@@ -51,24 +51,45 @@ class BlockhashRacingManager:
 
     async def get_fresh_blockhash(self) -> Optional[Hash]:
         """
-        Get the freshest available blockhash.
-        Returns the cached blockhash if it's less than 2 seconds old.
+        Fix 3: Blockhash Freshness for Jito Bundles.
+
+        Jito validators drop bundles whose blockhash is >5-10 slots stale (~2-4 seconds).
+        The hot path (arb_bot.py) must NEVER compile a transaction with a blockhash older
+        than a short TTL.  We enforce < 500 ms staleness here and always race for a fresh
+        value when the cached one ages out — no silent fallback allowed.
         """
         current_time = time.time()
         age_ms = (current_time - self.last_update_time) * 1000
 
-        # Fix 59: Atomic Staleness Guard — ENFORCED: block execution if >2000 ms old.
-        # Trading with a 2-second-old blockhash at 0.017 SOL subsidizes Jito bloXroute shareholders.
-        # We return None and force the caller to abort — not to substitute a stale cached value.
-        if age_ms > 2000:
-            logger.critical(f"CRITICAL LATENCY WARNING: blockhash age {age_ms:.0f}ms > 2000ms — ALL EXECUTION BLOCKED, refusing stale blockhash")
+        # HARD LIMIT for Jito: refuse blockhash older than 500 ms
+        if age_ms > 500:
+            logger.critical(
+                f"🚨 BLOCKHASH STALE {age_ms:.0f}ms > 500ms — racing for fresh value "
+                f"(Jito will reject bundles with stale blockhash)"
+            )
+            # Block races for a fresh value; return None so the caller ABORTS this TX attempt
+            # rather than compiling with a stale blockhash
+            await self._race_blockhash_once()
+            if self.current_blockhash and (time.time() - self.last_update_time) * 1000 <= 500:
+                return self.current_blockhash
+            logger.error("❌ No fresh blockhash available — aborting TX")
             return None
 
-        # Return cached blockhash if fresh enough (2 seconds)
-        if self.current_blockhash and age_ms < 2000:
+        # Cached blockhash is still fresh enough (< 500 ms)
+        if self.current_blockhash:
             return self.current_blockhash
 
-        # Otherwise, do a fresh race
+        # Blockhash not yet cached — race now
+        await self._race_blockhash_once()
+        return self.current_blockhash
+
+    async def fetch_fresh_blockhash(self) -> Optional[Hash]:
+        """
+        Force-fetch a fresh blockhash from Helius (bypass all caches).
+        Called at the LAST MOMENT before MessageV0.try_compile in the hot path.
+
+        Returns the blockhash string, or None if all endpoints failed.
+        """
         await self._race_blockhash_once()
         return self.current_blockhash
 

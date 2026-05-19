@@ -25,12 +25,15 @@ class WSSConnection:
         self.connected = False
         self.last_pong = time.time()
         self.subscriptions: Dict[int, Dict] = {}
+        self.session: Optional[aiohttp.ClientSession] = None
 
     async def connect(self) -> bool:
         """Establish WebSocket connection."""
         try:
-            session = aiohttp.ClientSession()
-            self.websocket = await session.ws_connect(
+            if self.session and not self.session.closed:
+                await self.session.close()
+            self.session = aiohttp.ClientSession()
+            self.websocket = await self.session.ws_connect(
                 self.url,
                 heartbeat=15.0,
                 timeout=30.0,
@@ -43,12 +46,17 @@ class WSSConnection:
         except Exception as e:
             logger.warning(f"❌ Failed to connect to {self.name}: {e}")
             self.connected = False
+            if self.session and not self.session.closed:
+                await self.session.close()
+                self.session = None
             return False
 
     async def disconnect(self):
-        """Close WebSocket connection."""
+        """Close WebSocket connection and release the HTTP session."""
         if self.websocket and not self.websocket.closed:
             await self.websocket.close()
+        if self.session and not self.session.closed:
+            await self.session.close()
         self.connected = False
         logger.info(f"🔌 Disconnected from {self.name}")
 

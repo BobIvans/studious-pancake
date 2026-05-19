@@ -52,9 +52,9 @@ async def get_jupiter_quote(input_mint: str, output_mint: str, slippage_bps: int
             "outputMint": output_mint,
             "amount": str(fuzzed_amount),
             "slippageBps": str(slippage_bps),
-            "onlyDirectRoutes": "false",
+            "onlyDirectRoutes": "true",
             "restrictIntermediateTokens": "true",
-            "maxAccounts": "16",
+            "maxAccounts": "8",
         }
         
         headers = {

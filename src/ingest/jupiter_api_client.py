@@ -91,9 +91,10 @@ class JupiterClient:
         if fee_bps is not None:
             params["feeBps"] = str(fee_bps)
 
-        params["onlyDirectRoutes"] = "false"
+        if only_direct_routes:
+            params["onlyDirectRoutes"] = "true"
         params["restrictIntermediateTokens"] = "true"
-        params["maxAccounts"] = "16"
+        params["maxAccounts"] = "8"  # MTU Safety: 8 accounts × 32 bytes = 256 bytes overhead → keeps TX within 1232-byte UDP limit
 
         if as_legacy_transaction:
             params["asLegacyTransaction"] = "true"

@@ -310,6 +310,11 @@ class JitoBiddingManager:
         if strategy not in self.strategy_success:
             self.strategy_success[strategy] = []
         self.strategy_success[strategy].append((time.time(), success))
+        # Prune entries older than 10 minutes to prevent memory leak
+        now = time.time()
+        self.strategy_success[strategy] = [
+            (t, s) for t, s in self.strategy_success[strategy] if now - t <= 600
+        ]
         if success:
             self.consecutive_success += 1
         else:

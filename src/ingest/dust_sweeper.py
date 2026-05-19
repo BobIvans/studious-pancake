@@ -27,22 +27,16 @@ class DustSweeper:
         self.rpc_url = rpc_url
         self.session = session
         self.spl_token_program = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+        # Token-2022 Program ID for xStocks (RWA tokens) — stored as instance var so all methods can reference it
+        self.spl_token_2022_program = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
         
         # Phase 48: Golden ATAs that should NEVER be closed (Capital Protection)
         self.wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         self.usdc_mint = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
         from src.config.xstocks_registry import is_xstock_token
         from spl.token.instructions import get_associated_token_address
-        # Token-2022 Program ID for xStocks
-        TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
-
-        if is_xstock_token(self.wsol_mint):
-            self.wsol_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.wsol_mint, TOKEN_2022_PROGRAM_ID))
-        else:
-            self.wsol_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.wsol_mint))
-
         if is_xstock_token(self.usdc_mint):
-            self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint, TOKEN_2022_PROGRAM_ID))
+            self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint, self.spl_token_2022_program))
         else:
             self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint))
         self.golden_atas = {self.wsol_ata, self.usdc_ata}
@@ -217,9 +211,15 @@ class DustSweeper:
         """Build Burn instruction for SPL token (Phase 41)."""
         try:
             from spl.token.instructions import BurnParams, burn
-            
+
+            # Fix: use Token-2022 program ID for xStocks, classic SPL for everything else
+            if mint and is_xstock_token(Pubkey.from_string(mint)):
+                program_id = self.spl_token_2022_program
+            else:
+                program_id = self.spl_token_program
+
             burn_params = BurnParams(
-                program_id=self.spl_token_program,
+                program_id=program_id,
                 account=Pubkey.from_string(token_account),
                 mint=Pubkey.from_string(mint),
                 owner=self.wallet_keypair.pubkey(),

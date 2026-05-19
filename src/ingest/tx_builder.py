@@ -165,7 +165,7 @@ class JupiterTxBuilder:
                     {
                         "encoding": "base64",
                         "commitment": "confirmed",
-                        "replaceRecentBlockhash": True,
+                        "replaceRecentBlockhash": False,
                         "accounts": {
                             "encoding": "base64",
                             "addresses": []
@@ -416,6 +416,9 @@ class JupiterTxBuilder:
 
     def _parse_instruction(self, ix_data: Dict) -> Instruction:
         """Parse Jupiter instruction dictionary into solders.Instruction."""
+        raw_b64 = ix_data["data"]
+        # Fix: pad base64 string to a multiple of 4 characters (Jupiter sometimes omits trailing '=')
+        padded_b64 = raw_b64 + "=" * (-len(raw_b64) % 4)
         return Instruction(
             program_id=Pubkey.from_string(ix_data["programId"]),
             accounts=[
@@ -426,7 +429,7 @@ class JupiterTxBuilder:
                 )
                 for meta in ix_data["accounts"]
             ],
-            data=base64.b64decode(ix_data["data"]) if isinstance(ix_data["data"], str) else bytes(ix_data["data"])
+            data=base64.b64decode(padded_b64) if isinstance(ix_data["data"], str) else bytes(ix_data["data"])
         )
 
     async def get_swap_instructions(
@@ -445,35 +448,6 @@ class JupiterTxBuilder:
         Returns:
             Tuple of (list of solders Instructions, list of Address Lookup Table Pubkeys)
         """
-        # --- СТРОГИЙ КОНТРОЛЬ ПРОФИТА ---
-        try:
-            in_amount = int(quote_response.get("inAmount", 0))
-            out_amount = int(quote_response.get("outAmount", 0))
-            
-            profit_raw = out_amount - in_amount
-            if profit_raw < expected_tip_lamports:
-                # Опасно! Возможен убыток. Ставим проскальзывание 0
-                quote_response["slippageBps"] = 0
-        except Exception as e:
-            logger.debug(f"Slippage guard check bypassed: {e}")
-        # --------------------------------
-
-        # Phase 36: Explicit destinationTokenAccount for wSOL trades
-        # Forces Jupiter to route profit directly to our primary ATA
-        sol_mint_str = "So11111111111111111111111111111111111111112"
-        destination_ata = None
-        
-        output_mint = quote_response.get("outputMint")
-        if output_mint == sol_mint_str:
-            sol_mint = Pubkey.from_string(sol_mint_str)
-            wallet = Pubkey.from_string(wallet_pubkey)
-            # Phase 48: Token-2022 Aware ATA Derivation
-            from src.config.xstocks_registry import is_xstock_token
-            if is_xstock_token(sol_mint):
-                destination_ata = str(get_associated_token_address(wallet, sol_mint, TOKEN_2022_PROGRAM_ID))
-            else:
-                destination_ata = str(get_associated_token_address(wallet, sol_mint))
-
         # Rate limit Jupiter API calls
         async with self.jupiter_limiter:
             payload = {
@@ -483,7 +457,7 @@ class JupiterTxBuilder:
                 "dynamicComputeUnitLimit": not use_custom_cu,
                 "onlyDirectRoutes": "false",
                 "restrictIntermediateTokens": "true",
-                "maxAccounts": "10",  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
+                "maxAccounts": "8",  # MTU Safety: 8 accts × 32B = 256B overhead → TX stays within 1232-byte UDP limit
             }
             if destination_ata:
                 payload["destinationTokenAccount"] = destination_ata
@@ -1135,9 +1109,18 @@ class JupiterTxBuilder:
             # Старый подход borrow_ix.data[:-1] + bytes([index]) сдвигает байты и убивает транзакцию.
             # Теперь используем struct.pack для четкой сборки последнего байта.
             import struct
+            from solders.instruction import Instruction
             original_data_without_index = borrow_ix.data[:16]
-            safe_index_byte = struct.pack("<B", actual_repay_index)
-            borrow_ix.data = original_data_without_index + safe_index_byte
+            safe_index_bytes = struct.pack("<Q", actual_repay_index)
+            new_data = original_data_without_index + safe_index_bytes
+            new_borrow_ix = Instruction(
+                program_id=borrow_ix.program_id,
+                accounts=borrow_ix.accounts,
+                data=new_data,
+            )
+            borrow_idx = all_instructions.index(borrow_ix)
+            all_instructions[borrow_idx] = new_borrow_ix
+            borrow_ix = new_borrow_ix
 
             logger.debug(f"🛠️ Safe Dynamic Repay Index calculated: {actual_repay_index}")
         except ValueError:
@@ -1149,6 +1132,7 @@ class JupiterTxBuilder:
             "address_lookup_tables": [], # Would be populated
             "repay_index": actual_repay_index
         }
+
 
     def sanitize_instructions(self, instructions: List[Instruction]) -> List[Instruction]:
         """Phase 48: Global Cross-Leg ATA Deduplication.
@@ -1276,7 +1260,8 @@ class JupiterTxBuilder:
             except ImportError:
                 logger.warning("⚠️ create_idempotent_associated_token_account unavailable — relying on pre-existing ATA")
 
-            final_instructions = pre_instructions + [borrow_ix] + all_instructions + [repay_ix]
+            cu_limit_ix = set_compute_unit_limit(600000)
+            final_instructions = [cu_limit_ix] + pre_instructions + [borrow_ix] + all_instructions + [repay_ix]
 
             # 4.5 ATOMIC RENT RECOVERY — закрыть промежуточные после repay
             CORE_GOLDEN_MINTS_STR = {
@@ -1321,8 +1306,15 @@ class JupiterTxBuilder:
                 # сдвигает байты и убивает транзакцию.
                 import struct
                 original_data_without_index = borrow_ix.data[:16]
-                safe_index_byte = struct.pack("<B", actual_repay_index)
-                borrow_ix.data = original_data_without_index + safe_index_byte
+                safe_index_bytes = struct.pack("<Q", actual_repay_index)
+                new_borrow_ix = Instruction(
+                    program_id=borrow_ix.program_id,
+                    accounts=borrow_ix.accounts,
+                    data=original_data_without_index + safe_index_bytes,
+                )
+                borrow_idx = final_instructions.index(borrow_ix)
+                final_instructions[borrow_idx] = new_borrow_ix
+                borrow_ix = new_borrow_ix
                 logger.debug(f"🛠️ Safe Dynamic Repay Index calculated: {actual_repay_index}")
             except ValueError:
                 logger.error("CRITICAL: repay_ix not found in instruction list")
@@ -1468,7 +1460,7 @@ class JupiterTxBuilder:
                         "encoding": "base64",
                         "commitment": "confirmed",
                         "sigVerify": False,
-                        "replaceRecentBlockhash": True,
+                        "replaceRecentBlockhash": False,
                     }
                 ]
             }

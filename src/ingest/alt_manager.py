@@ -297,7 +297,11 @@ class ALTCacheManager:
             return 0.0
 
         current_time = time.time()
-        oldest_age = min(current_time - last_updated for last_updated, _ in self.alt_metadata.values())
+        # Fix: snapshot values to avoid RuntimeError if alt_metadata changes during iteration
+        values_snapshot = list(self.alt_metadata.values())
+        if not values_snapshot:
+            return 0.0
+        oldest_age = min(current_time - last_updated for last_updated, _ in values_snapshot)
         return oldest_age
 
     def _get_known_alt_pubkeys(self) -> Set[Pubkey]:

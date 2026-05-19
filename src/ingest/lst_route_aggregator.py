@@ -243,9 +243,9 @@ class LstRouteAggregator:
             "outputMint": output_mint,
             "amount": str(amount),
             "slippageBps": self.slippage_bps,
-            "onlyDirectRoutes": "false",
+            "onlyDirectRoutes": "true" if only_direct_routes else "false",
             "restrictIntermediateTokens": "true",
-            "maxAccounts": "10",  # MTU Safety: снижено с 16 до 10
+            "maxAccounts": "8",  # MTU safety: 8 acct max → TX ≤ 1232 bytes
         }
 
         # Add DEX filter if specified

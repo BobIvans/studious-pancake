@@ -7,7 +7,9 @@ instructions when the flashloan provides native SOL or when final output needs
 to be converted back to SOL for repayment.
 """
 
+import asyncio
 import logging
+import aiohttp
 from typing import List, Dict, Any, Optional, Tuple
 from decimal import Decimal
 from solders.pubkey import Pubkey
@@ -35,6 +37,7 @@ class WSOLManager:
     Analyzes arbitrage paths to determine when wrapping/unwrapping is needed:
     - Wrap SOL to wSOL before AMM swaps that don't accept native SOL
     - Unwrap wSOL back to SOL for flashloan repayment when needed
+    - Auto-unwrap wSOL when native balance drops below threshold (Fix 1)
     """
 
     def __init__(self, wallet_pubkey: Pubkey):
@@ -54,7 +57,7 @@ class WSOLManager:
             self.usdc_ata = get_associated_token_address(wallet_pubkey, self.usdc_mint, TOKEN_2022_PROGRAM_ID)
         else:
             self.usdc_ata = get_associated_token_address(wallet_pubkey, self.usdc_mint)
-        
+
         # Phase 48: ATA Cache (Golden ATAs that should NEVER be closed)
         self.golden_atas = {
             str(self.wsol_ata): "wSOL",
@@ -141,11 +144,7 @@ class WSOLManager:
         logger.debug(f"Injected {len(wrap_instructions)} wrapping instructions at position {insert_position}")
         return modified_instructions
 
-    def inject_unwrap_instructions(
-        self,
-        instructions: List[Instruction],
-        insert_position: int = -1
-    ) -> List[Instruction]:
+    def inject_unwrap_instructions(self, instructions: List[Instruction], insert_position: int = -1) -> List[Instruction]:
         """
         Inject wSOL->SOL unwrapping instructions into transaction.
 
@@ -189,10 +188,177 @@ class WSOLManager:
 
     def _create_unwrap_instructions(self) -> List[Instruction]:
         """
-        Phase 48: Abandoning unwrapping via CloseAccount to preserve ATA rent (0.002 SOL).
-        Keeping profit in wSOL is acceptable for our 0.017 SOL budget.
+        Create instructions to unwrap wSOL back to Native SOL.
+
+        Fix 1 (Capital Death Spiral): After profitable Jupiter swaps, profits land
+        in the wSOL ATA as wSOL tokens. Jito tips, however, are paid from Native SOL.
+        With a 0.017 SOL budget, 3 successive trades drain native balance below the
+        0.005 SOL minimum, causing InsufficientFundsForFee even though the wSOL ATA
+        holds the profit.
+
+        Solution: Close the wSOL ATA (CloseAccount) to extract all lamports back
+        to the main wallet as Native SOL. Jupiter sets the wSOL token balance equal
+        to the total lamports in the ATA account via SyncNative during swap output.
+        The close_account instruction transfers ALL lamports (token balance + 0.002 SOL
+        ATA rent) back to the destination wallet as Native SOL lamports.
+
+        The caller should insert these instructions BEFORE any system-program transfers
+        (Jito tips) so that Native SOL is replenished before tip payment is attempted.
+
+        Note: The wSOL ATA is re-created automatically on the next Jupiter swap via
+        CREATE_ATA_FUNCTION (idempotent — no cost if account already exists).
         """
-        return []
+        wallet = self.wallet_pubkey
+        wsol_mint = self.wsol_mint
+
+        # Determine correct token program (Token vs Token-2022)
+        from src.config.xstocks_registry import is_xstock_token
+        if is_xstock_token(wsol_mint):
+            prog_id = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
+        else:
+            prog_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+
+        # CloseAccount transfers all wSOL tokens + 0.002 SOL ATA rent
+        # back to the main wallet as Native SOL lamports
+        close_ix = close_account(CloseAccountParams(
+            program_id=prog_id,
+            account=self.wsol_ata,
+            dest=wallet,
+            owner=wallet
+        ))
+
+        logger.debug(
+            f"🔓 wSOL unwrap: closing ATA {self.wsol_ata} "
+            f"→ recovers rent + all wSOL tokens as Native SOL"
+        )
+        return [close_ix]
+
+    async def check_and_unwrap_wsol(
+        self,
+        rpc_url: str,
+        native_balance_sol: float,
+        unwrap_threshold_sol: float = 0.005,
+        min_wsol_sol: float = 0.004,
+    ) -> bool:
+        """
+        Check if wSOL ATA balance should be unwrapped to Native SOL and execute the unwrap.
+
+        Fix 1 (Capital Death Spiral): Jupiter swap profits land in the wSOL ATA while
+        Jito tips drain Native SOL. With a 0.017 SOL budget, 3-4 trades exhaust the native
+        balance even though wSOL keeps accumulating. The existing `wallet_balance_listener`
+        only checks every 10 seconds — too slow for HFT.
+
+        This method is called at the START of every trade cycle (hot path, 0.5-1s cadence).
+        If wSOL balance exceeds the threshold AND native balance is below threshold, the
+        wSOL ATA is closed via a standalone RPC transaction — lamports immediately return
+        to native SOL wallet. Jupiter recreates the ATA on the next swap
+        (idempotent ATA creation is free if the account already exists).
+
+        Args:
+            rpc_url: RPC URL for wSOL balance query
+            native_balance_sol: Current Native SOL balance (already known to caller)
+            unwrap_threshold_sol: Native below this → consider unwrapping
+            min_wsol_sol: Only unwrap if wSOL balance >= this (covers 0.002 SOL rent + profit)
+
+        Returns:
+            True if wSOL was unwrapped, False if no action needed.
+        """
+        wsol_balance_lamports = 0
+
+        # Only run the check when native balance is already below threshold
+        if native_balance_sol >= unwrap_threshold_sol:
+            return False
+
+        try:
+            query_payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getTokenAccountBalance",
+                "params": [str(self.wsol_ata)]
+            }
+            timeout = aiohttp.ClientTimeout(total=2.0)
+            async with aiohttp.ClientSession() as s:
+                async with s.post(rpc_url, json=query_payload, timeout=timeout) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        if "result" in data and "value" in data["result"]:
+                            wsol_balance_lamports = int(data["result"]["value"]["amount"])
+        except Exception as e:
+            logger.debug(f"wSOL balance query failed: {e}")
+            return False
+
+        wsol_balance_sol = wsol_balance_lamports / 1e9
+
+        if wsol_balance_lamports < int(min_wsol_sol * 1e9):
+            logger.debug(
+                f"💧 wSOL balance {wsol_balance_sol:.4f} SOL < {min_wsol_sol} SOL "
+                f"(native={native_balance_sol:.4f} SOL < {unwrap_threshold_sol} SOL) — unwrap threshold not met"
+            )
+            return False
+
+        logger.info(
+            f"🔓 Fix 1: wSOL unwrap triggered — "
+            f"native={native_balance_sol:.4f} SOL < {unwrap_threshold_sol} SOL, "
+            f"wSOL={wsol_balance_sol:.4f} SOL exceeds {min_wsol_sol} SOL threshold"
+        )
+
+        # Close wSOL ATA → all lamports (tokens + rent) return as Native SOL
+        unwrap_ixs = self._create_unwrap_instructions()
+        if not unwrap_ixs:
+            return False
+
+        # Build and send a standalone CloseAccount transaction via RPC
+        from solders.message import MessageV0
+        from solders.transaction import VersionedTransaction
+        from solders.compute_budget import set_compute_unit_limit
+
+        try:
+            cu_limit_ix = set_compute_unit_limit(50_000)
+            all_ixs = [cu_limit_ix] + unwrap_ixs
+
+            # Use helius direct URL for fresh blockhash
+            helius_url = rpc_url  # rpc_url IS the direct RPC HTTP URL
+            bh_payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash",
+                          "params": [{"commitment": "confirmed"}]}
+            async with aiohttp.ClientSession() as s:
+                async with s.post(helius_url, json=bh_payload, timeout=aiohttp.ClientTimeout(total=2.0)) as bh_resp:
+                    if bh_resp.status != 200:
+                        logger.warning("wSOL unwrap: failed to get blockhash")
+                        return False
+                    bh_data = await bh_resp.json()
+                    bh_str = bh_data["result"]["value"]["blockhash"]
+
+            msg = MessageV0.try_compile(
+                payer=self.wallet_pubkey,
+                instructions=all_ixs,
+                address_lookup_table_accounts=[],
+                recent_blockhash=Pubkey.from_string(bh_str)
+            )
+            tx = VersionedTransaction(msg, [])
+
+            tx_b64 = __import__("base64").b64encode(tx.serialize()).decode("ascii")
+            send_payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "sendTransaction",
+                "params": [tx_b64, {"encoding": "base64"}]
+            }
+            async with aiohttp.ClientSession() as s:
+                async with s.post(helius_url, json=send_payload, timeout=aiohttp.ClientTimeout(total=3.0)) as send_resp:
+                    if send_resp.status == 200:
+                        result = await send_resp.json()
+                        if "result" in result:
+                            logger.info(
+                                f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL "
+                                f"(tx: {str(result['result'])[:12]}…)"
+                            )
+                            return True
+                        else:
+                            logger.warning(f"wSOL unwrap send rejected: {result}")
+                    else:
+                        logger.warning(f"wSOL unwrap HTTP {send_resp.status}")
+        except Exception as e:
+            logger.warning(f"wSOL unwrap transaction failed: {e}")
+
+        return False
 
     def get_wsol_ata(self) -> Pubkey:
         """Get the wSOL ATA for the wallet."""

@@ -1676,7 +1676,7 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                 god_tip_lamports = jito_bidding_manager.calculate_optimal_tip(
                     expected_profit_sol=route.profit_sol, strategy="lst_depeg"
                 )
-                jito_tip_manager = god_tip_lamports
+                calculated_tip_lamports = god_tip_lamports
                 if god_tip_lamports <= 0:
                     logger.warning(f"🚫 Offset-by-zero tip for {signal.token_symbol} — skipping")
                     continue
@@ -2821,31 +2821,6 @@ async def check_ata_exists(session, rpc_getter, wallet_pubkey, mint_address):
     return False
 
 
-async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: str):
-    """Мгновенно закрывает ATA после сделки для возврата 0.002 SOL."""
-    try:
-        from spl.token.instructions import CloseAccountParams, close_account
-        from solders.pubkey import Pubkey
-        WSOL = "So11111111111111111111111111111111111111112"
-        USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-        if WSOL in ata_address or USDC in ata_address:
-            return
-        # Burn dust + close
-        close_ix = close_account(CloseAccountParams(
-            program_id=TOKEN_PROGRAM_ID,
-            account=Pubkey.from_string(ata_address),
-            dest=keypair.pubkey(),
-            owner=keypair.pubkey()
-        ))
-        tx = Transaction()
-        tx.add(close_ix)
-        # send ordinary tx (no Jito tip)
-        await send_tx(session, rpc_getter(), tx, keypair)
-        ATA_CACHE.discard(ata_address)
-        logger.debug(f"♻️ ATA closed instantly: {ata_address[:8]} (rent refunded)")
-    except Exception as e:
-        logger.debug(f"Immediate ATA cleanup failed: {e}")
-
 
 async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_executor, arbitrage_scorer=None, priority_queue=None, alt_manager=None):
     # Stagger startup to prevent MacOS DNS gaierror(8)
@@ -2941,39 +2916,27 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
             # ... fetches quotes into `routes` ... (Already done)
 
             # --- Fix 36: Cross-Currency Profit Illusion (Drain Bug) ---
-            # Determine real SOL price
+            # Normalize cross-currency profit to SOL via price_matrix
             SOL_MINT = "So11111111111111111111111111111111111111112"
-            sol_price_in_usd = price_matrix.get(SOL_MINT, 150.0)
+            sol_price_in_usd = price_matrix.get(SOL_MINT, (150.0, 0))[0] if isinstance(price_matrix.get(SOL_MINT), (list, tuple)) else price_matrix.get(SOL_MINT, 150.0)
             
-            # Check if in_mint or target_mint is a stablecoin to establish target_sol_price
-            STABLES = [
-                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", # USDC
-                "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8En2vQK2", # USDT
-                "2b1kVqUbox8neH2nXvJp88unA71H4id8Gv7W269PshF2"  # PYUSD
-            ]
-            
-            is_stable_trade = in_mint_str in STABLES or target_mint_str in STABLES
-            if is_stable_trade:
-                target_sol_price = 1.0 / sol_price_in_usd
-            else:
-                target_sol_price = 1.0
-                
-            # Estimate raw profit before sizing
             best_out_lamports = max([r[-1]["out_amount"] for r in routes])
             raw_profit_lamports = best_out_lamports - amount_lamports
             
             if raw_profit_lamports <= 0:
-                continue # No profit at all
-                
-            # Translate net_profit correctly into Native SOL equivalents BEFORE tip calculation
-            # Fix 3: normalise both best_out and input_cost independently in SOL
-            if is_stable_trade:
-                # Convert both sides to SOL individually; output is back to in_mint base units
-                final_out_sol = (best_out_lamports / (10 ** decimals_in)) * target_sol_price
-                input_cost_sol = (amount_lamports / (10 ** decimals_in)) * target_sol_price
-                raw_profit_sol  = final_out_sol - input_cost_sol
-            else:
-                raw_profit_sol = raw_profit_lamports / (10 ** decimals_in)
+                continue  # No profit at all
+            
+            # Normalize cross-currency profit to Native SOL equivalents for tip calculation
+            # Uses price oracle for all tokens (stables, LSTs, jitoSOL) - no more is_stable_trade illusion
+            # Get USD price of input token
+            in_mint_str_clean = str(in_mint) if hasattr(in_mint, '__str__') else in_mint
+            if in_mint_str_clean not in price_matrix:
+                in_mint_str_clean = target_mint_str  # fallback to other leg
+            token_in_price_usd = price_matrix.get(in_mint_str_clean, (sol_price_in_usd, 0))[0] if isinstance(price_matrix.get(in_mint_str_clean), (list, tuple)) else price_matrix.get(in_mint_str_clean, sol_price_in_usd)
+            
+            profit_in_tokens = raw_profit_lamports / (10 ** decimals_in)
+            profit_in_usd = profit_in_tokens * token_in_price_usd
+            raw_profit_sol = profit_in_usd / sol_price_in_usd
 
             # Max tip should never exceed 90% of equivalent USD profit gained (converted to SOL)
             max_safe_tip_sol = raw_profit_sol * 0.9

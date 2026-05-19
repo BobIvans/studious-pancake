@@ -245,7 +245,7 @@ class LstRouteAggregator:
             "slippageBps": self.slippage_bps,
             "onlyDirectRoutes": "false",
             "restrictIntermediateTokens": "true",
-            "maxAccounts": "16",
+            "maxAccounts": "10",  # MTU Safety: снижено с 16 до 10
         }
 
         # Add DEX filter if specified

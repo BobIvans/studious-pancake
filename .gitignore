@@ -1,9 +1,9 @@
-# Environment variables
+# ── Environment ──────────────────────────────────────────────────────────────
 .env
 .env.local
 .env.*.local
 
-# Python
+# ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
 *.pyo
@@ -13,16 +13,41 @@ env/
 ENV/
 .venv/
 
-# macOS
+# ── macOS ────────────────────────────────────────────────────────────────────
 .DS_Store
-.env
 
-# Bot data
+# ── Wallet / secrets ─────────────────────────────────────────────────────────
+wallet.json
+
+# ── Runtime databases (never commit) ─────────────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
 bot_history.db
-bot_analysis_*.jsonl
-test_bot_history.db
+bot_history.db-shm
+bot_history.db-wal
+ai_training_data.db
+ai_training_data.db-shm
+ai_training_data.db-wal
+paper_trading.db
+paper_trading.db-shm
+paper_trading.db-wal
+test.db
+test.db-shm
+test.db-wal
 
-# Helius webhook files
+# ── Runtime logs ─────────────────────────────────────────────────────────────
+paper_trades.jsonl
+bot_analysis_*.jsonl
+
+# ── Cargo build ──────────────────────────────────────────────────────────────
+target/
+Cargo.lock
+
+# ── Kilo / agent tooling ─────────────────────────────────────────────────────
+.kilo/
+
+# ── Helius webhook state files ────────────────────────────────────────────────
 helius_webhook_id.txt
 helius_webhook_ids.txt
 helius_webhook_config.json

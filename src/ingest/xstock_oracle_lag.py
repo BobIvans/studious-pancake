@@ -191,8 +191,8 @@ class XStockOracleLagStrategy:
                 f"outputMint={USDC_MINT}&"
                 f"amount=100000000&"  # 1 token (CORRECTED Phase 48: 8 decimals)
                 f"slippageBps=50&"
-                f"maxAccounts=16&"  # Limit accounts to fit in 1232 bytes
-                f"onlyDirectRoutes=false&restrictIntermediateTokens=true&maxAccounts=16"  # Enable multi-hop for hidden liquidity
+                f"maxAccounts=10&"  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
+                f"onlyDirectRoutes=false&restrictIntermediateTokens=true&maxAccounts=10"
             )
 
             async with self.session.get(quote_url) as resp:
@@ -463,8 +463,8 @@ class XStockOracleLagStrategy:
                 f"outputMint={output_mint}&"
                 f"amount={amount_lamports}&"
                 f"slippageBps=1&"
-                f"maxAccounts=16&"
-                f"onlyDirectRoutes=false&restrictIntermediateTokens=true&maxAccounts=16"
+                f"maxAccounts=10&"  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
+                f"onlyDirectRoutes=false&restrictIntermediateTokens=true&maxAccounts=10"
             )
             async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=5.0)) as resp:
                 if resp.status == 200:

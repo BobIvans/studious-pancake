@@ -364,6 +364,84 @@ PARCL_PROTOCOL = {
 }
 
 # ============================================================================
+# GRUPPA 5: YIELD STABLES (Nyeobichnye steyblkoyny — synteticheskiye/generiruyemye)
+# Nye k xStocks v traditsionnom smysle, no torguyutsya na AMM pulakh s lagom.
+# Registriruyutsya zdes dlya strategii Oracle Lag.
+# ============================================================================
+
+GROUP_5_YIELD_STABLES = {
+    "USDY": {
+        "name": "Ondo Short-Term US Government Bill Fund (USD Yield)",
+        "ticker": "USDY",
+        "underlying": "USD",
+        "mint": "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",
+        "decimals": 6,
+        "program": "SPL Token",
+        "category": "yield_stable",
+        "priority": 1,
+        "typical_lag_seconds": 5,
+        "avg_spread_pct": 0.3,
+        "scan_frequency": "high",  # Yield accrual drift — check frequently
+    },
+    "USDe": {
+        "name": "Ethena USDe — delta-neutral yield stablecoin",
+        "ticker": "USDe",
+        "underlying": "USD",
+        "mint": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
+        "decimals": 18,  # Originally 18 decimals on Ethereum; on Solana typically deployed as 6 or 18
+        "program": "SPL Token",
+        "category": "yield_stable",
+        "priority": 2,
+        "typical_lag_seconds": 5,
+        "avg_spread_pct": 0.3,
+        "scan_frequency": "high",
+        "note": "Verify actual Solana decimals before trading large amounts.",
+    },
+    "susDS": {
+        "name": "York Finance Sussex Dollar Yield (susDS)",
+        "ticker": "susDS",
+        "underlying": "USD",
+        "mint": "susDSyb6YVGZCXSpbLTVmH8fEWhjSagJMHWPMpZEEDs",
+        "decimals": 6,
+        "program": "SPL Token",
+        "category": "yield_stable",
+        "priority": 3,
+        "typical_lag_seconds": 5,
+        "avg_spread_pct": 0.3,
+        "scan_frequency": "high",
+        "note": "Verify mint via Solscan before production use.",
+    },
+    "USD+": {
+        "name": "Ondo Finance USD+ — yield-bearing dollar",
+        "ticker": "USD+",
+        "underlying": "USD",
+        "mint": "USDove1KZCdwC3VFfcy6DYpawutxVp271yJgDyJWB9q",
+        "decimals": 6,
+        "program": "SPL Token",
+        "category": "yield_stable",
+        "priority": 4,
+        "typical_lag_seconds": 5,
+        "avg_spread_pct": 0.3,
+        "scan_frequency": "high",
+        "note": "Verify mint via Solscan before production use.",
+    },
+    "JupUSD": {
+        "name": "Jupiter USD — yield-bearing stable",
+        "ticker": "JupUSD",
+        "underlying": "USD",
+        "mint": "JupUSDnJZZzrjqoKdcycEZFyX5pdYUlRW2uHkrjawcr",
+        "decimals": 6,
+        "program": "SPL Token",
+        "category": "yield_stable",
+        "priority": 5,
+        "typical_lag_seconds": 5,
+        "avg_spread_pct": 0.3,
+        "scan_frequency": "high",
+        "note": "Placeholder mint — replace with verified address from Jupiter docs.",
+    },
+}
+
+# ============================================================================
 # OBEDINENNYJ REESTR VSEH PAR (dlya bota)
 # ============================================================================
 
@@ -372,6 +450,7 @@ XSTOCKS_MASTER_REGISTRY.update(GROUP_1_MAGNIFICENT_SEVEN)
 XSTOCKS_MASTER_REGISTRY.update(GROUP_2_CRYPTO_PROXY)
 XSTOCKS_MASTER_REGISTRY.update(GROUP_3_ETF_INDEX)
 XSTOCKS_MASTER_REGISTRY.update(GROUP_4_RWA_PARCL)
+XSTOCKS_MASTER_REGISTRY.update(GROUP_5_YIELD_STABLES)
 
 # Tol'ko aktivnye pary s podtverzhdennymi mint-addressami
 ACTIVE_XSTOCKS = {

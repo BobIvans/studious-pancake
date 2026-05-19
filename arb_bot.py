@@ -524,6 +524,8 @@ class Config:
     KAMINO_MIN_PROFIT_SOL: float = float(os.getenv("KAMINO_MIN_PROFIT_SOL", "0.001"))
 
     LST_UNSTAKE_ARB_ENABLED: bool = str(os.getenv("LST_UNSTAKE_ARB_ENABLED", "false")).lower() == "true"  # DISABLED: placeholder
+    LST_UNSTAKE_MIN_DEVIATION_PCT: float = float(os.getenv("LST_UNSTAKE_MIN_DEVIATION_PCT", "0.5"))
+    LST_UNSTAKE_SCAN_INTERVAL: float = float(os.getenv("LST_UNSTAKE_SCAN_INTERVAL", "3.0"))
 
     # Fix 35: Hardcode to False to prevent accidental gas leakage from unfinished modules.
     # These .env values are intentionally IGNORED so the bot never boots frozen Red Ocean strategies.
@@ -1042,10 +1044,17 @@ class BankHealthMonitor:
 # ============================================================================
 
 SCAN_TARGETS = {
-    "stables":   {"description": "Stablecoin Pairs",   "scan_interval": 1.5, "pair_delay": 0.1, "pairs": [("USDC", "USDT"), ("USDC", "PYUSD"), ("USDC", "USDS")]},
-    "lst":       {"description": "LST Pairs",           "scan_interval": 2.0, "pair_delay": 0.1, "pairs": [("SOL", "jitoSOL"), ("SOL", "mSOL"), ("SOL", "bSOL")]},
-    "xstocks":   {"description": "xStocks RWA",         "scan_interval": 5.0, "pair_delay": 0.2, "pairs": [("USDC", "NVDAx"), ("USDC", "MSTRx"), ("USDC", "SPYx")]},
-    "rwa_rest":  {"description": "Other RWA/DePIN",     "scan_interval": 15.0, "pair_delay": 0.5, "pairs": [("USDC", "JUP"), ("USDC", "WIF")]},
+    "stables":   {"description": "Stablecoin Pairs",   "scan_interval": 1.5, "pair_delay": 0.1,
+                  "pairs": [("USDC", "USDT"), ("USDC", "PYUSD"), ("USDC", "USDS"),
+                            ("USDC", "USDY"), ("USDC", "USDe")]},  # Step 5: yield stables
+    "lst":       {"description": "LST Pairs",           "scan_interval": 2.0, "pair_delay": 0.1,
+                  "pairs": [("SOL", "jitoSOL"), ("SOL", "mSOL"), ("SOL", "bSOL"),
+                            ("SOL", "2ZSOL"), ("SOL", "bonkSOL")]},  # Step 5: new LSTs
+    "xstocks":   {"description": "xStocks RWA",         "scan_interval": 5.0, "pair_delay": 0.2,
+                  "pairs": [("USDC", "NVDAx"), ("USDC", "MSTRx"), ("USDC", "SPYx"),
+                            ("USDC", "GOOGLx"), ("USDC", "HOODx"), ("USDC", "GLDx")]},  # Step 5
+    "rwa_rest":  {"description": "Other RWA/DePIN",     "scan_interval": 15.0, "pair_delay": 0.5,
+                  "pairs": [("USDC", "JUP"), ("USDC", "WIF")]},
 }
 
 async def stable_scanner(queue, cfg):

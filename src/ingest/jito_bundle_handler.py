@@ -237,8 +237,19 @@ class JitoBundleHandler:
             tip_account = self._select_tip_account()
             tip_tx = self.bundle_template.create_tip_template(tip_lamports, tip_account)
 
-            # Update tip tx blockhash
-            tip_tx.message.recent_blockhash = arbitrage_tx.message.recent_blockhash
+            # Recompile tip tx with correct blockhash
+            # (message.recent_blockhash is read-only in solders MessageV0)
+            new_tip_msg = MessageV0.try_compile(
+                payer=self.keypair.pubkey(),
+                instructions=[transfer(TransferParams(
+                    from_pubkey=self.keypair.pubkey(),
+                    to_pubkey=Pubkey.from_string(tip_account),
+                    lamports=tip_lamports,
+                ))],
+                address_lookup_table_accounts=[],
+                recent_blockhash=arbitrage_tx.message.recent_blockhash,
+            )
+            tip_tx = VersionedTransaction(new_tip_msg, [self.keypair])
 
             # Create bundle - tip is now handled inside tx_builder.py (atomic protection)
             # secure_bundle logic disabled to prevent double tips
@@ -309,7 +320,7 @@ class JitoBundleHandler:
             return [{"success": False, "error": "No HTTP session"}]
 
         # Serialize bundle
-        serialized_bundle = [tx.serialize().hex() for tx in bundle]
+        serialized_bundle = [bytes(tx).hex() for tx in bundle]
 
         async def send_to_endpoint(endpoint: str) -> Dict:
             try:

@@ -154,7 +154,7 @@ class JupiterTxBuilder:
 
         try:
             # Serialize transaction for simulation
-            tx_b64 = base64.b64encode(transaction.serialize()).decode('ascii')
+            tx_b64 = base64.b64encode(bytes(transaction)).decode('ascii')
 
             payload = {
                 "jsonrpc": "2.0",
@@ -402,7 +402,7 @@ class JupiterTxBuilder:
                 recent_blockhash=_bh
             )
             draft_tx = VersionedTransaction(draft_msg, [])
-            _size = len(draft_tx.serialize())
+            _size = len(bytes(draft_tx))
             if _size > 1232:
                 logger.warning(f"⚠️ TX {_size} B > 1232 B UDP limit — spilled; too many hops or providers")
                 return None, 0, 0
@@ -1455,7 +1455,7 @@ class JupiterTxBuilder:
                 "id": 1,
                 "method": "simulateTransaction",
                 "params": [
-                    base64.b64encode(tx.serialize()).decode(),
+                    base64.b64encode(bytes(tx)).decode(),
                     {
                         "encoding": "base64",
                         "commitment": "confirmed",

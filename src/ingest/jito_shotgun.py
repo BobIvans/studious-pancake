@@ -86,7 +86,7 @@ class JitoShotgun:
 
         # Convert to base58 - use EXACT same serialized tx (same sig) for all regions (Fix 82)
         # Never re-sign with different blockhash per region to avoid double-spend rejection
-        tx_base58 = [base58.b58encode(tx.serialize()).decode('ascii') for tx in transactions]
+        tx_base58 = [base58.b58encode(bytes(tx)).decode('ascii') for tx in transactions]
 
         # Send to all endpoints simultaneously
         tasks = []

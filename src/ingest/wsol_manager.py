@@ -335,7 +335,7 @@ class WSOLManager:
             )
             tx = VersionedTransaction(msg, [])
 
-            tx_b64 = __import__("base64").b64encode(tx.serialize()).decode("ascii")
+            tx_b64 = __import__("base64").b64encode(bytes(tx)).decode("ascii")
             send_payload = {
                 "jsonrpc": "2.0", "id": 1,
                 "method": "sendTransaction",

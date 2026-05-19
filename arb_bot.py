@@ -1498,12 +1498,12 @@ async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_am
         tx = VersionedTransaction(msg, [keypair])
 
         # Check transaction size limit — MTU safety buffer (1200 bytes)
-        tx_size = len(tx.serialize())
+        tx_size = len(bytes(tx))
         if tx_size > 1200:
             logger.warning(f"⚠️ TX rejected: size {tx_size} > 1200 bytes (too many hops). Dropping to avoid silent network drop.")
             return None
 
-        return base64.b64encode(tx.serialize()).decode('ascii')
+        return base64.b64encode(bytes(tx)).decode('ascii')
     except Exception as e:
         logger.debug(f"Tx construction error: {e}")
         return None
@@ -1777,7 +1777,7 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                         recent_blockhash=Hash.from_string(blockhash),
                     )
                     tx = VersionedTransaction(msg, [keypair])
-                    tx_b64 = base64.b64encode(tx.serialize()).decode("ascii")
+                    tx_b64 = base64.b64encode(bytes(tx)).decode("ascii")
                 except Exception as e:
                     logger.warning(f"TX compile error: {e}")
                     continue
@@ -2184,7 +2184,7 @@ async def create_simple_dummy_tx(session, keypair, rpc_getter):
                         recent_blockhash=recent_blockhash
                     )
                     tx = VersionedTransaction(msg, [keypair])
-                    return base64.b64encode(tx.serialize()).decode('ascii')
+                    return base64.b64encode(bytes(tx)).decode('ascii')
     except Exception as e:
         logger.debug(f"Dummy tx creation error: {e}")
     return None
@@ -2356,8 +2356,35 @@ async def execute_enhanced_migration_arbitrage(mint_address, raydium_addresses, 
             logger.warning("No transaction data available")
             return False
 
-        # Inject tip instruction directly into transaction_data (single atomic tx)
-        transaction_data.instructions.insert(-1, tip_ix)
+        # Inject tip instruction: decompile VersionedTransaction, add tip, recompile
+        from solders.message import MessageV0
+        from solders.instruction import Instruction as SoldersInstruction
+        from solders.transaction import VersionedTransaction
+
+        msg = transaction_data.message
+        all_keys = list(msg.account_keys)
+
+        # Decompile existing compiled instructions back to Instruction objects
+        decompiled = []
+        for ci in msg.instructions:
+            decompiled.append(SoldersInstruction(
+                program_id=all_keys[ci.program_id_index],
+                accounts=[all_keys[i] for i in ci.accounts],
+                data=bytes(ci.data),
+            ))
+
+        # Add tip instruction to the end (before any cleanup ixs)
+        all_ixs = decompiled + [tip_ix]
+
+        # Recompile new message with blockhash preserved
+        new_msg = MessageV0.try_compile(
+            payer=msg.account_keys[0],
+            instructions=all_ixs,
+            address_lookup_table_accounts=list(msg.address_lookup_table_accounts),
+            recent_blockhash=msg.recent_blockhash,
+        )
+
+        transaction_data = VersionedTransaction(new_msg, [keypair])
 
         # Send bundle as exactly ONE transaction (atomic: tip OR arb, never partial)
         bundle_to_send = [transaction_data]
@@ -2778,7 +2805,7 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
             task = asyncio.create_task(
                 check_bundle_confirmation(
                     result["bundle_id"], jito_executor, data_aggregator,
-                    base64.b64encode(arbitrage_tx.serialize()).decode(),
+                    base64.b64encode(bytes(arbitrage_tx)).decode(),
                     tx_id_str,
                     execution_time,
                     session=session,
@@ -2964,7 +2991,7 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
                 calculated_tip = jito_bidding_manager.calculate_optimal_tip(
                     expected_profit_sol=opportunity.metadata.get("expected_profit_sol", net_profit)
                     if 'opportunity' in dir() else net_profit,
-                    strategy=bounded_float(strategy_label),
+                    strategy=str(strategy_label),
                 )
                 if calculated_tip < 0:  # Capital Guard hit
                     logger.warning(f"🚫 Capital Guard: Jito 50th > 80% of expected profit — skipping whale market for {path}")
@@ -3578,7 +3605,7 @@ async def run():
                                         blockhash = await get_current_blockhash(session, rpc.get_rpc())
                                         msg = MessageV0.try_compile(keypair.pubkey(), [close_ix], [], Hash.from_string(blockhash))
                                         tx = VersionedTransaction(msg, [keypair])
-                                        tx_b64 = base64.b64encode(tx.serialize()).decode('ascii')
+                                        tx_b64 = base64.b64encode(bytes(tx)).decode('ascii')
                                         await session.post(rpc.get_rpc(), json={"jsonrpc": "2.0", "id": 1, "method": "sendTransaction", "params": [tx_b64]})
                                         
                                         # ATA будет пересоздана автоматически при следующем арбитраже через CREATE_ATA_FUNCTION
@@ -4005,7 +4032,7 @@ async def execute_ultra_arbitrage(cycle: ArbitrageCycle, session, rpc, keypair):
         if tx:
             # 100% CAPITAL PROTECTION: Pre-trade Simulation
             flash_sim = FlashSimulator(session, rpc.get_rpc())
-            tx_b64 = base64.b64encode(tx.serialize()).decode()
+            tx_b64 = base64.b64encode(bytes(tx)).decode()
             
             # Phase 48: Protect all stablecoins and base assets from burning (Task 21)
             STABLES = {
@@ -4098,7 +4125,7 @@ async def _build_burn_instruction_atlanta(token_account: str, mint: str, amount_
             program_id=Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),
             account=Pubkey.from_string(token_account),
             mint=Pubkey.from_string(mint),
-            owner= Pubkey.from_string(token_account),
+            owner=keypair.pubkey(),
             amount=amount_lamports,
         )
         return burn(burn_params)
@@ -4194,7 +4221,7 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
             tx = VersionedTransaction(message, [keypair])
 
             # Send transaction
-            tx_b64 = base64.b64encode(tx.serialize()).decode()
+            tx_b64 = base64.b64encode(bytes(tx)).decode()
             send_payload = {
                 "jsonrpc": "2.0",
                 "id": 1,

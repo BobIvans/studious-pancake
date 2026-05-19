@@ -88,7 +88,7 @@ async def unwrap_wsol_accounts(session, rpc_url, keypair, wsol_accounts):
                 send_payload = {
                     "jsonrpc": "2.0", "id": 1,
                     "method": "sendTransaction",
-                    "params": [tx.serialize().hex(), {"encoding": "base64", "skipPreflight": True}]
+                    "params": [bytes(tx).hex(), {"encoding": "base64", "skipPreflight": True}]
                 }
                 async with session.post(rpc_url, json=send_payload) as send_resp:
                     if send_resp.status == 200:
@@ -125,7 +125,7 @@ async def unwrap_wsol_accounts(session, rpc_url, keypair, wsol_accounts):
                 send_payload = {
                     "jsonrpc": "2.0", "id": 1,
                     "method": "sendTransaction",
-                    "params": [base64.b64encode(tx.serialize()).decode(), {"encoding": "base64", "skipPreflight": True}]
+                    "params": [base64.b64encode(bytes(tx)).decode(), {"encoding": "base64", "skipPreflight": True}]
                 }
 
                 async with session.post(rpc_url, json=send_payload) as send_resp:
@@ -229,7 +229,7 @@ async def recover_rent():
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "sendTransaction",
-                "params": [base64.b64encode(tx.serialize()).decode('ascii'), {"encoding": "base64", "skipPreflight": False}]
+                "params": [base64.b64encode(bytes(tx)).decode('ascii'), {"encoding": "base64", "skipPreflight": False}]
             }
             
             async with session.post(rpc_url, json=payload) as resp:

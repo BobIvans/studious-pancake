@@ -408,49 +408,11 @@ class XStockOracleLagStrategy:
             """
             usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
             
-            # 1. Узнаем ликвидность USDC банка в MarginFi
-            from arb_bot import MARGINFI_BANKS
-            usdc_bank_info = MARGINFI_BANKS.get(usdc_mint, {})
-            if not usdc_bank_info:
-                logger.error("❌ Missing USDC bank info for flashloan")
-                return None
-                
-            try:
-                # Пытаемся вытянуть 95% ликвидности USDC из банка MarginFi
-                payload = {
-                    "jsonrpc": "2.0", "id": 1, "method": "getTokenAccountBalance",
-                    "params": [str(usdc_bank_info["liquidity_vault"])]
-                }
-                async with self.session.post(self.cfg.WSS_ENDPOINTS[0].replace("wss", "https"), json=payload) as resp:
-                    data = await resp.json()
-                    vault_lamports = int(data["result"]["value"]["amount"])
-                    marginfi_max = int(vault_lamports * 0.95)
+            # ⚡ HFT-ОПТИМИЗАЦИЯ: Фиксированный микро-займ вместо медленного RPC-запроса.
+            # Для баланса 0.017 SOL берем 15 USDC ($15). Это экономит ~300ms!
+            # 15 USDC гарантированно есть в MarginFi пуле.
+            max_usdc_lamports = 15_000_000
 
-                    # DYNAMIC SIZING: Use 95% vault liquidity + AMM math to find optimal size
-                    max_usdc_lamports = marginfi_max
-
-                    if hasattr(self, 'optimal_trade_sizer') and self.optimal_trade_sizer:
-                        # Use analytical O(1) formula to compute the EXACT optimal size
-                        # that maximizes profit without killing the spread via slippage
-                        optimal_size = self.optimal_trade_sizer.find_optimal_trade_size(
-                            routes=[], 
-                            amount_in=max_usdc_lamports, 
-                            decimals_in=6, 
-                            decimals_out=6, 
-                            jito_tip_sol=0.00001
-                        )
-                        if optimal_size and int(optimal_size) > 1_000_000:  # Min 1 USDC
-                            max_usdc_lamports = int(optimal_size)
-                            logger.debug(f"📈 Optimal sizing: {max_usdc_lamports/1e6:.2f} USDC from AMM curve peak")
-                        else:
-                            max_usdc_lamports = marginfi_max
-            except Exception as e:
-                logger.warning(f"⚠️ Could not check MarginFi USDC liquidity, using safe default 10 USDC: {e}")
-                max_usdc_lamports = 10_000_000
-    
-            if max_usdc_lamports < 1_000_000: # Меньше 1 USDC
-                return None
-    
             # Step 1: Quote USDC → xStock (Покупаем дешево)
             quote_usdc_to_xstock = await self._get_jupiter_price_quote(
                 usdc_mint, token_mint, max_usdc_lamports

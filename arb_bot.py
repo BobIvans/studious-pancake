@@ -1174,7 +1174,7 @@ async def get_jupiter_quote(session, input_mint, output_mint, amount_lamports, c
         "outputMint": str(output_mint),
         "amount": str(amount_lamports),
         "slippageBps": str(slippage_bps),
-        "maxAccounts": "16", # Critical to fit 2 routes in one TX
+        "maxAccounts": "10",  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
         "onlyDirectRoutes": "false",
         "restrictIntermediateTokens": "true",
     }

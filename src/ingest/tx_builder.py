@@ -483,7 +483,7 @@ class JupiterTxBuilder:
                 "dynamicComputeUnitLimit": not use_custom_cu,
                 "onlyDirectRoutes": "false",
                 "restrictIntermediateTokens": "true",
-                "maxAccounts": "16",
+                "maxAccounts": "10",  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
             }
             if destination_ata:
                 payload["destinationTokenAccount"] = destination_ata
@@ -1089,7 +1089,7 @@ class JupiterTxBuilder:
             "So11111111111111111111111111111111111111112",  # wSOL
             "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", # USDC
         }
-        intermediate_mints = set(arbitrage_path[1:-1])  # всё, кроме borrow и финального
+        intermediate_mints = set(arbitrage_path)  # все токены маршрута (Эфемерные ATA)
         for mint_str in intermediate_mints:
             if mint_str in CORE_GOLDEN_MINTS_STR:
                 continue
@@ -1108,7 +1108,8 @@ class JupiterTxBuilder:
                     owner=wallet
                 ))
                 all_instructions.append(close_ix)
-                logger.debug(f"🧹 Atomic CloseAccount: {mint_str[:8]} ({"Token-2022" if is_xstock else "SPL"})")
+                prog_label = "Token-2022" if is_xstock else "SPL"
+                logger.debug(f"🧹 Atomic CloseAccount: {mint_str[:8]} ({prog_label})")
             except Exception as e:
                 logger.debug(f"⚠️ Atomic close skipped for {mint_str[:8]}: {e}")
         # =====================================================================
@@ -1203,15 +1204,33 @@ class JupiterTxBuilder:
             if buy_quote_response:
                 buy_ixs, buy_alts = await self.get_swap_instructions(buy_quote_response, wallet_pubkey, use_custom_cu=True)
                 if not buy_ixs: return None
-                all_instructions.extend(buy_ixs)
                 alts.extend(buy_alts)
 
             # Get Sell Swaps (если quote не пустой)
             if sell_quote_response:
                 sell_ixs, sell_alts = await self.get_swap_instructions(sell_quote_response, wallet_pubkey, use_custom_cu=True)
                 if not sell_ixs: return None
-                all_instructions.extend(sell_ixs)
                 alts.extend(sell_alts)
+
+            # ── ФИКС ЛОВУШКИ #1: Умная дедупликация ATA ─────────────────────────
+            # Оба свопа могут возвращать setupInstructions с CreateATA для одного
+            # и того же токена. Дубликат вызывает AccountAlreadyInitialized.
+            # Удаляем дубли до сборки транзакции.
+            from solders.pubkey import Pubkey
+            ATOKEN_PROGRAM = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
+            seen_atas: set = set()
+            cleaned_ixs: list = []
+
+            for ix in (buy_ixs if buy_quote_response else []) + (sell_ixs if sell_quote_response else []):
+                if ix.program_id == ATOKEN_PROGRAM and len(ix.accounts) >= 2:
+                    ata_addr = str(ix.accounts[1].pubkey)
+                    if ata_addr in seen_atas:
+                        logger.debug(f"✂️ Пропущен дубликат создания ATA: {ata_addr[:8]}")
+                        continue
+                    seen_atas.add(ata_addr)
+                cleaned_ixs.append(ix)
+
+            all_instructions = cleaned_ixs
 
             # Вычисляем индексы для MarginFi (Flashloan Introspection)
             # Допустим, мы берем займ первым, затем идут свопы, затем возврат
@@ -1231,14 +1250,40 @@ class JupiterTxBuilder:
                 borrow_amount_lamports
             )
 
-            final_instructions = [borrow_ix] + all_instructions + [repay_ix]
+            # ── ФИКС ЛОВУШКИ #2: Идемпотентное создание ATA для займа ─────────
+            # MarginFi lending_account_start_flashloan предполагает существование ATA
+            # для займного токена. Jupiter его не создаёт. create_idempotent не упадёт,
+            # если ATA уже есть — безопасно вызывать всегда.
+            pre_instructions = []
+            try:
+                from spl.token.instructions import create_idempotent_associated_token_account
+                # Определяем mint займа по bank_pubkey
+                _sol_bank = os.getenv("MARGINFI_SOL_BANK", "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj")
+                _usdc_bank = "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2"
+                borrow_mint_str = (
+                    "So11111111111111111111111111111111111111112"
+                    if bank_pubkey == _sol_bank else
+                    ("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+                     if bank_pubkey == _usdc_bank else
+                     "So11111111111111111111111111111111111111112")  # fallback: SOL
+                )
+                borrow_mint_pk = Pubkey.from_string(borrow_mint_str)
+                init_ata_ix = create_idempotent_associated_token_account(
+                    payer=wallet, owner=wallet, mint=borrow_mint_pk
+                )
+                pre_instructions.append(init_ata_ix)
+                logger.debug(f"🛡️ Idempotent borrow ATA ensured for {borrow_mint_str[:8]}")
+            except ImportError:
+                logger.warning("⚠️ create_idempotent_associated_token_account unavailable — relying on pre-existing ATA")
+
+            final_instructions = pre_instructions + [borrow_ix] + all_instructions + [repay_ix]
 
             # 4.5 ATOMIC RENT RECOVERY — закрыть промежуточные после repay
             CORE_GOLDEN_MINTS_STR = {
                 "So11111111111111111111111111111111111111112",
                 "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
             }
-            intermediate_mints = set(arbitrage_path[1:-1]) if isinstance(arbitrage_path, list) else set()
+            intermediate_mints = set(arbitrage_path) if isinstance(arbitrage_path, list) else set()
             for mint_str in intermediate_mints:
                 if mint_str in CORE_GOLDEN_MINTS_STR:
                     continue
@@ -1328,10 +1373,10 @@ class JupiterTxBuilder:
         user_token_account: Pubkey, token_program: Pubkey, amount: int
     ) -> Instruction:
         """Build MarginFi lending_account_repay instruction."""
-        # Phase 33: Use u64::MAX to signal "repay all active debt"
-        # This guarantees full debt clearance despite micro-lamport math artifacts.
-        u64_max = (2**64) - 1
-        data = MARGINFI_REPAY_DISCRIMINATOR + u64_max.to_bytes(8, "little")
+        # Phase 48: Используем точную сумму amount вместо u64::MAX
+        # MarginFi v2 может выдавать ошибку math на u64_max во флеш-лоанах.
+        # Передача точной суммы гарантирует успешный repay без ошибок математики.
+        data = MARGINFI_REPAY_DISCRIMINATOR + amount.to_bytes(8, "little")
 
         return Instruction(
             program_id=mfi_program,
@@ -1496,7 +1541,7 @@ class JupiterTxBuilder:
             f"outputMint={middle_mint}&"
             f"amount={amount_lamports}&"
             f"slippageBps=50&"
-            f"maxAccounts=16&"
+            f"maxAccounts=10&"
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
         )
@@ -1524,7 +1569,7 @@ class JupiterTxBuilder:
             f"outputMint={input_mint}&"
             f"amount={out_amount_leg1}&"
             f"slippageBps=50&"
-            f"maxAccounts=16&"
+            f"maxAccounts=10&"
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
         )

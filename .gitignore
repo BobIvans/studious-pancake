@@ -16,3 +16,14 @@ ENV/
 # macOS
 .DS_Store
 .env
+
+# Bot data
+bot_history.db
+bot_analysis_*.jsonl
+test_bot_history.db
+
+# Helius webhook files
+helius_webhook_id.txt
+helius_webhook_ids.txt
+helius_webhook_config.json
+webhook_status.json

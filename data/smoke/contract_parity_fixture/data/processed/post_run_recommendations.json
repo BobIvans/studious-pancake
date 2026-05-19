@@ -1,9 +1,0 @@
-{
-  "contract_version": "post_run_v_smoke",
-  "recommendations": [
-    {
-      "confidence": 0.7,
-      "kind": "keep_shadow_mode"
-    }
-  ]
-}

@@ -1,3 +1,0 @@
-{"pair_address": "pair_full_win", "run_id": "historical_replay_smoke", "state": "candidate_seen", "token_address": "tok_full_win"}
-{"entry_price": 1.0, "entry_time": "2026-03-10T12:00:00Z", "state": "position_opened", "token_address": "tok_full_win"}
-{"exit_reason": "scalp_momentum_decay_after_recheck", "hold_sec": 35, "pnl_pct": 17.999999999999993, "state": "full_exit", "token_address": "tok_full_win"}

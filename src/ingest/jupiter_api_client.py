@@ -9,9 +9,9 @@ from solders.transaction import VersionedTransaction
 logger = logging.getLogger(__name__)
 
 # Jupiter API endpoints
-QUOTE_API_URL = "https://quote-api.jup.ag/v6/quote"
-SWAP_API_URL = "https://quote-api.jup.ag/v6/swap"
+QUOTE_API_URL = "https://api.jup.ag/swap/v1/quote"
 
+SWAP_API_URL = "https://api.jup.ag/swap/v1/swap"
 
 class JupiterClient:
     """Async client for Jupiter API operations."""
@@ -29,7 +29,24 @@ class JupiterClient:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            self.session = aiohttp.ClientSession()
+            from aiohttp.resolver import AsyncResolver
+            resolver = AsyncResolver(
+                nameservers=["1.1.1.1", "8.8.8.8", "8.8.4.4"],
+                rotate=True
+            )
+            connector = aiohttp.TCPConnector(
+                resolver=resolver,
+                limit=150,
+                limit_per_host=30,
+                ttl_dns_cache=300,
+                use_dns_cache=True,
+                keepalive_timeout=60
+            )
+            self.session = aiohttp.ClientSession(
+                connector=connector,
+                timeout=aiohttp.ClientTimeout(total=12, sock_connect=8, sock_read=10),
+                headers={"User-Agent": "Mozilla/5.0"}
+            )
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -68,14 +85,15 @@ class JupiterClient:
             "inputMint": input_mint,
             "outputMint": output_mint,
             "amount": str(amount),
-            "slippageBps": str(slippage_bps),
+            "slippageBps": slippage_bps,
         }
 
         if fee_bps is not None:
             params["feeBps"] = str(fee_bps)
 
-        if only_direct_routes:
-            params["onlyDirectRoutes"] = "true"
+        params["onlyDirectRoutes"] = "false"
+        params["restrictIntermediateTokens"] = "true"
+        params["maxAccounts"] = "16"
 
         if as_legacy_transaction:
             params["asLegacyTransaction"] = "true"
@@ -138,7 +156,7 @@ class JupiterClient:
         quote_response: Dict[str, Any],
         user_public_key: str,
         *,
-        wrap_unwrap_sol: bool = True,
+        wrap_unwrap_sol: bool = False,
         fee_account: Optional[str] = None,
         tracking_account: Optional[str] = None,
     ) -> Dict[str, Any]:
@@ -166,7 +184,7 @@ class JupiterClient:
         payload = {
             "quoteResponse": quote_response,
             "userPublicKey": user_public_key,
-            "wrapUnwrapSOL": wrap_unwrap_sol,
+            "wrapAndUnwrapSol": wrap_unwrap_sol,
             "dynamicComputeUnitLimit": True,  # As specified in requirements
             "asVersionedTransaction": True,    # As specified in requirements
         }
@@ -249,8 +267,10 @@ class JupiterClient:
         try:
             # Jupiter returns the transaction as base64 string
             if isinstance(swap_transaction_data, str):
-                # Decode base64 to bytes
-                transaction_bytes = base64.b64decode(swap_transaction_data)
+                # Decode base64 to bytes — with padding guard for Helius/QuickNode.
+                # Some RPC providers strip trailing '='; dynamic padding always matches b64decode.
+                padded_tx = swap_transaction_data + "=" * (-len(swap_transaction_data) % 4)
+                transaction_bytes = base64.b64decode(padded_tx)
             else:
                 logger.error(f"Unexpected swapTransaction format: {type(swap_transaction_data)}")
                 return None
@@ -272,7 +292,7 @@ class JupiterClient:
         user_public_key: str,
         slippage_bps: int = 50,
         *,
-        wrap_unwrap_sol: bool = True,
+        wrap_unwrap_sol: bool = False,
         fee_account: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Convenience method to get both quote and transaction in one call.

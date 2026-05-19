@@ -1,8 +1,0 @@
-{
-  "wallet_lead_lag_sec": 68.0,
-  "multi_timeframe_confirmation": {
-    "1m": true,
-    "5m": true,
-    "15m": false
-  }
-}

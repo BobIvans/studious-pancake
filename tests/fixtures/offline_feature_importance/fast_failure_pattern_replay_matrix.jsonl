@@ -1,6 +1,0 @@
-{"cluster_concentration_ratio": 0.84, "exit_reason_final": "breakdown_stop", "hold_sec": 110, "liquidity_refill_ratio_120s": 0.35, "mae_pct_240s": -12.0, "net_pnl_pct": -12.0, "position_id": "f1", "seller_reentry_ratio": 0.92}
-{"cluster_concentration_ratio": 0.79, "exit_reason_final": "stop_loss", "hold_sec": 150, "liquidity_refill_ratio_120s": 0.42, "mae_pct_240s": -10.5, "net_pnl_pct": -10.0, "position_id": "f2", "seller_reentry_ratio": 0.88}
-{"cluster_concentration_ratio": 0.74, "exit_reason_final": "breakdown", "hold_sec": 200, "liquidity_refill_ratio_120s": 0.48, "mae_pct_240s": -8.4, "net_pnl_pct": -8.5, "position_id": "f3", "seller_reentry_ratio": 0.81}
-{"cluster_concentration_ratio": 0.25, "exit_reason_final": "trend_take_profit", "hold_sec": 610, "liquidity_refill_ratio_120s": 1.25, "mae_pct_240s": -3.0, "net_pnl_pct": 5.0, "position_id": "f4", "seller_reentry_ratio": 0.2}
-{"cluster_concentration_ratio": 0.21, "exit_reason_final": "trend_take_profit", "hold_sec": 790, "liquidity_refill_ratio_120s": 1.35, "mae_pct_240s": -2.2, "net_pnl_pct": 7.0, "position_id": "f5", "seller_reentry_ratio": 0.16}
-{"cluster_concentration_ratio": 0.31, "exit_reason_final": "time_exit", "hold_sec": 500, "liquidity_refill_ratio_120s": 1.1, "mae_pct_240s": -4.0, "net_pnl_pct": 3.0, "position_id": "f6", "seller_reentry_ratio": 0.3}

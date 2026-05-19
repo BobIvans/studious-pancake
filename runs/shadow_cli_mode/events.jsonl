@@ -1,3 +1,0 @@
-{"pair_address": "pair_wallet", "run_id": "shadow_cli_mode", "state": "candidate_seen", "token_address": "tok_wallet"}
-{"entry_price": 1.0, "entry_time": "2026-03-10T12:00:00Z", "state": "position_opened", "token_address": "tok_wallet"}
-{"state": "unresolved", "token_address": "tok_wallet", "warning": "historical_exit_not_resolved"}

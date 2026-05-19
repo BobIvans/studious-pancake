@@ -1,2 +1,0 @@
-2026-04-13 | JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN | JUP | risk=15.0 | verdict=ARB_HIGH | arb_spread=3.58% | liq_velocity=0.0x | smart_hits=2 | cross_delta=0.00% | src=dexscreener
-2026-04-13 | So11111111111111111111111111111111111111112 | SOL | risk=5.0 | verdict=PASS | arb_spread=0.00% | liq_velocity=0.1x | smart_hits=0 | cross_delta=0.00% | src=coingecko

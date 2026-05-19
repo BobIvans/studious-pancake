@@ -1,8 +1,0 @@
-{
-  "token_address": "test_distribution",
-  "cum_buy_volume": 80.0,
-  "cum_sell_volume": 120.0,
-  "price_change_bps": 50.0,
-  "expected_divergence": -0.784,
-  "expected_score": 0.0
-}

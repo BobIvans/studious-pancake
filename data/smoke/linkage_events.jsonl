@@ -1,3 +1,0 @@
-{"event": "linkage_scoring_started", "linkage_confidence": 0.98, "linkage_status": "ok", "overlap_count": 1, "pair_address": "pair_smoke_linkage", "token_address": "token_smoke_linkage", "ts": "2026-03-20T10:50:51Z", "warning": null}
-{"event": "linkage_score_computed", "linkage_confidence": 0.98, "linkage_status": "ok", "overlap_count": 1, "pair_address": "pair_smoke_linkage", "token_address": "token_smoke_linkage", "ts": "2026-03-20T10:50:51Z", "warning": null}
-{"event": "linkage_completed", "linkage_confidence": 0.98, "linkage_status": "ok", "overlap_count": 1, "pair_address": "pair_smoke_linkage", "token_address": "token_smoke_linkage", "ts": "2026-03-20T10:50:51Z", "warning": null}

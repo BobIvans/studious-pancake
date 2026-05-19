@@ -1,8 +1,0 @@
-{
-  "token_address": "test_strong_accumulation",
-  "cum_buy_volume": 200.0,
-  "cum_sell_volume": 100.0,
-  "price_change_bps": 150.0,
-  "expected_divergence": 0.662,
-  "expected_score": 1.0
-}

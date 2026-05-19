@@ -1,5 +1,0 @@
-{"bundle_count_first_60s": 1, "hold_sec": 600, "mfe_pct_240s": 8.0, "net_pnl_pct": 5.0, "position_id": "s1", "trend_survival_15m": 0.5}
-{"cluster_concentration_ratio": 0.7, "exit_reason_final": "stop_loss", "hold_sec": 150, "mae_pct_240s": -7.0, "net_pnl_pct": -4.0, "position_id": "s2"}
-{"hold_sec": 420, "net_pnl_pct": 2.0, "position_id": "s3", "time_to_first_profit_sec": 140, "x_author_velocity_5m": 4.5}
-{"creator_in_cluster_flag": true, "exit_reason_final": "breakdown", "hold_sec": 220, "mae_pct_240s": -6.5, "net_pnl_pct": -1.5, "position_id": "s4"}
-{"hold_sec": 840, "liquidity_refill_ratio_120s": 1.4, "mfe_pct_240s": 10.0, "net_pnl_pct": 6.0, "position_id": "s5", "trend_survival_15m": 0.63}

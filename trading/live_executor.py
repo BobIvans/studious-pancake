@@ -287,20 +287,79 @@ class LiveTrader:
         fill: dict[str, Any],
         settings: Any,
     ) -> list[Any]:
-        """Build actual swap instructions for the DEX.
+        """Build actual swap instructions using Jupiter API.
 
-        This is a placeholder - implement based on your specific DEX integration.
-        For Raydium, you'd build swap instructions with slippage control.
+        Args:
+            signal: Trading signal with entry/exit details
+            market: Market state information
+            fill: Fill details with amount and price
+            settings: Trading settings
+
+        Returns:
+            List of instructions for the swap
         """
-        # Placeholder implementation
-        # In real implementation, this would:
-        # 1. Get pool data from market state
-        # 2. Calculate amounts with slippage
-        # 3. Build Raydium/Jupiter swap instructions
-        # 4. Apply ExactIn with max_slippage_bps from signal
+        try:
+            # Import JupiterTxBuilder for real instruction building
+            from src.ingest.tx_builder import JupiterTxBuilder
+            import aiohttp
 
-        logger.warning("_build_swap_instructions not fully implemented")
-        return []  # Return empty list to indicate failure
+            # Extract trade details from signal/fill
+            token_in = signal.get("token_in", signal.get("base_token"))
+            token_out = signal.get("token_out", signal.get("target_token"))
+            amount_in = fill.get("amount", fill.get("quantity", 0))
+
+            if not token_in or not token_out or amount_in <= 0:
+                logger.error(f"Invalid trade parameters: token_in={token_in}, token_out={token_out}, amount={amount_in}")
+                return []
+
+            # Convert amount to lamports if needed
+            if token_in == "SOL":
+                amount_lamports = int(amount_in * 1e9)
+            else:
+                # For other tokens, assume amount is already in correct decimals
+                # This should be improved with proper decimal handling
+                amount_lamports = int(amount_in * 1e6)  # Assume USDC-like decimals
+
+            # Get slippage from signal or use default
+            slippage_bps = signal.get("max_slippage_bps", 50)  # 0.5% default
+
+            # Create Jupiter quote request
+            async with aiohttp.ClientSession() as session:
+                tx_builder = JupiterTxBuilder(session=session)
+
+                # Get Jupiter quote
+                params = {
+                    "inputMint": token_in if token_in.startswith("So1") or len(token_in) > 10 else market.get("tokens", {}).get(token_in, token_in),
+                    "outputMint": token_out if token_out.startswith("So1") or len(token_out) > 10 else market.get("tokens", {}).get(token_out, token_out),
+                    "amount": str(amount_lamports),
+                    "slippageBps": slippage_bps
+                }
+
+                # Get quote from Jupiter API
+                quote_url = "https://api.jup.ag/swap/v1/quote"
+                async with session.get(quote_url, params=params, timeout=aiohttp.ClientTimeout(total=5.0)) as resp:
+                    if resp.status != 200:
+                        logger.error(f"Jupiter quote failed: {resp.status}")
+                        return []
+
+                    quote_data = await resp.json()
+
+                # Get swap instructions from Jupiter
+                wallet_pubkey = str(self.payer_keypair.pubkey())  # Fixed: use self.payer_keypair
+                swap_ixs, address_lookup_tables = await tx_builder.get_swap_instructions(
+                    quote_data, wallet_pubkey, use_custom_cu=True
+                )
+
+                if not swap_ixs:
+                    logger.error("Failed to get swap instructions from Jupiter")
+                    return []
+
+                logger.info(f"Built {len(swap_ixs)} swap instructions for {token_in} -> {token_out}")
+                return swap_ixs
+
+        except Exception as e:
+            logger.error(f"Error building swap instructions: {e}")
+            return []
 
     async def execute_exit(
         self,

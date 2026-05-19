@@ -1,0 +1,22 @@
+[package]
+name = "flash-loan"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "flash_loan"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.30.1"
+anchor-spl = "0.30.1"
+# marginfi = { git = "https://github.com/mrgnlabs/marginfi-v2", features = ["cpi"] }
+# For Jupiter and Marinade, use generic CPI calls if no crates available
+solana-program = "1.18"

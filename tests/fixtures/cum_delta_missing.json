@@ -1,8 +1,0 @@
-{
-  "token_address": "test_missing",
-  "cum_buy_volume": null,
-  "cum_sell_volume": null,
-  "price_change_bps": null,
-  "expected_divergence": null,
-  "expected_score": null
-}

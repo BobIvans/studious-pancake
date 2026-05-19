@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
-"""Flash Loan + Jupiter Arbitrage Executor (интеграция moshthepitt/flash-loan-mastery)"""
+"""Flash Loan + Jupiter Arbitrage Executor (Native Python Implementation)"""
 import asyncio
 import json
-import subprocess
 from pathlib import Path
 from typing import Dict, Any, List
 from datetime import datetime, timezone
@@ -29,10 +28,16 @@ async def get_jupiter_quote(
     try:
         # используем curl (уже есть в окружении, надёжно)
         cmd = ["curl", "-s", "-L", url]
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
-        if result.returncode != 0:
+        process = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+        stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=10.0)
+        
+        if process.returncode != 0:
             return {"error": "jupiter_network_error"}
-        data = json.loads(result.stdout)
+        data = json.loads(stdout.decode())
         if "error" in data:
             return {"error": data.get("error")}
         return data
@@ -46,18 +51,21 @@ async def execute_flash_loan_jupiter_arb(
     settings: Settings,
     run_dir: Path,
 ) -> Dict[str, Any]:
-    """Главный executor: flash-loan → Jupiter swap → repay в одной транзакции"""
+    """Execute flash loan arbitrage using native Python logic with JupiterTxBuilder."""
     token_in = str(signal.get("token_address") or signal.get("input_mint") or "")
     token_out = str(signal.get("output_mint") or "")
     amount = int(signal.get("amount_lamports") or signal.get("size_sol", 0) * 1_000_000_000 or 1_000_000_000)
 
     if not token_out:
-        # если output_mint не указан — используем USDC как default
         token_out = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 
     log_info("flash_loan_arb_started", token_in=token_in, token_out=token_out, amount=amount)
 
-    # 1. Получаем quote
+    marginfi_account = getattr(settings, "MARGINFI_ACCOUNT", "")
+    if not marginfi_account:
+        log_warning("marginfi_account_missing")
+        return {"status": "failed", "reason": "marginfi_account_not_set"}
+
     quote = await get_jupiter_quote(token_in, token_out, amount)
     if "error" in quote:
         log_warning("flash_loan_arb_quote_failed", token=token_in)
@@ -66,53 +74,64 @@ async def execute_flash_loan_jupiter_arb(
     expected_out = int(quote.get("outAmount", 0))
     estimated_profit = (expected_out - amount) / 1_000_000_000
 
-    # 2. Запускаем готовый CLI из flm-jupiter-arb (самый простой и надёжный способ)
-    cli_cmd = [
-        "yarn", "start", "simple-jupiter-arb",
-        "-k", str(getattr(settings, "SOLANA_WALLET_PATH", "~/.config/solana/id.json")),
-        "-m1", token_in,
-        "-m2", token_out,
-        "-a", str(amount),
-    ]
-
     try:
-        result = subprocess.run(
-            cli_cmd,
-            cwd=FLM_CLI_PATH,
-            capture_output=True,
-            text=True,
-            timeout=45,
+        from src.ingest.tx_builder import JupiterTxBuilder
+        
+        tx_builder = JupiterTxBuilder(
+            session=None,
+            rpc_url=settings.RPC_URL_1 if hasattr(settings, 'RPC_URL_1') else "https://api.mainnet-beta.solana.com"
         )
-        tx_signature = None
-        for line in result.stdout.splitlines():
-            if line.startswith("https://solscan.io/tx/") or "tx/" in line:
-                tx_signature = line.strip().split("/")[-1]
-                break
-        success = result.returncode == 0 and tx_signature
-    except Exception as e:
-        success = False
-        tx_signature = None
-        log_warning("flash_loan_cli_exception", error=str(e))
+        
+        wallet_path = settings.SOLANA_WALLET_PATH if hasattr(settings, 'SOLANA_WALLET_PATH') else "~/.config/solana/id.json"
+        
+        fl_result = await tx_builder.build_marginfi_flashloan_tx(
+            wallet_pubkey=str(settings.WALLET_PUBKEY) if hasattr(settings, 'WALLET_PUBKEY') else "",
+            borrow_amount_lamports=amount,
+            buy_quote_response=quote,
+            sell_quote_response={},
+            marginfi_account=marginfi_account,
+            bank_pubkey=getattr(settings, 'MARGINFI_SOL_BANK', "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj"),
+            bank_liquidity_vault=getattr(settings, 'BANK_LIQUIDITY_VAULT', ""),
+            bank_liquidity_vault_authority=getattr(settings, 'BANK_LIQUIDITY_VAULT_AUTH', ""),
+            use_jito=True,
+        )
 
-    # 3. Логируем как полноценный ARB-трейд
+        if fl_result:
+            from src.ingest.jito_executor import JitoExecutor
+            jito_executor = JitoExecutor(session=None)
+            
+            instructions = fl_result.get("instructions", [])
+            bundle_result = await jito_executor.send_bundle(instructions)
+
+            if bundle_result.get("success"):
+                tx_signature = bundle_result.get("bundle_id", "unknown")
+            else:
+                tx_signature = None
+        else:
+            log_warning("flash_loan_arb_failed", reason="tx_build_failed")
+            tx_signature = None
+
+    except Exception as e:
+        log_warning("flash_loan_exception", error=str(e))
+        tx_signature = None
+
     trade_record = {
         "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-        "event": "paper_flash_loan_arb",
+        "event": "flash_loan_arb_native",
         "token_address": token_in,
         "symbol": signal.get("symbol", "ARB"),
         "side": "BUY",
         "regime": "ARB",
         "arb_score": float(signal.get("arb_score", 0)),
-        "tx_signature": tx_signature,
+        "tx_signature": tx_signature or "",
         "expected_profit_sol": round(estimated_profit, 6),
-        "status": "success" if success else "failed",
-        "contract_version": "flash_loan_jupiter_v1",
-        "flash_loan_program": FLM_PROGRAM_ID,
+        "status": "success" if tx_signature else "failed",
+        "contract_version": "native_python_v1",
     }
 
     append_jsonl(run_dir / "trades.jsonl", trade_record)
 
-    if success:
+    if tx_signature:
         log_info(
             "flash_loan_arb_executed",
             token=token_in,
@@ -121,6 +140,6 @@ async def execute_flash_loan_jupiter_arb(
             tx=tx_signature,
         )
     else:
-        log_warning("flash_loan_arb_failed", token=token_in, reason="cli_execution_failed")
+        log_warning("flash_loan_arb_failed", token=token_in, reason="execution_failed")
 
     return trade_record

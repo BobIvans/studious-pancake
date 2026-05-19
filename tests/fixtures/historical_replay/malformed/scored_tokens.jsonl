@@ -1,2 +1,0 @@
-{"pair_address":"pair_broken","symbol":"BROKEN","final_score":90}
-{"token_address":"tok_bad_ts","pair_address":"pair_bad_ts","symbol":"BADTS","final_score":89,"entry_price":1.0,"entry_time":"not-a-ts","regime_candidate":"ENTRY_CANDIDATE","rug_score":0.1,"rug_verdict":"PASS","buy_pressure":0.8,"first30s_buy_ratio":0.8,"bundle_cluster_score":0.8,"volume_velocity":5.0,"dev_sell_pressure_5m":0.0,"x_validation_score":70,"x_validation_delta":2,"holder_growth_5m":20,"smart_wallet_hits":2,"lp_burn_confirmed":true,"mint_revoked":true}

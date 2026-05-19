@@ -3,8 +3,9 @@
 import asyncio
 import json
 import logging
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 import aiohttp
+import base58
 from solders.keypair import Keypair
 from solders.system_program import TransferParams, transfer
 from solders.transaction import VersionedTransaction
@@ -16,19 +17,8 @@ from src.ingest.jito_priority_context import JitoPriorityContext
 logger = logging.getLogger(__name__)
 
 # Jito Bundle API endpoint
-JITO_BUNDLE_ENDPOINT = "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
+JITO_BUNDLE_ENDPOINT = "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles"  # Single NY endpoint for Helius (avoids blockhash geo-delay)
 
-# Official Jito Tip accounts (as of 2024)
-JITO_TIP_ACCOUNTS = [
-    "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",  # Jito tip account 1
-    "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",  # Jito tip account 2
-    "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLk",  # Jito tip account 3
-    "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",  # Jito tip account 4
-    "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh",  # Jito tip account 5
-    "ADuUkR4vqLUMWXxW9gh6D6L8pMSawimqcQn2WvDFAFER",  # Jito tip account 6
-    "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",  # Jito tip account 7
-    "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBnizKZ6jT",  # Jito tip account 8
-]
 
 
 class JitoBundleClient:
@@ -44,20 +34,47 @@ class JitoBundleClient:
         self.timeout = timeout
         self.max_retries = max_retries
         self._session_owned = session is None
+        # Phase 35: Dynamic Jito Tip Accounts
+        self.tip_accounts = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
+        # Fix #3: Track background tasks to prevent Python GC from destroying them
+        self.background_tasks: Set[asyncio.Task] = set()
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            self.session = aiohttp.ClientSession()
+            connector = aiohttp.TCPConnector(keepalive_timeout=300, limit=100)
+            self.session = aiohttp.ClientSession(connector=connector)  # Fix 85: persistent keep-alive
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
+        # Добавить в __aexit__:
+        if self.background_tasks:
+            for task in self.background_tasks:
+                if not task.done():
+                    task.cancel()
+        
         if self._session_owned and self.session:
             await self.session.close()
+
+    async def fetch_tip_accounts(self) -> bool:
+        """Fetch live Jito tip accounts (Phase 35)."""
+        if not self.session:
+            return False
+        try:
+            url = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
+            async with self.session.get(url, timeout=5.0) as resp:
+                if resp.status == 200:
+                    accounts = await resp.json()
+                    if accounts and isinstance(accounts, list):
+                        self.tip_accounts = accounts
+                        return True
+        except Exception:
+            pass
+        return False
 
     def _select_tip_account(self) -> str:
         """Select a random tip account for load balancing."""
         import random
-        return random.choice(JITO_TIP_ACCOUNTS)
+        return random.choice(self.tip_accounts)
 
     def _build_tip_instruction(
         self,
@@ -77,13 +94,32 @@ class JitoBundleClient:
         )
         return transfer_ix
 
-    async def _get_recent_blockhash(self) -> Hash:
-        """Get recent blockhash for transaction construction."""
-        # This is a simplified version - in production you'd get this from RPC
-        # For now, we'll use a placeholder - this should be replaced with actual RPC call
-        import time
-        # Placeholder blockhash - replace with actual RPC call
-        return Hash.from_string("11111111111111111111111111111112")
+    async def _get_recent_blockhash(self) -> Optional[Hash]:
+        """Get recent blockhash for transaction construction.
+
+        IMPORTANT: Never use a hardcoded/fake blockhash. Jito Block Engine
+        will reject the entire bundle with BlockhashNotFound if the
+        blockhash is stale or invalid. Always use a real blockhash obtained
+        from RPC within the last ~150 blocks.
+        """
+        if not self.session:
+            logger.error("No session available to fetch blockhash")
+            return None
+
+        try:
+            async with self.session.post(
+                "https://api.mainnet-beta.solana.com",
+                json={"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"},
+                timeout=aiohttp.ClientTimeout(total=3.0),
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if "result" in data and "value" in data["result"]:
+                        return Hash.from_string(data["result"]["value"]["blockhash"])
+        except Exception as e:
+            logger.error(f"Failed to fetch recent blockhash: {e}")
+
+        return None
 
     async def build_and_send_bundle(
         self,
@@ -107,18 +143,23 @@ class JitoBundleClient:
             if recent_blockhash is None:
                 recent_blockhash = await self._get_recent_blockhash()
 
+            if recent_blockhash is None:
+                logger.error("Cannot send bundle: failed to fetch recent blockhash")
+                return {
+                    "success": False,
+                    "error": "Failed to fetch recent blockhash",
+                    "bundle_id": None,
+                }
+
             # Select tip account
             tip_account = self._select_tip_account()
 
-            # Build tip instruction
-            tip_instruction = self._build_tip_instruction(
-                payer_keypair,
-                jito_context.dynamic_tip_target_lamports,
-                tip_account,
-            )
-
             # Combine swap instructions with tip
-            all_instructions = swap_instructions + [tip_instruction]
+            # NOTE: tx_builder.py already appends the Jito tip instruction as the FINAL
+            # instruction inside the transaction for capital protection (revert-on-fail).
+            # appending a second tip here would double-pay.  We pass swap_instructions
+            # straight through so the embedded tip is preserved.
+            all_instructions = swap_instructions
 
             # Build message
             message = MessageV0.try_compile(
@@ -136,7 +177,7 @@ class JitoBundleClient:
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "sendBundle",
-                "params": [[transaction.to_bytes().hex()]],
+                "params": [[base58.b58encode(bytes(transaction)).decode('ascii')]],
             }
 
             # Send bundle
@@ -258,8 +299,8 @@ class JitoBundleClient:
     async def wait_for_bundle_confirmation(
         self,
         bundle_id: str,
-        max_wait_time: float = 60.0,
-        check_interval: float = 2.0,
+        max_wait_time: float = 3.0,  # HFT: drop after 3s
+        check_interval: float = 0.5,
     ) -> Dict[str, Any]:
         """Wait for bundle confirmation.
 

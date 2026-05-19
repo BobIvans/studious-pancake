@@ -1208,9 +1208,6 @@ async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected
         logger.warning(f"Jupiter quote failed: {repr(e)}")
         return None
 
-# Program ID for our flash loan contract - from .env
-FLASH_LOAN_PROGRAM_ID = Pubkey.from_string(os.getenv("FLASHLOAN_PROGRAM_ID", "Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS"))
-
 async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_amount_lamports, quotes, cfg, keypair, rpc_getter, use_jito=False, tip_lamports=0, alt_manager=None, strategy_type=1):
     wallet_pubkey = str(keypair.pubkey())
 
@@ -1413,7 +1410,7 @@ async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_am
             address_lookup_tables=address_lookup_tables,
             payer=keypair.pubkey(),
             recent_blockhash=str(recent_blockhash),
-            program_id=str(FLASH_LOAN_PROGRAM_ID),  # Use flash loan program as key for caching
+            program_id="MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",  # MarginFi program as caching key
             operation_type="flash_arbitrage",
             use_jito=use_jito,
             rpc_url=rpc_getter()
@@ -1613,19 +1610,9 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                 )
 
                 # ── Step 3: Find best route ───────────────────────────────
-                # Use dynamic liquidity already calculated at top of loop (95% of 5 SOL max)
                 if borrow_lamports < 1_000_000_000:
                     logger.warning("MarginFi SOL bank is dry. Waiting...")
                     await asyncio.sleep(5)
-                    continue
-
-                # God-mode Jito tip via JitoBiddingManager (tip_floor + step-up/down + capital guard)
-                base_tip_lamports = jito_bidding_manager.calculate_optimal_tip(
-                    expected_profit_sol=route.profit_sol, strategy="lst_depeg"
-                )
-                if base_tip_lamports < 0:  # Capital Guard: skip whale market
-                    logger.warning(f"🚫 Capital Guard skipped lst_depeg {signal.token_symbol}: 50th > 80% profit")
-                    await asyncio.sleep(0.1)
                     continue
 
                 route = await route_aggregator.find_best_route(
@@ -1634,7 +1621,7 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                     direction=signal.direction,
                     base_fee_sol=cfg.BASE_FEE,
                     priority_fee_sol=cfg.PRIORITY_FEE,
-                    jito_tip_sol=base_tip_lamports / 1e9,
+                    jito_tip_sol=0.0,  # Placeholder — tip optimized below after route is confirmed
                     min_profit_buffer_sol=cfg.MIN_NET_PROFIT_BUFFER_SOL,
                 )
 
@@ -1649,8 +1636,17 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                     )
                     continue
 
+                # God-mode tip via bidding manager (tip_floor + step-up/down + capital guard)
+                god_tip_lamports = jito_bidding_manager.calculate_optimal_tip(
+                    expected_profit_sol=route.profit_sol, strategy="lst_depeg"
+                )
+                jito_tip_manager = god_tip_lamports
+                if god_tip_lamports <= 0:
+                    logger.warning(f"🚫 Offset-by-zero tip for {signal.token_symbol} — skipping")
+                    continue
+
                 # Build tip lamports for trade execution (already optimized by bidding manager)
-                jito_tip_lamports = base_tip_lamports
+                jito_tip_lamports = god_tip_lamports
 
                 # Jito Tip Trap Prevention: Adjust tip based on leader schedule
                 tip_adjustment = await jito_leader_tracker.get_optimal_tip(
@@ -1667,23 +1663,6 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                     f"profit={route.profit_sol:.6f} SOL ({route.profit_bps:.1f} BPS) | "
                     f"fees={route.total_fees_sol:.6f} SOL | "
                     f"final_tip={jito_tip_lamports/1e9:.6f} SOL"
-                )
-
-                if route is None:
-                    logger.debug(f"No route found for {signal.token_symbol} depeg")
-                    continue
-
-                if not route.is_profitable:
-                    logger.debug(
-                        f"⚠️ Route found but not profitable: {route.route_path} | "
-                        f"profit={route.profit_sol:.6f} SOL (need ≥{cfg.MIN_NET_PROFIT_BUFFER_SOL})"
-                    )
-                    continue
-
-                logger.debug(
-                    f"✅ Profitable route: {route.route_path} | "
-                    f"profit={route.profit_sol:.6f} SOL ({route.profit_bps:.1f} BPS) | "
-                    f"fees={route.total_fees_sol:.6f} SOL"
                 )
 
                 # ── Step 4: Build MarginFi flash loan TX ──────────────────

@@ -1062,17 +1062,6 @@ class JupiterTxBuilder:
         all_instructions.append(set_compute_unit_limit(600000))
         # Removed set_compute_unit_price - will be added by build_optimized_transaction
         
-        # 0.5. Create wSOL ATA if it doesn't exist (Phase 48: Idempotent, Token-2022 safe)
-        # MarginFi requires the ATA to exist before borrowing.
-        # We use CREATE_ATA_FUNCTION which is create_idempotent if available.
-        # Correct program ID is derived above (sol_prog_id) to avoid Token-2022 mismatches.
-        all_instructions.append(CREATE_ATA_FUNCTION(
-            payer=wallet,
-            owner=wallet,
-            mint=sol_mint,
-            token_program_id=sol_prog_id
-        ))
-        
         # 1. Borrow from MarginFi (placeholder index)
         borrow_ix = self._build_marginfi_borrow_ix(
             mfi_program, mfi_account, wallet, mfi_group, bank, vault, vault_auth,
@@ -1090,45 +1079,10 @@ class JupiterTxBuilder:
         )
         all_instructions.append(repay_ix)
 
-        from spl.token.instructions import close_account, CloseAccountParams
-        intermediate_mints = arbitrage_path[1:-1]
-        CORE_GOLDEN_MINTS = {
-            "So11111111111111111111111111111111111111112",
-            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-        }
-        for mint_str in set(intermediate_mints):
-            if mint_str not in CORE_GOLDEN_MINTS:
-                mint_pubkey = Pubkey.from_string(mint_str)
-                # Use xStocks registry (not brittle string-prefix) for Token-2022 detection
-                prog_id = TOKEN_2022_PROGRAM_ID if is_xstock_token(mint_pubkey) else TOKEN_PROGRAM_ID
-                ata_to_close = get_associated_token_address(wallet, mint_pubkey, prog_id)
-                close_ix = close_account(CloseAccountParams(
-                    program_id=prog_id,
-                    account=ata_to_close,
-                    dest=wallet,
-                    owner=wallet
-                ))
-                all_instructions.append(close_ix)
-        
-        if jito_tip_lamports > 0:
-            if str(sol_mint) == "So11111111111111111111111111111111111111112":
-                # Unwrap wSOL profit to Native SOL so SystemProgram can transfer the validator tip
-                all_instructions.append(close_account(CloseAccountParams(
-                    program_id=sol_prog_id,
-                    account=user_sol_ata,
-                    dest=wallet,
-                    owner=wallet
-                )))
-                all_instructions.append(CREATE_ATA_FUNCTION(
-                    payer=wallet,
-                    owner=wallet,
-                    mint=sol_mint,
-                    token_program_id=sol_prog_id
-                ))
-                logger.debug("🔓 wSOL unwrapping injected: CloseATA + CreateIdempotentATA before Jito tip in tx_builder")
-        # Чаевые Jito добавляются ТОЛЬКО СЮДА. В самый конец единой транзакции.
+        # ЗАЩИТА КАПИТАЛА (0.017 SOL): Чаевые Jito СТРОГО в конце единой транзакции.
         # Если DEX Swap выдаст SlippageExceeded или MarginFi Repay выдаст InsufficientFunds ->
-        # вся транзакция откатывается, и этот перевод чаевых НЕ СРАБОТАЕТ.
+        # вся транзакция откатывается, и перевод чаевых НЕ СРАБОТАЕТ.
+        if jito_tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
             tip_ix = transfer(TransferParams(
                 from_pubkey=wallet,

@@ -101,14 +101,12 @@ class KHopStitcher:
             # Expected min profit = 0.1% for safety, or pass from sizer
             expected_min_profit_lamports = 1000 # Placeholder for 0.000001 SOL
             
-            anchor_program_id = os.getenv("FLASHLOAN_PROGRAM_ID")
-            
-            # Use real MarginFi config (would be fetched from env/cfg)
+            # Use real MarginFi config
             marginfi_config = {
                 "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
                 "marginfi_group": "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8",
-                "marginfi_account": "ANch0r69... (placeholder)",
-                "bank_pubkey": "2s37YhpR... (placeholder)",
+                "marginfi_account": "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2",
+                "bank_pubkey": "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2",
                 "bank_liquidity_vault": "2s37YhpR...",
                 "bank_liquidity_vault_authority": "..."
             }

@@ -3,6 +3,7 @@
 import json
 import logging
 import asyncio
+import time
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from aiohttp import web
@@ -10,8 +11,6 @@ import aiohttp
 
 from .data_aggregator import DataAggregator
 from .webhook_config import WebhookConfig
-
-import asyncio
 logger = logging.getLogger(__name__)
 
 class HeliusWebhookHandler:
@@ -23,6 +22,7 @@ class HeliusWebhookHandler:
         self.opportunity_callback = opportunity_callback  # Callback to process opportunities
         self.webhook_queue = webhook_queue  # AsyncQueue for webhook signals
         self.on_token_discovery = on_token_discovery # Callback for dynamic registry
+        self.processed_signatures = {}  # Cache of processed signatures for deduplication
         self.app = web.Application()
         self.app.router.add_post('/webhook', self.handle_webhook)
         self.runner = None
@@ -96,6 +96,20 @@ class HeliusWebhookHandler:
     async def _process_event(self, event: Dict[str, Any], webhook_id: str):
         """Process a single event from Helius webhook."""
         try:
+            # ── ДЕДУПЛИКАЦИЯ ──────────────────────────────────────────────
+            # Helius может слать по 3-4 вебхука на одно и то же событие.
+            signature = event.get('transaction', {}).get('signature') or event.get('signature')
+            if signature:
+                now = time.time()
+                # Очищаем старые сигнатуры (старше 10 секунд)
+                self.processed_signatures = {
+                    k: v for k, v in self.processed_signatures.items() if now - v < 10
+                }
+                if signature in self.processed_signatures:
+                    logger.debug(f"♻️ Webhook event duplicate ignored: {signature[:8]}")
+                    return
+                self.processed_signatures[signature] = now
+
             # Log raw webhook event
             await self.data_aggregator.log_webhook_event(webhook_id, event)
 

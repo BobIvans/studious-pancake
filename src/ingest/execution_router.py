@@ -4,12 +4,14 @@ import asyncio
 import logging
 import base64
 import re
+import time
 from typing import Optional, Dict, Any, Set
 import aiohttp
 from solders.pubkey import Pubkey
 from solders.transaction import VersionedTransaction
 
 from .leader_tracker import LeaderTracker
+from .g2_tip_manager import ExecutionGuard
 # Phase 48: Import dynamic bank info from arb_bot
 try:
     from arb_bot import MARGINFI_BANKS
@@ -63,8 +65,11 @@ class ExecutionRouter:
         self.last_slot_executed = 0  # Fix 78: Slot mutex for single MARGINFI_ACCOUNT
         self.max_consecutive_failures = 3
 
+        # Execution Guard (Circuit Breaker for consecutive failures)
+        self.execution_guard = ExecutionGuard()
+
         # Fix 51: Jito Bundle Self-Cancellation — track stale bundles for overwrite
-        # map: bundle_id -> {"sent_slot": int, "endpoint": str, "tip_lamports": int}
+        # map: bundle_id -> {"sent_slot": int, "sent_at": float, "endpoint": str, "tip_lamports": int, "deducted_amount": int}
         self._pending_bundle_slots: Dict[str, Dict[str, Any]] = {}
         self._stale_bundle_ids: Set[str] = set()
         self._self_cancel_task: Optional[asyncio.Task] = None
@@ -101,6 +106,11 @@ class ExecutionRouter:
 
     async def execute_opportunity(self, session: aiohttp.ClientSession, cfg, rpc_url: str, transaction: VersionedTransaction, jito_tip_lamports: int) -> dict:
         """Execute transaction using appropriate method based on slot leader via sequential queue."""
+        # 1. Check ExecutionGuard (Circuit Breaker)
+        if not self.execution_guard.can_execute():
+            logger.warning("🚫 Circuit breaker active — skipping execution")
+            return {"status": "error", "message": "Circuit breaker active"}
+
         future = asyncio.Future()
 
         # Bundle Ghosting Timeout: 2.0s hard limit to prevent stale-bundle race
@@ -114,9 +124,13 @@ class ExecutionRouter:
                 # Post-execution balance check — prevents retry on insufficient funds
                 if result.get("status") == "success":
                     await self._check_wallet_balance_after_execution()
+                    self.execution_guard.record_success()
+                elif result.get("status") == "timeout" or "Slippage" in str(result):
+                    self.execution_guard.record_failure()
                 return result
             except asyncio.TimeoutError:
                 logger.warning("⏰ Bundle ghosting timeout - transaction stuck, releasing lock")
+                self.execution_guard.record_failure()
                 # Mark as timeout error but don't block the queue
                 return {"status": "timeout", "message": "Bundle stuck - timeout after 2.0s"}
 
@@ -432,7 +446,9 @@ class ExecutionRouter:
                 if bundle_result.get("success") and bundle_result.get("bundle_id"):
                     self._pending_bundle_slots[bundle_result["bundle_id"]] = {
                         "sent_slot": current_slot,
+                        "sent_at": time.time(),
                         "tip_lamports": jito_tip_lamports,
+                        "deducted_amount": 0,
                     }
                 return bundle_result
             else:
@@ -451,72 +467,46 @@ class ExecutionRouter:
             logger.error(f"Execution routing failed: {e}")
             return {"success": False, "error": str(e)}
 
-    # ───────────── Fix 51: Jito Bundle Self-Cancellation ──────────────────────
+    # ───────────── Fix 51: Jito Bundle Self-Cancellation + Ghost Balance Refund ──────────────────────
 
     async def _self_cancel_stale_bundles(self):
-        """Fix 51: Background task — detect bundles older than 2 slots (≈ 800 ms) and
-        mark them for self-cancellation.  A fresh blockhash is fetched on the next
-        send so we do not land a trade at an old price even if the bundle arrives late.
+        """Detect bundles dropped by Jito (>5 seconds old) and refund the virtual balance.
+        Prevents "Ghost Balance" bug where virtual_balance is never returned after a dropped bundle.
         """
         while True:
             try:
                 if not self._pending_bundle_slots:
-                    await asyncio.sleep(0.2)
+                    await asyncio.sleep(0.5)
                     continue
 
-                # Fetch current slot from the same RPC we use for routing
-                slot_payload = {"jsonrpc": "2.0", "id": 1, "method": "getSlot", "params": []}
-                async with self.session.post(self.rpc_url, json=slot_payload) as slot_resp:
-                    current_slot = None
-                    if slot_resp.status == 200:
-                        s_data = await slot_resp.json()
-                        current_slot = s_data.get("result")
-
-                if current_slot is None:
-                    await asyncio.sleep(0.2)
-                    continue
-
-                # Query Jito bundle statuses for all tracked pending bundles
-                stale = []
-                pending_ids = list(self._pending_bundle_slots.keys())
-                if pending_ids:
-                    status_payload = {
-                        "jsonrpc": "2.0", "id": 1,
-                        "method": "getBundleStatuses",
-                        "params": [pending_ids],
-                    }
-                    async with self.session.post(
-                        self.jito_executor.bundle_endpoint, json=status_payload
-                    ) as status_resp:
-                        if status_resp.status == 200:
-                            status_data = await status_resp.json()
-                            for item in status_data.get("result", {}).get("value", []):
-                                bid = item.get("bundle_id")
-                                conf = item.get("confirmation_status", "")
-                                if conf in ("confirmed", "finalized", "failed"):
-                                    stale.append(bid)
-
-                # Mark stale bundles (not yet confirmed AND > 2 slots old)
+                current_time = time.time()
                 for bid, meta in list(self._pending_bundle_slots.items()):
-                    if bid in stale:
-                        continue  # Already resolved by getBundleStatuses above
-                    if current_slot - meta["sent_slot"] > 2:
-                        self._stale_bundle_ids.add(bid)
+                    # Если прошло больше 5 секунд (бандл 100% умер в Jito)
+                    if current_time - meta.get("sent_at", current_time) > 5.0:
                         logger.warning(
-                            f"⚡ Bundle {bid[:8]}… stale (sent_slot={meta['sent_slot']}, "
-                            f"current={current_slot}). Marked for self-cancel."
+                            f"⚡ Bundle {bid[:8]} dropped by Jito. Refunding virtual balance."
                         )
 
-                # Purge resolved (confirmed/failed) bundles from tracking
-                resolved = stale | self._stale_bundle_ids
-                for bid in resolved:
+                        # ВОЗВРАЩАЕМ БАЛАНС
+                        try:
+                            from arb_bot import stats
+                            from arb_bot import stats_lock
+                            refund_amount = meta.get("deducted_amount", 0)
+                            async with stats_lock:
+                                stats["virtual_balance"] += refund_amount
+                        except (ImportError, KeyError) as e:
+                            logger.debug(f"Ghost balance refund unavailable: {e}")
+
+                        self._stale_bundle_ids.add(bid)
+
+                # Очистка
+                for bid in list(self._stale_bundle_ids):
                     self._pending_bundle_slots.pop(bid, None)
                     self._stale_bundle_ids.discard(bid)
 
             except Exception as e:
-                logger.debug(f"Self-cancel scan error: {e}")
-
-            await asyncio.sleep(0.2)  # Scan every 200 ms → catches a stale bundle within 1 slot
+                logger.debug(f"Reconciliation error: {e}")
+            await asyncio.sleep(1.0)
 
     def pop_and_clear_stale_bundle_id(self) -> Optional[str]:
         """Return and consume one stale bundle id so the caller can log it."""

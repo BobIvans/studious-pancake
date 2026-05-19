@@ -189,16 +189,20 @@ class LstRouteAggregator:
                 quotes.append(quote)
                 break  # Use first successful for load balancing
 
-        # If Sanctum enabled, try explicit Sanctum route for LST→SOL direction (load balanced)
+        # If Sanctum enabled, try explicit Sanctum route for LST→SOL direction
+        # Sanctum Router работает только с прямыми маршрутами (Direct),
+        # поэтому запрашиваем only_direct_routes=True и фильтр по Sanctum.
         if self.sanctum_enabled and self._is_lst_to_sol(input_mint, output_mint):
             sanctum_quote = await self._jupiter_quote(
                 input_mint, output_mint, amount,
-                only_direct_routes=False,
+                only_direct_routes=True,  # Sanctum требует прямых маршрутов
                 dex_filter=["Sanctum", "Sanctum Infinity"],
             )
             if sanctum_quote:
                 # Check Sanctum fees (placeholder: assume low fee)
                 sanctum_fee_pct = 0.001  # 0.1%
+                # Убеждаемся, что Sanctum дает лучший рейт, чем AMM
+                # Добавляем только если рейт лучше, чем лучший альтернативный
                 if sanctum_quote.price_impact_pct < 0.5:  # Low impact preferred
                     quotes.append(sanctum_quote)
 

@@ -1128,9 +1128,17 @@ class JupiterTxBuilder:
         # Calculate EXACT repay index dynamically using list introspection
         try:
             actual_repay_index = all_instructions.index(repay_ix)
-            # Update borrow instruction with the CORRECT repay index
-            borrow_ix.data = borrow_ix.data[:-1] + bytes([actual_repay_index])
-            logger.debug(f"🛠️ Dynamic Repay Index calculated: {actual_repay_index}")
+
+            # ── БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount) ──
+            # Формат: discriminator(8) + amount(8) + index(1)
+            # Старый подход borrow_ix.data[:-1] + bytes([index]) сдвигает байты и убивает транзакцию.
+            # Теперь используем struct.pack для четкой сборки последнего байта.
+            import struct
+            original_data_without_index = borrow_ix.data[:16]
+            safe_index_byte = struct.pack("<B", actual_repay_index)
+            borrow_ix.data = original_data_without_index + safe_index_byte
+
+            logger.debug(f"🛠️ Safe Dynamic Repay Index calculated: {actual_repay_index}")
         except ValueError:
             logger.error("CRITICAL: repay_ix not found in instruction list")
             return None
@@ -1263,9 +1271,14 @@ class JupiterTxBuilder:
             # Вычисляем точный индекс Repay инструкции для интроспекции MarginFi
             try:
                 actual_repay_index = final_instructions.index(repay_ix)
-                # Обновляем данные Borrow инструкции правильным индексом
-                borrow_ix.data = borrow_ix.data[:-1] + bytes([actual_repay_index])
-                logger.debug(f"🛠️ Dynamic Repay Index calculated: {actual_repay_index}")
+                # БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount,
+                # потом 1 байт - индекс). Старый подход borrow_ix.data[:-1] + bytes([index])
+                # сдвигает байты и убивает транзакцию.
+                import struct
+                original_data_without_index = borrow_ix.data[:16]
+                safe_index_byte = struct.pack("<B", actual_repay_index)
+                borrow_ix.data = original_data_without_index + safe_index_byte
+                logger.debug(f"🛠️ Safe Dynamic Repay Index calculated: {actual_repay_index}")
             except ValueError:
                 logger.error("CRITICAL: repay_ix not found in instruction list")
                 return None

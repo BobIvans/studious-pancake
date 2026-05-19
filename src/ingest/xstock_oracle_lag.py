@@ -10,6 +10,7 @@ from typing import Dict, Optional, Any, List
 from datetime import datetime, timedelta
 from decimal import Decimal
 import aiohttp
+import pytz
 
 from src.config.xstocks_registry import (
     get_xstock_mint,
@@ -22,6 +23,22 @@ from oracle_streams import PRIORITY_QUEUE_ORDER
 from .pyth_oracle_client import get_pyth_client
 
 logger = logging.getLogger(__name__)
+
+
+def is_market_open() -> bool:
+    """Check if NYSE is open (9:30 - 16:00 EST, weekdays only)."""
+    tz = pytz.timezone('US/Eastern')
+    now = datetime.now(tz)
+
+    # Weekend check
+    if now.weekday() >= 5:
+        return False
+
+    # Market hours 9:30 - 16:00
+    market_start = now.replace(hour=9, minute=30, second=0, microsecond=0)
+    market_end = now.replace(hour=16, minute=0, second=0, microsecond=0)
+
+    return market_start <= now <= market_end
 
 
 class XStockOracleLagStrategy:
@@ -87,6 +104,19 @@ class XStockOracleLagStrategy:
             pair_info = get_xstock_info(ticker)
             if not pair_info:
                 return
+
+            # ── Игнорируем IBITx и SLVx (неликвидные прокси) ──────────────────
+            if ticker in ["IBITx", "SLVx"]:
+                logger.debug(f"⏭️ Skipping {ticker} — illiquid proxy")
+                return
+
+            # ── Защита от мертвых часов для классических акций ────────────────
+            # Крипто-прокси (MSTRx и т.д.) торгуются 24/7, их не трогаем.
+            category = pair_info.get("category", "")
+            if category != "crypto_proxy":
+                if not is_market_open():
+                    logger.debug(f"💤 Market closed for {ticker}, skipping lag check.")
+                    return
 
             logger.debug(f"📊 Processing xStock swap: {ticker} ({token_mint[:8]}...)")
 

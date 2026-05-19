@@ -27,6 +27,7 @@ jsonschema-specifications==2025.9.1
 multidict==6.7.1
 mypy_extensions==1.1.0
 numpy==2.4.2
+pytz==2025.2
 packaging==26.0
 pandas==3.0.0
 pathspec==1.0.4

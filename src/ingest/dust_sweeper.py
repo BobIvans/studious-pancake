@@ -81,6 +81,12 @@ class DustSweeper:
                 account_address = account_info["pubkey"]
                 account_data = account_info.get("account", {})
 
+                # ── ПЕРВАЯ ЛИНИЯ ЗАЩИТЫ: Никогда не трогать Golden ATAs ──────────
+                # Абсолютная защита wSOL и USDC ATAs от sweep, даже если звание
+                # dust_check вдруг вернёт True из-за ошибки парса.
+                if str(account_address) in self.golden_atas:
+                    continue
+
                 # Check if account has zero balance (dust)
                 info = account_data.get("data", {}).get("parsed", {}).get("info", {})
                 token_amount = info.get("tokenAmount", {})
@@ -171,13 +177,11 @@ class DustSweeper:
             mint = info.get("mint", "")
             raw_amount = int(info.get("tokenAmount", {}).get("amount", "0"))
 
-            # Строгий CORE_GOLDEN_MINTS — только USDC и wSOL
-            # USDT и PYUSD могут быть закрыты, если пусты
-            CORE_GOLDEN_MINTS = {
-                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
+            # ── АБСОЛЮТНАЯ ЗАЩИТА: Никогда не трогать SOL и USDC ──────────
+            if mint in [
                 "So11111111111111111111111111111111111111112",  # wSOL
-            }
-            if mint in CORE_GOLDEN_MINTS:
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
+            ]:
                 return False
 
             # Token-2022 (xStocks) — проверяем withheld fees
@@ -192,14 +196,16 @@ class DustSweeper:
                     if withheld and int(withheld.get("amount", "0")) > 0:
                         logger.debug(f"⏳ xStock {mint[:8]} has withheld fees — skipping close")
                         return False
+
+                # Для xStocks — ждем полного обнуления
                 return ui_amount == 0
 
             # Zero balance — всегда dust (кроме golden, уже проверено выше)
             if ui_amount == 0:
                 return True
 
-            # Для всех остальных токенов — порог 0.05
-            if ui_amount < 0.05:
+            # Для всех остальных токенов — порог 0.01
+            if ui_amount < 0.01:
                 return True
 
             return False

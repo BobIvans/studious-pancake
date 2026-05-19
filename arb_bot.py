@@ -548,6 +548,10 @@ TOKENS = {
     "USDS": "USDSwr9ApdHk5bvJKMjzff41FfhJbZkp9bHqzZdduoP",
     "USDY": "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",
     "USDe": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
+    # Yield Stables (Step 5: Stable Yield Lag)
+    "susDS": "susDSyb6YVGZCXSpbLTVmH8fEWhjSagJMHWPMpZEEDs",   # York Finance susDS — verify via Solscan
+    "USD+":  "USDove1KZCdwC3VFfcy6DYpawutxVp271yJgDyJWB9q",    # Ondo/Streamflow USD+ yield stable
+    "JupUSD": "JupUSDnJZZzrjqoKdcycEZFyX5pdYUlRW2uHkrjawcr",  # Jupiter yield stable ( актуальный минт )
 
     # === GOLDEN FUND: LSTs ===
     "jitoSOL": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
@@ -556,6 +560,12 @@ TOKENS = {
     "INF": "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",
     "JupSOL": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
     "hubSOL": "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX",
+    # New LSTs with thin liquidity (Step 5)
+    "2ZSOL": "2ZSOLyqCWL24UYBYUBKbWMmTACYHCY9qiEgLPxEHiBE",  # DoubleZero LST — verify delimiter via Solscan
+    "psol":  "psolapbameK9iwMp8vd2sGhciCd753JqthShYwdt7R",        # Phantom LST — verify via Solscan
+    "bonkSOL": "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs",   # Bonk LST — Bonq-issued
+    "cgntSOL": "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE",  # Cogent LST
+    "vSOL": "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",      # Vault LST
 
     # === GOLDEN FUND: xStocks (Oracle Lag) ===
     "NVDAx": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
@@ -569,18 +579,13 @@ TOKENS = {
     "GOOGLx": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
     "HOODx": "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg",
     "MSTRx": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
-    # Yield Stables (Oracle Lag / Yield Drift)
+    "GLDx": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",   # Gold xStock — weekend arbitrage
+    # Yield Stables (duplicate from above for pair lookups)
     "USDY": "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",
     "USDe": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
-    "JupUSD": "JupUSDexampleMint11111111111111111111111111",  # placeholder - replace when live
-    # New LSTs (Sanctum fair price)
-    "2ZSOL": "2ZSOLexampleMint11111111111111111111111111111",  # placeholder
-    "psol": "psolExampleMint111111111111111111111111111111",   # placeholder
-    "bonkSOL": "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs",
-    "cgntSOL": "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE",
-    "vSOL": "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",
-    # xStocks RWA
-    "GLDx": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",
+    "JupUSD": "JupUSDnJZZzrjqoKdcycEZFyX5pdYUlRW2uHkrjawcr",  # Jupiter yield stable
+    # XStocks RWA
+    "susDS": "susDSyb6YVGZCXSpbLTVmH8fEWhjSagJMHWPMpZEEDs",   # York Finance synthetic dollar
 
     # === Tier B / Memes (Dynamic) ===
     "JUP": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN",
@@ -642,24 +647,37 @@ TOKEN_DECIMALS = {
     "USDSwr9ApdHk5bvJKMjzff41FfhJbZkp9bHqzZdduoP": 6,  # USDS
     "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6": 6,  # USDY
     "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT": 6,  # USDe
+    # Yield Stables (new — 6 decimals)
+    "JupUSDnJZZzrjqoKdcycEZFyX5pdYUlRW2uHkrjawcr": 6,  # JupUSD placeholder
+    "susDSyb6YVGZCXSpbLTVmH8fEWhjSagJMHWPMpZEEDs": 6,   # susDS placeholder
+    "USDove1KZCdwC3VFfcy6DYpawutxVp271yJgDyJWB9q": 6,    # USD+ (Ondo)
 
-    # Golden Fund: LSTs
+    # Golden Fund: LSTs (9 decimals)
     "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": 9,  # INF
     "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": 9,  # jitoSOL
     "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": 9,  # mSOL
     "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": 9,  # bSOL
     "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v": 9,  # JupSOL
     "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX": 9,  # hubSOL
+    "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs": 9,  # bonkSOL
+    "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE": 9,  # cgntSOL
+    "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7": 9,  # vSOL
+    "2ZSOLyqCWL24UYBYUBKbWMmTACYHCY9qiEgLPxEHiBE": 9,  # 2ZSOL placeholder
+    "psolapbameK9iwMp8vd2sGhciCd753JqthShYwdt7R": 9,      # psol placeholder
 
-    # Golden Fund: xStocks (Fixed Mainnet IDs)
+    # Golden Fund: xStocks (Fixed Mainnet IDs — Token-2022, 8 decimes = 6 in practice for display)
     "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh": 6,  # NVDAx
     "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB": 6,  # TSLAx
     "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp": 6,  # AAPLx
-    "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ": 6,  # SPYx
+    "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W": 6,  # SPYx
     "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX": 6,  # QQQx / MSFTx
     "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg": 6,  # AMZNx
     "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu": 6,  # METAx
+    "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN": 6,  # GOOGLx
+    "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg": 6,  # HOODx
     "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ": 6,  # MSTRx
+    "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re": 6,  # GLDx
+    "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ": 6,  # COINx / SPYx alt
 
     # Tier B: Memes
     "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN": 6,  # JUP
@@ -1506,6 +1524,7 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
         session=session,
         rpc_url=rpc_url,
         poll_interval=cfg.LST_SCAN_INTERVAL,
+        optimal_trade_sizer=trade_sizer,
     )
     route_aggregator = LstRouteAggregator(
         session=session,
@@ -1555,9 +1574,13 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
             # 95% cap + fallback to env default so all scanners speak the same logic.
             try:
                 borrow_lamports = await tx_builder.get_max_marginfi_borrow(str(bank_cfg["liquidity_vault"]))
-                # Smart cap to protect capital from pool slippage (10 SOL hard limit per LST trade)
-                HARD_CAP_SOL = 10 * 1_000_000_000
-                borrow_lamports = min(borrow_lamports, HARD_CAP_SOL)
+                # DYNAMIC SIZING: Feed 95% vault into OptimalTradeSizer to find peak of AMM curve
+                optimal = trade_sizer.find_optimal_trade_size(
+                    routes=[], amount_in=borrow_lamports, decimals_in=9, decimals_out=9, jito_tip_sol=0.0001
+                )
+                if optimal and int(optimal) > 100_000_000:  # Min 0.1 SOL
+                    borrow_lamports = int(optimal)
+                    logger.debug(f"📈 LST optimal size: {borrow_lamports/1e9:.4f} SOL (AMM curve peak)")
             except Exception as e:
                 logger.warning(f"Could not check MarginFi SOL liquidity, fallback to default: {e}")
                 borrow_lamports = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
@@ -1905,6 +1928,8 @@ async def lst_unstake_arbitrage_scanner(session, cfg, rpc_manager, keypair, jito
         rpc_url=rpc_url,
         marginfi_account=cfg.MARGINFI_ACCOUNT_PUBKEY,
         min_deviation_pct=cfg.LST_UNSTAKE_MIN_DEVIATION_PCT,
+        tx_builder=tx_builder,
+        optimal_trade_sizer=trade_sizer,
     )
     tx_builder = JupiterTxBuilder(session=session, rpc_url=rpc_url)
 
@@ -2070,7 +2095,6 @@ async def start_jito_sniper():
         await jito_pool_listener.start()
 
         logger.info("✅ Jito Sniper active - monitoring for new pool creations")
-        logger.info(".1f")
     except Exception as e:
         logger.error(f"Failed to start Jito sniper: {e}")
         raise

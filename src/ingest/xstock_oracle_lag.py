@@ -41,7 +41,16 @@ class XStockOracleLagStrategy:
         self.pyth_client = get_pyth_client()
 
         # Strategy parameters
-        self.min_profit_threshold = Decimal(str(getattr(cfg, 'ORACLE_LAG_MIN_PROFIT_SOL', 0.25)))
+        # ШАГ 4: Снижаем min_profit до 0.0005 SOL для малого капитала (0.017 SOL).
+        # Бот забирает микро-сделки с чистым плюсом, покрывающим только газ + чаевые.
+        configured_min = getattr(cfg, 'ORACLE_LAG_MIN_PROFIT_SOL', 0.25)
+        # Динамический порог: если баланс кошелька < 1 SOL, снижаем до 0.0005 SOL
+        wallet_balance_sol = getattr(cfg, 'WALLET_SOL_BALANCE', 0.017)
+        if wallet_balance_sol < 1.0:
+            self.min_profit_threshold = Decimal('0.0005')  # Микро-профит для малого капитала
+            logger.info(f"💰 Micro-profit mode: balance={wallet_balance_sol} SOL < 1 SOL, threshold=0.0005 SOL")
+        else:
+            self.min_profit_threshold = Decimal(str(configured_min))
         self.lag_threshold_pct = Decimal(str(getattr(cfg, 'ORACLE_LAG_THRESHOLD_PCT', 0.45)))
 
         # Cooldown tracking to prevent spam
@@ -224,10 +233,12 @@ class XStockOracleLagStrategy:
                 expected_profit = self._estimate_profit(ticker, oracle_price, dex_price)
 
             # Check minimum profit threshold
-            if expected_profit < 0.0005:  # Micro-profit for 0.017 SOL capital
+            # ШАГ 4: Для малого капитала ловим микро-профиты от 0.0005 SOL
+            min_profit_sol = float(self.min_profit_threshold)
+            if expected_profit < min_profit_sol:
                 logger.info(
                     f"💰 {ticker} {trade_direction} | Expected profit ${expected_profit:.4f} "
-                    f"below threshold ${float(self.min_profit_threshold):.4f}"
+                    f"below threshold ${min_profit_sol:.4f}"
                 )
                 return
 
@@ -385,15 +396,24 @@ class XStockOracleLagStrategy:
                     vault_lamports = int(data["result"]["value"]["amount"])
                     marginfi_max = int(vault_lamports * 0.95)
 
-                    # SMART SIZING: Hard cap to protect capital from small RWA/meme pool slippage
-                    HARD_CAP_USDC = 500 * 1_000_000        # $500 max per trade for stables
-                    HARD_CAP_SOL  = 10 * 1_000_000_000    # 10 SOL max for LST trades
-                    max_usdc_lamports = min(marginfi_max, HARD_CAP_USDC)
+                    # DYNAMIC SIZING: Use 95% vault liquidity + AMM math to find optimal size
+                    max_usdc_lamports = marginfi_max
 
-                    if hasattr(self, 'optimal_trade_sizer'):
-                        max_usdc_lamports = int(self.optimal_trade_sizer.find_optimal_trade_size(
-                            routes=[], amount_in=max_usdc_lamports, decimals_in=6, decimals_out=6, jito_tip_sol=0.00001
-                        ) or max_usdc_lamports) 
+                    if hasattr(self, 'optimal_trade_sizer') and self.optimal_trade_sizer:
+                        # Use analytical O(1) formula to compute the EXACT optimal size
+                        # that maximizes profit without killing the spread via slippage
+                        optimal_size = self.optimal_trade_sizer.find_optimal_trade_size(
+                            routes=[], 
+                            amount_in=max_usdc_lamports, 
+                            decimals_in=6, 
+                            decimals_out=6, 
+                            jito_tip_sol=0.00001
+                        )
+                        if optimal_size and int(optimal_size) > 1_000_000:  # Min 1 USDC
+                            max_usdc_lamports = int(optimal_size)
+                            logger.debug(f"📈 Optimal sizing: {max_usdc_lamports/1e6:.2f} USDC from AMM curve peak")
+                        else:
+                            max_usdc_lamports = marginfi_max
             except Exception as e:
                 logger.warning(f"⚠️ Could not check MarginFi USDC liquidity, using safe default 10 USDC: {e}")
                 max_usdc_lamports = 10_000_000
@@ -538,9 +558,41 @@ class XStockOracleLagStrategy:
         """
         Periodic scan for lag opportunities (fallback when webhooks miss events).
         Runs every 30 seconds for high-priority tickers.
+        Also refreshes wallet balance to keep min_profit_threshold in sync with capital.
         """
+        last_balance_check = 0.0
         while True:
             try:
+                now = time.time()
+                # Refrescar umbral cada 300 s (5 min) по SOL-балансу кошелька
+                if now - last_balance_check > 300 and self.cfg.MARGINFI_ACCOUNT_PUBKEY:
+                    last_balance_check = now
+                    try:
+                        payload = {
+                            "jsonrpc": "2.0", "id": 1,
+                            "method": "getBalance",
+                            "params": [self.cfg.MARGINFI_ACCOUNT_PUBKEY, {"commitment": "confirmed"}],
+                        }
+                        timeout = aiohttp.ClientTimeout(total=3.0)
+                        async with self.session.post(self.cfg.WSS_ENDPOINTS[0].replace("wss", "https"), json=payload, timeout=timeout) as resp:
+                            if resp.status == 200:
+                                data = await resp.json()
+                                sol_balance_raw = data.get("result", {}).get("value", 0)
+                                sol_balance = float(sol_balance_raw) / 1e9 if sol_balance_raw else 0.0
+                                cfg_min = getattr(self.cfg, 'ORACLE_LAG_MIN_PROFIT_SOL', 0.25)
+                                old_threshold = float(self.min_profit_threshold)
+                                if sol_balance < 1.0:
+                                    self.min_profit_threshold = Decimal('0.0005')
+                                else:
+                                    self.min_profit_threshold = Decimal(str(cfg_min))
+                                if float(self.min_profit_threshold) != old_threshold:
+                                    logger.info(
+                                        f"💰 Wallet={sol_balance:.4f} SOL → "
+                                        f"min_profit_threshold=${float(self.min_profit_threshold):.6f}"
+                                    )
+                    except Exception as e:
+                        logger.debug(f"Wallet balance refresh failed: {e}")
+
                 # Check top priority tickers
                 for ticker in PRIORITY_QUEUE_ORDER[:10]:  # Top 10 priority
                     if self._is_on_cooldown(ticker):

@@ -69,7 +69,7 @@ class OptimalTradeSizer:
                 return None  # Not profitable
 
             execution_time = time.time() - start_time
-            logger.debug(".6f")
+            logger.debug(f"Optimal size: {optimal_x:.6f} (computed in {execution_time:.6f}s)")
 
             return optimal_x
 

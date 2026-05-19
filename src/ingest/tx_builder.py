@@ -702,6 +702,7 @@ class JupiterTxBuilder:
         """
         Returns 95% of current available liquidity in the MarginFi pool.
         Protection: 95% cap prevents InsufficientLiquidity errors on execution.
+        No hard SOL/USDC cap — OptimalTradeSizer controls position size upstream.
         """
         try:
             payload = {
@@ -715,10 +716,7 @@ class JupiterTxBuilder:
                 if "result" in data and "value" in data["result"]:
                     vault_lamports = int(data["result"]["value"]["amount"])
                     safe_liquidity = int(vault_lamports * 0.95)
-
-                    # Hard cap for safety (e.g. max 10,000 SOL)
-                    max_cap_lamports = 10_000 * 1_000_000_000
-                    return min(safe_liquidity, max_cap_lamports)
+                    return safe_liquidity
         except Exception as e:
             logger.error(f"Failed to fetch MarginFi bank liquidity: {e}")
         return 0
@@ -972,7 +970,10 @@ class JupiterTxBuilder:
             bank_liquidity_vault: Pubkey of the MarginFi liquidity_vault PDA
 
         Returns:
-            Max safe borrow in lamports (95 % vault balance, capped at 10 000 SOL).
+            Max safe borrow in lamports (95 % of vault balance, no hard cap).
+            Optimal trade sizing is applied by the caller via OptimalTradeSizer
+            to avoid slippage consuming all profit.  A 95 % buffer prevents
+            InsufficientLiquidity errors on execution.
             0 on any failure so callers can skip gracefully.
         """
         try:
@@ -988,11 +989,9 @@ class JupiterTxBuilder:
                     if ("result" in data and "value" in data["result"]
                             and data["result"]["value"].get("amount")):
                         vault_lamports = int(data["result"]["value"]["amount"])
+                        # 95 % cap prevents InsufficientLiquidity errors
                         safe_liquidity = int(vault_lamports * 0.95)
-
-                        # Hard start-up cap: never borrow more than 10 000 SOL worth
-                        max_cap_lamports = 10_000 * 1_000_000_000
-                        return min(safe_liquidity, max_cap_lamports)
+                        return safe_liquidity
         except Exception as e:
             logger.error(f"Failed to fetch MarginFi bank liquidity for {bank_liquidity_vault[:8]}: {e}")
         return 0
@@ -1391,6 +1390,108 @@ class JupiterTxBuilder:
             return 0.0005 # 5 bps
             
         return 0.0030 # 30 bps (xStocks/Default)
+
+    async def get_circular_quote(
+        self,
+        input_mint: str,
+        middle_mint: str,
+        amount_lamports: int,
+        dex_filter_leg1: Optional[List[str]] = None,
+        dex_filter_leg2: Optional[List[str]] = None,
+        jito_tip_lamports: int = 50000,
+        only_direct_routes: bool = False,
+    ) -> Optional[Dict[str, Any]]:
+        """Build a circular (two-leg) Jupiter quote: input_mint → middle_mint → input_mint.
+
+        Used by LST unstake arbitrage: SOL → LST (Raydium/Orca) → SOL (Sanctum Router).
+
+        Args:
+            input_mint:  Entry token mint (e.g. SOL).
+            middle_mint: Intermediate token mint (e.g. mSOL / jitoSOL).
+            amount_lamports: Amount of input_mint to route.
+            dex_filter_leg1: DEX include-filter for the first swap (buy LST).
+            dex_filter_leg2: DEX include-filter for the second swap (exit via Sanctum).
+            jito_tip_lamports: Estimated Jito tip subtracted from gross profit.
+            only_direct_routes: If True, omit routing through intermediate tokens.
+
+        Returns:
+            Dict with out_amount, expected_profit_lamports, price_impact_bps, and jupiter instructions,
+            or None on failure.
+        """
+        quote_url = (
+            f"https://quote-api.jup.ag/v6/quote?"
+            f"inputMint={input_mint}&"
+            f"outputMint={middle_mint}&"
+            f"amount={amount_lamports}&"
+            f"slippageBps=50&"
+            f"maxAccounts=16&"
+            f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
+            f"restrictIntermediateTokens=true"
+        )
+        if dex_filter_leg1:
+            quote_url += f"&dexes={','.join(dex_filter_leg1)}"
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=5.0)
+            async with self.session.get(quote_url, timeout=timeout) as resp:
+                if resp.status != 200:
+                    return None
+                leg1 = await resp.json()
+        except Exception as e:
+            logger.debug(f"Circular quote leg 1 failed: {e}")
+            return None
+
+        out_amount_leg1 = int(leg1.get("outAmount", 0))
+        if out_amount_leg1 == 0:
+            return None
+
+        # Leg 2: middle_mint → input_mint (exit)
+        quote_url2 = (
+            f"https://quote-api.jup.ag/v6/quote?"
+            f"inputMint={middle_mint}&"
+            f"outputMint={input_mint}&"
+            f"amount={out_amount_leg1}&"
+            f"slippageBps=50&"
+            f"maxAccounts=16&"
+            f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
+            f"restrictIntermediateTokens=true"
+        )
+        if dex_filter_leg2:
+            quote_url2 += f"&dexes={','.join(dex_filter_leg2)}"
+
+        try:
+            timeout = aiohttp.ClientTimeout(total=5.0)
+            async with self.session.get(quote_url2, timeout=timeout) as resp:
+                if resp.status != 200:
+                    return None
+                leg2 = await resp.json()
+        except Exception as e:
+            logger.debug(f"Circular quote leg 2 failed: {e}")
+            return None
+
+        out_amount_leg2 = int(leg2.get("outAmount", 0))
+        if out_amount_leg2 == 0:
+            return None
+
+        gross_profit_lamports = out_amount_leg2 - amount_lamports
+        net_profit_lamports = gross_profit_lamports - jito_tip_lamports
+        price_impact_bps = (
+            int(float(leg2.get("priceImpactPct", "0").replace("%", "")) * 100)
+            if leg2.get("priceImpactPct")
+            else 0
+        )
+
+        return {
+            "expected_profit_lamports": net_profit_lamports,
+            "gross_profit_lamports": gross_profit_lamports,
+            "jito_tip_lamports": jito_tip_lamports,
+            "out_amount_leg1": out_amount_leg1,
+            "out_amount_leg2": out_amount_leg2,
+            "price_impact_bps": price_impact_bps,
+            "dex_leg1": leg1,
+            "dex_leg2": leg2,
+            "instructions": [],  # swap instructions resolved later by execution builder
+        }
 
     # === DISABLED: create_secure_jito_bundle ===
     # Jito tip is now inlined directly in build_native_flashloan_tx as the final instruction.

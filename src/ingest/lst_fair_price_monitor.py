@@ -5,6 +5,8 @@ the *theoretical* exchange rate of each LST vs SOL, then compares it to the
 live market price fetched from Jupiter Price API.  When the deviation exceeds
 a configurable threshold (default 15 BPS), a DepegSignal is emitted so the
 arbitrage scanner can act.
+Dynamic sizing: passes 95% of MarginFi vault liquidity to callback via
+DepegSignal so the caller can run OptimalTradeSizer before committing capital.
 """
 
 import asyncio
@@ -13,6 +15,7 @@ import logging
 import struct
 import time
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Callable, Dict, List, Optional, Tuple
 
 import aiohttp
@@ -50,6 +53,8 @@ class DepegSignal:
     deviation_bps: float     # signed: positive = LST undervalued on market
     direction: str           # "BUY_LST" if market < fair, "SELL_LST" if market > fair
     timestamp: float = field(default_factory=time.time)
+    # Dynamic sizing: 95% of MarginFi vault (no hard cap)
+    optimal_borrow_lamports: int = 0
 
     @property
     def abs_deviation_bps(self) -> float:
@@ -74,10 +79,12 @@ class LstFairPriceMonitor:
         session: aiohttp.ClientSession,
         rpc_url: str,
         poll_interval: float = 2.0,
+        optimal_trade_sizer: Optional[Any] = None,
     ):
         self.session = session
         self.rpc_url = rpc_url
         self.poll_interval = poll_interval
+        self.optimal_trade_sizer = optimal_trade_sizer
 
         # Cached fair-price ratios: mint -> ratio (SOL per 1 LST)
         self._fair_prices: Dict[str, float] = {}
@@ -180,13 +187,55 @@ class LstFairPriceMonitor:
                 await self.update_fair_prices()
                 await self.update_market_prices()
                 signals = self.get_depeg_signals(threshold_bps)
-                for sig in signals:
-                    logger.info(
-                        f"🔔 DEPEG {sig.token_symbol}: "
-                        f"fair={sig.fair_price:.6f} market={sig.market_price:.6f} "
-                        f"dev={sig.deviation_bps:+.1f}bps → {sig.direction}"
+
+                if signals:
+                    # Dynamic sizing: fetch 95% of MarginFi SOL vault, pass to OptimalTradeSizer
+                    # antes de cada señal para evitar slips excesivos (Step 2 — динамический сайзинг)
+                    sol_mint_str = str(SOL_MINT)
+                    from arb_bot import MARGINFI_BANKS
+                    sol_bank_vault = (
+                        str(MARGINFI_BANKS[sol_mint_str]["liquidity_vault"])
+                        if sol_mint_str in MARGINFI_BANKS
+                        else None
                     )
-                    await callback(sig) if asyncio.iscoroutinefunction(callback) else callback(sig)
+                    vault_lamports = 0
+                    if sol_bank_vault and self.optimal_trade_sizer:
+                        try:
+                            payload = {
+                                "jsonrpc": "2.0", "id": 1,
+                                "method": "getTokenAccountBalance",
+                                "params": [sol_bank_vault],
+                            }
+                            async with self.session.post(
+                                self.rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=2.0)
+                            ) as r2:
+                                if r2.status == 200:
+                                    d = await r2.json()
+                                    vault_lamports = int(d["result"]["value"]["amount"])
+                        except Exception as e:
+                            logger.debug(f"MarginFi SOL vault fetch failed: {e}")
+
+                    for sig in signals:
+                        # OptimalTradeSizer: O(1) analytical formula — no iterative search
+                        borrow_lamports = 0
+                        if vault_lamports > 0 and self.optimal_trade_sizer:
+                            borrow_lamports = int(
+                                self.optimal_trade_sizer.find_optimal_trade_size(
+                                    routes=[],                    # routes resolved later in scanner
+                                    amount_in=int(vault_lamports * 0.95),
+                                    decimals_in=9, decimals_out=9,
+                                    jito_tip_sol=0.0001,
+                                )
+                            )
+                        sig.optimal_borrow_lamports = borrow_lamports
+
+                        logger.info(
+                            f"🔔 DEPEG {sig.token_symbol}: "
+                            f"fair={sig.fair_price:.6f} market={sig.market_price:.6f} "
+                            f"dev={sig.deviation_bps:+.1f}bps → {sig.direction} "
+                            f"| optimal_borrow={borrow_lamports/1e9:.4f} SOL"
+                        )
+                        await callback(sig) if asyncio.iscoroutinefunction(callback) else callback(sig)
             except Exception as e:
                 logger.warning(f"Depeg monitor error: {e}")
             await asyncio.sleep(interval)

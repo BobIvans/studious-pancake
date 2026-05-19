@@ -88,9 +88,11 @@ class WebhookConfig:
                 cls.ORCA_POOL_ADDRESSES
             ),
             "txnStatus": "success",  # OPTIMIZED: Only listen to successful trades (saves credits)
-            "accountFilters": [  # Fix 86: Helius credit optimization - min 0.01 SOL native transfer
-                {"accountKey": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H6KCm3nTqK2", "filters": [{"memcmp": {"offset": 0, "bytes": ""}}], "nativeFilters": [{"min": 10000000}]},  # 0.01 SOL
-                {"accountKey": "whirLbMiicVdio4qvUfM5KMi3H9L1m1n3v4x2z3y4", "filters": [{"memcmp": {"offset": 0, "bytes": ""}}], "nativeFilters": [{"min": 10000000}]},  # 0.01 SOL
+            "accountFilters": [  # Fix 86+94: Helius credit optimization - min 10 SOL native transfer
+                # Track Jupiter program for swap/trade activity
+                {"accountKey": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8", "filters": [{"memcmp": {"offset": 0, "bytes": ""}}], "nativeFilters": [{"min": 10000000000}]},  # 10 SOL
+                # Track Orca Whirlpools for pool events
+                {"accountKey": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc", "filters": [{"memcmp": {"offset": 0, "bytes": ""}}], "nativeFilters": [{"min": 10000000000}]},  # 10 SOL
             ],
             "webhookIds": cls.WEBHOOK_IDS,
             "managementIds": cls.MANAGEMENT_IDS

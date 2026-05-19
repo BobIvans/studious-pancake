@@ -10,6 +10,7 @@ import os
 import json
 import base64
 import itertools
+import struct
 import hashlib
 import re
 import socket
@@ -1450,7 +1451,10 @@ async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_am
         try:
             actual_repay_index = optimized_instructions.index(repay_ix)
             # Update borrow instruction with the CORRECT repay index
-            borrow_ix.data = borrow_ix.data[:-1] + bytes([actual_repay_index])
+            # Discriminator(8) + Amount(8 u64) + Index(1 u8) — use struct.pack for exact packing
+            original_data_without_index = borrow_ix.data[:16]
+            safe_index_byte = struct.pack("<B", actual_repay_index)
+            borrow_ix.data = original_data_without_index + safe_index_byte
             logger.debug(f"🛠️ Dynamic Repay Index updated in arb_bot.py: {actual_repay_index}")
         except ValueError:
             logger.error("CRITICAL: repay_ix not found in optimized_instructions")
@@ -2426,14 +2430,21 @@ def create_placeholder_arbitrage_tx(keypair, blockhash):
 
     return VersionedTransaction(msg, [keypair])
 
-async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, tx_b64, tx_id, execution_time, session=None, keypair=None, rpc_getter=None, target_mint_ata=None):
+async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, tx_b64, tx_id, execution_time, session=None, keypair=None, rpc_getter=None, target_mint_ata=None, virtual_balance_to_deduct=0.0):
     """Check bundle confirmation asynchronously without blocking."""
     try:
         confirmation = await jito_executor.wait_for_confirmation(bundle_id, max_wait_time=15.0)
         if confirmation.get("status") == "failed":
             logger.error(f"❌ ТРЕЙД УПАЛ (Bundle Failed): {confirmation}")
             await data_aggregator.log_tx_failed(bundle_id, confirmation, {"tx": tx_b64})
-            
+
+            # ВОЗВРАЩАЕМ виртуальный баланс при неудаче — предотвращает утечку (Fix Balance Leak)
+            if virtual_balance_to_deduct > 0:
+                async with stats_lock:
+                    prev = stats["virtual_balance"]
+                    stats["virtual_balance"] = max(0.0, stats["virtual_balance"] + virtual_balance_to_deduct)
+                logger.info(f"♻️ Бандл отклонен, баланс {virtual_balance_to_deduct:.6f} SOL возвращен (virtual_balance: {prev:.6f} → {stats['virtual_balance']:.6f})")
+
             # MEV: Losing an auction is normal. Only trigger circuit breaker for critical errors.
             error_msg = str(confirmation.get("error", "")).lower()
             critical_errors = ["insufficient funds", "account not found", "unauthorized", "invalid signer"]
@@ -2448,6 +2459,14 @@ async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, t
                 logger.debug("ℹ️ Auction lost or bundle dropped - normal operation continues")
         elif confirmation.get("status") == "timeout":
             logger.warning(f"⏰ BUNDLE TIMEOUT: {bundle_id} - normal in competitive Jito auctions")
+
+            # ВОЗВРАЩАЕМ виртуальный баланс при таймауте — предотвращает утечку (Fix Balance Leak)
+            if virtual_balance_to_deduct > 0:
+                async with stats_lock:
+                    prev = stats["virtual_balance"]
+                    stats["virtual_balance"] = max(0.0, stats["virtual_balance"] + virtual_balance_to_deduct)
+                logger.info(f"♻️ Бандл таймаут, баланс {virtual_balance_to_deduct:.6f} SOL возвращен (virtual_balance: {prev:.6f} → {stats['virtual_balance']:.6f})")
+
             await data_aggregator.log_tx_failed(bundle_id, confirmation, {"tx": tx_b64, "reason": "timeout"})
         else:
             # Log successful confirmation + TASK 1: zero-delay ATA close for any outcome
@@ -2765,7 +2784,8 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
                     session=session,
                     keypair=keypair,
                     rpc_getter=lambda: rpc_manager.get_rpc(),
-                    target_mint_ata=out_ata
+                    target_mint_ata=out_ata,
+                    virtual_balance_to_deduct=virtual_balance_to_deduct,
                 )
             )
             # Prevent task leak by tracking active tasks
@@ -3473,18 +3493,7 @@ async def run():
             arb_opp.score = 95.0
             priority_queue.add_opportunity(arb_opp)
 
-        helius_webhook_handler = HeliusWebhookHandler(
-            data_aggregator,
-            cfg.WEBHOOK_PORT,
-            opportunity_callback=handle_webhook_opportunity,
-            webhook_queue=lst_webhook_trigger,  # Передаем созданную очередь!
-            on_token_discovery=lambda x: None
-        )
-
-        if cfg.HELIUS_WEBHOOK_ENABLED:
-            webhook_task = asyncio.create_task(helius_webhook_handler.start())
-        else:
-            logger.info("ℹ️ Helius webhook handler disabled")
+        # helius_webhook_handler created after jito_shotgun is initialized (see below)
 
         # 5. Strategies Initialization
         if cfg.ENABLE_XSTOCKS_ORACLE_LAG:
@@ -3532,6 +3541,23 @@ async def run():
                 auth_key=cfg.JITO_AUTH_KEY
             )
             jito_shotgun = JitoShotgun(session)
+
+        # Strat 3: Helius webhook handler — created AFTER jito_shotgun so it can fire
+        # swap/graduation signals to all 4 Jito regional block engines instantly.
+        helius_webhook_handler = HeliusWebhookHandler(
+            data_aggregator,
+            cfg.WEBHOOK_PORT,
+            opportunity_callback=handle_webhook_opportunity,
+            webhook_queue=lst_webhook_trigger,
+            on_token_discovery=lambda x: None,
+            jito_shotgun=jito_shotgun  # Strat 3: Jito Shotgun webhook integration
+        )
+
+        if cfg.HELIUS_WEBHOOK_ENABLED:
+            asyncio.create_task(helius_webhook_handler.start())
+        else:
+            logger.info("ℹ️ Helius webhook handler disabled")
+
         global dust_sweeper
         dust_sweeper = DustSweeper(keypair, rpc.get_rpc(), session)
         asyncio.create_task(dust_sweeper.sweep_on_startup())

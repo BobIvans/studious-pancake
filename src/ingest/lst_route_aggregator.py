@@ -191,12 +191,12 @@ class LstRouteAggregator:
 
         # If Sanctum enabled, try explicit Sanctum route for LST→SOL direction
         # Sanctum Router работает только с прямыми маршрутами (Direct),
-        # поэтому запрашиваем only_direct_routes=True и фильтр по Sanctum.
+        # поэтому запрашиваем only_direct_routes=True и фильтр по Sanctum (fixed DEXES list).
         if self.sanctum_enabled and self._is_lst_to_sol(input_mint, output_mint):
             sanctum_quote = await self._jupiter_quote(
                 input_mint, output_mint, amount,
                 only_direct_routes=True,  # Sanctum требует прямых маршрутов
-                dex_filter=["Sanctum", "Sanctum Infinity"],
+                dex_filter=["Sanctum", "Sanctum Infinity"],  # Принудительно включаем Sanctum (Fix 92)
             )
             if sanctum_quote:
                 # Check Sanctum fees (placeholder: assume low fee)

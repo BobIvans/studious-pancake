@@ -26,17 +26,19 @@ logger = logging.getLogger(__name__)
 
 
 def is_market_open() -> bool:
-    """Check if NYSE is open (9:30 - 16:00 EST, weekdays only)."""
-    tz = pytz.timezone('US/Eastern')
+    """Check if NYSE is tradable: 16:30-23:00 MSK, weekdays only.
+    Crypto-proxy xStocks (MSTRx, COINx) skip this check — are handled via is_market_open exemption in process_swap_event.
+    """
+    tz = pytz.timezone('Europe/Moscow')
     now = datetime.now(tz)
 
     # Weekend check
     if now.weekday() >= 5:
         return False
 
-    # Market hours 9:30 - 16:00
-    market_start = now.replace(hour=9, minute=30, second=0, microsecond=0)
-    market_end = now.replace(hour=16, minute=0, second=0, microsecond=0)
+    # Trading hours: 16:30 - 23:00 MSK
+    market_start = now.replace(hour=16, minute=30, second=0, microsecond=0)
+    market_end = now.replace(hour=23, minute=0, second=0, microsecond=0)
 
     return market_start <= now <= market_end
 
@@ -45,6 +47,13 @@ class XStockOracleLagStrategy:
     """
     Strategy for detecting and exploiting oracle lag between Pyth prices and DEX prices
     for xStocks (real-world asset tokens on Solana).
+
+    Execution flow (strictly atomic, STRICT_JITO_MODE only):
+      1. Borrow USDC from MarginFi v2 (0% fee) via flashloan.
+      2. Jupiter swap: USDC → xStock (buy cheap on DEX).
+      3. Jupiter swap: xStock → USDC (sell back at higher price).
+      4. Repay USDC to MarginFi + return profit in same Jito bundle.
+    No token holding: the borrow/repay cycle is guaranteed atomic by Jito bundle ordering.
     """
 
     def __init__(self, session, cfg, optimal_trade_sizer, tx_builder, execution_router):
@@ -110,8 +119,9 @@ class XStockOracleLagStrategy:
                 logger.debug(f"⏭️ Skipping {ticker} — illiquid proxy")
                 return
 
-            # ── Защита от мертвых часов для классических акций ────────────────
+            # ── Защита от мертвых часов для классических акций (16:30-23:00 MSK) ─────────
             # Крипто-прокси (MSTRx и т.д.) торгуются 24/7, их не трогаем.
+            # Если время не в торговые часы — торговать только крипто-прокси.
             category = pair_info.get("category", "")
             if category != "crypto_proxy":
                 if not is_market_open():

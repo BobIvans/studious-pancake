@@ -69,7 +69,7 @@ class ExecutionRouter:
         self.execution_guard = ExecutionGuard()
 
         # Fix 51: Jito Bundle Self-Cancellation — track stale bundles for overwrite
-        # map: bundle_id -> {"sent_slot": int, "sent_at": float, "endpoint": str, "tip_lamports": int, "deducted_amount": int}
+        # map: bundle_id -> {"sent_slot": int, "sent_at": float, "endpoint": str, "tip_lamports": int, "deducted_amount": float}
         self._pending_bundle_slots: Dict[str, Dict[str, Any]] = {}
         self._stale_bundle_ids: Set[str] = set()
         self._self_cancel_task: Optional[asyncio.Task] = None
@@ -448,7 +448,7 @@ class ExecutionRouter:
                         "sent_slot": current_slot,
                         "sent_at": time.time(),
                         "tip_lamports": jito_tip_lamports,
-                        "deducted_amount": 0,
+                        "deducted_amount": jito_tip_lamports / 1_000_000_000,  # Fix: refund in SOL so _self_cancel_stale_bundles actually works
                     }
                 return bundle_result
             else:

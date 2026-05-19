@@ -1010,7 +1010,8 @@ class JupiterTxBuilder:
         borrow_mint: str = "So11111111111111111111111111111111111111112",
         wsol_manager: Optional[Any] = None,
         pool_state_manager: Optional[Any] = None,
-        use_jito: bool = True
+        use_jito: bool = True,
+        # Token-2022 detection pre-imported at module level
     ) -> Optional[Dict[str, Any]]:
         """
         Build a native flashloan arbitrage transaction relying on MarginFi introspection.
@@ -1078,6 +1079,40 @@ class JupiterTxBuilder:
         )
         all_instructions.append(repay_ix)
 
+        # =====================================================================
+        # 4.5 ATOMIC RENT RECOVERY — Закрытие промежуточных ATA (ЗАЩИТА КАПИТАЛА)
+        # =====================================================================
+        # После того как репей выполнен, закрываем все промежуточные ATA (кроме
+        # CORE_GOLDEN: wSOL, USDC), чтобы мгновенно вернуть 0.002 SOL за каждую.
+        # Это критично для бюджета 0.017 SOL — даже 2 зависшие ATA = 25% капитала.
+        CORE_GOLDEN_MINTS_STR = {
+            "So11111111111111111111111111111111111111112",  # wSOL
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", # USDC
+        }
+        intermediate_mints = set(arbitrage_path[1:-1])  # всё, кроме borrow и финального
+        for mint_str in intermediate_mints:
+            if mint_str in CORE_GOLDEN_MINTS_STR:
+                continue
+            try:
+                mint_pk = Pubkey.from_string(mint_str)
+                # Token-2022 detection via xstocks_registry
+                from src.config.xstocks_registry import is_xstock_token
+                is_xstock = is_xstock_token(mint_pk)
+                prog_id = TOKEN_2022_PROGRAM_ID if is_xstock else TOKEN_PROGRAM_ID
+
+                ata_to_close = get_associated_token_address(wallet, mint_pk, prog_id)
+                close_ix = close_account(CloseAccountParams(
+                    program_id=prog_id,
+                    account=ata_to_close,
+                    dest=wallet,
+                    owner=wallet
+                ))
+                all_instructions.append(close_ix)
+                logger.debug(f"🧹 Atomic CloseAccount: {mint_str[:8]} ({"Token-2022" if is_xstock else "SPL"})")
+            except Exception as e:
+                logger.debug(f"⚠️ Atomic close skipped for {mint_str[:8]}: {e}")
+        # =====================================================================
+
         # ЗАЩИТА КАПИТАЛА (0.017 SOL): Чаевые Jito СТРОГО в конце единой транзакции.
         # Если DEX Swap выдаст SlippageExceeded или MarginFi Repay выдаст InsufficientFunds ->
         # вся транзакция откатывается, и перевод чаевых НЕ СРАБОТАЕТ.
@@ -1137,6 +1172,8 @@ class JupiterTxBuilder:
         bank_pubkey: str,
         bank_liquidity_vault: str,
         bank_liquidity_vault_authority: str,
+        arbitrage_path: Optional[List[str]] = None,
+        jito_tip_lamports: int = 0,
         use_jito: bool = True,
         strategy_type: int = 1
     ) -> Optional[Dict[str, Any]]:
@@ -1188,10 +1225,32 @@ class JupiterTxBuilder:
 
             final_instructions = [borrow_ix] + all_instructions + [repay_ix]
 
+            # 4.5 ATOMIC RENT RECOVERY — закрыть промежуточные после repay
+            CORE_GOLDEN_MINTS_STR = {
+                "So11111111111111111111111111111111111111112",
+                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            }
+            intermediate_mints = set(arbitrage_path[1:-1]) if isinstance(arbitrage_path, list) else set()
+            for mint_str in intermediate_mints:
+                if mint_str in CORE_GOLDEN_MINTS_STR:
+                    continue
+                try:
+                    mint_pk = Pubkey.from_string(mint_str)
+                    from src.config.xstocks_registry import is_xstock_token
+                    is_xstock = is_xstock_token(mint_pk)
+                    prog_id = TOKEN_2022_PROGRAM_ID if is_xstock else TOKEN_PROGRAM_ID
+                    ata_to_close = get_associated_token_address(wallet, mint_pk, prog_id)
+                    close_ix = close_account(CloseAccountParams(
+                        program_id=prog_id,
+                        account=ata_to_close,
+                        dest=wallet,
+                        owner=wallet
+                    ))
+                    final_instructions.append(close_ix)
+                except Exception:
+                    pass
+
             # 5. ATOMIC JITO TIP (100% CAPITAL PROTECTION)
-            # Чаевые Jito добавляются ТОЛЬКО СЮДА. В самый конец единой транзакции.
-            # Если DEX Swap выдаст SlippageExceeded или MarginFi Repay выдаст InsufficientFunds ->
-            # вся транзакция откатывается, и этот перевод чаевых НЕ СРАБОТАЕТ. Депозит 0.017 SOL в безопасности.
             if jito_tip_lamports > 0:
                 from solders.system_program import TransferParams, transfer
                 tip_ix = transfer(TransferParams(

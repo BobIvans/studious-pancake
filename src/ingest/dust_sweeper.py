@@ -157,16 +157,11 @@ class DustSweeper:
         """
         Determine if a token account should be swept.
 
-        Fix #5 — Aggressive ATA Rent Recovery:
-        With CLOSE_ATAS_ON_EXIT=true, any non-golden token account holding
-        less than 1.0 ui_amount is treated as dust.  This catches "large dust"
-        remnants such as 0.5 USDC or 0.1 JUP left behind by partially-failed
-        swaps.  Each such abandoned account locks 0.002 SOL in ATA rent; at
-        0.017 SOL total capital, even 8 stranded accounts would drain the
-        entire budget.
-
-        When CLOSE_ATAS_ON_EXIT is false/unset, the previous conservative
-        threshold (< 0.01) is used so normal sweeping stays cheap.
+        Fix #5 — Aggressive ATA Rent Recovery for 0.017 SOL capital:
+        - Core Golden (USDC, wSOL): НИКОГДА не трогаем
+        - Token-2022 xStocks: проверяем withheld_fees; сжигаем если баланс 0
+        - Zero-balance не-golden: dust
+        - Любой токен < 0.05: dust
         """
         try:
             parsed_data = account_data.get("data", {}).get("parsed", {})
@@ -174,24 +169,40 @@ class DustSweeper:
 
             ui_amount = float(info.get("tokenAmount", {}).get("uiAmountString", "0"))
             mint = info.get("mint", "")
+            raw_amount = int(info.get("tokenAmount", {}).get("amount", "0"))
 
-            # Never close the primary working-capital ATAs.
+            # Строгий CORE_GOLDEN_MINTS — только USDC и wSOL
+            # USDT и PYUSD могут быть закрыты, если пусты
             CORE_GOLDEN_MINTS = {
                 "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
                 "So11111111111111111111111111111111111111112",  # wSOL
-                "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",  # USDT
-                "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",  # PYUSD
             }
             if mint in CORE_GOLDEN_MINTS:
                 return False
 
-            # xStock ATAs: only sweep if completely empty (Token-2022 overhead).
-            if mint.startswith("Xs"):
+            # Token-2022 (xStocks) — проверяем withheld fees
+            # У Token-2022 есть withheld_fees, которые блокируют CloseAccount
+            # Если баланс > 0 и есть withheld fees, не трогаем
+            from src.config.xstocks_registry import is_xstock_token
+            if mint and is_xstock_token(Pubkey.from_string(mint)):
+                if ui_amount > 0:
+                    # Проверяем withheld fees (может блокировать close)
+                    # Если withheld_fees.info есть и непусто — safe side, не трогаем
+                    withheld = info.get("account", {}).get("data", {}).get("parsed", {}).get("info", {}).get("withheldAmount", {})
+                    if withheld and int(withheld.get("amount", "0")) > 0:
+                        logger.debug(f"⏳ xStock {mint[:8]} has withheld fees — skipping close")
+                        return False
                 return ui_amount == 0
 
-            # For non-golden/other tokens, only sweep if the quantity is < 0.05.
-            dust_threshold = 0.05
-            return ui_amount < dust_threshold
+            # Zero balance — всегда dust (кроме golden, уже проверено выше)
+            if ui_amount == 0:
+                return True
+
+            # Для всех остальных токенов — порог 0.05
+            if ui_amount < 0.05:
+                return True
+
+            return False
 
         except Exception:
             return False

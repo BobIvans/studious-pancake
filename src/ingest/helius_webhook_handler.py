@@ -253,11 +253,12 @@ class HeliusWebhookHandler:
 
                         await self.data_aggregator.log_opportunity_found(webhook_id, opportunity, metadata)
 
+                        # SINGLE PATH: priority_queue only — prevents double execution race condition
                         # Trigger LST scanner via webhook trigger
-                        if self.webhook_queue:
-                            await self.webhook_queue.put(opportunity)
+                        # if self.webhook_queue:
+                        #     await self.webhook_queue.put(opportunity)
 
-                        # Trigger LST scanner callback
+                        # Trigger LST scanner callback (single path)
                         if self.opportunity_callback:
                             await self.opportunity_callback(opportunity, webhook_id)
 

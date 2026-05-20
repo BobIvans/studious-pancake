@@ -79,6 +79,7 @@ class PoolStateManager:
             logger.info(f"Fix 5 WSS Sink: {len(self.rest_pools)} high-liquidity pools routed to REST: "
                         f"{[p[:8] for p in self.rest_pools[:5]]}")
 
+    async def sync_pool_states(self):
         """Force synchronization of all pool states with blockchain."""
         try:
             current_time = asyncio.get_event_loop().time()
@@ -213,8 +214,8 @@ class PoolStateManager:
                             self.watchdog_task = asyncio.create_task(self._watchdog())
                         await self._subscribe_to_slots(ws)
 
-                        # Send accountSubscribe for all pool addresses
-                        for pool_addr in self.pool_addresses:
+                        # Fix 5: subscribe only to WSS-worthy pools (low-liquidity skipped for REST)
+                        for pool_addr in self.wss_pools:
                             subscription_id = await self._subscribe_to_pool(ws, pool_addr)
                             if subscription_id:
                                 self.subscription_ids[pool_addr] = subscription_id

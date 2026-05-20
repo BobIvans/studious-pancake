@@ -1230,10 +1230,11 @@ async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected
             # Slippage must never exceed 40% of expected profit.
             # This mathematically prevents sandwich bot extraction of our capital:
             #   worst case: 40% slippage eaten by sandwich, leaving 60% gross profit → still net profit.
-            slippage_bps = max(1, int(expected_profit_bps * 0.4))
+            # Fix 4 (SlippageBps Floor): min 5 BPS — Jupiter часто отклоняет маршруты при slippage < 5 BPS
+            slippage_bps = max(5, int(expected_profit_bps * 0.4))
             logger.debug(
                 f"🛡️ Profit-aware slippage: {slippage_bps} BPS "
-                f"(profit={expected_profit_bps:.1f} BPS, cap=40%)"
+                f"(profit={expected_profit_bps:.1f} BPS, cap=40%, floor=5)"
             )
         else:
             slippage_bps = cfg.SLIPPAGE_BPS
@@ -1647,6 +1648,11 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                 if optimal and int(optimal) > 100_000_000:  # Min 0.1 SOL
                     borrow_lamports = int(optimal)
                     logger.debug(f"📈 LST optimal size: {borrow_lamports/1e9:.4f} SOL (AMM curve peak)")
+                # Fix 3 (MarginFi Slippage Margin): cap borrow to FLASH_LOAN_SIZE_SOL from .env
+                env_max = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
+                if borrow_lamports > env_max:
+                    logger.debug(f"📉 Capping borrow from {borrow_lamports/1e9:.4f} SOL to {env_max/1e9:.4f} SOL (FLASH_LOAN_SIZE_SOL)")
+                    borrow_lamports = env_max
             except Exception as e:
                 logger.warning(f"Could not check MarginFi SOL liquidity, fallback to default: {e}")
                 borrow_lamports = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
@@ -2738,11 +2744,8 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
         else:
             _rent_sol = RENT_PER_ATA_SOL
             logger.info(f"⚠️ New ATA required for {_dst_mint_str[:8]} — deducting {_rent_sol:.5f} SOL from expected profit ({opportunity.expected_profit_sol:.6f} SOL)")
-    # Check that profit still exceeds MIN_PROFIT_SOL after rent deduction
-    _profit_after_rent = opportunity.expected_profit_sol - _rent_sol
-    if _profit_after_rent < float(cfg.MIN_PROFIT_SOL):
-        logger.debug(f"Skipping {opportunity.pair}: Profit {_profit_after_rent:.6f} SOL after ATA rent ({_rent_sol} SOL) < MIN_PROFIT_SOL ({cfg.MIN_PROFIT_SOL})")
-        return
+    # Fix 3 (Phantom Rent): ATA закрывается атомарно внутри бандла — рента возвращается мгновенно
+    _profit_after_rent = opportunity.expected_profit_sol
     # ------------------------------------------------
 
     # — TASK 2 — Upfront Dynamic Capital Check (before we waste time building a tx) —
@@ -2949,10 +2952,7 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
     while True:
         priority, path = await queue.get()
         try:
-            # Fix 69: Leader-aware power saving
-            if leader_tracker and not leader_tracker.is_jito_imminent():
-                await asyncio.sleep(1.0)
-                continue
+            pairs_checked += 1
             if len(path) == 2:
                 in_mint, target_mint = path
                 in_mint_str = str(in_mint); target_mint_str = str(target_mint)   # str for HTTP/JSON safety
@@ -3058,10 +3058,6 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
             # Jito Game Theory: Dynamic Tips
             tip_lamports = getattr(cfg, "BASE_TIP_LAMPORTS", 10000)
             try:
-                # 1. Determine if Jito is leader for current slot
-                current_slot = stats.get("current_slot", 0)
-                is_jito_leader = leader_tracker.is_jito_slot(current_slot)
-                
                 # 2. Determine competition level (Success Rate)
                 attempts = stats.get("bundle_send_attempts", 0)
                 successes = stats.get("bundle_successes", 0)
@@ -3175,7 +3171,7 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
                 expected_profit_bps = profit_per_unit * 10_000.0
             else:
                 expected_profit_bps = 0.0
-            anti_sandwich_bps = max(1, int(expected_profit_bps * 0.4))
+            anti_sandwich_bps = max(5, int(expected_profit_bps * 0.4))
             logger.debug(
                 f"🛡️ Anti-sandwich: expected_profit={expected_profit_bps:.1f} BPS, "
                 f"max_slippage={anti_sandwich_bps} BPS (40% cap)"

@@ -9,6 +9,7 @@ the maximum borrow never kills profit via slippage (no hard caps).
 import asyncio
 import logging
 import time
+import os
 from typing import Dict, List, Optional, Any
 import aiohttp
 from solders.pubkey import Pubkey
@@ -65,6 +66,9 @@ class LstInstantUnstakeArbitrage:
             return []
 
         max_borrow_lamports = await _jup.get_max_marginfi_borrow(str(bank_info["liquidity_vault"]))
+        # Fix 3 (MarginFi Slippage Margin): cap borrow to FLASH_LOAN_SIZE_SOL
+        env_max_borrow = int(float(os.getenv("FLASH_LOAN_SIZE_SOL", "0.5")) * 1_000_000_000)
+        max_borrow_lamports = min(max_borrow_lamports, env_max_borrow)
         if max_borrow_lamports < 1_000_000_000:  # Min 1 SOL
             return []
 

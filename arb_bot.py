@@ -1752,7 +1752,7 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
     # Pre-Trade Guard: prevent sending unprofitable bundles (right before jito_executor.send_bundle)
     pre_trade_guard = PreTradeGuard(session=session, rpc_url=rpc_url)
 
-    # MarginFi bank config for SOL
+    # ── Fix 5 (Strict Gas Tank): never trade if balance < 0.005 SOL ──────────
     sol_mint_str = str(TOKENS["SOL"])
     if sol_mint_str not in MARGINFI_BANKS:
         logger.error("MarginFi SOL bank not configured — LST scanner disabled")
@@ -1779,6 +1779,19 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
 
     while True:
         cycle_count += 1
+
+        # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
+        try:
+            _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
+                stats.get("virtual_balance", stats.get("last_balance", 0.0))
+            )
+            if not _gas_ok:
+                logger.critical(f"🚨 STRICT GAS TANK: LST scanner halted — balance below 0.005 SOL")
+                await asyncio.sleep(30)
+                continue
+        except Exception as _ge:
+            logger.debug(f"LST scanner gas tank check skipped: {_ge}")
+
         try:
             # --- TASK 3 — Dynamic Max Borrow with Slippage-Pegged Sizing (FIX 4) ---
             # Uses OptimalTradeSizer.calculate_dynamic_flash_size to calculate the optimal
@@ -2079,7 +2092,7 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
 
                         # Wait for confirmation in background (non-blocking)
                         confirmation = await jito_executor.wait_for_confirmation(
-                            bundle_id, max_wait_time=30.0
+                            bundle_id, max_wait_time=0.8
                         )
                         if confirmation.get("status") in ["confirmed", "finalized"]:
                             logger.debug(f"✅ LST bundle confirmed: {confirmation['status']}")
@@ -2566,7 +2579,19 @@ async def execute_enhanced_migration_arbitrage(mint_address, raydium_addresses, 
                                               market_id, session, cfg, rpc_manager, keypair,
                                               jito_executor, ai_collector):
     """Execute migration arbitrage with enhanced PDA system."""
-    global TOTAL_FAILED_BUNDLES_IN_A_ROW, GLOBAL_STOP_EVENT
+    global GLOBAL_STOP_EVENT
+
+    # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
+    try:
+        _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
+            stats.get("virtual_balance", stats.get("last_balance", 0.0))
+        )
+        if not _gas_ok:
+            logger.critical("🚨 STRICT GAS TANK: Migration arb halted — balance below 0.005 SOL")
+            return False
+    except Exception as _ge:
+        logger.debug(f"Migration gas tank check skipped: {_ge}")
+
     try:
         start_time = time.time()
 
@@ -2655,10 +2680,11 @@ async def execute_enhanced_migration_arbitrage(mint_address, raydium_addresses, 
         # never stalled by 10–30 s `wait_for_confirmation`.
         stats["bundle_send_attempts"] += 1
 
+        global TOTAL_FAILED_BUNDLES_IN_A_ROW
         async def _migration_post_send(b_result: dict) -> None:
+            global TOTAL_FAILED_BUNDLES_IN_A_ROW
             _exec_ms = (time.time() - start_time) * 1000
             if b_result["success"]:
-                global TOTAL_FAILED_BUNDLES_IN_A_ROW
                 TOTAL_FAILED_BUNDLES_IN_A_ROW = 0
                 stats["bundle_successes"] += 1
                 bid = b_result.get("bundle_id", "")
@@ -2666,10 +2692,9 @@ async def execute_enhanced_migration_arbitrage(mint_address, raydium_addresses, 
                 logger.info(f"⚡ Executed in {_exec_ms:.2f}ms with pre-computed addresses")
 
                 confirmation = await jito_executor.wait_for_confirmation(
-                    bid, max_wait_time=30.0
+                    bid, max_wait_time=0.8
                 )
             else:
-                global TOTAL_FAILED_BUNDLES_IN_A_ROW
                 err = str(b_result.get("error", ""))
                 if "SlippageExceeded" in err:
                     TOTAL_FAILED_BUNDLES_IN_A_ROW += 1
@@ -2743,7 +2768,7 @@ async def mark_wsol_atomically_closed():
 async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, tx_b64, tx_id, execution_time, session=None, keypair=None, rpc_getter=None, target_mint_ata=None, virtual_balance_to_deduct=0.0):
     """Check bundle confirmation asynchronously without blocking."""
     try:
-        confirmation = await jito_executor.wait_for_confirmation(bundle_id, max_wait_time=15.0)
+        confirmation = await jito_executor.wait_for_confirmation(bundle_id, max_wait_time=0.8)
         if confirmation.get("status") == "failed":
             logger.error(f"❌ ТРЕЙД УПАЛ (Bundle Failed): {confirmation}")
             await data_aggregator.log_tx_failed(bundle_id, confirmation, {"tx": tx_b64})
@@ -3182,6 +3207,16 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
             # Fix 44: Virtual Balance Guard — use virtual_balance so we never double-
             # commit capital while previous bundles are still in-flight.
             balance = stats.get("virtual_balance", stats.get("last_balance", 0.0))
+
+            # Fix 5 (Strict Gas Tank): never trade if balance < 0.005 SOL
+            try:
+                _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(balance)
+                if not _gas_ok:
+                    logger.critical(f"🚨 STRICT GAS TANK: Balance {balance:.6f} SOL < 0.005 SOL. Worker halting.")
+                    await asyncio.sleep(30)
+                    continue
+            except Exception as _ge:
+                logger.debug(f"Worker gas tank check skipped: {_ge}")
             # Dynamic sizing from ENV + safety (Issue 5)
             borrow_env_sol = float(os.getenv("FLASH_LOAN_SIZE_SOL", "1.0"))
             borrow_amount_sol = borrow_env_sol  # For quote sizing (line 2327, 2363)

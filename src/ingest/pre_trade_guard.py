@@ -558,6 +558,45 @@ class PreTradeGuard:
         logger.debug(f"✅ Token security check passed for {mint_address}")
         return True, "Security check passed"
 
+    # ─── Strict Gas Tank (0.005 SOL Survival Floor) ───────────────────────────
+    # Never let the wallet drop below 0.005 SOL. If we hit this level, stop ALL
+    # trading immediately. At 0 SOL we can't even close ATAs to recover rent.
+    MIN_GAS_RESERVE_SOL = 0.005
+
+    @staticmethod
+    async def check_gas_tank(native_sol_balance: Optional[float] = None) -> Tuple[bool, float]:
+        """
+        🔋 Strict Gas Tank — последняя линия обороны капитала.
+
+        Если нативный SOL-баланс падает ниже 0.005 SOL, мы ОСТАНАВЛИВАЕМ
+        ВСЮ ТОРГОВЛЮ. Никаких сделок, никаких чаевых Jito, никаких
+        флеш-лоанов. Бот должен сначала восстановить баланс (через
+        dust_sweeper, внешний депозит, или ATA rent recovery).
+
+        Args:
+            native_sol_balance: Текущий баланс в SOL, или None для пропуска.
+
+        Returns:
+            Tuple[bool, float]:
+              True  = достаточно газа, можно торговать.
+              False = баланс на нуле — trading halted.
+              Second element: available_sol = balance - gas_reserve.
+        """
+        if native_sol_balance is None:
+            return True, 0.0  # Нет данных — оптимистично пропускаем
+
+        if native_sol_balance < PreTradeGuard.MIN_GAS_RESERVE_SOL:
+            logger.critical(
+                f"🚨 STRICT GAS TANK: Balance {native_sol_balance:.6f} SOL < "
+                f"{PreTradeGuard.MIN_GAS_RESERVE_SOL} SOL minimum. TRADING HALTED. "
+                f"Deposit SOL or run dust_sweeper to recover rent before resuming."
+            )
+            return False, 0.0
+
+        available = native_sol_balance - PreTradeGuard.MIN_GAS_RESERVE_SOL
+        logger.debug(f"🔋 Gas Tank: {native_sol_balance:.6f} SOL → {available:.6f} SOL available (reserve={PreTradeGuard.MIN_GAS_RESERVE_SOL})")
+        return True, available
+
     # ─── Pre-Trade Profit Re-Check ─────────────────────────────────────────────
 
     async def check_profit_before_execution(

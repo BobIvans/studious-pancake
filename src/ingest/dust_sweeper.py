@@ -39,6 +39,7 @@ class DustSweeper:
             self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint, self.spl_token_2022_program))
         else:
             self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint))
+        self.wsol_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.wsol_mint))
         self.golden_atas = {self.wsol_ata, self.usdc_ata}
 
     async def sweep_on_startup(self) -> int:
@@ -265,7 +266,8 @@ class DustSweeper:
                         logger.debug(f"🔥 Burning {amount} lamports from {account_addr[:8]}…")
 
                 # CloseAccount after draining: zero-balance accounts close cleanly
-                close_ix = self._build_close_account_instruction(account_addr)
+                # Pass mint so xStock Token-2022 accounts use the correct program ID
+                close_ix = self._build_close_account_instruction(account_addr, mint=mint)
                 if close_ix:
                     close_instructions.append(close_ix)
 
@@ -289,16 +291,30 @@ class DustSweeper:
             logger.error(f"Batch close failed: {e}")
             return 0
 
-    def _build_close_account_instruction(self, token_account: str):
-        """Build CloseAccount instruction for SPL token."""
+    def _build_close_account_instruction(self, token_account: str, mint: Optional[str] = None):
+        """Build CloseAccount instruction for SPL/Token-2022 token.
+
+        Args:
+            token_account: Token account address to close.
+            mint: Token mint string — used to detect Token-2022 xStocks so the
+                  correct program ID (Tokenz… vs Tokenkeg…) is used.
+                  If None, falls back to classic SPL Token program.
+        """
         try:
             from spl.token.instructions import CloseAccountParams, close_account
+            from src.config.xstocks_registry import is_xstock_token
+
+            # Detect Token-2022 xStocks → use Token-2022 program ID
+            if mint and is_xstock_token(Pubkey.from_string(mint)):
+                program_id = self.spl_token_2022_program
+            else:
+                program_id = self.spl_token_program
 
             close_params = CloseAccountParams(
                 account=Pubkey.from_string(token_account),
                 dest=self.wallet_keypair.pubkey(),
                 owner=self.wallet_keypair.pubkey(),
-                program_id=self.spl_token_program
+                program_id=program_id
             )
 
             return close_account(close_params)

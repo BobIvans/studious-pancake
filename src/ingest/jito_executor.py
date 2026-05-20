@@ -316,14 +316,14 @@ class JitoExecutor:
     async def wait_for_confirmation(
         self,
         bundle_id: str,
-        max_wait_time: float = 3.0,  # HFT: drop after 3s
-        check_interval: float = 2.0,
+        max_wait_time: float = 0.8,  # HFT: 2 slots ≈ 800ms, then ghost
+        check_interval: float = 0.4,
     ) -> Dict[str, Any]:
         """Wait for bundle confirmation.
 
         Args:
             bundle_id: Bundle ID to monitor
-            max_wait_time: Maximum wait time in seconds
+            max_wait_time: Maximum wait time in seconds (800ms HFT = 2 Solana slots)
             check_interval: Check interval in seconds
 
         Returns:

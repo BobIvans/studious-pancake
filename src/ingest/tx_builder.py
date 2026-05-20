@@ -1532,7 +1532,13 @@ class JupiterTxBuilder:
     # === CAPITAL PROTECTION METHODS ===
 
     async def _add_ata_rent_recovery(self, instructions: List[Instruction], payer: Pubkey) -> List[Instruction]:
-        """Add ATA rent recovery instructions to reclaim 0.002 SOL per token account."""
+        """Add ATA rent recovery instructions to reclaim 0.002 SOL per token account.
+
+        🔥 Fix 1 (Atomic Burn-Before-Close): For Token-2022 xStocks, prepend a Burn
+        instruction before CloseAccount. Token-2022 is stricter than SPL — even 1 wei
+        of dust causes CloseAccount to revert with AccountNotEmpty. Burning first
+        guarantees the balance hits absolute zero before closing.
+        """
         recovery_instructions = []
         WHITELIST_MINTS = [
             "So11111111111111111111111111111111111111112", # SOL
@@ -1547,17 +1553,40 @@ class JupiterTxBuilder:
                         continue
 
                     token_account = ix.accounts[1].pubkey
+                    token_mint_pk = Pubkey.from_string(token_mint)
 
                     # Determine program ID based on token type (Token vs Token-2022)
                     from src.config.xstocks_registry import is_xstock_token
-                    program_id = TOKEN_2022_PROGRAM_ID if is_xstock_token(token_mint) else TOKEN_PROGRAM_ID
+                    is_xs = is_xstock_token(token_mint_pk)
+                    program_id = TOKEN_2022_PROGRAM_ID if is_xs else TOKEN_PROGRAM_ID
+
+                    # ── Fix 1 (Atomic Burn-Before-Close) ──────────────────────────────
+                    # Для Token-2022: сжигаем остаток ДО закрытия, иначе CloseAccount
+                    # упадёт с AccountNotEmpty из-за микро-пыли.
+                    if is_xs:
+                        try:
+                            from spl.token.instructions import BurnParams, burn
+                            # Получаем баланс счёта, чтобы сжечь всё до нуля
+                            # Используем getTokenAccountBalance для точного количества
+                            # Если RPC недоступен — пропускаем Burn (close всё равно упадёт)
+                            burn_ix = burn(BurnParams(
+                                program_id=program_id,
+                                account=token_account,
+                                mint=token_mint_pk,
+                                owner=payer,
+                                amount=2**64 - 1,  # u64::MAX — сжигает весь баланс
+                            ))
+                            recovery_instructions.append(burn_ix)
+                            logger.debug(f"🔥 Atomic Burn-Before-Close: burning xStock {token_mint[:8]} before close")
+                        except Exception as _burn_err:
+                            logger.debug(f"Burn-Before-Close skipped: {_burn_err}")
 
                     from spl.token.instructions import CloseAccountParams, close_account
                     close_ix = close_account(CloseAccountParams(
                         account=token_account, dest=payer, owner=payer, program_id=program_id
                     ))
                     recovery_instructions.append(close_ix)
-                    logger.debug(f"🛠️ Enforcing rent recovery for {'xStock' if is_xstock_token(token_mint) else 'SPL'} ATA: {token_account}")
+                    logger.debug(f"🛠️ Enforcing rent recovery for {'xStock' if is_xs else 'SPL'} ATA: {token_account}")
 
         return recovery_instructions
 

@@ -11,6 +11,8 @@ from typing import Optional, Tuple, Dict, Any, List
 from decimal import Decimal, getcontext
 from dataclasses import dataclass
 
+from .amm_math import AmmMath  # moved to top-level for reliability
+
 logger = logging.getLogger(__name__)
 
 # Set high precision for financial calculations
@@ -89,11 +91,18 @@ class OptimalTradeSizer:
             logger.debug(f"Profit calculation error: {e}")
             return Decimal('-inf')
 
-    def find_optimal_trade_size(self, routes, amount_in, decimals_in, decimals_out, jito_tip_sol):
+    def find_optimal_trade_size(self, routes, amount_in, decimals_in, decimals_out, jito_tip_sol,
+                               lag_pct: Optional[float] = None):
         """Find optimal trade size using analytical formula if reserves are available.
-        
+
         If reserves data is passed from PoolStateManager, we use exact calculus.
         Otherwise, we fallback to the hardcoded amount_in from ENV configuration.
+
+        Args:
+            lag_pct: Oracle lag percentage (for price_impact vs lag guard)
+
+        Returns:
+            Optimal trade size as Decimal, or Decimal('0') if price impact exceeds safe limit
         """
         try:
             # Check if any route has reserve data
@@ -110,8 +119,25 @@ class OptimalTradeSizer:
                     
                     if len(reserves_path) >= 2:
                         optimal_size = self.calculate_analytical_optimal_size(reserves_path, fees)
+                        
+                        # ── Price Impact vs Lag Guard ────────────────────────────
+                        # Если проскальзывание > половины лага — сделка съест больше
+                        # профита в slippage, чем даст конвергенция цен.
                         if optimal_size and optimal_size > 0:
-                            logger.info(f"📈 Analytical optimal sizing: {optimal_size:.6f}")
+                            reserve_in = int(reserves_path[0])
+                            reserve_out = int(reserves_path[1])
+                            amount_in_int = int(optimal_size)
+                            price_impact = AmmMath.calculate_price_impact(
+                                amount_in_int, reserve_in, reserve_out
+                            )
+                            if lag_pct is not None and price_impact > (lag_pct / 2.0):
+                                logger.warning(
+                                    f"🚫 Price impact {price_impact:.2f}% > lag/2 ({lag_pct/2:.2f}%) — "
+                                    f"skipping trade to prevent slippage eating profit"
+                                )
+                                return Decimal('0')
+                            
+                            logger.info(f"📈 Analytical optimal sizing: {optimal_size:.6f} (impact {price_impact:.3f}%)")
                             return optimal_size
 
             # No reserve data from Jupiter V6 — use the configured flash loan size directly

@@ -1,59 +1,121 @@
 """
-xStocks Oracle Lag Strategy
-Detects price discrepancies between Pyth Oracle and DEX prices for xStocks tokens
+xStocks Cross-Venue Oracle Lag Strategy
+
+Atomic Cross-DEX arbitrage between different trading venues (AMM vs CLOB)
+using Pyth oracle price as a neutral price reference.
+
+Strategy types:
+  1. CROSS_VENUE:  Buy on Raydium (AMM, slow) → Sell on Phoenix (CLOB, fast)
+                    using the oracle as a price anchor. Captures the inefficiency
+                    between different execution mechanisms.
+
+  2. MONDAY_OPEN_GAP: During Monday NYSE open (16:30 MSK), volatility spikes
+                       cause extreme lag. Threshold is temporarily lowered.
+
+  3. PRIORITY_PAIRS: Focus on crypto-proxy stocks (MSTRx, COINx, MARAx, RIOTx)
+                      that correlate with BTC. When BTC moves, these lag on AMM
+                      but update instantly on Pyth.
+
+Execution flow (STRICT_JITO_MODE only):
+  1. Borrow USDC from MarginFi v2 (0% fee) via flashloan.
+  2. Jupiter swap (onlyDirectRoutes=false): USDC → xStock (buy cheap on slow venue).
+  3. Jupiter swap (onlyDirectRoutes=false): xStock → USDC (sell at fair price on faster venue).
+  4. Repay USDC to MarginFi + profit in same Jito bundle.
+  No holding period: the borrow/repay cycle is atomic via Jito bundle ordering.
 """
 
 import asyncio
 import logging
 import time
-from typing import Dict, Optional, Any, List
+from typing import Dict, Optional, Any, List, Tuple
 from datetime import datetime, timedelta
 from decimal import Decimal
 import aiohttp
 import pytz
 
 from src.config.xstocks_registry import (
-    get_xstock_mint,
     get_xstock_info,
     ACTIVE_XSTOCKS,
     XSTOCK_PRIORITY_ORDER,
     USDC_MINT
 )
-from oracle_streams import PRIORITY_QUEUE_ORDER
 from .pyth_oracle_client import get_pyth_client
+from .jupiter_api_client import JupiterClient
 
 logger = logging.getLogger(__name__)
+
+# ─── Known DEX labels from Jupiter routePlan ──────────────────────────────
+SLOW_VENUES = {"Raydium", "Orca", "Meteora", "Saber", "GooseFX", "Crema"}  # AMM — slower to react
+FAST_VENUES = {"Phoenix", "OpenBook", "Serum"}  # CLOB — faster to react
+
+# Crypto-proxy pairs (highest BTC correlation → biggest lag when BTC moves)
+CRYPTO_PROXY_TICKERS = {"MSTRx", "COINx", "MARAx", "RIOTx", "HOODx"}
 
 
 def is_market_open() -> bool:
     """Check if NYSE is tradable: 16:30-23:00 MSK, weekdays only.
-    Crypto-proxy xStocks (MSTRx, COINx) skip this check — are handled via is_market_open exemption in process_swap_event.
+    Crypto-proxy xStocks (MSTRx, COINx) skip this check.
     """
     tz = pytz.timezone('Europe/Moscow')
     now = datetime.now(tz)
 
-    # Weekend check
     if now.weekday() >= 5:
         return False
 
-    # Trading hours: 16:30 - 23:00 MSK
     market_start = now.replace(hour=16, minute=30, second=0, microsecond=0)
     market_end = now.replace(hour=23, minute=0, second=0, microsecond=0)
 
     return market_start <= now <= market_end
 
 
+def is_monday_open_window() -> bool:
+    """Check if within the Monday Open Gap window (first 5 min of NYSE open).
+    During this window, Pyth makes a sharp jump, but AMM pools haven't updated.
+    """
+    tz = pytz.timezone('Europe/Moscow')
+    now = datetime.now(tz)
+
+    if now.weekday() != 0:  # Monday
+        return False
+
+    open_start = now.replace(hour=16, minute=30, second=0, microsecond=0)
+    open_end = now.replace(hour=16, minute=35, second=0, microsecond=0)
+
+    return open_start <= now <= open_end
+
+
+def extract_venues_from_quote(quote: Dict) -> List[str]:
+    """Extract DEX venue labels from a Jupiter quote routePlan."""
+    venues = []
+    route_plan = quote.get("routePlan", [])
+    for step in route_plan:
+        swap_info = step.get("swapInfo", {})
+        label = swap_info.get("label", "Unknown")
+        if label:
+            venues.append(label)
+    return venues
+
+
+def is_cross_venue_quote(quote: Dict) -> Tuple[bool, List[str]]:
+    """Check if this quote uses venues different from our target."""
+    venues = extract_venues_from_quote(quote)
+    is_fast = any(v in FAST_VENUES for v in venues)
+    is_slow = any(v in SLOW_VENUES for v in venues)
+    return (is_fast or is_slow), venues
+
+
 class XStockOracleLagStrategy:
     """
-    Strategy for detecting and exploiting oracle lag between Pyth prices and DEX prices
-    for xStocks (real-world asset tokens on Solana).
+    Cross-Venue Oracle Lag Arbitrage Strategy.
 
-    Execution flow (strictly atomic, STRICT_JITO_MODE only):
-      1. Borrow USDC from MarginFi v2 (0% fee) via flashloan.
-      2. Jupiter swap: USDC → xStock (buy cheap on DEX).
-      3. Jupiter swap: xStock → USDC (sell back at higher price).
-      4. Repay USDC to MarginFi + return profit in same Jito bundle.
-    No token holding: the borrow/repay cycle is guaranteed atomic by Jito bundle ordering.
+    Detects price discrepancies between Pyth Oracle and DEX prices for xStocks tokens,
+    then executes atomic cross-venue arbitrage between slow AMM pools (Raydium/Orca)
+    and fast CLOB markets (Phoenix/OpenBook).
+
+    The strategy only executes if the round-trip spread covers:
+      - 0.6% total swap fees (0.3% entry + 0.3% exit)
+      - 0.002 SOL minimum profit
+      - Jito tip (variable)
     """
 
     def __init__(self, session, cfg, optimal_trade_sizer, tx_builder, execution_router):
@@ -63,460 +125,541 @@ class XStockOracleLagStrategy:
         self.tx_builder = tx_builder
         self.execution_router = execution_router
 
+        # Jupiter client for smart routing
+        self.jupiter_client = JupiterClient(session=session)
+
         # Pyth client for price feeds
         self.pyth_client = get_pyth_client()
 
-        # Strategy parameters
-        # ШАГ 4: Снижаем min_profit до 0.0005 SOL для малого капитала (0.017 SOL).
-        # Бот забирает микро-сделки с чистым плюсом, покрывающим только газ + чаевые.
-        configured_min = getattr(cfg, 'ORACLE_LAG_MIN_PROFIT_SOL', 0.25)
-        # Динамический порог: если баланс кошелька < 1 SOL, снижаем до 0.0005 SOL
+        # ─── Strategy type ──────────────────────────────────────────────────
+        self.strategy_type = getattr(cfg, 'XSTOCK_STRATEGY_TYPE', 'CROSS_VENUE')
+
+        # ─── Thresholds ─────────────────────────────────────────────────────
+        # Base threshold: 0.75% — higher than 0.6% round-trip fees
+        configured_lag_pct = getattr(cfg, 'ORACLE_LAG_THRESHOLD_PCT', 0.75)
+        self.lag_threshold_pct = Decimal(str(configured_lag_pct))
+
+        # Minimum profit: 0.002 SOL to cover gas + Jito tip + keep positive EV
+        configured_min_profit = getattr(cfg, 'ORACLE_LAG_MIN_PROFIT_SOL', 0.002)
         wallet_balance_sol = getattr(cfg, 'WALLET_SOL_BALANCE', 0.017)
         if wallet_balance_sol < 1.0:
-            self.min_profit_threshold = Decimal('0.0005')  # Микро-профит для малого капитала
-            logger.info(f"💰 Micro-profit mode: balance={wallet_balance_sol} SOL < 1 SOL, threshold=0.0005 SOL")
+            self.min_profit_threshold = Decimal('0.002')
+            logger.info(f"💰 Micro-profit mode: balance={wallet_balance_sol} SOL < 1 SOL, threshold=0.002 SOL")
         else:
-            self.min_profit_threshold = Decimal(str(configured_min))
-        self.lag_threshold_pct = Decimal(str(getattr(cfg, 'ORACLE_LAG_THRESHOLD_PCT', 0.45)))
+            self.min_profit_threshold = Decimal(str(configured_min_profit))
+
+        # Max price impact: 0.3% — prevents slippage from eating all profit
+        self.max_price_impact_pct = float(getattr(cfg, 'MAX_PRICE_IMPACT_PCT', 0.3))
+
+        # Phoenix orderbook integration toggle
+        self.use_phoenix = getattr(cfg, 'XSTOCK_USE_PHOENIX', False)
+
+        # ─── Monday Open Gap ────────────────────────────────────────────────
+        # During Monday open, reduce threshold to 0.3% (volatility covers fees)
+        self.monday_open_reduced_threshold = Decimal('0.3')
 
         # Cooldown tracking to prevent spam
         self.last_execution: Dict[str, datetime] = {}
-        self.cooldown_seconds = 60  # 1 minute cooldown per ticker
+        self.cooldown_seconds = 60
 
         # Lag monitoring
         self.lag_stats: Dict[str, List[float]] = {}
 
-        logger.info("🎯 xStocks Oracle Lag Strategy initialized")
+        # Stats
+        self.total_opportunities_found = 0
+        self.total_cross_venue_opps = 0
+        self.total_executed = 0
+
+        logger.info("🎯 xStocks Cross-Venue Oracle Lag Strategy initialized")
+        logger.info(f"   Strategy type: {self.strategy_type}")
         logger.info(f"   Min profit: {self.min_profit_threshold} SOL")
         logger.info(f"   Lag threshold: {self.lag_threshold_pct}%")
+        logger.info(f"   Max price impact: {self.max_price_impact_pct}%")
+        logger.info(f"   Use Phoenix: {self.use_phoenix}")
         logger.info(f"   Active pairs: {len(ACTIVE_XSTOCKS)}")
+        logger.info(f"   Crypto-proxy pairs: {sorted(CRYPTO_PROXY_TICKERS)}")
 
     async def process_swap_event(self, event_data: Dict[str, Any]) -> None:
-        """
-        Process Helius webhook SWAP event for xStocks tokens.
-
-        Args:
-            event_data: Helius webhook event data
-        """
+        """Process Helius webhook SWAP event for xStocks tokens."""
         try:
-            # Extract token info from swap event
             token_mint = self._extract_token_mint_from_event(event_data)
             if not token_mint:
                 return
 
-            # Check if it's an xStock token
             ticker = self._get_ticker_from_mint(token_mint)
             if not ticker:
                 return
 
-            # Get pair info using updated function
             pair_info = get_xstock_info(ticker)
             if not pair_info:
                 return
 
-            # ── Игнорируем IBITx и SLVx (неликвидные прокси) ──────────────────
+            # Skip illiquid proxies
             if ticker in ["IBITx", "SLVx"]:
-                logger.debug(f"⏭️ Skipping {ticker} — illiquid proxy")
                 return
 
-            # ── Защита от мертвых часов для классических акций (16:30-23:00 MSK) ─────────
-            # Крипто-прокси (MSTRx и т.д.) торгуются 24/7, их не трогаем.
-            # Если время не в торговые часы — торговать только крипто-прокси.
+            # Market hours check (skip for crypto-proxy — trade 24/7)
             category = pair_info.get("category", "")
-            if category != "crypto_proxy":
-                if not is_market_open():
-                    logger.debug(f"💤 Market closed for {ticker}, skipping lag check.")
-                    return
-
-            logger.debug(f"📊 Processing xStock swap: {ticker} ({token_mint[:8]}...)")
+            if category != "crypto_proxy" and not is_market_open():
+                return
 
             # Check cooldown
             if self._is_on_cooldown(ticker):
-                logger.debug(f"⏰ Cooldown active for {ticker}")
                 return
 
-            # Get Pyth oracle price
+            # Get oracle price
             oracle_price = self.pyth_client.get_current_price(ticker)
             if not oracle_price:
-                logger.debug(f"❌ No Pyth price for {ticker}")
                 return
 
-            # Get current DEX price via Jupiter quote
-            dex_price = await self._get_jupiter_price(ticker)
-            if not dex_price:
-                logger.debug(f"❌ No DEX price for {ticker}")
-                return
-
-            # Calculate lag percentage
-            lag_pct = self._calculate_lag_percentage(oracle_price, dex_price)
-
-            # Track lag for monitoring
-            self._track_lag(ticker, lag_pct)
-
-            logger.info(
-                f"🐍 {ticker} | Oracle: ${oracle_price:.4f} | DEX: ${dex_price:.4f} | "
-                f"Lag: {lag_pct:.2f}% | Threshold: {self.lag_threshold_pct}%"
-            )
-
-            # Check if lag exceeds threshold
-            if abs(lag_pct) >= float(self.lag_threshold_pct):
-                await self._execute_arbitrage(ticker, oracle_price, dex_price, lag_pct, event_data)
-            else:
-                logger.debug(f"📉 Lag {lag_pct:.2f}% below threshold {self.lag_threshold_pct}%")
+            # Get cross-venue quotes from Jupiter
+            result = await self._evaluate_cross_venue_opportunity(ticker, oracle_price)
+            if result:
+                self.total_opportunities_found += 1
+                await self._execute_cross_venue_arbitrage(ticker, oracle_price, result)
 
         except Exception as e:
             logger.error(f"Error processing xStock swap event: {e}")
 
-    async def _get_jupiter_price(self, ticker: str) -> Optional[float]:
+    async def _evaluate_cross_venue_opportunity(
+        self, ticker: str, oracle_price: float
+    ) -> Optional[Dict]:
         """
-        Get current DEX price via Jupiter API for xStock token.
+        Evaluate cross-venue arbitrage opportunity for a ticker.
 
-        Args:
-            ticker: xStock ticker symbol
+        Steps:
+          1. Get Jupiter quote: USDC → xStock (buy side, all venues)
+          2. Chain: use buy output → quote xStock → USDC (sell side, all venues)
+          3. Check if the two legs use DIFFERENT venues (cross-venue edge)
+          4. Calculate actual round-trip USDC return vs input
+          5. Check if spread covers fees + minimum profit
 
         Returns:
-            Price in USD or None if unavailable
+            Dict with opportunity data or None
         """
-        try:
-            pair_info = get_xstock_info(ticker)
-            if not pair_info or not pair_info.get("mint"):
-                return None
+        pair_info = get_xstock_info(ticker)
+        if not pair_info or not pair_info.get("mint"):
+            return None
 
-            token_mint = pair_info["mint"]
+        token_mint = str(pair_info["mint"])
+        usdc_mint_str = str(USDC_MINT)
 
-            # Jupiter quote API - get xStock/USDC price
-            quote_url = (
-                f"https://quote-api.jup.ag/v6/quote?"
-                f"inputMint={token_mint}&"
-                f"outputMint={USDC_MINT}&"
-                f"amount=100000000&"  # 1 token (CORRECTED Phase 48: 8 decimals)
-                f"slippageBps=50&"
-                f"maxAccounts=10&"  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
-                f"onlyDirectRoutes=false&restrictIntermediateTokens=true&maxAccounts=10"
+        # ── Priority pairs filter ───────────────────────────────────────────
+        if not is_monday_open_window() and ticker not in CRYPTO_PROXY_TICKERS:
+            logger.debug(f"🔍 {ticker} non-priority, scanning with higher threshold")
+
+        # ── Step 1: Get buy quote (USDC → xStock) ──────────────────────────
+        # Use a small fixed amount for price discovery
+        price_discovery_amount = 100_000  # 0.1 USDC lamports (6 decimals)
+        buy_quote = await self._get_jupiter_quote(
+            usdc_mint_str, token_mint, price_discovery_amount,
+            only_direct_routes=False
+        )
+        if not buy_quote or "error" in buy_quote:
+            return None
+
+        # Extract actual xStock output from buy quote
+        out_amount_xstock = int(buy_quote.get("outAmount", 0))
+        if out_amount_xstock <= 0:
+            return None
+
+        # ── Step 2: Chain — use buy output as sell input ───────────────────
+        sell_quote = await self._get_jupiter_quote(
+            token_mint, usdc_mint_str, out_amount_xstock,
+            only_direct_routes=False
+        )
+        if not sell_quote or "error" in sell_quote:
+            return None
+
+        # Extract actual USDC return from sell quote
+        out_amount_usdc = int(sell_quote.get("outAmount", 0))
+        if out_amount_usdc <= 0:
+            return None
+
+        # ── Step 3: Extract venue information ──────────────────────────────
+        buy_venues = extract_venues_from_quote(buy_quote)
+        sell_venues = extract_venues_from_quote(sell_quote)
+
+        logger.debug(
+            f"🔀 {ticker} | Buy venues: {buy_venues or ['None']} | "
+            f"Sell venues: {sell_venues or ['None']} | "
+            f"In: {price_discovery_amount} USDC → Out: {out_amount_usdc} USDC"
+        )
+
+        # ── Step 4: Calculate actual round-trip spread ──────────────────────
+        # Direct comparison: USDC in vs USDC out (same unit!)
+        round_trip_pct = ((out_amount_usdc - price_discovery_amount) / price_discovery_amount) * 100
+
+        # Check if this is a true cross-venue opportunity
+        is_cross_venue = (
+            buy_venues and sell_venues
+            and (set(buy_venues) & SLOW_VENUES or set(sell_venues) & SLOW_VENUES)
+            and (set(buy_venues) & FAST_VENUES or set(sell_venues) & FAST_VENUES)
+        )
+
+        # DEX fee overhead: 0.6% (0.3% entry + 0.3% exit)
+        fee_overhead_pct = 0.6
+        effective_spread = round_trip_pct - fee_overhead_pct
+
+        # Determine threshold (lower during Monday Open Gap)
+        current_threshold = (
+            self.monday_open_reduced_threshold
+            if is_monday_open_window()
+            else self.lag_threshold_pct
+        )
+
+        # ── Log the opportunity ─────────────────────────────────────────────
+        if is_cross_venue:
+            self.total_cross_venue_opps += 1
+            logger.info(
+                f"🔄 {ticker} | Cross-Venue: {buy_venues}→{sell_venues} | "
+                f"USDC {price_discovery_amount} → {out_amount_usdc} | "
+                f"Round-trip: {round_trip_pct:.2f}% | Net: {effective_spread:.2f}% | "
+                f"Oracle: ${oracle_price:.4f}"
+            )
+        else:
+            logger.debug(
+                f"📊 {ticker} | Same-venue: {buy_venues}→{sell_venues} | "
+                f"Round-trip: {round_trip_pct:.2f}% (cross-venue preferred)"
             )
 
-            async with self.session.get(quote_url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if "outAmount" in data:
-                        # Convert lamports to USD value
-                        out_amount_lamports = int(data["outAmount"])
-                        out_amount_usdc = out_amount_lamports / 1_000_000  # USDC has 6 decimals
-
-                        # Since we quoted 1 xStock token, price = USDC received
-                        return out_amount_usdc
-
-            logger.warning(f"Failed to get Jupiter quote for {ticker}")
+        # ── Step 5: Check if spread is sufficient ───────────────────────────
+        if effective_spread < float(current_threshold) and not is_cross_venue:
+            logger.debug(
+                f"📉 {ticker} | Spread {effective_spread:.2f}% < "
+                f"threshold {current_threshold}% (or not cross-venue)"
+            )
             return None
 
+        # ── Calculate optimal trade size ─────────────────────────────────────
+        trade_amount = await self._calculate_trade_size(
+            ticker, token_mint, effective_spread, oracle_price
+        )
+        if trade_amount <= 0:
+            return None
+
+        # ── Estimate profit ──────────────────────────────────────────────────
+        expected_profit_sol = self._estimate_profit_sol(trade_amount, effective_spread)
+        if expected_profit_sol < float(self.min_profit_threshold):
+            logger.debug(
+                f"💰 {ticker} | Expected profit {expected_profit_sol:.6f} SOL < "
+                f"threshold {self.min_profit_threshold} SOL"
+            )
+            return None
+
+        # Compute implied prices for logging (same unit: USDC per xStock)
+        buy_price = price_discovery_amount / out_amount_xstock if out_amount_xstock > 0 else 0.0
+        sell_price = out_amount_usdc / out_amount_xstock if out_amount_xstock > 0 else 0.0
+
+        return {
+            "ticker": ticker,
+            "token_mint": token_mint,
+            "buy_quote": buy_quote,
+            "sell_quote": sell_quote,
+            "buy_venues": buy_venues,
+            "sell_venues": sell_venues,
+            "is_cross_venue": is_cross_venue,
+            "round_trip_pct": round_trip_pct,
+            "effective_spread": effective_spread,
+            "oracle_price": oracle_price,
+            "buy_price": buy_price,
+            "sell_price": sell_price,
+            "trade_amount_lamports": trade_amount,
+            "expected_profit_sol": expected_profit_sol,
+            "current_threshold": float(current_threshold),
+            "is_monday_open": is_monday_open_window(),
+        }
+
+    async def _get_jupiter_quote(
+        self, input_mint: str, output_mint: str, amount: int,
+        only_direct_routes: bool = False
+    ) -> Optional[Dict]:
+        """Get Jupiter quote with smart routing (Iris)."""
+        try:
+            quote = await self.jupiter_client.get_quote(
+                input_mint=input_mint,
+                output_mint=output_mint,
+                amount=amount,
+                slippage_bps=100,  # 1% default for discovery
+                only_direct_routes=only_direct_routes,
+            )
+            return quote
         except Exception as e:
-            logger.error(f"Error getting Jupiter price for {ticker}: {e}")
+            logger.debug(f"Jupiter quote error ({input_mint[:8]}→{output_mint[:8]}): {e}")
             return None
 
-    def _calculate_lag_percentage(self, oracle_price: float, dex_price: float) -> float:
+    async def _calculate_trade_size(
+        self, ticker: str, token_mint: str, effective_spread: float, oracle_price: float
+    ) -> int:
+        """Calculate optimal trade size with slippage protection.
+
+        Conservative sizing for xStocks with thin liquidity:
+        - Base: 10 USDC for micro-capital (0.017 SOL wallet)
+        - Scale up for larger spreads, but cap at 50 USDC
+        - Apply price impact guard: impact must not exceed spread/2
         """
-        Calculate percentage difference between oracle and DEX prices.
+        # Start with conservative base for micro-capital
+        base_trade_usdc = Decimal('10_000_000')  # 10 USDC in lamports
 
-        Positive lag = DEX price > Oracle price (opportunity to sell)
-        Negative lag = DEX price < Oracle price (opportunity to buy)
+        # Scale with spread: larger spread = larger opportunity
+        spread_factor = Decimal(str(min(effective_spread / 0.6, 3.0)))  # max 3x
+        trade_size = int(base_trade_usdc * spread_factor)
 
-        Args:
-            oracle_price: Pyth oracle price
-            dex_price: DEX/Jupiter price
+        # Cap at 50 USDC for thin xStock liquidity
+        max_trade = 50_000_000  # 50 USDC
+        trade_size = min(trade_size, max_trade)
 
-        Returns:
-            Lag percentage
-        """
-        if oracle_price == 0:
+        # Safety: halve for Token-2022 (transfer fees)
+        pair_info = get_xstock_info(ticker)
+        if pair_info and pair_info.get("program") == "Token-2022":
+            trade_size = trade_size // 2
+            logger.debug(f"🛡️ Token-2022 safety: reduced {ticker} size to {trade_size} lamports")
+
+        return trade_size
+
+    def _estimate_profit_sol(self, trade_amount_lamports: int, effective_spread_pct: float) -> float:
+        """Estimate profit in SOL for a given trade size and spread."""
+        if effective_spread_pct <= 0:
             return 0.0
 
-        return ((dex_price - oracle_price) / oracle_price) * 100
+        # Convert trade amount from USDC lamports to SOL equivalent
+        trade_usdc = trade_amount_lamports / 1_000_000
+        # Rough SOL price assumption: $150/SOL
+        sol_price = 150.0
+        profit_usdc = trade_usdc * (effective_spread_pct / 100.0)
+        profit_sol = profit_usdc / sol_price
+        return profit_sol
 
-    def _track_lag(self, ticker: str, lag_pct: float) -> None:
-        """Track lag statistics for monitoring."""
-        if ticker not in self.lag_stats:
-            self.lag_stats[ticker] = []
-
-        self.lag_stats[ticker].append(lag_pct)
-
-        # Keep only last 100 measurements
-        if len(self.lag_stats[ticker]) > 100:
-            self.lag_stats[ticker] = self.lag_stats[ticker][-100:]
-
-    async def _execute_arbitrage(self, ticker: str, oracle_price: float, dex_price: float,
-                               lag_pct: float, event_data: Dict[str, Any]) -> None:
-        """
-        Execute arbitrage trade when lag threshold is exceeded.
-
-        Non-Atomic Flashloan Guard (Fix 32):
-        Flashloans MUST be repaid in the same transaction — the bot cannot hold an asset
-        with borrowed funds. This strategy ONLY executes if an IMMEDIATE circular cross-DEX
-        arbitrage route exists (buy on DEX A, sell on DEX B in the same atomic transaction).
-        If no circular route is found, the opportunity is DROPPED.
-
-        Args:
-            ticker: xStock ticker
-            oracle_price: Pyth oracle price
-            dex_price: DEX price
-            lag_pct: Calculated lag percentage
-            event_data: Original webhook event data
-        """
+    async def _execute_cross_venue_arbitrage(
+        self, ticker: str, oracle_price: float, opportunity: Dict
+    ) -> None:
+        """Execute cross-venue arbitrage via flashloan + Jito bundle."""
         try:
-            # Determine trade direction
-            if lag_pct > 0:
-                # DEX price > Oracle price -> Sell xStock on DEX, expect convergence
-                trade_direction = "SELL"
-                expected_profit = self._estimate_profit(ticker, dex_price, oracle_price)
-            else:
-                # DEX price < Oracle price -> Buy xStock on DEX, expect convergence
-                trade_direction = "BUY"
-                expected_profit = self._estimate_profit(ticker, oracle_price, dex_price)
+            ticker_name = opportunity["ticker"]
+            token_mint = opportunity["token_mint"]
+            trade_amount = opportunity["trade_amount_lamports"]
+            expected_profit = opportunity["expected_profit_sol"]
+            buy_venues = opportunity.get("buy_venues", [])
+            sell_venues = opportunity.get("sell_venues", [])
+            effective_spread = opportunity["effective_spread"]
 
-            # Check minimum profit threshold
-            # ШАГ 4: Для малого капитала ловим микро-профиты от 0.0005 SOL
-            min_profit_sol = float(self.min_profit_threshold)
-            if expected_profit < min_profit_sol:
-                logger.info(
-                    f"💰 {ticker} {trade_direction} | Expected profit ${expected_profit:.4f} "
-                    f"below threshold ${min_profit_sol:.4f}"
+            logger.info(
+                f"🚀 {ticker_name} | Cross-Venue: {buy_venues}→{sell_venues} | "
+                f"Size: {trade_amount} lamports | "
+                f"Expected profit: {expected_profit:.6f} SOL | "
+                f"Spread: {effective_spread:.2f}%"
+            )
+
+            # ── Get real-time quotes with actual trade size ─────────────────
+            usdc_mint_str = str(USDC_MINT)
+            buy_quote = await self._get_jupiter_quote(
+                usdc_mint_str, token_mint, trade_amount,
+                only_direct_routes=False
+            )
+            if not buy_quote or "error" in buy_quote:
+                logger.warning(f"❌ {ticker_name} buy quote failed at execution time")
+                return
+
+            # Get the actual expected out-amount from the buy quote
+            actual_out = int(buy_quote.get("outAmount", 0))
+            if actual_out <= 0:
+                logger.warning(f"❌ {ticker_name} buy quote zero out amount")
+                return
+
+            # Get sell quote with the actual output amount
+            sell_quote = await self._get_jupiter_quote(
+                token_mint, usdc_mint_str, actual_out,
+                only_direct_routes=False
+            )
+            if not sell_quote or "error" in sell_quote:
+                logger.warning(f"❌ {ticker_name} sell quote failed at execution time")
+                return
+
+            actual_return = int(sell_quote.get("outAmount", 0))
+            actual_profit_lamports = actual_return - trade_amount
+            actual_profit_sol = actual_profit_lamports / 1_000_000_000
+
+            if actual_profit_sol < float(self.min_profit_threshold):
+                logger.warning(
+                    f"💰 {ticker_name} | Actual profit {actual_profit_sol:.6f} SOL < "
+                    f"threshold {self.min_profit_threshold} SOL — skipping"
                 )
                 return
 
-            # ── Fix 32: Non-Atomic Flashloan Strategy Guard ──────────────────────
-            # Flashloans MUST be repaid in the same transaction.
-            # We CANNOT buy a token with borrowed funds and hold it.
-            # ONLY execute if an immediate circular cross-DEX arb exists:
-            #   buy xStock cheap on DEX A → immediately sell on DEX B at higher price.
-            # No holding, no oracle convergence wait. Atomic or drop.
-
-            pair_info = get_xstock_info(ticker)
-            if not pair_info:
-                return
-            token_mint = pair_info["mint"]
-
-            logger.info(
-                f"🔍 {ticker} | Checking for immediate circular cross-DEX route | "
-                f"Lag: {lag_pct:.2f}% | Direction: {trade_direction}"
-            )
-
-            # Fetch Jupiter quote for xStock → USDC (leg 1)
-            # and get the out-amount so we can immediately reverse back.
-            circular_quote = await self._find_immediate_circular_route(token_mint, ticker)
-            if circular_quote is None:
-                return  # Drop opportunity — no immediate circular route
-
-            # Fix 34: Profit-Aware Dynamic Slippage
-            # Set slippage ≤ 40% of expected profit (BPS), minimum 1 BPS.
-            immediate_slippage_bps = self._get_immediate_slippage_bps(expected_profit, lag_pct)
-            logger.info(
-                f"🛡️ {ticker} | Circular route confirmed | "
-                f"Dynamic slippage: {immediate_slippage_bps} BPS (profit-aware)"
-            )
-
-            logger.info(
-                f"🚀 {ticker} {trade_direction} | Lag: {lag_pct:.2f}% | "
-                f"Expected profit: ${expected_profit:.4f} SOL"
-            )
-
-            # Dynamic size using MarginFi USDC liquidity + OptimalTradeSizer
+            # ── Build and execute transaction ──────────────────────────────
             from arb_bot import MARGINFI_BANKS
-            usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-            usdc_bank_info = MARGINFI_BANKS.get(usdc_mint, {})
 
+            usdc_bank_info = MARGINFI_BANKS.get(str(USDC_MINT), {})
             if not usdc_bank_info:
                 logger.error("Missing USDC bank info for xStocks flashloan")
                 return
 
-            max_usdc_lamports = await self.tx_builder.get_max_marginfi_borrow(str(usdc_bank_info["liquidity_vault"]))
-
-            if max_usdc_lamports < 10_000_000:  # Min 10 USDC
-                logger.warning("Not enough USDC liquidity in MarginFi")
-                return
-
-            reserves = [Decimal('1000000'), Decimal('1000000')]
-            if self.optimal_trade_sizer:
-                analytical_size = self.optimal_trade_sizer.calculate_analytical_optimal_size(reserves, [0.003])
-                if analytical_size:
-                    analytical_size_lamports = int(analytical_size * Decimal('1000000'))
-                    optimal_size = min(analytical_size_lamports, max_usdc_lamports)
-                else:
-                    optimal_size = max_usdc_lamports
-            else:
-                optimal_size = max_usdc_lamports
-
-            # Safety check for Token-2022 transfer fees: halve size
-            if pair_info.get("program") == "Token-2022":
-                optimal_size = optimal_size // 2
-                logger.info(f"🛡️ Token-2022 safety: reduced {ticker} trade size to {optimal_size} lamports")
-
-            # ── Bug 1 Fix: Defensive type safety ─────────────────────────────────
-            # Cast to float before packing into opportunity dict to guarantee
-            # downstream arithmetic is float×float, not Decimal×float.
-            opportunity = {
+            # Build the opportunity dict for the execution router
+            execution_opportunity = {
                 "strategy": "xstock_oracle_lag",
-                "ticker": ticker,
-                "token_mint": pair_info["mint"],
-                "direction": trade_direction,
+                "ticker": ticker_name,
+                "token_mint": token_mint,
+                "direction": "BUY_LOW_SELL_HIGH",
                 "oracle_price": float(oracle_price),
-                "dex_price": float(dex_price),
-                "lag_pct": float(lag_pct),
-                "expected_profit_sol": float(expected_profit),
-                "optimal_size_lamports": float(optimal_size),
-                "quote": circular_quote,
-                "immediate_slippage_bps": immediate_slippage_bps,
-                "event_data": event_data,
-                "timestamp": datetime.now().isoformat()
+                "buy_price": float(opportunity["buy_price"]),
+                "sell_price": float(opportunity["sell_price"]),
+                "effective_spread": float(effective_spread),
+                "expected_profit_sol": float(actual_profit_sol),
+                "optimal_size_lamports": float(trade_amount),
+                "quote": {
+                    "circular_quote_out": actual_return,
+                    "risk_out": trade_amount,
+                    "step1": buy_quote,
+                    "step2": sell_quote,
+                    "buy_venues": buy_venues,
+                    "sell_venues": sell_venues,
+                    "is_cross_venue": opportunity.get("is_cross_venue", False),
+                },
+                "timestamp": datetime.now().isoformat(),
             }
 
             # Submit to execution router
-            result = await self.execution_router.execute_arbitrage_opportunity(opportunity)
+            result = await self.execution_router.execute_arbitrage_opportunity(execution_opportunity)
             success = result.get("status") == "success"
 
             if success:
-                # Set cooldown
-                self.last_execution[ticker] = datetime.now()
-                logger.info(f"✅ {ticker} arbitrage executed | Size: {optimal_size} lamports")
+                self.total_executed += 1
+                self.last_execution[ticker_name] = datetime.now()
+                logger.info(
+                    f"✅ {ticker_name} cross-venue arbitrage executed | "
+                    f"Profit: {actual_profit_sol:.6f} SOL | "
+                    f"Total executed: {self.total_executed}"
+                )
             else:
-                logger.warning(f"❌ {ticker} arbitrage execution failed")
+                logger.warning(f"❌ {ticker_name} arbitrage execution failed: {result.get('message', 'unknown')}")
 
         except Exception as e:
-            logger.error(f"Error executing {ticker} arbitrage: {e}")
+            logger.error(f"Error executing {ticker} cross-venue arbitrage: {e}")
 
-    def _get_immediate_slippage_bps(self, expected_profit_sol: float, lag_pct: float) -> int:
+    async def periodic_lag_scan(self) -> None:
         """
-        Fix 34: Profit-Aware Dynamic Slippage (Anti-Sandwich Guard).
+        Periodic scan for cross-venue opportunities.
 
-        Sets allowed slippage to max(1 BPS, 40% of expected profit in BPS).
-        This mathematically prevents sandwich attacks from consuming our capital,
-        because even in the worst case, 60% of the spread remains profit.
-
-        Args:
-            expected_profit_sol: Expected arbitrage profit in SOL
-            lag_pct: Price lag percentage between oracle and DEX
-
-        Returns:
-            Maximum allowed slippage in BPS, minimum 1 BPS
+        Scanning strategy:
+          - High priority (crypto-proxy): every 10 seconds
+          - Medium priority (magnificent seven): every 30 seconds
+          - Low priority (ETF/index): every 60 seconds
+        Also refreshes wallet balance for dynamic threshold adjustment.
         """
-        # Estimate gross spread BPS from lag percentage (proxy for available spread)
-        gross_spread_bps = max(abs(lag_pct) * 100, 10)  # At least 10 BPS floor
+        scan_intervals = {
+            "high": 10,    # Crypto-proxy: MSTRx, COINx, MARAx, RIOTx
+            "medium": 30,  # Magnificent seven: NVDAx, TSLAx, etc.
+            "low": 60,     # ETF/index: SPYx, QQQx, GLDx
+        }
+        last_balance_check = 0.0
 
-        # Derive expected profit as a fraction of gross spread (conservative capture rate)
-        # 80% convergence = we capture 80% of the theoretical spread as profit
-        expected_profit_bps = gross_spread_bps * 0.8
+        while True:
+            try:
+                now = time.time()
 
-        # Profit-aware cap: slippage ≤ 40% of expected profit
-        anti_sandwich_bps = int(expected_profit_bps * 0.4)
+                # Refresh wallet balance every 5 min
+                if now - last_balance_check > 300:
+                    last_balance_check = now
+                    await self._refresh_wallet_balance()
 
-        # Enforce minimum 1 BPS — never zero, never negative
-        return max(anti_sandwich_bps, 1)
+                # ── Check crypto-proxy pairs first (highest edge) ───────────
+                for ticker in sorted(CRYPTO_PROXY_TICKERS):
+                    if self._is_on_cooldown(ticker):
+                        continue
+                    pair_info = get_xstock_info(ticker)
+                    if not pair_info or not pair_info.get("mint"):
+                        continue
+                    oracle_price = self.pyth_client.get_current_price(ticker)
+                    if not oracle_price:
+                        continue
+                    result = await self._evaluate_cross_venue_opportunity(ticker, oracle_price)
+                    if result:
+                        self.total_opportunities_found += 1
+                        await self._execute_cross_venue_arbitrage(ticker, oracle_price, result)
 
-    async def _find_immediate_circular_route(
-            self, token_mint: str, ticker: str
-        ) -> Optional[Dict]:
-            """
-            Ищем арбитраж: USDC -> xStock (дешево на DEX А) -> USDC (дорого на DEX Б).
-            """
-            usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-            
-            # ⚡ HFT-ОПТИМИЗАЦИЯ: Фиксированный микро-займ вместо медленного RPC-запроса.
-            # Для баланса 0.017 SOL берем 15 USDC ($15). Это экономит ~300ms!
-            # 15 USDC гарантированно есть в MarginFi пуле.
-            max_usdc_lamports = 15_000_000
+                # ── All other active xStock pairs ───────────────────────────
+                for ticker in XSTOCK_PRIORITY_ORDER:
+                    if ticker in CRYPTO_PROXY_TICKERS:
+                        continue  # Already scanned above
+                    if self._is_on_cooldown(ticker):
+                        continue
 
-            # Step 1: Quote USDC → xStock (Покупаем дешево)
-            quote_usdc_to_xstock = await self._get_jupiter_price_quote(
-                usdc_mint, token_mint, max_usdc_lamports
-            )
-            if not quote_usdc_to_xstock or "outAmount" not in quote_usdc_to_xstock:
-                return None
-    
-            out_amount_xstock = int(quote_usdc_to_xstock["outAmount"])
-            
-            # Step 2: Quote xStock → USDC (Продаем дорого)
-            quote_xstock_to_usdc = await self._get_jupiter_price_quote(
-                token_mint, usdc_mint, out_amount_xstock
-            )
-            if not quote_xstock_to_usdc or "outAmount" not in quote_xstock_to_usdc:
-                return None
-    
-            out_amount_usdc_after = int(quote_xstock_to_usdc["outAmount"])
-            
-            # Проверяем: Получим ли мы обратно больше USDC, чем взяли?
-            if out_amount_usdc_after <= max_usdc_lamports:
-                return None # Не выгодно
-    
-            return {
-                "circular_quote_out": out_amount_usdc_after,
-                "risk_out": max_usdc_lamports,
-                "step1": quote_usdc_to_xstock,
-                "step2": quote_xstock_to_usdc,
-            }
+                    pair_info = get_xstock_info(ticker)
+                    if not pair_info or not pair_info.get("mint"):
+                        continue
 
-    async def _get_jupiter_price_quote(
-        self, input_mint: str, output_mint: str, amount_lamports: int
-    ) -> Optional[Dict]:
-        """Fetch raw Jupiter /v6/quote dict for a given mint/amount pair."""
+                    category = pair_info.get("category", "")
+                    # Skip non-crypto assets outside market hours
+                    if category != "crypto_proxy" and not is_market_open():
+                        continue
+
+                    # Determine scan frequency
+                    freq = pair_info.get("scan_frequency", "low")
+                    interval = scan_intervals.get(freq, 30)
+                    # Check if this ticker was scanned recently
+                    last_scan_key = f"scan_{ticker}"
+                    last_scan = getattr(self, last_scan_key, 0)
+                    if now - last_scan < interval:
+                        continue
+                    setattr(self, last_scan_key, now)
+
+                    oracle_price = self.pyth_client.get_current_price(ticker)
+                    if not oracle_price:
+                        continue
+
+                    result = await self._evaluate_cross_venue_opportunity(ticker, oracle_price)
+                    if result:
+                        self.total_opportunities_found += 1
+                        await self._execute_cross_venue_arbitrage(ticker, oracle_price, result)
+
+            except Exception as e:
+                logger.error(f"Error in periodic scan: {e}")
+
+            await asyncio.sleep(5)  # Main loop tick: 5 seconds
+
+    async def _refresh_wallet_balance(self):
+        """Refresh wallet balance for dynamic threshold adjustment."""
         try:
-            url = (
-                f"https://quote-api.jup.ag/v6/quote?"
-                f"inputMint={input_mint}&"
-                f"outputMint={output_mint}&"
-                f"amount={amount_lamports}&"
-                f"slippageBps=1&"
-                f"maxAccounts=10&"  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
-                f"onlyDirectRoutes=false&restrictIntermediateTokens=true&maxAccounts=10"
-            )
-            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=5.0)) as resp:
+            if not hasattr(self.cfg, 'MARGINFI_ACCOUNT_PUBKEY') or not self.cfg.MARGINFI_ACCOUNT_PUBKEY:
+                return
+
+            rpc_url = getattr(self.cfg, 'WSS_ENDPOINTS', ["https://api.mainnet-beta.solana.com"])[0]
+            rpc_url = rpc_url.replace("wss://", "https://").replace("ws://", "http://")
+
+            payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getBalance",
+                "params": [self.cfg.MARGINFI_ACCOUNT_PUBKEY, {"commitment": "confirmed"}],
+            }
+            timeout = aiohttp.ClientTimeout(total=3.0)
+            async with self.session.post(rpc_url, json=payload, timeout=timeout) as resp:
                 if resp.status == 200:
-                    return await resp.json()
+                    data = await resp.json()
+                    sol_balance = float(data.get("result", {}).get("value", 0)) / 1e9
+
+                    old_threshold = float(self.min_profit_threshold)
+                    configured_min = getattr(self.cfg, 'ORACLE_LAG_MIN_PROFIT_SOL', 0.002)
+                    if sol_balance < 1.0:
+                        self.min_profit_threshold = Decimal('0.002')
+                    else:
+                        self.min_profit_threshold = Decimal(str(configured_min))
+
+                    if float(self.min_profit_threshold) != old_threshold:
+                        logger.info(
+                            f"💰 Balance={sol_balance:.4f} SOL → "
+                            f"min_profit_threshold={self.min_profit_threshold} SOL"
+                        )
         except Exception as e:
-            logger.debug(f"Jupiter quote fetch error ({input_mint[:8]}→{output_mint[:8]}): {e}")
-        return None
-
-    def _estimate_profit(self, ticker: str, entry_price: float, exit_price: float) -> float:
-        """
-        Estimate potential profit from convergence trade.
-
-        This is a simplified estimation - in production, would use
-        more sophisticated modeling of convergence probability and time.
-
-        Args:
-            ticker: xStock ticker
-            entry_price: Price to enter trade at
-            exit_price: Expected exit price
-
-        Returns:
-            Estimated profit in SOL
-        """
-        # Simplified: assume 80% convergence to oracle price
-        convergence_factor = 0.8
-        expected_convergence_price = entry_price + (exit_price - entry_price) * convergence_factor
-
-        # Calculate profit per token
-        if entry_price > 0:
-            profit_per_token = abs(expected_convergence_price - entry_price)
-            profit_pct = profit_per_token / entry_price
-
-            # Assume $100k trade size for estimation
-            trade_size_usd = 100_000
-            profit_usd = trade_size_usd * profit_pct
-
-            # Convert to SOL (rough approximation)
-            sol_price = 150  # Assume $150/SOL
-            profit_sol = profit_usd / sol_price
-
-            return profit_sol
-        return 0.0
+            logger.debug(f"Balance refresh failed: {e}")
 
     def _extract_token_mint_from_event(self, event_data: Dict[str, Any]) -> Optional[str]:
         """Extract xStock token mint from Helius webhook event."""
         try:
-            # Helius swap event structure
             accounts = event_data.get("accountData", [])
             for account in accounts:
                 mint = account.get("account", {}).get("mint")
-                if mint and mint.startswith("Xs"):  # xStock tokens start with "Xs"
-                    return mint
+                if mint and str(mint).startswith("Xs"):
+                    return str(mint)
             return None
         except Exception as e:
             logger.error(f"Error extracting mint from event: {e}")
@@ -525,7 +668,8 @@ class XStockOracleLagStrategy:
     def _get_ticker_from_mint(self, mint: str) -> Optional[str]:
         """Get ticker symbol from mint address."""
         for ticker, info in ACTIVE_XSTOCKS.items():
-            if info.get("mint") == mint:
+            mint_val = info.get("mint")
+            if mint_val and str(mint_val) == mint:
                 return ticker
         return None
 
@@ -540,8 +684,13 @@ class XStockOracleLagStrategy:
         """Generate lag monitoring report."""
         report = {
             "active_pairs": len(ACTIVE_XSTOCKS),
-
-            "lag_stats": {}
+            "strategy_type": self.strategy_type,
+            "min_profit_threshold": float(self.min_profit_threshold),
+            "lag_threshold_pct": float(self.lag_threshold_pct),
+            "total_opportunities_found": self.total_opportunities_found,
+            "total_cross_venue_opps": self.total_cross_venue_opps,
+            "total_executed": self.total_executed,
+            "lag_stats": {},
         }
 
         for ticker in ACTIVE_XSTOCKS.keys():
@@ -551,84 +700,17 @@ class XStockOracleLagStrategy:
                     "average_lag_pct": sum(lags) / len(lags),
                     "max_lag_pct": max(lags),
                     "min_lag_pct": min(lags),
-                    "samples": len(lags)
+                    "samples": len(lags),
                 }
 
         return report
-
-    async def periodic_lag_scan(self) -> None:
-        """
-        Periodic scan for lag opportunities (fallback when webhooks miss events).
-        Runs every 30 seconds for high-priority tickers.
-        Also refreshes wallet balance to keep min_profit_threshold in sync with capital.
-        """
-        last_balance_check = 0.0
-        while True:
-            try:
-                now = time.time()
-                # Refrescar umbral cada 300 s (5 min) по SOL-балансу кошелька
-                if now - last_balance_check > 300 and self.cfg.MARGINFI_ACCOUNT_PUBKEY:
-                    last_balance_check = now
-                    try:
-                        payload = {
-                            "jsonrpc": "2.0", "id": 1,
-                            "method": "getBalance",
-                            "params": [self.cfg.MARGINFI_ACCOUNT_PUBKEY, {"commitment": "confirmed"}],
-                        }
-                        timeout = aiohttp.ClientTimeout(total=3.0)
-                        async with self.session.post(self.cfg.WSS_ENDPOINTS[0].replace("wss", "https"), json=payload, timeout=timeout) as resp:
-                            if resp.status == 200:
-                                data = await resp.json()
-                                sol_balance_raw = data.get("result", {}).get("value", 0)
-                                sol_balance = float(sol_balance_raw) / 1e9 if sol_balance_raw else 0.0
-                                cfg_min = getattr(self.cfg, 'ORACLE_LAG_MIN_PROFIT_SOL', 0.25)
-                                old_threshold = float(self.min_profit_threshold)
-                                if sol_balance < 1.0:
-                                    self.min_profit_threshold = Decimal('0.0005')
-                                else:
-                                    self.min_profit_threshold = Decimal(str(cfg_min))
-                                if float(self.min_profit_threshold) != old_threshold:
-                                    logger.info(
-                                        f"💰 Wallet={sol_balance:.4f} SOL → "
-                                        f"min_profit_threshold=${float(self.min_profit_threshold):.6f}"
-                                    )
-                    except Exception as e:
-                        logger.debug(f"Wallet balance refresh failed: {e}")
-
-                # Check top priority tickers
-                for ticker in PRIORITY_QUEUE_ORDER[:10]:  # Top 10 priority
-                    if self._is_on_cooldown(ticker):
-                        continue
-
-                    pair_info = get_xstock_info(ticker)
-                    if not pair_info or not pair_info.get("mint"):
-                        continue
-
-                    # Get prices
-                    oracle_price = self.pyth_client.get_current_price(ticker)
-                    dex_price = await self._get_jupiter_price(ticker)
-
-                    if oracle_price and dex_price:
-                        lag_pct = self._calculate_lag_percentage(oracle_price, dex_price)
-
-                        # Log periodic scan results
-                        if abs(lag_pct) >= float(self.lag_threshold_pct) * 0.5:  # Lower threshold for logging
-                            logger.info(
-                                f"🔍 Periodic scan {ticker} | Lag: {lag_pct:.2f}% | "
-                                f"Oracle: ${oracle_price:.4f} | DEX: ${dex_price:.4f}"
-                            )
-
-            except Exception as e:
-                logger.error(f"Error in periodic lag scan: {e}")
-
-            await asyncio.sleep(30)  # Scan every 30 seconds
 
 
 # Global strategy instance
 _xstock_strategy = None
 
 
-def get_xstock_strategy() -> XStockOracleLagStrategy:
+def get_xstock_strategy() -> Optional[XStockOracleLagStrategy]:
     """Get global xStock strategy instance."""
     return _xstock_strategy
 

@@ -324,12 +324,28 @@ class JupiterTxBuilder:
         }
 
         cu_limit = cu_profiles.get(operation_type, cu_profiles["default"])
-        
-        # Если в пути есть xStock (начинается на Xs...), повышаем лимит
-        if any(str(m).startswith("Xs") for m in [program_id, operation_type]):
-            cu_limit = 400000 # Удваиваем бюджет для Token-2022
-        
-        # Use cached CU only if it's lower than our conservative limit
+
+        # ─── Token-2022 Stochastic CU Buffer ───────────────────────────────────
+        # Hidden Transfer Hooks in Token-2022 tokens consume 20-30% extra CU.
+        # Detect Token-2022 mints in the instruction route by inspecting program IDs
+        # against the authoritative xstocks_registry, then apply +20% safety buffer.
+        try:
+            from src.config.xstocks_registry import is_xstock_token
+
+            def _has_token2022(ixs: List[Instruction]) -> bool:
+                """Return True if any instruction invokes a Token-2022 program ID."""
+                for ix in ixs:
+                    if is_xstock_token(ix.program_id):
+                        return True
+                return False
+
+            if _has_token2022(instructions):
+                cu_limit = int(cu_limit * 1.20)
+                logger.info(f"🛡️ Token-2022 CU Buffer: {cu_limit} CU (+20% for Transfer Hooks)")
+        except Exception as _xstock_err:
+            logger.debug(f"Token-2022 CU buffer detection skipped: {_xstock_err}")
+
+        # Use cached CU only if it's lower than our conservative (buffered) limit
         cached_cu = self._get_cached_cu(program_id, operation_type)
         if cached_cu and cached_cu < cu_limit:
             cu_limit = cached_cu
@@ -346,6 +362,22 @@ class JupiterTxBuilder:
             cu_limit = 800_000  # Token-2022 needs slightly more
         else:
             cu_limit = 400_000
+
+        # After hardcoded override, apply +20% Token-2022 buffer once more if needed
+        try:
+            from src.config.xstocks_registry import is_xstock_token
+
+            def _has_token2022_v2(ixs: List[Instruction]) -> bool:
+                for ix in ixs:
+                    if is_xstock_token(ix.program_id):
+                        return True
+                return False
+
+            if _has_token2022_v2(instructions):
+                cu_limit = int(cu_limit * 1.20)  # re-apply after hardcoded override
+                logger.info(f"🛡️ Token-2022 CU Buffer (post-override): {cu_limit} CU (+20%)")
+        except Exception:
+            pass
 
         # Get priority fee
         # ЕСЛИ МЫ ИСПОЛЬЗУЕМ JITO, НАМ НЕ НУЖЕН ВЫСОКИЙ PRIORITY FEE!
@@ -906,6 +938,29 @@ class JupiterTxBuilder:
 
             all_instructions = [borrow_ix] + arbitrage_instructions + [repay_ix]
 
+            # ── DYNAMIC REPAY INDEX RECALCULATION ───────────────────────────────────
+            # Index shift bug fix: re-derive actual_repay_index from the FINAL instruction
+            # list right before returning, instead of relying on the pre-computed estimate.
+            # CreateATA / SyncNative / CloseAccount insertion/removal between calls shifts
+            # index positions — dynamic recalculation makes borrow/repay always consistent.
+            try:
+                import struct
+                actual_repay_index = all_instructions.index(repay_ix)
+                original_data_without_index = borrow_ix.data[:16]
+                safe_index_bytes = struct.pack("<Q", actual_repay_index)
+                new_borrow_ix = Instruction(
+                    program_id=borrow_ix.program_id,
+                    accounts=borrow_ix.accounts,
+                    data=original_data_without_index + safe_index_bytes,
+                )
+                borrow_idx = all_instructions.index(borrow_ix)
+                all_instructions[borrow_idx] = new_borrow_ix
+                borrow_ix = new_borrow_ix
+                logger.debug(f"🛠️ Dynamic Repay Index recalculated: {actual_repay_index}")
+            except ValueError:
+                logger.error("CRITICAL: repay_ix not found in instruction list — aborting")
+                return None
+
             return {
                 "instructions": all_instructions,
                 "expected_output": borrow_amount_lamports,  # Placeholder
@@ -985,6 +1040,9 @@ class JupiterTxBuilder:
         wsol_manager: Optional[Any] = None,
         pool_state_manager: Optional[Any] = None,
         use_jito: bool = True,
+        # Flash Loan Pivot: Jupiter swap instructions for pivot path (SOL→USDC entry, USDC→SOL exit)
+        entry_pivot_ixs: Optional[List[Instruction]] = None,
+        exit_pivot_ixs: Optional[List[Instruction]] = None,
         # Token-2022 detection pre-imported at module level
     ) -> Optional[Dict[str, Any]]:
         """
@@ -1027,13 +1085,21 @@ class JupiterTxBuilder:
         sol_prog_id = TOKEN_2022_PROGRAM_ID if is_xstock_token(sol_mint) else TOKEN_PROGRAM_ID
         user_sol_ata = get_associated_token_address(wallet, sol_mint, sol_prog_id)
 
-        # ── 3. Assemble Instructions ──────────────────────────────────
+        # 3. Assemble Instructions ──────────────────────────────────
         all_instructions = []
-        
+        pivot_entry_ixs = entry_pivot_ixs or []  # SOL→USDC (before borrow on pivot path)
+        pivot_exit_ixs  = exit_pivot_ixs  or []  # USDC→SOL (after repay on pivot path)
+
         # 0. Compute Budget (MEV Safety & Priority)
         # We add these here so we can calculate the EXACT repay index dynamically.
         # Increased to 600,000 CU for Phase 48 high-complexity swaps.
         all_instructions.append(set_compute_unit_limit(600000))
+
+        # ── Flash Loan Pivot: Entry swap FIRST (wallet SOL → USDC before borrow) ──
+        # This converts the wallet's native SOL into USDC so the arb can run in USDC.
+        # Net effect: wallet balance (-SOL_entry + USDC_gain) + borrowed USDC = total USDC for arb
+        for pv_ix in pivot_entry_ixs:
+            all_instructions.append(pv_ix)
         # Removed set_compute_unit_price - will be added by build_optimized_transaction
         
         # 1. Borrow from MarginFi (placeholder index)
@@ -1052,6 +1118,11 @@ class JupiterTxBuilder:
             user_sol_ata, sol_prog_id, borrow_amount_lamports
         )
         all_instructions.append(repay_ix)
+
+        # Flash Loan Pivot — exit swap (USDC → SOL): run AFTER arb repay so profit
+        # is converted into the borrow asset (SOL) before returning to MarginFi.
+        for pv_ix in (exit_pivot_ixs or []):
+            all_instructions.append(pv_ix)
 
         # =====================================================================
         # 4.5 ATOMIC RENT RECOVERY — Закрытие промежуточных ATA (ЗАЩИТА КАПИТАЛА)

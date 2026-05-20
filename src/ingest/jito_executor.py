@@ -217,7 +217,7 @@ class JitoExecutor:
         self,
         bundle_id: str,
         max_wait_time: float = 3.0,  # HFT: drop after 3s
-        check_interval: float = 0.5,
+        check_interval: float = 2.0,
     ) -> Dict[str, Any]:
         """Wait for bundle confirmation.
 

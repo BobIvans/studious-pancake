@@ -3297,7 +3297,10 @@ async def run():
         return
 
     global KEYPAIR
-    KEYPAIR = Keypair.from_bytes(bytes(json.load(open(cfg.WALLET_PATH, 'r'))))
+    # Fix 81 / Memory Hardening: load keypair once at startup with context manager.
+    # No disk I/O during the hot trade loop — KEYPAIR stays resident in RAM.
+    with open(cfg.WALLET_PATH, 'r') as _f:
+        KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
     keypair = KEYPAIR
     logger.info(f"✅ Bot authorized: {keypair.pubkey()}")  # Fix 81: loaded once into RAM, disk I/O avoided in hot path
 

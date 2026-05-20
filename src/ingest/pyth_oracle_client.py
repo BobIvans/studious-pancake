@@ -105,16 +105,27 @@ class PythHermesClient:
                     return  # Not an xStocks feed we're tracking
 
                 price_data = data.get("price_feed", {})
-                price = price_data.get("price", {}).get("price")
-                confidence = price_data.get("price", {}).get("confidence")
-                publish_time = price_data.get("price", {}).get("publish_time")
+                price_info = price_data.get("price", {})
+                price = price_info.get("price")
+                confidence = price_info.get("confidence")
+                publish_time = price_info.get("publish_time")
+                status = price_info.get("status")  # "trading", "halted", "auction", "ignored", "unknown"
+
+                # ── Pyth Feed Status Guard ───────────────────────────────────────
+                # Pyth может отдавать «Last Known Price», даже если рынок акций США
+                # закрыт (ночь или выходные). Игнорируем все статусы кроме "trading",
+                # чтобы не торговать по устаревшей цене.
+                if status and status != "trading":
+                    logger.debug(f"⏭️ Pyth feed {ticker} status={status} — not trading, skipping")
+                    return
 
                 if price and publish_time:
                     # Update cache
                     self.price_cache[ticker] = {
                         "price": float(price),
                         "timestamp": datetime.fromtimestamp(publish_time),
-                        "confidence": float(confidence) if confidence else 0.0
+                        "confidence": float(confidence) if confidence else 0.0,
+                        "status": status,
                     }
 
                     # Log lag for monitoring
@@ -143,8 +154,8 @@ class PythHermesClient:
         """Get the latest price for a ticker."""
         if ticker in self.price_cache:
             cache_entry = self.price_cache[ticker]
-            # Check if price is fresh (within 5 minutes)
-            if datetime.now() - cache_entry["timestamp"] < timedelta(minutes=5):
+            # Check if price is fresh (within 3 seconds for HFT lag detection)
+            if datetime.now() - cache_entry["timestamp"] < timedelta(seconds=3):
                 return cache_entry["price"]
             else:
                 logger.warning(f"Stale price for {ticker}: {cache_entry['timestamp']}")
@@ -165,7 +176,7 @@ class PythHermesClient:
         return {
             ticker: info["price"]
             for ticker, info in self.price_cache.items()
-            if datetime.now() - info["timestamp"] < timedelta(minutes=5)
+            if datetime.now() - info["timestamp"] < timedelta(seconds=3)
         }
 
     def get_lag_report(self) -> Dict[str, Dict[str, Any]]:
@@ -179,7 +190,7 @@ class PythHermesClient:
                 "current_price": price_info["price"] if price_info else None,
                 "last_update": price_info["timestamp"].isoformat() if price_info else None,
                 "average_lag_seconds": avg_lag,
-                "is_fresh": price_info and (datetime.now() - price_info["timestamp"]) < timedelta(minutes=5)
+                "is_fresh": price_info and (datetime.now() - price_info["timestamp"]) < timedelta(seconds=3)
             }
 
         return report

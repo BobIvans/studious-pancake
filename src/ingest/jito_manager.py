@@ -277,7 +277,7 @@ class JitoBiddingManager:
             return 0
 
         p50 = self.get_50th_percentile_lamports() / 1e9
-        base = max(p50, expected_profit_sol * 0.4)
+        base = max(p50 * 1.2, expected_profit_sol * 0.4)
 
         # Capital Guard
         if p50 > expected_profit_sol * 0.8:

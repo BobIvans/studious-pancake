@@ -5,13 +5,22 @@ import logging
 import base64
 import re
 import time
-from typing import Optional, Dict, Any, Set
+import struct
+import os
+from typing import Optional, Dict, Any, Set, List, Tuple
 import aiohttp
 from solders.pubkey import Pubkey
 from solders.transaction import VersionedTransaction
+from solders.instruction import Instruction, AccountMeta
+from solders.hash import Hash
+from solders.message import MessageV0
+from solders.system_program import TransferParams, transfer
+from spl.token.instructions import get_associated_token_address
+from spl.token.constants import TOKEN_PROGRAM_ID
 
 from .leader_tracker import LeaderTracker
 from .g2_tip_manager import ExecutionGuard
+from .tx_builder import JupiterTxBuilder
 # Phase 48: Import dynamic bank info from arb_bot
 try:
     from arb_bot import MARGINFI_BANKS
@@ -19,6 +28,15 @@ except ImportError:
     MARGINFI_BANKS = {}
 
 logger = logging.getLogger(__name__)
+
+# Token-2022 Program ID for xStocks pivot helper
+TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
+
+# Flash Loan Pivot: Jupiter swap helper constants
+SOL_MINT = Pubkey.from_string("So11111111111111111111111111111111111111112")
+USDC_MINT = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
+JUPITER_QUOTE_URL = "https://quote-api.jup.ag/v6/quote"
+JUPITER_SWAP_IX_URL = "https://api.jup.ag/swap/v1/swap-instructions"
 
 STRATEGY_EXTRA_ACCOUNTS: Dict[str, Set[str]] = {}  # Fix 91: auto-discovered remaining accounts for transfer hooks
 
@@ -67,6 +85,12 @@ class ExecutionRouter:
 
         # Execution Guard (Circuit Breaker for consecutive failures)
         self.execution_guard = ExecutionGuard()
+
+        # Reputation Circuit Breaker: per-pair cooldown after 3 consecutive slippage fails
+        # Format: pair_key -> {"failures": int, "banned_until": float, "last_error": str}
+        self._pair_reputation: Dict[str, Dict[str, Any]] = {}
+        self.PAIR_SLIPPAGE_LIMIT = 3          # 3 consecutive slippage errors → cooldown
+        self.PAIR_COOLDOWN_SECONDS = 600      # 10 minutes cooldown per pair
 
         # Fix 51: Jito Bundle Self-Cancellation — track stale bundles for overwrite
         # map: bundle_id -> {"sent_slot": int, "sent_at": float, "endpoint": str, "tip_lamports": int, "deducted_amount": float}
@@ -141,6 +165,7 @@ class ExecutionRouter:
     async def execute_arbitrage_opportunity(self, opportunity: Dict[str, Any]) -> dict:
         """
         Execute arbitrage opportunity by strategy type.
+        Applies Reputation Circuit Breaker: rejects pairs with 3+ consecutive slippage errors.
 
         Args:
             opportunity: Arbitrage opportunity dict with strategy-specific data
@@ -155,10 +180,30 @@ class ExecutionRouter:
                 "message": "Dust accumulation detected - trading halted for safety"
             }
 
+        # Reputation Circuit Breaker: reject banned pairs
+        strategy = opportunity.get("strategy", "")
+        ticker  = opportunity.get("ticker", "")
+        mint    = opportunity.get("token_mint", "")
+        pair_key = self._pair_key(ticker, mint)
+        if self.is_pair_banned(pair_key):
+            logger.warning(f"🚫 Pair {pair_key} rejected by Reputation Circuit Breaker (cooldown active)")
+            return {"status": "rejected", "message": f"Pair {pair_key} in slippage cooldown"}
+
         try:
             strategy = opportunity.get("strategy")
             if strategy == "xstock_oracle_lag":
                 result = await self._execute_xstock_opportunity(opportunity)
+
+                # Reputation Circuit Breaker: track slippage failures per pair
+                pair_key = self._pair_key(opportunity.get("ticker", ""), opportunity.get("token_mint", ""))
+                if result.get("status") == "error" and "slippage" in str(result.get("message", "")).lower():
+                    self.record_pair_slippage(pair_key)
+                elif result.get("status") == "success":
+                    # Reset failure counter on success
+                    entry = self._pair_reputation.get(pair_key)
+                    if entry and entry.get("failures", 0) > 0:
+                        entry["failures"] = 0
+                        logger.info(f"✅ Pair {pair_key} reputation cleared after successful trade")
 
                 # Check rent recovery success
                 if result.get("status") == "success":
@@ -178,7 +223,7 @@ class ExecutionRouter:
             return {"status": "error", "message": str(e)}
 
     async def _execute_xstock_opportunity(self, opportunity: Dict[str, Any]) -> dict:
-        """Execute xStock oracle lag arbitrage opportunity."""
+        """Execute xStock oracle lag arbitrage opportunity with Flash Loan Pivot support."""
         try:
             from .tx_builder import JupiterTxBuilder
             tx_builder = JupiterTxBuilder(session=self.session, rpc_url=self.rpc_url)
@@ -198,22 +243,18 @@ class ExecutionRouter:
             )
 
             # ── Fetch Jupiter swap instructions for the atomic circular route ──────
-            # The opportunity must carry pre-fetched instructions for BOTH legs.
-            # If not present, attempt one last fetch from the circular quote data.
             all_swap_ixs: List[Instruction] = []
 
             if dex_swap_instructions:
                 all_swap_ixs = dex_swap_instructions
 
             if not all_swap_ixs and circular_quote:
-                # Fetch leg 1: xStock → USDC
                 step1_data = circular_quote.get("step1", {})
                 if step1_data:
                     step1_ixs, _ = await tx_builder.get_swap_instructions(step1_data, str(self.keypair.pubkey()), use_custom_cu=True)
                     if step1_ixs:
                         all_swap_ixs.extend(step1_ixs)
 
-                # Fetch leg 2: USDC → xStock (the return leg — what makes this immediate/atomic)
                 step2_data = circular_quote.get("step2", {})
                 if step2_data:
                     step2_ixs, _ = await tx_builder.get_swap_instructions(step2_data, str(self.keypair.pubkey()), use_custom_cu=True)
@@ -226,40 +267,109 @@ class ExecutionRouter:
 
             # Phase 48: Dynamic Bank Lookup (Removed Placeholders)
             # xStocks trade against USDC, so we flashloan USDC.
-            usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-            bank_info = MARGINFI_BANKS.get(usdc_mint, {})
-            
+            usdc_mint_str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            bank_info = MARGINFI_BANKS.get(usdc_mint_str, {})
+
             if not bank_info:
                 logger.error(f"❌ No MarginFi bank info found for USDC flashloan")
                 return {"status": "error", "message": "Missing USDC bank config"}
 
+            # ════════════════════════════════════════════════════════════════════
+            # FLASH LOAN PIVOT: If USDC bank is unavailable → borrow SOL + pivot
+            # ════════════════════════════════════════════════════════════════════
+            usdc_vault = str(bank_info["liquidity_vault"])
+            usdc_available = await self._is_bank_liquid(usdc_vault, optimal_size_lamports)
+
+            borrow_mint_str = usdc_mint_str   # default: USDC
+            sol_borrow_bank_info = None
+            entry_pivot_ixs: List[Instruction] = []   # SOL → USDC (only needed on pivot)
+            exit_pivot_ixs: List[Instruction] = []    # USDC → SOL (only needed on pivot)
+
+            if not usdc_available:
+                logger.warning(
+                    f"⚠️ USDC bank empty/at capacity for {ticker} — "
+                    f"attempting Flash Loan Pivot via SOL"
+                )
+                sol_bank_id = os.getenv("MARGINFI_SOL_BANK",
+                                        "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj").strip()
+                sol_bank_info = MARGINFI_BANKS.get(
+                    "So11111111111111111111111111111111111111112", {}
+                )
+                if not sol_bank_info:
+                    logger.error("❌ SOL bank info missing — cannot pivot")
+                    return {"status": "error", "message": "Pivot failed: no SOL bank"}
+
+                sol_vault = str(sol_bank_info["liquidity_vault"])
+                sol_available = await self._is_bank_liquid(sol_vault, optimal_size_lamports)
+                if not sol_available:
+                    logger.error("❌ SOL bank also empty — both pivot targets exhausted")
+                    return {"status": "error", "message": "Both USDC and SOL banks unavailable"}
+
+                # Estimate swap costs for pivot
+                swap_cost_lamports, sol_entry_ixs, sol_exit_ixs = \
+                    await self._build_jupiter_pivot_ixs(optimal_size_lamports, expected_profit_sol)
+                if swap_cost_lamports is None:
+                    logger.error("❌ Failed to get Jupiter swap instructions for pivot")
+                    return {"status": "error", "message": "Pivot Jupiter swap failed"}
+
+                entry_pivot_ixs = sol_entry_ixs
+                exit_pivot_ixs = sol_exit_ixs
+                borrow_mint_str = "So11111111111111111111111111111111111111112"
+                sol_borrow_bank_info = sol_bank_info
+
+                # Net profit check after pivot swap costs
+                cost_sol = swap_cost_lamports / 1e9
+                if expected_profit_sol <= cost_sol * 2:  # Both entry + exit
+                    logger.warning(
+                        f"⚠️ Pivot not profitable: profit={expected_profit_sol:.6f} SOL "
+                        f"< 2×swap_cost={cost_sol*2:.6f} SOL"
+                    )
+                    return {"status": "error", "message": "Pivot not profitable after fees"}
+
+                logger.info(
+                    f"🔄 FLASH PIVOT active: borrow SOL → swap→USDC → {ticker} arb → "
+                    f"swap back → repay SOL | cost={cost_sol:.6f} SOL"
+                )
+            # ════════════════════════════════════════════════════════════════════
+
             bank_pubkey = str(bank_info["bank"])
             vault = str(bank_info["liquidity_vault"])
             vault_auth = str(bank_info["liquidity_vault_authority"])
-            
+
             # Calculate dynamic tip based on expected profit and recommended Jito tip floor
             recommended_tip = 10000  # Default floor (0.00001 SOL)
             if self.jito_executor:
                 tip_info = self.jito_executor.get_current_tip_info()
                 if tip_info:
                     recommended_tip = tip_info.get("recommended_tip", 10000)
-            
+
             tip_percent = 0.40
             tip_lamports = int(expected_profit_sol * tip_percent * 1e9)
             jito_tip_lamports = max(recommended_tip, tip_lamports)
 
             logger.info(f"💰 Dynamic Jito tip calculated: {jito_tip_lamports} lamports (expected profit: {expected_profit_sol:.6f} SOL)")
 
+            # Build arbitrage path: [borrow_asset, intermediate, return_asset]
+            if borrow_mint_str == "So11111111111111111111111111111111111111112":
+                # Pivot path: SOL → (entry swap) → USDC → xStock → USDC → (exit swap) → SOL
+                arbitrage_path = [borrow_mint_str, usdc_mint_str, token_mint, usdc_mint_str, borrow_mint_str]
+            else:
+                arbitrage_path = [usdc_mint_str, token_mint, usdc_mint_str]
+
+            active_bank_info = sol_borrow_bank_info if sol_borrow_bank_info else bank_info
+
             fl_result = await tx_builder.build_native_flashloan_tx(
                 wallet_pubkey=str(self.keypair.pubkey()),
-                arbitrage_path=[usdc_mint, token_mint, usdc_mint],
+                arbitrage_path=arbitrage_path,
                 borrow_amount_lamports=optimal_size_lamports,
-                expected_min_profit_lamports=int(expected_profit_sol * 1e9), # Simplified
+                expected_min_profit_lamports=int(expected_profit_sol * 1e9),
                 dex_swap_instructions=all_swap_ixs,
-                marginfi_config=bank_info,
+                marginfi_config=active_bank_info,
                 jito_tip_lamports=jito_tip_lamports,
-                borrow_mint=usdc_mint,
-                use_jito=True
+                borrow_mint=borrow_mint_str,
+                use_jito=True,
+                entry_pivot_ixs=entry_pivot_ixs,
+                exit_pivot_ixs=exit_pivot_ixs,
             )
 
             if not fl_result:
@@ -270,8 +380,6 @@ class ExecutionRouter:
             extra_metas = _build_extra_account_metas(strategy_key)
             if extra_metas:
                 logger.info(f"🔧 Injecting {len(extra_metas)} discovered extra accounts for {strategy_key}")
-                # Append each extra account to the repay instruction's AccountMeta list
-                # The repay instruction is the last MarginFi instruction in the list
                 for ix in reversed(fl_result["instructions"]):
                     if ix.program_id == Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"):
                         ix.accounts.extend(extra_metas)
@@ -281,7 +389,7 @@ class ExecutionRouter:
             from solders.message import MessageV0
             from solders.transaction import VersionedTransaction
             from solders.hash import Hash
-            
+
             # Get blockhash
             blockhash_payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"}
             async with self.session.post(self.rpc_url, json=blockhash_payload) as resp:
@@ -291,20 +399,21 @@ class ExecutionRouter:
             message = MessageV0.try_compile(
                 payer=self.keypair.pubkey(),
                 instructions=fl_result["instructions"],
-                address_lookup_table_accounts=[], 
+                address_lookup_table_accounts=[],
                 recent_blockhash=Hash.from_string(recent_blockhash)
             )
             transaction = VersionedTransaction(message, [self.keypair])
 
             # Send via Jito
             jito_result = await self.jito_executor.send_bundle([transaction])
-            
+
             if jito_result.get("success"):
                 return {
                     "status": "success",
                     "bundle_id": jito_result.get("bundle_id"),
                     "strategy": "xstock_oracle_lag",
-                    "ticker": ticker
+                    "ticker": ticker,
+                    "pivoted": not usdc_available,
                 }
             else:
                 return {"status": "error", "message": jito_result.get("error")}
@@ -312,6 +421,216 @@ class ExecutionRouter:
         except Exception as e:
             logger.error(f"Error executing xStock opportunity: {e}")
             return {"status": "error", "message": str(e)}
+
+    # ─── Reputation Circuit Breaker (per-pair slippage cooldown) ────────────────
+
+    def _pair_key(self, ticker: str, mint: str) -> str:
+        """Build a stable human-readable pair key for reputation tracking."""
+        return f"{ticker}/{mint[:12]}"
+
+    def record_pair_slippage(self, pair_key: str) -> None:
+        """Record a slippage failure for a specific pair. Ban it if limit exceeded."""
+        now = time.time()
+        entry = self._pair_reputation.get(pair_key)
+        if entry is None or entry.get("banned_until", 0) < now:
+            # Either first failure or cooldown expired — reset counter
+            self._pair_reputation[pair_key] = {
+                "failures": 1,
+                "banned_until": 0,
+                "last_error": "slippage",
+            }
+            logger.debug(f"📊 Pair {pair_key}: 1st slippage noted (cooldown not yet active)")
+            return
+
+        entry["failures"] += 1
+        entry["last_error"] = "slippage"
+        if entry["failures"] >= self.PAIR_SLIPPAGE_LIMIT:
+            entry["banned_until"] = now + self.PAIR_COOLDOWN_SECONDS
+            logger.critical(
+                f"🚨 REPUTATION BREAKER: Pair {pair_key} banned for "
+                f"{self.PAIR_COOLDOWN_SECONDS}s ({entry['failures']} consecutive slippage fails)"
+            )
+        else:
+            logger.warning(
+                f"⚠️ Pair {pair_key}: {entry['failures']}/{self.PAIR_SLIPPAGE_LIMIT} "
+                f"consecutive slippage failures"
+            )
+
+    def is_pair_banned(self, pair_key: str) -> bool:
+        """Return True if the pair is currently in cooldown."""
+        now = time.time()
+        entry = self._pair_reputation.get(pair_key)
+        if entry and entry.get("banned_until", 0) > now:
+            return True
+        return False
+
+    def reset_pair_reputation(self, pair_key: str) -> None:
+        """Manually reset the failure counter for a pair (e.g. after a successful trade)."""
+        self._pair_reputation.pop(pair_key, None)
+        logger.info(f"🔄 Pair reputation reset: {pair_key}")
+
+    # ─── Flash Loan Pivot Helpers ───────────────────────────────────────────────
+
+    async def _is_bank_liquid(self, vault_pubkey: str, required_lamports: int) -> bool:
+        """Check if a MarginFi bank vault has enough free liquidity (95% cap)."""
+        try:
+            payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getTokenAccountBalance",
+                "params": [vault_pubkey],
+            }
+            async with self.session.post(self.rpc_url, json=payload, timeout=3.0) as resp:
+                data = await resp.json()
+                if "result" in data and "value" in data["result"]:
+                    vault_lamports = int(data["result"]["value"]["amount"])
+                    safe = int(vault_lamports * 0.95)
+                    return required_lamports <= safe
+        except Exception as e:
+            logger.debug(f"Bank liquidity check failed for {vault_pubkey[:8]}: {e}")
+        return False  # Conservative: treat failures as unavailable
+
+    async def _build_jupiter_pivot_ixs(
+        self, borrow_lamports: int, expected_profit_sol: float
+    ) -> Tuple[Optional[int], List[Instruction], List[Instruction]]:
+        """Fetch Jupiter swap instructions for the Flash Loan Pivot legs.
+
+        Returns (total_swap_cost_lamports, entry_ixs, exit_ixs).
+        entry_ixs: SOL → USDC (enter the arb)
+        exit_ixs:  USDC → SOL (exit + repay in SOL)
+        On any failure the first element is None.
+        """
+        wallet_pk = str(self.keypair.pubkey())
+        sol_pk = str(SOL_MINT)
+        usdc_pk = str(USDC_MINT)
+        # Use 10% of borrow amount as conservative entry size
+        entry_amount = max(borrow_lamports // 10, 1_000_000)  # min 0.001 SOL
+        exit_amount = entry_amount  # same size for return leg
+
+        entry_ixs: List[Instruction] = []
+        exit_ixs: List[Instruction] = []
+        total_cost = 0
+
+        # ── Entry: SOL → USDC ──────────────────────────────────────────────
+        entry_quote_url = (
+            f"{JUPITER_QUOTE_URL}?inputMint={sol_pk}&outputMint={usdc_pk}"
+            f"&amount={entry_amount}&slippageBps=30&maxAccounts=8"
+            f"&onlyDirectRoutes=false&restrictIntermediateTokens=true"
+        )
+        try:
+            async with self.session.get(entry_quote_url, timeout=4.0) as resp:
+                if resp.status != 200:
+                    logger.warning(f"Pivot entry quote failed: HTTP {resp.status}")
+                    return None, [], []
+                entry_quote = await resp.json()
+                out_amount = int(entry_quote.get("outAmount", 0))
+                if out_amount == 0:
+                    logger.warning("Pivot entry quote: outAmount == 0")
+                    return None, [], []
+        except Exception as e:
+            logger.warning(f"Pivot entry quote error: {e}")
+            return None, [], []
+
+        entry_swap_payload = {
+            "quoteResponse": entry_quote,
+            "userPublicKey": wallet_pk,
+            "wrapAndUnwrapSol": False,
+            "dynamicComputeUnitLimit": False,
+            "maxAccounts": "8",
+        }
+        try:
+            async with self.session.post(
+                JUPITER_SWAP_IX_URL, json=entry_swap_payload, timeout=5.0
+            ) as resp:
+                if resp.status != 200:
+                    logger.warning(f"Pivot entry swap-ix failed: HTTP {resp.status}")
+                    return None, [], []
+                entry_ix_data = await resp.json()
+                if "error" in entry_ix_data:
+                    logger.warning(f"Pivot entry swap-ix error: {entry_ix_data['error']}")
+                    return None, [], []
+                for ix_raw in entry_ix_data.get("swapInstruction", []), *(
+                    entry_ix_data.get("setupInstructions", []) or []
+                ):
+                    pass  # parsed below
+        except Exception as e:
+            logger.warning(f"Pivot entry swap-ix request error: {e}")
+            return None, [], []
+
+        # Parse entry instructions
+        if "swapInstruction" in entry_ix_data and entry_ix_data["swapInstruction"]:
+            entry_ixs.append(self._parse_jupiter_ix(entry_ix_data["swapInstruction"]))
+        for setup_ix in (entry_ix_data.get("setupInstructions") or []):
+            entry_ixs.append(self._parse_jupiter_ix(setup_ix))
+
+        price_impact_pct = entry_quote.get("priceImpactPct", "0")
+        try:
+            price_impact = float(price_impact_pct.replace("%", "")) if isinstance(price_impact_pct, str) else float(price_impact_pct)
+        except (ValueError, AttributeError):
+            price_impact = 0.0
+        total_cost += int(entry_amount * price_impact / 100)
+
+        # ── Exit: USDC → SOL ───────────────────────────────────────────────
+        exit_amount_ui = out_amount
+        exit_quote_url = (
+            f"{JUPITER_QUOTE_URL}?inputMint={usdc_pk}&outputMint={sol_pk}"
+            f"&amount={exit_amount_ui}&slippageBps=30&maxAccounts=8"
+            f"&onlyDirectRoutes=false&restrictIntermediateTokens=true"
+        )
+        try:
+            async with self.session.get(exit_quote_url, timeout=4.0) as resp:
+                if resp.status != 200:
+                    logger.warning(f"Pivot exit quote failed: HTTP {resp.status}")
+                    # fall through with entry only
+                else:
+                    exit_quote = await resp.json()
+                    out_exit = int(exit_quote.get("outAmount", 0))
+                    if out_exit > 0:
+                        exit_swap_payload = {
+                            "quoteResponse": exit_quote,
+                            "userPublicKey": wallet_pk,
+                            "wrapAndUnwrapSol": False,
+                            "dynamicComputeUnitLimit": False,
+                            "maxAccounts": "8",
+                        }
+                        async with self.session.post(
+                            JUPITER_SWAP_IX_URL, json=exit_swap_payload, timeout=5.0
+                        ) as resp2:
+                            if resp2.status == 200:
+                                exit_ix_data = await resp2.json()
+                                if "error" not in exit_ix_data:
+                                    if "swapInstruction" in exit_ix_data and exit_ix_data["swapInstruction"]:
+                                        exit_ixs.append(self._parse_jupiter_ix(exit_ix_data["swapInstruction"]))
+                                    for setup_ix in (exit_ix_data.get("setupInstructions") or []):
+                                        exit_ixs.append(self._parse_jupiter_ix(setup_ix))
+        except Exception as e:
+            logger.debug(f"Pivot exit swap setup error (non-fatal): {e}")
+
+        if not entry_ixs:
+            logger.warning("Pivot: no entry swap instructions fetched")
+            return None, [], []
+
+        logger.info(
+            f"🔄 Flash Pivot swap instructions: entry={len(entry_ixs)} ixs, "
+            f"exit={len(exit_ixs)} ixs, cost≈{total_cost/1e9:.6f} SOL"
+        )
+        return total_cost, entry_ixs, exit_ixs
+
+    def _parse_jupiter_ix(self, ix_data: dict) -> Instruction:
+        """Parse a raw Jupiter instruction dict into a solders Instruction."""
+        raw_b64 = ix_data["data"]
+        padded = raw_b64 + "=" * (-len(raw_b64) % 4)
+        return Instruction(
+            program_id=Pubkey.from_string(ix_data["programId"]),
+            accounts=[
+                AccountMeta(
+                    pubkey=Pubkey.from_string(m["pubkey"]),
+                    is_signer=m["isSigner"],
+                    is_writable=m["isWritable"],
+                )
+                for m in ix_data["accounts"]
+            ],
+            data=base64.b64decode(padded) if isinstance(raw_b64, str) else bytes(raw_b64),
+        )
 
     async def _check_dust_circuit_breaker(self) -> bool:
         """

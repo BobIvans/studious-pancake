@@ -24,7 +24,26 @@ class TransactionPrebuilder:
         logger.info(f"🔨 TransactionPrebuilder initialized (TTL: {template_expiry_seconds}s)")
 
     def cache_template(self, in_mint: str, out_mint: str, instructions: List[Any], alts: List[Any]):
-        """Cache instructions and ALTs for a pair. NEVER cache blockhash here."""
+        """Cache instructions and ALTs for a pair. NEVER cache blockhash here.
+
+        BLOCKS caching if the instruction list contains dynamic instructions
+        that may change between calls (CreateATA, SyncNative, etc.), preventing
+        stale repay-index references from cached templates.
+        """
+        ATTACHED_PROGRAM_IDS = {
+            "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",  # Associated Token Account
+            "ComputeBudget111111111111111111111111111111",       # Compute Budget
+        }
+        has_dynamic = any(
+            str(ix.program_id) in ATTACHED_PROGRAM_IDS
+            for ix in instructions
+        )
+        if has_dynamic:
+            logger.debug(
+                f"Skipping cache for {in_mint[:8]} -> {out_mint[:8]}: "
+                "dynamic instructions (CreateATA/SyncNative) detected — caching skipped"
+            )
+            return
         self.templates[(in_mint, out_mint)] = {
             "instructions": instructions,
             "alts": alts,

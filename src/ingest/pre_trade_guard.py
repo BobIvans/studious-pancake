@@ -2,6 +2,7 @@
 
 import logging
 import struct
+import time
 from typing import Optional, Dict, Any, Tuple
 import aiohttp
 from solders.pubkey import Pubkey
@@ -356,11 +357,10 @@ class PreTradeGuard:
         self.blacklisted_pools: Dict[str, float] = {}
         self.blacklist_duration = 3600  # 1 hour
 
-    def record_failure(self, pool_id: str):
+     def record_failure(self, pool_id: str):
         """Record a trade failure for a pool."""
         self.pool_fail_counter[pool_id] = self.pool_fail_counter.get(pool_id, 0) + 1
         if self.pool_fail_counter[pool_id] >= 3:
-            import time
             self.blacklisted_pools[pool_id] = time.time()
             logger.warning(f"🚫 Pool {pool_id} blacklisted for 1 hour after 3 failures.")
 
@@ -369,7 +369,6 @@ class PreTradeGuard:
         if pool_id not in self.blacklisted_pools:
             return False
         
-        import time
         if time.time() - self.blacklisted_pools[pool_id] > self.blacklist_duration:
             del self.blacklisted_pools[pool_id]
             self.pool_fail_counter[pool_id] = 0
@@ -558,3 +557,104 @@ class PreTradeGuard:
 
         logger.debug(f"✅ Token security check passed for {mint_address}")
         return True, "Security check passed"
+
+    # ─── Pre-Trade Profit Re-Check ─────────────────────────────────────────────
+
+    async def check_profit_before_execution(
+        self,
+        input_mint: str,
+        output_mint: str,
+        amount_lamports: int,
+        jito_tip_lamports: int,
+        base_fee_lamports: int,
+        expected_profit_lamports: int,
+        quote_url: str = "https://quote-api.jup.ag/v6/quote",
+        slippage_bps: int = 30,
+    ) -> Tuple[bool, str, int]:
+        """Re-check Jupiter price ~50 ms before signing/bundling the transaction.
+
+        This is the **last line of defence**: between fetching a quote and sending the
+        bundle 100-300 ms later the pool price may have moved enough to eat the expected
+        profit entirely.  Aborting here is always cheaper than burning gas + Jito tip on
+        a transaction that cannot be profitable.
+
+        Args:
+            input_mint:  Entry token mint string.
+            output_mint: Exit token mint string.
+            amount_lamports:      Size of the trade being executed.
+            jito_tip_lamports:    Jito tip in lamports (deducts from profit).
+            base_fee_lamports:    Network base fee in lamports.
+            expected_profit_lamports:  Profit that was projected at quote time.
+            quote_url:            Jupiter quote endpoint.
+            slippage_bps:         Slippage tolerance for the re-check.
+
+        Returns:
+            Tuple[bool, str, int]:
+              True  = still profitable, safe to go.
+              False = profit eroded — abort.
+              Third element: actual_profit_lamports (for caller audit/logging).
+        """
+        if not self.session:
+            return False, "No session available", 0
+
+        params = {
+            "inputMint": input_mint,
+            "outputMint": output_mint,
+            "amount": str(amount_lamports),
+            "slippageBps": str(slippage_bps),
+            "maxAccounts": "8",
+            "onlyDirectRoutes": "false",
+            "restrictIntermediateTokens": "true",
+        }
+
+        try:
+            now = time.time()
+            async with self.session.get(
+                quote_url, params=params, timeout=2.0
+            ) as resp:
+                if resp.status != 200:
+                    return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
+                fresh_quote = await resp.json()
+
+            actual_out = int(fresh_quote.get("outAmount", 0))
+            if actual_out == 0:
+                return False, "Pre-trade quote: outAmount == 0", 0
+
+            actual_gross_profit = actual_out - amount_lamports
+            total_cost_lamports = jito_tip_lamports + base_fee_lamports
+            actual_net_profit = actual_gross_profit - total_cost_lamports
+
+            latency_ms = (time.time() - now) * 1000
+            logger.debug(
+                f"🔍 Pre-trade re-check ({latency_ms:.0f}ms): "
+                f"gross={actual_gross_profit/1e9:.6f} SOL | "
+                f"cost={total_cost_lamports/1e9:.6f} SOL | "
+                f"net={actual_net_profit/1e9:.6f} SOL"
+            )
+
+            if actual_net_profit <= 0:
+                logger.warning(
+                    f"🚫 Pre-trade BLOCKED: profit eroded to {actual_net_profit/1e9:.6f} SOL "
+                    f"(tip={jito_tip_lamports/1e9:.6f} + fee={base_fee_lamports/1e9:.6f} = "
+                    f"{total_cost_lamports/1e9:.6f} SOL)"
+                )
+                return False, f"Profit eroded to {actual_net_profit/1e9:.6f} SOL (cost = {total_cost_lamports/1e9:.6f} SOL)", actual_net_profit
+
+            # Optional: compare with original expected profit
+            profit_slipped_pct = (
+                (expected_profit_lamports - actual_net_profit) / expected_profit_lamports
+                if expected_profit_lamports > 0 else 0.0
+            )
+            if profit_slipped_pct > 0.30:
+                logger.warning(
+                    f"⚠️ Pre-trade: profit slipped {profit_slipped_pct:.0%} "
+                    f"({expected_profit_lamports/1e9:.6f} → {actual_net_profit/1e9:.6f} SOL)"
+                )
+
+            return True, f"Pre-trade OK (net={actual_net_profit/1e9:.6f} SOL)", actual_net_profit
+
+        except asyncio.TimeoutError:
+            return False, "Pre-trade quote timed out", 0
+        except Exception as e:
+            logger.warning(f"Pre-trade re-check error: {e}")
+            return False, f"Pre-trade check error: {e}", 0

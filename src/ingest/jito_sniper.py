@@ -61,6 +61,7 @@ class JitoTipManager:
             "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
             "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
         ]
+        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: jito_sniper using hardcoded fallback!")
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.running = False
         self.current_percentiles: Dict[str, int] = {}

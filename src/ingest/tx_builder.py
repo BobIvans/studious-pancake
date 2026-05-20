@@ -68,6 +68,57 @@ logger = logging.getLogger(__name__)
 MARGINFI_BORROW_DISCRIMINATOR = b'\x91Y\xeba\x184\xa5\xd7'
 MARGINFI_REPAY_DISCRIMINATOR = b'1`E\xabz3\xa5\x9a'
 
+# CU Profiles — single source of truth for all compute unit limits (P0 Priority)
+# Replace every hardcoded set_compute_unit_limit(600000) / (300000) / etc.
+# with a lookup from this dict so the bot only pays for units it actually uses.
+CU_PROFILES: Dict[str, int] = {
+    "stables_swap":          80_000,   # USDC/USDT 2-leg Jupiter swap
+    "lst_depeg_arbitrage":  250_000,   # LST ↔ SOL via Sanctum multi-hop
+    "xstock_oracle_lag":    400_000,   # xStock + USDC circular + Token-2022 overhead
+    "flash_loan_pivot":     600_000,   # Flashloan + Jupiter swaps + SOL/USDC pivot
+    "flash_arbitrage":      600_000,   # Full native flashloan with complex routing
+    "liquidator":           400_000,   # Kamino/Native liquidation
+    "default":              200_000,   # Conservative default
+    # strategy_type → profile key mapping
+    "strategy_1": "flash_arbitrage",
+    "strategy_2": "lst_depeg_arbitrage",
+    "strategy_4": "xstock_oracle_lag",
+}
+
+
+def get_cu_limit(
+    operation_type: str = "default",
+    strategy_type: int = 1,
+    is_native_flashloan: bool = False,
+) -> int:
+    """Return the appropriate CU limit for the given strategy context.
+
+    Single source of truth: always read from ``CU_PROFILES`` so that
+    every hardcoded ``set_compute_unit_limit(600000)`` call can be eliminated
+    and replaced with this function.
+
+    Args:
+        operation_type:    High-level name (e.g. ``"stables_swap"``).
+        strategy_type:     Numeric tag passed by upper-layer scanners (1/2/4…).
+        is_native_flashloan: True when the call originates from
+            :py:meth:`build_native_flashloan_tx` (profile key derived from
+            ``strategy_type`` only, no Jupiter swap overhead).
+
+    Returns:
+        The CU limit in compute units.
+    """
+    # 1. Explicit operation_type overrides everything else
+    if operation_type != "default":
+        return CU_PROFILES.get(operation_type, CU_PROFILES["default"])
+
+    # 2. strategy_type numeric mapping
+    profile_key = CU_PROFILES.get(f"strategy_{strategy_type}", "flash_arbitrage")
+    if is_native_flashloan:
+        # Native flashloan has fewer Jupiter-level overhead instructions
+        profile_key = CU_PROFILES.get(f"strategy_{strategy_type}", "flash_arbitrage")
+
+    return CU_PROFILES.get(profile_key, CU_PROFILES["flash_arbitrage"])
+
 SWAP_INSTRUCTIONS_API_URL = "https://api.jup.ag/swap/v1/swap-instructions"
 
 JUPITER_PROXIES = [
@@ -87,8 +138,8 @@ class NaiveLimiter:
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
-        await asyncio.sleep(1.0)
-        self.semaphore.release()
+        # Don't block the worker! Schedule release in background
+        asyncio.get_event_loop().call_later(1.0, self.semaphore.release)
 
 class JupiterTxBuilder:
     """Builds and signs Solana swap transactions using Jupiter API."""
@@ -352,32 +403,19 @@ class JupiterTxBuilder:
 
 
         # ╔══════════════════════════════════════════════════════════════════════╗
-        # ║  TASK 2 — HARDCODED CU LIMITS (NO RPC SIMULATION — SAVES 200–300ms) ║
-        # ║  Solana charges ONLY for actually consumed CU.                    ║
-        # ║  Over-estimating is fine; under-estimating causes OOG.             ║
+        # ║  CU PROFILES — dynamic limits from module-level CU_PROFILES dict      ║
         # ╚══════════════════════════════════════════════════════════════════════╝
-        if operation_type == "flash_arbitrage":
-            cu_limit = 600_000
-        elif operation_type == "xstocks_arbitrage":
-            cu_limit = 800_000  # Token-2022 needs slightly more
-        else:
-            cu_limit = 400_000
+        _profile_key = {
+            "flash_arbitrage":   "flash_arbitrage",
+            "xstocks_arbitrage": "xstock_oracle_lag",
+            "lst_arbitrage":     "lst_depeg_arbitrage",
+            "stables_swap":      "stables_swap",
+            "swap":              "stables_swap",
+            "default":           "default",
+        }.get(operation_type, operation_type)
 
-        # After hardcoded override, apply +20% Token-2022 buffer once more if needed
-        try:
-            from src.config.xstocks_registry import is_xstock_token
-
-            def _has_token2022_v2(ixs: List[Instruction]) -> bool:
-                for ix in ixs:
-                    if is_xstock_token(ix.program_id):
-                        return True
-                return False
-
-            if _has_token2022_v2(instructions):
-                cu_limit = int(cu_limit * 1.20)  # re-apply after hardcoded override
-                logger.info(f"🛡️ Token-2022 CU Buffer (post-override): {cu_limit} CU (+20%)")
-        except Exception:
-            pass
+        profile_cu = CU_PROFILES.get(_profile_key, CU_PROFILES["default"])
+        cu_limit = max(cu_limit, profile_cu)  # Always at least the profile floor
 
         # Get priority fee
         # ЕСЛИ МЫ ИСПОЛЬЗУЕМ JITO, НАМ НЕ НУЖЕН ВЫСОКИЙ PRIORITY FEE!
@@ -491,10 +529,6 @@ class JupiterTxBuilder:
                 "restrictIntermediateTokens": "true",
                 "maxAccounts": "8",  # MTU Safety: 8 accts × 32B = 256B overhead → TX stays within 1232-byte UDP limit
             }
-            if destination_ata:
-                payload["destinationTokenAccount"] = destination_ata
-                logger.debug(f"🎯 Forcing Jupiter destination to primary wSOL ATA: {destination_ata[:8]}...")
-
             instructions_data = await self._post_swap_instructions_request(payload)
         
         if "error" in instructions_data:
@@ -944,19 +978,29 @@ class JupiterTxBuilder:
             # CreateATA / SyncNative / CloseAccount insertion/removal between calls shifts
             # index positions — dynamic recalculation makes borrow/repay always consistent.
             try:
-                import struct
                 actual_repay_index = all_instructions.index(repay_ix)
-                original_data_without_index = borrow_ix.data[:16]
-                safe_index_bytes = struct.pack("<Q", actual_repay_index)
-                new_borrow_ix = Instruction(
-                    program_id=borrow_ix.program_id,
-                    accounts=borrow_ix.accounts,
-                    data=original_data_without_index + safe_index_bytes,
+                # ════════════════════════════════════════════════════════════════════════
+                # SAFE BORROW DATA RECONSTRUCTION (no fragile slice-patching)
+                # MarginFi borrow layout: discriminator(8) + amount(8 u64 LE) + index(1 u8)
+                # We rebuild data from scratch so the repay-index position is always correct
+                # regardless of any future CDDL format change or extra parameter injection.
+                # ════════════════════════════════════════════════════════════════════════
+                _new_data = (
+                    MARGINFI_BORROW_DISCRIMINATOR
+                    + borrow_amount_lamports.to_bytes(8, "little")
+                    + struct.pack("<B", actual_repay_index)
                 )
-                borrow_idx = all_instructions.index(borrow_ix)
-                all_instructions[borrow_idx] = new_borrow_ix
-                borrow_ix = new_borrow_ix
-                logger.debug(f"🛠️ Dynamic Repay Index recalculated: {actual_repay_index}")
+                if len(_new_data) == 17:
+                    borrow_ix = Instruction(
+                        program_id=borrow_ix.program_id,
+                        accounts=borrow_ix.accounts,
+                        data=_new_data,
+                    )
+                    borrow_idx = all_instructions.index(borrow_ix)
+                    all_instructions[borrow_idx] = borrow_ix
+                    logger.debug(f"🛠️ Safe Borrow Rebuild: data_len=17, repay_index={actual_repay_index}")
+                else:
+                    logger.warning(f"Borrow safe-rebuild size {len(_new_data)} != 17 — fallback to original")
             except ValueError:
                 logger.error("CRITICAL: repay_ix not found in instruction list — aborting")
                 return None
@@ -1092,8 +1136,9 @@ class JupiterTxBuilder:
 
         # 0. Compute Budget (MEV Safety & Priority)
         # We add these here so we can calculate the EXACT repay index dynamically.
-        # Increased to 600,000 CU for Phase 48 high-complexity swaps.
-        all_instructions.append(set_compute_unit_limit(600000))
+        # Dynamic CU limit via profile — strategy_type inferred from borrow_mint string.
+        _native_profile = CU_PROFILES.get("flash_arbitrage", 600_000)
+        all_instructions.append(set_compute_unit_limit(_native_profile))
 
         # ── Flash Loan Pivot: Entry swap FIRST (wallet SOL → USDC before borrow) ──
         # This converts the wallet's native SOL into USDC so the arb can run in USDC.
@@ -1164,6 +1209,7 @@ class JupiterTxBuilder:
         # вся транзакция откатывается, и перевод чаевых НЕ СРАБОТАЕТ.
         if jito_tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
+            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Hardcoded fallback! Must use dynamic fetch_tip_accounts().")
             tip_ix = transfer(TransferParams(
                 from_pubkey=wallet,
                 to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),
@@ -1177,12 +1223,14 @@ class JupiterTxBuilder:
 
             # ── БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount) ──
             # Формат: discriminator(8) + amount(8) + index(1)
+            # БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount)
+            # Формат: discriminator(8) + amount(8) + index(1)
             # Старый подход borrow_ix.data[:-1] + bytes([index]) сдвигает байты и убивает транзакцию.
-            # Теперь используем struct.pack для четкой сборки последнего байта.
+            # Теперь используем struct.pack для четкую сборку последнего байта.
             import struct
             from solders.instruction import Instruction
             original_data_without_index = borrow_ix.data[:16]
-            safe_index_bytes = struct.pack("<Q", actual_repay_index)
+            safe_index_bytes = struct.pack("<B", actual_repay_index)
             new_data = original_data_without_index + safe_index_bytes
             new_borrow_ix = Instruction(
                 program_id=borrow_ix.program_id,
@@ -1191,6 +1239,7 @@ class JupiterTxBuilder:
             )
             borrow_idx = all_instructions.index(borrow_ix)
             all_instructions[borrow_idx] = new_borrow_ix
+            borrow_ix = new_borrow_ix
             borrow_ix = new_borrow_ix
 
             logger.debug(f"🛠️ Safe Dynamic Repay Index calculated: {actual_repay_index}")
@@ -1331,7 +1380,11 @@ class JupiterTxBuilder:
             except ImportError:
                 logger.warning("⚠️ create_idempotent_associated_token_account unavailable — relying on pre-existing ATA")
 
-            cu_limit_ix = set_compute_unit_limit(600000)
+            # Dynamic CU limit from profile (strategy_type=2 → lst_depeg_arbitrage: 250k)
+            _strategy_profile = CU_PROFILES.get(f"strategy_{strategy_type}", "flash_arbitrage")
+            _profile_cu = CU_PROFILES.get(_strategy_profile, CU_PROFILES["flash_arbitrage"])
+            cu_limit_ix = set_compute_unit_limit(_profile_cu)
+            logger.debug(f"🛡️ CU Profile: strategy_type={strategy_type} → {_strategy_profile} ({_profile_cu:,} CU)")
             final_instructions = [cu_limit_ix] + pre_instructions + [borrow_ix] + all_instructions + [repay_ix]
 
             # 4.5 ATOMIC RENT RECOVERY — закрыть промежуточные после repay
@@ -1377,7 +1430,7 @@ class JupiterTxBuilder:
                 # сдвигает байты и убивает транзакцию.
                 import struct
                 original_data_without_index = borrow_ix.data[:16]
-                safe_index_bytes = struct.pack("<Q", actual_repay_index)
+                safe_index_bytes = struct.pack("<B", actual_repay_index)
                 new_borrow_ix = Instruction(
                     program_id=borrow_ix.program_id,
                     accounts=borrow_ix.accounts,
@@ -1459,6 +1512,7 @@ class JupiterTxBuilder:
     def _build_jito_tip_ix(self, wallet: Pubkey, tip_amount: int) -> Instruction:
         """Build Jito tip instruction for capital protection."""
         from solders.system_program import TransferParams, transfer
+        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Hardcoded fallback in _build_jito_tip_ix! Use dynamic tip accounts.")
 
         return transfer(TransferParams(
             from_pubkey=wallet,

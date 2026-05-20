@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import os
+import time
 from typing import Any, Dict, List, Optional, Callable
 import aiohttp
 import websockets
@@ -45,27 +46,42 @@ class JitoExecutor:
         self.current_tip_data = None
         # Phase 35: Dynamic Jito Tip Accounts
         self.tip_accounts = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
+        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Using hardcoded fallback! Update via fetch_tip_accounts() API.")
         self.tip_subscription_task = None
         self._running = False
 
+        # ─── Ghost Balance Recovery ───────────────────────────────────────────
+        # Track bundles whose confirmed/denied status is still unknown.
+        # If a bundle confirms we remove it here.
+        # The background reconciliation task removes stale entries (> 8 s old) and
+        # pushes the deducted amount back into the global virtual_balance so
+        # the bot never "freezes" just because Jito silently dropped a bundle.
+        self.pending_bundles: Dict[str, Dict[str, Any]] = {}
+        self._reconciliation_task: Optional[asyncio.Task] = None
+
     async def start(self):
-        """Start the tip stream subscription."""
+        """Start the tip stream subscription and reconciliation task."""
         if self._running:
             return
         self._running = True
         # Phase 35: Fetch tip accounts on startup
         await self.fetch_tip_accounts()
         self.tip_subscription_task = asyncio.create_task(self._subscribe_to_tip_stream())
+        # Ghost Balance Recovery: background reconciliation every 8 s
+        self._reconciliation_task = asyncio.create_task(self._reconcile_pending())
 
     async def stop(self):
-        """Stop the tip stream subscription."""
+        """Stop all background tasks."""
         self._running = False
-        if self.tip_subscription_task:
-            self.tip_subscription_task.cancel()
-            try:
-                await self.tip_subscription_task
-            except asyncio.CancelledError:
-                pass
+        for task in (self.tip_subscription_task, self._reconciliation_task):
+            if task:
+                task.cancel()
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
+        self.tip_subscription_task = None
+        self._reconciliation_task = None
 
     async def fetch_tip_accounts(self) -> bool:
         """Fetch live Jito tip accounts (Phase 35)."""
@@ -131,7 +147,7 @@ class JitoExecutor:
         """Get current tip information from polled API, with fallback to default tip."""
         if not self.current_tip_data or "tip_floor" not in self.current_tip_data:
             # Fallback to default tip if no data available
-            logger.warning("No tip data available, using fallback tip")
+            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: No tip data available, using hardcoded fallback!")
             return {
                 "recommended_tip": 85000,  # 0.000085 SOL safe fallback
                 "tip_accounts": ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU"],  # Default Jito tip account
@@ -141,7 +157,7 @@ class JitoExecutor:
         tip_floor = self.current_tip_data["tip_floor"]
         if not tip_floor:
             # Fallback
-            logger.warning("Tip floor data empty, using fallback tip")
+            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Tip floor data empty, using hardcoded fallback!")
             return {
                 "recommended_tip": 85000,
                 "tip_accounts": self.tip_accounts,
@@ -156,16 +172,78 @@ class JitoExecutor:
             "full_data": self.current_tip_data
         }
 
+    # ─── Ghost Balance Recovery ────────────────────────────────────────────────
+
+    def _record_pending(self, bundle_id: str, deducted_amount: float) -> None:
+        """Register a bundle in the pending set with its virtual-balance deduction."""
+        if bundle_id and deducted_amount > 0:
+            self.pending_bundles[bundle_id] = {
+                "deducted": deducted_amount,
+                "sent_at": time.time(),
+                "refunded": False,
+            }
+
+    def _confirm_pending(self, bundle_id: str) -> None:
+        """Remove a bundle from the pending set on confirmed landing."""
+        entry = self.pending_bundles.pop(bundle_id, None)
+        if entry:
+            logger.debug(
+                f"✅ Bundle {bundle_id[:12]} confirmed — "
+                f"deducted {entry['deducted']:.8f} SOL kept final."
+            )
+
+    async def _reconcile_pending(self) -> None:
+        """Background task: every 8 s, refund ghost bundles (no confirmation after 8 s)."""
+        while self._running:
+            try:
+                now = time.time()
+                stale_seconds = 8.0  # Jito confirms in < 400 ms; >8 s = ghost
+                refunded_total = 0.0
+
+                for bid, meta in list(self.pending_bundles.items()):
+                    if meta.get("refunded"):
+                        continue
+                    if now - meta.get("sent_at", now) < stale_seconds:
+                        continue
+                    refund = meta["deducted"]
+                    meta["refunded"] = True
+                    refunded_total += refund
+                    # Push back into global virtual_balance
+                    try:
+                        from arb_bot import stats, stats_lock
+                        async with stats_lock:  # type: ignore[misc]
+                            stats["virtual_balance"] += refund
+                        logger.warning(
+                            f"⚡ Ghost bundle {bid[:12]} refunded: {refund:.8f} SOL "
+                            f"→ virtual_balance (gone after {(now - meta['sent_at']):.1f}s)"
+                        )
+                    except Exception as _e:
+                        logger.debug(f"Ghost balance refund unavailable: {_e}")
+
+                self.pending_bundles = {
+                    k: v for k, v in self.pending_bundles.items()
+                    if not v.get("refunded")
+                }
+
+                if refunded_total > 0:
+                    logger.info(f"🔄 Reconciliation: {refunded_total:.8f} SOL ghost refunded")
+
+            except Exception as _e:
+                logger.debug(f"Reconciliation error: {_e}")
+            await asyncio.sleep(8.0)
+
     async def send_bundle(
         self,
         transactions: List[VersionedTransaction],
         tip_amount_lamports: int = 0,
+        deducted_amount: float = 0.0,
     ) -> Dict[str, Any]:
         """Send a bundle of transactions via Jito.
 
         Args:
             transactions: List of VersionedTransaction objects
             tip_amount_lamports: Tip amount in lamports (will use tip stream if available)
+            deducted_amount: Amount already deducted from virtual_balance (for ghost recovery)
 
         Returns:
             Dict with bundle result
@@ -209,7 +287,11 @@ class JitoExecutor:
         results = await asyncio.gather(*[_send_to_region(url) for url in self.endpoints], return_exceptions=True)
         for r in results:
             if isinstance(r, dict) and r.get("success"):
-                logger.info(f"✅ Bundle landed via {r.get('region')}: {r.get('bundle_id')}")
+                bundle_id = r.get("bundle_id", "")
+                logger.info(f"✅ Bundle landed via {r.get('region')}: {bundle_id}")
+                # Ghost Balance Recovery: record this bundle for reconciliation
+                if bundle_id and deducted_amount > 0:
+                    self._record_pending(bundle_id, deducted_amount)
                 return r
         return {"success": False, "error": "All regional endpoints failed"}
 
@@ -255,6 +337,8 @@ class JitoExecutor:
 
                             if confirmation_status in ["confirmed", "finalized", "failed"]:
                                 logger.info(f"Bundle {bundle_id} status: {confirmation_status}")
+                                # Ghost Balance Recovery: remove from pending — confirmed path handles balance
+                                self._confirm_pending(bundle_id)
                                 return {
                                     "bundle_id": bundle_id,
                                     "status": confirmation_status,

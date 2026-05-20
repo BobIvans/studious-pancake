@@ -35,6 +35,7 @@ class JitoManager:
             "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",  # Fallback 1
             "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",  # Fallback 2
         ]
+        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: jito_manager using hardcoded fallback! Must call update_tip_accounts() before use.")
         self.bundle_client = JitoBundleClient(session=session)
         # Fix #3: Track background tasks to prevent Python GC from destroying them
         self.background_tasks: Set[asyncio.Task] = set()

@@ -174,8 +174,8 @@ class MultiAggregatorClient:
                     await self.semaphore.acquire()
                     return self
                 async def __aexit__(self, exc_type, exc_val, exc_tb):
-                    await asyncio.sleep(self.delay)
-                    self.semaphore.release()
+                    # Don't block the worker! Schedule release in background
+                    asyncio.get_event_loop().call_later(self.delay, self.semaphore.release)
             return NaiveLimiter(rps)
 
     async def __aenter__(self):

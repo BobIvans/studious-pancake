@@ -183,6 +183,7 @@ class JitoBundleHandler:
             "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
             "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBVCmLzFZu"
         ]
+        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: jito_bundle_handler using hardcoded fallback! Fetch via Jito API.")
 
         # Default Jito endpoints if not provided
         self.jito_endpoints = jito_endpoints or [

@@ -419,6 +419,8 @@ class Config:
         "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",
         "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLk",
     ])
+    # ⚠️ FALLBACK: Jito rotates tip accounts regularly. Always use dynamic fetch_tip_accounts().
+    # See: https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts
 
     # Multi-RPC Racing Configuration
     MULTI_RPC_ENABLED: bool = str(os.getenv("MULTI_RPC_ENABLED", "true")).lower() == "true"
@@ -1162,7 +1164,7 @@ async def rwa_rest_scanner(queue, cfg):
                 await asyncio.sleep(scan_config["pair_delay"])
         await asyncio.sleep(scan_config["scan_interval"])
 
-async def get_jupiter_quote(session, input_mint, output_mint, amount_lamports, cfg, slippage_bps=None):
+async def get_jupiter_quote(session, input_mint, output_mint, amount_lamports, cfg, slippage_bps=None, restrict_intermediate: bool = True):
     pair_key = f"{input_mint}:{output_mint}:{amount_lamports}"
     if pair_key in PENDING_QUOTES:
         return None  # Fix 84: dedup - skip duplicate RPS waste
@@ -1177,7 +1179,7 @@ async def get_jupiter_quote(session, input_mint, output_mint, amount_lamports, c
         "slippageBps": str(slippage_bps),
         "maxAccounts": "10",  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
         "onlyDirectRoutes": "false",
-        "restrictIntermediateTokens": "true",
+        "restrictIntermediateTokens": "true" if restrict_intermediate else "false",
     }
     headers = {
         "User-Agent": "Mozilla/5.0",
@@ -1205,13 +1207,15 @@ def get_token_decimals(mint) -> int:
     """Return token decimals safe for str and Pubkey inputs."""
     return TOKEN_DECIMALS.get(str(mint), 9)
 
-async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected_profit_bps: float = 0.0):
+async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected_profit_bps: float = 0.0, restrict_intermediate: bool = True):
     """Get best quote with anti-sandwich slippage guard (Fix 34).
 
     Args:
         expected_profit_bps: Expected arbitrage profit in basis points.
                              Required for profit-aware dynamic slippage.
                              If 0, falls back to cfg.SLIPPAGE_BPS.
+        restrict_intermediate: If False, Jupiter finds multi-hop routes through intermediate tokens.
+                               Use for triangular/3+hop arbitrage to reduce sequential API calls.
     """
     try:
         if expected_profit_bps > 0:
@@ -1228,7 +1232,7 @@ async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected
             slippage_bps = cfg.SLIPPAGE_BPS
 
         quote = await asyncio.wait_for(
-            get_jupiter_quote(session, in_mint, out_mint, amount, cfg, slippage_bps),
+            get_jupiter_quote(session, in_mint, out_mint, amount, cfg, slippage_bps, restrict_intermediate=restrict_intermediate),
             timeout=3.0
         )
         return quote
@@ -1359,6 +1363,34 @@ async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_am
         int(effective_base_amount), [repay_index]
     )
 
+    # ═══════════════════════════════════════════════════════════════════════════
+    # SAFE BORROW DATA RECONSTRUCTION (avoids slice-patching fragile to CDDL changes)
+    # MarginFi borrow instruction layout: discriminator(8) | amount(8 u64 LE) | index(1 u8)
+    # We rebuild data from scratch instead of borrow_ix.data[:N] + bytes([index])
+    # to prevent byte shifts if Jupiter ever adds another param between amount and index.
+    # ═══════════════════════════════════════════════════════════════════════════
+    try:
+        from src.ingest.tx_builder import MARGINFI_BORROW_DISCRIMINATOR
+    except ImportError:
+        from src.ingest.tx_builder import MARGINFI_BORROW_DISCRIMINATOR
+
+    try:
+        # Exact re-serialization: discriminator (8) + amount (8 u64 LE) + repay index (1 u8)
+        _new_data = (MARGINFI_BORROW_DISCRIMINATOR
+                     + int(effective_base_amount).to_bytes(8, "little")
+                     + struct.pack("<B", repay_index))
+        if len(_new_data) == 17:
+            borrow_ix = Instruction(
+                program_id=borrow_ix.program_id,
+                accounts=borrow_ix.accounts,
+                data=_new_data,
+            )
+        else:
+            logger.warning(f"Borrow data re-serialized to {len(_new_data)} bytes — using original")
+    except Exception as _rebuild_err:
+        logger.debug(f"Borrow safe-rebuild skipped ({_rebuild_err}), using original")
+
+
     repay_ix = builder.build_marginfi_repay_ix(
         mfi_program, marginfi_account, keypair.pubkey(), mfi_group,
         bank_cfg["bank"], bank_cfg["liquidity_vault"],
@@ -1443,19 +1475,27 @@ async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_am
             use_jito=use_jito,
             rpc_url=rpc_getter()
         )
-
-        # Hardcode optimized CU budget for flash loans (300k for flash arbitrage)
-        cu_limit = 300000
-
+        # cu_limit is already the dynamic profile value from build_optimized_transaction()
         # Calculate EXACT repay index dynamically using list introspection in optimized_instructions
         try:
             actual_repay_index = optimized_instructions.index(repay_ix)
-            # Update borrow instruction with the CORRECT repay index
-            # Discriminator(8) + Amount(8 u64) + Index(1 u8) — use struct.pack for exact packing
-            original_data_without_index = borrow_ix.data[:16]
-            safe_index_byte = struct.pack("<B", actual_repay_index)
-            borrow_ix.data = original_data_without_index + safe_index_byte
-            logger.debug(f"🛠️ Dynamic Repay Index updated in arb_bot.py: {actual_repay_index}")
+            # ── SAFE BORROW DATA RECONSTRUCTION ───────────────────────────────────
+            # NO slice-patching here. Rebuild the borrow instruction data from explicit
+            # fields so the repay-index position is correct regardless of any future
+            # CDDL layout change (extra fields, different alignment, etc.).
+            # MarginFi borrow layout: discriminator(8) + amount(8 u64 LE) + index(1 u8)
+            from src.ingest.tx_builder import MARGINFI_BORROW_DISCRIMINATOR
+            _safe_data = (
+                MARGINFI_BORROW_DISCRIMINATOR
+                + int(effective_base_amount).to_bytes(8, "little")
+                + struct.pack("<B", actual_repay_index)
+            )
+            borrow_ix = Instruction(
+                program_id=borrow_ix.program_id,
+                accounts=borrow_ix.accounts,
+                data=_safe_data,
+            )
+            logger.debug(f"🛠️ Safe Borrow Data Re-serialized: repay_index={actual_repay_index}, len={len(_safe_data)} bytes")
         except ValueError:
             logger.error("CRITICAL: repay_ix not found in optimized_instructions")
             return None
@@ -1482,6 +1522,7 @@ async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_am
         # Add Jito tip instruction if specified (must be last for security)
         if tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
+            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Hardcoded fallback! Use dynamic fetch_tip_accounts() for production.")
             tip_ix = transfer(TransferParams(
                 from_pubkey=keypair.pubkey(),
                 to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),
@@ -1553,6 +1594,9 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
         session=session,
         rpc_url=rpc_url,
     )
+
+    # Pre-Trade Guard: prevent sending unprofitable bundles (right before jito_executor.send_bundle)
+    pre_trade_guard = PreTradeGuard(session=session, rpc_url=rpc_url)
 
     # MarginFi bank config for SOL
     sol_mint_str = str(TOKENS["SOL"])
@@ -1806,6 +1850,27 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                 # ── Step 7: Send via Jito bundle ──────────────────────────
                 if JITO_AVAILABLE:
                     tx_with_tip = tx  # Placeholder - tip will be added by JitoBundleHandler/JitoExecutor
+
+                    # ── Pre-Trade Guard: Re-check profit right before send_bundle (Fix Slippage Re-check)
+                    # Between fetching the quote and sending, 100-300ms may have passed.
+                    # If the price slipped and eats the profit — abort. Better to skip than burn gas.
+                    base_fee_lamports = int(cfg.PRIORITY_FEE * 1e9)
+                    est_gas_lamports = int(0.000005 * 1e9)
+                    expected_profit_lamports = int(route.profit_sol * 1e9)
+
+                    trade_ok, trade_reason, _ = await pre_trade_guard.check_profit_before_execution(
+                        input_mint=str(route.buy_quote.input_mint),    # entry token (SOL for buy-LST)
+                        output_mint=str(route.buy_quote.output_mint),   # exit token (LST for buy-LST)
+                        amount_lamports=route.borrow_amount_lamports,
+                        jito_tip_lamports=jito_tip_lamports,
+                        base_fee_lamports=base_fee_lamports + est_gas_lamports,
+                        expected_profit_lamports=expected_profit_lamports,
+                        quote_url=cfg.JUPITER_QUOTE_URL,
+                        slippage_bps=cfg.SLIPPAGE_BPS,
+                    )
+                    if not trade_ok:
+                        logger.warning(f"🚫 Pre-Trade Guard BLOCKED: {trade_reason} | {signal.token_symbol}")
+                        continue
 
                     stats["bundle_send_attempts"] += 1
                     bundle_result = await jito_executor.send_bundle([tx_with_tip])
@@ -2908,32 +2973,26 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
                         routes.append([quote1, q2])
                         route_types.append("direct")
 
-                # Simulated 3-hop Triangular (SOL -> USDC -> Target -> SOL)
-                quote_sol_usdc = await get_best_quote_multi(session, in_mint_str, str(TOKENS["USDC"]), amount_lamports, cfg)
-                if quote_sol_usdc and "outAmount" in quote_sol_usdc:
-                    quote_sol_usdc["out_amount"] = int(quote_sol_usdc["outAmount"])
-                    q_usdc_token = await get_best_quote_multi(session, str(TOKENS["USDC"]), target_mint_str, quote_sol_usdc["out_amount"], cfg)
-                    if q_usdc_token and "outAmount" in q_usdc_token:
-                        q_usdc_token["out_amount"] = int(q_usdc_token["outAmount"])
-                        q_token_sol = await get_best_quote_multi(session, target_mint_str, in_mint_str, q_usdc_token["out_amount"], cfg)
-                        if q_token_sol and "outAmount" in q_token_sol:
-                            q_token_sol["out_amount"] = int(q_token_sol["outAmount"])
-                            routes.append([quote_sol_usdc, q_usdc_token, q_token_sol])
-                            route_types.append("triangular")
+                # Triangular: Jupiter multi-hop via restrictIntermediateTokens=false (2 calls instead of 3 sequential)
+                quote1_multi = await get_best_quote_multi(session, in_mint_str, target_mint_str, amount_lamports, cfg, restrict_intermediate=False)
+                if quote1_multi and "outAmount" in quote1_multi:
+                    quote1_multi["out_amount"] = int(quote1_multi["outAmount"])
+                    q2_multi = await get_best_quote_multi(session, target_mint_str, in_mint_str, quote1_multi["out_amount"], cfg, restrict_intermediate=False)
+                    if q2_multi and "outAmount" in q2_multi:
+                        q2_multi["out_amount"] = int(q2_multi["outAmount"])
+                        routes.append([quote1_multi, q2_multi])
+                        route_types.append("triangular")
 
             elif len(path) == 3:
-                # Actual 3-hop from path
-                q1 = await get_best_quote_multi(session, in_mint_str, str(path[1]), amount_lamports, cfg)
+                # Multi-hop: Jupiter finds optimal route via intermediates with restrictIntermediateTokens=false
+                q1 = await get_best_quote_multi(session, in_mint_str, target_mint_str, amount_lamports, cfg, restrict_intermediate=False)
                 if q1 and "outAmount" in q1:
                     q1["out_amount"] = int(q1["outAmount"])
-                    q2 = await get_best_quote_multi(session, str(path[1]), target_mint_str, q1["out_amount"], cfg)
+                    q2 = await get_best_quote_multi(session, target_mint_str, in_mint_str, q1["out_amount"], cfg, restrict_intermediate=False)
                     if q2 and "outAmount" in q2:
                         q2["out_amount"] = int(q2["outAmount"])
-                        q3 = await get_best_quote_multi(session, target_mint_str, in_mint_str, q2["out_amount"], cfg)
-                        if q3 and "outAmount" in q3:
-                            q3["out_amount"] = int(q3["outAmount"])
-                            routes.append([q1, q2, q3])
-                            route_types.append("triangular")
+                        routes.append([q1, q2])
+                        route_types.append("triangular")
 
             if not routes:
                 continue
@@ -3115,26 +3174,28 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
                 chosen_route = [quote1, quote2]
 
             elif best_route_idx == 1:
-                # Triangular route re-fetch: update sub-legs in-situ with anti-sandwich slippage
-                q_usdc_token = await get_best_quote_multi(
-                    session, str(TOKENS["USDC"]), target_mint_str,
-                    quote_sol_usdc["out_amount"], cfg,
-                    expected_profit_bps=expected_profit_bps
+                # Triangular route re-fetch: use restrictIntermediateTokens=false (2 calls instead of 3)
+                quote1_multi = await get_best_quote_multi(
+                    session, in_mint_str, target_mint_str,
+                    amount_lamports, cfg,
+                    expected_profit_bps=expected_profit_bps,
+                    restrict_intermediate=False
                 )
-                if not q_usdc_token:
-                    logger.debug("Anti-sandwich re-fetch of triangular leg 2 failed; skipping")
+                if not quote1_multi:
+                    logger.debug("Anti-sandwich re-fetch of multi-hop leg 1 failed; skipping")
                     continue
-                q_token_sol = await get_best_quote_multi(
+                quote1_multi["out_amount"] = int(quote1_multi["outAmount"])
+                q2_multi = await get_best_quote_multi(
                     session, target_mint_str, in_mint_str,
-                    q_usdc_token["out_amount"], cfg,
-                    expected_profit_bps=expected_profit_bps
+                    quote1_multi["out_amount"], cfg,
+                    expected_profit_bps=expected_profit_bps,
+                    restrict_intermediate=False
                 )
-                if not q_token_sol:
-                    logger.debug("Anti-sandwich re-fetch of triangular leg 3 failed; skipping")
+                if not q2_multi:
+                    logger.debug("Anti-sandwich re-fetch of multi-hop leg 2 failed; skipping")
                     continue
-                quote3 = q_token_sol  # Triangular leg 3
-                # Fix 39: Triangular route — all 3 legs must be passed to tx builder
-                chosen_route = [quote_sol_usdc, q_usdc_token, quote3]
+                q2_multi["out_amount"] = int(q2_multi["outAmount"])
+                chosen_route = [quote1_multi, q2_multi]
             # ─────────────────────────────────────────────────────────────────────────────
 
             # Fix 39: chosen_route must be populated before this point

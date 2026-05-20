@@ -404,6 +404,30 @@ class ExecutionRouter:
             )
             transaction = VersionedTransaction(message, [self.keypair])
 
+            # ─── Pre-Trade Guard: profit re-check in last ~50 ms ──────────────────
+            # Verify the swap legs still deliver positive profit after fees right
+            # before the transaction is signed and handed to Jito.  If the pool
+            # price moved >0.1% in the 100-300 ms between quote fetch and now,
+            # abort early — cheaper than burning tip + gas.
+            try:
+                from .pre_trade_guard import PreTradeGuard
+                _ptg = PreTradeGuard()
+                _base_fee = 5000  # 0.000005 SOL in lamports (base network fee)
+                prof_ok, prof_reason, actual_net = await _ptg.check_profit_before_execution(
+                    input_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",   # USDC leg in
+                    output_mint=token_mint,                                  # xStock leg out
+                    amount_lamports=optimal_size_lamports,
+                    jito_tip_lamports=jito_tip_lamports,
+                    base_fee_lamports=_base_fee,
+                    expected_profit_lamports=int(expected_profit_sol * 1e9),
+                )
+                if not prof_ok:
+                    logger.warning(f"🚫 Pre-trade guard blocked: {prof_reason}")
+                    return {"status": "blocked", "message": prof_reason}
+                logger.debug(f"✅ Pre-trade profit OK: {actual_net/1e9:.6f} SOL")
+            except Exception as _ptg_e:
+                logger.debug(f"Pre-trade re-check skipped ({_ptg_e}) — proceeding")
+
             # Send via Jito
             jito_result = await self.jito_executor.send_bundle([transaction])
 

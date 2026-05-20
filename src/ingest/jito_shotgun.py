@@ -163,10 +163,11 @@ class JitoShotgun:
                 raw_ix = Instruction(program_id=program_id, accounts=accounts, data=data)
                 existing_instructions.append(raw_ix)
 
+            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Hardcoded fallback in jito_shotgun! Use dynamic fetch_tip_accounts().")
             # Add tip transfer as VERY LAST instruction
             tip_ix = transfer(TransferParams(
                 from_pubkey=transaction.message.account_keys[0],
-                to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),
+                to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),  # ⚠️ FALLBACK: use dynamic tip accounts
                 lamports=tip_lamports,
             ))
 

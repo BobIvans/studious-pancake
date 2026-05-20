@@ -323,7 +323,7 @@ class DustSweeper:
         """Send transaction to network."""
         try:
             import base64
-            tx_b64 = base64.b64encode(tx.serialize()).decode('ascii')
+            tx_b64 = base64.b64encode(bytes(tx)).decode('ascii')
 
             payload = {
                 "jsonrpc": "2.0",

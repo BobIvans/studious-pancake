@@ -53,7 +53,7 @@ class HeliusSender:
                 # Note: For VersionedTransaction, need to modify message
                 # This is simplified; in practice, rebuild transaction with tip
 
-            tx_b64 = base64.b64encode(signed_tx.serialize()).decode('ascii')
+            tx_b64 = base64.b64encode(bytes(signed_tx)).decode('ascii')
 
             payload = {
                 "jsonrpc": "2.0",

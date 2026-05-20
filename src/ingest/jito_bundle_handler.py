@@ -309,7 +309,7 @@ class JitoBundleHandler:
             return [{"success": False, "error": "No HTTP session"}]
 
         # Serialize bundle
-        serialized_bundle = [tx.serialize().hex() for tx in bundle]
+        serialized_bundle = [bytes(tx).hex() for tx in bundle]
 
         async def send_to_endpoint(endpoint: str) -> Dict:
             try:

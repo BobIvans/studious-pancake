@@ -4117,7 +4117,7 @@ async def dust_sweep_background():
             logger.error(f"Background dust sweep error: {e}")
             await asyncio.sleep(300)  # Retry in 5 minutes
 
-async def _build_burn_instruction_atlanta(token_account: str, mint: str, amount_lamports: int):
+async def _build_burn_instruction_atlanta(token_account: str, mint: str, amount_lamports: int, keypair):
     """Build TokenProgram.Burn instruction for SPL token (Task 52 — Phase 41)."""
     try:
         from spl.token.instructions import BurnParams, burn
@@ -4181,7 +4181,7 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
             # Task 52: Burn-before-close — flush non-zero residue to prevent TokenAccountNotEmpty
             raw_amount = int(raw_amount_str or 0) * (10 ** (9 - decimals))
             if raw_amount > 0:
-                burn_ix = _build_burn_instruction_atlanta(str(ata_address), mint, raw_amount)
+                burn_ix = _build_burn_instruction_atlanta(str(ata_address), mint, raw_amount, keypair)
                 if burn_ix:
                     close_instructions.append(burn_ix)
                     logger.debug(f"🔥 Burning {raw_amount} lamports ({ui_amount} tokens) from {str(ata_address)[:8]}…")

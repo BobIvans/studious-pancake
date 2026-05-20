@@ -120,7 +120,7 @@ class FlashSimulator:
                     "encoding": "base64",
                     "commitment": "confirmed",
                     "sigVerify": False,
-                    "replaceRecentBlockhash": False,
+                    "replaceRecentBlockhash": True,
                     # Add accounts parameter to get balance changes
                     "accounts": {
                         "encoding": "base64",

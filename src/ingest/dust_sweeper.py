@@ -57,6 +57,15 @@ class DustSweeper:
         logger.info(f"✅ Shutdown sweep complete. Recovered: {recovered_sol:.6f} SOL")
         return recovered_lamports
 
+    async def sweep_after_successful_tx(self) -> int:
+        """Light post-tx dust sweep — called by execution_router after confirmed arbitrage.
+        Skips startup/shutdown log noise; returns lamports recovered for metrics."""
+        logger.debug("🧹 Post-tx dust sweep...")
+        recovered = await self._sweep_dust()
+        if recovered > 0:
+            logger.info(f"✅ Post-tx sweep recovered {recovered / 1e9:.6f} SOL")
+        return recovered
+
     async def _sweep_dust(self) -> int:
         """Core dust sweeping logic."""
         try:

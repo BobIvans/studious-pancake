@@ -75,7 +75,7 @@ MARGINFI_REPAY_DISCRIMINATOR = b'1`E\xabz3\xa5\x9a'
 CU_PROFILES: Dict[str, int] = {
     "stables_swap":          80_000,   # USDC/USDT 2-leg Jupiter swap
     "lst_depeg_arbitrage":  250_000,   # LST ↔ SOL via Sanctum multi-hop
-    "xstock_oracle_lag":    400_000,   # xStock + USDC circular + Token-2022 overhead
+    "xstock_oracle_lag":    800_000,   # xStock + USDC circular + Token-2022 overhead (+ Transfer Hooks)
     "flash_loan_pivot":     600_000,   # Flashloan + Jupiter swaps + SOL/USDC pivot
     "flash_arbitrage":      600_000,   # Full native flashloan with complex routing
     "liquidator":           400_000,   # Kamino/Native liquidation
@@ -512,6 +512,11 @@ class JupiterTxBuilder:
             for ix_data in instructions_data["setupInstructions"]:
                 ix = self._parse_instruction(ix_data)
                 
+                # ФИКС: Фильтруем ComputeBudget от Jupiter — SVM не допускает дубликатов
+                if str(ix.program_id) == "ComputeBudget111111111111111111111111111111":
+                    logger.debug("✂️ Вырезан дубликат ComputeBudget от Юпитера")
+                    continue
+                
                 # Phase 12: Deduplicate Associated Token Account creation
                 if str(ix.program_id) == "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86":
                     if len(ix.accounts) >= 2:
@@ -527,9 +532,14 @@ class JupiterTxBuilder:
         if "swapInstruction" in instructions_data and instructions_data["swapInstruction"]:
             instructions.append(self._parse_instruction(instructions_data["swapInstruction"]))
 
-        # Parse cleanup instruction (e.g. closing ATAs)
+        # FIX 1 (Jupiter Cleanup Sabotage): NEVER add cleanupInstruction from Jupiter.
+        # Jupiter sometimes returns cleanupInstruction that closes intermediate ATAs mid-tx,
+        # causing AccountNotFound on the next leg. Also, AMMs leave unpredictable dust (1-2 micro-tokens)
+        # in intermediate ATAs — CloseAccount reverts the FULL transaction if token balance != 0.
+        # wSOL ATA is safely closed atomically in build_native_flashloan_tx.
+        # All other ATAs are swept asynchronously by DustSweeper post-trade.
         if "cleanupInstruction" in instructions_data and instructions_data["cleanupInstruction"]:
-            instructions.append(self._parse_instruction(instructions_data["cleanupInstruction"]))
+            logger.debug(f"✂️ Stripped Jupiter cleanupInstruction — intermediate ATA dust would cause 100% revert")
 
         alt_pubkeys = []
         if "addressLookupTableAddresses" in instructions_data and instructions_data["addressLookupTableAddresses"]:
@@ -1139,38 +1149,20 @@ class JupiterTxBuilder:
             all_instructions.append(pv_ix)
 
         # =====================================================================
-        # 4.5 ATOMIC RENT RECOVERY — Закрытие промежуточных ATA (ЗАЩИТА КАПИТАЛА)
-        # =====================================================================
-        # После того как репей выполнен, закрываем все промежуточные ATA (кроме
-        # CORE_GOLDEN: wSOL, USDC), чтобы мгновенно вернуть 0.002 SOL за каждую.
-        # Это критично для бюджета 0.017 SOL — даже 2 зависшие ATA = 25% капитала.
-        CORE_GOLDEN_MINTS_STR = {
-            "So11111111111111111111111111111111111111112",  # wSOL
-            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", # USDC
-        }
-        intermediate_mints = set(arbitrage_path)  # все токены маршрута (Эфемерные ATA)
-        for mint_str in intermediate_mints:
-            if mint_str in CORE_GOLDEN_MINTS_STR:
-                continue
-            try:
-                mint_pk = Pubkey.from_string(mint_str)
-                # Token-2022 detection via xstocks_registry
-                from src.config.xstocks_registry import is_xstock_token
-                is_xstock = is_xstock_token(mint_pk)
-                prog_id = TOKEN_2022_PROGRAM_ID if is_xstock else TOKEN_PROGRAM_ID
-
-                ata_to_close = get_associated_token_address(wallet, mint_pk, prog_id)
-                close_ix = close_account(CloseAccountParams(
-                    program_id=prog_id,
-                    account=ata_to_close,
-                    dest=wallet,
-                    owner=wallet
-                ))
-                all_instructions.append(close_ix)
-                prog_label = "Token-2022" if is_xstock else "SPL"
-                logger.debug(f"🧹 Atomic CloseAccount: {mint_str[:8]} ({prog_label})")
-            except Exception as e:
-                logger.debug(f"⚠️ Atomic close skipped for {mint_str[:8]}: {e}")
+        # Fix 1 (Non-burning Dust): Only close wSOL atomically.
+        # Intermediate ATA (BONK, xStocks, etc.) leave 1–2 micro-token dust after Jupiter/Raydium swaps.
+        # CloseAccount reverts the FULL transaction if token balance != 0.
+        # wSOL is safe because close_account unwraps all wSOL + 0.002 SOL rent in one instruction.
+        # All other ATA are cleaned asynchronously by dust_sweeper post-tx.
+        wsol_mint_pk = Pubkey.from_string("So11111111111111111111111111111111111111112")
+        wsol_ata = get_associated_token_address(wallet, wsol_mint_pk)
+        all_instructions.append(close_account(CloseAccountParams(
+            program_id=TOKEN_PROGRAM_ID,
+            account=wsol_ata,
+            dest=wallet,
+            owner=wallet,
+        )))
+        logger.debug("🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper")
         # =====================================================================
 
         # ЗАЩИТА КАПИТАЛА (0.017 SOL): Чаевые Jito СТРОГО в конце единой транзакции.
@@ -1178,37 +1170,15 @@ class JupiterTxBuilder:
         # вся транзакция откатывается, и перевод чаевых НЕ СРАБОТАЕТ.
         if jito_tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
-
-            # Fix 1: Close wSOL ATA to extract native SOL before paying Jito tip.
-            # Prevents "wSOL Death Spiral" where profit accumulates in wSOL
-            # while Jito tips drain native SOL, ultimately causing InsufficientFundsForFee.
-            # The close_account instruction extracts all wSOL tokens + 0.002 SOL ATA rent
-            # back to the main wallet as native SOL lamports.
-            # CreateIdempotentATA below ensures the wSOL ATA is recreated for the next trade.
-            if str(sol_mint) == "So11111111111111111111111111111111111111112":
-                wsol_prog_id = TOKEN_PROGRAM_ID
-                _user_wsol_ata = get_associated_token_address(wallet, sol_mint, wsol_prog_id)
-                all_instructions.append(close_account(CloseAccountParams(
-                    program_id=wsol_prog_id,
-                    account=_user_wsol_ata,
-                    dest=wallet,
-                    owner=wallet
-                )))
-                all_instructions.append(CREATE_ATA_FUNCTION(
-                    payer=wallet, owner=wallet, mint=sol_mint
-                ))
-                logger.debug("🔓 Fix 1 (wSOL Death Spiral): CloseATA + CreateIdempotentATA injected before Jito tip")
-
-            # Fix 2: Dynamic Jito tip account — never hardcoded.
-                # Caller (arb_bot / execution_router) injects jito_executor.tip_accounts.
-                # STRICTLY dynamic — no hardcoded fallback (Fix 2).
-                if not tip_accounts:
-                    logger.critical(
-                        "🚨 JITO TIP ACCOUNTS: tip_accounts is empty! "
-                        "Caller must supply jito_executor.tip_accounts. Aborting to prevent hardcoded fallback."
-                    )
-                    return None
-                selected_tip_account = random.choice(tip_accounts)
+            # Fix 1: wSOL already closed atomically above.
+            # Dynamic tip accounts — caller must supply, abort if empty (no hardcoded fallback).
+            if not tip_accounts:
+                logger.critical(
+                    "🚨 JITO TIP ACCOUNTS: tip_accounts is empty! "
+                    "Caller must supply jito_executor.tip_accounts. Aborting to prevent hardcoded fallback."
+                )
+                return None
+            selected_tip_account = random.choice(tip_accounts)
             tip_ix = transfer(TransferParams(
                 from_pubkey=wallet,
                 to_pubkey=Pubkey.from_string(selected_tip_account),
@@ -1239,7 +1209,6 @@ class JupiterTxBuilder:
             borrow_idx = all_instructions.index(borrow_ix)
             all_instructions[borrow_idx] = new_borrow_ix
             borrow_ix = new_borrow_ix
-            borrow_ix = new_borrow_ix
 
             logger.debug(f"🛠️ Safe Dynamic Repay Index calculated: {actual_repay_index}")
         except ValueError:
@@ -1247,20 +1216,40 @@ class JupiterTxBuilder:
             return None
 
         return {
-            "instructions": self.sanitize_instructions(all_instructions),
+            "instructions": self.sanitize_instructions(all_instructions, payer=wallet),
             "address_lookup_tables": [], # Would be populated
             "repay_index": actual_repay_index
         }
 
 
-    def sanitize_instructions(self, instructions: List[Instruction]) -> List[Instruction]:
-        """Phase 48: Global Cross-Leg ATA Deduplication.
+    def sanitize_instructions(self, instructions: List[Instruction], payer: Optional[Pubkey] = None) -> List[Instruction]:
+        """Phase 48: Global Cross-Leg ATA Deduplication + Golden ATA Protection.
         Filters out redundant create_associated_token_account instructions.
+        NEVER closes Golden ATAs (wSOL, USDC) — they are sacred.
+
+        Args:
+            instructions: List of instructions to sanitize.
+            payer: Optional wallet pubkey to compute golden ATA addresses.
+                   If None, golden ATA CloseAccount detection is skipped (safe fallback).
         """
         seen_atas = set()
         sanitized = []
-        ata_prog = Pubkey.from_string("ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL")
-        
+        ata_prog = Pubkey.from_string("ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86")
+        # Golden ATAs that must NEVER be closed
+        _golden_mints = {
+            "So11111111111111111111111111111111111111112",  # wSOL
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
+        }
+        # Pre-compute golden ATA addresses if payer is known
+        _golden_atas = set()
+        if payer is not None:
+            from spl.token.instructions import get_associated_token_address
+            for _gm in _golden_mints:
+                try:
+                    _golden_atas.add(str(get_associated_token_address(payer, Pubkey.from_string(_gm))))
+                except Exception:
+                    pass
+
         for ix in instructions:
             if ix.program_id == ata_prog:
                 # Associated Token Account program: target ATA is typically account at index 1
@@ -1270,6 +1259,17 @@ class JupiterTxBuilder:
                         logger.debug(f"✂️ Deduplicated ATA creation for {ata_pubkey[:8]}")
                         continue
                     seen_atas.add(ata_pubkey)
+            # FIX 1 (Golden ATA Protection): NEVER close wSOL or USDC ATAs.
+            # Jupiter's cleanupInstruction or our own sanitize must NEVER touch these.
+            if str(ix.program_id) == "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA":
+                # Detect CloseAccount instruction
+                if len(ix.data) >= 8 and ix.data[:8] == CLOSE_ACCOUNT_DISCRIMINATOR:
+                    # CloseAccount: account is at index 0, dest at index 1, owner at index 2
+                    if len(ix.accounts) >= 1:
+                        close_target = str(ix.accounts[0].pubkey)
+                        if close_target in _golden_atas:
+                            logger.warning(f"🛡️ GOLDEN ATA PROTECTION: Blocked CloseAccount for golden ATA ({close_target[:8]})")
+                            continue
             sanitized.append(ix)
         return sanitized
 
@@ -1387,48 +1387,27 @@ class JupiterTxBuilder:
             logger.debug(f"🛡️ CU Profile: strategy_type={strategy_type} → {_strategy_profile} ({_profile_cu:,} CU)")
             final_instructions = [cu_limit_ix] + pre_instructions + [borrow_ix] + all_instructions + [repay_ix]
 
-            # 4.5 ATOMIC RENT RECOVERY — закрыть промежуточные после repay
-            CORE_GOLDEN_MINTS_STR = {
-                "So11111111111111111111111111111111111111112",
-                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-            }
-            intermediate_mints = set(arbitrage_path) if isinstance(arbitrage_path, list) else set()
-            for mint_str in intermediate_mints:
-                if mint_str in CORE_GOLDEN_MINTS_STR:
-                    continue
-                try:
-                    mint_pk = Pubkey.from_string(mint_str)
-                    from src.config.xstocks_registry import is_xstock_token
-                    is_xstock = is_xstock_token(mint_pk)
-                    prog_id = TOKEN_2022_PROGRAM_ID if is_xstock else TOKEN_PROGRAM_ID
-                    ata_to_close = get_associated_token_address(wallet, mint_pk, prog_id)
-                    close_ix = close_account(CloseAccountParams(
-                        program_id=prog_id,
-                        account=ata_to_close,
-                        dest=wallet,
-                        owner=wallet
-                    ))
-                    final_instructions.append(close_ix)
-                except Exception:
-                    pass
+            # =====================================================================
+            # Fix 1 (Non-burning Dust): Only close wSOL atomically.
+            # Intermediate ATA (BONK, xStocks, etc.) leave dust after swaps.
+            # CloseAccount reverts if token balance != 0 (full tx rollback).
+            # wSOL is safe — close_account unwraps all wSOL + 0.002 SOL rent at once.
+            # All other ATA cleaned asynchronously by dust_sweeper post-tx.
+            final_instructions.append(close_account(CloseAccountParams(
+                program_id=TOKEN_PROGRAM_ID,
+                account=user_sol_ata,
+                dest=wallet,
+                owner=wallet,
+            )))
+            logger.debug("🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper")
+            # =====================================================================
 
             # 5. ATOMIC JITO TIP (100% CAPITAL PROTECTION)
             if jito_tip_lamports > 0:
                 from solders.system_program import TransferParams, transfer
 
-                # Fix 1: Close wSOL ATA to extract native SOL before paying Jito tip
-                final_instructions.append(close_account(CloseAccountParams(
-                    program_id=TOKEN_PROGRAM_ID,
-                    account=user_sol_ata,
-                    dest=wallet,
-                    owner=wallet
-                )))
-                final_instructions.append(CREATE_ATA_FUNCTION(
-                    payer=wallet, owner=wallet, mint=sol_mint
-                ))
-                logger.debug("🔓 wSOL unwrap injected: CloseATA + CreateIdempotentATA before Jito tip")
-
-                # Fix 2: Use dynamic tip account from jito_executor (STRICTLY no hardcoded fallback)
+                # Fix 1: wSOL already closed atomically above.
+                # Dynamic tip account — abort if empty (Fix 2, no hardcoded fallback).
                 if not tip_accounts:
                     logger.critical(
                         "🚨 JITO TIP ACCOUNTS: tip_accounts is empty! "
@@ -1466,7 +1445,7 @@ class JupiterTxBuilder:
                 return None
 
             return {
-                "instructions": self.sanitize_instructions(final_instructions),
+                "instructions": self.sanitize_instructions(final_instructions, payer=wallet),
                 "address_lookup_table_pubkeys": list(set(alts)),
                 "repay_index": actual_repay_index if 'actual_repay_index' in dir() else repay_index
             }

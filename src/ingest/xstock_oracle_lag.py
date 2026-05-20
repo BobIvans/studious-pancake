@@ -495,8 +495,10 @@ class XStockOracleLagStrategy:
                 return
 
             actual_return = int(sell_quote.get("outAmount", 0))
-            actual_profit_lamports = actual_return - trade_amount
-            actual_profit_sol = actual_profit_lamports / 1_000_000_000
+            actual_profit_lamports = actual_return - trade_amount  # USDC lamports (6 decimals)
+            actual_profit_usdc = actual_profit_lamports / 1_000_000   # 6 decimals for USDC
+            sol_price = float(self.pyth_client.get_current_price("SOL") or 150.0)
+            actual_profit_sol = actual_profit_usdc / sol_price  # Convert USDC profit → SOL equivalent
 
             if actual_profit_sol < float(self.min_profit_threshold):
                 logger.warning(

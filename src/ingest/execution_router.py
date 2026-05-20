@@ -210,6 +210,15 @@ class ExecutionRouter:
                 # Check rent recovery success
                 if result.get("status") == "success":
                     await self._verify_rent_recovery()
+                    # Fix 1 (Non-burning Dust): Post-tx dust sweep — clean intermediate ATA
+                    # that passed through atomically (non-zero dust stays in ATA, CloseAccount
+                    # no longer blocks the tx, dust is swept here after commit).
+                    try:
+                        from src.ingest.dust_sweeper import DustSweeper
+                        sweeper = DustSweeper(self.keypair, self.rpc_url, self.session)
+                        await sweeper.sweep_after_successful_tx()
+                    except Exception as _e:
+                        logger.debug(f"Post-tx dust sweep skipped: {_e}")
                 elif result.get("status") == "error":
                     self.consecutive_failures += 1
                     # ATA Rent Trap Protection: Aggressive cleanup on failure
@@ -350,6 +359,40 @@ class ExecutionRouter:
             tip_percent = 0.40
             tip_lamports = int(expected_profit_sol * tip_percent * 1e9)
             jito_tip_lamports = max(recommended_tip, tip_lamports)
+
+            # ── Fix 2 (Unfunded Jito Tip): Cap tip by actual native SOL balance ──
+            # Jito tip is a native SOL transfer. Pre-flight simulation rejects
+            # InsufficientFundsForFee if tip > current native balance.
+            # Fetch balance and cap tip before building/bundling the transaction.
+            try:
+                bal_payload = {
+                    "jsonrpc": "2.0", "id": 1,
+                    "method": "getBalance",
+                    "params": [str(self.keypair.pubkey())],
+                }
+                async with self.session.post(self.rpc_url, json=bal_payload, timeout=3.0) as bal_resp:
+                    if bal_resp.status == 200:
+                        bal_data = await bal_resp.json()
+                        native_lamports = bal_data.get("result", {}).get("value", 0)
+                        native_sol = native_lamports / 1e9
+                        available_native = native_sol - 0.005  # reserve 0.005 SOL for gas
+                        if available_native <= 0:
+                            logger.warning(f"🚫 Insufficient native SOL for tip: {native_sol:.6f} SOL — skipping {ticker}")
+                            return {"status": "error", "message": "Insufficient native SOL for tip"}
+                        tip_before = jito_tip_lamports / 1e9
+                        jito_tip_lamports = min(jito_tip_lamports, int(available_native * 1e9))
+                        if jito_tip_lamports < 10000:
+                            logger.warning(
+                                f"⏭️ Tip {jito_tip_lamports / 1e9:.6f} SOL after balance cap below 10k lamports minimum — skipping {ticker}"
+                            )
+                            return {"status": "error", "message": "Tip below minimum after balance cap"}
+                        logger.debug(
+                            f"💰 Tip balance guard: native={native_sol:.6f} SOL | "
+                            f"available={available_native:.6f} SOL | "
+                            f"tip {tip_before:.6f} → {jito_tip_lamports / 1e9:.6f} SOL"
+                        )
+            except Exception as e:
+                logger.debug(f"Native balance check failed ({e}), tip unchanged")
 
             logger.info(f"💰 Dynamic Jito tip calculated: {jito_tip_lamports} lamports (expected profit: {expected_profit_sol:.6f} SOL)")
 

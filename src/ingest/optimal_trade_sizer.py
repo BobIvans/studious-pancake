@@ -168,3 +168,69 @@ class OptimalTradeSizer:
         except Exception as e:
             logger.warning(f"Error in find_optimal_trade_size_multi_route: {e}")
             return (Decimal('0'), 0)
+
+    # ────────────────────────────────────────────────────────────────────────────
+    # FIX 4: MarginFi Slippage-Pegged Sizing
+    # ────────────────────────────────────────────────────────────────────────────
+    # For 0.017 SOL micro-capital, we only risk a safe portion to cover slippage.
+    # Formula: Max_Flash = Max_Loss_Budget / Expected_Slippage_Pct
+    # This mathematically guarantees that slippage can never zero out the wallet.
+    # ────────────────────────────────────────────────────────────────────────────
+
+    def calculate_dynamic_flash_size(
+        self,
+        wallet_native_balance_sol: float = 0.017,
+        pool_slippage_pct: float = 0.005,
+    ) -> float:
+        """
+        Calculate the optimal flash loan size based on wallet balance and pool slippage.
+
+        We only risk a safe portion of our actual wallet balance to cover potential AMM slippage.
+        For 0.017 SOL, max risk is ~20% (0.0034 SOL).
+
+        Args:
+            wallet_native_balance_sol: Current native SOL balance of the wallet.
+            pool_slippage_pct: Expected slippage from the pool (e.g. 0.005 = 0.5%).
+
+        Returns:
+            Optimal flash loan size in SOL.
+        """
+        SAFE_RISK_RATIO = 0.20  # Never risk more than 20% of wallet
+        MAX_ABSOLUTE_FLASH_SOL = 5.0  # Hard cap to avoid draining MarginFi
+
+        max_loss_budget_sol = max(wallet_native_balance_sol * SAFE_RISK_RATIO, 0.001)
+        # Protect division by zero: min 0.1% slippage floor
+        safe_slippage = max(pool_slippage_pct, 0.001)
+
+        dynamic_flash_size = max_loss_budget_sol / safe_slippage
+
+        result = min(dynamic_flash_size, MAX_ABSOLUTE_FLASH_SOL)
+        logger.debug(
+            f"📐 Dynamic Flash Size: {result:.4f} SOL "
+            f"(wallet={wallet_native_balance_sol:.4f} SOL, "
+            f"risk={max_loss_budget_sol:.6f} SOL, "
+            f"slippage={pool_slippage_pct:.4%})"
+        )
+        return result
+
+    def get_slippage_pegged_borrow_lamports(
+        self,
+        wallet_native_balance_sol: float,
+        pool_slippage_pct: float,
+        env_flash_size_sol: float,
+    ) -> int:
+        """
+        Get the slippage-pegged borrow amount in lamports.
+        Returns min(dynamic_size, env_size) so the .env cap still applies.
+
+        Args:
+            wallet_native_balance_sol: Current native SOL balance.
+            pool_slippage_pct: Expected pool slippage.
+            env_flash_size_sol: Hardcoded FLASH_LOAN_SIZE_SOL from .env.
+
+        Returns:
+            Borrow amount in lamports.
+        """
+        dynamic = self.calculate_dynamic_flash_size(wallet_native_balance_sol, pool_slippage_pct)
+        final_sol = min(dynamic, env_flash_size_sol)
+        return int(final_sol * 1_000_000_000)

@@ -272,7 +272,12 @@ class JitoBiddingManager:
         except Exception:
             return 10000
 
-    def calculate_blue_ocean_tip(self, expected_profit_sol: float, strategy: str = "blue_ocean") -> int:
+    def calculate_blue_ocean_tip(
+        self,
+        expected_profit_sol: float,
+        strategy: str = "blue_ocean",
+        current_native_sol_balance: Optional[float] = None,
+    ) -> int:
         """
         Blue Ocean Tip Strategy: 40% of Expected Net Profit (no percentiles, no capital guard).
 
@@ -295,9 +300,30 @@ class JitoBiddingManager:
         tip_sol = expected_profit_sol * 0.40
         tip_lamports = int(tip_sol * 1_000_000_000)
 
-        # Минимальный tip: 10000 lamports (0.00001 SOL)
-        min_tip = 10000
-        tip_lamports = max(tip_lamports, min_tip)
+        # ── Fix 2 (Unfunded Jito Tip): Cap tip by actual native SOL balance ──
+        # Jito Tip is a native SOL transfer. If the wallet has 0.017 SOL and
+        # we try to send 0.004 SOL (40% of 0.01 USDC-profit treated as SOL),
+        # the tx fails at pre-flight with InsufficientFundsForFee.
+        # available_native_lamports is fetched from RPC when the caller has a session.
+        # Callers should pass `current_native_sol_balance` via session query.
+        # If not provided, we fall back to expected_profit_sol only.
+        tip_lamports_float = tip_lamports
+        if current_native_sol_balance is not None:
+            available_native_lamports = int((current_native_sol_balance - 0.005) * 1_000_000_000)  # leave 0.005 SOL for gas
+            tip_lamports_float = min(tip_lamports, available_native_lamports)
+            logger.debug(
+                f"💰 Jito tip cap: balance={current_native_sol_balance:.6f} SOL | "
+                f"available={available_native_lamports / 1e9:.6f} SOL | "
+                f"calculated_tip={tip_lamports / 1e9:.6f} SOL → capped={tip_lamports_float / 1e9:.6f} SOL"
+            )
+        # Minimum practical tip: 10000 lamports (0.00001 SOL)
+        MIN_TIP_LAMPORTS = 10_000
+        if tip_lamports_float < MIN_TIP_LAMPORTS:
+            logger.warning(
+                f"⏭️ Tip {tip_lamports_float} lamports below minimum {MIN_TIP_LAMPORTS} — skipping {strategy}"
+            )
+            return 0
+        tip_lamports = int(tip_lamports_float)
 
         # Максимальный tip: никогда больше 70% от профита
         logger.info(
@@ -306,7 +332,12 @@ class JitoBiddingManager:
         )
         return tip_lamports
 
-    def calculate_optimal_tip(self, expected_profit_sol: float, strategy: str = "default") -> int:
+    def calculate_optimal_tip(
+        self,
+        expected_profit_sol: float,
+        strategy: str = "default",
+        current_native_sol_balance: Optional[float] = None,
+    ) -> int:
         """Start + Step-Up/Down + Capital Guard."""
         if expected_profit_sol <= 0:
             return 0
@@ -338,7 +369,31 @@ class JitoBiddingManager:
         else:
             self.consecutive_success += 1
 
-        return int(tip_sol * 1_000_000_000)
+        tip_lamports = int(tip_sol * 1_000_000_000)
+
+        # ── Fix 2 (Unfunded Jito Tip): Cap by actual native SOL balance ──
+        if current_native_sol_balance is not None:
+            available_native = int((current_native_sol_balance - 0.005) * 1_000_000_000)
+            if available_native <= 0:
+                logger.warning(
+                    f"🚫 Native balance {current_native_sol_balance:.6f} SOL < gas reserve — "
+                    f"returning -1 for {strategy}"
+                )
+                return -1
+            capped = min(tip_lamports, available_native)
+            if capped < 10_000:
+                logger.warning(
+                    f"⏭️ Optimal tip {capped} < {10_000} lamports minimum "
+                    f"after native cap — returning -1 for {strategy}"
+                )
+                return -1
+            logger.debug(
+                f"💰 Optimal tip native cap: {tip_lamports / 1e9:.6f} SOL → "
+                f"{capped / 1e9:.6f} SOL (native={current_native_sol_balance:.6f} SOL)"
+            )
+            tip_lamports = capped
+
+        return tip_lamports
 
     def record_trade_result(self, strategy: str, success: bool):
         import time

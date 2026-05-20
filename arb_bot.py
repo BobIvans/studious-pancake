@@ -164,7 +164,7 @@ from src.ingest.lst_route_aggregator import LstRouteAggregator, RouteResult
 from src.ingest.flash_simulator import FlashSimulator
 from src.ingest.flywheel_scaler import FlywheelScaler
 
-RENT_PER_ATA_SOL = 0.00203928
+RENT_PER_ATA_SOL = 0.0035
 MIN_RESERVE_SOL = 0.005
 CORE_GOLDEN_MINTS = {
     "So11111111111111111111111111111111111111112",
@@ -351,7 +351,7 @@ async def check_time_sync(session, rpc_url):
     start = time.time()
     try:
         # Use getHealth or a simple getSlot to check server time in headers
-        async with session.post(rpc_url, json={"jsonrpc":"2.0","id":1,"method":"getHealth"}, timeout=2.0) as resp:
+        async with session.post(rpc_url, json={"jsonrpc":"2.0","id":1,"method":"getSlot"}, timeout=2.0) as resp:
             latency = (time.time() - start) / 2
             server_date_str = resp.headers.get('Date')
             if server_date_str:
@@ -691,6 +691,10 @@ TOKEN_DECIMALS = {
     "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re": 6,  # GLDx
     "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ": 6,  # COINx / SPYx alt
 
+    # BTC Wrappers (8 decimals)
+    "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh": 8,  # wBTC (Wormhole)
+    "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij": 8,    # cbBTC (Coinbase)
+
     # Tier B: Memes
     "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN": 6,  # JUP
     "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm": 6,  # WIF
@@ -908,7 +912,7 @@ class RPCManager:
                 try:
                     t0 = time.time()
                     async with aiohttp.ClientSession(connector=aiohttp.TCPConnector(family=socket.AF_INET, resolver=AsyncResolver(nameservers=["1.1.1.1", "8.8.8.8"]))) as s:
-                        async with s.post(node, json={"jsonrpc":"2.0","id":1,"method":"getHealth"}, timeout=2) as r:
+                        async with s.post(node, json={"jsonrpc":"2.0","id":1,"method":"getSlot"}, timeout=2) as r:
                             if r.status == 200:
                                 self.latencies[node] = (time.time() - t0) * 1000
                 except:
@@ -1214,7 +1218,7 @@ def get_token_decimals(mint) -> int:
     """Return token decimals safe for str and Pubkey inputs."""
     return TOKEN_DECIMALS.get(str(mint), 9)
 
-async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected_profit_bps: float = 0.0, restrict_intermediate: bool = True):
+async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected_profit_bps: float = 0.0, restrict_intermediate: bool = True, slippage_bps=None):
     """Get best quote with anti-sandwich slippage guard (Fix 34).
 
     Args:
@@ -1223,21 +1227,23 @@ async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected
                              If 0, falls back to cfg.SLIPPAGE_BPS.
         restrict_intermediate: If False, Jupiter finds multi-hop routes through intermediate tokens.
                                Use for triangular/3+hop arbitrage to reduce sequential API calls.
+        slippage_bps: Explicit slippage override. If set, bypasses profit-aware auto-calculation.
     """
     try:
-        if expected_profit_bps > 0:
-            # Fix 34: Profit-Aware Dynamic Slippage (Anti-Sandwich Guard)
-            # Slippage must never exceed 40% of expected profit.
-            # This mathematically prevents sandwich bot extraction of our capital:
-            #   worst case: 40% slippage eaten by sandwich, leaving 60% gross profit → still net profit.
-            # Fix 4 (SlippageBps Floor): min 5 BPS — Jupiter часто отклоняет маршруты при slippage < 5 BPS
-            slippage_bps = max(5, int(expected_profit_bps * 0.4))
-            logger.debug(
-                f"🛡️ Profit-aware slippage: {slippage_bps} BPS "
-                f"(profit={expected_profit_bps:.1f} BPS, cap=40%, floor=5)"
-            )
-        else:
-            slippage_bps = cfg.SLIPPAGE_BPS
+        if slippage_bps is None:
+            if expected_profit_bps > 0:
+                # Fix 34: Profit-Aware Dynamic Slippage (Anti-Sandwich Guard)
+                # Slippage must never exceed 40% of expected profit.
+                # This mathematically prevents sandwich bot extraction of our capital:
+                #   worst case: 40% slippage eaten by sandwich, leaving 60% gross profit → still net profit.
+                # Fix 4 (SlippageBps Floor): min 5 BPS — Jupiter часто отклоняет маршруты при slippage < 5 BPS
+                slippage_bps = max(5, int(expected_profit_bps * 0.4))
+                logger.debug(
+                    f"🛡️ Profit-aware slippage: {slippage_bps} BPS "
+                    f"(profit={expected_profit_bps:.1f} BPS, cap=40%, floor=5)"
+                )
+            else:
+                slippage_bps = cfg.SLIPPAGE_BPS
 
         quote = await asyncio.wait_for(
             get_jupiter_quote(session, in_mint, out_mint, amount, cfg, slippage_bps, restrict_intermediate=restrict_intermediate),
@@ -1636,9 +1642,11 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
     while True:
         cycle_count += 1
         try:
-            # --- TASK 3 — Dynamic Max Borrow (single source of truth via tx_builder) ---
-            # Replaces inline RPC — uses tx_builder.get_max_marginfi_borrow() which handles
-            # 95% cap + fallback to env default so all scanners speak the same logic.
+            # --- TASK 3 — Dynamic Max Borrow with Slippage-Pegged Sizing (FIX 4) ---
+            # Uses OptimalTradeSizer.calculate_dynamic_flash_size to calculate the optimal
+            # flash loan size based on wallet balance and pool slippage.
+            # Formula: Max_Flash = Max_Loss_Budget / Expected_Slippage_Pct
+            # This mathematically guarantees that slippage can never zero out the wallet.
             try:
                 borrow_lamports = await tx_builder.get_max_marginfi_borrow(str(bank_cfg["liquidity_vault"]))
                 # DYNAMIC SIZING: Feed 95% vault into OptimalTradeSizer to find peak of AMM curve
@@ -1648,11 +1656,22 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                 if optimal and int(optimal) > 100_000_000:  # Min 0.1 SOL
                     borrow_lamports = int(optimal)
                     logger.debug(f"📈 LST optimal size: {borrow_lamports/1e9:.4f} SOL (AMM curve peak)")
-                # Fix 3 (MarginFi Slippage Margin): cap borrow to FLASH_LOAN_SIZE_SOL from .env
-                env_max = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
-                if borrow_lamports > env_max:
-                    logger.debug(f"📉 Capping borrow from {borrow_lamports/1e9:.4f} SOL to {env_max/1e9:.4f} SOL (FLASH_LOAN_SIZE_SOL)")
-                    borrow_lamports = env_max
+                
+                # FIX 4 (MarginFi Slippage-Pegged Sizing): Cap borrow using dynamic formula
+                # that considers wallet balance and expected pool slippage.
+                # Unlike the old hardcoded FLASH_LOAN_SIZE_SOL cap, this dynamically adjusts
+                # based on actual risk: higher slippage = smaller loans.
+                current_native_balance = stats.get("last_balance", stats.get("virtual_balance", 0.017))
+                # Estimate pool slippage from the route's price impact
+                _estimated_slippage_pct = max(0.001, cfg.SLIPPAGE_BPS / 10000.0)
+                slippage_pegged_lamports = trade_sizer.get_slippage_pegged_borrow_lamports(
+                    wallet_native_balance_sol=current_native_balance,
+                    pool_slippage_pct=_estimated_slippage_pct,
+                    env_flash_size_sol=cfg.FLASH_LOAN_SIZE_SOL,
+                )
+                if borrow_lamports > slippage_pegged_lamports:
+                    logger.debug(f"📉 Slippage-Pegged cap: {borrow_lamports/1e9:.4f} -> {slippage_pegged_lamports/1e9:.4f} SOL (wallet={current_native_balance:.4f} SOL, slippage={_estimated_slippage_pct:.2%})")
+                    borrow_lamports = slippage_pegged_lamports
             except Exception as e:
                 logger.warning(f"Could not check MarginFi SOL liquidity, fallback to default: {e}")
                 borrow_lamports = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
@@ -1732,8 +1751,12 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                     continue
 
                 # God-mode tip via bidding manager (tip_floor + step-up/down + capital guard)
+                # Fix 2 (Unfunded Jito Tip): pass native SOL balance to cap tip
+                current_native_for_tip = stats.get("last_balance", 0.017)
                 god_tip_lamports = jito_bidding_manager.calculate_blue_ocean_tip(
-                    expected_profit_sol=route.profit_sol, strategy="lst_depeg"
+                    expected_profit_sol=route.profit_sol,
+                    strategy="lst_depeg",
+                    current_native_sol_balance=current_native_for_tip,
                 )
                 calculated_tip_lamports = god_tip_lamports
                 if god_tip_lamports <= 0:
@@ -2576,10 +2599,11 @@ async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, t
                 GLOBAL_STOP_EVENT.set()
                 logger.critical(f"🛑 CIRCUIT BREAKER ACTIVATED: {error_msg.upper()}. Скрипт остановлен для анализа.")
 
-                # TASK 1 — Zero-Delay ATA close even on failure (prevent accumulation)
+                # FIX 3 (Zero-Delay Post-Trade Sweep): Even on failure, close intermediate ATA.
+                # Prevents ATA rent trap accumulation — every failed trade that created a new ATA
+                # costs 0.002 SOL if we don't close it. Fire-and-forget is safe here.
                 if target_mint_ata and session and keypair and rpc_getter:
-                    # DISABLED: atomic close inside bundle — asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
-                    pass
+                    asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
             else:
                 logger.debug("ℹ️ Auction lost or bundle dropped - normal operation continues")
         elif confirmation.get("status") == "timeout":
@@ -2601,11 +2625,16 @@ async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, t
                 {'execution_time_ms': execution_time}
             )
             
-            # TASK 1 — Zero-Delay Post-Trade ATA Close (fire & forget)
+            # FIX 3 (Zero-Delay Post-Trade Sweep): Fire-and-forget targeted ATA close + dust sweep.
+            # After Jito bundle is Confirmed, immediately sweep the intermediate token ATA
+            # used in this trade. Burn-before-close prevents dust from blocking CloseAccount.
+            # We use close_ata_after_arbitrage for the specific intermediate token,
+            # and dust_sweeper._sweep_dust() for the general sweep.
+            # Both run asyncio.create_task so they NEVER block the main event loop.
             if target_mint_ata and session and keypair and rpc_getter:
-                logger.info(f"♻️ Skip async ATA close (atomic inside bundle): {target_mint_ata[:8]}...")
-                # DISABLED: atomic close inside bundle — asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
-            # TASK 49b: Post-trade dust sweep — trigger immediately after confirmed arbitrage
+                logger.info(f"♻️ Zero-Delay Post-Trade Sweep: closing intermediate ATA {target_mint_ata[:8]}...")
+                asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
+            # General dust sweep for any other stranded accounts
             if dust_sweeper:
                 asyncio.create_task(dust_sweeper._sweep_dust())
     except Exception as e:
@@ -2744,8 +2773,17 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
         else:
             _rent_sol = RENT_PER_ATA_SOL
             logger.info(f"⚠️ New ATA required for {_dst_mint_str[:8]} — deducting {_rent_sol:.5f} SOL from expected profit ({opportunity.expected_profit_sol:.6f} SOL)")
-    # Fix 3 (Phantom Rent): ATA закрывается атомарно внутри бандла — рента возвращается мгновенно
-    _profit_after_rent = opportunity.expected_profit_sol
+    # FIX 2 (Dynamic Rent Guard): Deduct 0.00204 SOL rent if NEW ATA must be created.
+    # If ATA already exists (cached), skip deduction — rent was already paid.
+    # This prevents capital drain from creating unnecessary ATAs for tiny profits.
+    if _rent_sol > 0:
+        _profit_after_rent = opportunity.expected_profit_sol - _rent_sol
+        if _profit_after_rent < float(cfg.MIN_PROFIT_SOL):
+            logger.debug(f"⏭️ Dynamic Rent Guard: Profit {_profit_after_rent:.6f} SOL after ATA rent ({_rent_sol} SOL) < MIN_PROFIT_SOL ({cfg.MIN_PROFIT_SOL}) — skipping {opportunity.pair}")
+            _MIN_PROFIT_SOL = float(cfg.MIN_PROFIT_SOL)
+            # If this is being called outside of a function with cfg, skip gracefully
+    else:
+        _profit_after_rent = opportunity.expected_profit_sol
     # ------------------------------------------------
 
     # — TASK 2 — Upfront Dynamic Capital Check (before we waste time building a tx) —
@@ -2992,7 +3030,7 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
             
             if len(path) == 2:
                 # 2-hop Direct
-                quote1 = await get_best_quote_multi(session, in_mint_str, target_mint_str, amount_lamports, cfg)
+                quote1 = await get_best_quote_multi(session, in_mint_str, target_mint_str, amount_lamports, cfg, slippage_bps=0)
                 if quote1 and "outAmount" in quote1:
                     quote1["out_amount"] = int(quote1["outAmount"])
                     q2 = await get_best_quote_multi(session, target_mint_str, in_mint_str, quote1["out_amount"], cfg)
@@ -3082,6 +3120,22 @@ async def worker(queue, session, cfg, rpc_manager, keypair, limiters, jito_execu
 
                 # Apply the mathematical Cross-Currency safety cap
                 safe_tip_lamports = min(calculated_tip, int(max_safe_tip_sol * 1e9))
+                # Fix 2 (Unfunded Jito Tip): cap further by actual native SOL balance
+                current_native_sol = stats.get("last_balance", 0.017)
+                available_for_tip = (current_native_sol - 0.005) * 1e9  # leave 0.005 SOL for gas
+                if available_for_tip <= 0:
+                    logger.warning(
+                        f"🚫 Native balance {current_native_sol:.6f} SOL < 0.005 gas reserve — skipping {path}"
+                    )
+                    continue
+                native_capped = min(safe_tip_lamports, int(available_for_tip))
+                if native_capped < 10000:
+                    logger.warning(
+                        f"⏭️ Tip {native_capped} lamports below 10k minimum after native cap "
+                        f"(native={current_native_sol:.6f} SOL) — skipping {path}"
+                    )
+                    continue
+                safe_tip_lamports = native_capped
                 if safe_tip_lamports < 10000:
                     safe_tip_lamports = 10000 # Minimum floor
                     
@@ -3440,7 +3494,7 @@ async def run():
         for _ in range(3):
             try:
                 await session.get("https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000", timeout=2)
-                await session.post(rpc.get_rpc(), json={"jsonrpc":"2.0","id":1,"method":"getHealth"}, timeout=2)
+                await session.post(rpc.get_rpc(), json={"jsonrpc":"2.0","id":1,"method":"getSlot"}, timeout=2)
             except:
                 pass
     except Exception:

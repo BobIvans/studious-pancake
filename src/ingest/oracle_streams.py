@@ -262,6 +262,17 @@ class OracleStreams:
 
             price_diff_pct = abs(oracle_price.price - amm_price) / amm_price
 
+            # Fix 4 (Pyth Confidence Interval): Skip signals that lie within the oracle's
+            # confidence band — this is market noise, not arbitrage. Jupiter slippage alone
+            # would eat the entire spread before it reaches 1.2× the confidence margin.
+            confidence_pct = float(oracle_price.confidence) / float(oracle_price.price)
+            if confidence_pct > price_diff_pct * 1.2:
+                logger.debug(
+                    f"🐍 Pyth noise skip {ticker}: confidence {confidence_pct:.4%} > "
+                    f"1.2 × spread {price_diff_pct:.4%} — no real arbitrage signal"
+                )
+                return None
+
             # Check if above threshold (0.25% for xStocks)
             if price_diff_pct > 0.0025:
                 direction = "oracle_higher" if oracle_price.price > amm_price else "amm_higher"

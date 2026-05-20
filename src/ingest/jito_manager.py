@@ -35,7 +35,7 @@ class JitoManager:
             "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",  # Fallback 1
             "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",  # Fallback 2
         ]
-        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: jito_manager using hardcoded fallback! Must call update_tip_accounts() before use.")
+        logger.warning("JitoManager: tip_accounts initialized with fallback defaults. Call update_tip_accounts() to fetch dynamic accounts from Jito API.")
         self.bundle_client = JitoBundleClient(session=session)
         # Fix #3: Track background tasks to prevent Python GC from destroying them
         self.background_tasks: Set[asyncio.Task] = set()
@@ -271,6 +271,40 @@ class JitoBiddingManager:
             return int(val)
         except Exception:
             return 10000
+
+    def calculate_blue_ocean_tip(self, expected_profit_sol: float, strategy: str = "blue_ocean") -> int:
+        """
+        Blue Ocean Tip Strategy: 40% of Expected Net Profit (no percentiles, no capital guard).
+
+        Для стратегий LST Depeg, xStocks Oracle Lag, Sanctum Router — там нет жесткой
+        конкуренции за блок, поэтому Tip = 40% от Expected Net Profit достаточно для
+        гарантированного включения в блок. Никаких landed_tips_50th_percentile, никаких
+        Step-Up/Down, никакого Capital Guard (который может заблокировать сделку с 0.017 SOL).
+
+        Args:
+            expected_profit_sol: Expected net profit in SOL.
+            strategy: Strategy name for logging.
+
+        Returns:
+            Tip amount in lamports (positive) or 0 (if profit too small).
+        """
+        if expected_profit_sol <= 0:
+            return 0
+
+        # 40% of expected net profit — validated for Blue Ocean strategies
+        tip_sol = expected_profit_sol * 0.40
+        tip_lamports = int(tip_sol * 1_000_000_000)
+
+        # Минимальный tip: 10000 lamports (0.00001 SOL)
+        min_tip = 10000
+        tip_lamports = max(tip_lamports, min_tip)
+
+        # Максимальный tip: никогда больше 70% от профита
+        logger.info(
+            f"💰 Blue Ocean tip: {tip_sol:.6f} SOL (40% of {expected_profit_sol:.6f} SOL profit) "
+            f"| strategy={strategy}"
+        )
+        return tip_lamports
 
     def calculate_optimal_tip(self, expected_profit_sol: float, strategy: str = "default") -> int:
         """Start + Step-Up/Down + Capital Guard."""

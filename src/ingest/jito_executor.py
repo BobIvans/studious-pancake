@@ -147,17 +147,17 @@ class JitoExecutor:
         """Get current tip information from polled API, with fallback to default tip."""
         if not self.current_tip_data or "tip_floor" not in self.current_tip_data:
             # Fallback to default tip if no data available
-            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: No tip data available, using hardcoded fallback!")
+            logger.warning("JitoExecutor: No tip data available from stream, using fallback tip account.")
             return {
                 "recommended_tip": 85000,  # 0.000085 SOL safe fallback
-                "tip_accounts": ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU"],  # Default Jito tip account
+                "tip_accounts": self.tip_accounts,  # dynamic (previously fetched) or hardcoded fallback
                 "full_data": None
             }
 
         tip_floor = self.current_tip_data["tip_floor"]
         if not tip_floor:
             # Fallback
-            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Tip floor data empty, using hardcoded fallback!")
+            logger.warning("JitoExecutor: Tip floor data empty, using fallback tip account.")
             return {
                 "recommended_tip": 85000,
                 "tip_accounts": self.tip_accounts,

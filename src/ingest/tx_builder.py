@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+import random
 import base58
 import base64
 import time
@@ -84,40 +85,6 @@ CU_PROFILES: Dict[str, int] = {
     "strategy_2": "lst_depeg_arbitrage",
     "strategy_4": "xstock_oracle_lag",
 }
-
-
-def get_cu_limit(
-    operation_type: str = "default",
-    strategy_type: int = 1,
-    is_native_flashloan: bool = False,
-) -> int:
-    """Return the appropriate CU limit for the given strategy context.
-
-    Single source of truth: always read from ``CU_PROFILES`` so that
-    every hardcoded ``set_compute_unit_limit(600000)`` call can be eliminated
-    and replaced with this function.
-
-    Args:
-        operation_type:    High-level name (e.g. ``"stables_swap"``).
-        strategy_type:     Numeric tag passed by upper-layer scanners (1/2/4…).
-        is_native_flashloan: True when the call originates from
-            :py:meth:`build_native_flashloan_tx` (profile key derived from
-            ``strategy_type`` only, no Jupiter swap overhead).
-
-    Returns:
-        The CU limit in compute units.
-    """
-    # 1. Explicit operation_type overrides everything else
-    if operation_type != "default":
-        return CU_PROFILES.get(operation_type, CU_PROFILES["default"])
-
-    # 2. strategy_type numeric mapping
-    profile_key = CU_PROFILES.get(f"strategy_{strategy_type}", "flash_arbitrage")
-    if is_native_flashloan:
-        # Native flashloan has fewer Jupiter-level overhead instructions
-        profile_key = CU_PROFILES.get(f"strategy_{strategy_type}", "flash_arbitrage")
-
-    return CU_PROFILES.get(profile_key, CU_PROFILES["flash_arbitrage"])
 
 SWAP_INSTRUCTIONS_API_URL = "https://api.jup.ag/swap/v1/swap-instructions"
 
@@ -272,7 +239,7 @@ class JupiterTxBuilder:
         key = self._get_cu_cache_key(program_id, operation_type)
         self.cu_cache[key] = (cu_limit, time.time())
 
-    async def get_dynamic_priority_fee(self, rpc_url: Optional[str] = None, lookback_slots: int = 20, max_priority_fee_sol: float = 0.005, cu_limit: int = 300000) -> int:
+    async def get_dynamic_priority_fee(self, rpc_url: Optional[str] = None, lookback_slots: int = 20, max_priority_fee_sol: float = 0.005, cu_limit: int = 300_000) -> int:
         """Get dynamic priority fee based on recent prioritization fees.
 
         Args:
@@ -1087,6 +1054,8 @@ class JupiterTxBuilder:
         # Flash Loan Pivot: Jupiter swap instructions for pivot path (SOL→USDC entry, USDC→SOL exit)
         entry_pivot_ixs: Optional[List[Instruction]] = None,
         exit_pivot_ixs: Optional[List[Instruction]] = None,
+        # Fix 2: Dynamic Jito tip accounts (injected by caller from jito_executor.tip_accounts)
+        tip_accounts: Optional[List[str]] = None,
         # Token-2022 detection pre-imported at module level
     ) -> Optional[Dict[str, Any]]:
         """
@@ -1209,10 +1178,35 @@ class JupiterTxBuilder:
         # вся транзакция откатывается, и перевод чаевых НЕ СРАБОТАЕТ.
         if jito_tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
-            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Hardcoded fallback! Must use dynamic fetch_tip_accounts().")
+
+            # Fix 1: Close wSOL ATA to extract native SOL before paying Jito tip.
+            # Prevents "wSOL Death Spiral" where profit accumulates in wSOL
+            # while Jito tips drain native SOL, ultimately causing InsufficientFundsForFee.
+            # The close_account instruction extracts all wSOL tokens + 0.002 SOL ATA rent
+            # back to the main wallet as native SOL lamports.
+            # CreateIdempotentATA below ensures the wSOL ATA is recreated for the next trade.
+            if str(sol_mint) == "So11111111111111111111111111111111111111112":
+                wsol_prog_id = TOKEN_PROGRAM_ID
+                _user_wsol_ata = get_associated_token_address(wallet, sol_mint, wsol_prog_id)
+                all_instructions.append(close_account(CloseAccountParams(
+                    program_id=wsol_prog_id,
+                    account=_user_wsol_ata,
+                    dest=wallet,
+                    owner=wallet
+                )))
+                all_instructions.append(CREATE_ATA_FUNCTION(
+                    payer=wallet, owner=wallet, mint=sol_mint
+                ))
+                logger.debug("🔓 Fix 1 (wSOL Death Spiral): CloseATA + CreateIdempotentATA injected before Jito tip")
+
+            # Fix 2: Dynamic Jito tip account — never hardcoded.
+            # Caller (arb_bot / execution_router) injects jito_executor.tip_accounts.
+            # Falls back to hardcoded value only if caller passes None (should never happen in production).
+            _tip_accounts_list = tip_accounts or ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
+            selected_tip_account = random.choice(_tip_accounts_list)
             tip_ix = transfer(TransferParams(
                 from_pubkey=wallet,
-                to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),
+                to_pubkey=Pubkey.from_string(selected_tip_account),
                 lamports=jito_tip_lamports
             ))
             all_instructions.append(tip_ix)
@@ -1288,7 +1282,8 @@ class JupiterTxBuilder:
         arbitrage_path: Optional[List[str]] = None,
         jito_tip_lamports: int = 0,
         use_jito: bool = True,
-        strategy_type: int = 1
+        strategy_type: int = 1,
+        tip_accounts: Optional[List[str]] = None,  # Fix 2: dynamic tip accounts
     ) -> Optional[Dict[str, Any]]:
         try:
             from solders.pubkey import Pubkey
@@ -1415,9 +1410,25 @@ class JupiterTxBuilder:
             # 5. ATOMIC JITO TIP (100% CAPITAL PROTECTION)
             if jito_tip_lamports > 0:
                 from solders.system_program import TransferParams, transfer
+
+                # Fix 1: Close wSOL ATA to extract native SOL before paying Jito tip
+                final_instructions.append(close_account(CloseAccountParams(
+                    program_id=TOKEN_PROGRAM_ID,
+                    account=user_sol_ata,
+                    dest=wallet,
+                    owner=wallet
+                )))
+                final_instructions.append(CREATE_ATA_FUNCTION(
+                    payer=wallet, owner=wallet, mint=sol_mint
+                ))
+                logger.debug("🔓 wSOL unwrap injected: CloseATA + CreateIdempotentATA before Jito tip")
+
+                # Fix 2: Use dynamic tip account from jito_executor (never hardcoded)
+                _tip_accounts_list = tip_accounts or ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
+                selected_tip_account = random.choice(_tip_accounts_list)
                 tip_ix = transfer(TransferParams(
                     from_pubkey=wallet,
-                    to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),
+                    to_pubkey=Pubkey.from_string(selected_tip_account),
                     lamports=jito_tip_lamports
                 ))
                 final_instructions.append(tip_ix)
@@ -1509,14 +1520,23 @@ class JupiterTxBuilder:
             data=data,
         )
 
-    def _build_jito_tip_ix(self, wallet: Pubkey, tip_amount: int) -> Instruction:
-        """Build Jito tip instruction for capital protection."""
+    def _build_jito_tip_ix(self, wallet: Pubkey, tip_amount: int, tip_account: Optional[str] = None) -> Instruction:
+        """Build Jito tip instruction for capital protection.
+
+        Args:
+            wallet: Payer wallet pubkey.
+            tip_amount: Tip amount in lamports.
+            tip_account: Dynamic Jito tip account from fetch_tip_accounts(). Falls back to hardcoded default if None.
+        """
         from solders.system_program import TransferParams, transfer
-        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Hardcoded fallback in _build_jito_tip_ix! Use dynamic tip accounts.")
+
+        if not tip_account:
+            logger.warning("🚨 JITO TIP ACCOUNTS: No dynamic tip_account provided, using fallback. Call fetch_tip_accounts() at bot startup.")
+            tip_account = "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
 
         return transfer(TransferParams(
             from_pubkey=wallet,
-            to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),  # Jito tip account
+            to_pubkey=Pubkey.from_string(tip_account),
             lamports=tip_amount,
         ))
 
@@ -1658,7 +1678,7 @@ class JupiterTxBuilder:
             f"outputMint={middle_mint}&"
             f"amount={amount_lamports}&"
             f"slippageBps=50&"
-            f"maxAccounts=10&"
+            f"maxAccounts=8&"  # Fix 3: MTU safety — 8 accounts × 32B = 256B overhead → stays within 1232-byte UDP limit
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
         )
@@ -1686,7 +1706,7 @@ class JupiterTxBuilder:
             f"outputMint={input_mint}&"
             f"amount={out_amount_leg1}&"
             f"slippageBps=50&"
-            f"maxAccounts=10&"
+            f"maxAccounts=8&"  # Fix 3: MTU safety — 8 accounts × 32B = 256B overhead → stays within 1232-byte UDP limit
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
         )

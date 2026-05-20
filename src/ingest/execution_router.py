@@ -338,10 +338,12 @@ class ExecutionRouter:
 
             # Calculate dynamic tip based on expected profit and recommended Jito tip floor
             recommended_tip = 10000  # Default floor (0.00001 SOL)
+            _dynamic_tip_accounts = None  # Fix 2: dynamic tip accounts
             if self.jito_executor:
                 tip_info = self.jito_executor.get_current_tip_info()
                 if tip_info:
                     recommended_tip = tip_info.get("recommended_tip", 10000)
+                    _dynamic_tip_accounts = self.jito_executor.tip_accounts
 
             tip_percent = 0.40
             tip_lamports = int(expected_profit_sol * tip_percent * 1e9)
@@ -370,6 +372,7 @@ class ExecutionRouter:
                 use_jito=True,
                 entry_pivot_ixs=entry_pivot_ixs,
                 exit_pivot_ixs=exit_pivot_ixs,
+                tip_accounts=_dynamic_tip_accounts,  # Fix 2: pass dynamic tip accounts from jito_executor
             )
 
             if not fl_result:

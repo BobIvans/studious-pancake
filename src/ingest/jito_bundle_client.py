@@ -34,9 +34,9 @@ class JitoBundleClient:
         self.timeout = timeout
         self.max_retries = max_retries
         self._session_owned = session is None
-        # Phase 35: Dynamic Jito Tip Accounts
+        # Phase 35: Dynamic Jito Tip Accounts (call fetch_tip_accounts() at startup to override)
         self.tip_accounts = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
-        # Fix #3: Track background tasks to prevent Python GC from destroying them
+        logger.warning("JitoBundleClient: tip_accounts initialized with fallback default only. Call fetch_tip_accounts() at startup to retrieve dynamic accounts from Jito API.")
         self.background_tasks: Set[asyncio.Task] = set()
 
     async def __aenter__(self):

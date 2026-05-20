@@ -218,7 +218,7 @@ class MultiAggregatorClient:
                     'slippageBps': str(anti_sandwich_bps),
                     'onlyDirectRoutes': 'false',
                     'restrictIntermediateTokens': 'true',
-                    'maxAccounts': '10'  # MTU Safety: снижено с 16 до 10
+                    'maxAccounts': '8'  # Fix 3: MTU Safety — 8 accounts × 32 bytes = 256 bytes overhead → keeps TX within 1232-byte UDP limit
                 }
 
                 # Adjust params for different aggregators

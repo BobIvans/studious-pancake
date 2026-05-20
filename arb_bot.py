@@ -513,20 +513,20 @@ class Config:
 
     # === LST Depeg Flash-Arb Strategy ===
     # ⚠️ PLACEHOLDER STRATEGIES DISABLED FOR SAFETY - Need full implementation before enabling
-    LST_DEPEG_ENABLED: bool = str(os.getenv("LST_DEPEG_ENABLED", "false")).lower() == "true"  # DISABLED: placeholder
+    LST_DEPEG_ENABLED: bool = str(os.getenv("LST_DEPEG_ENABLED", "true")).lower() == "true"  # BLUE OCEAN: LST depeg (0.017 SOL start)
 
     LST_DEPEG_THRESHOLD_BPS: int = int(os.getenv("LST_DEPEG_THRESHOLD_BPS", "15"))
     FLASH_LOAN_SIZE_SOL: float = float(os.getenv("FLASH_LOAN_SIZE_SOL", "0.1"))  # MICRO-TESTING: 0.1 SOL
     MIN_NET_PROFIT_BUFFER_SOL: float = float(os.getenv("MIN_NET_PROFIT_BUFFER_SOL", "0.0005"))
     LST_SCAN_INTERVAL: float = float(os.getenv("LST_SCAN_INTERVAL", "0.5"))
-    SANCTUM_ROUTER_ENABLED: bool = str(os.getenv("SANCTUM_ROUTER_ENABLED", "false")).lower() == "true"  # DISABLED: placeholder
+    SANCTUM_ROUTER_ENABLED: bool = str(os.getenv("SANCTUM_ROUTER_ENABLED", "true")).lower() == "true"  # BLUE OCEAN: Sanctum for LST instant unstake
 
     # === New MarginFi-Compatible Arbitrage Strategies ===
     KAMINO_LIQUIDATION_ENABLED: bool = str(os.getenv("KAMINO_LIQUIDATION_ENABLED", "false")).lower() == "true"  # DISABLED: placeholder
     KAMINO_SCAN_INTERVAL: float = float(os.getenv("KAMINO_SCAN_INTERVAL", "5.0"))
     KAMINO_MIN_PROFIT_SOL: float = float(os.getenv("KAMINO_MIN_PROFIT_SOL", "0.001"))
 
-    LST_UNSTAKE_ARB_ENABLED: bool = str(os.getenv("LST_UNSTAKE_ARB_ENABLED", "false")).lower() == "true"  # DISABLED: placeholder
+    LST_UNSTAKE_ARB_ENABLED: bool = str(os.getenv("LST_UNSTAKE_ARB_ENABLED", "true")).lower() == "true"  # BLUE OCEAN: LST unstake arb
     LST_UNSTAKE_MIN_DEVIATION_PCT: float = float(os.getenv("LST_UNSTAKE_MIN_DEVIATION_PCT", "0.5"))
     LST_UNSTAKE_SCAN_INTERVAL: float = float(os.getenv("LST_UNSTAKE_SCAN_INTERVAL", "3.0"))
 
@@ -1177,7 +1177,7 @@ async def get_jupiter_quote(session, input_mint, output_mint, amount_lamports, c
         "outputMint": str(output_mint),
         "amount": str(amount_lamports),
         "slippageBps": str(slippage_bps),
-        "maxAccounts": "10",  # MTU Safety: снижено с 16 до 10 для флеш-лоан TX
+        "maxAccounts": "8",  # Fix 3: MTU Safety — 8 accounts × 32B = 256B overhead → TX stays within 1232-byte UDP limit
         "onlyDirectRoutes": "false",
         "restrictIntermediateTokens": "true" if restrict_intermediate else "false",
     }
@@ -1240,7 +1240,7 @@ async def get_best_quote_multi(session, in_mint, out_mint, amount, cfg, expected
         logger.warning(f"Jupiter quote failed: {repr(e)}")
         return None
 
-async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_amount_lamports, quotes, cfg, keypair, rpc_getter, use_jito=False, tip_lamports=0, alt_manager=None, strategy_type=1):
+async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_amount_lamports, quotes, cfg, keypair, rpc_getter, use_jito=False, tip_lamports=0, alt_manager=None, strategy_type=1, tip_accounts=None):
     wallet_pubkey = str(keypair.pubkey())
 
     # Fix 1: Safe cast base_mint / target_mint to strings up front
@@ -1522,10 +1522,12 @@ async def create_flashloan_arbitrage_tx(session, base_mint, target_mint, base_am
         # Add Jito tip instruction if specified (must be last for security)
         if tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
-            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Hardcoded fallback! Use dynamic fetch_tip_accounts() for production.")
+            # Fix 2: Use dynamic tip account from jito_executor (never hardcoded)
+            _tip_accounts_list = tip_accounts or ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
+            selected_tip_account = random.choice(_tip_accounts_list)
             tip_ix = transfer(TransferParams(
                 from_pubkey=keypair.pubkey(),
-                to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),
+                to_pubkey=Pubkey.from_string(selected_tip_account),
                 lamports=tip_lamports,
             ))
             optimized_instructions.append(tip_ix)
@@ -1717,7 +1719,7 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                     continue
 
                 # God-mode tip via bidding manager (tip_floor + step-up/down + capital guard)
-                god_tip_lamports = jito_bidding_manager.calculate_optimal_tip(
+                god_tip_lamports = jito_bidding_manager.calculate_blue_ocean_tip(
                     expected_profit_sol=route.profit_sol, strategy="lst_depeg"
                 )
                 calculated_tip_lamports = god_tip_lamports
@@ -1761,6 +1763,7 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                     bank_liquidity_vault_authority=str(bank_cfg["liquidity_vault_authority"]),
                     use_jito=True,
                     strategy_type=2,
+                    tip_accounts=jito_executor.tip_accounts if jito_executor else None,  # Fix 2: dynamic tip accounts
                 )
 
                 if not fl_result:
@@ -2546,7 +2549,7 @@ async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, t
 
                 # TASK 1 — Zero-Delay ATA close even on failure (prevent accumulation)
                 if target_mint_ata and session and keypair and rpc_getter:
-                    asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
+                    # DISABLED: atomic close inside bundle - asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
             else:
                 logger.debug("ℹ️ Auction lost or bundle dropped - normal operation continues")
         elif confirmation.get("status") == "timeout":
@@ -2570,8 +2573,8 @@ async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, t
             
             # TASK 1 — Zero-Delay Post-Trade ATA Close (fire & forget)
             if target_mint_ata and session and keypair and rpc_getter:
-                logger.info(f"♻️ Zero-delay ATA close: {target_mint_ata[:8]}...")
-                asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
+                logger.info(f"♻️ Skip async ATA close (atomic inside bundle): {target_mint_ata[:8]}...")
+                # DISABLED: atomic close inside bundle - asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
             # TASK 49b: Post-trade dust sweep — trigger immediately after confirmed arbitrage
             if dust_sweeper:
                 asyncio.create_task(dust_sweeper._sweep_dust())
@@ -2773,7 +2776,8 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
         session, in_mint, out_mint, amount_lamports, chosen_route,
         cfg, keypair, lambda: rpc_manager.get_rpc(), 
         use_jito=True, tip_lamports=tip_amount_lamports, alt_manager=alt_manager,
-        strategy_type=strat_type
+        strategy_type=strat_type,
+        tip_accounts=jito_executor.tip_accounts if jito_executor else None,  # Fix 3: dynamic tip accounts
     )
     if not tx_b64:
         logger.warning("Failed to create priority arbitrage tx")

@@ -357,7 +357,7 @@ class PreTradeGuard:
         self.blacklisted_pools: Dict[str, float] = {}
         self.blacklist_duration = 3600  # 1 hour
 
-     def record_failure(self, pool_id: str):
+    def record_failure(self, pool_id: str):
         """Record a trade failure for a pool."""
         self.pool_fail_counter[pool_id] = self.pool_fail_counter.get(pool_id, 0) + 1
         if self.pool_fail_counter[pool_id] >= 3:

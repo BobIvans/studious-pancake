@@ -86,6 +86,8 @@ def normalize_profit_to_sol(
 
 # Global execution lock for sequential flash loan processing
 execution_lock = asyncio.Lock()
+# Per-MarginFi account lock: never two concurrent flash-loan CPI calls on the same lending_account
+marginfi_account_lock = asyncio.Lock()
 stats_lock = asyncio.Lock()
 active_tasks = set()
 leader_tracker = None
@@ -97,6 +99,16 @@ PENDING_QUOTES: Set[str] = set()  # Fix 84: RPS shield - dedup Jupiter requests
 LAST_SIGNAL_TIME: Dict[str, float] = {}  # Fix 88: per-pair 400ms cooldown (1 slot)
 STRATEGY_FAILURES: Dict[str, int] = {}  # Fix 90: reputation circuit breaker
 STRATEGY_DISABLED_UNTIL: Dict[str, float] = {}
+
+# ── Fix 2 (Reputation Guard): Pair-level consecutive failure tracking ──────
+# Если конкретная пара (напр. SOL/jitoSOL) выдает 3 ошибки Slippage подряд,
+# отправляем пару в бан (cooldown) на 600 секунд. Это сохраняет репутацию
+# кошелька перед Jito и предотвращает сжигание газа на «высушенных» пулах.
+PAIR_FAILURES: Dict[str, int] = {}
+PAIR_DISABLED_UNTIL: Dict[str, float] = {}
+PAIR_COOLDOWN_SECONDS: int = 600  # 10 минут бана для пары
+# ────────────────────────────────────────────────────────────────────────────
+
 
 # Fix 1 (wSOL Death Spiral): Timestamp of last atomic wSOL CloseAccount.
 # When build_native_flashloan_tx closes wSOL + recreates ATA before the Jito tip,
@@ -861,6 +873,8 @@ openocean_ban_time = 60
 
 # Global execution lock for sequential flash loan processing
 execution_lock = asyncio.Lock()
+# Per-MarginFi account lock: prevents two concurrent flash-loan CPI calls on the same lending_account
+marginfi_account_lock = asyncio.Lock()
 # Lock for thread-safe stats updates
 stats_lock = asyncio.Lock()
 
@@ -868,8 +882,132 @@ stats_lock = asyncio.Lock()
 GLOBAL_STOP_EVENT = asyncio.Event()
 TOTAL_FAILED_BUNDLES_IN_A_ROW = 0  # Fix 64: Slippage loop breaker
 
+# =============================================================================
+# Fix 96: Token-2022 Remaining-Account Error Parser
+# =============================================================================
+STRATEGY_EXTRA_ACCOUNTS: Dict[str, Set[str]] = {}  # auto-discovered extra accounts per strategy/pair
+
+def _extract_pubkey_from_error(error_text: str) -> Optional[str]:
+    """Extract a Base58 pubkey from Solana error strings (remaining-account / Missing signature etc.)."""
+    if not error_text:
+        return None
+    # Standard Base58 alphabet (no 0/O/I/l); typical Solana pubkey is 32–44 chars
+    match = re.search(r'[1-9A-HJ-NP-Za-km-z]{32,44}', error_text)
+    return match.group(1) if match else None
+
+def discover_ri_extra_account(error_text: str, strategy_key: str = "default") -> None:
+    """Parse a Remaining Account / Missing signature error and cache the pubkey for future injections."""
+    pk = _extract_pubkey_from_error(str(error_text) if error_text else "")
+    if pk:
+        STRATEGY_EXTRA_ACCOUNTS.setdefault(strategy_key, set()).add(pk)
+        logger.warning(f"🔧 Fix 96: Discovered extra account {pk[:8]}… for strategy={strategy_key}")
+
+
+# =============================================================================
+# Virtual Balance Reconciler — Fix "Ghost Balance Drift"
+# =============================================================================
+async def balance_reconciler(http_session, rpc_url: str, keypair_ref, jito_exec_ref) -> None:
+    """Every 30 s pull the actual on-chain SOL balance and
+    re-anchor `stats["virtual_balance"]` to it.
+
+    Ghost-Balance Drift occurs when the bot is restarted mid-flight or when an
+    in-flight bundle silently vanishes from Jito without any MÉV refund event.
+    The reconciliation loop eliminates both modes by doing:
+
+        virtual_balance = actual_rpc_balance
+                         − sum(pending_bundle_lamports)
+                         − tracked_jito_tips_already_deducted
+
+    This guarantees the bot never "freezes" due to arithmetic drift — at most
+    30 s of phantom balance before a full re-anchor.
+    """
+    global stats, stats_lock
+    wallet_pk = str(keypair_ref.pubkey())
+
+    while True:
+        try:
+            await asyncio.sleep(30)  # Hard 30 s background loop per spec
+
+            # 1. Fetch actual balance from RPC
+            payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getBalance",
+                "params": [wallet_pk],
+            }
+            async with http_session.post(rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=5.0)) as resp:
+                if resp.status != 200:
+                    continue
+                result_data = await resp.json()
+                if "result" not in result_data or "value" not in result_data["result"]:
+                    continue
+                actual_lamports = result_data["result"]["value"]
+            actual_sol = actual_lamports / 1e9
+
+            # 2. Subtract pending Jito bundle deductions (lamports already reserved but unconfirmed)
+            pending_lamports = 0
+            try:
+                for meta in jito_exec_ref.pending_bundles.values():
+                    pending_lamports += int(meta.get("deducted", 0.0) * 1e9)
+            except Exception:
+                pass
+
+            reconciled_sol = max((actual_lamports - pending_lamports) / 1e9, 0.0)
+
+            # 3. Update virtual_balance atomically
+            async with stats_lock:
+                prev = stats.get("virtual_balance", 0.0)
+                stats["virtual_balance"] = reconciled_sol
+                drift = abs(reconciled_sol - prev)
+                if drift > 0.000001:  # Only log when meaningful (> 1 µSOL)
+                    logger.info(
+                        f"⚖️ Virtual Balance Reconciled: {prev:.6f} → {reconciled_sol:.6f} SOL "
+                        f"(actual={actual_sol:.6f}, pending={pending_lamports/1e9:.6f}, "
+                        f"drift={drift:.6f})"
+                    )
+
+        except Exception as e:
+            logger.debug(f"Balance reconciler cycle error: {e}")
+
+
 # Track failed attempts per pair to switch resources
-pair_failure_count = {}
+
+# ── Fix 2: Pair-level reputation guard functions ────────────────────────────
+def is_pair_allowed(pair_key: str) -> bool:
+    """Check if a pair (e.g. "SOL:jitoSOL") is allowed to trade.
+    Если пара в бане (3+ последовательных ошибок), возвращаем False.
+    """
+    disabled_until = PAIR_DISABLED_UNTIL.get(pair_key, 0.0)
+    if disabled_until > time.time():
+        remaining = int(disabled_until - time.time())
+        logger.debug(f"🛡️ Pair {pair_key} is banned for {remaining}s more — skipping")
+        return False
+    # Если бан истек — чистим счетчик
+    if disabled_until > 0 and disabled_until <= time.time():
+        PAIR_FAILURES.pop(pair_key, None)
+        PAIR_DISABLED_UNTIL.pop(pair_key, None)
+    return True
+
+def record_pair_failure(pair_key: str, error_type: str = "unknown"):
+    """Record a consecutive failure for a pair.
+     3 consecutive fails → pair banned for PAIR_COOLDOWN_SECONDS.
+    """
+    PAIR_FAILURES[pair_key] = PAIR_FAILURES.get(pair_key, 0) + 1
+    fails = PAIR_FAILURES[pair_key]
+    logger.debug(f"⚠️ Pair failure #{fails} for {pair_key}: {error_type}")
+    if fails >= 3:
+        ban_until = time.time() + PAIR_COOLDOWN_SECONDS
+        PAIR_DISABLED_UNTIL[pair_key] = ban_until
+        logger.critical(
+            f"🚨 REPUTATION BREAKER (Pair): {pair_key} disabled for "
+            f"{PAIR_COOLDOWN_SECONDS}s after {fails} consecutive failures ({error_type})"
+        )
+
+def record_pair_success(pair_key: str):
+    """Reset consecutive failure counter on successful trade."""
+    if pair_key in PAIR_FAILURES:
+        PAIR_FAILURES.pop(pair_key, None)
+        logger.debug(f"✅ Pair {pair_key} failure counter reset after success")
+# ────────────────────────────────────────────────────────────────────────────
 
 try:
     from aiolimiter import AsyncLimiter
@@ -1912,22 +2050,34 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                         continue
 
                     stats["bundle_send_attempts"] += 1
-                    bundle_result = await jito_executor.send_bundle([tx_with_tip])
-                    if bundle_result["success"]:
-                        # Fix 1 (wSOL Death Spiral): mark that the atomic path just closed wSOL + recreated ATA.
-                        # wallet_balance_listener will skip its own standalone close for WSOL_CLOSE_COOLDOWN seconds.
+
+                    # ── Fix "Blocking Discovery": Fire-and-Forget Execution ──────────
+                    # send_bundle itself is ~200ms, wait_for_confirmation wall-clock is up to 30 s.
+                    # Both are wrapped in a background task so the worker loop never blocks
+                    # and continues scanning new pairs while this bundle is pending.
+                    async def _post_send_processing(b_result: dict, b_route):
+                        if not b_result.get("success"):
+                            logger.warning(
+                                f"❌ LST bundle failed: {b_result.get('error')} "
+                                f"| {signal.token_symbol}"
+                            )
+                            jito_bidding_manager.record_trade_result("lst_depeg", False)
+                            stats["sim_fails"] += 1
+                            return
+
+                        # Mark wSOL atomically closed and update stats
                         await mark_wsol_atomically_closed()
                         stats["bundle_successes"] += 1
-                        bundle_id = bundle_result["bundle_id"]
+                        stats["trades"] += 1
+                        bundle_id = b_result.get("bundle_id", "")
                         logger.debug(
                             f"🔥 LST Flash-Arb bundle sent! "
-                            f"{signal.token_symbol} | profit={route.profit_sol:.6f} SOL | "
-                            f"route={route.route_path} | bundle={bundle_id} | "
+                            f"{signal.token_symbol} | profit={b_route.profit_sol:.6f} SOL | "
+                            f"route={b_route.route_path} | bundle={bundle_id} | "
                             f"tip={jito_tip_lamports/1e9:.6f} SOL"
                         )
-                        stats["trades"] += 1
 
-                        # Wait for confirmation
+                        # Wait for confirmation in background (non-blocking)
                         confirmation = await jito_executor.wait_for_confirmation(
                             bundle_id, max_wait_time=30.0
                         )
@@ -1935,12 +2085,15 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                             logger.debug(f"✅ LST bundle confirmed: {confirmation['status']}")
                             jito_bidding_manager.record_trade_result("lst_depeg", True)
                         else:
-                            logger.warning(f"❌ LST bundle status: {confirmation.get('status', 'unknown')}")
+                            logger.warning(
+                                f"❌ LST bundle status: {confirmation.get('status', 'unknown')} "
+                                f"| {signal.token_symbol}"
+                            )
                             jito_bidding_manager.record_trade_result("lst_depeg", False)
-                    else:
-                        logger.warning(f"❌ LST bundle failed: {bundle_result.get('error')}")
-                        jito_bidding_manager.record_trade_result("lst_depeg", False)
-                        stats["sim_fails"] += 1
+
+                    tx_with_tip = tx  # Placeholder — tip will be added by JitoBundleHandler/JitoExecutor
+                    bundle_result = await jito_executor.send_bundle([tx_with_tip])
+                    asyncio.create_task(_post_send_processing(bundle_result, route))
                 else:
                     logger.warning("❌ Simulation failed or Jito unavailable. Skipping trade for capital protection.")
         except Exception as e:
@@ -2497,32 +2650,42 @@ async def execute_enhanced_migration_arbitrage(mint_address, raydium_addresses, 
         bundle_to_send = [transaction_data]
 
         # Send enhanced bundle (single transaction with merged tip)
+        # Fix "Blocking Discovery": send_bundle is ~200ms; we do not await confirmation here.
+        # Confirmation is handled by a fire-and-forget background task so the caller is
+        # never stalled by 10–30 s `wait_for_confirmation`.
         stats["bundle_send_attempts"] += 1
-        bundle_result = await jito_executor.send_bundle(bundle_to_send)
 
-        execution_time = (time.time() - start_time) * 1000
-
-        if bundle_result["success"]:
-            global TOTAL_FAILED_BUNDLES_IN_A_ROW
-            TOTAL_FAILED_BUNDLES_IN_A_ROW = 0
-            stats["bundle_successes"] += 1
-            bundle_id = bundle_result["bundle_id"]
-            logger.info(f"🔥 Enhanced migration bundle sent! ID: {bundle_id}")
-            logger.info(f"⚡ Executed in {execution_time:.2f}ms with pre-computed addresses")
-
-            return True
-        else:
-            err = str(bundle_result.get('error', ''))
-            if "SlippageExceeded" in err:
-                TOTAL_FAILED_BUNDLES_IN_A_ROW += 1
-                if TOTAL_FAILED_BUNDLES_IN_A_ROW >= 10:
-                    logger.critical("🚨 10 consecutive SlippageExceeded — activating GLOBAL_STOP_EVENT")
-                    GLOBAL_STOP_EVENT.set()
-            else:
+        async def _migration_post_send(b_result: dict) -> None:
+            _exec_ms = (time.time() - start_time) * 1000
+            if b_result["success"]:
+                global TOTAL_FAILED_BUNDLES_IN_A_ROW
                 TOTAL_FAILED_BUNDLES_IN_A_ROW = 0
-            logger.warning(f"❌ Enhanced bundle failed: {err}")
+                stats["bundle_successes"] += 1
+                bid = b_result.get("bundle_id", "")
+                logger.info(f"🔥 Enhanced migration bundle sent! ID: {bid}")
+                logger.info(f"⚡ Executed in {_exec_ms:.2f}ms with pre-computed addresses")
 
-            return False
+                confirmation = await jito_executor.wait_for_confirmation(
+                    bid, max_wait_time=30.0
+                )
+            else:
+                global TOTAL_FAILED_BUNDLES_IN_A_ROW
+                err = str(b_result.get("error", ""))
+                if "SlippageExceeded" in err:
+                    TOTAL_FAILED_BUNDLES_IN_A_ROW += 1
+                    if TOTAL_FAILED_BUNDLES_IN_A_ROW >= 10:
+                        logger.critical(
+                            "🚨 10 consecutive SlippageExceeded — activating GLOBAL_STOP_EVENT"
+                        )
+                        GLOBAL_STOP_EVENT.set()
+                else:
+                    TOTAL_FAILED_BUNDLES_IN_A_ROW = 0
+                logger.warning(f"❌ Enhanced bundle failed: {err}")
+                confirmation = None
+
+        bundle_result = await jito_executor.send_bundle(bundle_to_send)
+        asyncio.create_task(_migration_post_send(bundle_result))
+        return True
 
     except Exception as e:
         logger.error(f"Enhanced migration execution failed: {e}")
@@ -2654,8 +2817,8 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
         return
 
     # Check if pair has too many failures, switch to other pairs
-    if pair_failure_count.get(opportunity.pair, 0) > 5:
-        logger.debug(f"🚫 Skipping {opportunity.pair} due to repeated failures (>5), switching resources")
+    if not is_pair_allowed(opportunity.pair):
+        logger.debug(f"🚫 Skipping {opportunity.pair} due to reputation ban — switching resources")
         return
 
     # Phase 42: Upfront Liquidity Guard (REWRITTEN Phase 48)
@@ -2918,8 +3081,8 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
         f"| virtual_balance={stats['virtual_balance']:.6f}"
     )
     
-    # Record failure for pool blacklisting
-    pair_failure_count[opportunity.pair] = pair_failure_count.get(opportunity.pair, 0) + 1
+    # Fix 2 (Reputation Guard): record pair failure for circuit breaker
+    record_pair_failure(opportunity.pair, error_type="send_failed")
     
     # [Phase 27] ATA Rent Recovery is now handled inside check_bundle_confirmation for precision.
     from spl.token.instructions import get_associated_token_address
@@ -2929,8 +3092,8 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
 
     # Log transaction sent (outside lock)
     if result.get("success"):
-        # Reset pair failure counter on new success (PairFailureGuard balance)
-        pair_failure_count[opportunity.pair] = 0
+        # Fix 2 (Reputation Guard): reset pair failure counter on success
+        record_pair_success(opportunity.pair)
         tx_id_str = in_mint_str[:8] + out_mint_str[:8] + str(int(time.time()))
         logger.debug("🔥 Priority transaction sent successfully!")
 
@@ -2954,8 +3117,13 @@ async def execute_priority_opportunity(opportunity, session, cfg, rpc_manager, k
             # Вместо простого add_done_callback используйте:
             task.add_done_callback(lambda t: active_tasks.discard(t))
     else:
-        logger.warning(f"❌ Priority transaction failed: {result.get('error')}")
-        pair_failure_count[opportunity.pair] = pair_failure_count.get(opportunity.pair, 0) + 1
+        err_msg = result.get("error", "")
+        logger.warning(f"❌ Priority transaction failed: {err_msg}")
+        # Fix 96: Token-2022 Error Parser — extract Remaining-Account pubkey
+        if err_msg and ("remaining account" in err_msg.lower() or "missing required signature" in err_msg.lower()):
+            discover_ri_extra_account(err_msg, getattr(opportunity, "metadata", {}).get("strategy", "default"))
+        # Fix 2 (Reputation Guard): record pair failure
+        record_pair_failure(opportunity.pair, error_type=err_msg or "unknown")
 
 async def check_ata_exists(session, rpc_getter, wallet_pubkey, mint_address):
     """Check if Associated Token Account exists for the given mint"""
@@ -3456,7 +3624,7 @@ async def run():
     trade_sizer = OptimalTradeSizer()
 
     # Use AsyncResolver with Cloudflare/Google DNS + AF_INET only for low-latency networking
-    # Fix 53: IPv4 + custom nameservers configures DNS 50-80 ms faster than IPv6-only
+    # Fix 53+94: IPv4 + custom nameservers for 50-80ms DNS boost; keepalive_timeout=300
     _resolver = None
     try:
         import brotli  # noqa: enables aiohttp Brotli decoding (Accept-Encoding: br)
@@ -3466,23 +3634,30 @@ async def run():
         import aiodns  # noqa: ensures aiodns is present for AsyncResolver
     except ImportError:
         logger.warning("⚠️ aiodns not available — falling back to default DNS resolver")
-    # AsyncResolver is already imported at top-level (aiohttp.resolver.AsyncResolver)
     _resolver = AsyncResolver(nameservers=["1.1.1.1", "8.8.8.8"])
 
     try:
         # Fix 53: AF_INET disables IPv6 lookups; ttl_dns_cache reduces DNS overhead;
         # force_close is mandatory on macOS for >1024 concurrent connections.
+        # Fix 94: keepalive_timeout=300 reuses TCP connections (saves 3-way handshake per Jupiter quote).
         connector = aiohttp.TCPConnector(
             family=socket.AF_INET,
             resolver=_resolver,
             limit=0,
             ttl_dns_cache=300,
             use_dns_cache=True,
-            force_close=True
+            force_close=True,
+            keepalive_timeout=300,
         )
     except Exception:
         logger.warning("connector fallback — using defaults")
-        connector = aiohttp.TCPConnector(limit=0, ttl_dns_cache=300, use_dns_cache=True, force_close=True)
+        connector = aiohttp.TCPConnector(
+            limit=0,
+            ttl_dns_cache=300,
+            use_dns_cache=True,
+            force_close=True,
+            keepalive_timeout=300,
+        )
 
     session = aiohttp.ClientSession(
         connector=connector,
@@ -3878,6 +4053,8 @@ async def run():
             # asyncio.create_task(yellowstone_stream.connect()),  # DISABLED: grpc issue
             asyncio.create_task(dust_sweep_background()),
             asyncio.create_task(cleanup_temporary_tokens()),
+            # Virtual Balance Reconciler — re-anchors virtual_balance every 30 s
+            asyncio.create_task(balance_reconciler(session, rpc.get_rpc(), keypair, jito_executor)),
         ]
         # LST Depeg Flash-Arb Scanner (primary strategy)
         if cfg.LST_DEPEG_ENABLED:

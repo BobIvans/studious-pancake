@@ -279,25 +279,55 @@ class JitoBiddingManager:
         current_native_sol_balance: Optional[float] = None,
     ) -> int:
         """
-        Blue Ocean Tip Strategy: 40% of Expected Net Profit (no percentiles, no capital guard).
+        Blue Ocean Tip Strategy: 40% of Expected Net Profit with Tip Floor Filter.
 
         Для стратегий LST Depeg, xStocks Oracle Lag, Sanctum Router — там нет жесткой
         конкуренции за блок, поэтому Tip = 40% от Expected Net Profit достаточно для
-        гарантированного включения в блок. Никаких landed_tips_50th_percentile, никаких
-        Step-Up/Down, никакого Capital Guard (который может заблокировать сделку с 0.017 SOL).
+        гарантированного включения в блок. Никаких Step-Up/Down, никакого Capital Guard
+        (который может заблокировать сделку с 0.017 SOL).
+
+        🛡️ Fix 3 (Tip Floor Filter): Сравниваем рассчитанный tip с landed_tips_50th_percentile
+        из Jito API. Если 40% профита < 50й перцентиль — отменяем сделку целиком.
+        Не пытаемся перебить пол (floor), если это съедает > 80% профита. Ждем, когда
+        конкуренция упадет.
 
         Args:
             expected_profit_sol: Expected net profit in SOL.
             strategy: Strategy name for logging.
+            current_native_sol_balance: Native SOL balance for capital cap.
 
         Returns:
-            Tip amount in lamports (positive) or 0 (if profit too small).
+            Tip amount in lamports (positive) or 0 (if profit too small or tip floor too high).
         """
         if expected_profit_sol <= 0:
             return 0
 
+        # ── Fix 3: Tip Floor Filter (Jito 50th Percentile) ──────────────────
+        # Если 40% от профита не хватает, чтобы перебить Jito floor — отменяем сделку.
+        # Спамить бандлы с чаевыми ниже рынка = убить репутацию кошелька в Jito.
+        p50_lamports = self.get_50th_percentile_lamports()
+        p50_sol = p50_lamports / 1e9
+        forty_pct_tip_sol = expected_profit_sol * 0.40
+
+        if forty_pct_tip_sol < p50_sol:
+            logger.warning(
+                f"🚫 Tip Floor Filter [{strategy}]: "
+                f"40% tip ({forty_pct_tip_sol:.8f} SOL) < Jito 50th percentile ({p50_sol:.8f} SOL). "
+                f"Skipping trade — wait for lower competition."
+            )
+            return 0
+
+        # ── Tip Cost Guard: не тратим > 80% профита на tip ──────────────────
+        if p50_sol > expected_profit_sol * 0.80:
+            logger.warning(
+                f"🚫 Tip Cost Guard [{strategy}]: "
+                f"Jito 50th percentile ({p50_sol:.8f} SOL) > 80% of profit "
+                f"({expected_profit_sol:.8f} SOL). Skipping to preserve capital."
+            )
+            return 0
+
         # 40% of expected net profit — validated for Blue Ocean strategies
-        tip_sol = expected_profit_sol * 0.40
+        tip_sol = forty_pct_tip_sol
         tip_lamports = int(tip_sol * 1_000_000_000)
 
         # ── Fix 2 (Unfunded Jito Tip): Cap tip by actual native SOL balance ──
@@ -338,12 +368,30 @@ class JitoBiddingManager:
         strategy: str = "default",
         current_native_sol_balance: Optional[float] = None,
     ) -> int:
-        """Start + Step-Up/Down + Capital Guard."""
+        """Start + Step-Up/Down + Capital Guard.
+
+        🛡️ Tip Floor Filter: Если 40% профита < 50й перцентиль Jito — отменяем сделку.
+        Не пытаемся перебить пол (floor), если это съедает > 80% профита.
+        Ждем, когда конкуренция упадет.
+        """
         if expected_profit_sol <= 0:
             return 0
 
+        # ── Fix 3: Tip Floor Filter (Jito 50th Percentile) ──────────────────
+        # Если 40% от профита не хватает, чтобы перебить Jito floor — отменяем сделку.
+        # Спамить бандлы с чаевыми ниже рынка = убить репутацию кошелька в Jito.
         p50 = self.get_50th_percentile_lamports() / 1e9
-        base = max(p50 * 1.2, expected_profit_sol * 0.4)
+        forty_pct_tip = expected_profit_sol * 0.40
+
+        if forty_pct_tip < p50:
+            logger.warning(
+                f"🚫 Tip Floor Filter [{strategy}]: "
+                f"40% tip ({forty_pct_tip:.8f} SOL) < Jito 50th percentile ({p50:.8f} SOL). "
+                f"Skipping trade — wait for lower competition."
+            )
+            return -1
+
+        base = max(p50 * 1.2, forty_pct_tip)
 
         # Capital Guard
         if p50 > expected_profit_sol * 0.8:

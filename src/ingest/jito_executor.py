@@ -48,6 +48,7 @@ class JitoExecutor:
         self.tip_accounts = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
         logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Using hardcoded fallback! Update via fetch_tip_accounts() API.")
         self.tip_subscription_task = None
+        self._tip_accounts_refresh_task = None  # Fix 95: 10-min periodic refresh
         self._running = False
 
         # ─── Ghost Balance Recovery ───────────────────────────────────────────
@@ -67,13 +68,15 @@ class JitoExecutor:
         # Phase 35: Fetch tip accounts on startup
         await self.fetch_tip_accounts()
         self.tip_subscription_task = asyncio.create_task(self._subscribe_to_tip_stream())
+        # Fix 95: Refresh Jito tip_accounts list every 10 min (they rotate; hardcoded is stale after a few minutes)
+        self._tip_accounts_refresh_task = asyncio.create_task(self._periodic_tip_accounts_refresh())
         # Ghost Balance Recovery: background reconciliation every 8 s
         self._reconciliation_task = asyncio.create_task(self._reconcile_pending())
 
     async def stop(self):
         """Stop all background tasks."""
         self._running = False
-        for task in (self.tip_subscription_task, self._reconciliation_task):
+        for task in (self.tip_subscription_task, self._tip_accounts_refresh_task, self._reconciliation_task):
             if task:
                 task.cancel()
                 try:
@@ -81,6 +84,7 @@ class JitoExecutor:
                 except asyncio.CancelledError:
                     pass
         self.tip_subscription_task = None
+        self._tip_accounts_refresh_task = None  # Fix 95
         self._reconciliation_task = None
 
     async def fetch_tip_accounts(self) -> bool:
@@ -214,7 +218,8 @@ class JitoExecutor:
                         async with stats_lock:  # type: ignore[misc]
                             stats["virtual_balance"] += refund
                         logger.warning(
-                            f"⚡ Ghost bundle {bid[:12]} refunded: {refund:.8f} SOL "
+                            f"⚡ Bundle Dropped: Reconciled — ghost bundle {bid[:12]} "
+                            f"refunded {refund:.8f} SOL "
                             f"→ virtual_balance (gone after {(now - meta['sent_at']):.1f}s)"
                         )
                     except Exception as _e:
@@ -231,6 +236,19 @@ class JitoExecutor:
             except Exception as _e:
                 logger.debug(f"Reconciliation error: {_e}")
             await asyncio.sleep(8.0)
+
+    # ─── Periodic Jito Tip-Accounts Refresh (Fix 95) ──────────────────────────
+    async def _periodic_tip_accounts_refresh(self) -> None:
+        """Refresh Jito tip_accounts list every 10 min."""
+        while self._running:
+            try:
+                await asyncio.sleep(600)  # 10 minutes
+                refreshed = await self.fetch_tip_accounts()
+                if refreshed:
+                    logger.info(f"🔄 Jito tip_accounts refreshed: {len(self.tip_accounts)} accounts active (10-min poll)")
+            except Exception as e:
+                logger.debug(f"Tip-accounts periodic refresh error: {e}")
+                await asyncio.sleep(60)
 
     async def send_bundle(
         self,

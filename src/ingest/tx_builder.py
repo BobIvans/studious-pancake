@@ -1200,10 +1200,15 @@ class JupiterTxBuilder:
                 logger.debug("🔓 Fix 1 (wSOL Death Spiral): CloseATA + CreateIdempotentATA injected before Jito tip")
 
             # Fix 2: Dynamic Jito tip account — never hardcoded.
-            # Caller (arb_bot / execution_router) injects jito_executor.tip_accounts.
-            # Falls back to hardcoded value only if caller passes None (should never happen in production).
-            _tip_accounts_list = tip_accounts or ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
-            selected_tip_account = random.choice(_tip_accounts_list)
+                # Caller (arb_bot / execution_router) injects jito_executor.tip_accounts.
+                # STRICTLY dynamic — no hardcoded fallback (Fix 2).
+                if not tip_accounts:
+                    logger.critical(
+                        "🚨 JITO TIP ACCOUNTS: tip_accounts is empty! "
+                        "Caller must supply jito_executor.tip_accounts. Aborting to prevent hardcoded fallback."
+                    )
+                    return None
+                selected_tip_account = random.choice(tip_accounts)
             tip_ix = transfer(TransferParams(
                 from_pubkey=wallet,
                 to_pubkey=Pubkey.from_string(selected_tip_account),
@@ -1423,9 +1428,14 @@ class JupiterTxBuilder:
                 ))
                 logger.debug("🔓 wSOL unwrap injected: CloseATA + CreateIdempotentATA before Jito tip")
 
-                # Fix 2: Use dynamic tip account from jito_executor (never hardcoded)
-                _tip_accounts_list = tip_accounts or ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
-                selected_tip_account = random.choice(_tip_accounts_list)
+                # Fix 2: Use dynamic tip account from jito_executor (STRICTLY no hardcoded fallback)
+                if not tip_accounts:
+                    logger.critical(
+                        "🚨 JITO TIP ACCOUNTS: tip_accounts is empty! "
+                        "Caller must supply jito_executor.tip_accounts. Aborting to prevent hardcoded fallback."
+                    )
+                    return None
+                selected_tip_account = random.choice(tip_accounts)
                 tip_ix = transfer(TransferParams(
                     from_pubkey=wallet,
                     to_pubkey=Pubkey.from_string(selected_tip_account),

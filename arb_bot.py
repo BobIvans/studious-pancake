@@ -98,6 +98,13 @@ LAST_SIGNAL_TIME: Dict[str, float] = {}  # Fix 88: per-pair 400ms cooldown (1 sl
 STRATEGY_FAILURES: Dict[str, int] = {}  # Fix 90: reputation circuit breaker
 STRATEGY_DISABLED_UNTIL: Dict[str, float] = {}
 
+# Fix 1 (wSOL Death Spiral): Timestamp of last atomic wSOL CloseAccount.
+# When build_native_flashloan_tx closes wSOL + recreates ATA before the Jito tip,
+# this is set to time.time(). The wallet_balance_listener skips its own standalone
+# wSOL close for WSOL_CLOSE_COOLDOWN seconds after an atomic close.
+WSOL_JUST_CLOSED_ATOMICALLY: float = 0.0
+WSOL_CLOSE_COOLDOWN: float = 60.0  # seconds — any recent atomic close is authoritative
+
 # Import Jito client
 try:
     from src.ingest.jito_bundle_client import JitoBundleClient
@@ -1878,6 +1885,9 @@ async def lst_depeg_scanner(session, cfg, rpc_manager, keypair, jito_executor, w
                     stats["bundle_send_attempts"] += 1
                     bundle_result = await jito_executor.send_bundle([tx_with_tip])
                     if bundle_result["success"]:
+                        # Fix 1 (wSOL Death Spiral): mark that the atomic path just closed wSOL + recreated ATA.
+                        # wallet_balance_listener will skip its own standalone close for WSOL_CLOSE_COOLDOWN seconds.
+                        await mark_wsol_atomically_closed()
                         stats["bundle_successes"] += 1
                         bundle_id = bundle_result["bundle_id"]
                         logger.debug(
@@ -2525,6 +2535,19 @@ def create_placeholder_arbitrage_tx(keypair, blockhash):
 
     return VersionedTransaction(msg, [keypair])
 
+async def mark_wsol_atomically_closed():
+    """Fix 1 (wSOL Death Spiral): Mark that the atomic arb path just closed wSOL.
+
+    build_native_flashloan_tx injects CloseAccount+CreateIdempotentATA for wSOL
+    inside the arb transaction before the Jito tip.  The wallet_balance_listener
+    must NOT run its own standalone CloseAccount transaction for the same ATA —
+    that would race with the arb's close and waste gas.  Call this right after
+    the arb bundle is sent (not confirmed — a failed bundle reverts atomically).
+    """
+    global WSOL_JUST_CLOSED_ATOMICALLY
+    WSOL_JUST_CLOSED_ATOMICALLY = time.time()
+
+
 async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, tx_b64, tx_id, execution_time, session=None, keypair=None, rpc_getter=None, target_mint_ata=None, virtual_balance_to_deduct=0.0):
     """Check bundle confirmation asynchronously without blocking."""
     try:
@@ -2549,7 +2572,8 @@ async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, t
 
                 # TASK 1 — Zero-Delay ATA close even on failure (prevent accumulation)
                 if target_mint_ata and session and keypair and rpc_getter:
-                    # DISABLED: atomic close inside bundle - asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
+                    # DISABLED: atomic close inside bundle — asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
+                    pass
             else:
                 logger.debug("ℹ️ Auction lost or bundle dropped - normal operation continues")
         elif confirmation.get("status") == "timeout":
@@ -2574,7 +2598,7 @@ async def check_bundle_confirmation(bundle_id, jito_executor, data_aggregator, t
             # TASK 1 — Zero-Delay Post-Trade ATA Close (fire & forget)
             if target_mint_ata and session and keypair and rpc_getter:
                 logger.info(f"♻️ Skip async ATA close (atomic inside bundle): {target_mint_ata[:8]}...")
-                # DISABLED: atomic close inside bundle - asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
+                # DISABLED: atomic close inside bundle — asyncio.create_task(close_ata_after_arbitrage(session, keypair, rpc_getter, target_mint_ata))
             # TASK 49b: Post-trade dust sweep — trigger immediately after confirmed arbitrage
             if dust_sweeper:
                 asyncio.create_task(dust_sweeper._sweep_dust())
@@ -3319,7 +3343,7 @@ async def blockhash_updater(session, rpc_getter):
                         elif item["id"] == 2:
                             stats["current_slot"] = item["result"]
         except: pass
-        await asyncio.sleep(0.4) # Соответствует скорости генерации блоков Solana
+        await asyncio.sleep(2.0) # 2s cache — confirmed blockhash for Jito geo-propagation
 
 async def run():
     import gc
@@ -3514,6 +3538,27 @@ async def run():
             )
             await jito_executor.start()
 
+            # Fix 2: Hardcoded Jito Tip Accounts — retry fetch_tip_accounts() up to 3 times.
+            # If still empty after retries, log CRITICAL so the operator knows tips may go to stale accounts.
+            _fetch_attempts = 0
+            while _fetch_attempts < 3:
+                if jito_executor.tip_accounts and len(jito_executor.tip_accounts) > 1:
+                    logger.info(f"✅ Jito tip accounts loaded: {len(jito_executor.tip_accounts)} active accounts")
+                    break
+                _fetch_attempts += 1
+                logger.warning(
+                    f"⚠️ Jito tip accounts attempt {_fetch_attempts}/3: "
+                    f"{len(jito_executor.tip_accounts)} accounts — retrying in 2s..."
+                )
+                await asyncio.sleep(2)
+                await jito_executor.fetch_tip_accounts()
+            if _fetch_attempts >= 3 and len(jito_executor.tip_accounts) <= 1:
+                logger.critical(
+                    "🚨 JITO TIP ACCOUNTS: Dynamic fetch failed after 3 attempts! "
+                    f"Proceeding with {len(jito_executor.tip_accounts)} hardcoded fallback account(s). "
+                    "Tips may be sent to stale accounts — manual inspection required."
+                )
+
         # God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
         global jito_bidding_manager
         jito_bidding_manager = JitoBiddingManager()
@@ -3530,7 +3575,8 @@ async def run():
             jito_executor=jito_executor,
             session=session,
             rpc_url=rpc.get_rpc(),
-            keypair=keypair
+            keypair=keypair,
+            alt_manager=alt_manager  # Fix 3: pass alt_manager for MTU-safe tx compilation
         )
         execution_router.start_processor()
 
@@ -3635,6 +3681,7 @@ async def run():
             from spl.token.instructions import close_account, CloseAccountParams
             from spl.token.constants import TOKEN_PROGRAM_ID
             from spl.token.instructions import get_associated_token_address
+            from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
             
             wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
             wsol_ata = get_associated_token_address(keypair.pubkey(), wsol_mint)
@@ -3649,6 +3696,16 @@ async def run():
                         # 2. Если нативный SOL падает ниже 0.01 SOL (опасно!)
                         if current_balance < 0.01:
                             logger.warning(f"⚠️ Native SOL critically low ({current_balance} SOL). Checking wSOL for unwrap...")
+                            
+                            # Fix 1 (wSOL Death Spiral): If the atomic arb path just closed wSOL
+                            # inside the transaction, skip the standalone close to avoid races + gas waste.
+                            global WSOL_JUST_CLOSED_ATOMICALLY
+                            if time.time() - WSOL_JUST_CLOSED_ATOMICALLY < WSOL_CLOSE_COOLDOWN:
+                                logger.debug(
+                                    f"🔓 wSOL was atomically closed {time.time() - WSOL_JUST_CLOSED_ATOMICALLY:.0f}s ago — "
+                                    f"skipping standalone unwrap to prevent duplicate close"
+                                )
+                                continue  # keep sleeping; the atomic path already replenished native SOL
                             
                             # Проверяем баланс wSOL ATA
                             payload = {"jsonrpc": "2.0", "id": 1, "method": "getTokenAccountBalance", "params": [str(wsol_ata)]}
@@ -3669,12 +3726,20 @@ async def run():
                                             owner=keypair.pubkey()
                                         ))
                                         
-                                        # Отправляем обычную транзакцию (не Jito) для пополнения
+                                        # Fix 4: Add Priority Fee so TX doesn't hang in mempool for hours
+                                        cu_limit_ix = set_compute_unit_limit(50_000)
+                                        cu_price_ix = set_compute_unit_price(100_000)  # ~0.000005 SOL priority fee
                                         blockhash = await get_current_blockhash(session, rpc.get_rpc())
-                                        msg = MessageV0.try_compile(keypair.pubkey(), [close_ix], [], Hash.from_string(blockhash))
+                                        msg = MessageV0.try_compile(
+                                            keypair.pubkey(),
+                                            [cu_limit_ix, cu_price_ix, close_ix],
+                                            [],
+                                            Hash.from_string(blockhash)
+                                        )
                                         tx = VersionedTransaction(msg, [keypair])
                                         tx_b64 = base64.b64encode(bytes(tx)).decode('ascii')
-                                        await session.post(rpc.get_rpc(), json={"jsonrpc": "2.0", "id": 1, "method": "sendTransaction", "params": [tx_b64]})
+                                        await session.post(rpc.get_rpc(), json={"jsonrpc": "2.0", "id": 1, "method": "sendTransaction", "params": [tx_b64]}
+                                        )
                                         
                                         # ATA будет пересоздана автоматически при следующем арбитраже через CREATE_ATA_FUNCTION
                 except Exception as e:
@@ -3739,11 +3804,14 @@ async def run():
         tasks = [
             asyncio.create_task(update_prices(session, cfg)),
             asyncio.create_task(blockhash_updater(session, lambda: rpc.get_rpc())),
-            asyncio.create_task(stable_scanner(queue, cfg)),        # Loop A: Fast stables (1.5s)
+            # DISABLED: stable_scanner — RPS-heavy polling (Helius 429 prevention)
+            # asyncio.create_task(stable_scanner(queue, cfg)),        # Fast stables (1.5s)
             asyncio.create_task(lst_scanner(queue, cfg)),           # Loop B: LST arbitrage (2.0s)
             asyncio.create_task(xstocks_scanner(queue, cfg)),       # Loop C: xStocks priority (5.0s)
-            asyncio.create_task(rwa_rest_scanner(queue, cfg)),      # Loop D: RWA rest (15.0s)
-            asyncio.create_task(dexscreener_scanner(queue, session, cfg)),
+            # DISABLED: rwa_rest_scanner — RPS-heavy polling (15.0s interval)
+            # asyncio.create_task(rwa_rest_scanner(queue, cfg)),
+            # DISABLED: dexscreener_scanner — RPS-heavy external API polling
+            # asyncio.create_task(dexscreener_scanner(queue, session, cfg))
             asyncio.create_task(priority_queue_processor()),  # ENABLED: AI-powered priority processor
             *[asyncio.create_task(worker(queue, session, cfg, rpc, keypair, limiters, jito_executor, arbitrage_scorer, priority_queue, alt_manager=alt_manager)) for _ in range(cfg.WORKER_COUNT)],
 

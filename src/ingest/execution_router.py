@@ -66,7 +66,7 @@ class StandardTransactionSender:
 class ExecutionRouter:
     """Routes transactions between Jito bundles and standard transactions based on slot leader with sequential queue."""
 
-    def __init__(self, leader_tracker: LeaderTracker, jito_executor, session: aiohttp.ClientSession, rpc_url: str, keypair=None):
+    def __init__(self, leader_tracker: LeaderTracker, jito_executor, session: aiohttp.ClientSession, rpc_url: str, keypair=None, alt_manager=None):
         self.leader_tracker = leader_tracker
         self.jito_executor = jito_executor
         self.standard_tx_sender = StandardTransactionSender(session, rpc_url)
@@ -75,6 +75,8 @@ class ExecutionRouter:
         self.keypair = keypair
         self.session = session
         self.rpc_url = rpc_url
+        # Fix 3: ALT Manager for MTU-safe tx compilation
+        self.alt_manager = alt_manager
 
         # Circuit Breaker: Anti-Dust protection
         self.critical_balance_threshold = 0.017  # SOL - panic if rent recovery fails
@@ -399,10 +401,24 @@ class ExecutionRouter:
                 bh_data = await resp.json()
                 recent_blockhash = bh_data["result"]["value"]["blockhash"]
 
+            # Fix 3: MTU-Safe ALT resolution — pull resolved accounts from alt_manager cache
+            resolved_alts: List[Pubkey] = []
+            _flavor_alt_pubkeys = (
+                fl_result.get("address_lookup_table_pubkeys") or  # build_marginfi_flashloan_tx key
+                fl_result.get("address_lookup_tables") or          # build_native_flashloan_tx key
+                []
+            )
+            for alt_pk_str in _flavor_alt_pubkeys:
+                if not alt_pk_str or not self.alt_manager:
+                    continue
+                _resolved = await self.alt_manager.resolve_alt(Pubkey.from_string(alt_pk_str))
+                if _resolved:
+                    resolved_alts.extend(_resolved)
+
             message = MessageV0.try_compile(
                 payer=self.keypair.pubkey(),
                 instructions=fl_result["instructions"],
-                address_lookup_table_accounts=[],
+                address_lookup_table_accounts=resolved_alts,
                 recent_blockhash=Hash.from_string(recent_blockhash)
             )
             transaction = VersionedTransaction(message, [self.keypair])
@@ -435,6 +451,14 @@ class ExecutionRouter:
             jito_result = await self.jito_executor.send_bundle([transaction])
 
             if jito_result.get("success"):
+                # Fix 1 (wSOL Death Spiral): build_native_flashloan_tx closed wSOL + recreated ATA
+                # inside the arb transaction.  Mark the atomic close so wallet_balance_listener
+                # skips its own standalone CloseAccount×for the same ATA (saves one RPC tx / gas).
+                try:
+                    from arb_bot import mark_wsol_atomically_closed
+                    await mark_wsol_atomically_closed()
+                except Exception:
+                    pass  # non-fatal — listener has its own cooldown guard
                 return {
                     "status": "success",
                     "bundle_id": jito_result.get("bundle_id"),
@@ -782,29 +806,23 @@ class ExecutionRouter:
                     if resp.status == 200:
                         current_slot = (await resp.json())["result"]
             
-            # Check if Jito slot
-            if self.leader_tracker.is_jito_slot(current_slot):
-                logger.info(f"🎯 Jito slot detected (leader: {self.leader_tracker.get_current_slot_leader(current_slot)[:8]}...) - using Jito bundle")
-                
-                self.last_slot_executed = current_slot  # Mark slot as used
-                # Fix 51: Record the slot so the self-cancel task can detect staleness
-                bundle_result = await self.jito_executor.send_bundle([transaction])
-                if bundle_result.get("success") and bundle_result.get("bundle_id"):
-                    self._pending_bundle_slots[bundle_result["bundle_id"]] = {
-                        "sent_slot": current_slot,
-                        "sent_at": time.time(),
-                        "tip_lamports": jito_tip_lamports,
-                        "deducted_amount": jito_tip_lamports / 1_000_000_000,  # Fix: refund in SOL so _self_cancel_stale_bundles actually works
-                    }
-                return bundle_result
-            else:
-                # Phase 48: STRICT_JITO_MODE is now mandatory
-                logger.warning(f"⏳ Non-Jito slot ({current_slot}). Trade queued/skipped for capital protection.")
-                return {
-                    "success": False,
-                    "error": "non_jito_slot",
-                    "message": "Trade skipped (STRICT_JITO_MODE enabled)."
+            # ── JITO FIX: Remove stale hardcoded leader check ──────────
+            # The hardcoded JITO_VALIDATOR_VOTES list in leader_tracker.py is always
+            # stale (~100% outdated). Jito Block Engine auto-inserts bundles into the
+            # next Jito slot within 5 slots — no local leader check needed.
+            # See: https://jito-labs.gitbook.io/mev/searcher-resources/bundles
+            logger.info(f"🎯 Sending bundle to Jito Block Engine unconditionally (slot={current_slot})...")
+            
+            self.last_slot_executed = current_slot  # Mark slot as used
+            bundle_result = await self.jito_executor.send_bundle([transaction])
+            if bundle_result.get("success") and bundle_result.get("bundle_id"):
+                self._pending_bundle_slots[bundle_result["bundle_id"]] = {
+                    "sent_slot": current_slot,
+                    "sent_at": time.time(),
+                    "tip_lamports": jito_tip_lamports,
+                    "deducted_amount": jito_tip_lamports / 1_000_000_000,
                 }
+            return bundle_result
 
         except Exception as e:
             err = str(e)

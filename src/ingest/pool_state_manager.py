@@ -32,7 +32,8 @@ class PoolReserve:
 class PoolStateManager:
     """Manages in-memory pool states updated via WebSocket."""
 
-    def __init__(self, websocket_url: str, pool_addresses: List[str]):
+    def __init__(self, websocket_url: str, pool_addresses: List[str],
+                 high_liquidity_pools: Optional[set] = None):
         self.websocket_url = websocket_url
         self.pool_addresses = pool_addresses
         self.pool_states: Dict[str, PoolReserve] = {}
@@ -41,6 +42,11 @@ class PoolStateManager:
         self.running = False
         self.subscription_ids: Dict[str, int] = {}  # pool_address -> subscription_id
         self.sub_to_pool: Dict[int, str] = {}      # subscription_id -> pool_address
+
+        # Fix 5: High-liquidity pools excluded from WSS (>$10M TVL → REST API cheaper/better)
+        self.high_liquidity_pools: set = high_liquidity_pools or set()
+        self.wss_pools: List[str] = []
+        self.rest_pools: List[str] = []
 
         # State synchronization settings
         self.last_sync_time = 0
@@ -52,11 +58,27 @@ class PoolStateManager:
         self.last_slot_msg_time = 0  # Fix 55: slot-subscribe heartbeat
         self.watchdog_task = None
 
-    def register_arbitrage_callback(self, callback: Callable[[str, PoolReserve], None]):
+    def register_arbitrage_callback(self, callback):
         """Register callback for arbitrage evaluation when pool updates."""
         self.arbitrage_callbacks.append(callback)
 
-    async def sync_pool_states(self):
+    def _partition_pools(self) -> None:
+        """Fix 5: Split pool addresses into WSS-worthy and REST-only groups.
+
+        High-TV pairs (= > $10M implied reserve value estimated from Jupiter TVL)
+        are excluded from the WebSocket to save subscription credits, reduce CPU
+        churn, and free bandwidth for the real-micro-cap pairs that actually need WSS.
+        """
+        if not self.high_liquidity_pools:
+            self.wss_pools = list(self.pool_addresses)
+            self.rest_pools = []
+            return
+        self.wss_pools = [p for p in self.pool_addresses if p not in self.high_liquidity_pools]
+        self.rest_pools = [p for p in self.pool_addresses if p in self.high_liquidity_pools]
+        if self.rest_pools:
+            logger.info(f"Fix 5 WSS Sink: {len(self.rest_pools)} high-liquidity pools routed to REST: "
+                        f"{[p[:8] for p in self.rest_pools[:5]]}")
+
         """Force synchronization of all pool states with blockchain."""
         try:
             current_time = asyncio.get_event_loop().time()
@@ -160,6 +182,10 @@ class PoolStateManager:
     async def start(self):
         """Start WebSocket connection and subscribe to all pools with auto-reconnect."""
         self.running = True
+
+        # Fix 5: partition pools before connecting
+        self._partition_pools()
+
         reconnect_delay = 1.0  # Start with 1 second delay
         last_heal = time.time()
 

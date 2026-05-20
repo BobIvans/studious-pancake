@@ -221,6 +221,13 @@ class KaminoFlashLiquidationExecutor:
             if not swap_quote:
                 return False
 
+            # Fix 2: Dynamic Jito tip accounts — source from jito_executor, reject if empty
+            tip_accounts = list(jito_executor.tip_accounts) if jito_executor and jito_executor.tip_accounts else []
+            if not tip_accounts:
+                logger.critical("🚨 JITO TIP ACCOUNTS: tip_accounts is empty! "
+                                "Call fetch_tip_accounts() at bot startup. Aborting liquidation.")
+                return False
+
             # 3. Build MarginFi flash loan transaction
             fl_result = await tx_builder.build_marginfi_flashloan_tx(
                 wallet_pubkey=str(keypair.pubkey()),
@@ -232,6 +239,7 @@ class KaminoFlashLiquidationExecutor:
                 bank_liquidity_vault="...liquidity_vault...",
                 bank_liquidity_vault_authority="...vault_auth...",
                 use_jito=True,
+                tip_accounts=tip_accounts,
             )
 
             if not fl_result:

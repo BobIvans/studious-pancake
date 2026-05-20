@@ -163,7 +163,8 @@ class LstInstantUnstakeArbitrage:
                 marginfi_config=bank_info,
                 jito_tip_lamports=100000,
                 borrow_mint=SOL_MINT,
-                use_jito=True
+                use_jito=True,
+                tip_accounts=jito_executor.tip_accounts if jito_executor else None,  # Fix 2: dynamic Jito tip accounts
             )
 
             if not fl_result:

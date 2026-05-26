@@ -466,14 +466,19 @@ class JupiterTxBuilder:
         profile_cu = CU_PROFILES.get(_profile_key, CU_PROFILES["default"])
         cu_limit = max(cu_limit, profile_cu)  # Always at least the profile floor
 
-        # ─── Localized Fee Market Extraction ────────────────────────────────────────
-        # Extract unique account addresses from transaction instructions for
-        # accurate priority fee estimation on local fee markets (2026 Solana)
-        unique_accounts: set = set()
+        # СТРОГИЙ ФИЛЬТР ЛОКАЛЬНЫХ РЫНКОВ (Защита от переплаты за газ)
+        # Исключаем системные программы, сисвары и всё, что read-only.
+        # Нам интересна конкуренция только за пулы (writable state).
+        writable_accounts = set()
         for ix in instructions:
             for meta in ix.accounts:
-                unique_accounts.add(str(meta.pubkey))
-        account_keys = list(unique_accounts)[:128]  # Limit to 128 addresses max
+                if meta.is_writable: # Берем ТОЛЬКО изменяемые аккаунты
+                    writable_accounts.add(str(meta.pubkey))
+        
+        # Дополнительно удаляем свой кошелек (за него нет конкуренции)
+        writable_accounts.discard(str(payer))
+        
+        account_keys = list(writable_accounts)[:128]
 
         # Get priority fee
         # Минимальный пол для Priority Fee в размере 5000 микролампортов/CU даже в режиме Jito,
@@ -733,7 +738,7 @@ class JupiterTxBuilder:
                 "quoteResponse": quote_response,
                 "userPublicKey": wallet_pubkey,
                 "wrapAndUnwrapSol": False,
-                "dynamicComputeUnitLimit": not use_custom_cu,
+                "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером
                 "onlyDirectRoutes": "true",  # Task 14: force direct routes for micro-balance safety
                 "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
                 "maxAccounts": "8",  # MTU Safety: 8 accts × 32B = 256B overhead → TX stays within 1232-byte UDP limit
@@ -2325,9 +2330,6 @@ class JupiterTxBuilder:
         dex_filter_leg2: Optional[List[str]] = None,
         jito_tip_lamports: int = 50000,
         only_direct_routes: bool = True,  # Task 14: default to direct routes — ATA drain guard
-        exit_exact_out_amount: Optional[
-            int
-        ] = None,  # ExactOut: expected repay amount in lamports
     ) -> Optional[Dict[str, Any]]:
         """Build a circular (two-leg) Jupiter quote: input_mint → middle_mint → input_mint.
 
@@ -2373,7 +2375,7 @@ class JupiterTxBuilder:
         if out_amount_leg1 == 0:
             return None
 
-        # Leg 2: middle_mint → input_mint (exit / ExactOut for repayment guarantee)
+        # Leg 2: middle_mint → input_mint (exit)
         quote_url2 = (
             f"https://quote-api.jup.ag/v6/quote?"
             f"inputMint={middle_mint}&"
@@ -2384,11 +2386,6 @@ class JupiterTxBuilder:
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
         )
-        # ── ExactOut Mode (The ExactIn vs ExactOut Fix) ──────────────────────────────
-        # Guarantees the exit swap yields exactly exit_exact_out_amount for MarginFi repayment,
-        # fully eliminating InsufficientFunds.Errorf due to rounding/slippage.
-        if exit_exact_out_amount:
-            quote_url2 += f"&swapMode=ExactOut&exactOutAmount={str(int(exit_exact_out_amount))}"
         if dex_filter_leg2:
             quote_url2 += f"&dexes={','.join(dex_filter_leg2)}"
 
@@ -2405,13 +2402,6 @@ class JupiterTxBuilder:
         out_amount_leg2 = int(leg2.get("outAmount", 0))
         if out_amount_leg2 == 0:
             return None
-
-        # ── ExactOut injection: if caller provided target out amount, pull ExactOut
-        # from Jupiter quote and confirm outAmount matches borrow_amount + profit.
-        if exit_exact_out_amount:
-            out_amount_leg2 = int(leg2.get("outAmount", out_amount_leg2))
-            # Also ensure swapMode is set in leg2 response for swap-instructions propagation
-            leg2["swapMode"] = "ExactOut"
 
         gross_profit_lamports = out_amount_leg2 - amount_lamports
         net_profit_lamports = gross_profit_lamports - jito_tip_lamports

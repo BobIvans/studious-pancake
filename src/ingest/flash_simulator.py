@@ -85,6 +85,10 @@ class FlashSimulator:
         self.private_rpc_only = private_rpc_only
         self.bypass_rpc_simulation = bypass_rpc_simulation
         # Track simulation stats for monitoring
+        # FIX 11 (MarginFi Utilization Guard): cooldown tracking for banks that
+        # return simulation errors. Prevents infinite RPC spam when a bank is at capacity.
+        self._bank_cooldowns: Dict[str, float] = {}  # bank_vault_pubkey -> cooldown_until_timestamp
+        self.MARGINFI_COOLDOWN_SECONDS = 60
         self._stats = {
             "total_simulations": 0,
             "successful": 0,
@@ -261,6 +265,7 @@ class FlashSimulator:
         max_slippage_pct: float = 5.0,  # Max slippage impact %
         jito_endpoint: Optional[str] = None,
         expected_profit_sol: Optional[float] = None,  # Phase 49: local math confidence
+        bank_vault_pubkey: Optional[str] = None,  # FIX 11: track cooldowns per bank vault
     ) -> Tuple[bool, str, SimulationResult]:
         """Simulate and validate that the transaction is profitable.
 
@@ -311,6 +316,9 @@ class FlashSimulator:
         sim = await self.simulate_transaction(tx_b64, tx_signer_pubkey, wallet_index, min_profit_lamports, jito_endpoint)
 
         if not sim.success:
+            # FIX 11: If simulation failed with MarginFi-specific error, record cooldown
+            if bank_vault_pubkey and self._is_marginfi_error(sim.error):
+                self.record_bank_cooldown(bank_vault_pubkey)
             return False, f"Simulation failed: {sim.error}", sim
 
         # For flash loan arbitrage: if simulation succeeds (no error), MarginFi accepted repayment
@@ -340,11 +348,49 @@ class FlashSimulator:
 
         return True, "Profitable (MarginFi confirmed)", successful_sim
 
+    def is_bank_on_cooldown(self, bank_vault_pubkey: str) -> bool:
+        """
+        FIX 11: Check if a MarginFi bank is on cooldown after a simulation failure.
+        Returns True if the bank should be skipped (cooldown still active).
+        """
+        cooldown_until = self._bank_cooldowns.get(bank_vault_pubkey, 0)
+        if time.time() < cooldown_until:
+            remaining = cooldown_until - time.time()
+            logger.debug(f"⏳ FIX 11: Bank {bank_vault_pubkey[:8]} on cooldown ({remaining:.0f}s remaining)")
+            return True
+        return False
+
+    def record_bank_cooldown(self, bank_vault_pubkey: str):
+        """
+        FIX 11: Record a 60-second cooldown for a MarginFi bank after a failed simulation.
+        During cooldown, callers should skip this bank and attempt the Flash Loan Pivot.
+        """
+        self._bank_cooldowns[bank_vault_pubkey] = time.time() + self.MARGINFI_COOLDOWN_SECONDS
+        logger.warning(f"⏳ FIX 11: Bank {bank_vault_pubkey[:8]} cooldown for {self.MARGINFI_COOLDOWN_SECONDS}s (simulation failure)")
+
     def get_stats(self) -> Dict:
         """Return cumulative simulation statistics."""
         stats = dict(self._stats)
         stats["gas_saved_sol"] = stats["gas_saved_lamports"] / 1e9
         return stats
+
+    def _is_marginfi_error(self, error_str: Optional[str]) -> bool:
+        """
+        FIX 11: Detect MarginFi-specific simulation errors that indicate bank
+        utilization limits have been reached (not transient RPC issues).
+        """
+        if not error_str:
+            return False
+        marginfi_keywords = [
+            "BorrowingNotAllowed",
+            "BankLiquidityVaultInsufficient",
+            "BankCapacityExceeded",
+            "BankUtilizationLimit",
+            "FlashloanIntrospectionFailed",
+            "FlashLoanIntrospection",
+            "Custom Error",
+        ]
+        return any(kw.lower() in error_str.lower() for kw in marginfi_keywords)
 
     @staticmethod
     def _extract_error_from_logs(logs: List[str], err: any) -> str:

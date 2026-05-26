@@ -28,6 +28,9 @@ try:
 except ImportError:
     MARGINFI_BANKS = {}
 
+# FIX 13: Shared global Jupiter rate limiter — 4 req/s across all modules
+from .jupiter_api_client import _GLOBAL_JUPITER_LIMITER, _limiter_available
+
 logger = logging.getLogger(__name__)
 
 # Token-2022 Program ID for xStocks pivot helper
@@ -396,12 +399,17 @@ class ExecutionRouter:
                 borrow_mint_str = "So11111111111111111111111111111111111111112"
                 sol_borrow_bank_info = sol_bank_info
 
-                # Net profit check after pivot swap costs
+                # FIX 12: Net profit check using exact pivot cost (borrow_lamports - out_exit)
+                # Not price_impact_pct estimation which was mathematically unsound.
+                # Guard: expected_profit_sol must exceed actual pivot cost + minimum buffer
+                min_profit_buffer_sol = 0.00005  # 0.00005 SOL safety buffer
                 cost_sol = swap_cost_lamports / 1e9
-                if expected_profit_sol <= cost_sol * 2:  # Both entry + exit
+                profit_after_pivot = expected_profit_sol - cost_sol
+                if profit_after_pivot <= min_profit_buffer_sol:
                     logger.warning(
                         f"⚠️ Pivot not profitable: profit={expected_profit_sol:.6f} SOL "
-                        f"< 2×swap_cost={cost_sol*2:.6f} SOL"
+                        f"- pivot_cost={cost_sol:.6f} SOL = {profit_after_pivot:.6f} SOL "
+                        f"≤ min_buffer={min_profit_buffer_sol:.6f} SOL"
                     )
                     return {"status": "error", "message": "Pivot not profitable after fees"}
 
@@ -670,24 +678,46 @@ class ExecutionRouter:
 
         entry_ixs: List[Instruction] = []
         exit_ixs: List[Instruction] = []
-        total_cost = 0
+        # FIX 12: actual pivot cost calculated as borrow_lamports - out_exit (exact math)
+        # No more price_impact_pct estimation which was mathematically unsound.
+        actual_pivot_cost = 0
+        out_exit = 0
 
         # ── Entry: SOL → USDC ──────────────────────────────────────────────
         entry_quote_url = (
             f"{JUPITER_QUOTE_URL}?inputMint={sol_pk}&outputMint={usdc_pk}"
-            f"&amount={int(entry_amount)}&slippageBps=30&maxAccounts=8"
+            f"&amount={int(entry_amount)}&slippageBps=30&maxAccounts=28"
             f"&onlyDirectRoutes=true&restrictIntermediateTokens=true"
         )
         try:
-            async with self.session.get(entry_quote_url, timeout=4.0) as resp:
-                if resp.status != 200:
-                    logger.warning(f"Pivot entry quote failed: HTTP {resp.status}")
-                    return None, [], []
-                entry_quote = await resp.json()
-                out_amount = int(entry_quote.get("outAmount", 0))
-                if out_amount == 0:
-                    logger.warning("Pivot entry quote: outAmount == 0")
-                    return None, [], []
+            # FIX 13: Acquire global Jupiter rate limiter before each request
+            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
+                async with _GLOBAL_JUPITER_LIMITER:
+                    async with self.session.get(entry_quote_url, timeout=4.0) as resp:
+                        if resp.status != 200:
+                            if resp.status == 429:
+                                logger.warning("Jupiter 429 on pivot entry — backoff 2.0s")
+                                await asyncio.sleep(2.0)
+                            logger.warning(f"Pivot entry quote failed: HTTP {resp.status}")
+                            return None, [], []
+                        entry_quote = await resp.json()
+                        out_amount = int(entry_quote.get("outAmount", 0))
+                        if out_amount == 0:
+                            logger.warning("Pivot entry quote: outAmount == 0")
+                            return None, [], []
+            else:
+                async with self.session.get(entry_quote_url, timeout=4.0) as resp:
+                    if resp.status != 200:
+                        if resp.status == 429:
+                            logger.warning("Jupiter 429 on pivot entry — backoff 2.0s")
+                            await asyncio.sleep(2.0)
+                        logger.warning(f"Pivot entry quote failed: HTTP {resp.status}")
+                        return None, [], []
+                    entry_quote = await resp.json()
+                    out_amount = int(entry_quote.get("outAmount", 0))
+                    if out_amount == 0:
+                        logger.warning("Pivot entry quote: outAmount == 0")
+                        return None, [], []
         except Exception as e:
             logger.warning(f"Pivot entry quote error: {e}")
             return None, [], []
@@ -724,36 +754,52 @@ class ExecutionRouter:
         for setup_ix in (entry_ix_data.get("setupInstructions") or []):
             entry_ixs.append(self._parse_jupiter_ix(setup_ix))
 
-        price_impact_pct = entry_quote.get("priceImpactPct", "0")
-        try:
-            price_impact = float(price_impact_pct.replace("%", "")) if isinstance(price_impact_pct, str) else float(price_impact_pct)
-        except (ValueError, AttributeError):
-            price_impact = 0.0
-        total_cost += int(entry_amount * price_impact / 100)
+        # FIX 12: Removed price_impact_pct estimation — mathematically unsound.
+        # Actual pivot cost is calculated from the exit leg's outAmount below.
 
         # ── Exit: USDC → SOL ───────────────────────────────────────────────
         # Task 16: ensure int (outAmount may be Decimal/float in some paths)
         exit_amount_ui = int(out_amount)
         exit_quote_url = (
             f"{JUPITER_QUOTE_URL}?inputMint={usdc_pk}&outputMint={sol_pk}"
-            f"&amount={exit_amount_ui}&slippageBps=30&maxAccounts=8"
+            f"&amount={exit_amount_ui}&slippageBps=30&maxAccounts=28"
             f"&onlyDirectRoutes=true&restrictIntermediateTokens=true"
         )
         try:
-            async with self.session.get(exit_quote_url, timeout=4.0) as resp:
-                if resp.status != 200:
-                    logger.warning(f"Pivot exit quote failed: HTTP {resp.status}")
-                    # fall through with entry only
-                else:
-                    exit_quote = await resp.json()
-                    out_exit = int(exit_quote.get("outAmount", 0))
+            # FIX 13: Acquire global Jupiter rate limiter before each request
+            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
+                async with _GLOBAL_JUPITER_LIMITER:
+                    async with self.session.get(exit_quote_url, timeout=4.0) as resp:
+                        if resp.status != 200:
+                            if resp.status == 429:
+                                logger.warning("Jupiter 429 on pivot exit — backoff 2.0s")
+                                await asyncio.sleep(2.0)
+                            logger.warning(f"Pivot exit quote failed: HTTP {resp.status}")
+                            # fall through with entry only
+                        else:
+                            exit_quote = await resp.json()
+                            out_exit = int(exit_quote.get("outAmount", 0))
+            else:
+                async with self.session.get(exit_quote_url, timeout=4.0) as resp:
+                    if resp.status != 200:
+                        if resp.status == 429:
+                            logger.warning("Jupiter 429 on pivot exit — backoff 2.0s")
+                            await asyncio.sleep(2.0)
+                        logger.warning(f"Pivot exit quote failed: HTTP {resp.status}")
+                        # fall through with entry only
+                    else:
+                        exit_quote = await resp.json()
+                        out_exit = int(exit_quote.get("outAmount", 0))
+                    # FIX 12: Calculate exact pivot cost from real outAmount
+                    # actual cost = borrow_lamports - out_exit (SOL lost in pivot swap)
                     if out_exit > 0:
+                        actual_pivot_cost = borrow_lamports - out_exit
                         exit_swap_payload = {
                             "quoteResponse": exit_quote,
                             "userPublicKey": wallet_pk,
                             "wrapAndUnwrapSol": False,
                             "dynamicComputeUnitLimit": False,
-                            "maxAccounts": "8",
+                            "maxAccounts": "28",
                         }
                         async with self.session.post(
                             JUPITER_SWAP_IX_URL, json=exit_swap_payload, timeout=5.0
@@ -774,9 +820,9 @@ class ExecutionRouter:
 
         logger.info(
             f"🔄 Flash Pivot swap instructions: entry={len(entry_ixs)} ixs, "
-            f"exit={len(exit_ixs)} ixs, cost≈{total_cost/1e9:.6f} SOL"
+            f"exit={len(exit_ixs)} ixs, actual_cost={actual_pivot_cost/1e9:.6f} SOL"
         )
-        return total_cost, entry_ixs, exit_ixs
+        return actual_pivot_cost, entry_ixs, exit_ixs
 
     def _parse_jupiter_ix(self, ix_data: dict) -> Instruction:
         """Parse a raw Jupiter instruction dict into a solders Instruction."""

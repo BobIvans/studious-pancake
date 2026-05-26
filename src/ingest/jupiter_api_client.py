@@ -9,6 +9,15 @@ import aiohttp
 import orjson
 from solders.transaction import VersionedTransaction
 
+try:
+    from aiolimiter import AsyncLimiter
+    _GLOBAL_JUPITER_LIMITER = AsyncLimiter(4, 1.0)
+    _limiter_available = True
+except ImportError:
+    _GLOBAL_JUPITER_LIMITER = None
+    _limiter_available = False
+    logger.warning("aiolimiter not installed — Jupiter rate limiting disabled")
+
 logger = logging.getLogger(__name__)
 
 # Jupiter API endpoints
@@ -105,26 +114,59 @@ class JupiterClient:
 
         for attempt in range(self.max_retries):
             try:
-                async with self.session.get(
-                    QUOTE_API_URL,
-                    params=params,
-                    timeout=self.timeout,
-                ) as response:
-                    if response.status == 200:
-                        result = orjson.loads(await response.read())
-                        logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
-                        return result
-                    else:
-                        error_text = await response.text()
-                        logger.warning(f"Quote API error (attempt {attempt + 1}): {response.status} - {error_text}")
+                # FIX 13: Global Jupiter rate limiter — 4 req/s shared across all instances
+                if _GLOBAL_JUPITER_LIMITER is not None:
+                    async with _GLOBAL_JUPITER_LIMITER:
+                        async with self.session.get(
+                            QUOTE_API_URL,
+                            params=params,
+                            timeout=self.timeout,
+                        ) as response:
+                            if response.status == 200:
+                                result = orjson.loads(await response.read())
+                                logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
+                                return result
+                            elif response.status == 429:
+                                # FIX 13: 429 Too Many Requests — mandatory 2.0s backoff
+                                logger.warning(f"Jupiter 429 rate limit hit — backoff 2.0s (attempt {attempt + 1})")
+                                await asyncio.sleep(2.0)
+                                continue
+                            else:
+                                error_text = await response.text()
+                                logger.warning(f"Quote API error (attempt {attempt + 1}): {response.status} - {error_text}")
 
-                        if attempt == self.max_retries - 1:
-                            return {
-                                "error": f"HTTP {response.status}: {error_text}",
-                                "inputMint": input_mint,
-                                "outputMint": output_mint,
-                                "amount": str(amount),
-                            }
+                                if attempt == self.max_retries - 1:
+                                    return {
+                                        "error": f"HTTP {response.status}: {error_text}",
+                                        "inputMint": input_mint,
+                                        "outputMint": output_mint,
+                                        "amount": str(amount),
+                                    }
+                else:
+                    async with self.session.get(
+                        QUOTE_API_URL,
+                        params=params,
+                        timeout=self.timeout,
+                    ) as response:
+                        if response.status == 200:
+                            result = orjson.loads(await response.read())
+                            logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
+                            return result
+                        elif response.status == 429:
+                            logger.warning(f"Jupiter 429 rate limit hit — backoff 2.0s (attempt {attempt + 1})")
+                            await asyncio.sleep(2.0)
+                            continue
+                        else:
+                            error_text = await response.text()
+                            logger.warning(f"Quote API error (attempt {attempt + 1}): {response.status} - {error_text}")
+
+                            if attempt == self.max_retries - 1:
+                                return {
+                                    "error": f"HTTP {response.status}: {error_text}",
+                                    "inputMint": input_mint,
+                                    "outputMint": output_mint,
+                                    "amount": str(amount),
+                                }
 
             except asyncio.TimeoutError:
                 logger.warning(f"Quote API timeout (attempt {attempt + 1})")
@@ -202,26 +244,56 @@ class JupiterClient:
 
         for attempt in range(self.max_retries):
             try:
-                async with self.session.post(
-                    SWAP_API_URL,
-                    json=payload,
-                    headers={"Content-Type": "application/json"},
-                    timeout=self.timeout,
-                ) as response:
-                    if response.status == 200:
-                        result = orjson.loads(await response.read())
-                        logger.debug(f"Successfully got swap transaction for user {user_public_key}")
-                        return result
-                    else:
-                        error_text = await response.text()
-                        logger.warning(f"Swap API error (attempt {attempt + 1}): {response.status} - {error_text}")
-
-                        if attempt == self.max_retries - 1:
-                            return {
-                                "error": f"HTTP {response.status}: {error_text}",
-                                "quote_response": quote_response,
-                                "user_public_key": user_public_key,
-                            }
+                # FIX 13: Global Jupiter rate limiter — 4 req/s shared across all instances
+                if _GLOBAL_JUPITER_LIMITER is not None:
+                    async with _GLOBAL_JUPITER_LIMITER:
+                        async with self.session.post(
+                            SWAP_API_URL,
+                            json=payload,
+                            headers={"Content-Type": "application/json"},
+                            timeout=self.timeout,
+                        ) as response:
+                            if response.status == 200:
+                                result = orjson.loads(await response.read())
+                                logger.debug(f"Successfully got swap transaction for user {user_public_key}")
+                                return result
+                            elif response.status == 429:
+                                logger.warning(f"Jupiter swap 429 rate limit hit — backoff 2.0s (attempt {attempt + 1})")
+                                await asyncio.sleep(2.0)
+                                continue
+                            else:
+                                error_text = await response.text()
+                                logger.warning(f"Swap API error (attempt {attempt + 1}): {response.status} - {error_text}")
+                                if attempt == self.max_retries - 1:
+                                    return {
+                                        "error": f"HTTP {response.status}: {error_text}",
+                                        "quote_response": quote_response,
+                                        "user_public_key": user_public_key,
+                                    }
+                else:
+                    async with self.session.post(
+                        SWAP_API_URL,
+                        json=payload,
+                        headers={"Content-Type": "application/json"},
+                        timeout=self.timeout,
+                    ) as response:
+                        if response.status == 200:
+                            result = orjson.loads(await response.read())
+                            logger.debug(f"Successfully got swap transaction for user {user_public_key}")
+                            return result
+                        elif response.status == 429:
+                            logger.warning(f"Jupiter swap 429 rate limit hit — backoff 2.0s (attempt {attempt + 1})")
+                            await asyncio.sleep(2.0)
+                            continue
+                        else:
+                            error_text = await response.text()
+                            logger.warning(f"Swap API error (attempt {attempt + 1}): {response.status} - {error_text}")
+                            if attempt == self.max_retries - 1:
+                                return {
+                                    "error": f"HTTP {response.status}: {error_text}",
+                                    "quote_response": quote_response,
+                                    "user_public_key": user_public_key,
+                                }
 
             except asyncio.TimeoutError:
                 logger.warning(f"Swap API timeout (attempt {attempt + 1})")

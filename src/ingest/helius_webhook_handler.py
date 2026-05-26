@@ -32,7 +32,9 @@ class HeliusWebhookHandler:
         self.runner = None
         # ── Event Loop Anti-Starvation: LIFO signal queue ────────────────────────
         # Latest signals are processed first. Signals older than 800ms are dropped.
-        self._signal_deque: deque = deque()
+        # FIX 14 (OOM Prevention): maxlen=100 ensures the deque never grows unbounded
+        # during high-volatility events, preventing server OOM crashes.
+        self._signal_deque: deque = deque(maxlen=100)
         self.EVENT_DROP_MS = 800
         self._event_counter = 0  # counts processed events for async.yield every 3
 

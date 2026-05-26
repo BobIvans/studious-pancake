@@ -13,6 +13,9 @@ from typing import Dict, List, Optional, Tuple
 
 import aiohttp
 
+# FIX 13: Shared global Jupiter rate limiter — 4 req/s across all modules
+from .jupiter_api_client import _GLOBAL_JUPITER_LIMITER, _limiter_available
+
 logger = logging.getLogger("LstRouteAgg")
 
 SOL_MINT = "So11111111111111111111111111111111111111112"
@@ -321,18 +324,42 @@ class LstRouteAggregator:
 
         try:
             timeout = aiohttp.ClientTimeout(total=5.0)
-            async with self.session.get(
-                JUPITER_QUOTE_URL, params=params, headers=headers, timeout=timeout
-            ) as resp:
-                if resp.status != 200:
-                    error = await resp.text()
-                    logger.debug(f"Jupiter quote {resp.status}: {error[:200]}")
-                    return None
+            # FIX 13: Acquire global Jupiter rate limiter before each request
+            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
+                async with _GLOBAL_JUPITER_LIMITER:
+                    async with self.session.get(
+                        JUPITER_QUOTE_URL, params=params, headers=headers, timeout=timeout
+                    ) as resp:
+                        if resp.status != 200:
+                            if resp.status == 429:
+                                logger.warning("Jupiter 429 rate limit hit — backoff 2.0s")
+                                await asyncio.sleep(2.0)
+                                return None
+                            error = await resp.text()
+                            logger.debug(f"Jupiter quote {resp.status}: {error[:200]}")
+                            return None
 
-                data = await resp.json()
-                out_amount = int(data.get("outAmount", 0))
-                if out_amount == 0:
-                    return None
+                        data = await resp.json()
+                        out_amount = int(data.get("outAmount", 0))
+                        if out_amount == 0:
+                            return None
+            else:
+                async with self.session.get(
+                    JUPITER_QUOTE_URL, params=params, headers=headers, timeout=timeout
+                ) as resp:
+                    if resp.status != 200:
+                        if resp.status == 429:
+                            logger.warning("Jupiter 429 rate limit hit — backoff 2.0s")
+                            await asyncio.sleep(2.0)
+                            return None
+                        error = await resp.text()
+                        logger.debug(f"Jupiter quote {resp.status}: {error[:200]}")
+                        return None
+
+                    data = await resp.json()
+                    out_amount = int(data.get("outAmount", 0))
+                    if out_amount == 0:
+                        return None
 
                 # Extract route plan for labeling
                 route_plan = data.get("routePlan", [])

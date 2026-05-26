@@ -1,6 +1,6 @@
 """
 Blockhash Racing Manager - Multi-RPC Blockhash Stream for HFT Performance
-Races multiple RPC endpoints to get the freshest blockhash every 500ms
+Races multiple RPC endpoints to get the freshest blockhash every 15s
 """
 
 import asyncio
@@ -29,9 +29,13 @@ class BlockhashRacingManager:
     """
     Races multiple RPC endpoints to get the freshest blockhash.
     Reduces BlockhashNotFound errors by 40% through racing strategy.
+    
+    FIX 18: Default interval increased from 1500ms to 15000ms.
+    Solana blockhashes are valid for ~60s (150 slots). A 15s interval
+    reduces RPC load by 90% while keeping the blockhash fully valid for Jito bundles.
     """
 
-    def __init__(self, rpc_endpoints: List[str], race_interval_ms: int = 1500):
+    def __init__(self, rpc_endpoints: List[str], race_interval_ms: int = 15000):
         # Combine user endpoints with Jito regional nodes for maximum speed
         self.rpc_endpoints = list(set(rpc_endpoints + JITO_REGIONAL_NODES))
         self.race_interval_ms = race_interval_ms
@@ -55,7 +59,7 @@ class BlockhashRacingManager:
 
         # Start background racing task
         asyncio.create_task(self._racing_loop())
-        logger.info(f"🚀 Blockhash Racing Manager started with {len(self.rpc_endpoints)} RPC endpoints")
+        logger.info(f"🚀 Blockhash Racing Manager started with {len(self.rpc_endpoints)} RPC endpoints (interval={self.race_interval_ms}ms)")
 
     async def stop(self):
         """Stop the racing manager."""

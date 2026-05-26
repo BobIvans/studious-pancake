@@ -206,7 +206,9 @@ from src.ingest.lst_route_aggregator import LstRouteAggregator, RouteResult
 from src.ingest.flash_simulator import FlashSimulator
 from src.ingest.flywheel_scaler import FlywheelScaler
 
-RENT_PER_ATA_SOL = 0.0035
+# Dynamic ATA rent: 0.00204 SOL for standard SPL Token, 0.0035 SOL for Token-2022 (xStocks/RWA)
+RENT_SPL_ATA_SOL = 0.00204
+RENT_TOKEN2022_SOL = 0.0035
 MIN_RESERVE_SOL = 0.005
 
 # ── Phase 49: Async Trade Logger ─────────────────────────────────────────────
@@ -4399,6 +4401,7 @@ async def execute_priority_opportunity(
             mints_involved.add(leg.get("outputMint"))
 
     actual_new_atas_needed = 0
+    _rent_cost = 0.0
     from spl.token.instructions import get_associated_token_address
     from src.config.xstocks_registry import is_xstock_token
 
@@ -4420,12 +4423,13 @@ async def execute_priority_opportunity(
             )
             if not exists:
                 actual_new_atas_needed += 1
+                _rent_cost += RENT_TOKEN2022_SOL if is_xstock_token(mint_pubkey) else RENT_SPL_ATA_SOL
             else:
                 ATA_CACHE.add(ata_addr)
 
     current_sol = stats.get("virtual_balance", stats.get("last_balance", 0.0))
     tip_sol = tip_amount_lamports / 1e9
-    rent_cost_sol = actual_new_atas_needed * RENT_PER_ATA_SOL
+    rent_cost_sol = _rent_cost
 
     projected_balance_during_tx = (
         current_sol - rent_cost_sol - tip_sol - cfg.PRIORITY_FEE
@@ -4514,7 +4518,7 @@ async def execute_priority_opportunity(
             if _ata_already:
                 ATA_CACHE.add(_dst_ata)
             else:
-                _rent_sol = RENT_PER_ATA_SOL
+                _rent_sol = RENT_TOKEN2022_SOL if is_xstock_token(Pubkey.from_string(_dst_mint_str)) else RENT_SPL_ATA_SOL
                 logger.info(
                     f"⚠️ New ATA required for {_dst_mint_str[:8]} — deducting {_rent_sol:.5f} SOL from expected profit ({opportunity.expected_profit_sol:.6f} SOL)"
                 )
@@ -4546,6 +4550,7 @@ async def execute_priority_opportunity(
 
             _golden = {str(TOKEN_PROGRAM_ID), str(TOKEN_2022_PROGRAM_ID)}
             _new_ata_count = 0
+            _rent_cost = 0.0
             _new_atas_to_create = set()  # ФИКС 3: локальный сет — не в глобальный кэш!
             for mint_str in leg_mints:
                 mint_pk = Pubkey.from_string(mint_str)
@@ -4558,10 +4563,10 @@ async def execute_priority_opportunity(
                 if _ata not in ATA_CACHE:
                     _new_ata_count += 1
                     _new_atas_to_create.add(_ata)  # локально — только после подтверждения tx
+                    _rent_cost += RENT_TOKEN2022_SOL if is_xstock_token(mint_pk) else RENT_SPL_ATA_SOL
 
             _tip_sol = int(tip_amount_lamports) / 1e9
             _gas_sol = cfg.PRIORITY_FEE + 0.000005
-            _rent_cost = _new_ata_count * RENT_PER_ATA_SOL
             _total_cost = _tip_sol + _gas_sol + _rent_cost
             _virt_bal = stats.get("virtual_balance", current_balance_sol)
 

@@ -244,7 +244,7 @@ class MultiAggregatorClient:
                     "slippageBps": str(anti_sandwich_bps),
                     "onlyDirectRoutes": "true",  # Task 14: force direct routes to block ATA creation on intermediate tokens
                     "restrictIntermediateTokens": "true",
-                    "maxAccounts": "8",  # Fix 3: MTU Safety — 8 accounts × 32 bytes = 256 bytes overhead → keeps TX within 1232-byte UDP limit
+                    "maxAccounts": "28",  # FIX 8: Increased from 8 to 28 — LST routing via Sanctum requires deep account graphs. ALTs keep TX within 1232-byte MTU.
                 }
 
                 # Adjust params for different aggregators

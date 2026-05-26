@@ -363,9 +363,9 @@ class WSOLManager:
                     if send_resp.status == 200:
                         result = await send_resp.json()
                         if "result" in result:
-                            global _balance_lock_paused, _balance_lock_pause_until
-                            _balance_lock_paused = True
-                            _balance_lock_pause_until = time.time() + 0.4
+                            import arb_bot
+                            arb_bot._balance_lock_paused = True
+                            arb_bot._balance_lock_pause_until = time.time() + 0.4
                             logger.info(
                                 f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL. "
                                 f"Paused next trade for 400ms to allow account state convergence."

@@ -303,7 +303,7 @@ class JupiterTxBuilder:
         self,
         rpc_url: Optional[str] = None,
         lookback_slots: int = 20,
-        max_priority_fee_sol: float = 0.00008,
+        expected_profit_sol: float = 0.0,
         cu_limit: int = 300_000,
         account_keys: Optional[List[str]] = None,
     ) -> int:
@@ -312,7 +312,7 @@ class JupiterTxBuilder:
         Args:
             rpc_url: RPC URL to query
             lookback_slots: Number of recent slots to analyze
-            max_priority_fee_sol: Absolute maximum fee cap in SOL (Phase 34 Guard)
+            expected_profit_sol: Expected profit in SOL for dynamic cap (5%)
             cu_limit: Compute unit limit for this transaction
             account_keys: List of account addresses for localized fee markets (2026)
 
@@ -353,12 +353,14 @@ class JupiterTxBuilder:
                             # Apply aggressiveness multiplier (1.1x)
                             priority_fee = int(priority_fee * 1.1)
 
-                            # ── Phase 49: Priority Fee Saturation Circuit Breaker ──
-                            # Budget: 0.017 SOL. We cannot afford high network fees.
-                            # Threshold: 0.00008 SOL.
+                            # ── Dynamic Priority Fee Cap ──
+                            # Budget: 0.015 SOL starting capital. We cannot afford high network fees.
+                            # Dynamic Threshold: 5% of expected profit.
                             # If exceeded, force down to 0.00001 SOL (min viable) to stay in the race without dying.
+                            # Guard: At least 0.00001 SOL if expected profit is tiny.
+                            dynamic_cap_sol = max(expected_profit_sol * 0.05, 0.00001)
                             max_micro_lamports = int(
-                                (max_priority_fee_sol * 1e9) / cu_limit * 1e6
+                                (dynamic_cap_sol * 1e9) / cu_limit * 1e6
                             )
                             min_viable_micro_lamports = int(
                                 (0.00001 * 1e9) / cu_limit * 1e6
@@ -367,9 +369,8 @@ class JupiterTxBuilder:
                             if priority_fee > max_micro_lamports:
                                 logger.warning(
                                     f"⚠️ PRIORITY FEE SATURATION: {priority_fee} µ-lamports "
-                                    f"exceeds {max_priority_fee_sol} SOL cap. "
-                                    f"Forcing down to 0.00001 SOL ({min_viable_micro_lamports} µ-lamports) "
-                                    f"to protect 0.017 SOL budget."
+                                    f"exceeds {dynamic_cap_sol:.6f} SOL (5% profit cap). "
+                                    f"Forcing down to min viable {min_viable_micro_lamports} µ-lamports."
                                 )
                                 return max(min_viable_micro_lamports, 1)
 
@@ -398,6 +399,7 @@ class JupiterTxBuilder:
         operation_type: str = "swap",
         use_jito: bool = False,
         rpc_url: Optional[str] = None,
+        expected_profit_sol: float = 0.0,
     ) -> Tuple[List[Instruction], int, int]:
         """Build transaction with optimized CU limit and priority fee.
 
@@ -484,7 +486,7 @@ class JupiterTxBuilder:
         # Минимальный пол для Priority Fee в размере 5000 микролампортов/CU даже в режиме Jito,
         # чтобы гарантировать прохождение пре-фильтров RPC-узлов для сложных транзакций (>200k CU).
         priority_fee = 5000 if use_jito else await self.get_dynamic_priority_fee(
-            rpc_url, cu_limit=cu_limit, account_keys=account_keys
+            rpc_url, expected_profit_sol=expected_profit_sol, cu_limit=cu_limit, account_keys=account_keys
         )
 
         # Fix 60: Safety cap check — 0 is our skip sentinel from get_dynamic_priority_fee
@@ -634,23 +636,24 @@ class JupiterTxBuilder:
             _mtu_tx = VersionedTransaction(_mtu_msg, [])
             _mtu_size = len(bytes(_mtu_tx))
             if 0 < _mtu_size < 500:
-                _padding_target = 600
-                # No-op: SetComputeUnitLimit with existing limit (harmless duplicate at end)
-                _extra_cb = set_compute_unit_limit(cu_limit)
-                final_instructions.append(_extra_cb)
-                # Re-compile once to verify size after padding
-                _padded_msg = MessageV0.try_compile(
-                    payer=payer,
-                    instructions=final_instructions,
-                    address_lookup_table_accounts=_mtu_alts,
-                    recent_blockhash=_mtu_bh,
-                )
-                _padded_tx = VersionedTransaction(_padded_msg, [])
-                _padded_size = len(bytes(_padded_tx))
-                logger.debug(
-                    f"📦 MTU padding applied: {_mtu_size} B → {_padded_size} B "
-                    f"(target ≈{_padding_target} B; duplicate CU-limit no-op appended)"
-                )
+                pass # MTU padding disabled: duplicate ComputeBudget causes rejection
+                # _padding_target = 600
+                # # No-op: SetComputeUnitLimit with existing limit (harmless duplicate at end)
+                # _extra_cb = set_compute_unit_limit(cu_limit)
+                # final_instructions.append(_extra_cb)
+                # # Re-compile once to verify size after padding
+                # _padded_msg = MessageV0.try_compile(
+                #     payer=payer,
+                #     instructions=final_instructions,
+                #     address_lookup_table_accounts=_mtu_alts,
+                #     recent_blockhash=_mtu_bh,
+                # )
+                # _padded_tx = VersionedTransaction(_padded_msg, [])
+                # _padded_size = len(bytes(_padded_tx))
+                # logger.debug(
+                #     f"📦 MTU padding applied: {_mtu_size} B → {_padded_size} B "
+                #     f"(target ≈{_padding_target} B; duplicate CU-limit no-op appended)"
+                # )
         except Exception as _mtu_err:
             logger.debug(f"MTU padding skipped (non-critical): {_mtu_err}")
 
@@ -741,7 +744,7 @@ class JupiterTxBuilder:
                 "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером
                 "onlyDirectRoutes": "true",  # Task 14: force direct routes for micro-balance safety
                 "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
-                "maxAccounts": "8",  # MTU Safety: 8 accts × 32B = 256B overhead → TX stays within 1232-byte UDP limit
+                "maxAccounts": "28",  # FIX 8: Increased from 8 to 28 — LST routing via Sanctum requires deep account graphs. ALTs keep TX within 1232-byte MTU.
                 "cache_buster": str(time.time_ns()),  # Task 1: Anti-cache bomb for HFT
             }
             instructions_data = await self._post_swap_instructions_request(payload)
@@ -1542,6 +1545,46 @@ class JupiterTxBuilder:
         _native_profile = CU_PROFILES.get("flash_arbitrage", 600_000)
         all_instructions.append(set_compute_unit_limit(_native_profile))
 
+        # ═══════════════════════════════════════════════════════════════════════
+        # FIX 10 (SyncNative + wSOL ATA Recreation):
+        # After Task 6 (allowing wSOL CloseAccount), the wSOL ATA is closed at
+        # the end of every transaction. On the next trade, it must be re-created.
+        # We create it idempotently here, and follow with a SyncNative to ensure
+        # the token program recognizes any native SOL that enters the ATA via
+        # SystemProgram transfers (e.g. Jupiter entry pivot swaps).
+        # ═══════════════════════════════════════════════════════════════════════
+        try:
+            from spl.token.instructions import (
+                create_idempotent_associated_token_account,
+                sync_native,
+                SyncNativeParams,
+            )
+            wsol_mint_pk = Pubkey.from_string("So11111111111111111111111111111111111111112")
+            # Create wSOL ATA idempotently (no-op if already exists)
+            create_wsol_ata_ix = create_idempotent_associated_token_account(
+                payer=wallet, owner=wallet, mint=wsol_mint_pk
+            )
+            all_instructions.append(create_wsol_ata_ix)
+            logger.debug(
+                f"🛡️ FIX 10: Idempotent wSOL ATA ensured for {wallet_pubkey[:8]}"
+            )
+            # SyncNative — ensures token program recognises native SOL in the ATA
+            wsol_ata_pk = get_associated_token_address(wallet, wsol_mint_pk)
+            sync_native_ix = sync_native(
+                SyncNativeParams(program_id=TOKEN_PROGRAM_ID, account=wsol_ata_pk)
+            )
+            all_instructions.append(sync_native_ix)
+            logger.debug(
+                f"🔄 FIX 10: SyncNative appended for wSOL ATA {str(wsol_ata_pk)[:8]}"
+            )
+        except ImportError as _wsol_import_err:
+            logger.warning(
+                f"FIX 10: create_idempotent_ata / SyncNative not available, skipping: {_wsol_import_err}"
+            )
+        except Exception as _wsol_err:
+            logger.warning(f"FIX 10: wSOL ATA setup failed (non-fatal): {_wsol_err}")
+        # ═══════════════════════════════════════════════════════════════════════
+
         # ── Flash Loan Pivot: Entry swap FIRST (wallet SOL → USDC before borrow) ──
         # This converts the wallet's native SOL into USDC so the arb can run in USDC.
         # Net effect: wallet balance (-SOL_entry + USDC_gain) + borrowed USDC = total USDC for arb
@@ -1635,19 +1678,29 @@ class JupiterTxBuilder:
             )
             all_instructions.append(tip_ix)
 
-        # Calculate EXACT repay index dynamically using list introspection
+        # ═══════════════════════════════════════════════════════════════════
+        # FIX 7 (MarginFi Introspection Index Shift): sanitize instructions FIRST
+        # before calculating the repay index. sanitize_instructions may remove
+        # duplicate ATA creation instructions, shifting the array. If we calculate
+        # the repay index on the unsanitized list, MarginFi's introspection will
+        # look at the wrong index and revert with 100% certainty.
+        # ═══════════════════════════════════════════════════════════════════
+        sanitized = self.sanitize_instructions(all_instructions, payer=wallet)
+
+        # Find the (possibly new) indices within the sanitized list
+        # so the repay_index we pack into borrow_ix.data is 100% correct.
         try:
-            actual_repay_index = all_instructions.index(repay_ix)
+            actual_repay_index = sanitized.index(repay_ix)
 
             # ── БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount) ──
             # Формат: discriminator(8) + amount(8) + index(1)
             # БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount)
             # Формат: discriminator(8) + amount(8) + index(1)
-            # Старый подход borrow_ix.data[:-1] + bytes([index]) сдвигает байты и убивает транзакцию.
-            # Теперь используем struct.pack для четкую сборку последнего байта.
             import struct
             from solders.instruction import Instruction
 
+            # Find borrow_ix in the SANITIZED list
+            new_borrow_idx = sanitized.index(borrow_ix)
             original_data_without_index = borrow_ix.data[:16]
             safe_index_bytes = struct.pack("<Q", actual_repay_index)
             new_data = original_data_without_index + safe_index_bytes
@@ -1656,19 +1709,18 @@ class JupiterTxBuilder:
                 accounts=borrow_ix.accounts,
                 data=new_data,
             )
-            borrow_idx = all_instructions.index(borrow_ix)
-            all_instructions[borrow_idx] = new_borrow_ix
+            sanitized[new_borrow_idx] = new_borrow_ix
             borrow_ix = new_borrow_ix
 
             logger.debug(
-                f"🛠️ Safe Dynamic Repay Index calculated: {actual_repay_index}"
+                f"🛠️ FIX 7: Safe Dynamic Repay Index calculated on sanitized array: {actual_repay_index}"
             )
         except ValueError:
-            logger.error("CRITICAL: repay_ix not found in instruction list")
+            logger.error("CRITICAL: repay_ix not found in sanitized instruction list")
             return None
 
         return {
-            "instructions": self.sanitize_instructions(all_instructions, payer=wallet),
+            "instructions": sanitized,
             "address_lookup_tables": [],  # Would be populated
             "repay_index": actual_repay_index,
         }
@@ -1692,9 +1744,13 @@ class JupiterTxBuilder:
         sanitized = []
         ata_prog = Pubkey.from_string("ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86")
         # Golden ATAs that must NEVER be closed
+        # FIX 6 (wSOL Death Spiral): wSOL REMOVED from golden ATAs.
+        # We MUST allow CloseAccount on wSOL so the native SOL is unwrapped
+        # and refunded to the wallet to pay Jito tips. The ATA will be
+        # re-created idempotently on the next trade.
+        # USDC remains protected as a Golden ATA.
         _golden_mints = {
-            "So11111111111111111111111111111111111111112",  # wSOL
-            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC — keep protected
         }
         # Pre-compute golden ATA addresses if payer is known
         _golden_atas = set()

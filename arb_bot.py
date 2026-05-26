@@ -9,6 +9,7 @@ import logging
 import random
 import os
 import orjson
+import orjson as json
 import base64
 import itertools
 import struct
@@ -178,7 +179,7 @@ from src.ingest.helius_webhook_handler import HeliusWebhookHandler
 from src.ingest.optimal_trade_sizer import (
     OptimalTradeSizer,
 )  # VelocitySlippageManager not implemented
-from src.ingest.rpc_multiplexing import ExecutionPipeline
+from src.ingest.rpc_multiplexing import ExecutionPipeline, _set_global_price_matrix
 from src.ingest.helius_sender import HeliusSender, TransactionSender
 
 # ULTRA ARB MASTER - New In-Memory State Modules
@@ -849,7 +850,7 @@ class Config:
     BASE_TIP_LAMPORTS: int = int(os.getenv("BASE_TIP_LAMPORTS", "10000"))
     FLASH_FEE_PCT: float = float(os.getenv("FLASH_FEE_PCT", "0.0"))
 
-    MARGINFI_ACCOUNT_PUBKEY: str = os.getenv("MARGINFI_ACCOUNT", "")
+    MARGINFI_ACCOUNT_PUBKEY: str = os.getenv("MARGINFI_ACCOUNT", "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2")
 
     # Arbitrage Engine Settings
     MIN_PROFIT_THRESHOLD_SOL: float = float(
@@ -1900,6 +1901,7 @@ async def update_prices(session, cfg):
                         if info and info.get("price"):
                             new_matrix[mint] = (float(info["price"]), now)
                     price_matrix = new_matrix
+                    _set_global_price_matrix(new_matrix)
         except Exception as e:
             logger.debug(f"Price error: {e}")
         await asyncio.sleep(cfg.BG_FETCH_INTERVAL)
@@ -2662,6 +2664,7 @@ async def create_flashloan_arbitrage_tx(
                 operation_type="flash_arbitrage",
                 use_jito=use_jito,
                 rpc_url=rpc_getter(),
+                expected_profit_sol=route.profit_sol if route and getattr(route, "profit_sol", None) else 0.0,
             )
         )
         # cu_limit is already the dynamic profile value from build_optimized_transaction()
@@ -3010,9 +3013,7 @@ async def lst_depeg_scanner(
                     )
 
                 # FIX 4 (MarginFi Slippage-Pegged Sizing): Cap borrow using dynamic formula
-                # that considers wallet balance and expected pool slippage.
-                # Unlike the old hardcoded FLASH_LOAN_SIZE_SOL cap, this dynamically adjusts
-                # based on actual risk: higher slippage = smaller loans.
+                # that considers wallet balance, expected pool slippage, and 50% of the vault liquidity.
                 current_native_balance = stats.get(
                     "last_balance", stats.get("virtual_balance", 0.017)
                 )
@@ -3022,12 +3023,12 @@ async def lst_depeg_scanner(
                     trade_sizer.get_slippage_pegged_borrow_lamports(
                         wallet_native_balance_sol=current_native_balance,
                         pool_slippage_pct=_estimated_slippage_pct,
-                        env_flash_size_sol=cfg.FLASH_LOAN_SIZE_SOL,
+                        bank_liquidity_lamports=borrow_lamports,
                     )
                 )
                 if borrow_lamports > slippage_pegged_lamports:
                     logger.debug(
-                        f"📉 Slippage-Pegged cap: {borrow_lamports/1e9:.4f} -> {slippage_pegged_lamports/1e9:.4f} SOL (wallet={current_native_balance:.4f} SOL, slippage={_estimated_slippage_pct:.2%})"
+                        f"📉 Slippage-Pegged cap: {borrow_lamports/1e9:.4f} -> {slippage_pegged_lamports/1e9:.4f} SOL"
                     )
                     borrow_lamports = slippage_pegged_lamports
             except Exception as e:
@@ -3143,16 +3144,16 @@ async def lst_depeg_scanner(
                 jito_tip_lamports = tip_adjustment["tip_lamports"]
 
                 # ── Task 13: InsufficientFunds Protection ─────────────────────────
-                # Hard cap: tip must never exceed (native_balance - 0.005) SOL.
-                # 0.005 SOL is the gas/rent safety reserve; exceeding it causes
-                # InsufficientFundsForFee pre-flight failure on a 0.017 SOL wallet.
-                current_native_for_tip = stats.get("last_balance", 0.017)
+                # Hard cap: tip must never exceed (native_balance - 0.0025) SOL.
+                # 0.0025 SOL is the gas/rent safety reserve; exceeding it causes
+                # InsufficientFundsForFee pre-flight failure on a 0.015 SOL wallet.
+                current_native_for_tip = stats.get("last_balance", 0.015)
                 available_for_tip = (
-                    current_native_for_tip - 0.005
+                    current_native_for_tip - 0.0025
                 ) * 1e9
                 if available_for_tip <= 0:
                     logger.warning(
-                        f"🚫 Native balance {current_native_for_tip:.6f} SOL < 0.005 gas reserve "
+                        f"🚫 Native balance {current_native_for_tip:.6f} SOL < 0.0025 gas reserve "
                         f"— skipping {signal.token_symbol}"
                     )
                     continue
@@ -5620,7 +5621,6 @@ async def run():
             use_dns_cache=True,
             force_close=False,  # РАЗРЕШАЕМ Keep-Alive!
             keepalive_timeout=300,
-            tcp_nodelay=True,
             ssl=False,
         )
     except Exception:
@@ -5632,7 +5632,6 @@ async def run():
             use_dns_cache=True,
             force_close=False,  # РАЗРЕШАЕМ Keep-Alive!
             keepalive_timeout=300,
-            tcp_nodelay=True,
             ssl=False,
         )
 
@@ -6455,15 +6454,14 @@ async def run():
 
                 # Задача 52: Локальный мониторинг (Health Check File)
                 try:
-                    with open("bot_health.json", "w") as f:
-                        json.dump(
+                    with open("bot_health.json", "wb") as f:
+                        f.write(orjson.dumps(
                             {
                                 "last_ping": time.time(),
                                 "balance": stats.get("last_balance"),
                                 "trades": stats.get("trades"),
-                            },
-                            f,
-                        )
+                            }
+                        ))
                 except Exception as e:
                     logger.debug(f"Heartbeat write error: {e}")
 
@@ -6919,14 +6917,20 @@ async def dust_sweep_background():
 async def _build_burn_instruction_atlanta(
     token_account: str, mint: str, amount_lamports: int, keypair
 ):
-    """Build TokenProgram.Burn instruction for SPL token (Task 52 — Phase 41)."""
+    """Build TokenProgram.Burn instruction for SPL token (Task 52 — Phase 41).
+    Uses Token-2022 program for xStock tokens, classic SPL for everything else."""
     try:
         from spl.token.instructions import BurnParams, burn
+        from src.config.xstocks_registry import is_xstock_token
+
+        # Detect Token-2022 xStocks → use Token-2022 program ID
+        if mint and is_xstock_token(mint):
+            program_id = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
+        else:
+            program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
         burn_params = BurnParams(
-            program_id=Pubkey.from_string(
-                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-            ),
+            program_id=program_id,
             account=Pubkey.from_string(token_account),
             mint=Pubkey.from_string(mint),
             owner=keypair.pubkey(),
@@ -7073,15 +7077,20 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                     )
 
             # Build CloseAccount instruction (runs regardless — handles zero-leftover path)
+            # Detect Token-2022 xStocks → use Token-2022 program ID for CloseAccount
             from spl.token.instructions import CloseAccountParams, close_account
+            from src.config.xstocks_registry import is_xstock_token
+
+            if mint and is_xstock_token(mint):
+                close_program_id = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
+            else:
+                close_program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
             close_params = CloseAccountParams(
                 account=Pubkey.from_string(ata_address),
                 dest=keypair.pubkey(),
                 owner=keypair.pubkey(),
-                program_id=Pubkey.from_string(
-                    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-                ),
+                program_id=close_program_id,
                 signers=[],
             )
             close_instructions.append(close_account(close_params))

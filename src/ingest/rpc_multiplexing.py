@@ -10,7 +10,7 @@ from contextlib import asynccontextmanager
 import hashlib
 from solders.keypair import Keypair
 from decimal import Decimal
-from .jito_bundle_handler import JitoBundleHandler, BackrunTrigger
+from .jito_bundle_handler import JitoBundleHandler, BackrunTrigger, _set_global_price_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -351,7 +351,8 @@ class ExecutionPipeline:
         pre_trade_guard: 'PreTradeGuard',
         keypair: Keypair,
         slippage_manager: Optional['VelocitySlippageManager'] = None,
-        session: Optional[aiohttp.ClientSession] = None
+        session: Optional[aiohttp.ClientSession] = None,
+        price_matrix: Optional[Dict[str, tuple]] = None,
     ):
         self.rpc_engine = RPCMultiplexingEngine(wss_endpoints, rpc_endpoints)
         self.monitored_addresses = monitored_addresses
@@ -363,6 +364,9 @@ class ExecutionPipeline:
         self.bundle_handler = JitoBundleHandler(keypair, session)
         self.backrun_trigger = BackrunTrigger(self.bundle_handler)
         self.running = False
+
+        if price_matrix:
+            _set_global_price_matrix(price_matrix)
 
     async def start(self):
         """Start the execution pipeline."""

@@ -43,7 +43,7 @@ async def get_jupiter_quote(
         
         if process.returncode != 0:
             return {"error": "jupiter_network_error"}
-        data = json.loads(stdout.decode())
+        data = orjson.loads(stdout)
         if "error" in data:
             return {"error": data.get("error")}
         return data

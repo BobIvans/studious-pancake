@@ -632,16 +632,16 @@ class PreTradeGuard:
         logger.debug(f"✅ Token security check passed for {mint_address}")
         return True, "Security check passed"
 
-    # ─── Strict Gas Tank (0.005 SOL Survival Floor) ───────────────────────────
-    # Never let the wallet drop below 0.005 SOL. If we hit this level, stop ALL
+    # ─── Strict Gas Tank (0.0025 SOL Survival Floor) ───────────────────────────
+    # Never let the wallet drop below 0.0025 SOL. If we hit this level, stop ALL
     # trading immediately. At 0 SOL we can't even close ATAs to recover rent.
-    MIN_GAS_RESERVE_SOL = 0.005
+    MIN_GAS_RESERVE_SOL = 0.0025
 
     # ─── Hard Floor Guard (Rent-Exemption Killswitch) ───────────────────────────
-    # If native SOL balance drops below 0.003 SOL, the Solana network garbage-
-    # collector will DELETE the wallet account. Kill the process at 0.003 SOL to
+    # If native SOL balance drops below 0.0015 SOL, the Solana network garbage-
+    # collector will DELETE the wallet account. Kill the process at 0.0015 SOL to
     # prevent that from ever happening — never allow the wallet to be erased.
-    HARD_FLOOR_SOL = 0.003
+    HARD_FLOOR_SOL = 0.0015
 
     @staticmethod
     def enforce_hard_floor(native_sol_balance: float) -> None:
@@ -665,7 +665,7 @@ class PreTradeGuard:
     # ─── Main Wallet Rent-Exemption Killswitch ──────────────────────────────────
     # Urgent RPC-balance check: call this after every successful Jito bundle
     # confirmation and before any balance-tracking logic. Triggers killed process
-    # on native_sol_balance < 0.003 SOL to guarantee wallet is never garbage-
+    # on native_sol_balance < 0.0015 SOL to guarantee wallet is never garbage-
     # collected by the Solana network.
 
     MARGINFI_BASE_ACCOUNT = Pubkey.from_string(
@@ -679,7 +679,7 @@ class PreTradeGuard:
         """
         🔋 Strict Gas Tank — последняя линия обороны капитала.
 
-        Если нативный SOL-баланс падает ниже 0.005 SOL, мы ОСТАНАВЛИВАЕМ
+        Если нативный SOL-баланс падает ниже 0.0025 SOL, мы ОСТАНАВЛИВАЕМ
         ВСЮ ТОРГОВЛЮ. Никаких сделок, никаких чаевых Jito, никаких
         флеш-лоанов. Бот должен сначала восстановить баланс (через
         dust_sweeper, внешний депозит, или ATA rent recovery).

@@ -332,29 +332,9 @@ class JitoBiddingManager:
         if expected_profit_sol <= 0:
             return 0
 
-        # ── Fix 3: Tip Floor Filter (Jito 50th Percentile) ──────────────────
-        # Если 40% от профита не хватает, чтобы перебить Jito floor — отменяем сделку.
-        # Спамить бандлы с чаевыми ниже рынка = убить репутацию кошелька в Jito.
-        p50_lamports = self.get_50th_percentile_lamports()
-        p50_sol = p50_lamports / 1e9
+        # ── Dynamic Jito Tip Floor Filtering ──────────────────
+        # Calculate tip as a % of profit. Removed blocking floor filters.
         forty_pct_tip_sol = expected_profit_sol * 0.40
-
-        if forty_pct_tip_sol < p50_sol:
-            logger.warning(
-                f"🚫 Tip Floor Filter [{strategy}]: "
-                f"40% tip ({forty_pct_tip_sol:.8f} SOL) < Jito 50th percentile ({p50_sol:.8f} SOL). "
-                f"Skipping trade — wait for lower competition."
-            )
-            return 0
-
-        # ── Tip Cost Guard: не тратим > 80% профита на tip ──────────────────
-        if p50_sol > expected_profit_sol * 0.80:
-            logger.warning(
-                f"🚫 Tip Cost Guard [{strategy}]: "
-                f"Jito 50th percentile ({p50_sol:.8f} SOL) > 80% of profit "
-                f"({expected_profit_sol:.8f} SOL). Skipping to preserve capital."
-            )
-            return 0
 
         # 40% of expected net profit — validated for Blue Ocean strategies
         # ── Phase 49: Adaptive Tip Step-Up ───────────────────────────────────
@@ -384,7 +364,7 @@ class JitoBiddingManager:
         # If not provided, we fall back to expected_profit_sol only.
         tip_lamports_float = tip_lamports
         if current_native_sol_balance is not None:
-            available_native_lamports = int((current_native_sol_balance - 0.005) * 1_000_000_000)  # leave 0.005 SOL for gas
+            available_native_lamports = int((current_native_sol_balance - 0.0025) * 1_000_000_000)  # leave 0.0025 SOL for gas
             tip_lamports_float = min(tip_lamports, available_native_lamports)
             logger.debug(
                 f"💰 Jito tip cap: balance={current_native_sol_balance:.6f} SOL | "
@@ -427,26 +407,10 @@ class JitoBiddingManager:
         if expected_profit_sol <= 0:
             return 0
 
-        # ── Fix 3: Tip Floor Filter (Jito 50th Percentile) ──────────────────
-        # Если 40% от профита не хватает, чтобы перебить Jito floor — отменяем сделку.
-        # Спамить бандлы с чаевыми ниже рынка = убить репутацию кошелька в Jito.
+        # ── Dynamic Jito Tip Floor Filtering ──────────────────
         p50 = self.get_50th_percentile_lamports() / 1e9
         forty_pct_tip = expected_profit_sol * 0.40
-
-        if forty_pct_tip < p50:
-            logger.warning(
-                f"🚫 Tip Floor Filter [{strategy}]: "
-                f"40% tip ({forty_pct_tip:.8f} SOL) < Jito 50th percentile ({p50:.8f} SOL). "
-                f"Skipping trade — wait for lower competition."
-            )
-            return -1
-
-        base = max(p50 * 1.2, forty_pct_tip)
-
-        # Capital Guard
-        if p50 > expected_profit_sol * 0.8:
-            logger.warning("🚫 Capital Guard: Jito 50th > 80% profit — skipping whale market")
-            return -1
+        base = forty_pct_tip # Ignore p50 to allow highly profitable trades without arbitrary floors
 
         # Success rate last 10 min
         import time

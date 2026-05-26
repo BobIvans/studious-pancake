@@ -96,9 +96,9 @@ class JupiterClient:
             params["feeBps"] = str(fee_bps)
 
         # Task 14: ATA Routing Drain — always force direct routes on Jupiter v6
-        params["onlyDirectRoutes"] = "true" if only_direct_routes else "false"
+        params["onlyDirectRoutes"] = "true"
         params["restrictIntermediateTokens"] = "true"
-        params["maxAccounts"] = "8"  # MTU Safety: 8 accounts × 32 bytes = 256 bytes overhead → keeps TX within 1232-byte UDP limit
+        params["maxAccounts"] = "28"  # FIX 8: Increased from 8 to 28 — LST routing via Sanctum requires deep account graphs. ALTs keep TX within 1232-byte MTU.
 
         if as_legacy_transaction:
             params["asLegacyTransaction"] = "true"

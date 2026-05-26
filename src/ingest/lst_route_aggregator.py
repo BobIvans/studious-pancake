@@ -304,7 +304,7 @@ class LstRouteAggregator:
             "slippageBps": self.slippage_bps,
             "onlyDirectRoutes": "true" if only_direct_routes else "false",
             "restrictIntermediateTokens": "true",
-            "maxAccounts": "8",
+            "maxAccounts": "28",  # FIX 8: Increased from 8 to 28 — LST routing via Sanctum requires deep account graphs. ALTs keep TX within 1232-byte MTU.
             "cache_buster": str(time.time_ns()),
         }
 

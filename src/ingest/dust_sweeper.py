@@ -1,7 +1,7 @@
 """
 Zero-Dust Guard & Crash Recovery
 Automatically cleans stranded Token Accounts (value < $1.00) and recovers ATA rent (0.002 SOL per account).
-Critical for protecting the 0.17 SOL budget from accumulation of low-value dust.
+Critical for protecting the 0.015 SOL budget from accumulation of low-value dust.
 """
 
 import asyncio
@@ -133,35 +133,37 @@ class DustSweeper:
             return 0
 
     async def _get_wallet_token_accounts(self) -> List[Dict]:
-        """Get all Token Accounts owned by our wallet."""
-        try:
-            # Use lightweight getTokenAccountsByOwner instead of heavy getProgramAccounts
-            payload = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "getTokenAccountsByOwner",
-                "params": [
-                    str(self.wallet_keypair.pubkey()),
-                    {
-                        "programId": str(self.spl_token_program)
-                    },
-                    {
-                        "encoding": "jsonParsed"
-                    }
-                ]
-            }
+        """Get all Token Accounts owned by our wallet (classic SPL + Token-2022)."""
+        all_accounts = []
+        for program_id in [self.spl_token_program, self.spl_token_2022_program]:
+            try:
+                payload = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "getTokenAccountsByOwner",
+                    "params": [
+                        str(self.wallet_keypair.pubkey()),
+                        {
+                            "programId": str(program_id)
+                        },
+                        {
+                            "encoding": "jsonParsed"
+                        }
+                    ]
+                }
 
-            async with self.session.post(self.rpc_url, json=payload) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return data.get("result", [])
-                else:
-                    logger.error(f"Failed to get token accounts: {resp.status}")
-                    return []
+                async with self.session.post(self.rpc_url, json=payload) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        accounts = data.get("result", {}).get("value", [])
+                        all_accounts.extend(accounts)
+                    else:
+                        logger.error(f"Failed to get token accounts for {program_id}: {resp.status}")
 
-        except Exception as e:
-            logger.error(f"Token account query failed: {e}")
-            return []
+            except Exception as e:
+                logger.error(f"Token account query failed for {program_id}: {e}")
+
+        return all_accounts
 
     async def _is_dust_account(self, account_data: Dict) -> bool:
         """
@@ -334,10 +336,14 @@ class DustSweeper:
             blockhash = await self._get_recent_blockhash()
 
             # Add compute unit limits
-            from solders.compute_budget import set_compute_unit_limit
+            from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
             cu_limit_ix = set_compute_unit_limit(200_000)
+            # FIX 9 (Dust Sweeper Mempool Freezing): Add priority fee instruction
+            # so garbage-collection transactions don't get stuck in the mempool.
+            # 100_000 micro-lamports = 0.00001 SOL priority fee — negligible but vital.
+            cu_price_ix = set_compute_unit_price(100_000)
 
-            all_instructions = [cu_limit_ix] + close_instructions
+            all_instructions = [cu_limit_ix, cu_price_ix] + close_instructions
 
             # Fix 2: Validate Compute Budget instruction ordering before compile
             from src.ingest.tx_builder import validate_cb_ordering

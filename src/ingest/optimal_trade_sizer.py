@@ -425,20 +425,23 @@ class OptimalTradeSizer:
         self,
         wallet_native_balance_sol: float,
         pool_slippage_pct: float,
-        env_flash_size_sol: float,
+        bank_liquidity_lamports: int,
     ) -> int:
         """
         Get the slippage-pegged borrow amount in lamports.
-        Returns min(dynamic_size, env_size) so the .env cap still applies.
 
         Args:
             wallet_native_balance_sol: Current native SOL balance.
             pool_slippage_pct: Expected pool slippage.
-            env_flash_size_sol: Hardcoded FLASH_LOAN_SIZE_SOL from .env.
+            bank_liquidity_lamports: Available liquidity in the respective MarginFi bank vault.
 
         Returns:
             Borrow amount in lamports.
         """
         dynamic = self.calculate_dynamic_flash_size(wallet_native_balance_sol, pool_slippage_pct)
-        final_sol = min(dynamic, env_flash_size_sol)
+        # Dynamic absolute cap: never exceed 50% of available liquidity to prevent utilization reverts
+        bank_liquidity_sol = bank_liquidity_lamports / 1_000_000_000
+        max_allowed_by_liquidity = bank_liquidity_sol * 0.5
+        
+        final_sol = min(dynamic, max_allowed_by_liquidity)
         return int(final_sol * 1_000_000_000)

@@ -1058,3 +1058,1208 @@ Traceback (most recent call last):
     for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
                                  ^^^^^^^^^^^^^
 NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7152, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5540, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7152, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5540, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7152, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5540, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7152, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5540, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7152, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5540, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7152, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5540, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7152, in <module>
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5540, in run
+    idle_seconds = 0.0  # Reset on every enqueue — no GC mid-arb
+    ^^
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
+                         ~~~~~~~^~~~~~
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7154, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
+                                       ^^^^
+NameError: name 'json' is not defined. Did you mean: 'orjson'? Or did you forget to import 'json'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7154, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
+                                       ^^^^
+NameError: name 'json' is not defined. Did you mean: 'orjson'? Or did you forget to import 'json'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7154, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
+                                       ^^^^
+NameError: name 'json' is not defined. Did you mean: 'orjson'? Or did you forget to import 'json'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7154, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
+                                       ^^^^
+NameError: name 'json' is not defined. Did you mean: 'orjson'? Or did you forget to import 'json'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7154, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
+                                       ^^^^
+NameError: name 'json' is not defined. Did you mean: 'orjson'? Or did you forget to import 'json'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7154, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
+                                       ^^^^
+NameError: name 'json' is not defined. Did you mean: 'orjson'? Or did you forget to import 'json'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7155, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5579, in run
+    KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
+                                       ^^^^
+NameError: name 'json' is not defined. Did you mean: 'orjson'? Or did you forget to import 'json'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5578, in run
+    with open(KEYPAIR_PATH, "r") as _f:
+              ^^^^^^^^^^^^
+NameError: name 'KEYPAIR_PATH' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:connector fallback — using defaults
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5615, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<7 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7156, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5628, in run
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+    ...<6 lines>...
+        ssl=False,
+    )
+TypeError: TCPConnector.__init__() got an unexpected keyword argument 'tcp_nodelay'
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x11095d6a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x10f0656a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x109b896a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x1103b16a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x1096856a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x10a8b96a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x10f5796a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x10c3d56a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x1132296a0>
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+ERROR:asyncio:Unclosed client session
+client_session: <aiohttp.client.ClientSession object at 0x11648d6a0>

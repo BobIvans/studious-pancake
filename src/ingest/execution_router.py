@@ -443,7 +443,7 @@ class ExecutionRouter:
                         bal_data = await bal_resp.json()
                         native_lamports = bal_data.get("result", {}).get("value", 0)
                         native_sol = native_lamports / 1e9
-                        available_native = native_sol - 0.005  # reserve 0.005 SOL for gas
+                        available_native = native_sol - 0.0025  # reserve 0.0025 SOL for gas
                         if available_native <= 0:
                             logger.warning(f"🚫 Insufficient native SOL for tip: {native_sol:.6f} SOL — skipping {ticker}")
                             return {"status": "error", "message": "Insufficient native SOL for tip"}
@@ -874,7 +874,7 @@ class ExecutionRouter:
                         logger.debug(f"💰 Post-execution balance check: {balance_sol:.6f} SOL")
 
                         # ── Task 4: Main Wallet Rent-Exemption Killswitch ────────────
-                        # If native SOL balance < 0.003 SOL, Solana GC will delete the
+                        # If native SOL balance < 0.0015 SOL, Solana GC will delete the
                         # wallet account. Kill process immediately to prevent that.
                         try:
                             from src.ingest.pre_trade_guard import PreTradeGuard

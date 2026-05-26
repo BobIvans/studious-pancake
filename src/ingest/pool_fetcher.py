@@ -5,7 +5,7 @@ Caches results to avoid repeated API calls.
 """
 
 import asyncio
-import json
+import orjson
 import logging
 from typing import Any, Dict, List, Optional, Set
 import aiohttp

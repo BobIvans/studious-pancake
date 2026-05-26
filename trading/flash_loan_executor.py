@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Flash Loan + Jupiter Arbitrage Executor (Native Python Implementation)"""
 import asyncio
-import json
+import orjson
 from pathlib import Path
 from typing import Dict, Any, List
 from datetime import datetime, timezone

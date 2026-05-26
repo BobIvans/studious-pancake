@@ -763,17 +763,19 @@ class Config:
 
     # Jito Bundle Configuration
     # Phase 49: All 4 regions in shotgun approach for maximum bundle propagation
-    _env_jito_url = os.getenv("JITO_BLOCK_ENGINE_URL", "").strip()
-    _default_jito_endpoints = [
-        "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
-    ]
     JITO_ENDPOINTS: List[str] = field(
         default_factory=lambda: [
             u
-            for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+            for u in (
+                [os.getenv("JITO_BLOCK_ENGINE_URL", "").strip()]
+                if os.getenv("JITO_BLOCK_ENGINE_URL", "").strip()
+                else [
+                    "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+                    "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+                    "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
+                    "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
+                ]
+            )
             if u  # filter out empty strings
         ]
     )
@@ -1385,11 +1387,11 @@ MARGINFI_GROUP = Pubkey.from_string(os.getenv("MARGINFI_GROUP", "4qp6Fx6tnZkY5Wr
 # smart-contract rejects with ConstraintTokenAccount / AccountNotInitialized.
 # These are the real on-chain vault addresses for the two active Mainnet banks.
 MARGINFI_LIQUIDITY_VAULTS: Dict[str, str] = {
-    # SOL Bank  →  SOL Liquidity Vault
-    "So11111111111111111111111111111111111111112":
+    # SOL Bank (CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj)  →  SOL Liquidity Vault
+    "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj":
         "7uttpzxsHAcX97X5ZwaX8xMpsJc9aKx2V8t4Gf6A43XJ",
-    # USDC Bank  →  USDC Liquidity Vault
-    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v":
+    # USDC Bank (2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2)  →  USDC Liquidity Vault
+    "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2":
         "73zNEAXx8vWeCReEwZgPZteXhH3RTo8gC1vC51g8x7j2",
 }
 
@@ -1403,6 +1405,7 @@ def get_marginfi_bank_accounts(bank_pubkey: Pubkey):
         return pda
 
     bank_str = str(bank_pubkey)
+    # logger.debug(f"DEBUG BANK LOOKUP: '{bank_str}' (len={len(bank_str)})")
     liquidity_vault_str = MARGINFI_LIQUIDITY_VAULTS.get(bank_str)
     if not liquidity_vault_str:
         logger.critical(
@@ -1578,15 +1581,15 @@ def _load_extra_accounts() -> dict:
     """Load extra accounts from JSON file, keyed by strategy_key."""
     try:
         with open(EXTRA_ACCOUNTS_FILE, "r") as f:
-            return json.load(f)
-    except (FileNotFoundError, json.JSONDecodeError):
+            return orjson.loads(f.read())
+    except (FileNotFoundError, orjson.JSONDecodeError):
         return {}
 
 
 def _save_extra_accounts(data: dict) -> None:
     """Save extra accounts to JSON file."""
-    with open(EXTRA_ACCOUNTS_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    with open(EXTRA_ACCOUNTS_FILE, "wb") as f:
+        f.write(orjson.dumps(data, option=orjson.OPT_INDENT_2))
 
 
 def discover_ri_extra_account(error_text: str, strategy_key: str = "default") -> None:
@@ -5573,7 +5576,8 @@ async def run():
     # Fix 81 / Memory Hardening: load keypair once at startup with context manager.
     # No disk I/O during the hot trade loop — KEYPAIR stays resident in RAM.
     with open(cfg.WALLET_PATH, "r") as _f:
-        KEYPAIR = Keypair.from_bytes(bytes(json.load(_f)))
+        KEYPAIR = Keypair.from_bytes(bytes(orjson.loads(_f.read())))
+
     keypair = KEYPAIR
     logger.info(
         f"✅ Bot authorized: {keypair.pubkey()}"

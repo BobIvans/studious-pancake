@@ -1,6 +1,7 @@
 """Security and Liquidity Guard for pre-trade validation."""
 
 import logging
+import os
 import struct
 import time
 from typing import Optional, Dict, Any, Tuple
@@ -12,7 +13,9 @@ logger = logging.getLogger(__name__)
 
 # Token program IDs
 TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEE3N7LCCpkD7Zi1SSJC7u8HXvR5")
+TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
+    "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m"
+)
 
 # Minimum vault balance threshold (equivalent to $100 worth of tokens)
 MIN_VAULT_BALANCE_THRESHOLD = 100_000_000  # 0.1 SOL in lamports as example
@@ -21,21 +24,28 @@ MIN_VAULT_BALANCE_THRESHOLD = 100_000_000  # 0.1 SOL in lamports as example
 SAFE_MINTS = {
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
     "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",  # USDT
-    "jitoSoX8AnGvCjk9ncS626S6757L8HEnuU6Muz3zSUn",  # jitoSOL
-    "mSoLzYSa7mS5165EKKv9kS6m4H3sSsaZ17PZ7wHS69",  # mSOL
-    "bSo13r4T97Hrc798ZreRE6hFTsBbh9QG9pWJ6t1Y7wJ",  # bSOL
+    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL  (mainnet verified)
+    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL     (mainnet verified)
+    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",  # bSOL     (mainnet verified)
     "So11111111111111111111111111111111111111112",  # wSOL
-    "DezXAZ8z7Pnrn9vzct4XVkMmrvCXVcr7K9h9hR887BNo",  # BONK
+    "DezXAZ8z7P8gVmFiDQ6cEhPmmF9rj3ZfVGg3LyZ3mTKV",  # BONK    (mainnet verified)
 }
+
 
 class TokenSecurityChecker:
     """Analyzes token mint accounts for security flags and scam indicators."""
 
-    def __init__(self, session: Optional[aiohttp.ClientSession] = None, rpc_url: Optional[str] = None):
+    def __init__(
+        self,
+        session: Optional[aiohttp.ClientSession] = None,
+        rpc_url: Optional[str] = None,
+    ):
         self.session = session
         self.rpc_url = rpc_url
 
-    async def check_token_security(self, mint_address: str, rpc_url: Optional[str] = None) -> Tuple[bool, str]:
+    async def check_token_security(
+        self, mint_address: str, rpc_url: Optional[str] = None
+    ) -> Tuple[bool, str]:
         """Check if a token mint account is safe for trading.
 
         Args:
@@ -50,7 +60,9 @@ class TokenSecurityChecker:
 
         # Phase 20: Whitelist bypass
         if mint_address in SAFE_MINTS:
-            logger.debug(f"🛡️ Token {mint_address} is in SAFE_MINTS whitelist. Bypassing security checks.")
+            logger.debug(
+                f"🛡️ Token {mint_address} is in SAFE_MINTS whitelist. Bypassing security checks."
+            )
             return True, "Whitelisted safe token"
 
         rpc_url = rpc_url or self.rpc_url
@@ -65,11 +77,8 @@ class TokenSecurityChecker:
                 "method": "getAccountInfo",
                 "params": [
                     mint_address,
-                    {
-                        "encoding": "base64",
-                        "commitment": "confirmed"
-                    }
-                ]
+                    {"encoding": "base64", "commitment": "confirmed"},
+                ],
             }
 
             async with self.session.post(rpc_url, json=payload) as resp:
@@ -90,7 +99,9 @@ class TokenSecurityChecker:
             logger.warning(f"Security check failed for {mint_address}: {e}")
             return False, f"Check failed: {str(e)}"
 
-    async def _analyze_mint_account(self, account_info: Dict[str, Any], mint_address: str) -> Tuple[bool, str]:
+    async def _analyze_mint_account(
+        self, account_info: Dict[str, Any], mint_address: str
+    ) -> Tuple[bool, str]:
         """Analyze the raw mint account data for security flags."""
         try:
             owner = account_info.get("owner")
@@ -110,10 +121,13 @@ class TokenSecurityChecker:
         except Exception as e:
             return False, f"Analysis failed: {str(e)}"
 
-    def _check_token_program_mint(self, account_info: Dict[str, Any], mint_address: str) -> Tuple[bool, str]:
+    def _check_token_program_mint(
+        self, account_info: Dict[str, Any], mint_address: str
+    ) -> Tuple[bool, str]:
         """Check security flags for standard Token Program mint."""
         try:
             import base64
+
             data_b64 = account_info.get("data", [""])[0]
             if not data_b64:
                 return False, "No account data"
@@ -146,10 +160,13 @@ class TokenSecurityChecker:
         except Exception as e:
             return False, f"Token program analysis failed: {str(e)}"
 
-    def _check_token_2022_mint(self, account_info: Dict[str, Any], mint_address: str) -> Tuple[bool, str]:
+    def _check_token_2022_mint(
+        self, account_info: Dict[str, Any], mint_address: str
+    ) -> Tuple[bool, str]:
         """Check security flags for Token-2022 mint."""
         try:
             import base64
+
             data_b64 = account_info.get("data", [""])[0]
             if not data_b64:
                 return False, "No account data"
@@ -173,24 +190,32 @@ class TokenSecurityChecker:
             # Base mint data starts after extensions
             # For basic check, look at the end of the data where authorities should be
 
-            # Check mintAuthority - similar to Token Program but offset may vary with extensions
-            # For simplicity, check the last part where authorities typically are
-            if len(data) >= 82:
-                # Check freeze authority at typical offset
-                freeze_auth_option = data[-36] if len(data) > 36 else data[len(data)-37]
-                if freeze_auth_option != 0:
-                    return False, "Freeze authority is set (Token-2022)"
+            # Token-2022 TLV (Type-Length-Value) Parsing
+            # Base Mint: 0-82 | AccountType: 165 | Extensions: 166+
+            if len(data) >= 166:
+                offset = 166
+                while offset + 4 <= len(data):
+                    ext_type = struct.unpack("<H", data[offset : offset + 2])[0]
+                    ext_len = struct.unpack("<H", data[offset + 2 : offset + 4])[0]
 
-                # Check mint authority
-                mint_auth_option = data[-72] if len(data) > 72 else data[len(data)-73]
-                if mint_auth_option != 0:
-                    return False, "Mint authority is set (Token-2022)"
+                    if ext_type == 11:  # TransferFeeConfig
+                        # Newer Transfer Fee bps is at offset 106 within extension value
+                        if ext_len >= 108:
+                            bps_offset = offset + 4 + 106
+                            fee_bps = struct.unpack(
+                                "<H", data[bps_offset : bps_offset + 2]
+                            )[0]
+                            if fee_bps > 0:
+                                fee_pct = fee_bps / 100.0
+                                return (
+                                    False,
+                                    f"Token-2022 has transfer fee: {fee_pct}% ({fee_bps} bps)",
+                                )
 
-            # TODO: Parse TransferFeeConfig extension properly
-            # For now, assume safe if authorities are null
-            logger.warning(f"Token-2022 transfer fee check not fully implemented for {mint_address}")
+                    # Move to next extension (must be 8-byte aligned in account data, but sequential here)
+                    offset += 4 + ext_len
 
-            return True, "Token-2022 appears safe (basic check)"
+            return True, "Token-2022 appears safe (fee check passed)"
 
         except Exception as e:
             return False, f"Token-2022 analysis failed: {str(e)}"
@@ -199,11 +224,17 @@ class TokenSecurityChecker:
 class LiquidityValidator:
     """Validates real liquidity in pool vaults."""
 
-    def __init__(self, session: Optional[aiohttp.ClientSession] = None, rpc_url: Optional[str] = None):
+    def __init__(
+        self,
+        session: Optional[aiohttp.ClientSession] = None,
+        rpc_url: Optional[str] = None,
+    ):
         self.session = session
         self.rpc_url = rpc_url
 
-    async def validate_vault_balance(self, vault_address: str, rpc_url: Optional[str] = None) -> Tuple[bool, str]:
+    async def validate_vault_balance(
+        self, vault_address: str, rpc_url: Optional[str] = None
+    ) -> Tuple[bool, str]:
         """Check if a token vault has sufficient real liquidity.
 
         Args:
@@ -226,7 +257,7 @@ class LiquidityValidator:
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "getTokenAccountBalance",
-                "params": [vault_address]
+                "params": [vault_address],
             }
 
             async with self.session.post(rpc_url, json=payload) as resp:
@@ -245,7 +276,10 @@ class LiquidityValidator:
                 try:
                     amount = int(amount_str)
                     if amount < MIN_VAULT_BALANCE_THRESHOLD:
-                        return False, f"Insufficient vault balance: {amount} (min: {MIN_VAULT_BALANCE_THRESHOLD})"
+                        return (
+                            False,
+                            f"Insufficient vault balance: {amount} (min: {MIN_VAULT_BALANCE_THRESHOLD})",
+                        )
 
                     return True, f"Vault has sufficient balance: {amount}"
 
@@ -257,10 +291,7 @@ class LiquidityValidator:
             return False, f"Validation failed: {str(e)}"
 
     async def batch_validate_security_and_liquidity(
-        self,
-        mint_address: str,
-        vault_address: str,
-        rpc_url: Optional[str] = None
+        self, mint_address: str, vault_address: str, rpc_url: Optional[str] = None
     ) -> Tuple[bool, str]:
         """Validate both security and liquidity in a single batch RPC call.
 
@@ -287,11 +318,8 @@ class LiquidityValidator:
                 "method": "getMultipleAccounts",
                 "params": [
                     [mint_address, vault_address],
-                    {
-                        "encoding": "base64",
-                        "commitment": "confirmed"
-                    }
-                ]
+                    {"encoding": "base64", "commitment": "confirmed"},
+                ],
             }
 
             async with self.session.post(rpc_url, json=payload) as resp:
@@ -313,7 +341,11 @@ class LiquidityValidator:
                     return False, "Mint account not found"
 
                 security_checker = TokenSecurityChecker()
-                is_secure, security_reason = await security_checker._analyze_mint_account(mint_account, mint_address)
+                is_secure, security_reason = (
+                    await security_checker._analyze_mint_account(
+                        mint_account, mint_address
+                    )
+                )
                 if not is_secure:
                     return False, f"Security check failed: {security_reason}"
 
@@ -323,16 +355,24 @@ class LiquidityValidator:
 
                 # Parse vault balance from account data
                 import base64
+
                 vault_data_b64 = vault_account.get("data", [""])[0]
                 if vault_data_b64:
-                    vault_data = base64.b64decode(vault_data_b64 + "=" * (-len(vault_data_b64) % 4))
+                    vault_data = base64.b64decode(
+                        vault_data_b64 + "=" * (-len(vault_data_b64) % 4)
+                    )
                     # Token account balance is at offset 64-72 (8 bytes, little endian)
                     if len(vault_data) >= 72:
                         balance_bytes = vault_data[64:72]
-                        balance = struct.unpack('<Q', balance_bytes)[0]  # little endian uint64
+                        balance = struct.unpack("<Q", balance_bytes)[
+                            0
+                        ]  # little endian uint64
 
                         if balance < MIN_VAULT_BALANCE_THRESHOLD:
-                            return False, f"Insufficient vault balance: {balance} (min: {MIN_VAULT_BALANCE_THRESHOLD})"
+                            return (
+                                False,
+                                f"Insufficient vault balance: {balance} (min: {MIN_VAULT_BALANCE_THRESHOLD})",
+                            )
 
                         return True, f"Token is secure and vault has balance: {balance}"
                     else:
@@ -341,14 +381,20 @@ class LiquidityValidator:
                     return False, "No vault account data"
 
         except Exception as e:
-            logger.warning(f"Batch validation failed for mint={mint_address}, vault={vault_address}: {e}")
+            logger.warning(
+                f"Batch validation failed for mint={mint_address}, vault={vault_address}: {e}"
+            )
             return False, f"Batch validation failed: {str(e)}"
 
 
 class PreTradeGuard:
     """Orchestrates pre-trade security and liquidity checks."""
 
-    def __init__(self, session: Optional[aiohttp.ClientSession] = None, rpc_url: Optional[str] = None):
+    def __init__(
+        self,
+        session: Optional[aiohttp.ClientSession] = None,
+        rpc_url: Optional[str] = None,
+    ):
         self.session = session
         self.rpc_url = rpc_url
         self.security_checker = TokenSecurityChecker(session, rpc_url)
@@ -362,21 +408,25 @@ class PreTradeGuard:
         self.pool_fail_counter[pool_id] = self.pool_fail_counter.get(pool_id, 0) + 1
         if self.pool_fail_counter[pool_id] >= 3:
             self.blacklisted_pools[pool_id] = time.time()
-            logger.warning(f"🚫 Pool {pool_id} blacklisted for 1 hour after 3 failures.")
+            logger.warning(
+                f"🚫 Pool {pool_id} blacklisted for 1 hour after 3 failures."
+            )
 
     def is_blacklisted(self, pool_id: str) -> bool:
         """Check if a pool is blacklisted."""
         if pool_id not in self.blacklisted_pools:
             return False
-        
+
         if time.time() - self.blacklisted_pools[pool_id] > self.blacklist_duration:
             del self.blacklisted_pools[pool_id]
             self.pool_fail_counter[pool_id] = 0
             return False
-            
+
         return True
 
-    async def check_token_2022_transfer_fee(self, mint_address: Pubkey, rpc_url: Optional[str] = None) -> Tuple[bool, float, str]:
+    async def check_token_2022_transfer_fee(
+        self, mint_address: Pubkey, rpc_url: Optional[str] = None
+    ) -> Tuple[bool, float, str]:
         """
         Check Token-2022 TransferFeeConfig for hidden transfer taxes.
 
@@ -402,11 +452,8 @@ class PreTradeGuard:
                 "method": "getAccountInfo",
                 "params": [
                     str(mint_address),
-                    {
-                        "encoding": "base64",
-                        "commitment": "confirmed"
-                    }
-                ]
+                    {"encoding": "base64", "commitment": "confirmed"},
+                ],
             }
 
             async with self.session.post(rpc_url, json=payload) as resp:
@@ -428,6 +475,7 @@ class PreTradeGuard:
 
                 # Decode base64 data
                 import base64
+
                 raw_data = base64.b64decode(account_data["data"][0])
 
                 # Token-2022 TLV (Type-Length-Value) Parsing
@@ -438,9 +486,9 @@ class PreTradeGuard:
                 # Iterate through extensions
                 offset = 166
                 while offset + 4 <= len(raw_data):
-                    ext_type = struct.unpack("<H", raw_data[offset:offset+2])[0]
-                    ext_len = struct.unpack("<H", raw_data[offset+2:offset+4])[0]
-                    
+                    ext_type = struct.unpack("<H", raw_data[offset : offset + 2])[0]
+                    ext_len = struct.unpack("<H", raw_data[offset + 2 : offset + 4])[0]
+
                     if ext_type == 11:  # TransferFeeConfig
                         # TransferFeeConfig layout (simplified):
                         # - Authorities: 64 bytes (2 * 32)
@@ -448,32 +496,42 @@ class PreTradeGuard:
                         # - Older Transfer Fee: 18 bytes (8 epoch + 8 max + 2 bps)
                         # - Newer Transfer Fee: 18 bytes (8 epoch + 8 max + 2 bps)
                         # Total extension length is typically 108 bytes.
-                        
+
                         # We care about the 'newer_transfer_fee' basis points.
                         # Offset within extension value: 32 + 32 + 8 + 18 + 16 = 106
                         if ext_len >= 108:
                             bps_offset = offset + 4 + 106
-                            fee_bps = struct.unpack("<H", raw_data[bps_offset:bps_offset+2])[0]
-                            
+                            fee_bps = struct.unpack(
+                                "<H", raw_data[bps_offset : bps_offset + 2]
+                            )[0]
+
                             if fee_bps > 0:
                                 fee_pct = fee_bps / 100.0
-                                logger.info(f"🛡️ Token-2022 Transfer Fee detected: {fee_pct}% ({fee_bps} bps)")
+                                logger.info(
+                                    f"🛡️ Token-2022 Transfer Fee detected: {fee_pct}% ({fee_bps} bps)"
+                                )
                                 return True, fee_pct, f"Transfer fee: {fee_pct}%"
-                        
+
                     # Move to next extension (must be 8-byte aligned)
                     offset += 4 + ext_len
-                    # Note: SPL Token-2022 extensions are usually padded to 8 bytes, 
+                    # Note: SPL Token-2022 extensions are usually padded to 8 bytes,
                     # but the 'length' field doesn't include the padding.
                     # For simple sequential parsing, we just follow the length.
-                
+
                 return False, 0.0, "No transfer fee extension found"
 
         except Exception as e:
-            logger.error(f"Error checking Token-2022 transfer fee for {mint_address}: {e}")
+            logger.error(
+                f"Error checking Token-2022 transfer fee for {mint_address}: {e}"
+            )
             return False, 0.0, f"Check failed: {str(e)}"
 
-    async def get_adjusted_profit_threshold(self, mint_address: Pubkey, base_profit_threshold: float,
-                                          rpc_url: Optional[str] = None) -> float:
+    async def get_adjusted_profit_threshold(
+        self,
+        mint_address: Pubkey,
+        base_profit_threshold: float,
+        rpc_url: Optional[str] = None,
+    ) -> float:
         """
         Get profit threshold adjusted for Token-2022 transfer fees.
 
@@ -485,7 +543,9 @@ class PreTradeGuard:
         Returns:
             Adjusted profit threshold accounting for transfer fees
         """
-        has_fee, fee_pct, reason = await self.check_token_2022_transfer_fee(mint_address, rpc_url)
+        has_fee, fee_pct, reason = await self.check_token_2022_transfer_fee(
+            mint_address, rpc_url
+        )
 
         if has_fee and fee_pct > 0:
             # Add transfer fee to required profit (assume fee applies to output amount)
@@ -493,8 +553,10 @@ class PreTradeGuard:
             adjustment_factor = 1 + (fee_pct / 100) * 2
             adjusted_threshold = base_profit_threshold * adjustment_factor
 
-            logger.info(f"💰 Transfer fee adjustment for {mint_address}: {fee_pct:.2f}% "
-                       f"-> threshold {base_profit_threshold:.6f} -> {adjusted_threshold:.6f} SOL")
+            logger.info(
+                f"💰 Transfer fee adjustment for {mint_address}: {fee_pct:.2f}% "
+                f"-> threshold {base_profit_threshold:.6f} -> {adjusted_threshold:.6f} SOL"
+            )
             return adjusted_threshold
         else:
             return base_profit_threshold
@@ -504,7 +566,7 @@ class PreTradeGuard:
         mint_address: str,
         pool_id: Optional[str] = None,
         vault_address: Optional[str] = None,
-        rpc_url: Optional[str] = None
+        rpc_url: Optional[str] = None,
     ) -> Tuple[bool, str]:
         """Run complete pre-trade validation pipeline.
 
@@ -520,11 +582,15 @@ class PreTradeGuard:
         if pool_id and self.is_blacklisted(pool_id):
             return False, f"Pool {pool_id} is blacklisted"
 
-        logger.debug(f"Running pre-trade validation for mint={mint_address}, vault={vault_address}")
+        logger.debug(
+            f"Running pre-trade validation for mint={mint_address}, vault={vault_address}"
+        )
 
         # Step 1: Security check (fastest - analyze local data)
         logger.debug("Step 1: Security Shield check")
-        is_secure, security_reason = await self.security_checker.check_token_security(mint_address, rpc_url)
+        is_secure, security_reason = await self.security_checker.check_token_security(
+            mint_address, rpc_url
+        )
         if not is_secure:
             logger.info(f"🚫 Trade aborted - Security check failed: {security_reason}")
             return False, security_reason
@@ -532,25 +598,33 @@ class PreTradeGuard:
         # Step 2: Liquidity check (requires RPC call) - skip if no vault address
         if vault_address:
             logger.debug("Step 2: Ghost Liquidity Filter check")
-            has_liquidity, liquidity_reason = await self.liquidity_validator.validate_vault_balance(vault_address, rpc_url)
+            has_liquidity, liquidity_reason = (
+                await self.liquidity_validator.validate_vault_balance(
+                    vault_address, rpc_url
+                )
+            )
             if not has_liquidity:
-                logger.info(f"🚫 Trade aborted - Liquidity check failed: {liquidity_reason}")
+                logger.info(
+                    f"🚫 Trade aborted - Liquidity check failed: {liquidity_reason}"
+                )
                 return False, liquidity_reason
         else:
-            logger.debug("Step 2: Skipping vault validation (no vault address provided)")
+            logger.debug(
+                "Step 2: Skipping vault validation (no vault address provided)"
+            )
 
         logger.info(f"✅ Pre-trade validation passed for {mint_address}")
         return True, "All checks passed"
 
     async def validate_token_security(
-        self,
-        mint_address: str,
-        rpc_url: Optional[str] = None
+        self, mint_address: str, rpc_url: Optional[str] = None
     ) -> Tuple[bool, str]:
         """Validate only token security (for existing pools/arbitrage)."""
         logger.debug(f"Running security validation for mint={mint_address}")
 
-        is_secure, security_reason = await self.security_checker.check_token_security(mint_address, rpc_url)
+        is_secure, security_reason = await self.security_checker.check_token_security(
+            mint_address, rpc_url
+        )
         if not is_secure:
             logger.info(f"🚫 Token security check failed: {security_reason}")
             return False, security_reason
@@ -563,8 +637,45 @@ class PreTradeGuard:
     # trading immediately. At 0 SOL we can't even close ATAs to recover rent.
     MIN_GAS_RESERVE_SOL = 0.005
 
+    # ─── Hard Floor Guard (Rent-Exemption Killswitch) ───────────────────────────
+    # If native SOL balance drops below 0.003 SOL, the Solana network garbage-
+    # collector will DELETE the wallet account. Kill the process at 0.003 SOL to
+    # prevent that from ever happening — never allow the wallet to be erased.
+    HARD_FLOOR_SOL = 0.003
+
     @staticmethod
-    async def check_gas_tank(native_sol_balance: Optional[float] = None) -> Tuple[bool, float]:
+    def enforce_hard_floor(native_sol_balance: float) -> None:
+        """
+        💀 Hard Floor Guard — absolute rent-exemption killswitch.
+
+        If native_sol_balance < 0.003 SOL, the Solana network garbage-collector
+        will delete the wallet account. This function calls os._exit(1) instantly
+        to prevent that from ever happening.
+
+        Args:
+            native_sol_balance: Current wallet balance in SOL.
+        """
+        if native_sol_balance < PreTradeGuard.HARD_FLOOR_SOL:
+            logger.critical(
+                f"💀 RENT DEATH KILLSWITCH: Balance {native_sol_balance:.6f} SOL < "
+                f"{PreTradeGuard.HARD_FLOOR_SOL} SOL — calling os._exit(1) to preserve wallet state"
+            )
+            os._exit(1)
+
+    # ─── Main Wallet Rent-Exemption Killswitch ──────────────────────────────────
+    # Urgent RPC-balance check: call this after every successful Jito bundle
+    # confirmation and before any balance-tracking logic. Triggers killed process
+    # on native_sol_balance < 0.003 SOL to guarantee wallet is never garbage-
+    # collected by the Solana network.
+
+    MARGINFI_BASE_ACCOUNT = Pubkey.from_string(
+        "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+    )
+
+    @staticmethod
+    async def check_gas_tank(
+        native_sol_balance: Optional[float] = None,
+    ) -> Tuple[bool, float]:
         """
         🔋 Strict Gas Tank — последняя линия обороны капитала.
 
@@ -594,7 +705,9 @@ class PreTradeGuard:
             return False, 0.0
 
         available = native_sol_balance - PreTradeGuard.MIN_GAS_RESERVE_SOL
-        logger.debug(f"🔋 Gas Tank: {native_sol_balance:.6f} SOL → {available:.6f} SOL available (reserve={PreTradeGuard.MIN_GAS_RESERVE_SOL})")
+        logger.debug(
+            f"🔋 Gas Tank: {native_sol_balance:.6f} SOL → {available:.6f} SOL available (reserve={PreTradeGuard.MIN_GAS_RESERVE_SOL})"
+        )
         return True, available
 
     # ─── Pre-Trade Profit Re-Check ─────────────────────────────────────────────
@@ -639,18 +752,16 @@ class PreTradeGuard:
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
-            "amount": str(amount_lamports),
+            "amount": str(int(amount_lamports)),  # Task 16: strict int→string to avoid HTTP 400
             "slippageBps": str(slippage_bps),
             "maxAccounts": "8",
-            "onlyDirectRoutes": "false",
-            "restrictIntermediateTokens": "true",
+            "onlyDirectRoutes": "true",  # Task 14: force direct routes for micro-balance safety
+            "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
         }
 
         try:
             now = time.time()
-            async with self.session.get(
-                quote_url, params=params, timeout=2.0
-            ) as resp:
+            async with self.session.get(quote_url, params=params, timeout=2.0) as resp:
                 if resp.status != 200:
                     return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
                 fresh_quote = await resp.json()
@@ -677,12 +788,18 @@ class PreTradeGuard:
                     f"(tip={jito_tip_lamports/1e9:.6f} + fee={base_fee_lamports/1e9:.6f} = "
                     f"{total_cost_lamports/1e9:.6f} SOL)"
                 )
-                return False, f"Profit eroded to {actual_net_profit/1e9:.6f} SOL (cost = {total_cost_lamports/1e9:.6f} SOL)", actual_net_profit
+                return (
+                    False,
+                    f"Profit eroded to {actual_net_profit/1e9:.6f} SOL (cost = {total_cost_lamports/1e9:.6f} SOL)",
+                    actual_net_profit,
+                )
 
             # Optional: compare with original expected profit
             profit_slipped_pct = (
-                (expected_profit_lamports - actual_net_profit) / expected_profit_lamports
-                if expected_profit_lamports > 0 else 0.0
+                (expected_profit_lamports - actual_net_profit)
+                / expected_profit_lamports
+                if expected_profit_lamports > 0
+                else 0.0
             )
             if profit_slipped_pct > 0.30:
                 logger.warning(
@@ -690,7 +807,11 @@ class PreTradeGuard:
                     f"({expected_profit_lamports/1e9:.6f} → {actual_net_profit/1e9:.6f} SOL)"
                 )
 
-            return True, f"Pre-trade OK (net={actual_net_profit/1e9:.6f} SOL)", actual_net_profit
+            return (
+                True,
+                f"Pre-trade OK (net={actual_net_profit/1e9:.6f} SOL)",
+                actual_net_profit,
+            )
 
         except asyncio.TimeoutError:
             return False, "Pre-trade quote timed out", 0

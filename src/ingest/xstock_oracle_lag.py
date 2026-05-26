@@ -253,7 +253,7 @@ class XStockOracleLagStrategy:
         price_discovery_amount = 100_000  # 0.1 USDC lamports (6 decimals)
         buy_quote = await self._get_jupiter_quote(
             usdc_mint_str, token_mint, price_discovery_amount,
-            only_direct_routes=False
+            only_direct_routes=True  # Task 14: force direct routes for micro-balance safety
         )
         if not buy_quote or "error" in buy_quote:
             return None
@@ -268,7 +268,7 @@ class XStockOracleLagStrategy:
         # guarantees out_amount_xstock IS received after Token-2022 transfer fees + slippage.
         sell_quote = await self._get_jupiter_quote(
             token_mint, usdc_mint_str, out_amount_xstock,
-            only_direct_routes=False,
+            only_direct_routes=True,  # Task 14: force direct routes for micro-balance safety
             exact_out=True,
         )
         if not sell_quote or "error" in sell_quote:
@@ -375,7 +375,7 @@ class XStockOracleLagStrategy:
 
     async def _get_jupiter_quote(
         self, input_mint: str, output_mint: str, amount: int,
-        only_direct_routes: bool = False,
+        only_direct_routes: bool = True,  # Task 14: default to direct routes for micro-balance safety
         exact_out: bool = False,   # Fix 4: exactOut — guarantee at least `amount` output by requesting more input buffer
         exact_out_bps: int = 30,   # Fix 4: 30 bps (0.3%) input buffer for sell chain / Token-2022 fees
     ) -> Optional[Dict]:
@@ -397,7 +397,7 @@ class XStockOracleLagStrategy:
             quote = await self.jupiter_client.get_quote(
                 input_mint=input_mint,
                 output_mint=output_mint,
-                amount=effective_amount,
+                amount=int(effective_amount),  # Task 16: strict int→string (safe int cast)
                 slippage_bps=max(30, exact_out_bps if exact_out else 100),  # min 30 bps
                 only_direct_routes=only_direct_routes,
             )
@@ -472,7 +472,7 @@ class XStockOracleLagStrategy:
             usdc_mint_str = str(USDC_MINT)
             buy_quote = await self._get_jupiter_quote(
                 usdc_mint_str, token_mint, trade_amount,
-                only_direct_routes=False
+                only_direct_routes=True  # Task 14: force direct routes for micro-balance safety
             )
             if not buy_quote or "error" in buy_quote:
                 logger.warning(f"❌ {ticker_name} buy quote failed at execution time")
@@ -487,7 +487,7 @@ class XStockOracleLagStrategy:
             # Fix 4: sell quote uses exact_out so outAmount >= actual_out after buffers
             sell_quote = await self._get_jupiter_quote(
                 token_mint, usdc_mint_str, actual_out,
-                only_direct_routes=False,
+                only_direct_routes=True,  # Task 14: force direct routes for micro-balance safety
                 exact_out=True,
             )
             if not sell_quote or "error" in sell_quote:

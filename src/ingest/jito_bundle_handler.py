@@ -1,7 +1,8 @@
 """Jito Bundle Handler for Atomic Backrunning & MEV Execution."""
 
 import asyncio
-import json
+import orjson
+import base58
 import logging
 import time
 import aiohttp
@@ -39,6 +40,7 @@ def _normalize_tip_sol(expected_profit_sol: float, target_mint_str: str) -> floa
 
 
 from solders.transaction import VersionedTransaction
+from solders.message import MessageV0
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.system_program import transfer, TransferParams
@@ -219,6 +221,11 @@ class JitoBundleHandler:
             tip_lamports = int(true_profit_sol * self.tip_percent * 1_000_000_000)  # Convert SOL to lamports
             tip_lamports = max(tip_lamports, 10000)  # Minimum 0.00001 SOL
 
+            # ── Task 15: Micro-Jitter (The Tie-Breaker) ────────────────────────────────
+            # Never submit a tip ending in ≈000. Adding random 11–142 lamports makes our
+            # bundle mathematically-strictly larger than every free-bot competitor at 10000.
+            tip_lamports += random.randint(11, 142)
+
             logger.info(f"💰 Using dynamic tip: {tip_lamports / 1e9:.6f} SOL ({self.tip_percent:.1%} of expected profit, normalized from {expected_profit_sol:.6f} {tip_target_mint[:8]} SOL-equiv)")
 
             # Get active Jito leaders for optimal Block Engine targeting
@@ -234,27 +241,48 @@ class JitoBundleHandler:
             if not arbitrage_tx:
                 return {"success": False, "error": "Failed to create arbitrage transaction"}
 
-            # Create tip transaction
+            # ── Uncle Bandit Protection: Merge tip INTO arbitrage tx ──────────────
+            # Never use separate tip_tx — in 2026, uncled blocks allow malicious
+            # searchers to extract and broadcast the tip_tx alone, draining our wallet
+            # without executing the arbitrage. By inlining the tip as the last instruction
+            # inside the arbitrage transaction, we guarantee atomicity: if the arbitrage
+            # fails or the block is skipped, the entire transaction (including tip) is
+            # rolled back atomically.
+            from solders.instruction import Instruction as SoldersInstruction
+
             tip_account = self._select_tip_account()
-            tip_tx = self.bundle_template.create_tip_template(tip_lamports, tip_account)
+            msg = arbitrage_tx.message
+            all_keys = list(msg.account_keys)
 
-            # Recompile tip tx with correct blockhash
-            # (message.recent_blockhash is read-only in solders MessageV0)
-            new_tip_msg = MessageV0.try_compile(
+            # Decompile existing instructions from the arbitrage transaction
+            decompiled = []
+            for ci in msg.instructions:
+                decompiled.append(
+                    SoldersInstruction(
+                        program_id=all_keys[ci.program_id_index],
+                        accounts=[all_keys[i] for i in ci.accounts],
+                        data=bytes(ci.data),
+                    )
+                )
+
+            # Append tip transfer as the last instruction (inside the same tx)
+            all_ixs = decompiled + [transfer(TransferParams(
+                from_pubkey=self.keypair.pubkey(),
+                to_pubkey=Pubkey.from_string(tip_account),
+                lamports=tip_lamports,
+            ))]
+
+            # Recompile merged message with same ALTs and blockhash
+            new_msg = MessageV0.try_compile(
                 payer=self.keypair.pubkey(),
-                instructions=[transfer(TransferParams(
-                    from_pubkey=self.keypair.pubkey(),
-                    to_pubkey=Pubkey.from_string(tip_account),
-                    lamports=tip_lamports,
-                ))],
-                address_lookup_table_accounts=[],
-                recent_blockhash=arbitrage_tx.message.recent_blockhash,
+                instructions=all_ixs,
+                address_lookup_table_accounts=list(msg.address_lookup_table_accounts),
+                recent_blockhash=msg.recent_blockhash,
             )
-            tip_tx = VersionedTransaction(new_tip_msg, [self.keypair])
 
-            # Create bundle - tip is now handled inside tx_builder.py (atomic protection)
-            # secure_bundle logic disabled to prevent double tips
-            bundle = [arbitrage_tx]
+            # Single atomic transaction — tip cannot be extracted without the arb
+            merged_tx = VersionedTransaction(new_msg, [self.keypair])
+            bundle = [merged_tx]
 
             # Execute Jito Shotgun strategy across all 4 regional Block Engines
             results = await self._shotgun_bundle(bundle, active_endpoints)
@@ -321,7 +349,7 @@ class JitoBundleHandler:
             return [{"success": False, "error": "No HTTP session"}]
 
         # Serialize bundle
-        serialized_bundle = [bytes(tx).hex() for tx in bundle]
+        serialized_bundle = [base58.b58encode(bytes(tx)).decode('ascii') for tx in bundle]
 
         async def send_to_endpoint(endpoint: str) -> Dict:
             try:

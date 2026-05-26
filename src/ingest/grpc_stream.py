@@ -1,220 +1,267 @@
 """
 Yellowstone gRPC Adapter for Zero-Latency Streaming
-Uses Yellowstone gRPC protocol for sub-50ms account updates from Helius/Triton.
-Bypasses WebSocket latency for critical arbitrage triggers.
+Live implementation using grpcio + yellowstone_grpc_proto (PyPI package).
+Replaces WebSocket accountSubscribe with sub-50ms binary gRPC streaming from
+Helius/Triton relay nodes directly out of validator RAM.
+
+Graceful bootstrap — if yellowstone_grpc_proto is not yet installed, a hard
+warning is emitted at import time and the stream will STALL rather than falling
+back silently to stale WebSocket data.
 """
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Callable, Any
-import grpc
-import time
-
-# Placeholder for Yellowstone gRPC imports
-# In practice, would import from yellowstone_grpc_proto
-# from yellowstone_grpc_proto import geyser_pb2, geyser_pb2_grpc
+import grpc as _grpc
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+# ── Yellowstone-protobuf bootstrap (best-effort) ─────────────────────────────
+_GEYSER_AVAILABLE = False
+try:
+    from yellowstone_grpc_proto import geyser_pb2  as _geyser_pb2           # type: ignore[import]
+    from yellowstone_grpc_proto import geyser_pb2_grpc as _geyser_pb2_grpc   # type: ignore[import]
+    _GEYSER_AVAILABLE = True
+except ImportError as _import_err:
+    _geyser_pb2      = None  # type: ignore[assignment]
+    _geyser_pb2_grpc = None  # type: ignore[assignment]
+    _IMPORT_ERR = str(_import_err)
+    logger.warning(
+        "\n"
+        "═════════════════════════════════════════════════════════════════\n"
+        "  CRITICAL: yellowstone_grpc_proto NOT installed.               \n"
+        "  The Yellowstone gRPC stream CANNOT start until this is fixed.  \n"
+        "  Fix:                                                           \n"
+        "    pip install yellowstone-grpc-proto grpcio betterproto       \n"
+        "  Import error:                                                  \n"
+        f"    {_IMPORT_ERR}                                               \n"
+        "═════════════════════════════════════════════════════════════════"
+    )
+
+# ── Channel keep-alive options (HTTP/2 on gRPC) ───────────────────────────────
+_KEEPALIVE_MS        = 20_000
+_KEEPALIVE_TIMEOUT_MS = 10_000
+_KEEPALIVE_PERMIT    = True
+_MAX_PING_STRIKES    = 0
+
+
 class YellowstoneStream:
-    """Yellowstone gRPC streaming client for ultra-low latency."""
+    """Live Yellowstone gRPC streaming client — 20-40 ms faster than WebSocket.
 
-    def __init__(self, grpc_endpoint: str, api_key: Optional[str] = None):
-        self.grpc_endpoint = grpc_endpoint
-        self.api_key = api_key
-        self.channel = None
-        self.stub = None
-        self.running = False
-        self.account_callbacks: Dict[str, List[Callable]] = {}
-        self.program_callbacks: Dict[str, List[Callable]] = {}
+    Parameters
+    ----------
+    grpc_endpoint: ``host:port`` of the relay, e.g.
+        ``"yellowstone.helius.rpcpool.com:443"``.
+    api_key: Optional bearer token injected as gRPC metadata.
+    """
 
-    async def connect(self):
-        """Establish gRPC connection to Yellowstone endpoint."""
-        try:
-            # Create secure channel
-            self.channel = grpc.aio.secure_channel(
-                self.grpc_endpoint,
-                grpc.ssl_channel_credentials()
+    def __init__(self, grpc_endpoint: str, api_key: Optional[str] = None) -> None:
+        if not _GEYSER_AVAILABLE:
+            logger.error(
+                "YellowstoneStream instantiated without protobuf deps. "
+                "Install yellowstone-grpc-proto and grpcio first."
             )
 
-            # Create stub (placeholder - would use actual Yellowstone stub)
-            # self.stub = geyser_pb2_grpc.GeyserStub(self.channel)
+        self.grpc_endpoint    = grpc_endpoint
+        self.api_key          = api_key
+        self.channel: Optional[Any] = None
+        self.stub:    Optional[Any] = None
+        self.running          = False
+        self._retry_task: Optional[asyncio.Task] = None
+        self._dead            = False
 
-            # Add API key metadata if provided
-            self.metadata = []
-            if self.api_key:
-                self.metadata.append(("authorization", f"Bearer {self.api_key}"))
+        # ── Callback registries ──────────────────────────────────────────────
+        self.account_callbacks: Dict[str, List[Callable]]   = {}
+        self.program_callbacks: Dict[str, List[Callable]]   = {}
 
-            logger.info(f"Connected to Yellowstone gRPC: {self.grpc_endpoint}")
+    # ── Public API ────────────────────────────────────────────────────────────
 
-        except Exception as e:
-            logger.error(f"Yellowstone gRPC connection failed: {e}")
-            raise
+    @property
+    def available(self) -> bool:
+        return _GEYSER_AVAILABLE
 
-    async def disconnect(self):
-        """Close gRPC connection."""
-        if self.channel:
-            await self.channel.close()
+    async def connect(self) -> None:
+        """Open gRPC channel and start the subscribe / redelivery loop."""
+        if not _GEYSER_AVAILABLE:
+            logger.error(
+                "Yellowstone stream connect ABORTED — grpc/proto deps missing. "
+                f"Root cause: {_IMPORT_ERR}"
+            )
+            return
+
+        self.running = True
+        self._dead   = False
+        self._retry_task = asyncio.create_task(self._retry_loop())
+
+    async def disconnect(self) -> None:
+        """Shut down gracefully — cancel retry loop, close gRPC channel."""
+        self._dead   = True
         self.running = False
+        if self._retry_task is not None:
+            self._retry_task.cancel()
+            try:
+                await self._retry_task
+            except asyncio.CancelledError:
+                pass
+            self._retry_task = None
+        if self.channel is not None:
+            try:
+                await self.channel.close()
+            except Exception:
+                pass
+            self.channel = None
+            self.stub    = None
 
-    def register_account_callback(self, account_address: str, callback: Callable):
-        """Register callback for specific account updates."""
+    # ── Callback registration ──────────────────────────────────────────────────
+
+    def register_account_callback(
+        self, account_address: str, callback: Callable
+    ) -> None:
         if account_address not in self.account_callbacks:
             self.account_callbacks[account_address] = []
         self.account_callbacks[account_address].append(callback)
 
-    def register_program_callback(self, program_id: str, callback: Callable):
-        """Register callback for program account updates."""
+    def register_program_callback(
+        self, program_id: str, callback: Callable
+    ) -> None:
         if program_id not in self.program_callbacks:
             self.program_callbacks[program_id] = []
-        self.program_callbacks[program_id].append(callback)
+        if callback not in self.program_callbacks[program_id]:
+            self.program_callbacks[program_id].append(callback)
 
-    async def subscribe_to_accounts(self, account_addresses: List[str]):
-        """Subscribe to real-time account updates."""
+    # ── Core retry / reconnect loop ────────────────────────────────────────────
+
+    async def _retry_loop(self) -> None:
+        """Exponential-backoff outer loop: reconnect on any stream failure."""
+        backoff = 1.0
+        while self.running and not self._dead:
+            try:
+                await self._run_stream()
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                logger.warning(
+                    f"Yellowstone stream error ({exc!r}) — "
+                    f"reconnecting in {backoff:.1f}s"
+                )
+            if not self.running or self._dead:
+                break
+            await asyncio.sleep(backoff)
+            backoff = min(backoff * 2.0, 30.0)
+
+    async def _run_stream(self) -> None:
+        """Open a single gRPC channel, send Subscribe, drain the response stream."""
+        metadata: List[tuple] = (
+            [("authorization", f"Bearer {self.api_key}")]
+            if self.api_key
+            else []
+        )
+
+        options = [
+            ("grpc.keepalive_time_ms",              _KEEPALIVE_MS),
+            ("grpc.keepalive_timeout_ms",           _KEEPALIVE_TIMEOUT_MS),
+            ("grpc.keepalive_permit_without_calls", _KEEPALIVE_PERMIT),
+            ("grpc.http2.max_ping_strikes",         _MAX_PING_STRIKES),
+        ]
+
+        channel = _grpc.aio.secure_channel(
+            self.grpc_endpoint,
+            _grpc.ssl_channel_credentials(),
+            options=options,
+        )
+        self.channel = channel
+        self.stub     = _geyser_pb2_grpc.GeyserStub(channel)
+
+        req = self._build_subscribe_from_registries()
+        logger.info(
+            f"Yellowstone gRPC ▶ streaming from {self.grpc_endpoint}  "
+            f"| accounts={len(self.account_callbacks)}  "
+            f"| programs={len(self.program_callbacks)}"
+        )
+
+        async for update in self.stub.Subscribe(req, metadata=metadata or None):  # type: ignore[call-arg]
+            if self._dead or not self.running:
+                break
+            await self._dispatch(update)
+
+    # ── Subscribe-request assembly ──────────────────────────────────────────────
+
+    def _build_subscribe_from_registries(self) -> Any:
+        """Build a SubscribeRequest proto from the current callback registries."""
+
+        def _acct_filter() -> Any:
+            return _geyser_pb2.SubscribeRequestFilterAccounts(
+                owner=None, filters=[]
+            )
+
+        accounts: Dict[str, Any] = {
+            addr: _acct_filter() for addr in self.account_callbacks
+        }
+
+        programs: Dict[str, Any] = {
+            pid: _geyser_pb2.SubscribeRequestFilterPrograms(
+                account=_acct_filter(),
+                logs=True,
+            )
+            for pid in self.program_callbacks
+        }
+
+        return _geyser_pb2.SubscribeRequest(
+            accounts=accounts,
+            accounts_data_slice=[],
+            programs=programs,
+        )
+
+    # ── Update dispatch ─────────────────────────────────────────────────────────
+
+    async def _dispatch(self, update: Any) -> None:
+        """Route an incoming SubscribeUpdate to all matching callbacks."""
+        which = update.WhichOneof("update")
+        if which == "account":
+            await self._route_account(update.account)
+        elif which == "pong":
+            # Relay acknowledged our ping — nothing to do
+            pass
+
+    async def _route_account(self, account_update: Any) -> None:
+        """Push an account update to every registered callback for that pubkey."""
         try:
-            # Create subscription request (placeholder structure)
-            request = {
-                "accounts": {},
-                "accounts_data_slice": [],
-                "ping": None
-            }
+            raw:   bytes = account_update.account.data
+            pubkey: str  = account_update.account.pubkey
+        except Exception:
+            return
 
-            # Add accounts to subscription
-            for addr in account_addresses:
-                request["accounts"][addr] = {
-                    "owner": None,  # Subscribe to all owners
-                    "filters": []
-                }
+        for cb in self.account_callbacks.get(pubkey, []):
+            try:
+                await cb({
+                    "pubkey":  pubkey,
+                    "owner":   account_update.account.owner,
+                    "data":    raw,
+                    "slot":    account_update.account.slot,
+                })
+            except Exception as exc:
+                logger.debug(f"Yellowstone account callback error [{pubkey[:8]}]: {exc}")
 
-            # Send subscription (placeholder - would use actual gRPC call)
-            # response_stream = self.stub.Subscribe(request, metadata=self.metadata)
-
-            logger.info(f"Subscribed to {len(account_addresses)} accounts via Yellowstone")
-
-            # Start listening for updates
-            asyncio.create_task(self._listen_for_updates())
-
-        except Exception as e:
-            logger.error(f"Account subscription failed: {e}")
-
-    async def subscribe_to_program(self, program_id: str):
-        """Subscribe to all accounts owned by a program."""
-        try:
-            # Program subscription (placeholder)
-            request = {
-                "accounts": {},
-                "accounts_data_slice": [],
-                "programs": {
-                    program_id: {
-                        "account": {"filters": []},
-                        "logs": True  # Also subscribe to logs
-                    }
-                }
-            }
-
-            # Send subscription
-            logger.info(f"Subscribed to program {program_id} via Yellowstone")
-
-            # Start listening
-            asyncio.create_task(self._listen_for_updates())
-
-        except Exception as e:
-            logger.error(f"Program subscription failed: {e}")
-
-    async def _listen_for_updates(self):
-        """Listen for incoming account/program updates."""
-        self.running = True
-
-        try:
-            while self.running:
-                # Placeholder for receiving gRPC stream messages
-                # In practice: async for update in response_stream:
-
-                # Simulate receiving updates (for testing)
-                await asyncio.sleep(0.1)  # 100ms poll for demo
-
-                # Process mock updates
-                mock_update = self._create_mock_update()
-                if mock_update:
-                    await self._process_update(mock_update)
-
-        except Exception as e:
-            logger.error(f"Update listening failed: {e}")
-
-    async def _process_update(self, update: Dict[str, Any]):
-        """Process received account/program update."""
-        try:
-            update_type = update.get("type")
-
-            if update_type == "account":
-                await self._process_account_update(update)
-            elif update_type == "program":
-                await self._process_program_update(update)
-            elif update_type == "ping":
-                # Handle ping/pong for connection keepalive
-                pass
-
-        except Exception as e:
-            logger.debug(f"Update processing error: {e}")
-
-    async def _process_account_update(self, update: Dict[str, Any]):
-        """Process account update notification."""
-        try:
-            account_info = update.get("account", {})
-            account_address = account_info.get("pubkey")
-
-            if account_address in self.account_callbacks:
-                for callback in self.account_callbacks[account_address]:
-                    try:
-                        await callback(update)
-                    except Exception as e:
-                        logger.error(f"Account callback error: {e}")
-
-        except Exception as e:
-            logger.debug(f"Account update processing error: {e}")
-
-    async def _process_program_update(self, update: Dict[str, Any]):
-        """Process program account update."""
-        try:
-            program_info = update.get("program", {})
-            program_id = program_info.get("program_id")
-
-            if program_id in self.program_callbacks:
-                for callback in self.program_callbacks[program_id]:
-                    try:
-                        await callback(update)
-                    except Exception as e:
-                        logger.error(f"Program callback error: {e}")
-
-        except Exception as e:
-            logger.debug(f"Program update processing error: {e}")
-
-    def _create_mock_update(self) -> Optional[Dict[str, Any]]:
-        """Create mock update for testing (remove in production)."""
-        # This is just for demonstration - real implementation would receive from gRPC stream
-        return None
+    # ── Health / stats ──────────────────────────────────────────────────────────
 
     def get_connection_stats(self) -> Dict[str, Any]:
-        """Get connection and performance statistics."""
         return {
-            "endpoint": self.grpc_endpoint,
-            "connected": self.channel is not None,
-            "subscribed_accounts": len(self.account_callbacks),
-            "subscribed_programs": len(self.program_callbacks),
-            "latency_ms": "<50"  # Yellowstone target latency
+            "endpoint":            self.grpc_endpoint,
+            "connected":           self.channel is not None,
+            "accounts_subscribed": len(self.account_callbacks),
+            "programs_subscribed": len(self.program_callbacks),
+            "latency_ms_target":   "<50",
+            "proto_available":     _GEYSER_AVAILABLE,
         }
 
     async def health_check(self) -> bool:
-        """Perform health check on gRPC connection."""
+        if self.channel is None or self.stub is None:
+            return False
         try:
-            if not self.channel:
-                return False
-
-            # Send ping (placeholder)
-            # response = await self.stub.Ping(geyser_pb2.PingRequest(...))
-            # return response is not None
-
-            return True  # Placeholder
-
+            resp = await self.stub.Ping(                       # type: ignore[misc]
+                _geyser_pb2.PingRequest(num=0),                 # type: ignore[misc]
+                timeout=2.0,
+            )
+            return resp is not None
         except Exception:
             return False

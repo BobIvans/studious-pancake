@@ -4,7 +4,7 @@ Hermes WebSocket integration for xStocks Oracle Lag Strategy
 """
 
 import asyncio
-import json
+import orjson
 import logging
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
@@ -76,15 +76,15 @@ class PythHermesClient:
                     "price_feed_ids": get_all_feed_ids()
                 }
 
-                await websocket.send(json.dumps(subscription))
+                await websocket.send(orjson.dumps(subscription))
                 logger.info(f"📡 Subscribed to {len(get_all_feed_ids())} Pyth feeds")
 
                 # Listen for messages
                 async for message in websocket:
                     try:
-                        data = json.loads(message)
+                        data = orjson.loads(message)
                         await self._process_message(data)
-                    except json.JSONDecodeError as e:
+                    except Exception as e:
                         logger.warning(f"Invalid JSON from Pyth: {e}")
 
         except (ConnectionClosedError, WebSocketException) as e:

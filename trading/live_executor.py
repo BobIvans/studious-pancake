@@ -201,7 +201,6 @@ class LiveTrader:
             bundle_result = await self.jito_client.build_and_send_bundle(
                 swap_instructions=swap_instructions,
                 payer_keypair=self.payer_keypair,
-                jito_context=jito_context,
             )
 
             if not bundle_result.get("success"):
@@ -332,11 +331,14 @@ class LiveTrader:
                     "inputMint": token_in if token_in.startswith("So1") or len(token_in) > 10 else market.get("tokens", {}).get(token_in, token_in),
                     "outputMint": token_out if token_out.startswith("So1") or len(token_out) > 10 else market.get("tokens", {}).get(token_out, token_out),
                     "amount": str(amount_lamports),
-                    "slippageBps": slippage_bps
+                    "slippageBps": slippage_bps,
+                    "onlyDirectRoutes": "true",         # Task 14: force direct routes for micro-balance safety
+                    "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
+                    "maxAccounts": "8",
                 }
 
                 # Get quote from Jupiter API
-                quote_url = "https://api.jup.ag/swap/v1/quote"
+                quote_url = "https://quote-api.jup.ag/v6/quote"
                 async with session.get(quote_url, params=params, timeout=aiohttp.ClientTimeout(total=5.0)) as resp:
                     if resp.status != 200:
                         logger.error(f"Jupiter quote failed: {resp.status}")

@@ -9,9 +9,33 @@ Golden rule for scaling (0.017 → 1.0 SOL):
 
 import time
 import logging
-from typing import Dict, Any, Optional
+from typing import Dict, List, Any, Optional
+from dataclasses import dataclass
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("FlywheelScaler")
+
+@dataclass
+class ScalingTier:
+    min_balance: float
+    max_balance: float
+    max_concurrent_trades: int
+    flash_loan_size: float
+    jito_tip_percent: float
+    min_profit_sol: float
+    allowed_strategies: List[str]
+    max_slippage_bps: int
+
+# Strict risk parameters engineered to scale safely from 0.017 SOL upwards
+SCALING_GRID = [
+    # Tier 1: Survival Phase (0.017 - 0.05 SOL) - SOL & Stables only, tightest parameters
+    ScalingTier(0.0, 0.05, 1, 0.25, 0.50, 0.0005, ["SS", "SL"], 15),
+    # Tier 2: Momentum Phase (0.05 - 0.20 SOL) - Enable major pairs
+    ScalingTier(0.05, 0.20, 2, 0.50, 0.40, 0.0010, ["SS", "SL", "SM"], 25),
+    # Tier 3: Growth Phase (0.20 - 1.00 SOL) - Introduce wrappers & stable yield ladders
+    ScalingTier(0.20, 1.00, 3, 1.00, 0.30, 0.0020, ["SS", "SL", "SM", "BT", "ET", "YL"], 35),
+    # Tier 4: Professional Phase (1.00 - 10.00 SOL+) - Full strategy suite activated
+    ScalingTier(1.00, 100.0, 5, 2.50, 0.25, 0.0050, ["all"], 50),
+]
 
 
 class PairReputationCircuitBreaker:
@@ -121,18 +145,14 @@ class PairReputationCircuitBreaker:
 class FlywheelScaler:
     """Dynamically adjusts trading parameters based on account balance growth.
 
-    Phase-aware scaling:
-      Phase 1 (Survival)     : 0.017 – 0.1 SOL   → ultra-safe, Jito only
-      Phase 2 (Momentum)     : 0.1  – 1.0 SOL    → moderate risk, same
-      Phase 3 (Scaling)      : ≥ 1.0 SOL         → full strategies, RPC fallback
-
     Integrated with ``PairReputationCircuitBreaker`` to automatically check pair
     cooldown status before any trade reaches the hot path.
     """
 
     def __init__(self, initial_balance: float = 0.017):
         self.initial_balance = initial_balance
-        self.current_phase = 1
+        self.rent_per_ata = 0.00204  # SOL rent exemption fee
+        self.min_gas_reserve = 0.005  # STRICT_GAS_TANK floor
 
         # Reputation Circuit Breaker — per-pair slippage cooldown
         self.reputation = PairReputationCircuitBreaker(
@@ -141,57 +161,45 @@ class FlywheelScaler:
             error_keywords=("slippage",),
         )
 
-    # ── Phase-aware trading parameters ───────────────────────────────────────
+    def get_tier(self, current_balance: float) -> ScalingTier:
+        """Finds the active scaling tier based on current balance."""
+        for tier in SCALING_GRID:
+            if tier.min_balance <= current_balance < tier.max_balance:
+                return tier
+        return SCALING_GRID[-1]
+
+    def pre_calculate_ata_budget(self, virtual_balance: float, jito_tip_sol: float, priority_fee_sol: float) -> int:
+        """
+        Pre-calculates the maximum number of new ATAs we can afford to open
+        without violating our safety gas floor.
+        """
+        available_room = virtual_balance - self.min_gas_reserve - jito_tip_sol - priority_fee_sol
+        if available_room <= 0:
+            return 0
+        return int(available_room // self.rent_per_ata)
+
+    # ── Backward compatibility wrapper ───────────────────────────────────────
 
     def get_trading_params(self, current_balance_sol: float) -> dict:
         """Return dynamic trading parameters appropriate for the current balance."""
-        
-        if current_balance_sol < 0.1:
-            return {
-                "phase": 1,
-                "max_concurrent_trades": 1,
-                "jito_tip_pct": 0.50,
-                "min_net_profit_sol": 0.001,
-                "allowed_strategies": [
-                    "stablecoins", "lst_tokens", "ultra_arb_wrappers",
-                    "kamino_receipts", "ultra_arb_yield_stables", "ultra_arb_graduation",
-                ],
-                "rpc_fallback_enabled": False,
-            }
-
-        elif current_balance_sol < 1.0:
-            return {
-                "phase": 2,
-                "max_concurrent_trades": 3,
-                "jito_tip_pct": 0.35,
-                "min_net_profit_sol": 0.0005,
-                "allowed_strategies": ["stablecoins", "lst_tokens", "ultra_arb_wrappers"],
-                "rpc_fallback_enabled": False,
-            }
-
-        else:
-            return {
-                "phase": 3,
-                "max_concurrent_trades": 10,
-                "jito_tip_pct": 0.25,
-                "min_net_profit_sol": 0.0001,
-                "allowed_strategies": "ALL",
-                "rpc_fallback_enabled": True,
-            }
+        tier = self.get_tier(current_balance_sol)
+        return {
+            "max_concurrent_trades": tier.max_concurrent_trades,
+            "jito_tip_pct": tier.jito_tip_percent,
+            "min_net_profit_sol": tier.min_profit_sol,
+            "allowed_strategies": tier.allowed_strategies,
+            "max_slippage_bps": tier.max_slippage_bps,
+            "flash_loan_size": tier.flash_loan_size
+        }
 
     # ── Reputation-aware pair gating ─────────────────────────────────────────
 
     def is_pair_allowed(self, pair_key: str) -> bool:
-        """Return True if *pair_key* is not currently in slippage cooldown.
-
-        Call this before attaching a pair to the execution queue to avoid
-        blindly firing into already-drained pools.
-        """
+        """Return True if *pair_key* is not currently in slippage cooldown."""
         return not self.reputation.is_banned(pair_key)
 
     def record_pair_slippage(self, pair_key: str, error_msg: str = "") -> None:
-        """Record a slippage failure for a pair. Pairs exceeding 3 consecutive
-        failures are automatically placed in cooldown for 10 minutes."""
+        """Record a slippage failure for a pair."""
         self.reputation.record_failure(pair_key, error_msg)
 
     def record_pair_success(self, pair_key: str) -> None:

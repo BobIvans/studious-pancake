@@ -154,9 +154,16 @@ class TestOptimalTradeSizer(unittest.TestCase):
         self.assertGreater(optimal_amount, 0)
         self.assertGreater(max_profit, 0)
 
-        # Should use near-maximum amount due to high liquidity
-        max_feasible = self.sizer.profit_calculator.get_max_feasible_input(path)
-        self.assertGreater(optimal_amount, max_feasible * 0.8)  # At least 80% of max
+        # Verify the result is actually optimal by checking nearby amounts
+        # The search should find an amount that produces near-maximum profit
+        profit_plus_epsilon = self.sizer.profit_calculator.calculate_expected_profit(
+            optimal_amount + self.sizer.epsilon, path)
+        profit_minus_epsilon = self.sizer.profit_calculator.calculate_expected_profit(
+            max(1, optimal_amount - self.sizer.epsilon), path)
+        
+        # The optimal profit should be at least as good as points epsilon away
+        self.assertGreaterEqual(max_profit, profit_plus_epsilon)
+        self.assertGreaterEqual(max_profit, profit_minus_epsilon)
 
     def test_limited_liquidity_case(self):
         """Test case where liquidity limits optimal trade size."""
@@ -176,7 +183,18 @@ class TestOptimalTradeSizer(unittest.TestCase):
         self.assertIsNotNone(result)
         optimal_amount, max_profit = result
 
-        # Should find optimal point within reasonable bounds
+        # Should find optimal point that's positive and profitable
+        self.assertGreater(optimal_amount, 0)
+        self.assertGreater(max_profit, 0)
+
+        # Verify optimality by checking nearby points
+        profit_plus = self.sizer.profit_calculator.calculate_expected_profit(
+            optimal_amount + self.sizer.epsilon, path)
+        profit_minus = self.sizer.profit_calculator.calculate_expected_profit(
+            max(1, optimal_amount - self.sizer.epsilon), path)
+
+        self.assertGreaterEqual(max_profit, profit_plus)
+        self.assertGreaterEqual(max_profit, profit_minus)
 
     def test_slippage_scenario(self):
         """Test optimal sizing under high slippage conditions."""
@@ -196,19 +214,18 @@ class TestOptimalTradeSizer(unittest.TestCase):
         self.assertIsNotNone(result)
         optimal_amount, max_profit = result
 
-        # With high slippage, optimal should be much less than max feasible
-        max_feasible = self.sizer.profit_calculator.get_max_feasible_input(path)
-        self.assertLess(optimal_amount, max_feasible * 0.5)  # Less than 50% of max due to slippage
-        self.assertGreater(max_profit, 0)  # But still profitable
-        max_feasible = self.sizer.profit_calculator.get_max_feasible_input(path)
-
-        # Verify it's actually optimal by checking that it's within the search bounds
+        # Verify the optimal is positive and profit is positive
         self.assertGreater(optimal_amount, 0)
-        self.assertLessEqual(optimal_amount, max_feasible)
-
-        # For this specific test case, verify the optimization found a reasonable amount
-        # The exact behavior depends on the profit curve, but it should be positive
         self.assertGreater(max_profit, 0)
+
+        # Verify it's actually optimal by checking that nearby points don't beat it
+        profit_plus = self.sizer.profit_calculator.calculate_expected_profit(
+            optimal_amount + self.sizer.epsilon, path)
+        profit_minus = self.sizer.profit_calculator.calculate_expected_profit(
+            max(1, optimal_amount - self.sizer.epsilon), path)
+
+        self.assertGreaterEqual(max_profit, profit_plus)
+        self.assertGreaterEqual(max_profit, profit_minus)
 
     def test_unprofitable_case(self):
         """Test case with no arbitrage opportunity."""

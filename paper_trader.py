@@ -86,7 +86,15 @@ class PaperTrader:
     async def _fetch_jupiter(self, input_mint: str, output_mint: str, amount: int):
         async with self.jup_sem:
             url = "https://quote-api.jup.ag/v6/quote"
-            params = {"inputMint": input_mint, "outputMint": output_mint, "amount": str(amount), "slippageBps": "15"}
+            params = {
+                "inputMint": input_mint,
+                "outputMint": output_mint,
+                "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
+                "slippageBps": "15",
+                "onlyDirectRoutes": "true",  # Task 14: force direct routes
+                "restrictIntermediateTokens": "true",  # Task 14: block intermediate tokens
+                "maxAccounts": "8",
+            }
             try:
                 async with self.session.get(url, params=params) as resp:
                     if resp.status == 200:

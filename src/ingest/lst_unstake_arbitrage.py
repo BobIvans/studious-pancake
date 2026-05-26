@@ -10,7 +10,7 @@ import asyncio
 import logging
 import time
 import os
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Callable
 import aiohttp
 from solders.pubkey import Pubkey
 
@@ -30,9 +30,11 @@ class LstInstantUnstakeArbitrage:
         tx_builder: Any = None,
         optimal_trade_sizer: Any = None,
         min_profit_lamports: int = 50000,
+        rpc_getter: Optional[Callable[[], str]] = None,
     ):
         self.session = session
-        self.rpc_url = rpc_url
+        self._static_rpc_url = rpc_url
+        self.rpc_getter = rpc_getter
         self.marginfi_account = marginfi_account
         self.lst_mints = lst_mints
         self.tx_builder = tx_builder
@@ -57,7 +59,7 @@ class LstInstantUnstakeArbitrage:
             _jup = self.tx_builder
         else:
             from src.ingest.tx_builder import JupiterTxBuilder
-            _jup = JupiterTxBuilder(session=self.session, rpc_url=self.rpc_url)
+            _jup = JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter)
 
         # Dynamic liquidity from MarginFi SOL bank
         from arb_bot import MARGINFI_BANKS
@@ -100,6 +102,8 @@ class LstInstantUnstakeArbitrage:
                     amount_lamports=test_amount_lamports,
                     # Принудительно используем Sanctum Router для второго лега (LST → SOL по справедливому курсу)
                     dex_filter_leg2=["Sanctum", "Sanctum Infinity"],
+                    # ── ExactOut for exit leg: guaranteed exact return of borrow_amount + profit
+                    exit_exact_out_amount=test_amount_lamports,  # repay exactly what was borrowed
                 )
 
                 if not quote:
@@ -144,7 +148,7 @@ class LstInstantUnstakeArbitrage:
           1. ComputeBudget (CU лимит)
           2. MarginFi Borrow SOL
           3. Buy LST на Raydium/Orca (Jupiter swap)
-          4. Sanctum Router Instant Unstake (LST -> SOL)
+          4. Sanctum Router Instant Unstake (LST -> SOL) — ExactOut guaranteed
           5. MarginFi Repay SOL
           6. Jito Tip (ЗАЩИТА КАПИТАЛА — строго последний)
         """
@@ -158,12 +162,39 @@ class LstInstantUnstakeArbitrage:
             if not bank_info:
                 return False
 
+            # ── ExactOut: Fetch Jupiter swap-instructions for the LEG2 exit quote ─────
+            # dex_leg2 already has swapMode=ExactOut injected by scan_unstake_opportunities().
+            # We now resolve those instructions from Jupiter so ExactOut goes end-to-end.
+            dex_leg1 = quote.get("dex_leg1", {})
+            dex_leg2 = quote.get("dex_leg2", {})
+            wallet_pubkey = str(keypair.pubkey())
+
+            all_swap_ixs = []
+
+            try:
+                leg1_ixs, _ = await tx_builder.get_swap_instructions(dex_leg1, wallet_pubkey, use_custom_cu=True)
+                if leg1_ixs:
+                    all_swap_ixs.extend(leg1_ixs)
+            except Exception as _leg1_err:
+                logger.warning(f"ExactOut leg1 swap-instructions fetch failed (non-fatal): {_leg1_err}")
+
+            try:
+                leg2_ixs, _ = await tx_builder.get_swap_instructions(dex_leg2, wallet_pubkey, use_custom_cu=True)
+                if leg2_ixs:
+                    all_swap_ixs.extend(leg2_ixs)
+                else:
+                    logger.error("ExactOut LEG2 (exit) swap instructions empty — aborting to prevent InsufficientFunds")
+                    return False
+            except Exception as _leg2_err:
+                logger.error(f"ExactOut LEG2 swap-instructions fetch failed: {_leg2_err} — aborting")
+                return False
+
             fl_result = await tx_builder.build_native_flashloan_tx(
                 wallet_pubkey=str(keypair.pubkey()),
                 arbitrage_path=[SOL_MINT, lst_mint, SOL_MINT],
                 borrow_amount_lamports=borrow_amount,
                 expected_min_profit_lamports=opportunity["expected_profit_lamports"],
-                dex_swap_instructions=quote.get("instructions", []),
+                dex_swap_instructions=all_swap_ixs,
                 marginfi_config=bank_info,
                 jito_tip_lamports=100000,
                 borrow_mint=SOL_MINT,

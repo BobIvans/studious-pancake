@@ -1,17 +1,20 @@
 """Jupiter API client for Solana swaps and quotes."""
 
+import asyncio
 import base64
 import logging
+import time
 from typing import Any, Dict, Optional
 import aiohttp
+import orjson
 from solders.transaction import VersionedTransaction
 
 logger = logging.getLogger(__name__)
 
 # Jupiter API endpoints
-QUOTE_API_URL = "https://api.jup.ag/swap/v1/quote"
+QUOTE_API_URL = "https://quote-api.jup.ag/v6/quote"
 
-SWAP_API_URL = "https://api.jup.ag/swap/v1/swap"
+SWAP_API_URL = "https://quote-api.jup.ag/v6/swap"
 
 class JupiterClient:
     """Async client for Jupiter API operations."""
@@ -84,15 +87,16 @@ class JupiterClient:
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
-            "amount": str(amount),
+            "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
             "slippageBps": slippage_bps,
+            "cache_buster": str(time.time_ns()),  # Task 1: Anti-cache bomb for HFT
         }
 
         if fee_bps is not None:
             params["feeBps"] = str(fee_bps)
 
-        if only_direct_routes:
-            params["onlyDirectRoutes"] = "true"
+        # Task 14: ATA Routing Drain — always force direct routes on Jupiter v6
+        params["onlyDirectRoutes"] = "true" if only_direct_routes else "false"
         params["restrictIntermediateTokens"] = "true"
         params["maxAccounts"] = "8"  # MTU Safety: 8 accounts × 32 bytes = 256 bytes overhead → keeps TX within 1232-byte UDP limit
 
@@ -107,7 +111,7 @@ class JupiterClient:
                     timeout=self.timeout,
                 ) as response:
                     if response.status == 200:
-                        result = await response.json()
+                        result = orjson.loads(await response.read())
                         logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
                         return result
                     else:
@@ -166,7 +170,7 @@ class JupiterClient:
         Args:
             quote_response: Quote response from get_quote()
             user_public_key: User's public key as string
-            wrap_unwrap_sol: Whether to auto-wrap/unwrap SOL (default: True)
+            wrap_unwrap_sol: Whether to auto-wrap/unwrap SOL (default: False)
             fee_account: Fee account for platform fees (optional)
             tracking_account: Tracking account for analytics (optional)
 
@@ -205,7 +209,7 @@ class JupiterClient:
                     timeout=self.timeout,
                 ) as response:
                     if response.status == 200:
-                        result = await response.json()
+                        result = orjson.loads(await response.read())
                         logger.debug(f"Successfully got swap transaction for user {user_public_key}")
                         return result
                     else:

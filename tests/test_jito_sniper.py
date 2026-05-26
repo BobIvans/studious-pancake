@@ -49,7 +49,7 @@ class TestJitoTipManager(unittest.TestCase):
     def test_minimum_tip_enforcement(self):
         """Test that minimum tip is always enforced."""
         self.tip_manager.current_tips = [1000, 2000, 3000]  # All below minimum
-        self.tip_manager.last_update = asyncio.get_event_loop().time()
+        self.tip_manager.last_update = asyncio.get_running_loop().time()
 
         tip = self.tip_manager.get_optimal_tip()
         self.assertEqual(tip, 10000)  # Should enforce minimum

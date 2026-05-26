@@ -88,11 +88,20 @@ class WebhookConfig:
                 cls.ORCA_POOL_ADDRESSES
             ),
             "txnStatus": "success",  # OPTIMIZED: Only listen to successful trades (saves credits)
-            "accountFilters": [  # Fix 86+94: Helius credit optimization - min 10 SOL native transfer
-                # Track Jupiter program for swap/trade activity
-                {"accountKey": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8", "filters": [{"memcmp": {"offset": 0, "bytes": ""}}], "nativeFilters": [{"min": 10000000000}]},  # 10 SOL
-                # Track Orca Whirlpools for pool events
-                {"accountKey": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc", "filters": [{"memcmp": {"offset": 0, "bytes": ""}}], "nativeFilters": [{"min": 10000000000}]},  # 10 SOL
+            "accountFilters": [  # Phase 49: Helius credit conservation — hard filter
+                # Jupiter v6 program — only trigger for significant SOL volume (50 SOL)
+                {"accountKey": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+                 "filters": [{"memcmp": {"offset": 0, "bytes": ""}}],
+                 "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold
+                # Orca Whirlpools — only trigger for significant SOL volume (50 SOL)
+                {"accountKey": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
+                 "filters": [{"memcmp": {"offset": 0, "bytes": ""}}],
+                 "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold
+                # Sanctum Router (LST) — 0.1 SOL is enough because LST pools deliver
+                # meaningful profit with 10-100× less volume than direct SOL swaps.
+                {"accountKey": "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",
+                 "filters": [{"memcmp": {"offset": 0, "bytes": ""}}],
+                 "nativeFilters": [{"min": 100_000_000}]},   # 0.1 SOL for LST/xStocks
             ],
             "webhookIds": cls.WEBHOOK_IDS,
             "managementIds": cls.MANAGEMENT_IDS

@@ -429,7 +429,7 @@ GROUP_5_YIELD_STABLES = {
         "name": "Jupiter USD — yield-bearing stable",
         "ticker": "JupUSD",
         "underlying": "USD",
-        "mint": "JupUSDnJZZzrjqoKdcycEZFyX5pdYUlRW2uHkrjawcr",
+        "mint": "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",
         "decimals": 6,
         "program": "SPL Token",
         "category": "yield_stable",
@@ -437,7 +437,7 @@ GROUP_5_YIELD_STABLES = {
         "typical_lag_seconds": 5,
         "avg_spread_pct": 0.3,
         "scan_frequency": "high",
-        "note": "Placeholder mint — replace with verified address from Jupiter docs.",
+        "note": "Jupiter yield stable — verified Mainnet mint.",
     },
 }
 

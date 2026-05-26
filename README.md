@@ -30,7 +30,6 @@
     ```bash
     MARGINFI_ACCOUNT=ваш_marginfi_аккаунт
     HELIUS_API_KEY=ваш_helius_api_key
-    FLASHLOAN_PROGRAM_ID=ваш_задеплоенный_контракт
     ```
 
 3. **Настройка Helius Webhook (для LST arbitrage):**

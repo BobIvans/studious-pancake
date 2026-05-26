@@ -1,111 +1,168 @@
-"""Jito Bundle Client for sending real transactions via Jito bundles."""
+"""Jito Bundle Client — HTTP REST Submission (Free Resources).
+
+This client uses Jito's JSON-RPC HTTP API to submit bundles, eliminating the need
+for complex gRPC dependencies and paid tier resources.
+"""
+
+from __future__ import annotations
 
 import asyncio
-import json
-import logging
-from typing import Any, Dict, List, Optional, Set
-import aiohttp
 import base58
-from solders.keypair import Keypair
-from solders.system_program import TransferParams, transfer
-from solders.transaction import VersionedTransaction
-from solders.message import MessageV0
-from solders.hash import Hash
+import logging
+import time
+from typing import Any, Dict, List, Optional
+import aiohttp
 
-from src.ingest.jito_priority_context import JitoPriorityContext
+from solders.hash import Hash
+from solders.keypair import Keypair
+from solders.message import MessageV0
+from solders.transaction import VersionedTransaction
 
 logger = logging.getLogger(__name__)
 
-# Jito Bundle API endpoint
-JITO_BUNDLE_ENDPOINT = "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles"  # Single NY endpoint for Helius (avoids blockhash geo-delay)
-
+# ── Jito regional Block Engine HTTP endpoints ─────────────────────────────────
+JITO_HTTP_ENDPOINTS: List[str] = [
+    "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+    "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+    "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
+    "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
+]
 
 
 class JitoBundleClient:
-    """Client for sending transaction bundles via Jito."""
+    """HTTP-based Jito bundle client — 100% free resources, zero gRPC overhead."""
 
     def __init__(
         self,
-        session: Optional[aiohttp.ClientSession] = None,
-        timeout: float = 30.0,
-        max_retries: int = 3,
-    ):
-        self.session = session
-        self.timeout = timeout
+        endpoints:   Optional[List[str]] = None,
+        api_key:     Optional[str]       = None,
+        max_retries: int                 = 2,
+        keypair:     Optional[Keypair]   = None,
+        session:     Optional[aiohttp.ClientSession] = None,
+    ) -> None:
+        self.endpoints   = endpoints or JITO_HTTP_ENDPOINTS
+        self.api_key     = api_key
         self.max_retries = max_retries
+        self.keypair     = keypair
+        self.session     = session
         self._session_owned = session is None
-        # Phase 35: Dynamic Jito Tip Accounts — must call fetch_tip_accounts() at startup
-        self.tip_accounts: List[str] = []
-        logger.warning("JitoBundleClient: tip_accounts initialized empty. Call fetch_tip_accounts() at startup to retrieve dynamic accounts from Jito API.")
-        self.background_tasks: Set[asyncio.Task] = set()
 
-    async def __aenter__(self):
+        # Dynamic tip accounts (Phase 35)
+        self.tip_accounts: List[str] = []
+        self.background_tasks: set = set()
+
+    # ── Context manager ────────────────────────────────────────────────────────
+
+    async def __aenter__(self) -> "JitoBundleClient":
         if self._session_owned and self.session is None:
-            connector = aiohttp.TCPConnector(keepalive_timeout=300, limit=100)
-            self.session = aiohttp.ClientSession(connector=connector)  # Fix 85: persistent keep-alive
+            self.session = aiohttp.ClientSession(
+                connector=aiohttp.TCPConnector(force_close=False, ttl_dns_cache=300)
+            )
         return self
 
-    async def __aexit__(self, exc_type, exc_val, exc_tb):
-        # Добавить в __aexit__:
-        if self.background_tasks:
-            for task in self.background_tasks:
-                if not task.done():
-                    task.cancel()
-        
+    async def __aexit__(self, *_: Any) -> None:
+        for t in self.background_tasks:
+            if not t.done():
+                t.cancel()
+        self.background_tasks.clear()
+
         if self._session_owned and self.session:
             await self.session.close()
+
+    # ── Lifecycle ────────────────────────────────────────────────────────────────
+
+    async def start(self) -> None:
+        """Start background tasks including Jito auth refresh."""
+        if self.keypair and self.session:
+            task = asyncio.create_task(self._maintain_jito_auth_loop())
+            self.background_tasks.add(task)
+
+    async def _maintain_jito_auth_loop(self) -> None:
+        """Maintains Jito Searcher authentication by refreshing JWT every 9 minutes."""
+        while True:
+            try:
+                jwt_token = await self._authenticate_jito()
+                if jwt_token:
+                    self.api_key = jwt_token
+                else:
+                    logger.warning("⚠️ Jito Auth refresh failed — retrying in 30s...")
+                    await asyncio.sleep(30)
+                    continue
+            except Exception as e:
+                logger.error(f"Jito auth loop error: {e}")
+            await asyncio.sleep(540)  # Refresh every 9 minutes
+
+    # ── Tip account management ──────────────────────────────────────────────────
 
     async def fetch_tip_accounts(self) -> bool:
         """Fetch live Jito tip accounts (Phase 35)."""
         if not self.session:
             return False
         try:
-            url = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
-            async with self.session.get(url, timeout=5.0) as resp:
+            async with self.session.get(
+                "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts",
+                timeout=5.0,
+            ) as resp:
                 if resp.status == 200:
-                    accounts = await resp.json()
-                    if accounts and isinstance(accounts, list):
-                        self.tip_accounts = accounts
-                        return True
-        except Exception:
-            pass
+                    self.tip_accounts = await resp.json()
+                    return bool(self.tip_accounts)
+        except Exception as e:
+            logger.debug(f"Failed to fetch tip accounts: {e}")
         return False
 
     def _select_tip_account(self) -> str:
-        """Select a random tip account for load balancing."""
         import random
-        return random.choice(self.tip_accounts)
-
-    def _build_tip_instruction(
-        self,
-        payer_keypair: Keypair,
-        tip_amount_lamports: int,
-        tip_account: str,
-    ) -> Any:
-        """Build a SOL transfer instruction to tip Jito."""
-        from solders.pubkey import Pubkey
-
-        transfer_ix = transfer(
-            TransferParams(
-                from_pubkey=payer_keypair.pubkey(),
-                to_pubkey=Pubkey.from_string(tip_account),
-                lamports=tip_amount_lamports,
-            )
+        return (
+            random.choice(self.tip_accounts)
+            if self.tip_accounts
+            else "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
         )
-        return transfer_ix
+
+    # ── Jito Searcher Authentication Handshake (Phase 49) ───────────────────────
+
+    async def _authenticate_jito(self) -> Optional[str]:
+        if not self.keypair or not self.session:
+            return None
+        try:
+            challenge_url = "https://mainnet.block-engine.jito.wtf/api/v1/auth/challenge"
+            payload = {"key": str(self.keypair.pubkey())}
+            async with self.session.post(challenge_url, json=payload, timeout=5.0) as resp:
+                if resp.status != 200:
+                    logger.warning(f"Jito challenge failed: HTTP {resp.status}")
+                    return None
+                data = await resp.json()
+                challenge = data.get("value", "")
+
+            if not challenge:
+                return None
+
+            message = f"{str(self.keypair.pubkey())}-{challenge}"
+            signature_bytes = self.keypair.sign_message(message.encode("utf-8"))
+            signature_b58 = base58.b58encode(bytes(signature_bytes)).decode("ascii")
+
+            token_url = "https://mainnet.block-engine.jito.wtf/api/v1/auth/token"
+            token_payload = {
+                "key": str(self.keypair.pubkey()),
+                "challenge": message,
+                "client_sig": signature_b58,
+            }
+            async with self.session.post(token_url, json=token_payload, timeout=5.0) as resp:
+                if resp.status == 200:
+                    token_data = await resp.json()
+                    access_token = token_data.get("access_token", {}).get("value")
+                    logger.info("🔑 Jito Searcher Authentication successful! JWT token acquired.")
+                    return access_token
+                else:
+                    logger.warning(f"Jito token generation failed: HTTP {resp.status}")
+        except Exception as e:
+            logger.error(f"Jito authentication handshake failed: {e}")
+        return None
+
+    # ── Blockhash ───────────────────────────────────────────────────────────────
 
     async def _get_recent_blockhash(self) -> Optional[Hash]:
-        """Get recent blockhash for transaction construction.
-
-        IMPORTANT: Never use a hardcoded/fake blockhash. Jito Block Engine
-        will reject the entire bundle with BlockhashNotFound if the
-        blockhash is stale or invalid. Always use a real blockhash obtained
-        from RPC within the last ~150 blocks.
-        """
         if not self.session:
-            logger.error("No session available to fetch blockhash")
             return None
-
         try:
             async with self.session.post(
                 "https://api.mainnet-beta.solana.com",
@@ -114,232 +171,144 @@ class JitoBundleClient:
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
-                    if "result" in data and "value" in data["result"]:
-                        return Hash.from_string(data["result"]["value"]["blockhash"])
-        except Exception as e:
-            logger.error(f"Failed to fetch recent blockhash: {e}")
-
+                    return Hash.from_string(
+                        data["result"]["value"]["blockhash"]
+                    )
+        except Exception as exc:
+            logger.error(f"Failed to fetch blockhash: {exc}")
         return None
+
+    # ── HTTP bundle submission ──────────────────────────────────────────────────
 
     async def build_and_send_bundle(
         self,
         swap_instructions: List[Any],
-        payer_keypair: Keypair,
-        jito_context: JitoPriorityContext,
+        payer_keypair:    Keypair,
         recent_blockhash: Optional[Hash] = None,
     ) -> Dict[str, Any]:
-        """Build and send a transaction bundle to Jito.
-
-        Args:
-            swap_instructions: List of swap instructions to include in bundle
-            payer_keypair: Keypair for signing transactions
-            jito_context: Jito priority context with tip information
-            recent_blockhash: Recent blockhash (optional, will fetch if not provided)
-
-        Returns:
-            Dict containing bundle ID and status information
-        """
+        """Отправка бандла через бесплатный Jito REST API (HTTP POST)"""
         try:
             if recent_blockhash is None:
                 recent_blockhash = await self._get_recent_blockhash()
+            if not recent_blockhash:
+                return {"success": False, "error": "No blockhash", "bundle_id": None}
 
-            if recent_blockhash is None:
-                logger.error("Cannot send bundle: failed to fetch recent blockhash")
-                return {
-                    "success": False,
-                    "error": "Failed to fetch recent blockhash",
-                    "bundle_id": None,
-                }
-
-            # Select tip account
-            tip_account = self._select_tip_account()
-
-            # Combine swap instructions with tip
-            # NOTE: tx_builder.py already appends the Jito tip instruction as the FINAL
-            # instruction inside the transaction for capital protection (revert-on-fail).
-            # appending a second tip here would double-pay.  We pass swap_instructions
-            # straight through so the embedded tip is preserved.
-            all_instructions = swap_instructions
-
-            # Build message
+            # Сборка транзакции
             message = MessageV0.try_compile(
-                payer_keypair.pubkey(),
-                all_instructions,
-                [],
-                recent_blockhash,
+                payer_keypair.pubkey(), swap_instructions, [], recent_blockhash,
             )
-
-            # Create versioned transaction
             transaction = VersionedTransaction(message, [payer_keypair])
 
-            # Convert to bundle format
-            bundle = {
+            # Для HTTP API Jito транзакция ДОЛЖНА быть строкой Base58
+            tx_base58 = base58.b58encode(bytes(transaction)).decode("ascii")
+
+            payload = {
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "sendBundle",
-                "params": [[base58.b58encode(bytes(transaction)).decode('ascii')]],
+                "params": [[tx_base58]]
             }
 
-            # Send bundle
-            return await self._send_bundle_request(bundle)
+            # Выстреливаем по всем бесплатным HTTP-эндпоинтам (Shotgun)
+            tasks = []
+            for endpoint in self.endpoints:
+                tasks.append(asyncio.create_task(self._send_http_request(endpoint, payload)))
 
-        except Exception as e:
-            logger.error(f"Error building/sending bundle: {e}")
-            return {
-                "success": False,
-                "error": str(e),
-                "bundle_id": None,
-            }
+            # Ждем первый успешный ответ
+            if not tasks:
+                return {"success": False, "error": "No endpoints configured", "bundle_id": None}
 
-    async def _send_bundle_request(self, bundle: Dict[str, Any]) -> Dict[str, Any]:
-        """Send bundle request to Jito API."""
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED, timeout=3.0)
+            
+            # Отменяем зависшие задачи
+            for task in pending:
+                task.cancel()
+                
+            # Безопасно гасим возможные исключения в отмененных задачах (защита от утечки памяти)
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+
+            # Проверяем успешные
+            for task in done:
+                try:
+                    res = task.result()
+                    if res.get("success"):
+                        return res
+                except Exception as e:
+                    logger.debug(f"HTTP Shotgun task failed: {e}")
+
+            return {"success": False, "error": "All HTTP endpoints failed", "bundle_id": None}
+
+        except Exception as exc:
+            logger.error(f"build_and_send_bundle error: {exc}")
+            return {"success": False, "error": str(exc), "bundle_id": None}
+
+    async def _send_http_request(self, url: str, payload: dict) -> dict:
+        """Внутренний метод отправки одного HTTP запроса."""
         if not self.session:
-            raise RuntimeError("Client session not available")
+            return {"success": False, "error": "No session"}
+        try:
+            headers = {"Content-Type": "application/json"}
+            if self.api_key:
+                headers["Authorization"] = f"Bearer {self.api_key}"
 
-        for attempt in range(self.max_retries):
-            try:
-                async with self.session.post(
-                    JITO_BUNDLE_ENDPOINT,
-                    json=bundle,
-                    headers={"Content-Type": "application/json"},
-                    timeout=self.timeout,
-                ) as response:
-                    result = await response.json()
+            async with self.session.post(url, json=payload, headers=headers, timeout=2.0) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if "result" in data:
+                        return {"success": True, "bundle_id": data["result"], "url": url}
+                    return {"success": False, "error": f"JSON-RPC error: {data}", "url": url}
+                return {"success": False, "error": f"HTTP {resp.status}", "url": url}
+        except Exception as e:
+            return {"success": False, "error": str(e), "url": url}
 
-                    if response.status == 200:
-                        bundle_id = result.get("result")
-                        logger.info(f"Bundle sent successfully, ID: {bundle_id}")
-                        return {
-                            "success": True,
-                            "bundle_id": bundle_id,
-                            "status": "sent",
-                        }
-                    else:
-                        error_msg = result.get("error", {}).get("message", "Unknown error")
-                        logger.warning(f"Bundle send failed (attempt {attempt + 1}): {error_msg}")
-
-                        if attempt == self.max_retries - 1:
-                            return {
-                                "success": False,
-                                "error": error_msg,
-                                "bundle_id": None,
-                            }
-
-            except asyncio.TimeoutError:
-                logger.warning(f"Bundle send timeout (attempt {attempt + 1})")
-                if attempt == self.max_retries - 1:
-                    return {
-                        "success": False,
-                        "error": "Request timeout",
-                        "bundle_id": None,
-                    }
-
-            except Exception as e:
-                logger.error(f"Bundle send error (attempt {attempt + 1}): {e}")
-                if attempt == self.max_retries - 1:
-                    return {
-                        "success": False,
-                        "error": str(e),
-                        "bundle_id": None,
-                    }
-
-            # Wait before retry
-            await asyncio.sleep(0.5 * (2 ** attempt))
-
-        return {
-            "success": False,
-            "error": "Max retries exceeded",
-            "bundle_id": None,
-        }
+    # ── Status query ────────────────────────────────────────────────────────────
 
     async def get_bundle_statuses(self, bundle_ids: List[str]) -> Dict[str, Any]:
-        """Get status of one or more bundles.
-
-        Args:
-            bundle_ids: List of bundle IDs to check
-
-        Returns:
-            Dict mapping bundle IDs to their status information
-        """
-        if not self.session:
-            raise RuntimeError("Client session not available")
-
-        if not bundle_ids:
+        """Get status of one or more bundles via HTTP POST."""
+        if not self.session or not bundle_ids:
             return {}
-
+        
+        # Use NY endpoint as default for status queries
+        endpoint = "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles"
         try:
-            status_request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "getBundleStatuses",
-                "params": [bundle_ids],
-            }
-
             async with self.session.post(
-                JITO_BUNDLE_ENDPOINT,
-                json=status_request,
-                headers={"Content-Type": "application/json"},
-                timeout=self.timeout,
-            ) as response:
-                result = await response.json()
-
-                if response.status == 200 and "result" in result:
-                    statuses = result["result"]
-                    logger.debug(f"Retrieved bundle statuses for {len(bundle_ids)} bundles")
-                    return statuses
-                else:
-                    error_msg = result.get("error", {}).get("message", "Unknown error")
-                    logger.error(f"Failed to get bundle statuses: {error_msg}")
-                    return {}
-
-        except Exception as e:
-            logger.error(f"Error getting bundle statuses: {e}")
-            return {}
+                endpoint,
+                json={
+                    "jsonrpc": "2.0", "id": 1,
+                    "method":  "getBundleStatuses",
+                    "params":  [bundle_ids],
+                },
+                timeout=5.0,
+            ) as resp:
+                if resp.status == 200:
+                    result = await resp.json()
+                    if "result" in result and result["result"]["value"]:
+                        # API returns a list of status objects
+                        statuses = {}
+                        for item in result["result"]["value"]:
+                            if item and "bundle_id" in item:
+                                statuses[item["bundle_id"]] = item
+                        return statuses
+        except Exception as exc:
+            logger.error(f"get_bundle_statuses error: {exc}")
+        return {}
 
     async def wait_for_bundle_confirmation(
         self,
-        bundle_id: str,
-        max_wait_time: float = 3.0,  # HFT: drop after 3s
+        bundle_id:    str,
+        max_wait_time: float = 3.0,
         check_interval: float = 0.5,
     ) -> Dict[str, Any]:
-        """Wait for bundle confirmation.
-
-        Args:
-            bundle_id: Bundle ID to monitor
-            max_wait_time: Maximum time to wait in seconds
-            check_interval: How often to check status in seconds
-
-        Returns:
-            Dict with final bundle status
-        """
-        import time
-        start_time = time.time()
-
-        while time.time() - start_time < max_wait_time:
-            try:
-                statuses = await self.get_bundle_statuses([bundle_id])
-
-                if bundle_id in statuses:
-                    status_info = statuses[bundle_id]
-                    confirmation_status = status_info.get("confirmation_status")
-
-                    if confirmation_status in ["confirmed", "finalized", "failed"]:
-                        logger.info(f"Bundle {bundle_id} reached final status: {confirmation_status}")
-                        return {
-                            "bundle_id": bundle_id,
-                            "status": confirmation_status,
-                            "details": status_info,
-                        }
-
-                await asyncio.sleep(check_interval)
-
-            except Exception as e:
-                logger.error(f"Error checking bundle status: {e}")
-                await asyncio.sleep(check_interval)
-
-        logger.warning(f"Bundle {bundle_id} confirmation timeout after {max_wait_time}s")
-        return {
-            "bundle_id": bundle_id,
-            "status": "timeout",
-            "details": {},
-        }
+        start = time.time()
+        while time.time() - start < max_wait_time:
+            statuses = await self.get_bundle_statuses([bundle_id])
+            if bundle_id in statuses:
+                info           = statuses[bundle_id]
+                confirmation   = info.get("confirmation_status", "")
+                if confirmation in {"confirmed", "finalized"}:
+                    return {"bundle_id": bundle_id, "status": confirmation, "details": info}
+                elif confirmation == "failed":
+                     return {"bundle_id": bundle_id, "status": "failed", "details": info}
+            await asyncio.sleep(check_interval)
+        return {"bundle_id": bundle_id, "status": "timeout", "details": {}}

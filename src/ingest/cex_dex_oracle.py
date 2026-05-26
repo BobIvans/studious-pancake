@@ -125,7 +125,7 @@ class CexDexOracle:
 
             # Use mid price for comparison
             mid_price = (best_bid + best_ask) / Decimal('2')
-            timestamp = asyncio.get_event_loop().time()
+            timestamp = asyncio.get_running_loop().time()
 
             # Store price data
             price_data = {

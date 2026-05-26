@@ -70,7 +70,7 @@ class LocalRouter:
     def __init__(
         self,
         pool_state_manager: PoolStateManager,
-        jupiter_api_url: str = "https://api.jup.ag/swap/v1",
+        jupiter_api_url: str = "https://quote-api.jup.ag/v6",
         session: Optional[aiohttp.ClientSession] = None
     ):
         self.pool_state_manager = pool_state_manager
@@ -270,9 +270,9 @@ class LocalRouter:
             params = {
                 "inputMint": sol_mint,
                 "outputMint": token_address,
-                "amount": str(amount_in_sol),
+                "amount": str(int(amount_in_sol)),  # Task 16: strict int→string to avoid HTTP 400
                 "slippageBps": slippage_bps,
-                "onlyDirectRoutes": "false",  # Allow multi-hop
+                "onlyDirectRoutes": "true",  # Task 14: force direct routes for micro-balance safety
                 "maxAccounts": 20  # Limit for transaction size
             }
 

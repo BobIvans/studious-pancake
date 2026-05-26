@@ -7,7 +7,7 @@ import re
 import time
 import struct
 import os
-from typing import Optional, Dict, Any, Set, List, Tuple
+from typing import Optional, Dict, Any, Set, List, Tuple, Callable
 import aiohttp
 from solders.pubkey import Pubkey
 from solders.transaction import VersionedTransaction
@@ -21,6 +21,7 @@ from spl.token.constants import TOKEN_PROGRAM_ID
 from .leader_tracker import LeaderTracker
 from .g2_tip_manager import ExecutionGuard
 from .tx_builder import JupiterTxBuilder
+from .epoch_tracker import EpochTracker
 # Phase 48: Import dynamic bank info from arb_bot
 try:
     from arb_bot import MARGINFI_BANKS
@@ -36,7 +37,7 @@ TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6
 SOL_MINT = Pubkey.from_string("So11111111111111111111111111111111111111112")
 USDC_MINT = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
 JUPITER_QUOTE_URL = "https://quote-api.jup.ag/v6/quote"
-JUPITER_SWAP_IX_URL = "https://api.jup.ag/swap/v1/swap-instructions"
+JUPITER_SWAP_IX_URL = "https://quote-api.jup.ag/v6/swap-instructions"
 
 STRATEGY_EXTRA_ACCOUNTS: Dict[str, Set[str]] = {}  # Fix 91: auto-discovered remaining accounts for transfer hooks
 
@@ -66,15 +67,21 @@ class StandardTransactionSender:
 class ExecutionRouter:
     """Routes transactions between Jito bundles and standard transactions based on slot leader with sequential queue."""
 
-    def __init__(self, leader_tracker: LeaderTracker, jito_executor, session: aiohttp.ClientSession, rpc_url: str, keypair=None, alt_manager=None):
+    def __init__(self, leader_tracker: LeaderTracker, jito_executor, session: aiohttp.ClientSession, rpc_url: str, keypair=None, alt_manager=None, rpc_getter: Optional[Callable[[], str]] = None):
         self.leader_tracker = leader_tracker
         self.jito_executor = jito_executor
         self.standard_tx_sender = StandardTransactionSender(session, rpc_url)
-        self.execution_queue = asyncio.Queue(maxsize=100)  # Increased from 1 to prevent deadlocks
+        self.execution_queue = asyncio.Queue(maxsize=100)
         self._processor_task = None
         self.keypair = keypair
         self.session = session
+        self._static_rpc_url = rpc_url
+        self.rpc_getter = rpc_getter
         self.rpc_url = rpc_url
+        # Epoch Shield: Block trades during epoch boundary storm
+        self.epoch_tracker = EpochTracker(rpc_url=rpc_url, session=session)
+        self._epoch_killswitch_active = False
+        self._epoch_last_reason = ""
         # Fix 3: ALT Manager for MTU-safe tx compilation
         self.alt_manager = alt_manager
 
@@ -93,6 +100,11 @@ class ExecutionRouter:
         self._pair_reputation: Dict[str, Dict[str, Any]] = {}
         self.PAIR_SLIPPAGE_LIMIT = 3          # 3 consecutive slippage errors → cooldown
         self.PAIR_COOLDOWN_SECONDS = 600      # 10 minutes cooldown per pair
+
+        # ── Phase 49: Optimistic State ─────────────────────────────────────────
+        # When a bundle is sent via Jito we do NOT wait for on-chain confirmation
+        # before considering the MarginFi account free for the next trade.
+        self.is_account_busy: bool = False
 
         # Fix 51: Jito Bundle Self-Cancellation — track stale bundles for overwrite
         # map: bundle_id -> {"sent_slot": int, "sent_at": float, "endpoint": str, "tip_lamports": int, "deducted_amount": float}
@@ -164,6 +176,51 @@ class ExecutionRouter:
             logger.error("Execution queue is full - dropping transaction to prevent deadlock")
             return {"status": "error", "message": "Execution queue full"}
 
+    async def _check_epoch_killswitch(self) -> bool:
+        """
+        Epoch Shield: block all trades during the epoch boundary consensus storm.
+        - First 60 s after a new epoch starts (leader schedules are being recalculated)
+        - Last 30 s before the current epoch ends
+        Returns True  → epoch is safe, trading may proceed
+        Returns False → killswitch active, trading blocked
+        """
+        SECONDS_FROM_EPOCH_START = 60
+        SECONDS_TO_EPOCH_END = 30
+
+        try:
+            info = self.epoch_tracker.epoch_info
+            if not info:
+                return True   # no epoch data yet — default safe
+
+            slots_in_epoch = info.get("slotsInEpoch", 432000)
+            slot_index     = info.get("slotIndex", 0)
+
+            # ── Case 1: epoch just started (<60 s = ~150 slots at 400 ms) ──
+            if slot_index < SECONDS_FROM_EPOCH_START * 3:
+                self._epoch_killswitch_active = True
+                self._epoch_last_reason = (
+                    f"Epoch just started (slotIndex={slot_index}, "
+                    f"leaders still recalculating)"
+                )
+                return False
+
+            # ── Case 2: less than 30 s until epoch end ──
+            slots_remaining = slots_in_epoch - slot_index
+            secs_remaining  = int(slots_remaining * 0.4)
+            if 0 < secs_remaining <= SECONDS_TO_EPOCH_END:
+                self._epoch_killswitch_active = True
+                self._epoch_last_reason = (
+                    f"Consensus storm: {secs_remaining}s until epoch end"
+                )
+                return False
+
+            self._epoch_killswitch_active = False
+            return True
+
+        except Exception as exc:
+            logger.debug(f"Epoch killswitch check failed ({exc}) — default safe")
+            return True
+
     async def execute_arbitrage_opportunity(self, opportunity: Dict[str, Any]) -> dict:
         """
         Execute arbitrage opportunity by strategy type.
@@ -175,6 +232,14 @@ class ExecutionRouter:
         Returns:
             Execution result dict
         """
+        # ── Epoch Shield: never trade near epoch boundary ───────────────────────
+        if not await self._check_epoch_killswitch():
+            logger.warning(f"🛡️ Epoch killswitch: {self._epoch_last_reason} — trade rejected")
+            return {
+                "status": "epoch_blocked",
+                "message": self._epoch_last_reason,
+            }
+
         # Circuit Breaker: Check for dust accumulation before execution
         if await self._check_dust_circuit_breaker():
             return {
@@ -237,7 +302,10 @@ class ExecutionRouter:
         """Execute xStock oracle lag arbitrage opportunity with Flash Loan Pivot support."""
         try:
             from .tx_builder import JupiterTxBuilder
-            tx_builder = JupiterTxBuilder(session=self.session, rpc_url=self.rpc_url)
+            tx_builder = JupiterTxBuilder(
+                session=self.session,
+                rpc_getter=self.rpc_getter,
+            )
 
             # Extract opportunity data
             ticker = opportunity["ticker"]
@@ -607,8 +675,8 @@ class ExecutionRouter:
         # ── Entry: SOL → USDC ──────────────────────────────────────────────
         entry_quote_url = (
             f"{JUPITER_QUOTE_URL}?inputMint={sol_pk}&outputMint={usdc_pk}"
-            f"&amount={entry_amount}&slippageBps=30&maxAccounts=8"
-            f"&onlyDirectRoutes=false&restrictIntermediateTokens=true"
+            f"&amount={int(entry_amount)}&slippageBps=30&maxAccounts=8"
+            f"&onlyDirectRoutes=true&restrictIntermediateTokens=true"
         )
         try:
             async with self.session.get(entry_quote_url, timeout=4.0) as resp:
@@ -664,11 +732,12 @@ class ExecutionRouter:
         total_cost += int(entry_amount * price_impact / 100)
 
         # ── Exit: USDC → SOL ───────────────────────────────────────────────
-        exit_amount_ui = out_amount
+        # Task 16: ensure int (outAmount may be Decimal/float in some paths)
+        exit_amount_ui = int(out_amount)
         exit_quote_url = (
             f"{JUPITER_QUOTE_URL}?inputMint={usdc_pk}&outputMint={sol_pk}"
             f"&amount={exit_amount_ui}&slippageBps=30&maxAccounts=8"
-            f"&onlyDirectRoutes=false&restrictIntermediateTokens=true"
+            f"&onlyDirectRoutes=true&restrictIntermediateTokens=true"
         )
         try:
             async with self.session.get(exit_quote_url, timeout=4.0) as resp:
@@ -804,6 +873,16 @@ class ExecutionRouter:
                         balance_sol = balance_lamports / 1_000_000_000
                         logger.debug(f"💰 Post-execution balance check: {balance_sol:.6f} SOL")
 
+                        # ── Task 4: Main Wallet Rent-Exemption Killswitch ────────────
+                        # If native SOL balance < 0.003 SOL, Solana GC will delete the
+                        # wallet account. Kill process immediately to prevent that.
+                        try:
+                            from src.ingest.pre_trade_guard import PreTradeGuard
+                            PreTradeGuard.enforce_hard_floor(balance_sol)
+                        except Exception:
+                            pass
+                        # ──────────────────────────────────────────────────────────────
+
                         # Warn if balance is critically low
                         if balance_sol < self.critical_balance_threshold:
                             logger.warning(f"⚠️ Low balance after execution: {balance_sol:.6f} SOL (below {self.critical_balance_threshold} SOL threshold)")
@@ -817,11 +896,13 @@ class ExecutionRouter:
 
     def discover_extra_account(self, error_msg: str, token_key: str):
         """Fix 91: Extract missing remaining account Pubkey from RPC error and cache it."""
+        # Поиск Base58 строки (Pubkey) в тексте ошибки
         match = re.search(r'([1-9A-HJ-NP-Za-km-z]{32,44})', error_msg)
         if match:
             pk = match.group(1)
+            # STRATEGY_EXTRA_ACCOUNTS — глобальный словарь
             STRATEGY_EXTRA_ACCOUNTS.setdefault(token_key, set()).add(pk)
-            logger.warning(f"🔧 Discovered extra account {pk} for {token_key}")
+            logger.warning(f"🔧 Self-Healing: Discovered missing remaining account {pk} for {token_key}")
 
     async def _route_transaction(self, session: aiohttp.ClientSession, cfg, rpc_url: str, transaction: VersionedTransaction, jito_tip_lamports: int) -> dict:
         """Route transaction using appropriate method based on current slot leader."""
@@ -865,6 +946,18 @@ class ExecutionRouter:
                     "tip_lamports": jito_tip_lamports,
                     "deducted_amount": jito_tip_lamports / 1_000_000_000,
                 }
+                # ── Phase 49: Optimistic State ───────────────────────────────────
+                from arb_bot import stats, stats_lock
+                tip_deducted = jito_tip_lamports / 1e9
+                async with stats_lock:
+                    prev = stats.get("virtual_balance", 0.0)
+                    stats["virtual_balance"] = max(0.0, prev - tip_deducted)
+                    stats["last_balance"] = stats["virtual_balance"]
+                self.is_account_busy = False   # MarginFi account is instantly free
+                logger.debug(
+                    f"⚡ Optimistic balance: virtual_balance {prev:.6f} → "
+                    f"{stats['virtual_balance']:.6f} SOL (tip {tip_deducted:.6f})"
+                )
             return bundle_result
 
         except Exception as e:

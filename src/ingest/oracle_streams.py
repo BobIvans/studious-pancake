@@ -6,7 +6,7 @@ Supports PriorityQueue for multiple simultaneous signals.
 """
 
 import asyncio
-import json
+import orjson
 import logging
 import time
 from typing import Dict, List, Optional, Callable, Any
@@ -127,16 +127,16 @@ class OracleStreams:
                     "subscription_type": "price_feed_updates",
                     "price_feed_ids": feed_ids
                 }
-                await websocket.send(json.dumps(subscription_msg))
+                await websocket.send(orjson.dumps(subscription_msg))
 
                 async for message in websocket:
                     if not self.running:
                         break
 
                     try:
-                        data = json.loads(message)
+                        data = orjson.loads(message)
                         await self._process_pyth_update(data)
-                    except json.JSONDecodeError:
+                    except Exception:
                         continue
 
         except Exception as e:
@@ -158,16 +158,16 @@ class OracleStreams:
                     "method": "subscribe",
                     "params": ["price_feeds"]  # Placeholder
                 }
-                await websocket.send(json.dumps(subscription_msg))
+                await websocket.send(orjson.dumps(subscription_msg))
 
                 async for message in websocket:
                     if not self.running:
                         break
 
                     try:
-                        data = json.loads(message)
+                        data = orjson.loads(message)
                         await self._process_chainlink_update(data)
-                    except json.JSONDecodeError:
+                    except Exception:
                         continue
 
         except Exception as e:
@@ -198,7 +198,7 @@ class OracleStreams:
             raw_price = Decimal(str(price_data.get("price", 0)))
             expo = int(price_data.get("expo", 0))
             price = raw_price * (Decimal('10') ** expo)  # Apply exponent for actual price
-            confidence = Decimal(str(price_data.get("confidence", 0)))
+            confidence = Decimal(str(price_data.get("confidence", 0))) * (Decimal('10') ** expo)
             
             # Latency Check
             publish_time = price_data.get("publish_time")
@@ -322,7 +322,7 @@ class OracleStreams:
                     ticker = opportunity["ticker"]
 
                     # Check if we recently processed this signal
-                    now = asyncio.get_event_loop().time()
+                    now = asyncio.get_running_loop().time()
                     if ticker in self.active_signals:
                         if now - self.active_signals[ticker] < 5.0:  # 5 second cooldown
                             continue
@@ -426,7 +426,7 @@ class OracleStreams:
         """Get how old the oracle price is in seconds."""
         price = self.oracle_prices.get(token_symbol)
         if price:
-            return asyncio.get_event_loop().time() - price.timestamp
+            return asyncio.get_running_loop().time() - price.timestamp
         return None
 
     async def check_oracle_vs_amm(self, token_symbol: str, amm_price: Decimal,

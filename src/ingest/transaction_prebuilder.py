@@ -31,7 +31,7 @@ class TransactionPrebuilder:
         stale repay-index references from cached templates.
         """
         ATTACHED_PROGRAM_IDS = {
-            "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",  # Associated Token Account
+            "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86",  # Associated Token Account
             "ComputeBudget111111111111111111111111111111",       # Compute Budget
         }
         has_dynamic = any(

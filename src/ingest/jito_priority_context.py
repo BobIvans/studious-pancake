@@ -24,7 +24,7 @@ class JitoPriorityContextAdapter:
 
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         self.config = config or {}
-        self.base_tip_lamports = self.config.get("base_tip_lamports", 1000)  # 0.000001 SOL
+        self.base_tip_lamports = self.config.get("base_tip_lamports", 10000)  # 0.00001 SOL
         self.congestion_multiplier = self.config.get("congestion_multiplier", 5000)
         self.max_budget_sol = self.config.get("max_budget_sol", 10.0)
 

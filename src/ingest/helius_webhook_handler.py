@@ -1,9 +1,12 @@
 """Helius Webhook Handler for Sanctum LST Arbitrage Opportunities."""
 
-import json
+import os
+import hmac
+import orjson
 import logging
 import asyncio
 import time
+from collections import deque
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from aiohttp import web
@@ -27,6 +30,11 @@ class HeliusWebhookHandler:
         self.app = web.Application()
         self.app.router.add_post('/webhook', self.handle_webhook)
         self.runner = None
+        # ── Event Loop Anti-Starvation: LIFO signal queue ────────────────────────
+        # Latest signals are processed first. Signals older than 800ms are dropped.
+        self._signal_deque: deque = deque()
+        self.EVENT_DROP_MS = 800
+        self._event_counter = 0  # counts processed events for async.yield every 3
 
     async def _check_port_available(self) -> bool:
         """Check if the webhook port is available before starting the server."""
@@ -70,11 +78,34 @@ class HeliusWebhookHandler:
 
     async def handle_webhook(self, request):
         """Handle incoming webhook from Helius."""
+        # ── Fix 2: Webhook Spoofing Protection ─────────────────────────────────────
+        # Helius sends Authorization header that must match our secret.
+        # This prevents botnets from sending fake arbitrage signals.
+        import hmac
+
+        auth_header = request.headers.get('Authorization', '')
+        expected_auth = os.getenv("HELIUS_WEBHOOK_SECRET", os.getenv("HELIUS_API_KEY", ""))
+
+        # Constant-time comparison to prevent timing attacks
+        if not auth_header or not expected_auth or not hmac.compare_digest(auth_header, expected_auth):
+            logger.critical(f"🚨 WEBHOOK SECURITY BREACH: Unauthorized POST attempt from {request.remote}")
+            return web.Response(status=401, text='Unauthorized')
+
+        # Phase 49: Direct IP Webhook Injection Check
+        host = request.host
+        if "trycloudflare.com" in host or "localhost" in host:
+             logger.critical(
+                 f"🚨 WEBHOOK LATENCY ALERT: Receiving signals via {host}. "
+                 f"Tunneling introduces 400ms+ lag. Use Direct IP for production competitive advantage."
+             )
+
         if not hasattr(self, '_sem'):
             self._sem = asyncio.Semaphore(10)  # Fix 67
         async with self._sem:
             try:
-                data = await request.json()
+                # orjson is ~5x faster than stdlib json (C extension)
+                raw_bytes = await request.read()
+                data = orjson.loads(raw_bytes)
                 webhook_id = data.get('webhookId', 'unknown')
     
                 # Validate webhook ID
@@ -84,9 +115,10 @@ class HeliusWebhookHandler:
     
                 logger.info(f"📡 Received webhook {webhook_id} with {len(data.get('events', []))} events")
     
-                # Process each event in the webhook (Background task to avoid Helius timeout)
+                # Process each event — push into LIFO deque (newest-last → pop-last first)
+                now = time.time()
                 for event in data.get('events', []):
-                    asyncio.create_task(self._process_event(event, webhook_id))
+                    self._signal_deque.append((now, event))
     
                 return web.Response(text='OK')
 
@@ -95,9 +127,28 @@ class HeliusWebhookHandler:
                 return web.Response(status=500, text='Internal Server Error')
 
     async def _process_event(self, event: Dict[str, Any], webhook_id: str):
-        """Process a single event from Helius webhook."""
+        """Process a single event from Helius webhook.
+
+        LIFO deque drop policy (Task 3 anti-starvation):
+          - Signal deque is populated by handle_webhook (newest appended last).
+          - If deque is non-empty, pop the NEWEST event first (LIFO = drop old signals).
+          - Events older than EVENT_DROP_MS are silently discarded.
+          - After every 3 processed events, await asyncio.sleep(0) so the
+            execution_router never starves on busy Helius batches.
+        """
         try:
-            # ── ДЕДУПЛИКАЦИЯ ──────────────────────────────────────────────
+            # ── LIFO: pop newest event first; drop if stale (> EVENT_DROP_MS) ─────
+            while self._signal_deque:
+                ts, ev = self._signal_deque.pop()
+                if (time.time() - ts) * 1000 > self.EVENT_DROP_MS:
+                    logger.debug("♻️ Dropped stale webhook event (age > 800 ms)")
+                    continue
+                event = ev   # use deque event instead of original argument
+                break
+            else:
+                return  # deque was empty — nothing to do
+
+            # ── ДЕДУПЛИКАЦИЯ ────────────────────────────────────────────────────
             # Helius может слать по 3-4 вебхука на одно и то же событие.
             signature = event.get('transaction', {}).get('signature') or event.get('signature')
             if signature:
@@ -159,6 +210,11 @@ class HeliusWebhookHandler:
             # Tokyo, NY) as soon as the webhook signal arrives — no polling, no delay.
             if self.jito_shotgun and event_type in ('SWAP', 'CREATE_POOL', 'GRADUATION'):
                 asyncio.create_task(self._fire_jito_shotgun(event))
+
+            # ── YIELD: every 3 events, give CPU to execution_router ──────────────
+            self._event_counter += 1
+            if self._event_counter % 3 == 0:
+                await asyncio.sleep(0)  # co-operative yield — prevents event-loop starvation
 
         except Exception as e:
             logger.error(f"Event processing error: {e}")

@@ -10,6 +10,7 @@ to be converted back to SOL for repayment.
 import asyncio
 import logging
 import aiohttp
+import time
 from typing import List, Dict, Any, Optional, Tuple
 from decimal import Decimal
 from solders.pubkey import Pubkey
@@ -24,6 +25,21 @@ except ImportError:
 from spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
 
 logger = logging.getLogger(__name__)
+
+# Global flag for wSOL unwrap race condition prevention
+_balance_lock_paused = False
+_balance_lock_pause_until = 0.0
+
+
+def _balance_lock_can_trade() -> bool:
+    """Check if trading is allowed (not paused after wSOL unwrap)."""
+    global _balance_lock_paused, _balance_lock_pause_until
+    if _balance_lock_paused and time.time() < _balance_lock_pause_until:
+        return False
+    if _balance_lock_paused and time.time() >= _balance_lock_pause_until:
+        _balance_lock_paused = False
+        _balance_lock_pause_until = 0.0
+    return True
 
 # Constants
 SOL_MINT = Pubkey.from_string("So11111111111111111111111111111111111111112")
@@ -224,7 +240,8 @@ class WSOLManager:
             program_id=prog_id,
             account=self.wsol_ata,
             dest=wallet,
-            owner=wallet
+            owner=wallet,
+            signers=[],
         ))
 
         logger.debug(
@@ -346,9 +363,12 @@ class WSOLManager:
                     if send_resp.status == 200:
                         result = await send_resp.json()
                         if "result" in result:
+                            global _balance_lock_paused, _balance_lock_pause_until
+                            _balance_lock_paused = True
+                            _balance_lock_pause_until = time.time() + 0.4
                             logger.info(
-                                f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL "
-                                f"(tx: {str(result['result'])[:12]}…)"
+                                f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL. "
+                                f"Paused next trade for 400ms to allow account state convergence."
                             )
                             return True
                         else:

@@ -209,6 +209,8 @@ class PriorityArbitrageQueue:
     def __init__(self, max_size: int = 100):
         self.queue: List[Tuple[float, ArbitrageOpportunity]] = []
         self.max_size = max_size
+        # Reactive event trigger: wake up processor instantly (0ms latency)
+        self._event = asyncio.Event()
 
     def add_opportunity(self, opportunity: ArbitrageOpportunity):
         """Add opportunity to priority queue."""
@@ -223,8 +225,11 @@ class PriorityArbitrageQueue:
         if len(self.queue) > self.max_size:
             self.queue.pop()  # Remove lowest priority
 
+        # Trigger reactive event
+        self._event.set()
+
     def get_next_opportunity(self) -> Optional[ArbitrageOpportunity]:
-        """Get highest priority opportunity."""
+        """Get highest priority opportunity (synchronous)."""
         while self.queue:
             score, opportunity = self.queue.pop(0)
 
@@ -234,6 +239,27 @@ class PriorityArbitrageQueue:
             # Stale opportunity removed, continue to next
 
         return None
+
+    async def get_next_opportunity_async(self) -> ArbitrageOpportunity:
+        """Reactive task getter: sleeps until a signal arrives, then wakes up instantly."""
+        while True:
+            # If queue is empty, wait for the next set() call from add_opportunity
+            if not self.queue:
+                self._event.clear()
+                await self._event.wait()
+
+            current_time = time.time()
+            # Flush stale signals (older than 5s) before processing
+            self.queue = [
+                (s, opp) for s, opp in self.queue if current_time - opp.timestamp <= 5.0
+            ]
+
+            if self.queue:
+                score, opportunity = self.queue.pop(0)
+                return opportunity
+            else:
+                # If all signals were stale, reset event and wait again
+                self._event.clear()
 
     def peek_next_opportunity(self) -> Optional[ArbitrageOpportunity]:
         """Peek at next opportunity without removing it."""

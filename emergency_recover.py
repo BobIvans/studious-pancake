@@ -40,12 +40,8 @@ async def get_all_token_accounts(session: aiohttp.ClientSession, rpc_url: str, o
 
 
 async def unwrap_wsol_accounts(session, rpc_url, keypair, wsol_accounts):
-    """Real wSOL unwrap + close logic (point 7)."""
-    from spl.token.instructions import close_account, CloseAccountParams, sync_native, SyncNativeParams
-    from solders.transaction import VersionedTransaction
-    from solders.message import MessageV0
-    from solders.hash import Hash
-
+    """Real wSOL unwrap + close logic."""
+    from spl.token.instructions import close_account, CloseAccountParams
     TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
     for account_info in wsol_accounts:
@@ -54,89 +50,49 @@ async def unwrap_wsol_accounts(session, rpc_url, keypair, wsol_accounts):
 
         logger.info(f"Unwrapping wSOL account {str(acc_pubkey)[:8]}... with {balance} wSOL")
 
-        # close_account automatically unwraps + returns rent
         close_ix = close_account(CloseAccountParams(
             account=acc_pubkey,
             dest=keypair.pubkey(),
             owner=keypair.pubkey(),
-            program_id=TOKEN_PROGRAM_ID
+            program_id=TOKEN_PROGRAM_ID,
+            signers=[],
         ))
 
-        # Build and send tx (real implementation for point 2)
         blockhash_payload = {
             "jsonrpc": "2.0", "id": 1,
             "method": "getLatestBlockhash",
             "params": [{"commitment": "confirmed"}]
         }
 
-        async with session.post(rpc_url, json=blockhash_payload) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                blockhash = Hash.from_string(data["result"]["value"]["blockhash"])
-                # ── FIX 2: Compute Budget Strict Ordering check ────────────────
-                if not validate_cb_ordering([close_ix], "emergency_recover.unwrap_wsol"):
-                    logger.critical("CRITICAL: ComputeBudget ordering violation in emergency_recover. Skipping TX.")
-                    return
-                # ─────────────────────────────────────────────────────────────────
-                msg = MessageV0.try_compile(
-                    payer=keypair.pubkey(),
-                    instructions=[close_ix],
-                    address_lookup_table_accounts=[],
-                    recent_blockhash=blockhash
-                )
-                tx = VersionedTransaction(msg, [keypair])
-                send_payload = {
-                    "jsonrpc": "2.0", "id": 1,
-                    "method": "sendTransaction",
-                    "params": [bytes(tx).hex(), {"encoding": "base64", "skipPreflight": True}]
-                }
-                async with session.post(rpc_url, json=send_payload) as send_resp:
-                    if send_resp.status == 200:
-                        logger.info(f"✅ wSOL account closed successfully")
-                    else:
-                        logger.error("Failed to send wSOL close tx")
+        try:
+            async with session.post(rpc_url, json=blockhash_payload) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    blockhash = Hash.from_string(data["result"]["value"]["blockhash"])
+                    
+                    if not validate_cb_ordering([close_ix], "emergency_recover.unwrap_wsol"):
+                        logger.critical("CRITICAL: ComputeBudget ordering violation in emergency_recover. Skipping TX.")
+                        return
 
-        async with session.post(rpc_url, json=blockhash_payload) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                blockhash_str = data["result"]["value"]["blockhash"]
-                blockhash = Hash.from_string(blockhash_str)
-
-                # Create transaction
-                sync_ix = sync_native(SyncNativeParams(
-                    program_id=TOKEN_PROGRAM_ID,
-                    account=acc_pubkey
-                ))
-                instructions = [sync_ix, close_ix]
-                # ── FIX 2: Compute Budget Strict Ordering check ────────────────
-                if not validate_cb_ordering(instructions, "emergency_recover.unwrap_wsol.batch"):
-                    logger.critical("CRITICAL: ComputeBudget ordering violation in emergency_recover. Skipping TX.")
-                    return
-                # ─────────────────────────────────────────────────────────────────
-                msg = MessageV0.try_compile(
-                    payer=keypair.pubkey(),
-                    instructions=instructions,
-                    address_lookup_table_accounts=[],
-                    recent_blockhash=blockhash
-                )
-                tx = VersionedTransaction(msg, [keypair])
-
-                # Send transaction
-                send_payload = {
-                    "jsonrpc": "2.0", "id": 1,
-                    "method": "sendTransaction",
-                    "params": [base64.b64encode(bytes(tx)).decode(), {"encoding": "base64", "skipPreflight": True}]
-                }
-
-                async with session.post(rpc_url, json=send_payload) as send_resp:
-                    if send_resp.status == 200:
-                        send_data = await send_resp.json()
-                        if "result" in send_data:
-                            logger.info(f"✅ Successfully unwrapped wSOL account: {send_data['result']}")
+                    msg = MessageV0.try_compile(
+                        payer=keypair.pubkey(),
+                        instructions=[close_ix],
+                        address_lookup_table_accounts=[],
+                        recent_blockhash=blockhash
+                    )
+                    tx = VersionedTransaction(msg, [keypair])
+                    send_payload = {
+                        "jsonrpc": "2.0", "id": 1,
+                        "method": "sendTransaction",
+                        "params": [base64.b64encode(bytes(tx)).decode(), {"encoding": "base64", "skipPreflight": True}]
+                    }
+                    async with session.post(rpc_url, json=send_payload) as send_resp:
+                        if send_resp.status == 200:
+                            logger.info(f"✅ wSOL account {str(acc_pubkey)[:8]} closed and unwrapped successfully")
                         else:
-                            logger.error(f"Failed to unwrap wSOL account: {send_data.get('error', 'Unknown error')}")
-                    else:
-                        logger.error(f"RPC error unwrapping wSOL: {send_resp.status}")
+                            logger.error(f"Failed to send wSOL close tx: {await send_resp.text()}")
+        except Exception as e:
+            logger.error(f"Error during wSOL unwrap: {e}")
 
 async def recover_rent():
     """Main recovery loop."""
@@ -202,7 +158,7 @@ async def recover_rent():
                     account=acc_pubkey,
                     dest=keypair.pubkey(),
                     owner=keypair.pubkey(),
-                    signer_pubkeys=[]
+                    signers=[],
                 ))
                 instructions.append(ix)
 

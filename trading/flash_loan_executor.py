@@ -24,7 +24,13 @@ async def get_jupiter_quote(
     slippage_bps: int = 150,
 ) -> Dict[str, Any]:
     """Получаем свежий quote от Jupiter (бесплатно)"""
-    url = f"{JUPITER_QUOTE_API}?inputMint={input_mint}&outputMint={output_mint}&amount={amount_lamports}&slippageBps={slippage_bps}"
+    # Task 14: force direct routes + restrictIntermediateTokens to prevent ATA drain
+    # Task 16: amount is already int, no float → decimal-point risk
+    url = (
+        f"{JUPITER_QUOTE_API}?inputMint={input_mint}&outputMint={output_mint}"
+        f"&amount={amount_lamports}&slippageBps={slippage_bps}"
+        f"&onlyDirectRoutes=true&restrictIntermediateTokens=true&maxAccounts=8"
+    )
     try:
         # используем curl (уже есть в окружении, надёжно)
         cmd = ["curl", "-s", "-L", url]

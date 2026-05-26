@@ -6,7 +6,7 @@ for free-tier Solana arbitrage opportunities.
 """
 
 import asyncio
-import json
+import orjson
 import logging
 import random
 import time
@@ -101,9 +101,9 @@ class JitoTipManager:
                     async for message in websocket:
                         self.last_msg_time = time.time()
                         try:
-                            data = json.loads(message)
+                            data = orjson.loads(message)
                             await self._process_tip_data(data)
-                        except json.JSONDecodeError:
+                        except Exception:
                             logger.warning(
                                 f"Invalid JSON from tip stream: {message[:100]}..."
                             )
@@ -352,7 +352,7 @@ class WssPoolCreationListener:
                 "method": "slotSubscribe",
                 "params": []
             }
-            await self.websocket.send(json.dumps(msg))
+            await self.websocket.send(orjson.dumps(msg))
             logger.info("📡 Subscribed to slots for heartbeat watchdog")
         except Exception as e:
             logger.error(f"Failed to subscribe to slots: {e}")
@@ -389,7 +389,7 @@ class WssPoolCreationListener:
         }
 
         try:
-            await self.websocket.send(json.dumps(subscribe_request))
+            await self.websocket.send(orjson.dumps(subscribe_request))
             self.subscriptions[program_id] = subscription_id
             logger.info(
                 f"📡 Subscribed to logs for {self.TARGET_PROGRAMS.get(program_id, program_id)[:8]}..."
@@ -401,7 +401,7 @@ class WssPoolCreationListener:
     async def _handle_message(self, message: str):
         """Handle incoming WebSocket message."""
         try:
-            data = json.loads(message)
+            data = orjson.loads(message)
 
             # Handle subscription confirmations
             if "id" in data and data.get("result"):
@@ -412,7 +412,7 @@ class WssPoolCreationListener:
             if data.get("method") == "logsNotification":
                 await self._handle_logs_notification(data["params"])
 
-        except json.JSONDecodeError:
+        except Exception:
             logger.error(f"Invalid JSON message: {message[:100]}...")
         except Exception as e:
             logger.error(f"Error processing WebSocket message: {e}")
@@ -670,7 +670,7 @@ class JitoBundleSender:
         """
         # Convert transaction to bundle format (Jito requires base58)
         import base58
-        tx_base58 = base58.b58encode(transaction.to_bytes()).decode('ascii')
+        tx_base58 = base58.b58encode(bytes(transaction)).decode('ascii')
         bundle_data = [[tx_base58]]
 
         # Send to the single configured endpoint (geo-single mode to prevent blockhash drift)

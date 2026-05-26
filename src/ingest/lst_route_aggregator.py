@@ -8,7 +8,7 @@ the full circuit: MarginFi Borrow → Buy LST → Sell LST → MarginFi Repay.
 import asyncio
 import logging
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
 import aiohttp
@@ -38,18 +38,43 @@ class RouteQuote:
     route_plan: List[str]      # list of DEX names in the route
 
 
-@dataclass
 class RouteResult:
     """Full arbitrage circuit result."""
+    __slots__ = ("profit_sol", "profit_bps", "buy_quote", "sell_quote",
+                 "borrow_amount_lamports", "route_path", "is_profitable",
+                 "total_fees_sol", "timestamp")
+
     profit_sol: float
     profit_bps: float
     buy_quote: RouteQuote
     sell_quote: RouteQuote
     borrow_amount_lamports: int
-    route_path: str            # human-readable route description
+    route_path: str
     is_profitable: bool
     total_fees_sol: float
-    timestamp: float = field(default_factory=time.time)
+    timestamp: float
+
+    def __init__(
+        self,
+        profit_sol: float,
+        profit_bps: float,
+        buy_quote: RouteQuote,
+        sell_quote: RouteQuote,
+        borrow_amount_lamports: int,
+        route_path: str,
+        is_profitable: bool,
+        total_fees_sol: float,
+        timestamp: Optional[float] = None,
+    ):
+        self.profit_sol = profit_sol
+        self.profit_bps = profit_bps
+        self.buy_quote = buy_quote
+        self.sell_quote = sell_quote
+        self.borrow_amount_lamports = borrow_amount_lamports
+        self.route_path = route_path
+        self.is_profitable = is_profitable
+        self.total_fees_sol = total_fees_sol
+        self.timestamp = timestamp if timestamp is not None else time.time()
 
 
 class LstRouteAggregator:
@@ -78,6 +103,8 @@ class LstRouteAggregator:
         priority_fee_sol: float = 0.0001,
         jito_tip_sol: float = 0.0001,
         min_profit_buffer_sol: float = 0.0005,
+        exit_exact_out_amount: Optional[int] = None,  # ExactOut: inject swapMode=ExactOut on exit quote
+        wallet_balance_sol: float = 0.0,  # Task 14: wallet balance — forces direct routes when < 0.5 SOL
     ) -> Optional[RouteResult]:
         """Find the best buy+sell route for a given LST depeg opportunity.
 
@@ -97,7 +124,7 @@ class LstRouteAggregator:
 
         if direction == "BUY_LST":
             # Borrow SOL → Buy LST (cheap on DEX) → Sell LST (via Sanctum/DEX) → Repay SOL
-            buy_quotes = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports)
+            buy_quotes = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports, wallet_balance_sol=wallet_balance_sol)
             if not buy_quotes:
                 logger.debug(f"No buy quotes for SOL→{lst_mint[:8]}")
                 return None
@@ -105,7 +132,8 @@ class LstRouteAggregator:
             best_result = None
             for buy_q in buy_quotes:
                 # Now sell LST back to SOL
-                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount)
+                # ExactOut on sell (exit) leg: MarginFi repay exact SOL needed
+                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount, swap_mode=exit_exact_out_amount, wallet_balance_sol=wallet_balance_sol)
                 if not sell_quotes:
                     continue
 
@@ -133,13 +161,14 @@ class LstRouteAggregator:
 
         elif direction == "SELL_LST":
             # Borrow SOL → Buy LST (via Sanctum at fair) → Sell LST (expensive on DEX) → Repay
-            buy_quotes = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports)
+            buy_quotes = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports, wallet_balance_sol=wallet_balance_sol)
             if not buy_quotes:
                 return None
 
             best_result = None
             for buy_q in buy_quotes:
-                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount)
+                # ExactOut on sell (exit) leg: get exact SOL back
+                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount, swap_mode=exit_exact_out_amount, wallet_balance_sol=wallet_balance_sol)
                 if not sell_quotes:
                     continue
                 for sell_q in sell_quotes:
@@ -174,17 +203,40 @@ class LstRouteAggregator:
         input_mint: str,
         output_mint: str,
         amount: int,
+        swap_mode: Optional[str] = None,
+        dex_filter: Optional[List[str]] = None,
+        wallet_balance_sol: float = 0.0,  # Task 14: micro-balance direct-route guard
     ) -> List[RouteQuote]:
-        """Fetch quotes from Jupiter (multi-hop, includes Sanctum pools)."""
+        """Fetch quotes from Jupiter (multi-hop, includes Sanctum pools).
+
+        Args:
+            input_mint: Input token mint.
+            output_mint: Output token mint.
+            amount: Amount in lamports.
+            swap_mode: Optional Jupiter swapMode (e.g. "ExactOut") injected into quote URL.
+            dex_filter: Optional DEX filter list.
+            wallet_balance_sol: Current native SOL balance. When < 0.5 SOL, ONLY direct
+                routes are attempted to prevent Jupiter from routing through intermediate
+                tokens (which would create ATA accounts costing ~0.002 SOL each).
+        """
         quotes: List[RouteQuote] = []
+
+        # Task 14: ATA Routing Drain Protection
+        # If wallet balance < 0.5 SOL, creating a new ATA for an intermediate token
+        # (e.g. WIF) costs ~0.002 SOL — enough to drain a micro-capital wallet entirely
+        # after 8 such opportunities. Force direct routes to prevent hidden CreateATA.
+        force_direct = wallet_balance_sol < 0.5
 
         # Load balancing: alternate between Jupiter multi-hop and direct
         routes = [
             ("multi", {"only_direct_routes": False}),
             ("direct", {"only_direct_routes": True}),
         ]
+        if force_direct:
+            # Kill multi-hop: only direct routes under micro-balance threshold
+            routes = [routes[1]]  # keep only ("direct", ...)
         for route_type, params in routes:
-            quote = await self._jupiter_quote(input_mint, output_mint, amount, **params)
+            quote = await self._jupiter_quote(input_mint, output_mint, amount, **params, swap_mode=swap_mode)
             if quote:
                 quotes.append(quote)
                 break  # Use first successful for load balancing
@@ -197,6 +249,7 @@ class LstRouteAggregator:
                 input_mint, output_mint, amount,
                 only_direct_routes=True,  # Sanctum требует прямых маршрутов
                 dex_filter=["Sanctum", "Sanctum Infinity"],  # Принудительно включаем Sanctum (Fix 92)
+                swap_mode=swap_mode,
             )
             if sanctum_quote:
                 # Check Sanctum fees (placeholder: assume low fee)
@@ -236,17 +289,36 @@ class LstRouteAggregator:
         amount: int,
         only_direct_routes: bool = False,
         dex_filter: Optional[List[str]] = None,
+        swap_mode: Optional[str] = None,
+        wallet_balance_sol: float = 0.0,
     ) -> Optional[RouteQuote]:
-        """Fetch a single quote from Jupiter Quote API v6."""
+        """Fetch a single quote from Jupiter Quote API v6.
+
+        Args:
+            input_mint: Input token mint.
+            output_mint: Output token mint.
+            amount: Amount in lamports.
+            only_direct_routes: If True, only direct routes.
+            dex_filter: Optional DEX filter list.
+            swap_mode: Optional Jupiter swapMode (e.g. "ExactOut") injected into quote URL.
+            wallet_balance_sol: Current SOL balance (for ATA routing guard).
+        """
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
-            "amount": str(amount),
+            "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
             "slippageBps": self.slippage_bps,
             "onlyDirectRoutes": "true" if only_direct_routes else "false",
             "restrictIntermediateTokens": "true",
-            "maxAccounts": "8",  # MTU safety: 8 acct max → TX ≤ 1232 bytes
+            "maxAccounts": "8",
+            "cache_buster": str(time.time_ns()),
         }
+
+        # ── ExactOut Mode (The ExactIn vs ExactOut Fix) ──────────────────────────────
+        # Guarantees the swap yields exactly the required repayment amount for MarginFi,
+        # fully eliminating InsufficientFunds revert due to rounding/slippage.
+        if swap_mode:
+            params["swapMode"] = swap_mode
 
         # Add DEX filter if specified
         if dex_filter:

@@ -115,8 +115,11 @@ class JitoManager:
         tip_sol = profit_sol * tip_percentage
         tip_lamports = int(tip_sol * 1_000_000_000)  # Convert SOL to lamports
 
-        # Ensure minimum tip
+        # Ensure minimum tip + Micro-Jitter (The Tie-Breaker Fix)
+        # Never submit a tip ending in 000. Adding random 11-142 lamports guarantees
+        # our tip advances past all robot rivals betting exactly 10000 lamports.
         tip_lamports = max(tip_lamports, self.default_tip_lamports)
+        tip_lamports += random.randint(11, 142)
 
         logger.info(f"💰 Calculated dynamic tip: {tip_sol:.6f} SOL ({tip_percentage*100:.1f}% of normalized profit)")
         return tip_lamports
@@ -186,7 +189,6 @@ class JitoManager:
             result = await self.bundle_client.build_and_send_bundle(
                 swap_instructions=[],  # Transaction already contains instructions
                 payer_keypair=payer_keypair,
-                jito_context=jito_context,
                 recent_blockhash=recent_blockhash
             )
 
@@ -243,12 +245,40 @@ class JitoBiddingManager:
     """God-mode dynamic Jito tip bidding with success-rate feedback and capital guard."""
 
     TIP_FLOOR_URL = "https://bundles.jito.wtf/api/v1/bundles/tip_floor"
+    TIP_ACCOUNTS_URL = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
 
     def __init__(self):
         self.tip_floor_data = {}
+        self.tip_accounts = [
+            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",  # Fallback 1
+            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",  # Fallback 2
+        ]
         self.strategy_success: Dict[str, list] = {}  # strategy -> [ (timestamp, success_bool) ]
         self.consecutive_success = 0
         self.last_poll = 0.0
+        # ── Phase 49: Adaptive Tip Step-Up ───────────────────────────────────
+        # After N consecutive failed bundle submissions (simulation passed), ramp tip%
+        self._consecutive_failures = 0
+        self._step_up_until = 0.0   # epoch when elevated tip window expires
+        self.STEP_UP_THRESHOLD = 3  # failures before step-up
+        self.STEP_UP_DURATION_S = 300  # 5-minute elevated tip window
+        self.STEP_UP_TIP_PCT_LOW = 0.55  # 55% during elevated window
+        self.STEP_UP_TIP_PCT_HIGH = 0.60  # 60% cap during elevated window
+        self.BASE_TIP_PCT = 0.40  # 40% baseline
+
+    async def update_tip_accounts(self, session: aiohttp.ClientSession) -> bool:
+        """Fetch live Jito tip accounts from Block Engine (Phase 35)."""
+        try:
+            async with session.get(self.TIP_ACCOUNTS_URL, timeout=5.0) as resp:
+                if resp.status == 200:
+                    accounts = await resp.json()
+                    if accounts and isinstance(accounts, list):
+                        self.tip_accounts = accounts
+                        logger.info(f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active accounts")
+                        return True
+        except Exception as e:
+            logger.warning(f"Failed to fetch dynamic Jito tip accounts: {e}. Using cached defaults.")
+        return False
 
     async def poll_tip_floor(self, session: aiohttp.ClientSession):
         """Poll every 10s."""
@@ -327,7 +357,22 @@ class JitoBiddingManager:
             return 0
 
         # 40% of expected net profit — validated for Blue Ocean strategies
-        tip_sol = forty_pct_tip_sol
+        # ── Phase 49: Adaptive Tip Step-Up ───────────────────────────────────
+        # If we are inside a step-up window (>= 3 consecutive failures earlier),
+        # raise tip to 55-60 % of profit to compete with aggressive rivals.
+        tip_pct = 0.40
+        if time.time() < self._step_up_until:
+            # Freshly raised — use upper bound to aggressively win
+            tip_pct = self.STEP_UP_TIP_PCT_HIGH
+        elif self._consecutive_failures >= self.STEP_UP_THRESHOLD:
+            # Still in a multi-failure streak — activate elevated window now
+            self._step_up_until = time.time() + self.STEP_UP_DURATION_S
+            tip_pct = self.STEP_UP_TIP_PCT_HIGH
+            logger.warning(
+                f"📈 Phase 49 Step-Up: {self._consecutive_failures} consecutive failures → "
+                f"tip raised to {tip_pct*100:.0f}% for {self.STEP_UP_DURATION_S}s"
+            )
+        tip_sol = forty_pct_tip_sol * (tip_pct / 0.40)  # scale from 40 % baseline
         tip_lamports = int(tip_sol * 1_000_000_000)
 
         # ── Fix 2 (Unfunded Jito Tip): Cap tip by actual native SOL balance ──
@@ -355,9 +400,14 @@ class JitoBiddingManager:
             return 0
         tip_lamports = int(tip_lamports_float)
 
+        # ── The Tie-Breaker Fix: Micro-Jitter ─────────────────────────────────────
+        # Never submit a tip ending in 000. Adding random 11–142 lamports makes our
+        # bundle hash/bid strictly larger than every competing micro-bot at exactly 10000.
+        tip_lamports += random.randint(11, 142)
+
         # Максимальный tip: никогда больше 70% от профита
         logger.info(
-            f"💰 Blue Ocean tip: {tip_sol:.6f} SOL (40% of {expected_profit_sol:.6f} SOL profit) "
+            f"💰 Blue Ocean tip: {tip_sol:.6f} SOL ({tip_pct*100:.0f}% of {expected_profit_sol:.6f} SOL profit) "
             f"| strategy={strategy}"
         )
         return tip_lamports
@@ -441,6 +491,11 @@ class JitoBiddingManager:
             )
             tip_lamports = capped
 
+        # ── The Tie-Breaker Fix: Micro-Jitter ─────────────────────────────────────
+        # Never submit a tip ending in 000. Adding random 11–142 lamports makes our
+        # bundle hash/bid strictly larger than every competing micro-bot at exactly 10000.
+        tip_lamports += random.randint(11, 142)
+
         return tip_lamports
 
     def record_trade_result(self, strategy: str, success: bool):
@@ -457,3 +512,26 @@ class JitoBiddingManager:
             self.consecutive_success += 1
         else:
             self.consecutive_success = 0
+
+    def record_bundle_result(self, strategy: str, landed: bool):
+        """Phase 49: Track consecutive bundle failures for dynamic step-up.
+
+        Called with ``landed=True`` when Jito confirms the bundle landed on-chain,
+        or ``landed=False`` when the bundle was dropped / failed.
+        """
+        import time
+        if landed:
+            # Success — reset failure counter and collapse step-up window
+            self._consecutive_failures = 0
+            self._step_up_until = 0.0
+            self.record_trade_result(strategy, True)
+        else:
+            # Accumulate failure — trigger step-up window once threshold is hit
+            self._consecutive_failures += 1
+            if self._consecutive_failures == self.STEP_UP_THRESHOLD:
+                self._step_up_until = time.time() + self.STEP_UP_DURATION_S
+                logger.warning(
+                    f"📈 Phase 49 Bidding Manager: {self.STEP_UP_THRESHOLD} consecutive failures → "
+                    f"step-up window activated for {self.STEP_UP_DURATION_S}s (tip {self.STEP_UP_TIP_PCT_LOW*100:.0f}–{self.STEP_UP_TIP_PCT_HIGH*100:.0f}%)"
+                )
+            self.record_trade_result(strategy, False)

@@ -1,7 +1,7 @@
 """RPC Multiplexing Engine for racing multiple WebSocket providers."""
 
 import asyncio
-import json
+import orjson
 import logging
 import time
 import aiohttp
@@ -79,7 +79,7 @@ class WSSConnection:
                     ]
                 }
 
-                await self.websocket.send_str(json.dumps(params))
+                await self.websocket.send_str(orjson.dumps(params).decode())
                 self.subscriptions[subscription_id] = {
                     "type": "logs",
                     "addresses": [address],
@@ -105,7 +105,7 @@ class WSSConnection:
         try:
             msg = await self.websocket.receive()
             if msg.type == aiohttp.WSMsgType.TEXT:
-                return json.loads(msg.data)
+                return orjson.loads(msg.data)
             elif msg.type == aiohttp.WSMsgType.ERROR:
                 logger.error(f"WebSocket error on {self.name}: {self.websocket.exception()}")
                 self.connected = False

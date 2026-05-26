@@ -32,7 +32,7 @@ class PoolFetcher:
         self.cache_file = Path(cache_file)
         self.cache: Dict[str, List[PoolAddress]] = {}
         self.target_tokens = set()
-        self.jupiter_api_url = "https://api.jup.ag/swap/v1"
+        self.jupiter_api_url = "https://quote-api.jup.ag/v6"
         self.raydium_api_url = "https://api-v3.raydium.io"
 
     def set_target_tokens(self, tokens: List[str]):

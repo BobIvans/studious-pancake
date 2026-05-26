@@ -2,7 +2,7 @@
 
 import asyncio
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List, Any
 import aiohttp
 from solders.pubkey import Pubkey
 
@@ -78,7 +78,7 @@ class LeaderTracker:
                 slot = current_slot + i
                 self.leader_schedule[slot] = leader_pubkey
 
-            self.last_fetch = asyncio.get_event_loop().time()
+            self.last_fetch = asyncio.get_running_loop().time()
             logger.info(f"✅ Updated leader schedule for {len(leaders)} slots starting from {current_slot}")
 
         except Exception as e:
@@ -92,15 +92,71 @@ class LeaderTracker:
         """Get the leader for the current slot."""
         return self.get_leader_for_slot(current_slot)
 
-    async def calculate_aggressive_priority_fee(self, session: aiohttp.ClientSession, rpc_url: str, max_fee_sol: float) -> float:
+    def is_jito_imminent(self, current_slot: int, jito_leaders: Optional[set] = None,
+                         max_slots_ahead: int = 10) -> Dict[str, Any]:
+        """
+        Task 4 — Jito Leader Trap Guard.
+
+        Checks whether a Jito block-engine leader is scheduled within the next
+        ``max_slots_ahead`` slots.
+
+        If the next Jito leader is MORE than ``max_slots_ahead`` slots away, the
+        caller should either raise the Jito tip by +10% or skip the trade entirely
+        to avoid "Blockhash Expired" while waiting for the Jito validator's slot.
+
+        Args:
+            current_slot: The latest known slot number.
+            jito_leaders:  Set of Jito block-engine validator pubkeys.
+                           If None, an empty set is used (returns ``not_imminent``).
+            max_slots_ahead: The threshold slots distance beyond which the Jito
+                             leader is considered "too far" (default: 10 slots ≈ 4 s).
+
+        Returns:
+            Dict with:
+              ``imminent``    — True if a Jito leader is within max_slots_ahead.
+              ``slots_ahead`` — Exact slot distance to the next Jito leader.
+              ``reason``      — Human-readable explanation.
+        """
+        jito_leaders = jito_leaders or set()
+
+        if not self.leader_schedule or not jito_leaders:
+            return {
+                "imminent": False,
+                "slots_ahead": float("inf"),
+                "reason": "No leader schedule or Jito leader list available — assume not imminent",
+            }
+
+        # Scan forward from current_slot in the cached schedule
+        for offset in range(1, max_slots_ahead + 1):
+            slot = current_slot + offset
+            validator = self.leader_schedule.get(slot)
+            if validator and validator in jito_leaders:
+                return {
+                    "imminent": True,
+                    "slots_ahead": offset,
+                    "reason": f"Jito leader '{validator[:8]}…' found at slot {slot} ({offset} slots ahead)",
+                }
+
+        # No Jito leader within max_slots_ahead slots
+        return {
+            "imminent": False,
+            "slots_ahead": max_slots_ahead + 1,
+            "reason": (
+                f"No Jito leader within {max_slots_ahead} slots "
+                f"(slots {current_slot + 1}–{current_slot + max_slots_ahead}). "
+                "Consider increasing tip by +10% or skipping trade."
+            ),
+        }
+
+    async def calculate_aggressive_priority_fee(self, session: aiohttp.ClientSession, rpc_url: str, max_fee_sol: float, account_keys: Optional[List[str]] = None) -> float:
         """Calculate aggressive priority fee for non-Jito slots."""
         try:
-            # Get recent prioritization fees
+            # Get recent prioritization fees - use localized fee market if accounts provided
             payload = {
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "getRecentPrioritizationFees",
-                "params": [["11111111111111111111111111111112"]]  # System program
+                "params": [account_keys if account_keys else []],  # Localized fee market support
             }
             async with session.post(rpc_url, json=payload) as resp:
                 if resp.status != 200:

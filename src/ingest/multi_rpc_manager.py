@@ -7,13 +7,103 @@ latency in arbitrage scenarios.
 """
 
 import asyncio
-import json
+import orjson
 import logging
 from typing import Dict, List, Optional, Set, Callable, Any
 import aiohttp
 import websockets
 
 logger = logging.getLogger("MultiRpcManager")
+
+# Solana SVM hard limit for one transaction: ~1,400,000 CU.
+# We always keep a safety margin below it.
+SOLANA_CU_HARD_LIMIT = 1_400_000
+
+
+async def async_race_http_requests(
+    session: aiohttp.ClientSession,
+    endpoints: List[str],
+    payload: dict,
+    method: str = "POST",
+    timeout_seconds: float = 2.0,
+    label: str = "HTTP race",
+) -> Optional[dict]:
+    """Fire identical requests to multiple HTTP endpoints simultaneously.
+
+    Implements the ``Promise.any`` pattern for HTTP polling: the first response that
+    arrives wins; all other in-flight requests are immediately cancelled.  This
+    guarantees the minimum possible latency is used for every critical call
+    (blockhash fetch, quote retrieval, etc.), regardless of which endpoint happened
+    to be faster on this particular millisecond.
+
+    Args:
+        session: Shared ``aiohttp.ClientSession``.
+        endpoints: List of HTTP endpoint URLs to race.
+        payload: Identical JSON body for each request.
+        method: HTTP method, default POST.
+        timeout_seconds: Per-request timeout.
+        label: Human-readable label for log messages.
+
+    Returns:
+        First successful ``dict`` response, or ``None`` if all endpoints failed.
+    """
+    if not endpoints:
+        return None
+
+    tasks: List[asyncio.Task] = []
+    for ep in endpoints:
+        task = asyncio.create_task(
+            _http_fetch(session, ep, payload, method, timeout_seconds, label)
+        )
+        tasks.append(task)
+
+    try:
+        for coro in asyncio.as_completed(tasks):
+            result = await coro
+            if result is not None:
+                logger.debug(f"🏁 {label} won by first response in {len(tasks)}-endpoint race")
+                # Cancel the rest immediately
+                for t in tasks:
+                    if not t.done():
+                        t.cancel()
+                return result
+    except Exception as e:
+        logger.debug(f"{label} race error: {e}")
+    finally:
+        for t in tasks:
+            if not t.done():
+                t.cancel()
+
+    logger.warning(f"❌ {label}: all {len(endpoints)} endpoints failed")
+    return None
+
+
+async def _http_fetch(
+    session: aiohttp.ClientSession,
+    endpoint: str,
+    payload: dict,
+    method: str = "POST",
+    timeout_seconds: float = 2.0,
+    label: str = "HTTP race",
+) -> Optional[dict]:
+    """Fetch from a single HTTP endpoint with short timeout."""
+    try:
+        timeout = aiohttp.ClientTimeout(total=timeout_seconds)
+        if method.upper() == "POST":
+            async with session.post(endpoint, json=payload, timeout=timeout) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+                else:
+                    logger.debug(f"{label} HTTP {resp.status} from {endpoint}")
+        else:
+            async with session.get(endpoint, params=payload, timeout=timeout) as resp:
+                if resp.status == 200:
+                    return await resp.json()
+    except asyncio.TimeoutError:
+        logger.debug(f"{label} timeout from {endpoint}")
+    except Exception as e:
+        logger.debug(f"{label} error from {endpoint}: {e}")
+    return None
 
 
 class RpcEndpoint:
@@ -167,7 +257,7 @@ class MultiRpcManager:
     async def _process_message(self, endpoint: RpcEndpoint, message: str):
         """Process incoming WebSocket message."""
         try:
-            data = json.loads(message)
+            data = orjson.loads(message)
 
             # Handle subscription confirmations
             if "id" in data and "result" in data:
@@ -178,7 +268,7 @@ class MultiRpcManager:
             if "method" in data and data["method"] == "logsNotification":
                 await self._handle_logs_event(endpoint, data["params"])
 
-        except json.JSONDecodeError:
+        except Exception:
             logger.error(f"Invalid JSON from {endpoint.name}: {message[:100]}...")
         except Exception as e:
             logger.error(f"Error processing message from {endpoint.name}: {e}")
@@ -191,7 +281,7 @@ class MultiRpcManager:
             if not signature:
                 return
             event_signature = signature
-            current_time = asyncio.get_event_loop().time() * 1000  # milliseconds
+            current_time = asyncio.get_running_loop().time() * 1000  # milliseconds
 
             # Check for duplicates within deduplication window
             if self._is_duplicate_event(event_signature, current_time):
@@ -237,7 +327,7 @@ class MultiRpcManager:
         while self.running:
             await asyncio.sleep(60)  # Cleanup every minute
 
-            current_time = asyncio.get_event_loop().time() * 1000
+            current_time = asyncio.get_running_loop().time() * 1000
             cutoff_time = current_time - self.deduplication_window_ms
 
             # Remove old timestamps
@@ -290,7 +380,7 @@ class MultiRpcManager:
         }
 
         try:
-            await endpoint.connection.send(json.dumps(request))
+            await endpoint.connection.send(orjson.dumps(request))
             logger.debug(f"📡 Sent {method} subscription to {endpoint.name}")
         except Exception as e:
             logger.error(f"Failed to send subscription to {endpoint.name}: {e}")

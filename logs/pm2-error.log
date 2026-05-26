@@ -1,0 +1,1060 @@
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 536, in <module>
+    TOKEN_2022_PROGRAM_ID
+NameError: name 'TOKEN_2022_PROGRAM_ID' is not defined. Did you mean: 'TOKEN_PROGRAM_ID'?
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7053, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5446, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7053, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5446, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7053, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5446, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7053, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5446, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7053, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5446, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7101, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5492, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined
+WARNING:src.ingest.grpc_stream:
+═════════════════════════════════════════════════════════════════
+  CRITICAL: yellowstone_grpc_proto NOT installed.               
+  The Yellowstone gRPC stream CANNOT start until this is fixed.  
+  Fix:                                                           
+    pip install yellowstone-grpc-proto grpcio betterproto       
+  Import error:                                                  
+    No module named 'yellowstone_grpc_proto'                                               
+═════════════════════════════════════════════════════════════════
+WARNING:ArbBot:Invalid token address for fwdSOL: fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z - String is the wrong size
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+CRITICAL:ArbBot:🛑 UNKNOWN MARGINFI BANK: 2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2
+liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed.
+Traceback (most recent call last):
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 7144, in <module>
+    asyncio.run(run())
+    ~~~~~~~~~~~^^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 195, in run
+    return runner.run(main)
+           ~~~~~~~~~~^^^^^^
+  File "/Library/Frameworks/Python.framework/Versions/3.13/lib/python3.13/asyncio/runners.py", line 118, in run
+    return self._loop.run_until_complete(task)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^
+  File "uvloop/loop.pyx", line 1518, in uvloop.loop.Loop.run_until_complete
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 5533, in run
+    cfg = Config()
+  File "<string>", line 20, in __init__
+  File "/Users/ivansbobrovs/Desktop/1solana-coin-signal-engine-main/arb_bot.py", line 776, in <lambda>
+    for u in ([_env_jito_url] if _env_jito_url else _default_jito_endpoints)
+                                 ^^^^^^^^^^^^^
+NameError: name '_env_jito_url' is not defined

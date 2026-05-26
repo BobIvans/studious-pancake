@@ -1,0 +1,6 @@
+WARNING:ArbBot:Invalid token address for JupUSD: JupUSDnJZZzrjqoKdcycEZFyX5pdYUlRW2uHkrjawcr - Invalid Base58 string
+WARNING:ArbBot:Invalid token address for 2ZSOL: 2ZSOLyqCWL24UYBYUBKbWMmTACYHCY9qiEgLPxEHiBE - Invalid Base58 string
+WARNING:ArbBot:Invalid token address for psol: psolapbameK9iwMp8vd2sGhciCd753JqthShYwdt7R - Invalid Base58 string
+=== RUN() STARTED ===
+CRITICAL:ArbBot:CRITICAL: MARGINFI_ACCOUNT has invalid format (27 chars). Must be a valid Base58 Solana pubkey (32-44 alphanumeric chars, no 0/O/I/l). Run MarginFi deposit first.
+CRITICAL:ArbBot:Bot cannot start — MarginFi account validation failed.

@@ -1,7 +1,7 @@
 """Data Aggregator for Flash Loan Bot - Unified Event Logging and Analytics."""
 
 import sqlite3
-import json
+import orjson
 import asyncio
 import time
 from datetime import datetime, timedelta
@@ -164,11 +164,11 @@ class DataAggregator:
                 'event_type': event_type,
                 'webhook_id': kwargs.get('webhook_id'),
                 'transaction_signature': kwargs.get('transaction_signature'),
-                'input_data': json.dumps(kwargs.get('input_data', {})),
-                'parsed_opportunity': json.dumps(kwargs.get('parsed_opportunity', {})),
-                'simulation_result': json.dumps(kwargs.get('simulation_result', {})),
-                'execution_result': json.dumps(kwargs.get('execution_result', {})),
-                'metadata': json.dumps(kwargs.get('metadata', {}))
+                'input_data': orjson.dumps(kwargs.get('input_data', {})).decode(),
+                'parsed_opportunity': orjson.dumps(kwargs.get('parsed_opportunity', {})).decode(),
+                'simulation_result': orjson.dumps(kwargs.get('simulation_result', {})).decode(),
+                'execution_result': orjson.dumps(kwargs.get('execution_result', {})).decode(),
+                'metadata': orjson.dumps(kwargs.get('metadata', {})).decode()
             }
 
             # Add to batch queue instead of direct DB write
@@ -315,13 +315,13 @@ class DataAggregator:
                         'event_type': row[2],
                         'webhook_id': row[3],
                         'transaction_signature': row[4],
-                        'input_data': json.loads(row[5]) if row[5] else {},
-                        'parsed_opportunity': json.loads(row[6]) if row[6] else {},
-                        'simulation_result': json.loads(row[7]) if row[7] else {},
-                        'execution_result': json.loads(row[8]) if row[8] else {},
-                        'metadata': json.loads(row[9]) if row[9] else {}
+                        'input_data': orjson.loads(row[5]) if row[5] else {},
+                        'parsed_opportunity': orjson.loads(row[6]) if row[6] else {},
+                        'simulation_result': orjson.loads(row[7]) if row[7] else {},
+                        'execution_result': orjson.loads(row[8]) if row[8] else {},
+                        'metadata': orjson.loads(row[9]) if row[9] else {}
                     }
-                    f.write(json.dumps(event_dict) + '\n')
+                    f.write(orjson.dumps(event_dict).decode() + '\n')
 
         logger.info(f"Exported {days} days of data to {output_file}")
         return output_file
@@ -436,8 +436,8 @@ class DataAggregator:
 
             results = []
             async for row in cursor:
-                opportunity = json.loads(row[0]) if row[0] else {}
-                metadata = json.loads(row[1]) if row[1] else {}
+                opportunity = orjson.loads(row[0]) if row[0] else {}
+                metadata = orjson.loads(row[1]) if row[1] else {}
                 results.append({
                     'opportunity': opportunity,
                     'metadata': metadata,

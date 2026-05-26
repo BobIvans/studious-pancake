@@ -6,7 +6,7 @@ before execution. Handles simulation response parsing and profit calculation.
 """
 
 import asyncio
-import json
+import orjson
 import logging
 from typing import Dict, Optional, Tuple
 import aiohttp
@@ -57,7 +57,7 @@ class TransactionSimulator:
                     tx_b64,
                     {
                         "encoding": "base64",
-                        "commitment": "processed",
+                        "commitment": "confirmed",
                         "sigVerify": False
                     }
                 ]

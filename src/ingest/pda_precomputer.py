@@ -41,6 +41,23 @@ class RaydiumPDAPrecomputer:
         # OpenBook market cache
         self.market_cache: Dict[str, Pubkey] = {}
 
+    @staticmethod
+    def compute_complete_pool_addresses(mint_address: str, market_id: Optional[str] = None) -> Dict[str, str]:
+        """
+        REMOVED: Raydium V4 pool addresses are randomly generated Keypairs.
+        Pre-computing via find_program_address is mathematically impossible and
+        results in 100% AccountNotFound failures.
+        
+        The bot must rely on jito_sniper.WssPoolCreationListener to parse the
+        actual pool_address from the InitializePool logs.
+        """
+        logger.error(
+            f"compute_complete_pool_addresses HARD BLOCKED for {mint_address}: "
+            "Raydium V4 uses random Keypairs, not PDAs. "
+            "Use jito_sniper.WssPoolCreationListener for pool discovery."
+        )
+        return {}
+
     async def discover_pool_addresses(self, token_mint: str) -> Dict[str, Pubkey]:
         """
         Discover Raydium AMM V4 addresses by monitoring program logs.

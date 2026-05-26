@@ -11,7 +11,7 @@ import logging
 import os
 from typing import List, Dict, Set
 from datetime import datetime, timedelta
-import json
+import orjson
 
 logger = logging.getLogger(__name__)
 
@@ -33,7 +33,7 @@ class DexScreenerClient:
             try:
                 async with self.session.get(url, timeout=10) as resp:
                     if resp.status == 200:
-                        data = await resp.json()
+                        data = orjson.loads(await resp.read())
                         return data if isinstance(data, list) else []
             except Exception as e:
                 logger.warning(f"DexScreener fetch failed: {e}")

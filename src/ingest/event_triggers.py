@@ -72,7 +72,7 @@ class EventTriggerEngine:
         """
         token_symbol = price_data.get('token')
         price_usd = Decimal(str(price_data.get('price', 0)))
-        timestamp = price_data.get('timestamp', asyncio.get_event_loop().time())
+        timestamp = price_data.get('timestamp', asyncio.get_running_loop().time())
         source = price_data.get('source', 'unknown')
 
         if not token_symbol or price_usd <= 0:
@@ -123,7 +123,7 @@ class EventTriggerEngine:
             expected_profit_bps=expected_profit_bps,
             confidence_score=0.95,  # High confidence for graduation events
             trigger_data=event_data,
-            timestamp=asyncio.get_event_loop().time()
+            timestamp=asyncio.get_running_loop().time()
         )
 
         await self._emit_signal(signal)
@@ -154,7 +154,7 @@ class EventTriggerEngine:
                 expected_profit_bps=expected_profit_bps,
                 confidence_score=0.90,  # High confidence for epoch events
                 trigger_data=epoch_data,
-                timestamp=asyncio.get_event_loop().time()
+                timestamp=asyncio.get_running_loop().time()
             )
 
             await self._emit_signal(signal)
@@ -192,7 +192,7 @@ class EventTriggerEngine:
                     'price_diff_pct': price_diff_pct,
                     'oracle_source': oracle_price.source
                 },
-                timestamp=asyncio.get_event_loop().time()
+                timestamp=asyncio.get_running_loop().time()
             )
 
             await self._emit_signal(signal)
@@ -202,7 +202,7 @@ class EventTriggerEngine:
         self.active_signals.append(signal)
 
         # Keep only recent signals (last 10 minutes)
-        cutoff_time = asyncio.get_event_loop().time() - 600
+        cutoff_time = asyncio.get_running_loop().time() - 600
         self.active_signals = [s for s in self.active_signals if s.timestamp > cutoff_time]
 
         # Notify handlers
@@ -241,7 +241,7 @@ class VolatilityWatcher:
             if not current_price:
                 return
 
-            current_time = asyncio.get_event_loop().time()
+            current_time = asyncio.get_running_loop().time()
 
             # Update price history
             if token_symbol not in self.price_history:
@@ -266,7 +266,7 @@ class VolatilityWatcher:
                 return None
 
             # Get prices within time window
-            current_time = asyncio.get_event_loop().time()
+            current_time = asyncio.get_running_loop().time()
             window_start = current_time - self.time_window_seconds
 
             window_prices = [
@@ -329,7 +329,7 @@ class VolatilityWatcher:
                         'lagging_dexes': lagging_dexes,
                         'direction': direction
                     },
-                    timestamp=asyncio.get_event_loop().time()
+                    timestamp=asyncio.get_running_loop().time()
                 )
 
                 # Emit signal (would be handled by main arbitrage engine)
@@ -424,7 +424,7 @@ class VolatilityWatcher:
             'oracle_prices': {
                 symbol: {
                     'price': float(price.price_usd),
-                    'age_seconds': asyncio.get_event_loop().time() - price.timestamp,
+                    'age_seconds': asyncio.get_running_loop().time() - price.timestamp,
                     'source': price.source
                 }
                 for symbol, price in self.oracle_prices.items()

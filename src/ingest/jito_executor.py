@@ -1,91 +1,168 @@
-"""JitoExecutor class that subscribes to tip_stream and sends transactions as send_bundle."""
+"""JitoExecutor — HTTP REST bundle submission to regional endpoints.
+
+Replaces gRPC with HTTP POST shotgun (aiohttp).
+The "first-accepted-wins" regional shotgun semantics are preserved.
+"""
+
+from __future__ import annotations
 
 import asyncio
-import json
+import base58
 import logging
 import os
 import time
 from typing import Any, Dict, List, Optional, Callable
 import aiohttp
-import websockets
-import base58
-import random
 from solders.keypair import Keypair
 from solders.transaction import VersionedTransaction
 
 logger = logging.getLogger(__name__)
 
+# ── Regional Block Engine HTTP endpoints ──────────────────────────────────────
+JITO_HTTP_ENDPOINTS: List[str] = [
+    "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+    "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+    "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
+    "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
+]
+
+
 class JitoExecutor:
-    """Executor that subscribes to Jito tip_stream and sends bundles."""
+    """Executor that subscribes to Jito tip stream and fires bundles via HTTP REST."""
 
     def __init__(
         self,
-        session: Optional[aiohttp.ClientSession] = None,
-        tip_stream_url: Optional[str] = None,
-        bundle_endpoint: Optional[str] = None,
-        timeout: float = 30.0,
-        keypair: Optional[Keypair] = None
+        session:        Optional[aiohttp.ClientSession] = None,
+        tip_stream_url: Optional[str]                     = None,
+        bundle_endpoint: Optional[str]                    = None,
+        timeout:        float                             = 30.0,
+        keypair:        Optional[Keypair]                 = None,
     ):
-        self.keypair = keypair
-        # Use environment variables with defaults
-        self.session = session
-        self.tip_stream_url = tip_stream_url or os.getenv(
-            "JITO_TIP_STREAM_URL", "https://bundles-api-rest.jito.wtf/api/v1/bundles/tip_floor"
-        )
-        self.bundle_endpoint = bundle_endpoint or os.getenv(
+        self.keypair          = keypair
+        self.session          = session
+        self.bundle_endpoint  = bundle_endpoint or os.getenv(
             "JITO_RPC_URL", "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
         )
-        self.endpoints = [  # Fix 89: regional shotgun
-            "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
-            "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
-            "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
-            "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        ]
-        self._tip_backoff = 0  # Exponential backoff counter for tip API failures
-        self.timeout = timeout
+        self.endpoints        = JITO_HTTP_ENDPOINTS
+        self.timeout          = timeout
         self.current_tip_data = None
-        # Phase 35: Dynamic Jito Tip Accounts
-        self.tip_accounts = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
-        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Using hardcoded fallback! Update via fetch_tip_accounts() API.")
-        self.tip_subscription_task = None
-        self._tip_accounts_refresh_task = None  # Fix 95: 10-min periodic refresh
-        self._running = False
 
-        # ─── Ghost Balance Recovery ───────────────────────────────────────────
-        # Track bundles whose confirmed/denied status is still unknown.
-        # If a bundle confirms we remove it here.
-        # The background reconciliation task removes stale entries (> 8 s old) and
-        # pushes the deducted amount back into the global virtual_balance so
-        # the bot never "freezes" just because Jito silently dropped a bundle.
-        self.pending_bundles: Dict[str, Dict[str, Any]] = {}
-        self._reconciliation_task: Optional[asyncio.Task] = None
+        # Phase 35: Dynamic Jito tip accounts
+        self.tip_accounts = [
+            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",
+            "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLk",
+            "ADuUkR4vqLUMWXxW9gh6D6L8pMSawDBQW5ypTcRqMoKY",
+            "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh",
+            "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
+            "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
+            "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBVCmLzFZu"
+        ]
+        self.tip_subscription_task   = None
+        self._tip_accounts_refresh_task: Optional[asyncio.Task] = None
+        self._running                = False
 
-    async def start(self):
-        """Start the tip stream subscription and reconciliation task."""
+        # ── Ghost Balance Recovery ────────────────────────────────────────────
+        self.pending_bundles: Dict[str, Dict[str, Any]]       = {}
+        self._reconciliation_task: Optional[asyncio.Task]     = None
+        self._auth_refresh_task: Optional[asyncio.Task] = None
+        self.api_key: Optional[str] = None
+
+    # ── Lifecycle ──────────────────────────────────────────────────────────────
+
+    async def start(self) -> None:
         if self._running:
             return
         self._running = True
-        # Phase 35: Fetch tip accounts on startup
         await self.fetch_tip_accounts()
-        self.tip_subscription_task = asyncio.create_task(self._subscribe_to_tip_stream())
-        # Fix 95: Refresh Jito tip_accounts list every 10 min (they rotate; hardcoded is stale after a few minutes)
-        self._tip_accounts_refresh_task = asyncio.create_task(self._periodic_tip_accounts_refresh())
-        # Ghost Balance Recovery: background reconciliation every 8 s
-        self._reconciliation_task = asyncio.create_task(self._reconcile_pending())
 
-    async def stop(self):
-        """Stop all background tasks."""
+        # Phase 49: Jito Searcher Authentication Handshake
+        if self.keypair:
+            self._auth_refresh_task = asyncio.create_task(self._maintain_jito_auth_loop())
+
+        self.tip_subscription_task        = asyncio.create_task(self._subscribe_to_tip_stream())
+        self._tip_accounts_refresh_task   = asyncio.create_task(self._periodic_tip_accounts_refresh())
+        self._reconciliation_task         = asyncio.create_task(self._reconcile_pending())
+
+    async def _authenticate_jito(self) -> Optional[str]:
+        """
+        Performs the official Jito Searcher Authentication handshake (Phase 49).
+        """
+        if not self.keypair or not self.session:
+            return None
+        try:
+            # 1. Request challenge
+            challenge_url = "https://mainnet.block-engine.jito.wtf/api/v1/auth/challenge"
+            payload = {"key": str(self.keypair.pubkey())}
+            async with self.session.post(challenge_url, json=payload, timeout=5.0) as resp:
+                if resp.status != 200:
+                    logger.warning(f"Jito challenge failed: HTTP {resp.status}")
+                    return None
+                data = await resp.json()
+                challenge = data.get("value", "")
+
+            if not challenge:
+                return None
+
+            # 2. Sign challenge with wallet private key
+            message = f"{str(self.keypair.pubkey())}-{challenge}"
+            signature_bytes = self.keypair.sign_message(message.encode("utf-8"))
+            signature_b58 = base58.b58encode(bytes(signature_bytes)).decode("ascii")
+
+            # 3. Submit signature and get JWT token
+            token_url = "https://mainnet.block-engine.jito.wtf/api/v1/auth/token"
+            token_payload = {
+                "key": str(self.keypair.pubkey()),
+                "challenge": message,
+                "client_sig": signature_b58
+            }
+            async with self.session.post(token_url, json=token_payload, timeout=5.0) as resp:
+                if resp.status == 200:
+                    token_data = await resp.json()
+                    access_token = token_data.get("access_token", {}).get("value")
+                    logger.info("🔑 Jito Searcher Authentication successful! JWT token acquired.")
+                    return access_token
+                else:
+                    logger.warning(f"Jito token generation failed: HTTP {resp.status}")
+        except Exception as e:
+            logger.error(f"Jito authentication handshake failed: {e}")
+        return None
+
+    async def _maintain_jito_auth_loop(self) -> None:
+        """Maintains Jito Searcher authentication by refreshing JWT every 9 minutes."""
+        while self._running:
+            try:
+                jwt_token = await self._authenticate_jito()
+                if jwt_token:
+                    self.api_key = jwt_token
+                    if hasattr(self, 'jito_client') and self.jito_client:
+                        self.jito_client.api_key = jwt_token
+                else:
+                    logger.warning("⚠️ Jito Auth refresh failed — retrying in 30s...")
+                    await asyncio.sleep(30)
+                    continue
+            except Exception as e:
+                logger.error(f"Jito auth loop error: {e}")
+            await asyncio.sleep(540)  # Refresh every 9 minutes
+
+    async def stop(self) -> None:
         self._running = False
-        for task in (self.tip_subscription_task, self._tip_accounts_refresh_task, self._reconciliation_task):
+        for task in (self.tip_subscription_task,
+                     self._tip_accounts_refresh_task,
+                     self._reconciliation_task,
+                     self._auth_refresh_task):
             if task:
                 task.cancel()
                 try:
                     await task
                 except asyncio.CancelledError:
                     pass
-        self.tip_subscription_task = None
-        self._tip_accounts_refresh_task = None  # Fix 95
-        self._reconciliation_task = None
+        self.tip_subscription_task       = None
+        self._tip_accounts_refresh_task  = None
+        self._reconciliation_task        = None
+        self._auth_refresh_task          = None
+
+    # ── Tip account management ──────────────────────────────────────────────────
 
     async def fetch_tip_accounts(self) -> bool:
         """Fetch live Jito tip accounts (Phase 35)."""
@@ -98,10 +175,10 @@ class JitoExecutor:
                     accounts = await resp.json()
                     if accounts and isinstance(accounts, list):
                         self.tip_accounts = accounts
-                        logger.info(f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active accounts")
+                        logger.info(f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active")
                         return True
-        except Exception as e:
-            logger.warning(f"Failed to fetch dynamic Jito tip accounts: {e}")
+        except Exception as exc:
+            logger.warning(f"Tip-account fetch failed: {exc}")
         return False
 
     async def get_jito_tip(self, priority: str = "normal") -> float:
@@ -109,86 +186,110 @@ class JitoExecutor:
         endpoints = [
             "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_floor",
             "https://bundles-api-rest.jito.wtf/api/v1/bundles/tip_floor",
-            "https://api.jito.wtf/api/v1/bundles/tip_floor"
+            "https://api.jito.wtf/api/v1/bundles/tip_floor",
         ]
-
         mult = {"critical": 2.8, "high": 1.8, "normal": 1.0}.get(priority, 1.0)
-
         for ep in endpoints:
             for attempt in range(3):
                 try:
-                    async with aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=4)) as s:
+                    async with aiohttp.ClientSession() as s:
                         async with s.get(ep) as r:
                             if r.status == 200:
                                 data = await r.json()
-                                tip = float(data[0].get("landed_tips_25th_percentile", default))
-                                final = max(tip * mult, 0.00005)
-                                logger.info(f"✅ Tip loaded: {final:.8f} SOL")
-                                return final
-                except:
-                    await asyncio.sleep(0.7)
+                                tip_value = None
 
+                                if isinstance(data, list) and len(data) > 0:
+                                    tip_value = data[0].get("landed_tips_25th_percentile")
+                                elif isinstance(data, dict):
+                                    tip_value = data.get("landed_tips_25th_percentile")
+
+                                if tip_value is not None:
+                                    return max(float(tip_value) * mult, 0.00005)
+                except Exception:
+                    await asyncio.sleep(0.7)
         logger.warning(f"Tip fallback → {default}")
         return default
 
-    async def _subscribe_to_tip_stream(self):
-        """Poll Jito tip floor API with multiple endpoints and backoff."""
+    async def _subscribe_to_tip_stream(self) -> None:
+        """Background tip-rotation loop."""
+        self._tip_backoff = 0
         while self._running:
             try:
                 tip = await self.get_jito_tip()
-                # Phase 35: Use dynamic tip accounts
                 self.current_tip_data = {
-                    "tip_floor": [{"pubkey": acc, "lamports": int(tip * 1e9)} for acc in self.tip_accounts]
+                    "tip_floor": [
+                        {"pubkey": acc, "lamports": int(tip * 1e9)}
+                        for acc in self.tip_accounts
+                    ]
                 }
                 self._tip_backoff = 0
-            except Exception as e:
-                logger.error(f"Tip floor API error: {e}")
+            except Exception as exc:
+                logger.error(f"Tip stream error: {exc}")
                 self._tip_backoff = min(self._tip_backoff + 1, 5)
             sleep_time = 2.5 * (2 ** self._tip_backoff)
             await asyncio.sleep(sleep_time)
 
     def get_current_tip_info(self) -> Optional[Dict[str, Any]]:
-        """Get current tip information from polled API, with fallback to default tip."""
         if not self.current_tip_data or "tip_floor" not in self.current_tip_data:
-            # Fallback to default tip if no data available
-            logger.warning("JitoExecutor: No tip data available from stream, using fallback tip account.")
             return {
-                "recommended_tip": 85000,  # 0.000085 SOL safe fallback
-                "tip_accounts": self.tip_accounts,  # dynamic (previously fetched) or hardcoded fallback
-                "full_data": None
+                "recommended_tip": 85_000,
+                "tip_accounts":    self.tip_accounts,
+                "full_data":       None,
             }
-
         tip_floor = self.current_tip_data["tip_floor"]
         if not tip_floor:
-            # Fallback
-            logger.warning("JitoExecutor: Tip floor data empty, using fallback tip account.")
             return {
-                "recommended_tip": 85000,
-                "tip_accounts": self.tip_accounts,
-                "full_data": None
+                "recommended_tip": 85_000,
+                "tip_accounts":    self.tip_accounts,
+                "full_data":       None,
             }
-
-        # Find tip with highest lamports (recommended tip)
-        best_tip = max(tip_floor, key=lambda x: x["lamports"])
+        best = max(tip_floor, key=lambda x: x["lamports"])
         return {
-            "recommended_tip": best_tip["lamports"],
-            "tip_accounts": [tip["pubkey"] for tip in tip_floor],
-            "full_data": self.current_tip_data
+            "recommended_tip": best["lamports"],
+            "tip_accounts":    [t["pubkey"] for t in tip_floor],
+            "full_data":       self.current_tip_data,
         }
 
-    # ─── Ghost Balance Recovery ────────────────────────────────────────────────
+    async def get_jito_rtt_ms(self) -> float:
+        """Measure network RTT to Jito endpoint."""
+        if not self.session:
+            return 0.0
+        try:
+            url = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
+            start = time.time()
+            async with self.session.get(url, timeout=aiohttp.ClientTimeout(total=2.0)) as resp:
+                if resp.status == 200:
+                    await resp.json()
+                    return (time.time() - start) * 1000
+        except Exception:
+            pass
+        return 999.0
+
+    async def _periodic_tip_accounts_refresh(self) -> None:
+        while self._running:
+            try:
+                await asyncio.sleep(600)
+                refreshed = await self.fetch_tip_accounts()
+                if refreshed:
+                    logger.info(
+                        f"🔄 Jito tip_accounts refreshed: "
+                        f"{len(self.tip_accounts)} active (10-min poll)"
+                    )
+            except Exception as exc:
+                logger.debug(f"Periodic tip-accounts refresh error: {exc}")
+                await asyncio.sleep(60)
+
+    # ── Ghost Balance Recovery ─────────────────────────────────────────────────
 
     def _record_pending(self, bundle_id: str, deducted_amount: float) -> None:
-        """Register a bundle in the pending set with its virtual-balance deduction."""
         if bundle_id and deducted_amount > 0:
             self.pending_bundles[bundle_id] = {
                 "deducted": deducted_amount,
-                "sent_at": time.time(),
+                "sent_at":  time.time(),
                 "refunded": False,
             }
 
     def _confirm_pending(self, bundle_id: str) -> None:
-        """Remove a bundle from the pending set on confirmed landing."""
         entry = self.pending_bundles.pop(bundle_id, None)
         if entry:
             logger.debug(
@@ -197,11 +298,10 @@ class JitoExecutor:
             )
 
     async def _reconcile_pending(self) -> None:
-        """Background task: every 8 s, refund ghost bundles (no confirmation after 8 s)."""
         while self._running:
             try:
-                now = time.time()
-                stale_seconds = 8.0  # Jito confirms in < 400 ms; >8 s = ghost
+                now            = time.time()
+                stale_seconds  = 8.0
                 refunded_total = 0.0
 
                 for bid, meta in list(self.pending_bundles.items()):
@@ -209,21 +309,18 @@ class JitoExecutor:
                         continue
                     if now - meta.get("sent_at", now) < stale_seconds:
                         continue
-                    refund = meta["deducted"]
+                    refund       = meta["deducted"]
                     meta["refunded"] = True
                     refunded_total += refund
-                    # Push back into global virtual_balance
                     try:
                         from arb_bot import stats, stats_lock
                         async with stats_lock:  # type: ignore[misc]
                             stats["virtual_balance"] += refund
                         logger.warning(
-                            f"⚡ Bundle Dropped: Reconciled — ghost bundle {bid[:12]} "
-                            f"refunded {refund:.8f} SOL "
-                            f"→ virtual_balance (gone after {(now - meta['sent_at']):.1f}s)"
+                            f"⚡ Ghost bundle {bid[:12]} refunded {refund:.8f} SOL"
                         )
-                    except Exception as _e:
-                        logger.debug(f"Ghost balance refund unavailable: {_e}")
+                    except Exception as exc:
+                        logger.debug(f"Ghost-balance refund unavailable: {exc}")
 
                 self.pending_bundles = {
                     k: v for k, v in self.pending_bundles.items()
@@ -233,144 +330,160 @@ class JitoExecutor:
                 if refunded_total > 0:
                     logger.info(f"🔄 Reconciliation: {refunded_total:.8f} SOL ghost refunded")
 
-            except Exception as _e:
-                logger.debug(f"Reconciliation error: {_e}")
+            except Exception as exc:
+                logger.debug(f"Reconciliation error: {exc}")
             await asyncio.sleep(8.0)
 
-    # ─── Periodic Jito Tip-Accounts Refresh (Fix 95) ──────────────────────────
-    async def _periodic_tip_accounts_refresh(self) -> None:
-        """Refresh Jito tip_accounts list every 10 min."""
-        while self._running:
-            try:
-                await asyncio.sleep(600)  # 10 minutes
-                refreshed = await self.fetch_tip_accounts()
-                if refreshed:
-                    logger.info(f"🔄 Jito tip_accounts refreshed: {len(self.tip_accounts)} accounts active (10-min poll)")
-            except Exception as e:
-                logger.debug(f"Tip-accounts periodic refresh error: {e}")
-                await asyncio.sleep(60)
+    # ── HTTP SendBundle ─────────────────────────────────────────────────────────
 
     async def send_bundle(
         self,
-        transactions: List[VersionedTransaction],
-        tip_amount_lamports: int = 0,
-        deducted_amount: float = 0.0,
+        transactions:         List[VersionedTransaction],
+        tip_amount_lamports:  int          = 0,
+        deducted_amount:      float        = 0.0,
     ) -> Dict[str, Any]:
-        """Send a bundle of transactions via Jito.
+        """Fire a bundle to all 4 regional endpoints via HTTP POST; first success wins."""
 
-        Args:
-            transactions: List of VersionedTransaction objects
-            tip_amount_lamports: Tip amount in lamports (will use tip stream if available)
-            deducted_amount: Amount already deducted from virtual_balance (for ghost recovery)
-
-        Returns:
-            Dict with bundle result
-        """
-        # Phase 31: Enforce Jito bundle limit (Max 5 transactions)
         if len(transactions) > 5:
-            logger.error(f"❌ Bundle rejected: {len(transactions)} transactions exceeds Jito limit of 5")
-            return {"success": False, "error": f"Bundle limit exceeded: {len(transactions)} > 5"}
+            logger.error(
+                f"❌ Bundle rejected: {len(transactions)} txns > Jito limit of 5"
+            )
+            return {
+                "success": False,
+                "error":   f"Bundle limit exceeded: {len(transactions)} > 5",
+            }
 
-        if not self.session:
-            raise RuntimeError("HTTP session not available")
+        # Encode transactions to Base58 for HTTP API
+        tx_base58_list = [base58.b58encode(bytes(tx)).decode("ascii") for tx in transactions]
 
-        # Phase 48: Tip injection DISABLED here - only tx_builder.py does secure tip merge
-        # jito_executor just forwards the already-signed tx with tip inside
-        # (prevents double-tip and signature corruption)
-
-        # Convert transactions to base58
-        tx_base58 = [base58.b58encode(bytes(tx)).decode('ascii') for tx in transactions]
-
-        bundle = {
+        payload = {
             "jsonrpc": "2.0",
             "id": 1,
             "method": "sendBundle",
-            "params": [tx_base58],
+            "params": [tx_base58_list]
         }
 
-        # Fix 89: Regional Bundle Shotgun - simultaneous send, first success wins
-        async def _send_to_region(url):
-            try:
-                async with self.session.post(
-                    url, json=bundle, headers={"Content-Type": "application/json"},
-                    timeout=aiohttp.ClientTimeout(total=self.timeout)
-                ) as resp:
-                    if resp.status == 200:
-                        result = await resp.json()
-                        return {"success": True, "bundle_id": result.get("result"), "region": url}
-                    return {"success": False, "error": await resp.text(), "region": url}
-            except Exception as e:
-                return {"success": False, "error": str(e), "region": url}
+        headers = {"Content-Type": "application/json"}
+        if self.api_key:
+            headers["Authorization"] = f"Bearer {self.api_key}"
 
-        results = await asyncio.gather(*[_send_to_region(url) for url in self.endpoints], return_exceptions=True)
-        for r in results:
-            if isinstance(r, dict) and r.get("success"):
-                bundle_id = r.get("bundle_id", "")
-                logger.info(f"✅ Bundle landed via {r.get('region')}: {bundle_id}")
-                # Ghost Balance Recovery: record this bundle for reconciliation
-                if bundle_id and deducted_amount > 0:
-                    self._record_pending(bundle_id, deducted_amount)
-                return r
-        return {"success": False, "error": "All regional endpoints failed"}
+        logger.debug(
+            f"🔫 HTTP Shotgun: firing bundle to {len(self.endpoints)} regions"
+        )
+
+        tasks = []
+        for url in self.endpoints:
+            tasks.append(asyncio.create_task(self._send_http(url, payload, headers)))
+
+        done_pending = set()
+        first_success: Optional[Dict[str, Any]] = None
+
+        while tasks and first_success is None:
+            done_now, tasks = await asyncio.wait(
+                tasks, return_when=asyncio.FIRST_COMPLETED, timeout=3.0
+            )
+            done_pending |= done_now
+            for t in done_now:
+                try:
+                    result = t.result()
+                except Exception:
+                    result = {"success": False, "error": "exception", "region": "unknown"}
+                if isinstance(result, dict) and result.get("success"):
+                    first_success = result
+                    break
+
+            for t in tasks:
+                t.cancel()
+            if first_success:
+                break
+
+        if first_success:
+            bundle_id = first_success.get("bundle_id", "")
+            logger.info(
+                f"✅ Bundle landed via {first_success.get('region')}: {bundle_id}"
+            )
+            if bundle_id and deducted_amount > 0:
+                self._record_pending(bundle_id, deducted_amount)
+            return first_success
+
+        logger.error("⚠️ All HTTP regional endpoints returned failure")
+        return {"success": False, "error": "All HTTP regional endpoints failed"}
+
+    async def _send_http(
+        self,
+        endpoint:    str,
+        payload:     dict,
+        headers:     dict,
+    ) -> Dict[str, Any]:
+        if not self.session:
+            return {"success": False, "error": "No session", "region": endpoint}
+        try:
+            async with self.session.post(endpoint, json=payload, headers=headers, timeout=5.0) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if "result" in data:
+                        return {
+                            "success":  True,
+                            "bundle_id": data["result"],
+                            "region":   endpoint,
+                        }
+                    return {"success": False, "error": f"JSON-RPC error: {data}", "region": endpoint}
+                return {"success": False, "error": f"HTTP {resp.status}", "region": endpoint}
+        except Exception as exc:
+            return {"success": False, "error": str(exc), "region": endpoint}
+
+    # ── Status confirmation ────────────────────────────────────────────────────
 
     async def wait_for_confirmation(
         self,
-        bundle_id: str,
-        max_wait_time: float = 0.8,  # HFT: 2 slots ≈ 800ms, then ghost
-        check_interval: float = 0.4,
+        bundle_id:       str,
+        max_wait_time:   float  = 3.0,
+        check_interval:  float  = 0.5,
     ) -> Dict[str, Any]:
-        """Wait for bundle confirmation.
-
-        Args:
-            bundle_id: Bundle ID to monitor
-            max_wait_time: Maximum wait time in seconds (800ms HFT = 2 Solana slots)
-            check_interval: Check interval in seconds
-
-        Returns:
-            Dict with confirmation status
-        """
-        import time
-        start_time = time.time()
-
-        while time.time() - start_time < max_wait_time:
+        start = time.time()
+        while time.time() - start < max_wait_time:
             try:
-                status_request = {
-                    "jsonrpc": "2.0",
-                    "id": 1,
-                    "method": "getBundleStatuses",
-                    "params": [[bundle_id]],
-                }
-
-                async with self.session.post(
-                    self.bundle_endpoint,
-                    json=status_request,
-                    headers={"Content-Type": "application/json"},
-                    timeout=aiohttp.ClientTimeout(total=10.0)
-                ) as resp:
-                    if resp.status == 200:
-                        result = await resp.json()
-                        if "result" in result and bundle_id in result["result"]:
-                            status_info = result["result"][bundle_id]
-                            confirmation_status = status_info.get("confirmation_status")
-
-                            if confirmation_status in ["confirmed", "finalized", "failed"]:
-                                logger.info(f"Bundle {bundle_id} status: {confirmation_status}")
-                                # Ghost Balance Recovery: remove from pending — confirmed path handles balance
-                                self._confirm_pending(bundle_id)
-                                return {
-                                    "bundle_id": bundle_id,
-                                    "status": confirmation_status,
-                                    "details": status_info,
-                                }
-
-                await asyncio.sleep(check_interval)
-
-            except Exception as e:
-                logger.error(f"Status check error: {e}")
-                await asyncio.sleep(check_interval)
+                if self.session:
+                    status_request = {
+                        "jsonrpc": "2.0", "id": 1,
+                        "method":  "getBundleStatuses",
+                        "params":  [[bundle_id]],
+                    }
+                    async with self.session.post(
+                        self.bundle_endpoint,
+                        json=status_request,
+                        headers={"Content-Type": "application/json"},
+                        timeout=aiohttp.ClientTimeout(total=5.0),
+                    ) as resp:
+                        if resp.status == 200:
+                            result = await resp.json()
+                            if "result" in result and result["result"]["value"]:
+                                # Find status for our bundle_id
+                                info = None
+                                for item in result["result"]["value"]:
+                                    if item and item.get("bundle_id") == bundle_id:
+                                        info = item
+                                        break
+                                
+                                if info:
+                                    confirmation = info.get("confirmation_status", "")
+                                    if confirmation in {"confirmed", "finalized"}:
+                                        logger.info(f"Bundle {bundle_id} status: {confirmation}")
+                                        self._confirm_pending(bundle_id)
+                                        return {
+                                            "bundle_id": bundle_id,
+                                            "status":    confirmation,
+                                            "details":   info,
+                                        }
+                                    elif confirmation == "failed":
+                                        return {
+                                            "bundle_id": bundle_id,
+                                            "status":    "failed",
+                                            "details":   info,
+                                        }
+            except Exception as exc:
+                logger.error(f"Status check error: {exc}")
+            await asyncio.sleep(check_interval)
 
         logger.warning(f"Bundle {bundle_id} confirmation timeout")
-        return {
-            "bundle_id": bundle_id,
-            "status": "timeout",
-        }
+        return {"bundle_id": bundle_id, "status": "timeout"}

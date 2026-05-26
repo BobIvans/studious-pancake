@@ -85,7 +85,7 @@ class EpochTracker:
                     result = data.get("result", {})
                     self.epoch_info = result
                     self.current_epoch = result.get("epoch", 0)
-                    self.last_check = asyncio.get_event_loop().time()
+                    self.last_check = asyncio.get_running_loop().time()
 
                     logger.debug(f"Epoch {self.current_epoch}: {result}")
 

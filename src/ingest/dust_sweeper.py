@@ -197,13 +197,16 @@ class DustSweeper:
             # Если баланс > 0 и есть withheld fees, не трогаем
             from src.config.xstocks_registry import is_xstock_token
             if mint and is_xstock_token(Pubkey.from_string(mint)):
-                if ui_amount > 0:
-                    # Проверяем withheld fees (может блокировать close)
-                    # Если withheld_fees.info есть и непусто — safe side, не трогаем
-                    withheld = info.get("account", {}).get("data", {}).get("parsed", {}).get("info", {}).get("withheldAmount", {})
-                    if withheld and int(withheld.get("amount", "0")) > 0:
-                        logger.debug(f"⏳ xStock {mint[:8]} has withheld fees — skipping close")
-                        return False
+                # Извлекаем расширения Token-2022 (extensions находятся на уровне parsed)
+                extensions = parsed_data.get("extensions", [])
+                
+                # Ищем расширение удержанных комиссий
+                for ext in extensions:
+                    if ext.get("extension") == "transferFeeAmount":
+                        withheld_amount = int(ext.get("state", {}).get("withheldAmount", 0))
+                        if withheld_amount > 0:
+                            logger.debug(f"⏳ xStock {mint[:8]} has withheld fees ({withheld_amount}) — skipping close to prevent revert.")
+                            return False
 
                 # Для xStocks — ждем полного обнуления
                 return ui_amount == 0
@@ -314,7 +317,8 @@ class DustSweeper:
                 account=Pubkey.from_string(token_account),
                 dest=self.wallet_keypair.pubkey(),
                 owner=self.wallet_keypair.pubkey(),
-                program_id=program_id
+                program_id=program_id,
+                signers=[],
             )
 
             return close_account(close_params)

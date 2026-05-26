@@ -17,6 +17,6 @@ module.exports = {
     error_file: "logs/pm2-error.log",
     out_file: "logs/pm2-out.log",
     merge_logs: true,
-    max_memory_restart: "500M",
+    max_memory_restart: "1024M", // ФИКС: Даем боту дышать в моменты пиковой нагрузки
   }]
 };

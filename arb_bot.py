@@ -3098,12 +3098,20 @@ async def lst_depeg_scanner(
                     jito_tip_sol=0.0,  # Placeholder — tip optimized below after route is confirmed
                     min_profit_buffer_sol=cfg.MIN_NET_PROFIT_BUFFER_SOL,
                     wallet_balance_sol=current_wallet_balance,  # Task 14: pass balance to enforce direct routes under 0.5 SOL
-                    # ── ExactOut: Guarantee the exit quote yields exactly borrow_lamports → full
-                    # elimination of InsufficientFunds.Error on MarginFi repay
-                    exit_exact_out_amount=borrow_lamports,
                 )
 
                 if route is None:
+                    continue
+
+                # ── ExactIn Safety: Validate debt coverage via otherAmountThreshold ─────
+                # Ensures worst-case swap output covers MarginFi repayment
+                sell_quote_resp = route.sell_quote.full_quote_response
+                worst_case_out = int(sell_quote_resp.get("otherAmountThreshold", sell_quote_resp.get("outAmount", 0)))
+                if worst_case_out < borrow_lamports:
+                    logger.warning(
+                        f"🚫 Trade cancelled: worst-case out {worst_case_out} < debt {borrow_lamports} "
+                        f"(slippage risk) for {signal.token_symbol}"
+                    )
                     continue
 
                 if not route.is_profitable:

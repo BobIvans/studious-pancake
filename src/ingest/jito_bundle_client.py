@@ -35,13 +35,11 @@ class JitoBundleClient:
     def __init__(
         self,
         endpoints:   Optional[List[str]] = None,
-        api_key:     Optional[str]       = None,
         max_retries: int                 = 2,
         keypair:     Optional[Keypair]   = None,
         session:     Optional[aiohttp.ClientSession] = None,
     ) -> None:
         self.endpoints   = endpoints or JITO_HTTP_ENDPOINTS
-        self.api_key     = api_key
         self.max_retries = max_retries
         self.keypair     = keypair
         self.session     = session
@@ -72,25 +70,8 @@ class JitoBundleClient:
     # ── Lifecycle ────────────────────────────────────────────────────────────────
 
     async def start(self) -> None:
-        """Start background tasks including Jito auth refresh."""
-        if self.keypair and self.session:
-            task = asyncio.create_task(self._maintain_jito_auth_loop())
-            self.background_tasks.add(task)
-
-    async def _maintain_jito_auth_loop(self) -> None:
-        """Maintains Jito Searcher authentication by refreshing JWT every 9 minutes."""
-        while True:
-            try:
-                jwt_token = await self._authenticate_jito()
-                if jwt_token:
-                    self.api_key = jwt_token
-                else:
-                    logger.warning("⚠️ Jito Auth refresh failed — retrying in 30s...")
-                    await asyncio.sleep(30)
-                    continue
-            except Exception as e:
-                logger.error(f"Jito auth loop error: {e}")
-            await asyncio.sleep(540)  # Refresh every 9 minutes
+        """Start background tasks."""
+        pass
 
     # ── Tip account management ──────────────────────────────────────────────────
 
@@ -117,46 +98,6 @@ class JitoBundleClient:
             if self.tip_accounts
             else "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
         )
-
-    # ── Jito Searcher Authentication Handshake (Phase 49) ───────────────────────
-
-    async def _authenticate_jito(self) -> Optional[str]:
-        if not self.keypair or not self.session:
-            return None
-        try:
-            challenge_url = "https://mainnet.block-engine.jito.wtf/api/v1/auth/challenge"
-            payload = {"key": str(self.keypair.pubkey())}
-            async with self.session.post(challenge_url, json=payload, timeout=5.0) as resp:
-                if resp.status != 200:
-                    logger.warning(f"Jito challenge failed: HTTP {resp.status}")
-                    return None
-                data = await resp.json()
-                challenge = data.get("value", "")
-
-            if not challenge:
-                return None
-
-            message = f"{str(self.keypair.pubkey())}-{challenge}"
-            signature_bytes = self.keypair.sign_message(message.encode("utf-8"))
-            signature_b58 = base58.b58encode(bytes(signature_bytes)).decode("ascii")
-
-            token_url = "https://mainnet.block-engine.jito.wtf/api/v1/auth/token"
-            token_payload = {
-                "key": str(self.keypair.pubkey()),
-                "challenge": message,
-                "client_sig": signature_b58,
-            }
-            async with self.session.post(token_url, json=token_payload, timeout=5.0) as resp:
-                if resp.status == 200:
-                    token_data = await resp.json()
-                    access_token = token_data.get("access_token", {}).get("value")
-                    logger.info("🔑 Jito Searcher Authentication successful! JWT token acquired.")
-                    return access_token
-                else:
-                    logger.warning(f"Jito token generation failed: HTTP {resp.status}")
-        except Exception as e:
-            logger.error(f"Jito authentication handshake failed: {e}")
-        return None
 
     # ── Blockhash ───────────────────────────────────────────────────────────────
 
@@ -249,8 +190,6 @@ class JitoBundleClient:
             return {"success": False, "error": "No session"}
         try:
             headers = {"Content-Type": "application/json"}
-            if self.api_key:
-                headers["Authorization"] = f"Bearer {self.api_key}"
 
             async with self.session.post(url, json=payload, headers=headers, timeout=2.0) as resp:
                 if resp.status == 200:

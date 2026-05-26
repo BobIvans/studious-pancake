@@ -2,6 +2,7 @@
 
 Replaces gRPC with HTTP POST shotgun (aiohttp).
 The "first-accepted-wins" regional shotgun semantics are preserved.
+Auth: REST API is fully public — no JWT handshake needed.
 """
 
 from __future__ import annotations
@@ -58,15 +59,13 @@ class JitoExecutor:
             "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
             "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBVCmLzFZu"
         ]
-        self.tip_subscription_task   = None
+        self.tip_subscription_task     = None
         self._tip_accounts_refresh_task: Optional[asyncio.Task] = None
-        self._running                = False
+        self._running                  = False
 
         # ── Ghost Balance Recovery ────────────────────────────────────────────
         self.pending_bundles: Dict[str, Dict[str, Any]]       = {}
         self._reconciliation_task: Optional[asyncio.Task]     = None
-        self._auth_refresh_task: Optional[asyncio.Task] = None
-        self.api_key: Optional[str] = None
 
     # ── Lifecycle ──────────────────────────────────────────────────────────────
 
@@ -76,81 +75,15 @@ class JitoExecutor:
         self._running = True
         await self.fetch_tip_accounts()
 
-        # Phase 49: Jito Searcher Authentication Handshake
-        if self.keypair:
-            self._auth_refresh_task = asyncio.create_task(self._maintain_jito_auth_loop())
-
         self.tip_subscription_task        = asyncio.create_task(self._subscribe_to_tip_stream())
         self._tip_accounts_refresh_task   = asyncio.create_task(self._periodic_tip_accounts_refresh())
         self._reconciliation_task         = asyncio.create_task(self._reconcile_pending())
-
-    async def _authenticate_jito(self) -> Optional[str]:
-        """
-        Performs the official Jito Searcher Authentication handshake (Phase 49).
-        """
-        if not self.keypair or not self.session:
-            return None
-        try:
-            # 1. Request challenge
-            challenge_url = "https://mainnet.block-engine.jito.wtf/api/v1/auth/challenge"
-            payload = {"key": str(self.keypair.pubkey())}
-            async with self.session.post(challenge_url, json=payload, timeout=5.0) as resp:
-                if resp.status != 200:
-                    logger.warning(f"Jito challenge failed: HTTP {resp.status}")
-                    return None
-                data = await resp.json()
-                challenge = data.get("value", "")
-
-            if not challenge:
-                return None
-
-            # 2. Sign challenge with wallet private key
-            message = f"{str(self.keypair.pubkey())}-{challenge}"
-            signature_bytes = self.keypair.sign_message(message.encode("utf-8"))
-            signature_b58 = base58.b58encode(bytes(signature_bytes)).decode("ascii")
-
-            # 3. Submit signature and get JWT token
-            token_url = "https://mainnet.block-engine.jito.wtf/api/v1/auth/token"
-            token_payload = {
-                "key": str(self.keypair.pubkey()),
-                "challenge": message,
-                "client_sig": signature_b58
-            }
-            async with self.session.post(token_url, json=token_payload, timeout=5.0) as resp:
-                if resp.status == 200:
-                    token_data = await resp.json()
-                    access_token = token_data.get("access_token", {}).get("value")
-                    logger.info("🔑 Jito Searcher Authentication successful! JWT token acquired.")
-                    return access_token
-                else:
-                    logger.warning(f"Jito token generation failed: HTTP {resp.status}")
-        except Exception as e:
-            logger.error(f"Jito authentication handshake failed: {e}")
-        return None
-
-    async def _maintain_jito_auth_loop(self) -> None:
-        """Maintains Jito Searcher authentication by refreshing JWT every 9 minutes."""
-        while self._running:
-            try:
-                jwt_token = await self._authenticate_jito()
-                if jwt_token:
-                    self.api_key = jwt_token
-                    if hasattr(self, 'jito_client') and self.jito_client:
-                        self.jito_client.api_key = jwt_token
-                else:
-                    logger.warning("⚠️ Jito Auth refresh failed — retrying in 30s...")
-                    await asyncio.sleep(30)
-                    continue
-            except Exception as e:
-                logger.error(f"Jito auth loop error: {e}")
-            await asyncio.sleep(540)  # Refresh every 9 minutes
 
     async def stop(self) -> None:
         self._running = False
         for task in (self.tip_subscription_task,
                      self._tip_accounts_refresh_task,
-                     self._reconciliation_task,
-                     self._auth_refresh_task):
+                     self._reconciliation_task):
             if task:
                 task.cancel()
                 try:
@@ -160,7 +93,6 @@ class JitoExecutor:
         self.tip_subscription_task       = None
         self._tip_accounts_refresh_task  = None
         self._reconciliation_task        = None
-        self._auth_refresh_task          = None
 
     # ── Tip account management ──────────────────────────────────────────────────
 
@@ -364,8 +296,6 @@ class JitoExecutor:
         }
 
         headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
 
         logger.debug(
             f"🔫 HTTP Shotgun: firing bundle to {len(self.endpoints)} regions"
@@ -458,29 +388,25 @@ class JitoExecutor:
                         if resp.status == 200:
                             result = await resp.json()
                             if "result" in result and result["result"]["value"]:
-                                # Find status for our bundle_id
-                                info = None
                                 for item in result["result"]["value"]:
                                     if item and item.get("bundle_id") == bundle_id:
                                         info = item
+                                        confirmation = info.get("confirmation_status", "")
+                                        if confirmation in {"confirmed", "finalized"}:
+                                            logger.info(f"Bundle {bundle_id} status: {confirmation}")
+                                            self._confirm_pending(bundle_id)
+                                            return {
+                                                "bundle_id": bundle_id,
+                                                "status":    confirmation,
+                                                "details":   info,
+                                            }
+                                        elif confirmation == "failed":
+                                            return {
+                                                "bundle_id": bundle_id,
+                                                "status":    "failed",
+                                                "details":   info,
+                                            }
                                         break
-                                
-                                if info:
-                                    confirmation = info.get("confirmation_status", "")
-                                    if confirmation in {"confirmed", "finalized"}:
-                                        logger.info(f"Bundle {bundle_id} status: {confirmation}")
-                                        self._confirm_pending(bundle_id)
-                                        return {
-                                            "bundle_id": bundle_id,
-                                            "status":    confirmation,
-                                            "details":   info,
-                                        }
-                                    elif confirmation == "failed":
-                                        return {
-                                            "bundle_id": bundle_id,
-                                            "status":    "failed",
-                                            "details":   info,
-                                        }
             except Exception as exc:
                 logger.error(f"Status check error: {exc}")
             await asyncio.sleep(check_interval)

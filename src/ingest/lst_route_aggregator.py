@@ -103,7 +103,6 @@ class LstRouteAggregator:
         priority_fee_sol: float = 0.0001,
         jito_tip_sol: float = 0.0001,
         min_profit_buffer_sol: float = 0.0005,
-        exit_exact_out_amount: Optional[int] = None,  # ExactOut: inject swapMode=ExactOut on exit quote
         wallet_balance_sol: float = 0.0,  # Task 14: wallet balance — forces direct routes when < 0.5 SOL
     ) -> Optional[RouteResult]:
         """Find the best buy+sell route for a given LST depeg opportunity.
@@ -132,8 +131,8 @@ class LstRouteAggregator:
             best_result = None
             for buy_q in buy_quotes:
                 # Now sell LST back to SOL
-                # ExactOut on sell (exit) leg: MarginFi repay exact SOL needed
-                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount, swap_mode=exit_exact_out_amount, wallet_balance_sol=wallet_balance_sol)
+                # ExactIn on sell (exit) leg: swap all LST back to SOL to capture profit in native asset
+                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount, wallet_balance_sol=wallet_balance_sol)
                 if not sell_quotes:
                     continue
 
@@ -167,8 +166,8 @@ class LstRouteAggregator:
 
             best_result = None
             for buy_q in buy_quotes:
-                # ExactOut on sell (exit) leg: get exact SOL back
-                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount, swap_mode=exit_exact_out_amount, wallet_balance_sol=wallet_balance_sol)
+                # ExactIn on sell (exit) leg: get SOL back
+                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount, wallet_balance_sol=wallet_balance_sol)
                 if not sell_quotes:
                     continue
                 for sell_q in sell_quotes:
@@ -203,7 +202,6 @@ class LstRouteAggregator:
         input_mint: str,
         output_mint: str,
         amount: int,
-        swap_mode: Optional[str] = None,
         dex_filter: Optional[List[str]] = None,
         wallet_balance_sol: float = 0.0,  # Task 14: micro-balance direct-route guard
     ) -> List[RouteQuote]:
@@ -213,7 +211,6 @@ class LstRouteAggregator:
             input_mint: Input token mint.
             output_mint: Output token mint.
             amount: Amount in lamports.
-            swap_mode: Optional Jupiter swapMode (e.g. "ExactOut") injected into quote URL.
             dex_filter: Optional DEX filter list.
             wallet_balance_sol: Current native SOL balance. When < 0.5 SOL, ONLY direct
                 routes are attempted to prevent Jupiter from routing through intermediate
@@ -236,7 +233,7 @@ class LstRouteAggregator:
             # Kill multi-hop: only direct routes under micro-balance threshold
             routes = [routes[1]]  # keep only ("direct", ...)
         for route_type, params in routes:
-            quote = await self._jupiter_quote(input_mint, output_mint, amount, **params, swap_mode=swap_mode)
+            quote = await self._jupiter_quote(input_mint, output_mint, amount, **params)
             if quote:
                 quotes.append(quote)
                 break  # Use first successful for load balancing
@@ -249,7 +246,6 @@ class LstRouteAggregator:
                 input_mint, output_mint, amount,
                 only_direct_routes=True,  # Sanctum требует прямых маршрутов
                 dex_filter=["Sanctum", "Sanctum Infinity"],  # Принудительно включаем Sanctum (Fix 92)
-                swap_mode=swap_mode,
             )
             if sanctum_quote:
                 # Check Sanctum fees (placeholder: assume low fee)
@@ -289,7 +285,6 @@ class LstRouteAggregator:
         amount: int,
         only_direct_routes: bool = False,
         dex_filter: Optional[List[str]] = None,
-        swap_mode: Optional[str] = None,
         wallet_balance_sol: float = 0.0,
     ) -> Optional[RouteQuote]:
         """Fetch a single quote from Jupiter Quote API v6.
@@ -300,7 +295,6 @@ class LstRouteAggregator:
             amount: Amount in lamports.
             only_direct_routes: If True, only direct routes.
             dex_filter: Optional DEX filter list.
-            swap_mode: Optional Jupiter swapMode (e.g. "ExactOut") injected into quote URL.
             wallet_balance_sol: Current SOL balance (for ATA routing guard).
         """
         params = {
@@ -313,12 +307,6 @@ class LstRouteAggregator:
             "maxAccounts": "8",
             "cache_buster": str(time.time_ns()),
         }
-
-        # ── ExactOut Mode (The ExactIn vs ExactOut Fix) ──────────────────────────────
-        # Guarantees the swap yields exactly the required repayment amount for MarginFi,
-        # fully eliminating InsufficientFunds revert due to rounding/slippage.
-        if swap_mode:
-            params["swapMode"] = swap_mode
 
         # Add DEX filter if specified
         if dex_filter:

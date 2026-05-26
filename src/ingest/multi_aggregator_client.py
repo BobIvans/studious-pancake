@@ -313,6 +313,7 @@ class MultiAggregatorClient:
                 "quoteResponse": quote_response["data"],
                 "userPublicKey": user_public_key,
                 "wrapAndUnwrapSol": False,  # Critical: Don't auto-wrap SOL for flash loans
+                "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером
             }
         elif aggregator.name == "openocean":
             # OpenOcean swap params

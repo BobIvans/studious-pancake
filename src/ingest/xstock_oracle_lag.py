@@ -264,12 +264,10 @@ class XStockOracleLagStrategy:
             return None
 
         # ── Step 2: Chain — use buy output as sell input ───────────────────
-        # Fix 4: exact_out=True applies a 0.3% input buffer so the sell quote
-        # guarantees out_amount_xstock IS received after Token-2022 transfer fees + slippage.
+        # ExactIn: swap all xStock back to USDC to capture profit in native asset
         sell_quote = await self._get_jupiter_quote(
             token_mint, usdc_mint_str, out_amount_xstock,
             only_direct_routes=True,  # Task 14: force direct routes for micro-balance safety
-            exact_out=True,
         )
         if not sell_quote or "error" in sell_quote:
             return None
@@ -376,29 +374,17 @@ class XStockOracleLagStrategy:
     async def _get_jupiter_quote(
         self, input_mint: str, output_mint: str, amount: int,
         only_direct_routes: bool = True,  # Task 14: default to direct routes for micro-balance safety
-        exact_out: bool = False,   # Fix 4: exactOut — guarantee at least `amount` output by requesting more input buffer
-        exact_out_bps: int = 30,   # Fix 4: 30 bps (0.3%) input buffer for sell chain / Token-2022 fees
     ) -> Optional[Dict]:
         """Get Jupiter quote with smart routing (Iris).
-
-        Fix 4 (Token-2022): When exact_out=True the caller passes the minimum desired output
-        and we inflate the input by ``exact_out_bps`` so the native swap produces at minimum
-        the requested output after transfer-fee deductions from the sell chain.
 
         MTU Safety: slippageBps kept ≥ 30 to avoid QuoteNotFound errors on volatile pairs.
         """
         try:
-            effective_amount = amount
-            if exact_out:
-                # Add a small input-side buffer so the execution engine guarantees the
-                # minimum required output after fees and slippage.
-                effective_amount = int(amount * (1 + exact_out_bps / 10_000) + 1)
-
             quote = await self.jupiter_client.get_quote(
                 input_mint=input_mint,
                 output_mint=output_mint,
-                amount=int(effective_amount),  # Task 16: strict int→string (safe int cast)
-                slippage_bps=max(30, exact_out_bps if exact_out else 100),  # min 30 bps
+                amount=int(amount),  # Task 16: strict int→string (safe int cast)
+                slippage_bps=max(30, 100),  # min 30 bps, default 100
                 only_direct_routes=only_direct_routes,
             )
             return quote
@@ -484,14 +470,22 @@ class XStockOracleLagStrategy:
                 logger.warning(f"❌ {ticker_name} buy quote zero out amount")
                 return
 
-            # Fix 4: sell quote uses exact_out so outAmount >= actual_out after buffers
+            # ExactIn: swap all xStock back to USDC
             sell_quote = await self._get_jupiter_quote(
                 token_mint, usdc_mint_str, actual_out,
                 only_direct_routes=True,  # Task 14: force direct routes for micro-balance safety
-                exact_out=True,
             )
             if not sell_quote or "error" in sell_quote:
                 logger.warning(f"❌ {ticker_name} sell quote failed at execution time")
+                return
+
+            # ── ExactIn Safety: Validate debt coverage via otherAmountThreshold ─────
+            worst_case_out = int(sell_quote.get("otherAmountThreshold", sell_quote.get("outAmount", 0)))
+            if worst_case_out < trade_amount:
+                logger.warning(
+                    f"🚫 {ticker_name} trade cancelled: worst-case out {worst_case_out} < debt {trade_amount} "
+                    f"(slippage risk)"
+                )
                 return
 
             actual_return = int(sell_quote.get("outAmount", 0))

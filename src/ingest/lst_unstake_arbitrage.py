@@ -102,8 +102,6 @@ class LstInstantUnstakeArbitrage:
                     amount_lamports=test_amount_lamports,
                     # Принудительно используем Sanctum Router для второго лега (LST → SOL по справедливому курсу)
                     dex_filter_leg2=["Sanctum", "Sanctum Infinity"],
-                    # ── ExactOut for exit leg: guaranteed exact return of borrow_amount + profit
-                    exit_exact_out_amount=test_amount_lamports,  # repay exactly what was borrowed
                 )
 
                 if not quote:
@@ -148,7 +146,7 @@ class LstInstantUnstakeArbitrage:
           1. ComputeBudget (CU лимит)
           2. MarginFi Borrow SOL
           3. Buy LST на Raydium/Orca (Jupiter swap)
-          4. Sanctum Router Instant Unstake (LST -> SOL) — ExactOut guaranteed
+          4. Sanctum Router Instant Unstake (LST -> SOL)
           5. MarginFi Repay SOL
           6. Jito Tip (ЗАЩИТА КАПИТАЛА — строго последний)
         """
@@ -162,9 +160,6 @@ class LstInstantUnstakeArbitrage:
             if not bank_info:
                 return False
 
-            # ── ExactOut: Fetch Jupiter swap-instructions for the LEG2 exit quote ─────
-            # dex_leg2 already has swapMode=ExactOut injected by scan_unstake_opportunities().
-            # We now resolve those instructions from Jupiter so ExactOut goes end-to-end.
             dex_leg1 = quote.get("dex_leg1", {})
             dex_leg2 = quote.get("dex_leg2", {})
             wallet_pubkey = str(keypair.pubkey())
@@ -176,17 +171,26 @@ class LstInstantUnstakeArbitrage:
                 if leg1_ixs:
                     all_swap_ixs.extend(leg1_ixs)
             except Exception as _leg1_err:
-                logger.warning(f"ExactOut leg1 swap-instructions fetch failed (non-fatal): {_leg1_err}")
+                logger.warning(f"Leg1 swap-instructions fetch failed (non-fatal): {_leg1_err}")
 
             try:
                 leg2_ixs, _ = await tx_builder.get_swap_instructions(dex_leg2, wallet_pubkey, use_custom_cu=True)
                 if leg2_ixs:
                     all_swap_ixs.extend(leg2_ixs)
                 else:
-                    logger.error("ExactOut LEG2 (exit) swap instructions empty — aborting to prevent InsufficientFunds")
+                    logger.error("LEG2 (exit) swap instructions empty — aborting")
                     return False
             except Exception as _leg2_err:
-                logger.error(f"ExactOut LEG2 swap-instructions fetch failed: {_leg2_err} — aborting")
+                logger.error(f"LEG2 swap-instructions fetch failed: {_leg2_err} — aborting")
+                return False
+
+            # ── ExactIn Safety: Validate debt coverage via otherAmountThreshold ─────
+            worst_case_out = int(dex_leg2.get("otherAmountThreshold", dex_leg2.get("outAmount", 0)))
+            if worst_case_out < borrow_amount:
+                logger.warning(
+                    f"🚫 LST unstake cancelled: worst-case out {worst_case_out} < debt {borrow_amount} "
+                    f"(slippage risk)"
+                )
                 return False
 
             fl_result = await tx_builder.build_native_flashloan_tx(

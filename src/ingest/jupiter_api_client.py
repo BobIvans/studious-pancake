@@ -190,7 +190,7 @@ class JupiterClient:
             "quoteResponse": quote_response,
             "userPublicKey": user_public_key,
             "wrapAndUnwrapSol": wrap_unwrap_sol,
-            "dynamicComputeUnitLimit": True,  # As specified in requirements
+            "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером
             "asVersionedTransaction": True,    # As specified in requirements
         }
 

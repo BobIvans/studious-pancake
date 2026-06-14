@@ -8,6 +8,7 @@ import asyncio
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from solders.transaction import VersionedTransaction
+from solders.pubkey import Pubkey
 import aiohttp
 import base58
 import os
@@ -142,8 +143,15 @@ class JitoShotgun:
         return max(min_tip, dynamic_tip)
 
     async def _merge_tip_into_transaction(self, transaction: VersionedTransaction,
-                                          tip_lamports: int, keypair) -> VersionedTransaction:
-        """Merge Jito tip into transaction as final instruction (capital protection)."""
+                                           tip_lamports: int, keypair, tip_account: str) -> VersionedTransaction:
+        """Merge Jito tip into transaction as final instruction (capital protection).
+        
+        Args:
+            transaction: The transaction to merge the tip into
+            tip_lamports: Amount of tip in lamports
+            keypair: Signer keypair
+            tip_account: Dynamic tip account address from jito_executor.tip_accounts
+        """
         try:
             from solders.system_program import TransferParams, transfer
             from solders.instruction import Instruction, AccountMeta
@@ -163,11 +171,10 @@ class JitoShotgun:
                 raw_ix = Instruction(program_id=program_id, accounts=accounts, data=data)
                 existing_instructions.append(raw_ix)
 
-            logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: Hardcoded fallback in jito_shotgun! Use dynamic fetch_tip_accounts().")
-            # Add tip transfer as VERY LAST instruction
+            # Add tip transfer as VERY LAST instruction using dynamic tip account
             tip_ix = transfer(TransferParams(
                 from_pubkey=transaction.message.account_keys[0],
-                to_pubkey=Pubkey.from_string("96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"),  # ⚠️ FALLBACK: use dynamic tip accounts
+                to_pubkey=Pubkey.from_string(tip_account),
                 lamports=tip_lamports,
             ))
 

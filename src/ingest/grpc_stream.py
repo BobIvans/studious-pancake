@@ -4,45 +4,39 @@ Live implementation using grpcio + yellowstone_grpc_proto (PyPI package).
 Replaces WebSocket accountSubscribe with sub-50ms binary gRPC streaming from
 Helius/Triton relay nodes directly out of validator RAM.
 
-Graceful bootstrap — if yellowstone_grpc_proto is not yet installed, a hard
-warning is emitted at import time and the stream will STALL rather than falling
-back silently to stale WebSocket data.
+NOTE: This is OPTIONAL for free tier (Helius Webhook only mode). If protobuf
+deps are missing, the bot continues without gRPC streaming.
 """
 
 import asyncio
 import logging
-import grpc as _grpc
 from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
-# ── Yellowstone-protobuf bootstrap (best-effort) ─────────────────────────────
+# ── Yellowstone-protobuf bootstrap (graceful, not required) ──────────────────────
 _GEYSER_AVAILABLE = False
+_geyser_pb2 = None
+_geyser_pb2_grpc = None
+_IMPORT_ERR = ""
+_grpc = None  # Will be set if available
+
 try:
-    from yellowstone_grpc_proto import geyser_pb2  as _geyser_pb2           # type: ignore[import]
+    import grpc as _grpc
+    from yellowstone_grpc_proto import geyser_pb2 as _geyser_pb2           # type: ignore[import]
     from yellowstone_grpc_proto import geyser_pb2_grpc as _geyser_pb2_grpc   # type: ignore[import]
     _GEYSER_AVAILABLE = True
-except ImportError as _import_err:
-    _geyser_pb2      = None  # type: ignore[assignment]
-    _geyser_pb2_grpc = None  # type: ignore[assignment]
-    _IMPORT_ERR = str(_import_err)
-    logger.warning(
-        "\n"
-        "═════════════════════════════════════════════════════════════════\n"
-        "  CRITICAL: yellowstone_grpc_proto NOT installed.               \n"
-        "  The Yellowstone gRPC stream CANNOT start until this is fixed.  \n"
-        "  Fix:                                                           \n"
-        "    pip install yellowstone-grpc-proto grpcio betterproto       \n"
-        "  Import error:                                                  \n"
-        f"    {_IMPORT_ERR}                                               \n"
-        "═════════════════════════════════════════════════════════════════"
-    )
 
-# ── Channel keep-alive options (HTTP/2 on gRPC) ───────────────────────────────
-_KEEPALIVE_MS        = 20_000
-_KEEPALIVE_TIMEOUT_MS = 10_000
-_KEEPALIVE_PERMIT    = True
-_MAX_PING_STRIKES    = 0
+    # ── Channel keep-alive options (HTTP/2 on gRPC) ───────────────────────────────
+    _KEEPALIVE_MS        = 20_000
+    _KEEPALIVE_TIMEOUT_MS = 10_000
+    _KEEPALIVE_PERMIT    = True
+    _MAX_PING_STRIKES    = 0
+except ImportError as _import_err:
+    _IMPORT_ERR = str(_import_err)
+    logger.info(
+        "ℹ️ Yellowstone gRPC not installed - using Helius Webhook-only mode (free tier)"
+    )
 
 
 class YellowstoneStream:
@@ -151,6 +145,9 @@ class YellowstoneStream:
 
     async def _run_stream(self) -> None:
         """Open a single gRPC channel, send Subscribe, drain the response stream."""
+        if not _GEYSER_AVAILABLE:
+            return
+
         metadata: List[tuple] = (
             [("authorization", f"Bearer {self.api_key}")]
             if self.api_key

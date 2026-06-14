@@ -5,6 +5,7 @@ No iterative searches - pure mathematical computation.
 """
 
 import logging
+import os
 import time
 import math
 from typing import Optional, Tuple, Dict, Any, List
@@ -14,6 +15,14 @@ from dataclasses import dataclass
 from .amm_math import AmmMath  # moved to top-level for reliability
 
 logger = logging.getLogger(__name__)
+
+MICRO_BALANCE_SOL = 0.015
+# Dynamic ATA rent: 0.00204 SOL for standard SPL Token, 0.0035 SOL for Token-2022 (xStocks/RWA)
+ATA_RENT_SOL = 0.00204
+ATA_RENT_TOKEN2022_SOL = 0.0035
+GAS_RESERVE_SOL = 0.005
+MANEUVER_BUDGET_SOL = MICRO_BALANCE_SOL - GAS_RESERVE_SOL
+FLASH_LOAN_ENV_CAP_SOL = "FLASH_LOAN_SIZE_SOL"
 
 # Set high precision for financial calculations
 getcontext().prec = 28
@@ -385,39 +394,71 @@ class OptimalTradeSizer:
     # This mathematically guarantees that slippage can never zero out the wallet.
     # ────────────────────────────────────────────────────────────────────────────
 
+    def _env_flash_loan_cap_sol(self) -> float:
+        """Return FLASH_LOAN_SIZE_SOL as an absolute upper cap, never as a target."""
+        try:
+            return max(float(os.getenv(FLASH_LOAN_ENV_CAP_SOL, "1.0")), 0.0)
+        except ValueError:
+            logger.warning(f"Invalid {FLASH_LOAN_ENV_CAP_SOL}; using 1.0 SOL cap")
+            return 1.0
+
     def calculate_dynamic_flash_size(
         self,
-        wallet_native_balance_sol: float = 0.017,
+        wallet_native_balance_sol: float = 0.015,
         pool_slippage_pct: float = 0.005,
+        virtual_balance: Optional[float] = None,
+        num_new_atas: int = 0,
+        expected_profit_sol: Optional[float] = None,
+        min_profit_after_rent_sol: float = 0.0,
     ) -> float:
         """
-        Calculate the optimal flash loan size based on wallet balance and pool slippage.
+        Calculate a capital-aware flash loan size for the 0.015 SOL survival phase.
 
-        We only risk a safe portion of our actual wallet balance to cover potential AMM slippage.
-        For 0.017 SOL, max risk is ~20% (0.0034 SOL).
-
-        Args:
-            wallet_native_balance_sol: Current native SOL balance of the wallet.
-            pool_slippage_pct: Expected slippage from the pool (e.g. 0.005 = 0.5%).
-
-        Returns:
-            Optimal flash loan size in SOL.
+        FLASH_LOAN_SIZE_SOL is treated only as an absolute cap. The working budget is
+        derived from virtual_balance, with 0.005 SOL reserved for gas and 0.00204 SOL
+        deducted per new ATA from expected profit.
         """
-        SAFE_RISK_RATIO = 0.20  # Never risk more than 20% of wallet
-        MAX_ABSOLUTE_FLASH_SOL = 5.0  # Hard cap to avoid draining MarginFi
+        effective_balance = virtual_balance if virtual_balance is not None else wallet_native_balance_sol
 
-        max_loss_budget_sol = max(wallet_native_balance_sol * SAFE_RISK_RATIO, 0.001)
-        # Protect division by zero: min 0.1% slippage floor
+        # Task 2: Logarithmic/Tiered Risk Scale for Scaling Phase
+        # Upgrades SAFE_RISK_RATIO from linear 20% to dynamic tiers.
+        if effective_balance < 0.2:
+            SAFE_RISK_RATIO = 0.20  # Survival: 20%
+        elif effective_balance < 2.0:
+            SAFE_RISK_RATIO = 0.50  # Momentum: 50%
+        else:
+            # Scale: 90% budget allocation, capped mathematically only by pool slippage
+            SAFE_RISK_RATIO = 0.90 
+        
+        max_loss_budget_sol = max(effective_balance - GAS_RESERVE_SOL, 0.0)
+        # Dynamic maneuver budget based on balance tier
+        # For small accounts, limit loss to 0.01 SOL. For large, allow up to 10% of balance.
+        maneuver_limit = 0.010 if effective_balance < 1.0 else effective_balance * 0.1
+        max_loss_budget_sol = min(max_loss_budget_sol, maneuver_limit)
+
+        if num_new_atas > 0 and expected_profit_sol is not None:
+            total_rent_cost = num_new_atas * ATA_RENT_SOL
+            profit_after_rent = expected_profit_sol - total_rent_cost
+            if profit_after_rent < min_profit_after_rent_sol:
+                logger.warning(
+                    f"Dynamic sizing rejected: expected profit {expected_profit_sol:.6f} SOL "
+                    f"minus {num_new_atas}x ATA rent {total_rent_cost:.6f} SOL = {profit_after_rent:.6f} SOL"
+                )
+                return 0.0
+
         safe_slippage = max(pool_slippage_pct, 0.001)
+        dynamic_flash_size = max_loss_budget_sol * SAFE_RISK_RATIO / safe_slippage
+        env_cap = self._env_flash_loan_cap_sol()
+        if env_cap > 0:
+            dynamic_flash_size = min(dynamic_flash_size, env_cap)
 
-        dynamic_flash_size = max_loss_budget_sol / safe_slippage
-
-        result = min(dynamic_flash_size, MAX_ABSOLUTE_FLASH_SOL)
+        result = max(dynamic_flash_size, 0.0)
         logger.debug(
             f"📐 Dynamic Flash Size: {result:.4f} SOL "
-            f"(wallet={wallet_native_balance_sol:.4f} SOL, "
-            f"risk={max_loss_budget_sol:.6f} SOL, "
-            f"slippage={pool_slippage_pct:.4%})"
+            f"(balance={effective_balance:.4f} SOL, "
+            f"risk_budget={max_loss_budget_sol:.6f} SOL, "
+            f"slippage={pool_slippage_pct:.4%}, env_cap={env_cap:.4f} SOL, "
+            f"num_new_atas={num_new_atas})"
         )
         return result
 
@@ -426,20 +467,25 @@ class OptimalTradeSizer:
         wallet_native_balance_sol: float,
         pool_slippage_pct: float,
         bank_liquidity_lamports: int,
+        virtual_balance: Optional[float] = None,
+        num_new_atas: int = 0,
+        expected_profit_sol: Optional[float] = None,
+        min_profit_after_rent_sol: float = 0.0,
     ) -> int:
         """
         Get the slippage-pegged borrow amount in lamports.
-
-        Args:
-            wallet_native_balance_sol: Current native SOL balance.
-            pool_slippage_pct: Expected pool slippage.
-            bank_liquidity_lamports: Available liquidity in the respective MarginFi bank vault.
-
-        Returns:
-            Borrow amount in lamports.
         """
-        dynamic = self.calculate_dynamic_flash_size(wallet_native_balance_sol, pool_slippage_pct)
-        # Dynamic absolute cap: never exceed 50% of available liquidity to prevent utilization reverts
+        dynamic = self.calculate_dynamic_flash_size(
+            wallet_native_balance_sol,
+            pool_slippage_pct,
+            virtual_balance=virtual_balance,
+            num_new_atas=num_new_atas,
+            expected_profit_sol=expected_profit_sol,
+            min_profit_after_rent_sol=min_profit_after_rent_sol,
+        )
+        if dynamic <= 0:
+            return 0
+        
         bank_liquidity_sol = bank_liquidity_lamports / 1_000_000_000
         max_allowed_by_liquidity = bank_liquidity_sol * 0.5
         

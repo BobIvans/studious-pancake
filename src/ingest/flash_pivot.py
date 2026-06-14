@@ -171,7 +171,21 @@ class FlashPivotEngine:
             # Net profit after pivot costs and fees
             net_profit = arbitrage_profit - total_pivot_cost - provider_fee
 
-            should_pivot = net_profit > 0
+            # ── Task 5: Flash Loan Pivot Hard Margin Filter ──────────────────
+            # Only allow a pivot if the arbitrage_profit margin (ROI) is > 1.5%.
+            # Dual-swap slippage on large sizes will destroy spreads thinner than 1.5%.
+            roi_pct = (arbitrage_profit / required_amount) * 100 if required_amount > 0 else 0
+            MIN_PIVOT_ROI = Decimal('1.5')
+            
+            if roi_pct < MIN_PIVOT_ROI:
+                logger.warning(
+                    f"🚫 Pivot rejected: arbitrage margin {roi_pct:.2f}% < {MIN_PIVOT_ROI}% minimum. "
+                    f"Pivoting is too risky for this spread."
+                )
+                should_pivot = False
+            else:
+                # Net profit after pivot costs and fees must also be positive
+                should_pivot = net_profit > 0
 
             return PivotOpportunity(
                 original_asset=original_asset,

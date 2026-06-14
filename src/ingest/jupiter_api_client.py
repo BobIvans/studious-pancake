@@ -75,6 +75,8 @@ class JupiterClient:
         fee_bps: Optional[int] = None,
         only_direct_routes: bool = False,
         as_legacy_transaction: bool = False,
+        swap_mode: str = "ExactIn", # Task 16: ExactOut support
+        wallet_balance_sol: float = 0.015, # Task 1: Dynamic Routing
     ) -> Dict[str, Any]:
         """Get quote from Jupiter API.
 
@@ -84,8 +86,10 @@ class JupiterClient:
             amount: Amount in smallest units (e.g., lamports for SOL)
             slippage_bps: Slippage tolerance in basis points (default: 50 = 0.5%)
             fee_bps: Platform fee in basis points (optional)
-            only_direct_routes: Whether to restrict to direct routes only
+            only_direct_routes: Explicit override for direct routes
             as_legacy_transaction: Whether to return legacy transaction format
+            swap_mode: "ExactIn" or "ExactOut"
+            wallet_balance_sol: Current wallet balance to determine routing complexity
 
         Returns:
             Quote response from Jupiter API
@@ -98,16 +102,17 @@ class JupiterClient:
             "outputMint": output_mint,
             "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
             "slippageBps": slippage_bps,
+            "swapMode": swap_mode, # Task 16
+            "onlyDirectRoutes": str(only_direct_routes).lower(),
+            "restrictIntermediateTokens": "false", # Let Jupiter find triangular arbs
             "cache_buster": str(time.time_ns()),  # Task 1: Anti-cache bomb for HFT
         }
 
         if fee_bps is not None:
             params["feeBps"] = str(fee_bps)
 
-        # Task 14: ATA Routing Drain — always force direct routes on Jupiter v6
-        params["onlyDirectRoutes"] = "true"
-        params["restrictIntermediateTokens"] = "true"
-        params["maxAccounts"] = "28"  # FIX 8: Increased from 8 to 28 — LST routing via Sanctum requires deep account graphs. ALTs keep TX within 1232-byte MTU.
+        # Task 14: ATA Routing Drain mitigation (maxAccounts=8)
+        params["maxAccounts"] = "8"  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
 
         if as_legacy_transaction:
             params["asLegacyTransaction"] = "true"
@@ -124,6 +129,7 @@ class JupiterClient:
                         ) as response:
                             if response.status == 200:
                                 result = orjson.loads(await response.read())
+                                result["fetched_at"] = time.time()  # Task 13: Stale Quote Guard
                                 logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
                                 return result
                             elif response.status == 429:

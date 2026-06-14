@@ -15,7 +15,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Any
 
-sys.path.insert(0, str(Path(__file__).parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 import aiohttp
 from src.ingest.data_aggregator import DataAggregator
 from src.config.xstocks_registry import XSTOCK_MINTS

@@ -19,6 +19,9 @@ from solders.transaction import VersionedTransaction
 
 logger = logging.getLogger(__name__)
 
+# ── Jito HTTP endpoints ───────────────────────────────────────────────────────
+JITO_STATUS_ENDPOINT = "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
+
 # ── Regional Block Engine HTTP endpoints ──────────────────────────────────────
 JITO_HTTP_ENDPOINTS: List[str] = [
     "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
@@ -42,7 +45,7 @@ class JitoExecutor:
         self.keypair          = keypair
         self.session          = session
         self.bundle_endpoint  = bundle_endpoint or os.getenv(
-            "JITO_RPC_URL", "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
+            "JITO_RPC_URL", JITO_STATUS_ENDPOINT
         )
         self.endpoints        = JITO_HTTP_ENDPOINTS
         self.timeout          = timeout

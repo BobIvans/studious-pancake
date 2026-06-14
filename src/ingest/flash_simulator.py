@@ -18,7 +18,7 @@ logger = logging.getLogger("FlashSim")
 # Phase 49: Local Math Confidence — skip RPC simulation when local O(1) math
 # says profit is clearly above threshold.  At 0.017 SOL you cannot afford
 # to pay 100-200 ms RPC round-trip for every opportunity.
-LOCAL_MATH_CONFIDENCE_THRESHOLD_SOL = 0.0015  # Bypass if confident > 0.0015 SOL
+LOCAL_MATH_CONFIDENCE_THRESHOLD_SOL = 0.00005  # Bypass if confident > 0.00005 SOL
 
 
 class SimulationResult:

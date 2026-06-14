@@ -4,7 +4,7 @@ Contains program addresses and their associated arbitrage strategies with priori
 """
 
 import os
-from typing import Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
 
 # Main monitored addresses dictionary - OPTIMIZED FOR MINIMAL HELIUS USAGE
 MONITORED_ADDRESSES = {
@@ -317,47 +317,65 @@ PYTH_FEEDS = {
 }
 
 # ============================================================================
-# PYTH HERMES WEBSOCKET CONFIG
+# PYTH CORE TOKEN FEEDS (Task 13: Real-Time Tip Normalization)
+# Used to bypass Jupiter Price API (10-30s cache lag) for SOL/USDC/USDT.
+# Pyth Hermes updates every ~400ms directly from validators.
 # ============================================================================
 
-HERMES_WS_URL = "wss://hermes.pyth.network/ws"
-HERMES_REST_URL = "https://hermes.pyth.network/v2/price_feeds"
-PYTH_PROGRAM_ID = "FsJ3A3u2vn5cTVofAjvy6y5kwABJAqYWp49E5U4g9ZPY"
+PYTH_CORE_FEEDS: Dict[str, Dict[str, Any]] = {
+    "SOL": {
+        "feed_id": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+        "symbol": "Crypto.SOL/USD",
+        "mint": "So11111111111111111111111111111111111111112",
+        "asset_type": "crypto",
+        "priority": 1,
+    },
+    "USDC": {
+        "feed_id": "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+        "symbol": "Crypto.USDC/USD",
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "asset_type": "crypto",
+        "priority": 2,
+    },
+    "USDT": {
+        "feed_id": "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+        "symbol": "Crypto.USDT/USD",
+        "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+        "asset_type": "crypto",
+        "priority": 3,
+    },
+}
 
-# ============================================================================
-# PRIORITY QUEUE ORDER FOR ORACLE LAG SIGNALS
-# ============================================================================
+def get_all_pyth_feed_ids(with_core: bool = True) -> List[str]:
+    """Get all Pyth feed IDs for subscription, optionally including core tokens.
 
-ORACLE_LAG_PRIORITY_ORDER = [
-    "MSTRx", "NVDAx", "TSLAx", "MARAx", "RIOTx",
-    "COINx", "HOODx", "AMZNx", "GOOGLx", "METAx",
-    "SPYx", "QQQx", "AAPLx", "MSFTx", "GLDx", "SLVx"
-]
+    PYTH_FEEDS and PYTH_CORE_FEEDS are module-level dicts defined below.
+    Since Python resolves names at call-time (not definition-time), we reference
+    them inside the function body where they are guaranteed to exist.
+    """
+    feed_ids = [
+        feed["feed_id"]
+        for feed in PYTH_FEEDS.values()
+        if isinstance(feed, dict) and "feed_id" in feed
+    ]
+    if with_core:
+        feed_ids.extend(
+            feed["feed_id"]
+            for feed in PYTH_CORE_FEEDS.values()
+            if isinstance(feed, dict) and "feed_id" in feed
+        )
+    return feed_ids
 
-# ============================================================================
-# HELPER FUNCTIONS FOR PYTH FEEDS
-# ============================================================================
 
-def get_pyth_feed_id(ticker: str) -> Optional[str]:
-    """Get Pyth feed ID for ticker."""
-    feed = PYTH_FEEDS.get(ticker)
+def get_core_feed_id(ticker: str) -> Optional[str]:
+    """Get Pyth feed ID for a core token ticker (SOL, USDC, USDT)."""
+    feed = PYTH_CORE_FEEDS.get(ticker)
     return feed.get("feed_id") if feed else None
 
-def get_all_pyth_feed_ids() -> list[str]:
-    """Get all Pyth feed IDs for subscription."""
-    return [feed["feed_id"] for feed in PYTH_FEEDS.values() if "feed_id" in feed]
 
-def get_feeds_by_category(category: str) -> dict:
-    """Get feeds by category."""
-    return {k: v for k, v in PYTH_FEEDS.items() if v.get("category") == category}
-
-def build_hermes_subscription(feed_ids: list[str]) -> dict:
-    """Build Hermes WebSocket subscription message."""
-    return {
-        "type": "subscribe",
-        "subscription_type": "price_feed_updates",
-        "price_feed_ids": feed_ids
-    }
-
-# Export the main dictionary for backward compatibility
-PYTHON_MONITORED_ADDRESSES = MONITORED_ADDRESSES
+def get_mint_for_core_feed(feed_id: str) -> Optional[str]:
+    """Reverse-lookup mint address from a core token feed ID."""
+    for ticker, info in PYTH_CORE_FEEDS.items():
+        if info.get("feed_id") == feed_id and info.get("mint"):
+            return info["mint"]
+    return None

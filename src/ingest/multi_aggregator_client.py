@@ -213,74 +213,162 @@ class MultiAggregatorClient:
         self.current_index = (self.current_index + 1) % len(self.aggregators)
         return aggregator
 
+    async def _race_single_aggregator(
+        self,
+        aggregator: AggregatorClient,
+        limiter,
+        input_mint: str,
+        output_mint: str,
+        amount: int,
+        slippage_bps: int,
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Task 12: Fire a quote request to a single aggregator through its rate limiter.
+        This is wrapped in an asyncio task for the concurrent race pattern.
+        """
+        async with limiter:
+            anti_sandwich_bps = max(5, int(slippage_bps))
+
+            if aggregator.name == "jupiter":
+                params = {
+                    "inputMint": str(input_mint),
+                    "outputMint": str(output_mint),
+                    "amount": str(int(amount)),
+                    "slippageBps": str(anti_sandwich_bps),
+                    "onlyDirectRoutes": "true",
+                    "restrictIntermediateTokens": "true",
+                    "maxAccounts": "28",
+                }
+            elif aggregator.name == "openocean":
+                params = {
+                    "chain": "solana",
+                    "inTokenAddress": str(input_mint),
+                    "outTokenAddress": str(output_mint),
+                    "amount": str(amount),
+                    "gasPrice": "5",
+                }
+            elif aggregator.name == "okx":
+                params = {
+                    "chainId": "501",
+                    "fromTokenAddress": str(input_mint),
+                    "toTokenAddress": str(output_mint),
+                    "amount": str(amount),
+                    "slippage": str(slippage_bps / 100),
+                }
+            elif aggregator.name == "odos":
+                params = {
+                    "chainId": 501,
+                    "inputTokens": [
+                        {"tokenAddress": str(input_mint), "amount": str(amount)}
+                    ],
+                    "outputTokens": [
+                        {"tokenAddress": str(output_mint), "proportion": 1}
+                    ],
+                    "slippageLimitPercent": slippage_bps / 100,
+                    "userAddr": "11111111111111111111111111111112",
+                }
+            else:
+                params = {
+                    "inputMint": str(input_mint),
+                    "outputMint": str(output_mint),
+                    "amount": str(int(amount)),
+                    "slippageBps": str(anti_sandwich_bps),
+                }
+
+            return await aggregator.get_quote(self.session, params)
+
     async def get_quote(
         self, input_mint: str, output_mint: str, amount: int, slippage_bps: int = 50
     ) -> Optional[Dict[str, Any]]:
-        """Get quote from next aggregator in rotation with RPS limiting."""
+        """
+        Task 12: Concurrent Aggregator Racing (Promise.any pattern).
+        Fires HTTP requests to ALL healthy aggregators simultaneously using
+        asyncio.wait(FIRST_COMPLETED). Takes the fastest profitable quote,
+        immediately cancels remaining pending tasks.
+
+        This replaces the old sequential loop (for _ in range(4):) which
+        waited 300-400ms per aggregator before trying the next one.
+        """
         if not self.session:
             raise RuntimeError(
                 "MultiAggregatorClient must be used as async context manager"
             )
 
-        # Fix 1: Safe cast to str so Pubkey objects never reach HTTP params or Pubkey.from_string()
+        # Fix 1: Safe cast to str so Pubkey objects never reach HTTP params
         input_mint = str(input_mint) if not isinstance(input_mint, str) else input_mint
         output_mint = (
             str(output_mint) if not isinstance(output_mint, str) else output_mint
         )
 
-        # Try up to 4 aggregators (now includes Odos)
-        for _ in range(4):
-            aggregator = self._get_next_aggregator()
+        # ── Task 12: Fire ALL aggregators concurrently ───────────────────────
+        # Create one task per aggregator. Each task acquires its own rate limiter
+        # (Jupiter 5 RPS, OpenOcean 2 RPS, OKX 5 RPS, Odos 1 RPS) autonomously.
+        tasks = []
+        aggregator_map: Dict[int, str] = {}  # task_id -> aggregator_name
 
-            # Apply independent limiter to prevent starvation (Jupiter 5 RPS won't block Gecko 0.5 RPS)
+        for aggregator in self.aggregators:
             limiter = getattr(self, f"{aggregator.name}_limiter", self.jupiter_limiter)
-            async with limiter:
+            task = asyncio.create_task(
+                self._race_single_aggregator(
+                    aggregator,
+                    limiter,
+                    input_mint,
+                    output_mint,
+                    amount,
+                    slippage_bps,
+                )
+            )
+            tasks.append(task)
+            aggregator_map[id(task)] = aggregator.name
 
-                anti_sandwich_bps = max(5, int(slippage_bps))
-                params = {
-                    "inputMint": str(input_mint),
-                    "outputMint": str(output_mint),
-                    "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
-                    "slippageBps": str(anti_sandwich_bps),
-                    "onlyDirectRoutes": "true",  # Task 14: force direct routes to block ATA creation on intermediate tokens
-                    "restrictIntermediateTokens": "true",
-                    "maxAccounts": "28",  # FIX 8: Increased from 8 to 28 — LST routing via Sanctum requires deep account graphs. ALTs keep TX within 1232-byte MTU.
-                }
+        # ── Race: wait for FIRST_COMPLETED ───────────────────────────────────
+        pending = set(tasks)
+        start_race = time.time()
+        timeout = 4.0  # Hard timeout — if no aggregator responds in 4s, fail
 
-                # Adjust params for different aggregators
-                if aggregator.name == "openocean":
-                    params = {
-                        "chain": "solana",
-                        "inTokenAddress": str(input_mint),
-                        "outTokenAddress": str(output_mint),
-                        "amount": str(amount),
-                        "gasPrice": "5",
-                    }
-                elif aggregator.name == "okx":
-                    params = {
-                        "chainId": "501",
-                        "fromTokenAddress": str(input_mint),
-                        "toTokenAddress": str(output_mint),
-                        "amount": str(amount),
-                        "slippage": str(slippage_bps / 100),
-                    }
-                elif aggregator.name == "odos":
-                    # Odos specific format (strict RPS=1 enforced by limiter)
-                    params = {
-                        "chainId": 501,
-                        "inputTokens": [
-                            {"tokenAddress": str(input_mint), "amount": str(amount)}
-                        ],
-                        "outputTokens": [
-                            {"tokenAddress": str(output_mint), "proportion": 1}
-                        ],
-                        "slippageLimitPercent": slippage_bps / 100,
-                        "userAddr": "11111111111111111111111111111112",
-                    }
+        try:
+            while pending:
+                done, pending = await asyncio.wait(
+                    pending,
+                    return_when=asyncio.FIRST_COMPLETED,
+                    timeout=timeout,
+                )
 
-            quote = await aggregator.get_quote(self.session, params)
-            if quote:
-                return quote
+                for task in done:
+                    try:
+                        result = task.result()
+                        if result is not None and result.get("data") is not None:
+                            # First profitable/valid quote received!
+                            race_ms = (time.time() - start_race) * 1000
+                            winner = aggregator_map.get(id(task), "unknown")
+                            logger.debug(
+                                f"🏁 Aggregator race won by {winner} "
+                                f"in {race_ms:.0f}ms for {input_mint[:8]}->{output_mint[:8]}"
+                            )
+
+                            # Cancel all pending tasks immediately
+                            for t in pending:
+                                t.cancel()
+
+                            return result
+                    except Exception as task_err:
+                        logger.debug(f"Aggregator race task failed: {task_err}")
+
+                # All completed tasks failed — continue waiting on the rest
+                if not pending:
+                    break
+
+                # Shrink timeout to remaining time
+                elapsed = time.time() - start_race
+                timeout = max(0.1, 4.0 - elapsed)
+
+        finally:
+            # Ensure all tasks are properly cleaned up
+            # Note: asyncio.wait() with timeout does NOT raise TimeoutError —
+            # it simply returns whatever tasks completed. The while-loop above
+            # handles the timeout naturally by reducing the remaining timeout.
+            for t in pending:
+                t.cancel()
 
         logger.warning(f"All aggregators failed for {input_mint} -> {output_mint}")
         return None

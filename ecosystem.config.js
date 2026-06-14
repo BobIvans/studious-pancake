@@ -1,5 +1,18 @@
 // PM2 Ecosystem Config — Ultra Arb Bot
 // Auto-restart every 12 hours to prevent memory leaks from WSS/aiohttp
+//
+// Log Rotation: Install pm2-logrotate to prevent log files from growing unbounded.
+// Run: pm2 install pm2-logrotate && pm2 set pm2-logrotate:max_size 50M && pm2 set pm2-logrotate:retain 3
+//
+// Alternatively, use logrotate with this config in /etc/logrotate.d/ultra-arb:
+//   /path/to/project/logs/*.log {
+//     hourly
+//     rotate 3
+//     compress
+//     missingok
+//     notifempty
+//     copytruncate
+//   }
 module.exports = {
   apps: [{
     name: "ultra-arb",

@@ -8,6 +8,7 @@ bundle sending, and status polling for dropped bundle recovery.
 import asyncio
 import logging
 import random
+import time
 from typing import Dict, Optional, Set, Tuple, Optional as OptionalType
 import aiohttp
 from solders.keypair import Keypair
@@ -26,8 +27,10 @@ class JitoManager:
         session: Optional[aiohttp.ClientSession] = None,
         tip_percentage_range: Tuple[float, float] = (0.1, 0.5),  # 10-50% of profit
         default_tip_lamports: int = 10000,  # 0.00001 SOL fallback
+        rpc_url: Optional[str] = None,
     ):
         self.session = session
+        self.rpc_url = rpc_url
         self.tip_percentage_range = tip_percentage_range
         self.default_tip_lamports = default_tip_lamports
         # Phase 35: Dynamic Jito Tip Accounts
@@ -36,7 +39,7 @@ class JitoManager:
             "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",  # Fallback 2
         ]
         logger.warning("JitoManager: tip_accounts initialized with fallback defaults. Call update_tip_accounts() to fetch dynamic accounts from Jito API.")
-        self.bundle_client = JitoBundleClient(session=session)
+        self.bundle_client = JitoBundleClient(session=session, rpc_url=rpc_url)
         # Fix #3: Track background tasks to prevent Python GC from destroying them
         self.background_tasks: Set[asyncio.Task] = set()
 
@@ -183,7 +186,7 @@ class JitoManager:
             jito_context.dynamic_tip_target_lamports = tip_lamports
 
             # Get recent blockhash from bundle client (real blockhash, not placeholder)
-            recent_blockhash = await self.bundle_client._get_recent_blockhash()
+            recent_blockhash = await self.bundle_client._get_recent_blockhash(self.rpc_url)
 
             # Send via bundle client
             result = await self.bundle_client.build_and_send_bundle(
@@ -282,7 +285,6 @@ class JitoBiddingManager:
 
     async def poll_tip_floor(self, session: aiohttp.ClientSession):
         """Poll every 10s."""
-        import time
         now = time.time()
         if now - self.last_poll < 10:
             return
@@ -332,27 +334,69 @@ class JitoBiddingManager:
         if expected_profit_sol <= 0:
             return 0
 
-        # ── Dynamic Jito Tip Floor Filtering ──────────────────
-        # Calculate tip as a % of profit. Removed blocking floor filters.
-        forty_pct_tip_sol = expected_profit_sol * 0.40
+        # ── Task 4: Logarithmic Jito Tip (Tapering Curve) ──────────────────
+        # Taper tip % as profit increases to prevent excessive overpayment.
+        # Hard cap at MAX_TIP_SOL (0.15 SOL) unless congestion is extreme.
+        MAX_TIP_SOL = 0.15
 
-        # 40% of expected net profit — validated for Blue Ocean strategies
+        if expected_profit_sol <= 0.1:
+            base_tip_pct = 0.40  # 40% for micro/small trades
+        elif expected_profit_sol <= 1.0:
+            base_tip_pct = 0.20  # 20% for medium trades
+        else:
+            base_tip_pct = 0.10  # 10% for large whale trades
+
+        tip_sol = expected_profit_sol * base_tip_pct
+
+        # Apply absolute hard cap
+        tip_sol = min(tip_sol, MAX_TIP_SOL)
+
+        # Convert to lamports
+        tip_lamports = int(tip_sol * 1_000_000_000)
+
+        # ── Task 7: Jito Pre-flight Tip Bump (Proactive Bidding) ───────────────
+        # Compare calculated tip against the live Jito 50th percentile floor.
+        # If calculated_tip < jito_floor BUT the expected_profit is large enough
+        # to comfortably cover the floor (jito_floor < expected_profit * 0.8),
+        # instantly override/bump the tip to jito_floor + random jitter.
+        # Win the block on the first attempt instead of failing.
+        floor_lamports = self.get_50th_percentile_lamports()
+        if tip_lamports < floor_lamports:
+            # Check if profit can comfortably cover the floor
+            if floor_lamports < (expected_profit_sol * 0.80 * 1_000_000_000):
+                bump_jitter = random.randint(100, 500)
+                tip_lamports = floor_lamports + bump_jitter
+                logger.debug(
+                    f"🚀 Tip Bump (Task 7): {tip_lamports} lamports "
+                    f"(floor={floor_lamports}, jitter={bump_jitter}) "
+                    f"for {strategy}"
+                )
+            else:
+                logger.warning(
+                    f"🚫 Tip Floor Filter: {strategy} profit {expected_profit_sol:.6f} SOL too small "
+                    f"to cover 50th percentile floor ({floor_lamports/1e9:.6f} SOL). skipping."
+                )
+                return 0
+
         # ── Phase 49: Adaptive Tip Step-Up ───────────────────────────────────
         # If we are inside a step-up window (>= 3 consecutive failures earlier),
-        # raise tip to 55-60 % of profit to compete with aggressive rivals.
-        tip_pct = 0.40
+        # raise tip to competitive levels (up to 60%).
+        tip_pct = base_tip_pct
         if time.time() < self._step_up_until:
-            # Freshly raised — use upper bound to aggressively win
             tip_pct = self.STEP_UP_TIP_PCT_HIGH
         elif self._consecutive_failures >= self.STEP_UP_THRESHOLD:
-            # Still in a multi-failure streak — activate elevated window now
             self._step_up_until = time.time() + self.STEP_UP_DURATION_S
             tip_pct = self.STEP_UP_TIP_PCT_HIGH
             logger.warning(
                 f"📈 Phase 49 Step-Up: {self._consecutive_failures} consecutive failures → "
                 f"tip raised to {tip_pct*100:.0f}% for {self.STEP_UP_DURATION_S}s"
             )
-        tip_sol = forty_pct_tip_sol * (tip_pct / 0.40)  # scale from 40 % baseline
+
+        tip_sol = expected_profit_sol * tip_pct
+        # Still respect MAX_TIP_SOL unless step-up is active (HFT survival priority)
+        if time.time() >= self._step_up_until:
+            tip_sol = min(tip_sol, MAX_TIP_SOL)
+
         tip_lamports = int(tip_sol * 1_000_000_000)
 
         # ── Fix 2 (Unfunded Jito Tip): Cap tip by actual native SOL balance ──
@@ -364,7 +408,7 @@ class JitoBiddingManager:
         # If not provided, we fall back to expected_profit_sol only.
         tip_lamports_float = tip_lamports
         if current_native_sol_balance is not None:
-            available_native_lamports = int((current_native_sol_balance - 0.0025) * 1_000_000_000)  # leave 0.0025 SOL for gas
+            available_native_lamports = int((current_native_sol_balance - 0.005) * 1_000_000_000)  # leave 0.005 SOL for gas
             tip_lamports_float = min(tip_lamports, available_native_lamports)
             logger.debug(
                 f"💰 Jito tip cap: balance={current_native_sol_balance:.6f} SOL | "

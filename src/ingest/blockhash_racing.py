@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 # Jito regional nodes and Regional Helius endpoints for blockhash racing
 # Reduces staleness by ~200ms by matching validator regions (Frankfurt/NY/Tokyo)
 JITO_REGIONAL_NODES = [
+    "https://mainnet.block-engine.jito.wtf", # Task 17: Jito-Native Blockhash
     "https://frankfurt.mainnet.block-engine.jito.wtf",
     "https://amsterdam.mainnet.block-engine.jito.wtf",
     "https://ny.mainnet.block-engine.jito.wtf",
@@ -189,14 +190,40 @@ class BlockhashRacingManager:
             task = asyncio.create_task(self._fetch_blockhash_from_endpoint(endpoint))
             tasks.append(task)
 
-        # Wait for the first successful response
+        # Wait for responses, preferring Jito if it's within a reasonable window
         results = []
+        jito_win = False
+        
         for coro in asyncio.as_completed(tasks):
             try:
                 result = await coro
                 if result:
                     results.append(result)
-                    break  # We got the first successful result, cancel others
+                    # If this is a Jito node, we win immediately
+                    if "jito" in result["endpoint"].lower():
+                        jito_win = True
+                        break
+                    
+                    # If not Jito, wait a tiny bit to see if Jito comes in (HFT priority)
+                    if len(results) == 1:
+                        try:
+                            # 50ms buffer for Jito to respond
+                            await asyncio.wait_for(asyncio.sleep(0.05), timeout=0.05)
+                        except asyncio.TimeoutError:
+                            pass
+                        # Check if any Jito tasks finished in that 50ms
+                        for t in tasks:
+                            if t.done() and not t.cancelled():
+                                try:
+                                    r = t.result()
+                                    if r and "jito" in r["endpoint"].lower():
+                                        results.insert(0, r)
+                                        jito_win = True
+                                        break
+                                except: pass
+                        
+                    if len(results) >= 1:
+                        break
             except Exception as e:
                 logger.debug(f"Blockhash race task error: {e}")
 
@@ -207,14 +234,17 @@ class BlockhashRacingManager:
 
         # Update if we got a result
         if results:
-            self.current_blockhash = results[0]["blockhash"]
+            # Prefer the first one if jito_win was set, otherwise first result
+            winner = results[0]
+            self.current_blockhash = winner["blockhash"]
             self.last_update_time = time.time()
             self.successful_races += 1
 
             response_time = (time.time() - start_time) * 1000  # ms
             self.avg_response_time = (self.avg_response_time + response_time) / 2
 
-            logger.debug(f"🏁 Blockhash race won in {response_time:.1f}ms")
+            source_label = "JITO" if "jito" in winner["endpoint"].lower() else "RPC"
+            logger.debug(f"🏁 Blockhash race won by {source_label} in {response_time:.1f}ms")
         else:
             logger.warning("❌ All blockhash racing tasks failed")
 

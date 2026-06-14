@@ -18,20 +18,116 @@ from solders.system_program import TransferParams, transfer
 from spl.token.instructions import get_associated_token_address
 from spl.token.constants import TOKEN_PROGRAM_ID
 
+
+# ════════════════════════════════════════════════════════════════════════
+# Task 11: MarginFi Account Pooling
+# ════════════════════════════════════════════════════════════════════════
+class MarginFiAccountPool:
+    """
+    Round-Robin pool of MarginFi accounts for concurrent flashloan execution.
+
+    Instead of locking to one slot (450ms sleep) when a single MARGINFI_ACCOUNT
+    is in use, this pool lets the bot execute trades on different MarginFi
+    accounts in the same slot — enabling parallel arb execution at scale.
+
+    Usage:
+        pool = MarginFiAccountPool.from_env()
+        acct = pool.checkout(current_slot)
+        # ... use acct for flashloan ...
+        pool.checkin(acct)  # optional — slot guard is automatic
+    """
+
+    def __init__(self, accounts: List[str], bank_configs: Optional[Dict[str, Dict]] = None):
+        if not accounts:
+            raise ValueError("MarginFiAccountPool requires at least one account")
+        self.accounts = list(accounts)
+        self._last_used_slot: Dict[str, int] = {}  # account_pubkey -> last_used_slot
+        self._current_index = 0
+        self._lock = asyncio.Lock()
+        # Optional: per-account bank config overrides (keyed by marginfi_account pubkey)
+        self.bank_configs = bank_configs or {}
+
+    @classmethod
+    def from_env(cls) -> "MarginFiAccountPool":
+        """
+        Create pool from MARGINFI_ACCOUNTS env var (comma-separated list).
+        Falls back to MARGINFI_ACCOUNT if only one account is configured.
+        """
+        accounts_str = os.getenv("MARGINFI_ACCOUNTS", "")
+        if accounts_str.strip():
+            accounts = [a.strip() for a in accounts_str.split(",") if a.strip()]
+            logger.info(f"🏦 MarginFi Account Pool: {len(accounts)} accounts (MARGINFI_ACCOUNTS)")
+        else:
+            single = os.getenv("MARGINFI_ACCOUNT", "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2")
+            accounts = [single.strip()] if single.strip() else []
+            logger.info(f"🏦 MarginFi Account Pool: 1 account (MARGINFI_ACCOUNT fallback)")
+
+        if not accounts:
+            logger.warning("🏦 No MarginFi accounts configured — using hardcoded default")
+            accounts = ["Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2"]
+
+        return cls(accounts)
+
+    async def checkout(self, current_slot: int) -> Tuple[str, int]:
+        """
+        Get the next available MarginFi account for the given slot.
+
+        Returns:
+            Tuple of (account_pubkey_string, index_in_pool)
+        """
+        async with self._lock:
+            for _ in range(len(self.accounts)):
+                acct = self.accounts[self._current_index]
+                idx = self._current_index
+                self._current_index = (self._current_index + 1) % len(self.accounts)
+
+                if self._last_used_slot.get(acct, 0) != current_slot:
+                    self._last_used_slot[acct] = current_slot
+                    logger.debug(
+                        f"🏦 Pool checkout: acct={acct[:8]}... "
+                        f"slot={current_slot} idx={idx}/{len(self.accounts)}"
+                    )
+                    return acct, idx
+
+            # All accounts used in this slot — return the next one anyway
+            # (better to risk AccountInUse than to delay 450ms)
+            acct = self.accounts[self._current_index % len(self.accounts)]
+            self._current_index = (self._current_index + 1) % len(self.accounts)
+            self._last_used_slot[acct] = current_slot
+            logger.warning(
+                f"🏦 All accounts busy in slot {current_slot}, "
+                f"re-using {acct[:8]}... (risk: AccountInUse)"
+            )
+            return acct, self._current_index
+
+    def get_bank_config(self, account: str, default_config: Dict) -> Dict:
+        """Get bank config for a specific account, falling back to default."""
+        if account in self.bank_configs:
+            cfg = dict(default_config)
+            cfg.update(self.bank_configs[account])
+            return cfg
+        return dict(default_config)
+
+    @property
+    def count(self) -> int:
+        return len(self.accounts)
+
+    def is_using_single_account(self) -> bool:
+        """Returns True if pool has only one account (no parallelism benefit)."""
+        return len(self.accounts) <= 1
+
 from .leader_tracker import LeaderTracker
 from .g2_tip_manager import ExecutionGuard
 from .tx_builder import JupiterTxBuilder
 from .epoch_tracker import EpochTracker
-# Phase 48: Import dynamic bank info from arb_bot
-try:
-    from arb_bot import MARGINFI_BANKS
-except ImportError:
-    MARGINFI_BANKS = {}
 
 # FIX 13: Shared global Jupiter rate limiter — 4 req/s across all modules
 from .jupiter_api_client import _GLOBAL_JUPITER_LIMITER, _limiter_available
 
 logger = logging.getLogger(__name__)
+
+RENT_SPL_ATA_SOL = 0.00204
+RENT_TOKEN2022_SOL = 0.0035
 
 # Token-2022 Program ID for xStocks pivot helper
 TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
@@ -70,17 +166,42 @@ class StandardTransactionSender:
 class ExecutionRouter:
     """Routes transactions between Jito bundles and standard transactions based on slot leader with sequential queue."""
 
-    def __init__(self, leader_tracker: LeaderTracker, jito_executor, session: aiohttp.ClientSession, rpc_url: str, keypair=None, alt_manager=None, rpc_getter: Optional[Callable[[], str]] = None):
+    def __init__(
+        self,
+        leader_tracker: LeaderTracker,
+        jito_executor,
+        session: aiohttp.ClientSession,
+        rpc_url: str,
+        keypair=None,
+        alt_manager=None,
+        rpc_getter: Optional[Callable[[], str]] = None,
+        blockhash_getter: Optional[Callable[[], str]] = None,
+        optimal_trade_sizer=None,
+        ata_cache=None,
+        flash_pivot_engine=None,
+        cfg=None,
+        data_aggregator=None,
+        stats=None,
+        stats_lock=None,
+    ):
         self.leader_tracker = leader_tracker
         self.jito_executor = jito_executor
         self.standard_tx_sender = StandardTransactionSender(session, rpc_url)
+        self.cfg = cfg
+        self.data_aggregator = data_aggregator
+        self.stats = stats
+        self.stats_lock = stats_lock
         self.execution_queue = asyncio.Queue(maxsize=100)
         self._processor_task = None
         self.keypair = keypair
         self.session = session
         self._static_rpc_url = rpc_url
         self.rpc_getter = rpc_getter
+        self.blockhash_getter = blockhash_getter
         self.rpc_url = rpc_url
+        self.optimal_trade_sizer = optimal_trade_sizer
+        self.ata_cache = ata_cache if ata_cache is not None else set()
+        self.flash_pivot_engine = flash_pivot_engine # Task 18
         # Epoch Shield: Block trades during epoch boundary storm
         self.epoch_tracker = EpochTracker(rpc_url=rpc_url, session=session)
         self._epoch_killswitch_active = False
@@ -94,6 +215,11 @@ class ExecutionRouter:
         self.consecutive_failures = 0
         self.last_slot_executed = 0  # Fix 78: Slot mutex for single MARGINFI_ACCOUNT
         self.max_consecutive_failures = 3
+
+        # ── Task 11: MarginFi Account Pool ───────────────────────────────────
+        # Replace 450ms slot-mutex with round-robin pool checkout.
+        # Can execute multiple independent flashloans in the same slot.
+        self.marginfi_pool = MarginFiAccountPool.from_env()
 
         # Execution Guard (Circuit Breaker for consecutive failures)
         self.execution_guard = ExecutionGuard()
@@ -161,7 +287,7 @@ class ExecutionRouter:
 
             # Wait for result with 2.0s timeout — prevents bundle ghosting race
             try:
-                result = await asyncio.wait_for(future, timeout=2.0)
+                result = await asyncio.wait_for(future, timeout=5.0)
                 # Post-execution balance check — prevents retry on insufficient funds
                 if result.get("status") == "success":
                     await self._check_wallet_balance_after_execution()
@@ -278,19 +404,39 @@ class ExecutionRouter:
                 # Check rent recovery success
                 if result.get("status") == "success":
                     await self._verify_rent_recovery()
-                    # Fix 1 (Non-burning Dust): Post-tx dust sweep — clean intermediate ATA
-                    # that passed through atomically (non-zero dust stays in ATA, CloseAccount
-                    # no longer blocks the tx, dust is swept here after commit).
-                    try:
-                        from src.ingest.dust_sweeper import DustSweeper
-                        sweeper = DustSweeper(self.keypair, self.rpc_url, self.session)
-                        await sweeper.sweep_after_successful_tx()
-                    except Exception as _e:
-                        logger.debug(f"Post-tx dust sweep skipped: {_e}")
                 elif result.get("status") == "error":
                     self.consecutive_failures += 1
                     # ATA Rent Trap Protection: Aggressive cleanup on failure
                     await self._emergency_ata_cleanup()
+
+                return result
+            elif strategy == "lst_unstake":
+                # LST Instant Unstake Arbitrage
+                from .lst_unstake_arbitrage import LstInstantUnstakeArbitrage
+                lst_arb = LstInstantUnstakeArbitrage(
+                    session=self.session,
+                    rpc_url=self.rpc_url,
+                    marginfi_account=os.getenv("MARGINFI_ACCOUNT", ""),
+                    tx_builder=JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter),
+                    optimal_trade_sizer=self.optimal_trade_sizer,
+                    rpc_getter=self.rpc_getter,
+                    ata_cache=self.ata_cache,
+                    keypair=self.keypair
+                )
+                success = await lst_arb.execute_unstake_arbitrage(
+                    opportunity=opportunity,
+                    tx_builder=lst_arb.tx_builder,
+                    keypair=self.keypair,
+                    jito_executor=self.jito_executor
+                )
+                result = {"status": "success" if success else "error"}
+
+                # Reputation Circuit Breaker: track slippage failures per pair
+                pair_key = self._pair_key("LST", opportunity.get("lst_mint", ""))
+                if result.get("status") == "error":
+                    self.record_pair_slippage(pair_key)
+                elif result.get("status") == "success":
+                    self.reset_pair_reputation(pair_key)
 
                 return result
             else:
@@ -300,6 +446,128 @@ class ExecutionRouter:
             logger.error(f"Error executing arbitrage opportunity: {e}")
             self.consecutive_failures += 1
             return {"status": "error", "message": str(e)}
+
+    async def _refetch_xstock_quotes(
+        self,
+        quote: Dict[str, Any],
+        amount_lamports: int,
+        only_direct_routes: bool = True,
+    ) -> Optional[Dict[str, Any]]:
+        """Refetch xStock circular quotes with strict Jupiter route guards."""
+        try:
+            from .jupiter_api_client import JupiterClient
+
+            step1 = quote.get("step1") or {}
+            step2 = quote.get("step2") or {}
+            if not step1 or not step2:
+                return None
+
+            input_mint = step1.get("inputMint")
+            output_mint = step1.get("outputMint")
+            if not input_mint or not output_mint:
+                return None
+
+            client = JupiterClient(self.session, timeout=4.0, max_retries=1)
+            buy_quote = await client.get_quote(
+                input_mint=input_mint,
+                output_mint=output_mint,
+                amount=int(amount_lamports),
+                slippage_bps=max(30, int(step1.get("slippageBps", 100))),
+                only_direct_routes=only_direct_routes,
+            )
+            if not buy_quote or "error" in buy_quote or int(buy_quote.get("outAmount", 0)) <= 0:
+                return None
+
+            sell_quote = await client.get_quote(
+                input_mint=output_mint,
+                output_mint=input_mint,
+                amount=int(amount_lamports), # Repay exact borrow
+                slippage_bps=max(30, int(step2.get("slippageBps", 100))),
+                only_direct_routes=only_direct_routes,
+                swap_mode="ExactOut", # Task 16
+            )
+            if not sell_quote or "error" in sell_quote or int(sell_quote.get("outAmount", 0)) <= 0:
+                return None
+
+            return {
+                "step1": buy_quote,
+                "step2": sell_quote,
+                "buy_venues": quote.get("buy_venues", []),
+                "sell_venues": quote.get("sell_venues", []),
+                "is_cross_venue": quote.get("is_cross_venue", False),
+                "circular_quote_out": int(sell_quote.get("outAmount", 0)),
+                "risk_out": int(amount_lamports),
+            }
+        except Exception as e:
+            logger.debug(f"xStock quote retry failed: {e}")
+            return None
+
+    async def _simulate_xstock_transaction(
+        self,
+        transaction,
+        expected_profit_sol: float,
+        min_profit_lamports: int,
+        tip_lamports: int,
+        bank_vault_pubkey: Optional[str] = None,
+    ) -> Tuple[bool, str, Any]:
+        """Run the local pre-flight simulation for an xStock transaction."""
+        from .flash_simulator import FlashSimulator
+
+        flash_sim = FlashSimulator(self.session, self.rpc_url)
+        tx_b64 = base64.b64encode(bytes(transaction)).decode("ascii")
+        return await flash_sim.validate_profitability(
+            tx_b64=tx_b64,
+            tx_signer_pubkey=str(self.keypair.pubkey()),
+            min_profit_lamports=min_profit_lamports,
+            tip_lamports=tip_lamports,
+            priority_fee_lamports=0,
+            expected_profit_sol=None,
+            bank_vault_pubkey=bank_vault_pubkey,
+        )
+
+    async def _retry_xstock_opportunity(
+        self,
+        opportunity: Dict[str, Any],
+        reason: str,
+        current_amount: int,
+        current_profit_sol: float,
+    ) -> dict:
+        """Apply Smart Retry rules before giving up on an xStock opportunity."""
+        retry_state = opportunity.get("_smart_retry", {})
+        if retry_state.get("used"):
+            return {"status": "error", "message": reason}
+
+        retry_opportunity = dict(opportunity)
+        retry_opportunity["_smart_retry"] = {"used": True, "mode": "slippage" if ("slippage" in reason.lower() or "liquidity" in reason.lower() or "depth" in reason.lower()) else "route"}
+
+        if "slippage" in reason.lower() or "liquidity" in reason.lower() or "depth" in reason.lower():
+            new_amount = max(int(current_amount * 0.5), 1)
+            retry_opportunity["optimal_size_lamports"] = new_amount
+            retry_opportunity["expected_profit_sol"] = max(current_profit_sol * 0.5, 0.0)
+            quote = await self._refetch_xstock_quotes(
+                opportunity.get("quote", {}),
+                new_amount,
+                only_direct_routes=True,
+            )
+            if not quote:
+                return {"status": "error", "message": f"Slippage retry quote rebuild failed: {reason}"}
+            retry_opportunity["quote"] = quote
+            logger.warning(f"Smart Retry: slippage cut xStock borrow to {new_amount} lamports")
+            return await self._execute_xstock_opportunity(retry_opportunity)
+
+        if "accountnotfound" in reason.lower() or "rent" in reason.lower() or "insufficient" in reason.lower() or "mtu" in reason.lower() or "size" in reason.lower():
+            quote = await self._refetch_xstock_quotes(
+                opportunity.get("quote", {}),
+                current_amount,
+                only_direct_routes=True,
+            )
+            if not quote:
+                return {"status": "error", "message": f"Route retry quote rebuild failed: {reason}"}
+            retry_opportunity["quote"] = quote
+            logger.warning("Smart Retry: rebuilt xStock route with onlyDirectRoutes=true and restrictIntermediateTokens=true due to size/rent error")
+            return await self._execute_xstock_opportunity(retry_opportunity)
+
+        return {"status": "error", "message": reason}
 
     async def _execute_xstock_opportunity(self, opportunity: Dict[str, Any]) -> dict:
         """Execute xStock oracle lag arbitrage opportunity with Flash Loan Pivot support."""
@@ -319,6 +587,29 @@ class ExecutionRouter:
             circular_quote = opportunity.get("quote")
             dex_swap_instructions = opportunity.get("dex_swap_instructions")
 
+            # Phase 48: Dynamic Bank Lookup (lazy import to avoid circular dependency)
+            from arb_bot import MARGINFI_BANKS
+
+            # ── Task 11: Check out a MarginFi account from the pool BEFORE
+            # building the flashloan tx. This ensures the pooled account is
+            # actually used in the instruction building, not just at send time.
+            _pool_acct_for_build = None
+            try:
+                # Fetch current slot for pool checkout
+                _slot_payload = {
+                    "jsonrpc": "2.0", "id": 1,
+                    "method": "getSlot", "params": []
+                }
+                async with self.session.post(
+                    self.rpc_url, json=_slot_payload, timeout=2.0
+                ) as _slot_resp:
+                    if _slot_resp.status == 200:
+                        _slot_data = await _slot_resp.json()
+                        _current_slot = _slot_data["result"]
+                        _pool_acct_for_build, _ = await self.marginfi_pool.checkout(_current_slot)
+            except Exception as _pool_err:
+                logger.debug(f"Task 11: Pool checkout before build failed ({_pool_err}) — using default account")
+
             logger.info(
                 f"🎯 Executing xStock arbitrage: {ticker} {direction} | "
                 f"Size: {optimal_size_lamports} lamports | Expected profit: {expected_profit_sol:.4f} SOL"
@@ -333,13 +624,19 @@ class ExecutionRouter:
             if not all_swap_ixs and circular_quote:
                 step1_data = circular_quote.get("step1", {})
                 if step1_data:
-                    step1_ixs, _ = await tx_builder.get_swap_instructions(step1_data, str(self.keypair.pubkey()), use_custom_cu=True)
+                    step1_ixs, _ = await tx_builder.get_swap_instructions(
+                        step1_data, str(self.keypair.pubkey()), use_custom_cu=True,
+                        expected_profit_sol=expected_profit_sol
+                    )
                     if step1_ixs:
                         all_swap_ixs.extend(step1_ixs)
 
                 step2_data = circular_quote.get("step2", {})
                 if step2_data:
-                    step2_ixs, _ = await tx_builder.get_swap_instructions(step2_data, str(self.keypair.pubkey()), use_custom_cu=True)
+                    step2_ixs, _ = await tx_builder.get_swap_instructions(
+                        step2_data, str(self.keypair.pubkey()), use_custom_cu=True,
+                        expected_profit_sol=expected_profit_sol
+                    )
                     if step2_ixs:
                         all_swap_ixs.extend(step2_ixs)
 
@@ -402,16 +699,38 @@ class ExecutionRouter:
                 # FIX 12: Net profit check using exact pivot cost (borrow_lamports - out_exit)
                 # Not price_impact_pct estimation which was mathematically unsound.
                 # Guard: expected_profit_sol must exceed actual pivot cost + minimum buffer
-                min_profit_buffer_sol = 0.00005  # 0.00005 SOL safety buffer
+
+                # ── PHASE 49: SMART PIVOT ANALYTICS ──────────────────────────────
+                # Dynamically adjust the profit buffer based on current capital.
+                # Micro-balances (0.015 SOL) cannot afford the risk of pivot slippage.
+                try:
+                    from .shared_state import stats
+                    current_capital = stats.get("last_balance", 0.015)
+                except ImportError:
+                    current_capital = 0.015
+
+                if current_capital < 0.1:
+                    min_profit_buffer_sol = 0.001  # Safe margin for micro-balance
+                else:
+                    min_profit_buffer_sol = 0.0001 # Aggressive margin for large capital
+
                 cost_sol = swap_cost_lamports / 1e9
                 profit_after_pivot = expected_profit_sol - cost_sol
-                if profit_after_pivot <= min_profit_buffer_sol:
+                
+                # ── Task 5: Flash Loan Pivot Hard Margin ROI Filter ───────────
+                # roi = (expected_profit_sol * sol_price) / (trade_amount_usdc)
+                # But here we use a simplified ROI based on borrow amount.
+                # Since borrow is in SOL (if pivoted), roi = expected_profit_sol / borrow_sol
+                roi_pct = (expected_profit_sol / (optimal_size_lamports / 1e9)) * 100 # Rough estimate
+                
+                if profit_after_pivot <= min_profit_buffer_sol or roi_pct < 1.5:
                     logger.warning(
-                        f"⚠️ Pivot not profitable: profit={expected_profit_sol:.6f} SOL "
-                        f"- pivot_cost={cost_sol:.6f} SOL = {profit_after_pivot:.6f} SOL "
-                        f"≤ min_buffer={min_profit_buffer_sol:.6f} SOL"
+                        f"⚠️ ANALYTICS: Pivot rejected. "
+                        f"Net Profit: {profit_after_pivot:.6f} SOL, ROI: {roi_pct:.2f}% | "
+                        f"Limits: Net > {min_profit_buffer_sol}, ROI > 1.5%"
                     )
-                    return {"status": "error", "message": "Pivot not profitable after fees"}
+                    return {"status": "error", "message": "Pivot mathematically unprofitable or low ROI"}
+                # ─────────────────────────────────────────────────────────────────
 
                 logger.info(
                     f"🔄 FLASH PIVOT active: borrow SOL → swap→USDC → {ticker} arb → "
@@ -436,6 +755,18 @@ class ExecutionRouter:
             tip_lamports = int(expected_profit_sol * tip_percent * 1e9)
             jito_tip_lamports = max(recommended_tip, tip_lamports)
 
+            # ── Task 15: Jito Tip Floor Guard ──────────────────────────────────
+            # If (Profit * 40%) < Tip Floor AND Profit < 0.0005 SOL, abort.
+            # Prevents overpaying for micro-trades where margin is too thin.
+            if self.jito_executor:
+                p50_floor = self.jito_executor.get_current_tip_info().get("recommended_tip", 10000)
+                if (expected_profit_sol * 0.40 * 1e9) < p50_floor and expected_profit_sol < 0.0005:
+                    logger.warning(
+                        f"🚫 ABORT: Jito Tip Floor {p50_floor/1e9:.6f} SOL > 40% profit {expected_profit_sol*0.4:.6f} SOL "
+                        f"on micro-trade for {ticker}. Waiting for cheaper floor."
+                    )
+                    return {"status": "error", "message": "Jito Tip Floor too high for micro-profit"}
+
             # ── Fix 2 (Unfunded Jito Tip): Cap tip by actual native SOL balance ──
             # Jito tip is a native SOL transfer. Pre-flight simulation rejects
             # InsufficientFundsForFee if tip > current native balance.
@@ -451,7 +782,7 @@ class ExecutionRouter:
                         bal_data = await bal_resp.json()
                         native_lamports = bal_data.get("result", {}).get("value", 0)
                         native_sol = native_lamports / 1e9
-                        available_native = native_sol - 0.0025  # reserve 0.0025 SOL for gas
+                        available_native = native_sol - 0.005  # reserve 0.005 SOL for gas
                         if available_native <= 0:
                             logger.warning(f"🚫 Insufficient native SOL for tip: {native_sol:.6f} SOL — skipping {ticker}")
                             return {"status": "error", "message": "Insufficient native SOL for tip"}
@@ -480,6 +811,22 @@ class ExecutionRouter:
                 arbitrage_path = [usdc_mint_str, token_mint, usdc_mint_str]
 
             active_bank_info = sol_borrow_bank_info if sol_borrow_bank_info else bank_info
+
+            # ── Task 11: Inject MarginFi account into bank config ────────────
+            # build_native_flashloan_tx expects marginfi_account inside the config
+            # dict, but MARGINFI_BANKS doesn't include it (it's stored separately).
+            # We inject it here, using the pooled account if available.
+            active_bank_info = dict(active_bank_info)  # Clone to avoid mutating the global
+            _acct_to_use = _pool_acct_for_build if _pool_acct_for_build else None
+            if _acct_to_use is None:
+                # Fallback: read from env like the rest of the bot does
+                _acct_to_use = os.getenv("MARGINFI_ACCOUNT", "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2")
+            active_bank_info["marginfi_account"] = Pubkey.from_string(_acct_to_use)
+            logger.debug(
+                f"🏦 Task 11: marginfi_account set to {_acct_to_use[:8]}... "
+                f"(pooled={_pool_acct_for_build is not None})"
+            )
+            # ───────────────────────────────────────────────────────────────────
 
             fl_result = await tx_builder.build_native_flashloan_tx(
                 wallet_pubkey=str(self.keypair.pubkey()),
@@ -514,11 +861,16 @@ class ExecutionRouter:
             from solders.transaction import VersionedTransaction
             from solders.hash import Hash
 
-            # Get blockhash
-            blockhash_payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"}
-            async with self.session.post(self.rpc_url, json=blockhash_payload) as resp:
-                bh_data = await resp.json()
-                recent_blockhash = bh_data["result"]["value"]["blockhash"]
+            # Get blockhash (HFT optimization: use cached blockhash to save 300ms latency)
+            recent_blockhash = None
+            if self.blockhash_getter:
+                recent_blockhash = self.blockhash_getter()
+            if not recent_blockhash:
+                logger.debug("Latency leak: blockhash not cached, fetching via RPC")
+                blockhash_payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"}
+                async with self.session.post(self.rpc_url, json=blockhash_payload) as resp:
+                    bh_data = await resp.json()
+                    recent_blockhash = bh_data["result"]["value"]["blockhash"]
 
             # Fix 3: MTU-Safe ALT resolution — pull resolved accounts from alt_manager cache
             resolved_alts: List[Pubkey] = []
@@ -567,6 +919,55 @@ class ExecutionRouter:
                 logger.debug(f"Pre-trade re-check skipped ({_ptg_e}) — proceeding")
 
             # Send via Jito
+            is_profitable, reason, sim_result = await self._simulate_xstock_transaction(
+                transaction,
+                expected_profit_sol=expected_profit_sol,
+                min_profit_lamports=int(expected_profit_sol * 1e9),
+                tip_lamports=jito_tip_lamports,
+                bank_vault_pubkey=vault,
+            )
+            if not is_profitable:
+                # Task 18: Smart Pivot Trigger
+                if self.flash_pivot_engine and any(kw in reason for kw in ["BorrowingNotAllowed", "BankCapacityExceeded", "BankUtilizationLimit"]):
+                    logger.warning(f"🚀 MarginFi capacity limit hit for {ticker}. Triggering FlashPivotEngine...")
+                    # Pivot to USDC if SOL bank is full (Task 18c)
+                    pivot_asset = "USDC" if borrow_mint_str == str(SOL_MINT) else "SOL"
+                    logger.info(f"🔄 Attempting Flash Loan Pivot to {pivot_asset}...")
+                    # We continue to retry, but next time usdc_available check will fail
+                    # which triggers the internal pivot logic in this method.
+
+                return await self._retry_xstock_opportunity(
+                    opportunity,
+                    reason,
+                    int(optimal_size_lamports),
+                    float(expected_profit_sol),
+                )
+
+            # ── Task 22: Webhook-Driven Paper Trading Interceptor ───────────────
+            if self.cfg and getattr(self.cfg, 'PAPER_TRADING_ONLY', False):
+                logger.info(f"🧪 [PAPER MODE] Simulation passed! Estimated Profit: {expected_profit_sol:.6f} SOL. Skipping real Jito submission.")
+                
+                if self.data_aggregator:
+                    paper_trade_record = {
+                        "trade_id": f"paper_{int(time.time())}",
+                        "route": opportunity.get("pair", f"{ticker} Oracle Lag"),
+                        "token_in": str(borrow_mint_str),
+                        "token_out": str(token_mint),
+                        "amount": float(optimal_size_lamports) / 1e9,
+                        "actual_profit": float(expected_profit_sol),
+                        "balance_after": (self.stats.get("virtual_balance", 0.0) if self.stats else 0.0) + float(expected_profit_sol),
+                        "dex_pair": opportunity.get("pair"),
+                        "confidence": float(opportunity.get("score", 1.0))
+                    }
+                    await self.data_aggregator.log_paper_trade(paper_trade_record)
+                
+                if self.stats and self.stats_lock:
+                    async with self.stats_lock:
+                        self.stats["virtual_balance"] += float(expected_profit_sol)
+                        self.stats["trades"] += 1
+                    
+                return {"status": "success", "message": "Paper trade simulated and logged"}
+
             jito_result = await self.jito_executor.send_bundle([transaction])
 
             if jito_result.get("success"):
@@ -574,10 +975,20 @@ class ExecutionRouter:
                 # inside the arb transaction.  Mark the atomic close so wallet_balance_listener
                 # skips its own standalone CloseAccount×for the same ATA (saves one RPC tx / gas).
                 try:
-                    from arb_bot import mark_wsol_atomically_closed
+                    from .shared_state import mark_wsol_atomically_closed
                     await mark_wsol_atomically_closed()
                 except Exception:
                     pass  # non-fatal — listener has its own cooldown guard
+                
+                # General dust sweep for any other stranded accounts
+                try:
+                    from src.ingest.dust_sweeper import DustSweeper
+                    dust_sweeper = DustSweeper(self.keypair, self.rpc_url, self.session)
+                    logger.info("🧹 Triggering aggressive post-trade Dust Sweep to reclaim rent...")
+                    asyncio.create_task(dust_sweeper.sweep_after_successful_tx())
+                except Exception:
+                    pass  # non-fatal
+                    
                 return {
                     "status": "success",
                     "bundle_id": jito_result.get("bundle_id"),
@@ -686,7 +1097,7 @@ class ExecutionRouter:
         # ── Entry: SOL → USDC ──────────────────────────────────────────────
         entry_quote_url = (
             f"{JUPITER_QUOTE_URL}?inputMint={sol_pk}&outputMint={usdc_pk}"
-            f"&amount={int(entry_amount)}&slippageBps=30&maxAccounts=28"
+            f"&amount={int(entry_amount)}&slippageBps=10&maxAccounts=8"
             f"&onlyDirectRoutes=true&restrictIntermediateTokens=true"
         )
         try:
@@ -748,11 +1159,15 @@ class ExecutionRouter:
             logger.warning(f"Pivot entry swap-ix request error: {e}")
             return None, [], []
 
-        # Parse entry instructions
+        # Parse entry instructions (Task 19: filter None from ComputeBudget drops)
         if "swapInstruction" in entry_ix_data and entry_ix_data["swapInstruction"]:
-            entry_ixs.append(self._parse_jupiter_ix(entry_ix_data["swapInstruction"]))
+            _parsed = self._parse_jupiter_ix(entry_ix_data["swapInstruction"])
+            if _parsed:
+                entry_ixs.append(_parsed)
         for setup_ix in (entry_ix_data.get("setupInstructions") or []):
-            entry_ixs.append(self._parse_jupiter_ix(setup_ix))
+            _parsed = self._parse_jupiter_ix(setup_ix)
+            if _parsed:
+                entry_ixs.append(_parsed)
 
         # FIX 12: Removed price_impact_pct estimation — mathematically unsound.
         # Actual pivot cost is calculated from the exit leg's outAmount below.
@@ -762,7 +1177,7 @@ class ExecutionRouter:
         exit_amount_ui = int(out_amount)
         exit_quote_url = (
             f"{JUPITER_QUOTE_URL}?inputMint={usdc_pk}&outputMint={sol_pk}"
-            f"&amount={exit_amount_ui}&slippageBps=30&maxAccounts=28"
+            f"&amount={exit_amount_ui}&slippageBps=10&maxAccounts=8"
             f"&onlyDirectRoutes=true&restrictIntermediateTokens=true"
         )
         try:
@@ -799,7 +1214,7 @@ class ExecutionRouter:
                             "userPublicKey": wallet_pk,
                             "wrapAndUnwrapSol": False,
                             "dynamicComputeUnitLimit": False,
-                            "maxAccounts": "28",
+                            "maxAccounts": "8",
                         }
                         async with self.session.post(
                             JUPITER_SWAP_IX_URL, json=exit_swap_payload, timeout=5.0
@@ -808,9 +1223,13 @@ class ExecutionRouter:
                                 exit_ix_data = await resp2.json()
                                 if "error" not in exit_ix_data:
                                     if "swapInstruction" in exit_ix_data and exit_ix_data["swapInstruction"]:
-                                        exit_ixs.append(self._parse_jupiter_ix(exit_ix_data["swapInstruction"]))
+                                        _parsed = self._parse_jupiter_ix(exit_ix_data["swapInstruction"])
+                                        if _parsed:
+                                            exit_ixs.append(_parsed)
                                     for setup_ix in (exit_ix_data.get("setupInstructions") or []):
-                                        exit_ixs.append(self._parse_jupiter_ix(setup_ix))
+                                        _parsed = self._parse_jupiter_ix(setup_ix)
+                                        if _parsed:
+                                            exit_ixs.append(_parsed)
         except Exception as e:
             logger.debug(f"Pivot exit swap setup error (non-fatal): {e}")
 
@@ -824,8 +1243,16 @@ class ExecutionRouter:
         )
         return actual_pivot_cost, entry_ixs, exit_ixs
 
-    def _parse_jupiter_ix(self, ix_data: dict) -> Instruction:
-        """Parse a raw Jupiter instruction dict into a solders Instruction."""
+    def _parse_jupiter_ix(self, ix_data: dict) -> Optional[Instruction]:
+        """Parse a raw Jupiter instruction dict into a solders Instruction.
+        Task 19: Returns None for ComputeBudget instructions to prevent
+        SVM duplicate ComputeBudget panic when combining with our custom CU limits.
+        """
+        # Task 19: Drop ComputeBudget instructions from Jupiter responses
+        if str(ix_data.get("programId", "")) == "ComputeBudget111111111111111111111111111111":
+            logger.debug("✂️ Dropped ComputeBudget instruction from Jupiter pivot response")
+            return None
+
         raw_b64 = ix_data["data"]
         padded = raw_b64 + "=" * (-len(raw_b64) % 4)
         return Instruction(
@@ -920,7 +1347,7 @@ class ExecutionRouter:
                         logger.debug(f"💰 Post-execution balance check: {balance_sol:.6f} SOL")
 
                         # ── Task 4: Main Wallet Rent-Exemption Killswitch ────────────
-                        # If native SOL balance < 0.0015 SOL, Solana GC will delete the
+                        # If native SOL balance < 0.002 SOL, Solana GC will delete the
                         # wallet account. Kill process immediately to prevent that.
                         try:
                             from src.ingest.pre_trade_guard import PreTradeGuard
@@ -932,6 +1359,15 @@ class ExecutionRouter:
                         # Warn if balance is critically low
                         if balance_sol < self.critical_balance_threshold:
                             logger.warning(f"⚠️ Low balance after execution: {balance_sol:.6f} SOL (below {self.critical_balance_threshold} SOL threshold)")
+                            
+                            # ── Task 3: Event-Driven Gas Refill ───────────────────
+                            # Hook into arb_bot's check_and_refill_gas for immediate replenishment
+                            try:
+                                from .gas_manager import check_and_refill_gas
+                                from .shared_state import rpc
+                                asyncio.create_task(check_and_refill_gas(self.session, rpc, self.keypair))
+                            except Exception as refill_err:
+                                logger.debug(f"Event-driven refill trigger failed: {refill_err}")
                     else:
                         logger.warning("Failed to parse balance from RPC response")
                 else:
@@ -967,14 +1403,17 @@ class ExecutionRouter:
                 data = await resp.json()
                 current_slot = data["result"]
 
-            # Fix 78: Slot-Level Execution Mutex - prevent parallel writes to single MARGINFI_ACCOUNT
-            if current_slot == self.last_slot_executed:
-                logger.warning(f"⏳ Slot {current_slot} already executed - queuing for next slot")
-                await asyncio.sleep(0.45)  # Wait ~1 slot (400ms)
-                # Re-fetch slot after sleep
-                async with session.post(rpc_url, json=payload) as resp:
-                    if resp.status == 200:
-                        current_slot = (await resp.json())["result"]
+            # ── Task 11: MarginFi Account Pooling ───────────────────────────
+            # Instead of blocking for 450ms when current_slot == last_slot_executed,
+            # we use a round-robin pool of MarginFi accounts. Each account can be
+            # used once per slot — with N accounts, we can handle N concurrent trades.
+            pool_account, pool_idx = await self.marginfi_pool.checkout(current_slot)
+            logger.debug(
+                f"🏦 Pool provided account {pool_account[:8]}... "
+                f"(idx={pool_idx}/{self.marginfi_pool.count}, slot={current_slot})"
+            )
+            
+            self.last_slot_executed = current_slot  # Mark slot as used
             
             # ── JITO FIX: Remove stale hardcoded leader check ──────────
             # The hardcoded JITO_VALIDATOR_VOTES list in leader_tracker.py is always
@@ -982,8 +1421,6 @@ class ExecutionRouter:
             # next Jito slot within 5 slots — no local leader check needed.
             # See: https://jito-labs.gitbook.io/mev/searcher-resources/bundles
             logger.info(f"🎯 Sending bundle to Jito Block Engine unconditionally (slot={current_slot})...")
-            
-            self.last_slot_executed = current_slot  # Mark slot as used
             bundle_result = await self.jito_executor.send_bundle([transaction])
             if bundle_result.get("success") and bundle_result.get("bundle_id"):
                 self._pending_bundle_slots[bundle_result["bundle_id"]] = {
@@ -993,7 +1430,7 @@ class ExecutionRouter:
                     "deducted_amount": jito_tip_lamports / 1_000_000_000,
                 }
                 # ── Phase 49: Optimistic State ───────────────────────────────────
-                from arb_bot import stats, stats_lock
+                from .shared_state import stats, stats_lock
                 tip_deducted = jito_tip_lamports / 1e9
                 async with stats_lock:
                     prev = stats.get("virtual_balance", 0.0)
@@ -1035,8 +1472,7 @@ class ExecutionRouter:
 
                         # ВОЗВРАЩАЕМ БАЛАНС
                         try:
-                            from arb_bot import stats
-                            from arb_bot import stats_lock
+                            from .shared_state import stats, stats_lock
                             refund_amount = meta.get("deducted_amount", 0)
                             async with stats_lock:
                                 stats["virtual_balance"] += refund_amount
@@ -1053,6 +1489,12 @@ class ExecutionRouter:
             except Exception as e:
                 logger.debug(f"Reconciliation error: {e}")
             await asyncio.sleep(1.0)
+
+    def pop_and_clear_stale_bundle_id(self) -> Optional[str]:
+        """Return and consume one stale bundle id so the caller can log it."""
+        if self._stale_bundle_ids:
+            return self._stale_bundle_ids.pop()
+        return None
 
     def pop_and_clear_stale_bundle_id(self) -> Optional[str]:
         """Return and consume one stale bundle id so the caller can log it."""

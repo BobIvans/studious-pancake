@@ -251,7 +251,7 @@ class JitoBundleHandler:
             # rolled back atomically.
             from solders.instruction import Instruction as SoldersInstruction
 
-            tip_account = self._select_tip_account()
+            tip_account = await self._select_tip_account()
             msg = arbitrage_tx.message
             all_keys = list(msg.account_keys)
 
@@ -388,11 +388,27 @@ class JitoBundleHandler:
         tasks = [send_to_endpoint(endpoint) for endpoint in endpoints]
         return await asyncio.gather(*tasks, return_exceptions=True)
 
-    def _select_tip_account(self) -> str:
-        """Select optimal Jito tip account (rotate for distribution)."""
-        # Simple rotation based on timestamp
-        index = int(time.time() * 1000) % len(self.jito_tip_accounts)
-        return self.jito_tip_accounts[index]
+    async def _select_tip_account(self) -> str:
+        """Select optimal Jito tip account (rotate for distribution) with live fetch."""
+        if not self.jito_tip_accounts:
+            # Fallback: fetch live accounts from Jito Block Engine
+            try:
+                import aiohttp
+                async with aiohttp.ClientSession() as session:
+                    url = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
+                    async with session.get(url, timeout=3.0) as resp:
+                        if resp.status == 200:
+                            accounts = await resp.json()
+                            if accounts and isinstance(accounts, list):
+                                self.jito_tip_accounts = accounts
+                                logger.info(f"🔄 Fetched {len(accounts)} live tip accounts")
+            except Exception as e:
+                logger.warning(f"Live tip account fetch failed: {e}")
+        
+        if self.jito_tip_accounts:
+            index = int(time.time() * 1000) % len(self.jito_tip_accounts)
+            return self.jito_tip_accounts[index]
+        return "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"  # Final fallback
 
     async def simulate_bundle_locally(self, bundle: List[VersionedTransaction], rpc_url: str) -> Dict[str, Any]:
         """Asynchronous local simulation (doesn't block bundle sending)."""

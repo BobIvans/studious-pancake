@@ -7,7 +7,7 @@ Shows statistics from paper_trading.db
 import asyncio
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src'))
 
 from ingest.data_aggregator import DataAggregator
 

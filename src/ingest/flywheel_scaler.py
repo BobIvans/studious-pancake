@@ -25,10 +25,15 @@ class ScalingTier:
     allowed_strategies: List[str]
     max_slippage_bps: int
 
-# Strict risk parameters engineered to scale safely from 0.017 SOL upwards
+# Strict risk parameters engineered for the current 0.015 SOL survival phase.
+MICRO_BALANCE_SOL = 0.015
+GAS_RESERVE_SOL = 0.005
+MANEUVER_BUDGET_SOL = MICRO_BALANCE_SOL - GAS_RESERVE_SOL
+ATA_RENT_SOL = 0.00204
+
 SCALING_GRID = [
-    # Tier 1: Survival Phase (0.017 - 0.05 SOL) - SOL & Stables only, tightest parameters
-    ScalingTier(0.0, 0.05, 1, 0.25, 0.50, 0.0005, ["SS", "SL"], 15),
+    # Tier 1: Survival Phase (0.015 - 0.05 SOL) - SOL & Stables only, tightest parameters
+    ScalingTier(0.0, 0.05, 1, MANEUVER_BUDGET_SOL, 0.50, 0.0005, ["SS", "SL"], 15),
     # Tier 2: Momentum Phase (0.05 - 0.20 SOL) - Enable major pairs
     ScalingTier(0.05, 0.20, 2, 0.50, 0.40, 0.0010, ["SS", "SL", "SM"], 25),
     # Tier 3: Growth Phase (0.20 - 1.00 SOL) - Introduce wrappers & stable yield ladders
@@ -151,7 +156,10 @@ class FlywheelScaler:
 
     def __init__(self, initial_balance: float = 0.017):
         self.initial_balance = initial_balance
-        self.rent_per_ata = 0.00204  # SOL rent exemption fee
+        # Task 17: Use Token-2022 rent (0.0035) as conservative default since
+        # pre_calculate_ata_budget cannot know which mints are involved.
+        # This prevents underestimating costs when xStocks are in the trade path.
+        self.rent_per_ata = ATA_RENT_SOL  # SOL rent exemption used by Jupiter setupInstructions
         self.min_gas_reserve = 0.005  # STRICT_GAS_TANK floor
 
         # Reputation Circuit Breaker — per-pair slippage cooldown

@@ -24,6 +24,8 @@ from spl.token.instructions import (
     create_associated_token_account,
     close_account,
     CloseAccountParams,
+    TransferParams,
+    transfer as spl_transfer,
 )
 
 try:
@@ -42,6 +44,9 @@ from solders.system_program import ID as SYSTEM_PROGRAM_ID
 TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
     "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m"
 )
+
+# AToken Program ID constant for ATA detection
+ATOKEN_PROGRAM = "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86"
 # MarginFi Program ID - loaded from environment with default
 MARGINFI_PROGRAM_ID = Pubkey.from_string(
     os.getenv("MARGINFI_PROGRAM_ID", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
@@ -49,6 +54,13 @@ MARGINFI_PROGRAM_ID = Pubkey.from_string(
 # Pre-computed SPL Token program discriminators (avoids hashlib.sha256 in hot path)
 SYNC_NATIVE_DISCRIMINATOR = bytes([0x35, 0x9A, 0xDC, 0x8E, 0x9A, 0x8B, 0xEA, 0x6A])
 CLOSE_ACCOUNT_DISCRIMINATOR = bytes([0x02, 0x9E, 0x8D, 0x1D, 0x11, 0x8E, 0x3B, 0x87])
+
+# ── Task 14: Token-2022 Transfer Hook Account Registry ──────────────────
+# Tracks remaining_accounts injected into swap instructions so that
+# sanitize_instructions() and build_native_flashloan_tx() can validate
+# they survive the full instruction pipeline.
+# Structure: {id(instruction): injected_count}
+_REMAINING_ACCOUNTS_REGISTRY: Dict[int, int] = {}
 
 COMPUTE_BUDGET_PROGRAM_ID = Pubkey.from_string(
     "ComputeBudget111111111111111111111111111111"
@@ -106,7 +118,7 @@ MARGINFI_FLASHLOAN_END = get_anchor_discriminator("lending_account_end_flashloan
 # with a lookup from this dict so the bot only pays for units it actually uses.
 CU_PROFILES: Dict[str, int] = {
     "stables_swap": 80_000,  # USDC/USDT 2-leg Jupiter swap
-    "lst_depeg_arbitrage": 250_000,  # LST ↔ SOL via Sanctum multi-hop
+    "lst_depeg_arbitrage": 450_000,  # LST ↔ SOL via Sanctum multi-hop
     "xstock_oracle_lag": 800_000,  # xStock + USDC circular + Token-2022 overhead (+ Transfer Hooks)
     "flash_loan_pivot": 600_000,  # Flashloan + Jupiter swaps + SOL/USDC pivot
     "flash_arbitrage": 600_000,  # Full native flashloan with complex routing
@@ -549,9 +561,9 @@ class JupiterTxBuilder:
             _size = len(bytes(draft_tx))
             if _size > 1180:
                 logger.warning(
-                    f"🚫 TX {_size} B > 1180 B Hard-Cap — too many hops; dropping to prevent silent network drop"
+                    f"🚫 TX {_size} B > 1180 B Hard-Cap — too many hops; flagging for Smart Retry"
                 )
-                return None, 0, 0
+                return "MTU_SIZE_LIMIT", _size, 0
         except Exception as _compile_err:
             # CRITICAL: MessageV0.try_compile failed — possible Rust panic or malformed CU/ALT state.
             # We skip this TX attempt (no RPC roundtrip) and return None so the caller retries cleanly.
@@ -560,62 +572,7 @@ class JupiterTxBuilder:
             )
             return None, 0, 0
 
-        # ─── FIX 5: CU Budget Safety Margin ────────────────────────────────────
-        # Profile-based cu_limit is the conservative floor. Now run lightweight simulation
-        # to get the actual consumption and apply +20% safety buffer.
-        # Hard cap at 1,350,000 CU to stay well under Solana's 1,400,000 CU hard limit.
-        CU_HARD_CAP = 1_350_000
-        simulated_cu = None
-        try:
-            sim_payload = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "simulateTransaction",
-                "params": [
-                    base64.b64encode(bytes(draft_tx)).decode("ascii"),
-                    {
-                        "encoding": "base64",
-                        "commitment": "confirmed",
-                        "replaceRecentBlockhash": False,
-                        "accounts": {"encoding": "base64", "addresses": []},
-                    },
-                ],
-            }
-            timeout = aiohttp.ClientTimeout(total=1.5)
-            async with self.session.post(
-                rpc_url or self.rpc_url, json=sim_payload, timeout=timeout
-            ) as sim_resp:
-                if sim_resp.status == 200:
-                    sim_data = orjson.loads(await sim_resp.read())
-                    if "result" in sim_data and "value" in sim_data["result"]:
-                        sim_result = sim_data["result"]["value"]
-                        if (
-                            "unitsConsumed" in sim_result
-                            and sim_result["unitsConsumed"] is not None
-                        ):
-                            simulated_cu = int(sim_result["unitsConsumed"])
-                            logger.debug(
-                                f"📊 CU Simulation: {simulated_cu:,} CU consumed by tx"
-                            )
-        except Exception as _sim_err:
-            logger.debug(f"CU simulation skipped (non-critical): {_sim_err}")
-
-        if simulated_cu is not None and simulated_cu > 0:
-            # Exact CU Packing: profile_cu floor OR sim_cu + 1 000 µ-buffer (system ops)
-            # No 1.2× safety multiplier — the Solana Block Scheduler packs by *requested*
-            # CU, not real consumption. A smaller footprint wins inclusion in a full block.
-            cu_limit = max(cu_limit, simulated_cu + 1_000)
-            logger.debug(
-                f"📊 Exact CU Packing: sim={simulated_cu:,} + 1 000 = {cu_limit:,} CU"
-            )
-        else:
-            if cu_limit > CU_HARD_CAP:
-                cu_limit = CU_HARD_CAP
-                logger.warning(
-                    f"⚠️ CU Limit capped at {CU_HARD_CAP:,} (no sim, profile={cu_limit:,})"
-                )
-
-        # Update the CU limit instruction with the final (safety-buffered) value
+        # Update the CU limit instruction with the final profile-based value
         cu_limit_ix = set_compute_unit_limit(cu_limit)
         final_instructions[0] = cu_limit_ix
 
@@ -712,18 +669,19 @@ class JupiterTxBuilder:
         return Instruction(
             program_id=program_id,
             accounts=accounts,
-            data=(
-                base64.b64decode(padded_b64)
-                if isinstance(ix_data["data"], str)
-                else bytes(ix_data["data"])
-            ),
-        )
+data=(
+            base64.b64decode(padded_b64)
+            if isinstance(ix_data["data"], str)
+            else bytes(ix_data["data"])
+        ),
+    )
 
     async def get_swap_instructions(
         self,
         quote_response: Dict[str, Any],
         wallet_pubkey: str,
         use_custom_cu: bool = False,
+        expected_profit_sol: float = 0.0,  # Dynamic Rent Guard: profit in SOL
         expected_tip_lamports: int = 100_000,  # Ожидаемые чаевые
     ) -> Tuple[List[Instruction], List[Pubkey]]:
         """Get swap instructions from Jupiter API for a given quote.
@@ -731,6 +689,7 @@ class JupiterTxBuilder:
         Args:
             quote_response: The response from the Jupiter /v6/quote API
             wallet_pubkey: User's public key as string
+            expected_profit_sol: Expected profit in SOL for Dynamic Rent Guard
 
         Returns:
             Tuple of (list of solders Instructions, list of Address Lookup Table Pubkeys)
@@ -744,7 +703,7 @@ class JupiterTxBuilder:
                 "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером
                 "onlyDirectRoutes": "true",  # Task 14: force direct routes for micro-balance safety
                 "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
-                "maxAccounts": "28",  # FIX 8: Increased from 8 to 28 — LST routing via Sanctum requires deep account graphs. ALTs keep TX within 1232-byte MTU.
+                "maxAccounts": "8",  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
                 "cache_buster": str(time.time_ns()),  # Task 1: Anti-cache bomb for HFT
             }
             instructions_data = await self._post_swap_instructions_request(payload)
@@ -756,6 +715,23 @@ class JupiterTxBuilder:
             return [], []
 
         instructions = []
+
+        # ─── TASK 2: Dynamic Rent Guard ─────────────────────────────────────────
+        # Protect against ATA rent cost exceeding profit. If setupInstructions
+        # would create more than 1 ATA, skip the route to avoid rent trap.
+        setup_instructions = instructions_data.get("setupInstructions", [])
+        if setup_instructions:
+            new_atas_needed = sum(
+                1 for ix in setup_instructions
+                if ix.get("programId", "") == ATOKEN_PROGRAM
+            )
+            rent_cost = new_atas_needed * 0.00204  # 0.00204 SOL per ATA
+            if expected_profit_sol > 0 and rent_cost > expected_profit_sol:
+                logger.warning(
+                    f"🚫 SKIP: profit {expected_profit_sol:.6f} SOL < ATA rent {rent_cost:.6f} SOL ({new_atas_needed} ATAs)"
+                )
+                return [], []
+        # ─────────────────────────────────────────────────────────────────────────
 
         # Skip compute budget instructions - we handle CU limits ourselves
 
@@ -775,6 +751,11 @@ class JupiterTxBuilder:
 
                 # Phase 12: Deduplicate Associated Token Account creation
                 if str(ix.program_id) == "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86":
+                    # Make creation idempotent by modifying bytecode (b'' or b'\x00' -> b'\x01')
+                    if ix.data == b'' or ix.data == b'\x00':
+                        ix.data = b'\x01'
+                        logger.debug("🛡️ Jupiter ATA instruction converted to Idempotent ATA")
+
                     if len(ix.accounts) >= 2:
                         ata_pubkey = str(ix.accounts[1].pubkey)
                         if ata_pubkey in seen_atas:
@@ -792,14 +773,27 @@ class JupiterTxBuilder:
             "swapInstruction" in instructions_data
             and instructions_data["swapInstruction"]
         ):
-            swap_ix = self._parse_instruction(instructions_data["swapInstruction"])
-            instructions.append(swap_ix)
+            _raw_swap = instructions_data["swapInstruction"]
+            # Task 19: Filter ComputeBudget from swapInstruction — Jupiter may embed
+            # its own CU limits here, which would duplicate our custom ones at index 0/1
+            # and cause SVM to instantly reject the transaction.
+            if str(_raw_swap.get("programId", "")) == "ComputeBudget111111111111111111111111111111":
+                logger.debug("✂️ Вырезан дубликат ComputeBudget из swapInstruction от Юпитера")
+            else:
+                swap_ix = self._parse_instruction(_raw_swap)
+                instructions.append(swap_ix)
 
         # ─── TASK 3: Remaining-Account Injection for Token-2022 Transfer Hooks ───
         # Jupiter's /v6/swap-instructions may supply extra non-ICIXI hook accounts in
         # top-level `remaining_accounts` field (e.g. for custom Token-2022 transfer hooks).
         # These accounts never appear in swapInstruction.accounts or setupInstructions;
         # they must be explicitly merged here to keep compile() happy.
+        #
+        # ─── TASK 14: Token-2022 Transfer Hook Propagation ──────────────────────
+        # Track injected remaining_accounts count in a module-level dict so that
+        # sanitize_instructions() and build_native_flashloan_tx() can validate
+        # they survive the full instruction pipeline without being dropped.
+        # Keyed by id(swap_ix) so we don't modify the Instruction object.
         rem_accounts = instructions_data.get("remaining_accounts", [])
         if rem_accounts and swap_ix is not None:
             # Build set of pubkey strings already covered by the swap instruction
@@ -822,8 +816,11 @@ class JupiterTxBuilder:
                 _injected += 1
             if _injected:
                 logger.debug(
-                    f"🔗 Injected {_injected} remaining_accounts hook account(s) into swap instruction"
+                    f"🔗 Task 14: Injected {_injected} remaining_accounts "
+                    f"hook account(s) into swap instruction"
                 )
+                # Register in global registry for downstream validation
+                _REMAINING_ACCOUNTS_REGISTRY[id(swap_ix)] = _injected
 
         # FIX 1 (Jupiter Cleanup Sabotage): NEVER add cleanupInstruction from Jupiter.
         # Jupiter sometimes returns cleanupInstruction that closes intermediate ATAs mid-tx,
@@ -993,13 +990,13 @@ class JupiterTxBuilder:
 
             estimated_size = base_size + instructions_size + alt_size
 
-            # Conservative estimate - add 20% buffer
             estimated = int(estimated_size * 1.2)
             if estimated > 1180:
                 logger.warning(
-                    f"📏 TX size estimate {estimated} B > 1180 B hard-cap — aborting"
+                    f"📏 MTU EXCEEDED: TX size estimate {estimated} B > 1180 B limit. "
+                    "Flagging for Smart Retry with simpler route."
                 )
-                return 1181  # Will fail the MTU check downstream
+                return 1181  # MTU_EXCEEDED sentinel value
             return estimated
 
         except Exception as e:
@@ -1325,9 +1322,6 @@ class JupiterTxBuilder:
             mfi_account = Pubkey.from_string(
                 "11111111111111111111111111111111"
             )  # Placeholder
-            mfi_group = Pubkey.from_string(
-                "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8"
-            )
             bank = Pubkey.from_string("11111111111111111111111111111111")  # Placeholder
             vault = Pubkey.from_string(
                 "11111111111111111111111111111111"
@@ -1338,17 +1332,16 @@ class JupiterTxBuilder:
             sol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
             user_sol_ata = get_associated_token_address(wallet, sol_mint)
 
-            # Calculate repay index: after borrow + swaps
-            repay_index = 1 + len(
+            # Calculate repay index: after borrow + swaps + SPL repay transfer
+            repay_index = 2 + len(
                 arbitrage_instructions
-            )  # borrow at 0, swaps, repay at end
+            )  # borrow at 0, swaps, transfer, repay at end
 
             # Borrow instruction (Flashloan Start)
             borrow_ix = self.build_marginfi_start_flashloan_ix(
                 mfi_program,
                 mfi_account,
                 wallet,
-                mfi_group,
                 bank,
                 vault,
                 vault_auth,
@@ -1363,7 +1356,6 @@ class JupiterTxBuilder:
                 mfi_program,
                 mfi_account,
                 wallet,
-                mfi_group,
                 bank,
                 vault,
                 vault_auth,
@@ -1371,7 +1363,20 @@ class JupiterTxBuilder:
                 TOKEN_PROGRAM_ID,
             )
 
-            all_instructions = [borrow_ix] + arbitrage_instructions + [repay_ix]
+            transfer_repay_ix = spl_transfer(
+                TransferParams(
+                    program_id=TOKEN_PROGRAM_ID,
+                    source=user_sol_ata,
+                    dest=vault,
+                    owner=wallet,
+                    amount=repay_amount,
+                    signers=[],
+                )
+            )
+
+            all_instructions = (
+                [borrow_ix] + arbitrage_instructions + [transfer_repay_ix, repay_ix]
+            )
 
             return {
                 "instructions": all_instructions,
@@ -1471,6 +1476,7 @@ class JupiterTxBuilder:
         exit_pivot_ixs: Optional[List[Instruction]] = None,
         # Fix 2: Dynamic Jito tip accounts (injected by caller from jito_executor.tip_accounts)
         tip_accounts: Optional[List[str]] = None,
+        recent_blockhash: Optional[str] = None,
         # Token-2022 detection pre-imported at module level
     ) -> Optional[Dict[str, Any]]:
         """
@@ -1511,11 +1517,6 @@ class JupiterTxBuilder:
             )
         )
         mfi_account = Pubkey.from_string(marginfi_config["marginfi_account"])
-        mfi_group = Pubkey.from_string(
-            marginfi_config.get(
-                "marginfi_group", "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8"
-            )
-        )
         bank = Pubkey.from_string(bank_pubkey)
         vault = Pubkey.from_string(marginfi_config["bank_liquidity_vault"])
         vault_auth = Pubkey.from_string(
@@ -1597,7 +1598,6 @@ class JupiterTxBuilder:
             mfi_program,
             mfi_account,
             wallet,
-            mfi_group,
             bank,
             vault,
             vault_auth,
@@ -1611,18 +1611,28 @@ class JupiterTxBuilder:
         # 2. DEX Swaps
         all_instructions.extend(dex_swap_instructions)
 
-        # 4. MarginFi Flashloan End
+        # 4. SPL repay transfer, then MarginFi Flashloan End
+        transfer_repay_ix = spl_transfer(
+            TransferParams(
+                program_id=sol_prog_id,
+                source=user_sol_ata,
+                dest=vault,
+                owner=wallet,
+                amount=borrow_amount_lamports,
+                signers=[],
+            )
+        )
         repay_ix = self.build_marginfi_end_flashloan_ix(
             mfi_program,
             mfi_account,
             wallet,
-            mfi_group,
             bank,
             vault,
             vault_auth,
             user_sol_ata,
             sol_prog_id,
         )
+        all_instructions.append(transfer_repay_ix)
         all_instructions.append(repay_ix)
 
         # Flash Loan Pivot — exit swap (USDC → SOL): run AFTER arb repay so profit
@@ -1636,22 +1646,22 @@ class JupiterTxBuilder:
         # CloseAccount reverts the FULL transaction if token balance != 0.
         # wSOL is safe because close_account unwraps all wSOL + 0.002 SOL rent in one instruction.
         # All other ATA are cleaned asynchronously by dust_sweeper post-tx.
-        wsol_mint_pk = Pubkey.from_string("So11111111111111111111111111111111111111112")
-        wsol_ata = get_associated_token_address(wallet, wsol_mint_pk)
-        all_instructions.append(
-            close_account(
-                CloseAccountParams(
-                    program_id=TOKEN_PROGRAM_ID,
-                    account=wsol_ata,
-                    dest=wallet,
-                    owner=wallet,
-                    signers=[],
-                )
-            )
-        )
-        logger.debug(
-            "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
-        )
+        # wsol_mint_pk = Pubkey.from_string("So11111111111111111111111111111111111111112")
+        # wsol_ata = get_associated_token_address(wallet, wsol_mint_pk)
+        # all_instructions.append(
+        #     close_account(
+        #         CloseAccountParams(
+        #             program_id=TOKEN_PROGRAM_ID,
+        #             account=wsol_ata,
+        #             dest=wallet,
+        #             owner=wallet,
+        #             signers=[],
+        #         )
+        #     )
+        # )
+        # logger.debug(
+        #     "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
+        # )
         # =====================================================================
 
         # ЗАЩИТА КАПИТАЛА (0.017 SOL): Чаевые Jito СТРОГО в конце единой транзакции.
@@ -1686,6 +1696,35 @@ class JupiterTxBuilder:
         # look at the wrong index and revert with 100% certainty.
         # ═══════════════════════════════════════════════════════════════════
         sanitized = self.sanitize_instructions(all_instructions, payer=wallet)
+
+        # ── Task 14: Validate remaining_accounts survived sanitization ─────
+        _rem_accounts_lost = 0
+        # Cleanup old entries from registry (keyed by id() which may be GC'd)
+        _valid_ids = {id(ix) for ix in sanitized}
+        _stale_keys = [k for k in _REMAINING_ACCOUNTS_REGISTRY if k not in _valid_ids]
+        for _sk in _stale_keys:
+            _REMAINING_ACCOUNTS_REGISTRY.pop(_sk, None)
+
+        for _ix in sanitized:
+            _expected = _REMAINING_ACCOUNTS_REGISTRY.get(id(_ix), 0)
+            if _expected > 0:
+                # The instruction was tagged with remaining_accounts — check
+                # that the extra accounts weren't stripped during sanitize.
+                # We can only approximate: count the Jupiter program accounts.
+                _jup_prog = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+                if str(_ix.program_id) == _jup_prog and len(_ix.accounts) < 20:
+                    # Jupiter swaps typically have 15-25 accounts.
+                    # < 20 after expecting rem_accounts means some were lost.
+                    _rem_accounts_lost += 1
+                    logger.warning(
+                        f"🚨 Task 14: Possible remaining_accounts loss detected! "
+                        f"Jupiter swap ix has only {len(_ix.accounts)} accounts "
+                        f"(expected ~{_expected} remaining accounts). "
+                        f"Transaction may fail with PrivilegeEscalation."
+                    )
+        if _rem_accounts_lost > 0:
+            logger.debug(f"🔗 Task 14: {_rem_accounts_lost} instruction(s) with potential remaining_accounts issues")
+        # ─────────────────────────────────────────────────────────────────────
 
         # Find the (possibly new) indices within the sanitized list
         # so the repay_index we pack into borrow_ix.data is 100% correct.
@@ -1723,6 +1762,7 @@ class JupiterTxBuilder:
             "instructions": sanitized,
             "address_lookup_tables": [],  # Would be populated
             "repay_index": actual_repay_index,
+            "recent_blockhash": recent_blockhash,
         }
 
     def sanitize_instructions(
@@ -1829,9 +1869,11 @@ class JupiterTxBuilder:
         use_jito: bool = True,
         strategy_type: int = 1,
         tip_accounts: Optional[List[str]] = None,  # Fix 2: dynamic tip accounts
+        recent_blockhash: Optional[str] = None,
         borrow_mint: Optional[
             str
         ] = None,  # Fix 2b: Oracle Pivot — alternate borrow asset (SOL or USDC)
+        expected_profit_sol: float = 0.0,  # Dynamic Rent Guard: profit in SOL
     ) -> Optional[Dict[str, Any]]:
         try:
             from solders.pubkey import Pubkey
@@ -1841,9 +1883,6 @@ class JupiterTxBuilder:
             wallet = Pubkey.from_string(wallet_pubkey)
             mfi_program = Pubkey.from_string(
                 "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
-            )
-            mfi_group = Pubkey.from_string(
-                "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8"
             )
             # Use borrow_mint if provided (Oracle Pivot), otherwise default to SOL
             borrow_mint_str = (
@@ -1876,10 +1915,10 @@ class JupiterTxBuilder:
             all_instructions = []
             alts = []
 
-            # Get Buy Swaps (если quote не пустой)
+# Get Buy Swaps (если quote не пустой)
             if buy_quote_response:
                 buy_ixs, buy_alts = await self.get_swap_instructions(
-                    buy_quote_response, wallet_pubkey, use_custom_cu=True
+                    buy_quote_response, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol
                 )
                 if not buy_ixs:
                     return None
@@ -1888,7 +1927,7 @@ class JupiterTxBuilder:
             # Get Sell Swaps (если quote не пустой)
             if sell_quote_response:
                 sell_ixs, sell_alts = await self.get_swap_instructions(
-                    sell_quote_response, wallet_pubkey, use_custom_cu=True
+                    sell_quote_response, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol
                 )
                 if not sell_ixs:
                     return None
@@ -1922,14 +1961,13 @@ class JupiterTxBuilder:
             all_instructions = cleaned_ixs
 
             # Вычисляем индексы для MarginFi (Flashloan Introspection)
-            # Допустим, мы берем займ первым, затем идут свопы, затем возврат
-            repay_index = len(all_instructions) + 1  # +1 т.к. borrow будет в начале
+            # borrow, swaps, SPL repay transfer, repay
+            repay_index = len(all_instructions) + 2
 
             borrow_ix = self.build_marginfi_start_flashloan_ix(
                 mfi_program,
                 Pubkey.from_string(marginfi_account),
                 wallet,
-                mfi_group,
                 Pubkey.from_string(bank_pubkey),
                 Pubkey.from_string(bank_liquidity_vault),
                 Pubkey.from_string(bank_liquidity_vault_authority),
@@ -1943,12 +1981,22 @@ class JupiterTxBuilder:
                 mfi_program,
                 Pubkey.from_string(marginfi_account),
                 wallet,
-                mfi_group,
                 Pubkey.from_string(bank_pubkey),
                 Pubkey.from_string(bank_liquidity_vault),
                 Pubkey.from_string(bank_liquidity_vault_authority),
                 user_borrow_ata,
                 TOKEN_PROGRAM_ID,
+            )
+
+            transfer_repay_ix = spl_transfer(
+                TransferParams(
+                    program_id=TOKEN_PROGRAM_ID,
+                    source=user_borrow_ata,
+                    dest=Pubkey.from_string(bank_liquidity_vault),
+                    owner=wallet,
+                    amount=borrow_amount_lamports,
+                    signers=[],
+                )
             )
 
             # ── ФИКС ЛОВУШКИ #2: Идемпотентное создание ATA для займа ─────────
@@ -1988,7 +2036,7 @@ class JupiterTxBuilder:
                     "⚠️ create_idempotent_associated_token_account unavailable — relying on pre-existing ATA"
                 )
 
-            # Dynamic CU limit from profile (strategy_type=2 → lst_depeg_arbitrage: 250k)
+            # Dynamic CU limit from profile (strategy_type=2 → lst_depeg_arbitrage: 450k)
             _strategy_profile = CU_PROFILES.get(
                 f"strategy_{strategy_type}", "flash_arbitrage"
             )
@@ -2004,7 +2052,7 @@ class JupiterTxBuilder:
                 + pre_instructions
                 + [borrow_ix]
                 + all_instructions
-                + [repay_ix]
+                + [transfer_repay_ix, repay_ix]
             )
 
             # =====================================================================
@@ -2013,20 +2061,20 @@ class JupiterTxBuilder:
             # CloseAccount reverts if token balance != 0 (full tx rollback).
             # wSOL is safe — close_account unwraps all wSOL + 0.002 SOL rent at once.
             # All other ATA cleaned asynchronously by dust_sweeper post-tx.
-            final_instructions.append(
-                close_account(
-                    CloseAccountParams(
-                        program_id=TOKEN_PROGRAM_ID,
-                        account=user_borrow_ata,
-                        dest=wallet,
-                        owner=wallet,
-                        signers=[],
-                    )
-                )
-            )
-            logger.debug(
-                "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
-            )
+            # final_instructions.append(
+            #     close_account(
+            #         CloseAccountParams(
+            #             program_id=TOKEN_PROGRAM_ID,
+            #             account=user_borrow_ata,
+            #             dest=wallet,
+            #             owner=wallet,
+            #             signers=[],
+            #         )
+            #     )
+            # )
+            # logger.debug(
+            #     "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
+            # )
             # =====================================================================
 
             # 5. ATOMIC JITO TIP (100% CAPITAL PROTECTION)
@@ -2051,12 +2099,13 @@ class JupiterTxBuilder:
                 )
                 final_instructions.append(tip_ix)
 
-            # Вычисляем точный индекс Repay инструкции для интроспекции MarginFi
+            sanitized_instructions = self.sanitize_instructions(
+                final_instructions, payer=wallet
+            )
+
+            # Вычисляем точный индекс Repay инструкции после дедупликации Jupiter ATA setup.
             try:
-                actual_repay_index = final_instructions.index(repay_ix)
-                # БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount,
-                # потом 1 байт - индекс). Старый подход borrow_ix.data[:-1] + bytes([index])
-                # сдвигает байты и убивает транзакцию.
+                actual_repay_index = sanitized_instructions.index(repay_ix)
                 import struct
 
                 # ФИКС: flashloan layout = discriminator(8) + amount(8 u64 LE) + repay_index(8 u64 LE)
@@ -2067,24 +2116,21 @@ class JupiterTxBuilder:
                     accounts=borrow_ix.accounts,
                     data=original_data_without_index + safe_index_bytes,
                 )
-                borrow_idx = final_instructions.index(borrow_ix)
-                final_instructions[borrow_idx] = new_borrow_ix
+                borrow_idx = sanitized_instructions.index(borrow_ix)
+                sanitized_instructions[borrow_idx] = new_borrow_ix
                 borrow_ix = new_borrow_ix
                 logger.debug(
-                    f"🛠️ Safe Dynamic Repay Index calculated: {actual_repay_index}"
+                    f"🛠️ Safe Dynamic Repay Index calculated on sanitized array: {actual_repay_index}"
                 )
             except ValueError:
-                logger.error("CRITICAL: repay_ix not found in instruction list")
+                logger.error("CRITICAL: repay_ix not found in sanitized instruction list")
                 return None
 
             return {
-                "instructions": self.sanitize_instructions(
-                    final_instructions, payer=wallet
-                ),
+                "instructions": sanitized_instructions,
                 "address_lookup_table_pubkeys": list(set(alts)),
-                "repay_index": (
-                    actual_repay_index if "actual_repay_index" in dir() else repay_index
-                ),
+                "repay_index": actual_repay_index,
+                "recent_blockhash": recent_blockhash,
             }
         except Exception as e:
             logger.error(f"Failed to build marginfi flashloan tx: {e}")
@@ -2095,7 +2141,6 @@ class JupiterTxBuilder:
         mfi_program: Pubkey,
         mfi_account: Pubkey,
         wallet: Pubkey,
-        mfi_group: Pubkey,
         bank: Pubkey,
         vault: Pubkey,
         vault_auth: Pubkey,
@@ -2130,9 +2175,8 @@ class JupiterTxBuilder:
 
         # СТРОГИЙ ПОРЯДОК АККАУНТОВ ДЛЯ MARGINFI V2 FLASHLOAN START (Сортировка отключена!)
         # MarginFi v2 expects accounts in fixed positions - sorting breaks the contract
-        # Order matches MarginFi IDL exactly: group, account, signer, bank, destination, vault, vault_auth, token_program, sysvar
+        # Order matches MarginFi IDL exactly: account, signer, bank, destination, vault, vault_auth, token_program, sysvar
         account_metas = [
-            AccountMeta(pubkey=mfi_group, is_signer=False, is_writable=False),
             AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
             AccountMeta(pubkey=wallet, is_signer=True, is_writable=True),
             AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
@@ -2154,7 +2198,6 @@ class JupiterTxBuilder:
         mfi_program: Pubkey,
         mfi_account: Pubkey,
         wallet: Pubkey,
-        mfi_group: Pubkey,
         bank: Pubkey,
         vault: Pubkey,
         vault_auth: Pubkey,
@@ -2172,10 +2215,9 @@ class JupiterTxBuilder:
         data = MARGINFI_FLASHLOAN_END  # Only discriminator, no amount
 
         # СТРОГИЙ ПОРЯДОК АККАУНТОВ ДЛЯ MARGINFI V2 END FLASHLOAN (Сортировка отключена!)
-        # MarginFi v2 expects 7 accounts in fixed positions — no vault_auth for End
-        # Order: group, account, signer, bank, source_token, vault, token_program
+        # MarginFi v2 expects 6 accounts in fixed positions
+        # Order: account, signer, bank, source_token, vault, token_program
         account_metas = [
-            AccountMeta(pubkey=mfi_group, is_signer=False, is_writable=False),
             AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
             AccountMeta(pubkey=wallet, is_signer=True, is_writable=True),
             AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
@@ -2409,7 +2451,7 @@ class JupiterTxBuilder:
             f"inputMint={input_mint}&"
             f"outputMint={middle_mint}&"
             f"amount={str(int(amount_lamports))}&"
-            f"slippageBps=50&"
+            f"slippageBps=0&"  # Leg 1: Entry strictly with slippage=0 to prevent balance mismatch on Leg 2
             f"maxAccounts=8&"  # Fix 3: MTU safety — 8 accounts × 32B = 256B overhead → stays within 1232-byte UDP limit
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
@@ -2417,12 +2459,21 @@ class JupiterTxBuilder:
         if dex_filter_leg1:
             quote_url += f"&dexes={','.join(dex_filter_leg1)}"
 
+        from .jupiter_api_client import _GLOBAL_JUPITER_LIMITER, _limiter_available
+
         try:
             timeout = aiohttp.ClientTimeout(total=5.0)
-            async with self.session.get(quote_url, timeout=timeout) as resp:
-                if resp.status != 200:
-                    return None
-                leg1 = orjson.loads(await resp.read())
+            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
+                async with _GLOBAL_JUPITER_LIMITER:
+                    async with self.session.get(quote_url, timeout=timeout) as resp:
+                        if resp.status != 200:
+                            return None
+                        leg1 = orjson.loads(await resp.read())
+            else:
+                async with self.session.get(quote_url, timeout=timeout) as resp:
+                    if resp.status != 200:
+                        return None
+                    leg1 = orjson.loads(await resp.read())
         except Exception as e:
             logger.debug(f"Circular quote leg 1 failed: {e}")
             return None
@@ -2437,7 +2488,7 @@ class JupiterTxBuilder:
             f"inputMint={middle_mint}&"
             f"outputMint={input_mint}&"
             f"amount={out_amount_leg1}&"
-            f"slippageBps=50&"
+            f"slippageBps=10&"
             f"maxAccounts=8&"  # Fix 3: MTU safety — 8 accounts × 32B = 256B overhead → stays within 1232-byte UDP limit
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
@@ -2447,10 +2498,17 @@ class JupiterTxBuilder:
 
         try:
             timeout = aiohttp.ClientTimeout(total=5.0)
-            async with self.session.get(quote_url2, timeout=timeout) as resp:
-                if resp.status != 200:
-                    return None
-                leg2 = orjson.loads(await resp.read())
+            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
+                async with _GLOBAL_JUPITER_LIMITER:
+                    async with self.session.get(quote_url2, timeout=timeout) as resp:
+                        if resp.status != 200:
+                            return None
+                        leg2 = orjson.loads(await resp.read())
+            else:
+                async with self.session.get(quote_url2, timeout=timeout) as resp:
+                    if resp.status != 200:
+                        return None
+                    leg2 = orjson.loads(await resp.read())
         except Exception as e:
             logger.debug(f"Circular quote leg 2 failed: {e}")
             return None

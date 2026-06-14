@@ -632,23 +632,27 @@ class PreTradeGuard:
         logger.debug(f"✅ Token security check passed for {mint_address}")
         return True, "Security check passed"
 
-    # ─── Strict Gas Tank (0.0025 SOL Survival Floor) ───────────────────────────
-    # Never let the wallet drop below 0.0025 SOL. If we hit this level, stop ALL
-    # trading immediately. At 0 SOL we can't even close ATAs to recover rent.
-    MIN_GAS_RESERVE_SOL = 0.0025
+    # ─── Strict Gas Tank (Survival Floor) ───────────────────────────
+    # Never let the wallet drop below Config.MIN_RESERVE_SOL. If we hit this level,
+    # stop ALL trading immediately. At 0 SOL we can't even close ATAs to recover rent.
+    @staticmethod
+    def get_min_reserve_sol() -> float:
+        """Get minimum reserve SOL from environment or default."""
+        import os
+        return float(os.getenv("MIN_RESERVE_SOL", "0.010"))
 
     # ─── Hard Floor Guard (Rent-Exemption Killswitch) ───────────────────────────
-    # If native SOL balance drops below 0.0015 SOL, the Solana network garbage-
-    # collector will DELETE the wallet account. Kill the process at 0.0015 SOL to
+    # If native SOL balance drops below 0.002 SOL, the Solana network garbage-
+    # collector will DELETE the wallet account. Kill the process at 0.002 SOL to
     # prevent that from ever happening — never allow the wallet to be erased.
-    HARD_FLOOR_SOL = 0.0015
+    HARD_FLOOR_SOL = 0.002
 
     @staticmethod
     def enforce_hard_floor(native_sol_balance: float) -> None:
         """
         💀 Hard Floor Guard — absolute rent-exemption killswitch.
 
-        If native_sol_balance < 0.003 SOL, the Solana network garbage-collector
+        If native_sol_balance < 0.002 SOL, the Solana network garbage-collector
         will delete the wallet account. This function calls os._exit(1) instantly
         to prevent that from ever happening.
 
@@ -679,7 +683,7 @@ class PreTradeGuard:
         """
         🔋 Strict Gas Tank — последняя линия обороны капитала.
 
-        Если нативный SOL-баланс падает ниже 0.0025 SOL, мы ОСТАНАВЛИВАЕМ
+        Если нативный SOL-баланс падает ниже Config.MIN_RESERVE_SOL, мы ОСТАНАВЛИВАЕМ
         ВСЮ ТОРГОВЛЮ. Никаких сделок, никаких чаевых Jito, никаких
         флеш-лоанов. Бот должен сначала восстановить баланс (через
         dust_sweeper, внешний депозит, или ATA rent recovery).
@@ -696,17 +700,18 @@ class PreTradeGuard:
         if native_sol_balance is None:
             return True, 0.0  # Нет данных — оптимистично пропускаем
 
-        if native_sol_balance < PreTradeGuard.MIN_GAS_RESERVE_SOL:
+        min_reserve = PreTradeGuard.get_min_reserve_sol()
+        if native_sol_balance < min_reserve:
             logger.critical(
                 f"🚨 STRICT GAS TANK: Balance {native_sol_balance:.6f} SOL < "
-                f"{PreTradeGuard.MIN_GAS_RESERVE_SOL} SOL minimum. TRADING HALTED. "
+                f"{min_reserve} SOL (MIN_RESERVE_SOL). TRADING HALTED. "
                 f"Deposit SOL or run dust_sweeper to recover rent before resuming."
             )
             return False, 0.0
 
-        available = native_sol_balance - PreTradeGuard.MIN_GAS_RESERVE_SOL
+        available = native_sol_balance - min_reserve
         logger.debug(
-            f"🔋 Gas Tank: {native_sol_balance:.6f} SOL → {available:.6f} SOL available (reserve={PreTradeGuard.MIN_GAS_RESERVE_SOL})"
+            f"🔋 Gas Tank: {native_sol_balance:.6f} SOL → {available:.6f} SOL available (reserve={min_reserve})"
         )
         return True, available
 
@@ -766,7 +771,9 @@ class PreTradeGuard:
                     return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
                 fresh_quote = await resp.json()
 
-            actual_out = int(fresh_quote.get("outAmount", 0))
+            actual_out = int(
+                fresh_quote.get("otherAmountThreshold", fresh_quote.get("outAmount", 0))
+            )
             if actual_out == 0:
                 return False, "Pre-trade quote: outAmount == 0", 0
 

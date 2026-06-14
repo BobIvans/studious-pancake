@@ -9,6 +9,7 @@ from __future__ import annotations
 import asyncio
 import base58
 import logging
+import os
 import time
 from typing import Any, Dict, List, Optional
 import aiohttp
@@ -38,11 +39,18 @@ class JitoBundleClient:
         max_retries: int                 = 2,
         keypair:     Optional[Keypair]   = None,
         session:     Optional[aiohttp.ClientSession] = None,
+        rpc_url:     Optional[str]       = None,
     ) -> None:
         self.endpoints   = endpoints or JITO_HTTP_ENDPOINTS
         self.max_retries = max_retries
         self.keypair     = keypair
         self.session     = session
+        self.rpc_url     = (
+            rpc_url
+            or os.getenv("HELIUS_GATEKEEPER_URL", "").strip()
+            or os.getenv("RPC_URL_1", "").strip()
+            or os.getenv("RPC_URL", "").strip()
+        )
         self._session_owned = session is None
 
         # Dynamic tip accounts (Phase 35)
@@ -101,12 +109,16 @@ class JitoBundleClient:
 
     # ── Blockhash ───────────────────────────────────────────────────────────────
 
-    async def _get_recent_blockhash(self) -> Optional[Hash]:
+    async def _get_recent_blockhash(self, rpc_url: Optional[str] = None) -> Optional[Hash]:
         if not self.session:
+            return None
+        endpoint = (rpc_url or self.rpc_url or "").strip()
+        if not endpoint:
+            logger.error("No RPC URL configured for blockhash fetch; refusing to use public Solana RPC")
             return None
         try:
             async with self.session.post(
-                "https://api.mainnet-beta.solana.com",
+                endpoint,
                 json={"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"},
                 timeout=aiohttp.ClientTimeout(total=3.0),
             ) as resp:
@@ -208,8 +220,8 @@ class JitoBundleClient:
         if not self.session or not bundle_ids:
             return {}
         
-        # Use NY endpoint as default for status queries
-        endpoint = "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles"
+        # Use the global Jito Block Engine endpoint for status queries so all regions are visible.
+        endpoint = "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
         try:
             async with self.session.post(
                 endpoint,

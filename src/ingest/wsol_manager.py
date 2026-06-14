@@ -56,8 +56,9 @@ class WSOLManager:
     - Auto-unwrap wSOL when native balance drops below threshold (Fix 1)
     """
 
-    def __init__(self, wallet_pubkey: Pubkey):
+    def __init__(self, wallet_pubkey: Pubkey, session: Optional[aiohttp.ClientSession] = None):
         self.wallet_pubkey = wallet_pubkey
+        self.session = session
         self.wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         self.usdc_mint = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
         from src.config.xstocks_registry import is_xstock_token
@@ -254,14 +255,14 @@ class WSOLManager:
         self,
         rpc_url: str,
         native_balance_sol: float,
-        unwrap_threshold_sol: float = 0.005,
+        unwrap_threshold_sol: Optional[float] = None,
         min_wsol_sol: float = 0.004,
     ) -> bool:
         """
         Check if wSOL ATA balance should be unwrapped to Native SOL and execute the unwrap.
 
         Fix 1 (Capital Death Spiral): Jupiter swap profits land in the wSOL ATA while
-        Jito tips drain Native SOL. With a 0.017 SOL budget, 3-4 trades exhaust the native
+        Jito tips drain Native SOL. With a 0.015 SOL budget, 3-4 trades exhaust the native
         balance even though wSOL keeps accumulating. The existing `wallet_balance_listener`
         only checks every 10 seconds — too slow for HFT.
 
@@ -274,13 +275,17 @@ class WSOLManager:
         Args:
             rpc_url: RPC URL for wSOL balance query
             native_balance_sol: Current Native SOL balance (already known to caller)
-            unwrap_threshold_sol: Native below this → consider unwrapping
+            unwrap_threshold_sol: Native below this → consider unwrapping (defaults to Config.MIN_RESERVE_SOL)
             min_wsol_sol: Only unwrap if wSOL balance >= this (covers 0.002 SOL rent + profit)
 
         Returns:
             True if wSOL was unwrapped, False if no action needed.
         """
         wsol_balance_lamports = 0
+        
+        if unwrap_threshold_sol is None:
+            import os
+            unwrap_threshold_sol = float(os.getenv("MIN_RESERVE_SOL", "0.010"))
 
         # Only run the check when native balance is already below threshold
         if native_balance_sol >= unwrap_threshold_sol:
@@ -293,12 +298,12 @@ class WSOLManager:
                 "params": [str(self.wsol_ata)]
             }
             timeout = aiohttp.ClientTimeout(total=2.0)
-            async with aiohttp.ClientSession() as s:
-                async with s.post(rpc_url, json=query_payload, timeout=timeout) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        if "result" in data and "value" in data["result"]:
-                            wsol_balance_lamports = int(data["result"]["value"]["amount"])
+            # FIX 3: Re-use global session to prevent port exhaustion
+            async with self.session.post(rpc_url, json=query_payload, timeout=timeout) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if "result" in data and "value" in data["result"]:
+                        wsol_balance_lamports = int(data["result"]["value"]["amount"])
         except Exception as e:
             logger.debug(f"wSOL balance query failed: {e}")
             return False
@@ -336,13 +341,13 @@ class WSOLManager:
             helius_url = rpc_url  # rpc_url IS the direct RPC HTTP URL
             bh_payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash",
                           "params": [{"commitment": "confirmed"}]}
-            async with aiohttp.ClientSession() as s:
-                async with s.post(helius_url, json=bh_payload, timeout=aiohttp.ClientTimeout(total=2.0)) as bh_resp:
-                    if bh_resp.status != 200:
-                        logger.warning("wSOL unwrap: failed to get blockhash")
-                        return False
-                    bh_data = await bh_resp.json()
-                    bh_str = bh_data["result"]["value"]["blockhash"]
+            # FIX 3: Re-use global session
+            async with self.session.post(helius_url, json=bh_payload, timeout=aiohttp.ClientTimeout(total=2.0)) as bh_resp:
+                if bh_resp.status != 200:
+                    logger.warning("wSOL unwrap: failed to get blockhash")
+                    return False
+                bh_data = await bh_resp.json()
+                bh_str = bh_data["result"]["value"]["blockhash"]
 
             msg = MessageV0.try_compile(
                 payer=self.wallet_pubkey,
@@ -358,23 +363,23 @@ class WSOLManager:
                 "method": "sendTransaction",
                 "params": [tx_b64, {"encoding": "base64"}]
             }
-            async with aiohttp.ClientSession() as s:
-                async with s.post(helius_url, json=send_payload, timeout=aiohttp.ClientTimeout(total=3.0)) as send_resp:
-                    if send_resp.status == 200:
-                        result = await send_resp.json()
-                        if "result" in result:
-                            import arb_bot
-                            arb_bot._balance_lock_paused = True
-                            arb_bot._balance_lock_pause_until = time.time() + 0.4
-                            logger.info(
-                                f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL. "
-                                f"Paused next trade for 400ms to allow account state convergence."
-                            )
-                            return True
-                        else:
-                            logger.warning(f"wSOL unwrap send rejected: {result}")
+            # FIX 3: Re-use global session
+            async with self.session.post(helius_url, json=send_payload, timeout=aiohttp.ClientTimeout(total=3.0)) as send_resp:
+                if send_resp.status == 200:
+                    result = await send_resp.json()
+                    if "result" in result:
+                        import arb_bot
+                        arb_bot._balance_lock_paused = True
+                        arb_bot._balance_lock_pause_until = time.time() + 0.4
+                        logger.info(
+                            f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL. "
+                            f"Paused next trade for 400ms to allow account state convergence."
+                        )
+                        return True
                     else:
-                        logger.warning(f"wSOL unwrap HTTP {send_resp.status}")
+                        logger.warning(f"wSOL unwrap send rejected: {result}")
+                else:
+                    logger.warning(f"wSOL unwrap HTTP {send_resp.status}")
         except Exception as e:
             logger.warning(f"wSOL unwrap transaction failed: {e}")
 

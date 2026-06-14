@@ -28,6 +28,8 @@ from spl.token.instructions import (
     transfer as spl_transfer,
 )
 
+logger = logging.getLogger(__name__)
+
 try:
     from spl.token.instructions import create_idempotent_associated_token_account
 

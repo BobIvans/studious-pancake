@@ -21,6 +21,7 @@ from solders.system_program import TransferParams, transfer
 from solders.transaction import VersionedTransaction
 from solders.message import MessageV0
 from solders.hash import Hash
+from .tx_builder import JupiterTxBuilder
 
 logger = logging.getLogger("JitoSniper")
 

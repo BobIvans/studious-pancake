@@ -25,7 +25,6 @@ def _set_global_price_matrix(matrix: Dict[str, tuple]):
 def _normalize_tip_sol(expected_profit_sol: float, target_mint_str: str) -> float:
     """Convert expected_profit_sol (which may be denominated in a non-SOL token)
     to true SOL value using the global price matrix."""
-    global _GLOBAL_PRICE_MATRIX, _GLOBAL_SOL_PRICE
     if target_mint_str == "So11111111111111111111111111111111111111112":
         return expected_profit_sol
     if _GLOBAL_PRICE_MATRIX is None:

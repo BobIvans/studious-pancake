@@ -5,12 +5,16 @@ import orjson
 import logging
 import time
 import aiohttp
-from typing import List, Dict, Any, Optional, Set
+from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
 from contextlib import asynccontextmanager
 import hashlib
 from solders.keypair import Keypair
 from decimal import Decimal
 from .jito_bundle_handler import JitoBundleHandler, BackrunTrigger, _set_global_price_matrix
+
+if TYPE_CHECKING:
+    from .optimal_trade_sizer import OptimalTradeSizer, VelocitySlippageManager
+    from .pre_trade_guard import PreTradeGuard
 
 logger = logging.getLogger(__name__)
 

@@ -3,6 +3,7 @@ Graph Mathematics for Ultra-Fast Arbitrage Discovery
 Implements Bellman-Ford algorithm with logarithmic weights for instant arbitrage detection.
 """
 
+import asyncio
 import logging
 import math
 import time

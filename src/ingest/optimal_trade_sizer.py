@@ -89,6 +89,16 @@ class ArbitragePath:
     def get_path_length(self) -> int:
         return len(self.pools)
 
+    def calculate_profit(self, amount_in: Decimal) -> Decimal:
+        current_amount = Decimal(str(amount_in))
+        for pool in self.pools:
+            reserve_in = Decimal(str(pool.reserve_in))
+            reserve_out = Decimal(str(pool.reserve_out))
+            if reserve_in <= 0 or reserve_out <= 0:
+                return Decimal('0')
+            current_amount = current_amount * reserve_out / reserve_in
+        return current_amount - Decimal(str(amount_in))
+
 
 class ProfitCalculator:
     """Calculates expected profit for arbitrage paths."""
@@ -125,6 +135,54 @@ class ProfitCalculator:
                 min_max_input = min(min_max_input, max_input)
         
         return int(min_max_input) if min_max_input != float('inf') else 0
+
+
+class VelocitySlippageManager:
+    """Calculates slippage tolerance from recent transaction velocity."""
+
+    def __init__(
+        self,
+        window_seconds: float = 1.0,
+        base_slippage: float = 0.005,
+        max_slippage: float = 0.05,
+    ):
+        self.window_seconds = max(window_seconds, 0.001)
+        self.base_slippage = base_slippage
+        self.max_slippage = max_slippage
+        self._timestamps: List[float] = []
+
+    def record_transaction(self, timestamp: Optional[float] = None) -> None:
+        now = time.time() if timestamp is None else float(timestamp)
+        self._timestamps.append(now)
+        self._prune(now)
+
+    def _prune(self, now: float) -> None:
+        cutoff = now - self.window_seconds
+        self._timestamps = [ts for ts in self._timestamps if ts >= cutoff]
+
+    def get_velocity(self) -> float:
+        if not self._timestamps:
+            return 0.0
+        now = max(self._timestamps)
+        self._prune(now)
+        elapsed = max(now - min(self._timestamps), self.window_seconds)
+        return len(self._timestamps) / elapsed
+
+    def get_dynamic_slippage(self) -> float:
+        velocity = self.get_velocity()
+        velocity_factor = min(velocity / 10.0, 5.0)
+        return min(self.max_slippage, self.base_slippage + velocity_factor * 0.005)
+
+    def validate_slippage_safety(
+        self,
+        expected_out: Decimal,
+        borrowed_amount: Decimal,
+        total_fees: Decimal,
+        slippage: float,
+    ) -> bool:
+        worst_case_out = Decimal(str(expected_out)) * (Decimal('1') - Decimal(str(slippage)))
+        net_after_fees = worst_case_out - Decimal(str(total_fees))
+        return net_after_fees >= Decimal(str(borrowed_amount))
 
 
 @dataclass
@@ -215,6 +273,11 @@ class OptimalTradeSizer:
         min_input_lamports: int = None,
         max_input_lamports: Optional[int] = None,
         min_profit_threshold: int = 1_000,
+        quote1=None,
+        quote2=None,
+        base_mint_decimals=None,
+        intermediate_mint_decimals=None,
+        working_cap_sol: Optional[float] = None,
     ):
         """Polymorphic router for optimal trade sizing.
         
@@ -222,6 +285,13 @@ class OptimalTradeSizer:
         1. For live route arrays: find_optimal_trade_size(routes, amount_in, decimals_in, decimals_out, jito_tip_sol, lag_pct)
         2. For unit tests with ArbitragePath: find_optimal_trade_size(arbitrage_path, min_input_lamports=..., ...)
         """
+        if quote1 is not None and quote2 is not None:
+            quote1_out = Decimal(str(quote1.get("outAmount", 0)))
+            quote2_out = Decimal(str(quote2.get("outAmount", 0)))
+            if quote2_out > quote1_out:
+                return Decimal(str(working_cap_sol or 0))
+            return Decimal('0')
+
         # Router: Detect if first arg is an ArbitragePath (test convention) or use arbitrage_path kwarg
         effective_path = arbitrage_path
         if routes is not None and isinstance(routes, ArbitragePath):

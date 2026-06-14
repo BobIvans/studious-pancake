@@ -52,6 +52,20 @@ gc.set_threshold(7000, 10, 10)  # Less frequent GC to avoid freezing hot loops
 # before calculating Jito tips.  This prevents the "Cross-Currency Tip Suicide"
 # where a profit of 5 USDC is interpreted as 5 SOL and the bot overpays tips.
 # ============================================================================
+def guaranteed_quote_out_amount(quote: Dict[str, Any]) -> int:
+    """Return the guaranteed output amount from a quote payload."""
+    if not quote:
+        return 0
+
+    if "otherAmountThreshold" in quote:
+        return int(quote["otherAmountThreshold"])
+    if "outAmount" in quote:
+        return int(quote["outAmount"])
+    if "out_amount" in quote:
+        return int(quote["out_amount"])
+    return 0
+
+
 def normalize_profit_to_sol(
     profit_raw: float,
     target_mint_str: str,
@@ -2327,6 +2341,7 @@ async def create_flashloan_arbitrage_tx(
     strategy_type=1,
     tip_accounts=None,
     blockhash_mgr=None,
+    opportunity=None,
 ):
     wallet_pubkey = str(keypair.pubkey())
 
@@ -2651,7 +2666,7 @@ async def create_flashloan_arbitrage_tx(
                 operation_type="flash_arbitrage",
                 use_jito=use_jito,
                 rpc_url=rpc_getter(),
-                expected_profit_sol=route.profit_sol if route and getattr(route, "profit_sol", None) else 0.0,
+                expected_profit_sol=opportunity.expected_profit_sol if opportunity else 0.0,
             )
         )
         # cu_limit is already the dynamic profile value from build_optimized_transaction()
@@ -4636,6 +4651,7 @@ async def execute_priority_opportunity(
                 jito_executor.tip_accounts if jito_executor else None
             ),  # Fix 3: dynamic tip accounts
             blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
+            opportunity=opportunity,
         )
         if not tx_b64:
             logger.warning("Failed to create priority arbitrage tx")
@@ -4980,6 +4996,7 @@ async def worker(
             profit_in_tokens = raw_profit_lamports / (10**decimals_in)
             profit_in_usd = profit_in_tokens * token_in_price_usd
             raw_profit_sol = profit_in_usd / sol_price_in_usd
+            current_expected_profit = raw_profit_sol
 
             # Max tip should never exceed 90% of equivalent USD profit gained (converted to SOL)
             max_safe_tip_sol = raw_profit_sol * 0.9
@@ -4999,18 +5016,10 @@ async def worker(
                 # 3. God-mode tip via JitoBiddingManager (tip_floor poller + step-up/down + capital guard)
                 #       replaces JitoTipManager (WebSocket) + inline dynamic tip.
                 # Capital Guard is inside calculate_optimal_tip: returns -1 if 50th > 80% profit.
-                strategy_label = (
-                    opportunity.metadata.get("strategy", "arbitrage")
-                    if "opportunity" in dir()
-                    else "arbitrage"
-                )
+                strategy_label = "arbitrage"
                 calculated_tip = jito_bidding_manager.calculate_optimal_tip(
-                    expected_profit_sol=(
-                        opportunity.metadata.get("expected_profit_sol", net_profit)
-                        if "opportunity" in dir()
-                        else net_profit
-                    ),
-                    strategy=str(strategy_label),
+                    expected_profit_sol=current_expected_profit,
+                    strategy=strategy_label,
                 )
                 if calculated_tip < 0:  # Capital Guard hit
                     logger.warning(
@@ -5076,7 +5085,7 @@ async def worker(
             capped_amount = min(int(optimal_amount), borrow_cap_lamports)
             if capped_amount < 1_000_000:
                 logger.debug(
-                    f"Cap too small ({capped_amount} lamports), skipping {opportunity.pair if 'opportunity' in dir() else 'unknown'}"
+                    f"Cap too small ({capped_amount} lamports), skipping {path}"
                 )
                 continue
             optimal_amount = capped_amount
@@ -5182,6 +5191,7 @@ async def worker(
                 net_profit = (
                     (profit_lamports - total_fees_in_base) / 1e6
                 ) / sol_price_in_usd
+            current_expected_profit = net_profit
 
             if net_profit < float(cfg.MIN_PROFIT_SOL):
                 logger.debug(
@@ -5345,6 +5355,8 @@ async def worker(
                     "out_mint": target_mint_str,
                     "tip_lamports": tip_lamports,
                     "chosen_route": chosen_route,
+                    "strategy": strategy_label,
+                    "expected_profit_sol": current_expected_profit,
                 },
             )
 
@@ -6348,6 +6360,7 @@ async def run():
                         execution_router=execution_router,
                         flash_pivot_engine=flash_pivot_engine,
                         blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
+                        opportunity=opportunity,
                     )
                 )
             except Exception as e:
@@ -7097,7 +7110,7 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
             # ФИКС 2: raw_amount_str уже в базовых единицах, умножение на децимали НЕ ТРЕБУЕТСЯ
             raw_amount = int(raw_amount_str or 0)
             if raw_amount > 0:
-                burn_ix = _build_burn_instruction_atlanta(
+                burn_ix = await _build_burn_instruction_atlanta(
                     str(ata_address), mint, raw_amount, keypair
                 )
                 if burn_ix:

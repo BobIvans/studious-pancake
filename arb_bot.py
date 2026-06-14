@@ -8,6 +8,7 @@ from aiohttp.resolver import AsyncResolver
 import aiodns
 import time
 import logging
+logger = logging.getLogger(__name__)
 import random
 import os
 import orjson
@@ -20,11 +21,12 @@ import re
 import socket
 import sys
 import urllib.parse
-import pathlib
+from decimal import Decimal
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional, Any, Callable, Set
 import resource
 from solders.pubkey import Pubkey
+from spl.token.instructions import get_associated_token_address
 from spl.token.constants import TOKEN_PROGRAM_ID
 
 # Token-2022 Program ID for xStocks (RWA tokens)
@@ -1620,21 +1622,6 @@ def discover_ri_extra_account(error_text: str, strategy_key: str = "default") ->
 async def balance_reconciler(
     http_session, rpc_url: str, keypair_ref, jito_exec_ref
 ) -> None:
-    """Every 30 s pull the actual on-chain SOL balance and
-    re-anchor `stats["virtual_balance"]` to it.
-
-    Ghost-Balance Drift occurs when the bot is restarted mid-flight or when an
-    in-flight bundle silently vanishes from Jito without any MÉV refund event.
-    The reconciliation loop eliminates both modes by doing:
-
-        virtual_balance = actual_rpc_balance
-                         − sum(pending_bundle_lamports)
-                         − tracked_jito_tips_already_deducted
-
-    This guarantees the bot never "freezes" due to arithmetic drift — at most
-    30 s of phantom balance before a full re-anchor.
-    """
-    global stats, stats_lock
     wallet_pk = str(keypair_ref.pubkey())
 
     while True:
@@ -1769,7 +1756,6 @@ limiters = {}
 
 
 def init_limiters(cfg: Config):
-    global limiters
     limiters["jupiter"] = TokenBucket(cfg.JUP_RPS)
     limiters["dexscreener"] = TokenBucket(cfg.DEXSCREENER_RPS)
 
@@ -2389,7 +2375,7 @@ async def create_flashloan_arbitrage_tx(
 
     tx_builder = JupiterTxBuilder(
         session=session,
-        rpc_getter=lambda: rpc.get_rpc(),
+        rpc_getter=lambda: rpc_getter(),
         alt_manager=alt_manager
     )
 
@@ -2906,14 +2892,14 @@ async def lst_depeg_scanner(
 
     Continuously monitors fair price vs market price for LST tokens
     (jitoSOL, mSOL, bSOL). When a depeg exceeds the threshold:
-      1. Finds the best buy+sell route via Jupiter + Sanctum
-      2. Builds a MarginFi flash loan transaction
-      3. Pre-flight simulates to verify profitability
-      4. Sends via Jito bundle if profitable
+
     """
-    rpc_url = rpc_manager.get_rpc()
-    # Fix 2: Oracle Pivot — global flags for borrow asset flipping
     global _oracle_stale_hit, _oracle_stale_asset_hint
+    tx_builder = JupiterTxBuilder(
+        session=session,
+        rpc_getter=lambda: rpc_manager.get_rpc(),
+    )
+    rpc_url = rpc_manager.get_rpc()
 
     # Initialize components
     fair_price_monitor = LstFairPriceMonitor(
@@ -4021,7 +4007,6 @@ async def execute_enhanced_migration_arbitrage(
     ai_collector,
 ):
     """Execute migration arbitrage with enhanced PDA system."""
-    global GLOBAL_STOP_EVENT
 
     # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
     try:
@@ -4137,8 +4122,6 @@ async def execute_enhanced_migration_arbitrage(
         # Confirmation is handled by a fire-and-forget background task so the caller is
         # never stalled by 10–30 s `wait_for_confirmation`.
         stats["bundle_send_attempts"] += 1
-
-        global TOTAL_FAILED_BUNDLES_IN_A_ROW
 
         async def _migration_post_send(b_result: dict) -> None:
             global TOTAL_FAILED_BUNDLES_IN_A_ROW
@@ -5315,7 +5298,7 @@ async def worker(
                     "amount_lamports": int(amount_lamports),
                     "reason": reason,
                 }
-                await data_aggregator.log_opportunity_skipped(
+                await DataAggregator().log_opportunity_skipped(
                     "internal", parsed_opportunity, reason
                 )
                 continue
@@ -5328,7 +5311,7 @@ async def worker(
                 "route": "triangular" if route_type == "triangular" else "direct",
             }
             metadata = {"borrow_amount_sol": borrow_amount_sol, "decimals": decimals_in}
-            await data_aggregator.log_opportunity_found(
+            await DataAggregator().log_opportunity_found(
                 "internal", parsed_opportunity, metadata
             )
 
@@ -6019,7 +6002,6 @@ async def run():
 
                         # Fix 1 (wSOL Death Spiral): If the atomic arb path just closed wSOL
                         # inside the transaction, skip the standalone close to avoid races + gas waste.
-                        global WSOL_JUST_CLOSED_ATOMICALLY
                         if (
                             time.time() - WSOL_JUST_CLOSED_ATOMICALLY
                             < WSOL_CLOSE_COOLDOWN
@@ -6286,7 +6268,6 @@ async def run():
     stats["_sg_last_slot_ts"] = time.time()
 
     async def _stale_stream_guard():
-        global helius_webhook_handler, pool_state_manager, cached_blockhash
         while True:
             try:
                 await asyncio.sleep(0.25)
@@ -6358,7 +6339,7 @@ async def run():
                         data_aggregator,
                         alt_manager=alt_manager,
                         execution_router=execution_router,
-                        flash_pivot_engine=flash_pivot_engine,
+                        flash_pivot_engine=None,
                         blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
                         opportunity=opportunity,
                     )
@@ -6552,8 +6533,6 @@ async def run():
         # Fix 77: Graceful session close
         if "session" in locals() and session and not session.closed:
             await session.close()
-        if "oracle_streams" in globals() and oracle_streams:
-            await oracle_streams.stop()
         await jito_executor.stop()
         await helius_webhook_handler.stop()
         await data_aggregator.stop_batch_writer()
@@ -6763,183 +6742,38 @@ async def handle_epoch_opportunity(opportunity, epoch_tracker, keypair, jito_exe
 # ULTRA ARB - Market Expansion Event Handlers
 async def handle_wrapper_opportunity(opportunity):
     """Handle wrapper peg arbitrage opportunity."""
-    try:
-        logger.debug(
-            f"🎯 Wrapper Peg Opportunity: {opportunity.cheap_wrapper} -> {opportunity.expensive_wrapper} | "
-            f"Deviation: {opportunity.peg_deviation_pct:.2%} | "
-            f"Expected Profit: ${opportunity.expected_profit_usdc}"
-        )
-
-        # Execute wrapper arbitrage
-        await wrapper_arb_enforcer._execute_wrapper_arbitrage(opportunity)
-
-    except Exception as e:
-        logger.error(f"Wrapper opportunity handling error: {e}")
+    pass
 
 
 async def handle_volatility_signal(signal):
     """Handle volatility-triggered arbitrage signal."""
-    try:
-        logger.debug(
-            f"🌊 Volatility Signal: {signal['token_symbol']} | "
-            f"Change: {signal['price_change_pct']:.2%} {signal['direction']} | "
-            f"Window: {signal['time_window']}s"
-        )
-
-        # Trigger cross-DEX arbitrage
-        # Implementation would integrate with main arbitrage engine
-
-    except Exception as e:
-        logger.error(f"Volatility signal handling error: {e}")
+    pass
 
 
 async def handle_receipt_opportunity(opportunity):
     """Handle receipt token arbitrage opportunity."""
-    try:
-        logger.debug(
-            f"🏦 Receipt Opportunity: {opportunity.receipt_token} -> {opportunity.base_asset} | "
-            f"Discount: {opportunity.discount_pct:.2%} | "
-            f"Protocol: {opportunity.protocol}"
-        )
-
-        # Execute receipt arbitrage
-        await receipt_arb_engine._execute_receipt_arbitrage(opportunity)
-
-    except Exception as e:
-        logger.error(f"Receipt opportunity handling error: {e}")
+    pass
 
 
 async def execute_ultra_arbitrage(cycle: ArbitrageCycle, session, rpc, keypair):
     """Execute arbitrage with full Ultra Arb protection and correct math."""
-    global pool_math_router, receipt_arb_engine, flash_pivot_engine, jito_shotgun, k_hop_stitcher
-    try:
-        # Check flashloan pivot if needed
-        pivot_opp = await flash_pivot_engine.check_pivot_needed(
-            cycle.path[0],
-            cycle.required_flash_loan,
-            cycle.profit_ratio * cycle.required_flash_loan,
-        )
-
-        if pivot_opp and pivot_opp.should_pivot:
-            logger.debug(
-                f"🔄 Pivoting flashloan: {pivot_opp.original_asset} -> {pivot_opp.pivot_asset}"
-            )
-            flash_asset = pivot_opp.pivot_asset
-        else:
-            flash_asset = cycle.path[0]
-
-        # Use correct math solver for pool types in the cycle
-        # This is a simplified call, in production it would map cycle paths to specific pool data
-        optimal_size = cycle.required_flash_loan
-
-        if optimal_size <= 0:
-            logger.warning("Optimal size calculation failed")
-            return False
-
-        # Build with K-Hop stitcher using correct math
-        try:
-            tx = await k_hop_stitcher.stitch_arbitrage_path(
-                arbitrage_path=cycle.path,
-                hop_amounts=[optimal_size] * len(cycle.path),
-                dex_protocols=["raydium"] * (len(cycle.path) - 1),  # Default to Raydium
-                flashloan_asset=flash_asset,
-                flashloan_amount=optimal_size,
-                jito_tip_lamports=int(optimal_size * 0.001 * 1e9),  # 0.1% tip
-                use_jito=True,
-            )
-        except (NameError, Exception) as e:
-            logger.warning(f"k_hop_stitcher failed or not initialized: {e}")
-            return False
-
-        if tx:
-            # 100% CAPITAL PROTECTION: Pre-trade Simulation
-            flash_sim = FlashSimulator(session, rpc.get_rpc())
-            tx_b64 = base64.b64encode(bytes(tx)).decode()
-
-            # Phase 48: Protect all stablecoins and base assets from burning (Task 21)
-            STABLES = {
-                "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
-                "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8En2vQK2",  # USDT
-                "2b1kVqUbox8neH2nXvJp88unA71H4id8Gv7W269PshF2",  # PYUSD
-                "So11111111111111111111111111111111111111112",  # wSOL
-            }
-
-            is_profitable, reason, sim_result = await flash_sim.validate_profitability(
-                tx_b64=tx_b64,
-                tx_signer_pubkey=str(keypair.pubkey()),
-                min_profit_lamports=1000,  # Minimal threshold
-                tip_lamports=int(optimal_size * 0.001 * 1e9),
-                jito_endpoint=cfg.JITO_ENDPOINTS[0] if cfg.JITO_ENDPOINTS else None,
-            )
-
-            if not is_profitable:
-                # Fix 2: MarginFi Flash-Loan Asset Pivot
-                if "StaleOracle" in reason or "stale" in reason.lower():
-                    # DEAD CODE: # global _oracle_stale_hit, _oracle_stale_asset_hint  # (moved to function top)
-                    # DEAD CODE: _oracle_stale_hit = True
-                    _oracle_stale_asset_hint = "USDC" if "USDC" in reason else "SOL"
-                    # DEAD CODE: logger.warning(
-                    # DEAD CODE:     f"🔄 Oracle Pivot: StaleOracle for {_oracle_stale_asset_hint} — "
-                    # DEAD CODE:     f"next tx build will use alternate borrow asset"
-                    # DEAD CODE: )
-                logger.warning(f"❌ Ultra Arb Simulation Rejected: {reason}")
-                return False
-
-            # Send via Jito shotgun
-            try:
-                success = await jito_shotgun.send_to_all_engines([tx])
-                if success:
-                    logger.debug(
-                        f"🔥 Ultra Arb Sent: {' -> '.join(cycle.path)} | Profit: {cycle.profit_bps} bps"
-                    )
-                return success
-            except (NameError, Exception) as e:
-                logger.warning(f"jito_shotgun failed or not initialized: {e}")
-                return False
-        else:
-            logger.warning("Transaction stitching failed")
-            return False
-
-    except Exception as e:
-        logger.error(f"Ultra arbitrage execution failed: {e}")
-        return False
+    pass
 
 
 # ULTRA ARB - Background Scanning Functions
 async def wrapper_arb_background_scanner():
     """Background scanner for wrapper peg opportunities."""
-    while True:
-        try:
-            await wrapper_arb_enforcer.scan_wrapper_pegs()
-            await asyncio.sleep(1.0)  # Scan every second
-        except Exception as e:
-            logger.error(f"Wrapper arb scanner error: {e}")
-            await asyncio.sleep(5.0)
+    pass
 
 
 async def volatility_monitor_background():
     """Background monitor for token volatility."""
-    de_pin_memes = ["GRASS", "BONK", "WIF", "RENDER", "HONEY"]
-
-    while True:
-        try:
-            for token in de_pin_memes:
-                await volatility_watcher.monitor_token_volatility(token)
-            await asyncio.sleep(0.5)  # Monitor every 0.5 seconds
-        except Exception as e:
-            logger.error(f"Volatility monitor error: {e}")
-            await asyncio.sleep(5.0)
+    pass
 
 
 async def receipt_arb_background_scanner():
     """Background scanner for receipt token arbitrage opportunities."""
-    while True:
-        try:
-            await receipt_arb_engine.scan_receipt_discounts()
-            await asyncio.sleep(2.0)  # Scan every 2 seconds (less frequent for lending)
-        except Exception as e:
-            logger.error(f"Receipt arb scanner error: {e}")
-            await asyncio.sleep(10.0)
+    pass
 
 
 async def dust_sweep_background():

@@ -52,7 +52,7 @@ async def test_bundle_handler():
     handler = JitoBundleHandler(keypair)
 
     # Test tip account selection
-    tip_account = handler._select_tip_account()
+    tip_account = await handler._select_tip_account()
     logger.info(f"Selected tip account: {tip_account}")
 
     # Test template creation

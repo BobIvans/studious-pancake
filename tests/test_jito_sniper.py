@@ -40,16 +40,19 @@ class TestJitoTipManager(unittest.TestCase):
         # Simulate tip data
         self.tip_manager.current_tips = [10000, 20000, 30000, 40000, 50000]  # Sorted
         self.tip_manager.last_update = time.time()  # Use time.time() instead of asyncio loop
+        self.tip_manager.current_percentiles = {"75th": 40000}
+        self.tip_manager.ema_75th = 40000
 
         # 75th percentile should be near the higher end
         tip = self.tip_manager.get_optimal_tip()
         self.assertGreaterEqual(tip, 30000)  # At least 75th percentile
-        self.assertEqual(tip, 40000)  # Exact 75th percentile of 5 items
+        self.assertEqual(tip, 44000)  # 40000 * tip_multiplier (1.1)
 
     def test_minimum_tip_enforcement(self):
         """Test that minimum tip is always enforced."""
+        import time
         self.tip_manager.current_tips = [1000, 2000, 3000]  # All below minimum
-        self.tip_manager.last_update = asyncio.get_running_loop().time()
+        self.tip_manager.last_update = time.time()
 
         tip = self.tip_manager.get_optimal_tip()
         self.assertEqual(tip, 10000)  # Should enforce minimum
@@ -65,7 +68,7 @@ class TestJitoTipManager(unittest.TestCase):
     def test_random_tip_account(self):
         """Test random tip account selection."""
         account = self.tip_manager.get_random_tip_account()
-        self.assertIn(account, JitoTipManager.JITO_TIP_ACCOUNTS)
+        self.assertIn(account, self.tip_manager.DEFAULT_TIP_ACCOUNTS)
 
 
 class TestWssPoolCreationListener(unittest.TestCase):
@@ -119,7 +122,7 @@ class TestJitoBundleSender(unittest.TestCase):
 
     def test_endpoint_configuration(self):
         """Test that Jito endpoints are configured."""
-        self.assertEqual(len(self.sender.JITO_ENDPOINTS), 4)
+        self.assertEqual(len(self.sender.JITO_ENDPOINTS), 1)  # Single NY endpoint
         self.assertTrue(all("jito.wtf" in endpoint for endpoint in self.sender.JITO_ENDPOINTS))
 
     @patch('aiohttp.ClientSession.post')

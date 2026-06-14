@@ -52,7 +52,8 @@ async def test_complete_mev_pipeline():
     # Test Jito bundle handler
     logger.info("🔥 Testing Jito Bundle Handler...")
     bundle_handler = JitoBundleHandler(keypair)
-    tip_template = bundle_handler.bundle_template.create_tip_template(50000, bundle_handler._select_tip_account())
+    tip_account = await bundle_handler._select_tip_account()
+    tip_template = bundle_handler.bundle_template.create_tip_template(50000, tip_account)
     logger.info(f"✅ Tip template created: {tip_template.message.recent_blockhash}")
 
     logger.info("🎉 All MEV components tested successfully!")
@@ -64,6 +65,7 @@ async def test_execution_pipeline():
     # This would require actual RPC connections, so we'll just test structure
     keypair = Keypair()
     pipeline = ExecutionPipeline(
+        rpc_endpoints=["https://api.mainnet-beta.solana.com"],
         wss_endpoints=["wss://api.mainnet-beta.solana.com"],
         monitored_addresses=["675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"],  # Jupiter program
         trade_sizer=OptimalTradeSizer(),

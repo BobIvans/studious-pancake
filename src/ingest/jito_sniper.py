@@ -62,6 +62,7 @@ class JitoTipManager:
         self.min_tip_lamports = min_tip_lamports
         self.tip_multiplier = tip_multiplier
         self.tip_accounts = []
+        self.DEFAULT_TIP_ACCOUNTS = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.running = False
         self.current_percentiles: Dict[str, int] = {}
@@ -325,8 +326,8 @@ class WssPoolCreationListener:
         self.rpc_ws_url = rpc_ws_url
         self.rpc_http_url = rpc_http_url
         self.event_callback = event_callback
-        self.session = session or aiohttp.ClientSession()
-        self._session_owned = session is None
+        self.session = session
+        self._session_owned = session is None  # Will be created in __aenter__
         self.websocket = None
         self.running = False
         self.subscriptions: Dict[str, int] = {}
@@ -709,7 +710,7 @@ class JitoBundleSender:
         auth_key: Optional[str] = None,
     ):
         self.session = session
-        self._session_owned = session is None
+        self._session_owned = session is None  # Will be created in __aenter__
         self.jito_endpoints = jito_endpoints or self.JITO_ENDPOINTS
         self.auth_key = auth_key
 

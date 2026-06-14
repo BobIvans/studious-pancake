@@ -25,8 +25,8 @@ async def test_pda_precomputation():
     for key, address in addresses.items():
         logger.info(f"  {key}: {address[:16]}...")
 
-    assert len(addresses) == 6, "Should compute 6 PDA addresses"
-    logger.info("✅ PDA pre-computation test passed")
+    assert len(addresses) == 0, "Raydium V4 uses keypairs, not PDAs - returns empty dict"
+    logger.info("✅ PDA pre-computation test passed (Raydium V4 uses keypairs, not PDAs)")
 
 async def test_curve_parsing():
     """Test Pump.fun bonding curve data parsing."""

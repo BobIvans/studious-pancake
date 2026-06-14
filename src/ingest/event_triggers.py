@@ -424,7 +424,7 @@ class VolatilityWatcher:
             'oracle_prices': {
                 symbol: {
                     'price': float(price.price_usd),
-                    'age_seconds': asyncio.get_running_loop().time() - price.timestamp,
+                    'age_seconds': time.time() - price.timestamp,
                     'source': price.source
                 }
                 for symbol, price in self.oracle_prices.items()

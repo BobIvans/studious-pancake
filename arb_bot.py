@@ -1,4 +1,6 @@
 from __future__ import annotations
+from dotenv import load_dotenv
+load_dotenv(override=True)
 import orjson
 import asyncio
 import aiohttp
@@ -19,7 +21,6 @@ import socket
 import sys
 import urllib.parse
 import pathlib
-from dotenv import load_dotenv
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Optional, Any, Callable, Set
 import resource
@@ -100,16 +101,7 @@ def normalize_profit_to_sol(
     return profit_raw
 
 
-# Global execution lock for sequential flash loan processing (initialized in run())
-execution_lock = None  # Initialize in run() to bind to correct event loop
-# Per-MarginFi account lock: never two concurrent flash-loan CPI calls on the same lending_account
-marginfi_account_lock = None  # Initialize in run() to bind to correct event loop
-stats_lock = None  # Initialize in run() to bind to correct event loop
-active_tasks: Set[asyncio.Task] = set()  # Fix 3: Track background tasks for exception capture
-leader_tracker = None
-jito_tip_manager = None
-jito_bidding_manager = None  # God-mode dynamic tip bidding (tip_floor polling + step-up/down + capital guard)
-jito_leader_tracker = None
+# ULTRA ARB MASTER - Unified Shared State (Imported from src.ingest.shared_state)
 KEYPAIR = None  # Fix 81: memory-mapped wallet - never read disk during arb
 PENDING_QUOTES: Set[str] = set()  # Fix 84: RPS shield - dedup Jupiter requests
 LAST_SIGNAL_TIME: Dict[str, float] = {}  # Fix 88: per-pair 400ms cooldown (1 slot)
@@ -199,6 +191,16 @@ from src.ingest.jito_shotgun import JitoShotgun
 from src.ingest.grpc_stream import YellowstoneStream
 from src.ingest.dust_sweeper import DustSweeper
 from src.ingest.alt_manager import ALTCacheManager
+import src.ingest.shared_state as shared_state
+from src.ingest.shared_state import (
+    stats,
+    stats_lock,
+    execution_lock,
+    marginfi_account_lock,
+    GLOBAL_STOP_EVENT,
+    active_tasks,
+    initialize_shared_state,
+)
 
 # LST Depeg Flash-Arb modules
 from src.ingest.lst_fair_price_monitor import LstFairPriceMonitor, DepegSignal
@@ -448,7 +450,6 @@ async def update_stats(key: str, value: Any = 1):
 
 from solders.system_program import transfer, TransferParams
 
-load_dotenv(override=True)
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s | %(message)s", datefmt="%H:%M:%S"
@@ -1503,20 +1504,6 @@ TIER_A_TOKENS = {
 TIER_A_MINTS = {TOKENS[name] for name in TIER_A_TOKENS if name in TOKENS}
 
 price_matrix: Dict[str, tuple] = {}  # (price, timestamp) for freshness TTL
-stats = {
-    "reqs": [],
-    "trades": 0,
-    "sim_fails": 0,
-    "last_balance": 0.0,
-    "virtual_balance": 0.0,  # Fix 44: Virtual Balance Guard for Jito spam prevention
-    # Key metrics for scaling
-    "bundle_send_attempts": 0,
-    "bundle_successes": 0,
-    "state_to_execution_latencies": [],
-    "gas_rent_leakage": 0.0,
-    "flash_loan_miss_count": 0,
-    "flash_loan_attempt_count": 0,
-}
 cached_blockhash: Optional[str] = None
 cache_time = 0
 openocean_banned_until = 0
@@ -1536,8 +1523,6 @@ def background_task_callback(t: asyncio.Task):
     except Exception as e:
         logger.error(f"💥 Hidden failure in background task ({t.get_name()}): {e}", exc_info=True)
 
-# Circuit Breaker: Global stop event for hard stop on any failure
-GLOBAL_STOP_EVENT = None  # Initialize in run() to bind to correct event loop
 TOTAL_FAILED_BUNDLES_IN_A_ROW = 0  # Fix 64: Slippage loop breaker
 
 # Fix 2: MarginFi Flash-Loan Asset Pivot — when StaleOracle is detected,
@@ -2932,10 +2917,7 @@ async def lst_depeg_scanner(
         session=session,
         rpc_url=rpc_url,
     )
-    tx_builder = JupiterTxBuilder(
-        session=session,
-        rpc_url=rpc_url,
-    )
+
 
     # Pre-Trade Guard: prevent sending unprofitable bundles (right before jito_executor.send_bundle)
     pre_trade_guard = PreTradeGuard(session=session, rpc_url=rpc_url)
@@ -3202,6 +3184,7 @@ async def lst_depeg_scanner(
                 tip_accounts=(
                     jito_executor.tip_accounts if jito_executor else None
                 ),  # Fix 2: dynamic tip accounts
+                expected_profit_sol=route.profit_sol,  # Dynamic Rent Guard
             )
 
             if not fl_result:
@@ -3564,7 +3547,7 @@ async def kamino_liquidation_scanner(session, cfg, rpc_manager, keypair, jito_ex
 
 
 async def lst_unstake_arbitrage_scanner(
-    session, cfg, rpc_manager, keypair, jito_executor
+    session, cfg, rpc_manager, keypair, jito_executor, jito_bidding_manager=None, data_aggregator=None
 ):
     """Main LST instant unstake arbitrage scanner for MarginFi flash loans.
 
@@ -3574,6 +3557,10 @@ async def lst_unstake_arbitrage_scanner(
     rpc_url = rpc_manager.get_rpc()
 
     # Initialize components
+    tx_builder = JupiterTxBuilder(
+        session=session,
+        rpc_getter=lambda: rpc_manager.get_rpc(),
+    )
     unstake_arb = LstInstantUnstakeArbitrage(
         session=session,
         rpc_url=rpc_url,
@@ -3582,15 +3569,15 @@ async def lst_unstake_arbitrage_scanner(
         tx_builder=tx_builder,
         optimal_trade_sizer=trade_sizer,
         rpc_getter=lambda: rpc_manager.get_rpc(),
-    )
-    tx_builder = JupiterTxBuilder(
-        session=session,
-        rpc_getter=lambda: rpc_manager.get_rpc(),
+        cfg=cfg,
+        data_aggregator=data_aggregator,
+        stats=stats,
+        stats_lock=stats_lock,
     )
 
     cycle_count = 0
 
-    logger.debug(
+    logger.info(
         f"🚀 LST Unstake Arbitrage Scanner started | "
         f"min_deviation={cfg.LST_UNSTAKE_MIN_DEVIATION_PCT}% | "
         f"scan_interval={cfg.LST_UNSTAKE_SCAN_INTERVAL}s"
@@ -3599,6 +3586,17 @@ async def lst_unstake_arbitrage_scanner(
     while True:
         cycle_count += 1
         try:
+            # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
+            _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
+                stats.get("virtual_balance", stats.get("last_balance", 0.0))
+            )
+            if not _gas_ok:
+                logger.critical(
+                    f"🚨 STRICT GAS TANK: LST Unstake scanner halted — balance below 0.005 SOL"
+                )
+                await asyncio.sleep(30)
+                continue
+
             # ── Step 1: Scan for unstake arbitrage opportunities ───────────
             opportunities = await unstake_arb.scan_unstake_opportunities()
 
@@ -3612,22 +3610,26 @@ async def lst_unstake_arbitrage_scanner(
 
             # ── Step 2: Execute arbitrage opportunities ─────────────────────
             for opportunity in opportunities:
-                logger.debug(
-                    f"💰 LST Unstake opportunity: {str(opportunity.lst_mint)[:8]}... | "
-                    f"market={opportunity.market_price_sol:.6f} protocol={opportunity.protocol_price_sol:.6f} | "
-                    f"dev={opportunity.deviation_pct:.2f}% | "
-                    f"profit={opportunity.expected_profit_sol:.6f} SOL"
+                # opportunity is a dict with keys: lst_mint, expected_profit_lamports, borrow_amount, quote
+                lst_mint_str = opportunity.get("lst_mint", "")
+                expected_profit_sol = opportunity.get("expected_profit_lamports", 0) / 1e9
+                borrow_amount_sol = opportunity.get("borrow_amount", 0) / 1e9
+
+                logger.info(
+                    f"💰 LST Unstake opportunity: {str(lst_mint_str)[:8]}... | "
+                    f"borrow={borrow_amount_sol:.6f} SOL | "
+                    f"profit={expected_profit_sol:.6f} SOL"
                 )
 
                 # Execute the arbitrage
                 success = await unstake_arb.execute_unstake_arbitrage(
-                    opportunity, tx_builder, keypair, jito_executor
+                    opportunity, tx_builder, keypair, jito_executor, jito_bidding_manager
                 )
 
                 if success:
                     stats["trades"] += 1
-                    logger.debug(
-                        f"✅ LST unstake arbitrage successful | profit={opportunity.expected_profit_sol:.6f} SOL"
+                    logger.info(
+                        f"✅ LST unstake arbitrage successful | profit={expected_profit_sol:.6f} SOL"
                     )
                 else:
                     stats["sim_fails"] += 1
@@ -4318,7 +4320,7 @@ async def check_bundle_confirmation(
                 )
             # General dust sweep for any other stranded accounts
             if dust_sweeper:
-                asyncio.create_task(dust_sweeper._sweep_dust())
+                asyncio.create_task(dust_sweeper.sweep_after_successful_tx())
     except Exception as e:
         logger.error(f"Confirmation check failed: {e}")
 
@@ -4446,6 +4448,28 @@ async def execute_priority_opportunity(
     logger.debug(
         f"🚀 Executing priority opportunity: {opportunity.pair} (score: {opportunity.score:.1f})"
     )
+
+    # Task 18: Patch Fatal Paper Trading Leak in "arb_bot.py"
+    if getattr(cfg, "PAPER_TRADING_ONLY", False):
+        logger.info(
+            f"🧪 [SIMULATION] Profitable opportunity found: {opportunity.pair} | "
+            f"Expected profit: {opportunity.expected_profit_sol:.6f} SOL. "
+            "Real execution skipped (PAPER_TRADING_ONLY=true)."
+        )
+        if data_aggregator:
+            try:
+                await data_aggregator.log_event(
+                    event_type="SimulatedOpportunity",
+                    parsed_opportunity={
+                        "pair": opportunity.pair,
+                        "score": opportunity.score,
+                        "expected_profit_sol": opportunity.expected_profit_sol,
+                    },
+                    metadata=opportunity.metadata,
+                )
+            except Exception as e:
+                logger.warning(f"Failed to log simulated opportunity: {e}")
+        return
 
     # Extract saved quotes from metadata instead of re-fetching (saves API calls)
     quote1 = opportunity.metadata.get("quote1")
@@ -5482,28 +5506,12 @@ async def run():
     
     # Fix 1: Initialize asyncio locks inside the running event loop
     global execution_lock, marginfi_account_lock, stats_lock, GLOBAL_STOP_EVENT
-    execution_lock = asyncio.Lock()
-    marginfi_account_lock = asyncio.Lock()
-    stats_lock = asyncio.Lock()
-    GLOBAL_STOP_EVENT = asyncio.Event()
+    initialize_shared_state()
+    execution_lock = shared_state.execution_lock
+    marginfi_account_lock = shared_state.marginfi_account_lock
+    stats_lock = shared_state.stats_lock
+    GLOBAL_STOP_EVENT = shared_state.GLOBAL_STOP_EVENT
     
-    # Background GC task: collect only when idle to preserve hot-path performance
-    async def gc_idle_collector():
-        idle_seconds = 0.0
-        while True:
-            await asyncio.sleep(1.0)
-            # Use global stats or queue size if available to detect idle state
-            # Here we use a simple heuristic: if no trades in last 5s, it's idle
-            if stats.get("trades", 0) == stats.get("_last_gc_trades", 0):
-                idle_seconds += 1.0
-                if idle_seconds >= 5.0:
-                    gc.collect()
-                    idle_seconds = 0.0
-            else:
-                stats["_last_gc_trades"] = stats.get("trades", 0)
-                idle_seconds = 0.0
-
-    asyncio.create_task(gc_idle_collector())
 
     # Делаем сборку мусора реже, но эффективнее, чтобы не мешать горячим циклам
     gc.set_threshold(7000, 10, 10)
@@ -5585,14 +5593,6 @@ async def run():
         KEYPAIR = Keypair.from_bytes(bytes(orjson.loads(_f.read())))
 
     keypair = KEYPAIR
-    logger.info(
-        f"✅ Bot authorized: {keypair.pubkey()}"
-    )  # Fix 81: loaded once into RAM, disk I/O avoided in hot path
-
-    # ── Fix 46: MARGINFI_ACCOUNT .env sanitization ─────────────────────────────
-    if not validate_marginfi_account(cfg):
-        logger.critical("Bot cannot start — MarginFi account validation failed.")
-        sys.exit(1)
 
     # ── Jito executor init (must be before health-factor uses RPC) ──────────────
     rpc = RPCManager(cfg)
@@ -5647,6 +5647,32 @@ async def run():
         },  # Fix 53 + 92: Brotli compression cuts quote payload size
     )
 
+    rpc_url = rpc.get_rpc()
+    balance_lamports = await StateManager.get_balance_lamports(
+        session, rpc, keypair.pubkey()
+    )
+    balance_sol = (
+        None if balance_lamports is None else balance_lamports / 1e9
+    )
+    logger.info("==================================================")
+    logger.info("Post-authorization diagnostics")
+    logger.info(f"Loaded Keypair file path: {cfg.WALLET_PATH}")
+    logger.info(f"Resolved public key address: {keypair.pubkey()}")
+    logger.info(f"Active RPC endpoint URL being queried: {rpc_url}")
+    if balance_lamports is not None:
+        logger.info(
+            f"Fetched SOL balance: {balance_lamports} lamports / {balance_sol:.9f} SOL"
+        )
+    else:
+        logger.info("Fetched SOL balance: unavailable")
+    logger.info("==================================================")
+
+    # ── Fix 46: MARGINFI_ACCOUNT .env sanitization ─────────────────────────────
+    if not validate_marginfi_account(cfg):
+        logger.critical("Bot cannot start — MarginFi account validation failed.")
+        await session.close()
+        sys.exit(1)
+
     # Phase 49: Hardware & Performance Heartbeat
     asyncio.create_task(tcp_heartbeat(session))
     asyncio.create_task(hard_floor_guard())
@@ -5666,874 +5692,866 @@ async def run():
                 )
             except:
                 pass
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"Warm-up request exception: {e}")
 
-        # Fix 70: Log rotation + DB vacuum background task
-        async def _maintenance():
-            while True:
-                await asyncio.sleep(6 * 3600)
-                # delete old .jsonl
-                for f in glob.glob("*.jsonl"):
-                    if os.path.getmtime(f) < time.time() - 48 * 3600:
-                        os.remove(f)
-                # vacuum DB
-                try:
-                    import sqlite3
+    # Fix 70: Log rotation + DB vacuum background task
+    async def _maintenance():
+        while True:
+            await asyncio.sleep(6 * 3600)
+            # delete old .jsonl
+            for f in glob.glob("*.jsonl"):
+                if os.path.getmtime(f) < time.time() - 48 * 3600:
+                    os.remove(f)
+            # vacuum DB
+            try:
+                import sqlite3
 
-                    conn = sqlite3.connect("bot_history.db")
-                    conn.execute("VACUUM;")
-                    conn.close()
-                except:
-                    pass
-                # disk check
-                if shutil.disk_usage(".").free < 500 * 1024 * 1024:
-                    logger.warning("Low disk space — stopping logs")
+                conn = sqlite3.connect("bot_history.db")
+                conn.execute("VACUUM;")
+                conn.close()
+            except:
+                pass
+            # disk check
+            if shutil.disk_usage(".").free < 500 * 1024 * 1024:
+                logger.warning("Low disk space — stopping logs")
 
-        asyncio.create_task(_maintenance())
-        asyncio.create_task(_gc_idle_collector())  # Fix 57: manual GC on idle queue
-        # Задача 50: Защита от Slot Drift (Time Sync Guard)
-        await check_time_sync(session, rpc.get_rpc())
+    asyncio.create_task(_maintenance())
+    asyncio.create_task(_gc_idle_collector())  # Fix 57: manual GC on idle queue
+    # Задача 50: Защита от Slot Drift (Time Sync Guard)
+    await check_time_sync(session, rpc.get_rpc())
 
-        # ── Fix 50: Health-Factor guard before any trade is attempted ───────────────
-        hf_raw = await check_marginfi_health_factor(
-            session, rpc.get_rpc(), cfg.MARGINFI_ACCOUNT_PUBKEY
+    # ── Fix 50: Health-Factor guard before any trade is attempted ───────────────
+    hf_raw = await check_marginfi_health_factor(
+        session, rpc.get_rpc(), cfg.MARGINFI_ACCOUNT_PUBKEY
+    )
+    # hf_raw == 1.0 means "unknown/neutral" (on-chain parsing not implemented)
+    # Only block if we got a real reading that indicates danger
+    if hf_raw is not None and hf_raw < 1.0 and hf_raw > 0.0:
+        logger.critical(
+            f"🛑 HEALTH FACTOR BLOCK: MarginFi account HF={hf_raw:.4f} < 1.0. "
+            "Clear your MarginFi debt before starting the bot."
         )
-        # hf_raw == 1.0 means "unknown/neutral" (on-chain parsing not implemented)
-        # Only block if we got a real reading that indicates danger
-        if hf_raw is not None and hf_raw < 1.0 and hf_raw > 0.0:
-            logger.critical(
-                f"🛑 HEALTH FACTOR BLOCK: MarginFi account HF={hf_raw:.4f} < 1.0. "
-                "Clear your MarginFi debt before starting the bot."
-            )
-            sys.exit(1)
-        if hf_raw is not None and hf_raw == 1.0:
-            logger.warning(
-                "⚠️ MarginFi health factor unknown (neutral 1.0) — proceeding with caution"
-            )
-
-        # 1. Core Data & Scaling Components
-        data_aggregator = DataAggregator()
-        await data_aggregator.start_batch_writer()
-
-        flywheel_scaler = FlywheelScaler(initial_balance=0.017)
-        arbitrage_scorer = ArbitrageScorer(session=session, rpc_url=rpc.get_rpc())
-
-        # 2. State Management
-        pool_state_manager = PoolStateManager(
-            websocket_url=cfg.WSS_ENDPOINTS[0], pool_addresses=[]
+        sys.exit(1)
+    if hf_raw is not None and hf_raw == 1.0:
+        logger.warning(
+            "⚠️ MarginFi health factor unknown (neutral 1.0) — proceeding with caution"
         )
 
-        alt_manager = ALTCacheManager(rpc_url=rpc.get_rpc(), session=session)
-        await alt_manager.initialize_cache()
+    # 1. Core Data & Scaling Components
+    data_aggregator = DataAggregator()
+    await data_aggregator.start_batch_writer()
 
-        # Task 5: Slot Drift Compensator — initialize blockhash racing manager
-        _all_rpc_endpoints = (
-            rpc.all_nodes
-            if hasattr(rpc, "all_nodes") and rpc.all_nodes
-            else [rpc.get_rpc()]
+    flywheel_scaler = FlywheelScaler(initial_balance=0.017)
+    arbitrage_scorer = ArbitrageScorer(session=session, rpc_url=rpc.get_rpc())
+
+    # 2. State Management
+    pool_state_manager = PoolStateManager(
+        websocket_url=cfg.WSS_ENDPOINTS[0], pool_addresses=[]
+    )
+
+    alt_manager = ALTCacheManager(rpc_url=rpc.get_rpc(), session=session)
+    await alt_manager.initialize_cache()
+
+    # Task 5: Slot Drift Compensator — initialize blockhash racing manager
+    _all_rpc_endpoints = (
+        rpc.all_nodes
+        if hasattr(rpc, "all_nodes") and rpc.all_nodes
+        else [rpc.get_rpc()]
+    )
+    _bh_mgr = init_blockhash_racing(_all_rpc_endpoints)
+    await _bh_mgr.start(session)
+    global blockhash_mgr
+    blockhash_mgr = _bh_mgr
+    logger.info(
+        f"⏱️ Slot Drift Compensator initialized with {len(_all_rpc_endpoints)} RPC endpoint(s)"
+    )
+
+    # Task 3b: Load persisted extra accounts from disk (survives bot restarts)
+    try:
+        _extra_on_disk = _load_extra_accounts()
+        for _strat_key, _extra_pks in _extra_on_disk.items():
+            if _strat_key.startswith("_"):
+                continue
+            STRATEGY_EXTRA_ACCOUNTS.setdefault(_strat_key, set()).update(
+                set(_extra_pks)
+            )
+        _extra_total = sum(
+            len(v) for k, v in _extra_on_disk.items() if not k.startswith("_")
         )
-        _bh_mgr = init_blockhash_racing(_all_rpc_endpoints)
-        await _bh_mgr.start(session)
-        global blockhash_mgr
-        blockhash_mgr = _bh_mgr
-        logger.info(
-            f"⏱️ Slot Drift Compensator initialized with {len(_all_rpc_endpoints)} RPC endpoint(s)"
+        if _extra_total:
+            logger.info(
+                f"📂 Loaded {_extra_total} persisted extra accounts from {EXTRA_ACCOUNTS_FILE}"
+            )
+    except Exception as _load_err:
+        logger.debug(f"extra_accounts.json loading failed: {_load_err}")
+
+    # 3. Execution Infrastructure (Jito & Leader Tracking)
+    global jito_tip_manager
+    jito_tip_manager = None
+    if JITO_AVAILABLE:
+        jito_tip_manager = JitoTipManager(
+            percentile=cfg.JITO_TIP_PERCENTILE,
+            min_tip_lamports=cfg.JITO_MIN_TIP_LAMPORTS,
+            tip_multiplier=cfg.TIP_MULTIPLIER,
         )
+        # Phase 35: Fetch live tip accounts before starting stream
+        await jito_tip_manager.fetch_tip_accounts()
+        await jito_tip_manager.start()
 
-        # Task 3b: Load persisted extra accounts from disk (survives bot restarts)
-        try:
-            _extra_on_disk = _load_extra_accounts()
-            for _strat_key, _extra_pks in _extra_on_disk.items():
-                if _strat_key.startswith("_"):
-                    continue
-                STRATEGY_EXTRA_ACCOUNTS.setdefault(_strat_key, set()).update(
-                    set(_extra_pks)
-                )
-            _extra_total = sum(
-                len(v) for k, v in _extra_on_disk.items() if not k.startswith("_")
-            )
-            if _extra_total:
-                logger.info(
-                    f"📂 Loaded {_extra_total} persisted extra accounts from {EXTRA_ACCOUNTS_FILE}"
-                )
-        except Exception as _load_err:
-            logger.debug(f"extra_accounts.json loading failed: {_load_err}")
+    global leader_tracker
+    leader_tracker = LeaderTracker(
+        rpc_url=rpc.get_rpc(), fetch_interval_ms=cfg.LEADER_FETCH_INTERVAL
+    )
+    await leader_tracker.start(session)
 
-        # 3. Execution Infrastructure (Jito & Leader Tracking)
-        global jito_tip_manager
-        jito_tip_manager = None
-        if JITO_AVAILABLE:
-            jito_tip_manager = JitoTipManager(
-                percentile=cfg.JITO_TIP_PERCENTILE,
-                min_tip_lamports=cfg.JITO_MIN_TIP_LAMPORTS,
-                tip_multiplier=cfg.TIP_MULTIPLIER,
-            )
-            # Phase 35: Fetch live tip accounts before starting stream
-            await jito_tip_manager.fetch_tip_accounts()
-            await jito_tip_manager.start()
+    global jito_leader_tracker
+    jito_leader_tracker = None
+    if JITO_AVAILABLE:
+        jito_leader_tracker = init_jito_leader_tracker(cfg.JITO_ENDPOINTS)
+        await jito_leader_tracker.start(session)
 
-        global leader_tracker
-        leader_tracker = LeaderTracker(
-            rpc_url=rpc.get_rpc(), fetch_interval_ms=cfg.LEADER_FETCH_INTERVAL
-        )
-        await leader_tracker.start(session)
-
-        global jito_leader_tracker
-        jito_leader_tracker = None
-        if JITO_AVAILABLE:
-            jito_leader_tracker = init_jito_leader_tracker(cfg.JITO_ENDPOINTS)
-            await jito_leader_tracker.start(session)
-
-        jito_executor = None
-        if JITO_AVAILABLE:
-            jito_executor = JitoExecutor(
-                session=session,
-                bundle_endpoint=cfg.JITO_ENDPOINTS[0] if cfg.JITO_ENDPOINTS else None,
-                keypair=keypair,
-            )
-            await jito_executor.start()
-
-            # Fix 2: Hardcoded Jito Tip Accounts — retry fetch_tip_accounts() up to 3 times.
-            # If still empty after retries, log CRITICAL so the operator knows tips may go to stale accounts.
-            _fetch_attempts = 0
-            while _fetch_attempts < 3:
-                if jito_executor.tip_accounts and len(jito_executor.tip_accounts) > 1:
-                    logger.info(
-                        f"✅ Jito tip accounts loaded: {len(jito_executor.tip_accounts)} active accounts"
-                    )
-                    break
-                _fetch_attempts += 1
-                logger.warning(
-                    f"⚠️ Jito tip accounts attempt {_fetch_attempts}/3: "
-                    f"{len(jito_executor.tip_accounts)} accounts — retrying in 2s..."
-                )
-                await asyncio.sleep(2)
-                await jito_executor.fetch_tip_accounts()
-            if _fetch_attempts >= 3 and len(jito_executor.tip_accounts) <= 1:
-                logger.critical(
-                    "🚨 JITO TIP ACCOUNTS: Dynamic fetch failed after 3 attempts! "
-                    "Aborting startup to prevent trading with stale tip accounts. "
-                    "Manual inspection required (Check network/Jito API status)."
-                )
-                os._exit(1)
-
-        # God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
-        global jito_bidding_manager
-        jito_bidding_manager = JitoBiddingManager()
-        if JITO_AVAILABLE:
-            # Phase 35: Dynamic Jito Tip Accounts pre-fetch
-            await jito_bidding_manager.update_tip_accounts(session)
-            
-            _poll_task = asyncio.create_task(
-                jito_bidding_manager.poll_tip_floor(session)
-            )
-            # noinspection PyTypeChecker
-            # _poll_task is intentionally fire-and-forget; it exits when run() exits
-            active_tasks.add(_poll_task)
-            _poll_task.add_done_callback(background_task_callback)
-            logger.info("🎯 Jito bidding manager started (polling tip_floor every 10s)")
-
-        execution_router = ExecutionRouter(
-            leader_tracker=leader_tracker,
-            jito_executor=jito_executor,
+    jito_executor = None
+    if JITO_AVAILABLE:
+        jito_executor = JitoExecutor(
             session=session,
-            rpc_url=rpc.get_rpc(),
+            bundle_endpoint=cfg.JITO_ENDPOINTS[0] if cfg.JITO_ENDPOINTS else None,
             keypair=keypair,
-            alt_manager=alt_manager,
-            rpc_getter=lambda: rpc.get_rpc(),
         )
-        execution_router.start_processor()
+        await jito_executor.start()
 
-        # 4. Webhook & Strategy Routing
-        async def handle_webhook_opportunity(opportunity, webhook_id):
-            logger.debug(
-                f"🚨 Webhook Triggered: {opportunity.get('strategy', 'unknown')}"
+        # Fix 2: Hardcoded Jito Tip Accounts — retry fetch_tip_accounts() up to 3 times.
+        # If still empty after retries, log CRITICAL so the operator knows tips may go to stale accounts.
+        _fetch_attempts = 0
+        while _fetch_attempts < 3:
+            if jito_executor.tip_accounts and len(jito_executor.tip_accounts) > 1:
+                logger.info(
+                    f"✅ Jito tip accounts loaded: {len(jito_executor.tip_accounts)} active accounts"
+                )
+                break
+            _fetch_attempts += 1
+            logger.warning(
+                f"⚠️ Jito tip accounts attempt {_fetch_attempts}/3: "
+                f"{len(jito_executor.tip_accounts)} accounts — retrying in 2s..."
             )
-            arb_opp = ArbitrageOpportunity(
-                pair=opportunity.get("description", "Webhook/Arb"),
-                expected_profit_sol=opportunity.get("expected_profit_sol", 0.01),
-                slippage_pct=0.01,
-                liquidity_depth_usd=50000,
-                network_congestion=50.0,
-                gas_cost_sol=0.0001,
-                execution_time_ms=0,
-                timestamp=time.time(),
-                metadata={"is_webhook": True, "raw_data": opportunity},
+            await asyncio.sleep(2)
+            await jito_executor.fetch_tip_accounts()
+        if _fetch_attempts >= 3 and len(jito_executor.tip_accounts) <= 1:
+            logger.critical(
+                "🚨 JITO TIP ACCOUNTS: Dynamic fetch failed after 3 attempts! "
+                "Aborting startup to prevent trading with stale tip accounts. "
+                "Manual inspection required (Check network/Jito API status)."
             )
-            arb_opp.score = 95.0
-            priority_queue.add_opportunity(arb_opp)
+            os._exit(1)
 
-        # helius_webhook_handler created after jito_shotgun is initialized (see below)
+    # God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
+    global jito_bidding_manager
+    jito_bidding_manager = JitoBiddingManager()
+    if JITO_AVAILABLE:
+        # Phase 35: Dynamic Jito Tip Accounts pre-fetch
+        await jito_bidding_manager.update_tip_accounts(session)
 
-        # 5. Strategies Initialization
-        if cfg.ENABLE_XSTOCKS_ORACLE_LAG:
-            from src.ingest.pyth_oracle_client import start_pyth_client
+        _poll_task = asyncio.create_task(
+            jito_bidding_manager.poll_tip_floor(session)
+        )
+        # noinspection PyTypeChecker
+        # _poll_task is intentionally fire-and-forget; it exits when run() exits
+        active_tasks.add(_poll_task)
+        _poll_task.add_done_callback(background_task_callback)
+        logger.info("🎯 Jito bidding manager started (polling tip_floor every 10s)")
 
-            asyncio.create_task(start_pyth_client())
+    execution_router = ExecutionRouter(
+        leader_tracker=leader_tracker,
+        jito_executor=jito_executor,
+        session=session,
+        rpc_url=rpc.get_rpc(),
+        keypair=keypair,
+        alt_manager=alt_manager,
+        rpc_getter=lambda: rpc.get_rpc(),
+        cfg=cfg,
+        data_aggregator=data_aggregator,
+        stats=stats,
+        stats_lock=stats_lock,
+    )
+    execution_router.start_processor()
 
-            from src.ingest.xstock_oracle_lag import init_xstock_strategy
+    # 4. Webhook & Strategy Routing
+    async def handle_webhook_opportunity(opportunity, webhook_id):
+        logger.debug(
+            f"🚨 Webhook Triggered: {opportunity.get('strategy', 'unknown')}"
+        )
+        arb_opp = ArbitrageOpportunity(
+            pair=opportunity.get("description", "Webhook/Arb"),
+            expected_profit_sol=opportunity.get("expected_profit_sol", 0.01),
+            slippage_pct=0.01,
+            liquidity_depth_usd=50000,
+            network_congestion=50.0,
+            gas_cost_sol=0.0001,
+            execution_time_ms=0,
+            timestamp=time.time(),
+            metadata={"is_webhook": True, "raw_data": opportunity},
+        )
+        arb_opp.score = 95.0
+        priority_queue.add_opportunity(arb_opp)
 
-            xstock_strategy = init_xstock_strategy(
-                session=session,
-                cfg=cfg,
-                optimal_trade_sizer=None,
-                tx_builder=JupiterTxBuilder(session=session, rpc_getter=lambda: rpc.get_rpc()),
-                execution_router=execution_router,
-            )
-            asyncio.create_task(xstock_strategy.periodic_lag_scan())
-            logger.info("🎯 xStocks Oracle Lag Strategy initialized")
+    # helius_webhook_handler created after jito_shotgun is initialized (see below)
 
-        # ULTRA ARB Components
-        # global pool_math_router, receipt_arb_engine, flash_pivot_engine, jito_shotgun
-        # pool_math_router = PoolMathRouter()
-        # receipt_arb_engine = ReceiptArbEngine(pool_state_manager, pool_math_router)
-        # flash_pivot_engine = FlashPivotEngine(pool_state_manager, pool_math_router)
+    # 5. Strategies Initialization
+    if cfg.ENABLE_XSTOCKS_ORACLE_LAG:
+        from src.ingest.pyth_oracle_client import start_pyth_client
 
-        # global wrapper_arb_enforcer, volatility_watcher
-        # wrapper_arb_enforcer = WrapperArbEnforcer(pool_state_manager)
-        # volatility_watcher = VolatilityWatcher(pool_state_manager)
+        asyncio.create_task(start_pyth_client())
 
-        # 6. Jito Sniper & Background Components
-        global jito_pool_listener, jito_tx_builder, jito_bundle_sender
-        jito_pool_listener = None
-        jito_tx_builder = None
-        jito_bundle_sender = None
-        jito_shotgun = None
+        from src.ingest.xstock_oracle_lag import init_xstock_strategy
 
-        if JITO_AVAILABLE:
-            jito_pool_listener = WssPoolCreationListener(
-                rpc_ws_url=cfg.WSS_ENDPOINTS[0] if cfg.WSS_ENDPOINTS else None,
-                rpc_http_url=rpc.get_rpc(),
-                event_callback=lambda event: None,
-                session=session,
-            )
-            jito_tx_builder = TransactionTipBuilder(jito_tip_manager)
-            jito_bundle_sender = JitoBundleSender(
-                jito_endpoints=cfg.JITO_ENDPOINTS, auth_key=cfg.JITO_AUTH_KEY
-            )
-            jito_shotgun = JitoShotgun(session)
+        xstock_strategy = init_xstock_strategy(
+            session=session,
+            cfg=cfg,
+            optimal_trade_sizer=None,
+            tx_builder=JupiterTxBuilder(session=session, rpc_getter=lambda: rpc.get_rpc()),
+            execution_router=execution_router,
+        )
+        asyncio.create_task(xstock_strategy.periodic_lag_scan())
+        logger.info("🎯 xStocks Oracle Lag Strategy initialized")
 
-        # Strat 3: Helius webhook handler — created AFTER jito_shotgun so it can fire
-        # swap/graduation signals to all 4 Jito regional block engines instantly.
-        helius_webhook_handler = HeliusWebhookHandler(
-            data_aggregator,
-            cfg.WEBHOOK_PORT,
-            opportunity_callback=handle_webhook_opportunity,
-            webhook_queue=lst_webhook_trigger,
-            on_token_discovery=lambda x: None,
-            jito_shotgun=jito_shotgun,  # Strat 3: Jito Shotgun webhook integration
+    # ULTRA ARB Components
+    # global pool_math_router, receipt_arb_engine, flash_pivot_engine, jito_shotgun
+    # pool_math_router = PoolMathRouter()
+    # receipt_arb_engine = ReceiptArbEngine(pool_state_manager, pool_math_router)
+    # flash_pivot_engine = FlashPivotEngine(pool_state_manager, pool_math_router)
+
+    # global wrapper_arb_enforcer, volatility_watcher
+    # wrapper_arb_enforcer = WrapperArbEnforcer(pool_state_manager)
+    # volatility_watcher = VolatilityWatcher(pool_state_manager)
+
+    # 6. Jito Sniper & Background Components
+    global jito_pool_listener, jito_tx_builder, jito_bundle_sender
+    jito_pool_listener = None
+    jito_tx_builder = None
+    jito_bundle_sender = None
+    jito_shotgun = None
+
+    if JITO_AVAILABLE:
+        jito_pool_listener = WssPoolCreationListener(
+            rpc_ws_url=cfg.WSS_ENDPOINTS[0] if cfg.WSS_ENDPOINTS else None,
+            rpc_http_url=rpc.get_rpc(),
+            event_callback=lambda event: None,
+            session=session,
+        )
+        jito_tx_builder = TransactionTipBuilder(jito_tip_manager)
+        jito_bundle_sender = JitoBundleSender(
+            jito_endpoints=cfg.JITO_ENDPOINTS, auth_key=cfg.JITO_AUTH_KEY
+        )
+        jito_shotgun = JitoShotgun(session)
+
+    # Strat 3: Helius webhook handler — created AFTER jito_shotgun so it can fire
+    # swap/graduation signals to all 4 Jito regional block engines instantly.
+    helius_webhook_handler = HeliusWebhookHandler(
+        data_aggregator,
+        cfg.WEBHOOK_PORT,
+        opportunity_callback=handle_webhook_opportunity,
+        webhook_queue=lst_webhook_trigger,
+        on_token_discovery=lambda x: None,
+        jito_shotgun=jito_shotgun,  # Strat 3: Jito Shotgun webhook integration
+    )
+
+    if cfg.HELIUS_WEBHOOK_ENABLED:
+        asyncio.create_task(helius_webhook_handler.start())
+    else:
+        logger.info("ℹ️ Helius webhook handler disabled")
+
+    global dust_sweeper
+    dust_sweeper = DustSweeper(keypair, rpc.get_rpc(), session)
+    asyncio.create_task(dust_sweeper.sweep_on_startup())
+
+    # [TASK 49] Periodic Dust Sweep (15-min fallback, primary sweep is post-trade)
+    async def periodic_dust_sweep():
+        while True:
+            await asyncio.sleep(900)  # 15 minutes fallback
+            try:
+                await dust_sweeper._sweep_dust()
+            except Exception as e:
+                logger.error(f"Periodic dust sweep failed: {e}")
+
+    asyncio.create_task(periodic_dust_sweep())
+
+    # 7. Balance & Health Monitoring
+    async def wallet_balance_listener():
+        from spl.token.instructions import close_account, CloseAccountParams
+        from spl.token.constants import TOKEN_PROGRAM_ID
+        from spl.token.instructions import get_associated_token_address
+        from solders.compute_budget import (
+            set_compute_unit_limit,
+            set_compute_unit_price,
         )
 
-        if cfg.HELIUS_WEBHOOK_ENABLED:
-            asyncio.create_task(helius_webhook_handler.start())
-        else:
-            logger.info("ℹ️ Helius webhook handler disabled")
+        wsol_mint = Pubkey.from_string(
+            "So11111111111111111111111111111111111111112"
+        )
+        wsol_ata = get_associated_token_address(keypair.pubkey(), wsol_mint)
 
-        global dust_sweeper
-        dust_sweeper = DustSweeper(keypair, rpc.get_rpc(), session)
-        asyncio.create_task(dust_sweeper.sweep_on_startup())
+        while True:
+            try:
+                # 1. Проверяем нативный баланс
+                current_balance = await StateManager.get_balance(
+                    session, rpc, keypair.pubkey()
+                )
+                if current_balance is not None:
+                    stats["last_balance"] = current_balance
 
-        # [TASK 49] Periodic Dust Sweep (15-min fallback, primary sweep is post-trade)
-        async def periodic_dust_sweep():
-            while True:
-                await asyncio.sleep(900)  # 15 minutes fallback
-                try:
-                    await dust_sweeper._sweep_dust()
-                except Exception as e:
-                    logger.error(f"Periodic dust sweep failed: {e}")
+                    # 2. Если нативный SOL падает ниже 0.01 SOL (опасно!)
+                    if current_balance < 0.01:
+                        logger.warning(
+                            f"⚠️ Native SOL critically low ({current_balance} SOL). Checking wSOL for unwrap..."
+                        )
 
-        asyncio.create_task(periodic_dust_sweep())
-
-        # 7. Balance & Health Monitoring
-        async def wallet_balance_listener():
-            from spl.token.instructions import close_account, CloseAccountParams
-            from spl.token.constants import TOKEN_PROGRAM_ID
-            from spl.token.instructions import get_associated_token_address
-            from solders.compute_budget import (
-                set_compute_unit_limit,
-                set_compute_unit_price,
-            )
-
-            wsol_mint = Pubkey.from_string(
-                "So11111111111111111111111111111111111111112"
-            )
-            wsol_ata = get_associated_token_address(keypair.pubkey(), wsol_mint)
-
-            while True:
-                try:
-                    # 1. Проверяем нативный баланс
-                    current_balance = await StateManager.get_balance(
-                        session, rpc, keypair.pubkey()
-                    )
-                    if current_balance is not None:
-                        stats["last_balance"] = current_balance
-
-                        # 2. Если нативный SOL падает ниже 0.01 SOL (опасно!)
-                        if current_balance < 0.01:
-                            logger.warning(
-                                f"⚠️ Native SOL critically low ({current_balance} SOL). Checking wSOL for unwrap..."
+                        # Fix 1 (wSOL Death Spiral): If the atomic arb path just closed wSOL
+                        # inside the transaction, skip the standalone close to avoid races + gas waste.
+                        global WSOL_JUST_CLOSED_ATOMICALLY
+                        if (
+                            time.time() - WSOL_JUST_CLOSED_ATOMICALLY
+                            < WSOL_CLOSE_COOLDOWN
+                        ):
+                            logger.debug(
+                                f"🔓 wSOL was atomically closed {time.time() - WSOL_JUST_CLOSED_ATOMICALLY:.0f}s ago — "
+                                f"skipping standalone unwrap to prevent duplicate close"
                             )
+                            continue  # keep sleeping; the atomic path already replenished native SOL
 
-                            # Fix 1 (wSOL Death Spiral): If the atomic arb path just closed wSOL
-                            # inside the transaction, skip the standalone close to avoid races + gas waste.
-                            global WSOL_JUST_CLOSED_ATOMICALLY
-                            if (
-                                time.time() - WSOL_JUST_CLOSED_ATOMICALLY
-                                < WSOL_CLOSE_COOLDOWN
-                            ):
-                                logger.debug(
-                                    f"🔓 wSOL was atomically closed {time.time() - WSOL_JUST_CLOSED_ATOMICALLY:.0f}s ago — "
-                                    f"skipping standalone unwrap to prevent duplicate close"
-                                )
-                                continue  # keep sleeping; the atomic path already replenished native SOL
+                        # Проверяем баланс wSOL ATA
+                        payload = {
+                            "jsonrpc": "2.0",
+                            "id": 1,
+                            "method": "getTokenAccountBalance",
+                            "params": [str(wsol_ata)],
+                        }
+                        async with session.post(
+                            rpc.get_rpc(), json=payload
+                        ) as resp:
+                            data = orjson.loads(await resp.read())
+                            if "result" in data and "value" in data["result"]:
+                                wsol_amount = int(data["result"]["value"]["amount"])
 
-                            # Проверяем баланс wSOL ATA
-                            payload = {
+                                # Если скопили хотя бы 0.005 wSOL профита - конвертируем в нативный
+                                if wsol_amount > 5_000_000:
+                                    logger.info(
+                                        f"🔄 Unwrapping {wsol_amount / 1e9} wSOL to Native SOL to replenish gas!"
+                                    )
+
+                                    # Закрытие wSOL ATA автоматически переводит все средства в Native SOL
+                                    close_ix = close_account(
+                                        CloseAccountParams(
+                                            program_id=TOKEN_PROGRAM_ID,
+                                            account=wsol_ata,
+                                            dest=keypair.pubkey(),
+                                            owner=keypair.pubkey(),
+                                            signers=[],
+                                        )
+                                    )
+
+                                    # Fix 4: Add Priority Fee so TX doesn't hang in mempool for hours
+                                    cu_limit_ix = set_compute_unit_limit(50_000)
+                                    cu_price_ix = set_compute_unit_price(
+                                        100_000
+                                    )  # ~0.000005 SOL priority fee
+                                    blockhash = await get_current_blockhash(
+                                        session, rpc.get_rpc()
+                                    )
+                                    msg = MessageV0.try_compile(
+                                        keypair.pubkey(),
+                                        [cu_limit_ix, cu_price_ix, close_ix],
+                                        [],
+                                        Hash.from_string(blockhash),
+                                    )
+                                    tx = VersionedTransaction(msg, [keypair])
+                                    tx_b64 = base64.b64encode(bytes(tx)).decode(
+                                        "ascii"
+                                    )
+                                    await session.post(
+                                        rpc.get_rpc(),
+                                        json={
+                                            "jsonrpc": "2.0",
+                                            "id": 1,
+                                            "method": "sendTransaction",
+                                            "params": [tx_b64],
+                                        },
+                                    )
+                                    logger.info(
+                                        f"✅ wSOL successfully unwrapped to native SOL"
+                                    )
+
+                                    # ATA будет пересоздана автоматически при следующем арбитраже через CREATE_ATA_FUNCTION
+
+                        # 🔴 THREAT #1 FIX: Auto-swap USDC → Native SOL when gas runs low
+                        # After wSOL unwrap, re-check native balance before USDC swap
+                        native_after_unwrap = await StateManager.get_balance(
+                            session, rpc, keypair.pubkey()
+                        )
+                        if native_after_unwrap is not None and native_after_unwrap < 0.005:
+                            USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+                            usdc_ata = get_associated_token_address(
+                                keypair.pubkey(), Pubkey.from_string(USDC_MINT)
+                            )
+                            usdc_payload = {
                                 "jsonrpc": "2.0",
                                 "id": 1,
                                 "method": "getTokenAccountBalance",
-                                "params": [str(wsol_ata)],
+                                "params": [str(usdc_ata)],
                             }
                             async with session.post(
-                                rpc.get_rpc(), json=payload
-                            ) as resp:
-                                data = orjson.loads(await resp.read())
-                                if "result" in data and "value" in data["result"]:
-                                    wsol_amount = int(data["result"]["value"]["amount"])
-
-                                    # Если скопили хотя бы 0.005 wSOL профита - конвертируем в нативный
-                                    if wsol_amount > 5_000_000:
+                                rpc.get_rpc(), json=usdc_payload
+                            ) as usdc_resp:
+                                usdc_data = await usdc_resp.json()
+                                if (
+                                    "result" in usdc_data
+                                    and "value" in usdc_data["result"]
+                                ):
+                                    usdc_amount = int(
+                                        usdc_data["result"]["value"]["amount"]
+                                    )
+                                    # Need at least $2 in USDC to cover aggregated coins
+                                    if usdc_amount > 2_000_000:
                                         logger.info(
-                                            f"🔄 Unwrapping {wsol_amount / 1e9} wSOL to Native SOL to replenish gas!"
+                                            f"🔄 GAS REPLENISHMENT: Swapping exactly 2 USDC ({2_000_000} micro-USDC) to Native SOL "
+                                            f"(USDC balance: {usdc_amount / 1_000_000:.2f})"
                                         )
-
-                                        # Закрытие wSOL ATA автоматически переводит все средства в Native SOL
-                                        close_ix = close_account(
-                                            CloseAccountParams(
-                                                program_id=TOKEN_PROGRAM_ID,
-                                                account=wsol_ata,
-                                                dest=keypair.pubkey(),
-                                                owner=keypair.pubkey(),
-                                                signers=[],
+                                        try:
+                                            from src.ingest.jupiter_api_client import (
+                                                JupiterClient,
+                                                QUOTE_API_URL,
+                                                SWAP_API_URL,
                                             )
-                                        )
 
-                                        # Fix 4: Add Priority Fee so TX doesn't hang in mempool for hours
-                                        cu_limit_ix = set_compute_unit_limit(50_000)
-                                        cu_price_ix = set_compute_unit_price(
-                                            100_000
-                                        )  # ~0.000005 SOL priority fee
-                                        blockhash = await get_current_blockhash(
-                                            session, rpc.get_rpc()
-                                        )
-                                        msg = MessageV0.try_compile(
-                                            keypair.pubkey(),
-                                            [cu_limit_ix, cu_price_ix, close_ix],
-                                            [],
-                                            Hash.from_string(blockhash),
-                                        )
-                                        tx = VersionedTransaction(msg, [keypair])
-                                        tx_b64 = base64.b64encode(bytes(tx)).decode(
-                                            "ascii"
-                                        )
-                                        await session.post(
-                                            rpc.get_rpc(),
-                                            json={
-                                                "jsonrpc": "2.0",
-                                                "id": 1,
-                                                "method": "sendTransaction",
-                                                "params": [tx_b64],
-                                            },
-                                        )
-                                        logger.info(
-                                            f"✅ wSOL successfully unwrapped to native SOL"
-                                        )
+                                            async with JupiterClient(session=session) as jup:
+                                                # Step 1: Get quote for USDC → SOL swap (exactly 2 USDC)
+                                                quote = await jup.get_quote(
+                                                    input_mint=USDC_MINT,
+                                                    output_mint="So11111111111111111111111111111111111111112",
+                                                    amount=2_000_000,  # Exactly 2 USDC
+                                                    slippage_bps=100,  # 1% slippage tolerance
+                                                )
+                                                if "error" in quote:
+                                                    logger.error(
+                                                        f"❌ Jupiter quote failed for USDC→SOL swap: {quote['error']}"
+                                                    )
+                                                    continue
 
-                                        # ATA будет пересоздана автоматически при следующем арбитраже через CREATE_ATA_FUNCTION
+                                                # Step 2: Build signed swap transaction
+                                                swap_tx = await jup.get_swap_transaction(
+                                                    quote,
+                                                    str(keypair.pubkey()),
+                                                    wrap_unwrap_sol=False,
+                                                )
+                                                if "error" in swap_tx:
+                                                    logger.error(
+                                                        f"❌ Jupiter swap tx failed for USDC→SOL swap: {swap_tx['error']}"
+                                                    )
+                                                    continue
 
-                            # 🔴 THREAT #1 FIX: Auto-swap USDC → Native SOL when gas runs low
-                            # After wSOL unwrap, re-check native balance before USDC swap
-                            native_after_unwrap = await StateManager.get_balance(
-                                session, rpc, keypair.pubkey()
-                            )
-                            if native_after_unwrap is not None and native_after_unwrap < 0.005:
-                                USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-                                usdc_ata = get_associated_token_address(
-                                    keypair.pubkey(), Pubkey.from_string(USDC_MINT)
-                                )
-                                usdc_payload = {
-                                    "jsonrpc": "2.0",
-                                    "id": 1,
-                                    "method": "getTokenAccountBalance",
-                                    "params": [str(usdc_ata)],
-                                }
-                                async with session.post(
-                                    rpc.get_rpc(), json=usdc_payload
-                                ) as usdc_resp:
-                                    usdc_data = await usdc_resp.json()
-                                    if (
-                                        "result" in usdc_data
-                                        and "value" in usdc_data["result"]
-                                    ):
-                                        usdc_amount = int(
-                                            usdc_data["result"]["value"]["amount"]
-                                        )
-                                        # Need at least $2 in USDC to cover aggregated coins
-                                        if usdc_amount > 2_000_000:
-                                            logger.info(
-                                                f"🔄 GAS REPLENISHMENT: Swapping exactly 2 USDC ({2_000_000} micro-USDC) to Native SOL "
-                                                f"(USDC balance: {usdc_amount / 1_000_000:.2f})"
+                                                # Step 3: Decode the versioned transaction
+                                                signed_tx = (
+                                                    JupiterClient.decode_swap_transaction(
+                                                        swap_tx
+                                                    )
+                                                )
+                                                if signed_tx is None:
+                                                    logger.error(
+                                                        "❌ Failed to decode Jupiter swap transaction"
+                                                    )
+                                                    continue
+
+                                                # Step 4: Resign with our keypair (Jupiter tx is not yet signed)
+                                                try:
+                                                    signed_tx = VersionedTransaction(
+                                                        signed_tx.message,
+                                                        [keypair],
+                                                    )
+                                                except Exception as resign_err:
+                                                    logger.error(
+                                                        f"❌ Failed to re-sign Jupiter tx: {resign_err}"
+                                                    )
+                                                    continue
+
+                                                # Step 5: Broadcast via direct RPC (NOT Jito — avoid front-run)
+                                                tx_b64_swap = base64.b64encode(
+                                                    bytes(signed_tx)
+                                                ).decode("ascii")
+                                                send_response = await session.post(
+                                                    rpc.get_rpc(),
+                                                    json={
+                                                        "jsonrpc": "2.0",
+                                                        "id": 1,
+                                                        "method": "sendTransaction",
+                                                        "params": [
+                                                            tx_b64_swap,
+                                                            {
+                                                                "skipPreflight": False,
+                                                                "maxRetries": 3,
+                                                            },
+                                                        ],
+                                                    },
+                                                )
+                                                if send_response.status == 200:
+                                                    swap_result = (
+                                                        await send_response.json()
+                                                    )
+                                                    logger.info(
+                                                        f"✅ GAS REFILL: USDC→SOL swap relayed: "
+                                                        f"{swap_result}"
+                                                    )
+                                                else:
+                                                    logger.error(
+                                                        f"❌ Swap broadcast returned "
+                                                        f"HTTP {send_response.status}: "
+                                                        f"{await send_response.text()}"
+                                                    )
+                                        except Exception as jup_err:
+                                            logger.error(
+                                                f"❌ USDC→SOL swap failed: {jup_err}"
                                             )
-                                            try:
-                                                from src.ingest.jupiter_api_client import (
-                                                    JupiterClient,
-                                                    QUOTE_API_URL,
-                                                    SWAP_API_URL,
-                                                )
+            except Exception as e:
+                logger.debug(f"Balance listener/unwrap error: {e}")
 
-                                                async with JupiterClient(session=session) as jup:
-                                                    # Step 1: Get quote for USDC → SOL swap (exactly 2 USDC)
-                                                    quote = await jup.get_quote(
-                                                        input_mint=USDC_MINT,
-                                                        output_mint="So11111111111111111111111111111111111111112",
-                                                        amount=2_000_000,  # Exactly 2 USDC
-                                                        slippage_bps=100,  # 1% slippage tolerance
-                                                    )
-                                                    if "error" in quote:
-                                                        logger.error(
-                                                            f"❌ Jupiter quote failed for USDC→SOL swap: {quote['error']}"
-                                                        )
-                                                        continue
+            await asyncio.sleep(120)
 
-                                                    # Step 2: Build signed swap transaction
-                                                    swap_tx = await jup.get_swap_transaction(
-                                                        quote,
-                                                        str(keypair.pubkey()),
-                                                        wrap_unwrap_sol=False,
-                                                    )
-                                                    if "error" in swap_tx:
-                                                        logger.error(
-                                                            f"❌ Jupiter swap tx failed for USDC→SOL swap: {swap_tx['error']}"
-                                                        )
-                                                        continue
+    asyncio.create_task(wallet_balance_listener())
 
-                                                    # Step 3: Decode the versioned transaction
-                                                    signed_tx = (
-                                                        JupiterClient.decode_swap_transaction(
-                                                            swap_tx
-                                                        )
-                                                    )
-                                                    if signed_tx is None:
-                                                        logger.error(
-                                                            "❌ Failed to decode Jupiter swap transaction"
-                                                        )
-                                                        continue
+    health_monitor = BankHealthMonitor(
+        rpc,
+        MARGINFI_BANKS["So11111111111111111111111111111111111111112"],
+        MARGINFI_BANKS["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"],
+    )
+    await health_monitor.start()
 
-                                                    # Step 4: Resign with our keypair (Jupiter tx is not yet signed)
-                                                    try:
-                                                        signed_tx = VersionedTransaction(
-                                                            signed_tx.message,
-                                                            [keypair],
-                                                        )
-                                                    except Exception as resign_err:
-                                                        logger.error(
-                                                            f"❌ Failed to re-sign Jupiter tx: {resign_err}"
-                                                        )
-                                                        continue
-
-                                                    # Step 5: Broadcast via direct RPC (NOT Jito — avoid front-run)
-                                                    tx_b64_swap = base64.b64encode(
-                                                        bytes(signed_tx)
-                                                    ).decode("ascii")
-                                                    send_response = await session.post(
-                                                        rpc.get_rpc(),
-                                                        json={
-                                                            "jsonrpc": "2.0",
-                                                            "id": 1,
-                                                            "method": "sendTransaction",
-                                                            "params": [
-                                                                tx_b64_swap,
-                                                                {
-                                                                    "skipPreflight": False,
-                                                                    "maxRetries": 3,
-                                                                },
-                                                            ],
-                                                        },
-                                                    )
-                                                    if send_response.status == 200:
-                                                        swap_result = (
-                                                            await send_response.json()
-                                                        )
-                                                        logger.info(
-                                                            f"✅ GAS REFILL: USDC→SOL swap relayed: "
-                                                            f"{swap_result}"
-                                                        )
-                                                    else:
-                                                        logger.error(
-                                                            f"❌ Swap broadcast returned "
-                                                            f"HTTP {send_response.status}: "
-                                                            f"{await send_response.text()}"
-                                                        )
-                                            except Exception as jup_err:
-                                                logger.error(
-                                                    f"❌ USDC→SOL swap failed: {jup_err}"
-                                                )
-                except Exception as e:
-                    logger.debug(f"Balance listener/unwrap error: {e}")
-
-                await asyncio.sleep(120)
-
-        asyncio.create_task(wallet_balance_listener())
-
-        health_monitor = BankHealthMonitor(
-            rpc,
-            MARGINFI_BANKS["So11111111111111111111111111111111111111112"],
-            MARGINFI_BANKS["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"],
+    # 8. Warm-up
+    initial_balance = None
+    while initial_balance is None:
+        initial_balance = await StateManager.get_balance(
+            session, rpc, keypair.pubkey()
         )
-        await health_monitor.start()
+        if initial_balance is None:
+            logger.warning("⏳ Ожидание готовности RPC... Повтор через 5 секунд")
+            await asyncio.sleep(5)
 
-        # 8. Warm-up
-        initial_balance = None
-        while initial_balance is None:
-            initial_balance = await StateManager.get_balance(
-                session, rpc, keypair.pubkey()
-            )
-            if initial_balance is None:
-                logger.warning("⏳ Ожидание готовности RPC... Повтор через 5 секунд")
-                await asyncio.sleep(5)
+    stats["last_balance"] = initial_balance
+    stats["virtual_balance"] = (
+        initial_balance  # Fix 44: seed virtual balance from actual balance
+    )
+    stats["initial_balance"] = initial_balance
 
-        stats["last_balance"] = initial_balance
-        stats["virtual_balance"] = (
-            initial_balance  # Fix 44: seed virtual balance from actual balance
-        )
-        stats["initial_balance"] = initial_balance
+    # Jupiter Warm-up
+    try:
+        url = "https://quote-api.jup.ag/v6/quote"
+        params = {
+            "inputMint": "So11111111111111111111111111111111111111112",
+            "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "amount": "100000000",
+            "slippageBps": "50",
+            "onlyDirectRoutes": "true",        # Task 14: force direct routes for micro-balance safety
+            "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
+            "maxAccounts": "8",
+        }
+        async with session.get(url, params=params) as resp:
+            if resp.status == 200:
+                logger.debug("✅ Jupiter warm-up successful")
+    except:
+        pass
 
-        # Jupiter Warm-up
-        try:
-            url = "https://quote-api.jup.ag/v6/quote"
-            params = {
-                "inputMint": "So11111111111111111111111111111111111111112",
-                "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-                "amount": "100000000",
-                "slippageBps": "50",
-                "onlyDirectRoutes": "true",        # Task 14: force direct routes for micro-balance safety
-                "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
-                "maxAccounts": "8",
-            }
-            async with session.get(url, params=params) as resp:
-                if resp.status == 200:
-                    logger.debug("✅ Jupiter warm-up successful")
-        except:
-            pass
+    # ── TASK 1: ATA Ghosting Pre-Warm ─────────────────────────────────────────
+    # DISABLED for micro-capital (0.017 SOL): creating 5 ATAs costs ~0.01 SOL
+    # in rent and hits STRICT_GAS_TANK immediately, freezing the bot before
+    # the first trade. Jupiter swap-instructions (setupInstructions) already
+    # create ATAs atomic-ally and recover the rent when the TX finalizes.
+    # await warmup_golden_atas(session, rpc.get_rpc(), keypair.pubkey())
 
-        # ── TASK 1: ATA Ghosting Pre-Warm ─────────────────────────────────────────
-        # DISABLED for micro-capital (0.017 SOL): creating 5 ATAs costs ~0.01 SOL
-        # in rent and hits STRICT_GAS_TANK immediately, freezing the bot before
-        # the first trade. Jupiter swap-instructions (setupInstructions) already
-        # create ATAs atomic-ally and recover the rent when the TX finalizes.
-        # await warmup_golden_atas(session, rpc.get_rpc(), keypair.pubkey())
+    # ── TASK 3: WebSocket Liveness Guard (StaleStreamGuard) ───────────────────
+    # Monitors stats["current_slot"] (updated by blockhash_updater every 2 s).
+    # If no slot update arrives within STALE_SLOT_TIMEOUT, force-reconnects
+    # HeliusWebhookHandler and PoolStateManager so the bot recovers from a
+    # ghosted / frozen WebSocket within milliseconds, not system timeout seconds.
+    STALE_SLOT_TIMEOUT = 5.0  # seconds
+    stats["_sg_last_slot"] = stats.get("current_slot", 0)
+    stats["_sg_last_slot_ts"] = time.time()
 
-        # ── TASK 3: WebSocket Liveness Guard (StaleStreamGuard) ───────────────────
-        # Monitors stats["current_slot"] (updated by blockhash_updater every 2 s).
-        # If no slot update arrives within STALE_SLOT_TIMEOUT, force-reconnects
-        # HeliusWebhookHandler and PoolStateManager so the bot recovers from a
-        # ghosted / frozen WebSocket within milliseconds, not system timeout seconds.
-        STALE_SLOT_TIMEOUT = 5.0  # seconds
-        stats["_sg_last_slot"] = stats.get("current_slot", 0)
-        stats["_sg_last_slot_ts"] = time.time()
+    async def _stale_stream_guard():
+        global helius_webhook_handler, pool_state_manager, cached_blockhash
+        while True:
+            try:
+                await asyncio.sleep(0.25)
+                now_slot = stats.get("current_slot", 0)
+                last_tracked = stats.get("_sg_last_slot", 0)
+                last_ts = stats.get("_sg_last_slot_ts", time.time())
 
-        async def _stale_stream_guard():
-            global helius_webhook_handler, pool_state_manager, cached_blockhash
-            while True:
-                try:
-                    await asyncio.sleep(0.25)
-                    now_slot = stats.get("current_slot", 0)
-                    last_tracked = stats.get("_sg_last_slot", 0)
-                    last_ts = stats.get("_sg_last_slot_ts", time.time())
-
-                    if now_slot == last_tracked and last_tracked != 0:
-                        stale_secs = time.time() - last_ts
-                        if stale_secs > STALE_SLOT_TIMEOUT:
-                            logger.critical(
-                                f"🚨 STALE STREAM GUARD: slot={now_slot} unchanged for {stale_secs:.1f}s — "
-                                "clearing blockhash cache and restarting handlers due to validator slot-skip."
-                            )
-                            # Принудительно сбрасываем кэш блокхеша, чтобы исключить BlockhashExpired
-                            cached_blockhash = None
-                            # Reconnect HeliusWebhookHandler
-                            if helius_webhook_handler:
-                                try:
-                                    await helius_webhook_handler.stop()
-                                    await asyncio.sleep(0.5)
-                                    asyncio.create_task(helius_webhook_handler.start())
-                                except Exception:
-                                    pass
-                            # Reset tracker so we don't loop-spam restarts
-                            stats["_sg_last_slot_ts"] = time.time()
-                    else:
-                        stats["_sg_last_slot"] = now_slot
-                        stats["_sg_last_slot_ts"] = time.time()
-                except Exception as _sg_err:
-                    logger.debug(f"StaleStreamGuard tick error: {_sg_err}")
-                    await asyncio.sleep(0.25)
-
-        asyncio.create_task(_stale_stream_guard())
-
-        # Priority queue processor for AI-scored opportunities
-        async def priority_queue_processor():
-            """Реактивный обработчик очереди: 0 мс задержки на запуск транзакции."""
-            logger.info("🧠 Реактивный процессор очереди запущен (0ms polling penalty)")
-            while True:
-                try:
-                    # Метод get_next_opportunity_async засыпает и просыпается по прерыванию,
-                    # исключая холостой sleep(0.1) из горячего пути
-                    opportunity = await priority_queue.get_next_opportunity_async()
-
-                    # Fix: Jito RTT Protection - measure network latency before executing
-                    try:
-                        jito_rtt = await jito_executor.get_jito_rtt_ms()
-                    except Exception:
-                        jito_rtt = 0.0
-
-                    if jito_rtt > 500:
-                        logger.warning(f"🐌 Jito Engine Congested (RTT {jito_rtt:.0f}ms). Entering safety cooldown...")
-                        await asyncio.sleep(5.0)
-                        continue
-
-                    # Phase 24: Process high-priority opportunities concurrently
-                    # Removing 'await' allows multiple simulations to run in parallel.
-                    asyncio.create_task(
-                        execute_priority_opportunity(
-                            opportunity,
-                            session,
-                            cfg,
-                            rpc,
-                            keypair,
-                            jito_executor,
-                            None,
-                            flywheel_scaler,
-                            data_aggregator,
-                            alt_manager=alt_manager,
-                            execution_router=execution_router,
-                            flash_pivot_engine=flash_pivot_engine,
-                            blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
+                if now_slot == last_tracked and last_tracked != 0:
+                    stale_secs = time.time() - last_ts
+                    if stale_secs > STALE_SLOT_TIMEOUT:
+                        logger.critical(
+                            f"🚨 STALE STREAM GUARD: slot={now_slot} unchanged for {stale_secs:.1f}s — "
+                            "clearing blockhash cache and restarting handlers due to validator slot-skip."
                         )
-                    )
-                except Exception as e:
-                    logger.error(f"Priority queue processor error: {e}")
-                    await asyncio.sleep(1)
+                        # Принудительно сбрасываем кэш блокхеша, чтобы исключить BlockhashExpired
+                        cached_blockhash = None
+                        # Reconnect HeliusWebhookHandler
+                        if helius_webhook_handler:
+                            try:
+                                await helius_webhook_handler.stop()
+                                await asyncio.sleep(0.5)
+                                asyncio.create_task(helius_webhook_handler.start())
+                            except Exception:
+                                pass
+                        # Reset tracker so we don't loop-spam restarts
+                        stats["_sg_last_slot_ts"] = time.time()
+                else:
+                    stats["_sg_last_slot"] = now_slot
+                    stats["_sg_last_slot_ts"] = time.time()
+            except Exception as _sg_err:
+                logger.debug(f"StaleStreamGuard tick error: {_sg_err}")
+                await asyncio.sleep(0.25)
 
-        # Health Monitor for MarginFi banks
-        health_monitor = BankHealthMonitor(
-            rpc,
-            MARGINFI_BANKS["So11111111111111111111111111111111111111112"],
-            MARGINFI_BANKS["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"],
-        )
-        await health_monitor.start()
+    asyncio.create_task(_stale_stream_guard())
 
-        # 9. Main Processing Loops
-        queue = asyncio.PriorityQueue(maxsize=100)
+    # Priority queue processor for AI-scored opportunities
+    async def priority_queue_processor():
+        """Реактивный обработчик очереди: 0 мс задержки на запуск транзакции."""
+        logger.info("🧠 Реактивный процессор очереди запущен (0ms polling penalty)")
+        while True:
+            try:
+                # Метод get_next_opportunity_async засыпает и просыпается по прерыванию,
+                # исключая холостой sleep(0.1) из горячего пути
+                opportunity = await priority_queue.get_next_opportunity_async()
 
-        tasks = [
-            asyncio.create_task(update_prices(session, cfg)),
-            # asyncio.create_task(blockhash_updater(session, lambda: rpc.get_rpc())),
-            # DISABLED: stable_scanner — RPS-heavy polling (Helius 429 prevention)
-            # asyncio.create_task(stable_scanner(queue, cfg)),        # Fast stables (1.5s)
-            asyncio.create_task(
-                lst_scanner(queue, cfg)
-            ),  # Loop B: LST arbitrage (2.0s)
-            asyncio.create_task(
-                xstocks_scanner(queue, cfg)
-            ),  # Loop C: xStocks priority (5.0s)
-            # DISABLED: rwa_rest_scanner — RPS-heavy polling (15.0s interval)
-            # asyncio.create_task(rwa_rest_scanner(queue, cfg)),
-            # DISABLED: dexscreener_scanner — RPS-heavy external API polling
-            # asyncio.create_task(dexscreener_scanner(queue, session, cfg))
-            asyncio.create_task(
-                priority_queue_processor()
-            ),  # ENABLED: AI-powered priority processor
-            *[
+                # Fix: Jito RTT Protection - measure network latency before executing
+                try:
+                    jito_rtt = await jito_executor.get_jito_rtt_ms()
+                except Exception:
+                    jito_rtt = 0.0
+
+                if jito_rtt > 500:
+                    logger.warning(f"🐌 Jito Engine Congested (RTT {jito_rtt:.0f}ms). Entering safety cooldown...")
+                    await asyncio.sleep(5.0)
+                    continue
+
+                # Phase 24: Process high-priority opportunities concurrently
+                # Removing 'await' allows multiple simulations to run in parallel.
                 asyncio.create_task(
-                    worker(
-                        queue,
+                    execute_priority_opportunity(
+                        opportunity,
                         session,
                         cfg,
                         rpc,
                         keypair,
-                        limiters,
                         jito_executor,
-                        arbitrage_scorer,
-                        priority_queue,
+                        None,
+                        flywheel_scaler,
+                        data_aggregator,
                         alt_manager=alt_manager,
+                        execution_router=execution_router,
+                        flash_pivot_engine=flash_pivot_engine,
+                        blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
                     )
                 )
-                for _ in range(cfg.WORKER_COUNT)
-            ],
-            # ULTRA ARB MASTER — background tasks commented out (components disabled)
-            # ULTRA ARB - Market Expansion Tasks
-            # asyncio.create_task(wrapper_arb_background_scanner()),
-            # asyncio.create_task(volatility_monitor_background()),
-            # ULTRA ARB - Stable×Stable & Lending Rate Tasks
-            # asyncio.create_task(receipt_arb_background_scanner()),
-            # ULTRA ARB - Production-Ready Tasks
-            asyncio.create_task(dust_sweep_background()),
-            asyncio.create_task(cleanup_temporary_tokens()),
-            # Virtual Balance Reconciler — re-anchors virtual_balance every 30 s
-            asyncio.create_task(
-                balance_reconciler(session, rpc.get_rpc(), keypair, jito_executor)
-            ),
-        ]
+            except Exception as e:
+                logger.error(f"Priority queue processor error: {e}")
+                await asyncio.sleep(1)
 
-        # Yellowstone gRPC connect is outside the list literal (cannot use bare `if` inside)
-        if yellowstone_stream is not None:
-            asyncio.create_task(yellowstone_stream.connect())
-        # LST Depeg Flash-Arb Scanner (primary strategy)
-        if cfg.LST_DEPEG_ENABLED:
-            lst_task = asyncio.create_task(
-                lst_depeg_scanner(
+    # 9. Main Processing Loops
+    queue = asyncio.PriorityQueue(maxsize=100)
+
+    tasks = [
+        asyncio.create_task(update_prices(session, cfg)),
+        # asyncio.create_task(blockhash_updater(session, lambda: rpc.get_rpc())),
+        # DISABLED: stable_scanner — RPS-heavy polling (Helius 429 prevention)
+        # asyncio.create_task(stable_scanner(queue, cfg)),        # Fast stables (1.5s)
+        asyncio.create_task(
+            lst_scanner(queue, cfg)
+        ),  # Loop B: LST arbitrage (2.0s)
+        asyncio.create_task(
+            xstocks_scanner(queue, cfg)
+        ),  # Loop C: xStocks priority (5.0s)
+        # DISABLED: rwa_rest_scanner — RPS-heavy polling (15.0s interval)
+        # asyncio.create_task(rwa_rest_scanner(queue, cfg)),
+        # DISABLED: dexscreener_scanner — RPS-heavy external API polling
+        # asyncio.create_task(dexscreener_scanner(queue, session, cfg))
+        asyncio.create_task(
+            priority_queue_processor()
+        ),  # ENABLED: AI-powered priority processor
+        *[
+            asyncio.create_task(
+                worker(
+                    queue,
                     session,
                     cfg,
                     rpc,
                     keypair,
+                    limiters,
                     jito_executor,
-                    lst_webhook_trigger,
-                    blockhash_mgr=blockhash_mgr,
+                    arbitrage_scorer,
+                    priority_queue,
+                    alt_manager=alt_manager,
                 )
             )
-            tasks.append(lst_task)
-            logger.debug("🌊 LST Depeg Flash-Arb Scanner ENABLED (Blue Ocean)")
-        else:
-            logger.debug("ℹ️ LST Depeg Flash-Arb Scanner DISABLED")
+            for _ in range(cfg.WORKER_COUNT)
+        ],
+        # ULTRA ARB MASTER — background tasks commented out (components disabled)
+        # ULTRA ARB - Market Expansion Tasks
+        # asyncio.create_task(wrapper_arb_background_scanner()),
+        # asyncio.create_task(volatility_monitor_background()),
+        # ULTRA ARB - Stable×Stable & Lending Rate Tasks
+        # asyncio.create_task(receipt_arb_background_scanner()),
+        # ULTRA ARB - Production-Ready Tasks
+        asyncio.create_task(dust_sweep_background()),
+        asyncio.create_task(cleanup_temporary_tokens()),
+        # Virtual Balance Reconciler — re-anchors virtual_balance every 30 s
+        asyncio.create_task(
+            balance_reconciler(session, rpc.get_rpc(), keypair, jito_executor)
+        ),
+    ]
 
-        # Kamino Flash-Liquidation Scanner (FROZEN: Red Ocean)
-        if cfg.KAMINO_LIQUIDATION_ENABLED:
-            kamino_task = asyncio.create_task(
-                kamino_liquidation_scanner(session, cfg, rpc, keypair, jito_executor)
+    # Yellowstone gRPC connect is outside the list literal (cannot use bare `if` inside)
+    if yellowstone_stream is not None:
+        asyncio.create_task(yellowstone_stream.connect())
+    # LST Depeg Flash-Arb Scanner (primary strategy)
+    if cfg.LST_DEPEG_ENABLED:
+        lst_task = asyncio.create_task(
+            lst_depeg_scanner(
+                session,
+                cfg,
+                rpc,
+                keypair,
+                jito_executor,
+                lst_webhook_trigger,
+                blockhash_mgr=blockhash_mgr,
             )
-            tasks.append(kamino_task)
-            logger.debug("🏦 Kamino Flash-Liquidation Scanner ENABLED")
-        else:
-            logger.info(
-                "❌ Kamino Flash-Liquidation Scanner FROZEN (Red Ocean competition)"
-            )
+        )
+        tasks.append(lst_task)
+        logger.debug("🌊 LST Depeg Flash-Arb Scanner ENABLED (Blue Ocean)")
+    else:
+        logger.debug("ℹ️ LST Depeg Flash-Arb Scanner DISABLED")
 
-        # LST Instant Unstake Arbitrage Scanner
-        if cfg.LST_UNSTAKE_ARB_ENABLED:
-            unstake_task = asyncio.create_task(
-                lst_unstake_arbitrage_scanner(session, cfg, rpc, keypair, jito_executor)
-            )
-            tasks.append(unstake_task)
-            logger.info("🔄 LST Instant Unstake Arbitrage Scanner ENABLED")
-        else:
-            logger.info("ℹ️ LST Instant Unstake Arbitrage Scanner DISABLED")
-
-        # Orderbook-AMM Bipartite Solver Scanner
-        if cfg.ORDERBOOK_AMM_ENABLED:
-            orderbook_task = asyncio.create_task(
-                orderbook_amm_scanner(session, cfg, rpc, keypair, jito_executor)
-            )
-            tasks.append(orderbook_task)
-            logger.info("🌊 Orderbook-AMM Arbitrage Scanner ENABLED (Blue Ocean)")
-        else:
-            logger.debug("ℹ️ Orderbook-AMM Arbitrage Scanner DISABLED")
-
-        # Add webhook task if enabled
-        if cfg.HELIUS_WEBHOOK_ENABLED:
-            tasks.append(webhook_task)
-
-        logger.debug(
-            f"🚀 Matrix Scanner launched! Initial Balance: {initial_balance} SOL"
+    # Kamino Flash-Liquidation Scanner (FROZEN: Red Ocean)
+    if cfg.KAMINO_LIQUIDATION_ENABLED:
+        kamino_task = asyncio.create_task(
+            kamino_liquidation_scanner(session, cfg, rpc, keypair, jito_executor)
+        )
+        tasks.append(kamino_task)
+        logger.debug("🏦 Kamino Flash-Liquidation Scanner ENABLED")
+    else:
+        logger.info(
+            "❌ Kamino Flash-Liquidation Scanner FROZEN (Red Ocean competition)"
         )
 
-        try:
-            while True:
-                await asyncio.sleep(10)
-                current_balance = await StateManager.get_balance(
-                    session, rpc, keypair.pubkey()
-                )
-                if current_balance is None:
-                    continue
+    # LST Instant Unstake Arbitrage Scanner
+    if cfg.LST_UNSTAKE_ARB_ENABLED:
+        unstake_task = asyncio.create_task(
+            lst_unstake_arbitrage_scanner(session, cfg, rpc, keypair, jito_executor, jito_bidding_manager, data_aggregator=data_aggregator)
+        )
+        tasks.append(unstake_task)
+        logger.info("🔄 LST Instant Unstake Arbitrage Scanner ENABLED")
+    else:
+        logger.info("ℹ️ LST Instant Unstake Arbitrage Scanner DISABLED")
 
-                stats["last_balance"] = current_balance
+    # Orderbook-AMM Bipartite Solver Scanner
+    if cfg.ORDERBOOK_AMM_ENABLED:
+        orderbook_task = asyncio.create_task(
+            orderbook_amm_scanner(session, cfg, rpc, keypair, jito_executor)
+        )
+        tasks.append(orderbook_task)
+        logger.info("🌊 Orderbook-AMM Arbitrage Scanner ENABLED (Blue Ocean)")
+    else:
+        logger.debug("ℹ️ Orderbook-AMM Arbitrage Scanner DISABLED")
 
-                # Задача 52: Локальный мониторинг (Health Check File)
-                try:
-                    with open("bot_health.json", "wb") as f:
-                        f.write(orjson.dumps(
-                            {
-                                "last_ping": time.time(),
-                                "balance": stats.get("last_balance"),
-                                "trades": stats.get("trades"),
-                            }
-                        ))
-                except Exception as e:
-                    logger.debug(f"Heartbeat write error: {e}")
+    logger.debug(
+        f"🚀 Matrix Scanner launched! Initial Balance: {initial_balance} SOL"
+    )
 
-                # Update metrics & Log Stats
-                working_cap = (
-                    current_balance - cfg.MIN_RESERVE_SOL
-                ) * cfg.TRADE_SIZE_PCT
-                bir = (
-                    (stats["bundle_successes"] / stats["bundle_send_attempts"]) * 100
-                    if stats["bundle_send_attempts"] > 0
-                    else 0
-                )
-                avg_sel = (
-                    sum(stats["state_to_execution_latencies"])
-                    / len(stats["state_to_execution_latencies"])
-                    if stats["state_to_execution_latencies"]
-                    else 0
-                )
-                flash_miss_rate = (
-                    (stats["flash_loan_miss_count"] / stats["flash_loan_attempt_count"])
-                    * 100
-                    if stats["flash_loan_attempt_count"] > 0
-                    else 0
-                )
+    try:
+        while True:
+            await asyncio.sleep(10)
+            current_balance = await StateManager.get_balance(
+                session, rpc, keypair.pubkey()
+            )
+            if current_balance is None:
+                continue
 
-                logger.debug(
-                    f"📊 [STATS] Balance: {current_balance:.8f} | WC: {working_cap:.8f} | Trades: {stats['trades']} | BIR: {bir:.1f}% | SEL: {avg_sel:.1f}ms"
-                )
+            stats["last_balance"] = current_balance
 
-                # Balance Guard + Fix 68: Dust Reserve
-                if current_balance < 0.005:
-                    logger.critical(
-                        "🚨 DEBT CEILING REACHED: 0.005 SOL native - closing ATAs, swapping to SOL, SHUTDOWN"
-                    )
-                    # 1. close non-essential ATAs 2. swap USDC->SOL 3. exit
-                    GLOBAL_STOP_EVENT.set()
-                    break
-                if current_balance < initial_balance * 0.3:
-                    logger.critical(
-                        f"🚨 BALANCE GUARD ACTIVATED: Balance {current_balance:.8f} SOL dropped below 30%"
-                    )
-                    await send_balance_alert(current_balance, initial_balance)
-                    break
-        finally:
-            logger.debug("🛑 Shutting down arbitrage engine components...")
-            # AsyncLogger: flush remaining trade records before exit
+            # Задача 52: Локальный мониторинг (Health Check File)
             try:
-                if "logger_obj" in locals():
-                    await logger_obj.stop()
-            except Exception as _log_stop_err:
-                logger.debug(f"Async trade logger stop error: {_log_stop_err}")
-            # Fix 77: Graceful session close
-            if "session" in locals() and session and not session.closed:
-                await session.close()
-            if "oracle_streams" in globals() and oracle_streams:
-                await oracle_streams.stop()
-            await jito_executor.stop()
-            await helius_webhook_handler.stop()
-            await data_aggregator.stop_batch_writer()
-            if cfg.JITO_SNIPER_ENABLED:
-                await jito_tip_manager.stop()
-                await jito_pool_listener.stop()
+                with open("bot_health.json", "wb") as f:
+                    f.write(orjson.dumps(
+                        {
+                            "last_ping": time.time(),
+                            "balance": stats.get("last_balance"),
+                            "trades": stats.get("trades"),
+                        }
+                    ))
+            except Exception as e:
+                logger.debug(f"Heartbeat write error: {e}")
+
+            # Update metrics & Log Stats
+            working_cap = (
+                current_balance - cfg.MIN_RESERVE_SOL
+            ) * cfg.TRADE_SIZE_PCT
+            bir = (
+                (stats["bundle_successes"] / stats["bundle_send_attempts"]) * 100
+                if stats["bundle_send_attempts"] > 0
+                else 0
+            )
+            avg_sel = (
+                sum(stats["state_to_execution_latencies"])
+                / len(stats["state_to_execution_latencies"])
+                if stats["state_to_execution_latencies"]
+                else 0
+            )
+            flash_miss_rate = (
+                (stats["flash_loan_miss_count"] / stats["flash_loan_attempt_count"])
+                * 100
+                if stats["flash_loan_attempt_count"] > 0
+                else 0
+            )
+
+            logger.debug(
+                f"📊 [STATS] Balance: {current_balance:.8f} | WC: {working_cap:.8f} | Trades: {stats['trades']} | BIR: {bir:.1f}% | SEL: {avg_sel:.1f}ms"
+            )
+
+            # Balance Guard + Fix 68: Dust Reserve
+            if current_balance < 0.005:
+                logger.critical(
+                    "🚨 DEBT CEILING REACHED: 0.005 SOL native - closing ATAs, swapping to SOL, SHUTDOWN"
+                )
+                # 1. close non-essential ATAs 2. swap USDC->SOL 3. exit
+                GLOBAL_STOP_EVENT.set()
+                break
+            if current_balance < initial_balance * 0.3:
+                logger.critical(
+                    f"🚨 BALANCE GUARD ACTIVATED: Balance {current_balance:.8f} SOL dropped below 30%"
+                )
+                await send_balance_alert(current_balance, initial_balance)
+                break
+    finally:
+        logger.debug("🛑 Shutting down arbitrage engine components...")
+        # AsyncLogger: flush remaining trade records before exit
+        try:
+            if "logger_obj" in locals():
+                await logger_obj.stop()
+        except Exception as _log_stop_err:
+            logger.debug(f"Async trade logger stop error: {_log_stop_err}")
+        # Fix 77: Graceful session close
+        if "session" in locals() and session and not session.closed:
+            await session.close()
+        if "oracle_streams" in globals() and oracle_streams:
+            await oracle_streams.stop()
+        await jito_executor.stop()
+        await helius_webhook_handler.stop()
+        await data_aggregator.stop_batch_writer()
+        if cfg.JITO_SNIPER_ENABLED:
+            await jito_tip_manager.stop()
+            await jito_pool_listener.stop()
 
 
 class StateManager:
     @staticmethod
-    async def get_balance(session, rpc_manager, pubkey):
+    async def get_balance_lamports(session, rpc_manager, pubkey):
         # Fix 72: Force confirmed commitment (never use processed)
         payload = {
             "jsonrpc": "2.0",
@@ -6566,7 +6584,7 @@ class StateManager:
                         data = orjson.loads(await resp.read())
                         if "result" in data:
                             logger.debug("✅ Баланс успешно получен")
-                            return data["result"]["value"] / 1e9
+                            return data["result"]["value"]
                     else:
                         error_text = await resp.text()
                         logger.warning(
@@ -6582,6 +6600,13 @@ class StateManager:
 
         logger.error("Все 3 попытки RPC провалились, возвращаем None")
         return None
+
+    @staticmethod
+    async def get_balance(session, rpc_manager, pubkey):
+        balance_lamports = await StateManager.get_balance_lamports(
+            session, rpc_manager, pubkey
+        )
+        return None if balance_lamports is None else balance_lamports / 1e9
 
 
 async def handle_oracle_lag_signal(

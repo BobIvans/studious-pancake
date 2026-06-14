@@ -29,6 +29,8 @@ class HeliusWebhookHandler:
         self.jito_shotgun = jito_shotgun  # Strat 3: Jito Shotgun — all-region broadcast on webhook signal
         self.app = web.Application()
         self.app.router.add_post('/webhook', self.handle_webhook)
+        self.app.router.add_get('/', self.handle_health)
+        self.app.router.add_get('/health', self.handle_health)
         self.runner = None
         # ── Event Loop Anti-Starvation: LIFO signal queue ────────────────────────
         # Latest signals are processed first. Signals older than 800ms are dropped.
@@ -78,20 +80,46 @@ class HeliusWebhookHandler:
             await self.runner.cleanup()
             logger.info("🛑 Helius webhook server stopped")
 
+    async def handle_health(self, request):
+        """Handle healthcheck requests from Cloudflare or monitoring tools."""
+        return web.json_response({"status": "alive", "timestamp": datetime.now().isoformat()})
+
     async def handle_webhook(self, request):
         """Handle incoming webhook from Helius."""
-        # ── Fix 2: Webhook Spoofing Protection ─────────────────────────────────────
-        # Helius sends Authorization header that must match our secret.
-        # This prevents botnets from sending fake arbitrage signals.
-        import hmac
+        # ── Fix 2: Flexible Helius Authorization ───────────────────────────────
+        # Helius Dashboard may send Authorization, while manual/webhook-ID callbacks
+        # can arrive with ?api-key=... or as trusted configured webhook IDs.
+        raw_bytes = await request.read()
+        try:
+            data = orjson.loads(raw_bytes) if raw_bytes else {}
+        except Exception:
+            logger.error("Invalid Helius webhook JSON payload")
+            return web.Response(status=400, text='Bad JSON')
 
+        query_webhook_id = request.query.get('webhookId') or request.query.get('webhook_id')
+        webhook_id = data.get('webhookId') or query_webhook_id or 'unknown'
         auth_header = request.headers.get('Authorization', '')
+        auth_query = request.query.get('api-key') or request.query.get('api_key') or ''
         expected_auth = os.getenv("HELIUS_WEBHOOK_SECRET", os.getenv("HELIUS_API_KEY", ""))
 
-        # Constant-time comparison to prevent timing attacks
-        if not auth_header or not expected_auth or not hmac.compare_digest(auth_header, expected_auth):
-            logger.critical(f"🚨 WEBHOOK SECURITY BREACH: Unauthorized POST attempt from {request.remote}")
+        auth_ok = bool(
+            expected_auth
+            and (
+                (auth_header and hmac.compare_digest(auth_header, expected_auth))
+                or (auth_query and hmac.compare_digest(auth_query, expected_auth))
+            )
+        )
+
+        # Task 17: Pure Code-Driven Webhook Authentication (No .env IDs)
+        # We rely strictly on auth_ok. If authorized, we accept the webhook regardless of ID.
+        if not auth_ok:
+            logger.critical(
+                f"🚨 WEBHOOK SECURITY BREACH: Unauthorized POST attempt from {request.remote} "
+                f"for webhook {webhook_id}"
+            )
             return web.Response(status=401, text='Unauthorized')
+
+        logger.debug(f"Authorized Helius webhook accepted: {webhook_id}")
 
         # Phase 49: Direct IP Webhook Injection Check
         host = request.host
@@ -106,15 +134,7 @@ class HeliusWebhookHandler:
         async with self._sem:
             try:
                 # orjson is ~5x faster than stdlib json (C extension)
-                raw_bytes = await request.read()
-                data = orjson.loads(raw_bytes)
                 webhook_id = data.get('webhookId', 'unknown')
-    
-                # Validate webhook ID
-                if not WebhookConfig.is_valid_webhook(webhook_id):
-                    logger.warning(f"⚠️ Received webhook from unknown ID: {webhook_id}")
-                    return web.Response(status=403, text='Unknown webhook ID')
-    
                 logger.info(f"📡 Received webhook {webhook_id} with {len(data.get('events', []))} events")
     
                 # Process each event — push into LIFO deque (newest-last → pop-last first)
@@ -174,13 +194,38 @@ class HeliusWebhookHandler:
                 await self._process_account_update(event, webhook_id)
 
             # Handle new token discovery (Pump.fun graduation or new Raydium pool)
-            elif event_type in ['SWAP', 'CREATE_POOL']:
+            elif event_type in ['SWAP', 'CREATE_POOL', 'ADD_LIQUIDITY']:
                 # Extract token from swap if not in our registry
                 token_transfers = event.get('tokenTransfers', [])
+                discovered_mints = []
                 for transfer in token_transfers:
                     mint = transfer.get('mint')
-                    if mint and self.on_token_discovery:
-                        await self.on_token_discovery(mint)
+                    if mint:
+                        discovered_mints.append(mint)
+                        if self.on_token_discovery:
+                            await self.on_token_discovery(mint)
+
+                # ── Task 5: High-Priority Routing for Liquidity Sniping ──────
+                # IDs: d0f65273-6427-48fc-b3cf-b70af928b0fc (ADD_LIQUIDITY)
+                #      27b50030-0a6c-4c2a-89f4-a7bd8c9ba618 (CREATE_POOL)
+                SNIPER_IDS = {
+                    "d0f65273-6427-48fc-b3cf-b70af928b0fc",
+                    "27b50030-0a6c-4c2a-89f4-a7bd8c9ba618"
+                }
+                
+                if webhook_id in SNIPER_IDS:
+                    logger.info(f"🎯 HIGH-PRIORITY SNIPE: event {event_type} on webhook {webhook_id}")
+                    if self.opportunity_callback:
+                        opportunity = {
+                            'type': 'liquidity_snipe_webhook',
+                            'description': f'Liquidity sniping signal: {event_type}',
+                            'mints': discovered_mints,
+                            'event_type': event_type,
+                            'webhook_id': webhook_id,
+                            'trigger_immediate_scan': True,
+                            'priority': 'high'
+                        }
+                        await self.opportunity_callback(opportunity, webhook_id)
 
                 # Check if this is an xStocks SWAP event
                 if event_type == 'SWAP' and self._is_xstocks_event(event):

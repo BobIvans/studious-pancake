@@ -322,7 +322,7 @@ class OracleStreams:
                     ticker = opportunity["ticker"]
 
                     # Check if we recently processed this signal
-                    now = asyncio.get_running_loop().time()
+                    now = time.time()
                     if ticker in self.active_signals:
                         if now - self.active_signals[ticker] < 5.0:  # 5 second cooldown
                             continue
@@ -426,7 +426,7 @@ class OracleStreams:
         """Get how old the oracle price is in seconds."""
         price = self.oracle_prices.get(token_symbol)
         if price:
-            return asyncio.get_running_loop().time() - price.timestamp
+            return time.time() - price.timestamp
         return None
 
     async def check_oracle_vs_amm(self, token_symbol: str, amm_price: Decimal,

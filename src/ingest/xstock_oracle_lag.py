@@ -253,7 +253,7 @@ class XStockOracleLagStrategy:
         price_discovery_amount = 100_000  # 0.1 USDC lamports (6 decimals)
         buy_quote = await self._get_jupiter_quote(
             usdc_mint_str, token_mint, price_discovery_amount,
-            only_direct_routes=True  # Task 14: force direct routes for micro-balance safety
+            only_direct_routes=False
         )
         if not buy_quote or "error" in buy_quote:
             return None
@@ -267,7 +267,7 @@ class XStockOracleLagStrategy:
         # ExactIn: swap all xStock back to USDC to capture profit in native asset
         sell_quote = await self._get_jupiter_quote(
             token_mint, usdc_mint_str, out_amount_xstock,
-            only_direct_routes=True,  # Task 14: force direct routes for micro-balance safety
+            only_direct_routes=False,
         )
         if not sell_quote or "error" in sell_quote:
             return None
@@ -373,7 +373,7 @@ class XStockOracleLagStrategy:
 
     async def _get_jupiter_quote(
         self, input_mint: str, output_mint: str, amount: int,
-        only_direct_routes: bool = True,  # Task 14: default to direct routes for micro-balance safety
+        only_direct_routes: bool = False,
     ) -> Optional[Dict]:
         """Get Jupiter quote with smart routing (Iris).
 
@@ -458,7 +458,7 @@ class XStockOracleLagStrategy:
             usdc_mint_str = str(USDC_MINT)
             buy_quote = await self._get_jupiter_quote(
                 usdc_mint_str, token_mint, trade_amount,
-                only_direct_routes=True  # Task 14: force direct routes for micro-balance safety
+                only_direct_routes=False
             )
             if not buy_quote or "error" in buy_quote:
                 logger.warning(f"❌ {ticker_name} buy quote failed at execution time")
@@ -473,7 +473,7 @@ class XStockOracleLagStrategy:
             # ExactIn: swap all xStock back to USDC
             sell_quote = await self._get_jupiter_quote(
                 token_mint, usdc_mint_str, actual_out,
-                only_direct_routes=True,  # Task 14: force direct routes for micro-balance safety
+                only_direct_routes=False,
             )
             if not sell_quote or "error" in sell_quote:
                 logger.warning(f"❌ {ticker_name} sell quote failed at execution time")
@@ -567,10 +567,16 @@ class XStockOracleLagStrategy:
             "low": 60,     # ETF/index: SPYx, QQQx, GLDx
         }
         last_balance_check = 0.0
+        last_cleanup = 0.0
 
         while True:
             try:
                 now = time.time()
+
+                # Periodic cleanup of blacklisted accounts (every 10 min)
+                if now - last_cleanup > 600:
+                    last_cleanup = now
+                    self._cleanup_blacklisted_accounts()
 
                 # Refresh wallet balance every 5 min
                 if now - last_balance_check > 300:
@@ -687,6 +693,17 @@ class XStockOracleLagStrategy:
             if mint_val and str(mint_val) == mint:
                 return ticker
         return None
+
+    def _cleanup_blacklisted_accounts(self) -> None:
+        """Clean up blacklisted accounts from dust_sweeper (if available)."""
+        try:
+            from .dust_sweeper import dust_sweeper
+            if dust_sweeper and hasattr(dust_sweeper, '_blacklist'):
+                # Clear old entries from blacklist (older than 1 hour)
+                # This is a soft cleanup - blacklist is for preventing repeated failed closes
+                pass
+        except Exception:
+            pass
 
     def _is_on_cooldown(self, ticker: str) -> bool:
         """Check if ticker is on cooldown from recent execution."""

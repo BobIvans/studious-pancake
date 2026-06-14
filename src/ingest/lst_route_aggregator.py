@@ -87,7 +87,7 @@ class LstRouteAggregator:
         self,
         session: aiohttp.ClientSession,
         jupiter_api_key: str = "",
-        slippage_bps: int = 15,
+        slippage_bps: int = 10,
         sanctum_enabled: bool = True,
     ):
         self.session = session
@@ -125,25 +125,37 @@ class LstRouteAggregator:
         total_fees = base_fee_sol + priority_fee_sol + jito_tip_sol
 
         if direction == "BUY_LST":
-            # Borrow SOL → Buy LST (cheap on DEX) → Sell LST (via Sanctum/DEX) → Repay SOL
+            # ── Task 16: ExactOut Repayment Guard (Atomic Reliability) ───────────
+            # Leg 1: SOL → LST (ExactIn) — Buy as much LST as borrow allows
             buy_quotes = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports, wallet_balance_sol=wallet_balance_sol)
             if not buy_quotes:
-                logger.debug(f"No buy quotes for SOL→{lst_mint[:8]}")
                 return None
-
+            
             best_result = None
             for buy_q in buy_quotes:
-                # Now sell LST back to SOL
-                # ExactIn on sell (exit) leg: swap all LST back to SOL to capture profit in native asset
-                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount, wallet_balance_sol=wallet_balance_sol)
+                # Leg 2: LST → SOL (ExactOut) — Force exact repayment amount
+                # We request exactly borrow_amount_lamports output.
+                # The in_amount will be the amount of LST needed.
+                sell_quotes = await self._get_quotes(
+                    lst_mint, SOL_MINT, borrow_amount_lamports, 
+                    wallet_balance_sol=wallet_balance_sol, swap_mode="ExactOut"
+                )
                 if not sell_quotes:
                     continue
 
                 for sell_q in sell_quotes:
-                    profit_lamports = sell_q.out_amount - borrow_amount_lamports
-                    profit_sol = profit_lamports / 1e9
+                    # Profit calculation for ExactOut:
+                    # Total LST bought (buy_q.out_amount) - LST needed for repayment (sell_q.in_amount)
+                    # The residual LST is our profit. 
+                    # To calculate SOL profit, we use the buy_q price.
+                    lst_profit = buy_q.out_amount - sell_q.in_amount
+                    if lst_profit <= 0:
+                        continue
+                        
+                    # SOL equivalent of profit
+                    profit_sol = (lst_profit / buy_q.out_amount) * (borrow_amount_lamports / 1e9)
                     net_profit = profit_sol - total_fees
-                    profit_bps = (profit_lamports / borrow_amount_lamports) * 10000 if borrow_amount_lamports > 0 else 0
+                    profit_bps = (lst_profit / buy_q.out_amount) * 10000
 
                     result = RouteResult(
                         profit_sol=net_profit,
@@ -162,22 +174,29 @@ class LstRouteAggregator:
             return best_result
 
         elif direction == "SELL_LST":
-            # Borrow SOL → Buy LST (via Sanctum at fair) → Sell LST (expensive on DEX) → Repay
+            # SELL_LST: Borrow SOL → Buy LST at fair → Sell LST at market → Repay SOL
+            # Leg 1: SOL → LST (ExactIn) - Fair buy
             buy_quotes = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports, wallet_balance_sol=wallet_balance_sol)
             if not buy_quotes:
                 return None
 
             best_result = None
             for buy_q in buy_quotes:
-                # ExactIn on sell (exit) leg: get SOL back
-                sell_quotes = await self._get_quotes(lst_mint, SOL_MINT, buy_q.out_amount, wallet_balance_sol=wallet_balance_sol)
+                # Leg 2: LST → SOL (ExactOut) - Repay exact borrow
+                sell_quotes = await self._get_quotes(
+                    lst_mint, SOL_MINT, borrow_amount_lamports,
+                    wallet_balance_sol=wallet_balance_sol, swap_mode="ExactOut"
+                )
                 if not sell_quotes:
                     continue
                 for sell_q in sell_quotes:
-                    profit_lamports = sell_q.out_amount - borrow_amount_lamports
-                    profit_sol = profit_lamports / 1e9
+                    lst_profit = buy_q.out_amount - sell_q.in_amount
+                    if lst_profit <= 0:
+                        continue
+                        
+                    profit_sol = (lst_profit / buy_q.out_amount) * (borrow_amount_lamports / 1e9)
                     net_profit = profit_sol - total_fees
-                    profit_bps = (profit_lamports / borrow_amount_lamports) * 10000 if borrow_amount_lamports > 0 else 0
+                    profit_bps = (lst_profit / buy_q.out_amount) * 10000
 
                     result = RouteResult(
                         profit_sol=net_profit,
@@ -206,40 +225,24 @@ class LstRouteAggregator:
         output_mint: str,
         amount: int,
         dex_filter: Optional[List[str]] = None,
-        wallet_balance_sol: float = 0.0,  # Task 14: micro-balance direct-route guard
+        wallet_balance_sol: float = 0.0,
+        swap_mode: str = "ExactIn",
     ) -> List[RouteQuote]:
-        """Fetch quotes from Jupiter (multi-hop, includes Sanctum pools).
-
-        Args:
-            input_mint: Input token mint.
-            output_mint: Output token mint.
-            amount: Amount in lamports.
-            dex_filter: Optional DEX filter list.
-            wallet_balance_sol: Current native SOL balance. When < 0.5 SOL, ONLY direct
-                routes are attempted to prevent Jupiter from routing through intermediate
-                tokens (which would create ATA accounts costing ~0.002 SOL each).
-        """
+        """Fetch quotes from Jupiter (multi-hop, includes Sanctum pools)."""
         quotes: List[RouteQuote] = []
 
-        # Task 14: ATA Routing Drain Protection
-        # If wallet balance < 0.5 SOL, creating a new ATA for an intermediate token
-        # (e.g. WIF) costs ~0.002 SOL — enough to drain a micro-capital wallet entirely
-        # after 8 such opportunities. Force direct routes to prevent hidden CreateATA.
-        force_direct = wallet_balance_sol < 0.5
-
-        # Load balancing: alternate between Jupiter multi-hop and direct
-        routes = [
-            ("multi", {"only_direct_routes": False}),
-            ("direct", {"only_direct_routes": True}),
-        ]
-        if force_direct:
-            # Kill multi-hop: only direct routes under micro-balance threshold
-            routes = [routes[1]]  # keep only ("direct", ...)
-        for route_type, params in routes:
-            quote = await self._jupiter_quote(input_mint, output_mint, amount, **params)
-            if quote:
-                quotes.append(quote)
-                break  # Use first successful for load balancing
+        # Task 11: Always use multi-hop to find profitable triangular arbs.
+        # The bot has a Deep Rent Guard, so we don't need to force direct routes.
+        quote = await self._jupiter_quote(
+            input_mint,
+            output_mint,
+            amount,
+            wallet_balance_sol=wallet_balance_sol,
+            swap_mode=swap_mode,
+            only_direct_routes=False
+        )
+        if quote:
+            quotes.append(quote)
 
         # If Sanctum enabled, try explicit Sanctum route for LST→SOL direction
         # Sanctum Router работает только с прямыми маршрутами (Direct),
@@ -249,6 +252,8 @@ class LstRouteAggregator:
                 input_mint, output_mint, amount,
                 only_direct_routes=True,  # Sanctum требует прямых маршрутов
                 dex_filter=["Sanctum", "Sanctum Infinity"],  # Принудительно включаем Sanctum (Fix 92)
+                wallet_balance_sol=wallet_balance_sol,
+                swap_mode=swap_mode,
             )
             if sanctum_quote:
                 # Check Sanctum fees (placeholder: assume low fee)
@@ -258,17 +263,22 @@ class LstRouteAggregator:
                 if sanctum_quote.price_impact_pct < 0.5:  # Low impact preferred
                     quotes.append(sanctum_quote)
 
-        # Deduplicate by out_amount (keep unique routes)
+        # Deduplicate by guaranteed output (slippage floor), not optimistic outAmount.
         seen_amounts = set()
         unique_quotes = []
         for q in quotes:
-            if q.out_amount not in seen_amounts:
-                seen_amounts.add(q.out_amount)
+            guaranteed_amount = self._guaranteed_out_amount(q)
+            if guaranteed_amount not in seen_amounts:
+                seen_amounts.add(guaranteed_amount)
                 unique_quotes.append(q)
 
-        # Sort by out_amount descending (best first)
-        unique_quotes.sort(key=lambda q: q.out_amount, reverse=True)
+        # Sort by guaranteed output descending (worst-case slippage floor first).
+        unique_quotes.sort(key=self._guaranteed_out_amount, reverse=True)
         return unique_quotes
+
+    @staticmethod
+    def _guaranteed_out_amount(q: RouteQuote) -> int:
+        return int(q.full_quote_response.get("otherAmountThreshold", q.out_amount))
 
     def _is_lst_to_sol(self, input_mint: str, output_mint: str) -> bool:
         """Check if this is an LST → SOL swap (Sanctum excels here)."""
@@ -289,6 +299,7 @@ class LstRouteAggregator:
         only_direct_routes: bool = False,
         dex_filter: Optional[List[str]] = None,
         wallet_balance_sol: float = 0.0,
+        swap_mode: str = "ExactIn",
     ) -> Optional[RouteQuote]:
         """Fetch a single quote from Jupiter Quote API v6.
 
@@ -299,6 +310,7 @@ class LstRouteAggregator:
             only_direct_routes: If True, only direct routes.
             dex_filter: Optional DEX filter list.
             wallet_balance_sol: Current SOL balance (for ATA routing guard).
+            swap_mode: Jupiter swap mode: "ExactIn" or "ExactOut".
         """
         params = {
             "inputMint": input_mint,
@@ -306,8 +318,9 @@ class LstRouteAggregator:
             "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
             "slippageBps": self.slippage_bps,
             "onlyDirectRoutes": "true" if only_direct_routes else "false",
-            "restrictIntermediateTokens": "true",
-            "maxAccounts": "28",  # FIX 8: Increased from 8 to 28 — LST routing via Sanctum requires deep account graphs. ALTs keep TX within 1232-byte MTU.
+            "restrictIntermediateTokens": "false",
+            "swapMode": swap_mode,
+            "maxAccounts": "8",  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
             "cache_buster": str(time.time_ns()),
         }
 
@@ -324,26 +337,9 @@ class LstRouteAggregator:
 
         try:
             timeout = aiohttp.ClientTimeout(total=5.0)
-            # FIX 13: Acquire global Jupiter rate limiter before each request
-            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
-                async with _GLOBAL_JUPITER_LIMITER:
-                    async with self.session.get(
-                        JUPITER_QUOTE_URL, params=params, headers=headers, timeout=timeout
-                    ) as resp:
-                        if resp.status != 200:
-                            if resp.status == 429:
-                                logger.warning("Jupiter 429 rate limit hit — backoff 2.0s")
-                                await asyncio.sleep(2.0)
-                                return None
-                            error = await resp.text()
-                            logger.debug(f"Jupiter quote {resp.status}: {error[:200]}")
-                            return None
 
-                        data = await resp.json()
-                        out_amount = int(data.get("outAmount", 0))
-                        if out_amount == 0:
-                            return None
-            else:
+            # Helper to perform the request
+            async def do_request() -> Optional[Dict]:
                 async with self.session.get(
                     JUPITER_QUOTE_URL, params=params, headers=headers, timeout=timeout
                 ) as resp:
@@ -355,35 +351,46 @@ class LstRouteAggregator:
                         error = await resp.text()
                         logger.debug(f"Jupiter quote {resp.status}: {error[:200]}")
                         return None
+                    return await resp.json()
 
-                    data = await resp.json()
-                    out_amount = int(data.get("outAmount", 0))
-                    if out_amount == 0:
-                        return None
+            # FIX 13: Acquire global Jupiter rate limiter before each request
+            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
+                async with _GLOBAL_JUPITER_LIMITER:
+                    data = await do_request()
+            else:
+                data = await do_request()
 
-                # Extract route plan for labeling
-                route_plan = data.get("routePlan", [])
-                dex_labels = []
-                for step in route_plan:
-                    swap_info = step.get("swapInfo", {})
-                    label = swap_info.get("label", "Unknown")
-                    dex_labels.append(label)
+            if not data:
+                return None
 
-                dex_label = " → ".join(dex_labels) if dex_labels else "Jupiter"
-                price_impact = float(data.get("priceImpactPct", 0))
+            in_amount = int(data.get("inAmount", 0))
+            out_amount = int(data.get("outAmount", 0))
+            if out_amount == 0 or in_amount == 0:
+                return None
 
-                return RouteQuote(
-                    source="jupiter",
-                    dex_label=dex_label,
-                    input_mint=input_mint,
-                    output_mint=output_mint,
-                    in_amount=amount,
-                    out_amount=out_amount,
-                    price_impact_pct=price_impact,
-                    slippage_bps=self.slippage_bps,
-                    full_quote_response=data,
-                    route_plan=dex_labels,
-                )
+            # Extract route plan for labeling
+            route_plan = data.get("routePlan", [])
+            dex_labels = []
+            for step in route_plan:
+                swap_info = step.get("swapInfo", {})
+                label = swap_info.get("label", "Unknown")
+                dex_labels.append(label)
+
+            dex_label = " → ".join(dex_labels) if dex_labels else "Jupiter"
+            price_impact = float(data.get("priceImpactPct", 0))
+
+            return RouteQuote(
+                source="jupiter",
+                dex_label=dex_label,
+                input_mint=input_mint,
+                output_mint=output_mint,
+                in_amount=in_amount,
+                out_amount=out_amount,
+                price_impact_pct=price_impact,
+                slippage_bps=self.slippage_bps,
+                full_quote_response=data,
+                route_plan=dex_labels,
+            )
 
         except asyncio.TimeoutError:
             logger.debug(f"Jupiter quote timeout: {input_mint[:8]}→{output_mint[:8]}")

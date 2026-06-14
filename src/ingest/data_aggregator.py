@@ -164,11 +164,11 @@ class DataAggregator:
                 'event_type': event_type,
                 'webhook_id': kwargs.get('webhook_id'),
                 'transaction_signature': kwargs.get('transaction_signature'),
-                'input_data': orjson.dumps(kwargs.get('input_data', {})).decode(),
-                'parsed_opportunity': orjson.dumps(kwargs.get('parsed_opportunity', {})).decode(),
-                'simulation_result': orjson.dumps(kwargs.get('simulation_result', {})).decode(),
-                'execution_result': orjson.dumps(kwargs.get('execution_result', {})).decode(),
-                'metadata': orjson.dumps(kwargs.get('metadata', {})).decode()
+                'input_data': orjson.dumps(kwargs.get('input_data', {}), default=str).decode(),
+                'parsed_opportunity': orjson.dumps(kwargs.get('parsed_opportunity', {}), default=str).decode(),
+                'simulation_result': orjson.dumps(kwargs.get('simulation_result', {}), default=str).decode(),
+                'execution_result': orjson.dumps(kwargs.get('execution_result', {}), default=str).decode(),
+                'metadata': orjson.dumps(kwargs.get('metadata', {}), default=str).decode()
             }
 
             # Add to batch queue instead of direct DB write
@@ -228,9 +228,15 @@ class DataAggregator:
         await self.log_event('TxFailed', transaction_signature=transaction_signature,
                            execution_result=execution_result, metadata=metadata or {})
 
-    async def cleanup_old_data(self, keep_days: int = 14):
-        """Remove events older than keep_days and archive aggregated stats."""
-        cutoff_timestamp = time.time() - (keep_days * 24 * 60 * 60)
+    async def cleanup_old_data(self, keep_hours: int = None):
+        """Remove events older than keep_hours and archive aggregated stats.
+        
+        Reads DB_RETENTION_HOURS from .env (default 24 hours) to prevent phantom
+        database growth and ghost errors from past runs.
+        """
+        if keep_hours is None:
+            keep_hours = int(os.getenv("DB_RETENTION_HOURS", "24"))
+        cutoff_timestamp = time.time() - (keep_hours * 60 * 60)
 
         async with aiosqlite.connect(self.db_path, timeout=30) as db:
             # Delete old events

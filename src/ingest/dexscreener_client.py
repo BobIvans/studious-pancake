@@ -84,10 +84,12 @@ class DexScreenerClient:
                         "volume_1h": token.get("volume", {}).get("h1"),
                         "timestamp": now.isoformat()
                     }
-                    # Fix 1: queue must be (priority, path_tuple) to match arb_bot worker
+                    # Task 19: Fix Tuple Unpacking Crash
+                    # The worker expects (priority, _tie_breaker, path)
                     SOL_MINT = "So11111111111111111111111111111111111111112"
                     try:
-                        queue.put_nowait((2, (SOL_MINT, mint)))
+                        import time
+                        queue.put_nowait((2, time.time_ns(), (SOL_MINT, mint)))
                     except asyncio.QueueFull:
                         pass  # HFT: stale data is trash — drop it, don't deadlock
                     self.discovered_tokens[mint] = now

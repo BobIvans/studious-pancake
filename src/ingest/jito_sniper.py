@@ -10,6 +10,8 @@ import orjson
 import logging
 import random
 import time
+import os
+import urllib.request
 from typing import Dict, List, Optional, Set, Tuple, Any, Callable
 import aiohttp
 import websockets
@@ -52,16 +54,13 @@ class JitoTipManager:
     """Manages real-time Jito tip tracking and optimization."""
 
     JITO_TIP_STREAM_URL = "ws://bundles.jito.wtf/api/v1/bundles/tip_stream"
+    JITO_TIP_ACCOUNTS_URL = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
+
     def __init__(self, percentile: float = 75.0, min_tip_lamports: int = 10000, tip_multiplier: float = 1.1):
         self.percentile = percentile
         self.min_tip_lamports = min_tip_lamports
         self.tip_multiplier = tip_multiplier
-        # Phase 35: Dynamic Jito Tip Accounts
-        self.tip_accounts = [
-            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
-            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bU7gRe",
-        ]
-        logger.critical("🚨 JITO TIP ACCOUNTS OUTDATED: jito_sniper using hardcoded fallback!")
+        self.tip_accounts = []
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.running = False
         self.current_percentiles: Dict[str, int] = {}
@@ -76,7 +75,26 @@ class JitoTipManager:
     async def start(self):
         """Start tip tracking."""
         self.running = True
+        # Task 14: Dynamically fetch tip accounts on startup
+        await self._refresh_tip_accounts()
         asyncio.create_task(self._maintain_connection())
+
+    async def _refresh_tip_accounts(self):
+        """Fetch Jito tip accounts from API."""
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(self.JITO_TIP_ACCOUNTS_URL) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        self.tip_accounts = data if isinstance(data, list) else []
+                        if self.tip_accounts:
+                            logger.info(f"✅ Dynamically fetched {len(self.tip_accounts)} Jito tip accounts")
+                            return
+        except Exception as e:
+            logger.warning(f"Failed to fetch Jito tip accounts: {e}")
+        
+        # Absolute fallback if API is down
+        self.tip_accounts = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
 
     async def stop(self):
         """Stop tip tracking."""
@@ -213,15 +231,14 @@ class JitoTipManager:
     async def fetch_tip_accounts(self) -> bool:
         """Fetch live Jito tip accounts from Block Engine (Phase 35)."""
         try:
-            # We use aiohttp for this as websockets is for the stream
             import aiohttp
             async with aiohttp.ClientSession() as session:
-                url = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
-                async with session.get(url, timeout=5.0) as resp:
+                async with session.get(self.JITO_TIP_ACCOUNTS_URL, timeout=5.0) as resp:
                     if resp.status == 200:
                         accounts = await resp.json()
-                        if accounts and isinstance(accounts, list):
-                            self.tip_accounts = accounts
+                        parsed_accounts = self._parse_tip_accounts(accounts)
+                        if parsed_accounts:
+                            self.tip_accounts = parsed_accounts
                             logger.info(f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active accounts")
                             return True
         except Exception as e:
@@ -229,8 +246,57 @@ class JitoTipManager:
             
         return False
 
+    def _parse_tip_accounts(self, accounts: Any) -> List[str]:
+        if isinstance(accounts, dict):
+            accounts = accounts.get("value") or accounts.get("accounts") or accounts.get("tip_accounts") or []
+        if not isinstance(accounts, list):
+            return []
+        parsed_accounts: List[str] = []
+        for account in accounts:
+            account_str = str(account).strip()
+            if account_str:
+                parsed_accounts.append(account_str)
+        return parsed_accounts
+
+    def _fetch_tip_accounts_sync(self, timeout: float = 1.5) -> bool:
+        try:
+            with urllib.request.urlopen(self.JITO_TIP_ACCOUNTS_URL, timeout=timeout) as resp:
+                if resp.status == 200:
+                    accounts = orjson.loads(resp.read().decode("utf-8"))
+                    parsed_accounts = self._parse_tip_accounts(accounts)
+                    if parsed_accounts:
+                        self.tip_accounts = parsed_accounts
+                        logger.info(f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active accounts")
+                        return True
+        except Exception as e:
+            logger.debug(f"Synchronous Jito tip account fetch failed: {e}")
+        return False
+
+    def _load_tip_accounts_from_env(self) -> List[str]:
+        raw_accounts = os.getenv("JITO_TIP_ACCOUNTS", "")
+        if not raw_accounts:
+            return []
+        return [
+            account.strip()
+            for account in raw_accounts.replace(";", ",").split(",")
+            if account.strip()
+        ]
+
     def get_random_tip_account(self) -> str:
-        """Get random Jito tip account for load balancing."""
+        """Get random Jito tip account for load balancing with fallback fetch."""
+        if not self.tip_accounts:
+            if self._fetch_tip_accounts_sync():
+                return random.choice(self.tip_accounts)
+
+            env_accounts = self._load_tip_accounts_from_env()
+            if env_accounts:
+                self.tip_accounts = env_accounts
+                logger.warning("Using JITO_TIP_ACCOUNTS fallback tip accounts")
+                return random.choice(self.tip_accounts)
+
+            logger.warning("Jito tip accounts unavailable; using emergency fallback tip account")
+            self.tip_accounts = list(self.DEFAULT_TIP_ACCOUNTS)
+
         return random.choice(self.tip_accounts)
 
 

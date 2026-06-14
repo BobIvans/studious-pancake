@@ -18,6 +18,7 @@ class WebhookConfig:
         "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs",  # bonkSOL
         "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE",  # cgntSOL — Cogent LST
         "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",  # vSOL — Vault LST
+        "cPQPBN7WubB3zyQDpzTK2ormx1BMdAym9xkrYUJsctm",  # fwdSOL — Forward staking LST
     ]
 
     # xStocks Token Addresses for Oracle Lag Monitoring
@@ -52,24 +53,21 @@ class WebhookConfig:
         "Hp53XEtt4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp",  # JitoSOL/SOL pool
     ]
 
-    # Active Webhook IDs
-    WEBHOOK_IDS = [
-        "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg",
-        "dbcij3LWUppTiACKHVKtjUi2Vn3JBmXu4quMErSMFpN",
-        "LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj"
-    ]
+    # Active Webhook IDs and the Helius event classes they monitor.
+    # Task 17: Pure Code-Driven Webhook Authentication (No .env IDs)
+    # We now rely strictly on HMAC authentication or API keys.
+    WEBHOOK_IDS = []
+
+    WEBHOOK_EVENT_TYPES = {}
 
     # Management IDs for programmatic control
-    MANAGEMENT_IDS = [
-        "d0f65273-6427-48fc-b3cf-b70af928b0fc",
-        "8d929e15-b845-4a58-b25a-935eb688c6ac"
-    ]
+    MANAGEMENT_IDS = []
 
     # Primary management ID
-    PRIMARY_MANAGEMENT_ID = "d0f65273-6427-48fc-b3cf-b70af928b0fc"
+    PRIMARY_MANAGEMENT_ID = ""
 
     # Secondary management ID
-    SECONDARY_MANAGEMENT_ID = "8d929e15-b845-4a58-b25a-935eb688c6ac"
+    SECONDARY_MANAGEMENT_ID = ""
 
     @classmethod
     def get_webhook_config(cls) -> Dict[str, any]:
@@ -101,10 +99,11 @@ class WebhookConfig:
                 # meaningful profit with 10-100× less volume than direct SOL swaps.
                 {"accountKey": "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",
                  "filters": [{"memcmp": {"offset": 0, "bytes": ""}}],
-                 "nativeFilters": [{"min": 100_000_000}]},   # 0.1 SOL for LST/xStocks
+                 "nativeFilters": [{"min": 5_000_000_000}]},   # 5 SOL (Whale Signal) for LST/xStocks
             ],
             "webhookIds": cls.WEBHOOK_IDS,
-            "managementIds": cls.MANAGEMENT_IDS
+            "managementIds": cls.MANAGEMENT_IDS,
+            "webhookEventTypes": cls.WEBHOOK_EVENT_TYPES
         }
 
     @classmethod
@@ -145,6 +144,7 @@ class WebhookConfig:
             "pyth_addresses": cls.PYTH_ADDRESSES,
             "orca_pool_addresses": cls.ORCA_POOL_ADDRESSES,
             "webhook_ids": cls.WEBHOOK_IDS,
+            "webhook_event_types": cls.WEBHOOK_EVENT_TYPES,
             "management_ids": cls.MANAGEMENT_IDS,
             "total_addresses": len(all_addresses),
             "total_webhooks": len(cls.WEBHOOK_IDS),
@@ -157,4 +157,5 @@ XSTOCK_ADDRESSES = WebhookConfig.XSTOCK_ADDRESSES
 PARCL_ADDRESSES = WebhookConfig.PARCL_ADDRESSES
 PYTH_ADDRESSES = WebhookConfig.PYTH_ADDRESSES
 WEBHOOK_IDS = WebhookConfig.WEBHOOK_IDS
+WEBHOOK_EVENT_TYPES = WebhookConfig.WEBHOOK_EVENT_TYPES
 MANAGEMENT_IDS = WebhookConfig.MANAGEMENT_IDS

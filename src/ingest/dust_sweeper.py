@@ -26,13 +26,12 @@ class DustSweeper:
         self.wallet_keypair = wallet_keypair
         self.rpc_url = rpc_url
         self.session = session
+        self._fail_tracker = {}
+        self._blacklist = set()
         self.spl_token_program = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-        # Token-2022 Program ID for xStocks (RWA tokens) — stored as instance var so all methods can reference it
         self.spl_token_2022_program = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
-        
-        # Phase 48: Golden ATAs that should NEVER be closed (Capital Protection)
-        self.wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         self.usdc_mint = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
+        self.wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         from src.config.xstocks_registry import is_xstock_token
         from spl.token.instructions import get_associated_token_address
         if is_xstock_token(self.usdc_mint):
@@ -230,6 +229,7 @@ class DustSweeper:
         """Build Burn instruction for SPL token (Phase 41)."""
         try:
             from spl.token.instructions import BurnParams, burn
+            from src.config.xstocks_registry import is_xstock_token
 
             # Fix: use Token-2022 program ID for xStocks, classic SPL for everything else
             if mint and is_xstock_token(Pubkey.from_string(mint)):
@@ -253,6 +253,7 @@ class DustSweeper:
         """Close a batch of dust token accounts and recover rent."""
         try:
             close_instructions = []
+            valid_batch = []
 
             for entry in batch:
                 account_addr = entry["address"]
@@ -263,18 +264,19 @@ class DustSweeper:
                 if not is_dust:
                     continue
                 
-                # Fix 52 / Phase 41: Burn-before-close — flush any non-zero residue first
+                # Task 14: Final safety check for Token-2022 (extensions can hide balance)
+                # If amount > 0, we'll try to burn, but if it fails we shouldn't close.
+                # Burn before close for non-zero residue
                 if amount > 0:
                     burn_ix = self._build_burn_instruction(account_addr, mint, amount)
                     if burn_ix:
                         close_instructions.append(burn_ix)
                         logger.debug(f"🔥 Burning {amount} lamports from {account_addr[:8]}…")
 
-                # CloseAccount after draining: zero-balance accounts close cleanly
-                # Pass mint so xStock Token-2022 accounts use the correct program ID
                 close_ix = self._build_close_account_instruction(account_addr, mint=mint)
                 if close_ix:
                     close_instructions.append(close_ix)
+                    valid_batch.append(account_addr)
 
             if not close_instructions:
                 return 0
@@ -284,12 +286,22 @@ class DustSweeper:
             success = await self._send_transaction(tx)
 
             if success:
+                # Clear failures on success
+                for addr in valid_batch:
+                    self._fail_tracker.pop(str(addr), None)
+                
                 # Return estimated rent recovered
                 rent_per_account = 2_000_000  # 0.002 SOL in lamports
-                # Count only close instructions
-                closed_count = sum(1 for ix in close_instructions if b"\x09" in ix.data) # 9 is CloseAccount discriminator
+                closed_count = len(valid_batch)
                 return closed_count * rent_per_account
             else:
+                # Task 14: Track failures
+                for addr in valid_batch:
+                    addr_str = str(addr)
+                    self._fail_tracker[addr_str] = self._fail_tracker.get(addr_str, 0) + 1
+                    if self._fail_tracker[addr_str] >= 2:
+                        logger.warning(f"🚫 Blacklisting dust account {addr_str[:8]} after 2 failures")
+                        self._blacklist.add(addr_str)
                 return 0
 
         except Exception as e:

@@ -2297,20 +2297,21 @@ async def get_best_quote_multi(
                 )
             else:
                 slippage_bps = cfg.SLIPPAGE_BPS
-            quote = await asyncio.wait_for(
-                get_jupiter_quote(
-                    session,
-                    in_mint,
-                    out_mint,
-                    amount,
-                    cfg,
-                    slippage_bps,
-                    restrict_intermediate=restrict_intermediate,
-                    swap_mode=swap_mode,
-                    exact_out_amount=exact_out_amount,
-                ),
-                timeout=3.0,
-            )
+
+        quote = await asyncio.wait_for(
+            get_jupiter_quote(
+                session,
+                in_mint,
+                out_mint,
+                amount,
+                cfg,
+                slippage_bps,
+                restrict_intermediate=restrict_intermediate,
+                swap_mode=swap_mode,
+                exact_out_amount=exact_out_amount,
+            ),
+            timeout=3.0,
+        )
         return quote
     except Exception as e:
         logger.warning(f"Jupiter quote failed: {repr(e)}")
@@ -5564,6 +5565,7 @@ async def run():
                 idle_seconds = 0.0  # Reset on every enqueue — no GC mid-arb
 
     cfg = Config()
+    init_limiters(cfg)
 
     # ── Optional gRPC (Yellowstone): only enabled when USE_GRPC=true in .env ──────
     # Free tier Helius cannot connect to premium Yellowstone relay; gRPC stays None by default.

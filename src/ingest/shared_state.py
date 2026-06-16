@@ -48,6 +48,11 @@ def initialize_shared_state():
     GLOBAL_STOP_EVENT = asyncio.Event()
     logger.info("✅ Shared state initialized with asyncio locks")
 
+# Fix 67: Balance lock flags — moved here from wsol_manager.py and arb_bot.py
+# to eliminate circular imports (wsol_manager was importing arb_bot and vice versa).
+_balance_lock_paused: bool = False
+_balance_lock_pause_until: float = 0.0
+
 def mark_wsol_atomically_closed():
     global WSOL_JUST_CLOSED_ATOMICALLY
     WSOL_JUST_CLOSED_ATOMICALLY = time.time()

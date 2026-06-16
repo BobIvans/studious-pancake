@@ -2117,28 +2117,45 @@ data=(
                 final_instructions, payer=wallet
             )
 
-            # Вычисляем точный индекс Repay инструкции после дедупликации Jupiter ATA setup.
-            try:
-                actual_repay_index = sanitized_instructions.index(repay_ix)
-                import struct
+            # Fix 63: Safe generator search instead of .index() for Solders Instruction objects.
+            # Solders Instruction does not support Python __eq__ for list.index().
+            # Use discriminator matching on program_id + data[:8] to find the repayment
+            # instruction in the sanitized list.
+            import struct
 
-                # ФИКС: flashloan layout = discriminator(8) + amount(8 u64 LE) + repay_index(8 u64 LE)
-                original_data_without_index = borrow_ix.data[:16]
-                safe_index_bytes = struct.pack("<Q", actual_repay_index)
-                new_borrow_ix = Instruction(
-                    program_id=borrow_ix.program_id,
-                    accounts=borrow_ix.accounts,
-                    data=original_data_without_index + safe_index_bytes,
-                )
-                borrow_idx = sanitized_instructions.index(borrow_ix)
-                sanitized_instructions[borrow_idx] = new_borrow_ix
-                borrow_ix = new_borrow_ix
-                logger.debug(
-                    f"🛠️ Safe Dynamic Repay Index calculated on sanitized array: {actual_repay_index}"
-                )
-            except ValueError:
-                logger.error("CRITICAL: repay_ix not found in sanitized instruction list")
+            actual_repay_index = next(
+                (i for i, ix in enumerate(sanitized_instructions)
+                 if ix.program_id == repay_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END),
+                None
+            )
+            if actual_repay_index is None:
+                logger.error("CRITICAL: repay_ix not found in sanitized instruction list (Fix 63)")
                 return None
+
+            # ФИКС: flashloan layout = discriminator(8) + amount(8 u64 LE) + repay_index(8 u64 LE)
+            original_data_without_index = borrow_ix.data[:16]
+            safe_index_bytes = struct.pack("<Q", actual_repay_index)
+            new_borrow_ix = Instruction(
+                program_id=borrow_ix.program_id,
+                accounts=borrow_ix.accounts,
+                data=original_data_without_index + safe_index_bytes,
+            )
+
+            # Find borrow_ix in sanitized list using same generator pattern (Fix 63)
+            borrow_idx = next(
+                (i for i, ix in enumerate(sanitized_instructions)
+                 if ix.program_id == borrow_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_START),
+                None
+            )
+            if borrow_idx is None:
+                logger.error("CRITICAL: borrow_ix not found in sanitized instruction list (Fix 63)")
+                return None
+
+            sanitized_instructions[borrow_idx] = new_borrow_ix
+            borrow_ix = new_borrow_ix
+            logger.debug(
+                f"🛠️ Safe Dynamic Repay Index calculated on sanitized array: {actual_repay_index} (Fix 63)"
+            )
 
             return {
                 "instructions": sanitized_instructions,

@@ -752,8 +752,14 @@ class PreTradeGuard:
               False = profit eroded — abort.
               Third element: actual_profit_lamports (for caller audit/logging).
         """
+        # Fix 70: Lazy session creation — if no session was provided at init,
+        # create one on-the-fly to prevent AttributeError during pre-trade checks.
         if not self.session:
-            return False, "No session available", 0
+            try:
+                self.session = aiohttp.ClientSession()
+                logger.debug("Fix 70: Created ad-hoc aiohttp session for PreTradeGuard")
+            except Exception as session_err:
+                return False, f"No session available: {session_err}", 0
 
         params = {
             "inputMint": input_mint,

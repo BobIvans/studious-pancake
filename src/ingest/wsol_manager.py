@@ -26,19 +26,18 @@ from spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
 
 logger = logging.getLogger(__name__)
 
-# Global flag for wSOL unwrap race condition prevention
-_balance_lock_paused = False
-_balance_lock_pause_until = 0.0
+# Fix 67: Balance lock flags moved to shared_state.py to eliminate circular imports.
+# Previously imported arb_bot, which caused recursive module execution.
+import src.ingest.shared_state as _shared_state_lock
 
 
 def _balance_lock_can_trade() -> bool:
     """Check if trading is allowed (not paused after wSOL unwrap)."""
-    global _balance_lock_paused, _balance_lock_pause_until
-    if _balance_lock_paused and time.time() < _balance_lock_pause_until:
+    if _shared_state_lock._balance_lock_paused and time.time() < _shared_state_lock._balance_lock_pause_until:
         return False
-    if _balance_lock_paused and time.time() >= _balance_lock_pause_until:
-        _balance_lock_paused = False
-        _balance_lock_pause_until = 0.0
+    if _shared_state_lock._balance_lock_paused and time.time() >= _shared_state_lock._balance_lock_pause_until:
+        _shared_state_lock._balance_lock_paused = False
+        _shared_state_lock._balance_lock_pause_until = 0.0
     return True
 
 # Constants
@@ -368,9 +367,9 @@ class WSOLManager:
                 if send_resp.status == 200:
                     result = await send_resp.json()
                     if "result" in result:
-                        import arb_bot
-                        arb_bot._balance_lock_paused = True
-                        arb_bot._balance_lock_pause_until = time.time() + 0.4
+                        # Fix 67: Use shared_state instead of import arb_bot
+                        _shared_state_lock._balance_lock_paused = True
+                        _shared_state_lock._balance_lock_pause_until = time.time() + 0.4
                         logger.info(
                             f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL. "
                             f"Paused next trade for 400ms to allow account state convergence."

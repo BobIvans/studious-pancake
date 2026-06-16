@@ -272,11 +272,22 @@ class JitoBundleHandler:
                 lamports=tip_lamports,
             ))]
 
+            # Fix 69: Safe ALT extraction — MessageV0 may not expose
+            # address_lookup_table_accounts as a top-level attribute on all solders versions.
+            # Use getattr with empty fallback to prevent AttributeError crashes.
+            _alts = getattr(msg, 'address_lookup_table_accounts', [])
+            if _alts is None:
+                _alts = []
+            try:
+                _alts = list(_alts)
+            except Exception:
+                _alts = []
+
             # Recompile merged message with same ALTs and blockhash
             new_msg = MessageV0.try_compile(
                 payer=self.keypair.pubkey(),
                 instructions=all_ixs,
-                address_lookup_table_accounts=list(msg.address_lookup_table_accounts),
+                address_lookup_table_accounts=_alts,
                 recent_blockhash=msg.recent_blockhash,
             )
 

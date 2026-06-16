@@ -129,7 +129,14 @@ class DataAggregator:
                 logger.error(f"Batch write worker error: {e}")
                 await asyncio.sleep(1)
 
-        # Final flush on shutdown
+        # Fix 64: Final flush on shutdown — completely drain the queue
+        # to prevent data loss of pending events.
+        while not self.write_queue.empty():
+            try:
+                item = self.write_queue.get_nowait()
+                batch.append(item)
+            except asyncio.QueueEmpty:
+                break
         if batch:
             await self._flush_batch(batch)
 

@@ -199,7 +199,7 @@ class OptimalTradeSizer:
 
     def __init__(self, epsilon_lamports: int = 1000):
         self.last_calculation = 0.0
-        self.epsilon = epsilon_lamports
+        self.epsilon = max(1, epsilon_lamports)  # Fix 65: guard against zero/negative epsilon
         self.profit_calculator = ProfitCalculator()
 
     def calculate_analytical_optimal_size(self, reserves_path: List[Decimal], fees: List[float]) -> Optional[Decimal]:

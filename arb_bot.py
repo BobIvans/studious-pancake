@@ -1541,10 +1541,9 @@ TOTAL_FAILED_BUNDLES_IN_A_ROW = 0  # Fix 64: Slippage loop breaker
 _oracle_stale_hit: bool = False
 _oracle_stale_asset_hint: str = "USDC"  # Which asset triggered the stale error
 
-# Fix 6: Balance Lock Guard — if virtual_balance drifts > 0.003 SOL from
-# on-chain balance, pause all trading for 400 ms (1 slot) and reconcile.
-_balance_lock_paused: bool = False
-_balance_lock_pause_until: float = 0.0
+# Fix 6 + 67: Balance Lock Guard — lives in shared_state.py to eliminate
+# circular imports with wsol_manager.py. Reference via shared_state module.
+# Local aliases are removed; use shared_state._balance_lock_paused directly.
 
 
 # =============================================================================
@@ -1656,12 +1655,12 @@ async def balance_reconciler(
                 prev = shared_state.stats.get("virtual_balance", 0.0)
                 shared_state.stats["virtual_balance"] = reconciled_sol
                 drift = abs(reconciled_sol - prev)
-                # Fix 6: Balance Lock Guard — if virtual vs actual diff > 0.003 SOL
+                # Fix 6 + 67: Balance Lock Guard — if virtual vs actual diff > 0.003 SOL
                 # pause all trading for 400 ms (1 slot) to prevent cascade failures.
+                # Uses shared_state to avoid circular imports with wsol_manager.py.
                 if drift > 0.003:
-                    global _balance_lock_paused, _balance_lock_pause_until
-                    _balance_lock_paused = True
-                    _balance_lock_pause_until = time.time() + 0.4  # 1 Solana slot
+                    shared_state._balance_lock_paused = True
+                    shared_state._balance_lock_pause_until = time.time() + 0.4  # 1 Solana slot
                     logger.critical(
                         f"🚨 BALANCE LOCK GUARD: virtual={prev:.6f} vs actual={actual_sol:.6f} "
                         f"drift={drift:.6f} > 0.003 SOL — pausing trading for 400ms"
@@ -2975,13 +2974,13 @@ async def lst_depeg_scanner(
         except Exception as _ge:
             logger.debug(f"LST scanner gas tank check skipped: {_ge}")
 
-        # Fix 6: Balance Lock Guard — pause if lock is active
-        if _balance_lock_paused and time.time() < _balance_lock_pause_until:
-            _lock_wait_ms = (_balance_lock_pause_until - time.time()) * 1000
+        # Fix 6 + 67: Balance Lock Guard — pause if lock is active
+        if shared_state._balance_lock_paused and time.time() < shared_state._balance_lock_pause_until:
+            _lock_wait_ms = (shared_state._balance_lock_pause_until - time.time()) * 1000
             logger.debug(
                 f"🔒 Balance Lock active — waiting {_lock_wait_ms:.0f}ms (lst_depeg_scanner)"
             )
-            await asyncio.sleep(max(0, _balance_lock_pause_until - time.time()))
+            await asyncio.sleep(max(0, shared_state._balance_lock_pause_until - time.time()))
 
         try:
             # --- TASK 3 — Dynamic Max Borrow with Slippage-Pegged Sizing (FIX 4) ---
@@ -4031,13 +4030,13 @@ async def execute_enhanced_migration_arbitrage(
     except Exception as _ge:
         logger.debug(f"Migration gas tank check skipped: {_ge}")
 
-    # Fix 6: Balance Lock Guard — pause if lock is active
-    if _balance_lock_paused and time.time() < _balance_lock_pause_until:
-        _lock_wait_ms = (_balance_lock_pause_until - time.time()) * 1000
+    # Fix 6 + 67: Balance Lock Guard — pause if lock is active
+    if shared_state._balance_lock_paused and time.time() < shared_state._balance_lock_pause_until:
+        _lock_wait_ms = (shared_state._balance_lock_pause_until - time.time()) * 1000
         logger.debug(
             f"🔒 Balance Lock active — waiting {_lock_wait_ms:.0f}ms (execute_enhanced_migration)"
         )
-        await asyncio.sleep(max(0, _balance_lock_pause_until - time.time()))
+        await asyncio.sleep(max(0, shared_state._balance_lock_pause_until - time.time()))
 
     try:
         start_time = time.time()
@@ -4861,13 +4860,13 @@ async def worker(
             except Exception as _ge:
                 logger.debug(f"Worker gas tank check skipped: {_ge}")
 
-            # Fix 6: Balance Lock Guard — pause if lock is active
-            if _balance_lock_paused and time.time() < _balance_lock_pause_until:
-                _lock_wait_ms = (_balance_lock_pause_until - time.time()) * 1000
+            # Fix 6 + 67: Balance Lock Guard — pause if lock is active
+            if shared_state._balance_lock_paused and time.time() < shared_state._balance_lock_pause_until:
+                _lock_wait_ms = (shared_state._balance_lock_pause_until - time.time()) * 1000
                 logger.debug(
                     f"🔒 Balance Lock active — waiting {_lock_wait_ms:.0f}ms (worker)"
                 )
-                await asyncio.sleep(max(0, _balance_lock_pause_until - time.time()))
+                await asyncio.sleep(max(0, shared_state._balance_lock_pause_until - time.time()))
 
             # Dynamic sizing from ENV + safety (Issue 5)
             borrow_env_sol = float(os.getenv("FLASH_LOAN_SIZE_SOL", "1.0"))

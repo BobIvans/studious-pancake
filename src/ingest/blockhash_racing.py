@@ -37,8 +37,10 @@ class BlockhashRacingManager:
     """
 
     def __init__(self, rpc_endpoints: List[str], race_interval_ms: int = 15000):
-        # Combine user endpoints with Jito regional nodes for maximum speed
-        self.rpc_endpoints = list(set(rpc_endpoints + JITO_REGIONAL_NODES))
+        # Fix 66: Only use standard RPC endpoints — Jito Block Engines do NOT support
+        # standard Solana JSON-RPC methods (getSlot, getBlockTime, getLatestBlockhash).
+        # JITO_REGIONAL_NODES are excluded from the standard querying pool.
+        self.rpc_endpoints = list(set(rpc_endpoints))
         self.race_interval_ms = race_interval_ms
         self.current_blockhash: Optional[Hash] = None
         self.last_update_time = 0

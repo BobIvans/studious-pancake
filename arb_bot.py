@@ -4,8 +4,6 @@ load_dotenv(override=True)
 import orjson
 import asyncio
 import aiohttp
-from aiohttp.resolver import AsyncResolver
-import aiodns
 import time
 import logging
 logger = logging.getLogger(__name__)
@@ -1790,7 +1788,6 @@ class RPCManager:
                             family=socket.AF_INET,
                             tcp_nodelay=True,
                             force_close=False,  # Keep-Alive
-                            resolver=AsyncResolver(),
                         )
                     ) as s:
                         async with s.post(
@@ -5612,44 +5609,15 @@ async def run():
     priority_queue = PriorityArbitrageQueue(max_size=50)
     trade_sizer = OptimalTradeSizer()
 
-    # Use AsyncResolver with Cloudflare/Google DNS + AF_INET only for low-latency networking
-    # Fix 53+94: IPv4 + custom nameservers for 50-80ms DNS boost; keepalive_timeout=300
-    _resolver = None
-    try:
-        import brotli  # noqa: enables aiohttp Brotli decoding (Accept-Encoding: br)
-    except ImportError:
-        brotli = None
-    try:
-        import aiodns  # noqa: ensures aiodns is present for AsyncResolver
-    except ImportError:
-        logger.warning("⚠️ aiodns not available — falling back to default DNS resolver")
-    _resolver = AsyncResolver()
+    connector = aiohttp.TCPConnector(
+        family=socket.AF_INET,
+            ttl_dns_cache=300,
+            use_dns_cache=True,
+            force_close=False,  # РАЗРЕШАЕМ Keep-Alive!
+            keepalive_timeout=300,
+            ssl=False,
+        )
 
-    try:
-        # Fix 53: AF_INET disables IPv6 lookups; ttl_dns_cache reduces DNS overhead;
-        # force_close is mandatory on macOS for >1024 concurrent connections.
-        # Fix 94: keepalive_timeout=300 reuses TCP connections (saves 3-way handshake per Jupiter quote).
-        connector = aiohttp.TCPConnector(
-            family=socket.AF_INET,
-            resolver=_resolver,
-            limit=100,
-            ttl_dns_cache=300,
-            use_dns_cache=True,
-            force_close=False,  # РАЗРЕШАЕМ Keep-Alive!
-            keepalive_timeout=300,
-            ssl=False,
-        )
-    except Exception:
-        logger.warning("connector fallback — using defaults")
-        connector = aiohttp.TCPConnector(
-            family=socket.AF_INET,
-            limit=100,
-            ttl_dns_cache=300,
-            use_dns_cache=True,
-            force_close=False,  # РАЗРЕШАЕМ Keep-Alive!
-            keepalive_timeout=300,
-            ssl=False,
-        )
 
     session = aiohttp.ClientSession(
         connector=connector,

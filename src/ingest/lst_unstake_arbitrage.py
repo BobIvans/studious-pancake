@@ -323,6 +323,11 @@ class LstInstantUnstakeArbitrage:
             if not bank_info:
                 return False
 
+            # Clone bank_info and inject marginfi_account to prevent compile KeyError
+            active_bank_info = dict(bank_info)
+            _acct_to_use = os.getenv("MARGINFI_ACCOUNT", "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2")
+            active_bank_info["marginfi_account"] = Pubkey.from_string(_acct_to_use)
+
             dex_leg1 = quote.get("dex_leg1", {})
             dex_leg2 = quote.get("dex_leg2", {})
             wallet_pubkey = str(keypair.pubkey())
@@ -371,7 +376,7 @@ class LstInstantUnstakeArbitrage:
                 borrow_amount_lamports=borrow_amount,
                 expected_min_profit_lamports=opportunity["expected_profit_lamports"],
                 dex_swap_instructions=all_swap_ixs,
-                marginfi_config=bank_info,
+                marginfi_config=active_bank_info,
                 jito_tip_lamports=jito_tip_lamports,
                 borrow_mint=SOL_MINT,
                 use_jito=True,

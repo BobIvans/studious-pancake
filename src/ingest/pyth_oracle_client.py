@@ -14,8 +14,8 @@ from websockets.exceptions import ConnectionClosedError, WebSocketException
 from oracle_streams import (
     HERMES_WS_URL,
     PYTH_FEEDS,
-    get_all_feed_ids
 )
+from src.config.addresses import get_all_pyth_feed_ids
 
 logger = logging.getLogger(__name__)
 
@@ -73,11 +73,11 @@ class PythHermesClient:
                 subscription = {
                     "type": "subscribe",
                     "subscription_type": "price_feed_updates",
-                    "price_feed_ids": get_all_feed_ids()
+                    "price_feed_ids": get_all_pyth_feed_ids()
                 }
 
                 await websocket.send(orjson.dumps(subscription))
-                logger.info(f"📡 Subscribed to {len(get_all_feed_ids())} Pyth feeds")
+                logger.info(f"📡 Subscribed to {len(get_all_pyth_feed_ids())} Pyth feeds")
 
                 # Listen for messages
                 async for message in websocket:

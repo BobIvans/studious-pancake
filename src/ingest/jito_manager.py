@@ -293,13 +293,19 @@ class JitoBiddingManager:
             async with session.get(self.TIP_FLOOR_URL, timeout=3) as resp:
                 if resp.status == 200:
                     self.tip_floor_data = await resp.json()
-                    logger.info(f"📊 Jito tip floor updated: 50th={self.tip_floor_data.get('landed_tips_50th_percentile')}")
+                    p50 = self.get_50th_percentile_lamports()
+                    logger.info(f"📊 Jito tip floor updated: 50th={p50}")
         except Exception as e:
             logger.debug(f"Tip floor poll failed: {e}")
 
     def get_50th_percentile_lamports(self) -> int:
         try:
-            val = self.tip_floor_data.get("landed_tips_50th_percentile", 10000)
+            if isinstance(self.tip_floor_data, list) and len(self.tip_floor_data) > 0:
+                val = self.tip_floor_data[0].get("landed_tips_50th_percentile", 10000)
+            elif isinstance(self.tip_floor_data, dict):
+                val = self.tip_floor_data.get("landed_tips_50th_percentile", 10000)
+            else:
+                val = 10000
             return int(val)
         except Exception:
             return 10000

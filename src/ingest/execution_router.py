@@ -17,6 +17,7 @@ from solders.message import MessageV0
 from solders.system_program import TransferParams, transfer
 from spl.token.instructions import get_associated_token_address
 from spl.token.constants import TOKEN_PROGRAM_ID
+import src.ingest.shared_state as shared_state
 
 
 # ════════════════════════════════════════════════════════════════════════
@@ -704,9 +705,8 @@ class ExecutionRouter:
                 # Dynamically adjust the profit buffer based on current capital.
                 # Micro-balances (0.015 SOL) cannot afford the risk of pivot slippage.
                 try:
-                    from .shared_state import stats
-                    current_capital = stats.get("last_balance", 0.015)
-                except ImportError:
+                    current_capital = shared_state.stats.get("last_balance", 0.015)
+                except (ImportError, AttributeError):
                     current_capital = 0.015
 
                 if current_capital < 0.1:
@@ -901,7 +901,7 @@ class ExecutionRouter:
             # abort early — cheaper than burning tip + gas.
             try:
                 from .pre_trade_guard import PreTradeGuard
-                _ptg = PreTradeGuard()
+                _ptg = PreTradeGuard(session=self.session, rpc_url=self.rpc_url)
                 _base_fee = 5000  # 0.000005 SOL in lamports (base network fee)
                 prof_ok, prof_reason, actual_net = await _ptg.check_profit_before_execution(
                     input_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",   # USDC leg in
@@ -975,8 +975,7 @@ class ExecutionRouter:
                 # inside the arb transaction.  Mark the atomic close so wallet_balance_listener
                 # skips its own standalone CloseAccount×for the same ATA (saves one RPC tx / gas).
                 try:
-                    from .shared_state import mark_wsol_atomically_closed
-                    await mark_wsol_atomically_closed()
+                    shared_state.mark_wsol_atomically_closed()
                 except Exception:
                     pass  # non-fatal — listener has its own cooldown guard
                 
@@ -1364,8 +1363,7 @@ class ExecutionRouter:
                             # Hook into arb_bot's check_and_refill_gas for immediate replenishment
                             try:
                                 from .gas_manager import check_and_refill_gas
-                                from .shared_state import rpc
-                                asyncio.create_task(check_and_refill_gas(self.session, rpc, self.keypair))
+                                asyncio.create_task(check_and_refill_gas(self.session, shared_state.rpc, self.keypair))
                             except Exception as refill_err:
                                 logger.debug(f"Event-driven refill trigger failed: {refill_err}")
                     else:
@@ -1430,16 +1428,15 @@ class ExecutionRouter:
                     "deducted_amount": jito_tip_lamports / 1_000_000_000,
                 }
                 # ── Phase 49: Optimistic State ───────────────────────────────────
-                from .shared_state import stats, stats_lock
                 tip_deducted = jito_tip_lamports / 1e9
-                async with stats_lock:
-                    prev = stats.get("virtual_balance", 0.0)
-                    stats["virtual_balance"] = max(0.0, prev - tip_deducted)
-                    stats["last_balance"] = stats["virtual_balance"]
+                async with shared_state.stats_lock:
+                    prev = shared_state.stats.get("virtual_balance", 0.0)
+                    shared_state.stats["virtual_balance"] = max(0.0, prev - tip_deducted)
+                    shared_state.stats["last_balance"] = shared_state.stats["virtual_balance"]
                 self.is_account_busy = False   # MarginFi account is instantly free
                 logger.debug(
                     f"⚡ Optimistic balance: virtual_balance {prev:.6f} → "
-                    f"{stats['virtual_balance']:.6f} SOL (tip {tip_deducted:.6f})"
+                    f"{shared_state.stats['virtual_balance']:.6f} SOL (tip {tip_deducted:.6f})"
                 )
             return bundle_result
 
@@ -1472,11 +1469,10 @@ class ExecutionRouter:
 
                         # ВОЗВРАЩАЕМ БАЛАНС
                         try:
-                            from .shared_state import stats, stats_lock
                             refund_amount = meta.get("deducted_amount", 0)
-                            async with stats_lock:
-                                stats["virtual_balance"] += refund_amount
-                        except (ImportError, KeyError) as e:
+                            async with shared_state.stats_lock:
+                                shared_state.stats["virtual_balance"] += refund_amount
+                        except (ImportError, AttributeError, KeyError) as e:
                             logger.debug(f"Ghost balance refund unavailable: {e}")
 
                         self._stale_bundle_ids.add(bid)

@@ -209,12 +209,6 @@ from src.ingest.dust_sweeper import DustSweeper
 from src.ingest.alt_manager import ALTCacheManager
 import src.ingest.shared_state as shared_state
 from src.ingest.shared_state import (
-    stats,
-    stats_lock,
-    execution_lock,
-    marginfi_account_lock,
-    GLOBAL_STOP_EVENT,
-    active_tasks,
     initialize_shared_state,
 )
 
@@ -457,11 +451,11 @@ def ensure_pubkey(val) -> Pubkey:
 # Helper function for thread-safe stats updates
 async def update_stats(key: str, value: Any = 1):
     """Thread-safe stats update."""
-    async with stats_lock:
-        if isinstance(value, int) and key in stats and isinstance(stats[key], int):
-            stats[key] += value
+    async with shared_state.stats_lock:
+        if isinstance(value, int) and key in shared_state.stats and isinstance(shared_state.stats[key], int):
+            shared_state.stats[key] += value
         else:
-            stats[key] = value
+            shared_state.stats[key] = value
 
 
 from solders.system_program import transfer, TransferParams
@@ -979,16 +973,16 @@ TOKENS = {
     "INF": "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",
     "JupSOL": "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",
     "hubSOL": "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX",
-    "fwdSOL": "fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z",
-    "dSOL": "dSoL8n9Sa798ZAr96f9f9f9f9f9f9f9f9f9f9f9f9f9",
+    "fwdSOL": "cPQPBN7WubB3zyQDpzTK2ormx1BMdAym9xkrYUJsctm",
+    "dSOL": "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ",
     "dzSOL": "Gekfj7SL2fVpTDxJZmeC46cTYxinjB6gkAnb6EGT6mnn",
     "psol": "pSo1f9nQXWgXibFtKf7NWYxb5enAM4qfP6UJSiXRQfL",
     "bonkSOL": "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs",
     "cgntSOL": "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE",
-    "vSOL": "vSoLmuSscAnpS699Yv8pYf8pYf8pYf8pYf8pYf8pYf8",
+    "vSOL": "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",
     "compassSOL": "Comp4ssDzXcLeu2MnLuGNNFC4cmLPMng8qWHPvzAMU1h",
-    "hSOL": "hSoL8p9v9v9v9v9v9v9v9v9v9v9v9v9v9v9v9v9v9v9",
-    "kSOL": "kSoL9n9Sa798ZAr96f9f9f9f9f9f9f9f9f9f9f9f9f9",
+    "hSOL": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
+    "kSOL": "kSoL6Y9p9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Y",
     # === GOLDEN FUND: xStocks (Oracle Lag) ===
     "NVDAx": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
     "TSLAx": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
@@ -1090,12 +1084,12 @@ TOKEN_DECIMALS = {
     "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE": 9,  # cgntSOL
     "Gekfj7SL2fVpTDxJZmeC46cTYxinjB6gkAnb6EGT6mnn": 9,  # dzSOL
     "pSo1f9nQXWgXibFtKf7NWYxb5enAM4qfP6UJSiXRQfL": 9,  # psol
-    "fwdSoLpYvT1Z3Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z5Z": 9,  # fwdSOL
-    "dSoL8n9Sa798ZAr96f9f9f9f9f9f9f9f9f9f9f9f9f9": 9,  # dSOL
-    "vSoLmuSscAnpS699Yv8pYf8pYf8pYf8pYf8pYf8pYf8": 9,  # vSOL
+    "cPQPBN7WubB3zyQDpzTK2ormx1BMdAym9xkrYUJsctm": 9,  # fwdSOL
+    "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ": 9,  # dSOL
+    "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7": 9,  # vSOL
     "Comp4ssDzXcLeu2MnLuGNNFC4cmLPMng8qWHPvzAMU1h": 9,  # compassSOL
-    "hSoL8p9v9v9v9v9v9v9v9v9v9v9v9v9v9v9v9v9v9v9": 9,  # hSOL
-    "kSoL9n9Sa798ZAr96f9f9f9f9f9f9f9f9f9f9f9f9f9": 9,  # kSOL
+    "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A": 9,  # hSOL
+    "kSoL6Y9p9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Y": 9,  # kSOL
     "BLVxek8YMXUQhcKmMvrFTrzh5FXg8ec88Crp6otEaCMf": 9,  # BELIEVE
     # Golden Fund: xStocks (Fixed Mainnet IDs — Token-2022, 8 decimes = 6 in practice for display)
     "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh": 6,  # NVDAx
@@ -1531,7 +1525,7 @@ MAX_CONCURRENT_TASKS = 1  # Sequential mode to prevent MarginFi account lock
 # Fix 3: Silent Exception Swallower - Background task callback for exception logging
 def background_task_callback(t: asyncio.Task):
     """Log hidden exceptions in background tasks and prevent silent failures."""
-    active_tasks.discard(t)
+    shared_state.active_tasks.discard(t)
     try:
         t.result()  # Raises exception if task failed
     except asyncio.CancelledError:
@@ -1657,9 +1651,9 @@ async def balance_reconciler(
             reconciled_sol = max((actual_lamports - pending_lamports) / 1e9, 0.0)
 
             # 3. Update virtual_balance atomically
-            async with stats_lock:
-                prev = stats.get("virtual_balance", 0.0)
-                stats["virtual_balance"] = reconciled_sol
+            async with shared_state.stats_lock:
+                prev = shared_state.stats.get("virtual_balance", 0.0)
+                shared_state.stats["virtual_balance"] = reconciled_sol
                 drift = abs(reconciled_sol - prev)
                 # Fix 6: Balance Lock Guard — if virtual vs actual diff > 0.003 SOL
                 # pause all trading for 400 ms (1 slot) to prevent cascade failures.
@@ -2125,7 +2119,7 @@ def get_market_aware_scan_interval(base_interval: float) -> float:
         )  # 10x slower outside trading hours to save RPC credits
 
 
-async def xstocks_scanner(queue, cfg):
+async def xstocks_scanner(queue, cfg, session, rpc):
     """Loop C (xStocks Priority): Oracle lag detection with market hours awareness."""
     scan_config = SCAN_TARGETS["xstocks"]
     logger.debug(
@@ -2135,7 +2129,7 @@ async def xstocks_scanner(queue, cfg):
     # Initialize PreTradeGuard for Token-2022 fee checking
     from src.ingest.pre_trade_guard import PreTradeGuard
 
-    pre_trade_guard = PreTradeGuard()
+    pre_trade_guard = PreTradeGuard(session=session, rpc_url=rpc.get_rpc())
 
     while True:
         # Dynamic scan interval based on market hours
@@ -2411,8 +2405,11 @@ async def create_flashloan_arbitrage_tx(
 
     # Convert SOL fees to base_mint equivalents if base_mint is not SOL
     is_sol_base = base_mint_str == "So11111111111111111111111111111111111111112"
-    sol_price_in_usd = price_matrix.get(
-        "So11111111111111111111111111111111111111112", 150.0
+    sol_entry = price_matrix.get(
+        "So11111111111111111111111111111111111111112"
+    )
+    sol_price_in_usd = (
+        sol_entry[0] if isinstance(sol_entry, (tuple, list)) else 150.0
     )
 
     base_fee_sol = cfg.BASE_FEE + (tip_lamports / 1e9)
@@ -2954,7 +2951,7 @@ async def lst_depeg_scanner(
         # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
         try:
             _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
-                stats.get("virtual_balance", stats.get("last_balance", 0.0))
+                shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
             )
             if not _gas_ok:
                 logger.critical(
@@ -2999,8 +2996,8 @@ async def lst_depeg_scanner(
 
                 # FIX 4 (MarginFi Slippage-Pegged Sizing): Cap borrow using dynamic formula
                 # that considers wallet balance, expected pool slippage, and 50% of the vault liquidity.
-                current_native_balance = stats.get(
-                    "last_balance", stats.get("virtual_balance", 0.017)
+                current_native_balance = shared_state.stats.get(
+                    "last_balance", shared_state.stats.get("virtual_balance", 0.017)
                 )
                 # Estimate pool slippage from the route's price impact
                 _estimated_slippage_pct = max(0.001, cfg.SLIPPAGE_BPS / 10000.0)
@@ -3056,9 +3053,9 @@ async def lst_depeg_scanner(
                     logger.debug(
                         f"📡 LST Scanner heartbeat #{cycle_count} | "
                         f"fair={status['fair_prices']} | "
-                        f"sims={sim_stats['total_simulations']} "
-                        f"(ok={sim_stats['profitable']}, blocked={sim_stats['unprofitable']}, "
-                        f"saved={sim_stats['gas_saved_sol']:.6f} SOL)"
+                        f"sims={sim_shared_state.stats['total_simulations']} "
+                        f"(ok={sim_shared_state.stats['profitable']}, blocked={sim_shared_state.stats['unprofitable']}, "
+                        f"saved={sim_shared_state.stats['gas_saved_sol']:.6f} SOL)"
                     )
                 await asyncio.sleep(cfg.LST_SCAN_INTERVAL)
                 continue
@@ -3077,7 +3074,7 @@ async def lst_depeg_scanner(
                     await asyncio.sleep(5)
                     continue
 
-                current_wallet_balance = stats.get("last_balance", 0.017)  # Task 14: wallet balance for direct-route guard
+                current_wallet_balance = shared_state.stats.get("last_balance", 0.017)  # Task 14: wallet balance for direct-route guard
                 route = await route_aggregator.find_best_route(
                     borrow_amount_lamports=borrow_lamports,
                     lst_mint=signal.token_mint,
@@ -3108,7 +3105,7 @@ async def lst_depeg_scanner(
 
                 # God-mode tip via bidding manager (tip_floor + step-up/down + capital guard)
                 # Fix 2 (Unfunded Jito Tip): pass native SOL balance to cap tip
-                current_native_for_tip = stats.get("last_balance", 0.017)
+                current_native_for_tip = shared_state.stats.get("last_balance", 0.017)
                 god_tip_lamports = jito_bidding_manager.calculate_blue_ocean_tip(
                     expected_profit_sol=route.profit_sol,
                     strategy="lst_depeg",
@@ -3132,7 +3129,7 @@ async def lst_depeg_scanner(
                 # Hard cap: tip must never exceed (native_balance - 0.0025) SOL.
                 # 0.0025 SOL is the gas/rent safety reserve; exceeding it causes
                 # InsufficientFundsForFee pre-flight failure on a 0.015 SOL wallet.
-                current_native_for_tip = stats.get("last_balance", 0.015)
+                current_native_for_tip = shared_state.stats.get("last_balance", 0.015)
                 available_for_tip = (
                     current_native_for_tip - 0.0025
                 ) * 1e9
@@ -3356,7 +3353,7 @@ async def lst_depeg_scanner(
                         )
                         continue
 
-                    stats["bundle_send_attempts"] += 1
+                    shared_state.stats["bundle_send_attempts"] += 1
 
                     # ── Fix "Blocking Discovery": Fire-and-Forget Execution ──────────
                     # send_bundle itself is ~200ms, wait_for_confirmation wall-clock is up to 30 s.
@@ -3372,8 +3369,8 @@ async def lst_depeg_scanner(
                         if not b_result.get("success"):
                             return
 
-                        stats["bundle_successes"] += 1
-                        stats["trades"] += 1
+                        shared_state.stats["bundle_successes"] += 1
+                        shared_state.stats["trades"] += 1
                         bundle_id = b_result.get("bundle_id", "")
 
                         # ── Async trade record (no blocking write) ─────────────────
@@ -3430,7 +3427,7 @@ async def lst_depeg_scanner(
 
                         tx_with_tip = tx  # Placeholder — tip will be added by JitoBundleHandler/JitoExecutor
                         bundle_result = await jito_executor.send_bundle([tx_with_tip])
-                        # Сохраняем сильную ссылку в глобальный набор active_tasks (Fix GC Trap)
+                        # Сохраняем сильную ссылку в глобальный набор shared_state.active_tasks (Fix GC Trap)
                         task = asyncio.create_task(
                             _post_send_processing(
                                 bundle_result,
@@ -3440,7 +3437,7 @@ async def lst_depeg_scanner(
                                 route.borrow_amount_lamports,
 )
                         )
-                        active_tasks.add(task)
+                        shared_state.active_tasks.add(task)
                         task.add_done_callback(background_task_callback)
 
                 else:
@@ -3524,12 +3521,12 @@ async def kamino_liquidation_scanner(session, cfg, rpc_manager, keypair, jito_ex
                 )
 
                 if success:
-                    stats["trades"] += 1
+                    shared_state.stats["trades"] += 1
                     logger.debug(
                         f"✅ Kamino liquidation successful | profit={opportunity.expected_profit_sol:.6f} SOL"
                     )
                 else:
-                    stats["sim_fails"] += 1
+                    shared_state.stats["sim_fails"] += 1
                     record_sim_failure("kamino_liquidation")
                     logger.warning("❌ Kamino liquidation failed")
 
@@ -3572,8 +3569,8 @@ async def lst_unstake_arbitrage_scanner(
         rpc_getter=lambda: rpc_manager.get_rpc(),
         cfg=cfg,
         data_aggregator=data_aggregator,
-        stats=stats,
-        stats_lock=stats_lock,
+        stats=shared_state.stats,
+        stats_lock=shared_state.stats_lock,
     )
 
     cycle_count = 0
@@ -3589,7 +3586,7 @@ async def lst_unstake_arbitrage_scanner(
         try:
             # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
             _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
-                stats.get("virtual_balance", stats.get("last_balance", 0.0))
+                shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
             )
             if not _gas_ok:
                 logger.critical(
@@ -3628,12 +3625,12 @@ async def lst_unstake_arbitrage_scanner(
                 )
 
                 if success:
-                    stats["trades"] += 1
+                    shared_state.stats["trades"] += 1
                     logger.info(
                         f"✅ LST unstake arbitrage successful | profit={expected_profit_sol:.6f} SOL"
                     )
                 else:
-                    stats["sim_fails"] += 1
+                    shared_state.stats["sim_fails"] += 1
                     record_sim_failure("lst_unstake")
                     logger.warning("❌ LST unstake arbitrage failed")
 
@@ -3728,12 +3725,12 @@ async def orderbook_amm_scanner(session, cfg, rpc_manager, keypair, jito_executo
             )
 
             if success:
-                stats["trades"] += 1
+                shared_state.stats["trades"] += 1
                 logger.debug(
                     f"✅ Orderbook-AMM arbitrage successful | profit={result.expected_profit:.6f}"
                 )
             else:
-                stats["sim_fails"] += 1
+                shared_state.stats["sim_fails"] += 1
                 record_sim_failure("orderbook_amm")
                 logger.warning("❌ Orderbook-AMM arbitrage failed")
 
@@ -4011,7 +4008,7 @@ async def execute_enhanced_migration_arbitrage(
     # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
     try:
         _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
-            stats.get("virtual_balance", stats.get("last_balance", 0.0))
+            shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
         )
         if not _gas_ok:
             logger.critical(
@@ -4121,14 +4118,14 @@ async def execute_enhanced_migration_arbitrage(
         # Fix "Blocking Discovery": send_bundle is ~200ms; we do not await confirmation here.
         # Confirmation is handled by a fire-and-forget background task so the caller is
         # never stalled by 10–30 s `wait_for_confirmation`.
-        stats["bundle_send_attempts"] += 1
+        shared_state.stats["bundle_send_attempts"] += 1
 
         async def _migration_post_send(b_result: dict) -> None:
             global TOTAL_FAILED_BUNDLES_IN_A_ROW
             _exec_ms = (time.time() - start_time) * 1000
             if b_result["success"]:
                 TOTAL_FAILED_BUNDLES_IN_A_ROW = 0
-                stats["bundle_successes"] += 1
+                shared_state.stats["bundle_successes"] += 1
                 bid = b_result.get("bundle_id", "")
                 logger.info(f"🔥 Enhanced migration bundle sent! ID: {bid}")
                 logger.info(
@@ -4144,9 +4141,9 @@ async def execute_enhanced_migration_arbitrage(
                     TOTAL_FAILED_BUNDLES_IN_A_ROW += 1
                     if TOTAL_FAILED_BUNDLES_IN_A_ROW >= 10:
                         logger.critical(
-                            "🚨 10 consecutive SlippageExceeded — activating GLOBAL_STOP_EVENT"
+                            "🚨 10 consecutive SlippageExceeded — activating shared_state.GLOBAL_STOP_EVENT"
                         )
-                        GLOBAL_STOP_EVENT.set()
+                        shared_state.GLOBAL_STOP_EVENT.set()
                 else:
                     TOTAL_FAILED_BUNDLES_IN_A_ROW = 0
                 logger.warning(f"❌ Enhanced bundle failed: {err}")
@@ -4243,8 +4240,8 @@ async def check_bundle_confirmation(
 
             # ♻️ 0ms Reconciler: Instantly refund virtual balance on failure
             if virtual_balance_to_deduct > 0:
-                async with stats_lock:
-                    stats["virtual_balance"] += virtual_balance_to_deduct
+                async with shared_state.stats_lock:
+                    shared_state.stats["virtual_balance"] += virtual_balance_to_deduct
                 logger.info(f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored.")
 
             # MEV: Losing an auction is normal. Only trigger circuit breaker for critical errors.
@@ -4256,7 +4253,7 @@ async def check_bundle_confirmation(
                 "invalid signer",
             ]
             if any(err in error_msg for err in critical_errors):
-                GLOBAL_STOP_EVENT.set()
+                shared_state.GLOBAL_STOP_EVENT.set()
                 logger.critical(
                     f"🛑 CIRCUIT BREAKER ACTIVATED: {error_msg.upper()}. Скрипт остановлен для анализа."
                 )
@@ -4281,8 +4278,8 @@ async def check_bundle_confirmation(
 
             # ♻️ 0ms Reconciler: Instantly refund virtual balance on timeout
             if virtual_balance_to_deduct > 0:
-                async with stats_lock:
-                    stats["virtual_balance"] += virtual_balance_to_deduct
+                async with shared_state.stats_lock:
+                    shared_state.stats["virtual_balance"] += virtual_balance_to_deduct
                 logger.info(f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored.")
 
             await data_aggregator.log_tx_failed(
@@ -4342,11 +4339,11 @@ async def execute_priority_opportunity(
     start_time = time.time()
 
     # Get current balance and flywheel params
-    current_balance_sol = stats.get("last_balance", 0.017)
+    current_balance_sol = shared_state.stats.get("last_balance", 0.017)
     params = flywheel_scaler.get_trading_params(current_balance_sol)
 
     # Check circuit breaker
-    if GLOBAL_STOP_EVENT.is_set():
+    if shared_state.GLOBAL_STOP_EVENT.is_set():
         logger.critical("Бот остановлен для анализа. Ожидание ручного рестарта.")
         return
 
@@ -4385,7 +4382,7 @@ async def execute_priority_opportunity(
 
     rent_per_ata = 0.00204
     # Fix 44: Use virtual_balance for affordability check (doesn't rely on last_WS_update)
-    current_sol = stats.get("virtual_balance", stats.get("last_balance", 0.0))
+    current_sol = shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
     tip_sol = tip_amount_lamports / 1e9
 
     # Integrate the preventative check (TASK 4)
@@ -4427,7 +4424,7 @@ async def execute_priority_opportunity(
             else:
                 ATA_CACHE.add(ata_addr)
 
-    current_sol = stats.get("virtual_balance", stats.get("last_balance", 0.0))
+    current_sol = shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
     tip_sol = tip_amount_lamports / 1e9
     rent_cost_sol = _rent_cost
 
@@ -4502,7 +4499,7 @@ async def execute_priority_opportunity(
         out_mint = TOKENS["SOL"]
 
     # Get flywheel params
-    current_balance_sol = stats.get("last_balance", 0.017)
+    current_balance_sol = shared_state.stats.get("last_balance", 0.017)
     params = flywheel_scaler.get_trading_params(current_balance_sol)
     cfg.ARBITRAGE_FILTER_MIN_PROFIT_SOL = params["min_net_profit_sol"]
 
@@ -4512,7 +4509,7 @@ async def execute_priority_opportunity(
     # opportunity to start building its transaction while the current bundle awaits confirmation.
     # Jito auctions operate on slot-level millisecond intervals — MarginFi account is free
     # for the next slot regardless of this bundle's confirmation outcome.
-    async with marginfi_account_lock:
+    async with shared_state.marginfi_account_lock:
         # ───────────────────────────────────────────────────────────────────────────────────────
 
         # --- ATA RENT GUARD (per-trade profit check) ---
@@ -4590,7 +4587,7 @@ async def execute_priority_opportunity(
             _tip_sol = int(tip_amount_lamports) / 1e9
             _gas_sol = cfg.PRIORITY_FEE + 0.000005
             _total_cost = _tip_sol + _gas_sol + _rent_cost
-            _virt_bal = stats.get("virtual_balance", current_balance_sol)
+            _virt_bal = shared_state.stats.get("virtual_balance", current_balance_sol)
 
             if _virt_bal - _total_cost < cfg.MIN_RESERVE_SOL:
                 logger.warning(
@@ -4719,12 +4716,12 @@ async def execute_priority_opportunity(
         est_gas_lamports = int((cfg.PRIORITY_FEE + 0.000005) * 1e9)
         virtual_balance_to_deduct = (tip_lamports + est_gas_lamports) / 1e9
         
-        async with stats_lock:
-            stats["virtual_balance"] = max(
-                0.0, stats["virtual_balance"] - virtual_balance_to_deduct
+        async with shared_state.stats_lock:
+            shared_state.stats["virtual_balance"] = max(
+                0.0, shared_state.stats["virtual_balance"] - virtual_balance_to_deduct
             )
         logger.debug(
-            f"💸 VirtualBalance deducted: -{virtual_balance_to_deduct:.6f} SOL | virtual_balance={stats['virtual_balance']:.6f}"
+            f"💸 VirtualBalance deducted: -{virtual_balance_to_deduct:.6f} SOL | virtual_balance={shared_state.stats['virtual_balance']:.6f}"
         )
 
     # --- OUTSIDE LOCK: Confirmation and Post-Execution ------------------------
@@ -4753,15 +4750,15 @@ async def execute_priority_opportunity(
 new_atas_to_create=_new_atas_to_create,  # ФИКС 3
                 )
             )
-            active_tasks.add(task)
+            shared_state.active_tasks.add(task)
             task.add_done_callback(background_task_callback)
     else:
         err_msg = result.get("error", "")
         logger.warning(f"❌ Priority transaction failed to send: {err_msg}")
         
         # Refund virtual balance if submission failed
-        async with stats_lock:
-            stats["virtual_balance"] = max(0.0, stats["virtual_balance"] + virtual_balance_to_deduct)
+        async with shared_state.stats_lock:
+            shared_state.stats["virtual_balance"] = max(0.0, shared_state.stats["virtual_balance"] + virtual_balance_to_deduct)
         logger.info(f"♻️ Capital Guard: Refunded {virtual_balance_to_deduct:.6f} SOL to virtual_balance due to send failure.")
 
         if err_msg and ("remaining account" in err_msg.lower() or "missing required signature" in err_msg.lower()):
@@ -4837,7 +4834,7 @@ async def worker(
 
             # Fix 44: Virtual Balance Guard — use virtual_balance so we never double-
             # commit capital while previous bundles are still in-flight.
-            balance = stats.get("virtual_balance", stats.get("last_balance", 0.0))
+            balance = shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
 
             # Fix 5 (Strict Gas Tank): never trade if balance < 0.005 SOL
             try:
@@ -4988,8 +4985,8 @@ async def worker(
             tip_lamports = getattr(cfg, "BASE_TIP_LAMPORTS", 10000)
             try:
                 # 2. Determine competition level (Success Rate)
-                attempts = stats.get("bundle_send_attempts", 0)
-                successes = stats.get("bundle_successes", 0)
+                attempts = shared_state.stats.get("bundle_send_attempts", 0)
+                successes = shared_state.stats.get("bundle_successes", 0)
                 competition_low = True
                 if attempts > 5:
                     success_rate = successes / attempts
@@ -5013,7 +5010,7 @@ async def worker(
                 # Apply the mathematical Cross-Currency safety cap
                 safe_tip_lamports = min(calculated_tip, int(max_safe_tip_sol * 1e9))
                 # Fix 2 (Unfunded Jito Tip): cap further by actual native SOL balance
-                current_native_sol = stats.get("last_balance", 0.017)
+                current_native_sol = shared_state.stats.get("last_balance", 0.017)
                 available_for_tip = (
                     current_native_sol - 0.005
                 ) * 1e9  # leave 0.005 SOL for gas
@@ -5143,8 +5140,11 @@ async def worker(
             profit_lamports = expected_out_lamports - amount_lamports
 
             is_sol_base = str(in_mint) == "So11111111111111111111111111111111111111112"
-            sol_price_in_usd = price_matrix.get(
-                "So11111111111111111111111111111111111111112", 150.0
+            sol_entry = price_matrix.get(
+                "So11111111111111111111111111111111111111112"
+            )
+            sol_price_in_usd = (
+                sol_entry[0] if isinstance(sol_entry, (tuple, list)) else 150.0
             )
 
             base_fee_sol = (
@@ -5317,7 +5317,7 @@ async def worker(
 
             # Calculate working capital locally (current balance for liquidity estimate)
             working_cap = (
-                stats.get("last_balance", 0.0) * 1e6
+                shared_state.stats.get("last_balance", 0.0) * 1e6
             )  # Convert to USD approximation
 
             # Create arbitrage opportunity with quotes saved in metadata for executor
@@ -5344,7 +5344,7 @@ async def worker(
             )
 
             # Calculate AI score
-            current_balance = stats.get("last_balance", 0.0)
+            current_balance = shared_state.stats.get("last_balance", 0.0)
             score = await arbitrage_scorer.score_opportunity(
                 opportunity, wallet_balance=current_balance
             )
@@ -5392,10 +5392,10 @@ async def blockhash_updater(session, rpc_getter):
                             cached_blockhash = item["result"]["value"]["blockhash"]
                             cache_time = time.time()
                         elif item["id"] == 2:
-                            stats["current_slot"] = item["result"]
+                            shared_state.stats["current_slot"] = item["result"]
                             # StaleStreamGuard: record timestamp of last slot update
-                            stats["_sg_last_slot"] = item["result"]
-                            stats["_sg_last_slot_ts"] = time.time()
+                            shared_state.stats["_sg_last_slot"] = item["result"]
+                            shared_state.stats["_sg_last_slot_ts"] = time.time()
         except:
             pass
         await asyncio.sleep(
@@ -5446,10 +5446,8 @@ async def hard_floor_guard():
     """
     while True:
         try:
-            from arb_bot import stats, stats_lock
-
-            async with stats_lock:
-                balance = stats.get("virtual_balance", 1.0)  # default high
+            async with shared_state.stats_lock:
+                balance = shared_state.stats.get("virtual_balance", 1.0)  # default high
 
             if balance < 0.003:
                 logger.critical(
@@ -5500,12 +5498,7 @@ async def run():
     gc.disable()
     
     # Fix 1: Initialize asyncio locks inside the running event loop
-    global execution_lock, marginfi_account_lock, stats_lock, GLOBAL_STOP_EVENT
     initialize_shared_state()
-    execution_lock = shared_state.execution_lock
-    marginfi_account_lock = shared_state.marginfi_account_lock
-    stats_lock = shared_state.stats_lock
-    GLOBAL_STOP_EVENT = shared_state.GLOBAL_STOP_EVENT
     
 
     # Делаем сборку мусора реже, но эффективнее, чтобы не мешать горячим циклам
@@ -5670,8 +5663,6 @@ async def run():
 
     # Phase 49: Hardware & Performance Heartbeat
     asyncio.create_task(tcp_heartbeat(session))
-    asyncio.create_task(hard_floor_guard())
-
     # ── Fix 53: Warm-up requests (3 dummy calls to prime DNS + TCP connections) ──────
     try:
         for _ in range(3):
@@ -5851,7 +5842,7 @@ async def run():
         )
         # noinspection PyTypeChecker
         # _poll_task is intentionally fire-and-forget; it exits when run() exits
-        active_tasks.add(_poll_task)
+        shared_state.active_tasks.add(_poll_task)
         _poll_task.add_done_callback(background_task_callback)
         logger.info("🎯 Jito bidding manager started (polling tip_floor every 10s)")
 
@@ -5865,8 +5856,8 @@ async def run():
         rpc_getter=lambda: rpc.get_rpc(),
         cfg=cfg,
         data_aggregator=data_aggregator,
-        stats=stats,
-        stats_lock=stats_lock,
+        stats=shared_state.stats,
+        stats_lock=shared_state.stats_lock,
     )
     execution_router.start_processor()
 
@@ -5992,7 +5983,7 @@ async def run():
                     session, rpc, keypair.pubkey()
                 )
                 if current_balance is not None:
-                    stats["last_balance"] = current_balance
+                    shared_state.stats["last_balance"] = current_balance
 
                     # 2. Если нативный SOL падает ниже 0.01 SOL (опасно!)
                     if current_balance < 0.01:
@@ -6227,11 +6218,14 @@ async def run():
             logger.warning("⏳ Ожидание готовности RPC... Повтор через 5 секунд")
             await asyncio.sleep(5)
 
-    stats["last_balance"] = initial_balance
-    stats["virtual_balance"] = (
+    shared_state.stats["last_balance"] = initial_balance
+    shared_state.stats["virtual_balance"] = (
         initial_balance  # Fix 44: seed virtual balance from actual balance
     )
-    stats["initial_balance"] = initial_balance
+    shared_state.stats["initial_balance"] = initial_balance
+
+    # Seed Hard Floor Guard (Task 47)
+    asyncio.create_task(hard_floor_guard())
 
     # Jupiter Warm-up
     try:
@@ -6259,21 +6253,21 @@ async def run():
     # await warmup_golden_atas(session, rpc.get_rpc(), keypair.pubkey())
 
     # ── TASK 3: WebSocket Liveness Guard (StaleStreamGuard) ───────────────────
-    # Monitors stats["current_slot"] (updated by blockhash_updater every 2 s).
+    # Monitors shared_state.stats["current_slot"] (updated by blockhash_updater every 2 s).
     # If no slot update arrives within STALE_SLOT_TIMEOUT, force-reconnects
     # HeliusWebhookHandler and PoolStateManager so the bot recovers from a
     # ghosted / frozen WebSocket within milliseconds, not system timeout seconds.
     STALE_SLOT_TIMEOUT = 5.0  # seconds
-    stats["_sg_last_slot"] = stats.get("current_slot", 0)
-    stats["_sg_last_slot_ts"] = time.time()
+    shared_state.stats["_sg_last_slot"] = shared_state.stats.get("current_slot", 0)
+    shared_state.stats["_sg_last_slot_ts"] = time.time()
 
     async def _stale_stream_guard():
         while True:
             try:
                 await asyncio.sleep(0.25)
-                now_slot = stats.get("current_slot", 0)
-                last_tracked = stats.get("_sg_last_slot", 0)
-                last_ts = stats.get("_sg_last_slot_ts", time.time())
+                now_slot = shared_state.stats.get("current_slot", 0)
+                last_tracked = shared_state.stats.get("_sg_last_slot", 0)
+                last_ts = shared_state.stats.get("_sg_last_slot_ts", time.time())
 
                 if now_slot == last_tracked and last_tracked != 0:
                     stale_secs = time.time() - last_ts
@@ -6293,10 +6287,10 @@ async def run():
                             except Exception:
                                 pass
                         # Reset tracker so we don't loop-spam restarts
-                        stats["_sg_last_slot_ts"] = time.time()
+                        shared_state.stats["_sg_last_slot_ts"] = time.time()
                 else:
-                    stats["_sg_last_slot"] = now_slot
-                    stats["_sg_last_slot_ts"] = time.time()
+                    shared_state.stats["_sg_last_slot"] = now_slot
+                    shared_state.stats["_sg_last_slot_ts"] = time.time()
             except Exception as _sg_err:
                 logger.debug(f"StaleStreamGuard tick error: {_sg_err}")
                 await asyncio.sleep(0.25)
@@ -6360,7 +6354,7 @@ async def run():
             lst_scanner(queue, cfg)
         ),  # Loop B: LST arbitrage (2.0s)
         asyncio.create_task(
-            xstocks_scanner(queue, cfg)
+            xstocks_scanner(queue, cfg, session, rpc)
         ),  # Loop C: xStocks priority (5.0s)
         # DISABLED: rwa_rest_scanner — RPS-heavy polling (15.0s interval)
         # asyncio.create_task(rwa_rest_scanner(queue, cfg)),
@@ -6467,7 +6461,7 @@ async def run():
             if current_balance is None:
                 continue
 
-            stats["last_balance"] = current_balance
+            shared_state.stats["last_balance"] = current_balance
 
             # Задача 52: Локальный мониторинг (Health Check File)
             try:
@@ -6475,8 +6469,8 @@ async def run():
                     f.write(orjson.dumps(
                         {
                             "last_ping": time.time(),
-                            "balance": stats.get("last_balance"),
-                            "trades": stats.get("trades"),
+                            "balance": shared_state.stats.get("last_balance"),
+                            "trades": shared_state.stats.get("trades"),
                         }
                     ))
             except Exception as e:
@@ -6487,25 +6481,25 @@ async def run():
                 current_balance - cfg.MIN_RESERVE_SOL
             ) * cfg.TRADE_SIZE_PCT
             bir = (
-                (stats["bundle_successes"] / stats["bundle_send_attempts"]) * 100
-                if stats["bundle_send_attempts"] > 0
+                (shared_state.stats["bundle_successes"] / shared_state.stats["bundle_send_attempts"]) * 100
+                if shared_state.stats["bundle_send_attempts"] > 0
                 else 0
             )
             avg_sel = (
-                sum(stats["state_to_execution_latencies"])
-                / len(stats["state_to_execution_latencies"])
-                if stats["state_to_execution_latencies"]
+                sum(shared_state.stats["state_to_execution_latencies"])
+                / len(shared_state.stats["state_to_execution_latencies"])
+                if shared_state.stats["state_to_execution_latencies"]
                 else 0
             )
             flash_miss_rate = (
-                (stats["flash_loan_miss_count"] / stats["flash_loan_attempt_count"])
+                (shared_state.stats["flash_loan_miss_count"] / shared_state.stats["flash_loan_attempt_count"])
                 * 100
-                if stats["flash_loan_attempt_count"] > 0
+                if shared_state.stats["flash_loan_attempt_count"] > 0
                 else 0
             )
 
             logger.debug(
-                f"📊 [STATS] Balance: {current_balance:.8f} | WC: {working_cap:.8f} | Trades: {stats['trades']} | BIR: {bir:.1f}% | SEL: {avg_sel:.1f}ms"
+                f"📊 [STATS] Balance: {current_balance:.8f} | WC: {working_cap:.8f} | Trades: {shared_state.stats['trades']} | BIR: {bir:.1f}% | SEL: {avg_sel:.1f}ms"
             )
 
             # Balance Guard + Fix 68: Dust Reserve
@@ -6514,7 +6508,7 @@ async def run():
                     "🚨 DEBT CEILING REACHED: 0.005 SOL native - closing ATAs, swapping to SOL, SHUTDOWN"
                 )
                 # 1. close non-essential ATAs 2. swap USDC->SOL 3. exit
-                GLOBAL_STOP_EVENT.set()
+                shared_state.GLOBAL_STOP_EVENT.set()
                 break
             if current_balance < initial_balance * 0.3:
                 logger.critical(

@@ -100,9 +100,9 @@ class LstInstantUnstakeArbitrage:
         # Если резервов нет (пустой routes) — возвращается полный 95% банк (без искажений).
         
         # Check current balance for capital-aware sizing
-        from arb_bot import stats
-        current_balance = stats.get("last_balance", stats.get("virtual_balance", 0.015))
-        current_virtual_balance = stats.get("virtual_balance", current_balance)
+        import src.ingest.shared_state as shared_state
+        current_balance = shared_state.stats.get("last_balance", shared_state.stats.get("virtual_balance", 0.015))
+        current_virtual_balance = shared_state.stats.get("virtual_balance", current_balance)
 
         for lst_mint in self.lst_mints:
             try:

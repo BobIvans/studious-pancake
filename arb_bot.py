@@ -1873,7 +1873,6 @@ def update_global_price_matrix(matrix: Dict[str, tuple]) -> None:
     Prevents stale price drift between arb_bot.price_matrix and
     _set_global_price_matrix() — both are updated atomically.
     """
-    global price_matrix
     price_matrix.update(matrix)
     _set_global_price_matrix(matrix)
 
@@ -3065,9 +3064,9 @@ async def lst_depeg_scanner(
                     logger.debug(
                         f"📡 LST Scanner heartbeat #{cycle_count} | "
                         f"fair={status['fair_prices']} | "
-                        f"sims={sim_shared_state.stats['total_simulations']} "
-                        f"(ok={sim_shared_state.stats['profitable']}, blocked={sim_shared_state.stats['unprofitable']}, "
-                        f"saved={sim_shared_state.stats['gas_saved_sol']:.6f} SOL)"
+                        f"sims={sim_stats['total_simulations']} "
+                        f"(ok={sim_stats['profitable']}, blocked={sim_stats['unprofitable']}, "
+                        f"saved={sim_stats['gas_saved_sol']:.6f} SOL)"
                     )
                 await asyncio.sleep(cfg.LST_SCAN_INTERVAL)
                 continue

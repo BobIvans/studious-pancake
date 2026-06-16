@@ -280,6 +280,18 @@ class WSOLManager:
         Returns:
             True if wSOL was unwrapped, False if no action needed.
         """
+        # Fix 74+78: Safe session fallback + safe str() casting on wsol_ata
+        _session = self.session
+        _session_owned = False
+        if _session is None:
+            try:
+                _session = aiohttp.ClientSession()
+                _session_owned = True
+                logger.debug("Fix 74: Created ad-hoc aiohttp session for check_and_unwrap_wsol")
+            except Exception as e:
+                logger.debug(f"wSOL unwrap: failed to create session: {e}")
+                return False
+
         wsol_balance_lamports = 0
         
         if unwrap_threshold_sol is None:
@@ -288,23 +300,28 @@ class WSOLManager:
 
         # Only run the check when native balance is already below threshold
         if native_balance_sol >= unwrap_threshold_sol:
+            if _session_owned:
+                await _session.close()
             return False
 
         try:
+            # Fix 78: Safe str() casting on wsol_ata for RPC queries
+            wsol_ata_str = str(self.wsol_ata)
             query_payload = {
                 "jsonrpc": "2.0", "id": 1,
                 "method": "getTokenAccountBalance",
-                "params": [str(self.wsol_ata)]
+                "params": [wsol_ata_str]
             }
             timeout = aiohttp.ClientTimeout(total=2.0)
-            # FIX 3: Re-use global session to prevent port exhaustion
-            async with self.session.post(rpc_url, json=query_payload, timeout=timeout) as resp:
+            async with _session.post(rpc_url, json=query_payload, timeout=timeout) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     if "result" in data and "value" in data["result"]:
                         wsol_balance_lamports = int(data["result"]["value"]["amount"])
         except Exception as e:
             logger.debug(f"wSOL balance query failed: {e}")
+            if _session_owned:
+                await _session.close()
             return False
 
         wsol_balance_sol = wsol_balance_lamports / 1e9
@@ -314,6 +331,8 @@ class WSOLManager:
                 f"💧 wSOL balance {wsol_balance_sol:.4f} SOL < {min_wsol_sol} SOL "
                 f"(native={native_balance_sol:.4f} SOL < {unwrap_threshold_sol} SOL) — unwrap threshold not met"
             )
+            if _session_owned:
+                await _session.close()
             return False
 
         logger.info(
@@ -325,12 +344,15 @@ class WSOLManager:
         # Close wSOL ATA → all lamports (tokens + rent) return as Native SOL
         unwrap_ixs = self._create_unwrap_instructions()
         if not unwrap_ixs:
+            if _session_owned:
+                await _session.close()
             return False
 
         # Build and send a standalone CloseAccount transaction via RPC
         from solders.message import MessageV0
         from solders.transaction import VersionedTransaction
         from solders.compute_budget import set_compute_unit_limit
+        import base64
 
         try:
             cu_limit_ix = set_compute_unit_limit(50_000)
@@ -340,8 +362,7 @@ class WSOLManager:
             helius_url = rpc_url  # rpc_url IS the direct RPC HTTP URL
             bh_payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash",
                           "params": [{"commitment": "confirmed"}]}
-            # FIX 3: Re-use global session
-            async with self.session.post(helius_url, json=bh_payload, timeout=aiohttp.ClientTimeout(total=2.0)) as bh_resp:
+            async with _session.post(helius_url, json=bh_payload, timeout=aiohttp.ClientTimeout(total=2.0)) as bh_resp:
                 if bh_resp.status != 200:
                     logger.warning("wSOL unwrap: failed to get blockhash")
                     return False
@@ -356,14 +377,13 @@ class WSOLManager:
             )
             tx = VersionedTransaction(msg, [])
 
-            tx_b64 = __import__("base64").b64encode(bytes(tx)).decode("ascii")
+            tx_b64 = base64.b64encode(bytes(tx)).decode("ascii")
             send_payload = {
                 "jsonrpc": "2.0", "id": 1,
                 "method": "sendTransaction",
                 "params": [tx_b64, {"encoding": "base64"}]
             }
-            # FIX 3: Re-use global session
-            async with self.session.post(helius_url, json=send_payload, timeout=aiohttp.ClientTimeout(total=3.0)) as send_resp:
+            async with _session.post(helius_url, json=send_payload, timeout=aiohttp.ClientTimeout(total=3.0)) as send_resp:
                 if send_resp.status == 200:
                     result = await send_resp.json()
                     if "result" in result:
@@ -381,6 +401,9 @@ class WSOLManager:
                     logger.warning(f"wSOL unwrap HTTP {send_resp.status}")
         except Exception as e:
             logger.warning(f"wSOL unwrap transaction failed: {e}")
+        finally:
+            if _session_owned:
+                await _session.close()
 
         return False
 

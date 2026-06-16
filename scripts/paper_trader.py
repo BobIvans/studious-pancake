@@ -86,9 +86,11 @@ class PaperTrader:
     async def _fetch_jupiter(self, input_mint: str, output_mint: str, amount: int):
         async with self.jup_sem:
             url = "https://quote-api.jup.ag/v6/quote"
+            # Fix 77: Safe str() wrapping on input_mint/output_mint to prevent
+            # TypeError when Pubkey objects are passed instead of strings
             params = {
-                "inputMint": input_mint,
-                "outputMint": output_mint,
+                "inputMint": str(input_mint),
+                "outputMint": str(output_mint),
                 "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
                 "slippageBps": "15",
                 "onlyDirectRoutes": "true",  # Task 14: force direct routes

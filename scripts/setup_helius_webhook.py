@@ -77,13 +77,27 @@ def create_helius_webhook():
     # Use configuration from WebhookConfig
     webhook_data = WebhookConfig.get_webhook_config()
 
+    # Fix 76: Sanitize webhook payload — strip internal keys that Helius rejects with HTTP 400
+    sanitized_data = {
+        "webhookURL": webhook_data["webhookURL"],
+        "webhookType": webhook_data["webhookType"],
+        "transactionTypes": webhook_data["transactionTypes"],
+        "accountAddresses": webhook_data["accountAddresses"],
+    }
+    if "txnStatus" in webhook_data:
+        sanitized_data["txnStatus"] = webhook_data["txnStatus"]
+    if "accountFilters" in webhook_data:
+        sanitized_data["accountFilters"] = webhook_data["accountFilters"]
+    if "authHeader" in webhook_data:
+        sanitized_data["authHeader"] = webhook_data["authHeader"]
+
     print("🚀 Creating Helius webhook...")
-    print(f"📡 URL: {webhook_data['webhookURL']}")
-    print(f"🎯 Monitoring {len(webhook_data['accountAddresses'])} LST addresses")
-    print(f"📊 Transaction types: {', '.join(webhook_data['transactionTypes'])}")
+    print(f"📡 URL: {sanitized_data['webhookURL']}")
+    print(f"🎯 Monitoring {len(sanitized_data['accountAddresses'])} LST addresses")
+    print(f"📊 Transaction types: {', '.join(sanitized_data['transactionTypes'])}")
 
     try:
-        response = requests.post(url, json=webhook_data, headers={
+        response = requests.post(url, json=sanitized_data, headers={
             "Content-Type": "application/json"
         })
 

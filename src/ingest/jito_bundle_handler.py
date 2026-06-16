@@ -62,14 +62,28 @@ class JitoLeaderChecker:
         self.cache_ttl = 2.0  # seconds
 
     async def get_next_scheduled_leaders(self) -> List[str]:
-        """Get list of endpoints with upcoming Jito leaders."""
-        if not self.session:
-            return self.jito_endpoints  # Fallback to all
+        """Get list of endpoints with upcoming Jito leaders.
+
+        Fix 75: Safe session fallback — create ad-hoc session if none provided.
+        """
+        # Fix 75: Safe session fallback
+        _session = self.session
+        _session_owned = False
+        if _session is None:
+            try:
+                _session = aiohttp.ClientSession()
+                _session_owned = True
+                logger.debug("Fix 75: Created ad-hoc aiohttp session for JitoLeaderChecker")
+            except Exception:
+                return self.jito_endpoints  # Fallback to all
 
         current_time = time.time()
         # Check cache
         if self.leader_cache and current_time - self.leader_cache.get('timestamp', 0) < self.cache_ttl:
-            return self.leader_cache.get('leaders', self.jito_endpoints)
+            leaders = self.leader_cache.get('leaders', self.jito_endpoints)
+            if _session_owned:
+                await _session.close()
+            return leaders
 
         active_endpoints = []
 
@@ -84,7 +98,7 @@ class JitoLeaderChecker:
                 }
 
                 timeout = aiohttp.ClientTimeout(total=0.5)
-                async with self.session.post(endpoint, json=payload, timeout=timeout) as resp:
+                async with _session.post(endpoint, json=payload, timeout=timeout) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         if "result" in data and data["result"]:
@@ -99,6 +113,8 @@ class JitoLeaderChecker:
             'timestamp': current_time
         }
 
+        if _session_owned:
+            await _session.close()
         return self.leader_cache['leaders']
 
 

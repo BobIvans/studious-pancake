@@ -479,6 +479,23 @@ class XStockOracleLagStrategy:
                 logger.warning(f"❌ {ticker_name} sell quote failed at execution time")
                 return
 
+            # ── Price Impact Filter (Fix 76): abort if total impact > spread/2 ──────
+            # Extract priceImpactPct from both quotes (Jupiter returns "0.5%" or "0.5")
+            try:
+                buy_impact_str = buy_quote.get("priceImpactPct", "0").replace("%", "")
+                sell_impact_str = sell_quote.get("priceImpactPct", "0").replace("%", "")
+                buy_impact = float(buy_impact_str) if buy_impact_str else 0.0
+                sell_impact = float(sell_impact_str) if sell_impact_str else 0.0
+                total_impact = buy_impact + sell_impact
+                if total_impact > (effective_spread / 2.0):
+                    logger.warning(
+                        f"🚫 {ticker_name} trade aborted: Total price impact {total_impact:.3f}% "
+                        f"is too high compared to effective spread {effective_spread:.3f}%"
+                    )
+                    return
+            except Exception as impact_err:
+                logger.debug(f"Price impact filter parse error (non-fatal): {impact_err}")
+
             # ── ExactIn Safety: Validate debt coverage via otherAmountThreshold ─────
             worst_case_out = int(sell_quote.get("otherAmountThreshold", sell_quote.get("outAmount", 0)))
             if worst_case_out < trade_amount:

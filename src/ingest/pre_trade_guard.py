@@ -56,18 +56,30 @@ class TokenSecurityChecker:
         Returns:
             Tuple of (is_safe: bool, reason: str)
         """
-        if not self.session:
-            return False, "No HTTP session available"
+        # Fix 73: Safe session fallback — create ad-hoc session if none provided
+        _session = self.session
+        _session_owned = False
+        if _session is None:
+            try:
+                _session = aiohttp.ClientSession()
+                _session_owned = True
+                logger.debug("Fix 73: Created ad-hoc aiohttp session for check_token_security")
+            except Exception as e:
+                return False, f"No HTTP session available: {e}"
 
         # Phase 20: Whitelist bypass
         if mint_address in SAFE_MINTS:
             logger.debug(
                 f"🛡️ Token {mint_address} is in SAFE_MINTS whitelist. Bypassing security checks."
             )
+            if _session_owned:
+                await _session.close()
             return True, "Whitelisted safe token"
 
         rpc_url = rpc_url or self.rpc_url
         if not rpc_url:
+            if _session_owned:
+                await _session.close()
             return False, "No RPC URL provided"
 
         try:
@@ -82,7 +94,7 @@ class TokenSecurityChecker:
                 ],
             }
 
-            async with self.session.post(rpc_url, json=payload) as resp:
+            async with _session.post(rpc_url, json=payload) as resp:
                 if resp.status != 200:
                     return False, f"RPC error: HTTP {resp.status}"
 
@@ -99,6 +111,9 @@ class TokenSecurityChecker:
         except Exception as e:
             logger.warning(f"Security check failed for {mint_address}: {e}")
             return False, f"Check failed: {str(e)}"
+        finally:
+            if _session_owned:
+                await _session.close()
 
     async def _analyze_mint_account(
         self, account_info: Dict[str, Any], mint_address: str
@@ -245,11 +260,20 @@ class LiquidityValidator:
         Returns:
             Tuple of (has_liquidity: bool, reason: str)
         """
-        if not self.session:
-            return False, "No HTTP session available"
+        # Fix 73: Safe session fallback
+        _session = self.session
+        _session_owned = False
+        if _session is None:
+            try:
+                _session = aiohttp.ClientSession()
+                _session_owned = True
+            except Exception as e:
+                return False, f"No HTTP session available: {e}"
 
         rpc_url = rpc_url or self.rpc_url
         if not rpc_url:
+            if _session_owned:
+                await _session.close()
             return False, "No RPC URL provided"
 
         try:
@@ -261,7 +285,7 @@ class LiquidityValidator:
                 "params": [vault_address],
             }
 
-            async with self.session.post(rpc_url, json=payload) as resp:
+            async with _session.post(rpc_url, json=payload) as resp:
                 if resp.status != 200:
                     return False, f"RPC error: HTTP {resp.status}"
 
@@ -290,6 +314,9 @@ class LiquidityValidator:
         except Exception as e:
             logger.warning(f"Vault validation failed for {vault_address}: {e}")
             return False, f"Validation failed: {str(e)}"
+        finally:
+            if _session_owned:
+                await _session.close()
 
     async def batch_validate_security_and_liquidity(
         self, mint_address: str, vault_address: str, rpc_url: Optional[str] = None
@@ -304,11 +331,20 @@ class LiquidityValidator:
         Returns:
             Tuple of (is_valid: bool, reason: str)
         """
-        if not self.session:
-            return False, "No HTTP session available"
+        # Fix 73: Safe session fallback
+        _session = self.session
+        _session_owned = False
+        if _session is None:
+            try:
+                _session = aiohttp.ClientSession()
+                _session_owned = True
+            except Exception as e:
+                return False, f"No HTTP session available: {e}"
 
         rpc_url = rpc_url or self.rpc_url
         if not rpc_url:
+            if _session_owned:
+                await _session.close()
             return False, "No RPC URL provided"
 
         try:
@@ -323,7 +359,7 @@ class LiquidityValidator:
                 ],
             }
 
-            async with self.session.post(rpc_url, json=payload) as resp:
+            async with _session.post(rpc_url, json=payload) as resp:
                 if resp.status != 200:
                     return False, f"RPC error: HTTP {resp.status}"
 
@@ -386,6 +422,9 @@ class LiquidityValidator:
                 f"Batch validation failed for mint={mint_address}, vault={vault_address}: {e}"
             )
             return False, f"Batch validation failed: {str(e)}"
+        finally:
+            if _session_owned:
+                await _session.close()
 
 
 class PreTradeGuard:
@@ -438,11 +477,20 @@ class PreTradeGuard:
         Returns:
             Tuple of (has_fee: bool, fee_bps: float, reason: str)
         """
-        if not self.session:
-            return False, 0.0, "No HTTP session available"
+        # Fix 73: Safe session fallback
+        _session = self.session
+        _session_owned = False
+        if _session is None:
+            try:
+                _session = aiohttp.ClientSession()
+                _session_owned = True
+            except Exception as e:
+                return False, 0.0, f"No HTTP session available: {e}"
 
         rpc_url = rpc_url or self.rpc_url
         if not rpc_url:
+            if _session_owned:
+                await _session.close()
             return False, 0.0, "No RPC URL provided"
 
         try:
@@ -457,7 +505,7 @@ class PreTradeGuard:
                 ],
             }
 
-            async with self.session.post(rpc_url, json=payload) as resp:
+            async with _session.post(rpc_url, json=payload) as resp:
                 if resp.status != 200:
                     return False, 0.0, f"RPC error: HTTP {resp.status}"
 
@@ -526,6 +574,9 @@ class PreTradeGuard:
                 f"Error checking Token-2022 transfer fee for {mint_address}: {e}"
             )
             return False, 0.0, f"Check failed: {str(e)}"
+        finally:
+            if _session_owned:
+                await _session.close()
 
     async def get_adjusted_profit_threshold(
         self,

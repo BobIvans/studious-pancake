@@ -102,12 +102,25 @@ async def recover_rent():
     rpc_url = os.getenv("RPC_URL_1")
     wallet_path = os.getenv("WALLET_PATH", "wallet.json")
     
-    if not os.path.exists(wallet_path):
-        logger.error(f"Wallet file not found at {wallet_path}")
-        return
+    # Try primary wallet path first
+    keypair = None
+    if os.path.exists(wallet_path):
+        with open(wallet_path, 'r') as f:
+            raw = f.read().strip()
+            if raw and raw != "[]":
+                keypair = Keypair.from_bytes(bytes(json.loads(raw)))
 
-    with open(wallet_path, 'r') as f:
-        keypair = Keypair.from_bytes(bytes(json.load(f)))
+    # Fallback: empty wallet.json → try WALLET_PATH env var
+    if keypair is None:
+        alt_path = os.getenv("WALLET_PATH", "/Users/ivansbobrovs/.config/solana/new_id.json")
+        logger.warning(f"wallet.json is empty or missing; falling back to {alt_path}")
+        if os.path.exists(alt_path):
+            with open(alt_path, 'r') as f:
+                keypair = Keypair.from_bytes(bytes(json.load(f)))
+
+    if keypair is None:
+        logger.error("No valid wallet keypair found. Check wallet.json or WALLET_PATH.")
+        return
     
     logger.info(f"Starting recovery for wallet: {keypair.pubkey()}")
 

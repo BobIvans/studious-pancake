@@ -4,7 +4,9 @@ import asyncio
 import orjson
 import logging
 import time
+import socket
 import aiohttp
+from aiohttp.resolver import AsyncResolver
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
 from contextlib import asynccontextmanager
 import hashlib
@@ -36,7 +38,9 @@ class WSSConnection:
         try:
             if self.session and not self.session.closed:
                 await self.session.close()
-            self.session = aiohttp.ClientSession()
+            _resolver = AsyncResolver(nameservers=["1.1.1.1", "8.8.8.8"])
+            _connector = aiohttp.TCPConnector(family=socket.AF_INET, resolver=_resolver, ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=_connector)
             self.websocket = await self.session.ws_connect(
                 self.url,
                 heartbeat=15.0,

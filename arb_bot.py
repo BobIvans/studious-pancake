@@ -4625,6 +4625,14 @@ async def execute_priority_opportunity(
             strat_type = 4
 
         # Fix 39: Pass the ACTUAL dynamic chosen_route (not hardcoded [quote1, quote2])
+        # Fix 81: Pre-calculate net profit to prevent USDC math divide-by-1e9 bug
+        tip_amount_sol = tip_amount_lamports / 1e9 if tip_amount_lamports else 0.0
+        est_net_profit_sol = max(
+            0.0,
+            float(opportunity.expected_profit_sol)
+            - tip_amount_sol
+            - (cfg.PRIORITY_FEE + cfg.BASE_FEE + cfg.ATA_FEE),
+        )
         # For triangular, this carries all 3 legs; for direct, 2 legs.
         tx_b64 = await create_flashloan_arbitrage_tx(
             session,
@@ -4644,7 +4652,7 @@ async def execute_priority_opportunity(
             ),  # Fix 3: dynamic tip accounts
             blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
             opportunity=opportunity,
-            expected_profit_sol=float(opportunity.expected_profit_sol),
+            expected_profit_sol=est_net_profit_sol,
         )
         if not tx_b64:
             logger.warning("Failed to create priority arbitrage tx")

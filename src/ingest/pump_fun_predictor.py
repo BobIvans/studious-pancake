@@ -404,11 +404,12 @@ class PumpFunMigrationPredictor:
     ):
         self.session = session
         self.wss_url = wss_url or "wss://api.mainnet-beta.solana.com"
+        # Fix G: Use real Jito Block Engine URLs instead of hallucinated solana.com domains
         self.jito_endpoints = jito_endpoints or [
-            "https://amsterdam.mainnet-beta.solana.com",
-            "https://frankfurt.mainnet-beta.solana.com",
-            "https://ny.mainnet-beta.solana.com",
-            "https://tokyo.mainnet-beta.solana.com"
+            "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles"
         ]
 
         # Active curves being monitored

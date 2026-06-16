@@ -158,10 +158,10 @@ class HeliusWebhookHandler:
                 # Fix 58/59: Use safely extracted events from list or dict payload
                 logger.info(f"📡 Received webhook {webhook_id} with {len(events)} events")
     
-                # Process each event — push into LIFO deque (newest-last → pop-last first)
+                # Fix C: Store webhook_id in deque to prevent ID loss
                 now = time.time()
                 for event in events:
-                    self._signal_deque.append((now, event))
+                    self._signal_deque.append((now, event, webhook_id))
     
                 return web.Response(text='OK')
 
@@ -297,7 +297,8 @@ class HeliusWebhookHandler:
         while True:
             try:
                 if self._signal_deque:
-                    await self._process_event(None, "deque_processor")
+                    ts, ev, webhook_id = self._signal_deque.pop()
+                    await self._process_event(ev, webhook_id)
                 else:
                     await asyncio.sleep(0.01)
             except asyncio.CancelledError:

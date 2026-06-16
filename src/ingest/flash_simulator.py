@@ -100,28 +100,12 @@ class FlashSimulator:
 
     def get_region_aware_rpc_url(self, jito_endpoint: str) -> str:
         """
-        Get RPC URL that matches the Jito bundle region for simulation integrity.
+        Get RPC URL matching the Jito bundle region.
 
-        Args:
-            jito_endpoint: Jito bundle endpoint URL
-
-        Returns:
-            RPC URL in the same region
+        Fix E: Removed hardcoded region_mapping containing fake 'YOUR_KEY' URLs
+        that caused all Jito-bound simulations to fail with HTTP 401.
+        Returns the configured primary RPC URL unconditionally.
         """
-        # Map Jito regions to RPC endpoints
-        region_mapping = {
-            "amsterdam": "https://mainnet.helius-rpc.com/?api-key=YOUR_KEY",  # Or other Amsterdam RPC
-            "frankfurt": "https://frankfurt.solana-mainnet.quiknode.pro/YOUR_KEY",  # Frankfurt RPC
-            "ny": "https://ny.solana-mainnet.quiknode.pro/YOUR_KEY",  # New York RPC
-            "tokyo": "https://tokyo.solana-mainnet.quiknode.pro/YOUR_KEY",  # Tokyo RPC
-        }
-
-        # Extract region from Jito endpoint
-        for region, rpc_url in region_mapping.items():
-            if region in jito_endpoint.lower():
-                return rpc_url
-
-        # Fallback to default RPC
         return self.rpc_url
 
     async def simulate_transaction(

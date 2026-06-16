@@ -818,8 +818,8 @@ class PreTradeGuard:
             "amount": str(int(amount_lamports)),  # Task 16: strict int→string to avoid HTTP 400
             "slippageBps": str(slippage_bps),
             "maxAccounts": "8",
-            "onlyDirectRoutes": "true",  # Task 14: force direct routes for micro-balance safety
-            "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
+            "onlyDirectRoutes": "false",  # Fix B: allow multi-hop routes for triangular arbitrage
+            "restrictIntermediateTokens": "false",  # Fix B: allow intermediate tokens for complex routes
         }
 
         try:

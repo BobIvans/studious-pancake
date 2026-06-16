@@ -53,10 +53,10 @@ class JitoLeaderChecker:
     def __init__(self, session: Optional[aiohttp.ClientSession] = None):
         self.session = session
         self.jito_endpoints = [
-            "https://amsterdam.mainnet-beta.solana.com",
-            "https://frankfurt.mainnet-beta.solana.com",
-            "https://ny.mainnet-beta.solana.com",
-            "https://tokyo.mainnet-beta.solana.com"
+            "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles"
         ]
         self.leader_cache: Dict[str, float] = {}
         self.cache_ttl = 2.0  # seconds
@@ -205,10 +205,10 @@ class JitoBundleHandler:
 
         # Default Jito endpoints if not provided
         self.jito_endpoints = jito_endpoints or [
-            "https://amsterdam.mainnet-beta.solana.com",
-            "https://frankfurt.mainnet-beta.solana.com",
-            "https://ny.mainnet-beta.solana.com",
-            "https://tokyo.mainnet-beta.solana.com"
+            "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
+            "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles"
         ]
 
     async def execute_backrun_bundle(

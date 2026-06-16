@@ -2333,6 +2333,7 @@ async def create_flashloan_arbitrage_tx(
     tip_accounts=None,
     blockhash_mgr=None,
     opportunity=None,
+    expected_profit_sol: float = 0.0,
 ):
     wallet_pubkey = str(keypair.pubkey())
 
@@ -4222,8 +4223,8 @@ async def mark_wsol_atomically_closed():
     that would race with the arb's close and waste gas.  Call this right after
     the arb bundle is sent (not confirmed — a failed bundle reverts atomically).
     """
-    global WSOL_JUST_CLOSED_ATOMICALLY
-    WSOL_JUST_CLOSED_ATOMICALLY = time.time()
+    # Fix F: WSOL_JUST_CLOSED_ATOMICALLY read from shared_state
+    shared_state.WSOL_JUST_CLOSED_ATOMICALLY = time.time()
 
 
 async def check_bundle_confirmation(
@@ -4643,6 +4644,7 @@ async def execute_priority_opportunity(
             ),  # Fix 3: dynamic tip accounts
             blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
             opportunity=opportunity,
+            expected_profit_sol=float(net_profit) if 'net_profit' in dir() else 0.0,
         )
         if not tx_b64:
             logger.warning("Failed to create priority arbitrage tx")
@@ -6005,11 +6007,11 @@ async def run():
                         # Fix 1 (wSOL Death Spiral): If the atomic arb path just closed wSOL
                         # inside the transaction, skip the standalone close to avoid races + gas waste.
                         if (
-                            time.time() - WSOL_JUST_CLOSED_ATOMICALLY
+                            time.time() - shared_state.WSOL_JUST_CLOSED_ATOMICALLY
                             < WSOL_CLOSE_COOLDOWN
                         ):
                             logger.debug(
-                                f"🔓 wSOL was atomically closed {time.time() - WSOL_JUST_CLOSED_ATOMICALLY:.0f}s ago — "
+                                f"🔓 wSOL was atomically closed {time.time() - shared_state.WSOL_JUST_CLOSED_ATOMICALLY:.0f}s ago — "
                                 f"skipping standalone unwrap to prevent duplicate close"
                             )
                             continue  # keep sleeping; the atomic path already replenished native SOL
@@ -6288,6 +6290,7 @@ async def run():
                             "clearing blockhash cache and restarting handlers due to validator slot-skip."
                         )
                         # Принудительно сбрасываем кэш блокхеша, чтобы исключить BlockhashExpired
+                        global cached_blockhash
                         cached_blockhash = None
                         # Reconnect HeliusWebhookHandler
                         if helius_webhook_handler:

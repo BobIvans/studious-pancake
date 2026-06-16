@@ -116,11 +116,17 @@ class TestWssPoolCreationListener(unittest.TestCase):
         self.assertIsNone(result)
 
 
-class TestJitoBundleSender(unittest.TestCase):
+class MockTransaction(Mock):
+    """Mock transaction class that supports bytes conversion."""
+    def __bytes__(self):
+        return b"deadbeef"
+
+
+class TestJitoBundleSender(unittest.IsolatedAsyncioTestCase):
     """Test Jito bundle sending functionality."""
 
     def setUp(self):
-        self.sender = JitoBundleSender(session=MagicMock())
+        self.sender = JitoBundleSender(session=None)
 
     def test_endpoint_configuration(self):
         """Test that Jito endpoints are configured."""
@@ -138,8 +144,7 @@ class TestJitoBundleSender(unittest.TestCase):
         mock_post.return_value.__aenter__.return_value = mock_response
 
         # Create mock transaction
-        mock_tx = Mock()
-        mock_tx.to_bytes.return_value.hex.return_value = "deadbeef"
+        mock_tx = MockTransaction()
 
         async with self.sender:
             result = await self.sender.send_bundle(mock_tx)
@@ -155,11 +160,10 @@ class TestJitoBundleSender(unittest.TestCase):
         # Mock response with tip error
         mock_response = AsyncMock()
         mock_response.status = 400
-        mock_response.json = AsyncMock(return_value={"error": "Insufficient tip"})
+        mock_response.json = AsyncMock(return_value={"error": {"message": "Insufficient tip"}})
         mock_post.return_value.__aenter__.return_value = mock_response
 
-        mock_tx = Mock()
-        mock_tx.to_bytes.return_value.hex.return_value = "deadbeef"
+        mock_tx = MockTransaction()
 
         async with self.sender:
             result = await self.sender.send_bundle(mock_tx)
@@ -175,11 +179,10 @@ class TestJitoBundleSender(unittest.TestCase):
         # Mock response - all fail since we have single endpoint
         mock_response = AsyncMock()
         mock_response.status = 500
-        mock_response.json = AsyncMock(return_value={"error": "Server error"})
+        mock_response.json = AsyncMock(return_value={"error": {"message": "Server error"}})
         mock_post.return_value.__aenter__.return_value = mock_response
 
-        mock_tx = Mock()
-        mock_tx.to_bytes.return_value.hex.return_value = "deadbeef"
+        mock_tx = MockTransaction()
 
         async with self.sender:
             result = await self.sender.send_bundle(mock_tx)
@@ -194,11 +197,10 @@ class TestJitoBundleSender(unittest.TestCase):
         # Mock all failures
         mock_response = AsyncMock()
         mock_response.status = 500
-        mock_response.json = AsyncMock(return_value={"error": "All endpoints down"})
+        mock_response.json = AsyncMock(return_value={"error": {"message": "All endpoints down"}})
         mock_post.return_value.__aenter__.return_value = mock_response
 
-        mock_tx = Mock()
-        mock_tx.to_bytes.return_value.hex.return_value = "deadbeef"
+        mock_tx = MockTransaction()
 
         async with self.sender:
             result = await self.sender.send_bundle(mock_tx)
@@ -208,7 +210,7 @@ class TestJitoBundleSender(unittest.TestCase):
         self.assertIsNone(result["first_bundle_id"])
 
 
-class TestTransactionTipBuilder(unittest.TestCase):
+class TestTransactionTipBuilder(unittest.IsolatedAsyncioTestCase):
     """Test transaction building with tips."""
 
     def setUp(self):
@@ -216,19 +218,16 @@ class TestTransactionTipBuilder(unittest.TestCase):
         self.builder = TransactionTipBuilder(self.tip_manager)
 
     @pytest.mark.asyncio
-    @patch('solders.keypair.Keypair')
-    @patch('src.ingest.jito_sniper.get_blockhash_manager')
-    async def test_transaction_building(self, mock_get_blockhash_mgr, mock_keypair):
+    @patch('src.ingest.blockhash_racing.get_blockhash_manager')
+    async def test_transaction_building(self, mock_get_blockhash_mgr):
         """Test basic transaction building."""
         # Mock blockhash manager
         mock_bh_mgr = MagicMock()
         mock_bh_mgr.get_fresh_blockhash = AsyncMock(return_value=Hash.default())
         mock_get_blockhash_mgr.return_value = mock_bh_mgr
 
-        # Mock keypair
-        mock_pubkey = MagicMock()
-        mock_pubkey.__str__ = Mock(return_value="test_pubkey")
-        mock_keypair.pubkey.return_value = mock_pubkey
+        from solders.keypair import Keypair
+        buyer_keypair = Keypair()
 
         # Create mock pool event
         pool_event = PoolCreationEvent(
@@ -244,7 +243,7 @@ class TestTransactionTipBuilder(unittest.TestCase):
         # Build transaction
         result = await self.builder.build_sniping_transaction(
             pool_event=pool_event,
-            buyer_keypair=mock_keypair,
+            buyer_keypair=buyer_keypair,
             buy_amount_lamports=1_000_000_000
         )
 

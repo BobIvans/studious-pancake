@@ -1790,7 +1790,7 @@ class RPCManager:
                             family=socket.AF_INET,
                             tcp_nodelay=True,
                             force_close=False,  # Keep-Alive
-                            resolver=AsyncResolver(nameservers=["1.1.1.1", "8.8.8.8"]),
+                            resolver=AsyncResolver(),
                         )
                     ) as s:
                         async with s.post(
@@ -5623,7 +5623,7 @@ async def run():
         import aiodns  # noqa: ensures aiodns is present for AsyncResolver
     except ImportError:
         logger.warning("⚠️ aiodns not available — falling back to default DNS resolver")
-    _resolver = AsyncResolver(nameservers=["1.1.1.1", "8.8.8.8"])
+    _resolver = AsyncResolver()
 
     try:
         # Fix 53: AF_INET disables IPv6 lookups; ttl_dns_cache reduces DNS overhead;

@@ -38,7 +38,7 @@ class WSSConnection:
         try:
             if self.session and not self.session.closed:
                 await self.session.close()
-            _resolver = AsyncResolver(nameservers=["1.1.1.1", "8.8.8.8"])
+            _resolver = AsyncResolver()
             _connector = aiohttp.TCPConnector(family=socket.AF_INET, resolver=_resolver, ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=_connector)
             self.websocket = await self.session.ws_connect(

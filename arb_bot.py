@@ -188,6 +188,7 @@ from src.ingest.optimal_trade_sizer import (
     OptimalTradeSizer,
 )  # VelocitySlippageManager not implemented
 from src.ingest.rpc_multiplexing import ExecutionPipeline, _set_global_price_matrix
+from src.ingest.pyth_core_price_feeder import init_pyth_core_feeder
 from src.ingest.helius_sender import HeliusSender, TransactionSender
 
 # ULTRA ARB MASTER - New In-Memory State Modules
@@ -1864,6 +1865,18 @@ class RPCManager:
                     "Все RPC ключи в .env невалидны или заблокированы сервером. Пожалуйста, обновите HELIUS_KEYS"
                 )
                 sys.exit(1)
+
+
+def update_global_price_matrix(matrix: Dict[str, tuple]) -> None:
+    """Fix 62: Unified callback that updates both arb_bot.price_matrix and the global Jito/RPC multiplexing matrix.
+
+    Called by PythCorePriceFeeder on every Hermes price update (~400ms).
+    Prevents stale price drift between arb_bot.price_matrix and
+    _set_global_price_matrix() — both are updated atomically.
+    """
+    global price_matrix
+    price_matrix.update(matrix)
+    _set_global_price_matrix(matrix)
 
 
 async def update_prices(session, cfg):
@@ -6341,6 +6354,15 @@ async def run():
             except Exception as e:
                 logger.error(f"Priority queue processor error: {e}")
                 await asyncio.sleep(1)
+
+    # Fix 62: Start Pyth Core Price Feeder for real-time SOL/USDC/USDT prices
+    # Updates both arb_bot.price_matrix and _set_global_price_matrix atomically
+    try:
+        pyth_feeder = init_pyth_core_feeder()
+        asyncio.create_task(pyth_feeder.start(on_price_update=update_global_price_matrix))
+        logger.info("📡 PythCorePriceFeeder started with unified price matrix callback (Fix 62)")
+    except Exception as pyth_err:
+        logger.warning(f"PythCorePriceFeeder startup failed (non-fatal): {pyth_err}")
 
     # 9. Main Processing Loops
     queue = asyncio.PriorityQueue(maxsize=100)

@@ -39,6 +39,7 @@ class HeliusWebhookHandler:
         self._signal_deque: deque = deque(maxlen=100)
         self.EVENT_DROP_MS = 800
         self._event_counter = 0  # counts processed events for async.yield every 3
+        self._consumer_task: Optional[asyncio.Task] = None  # Fix 55: background consumer
 
     async def _check_port_available(self) -> bool:
         """Check if the webhook port is available before starting the server."""
@@ -52,7 +53,7 @@ class HeliusWebhookHandler:
             return False
 
     async def start(self):
-        """Start the webhook server."""
+        """Start the webhook server and the background signal consumer."""
         # Check port availability before attempting to start
         if not await self._check_port_available():
             logger.warning(f"⚠️ Port {self.port} already in use. Webhook server disabled for this session.")
@@ -65,6 +66,9 @@ class HeliusWebhookHandler:
             site = web.TCPSite(runner=self.runner, port=self.port)
             await site.start()
             logger.info(f"🚀 Helius webhook server started on port {self.port}")
+            # Fix 55: Start background consumer to drain signal deque into _process_event
+            self._consumer_task = asyncio.create_task(self._consume_signals())
+            logger.info("🔄 Webhook signal consumer started (Fix 55)")
         except OSError as e:
             if "Address already in use" in str(e):
                 logger.warning(f"⚠️ Port {self.port} already in use. Webhook server disabled for this session.")
@@ -75,7 +79,14 @@ class HeliusWebhookHandler:
                 raise  # Re-raise other OSError types
 
     async def stop(self):
-        """Stop the webhook server."""
+        """Stop the webhook server and background consumer."""
+        if self._consumer_task:
+            self._consumer_task.cancel()
+            try:
+                await self._consumer_task
+            except asyncio.CancelledError:
+                pass
+            self._consumer_task = None
         if self.runner:
             await self.runner.cleanup()
             logger.info("🛑 Helius webhook server stopped")
@@ -91,13 +102,24 @@ class HeliusWebhookHandler:
         # can arrive with ?api-key=... or as trusted configured webhook IDs.
         raw_bytes = await request.read()
         try:
-            data = orjson.loads(raw_bytes) if raw_bytes else {}
+            data = orjson.loads(raw_bytes) if raw_bytes else []
         except Exception:
             logger.error("Invalid Helius webhook JSON payload")
             return web.Response(status=400, text='Bad JSON')
 
+        # Fix 58: Helius sends a list of events. Fallback to extracting from dict if format changes.
+        if isinstance(data, list):
+            events = data
+            data_dict = {}
+        elif isinstance(data, dict):
+            events = data.get('events', [data])
+            data_dict = data
+        else:
+            events = []
+            data_dict = {}
+
         query_webhook_id = request.query.get('webhookId') or request.query.get('webhook_id')
-        webhook_id = data.get('webhookId') or query_webhook_id or 'unknown'
+        webhook_id = data_dict.get('webhookId') or query_webhook_id or 'unknown'
         auth_header = request.headers.get('Authorization', '')
         auth_query = request.query.get('api-key') or request.query.get('api_key') or ''
         expected_auth = os.getenv("HELIUS_WEBHOOK_SECRET", os.getenv("HELIUS_API_KEY", ""))
@@ -133,13 +155,12 @@ class HeliusWebhookHandler:
             self._sem = asyncio.Semaphore(10)  # Fix 67
         async with self._sem:
             try:
-                # orjson is ~5x faster than stdlib json (C extension)
-                webhook_id = data.get('webhookId', 'unknown')
-                logger.info(f"📡 Received webhook {webhook_id} with {len(data.get('events', []))} events")
+                # Fix 58/59: Use safely extracted events from list or dict payload
+                logger.info(f"📡 Received webhook {webhook_id} with {len(events)} events")
     
                 # Process each event — push into LIFO deque (newest-last → pop-last first)
                 now = time.time()
-                for event in data.get('events', []):
+                for event in events:
                     self._signal_deque.append((now, event))
     
                 return web.Response(text='OK')
@@ -265,6 +286,26 @@ class HeliusWebhookHandler:
 
         except Exception as e:
             logger.error(f"Event processing error: {e}")
+
+    async def _consume_signals(self):
+        """Fix 55: Background consumer that drains _signal_deque into _process_event.
+
+        Runs continuously as an asyncio task started by start().
+        Prevents incoming webhooks from being blackholed — without this consumer
+        _signal_deque fills up but _process_event is never called.
+        """
+        while True:
+            try:
+                if self._signal_deque:
+                    await self._process_event(None, "deque_processor")
+                else:
+                    await asyncio.sleep(0.01)
+            except asyncio.CancelledError:
+                logger.info("🛑 Webhook signal consumer cancelled")
+                break
+            except Exception as e:
+                logger.error(f"Signal consumer error: {e}")
+                await asyncio.sleep(0.1)
 
     async def _fire_jito_shotgun(self, event: Dict) -> None:
         """Strat 3: Fire a noop Jito Shotgun broadcast to all 4 regional block engines on every swap signal."""

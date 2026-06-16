@@ -1518,11 +1518,11 @@ data=(
                 "program_id", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
             )
         )
-        mfi_account = Pubkey.from_string(marginfi_config["marginfi_account"])
+        mfi_account = Pubkey.from_string(str(marginfi_config["marginfi_account"]))
         bank = Pubkey.from_string(bank_pubkey)
-        vault = Pubkey.from_string(marginfi_config["bank_liquidity_vault"])
+        vault = Pubkey.from_string(str(marginfi_config["bank_liquidity_vault"]))
         vault_auth = Pubkey.from_string(
-            marginfi_config["bank_liquidity_vault_authority"]
+            str(marginfi_config["bank_liquidity_vault_authority"])
         )
 
         sol_mint = Pubkey.from_string(borrow_mint)
@@ -1731,17 +1731,29 @@ data=(
         # Find the (possibly new) indices within the sanitized list
         # so the repay_index we pack into borrow_ix.data is 100% correct.
         try:
-            actual_repay_index = sanitized.index(repay_ix)
+            actual_repay_index = next(
+                (i for i, ix in enumerate(sanitized)
+                 if ix.program_id == repay_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END),
+                None
+            )
+            if actual_repay_index is None:
+                logger.error("CRITICAL: repay_ix not found in sanitized instruction list")
+                return None
 
             # ── БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount) ──
-            # Формат: discriminator(8) + amount(8) + index(1)
-            # БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount)
             # Формат: discriminator(8) + amount(8) + index(1)
             import struct
             from solders.instruction import Instruction
 
-            # Find borrow_ix in the SANITIZED list
-            new_borrow_idx = sanitized.index(borrow_ix)
+            # Find borrow_ix in the SANITIZED list using generator (Fix 57)
+            new_borrow_idx = next(
+                (i for i, ix in enumerate(sanitized)
+                 if ix.program_id == borrow_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_START),
+                None
+            )
+            if new_borrow_idx is None:
+                logger.error("CRITICAL: borrow_ix not found in sanitized instruction list")
+                return None
             original_data_without_index = borrow_ix.data[:16]
             safe_index_bytes = struct.pack("<Q", actual_repay_index)
             new_data = original_data_without_index + safe_index_bytes
@@ -1756,9 +1768,9 @@ data=(
             logger.debug(
                 f"🛠️ FIX 7: Safe Dynamic Repay Index calculated on sanitized array: {actual_repay_index}"
             )
-        except ValueError:
-            logger.error("CRITICAL: repay_ix not found in sanitized instruction list")
-            return None
+        except (ValueError, StopIteration):
+                    logger.error("CRITICAL: repay_ix not found in sanitized instruction list")
+                    return None
 
         return {
             "instructions": sanitized,

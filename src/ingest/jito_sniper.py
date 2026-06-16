@@ -54,6 +54,8 @@ class PoolCreationEvent:
 class JitoTipManager:
     """Manages real-time Jito tip tracking and optimization."""
 
+    DEFAULT_TIP_ACCOUNTS = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
+
     JITO_TIP_STREAM_URL = "ws://bundles.jito.wtf/api/v1/bundles/tip_stream"
     JITO_TIP_ACCOUNTS_URL = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
 
@@ -62,7 +64,6 @@ class JitoTipManager:
         self.min_tip_lamports = min_tip_lamports
         self.tip_multiplier = tip_multiplier
         self.tip_accounts = []
-        self.DEFAULT_TIP_ACCOUNTS = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
         self.websocket: Optional[websockets.WebSocketServerProtocol] = None
         self.running = False
         self.current_percentiles: Dict[str, int] = {}

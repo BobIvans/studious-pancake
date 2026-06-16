@@ -9,7 +9,9 @@ import asyncio
 import unittest
 import sys
 import os
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import MagicMock, Mock, patch, AsyncMock
+from solders.hash import Hash
+import pytest
 
 # Add src to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -45,7 +47,7 @@ class TestJitoTipManager(unittest.TestCase):
 
         # 75th percentile should be near the higher end
         tip = self.tip_manager.get_optimal_tip()
-        self.assertGreaterEqual(tip, 30000)  # At least 75th percentile
+        self.assertGreaterEqual(tip, 10000)  # At least minimum tip
         self.assertEqual(tip, 44000)  # 40000 * tip_multiplier (1.1)
 
     def test_minimum_tip_enforcement(self):
@@ -75,7 +77,7 @@ class TestWssPoolCreationListener(unittest.TestCase):
     """Test WebSocket pool creation listener."""
 
     def setUp(self):
-        self.listener = WssPoolCreationListener()
+        self.listener = WssPoolCreationListener(session=MagicMock())
         self.listener.event_callback = AsyncMock()
 
     def test_target_programs(self):
@@ -118,13 +120,14 @@ class TestJitoBundleSender(unittest.TestCase):
     """Test Jito bundle sending functionality."""
 
     def setUp(self):
-        self.sender = JitoBundleSender()
+        self.sender = JitoBundleSender(session=MagicMock())
 
     def test_endpoint_configuration(self):
         """Test that Jito endpoints are configured."""
         self.assertEqual(len(self.sender.JITO_ENDPOINTS), 1)  # Single NY endpoint
         self.assertTrue(all("jito.wtf" in endpoint for endpoint in self.sender.JITO_ENDPOINTS))
 
+    @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.post')
     async def test_successful_bundle_send(self, mock_post):
         """Test successful bundle sending."""
@@ -142,9 +145,10 @@ class TestJitoBundleSender(unittest.TestCase):
             result = await self.sender.send_bundle(mock_tx)
 
         self.assertTrue(result["success"])
-        self.assertEqual(result["success_count"], 4)  # All endpoints should succeed
+        self.assertEqual(result["success_count"], 1)  # Single endpoint succeeds
         self.assertEqual(result["first_bundle_id"], "bundle_123")
 
+    @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.post')
     async def test_tip_failure_handling(self, mock_post):
         """Test handling of tip payment failures."""
@@ -164,26 +168,15 @@ class TestJitoBundleSender(unittest.TestCase):
         self.assertEqual(result["success_count"], 0)
         self.assertIn("tip", result["errors"][0].lower())
 
+    @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.post')
     async def test_partial_bundle_send(self, mock_post):
         """Test partial bundle sending (some endpoints fail)."""
-        # Mock mixed responses
-        def mock_response_factory(*args, **kwargs):
-            mock_resp = AsyncMock()
-            endpoint = args[0] if args else ""
-
-            if "frankfurt" in endpoint:
-                mock_resp.status = 200
-                mock_resp.json = AsyncMock(return_value={"result": "bundle_123"})
-            else:
-                mock_resp.status = 500
-                mock_resp.json = AsyncMock(return_value={"error": "Server error"})
-
-            return mock_resp
-
-        mock_post.side_effect = lambda *args, **kwargs: AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_response_factory(*args, **kwargs))
-        )
+        # Mock response - all fail since we have single endpoint
+        mock_response = AsyncMock()
+        mock_response.status = 500
+        mock_response.json = AsyncMock(return_value={"error": "Server error"})
+        mock_post.return_value.__aenter__.return_value = mock_response
 
         mock_tx = Mock()
         mock_tx.to_bytes.return_value.hex.return_value = "deadbeef"
@@ -191,10 +184,10 @@ class TestJitoBundleSender(unittest.TestCase):
         async with self.sender:
             result = await self.sender.send_bundle(mock_tx)
 
-        self.assertTrue(result["success"])
-        self.assertEqual(result["success_count"], 1)  # Only Frankfurt succeeds
-        self.assertEqual(result["first_bundle_id"], "bundle_123")
+        self.assertFalse(result["success"])
+        self.assertEqual(result["success_count"], 0)
 
+    @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.post')
     async def test_failed_bundle_send(self, mock_post):
         """Test complete bundle send failure."""
@@ -222,12 +215,20 @@ class TestTransactionTipBuilder(unittest.TestCase):
         self.tip_manager = JitoTipManager(min_tip_lamports=10000)
         self.builder = TransactionTipBuilder(self.tip_manager)
 
+    @pytest.mark.asyncio
     @patch('solders.keypair.Keypair')
-    async def test_transaction_building(self, mock_keypair):
+    @patch('src.ingest.jito_sniper.get_blockhash_manager')
+    async def test_transaction_building(self, mock_get_blockhash_mgr, mock_keypair):
         """Test basic transaction building."""
+        # Mock blockhash manager
+        mock_bh_mgr = MagicMock()
+        mock_bh_mgr.get_fresh_blockhash = AsyncMock(return_value=Hash.default())
+        mock_get_blockhash_mgr.return_value = mock_bh_mgr
+
         # Mock keypair
-        mock_keypair.pubkey.return_value = Mock()
-        mock_keypair.pubkey().__str__ = Mock(return_value="test_pubkey")
+        mock_pubkey = MagicMock()
+        mock_pubkey.__str__ = Mock(return_value="test_pubkey")
+        mock_keypair.pubkey.return_value = mock_pubkey
 
         # Create mock pool event
         pool_event = PoolCreationEvent(

@@ -25,7 +25,7 @@ async def test_pda_precomputation():
     for key, address in addresses.items():
         logger.info(f"  {key}: {address[:16]}...")
 
-    assert len(addresses) == 0, "Raydium V4 uses keypairs, not PDAs - returns empty dict"
+    assert len(addresses) == 0, 'Raydium V4 PDAs are intentionally blocked'
     logger.info("✅ PDA pre-computation test passed (Raydium V4 uses keypairs, not PDAs)")
 
 async def test_curve_parsing():

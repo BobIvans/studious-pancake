@@ -6,6 +6,7 @@ import logging
 import time
 import socket
 import aiohttp
+from aiohttp.resolver import ThreadedResolver
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
 from contextlib import asynccontextmanager
 import hashlib
@@ -37,7 +38,7 @@ class WSSConnection:
         try:
             if self.session and not self.session.closed:
                 await self.session.close()
-            _connector = aiohttp.TCPConnector(family=socket.AF_INET, ttl_dns_cache=300)
+            _connector = aiohttp.TCPConnector(family=socket.AF_INET, resolver=ThreadedResolver(), ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=_connector)
             self.websocket = await self.session.ws_connect(
                 self.url,

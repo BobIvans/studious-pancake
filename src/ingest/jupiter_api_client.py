@@ -41,7 +41,9 @@ class JupiterClient:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
+            from aiohttp.resolver import ThreadedResolver
             connector = aiohttp.TCPConnector(
+                resolver=ThreadedResolver(),
                 limit=150,
                 limit_per_host=30,
                 ttl_dns_cache=300,

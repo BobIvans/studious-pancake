@@ -4644,7 +4644,7 @@ async def execute_priority_opportunity(
             ),  # Fix 3: dynamic tip accounts
             blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
             opportunity=opportunity,
-            expected_profit_sol=float(net_profit) if 'net_profit' in dir() else 0.0,
+            expected_profit_sol=float(opportunity.expected_profit_sol),
         )
         if not tx_b64:
             logger.warning("Failed to create priority arbitrage tx")

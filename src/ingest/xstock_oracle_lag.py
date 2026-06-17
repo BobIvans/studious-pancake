@@ -41,7 +41,7 @@ from src.config.xstocks_registry import (
 )
 from .pyth_oracle_client import get_pyth_client
 from .jupiter_api_client import JupiterClient
-import src.ingest.shared_state as shared_state
+from . import shared_state
 
 logger = logging.getLogger(__name__)
 

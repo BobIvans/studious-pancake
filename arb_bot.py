@@ -5936,7 +5936,9 @@ async def run():
     )
 
     if cfg.HELIUS_WEBHOOK_ENABLED:
-        asyncio.create_task(helius_webhook_handler.start())
+        webhook_task = asyncio.create_task(helius_webhook_handler.start())
+        shared_state.active_tasks.add(webhook_task)
+        webhook_task.add_done_callback(background_task_callback)
     else:
         logger.info("ℹ️ Helius webhook handler disabled")
 

@@ -41,29 +41,12 @@ class HeliusWebhookHandler:
         self._event_counter = 0  # counts processed events for async.yield every 3
         self._consumer_task: Optional[asyncio.Task] = None  # Fix 55: background consumer
 
-    async def _check_port_available(self) -> bool:
-        """Check if the webhook port is available before starting the server."""
-        import socket
-        try:
-            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-                s.bind(('0.0.0.0', self.port))
-                s.close()
-            return True
-        except OSError:
-            return False
-
     async def start(self):
         """Start the webhook server and the background signal consumer."""
-        # Check port availability before attempting to start
-        if not await self._check_port_available():
-            logger.warning(f"⚠️ Port {self.port} already in use. Webhook server disabled for this session.")
-            logger.info("💡 Tip: Stop other instances of the bot before starting a new one.")
-            return
-
         try:
             self.runner = web.AppRunner(self.app)
             await self.runner.setup()
-            site = web.TCPSite(runner=self.runner, port=self.port)
+            site = web.TCPSite(runner=self.runner, host='0.0.0.0', port=self.port)
             await site.start()
             logger.info(f"🚀 Helius webhook server started on port {self.port}")
             # Fix 55: Start background consumer to drain signal deque into _process_event

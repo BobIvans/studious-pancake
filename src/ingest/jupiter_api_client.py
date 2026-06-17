@@ -422,11 +422,4 @@ class JupiterClient:
             "amount": amount,
             "user_public_key": user_public_key,
             "slippage_bps": slippage_bps,
-        }          "swap_transaction": swap_tx,
-            "decoded_transaction": decoded_tx,
-            "input_mint": input_mint,
-            "output_mint": output_mint,
-            "amount": amount,
-            "user_public_key": user_public_key,
-            "slippage_bps": slippage_bps,
         }

@@ -696,10 +696,13 @@ data=(
         Returns:
             Tuple of (list of solders Instructions, list of Address Lookup Table Pubkeys)
         """
+        # Strip injected keys that Jupiter's Rust backend rejects
+        clean_quote = {k: v for k, v in quote_response.items() if k != "fetched_at"}
+
         # Rate limit Jupiter API calls
         async with self.jupiter_limiter:
             payload = {
-                "quoteResponse": quote_response,
+                "quoteResponse": clean_quote,
                 "userPublicKey": wallet_pubkey,
                 "wrapAndUnwrapSol": False,
                 "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером

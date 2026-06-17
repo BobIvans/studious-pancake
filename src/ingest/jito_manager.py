@@ -284,19 +284,20 @@ class JitoBiddingManager:
         return False
 
     async def poll_tip_floor(self, session: aiohttp.ClientSession):
-        """Poll every 10s."""
-        now = time.time()
-        if now - self.last_poll < 10:
-            return
-        self.last_poll = now
-        try:
-            async with session.get(self.TIP_FLOOR_URL, timeout=3) as resp:
-                if resp.status == 200:
-                    self.tip_floor_data = await resp.json()
-                    p50 = self.get_50th_percentile_lamports()
-                    logger.info(f"📊 Jito tip floor updated: 50th={p50}")
-        except Exception as e:
-            logger.debug(f"Tip floor poll failed: {e}")
+        """Poll every 10s continuously."""
+        while True:
+            try:
+                now = time.time()
+                if now - self.last_poll >= 10:
+                    self.last_poll = now
+                    async with session.get(self.TIP_FLOOR_URL, timeout=3) as resp:
+                        if resp.status == 200:
+                            self.tip_floor_data = await resp.json()
+                            p50 = self.get_50th_percentile_lamports()
+                            logger.info(f"📊 Jito tip floor updated: 50th={p50}")
+            except Exception as e:
+                logger.debug(f"Tip floor poll failed: {e}")
+            await asyncio.sleep(2.0)
 
     def get_50th_percentile_lamports(self) -> int:
         try:

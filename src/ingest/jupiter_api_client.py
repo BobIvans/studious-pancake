@@ -233,8 +233,11 @@ class JupiterClient:
                 "quote_response": quote_response,
             }
 
+        # Strip injected keys that Jupiter's Rust backend rejects
+        clean_quote = {k: v for k, v in quote_response.items() if k != "fetched_at"}
+
         payload = {
-            "quoteResponse": quote_response,
+            "quoteResponse": clean_quote,
             "userPublicKey": user_public_key,
             "wrapAndUnwrapSol": wrap_unwrap_sol,
             "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером

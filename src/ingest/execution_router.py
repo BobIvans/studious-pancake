@@ -248,6 +248,8 @@ class ExecutionRouter:
             self._processor_task = asyncio.create_task(self._process_queue())
         if self._self_cancel_task is None:
             self._self_cancel_task = asyncio.create_task(self._self_cancel_stale_bundles())
+        # Start Epoch Shield
+        asyncio.create_task(self.epoch_tracker.start())
 
     async def _process_queue(self):
         """Process execution tasks sequentially."""
@@ -875,7 +877,8 @@ class ExecutionRouter:
                     recent_blockhash = bh_data["result"]["value"]["blockhash"]
 
             # Fix 3: MTU-Safe ALT resolution — pull resolved accounts from alt_manager cache
-            resolved_alts: List[Pubkey] = []
+            from solders.address_lookup_table_account import AddressLookupTableAccount
+            resolved_alts: List[AddressLookupTableAccount] = []
             _flavor_alt_pubkeys = (
                 fl_result.get("address_lookup_table_pubkeys") or  # build_marginfi_flashloan_tx key
                 fl_result.get("address_lookup_tables") or          # build_native_flashloan_tx key
@@ -886,7 +889,7 @@ class ExecutionRouter:
                     continue
                 _resolved = await self.alt_manager.resolve_alt(Pubkey.from_string(alt_pk_str))
                 if _resolved:
-                    resolved_alts.extend(_resolved)
+                    resolved_alts.append(AddressLookupTableAccount(key=Pubkey.from_string(alt_pk_str), addresses=_resolved))
 
             message = MessageV0.try_compile(
                 payer=self.keypair.pubkey(),
@@ -957,16 +960,16 @@ class ExecutionRouter:
                         "token_out": str(token_mint),
                         "amount": float(optimal_size_lamports) / 1e9,
                         "actual_profit": float(expected_profit_sol),
-                        "balance_after": (self.stats.get("virtual_balance", 0.0) if self.stats else 0.0) + float(expected_profit_sol),
+                        "balance_after": shared_state.stats.get("virtual_balance", 0.0) + float(expected_profit_sol),
                         "dex_pair": opportunity.get("pair"),
                         "confidence": float(opportunity.get("score", 1.0))
                     }
                     await self.data_aggregator.log_paper_trade(paper_trade_record)
                 
-                if self.stats and self.stats_lock:
-                    async with self.stats_lock:
-                        self.stats["virtual_balance"] += float(expected_profit_sol)
-                        self.stats["trades"] += 1
+                if shared_state.stats_lock:
+                    async with shared_state.stats_lock:
+                        shared_state.stats["virtual_balance"] += float(expected_profit_sol)
+                        shared_state.stats["trades"] += 1
                     
                 return {"status": "success", "message": "Paper trade simulated and logged"}
 

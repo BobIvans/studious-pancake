@@ -398,10 +398,21 @@ class LstInstantUnstakeArbitrage:
             if not recent_blockhash:
                 return False
 
+            # Resolve ALT accounts properly
+            from solders.address_lookup_table_account import AddressLookupTableAccount
+            alt_pubkey_strs = fl_result.get("address_lookup_table_pubkeys", [])
+            resolved_alts = []
+            import src.ingest.shared_state as shared_state
+            if shared_state.alt_manager:
+                for alt_str in alt_pubkey_strs:
+                    _res = await shared_state.alt_manager.resolve_alt(Pubkey.from_string(alt_str))
+                    if _res:
+                        resolved_alts.append(AddressLookupTableAccount(key=Pubkey.from_string(alt_str), addresses=_res))
+
             message = MessageV0.try_compile(
                 payer=keypair.pubkey(),
                 instructions=fl_result["instructions"],
-                address_lookup_table_accounts=[],
+                address_lookup_table_accounts=resolved_alts,
                 recent_blockhash=Hash.from_string(recent_blockhash)
             )
             transaction = VersionedTransaction(message, [keypair])

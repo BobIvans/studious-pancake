@@ -218,15 +218,16 @@ class TokenSecurityChecker:
                         # Newer Transfer Fee bps is at offset 106 within extension value
                         if ext_len >= 108:
                             bps_offset = offset + 4 + 106
-                            fee_bps = struct.unpack(
-                                "<H", data[bps_offset : bps_offset + 2]
-                            )[0]
-                            if fee_bps > 0:
-                                fee_pct = fee_bps / 100.0
-                                return (
-                                    False,
-                                    f"Token-2022 has transfer fee: {fee_pct}% ({fee_bps} bps)",
-                                )
+                            if bps_offset + 2 <= len(data):
+                                fee_bps = struct.unpack(
+                                    "<H", data[bps_offset : bps_offset + 2]
+                                )[0]
+                                if fee_bps > 0:
+                                    fee_pct = fee_bps / 100.0
+                                    return (
+                                        False,
+                                        f"Token-2022 has transfer fee: {fee_pct}% ({fee_bps} bps)",
+                                    )
 
                     # Move to next extension (must be 8-byte aligned in account data, but sequential here)
                     offset += 4 + ext_len

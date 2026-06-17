@@ -4901,13 +4901,11 @@ async def worker(
                     cfg,
                     slippage_bps=0,
                 )
-                if quote1 and "outAmount" in quote1:
-                    quote1["out_amount"] = int(quote1["outAmount"])
+                if quote1 and "out_amount" in quote1:
                     q2 = await get_best_quote_multi(
                         session, target_mint_str, in_mint_str, quote1["out_amount"], cfg
                     )
-                    if q2 and "outAmount" in q2:
-                        q2["out_amount"] = int(q2["outAmount"])
+                    if q2 and "out_amount" in q2:
                         routes.append([quote1, q2])
                         route_types.append("direct")
 
@@ -4920,8 +4918,7 @@ async def worker(
                     cfg,
                     restrict_intermediate=False,
                 )
-                if quote1_multi and "outAmount" in quote1_multi:
-                    quote1_multi["out_amount"] = int(quote1_multi["outAmount"])
+                if quote1_multi and "out_amount" in quote1_multi:
                     q2_multi = await get_best_quote_multi(
                         session,
                         target_mint_str,
@@ -4930,8 +4927,7 @@ async def worker(
                         cfg,
                         restrict_intermediate=False,
                     )
-                    if q2_multi and "outAmount" in q2_multi:
-                        q2_multi["out_amount"] = int(q2_multi["outAmount"])
+                    if q2_multi and "out_amount" in q2_multi:
                         routes.append([quote1_multi, q2_multi])
                         route_types.append("triangular")
 
@@ -4945,8 +4941,7 @@ async def worker(
                     cfg,
                     restrict_intermediate=False,
                 )
-                if q1 and "outAmount" in q1:
-                    q1["out_amount"] = int(q1["outAmount"])
+                if q1 and "out_amount" in q1:
                     q2 = await get_best_quote_multi(
                         session,
                         target_mint_str,
@@ -4955,8 +4950,7 @@ async def worker(
                         cfg,
                         restrict_intermediate=False,
                     )
-                    if q2 and "outAmount" in q2:
-                        q2["out_amount"] = int(q2["outAmount"])
+                    if q2 and "out_amount" in q2:
                         routes.append([q1, q2])
                         route_types.append("triangular")
 
@@ -5101,19 +5095,17 @@ async def worker(
                     session, in_mint_str, target_mint_str, optimal_amount, cfg,
                     slippage_bps=0,
                 )
-                if not new_quote1 or "outAmount" not in new_quote1:
+                if not new_quote1 or "out_amount" not in new_quote1:
                     logger.debug("Re-fetch failed (leg 1) for optimized amount — skipping")
                     continue
-                new_quote1["out_amount"] = int(new_quote1["outAmount"])
 
                 new_quote2 = await get_best_quote_multi(
                     session, target_mint_str, in_mint_str, new_quote1["out_amount"], cfg,
                     slippage_bps=0,
                 )
-                if not new_quote2 or "outAmount" not in new_quote2:
+                if not new_quote2 or "out_amount" not in new_quote2:
                     logger.debug("Re-fetch failed (leg 2) for optimized amount — skipping")
                     continue
-                new_quote2["out_amount"] = int(new_quote2["outAmount"])
 
                 chosen_route = [new_quote1, new_quote2]
                 quote1 = new_quote1
@@ -5258,7 +5250,7 @@ async def worker(
                         "Anti-sandwich re-fetch of multi-hop leg 1 failed; skipping"
                     )
                     continue
-                quote1_multi["out_amount"] = int(quote1_multi["outAmount"])
+                # out_amount already populated by get_jupiter_quote
                 q2_multi = await get_best_quote_multi(
                     session,
                     target_mint_str,
@@ -5734,6 +5726,7 @@ async def run():
     )
 
     alt_manager = ALTCacheManager(rpc_url=rpc.get_rpc(), session=session)
+    shared_state.alt_manager = alt_manager
     await alt_manager.initialize_cache()
 
     # Task 5: Slot Drift Compensator — initialize blockhash racing manager

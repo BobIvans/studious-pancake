@@ -41,6 +41,7 @@ from src.config.xstocks_registry import (
 )
 from .pyth_oracle_client import get_pyth_client
 from .jupiter_api_client import JupiterClient
+import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -569,7 +570,7 @@ class XStockOracleLagStrategy:
                         "dex_pair": f"{ticker_name}/USDC",
                         "confidence": 1.0
                     }
-                    await self.data_aggregator.log_paper_trade(paper_trade_record)
+                    await shared_state.data_aggregator.log_paper_trade(paper_trade_record)
                 
                 async with shared_state.stats_lock:
                     shared_state.stats["virtual_balance"] += float(actual_profit_sol)

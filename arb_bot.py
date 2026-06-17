@@ -5715,6 +5715,7 @@ async def run():
 
     # 1. Core Data & Scaling Components
     data_aggregator = DataAggregator()
+    shared_state.data_aggregator = data_aggregator
     await data_aggregator.start_batch_writer()
 
     flywheel_scaler = FlywheelScaler(initial_balance=0.017)

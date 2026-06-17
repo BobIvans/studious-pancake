@@ -45,6 +45,9 @@ cached_blockhash: Optional[str] = None
 # ALT Manager for Address Lookup Table resolution
 alt_manager: Optional[Any] = None
 
+# Data Aggregator for paper trading and analytics
+data_aggregator: Optional[Any] = None
+
 def initialize_shared_state():
     global execution_lock, marginfi_account_lock, stats_lock, GLOBAL_STOP_EVENT
     execution_lock = asyncio.Lock()

@@ -6,7 +6,67 @@ import logging
 import time
 import socket
 import aiohttp
-from aiohttp.resolver import ThreadedResolver
+import urllib.request
+import json
+import ssl
+from aiohttp.resolver import ThreadedResolver, AbstractResolver
+
+def resolve_doh_via_ip(hostname: str) -> list[str]:
+    """Query Google DoH API directly via IP address (bypasses system DNS)."""
+    url = f"https://8.8.8.8/resolve?name={hostname}&type=A"
+    try:
+        req = urllib.request.Request(url, headers={"Host": "dns.google"})
+        # Disable SSL verification ONLY for this query to prevent issues on older macOS
+        context = ssl._create_unverified_context()
+        with urllib.request.urlopen(req, context=context, timeout=2.0) as response:
+            data = json.loads(response.read().decode())
+            ips = []
+            for answer in data.get("Answer", []):
+                if answer.get("type") == 1:  # A record
+                    ips.append(answer["data"])
+            return ips
+    except Exception:
+        return []
+
+class DoHResolver(AbstractResolver):
+    async def resolve(self, host: str, port: int = 0, family: int = 0) -> list[dict]:
+        # Fast path: skip DoH for raw IP addresses
+        try:
+            socket.inet_aton(host)
+            return [{
+                'hostname': host,
+                'host': host,
+                'port': port,
+                'family': socket.AF_INET,
+                'proto': 0,
+                'flags': 0
+            }]
+        except socket.error:
+            pass
+            
+        # Resolve via Google DoH over IP
+        ips = resolve_doh_via_ip(host)
+        if not ips:
+            # Fallback to system resolver if DoH fails
+            try:
+                # Use a threaded resolver for fallback to avoid blocking
+                resolver = ThreadedResolver()
+                return await resolver.resolve(host, port, family)
+            except Exception:
+                return []
+        
+        return [
+            {
+                'hostname': host,
+                'host': ip,
+                'port': port,
+                'family': socket.AF_INET,
+                'proto': 0,
+                'flags': 0
+            }
+            for ip in ips
+        ]
+
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
 from contextlib import asynccontextmanager
 import hashlib
@@ -38,7 +98,7 @@ class WSSConnection:
         try:
             if self.session and not self.session.closed:
                 await self.session.close()
-            _connector = aiohttp.TCPConnector(family=socket.AF_INET, resolver=ThreadedResolver(), ttl_dns_cache=300)
+            _connector = aiohttp.TCPConnector(family=socket.AF_INET, resolver=DoHResolver(), ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=_connector)
             self.websocket = await self.session.ws_connect(
                 self.url,

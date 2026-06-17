@@ -7,6 +7,7 @@ Tests the WebSocket-based pool creation sniping system with Jito bundles.
 
 import asyncio
 import unittest
+from unittest import IsolatedAsyncioTestCase
 import sys
 import os
 from unittest.mock import MagicMock, Mock, patch, AsyncMock
@@ -122,7 +123,7 @@ class MockTransaction(Mock):
         return b"deadbeef"
 
 
-class TestJitoBundleSender(unittest.IsolatedAsyncioTestCase):
+class TestJitoBundleSender(IsolatedAsyncioTestCase):
     """Test Jito bundle sending functionality."""
 
     def setUp(self):
@@ -133,7 +134,6 @@ class TestJitoBundleSender(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(len(self.sender.JITO_ENDPOINTS), 1)  # Single NY endpoint
         self.assertTrue(all("jito.wtf" in endpoint for endpoint in self.sender.JITO_ENDPOINTS))
 
-    @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.post')
     async def test_successful_bundle_send(self, mock_post):
         """Test successful bundle sending."""
@@ -153,7 +153,6 @@ class TestJitoBundleSender(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["success_count"], 1)  # Single endpoint succeeds
         self.assertEqual(result["first_bundle_id"], "bundle_123")
 
-    @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.post')
     async def test_tip_failure_handling(self, mock_post):
         """Test handling of tip payment failures."""
@@ -172,7 +171,6 @@ class TestJitoBundleSender(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result["success_count"], 0)
         self.assertIn("tip", result["errors"][0].lower())
 
-    @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.post')
     async def test_partial_bundle_send(self, mock_post):
         """Test partial bundle sending (some endpoints fail)."""
@@ -190,7 +188,6 @@ class TestJitoBundleSender(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(result["success"])
         self.assertEqual(result["success_count"], 0)
 
-    @pytest.mark.asyncio
     @patch('aiohttp.ClientSession.post')
     async def test_failed_bundle_send(self, mock_post):
         """Test complete bundle send failure."""
@@ -210,15 +207,14 @@ class TestJitoBundleSender(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(result["first_bundle_id"])
 
 
-class TestTransactionTipBuilder(unittest.IsolatedAsyncioTestCase):
+class TestTransactionTipBuilder(IsolatedAsyncioTestCase):
     """Test transaction building with tips."""
 
     def setUp(self):
         self.tip_manager = JitoTipManager(min_tip_lamports=10000)
         self.builder = TransactionTipBuilder(self.tip_manager)
 
-    @pytest.mark.asyncio
-    @patch('src.ingest.blockhash_racing.get_blockhash_manager')
+    @patch('ingest.blockhash_racing.get_blockhash_manager')
     async def test_transaction_building(self, mock_get_blockhash_mgr):
         """Test basic transaction building."""
         # Mock blockhash manager

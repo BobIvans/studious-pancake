@@ -186,7 +186,7 @@ from src.ingest.helius_webhook_handler import HeliusWebhookHandler
 from src.ingest.optimal_trade_sizer import (
     OptimalTradeSizer,
 )  # VelocitySlippageManager not implemented
-from src.ingest.rpc_multiplexing import ExecutionPipeline, _set_global_price_matrix
+from src.ingest.rpc_multiplexing import ExecutionPipeline, _set_global_price_matrix, DoHResolver
 from src.ingest.pyth_core_price_feeder import init_pyth_core_feeder
 from src.ingest.helius_sender import HeliusSender, TransactionSender
 
@@ -5612,8 +5612,8 @@ async def run():
     trade_sizer = OptimalTradeSizer()
 
     connector = aiohttp.TCPConnector(
-        family=socket.AF_INET,
-        resolver=ThreadedResolver(),
+        resolver=DoHResolver(),
+        limit=100,
         ttl_dns_cache=300,
         use_dns_cache=True,
         force_close=False,

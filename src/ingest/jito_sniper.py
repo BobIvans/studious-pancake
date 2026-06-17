@@ -884,7 +884,7 @@ class TransactionTipBuilder:
 
             # Phase 30: Inject fresh blockhash from racing manager at the last second
             if recent_blockhash is None:
-                from src.ingest.blockhash_racing import get_blockhash_manager
+                from ingest.blockhash_racing import get_blockhash_manager
                 bh_mgr = get_blockhash_manager()
                 if bh_mgr:
                     recent_blockhash = await bh_mgr.get_fresh_blockhash()

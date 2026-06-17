@@ -319,8 +319,10 @@ class RaydiumTransactionTemplate:
             
             # Map accounts (simplified - in production would need careful mapping)
             accounts = []
-            for acc in template.get("accounts", []):
-                pubkey_str = acc.get("pubkey")
+            template_accounts = template.get("accounts", {})
+            for key, pubkey_str in template_accounts.items():
+                if not pubkey_str:
+                    continue
                 # If pubkey is a placeholder for user token account
                 if pubkey_str.startswith("USER_"):
                     token_symbol = pubkey_str.split("_")[1]
@@ -331,8 +333,8 @@ class RaydiumTransactionTemplate:
                     
                 accounts.append(AccountMeta(
                     pubkey=pubkey,
-                    is_signer=acc.get("is_signer", False),
-                    is_writable=acc.get("is_writable", False)
+                    is_signer=False,  # Simplified default
+                    is_writable=True  # Simplified default
                 ))
 
             ix = Instruction(

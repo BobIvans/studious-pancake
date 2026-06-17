@@ -265,7 +265,7 @@ class LocalRouter:
         """
         try:
             # Jupiter expects input/output mint addresses
-            sol_mint = "So11111111111111111111111111111112"  # Wrapped SOL mint
+            sol_mint = "So11111111111111111111111111111111111111112"  # Wrapped SOL mint
 
             params = {
                 "inputMint": sol_mint,

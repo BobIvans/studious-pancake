@@ -229,6 +229,11 @@ class KaminoFlashLiquidationExecutor:
                 return False
 
             # 3. Build MarginFi flash loan transaction
+            from arb_bot import MARGINFI_BANKS
+            sol_bank = MARGINFI_BANKS.get("So11111111111111111111111111111111111111112", {})
+            vault = str(sol_bank.get("liquidity_vault", ""))
+            vault_auth = str(sol_bank.get("liquidity_vault_authority", ""))
+
             fl_result = await tx_builder.build_marginfi_flashloan_tx(
                 wallet_pubkey=str(keypair.pubkey()),
                 borrow_amount_lamports=opportunity.borrow_amount,
@@ -236,8 +241,8 @@ class KaminoFlashLiquidationExecutor:
                 sell_quote_response=swap_quote["full_quote_response"],
                 marginfi_account=self.marginfi_account,
                 bank_pubkey="CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj",  # SOL bank
-                bank_liquidity_vault="...liquidity_vault...",
-                bank_liquidity_vault_authority="...vault_auth...",
+                bank_liquidity_vault=vault,
+                bank_liquidity_vault_authority=vault_auth,
                 use_jito=True,
                 tip_accounts=tip_accounts,
             )

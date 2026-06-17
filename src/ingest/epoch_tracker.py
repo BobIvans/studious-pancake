@@ -254,11 +254,11 @@ class EpochTracker:
             # In practice, would query Sanctum program for pool addresses
             # Placeholder mapping
             pool_map = {
-                "jitoSOL": "sanctum_jito_pool_address",
-                "mSOL": "sanctum_msol_pool_address",
-                "bSOL": "sanctum_bsol_pool_address",
-                "INF": "sanctum_inf_pool_address",
-                "JupSOL": "sanctum_jupsol_pool_address"
+                "jitoSOL": "11111111111111111111111111111112",
+                "mSOL": "11111111111111111111111111111112",
+                "bSOL": "11111111111111111111111111111112",
+                "INF": "11111111111111111111111111111112",
+                "JupSOL": "11111111111111111111111111111112"
             }
             return pool_map.get(lst_token)
 

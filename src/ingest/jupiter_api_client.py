@@ -115,9 +115,9 @@ class JupiterClient:
 
         for attempt in range(self.max_retries):
             try:
-                # FIX 13: Global Jupiter rate limiter — 4 req/s shared across all instances
-                if _GLOBAL_JUPITER_LIMITER is not None:
-                    async with _GLOBAL_JUPITER_LIMITER:
+                limiter = get_jupiter_limiter()
+                if limiter is not None:
+                    async with limiter:
                         async with self.session.get(
                             QUOTE_API_URL,
                             params=params,
@@ -246,9 +246,9 @@ class JupiterClient:
 
         for attempt in range(self.max_retries):
             try:
-                # FIX 13: Global Jupiter rate limiter — 4 req/s shared across all instances
-                if _GLOBAL_JUPITER_LIMITER is not None:
-                    async with _GLOBAL_JUPITER_LIMITER:
+                limiter = get_jupiter_limiter()
+                if limiter is not None:
+                    async with limiter:
                         async with self.session.post(
                             SWAP_API_URL,
                             json=payload,
@@ -416,6 +416,13 @@ class JupiterClient:
             "success": True,
             "quote": quote,
             "swap_transaction": swap_tx,
+            "decoded_transaction": decoded_tx,
+            "input_mint": input_mint,
+            "output_mint": output_mint,
+            "amount": amount,
+            "user_public_key": user_public_key,
+            "slippage_bps": slippage_bps,
+        }          "swap_transaction": swap_tx,
             "decoded_transaction": decoded_tx,
             "input_mint": input_mint,
             "output_mint": output_mint,

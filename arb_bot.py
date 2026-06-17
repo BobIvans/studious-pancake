@@ -2105,9 +2105,9 @@ async def lst_scanner(queue, cfg):
 
 def is_nyse_trading_hours() -> bool:
     """Check if current UTC time is within NYSE trading hours (13:30-20:00 UTC)."""
-    from datetime import datetime
+    from datetime import datetime, timezone
 
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     hour = now.hour
     minute = now.minute
 
@@ -5520,6 +5520,9 @@ async def run():
     
     # Fix 1: Initialize asyncio locks inside the running event loop
     initialize_shared_state()
+
+    import src.config.events as events_config
+    events_config.lst_webhook_trigger = asyncio.Queue()
     
 
     # Делаем сборку мусора реже, но эффективнее, чтобы не мешать горячим циклам

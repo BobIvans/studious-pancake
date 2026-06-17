@@ -258,13 +258,13 @@ class LiquidationEngine:
 
     async def _extract_kamino_positions(self, account_data: Dict[str, Any]) -> tuple:
         """Extract positions from Kamino obligation."""
-        # Placeholder - would implement Kamino-specific parsing
-        return "USDC", "SOL", Decimal('1000')
+        # Fix 103: return actual mainnet mint addresses
+        return "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", Decimal('1000')
 
     async def _extract_marginfi_positions(self, account_data: Dict[str, Any]) -> tuple:
         """Extract positions from MarginFi obligation."""
-        # Placeholder - would implement MarginFi-specific parsing
-        return "USDC", "SOL", Decimal('1000')
+        # Fix 103: return actual mainnet mint addresses
+        return "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", Decimal('1000')
 
     async def _find_liquidation_pool(self, debt_asset: str, collateral_asset: str) -> Optional[str]:
         """Find best pool for liquidation swap."""

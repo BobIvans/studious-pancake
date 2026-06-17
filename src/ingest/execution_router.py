@@ -417,6 +417,8 @@ class ExecutionRouter:
                 lst_arb = LstInstantUnstakeArbitrage(
                     session=self.session,
                     rpc_url=self.rpc_url,
+                    cfg=self.cfg,
+                    data_aggregator=self.data_aggregator,
                     marginfi_account=os.getenv("MARGINFI_ACCOUNT", ""),
                     tx_builder=JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter),
                     optimal_trade_sizer=self.optimal_trade_sizer,

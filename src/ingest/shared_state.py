@@ -10,8 +10,10 @@ execution_lock: Optional[asyncio.Lock] = None
 marginfi_account_lock: Optional[asyncio.Lock] = None
 stats_lock: Optional[asyncio.Lock] = None
 GLOBAL_STOP_EVENT: Optional[asyncio.Event] = None
+jito_bidding_manager: Optional[Any] = None
 
-# Stats and tracking
+# Fix 67: Balance lock flags
+
 stats: Dict[str, Any] = {
     "trades": 0,
     "last_balance": 0.0,

@@ -5890,9 +5890,12 @@ async def run():
         xstock_strategy = init_xstock_strategy(
             session=session,
             cfg=cfg,
-            optimal_trade_sizer=None,
+            keypair=keypair,
+            optimal_trade_sizer=trade_sizer,
             tx_builder=JupiterTxBuilder(session=session, rpc_getter=lambda: rpc.get_rpc()),
             execution_router=execution_router,
+            ata_cache=ATA_CACHE,
+            data_aggregator=data_aggregator,
         )
         asyncio.create_task(xstock_strategy.periodic_lag_scan())
         logger.info("🎯 xStocks Oracle Lag Strategy initialized")

@@ -118,12 +118,15 @@ class XStockOracleLagStrategy:
       - Jito tip (variable)
     """
 
-    def __init__(self, session, cfg, optimal_trade_sizer, tx_builder, execution_router):
+    def __init__(self, session, cfg, keypair, optimal_trade_sizer, tx_builder, execution_router, ata_cache=None, data_aggregator=None):
         self.session = session
         self.cfg = cfg
+        self.keypair = keypair
         self.optimal_trade_sizer = optimal_trade_sizer
         self.tx_builder = tx_builder
         self.execution_router = execution_router
+        self.ata_cache = ata_cache
+        self.data_aggregator = data_aggregator
 
         # Jupiter client for smart routing
         self.jupiter_client = JupiterClient(session=session)
@@ -549,6 +552,30 @@ class XStockOracleLagStrategy:
                 },
                 "timestamp": datetime.now().isoformat(),
             }
+
+            # ── Task 22: Webhook-Driven Paper Trading Interceptor ───────────────
+            if self.cfg and getattr(self.cfg, 'PAPER_TRADING_ONLY', False):
+                logger.info(f"🧪 [PAPER MODE] Simulation passed! Estimated Profit: {actual_profit_sol:.6f} SOL. Skipping real Jito submission.")
+                
+                if self.data_aggregator:
+                    paper_trade_record = {
+                        "trade_id": f"paper_{int(time.time())}",
+                        "route": f"{ticker_name} Oracle Lag",
+                        "token_in": usdc_mint_str,
+                        "token_out": token_mint,
+                        "amount": float(trade_amount) / 1e6,
+                        "actual_profit": float(actual_profit_sol),
+                        "balance_after": shared_state.stats.get("virtual_balance", 0.0) + float(actual_profit_sol),
+                        "dex_pair": f"{ticker_name}/USDC",
+                        "confidence": 1.0
+                    }
+                    await self.data_aggregator.log_paper_trade(paper_trade_record)
+                
+                async with shared_state.stats_lock:
+                    shared_state.stats["virtual_balance"] += float(actual_profit_sol)
+                    shared_state.stats["trades"] += 1
+                    
+                return
 
             # Submit to execution router
             result = await self.execution_router.execute_arbitrage_opportunity(execution_opportunity)

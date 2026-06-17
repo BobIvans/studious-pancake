@@ -7038,7 +7038,11 @@ if __name__ == "__main__":
     except ImportError:
         logging.info("ℹ️ uvloop не найден, используем стандартный asyncio")
 
+    # Execute ZERO-STRING HOT LOOP optimization before running the bot
+    _convert_tokens_to_pubkeys()
+
     try:
         asyncio.run(run())
     except KeyboardInterrupt:
         logging.info("Bot stopped.")
+topped.")

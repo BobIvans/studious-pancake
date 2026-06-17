@@ -45,7 +45,7 @@ class DoHResolver(AbstractResolver):
             pass
             
         # Resolve via Google DoH over IP
-        ips = resolve_doh_via_ip(host)
+        ips = await asyncio.to_thread(resolve_doh_via_ip, host)
         if not ips:
             # Fallback to system resolver if DoH fails
             try:

@@ -11,14 +11,17 @@ from solders.transaction import VersionedTransaction
 
 logger = logging.getLogger(__name__)
 
-try:
-    from aiolimiter import AsyncLimiter
-    _GLOBAL_JUPITER_LIMITER = AsyncLimiter(4, 1.0)
-    _limiter_available = True
-except ImportError:
-    _GLOBAL_JUPITER_LIMITER = None
-    _limiter_available = False
-    logger.warning("aiolimiter not installed — Jupiter rate limiting disabled")
+_GLOBAL_JUPITER_LIMITER = None
+
+def get_jupiter_limiter():
+    global _GLOBAL_JUPITER_LIMITER
+    if _GLOBAL_JUPITER_LIMITER is None:
+        try:
+            from aiolimiter import AsyncLimiter
+            _GLOBAL_JUPITER_LIMITER = AsyncLimiter(4, 1.0)
+        except ImportError:
+            _GLOBAL_JUPITER_LIMITER = None
+    return _GLOBAL_JUPITER_LIMITER
 
 # Jupiter API endpoints
 QUOTE_API_URL = "https://quote-api.jup.ag/v6/quote"

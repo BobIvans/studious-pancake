@@ -1322,14 +1322,14 @@ data=(
                 "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
             )
             mfi_account = Pubkey.from_string(
-                "11111111111111111111111111111111"
+                "Sysvar1nstructions1111111111111111111111111"
             )  # Placeholder
-            bank = Pubkey.from_string("11111111111111111111111111111111")  # Placeholder
+            bank = Pubkey.from_string("Sysvar1nstructions1111111111111111111111111")  # Placeholder
             vault = Pubkey.from_string(
-                "11111111111111111111111111111111"
+                "Sysvar1nstructions1111111111111111111111111"
             )  # Placeholder
             vault_auth = Pubkey.from_string(
-                "11111111111111111111111111111111"
+                "Sysvar1nstructions1111111111111111111111111"
             )  # Placeholder
             sol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
             user_sol_ata = get_associated_token_address(wallet, sol_mint)

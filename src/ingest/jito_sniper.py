@@ -675,9 +675,9 @@ class WssPoolCreationListener:
 
                     # Placeholder addresses - in production would parse from instruction data
                     # This requires decoding the actual transaction instructions
-                    pool_address = "11111111111111111111111111111112"
-                    base_mint = "So11111111111111111111111111111112"  # SOL placeholder
-                    quote_mint = "11111111111111111111111111111112"
+                    pool_address = "Sysvar1nstructions1111111111111111111111111"
+                    base_mint = "So11111111111111111111111111111111111111112"  # Corrected SOL
+                    quote_mint = "Sysvar1nstructions1111111111111111111111111"
 
                     return PoolCreationEvent(
                         program_id=program_id,

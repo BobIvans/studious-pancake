@@ -18,13 +18,10 @@ class DataAggregator:
 
     def __init__(self, db_path: str = "bot_history.db"):
         self.db_path = db_path
-        self.db_connection = None  # Persistent connection
-        self._ensure_db_exists()
-
-        # Async queue for batch database writes
         self.write_queue = asyncio.Queue()
         self.write_task = None
         self.running = False
+        self._ensure_db_exists()
 
     def _ensure_db_exists(self):
         """Create database and tables if they don't exist."""
@@ -76,24 +73,8 @@ class DataAggregator:
         conn.commit()
         conn.close()
 
-    async def _init_persistent_connection(self):
-        """Initialize persistent database connection for concurrent access."""
-        try:
-            self.db_connection = await aiosqlite.connect(self.db_path, timeout=30)
-            # Enable WAL mode for concurrent access
-            await self.db_connection.execute("PRAGMA journal_mode=WAL;")
-            await self.db_connection.execute("PRAGMA synchronous=NORMAL;")
-            await self.db_connection.execute("PRAGMA cache_size=1000;")
-            await self.db_connection.execute("PRAGMA temp_store=MEMORY;")
-            await self.db_connection.commit()
-            logger.info("Persistent database connection initialized with WAL mode")
-        except Exception as e:
-            logger.error(f"Failed to initialize persistent database connection: {e}")
-            self.db_connection = None
-
     async def start_batch_writer(self):
         """Start the background batch writer task."""
-        await self._init_persistent_connection()
         self.running = True
         self.write_task = asyncio.create_task(self._batch_write_worker())
         logger.info("Data aggregator batch writer started")

@@ -152,10 +152,13 @@ class HeliusWebhookHandler:
                 logger.error(f"Webhook processing error: {e}")
                 return web.Response(status=500, text='Internal Server Error')
 
-    async def _process_event(self, event: Dict[str, Any], webhook_id: str):
+    async def _process_event(self, event: Optional[Dict[str, Any]] = None, webhook_id: str = "unknown"):
         """Process a single event from Helius webhook.
 
-        LIFO deque drop policy (Task 3 anti-starvation):
+        If ``event`` is explicitly provided (test suite or direct call), the
+        internal LIFO deque is bypassed and the given event is processed directly.
+
+        Otherwise, the runtime LIFO deque drop policy applies:
           - Signal deque is populated by handle_webhook (newest appended last).
           - If deque is non-empty, pop the NEWEST event first (LIFO = drop old signals).
           - Events older than EVENT_DROP_MS are silently discarded.
@@ -163,16 +166,19 @@ class HeliusWebhookHandler:
             execution_router never starves on busy Helius batches.
         """
         try:
-            # ── LIFO: pop newest event first; drop if stale (> EVENT_DROP_MS) ─────
-            while self._signal_deque:
-                ts, ev = self._signal_deque.pop()
-                if (time.time() - ts) * 1000 > self.EVENT_DROP_MS:
-                    logger.debug("♻️ Dropped stale webhook event (age > 800 ms)")
-                    continue
-                event = ev   # use deque event instead of original argument
-                break
-            else:
-                return  # deque was empty — nothing to do
+            # If no event is passed (runtime behavior), pull the newest from the deque
+            if event is None:
+                # ── LIFO: pop newest event first; drop if stale (> EVENT_DROP_MS) ─────
+                while self._signal_deque:
+                    ts, ev, w_id = self._signal_deque.pop()
+                    if (time.time() - ts) * 1000 > self.EVENT_DROP_MS:
+                        logger.debug("♻️ Dropped stale webhook event (age > 800 ms)")
+                        continue
+                    event = ev
+                    webhook_id = w_id
+                    break
+                else:
+                    return  # deque was empty — nothing to do
 
             # ── ДЕДУПЛИКАЦИЯ ────────────────────────────────────────────────────
             # Helius может слать по 3-4 вебхука на одно и то же событие.

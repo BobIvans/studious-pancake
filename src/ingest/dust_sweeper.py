@@ -289,6 +289,12 @@ class DustSweeper:
                 # Clear failures on success
                 for addr in valid_batch:
                     self._fail_tracker.pop(str(addr), None)
+                    # СИНХРОНИЗАЦИЯ КЭША ATA_CACHE
+                    try:
+                        import src.ingest.shared_state as _shared_state
+                        _shared_state.ATA_CACHE.discard(str(addr))
+                    except Exception:
+                        pass
                 
                 # Return estimated rent recovered
                 rent_per_account = 2_000_000  # 0.002 SOL in lamports

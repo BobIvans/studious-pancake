@@ -110,31 +110,9 @@ class JitoTipManager:
     async def _maintain_connection(self):
         """Maintain WebSocket connection to Jito tip stream."""
         while self.running:
-            try:
-                logger.info("🔌 Connecting to Jito tip stream...")
-                async with websockets.connect(self.JITO_TIP_STREAM_URL) as websocket:
-                    self.websocket = websocket
-                    logger.info("✅ Connected to Jito tip stream")
-                    self.last_msg_time = time.time()
-                    if not self.watchdog_task or self.watchdog_task.done():
-                        self.watchdog_task = asyncio.create_task(self._watchdog())
-
-                    async for message in websocket:
-                        self.last_msg_time = time.time()
-                        try:
-                            data = orjson.loads(message)
-                            await self._process_tip_data(data)
-                        except Exception:
-                            logger.warning(
-                                f"Invalid JSON from tip stream: {message[:100]}..."
-                            )
-                        except Exception as e:
-                            logger.error(f"Error processing tip data: {e}")
-
-            except Exception as e:
-                logger.warning(f"Tip stream connection error: {e}")
-                if self.running:
-                    await asyncio.sleep(5.0)  # Reconnect delay
+            # ИСПРАВЛЕНИЕ: Jito отключили этот WSS-поток.
+            # Бот уже использует REST-эндпоинт в JitoBiddingManager.
+            await asyncio.sleep(60.0)
 
     async def _watchdog(self):
         """Monitor Jito stream health (Phase 40)."""

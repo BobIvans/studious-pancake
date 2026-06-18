@@ -16,6 +16,10 @@ import aiohttp
 # FIX 13: Shared global Jupiter rate limiter — 4 req/s across all modules
 from .jupiter_api_client import get_jupiter_limiter
 
+# Backward compatibility aliases for older code that still uses _GLOBAL_JUPITER_LIMITER or _limiter_available
+_GLOBAL_JUPITER_LIMITER = None
+_limiter_available = False
+
 logger = logging.getLogger("LstRouteAgg")
 
 SOL_MINT = "So11111111111111111111111111111111111111112"
@@ -354,8 +358,9 @@ class LstRouteAggregator:
                     return await resp.json()
 
             # FIX 13: Acquire global Jupiter rate limiter before each request
-            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
-                async with _GLOBAL_JUPITER_LIMITER:
+            limiter = get_jupiter_limiter()
+            if limiter is not None:
+                async with limiter:
                     data = await do_request()
             else:
                 data = await do_request()

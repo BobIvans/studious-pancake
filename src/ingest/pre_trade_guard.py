@@ -825,10 +825,20 @@ class PreTradeGuard:
 
         try:
             now = time.time()
-            async with self.session.get(quote_url, params=params, timeout=2.0) as resp:
-                if resp.status != 200:
-                    return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
-                fresh_quote = await resp.json()
+            # ИСПРАВЛЕНИЕ: Используем глобальный Jupiter лимитер для избежания HTTP 429
+            from src.ingest.jupiter_api_client import get_jupiter_limiter
+            limiter = get_jupiter_limiter()
+            if limiter is not None:
+                async with limiter:
+                    async with self.session.get(quote_url, params=params, timeout=2.0) as resp:
+                        if resp.status != 200:
+                            return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
+                        fresh_quote = await resp.json()
+            else:
+                async with self.session.get(quote_url, params=params, timeout=2.0) as resp:
+                    if resp.status != 200:
+                        return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
+                    fresh_quote = await resp.json()
 
             actual_out = int(
                 fresh_quote.get("otherAmountThreshold", fresh_quote.get("outAmount", 0))

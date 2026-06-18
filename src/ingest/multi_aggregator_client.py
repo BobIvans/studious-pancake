@@ -369,6 +369,9 @@ class MultiAggregatorClient:
             # handles the timeout naturally by reducing the remaining timeout.
             for t in pending:
                 t.cancel()
+            # ИСПРАВЛЕНИЕ УТЕЧКИ ПАМЯТИ: Дожидаемся отмены задач
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
 
         logger.warning(f"All aggregators failed for {input_mint} -> {output_mint}")
         return None

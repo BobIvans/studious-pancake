@@ -2688,14 +2688,15 @@ async def create_flashloan_arbitrage_tx(
                  if ix.program_id == borrow_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_START),
                 None
             )
-            optimized_instructions[borrow_idx] = Instruction(
-                program_id=borrow_ix.program_id,
-                accounts=borrow_ix.accounts,
-                data=_safe_data,
-            )
-            logger.debug(
-                f"🛠️ Safe Flashloan Start Data Re-serialized and Replaced at index {borrow_idx}: repay_index={actual_repay_index}"
-            )
+            if borrow_idx is not None:
+                optimized_instructions[borrow_idx] = Instruction(
+                    program_id=borrow_ix.program_id,
+                    accounts=borrow_ix.accounts,
+                    data=_safe_data,
+                )
+                logger.debug(
+                    f"🛠️ Safe Flashloan Start Data Re-serialized and Replaced at index {borrow_idx}: repay_index={actual_repay_index}"
+                )
         except (ValueError, StopIteration) as e:
             logger.error(f"CRITICAL: Failed to locate and update borrow/repay instruction: {e}")
             return None

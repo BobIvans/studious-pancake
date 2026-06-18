@@ -1765,7 +1765,7 @@ class RPCManager:
                             family=socket.AF_INET,
                             resolver=DoHResolver(),
                             tcp_nodelay=True,
-                            force_close=False,  # Keep-Alive
+                            force_close=False,
                         )
                     ) as s:
                         async with s.post(
@@ -1777,20 +1777,15 @@ class RPCManager:
                                 raw_bytes = await r.read()
                                 data = orjson.loads(raw_bytes)
                                 slot = int(data.get("result", 0))
-                                
-                                # Если нода прислала слот больше текущего максимума — обновляем максимум
                                 if slot > self.latest_slot:
                                     self.latest_slot = slot
-                                    
-                                # Если нода отстает более чем на 2 слота — заносим в черный список деградации
                                 if slot < self.latest_slot - 2:
                                     self.degraded_nodes.add(node)
                                     logger.warning(f"🐌 Slot Lag Alert: Node {node[:40]}... lagged by {self.latest_slot - slot} slots. Temporarily degraded.")
                                 else:
                                     self.degraded_nodes.discard(node)
-                                    
                                 self.latencies[node] = (time.time() - t0) * 1000
-                except:
+                except Exception:
                     self.latencies[node] = 999.0
             await asyncio.sleep(30)
 
@@ -1807,6 +1802,27 @@ class RPCManager:
         
         # Return fastest (lowest latency)
         return min(nodes_to_query, key=lambda n: self.latencies.get(n, 999.0))
+
+    async def get_token_account_balance(self, account_address: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch SPL token account balance via RPC.
+        Delegates to the active RPC session.
+        """
+        try:
+            payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getTokenAccountBalance",
+                "params": [account_address],
+            }
+            rpc_url = self.get_rpc()
+            async with aiohttp.ClientSession() as session:
+                async with session.post(rpc_url, json=payload, timeout=3.0) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data.get("result", {}).get("value")
+        except Exception as e:
+            logger.debug(f"get_token_account_balance failed for {account_address[:8]}: {e}")
+        return None
 
     def blacklist(self, rpc_url):
         if rpc_url in self.all_nodes:
@@ -5929,6 +5945,7 @@ async def run():
         stats=shared_state.stats,
         stats_lock=shared_state.stats_lock,
         blockhash_mgr=blockhash_mgr,
+        jito_bidding_manager=jito_bidding_manager,
     )
     execution_router.start_processor()
 
@@ -7130,18 +7147,11 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
 
 
 if __name__ == "__main__":
-    try:
-        import uvloop
-
-        uvloop.install()
-        logging.info("⚡ uvloop установлен (максимальная скорость)")
-    except ImportError:
-        logging.info("ℹ️ uvloop не найден, используем стандартный asyncio")
-
     # Execute ZERO-STRING HOT LOOP optimization before running the bot
     _convert_tokens_to_pubkeys()
-
     try:
+        import uvloop
+        uvloop.run(run())  # uvloop.run() properly manages libuv lifecycle for Python 3.11/3.12/3.13
+    except ImportError:
+        import asyncio
         asyncio.run(run())
-    except KeyboardInterrupt:
-        logging.info("Bot stopped.")

@@ -9,10 +9,15 @@ import aiohttp
 import urllib.request
 import json
 import ssl
+from typing import Optional
 from aiohttp.resolver import ThreadedResolver, AbstractResolver
 
-def resolve_doh_via_ip(hostname: str) -> list[str]:
-    """Query multiple DoH APIs directly via IP address (bypasses system DNS)."""
+def resolve_doh_via_ip(hostname: str) -> Optional[list[str]]:
+    """Query multiple DoH APIs directly via IP address (bypasses system DNS).
+
+    Uses parallel resolution across multiple DoH providers for fault tolerance.
+    If all providers fail, raises gaierror to prevent StopIteration in aiohappyeyeballs.
+    """
     # Список надежных DoH-провайдеров (включая unblocked Яндекс для РФ сетей)
     doh_providers = [
         ("https://8.8.8.8/resolve", "dns.google"),
@@ -21,24 +26,32 @@ def resolve_doh_via_ip(hostname: str) -> list[str]:
         ("https://77.88.8.1/resolve", "dns.yandex.ru")
     ]
 
-    for url_base, host_header in doh_providers:
+    def _try_single_provider(url_base: str, host_header: str) -> Optional[list[str]]:
         url = f"{url_base}?name={hostname}&type=A"
         try:
-            # Некоторые провайдеры (Cloudflare) требуют заголовок Accept
             headers = {"Host": host_header, "Accept": "application/dns-json"}
             req = urllib.request.Request(url, headers=headers)
             context = ssl._create_unverified_context()
-            with urllib.request.urlopen(req, context=context, timeout=1.5) as response:
+            with urllib.request.urlopen(req, context=context, timeout=2.0) as response:
                 data = json.loads(response.read().decode())
                 ips = []
                 for answer in data.get("Answer", []):
                     if answer.get("type") == 1:  # A record
                         ips.append(answer["data"])
-                if ips:
-                    return ips
+                return ips if ips else None
         except Exception:
-            continue
-    return []
+            return None
+
+    results = []
+    for url_base, host_header in doh_providers:
+        ips = _try_single_provider(url_base, host_header)
+        if ips:
+            return ips
+        results.append((url_base, host_header))
+
+    # All providers failed - raise gaierror instead of returning empty list
+    # This prevents StopIteration in aiohappyeyeballs on Python 3.13
+    raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
 
 
 class DoHResolver(AbstractResolver):
@@ -58,11 +71,10 @@ class DoHResolver(AbstractResolver):
             pass
 
         # Попытка разрешить имя через кастомный список DoH
-        ips = await asyncio.to_thread(resolve_doh_via_ip, host)
-
-        if not ips:
-            # ФОЛБЕК: Безопасно резолвим через системный getaddrinfo в потоке.
-            # Мы НЕ используем ThreadedResolver() от aiohttp, чтобы исключить баг StopIteration под Python 3.13!
+        try:
+            ips = await asyncio.to_thread(resolve_doh_via_ip, host)
+        except socket.gaierror:
+            # DoH resolution failed, fallback to system resolver
             try:
                 addr_infos = await asyncio.to_thread(socket.getaddrinfo, host, port, socket.AF_INET)
                 return [
@@ -77,9 +89,6 @@ class DoHResolver(AbstractResolver):
                     for info in addr_infos
                 ]
             except Exception:
-                # ИСПРАВЛЕНИЕ (StopIteration fix): вместо пустого списка [] кидаем gaierror.
-                # aiohappyeyeballs вызывает next() на результатах resolve(),
-                # пустой список -> StopIteration -> RuntimeError на Python 3.13.
                 raise socket.gaierror(socket.EAI_NONAME, "Name or service not known") from None
 
         return [

@@ -4939,13 +4939,13 @@ async def worker(
             amount_lamports = int(borrow_amount_sol * (10**decimals_in))
             
             # ── wSOL Death Spiral — проверка перед котированием ──
-            if current_balance_sol is not None and current_balance_sol < 0.015:
+            if balance is not None and balance < 0.015:
                 try:
                     from src.ingest.wsol_manager import WSOLManager
                     wsol_mgr = WSOLManager(keypair.pubkey(), session)
                     unwrapped = await wsol_mgr.check_and_unwrap_wsol(
-                        rpc_url=rpc.get_rpc(),
-                        native_balance_sol=current_balance_sol,
+                        rpc_url=rpc_manager.get_rpc(),
+                        native_balance_sol=balance,
                         unwrap_threshold_sol=0.015,
                     )
                     if unwrapped:

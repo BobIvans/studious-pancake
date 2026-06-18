@@ -3,6 +3,8 @@
 import os
 from typing import Dict, List, Optional
 
+from src.config.addresses import get_enabled_addresses
+
 class WebhookConfig:
     """Configuration for Helius webhooks monitoring LST arbitrage."""
 
@@ -53,8 +55,7 @@ class WebhookConfig:
         "Hp53XEtt4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp",  # JitoSOL/SOL pool
     ]
 
-    from src.config.addresses import get_enabled_addresses
-# Active Webhook IDs and the Helius event classes they monitor.
+    # Active Webhook IDs and the Helius event classes they monitor.
     # Task 17: Pure Code-Driven Webhook Authentication (No .env IDs)
     # We now rely strictly on HMAC authentication or API keys.
     WEBHOOK_IDS = []

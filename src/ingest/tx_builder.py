@@ -625,8 +625,12 @@ class JupiterTxBuilder:
         Forced read-only for program IDs and sysvars to improve scheduling priority.
         """
         raw_b64 = ix_data["data"]
-        # Fix: pad base64 string to a multiple of 4 characters
-        padded_b64 = raw_b64 + "=" * (-len(raw_b64) % 4)
+
+        if isinstance(raw_b64, str):
+            padded_b64 = raw_b64 + "=" * (-len(raw_b64) % 4)
+            data_bytes = base64.b64decode(padded_b64)
+        else:
+            data_bytes = bytes(raw_b64)
 
         program_id = Pubkey.from_string(ix_data["programId"])
 
@@ -663,7 +667,7 @@ class JupiterTxBuilder:
 
         # ── KERNEL TASK 2: Write-Lock Congestion guard ──────────────────────────
         # Sort AccountMeta by is_writable — read-only (False) first, writable (True) last.
-        # This minimises lock contention in the Solana SVM scheduler (QUIC / Agave)
+# This minimises lock contention in the Solana SVM scheduler (QUIC / Agave)
         # so that the hot-path accounts (writable DEX state) are not interleaved with
         # immutable program IDs and sysvars.
         accounts.sort(key=lambda am: (am.is_writable, str(am.pubkey)))
@@ -671,12 +675,8 @@ class JupiterTxBuilder:
         return Instruction(
             program_id=program_id,
             accounts=accounts,
-data=(
-            base64.b64decode(padded_b64)
-            if isinstance(ix_data["data"], str)
-            else bytes(ix_data["data"])
-        ),
-    )
+            data=data_bytes,
+        )
 
     async def get_swap_instructions(
         self,

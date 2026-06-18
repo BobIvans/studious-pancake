@@ -1487,6 +1487,8 @@ def get_marginfi_banks():
 
 
 MARGINFI_BANKS = get_marginfi_banks()
+import src.ingest.shared_state as shared_state
+shared_state.MARGINFI_BANKS = MARGINFI_BANKS
 
 # Discriminators for our flash loan contract
 EXECUTE_ARBITRAGE_DISCRIMINATOR = bytes(
@@ -6636,20 +6638,28 @@ async def run():
                 await send_balance_alert(current_balance, initial_balance)
                 break
     finally:
-        logger.debug("🛑 Shutting down arbitrage engine components...")
-        # ИСПРАВЛЕНИЕ: Итерируемся по копии списка, чтобы избежать RuntimeError
+        logger.info("🛑 Shutting down arbitrage engine components...")
+        
+        # 1. Сначала отменяем все фоновые задачи
         for task in list(shared_state.active_tasks):
             if not task.done():
                 task.cancel()
+        
+        # 2. Даем им время завершиться
+        if shared_state.active_tasks:
+            await asyncio.gather(*shared_state.active_tasks, return_exceptions=True)
+        
+        # 3. Теперь безопасно закрываем сессию
+        if "session" in locals() and session and not session.closed:
+            await session.close()
+        
         # AsyncLogger: flush remaining trade records before exit
         try:
             if "logger_obj" in locals():
                 await logger_obj.stop()
         except Exception as _log_stop_err:
             logger.debug(f"Async trade logger stop error: {_log_stop_err}")
-        # Fix 77: Graceful session close
-        if "session" in locals() and session and not session.closed:
-            await session.close()
+        
         await jito_executor.stop()
         await helius_webhook_handler.stop()
         await data_aggregator.stop_batch_writer()

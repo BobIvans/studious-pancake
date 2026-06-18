@@ -528,7 +528,7 @@ def _convert_mints_to_pubkeys():
 
     # Convert all registry entries
     for registry in [GROUP_1_MAGNIFICENT_SEVEN, GROUP_2_CRYPTO_PROXY,
-                     GROUP_3_ETF_INDEX, GROUP_4_RWA_PARCL]:
+                     GROUP_3_ETF_INDEX, GROUP_4_RWA_PARCL, GROUP_5_YIELD_STABLES]:
         for ticker, info in registry.items():
             registry[ticker] = convert_entry(info)
 

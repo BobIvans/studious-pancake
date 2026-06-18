@@ -600,7 +600,7 @@ class ExecutionRouter:
             dex_swap_instructions = opportunity.get("dex_swap_instructions")
 
             # Phase 48: Dynamic Bank Lookup (lazy import to avoid circular dependency)
-            from arb_bot import MARGINFI_BANKS
+            from src.ingest.shared_state import MARGINFI_BANKS
 
             # ── Task 11: Check out a MarginFi account from the pool BEFORE
             # building the flashloan tx. This ensures the pooled account is

@@ -18,6 +18,8 @@ from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.transaction import VersionedTransaction
 
+from src.ingest.shared_state import MARGINFI_BANKS
+
 logger = logging.getLogger("LstUnstakeArb")
 
 SOL_MINT = "So11111111111111111111111111111111111111112"
@@ -317,8 +319,7 @@ class LstInstantUnstakeArbitrage:
             lst_mint = opportunity["lst_mint"]
             quote = opportunity["quote"]
             borrow_amount = opportunity["borrow_amount"]
-            
-            from arb_bot import MARGINFI_BANKS
+
             bank_info = MARGINFI_BANKS.get(SOL_MINT)
             if not bank_info:
                 return False

@@ -64,7 +64,7 @@ class JitoTipManager:
         self.min_tip_lamports = min_tip_lamports
         self.tip_multiplier = tip_multiplier
         self.tip_accounts = []
-        self.websocket: Optional[websockets.WebSocketServerProtocol] = None
+        self.websocket: Optional[Any] = None
         self.running = False
         self.current_percentiles: Dict[str, int] = {}
         self.last_update = 0.0

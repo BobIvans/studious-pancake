@@ -248,7 +248,7 @@ class JitoExecutor:
                     meta["refunded"] = True
                     refunded_total += refund
                     try:
-                        from arb_bot import stats, stats_lock
+                        from src.ingest.shared_state import stats, stats_lock
                         async with stats_lock:  # type: ignore[misc]
                             stats["virtual_balance"] += refund
                         logger.warning(

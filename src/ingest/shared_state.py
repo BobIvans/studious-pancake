@@ -12,6 +12,10 @@ stats_lock: Optional[asyncio.Lock] = None
 GLOBAL_STOP_EVENT: Optional[asyncio.Event] = None
 jito_bidding_manager: Optional[Any] = None
 
+# MarginFi banks configuration (shared to avoid circular imports)
+MARGINFI_BANKS: Dict[str, Any] = {}
+MARGINFI_BANKS_LOCK = asyncio.Lock()
+
 # Fix 67: Balance lock flags
 
 stats: Dict[str, Any] = {

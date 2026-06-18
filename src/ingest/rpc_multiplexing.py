@@ -12,21 +12,34 @@ import ssl
 from aiohttp.resolver import ThreadedResolver, AbstractResolver
 
 def resolve_doh_via_ip(hostname: str) -> list[str]:
-    """Query Google DoH API directly via IP address (bypasses system DNS)."""
-    url = f"https://8.8.8.8/resolve?name={hostname}&type=A"
-    try:
-        req = urllib.request.Request(url, headers={"Host": "dns.google"})
-        # Disable SSL verification ONLY for this query to prevent issues on older macOS
-        context = ssl._create_unverified_context()
-        with urllib.request.urlopen(req, context=context, timeout=2.0) as response:
-            data = json.loads(response.read().decode())
-            ips = []
-            for answer in data.get("Answer", []):
-                if answer.get("type") == 1:  # A record
-                    ips.append(answer["data"])
-            return ips
-    except Exception:
-        return []
+    """Query multiple DoH APIs directly via IP address (bypasses system DNS)."""
+    # Список надежных DoH-провайдеров (включая unblocked Яндекс для РФ сетей)
+    doh_providers = [
+        ("https://8.8.8.8/resolve", "dns.google"),
+        ("https://1.1.1.1/dns-query", "cloudflare-dns.com"),
+        ("https://9.9.9.9/resolve", "dns.quad9.net"),
+        ("https://77.88.8.1/resolve", "dns.yandex.ru")
+    ]
+
+    for url_base, host_header in doh_providers:
+        url = f"{url_base}?name={hostname}&type=A"
+        try:
+            # Некоторые провайдеры (Cloudflare) требуют заголовок Accept
+            headers = {"Host": host_header, "Accept": "application/dns-json"}
+            req = urllib.request.Request(url, headers=headers)
+            context = ssl._create_unverified_context()
+            with urllib.request.urlopen(req, context=context, timeout=1.5) as response:
+                data = json.loads(response.read().decode())
+                ips = []
+                for answer in data.get("Answer", []):
+                    if answer.get("type") == 1:  # A record
+                        ips.append(answer["data"])
+                if ips:
+                    return ips
+        except Exception:
+            continue
+    return []
+
 
 class DoHResolver(AbstractResolver):
     async def resolve(self, host: str, port: int = 0, family: int = 0) -> list[dict]:
@@ -43,18 +56,29 @@ class DoHResolver(AbstractResolver):
             }]
         except socket.error:
             pass
-            
-        # Resolve via Google DoH over IP
+
+        # Попытка разрешить имя через кастомный список DoH
         ips = await asyncio.to_thread(resolve_doh_via_ip, host)
+
         if not ips:
-            # Fallback to system resolver if DoH fails
+            # ФОЛБЕК: Безопасно резолвим через системный getaddrinfo в потоке.
+            # Мы НЕ используем ThreadedResolver() от aiohttp, чтобы исключить баг StopIteration под Python 3.13!
             try:
-                # Use a threaded resolver for fallback to avoid blocking
-                resolver = ThreadedResolver()
-                return await resolver.resolve(host, port, family)
+                addr_infos = await asyncio.to_thread(socket.getaddrinfo, host, port, socket.AF_INET)
+                return [
+                    {
+                        'hostname': host,
+                        'host': info[4][0],
+                        'port': port,
+                        'family': socket.AF_INET,
+                        'proto': 0,
+                        'flags': 0
+                    }
+                    for info in addr_infos
+                ]
             except Exception:
                 return []
-        
+
         return [
             {
                 'hostname': host,

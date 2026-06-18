@@ -331,7 +331,6 @@ else:
     BipartiteOrderbookAmmSolver = None  # type: ignore[assignment,misc]
 
 # Webhook trigger for LST scanner
-from src.config.events import lst_webhook_trigger
 
 # Create instances
 transaction_prebuilder = TransactionPrebuilder()
@@ -6468,7 +6467,7 @@ async def run():
                 rpc,
                 keypair,
                 jito_executor,
-                lst_webhook_trigger,
+                events_config.lst_webhook_trigger,  # ИСПРАВЛЕНИЕ ССЫЛКИ
                 blockhash_mgr=blockhash_mgr,
             )
         )

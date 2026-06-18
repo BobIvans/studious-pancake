@@ -91,7 +91,7 @@ class DoHResolver(AbstractResolver):
             for ip in ips
         ]
 
-    def close(self) -> None:
+    async def close(self) -> None:
         """Required by AbstractResolver for cleanup."""
         pass
 

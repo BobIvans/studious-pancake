@@ -23,6 +23,7 @@ MIN_VAULT_BALANCE_THRESHOLD = 100_000_000  # 0.1 SOL in lamports as example
 
 # Whitelist of safe tokens (stablecoins and LSTs)
 SAFE_MINTS = {
+    "So11111111111111111111111111111111111111112",  # wSOL
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
     "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",  # USDT
     "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL  (mainnet verified)

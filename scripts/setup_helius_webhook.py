@@ -93,6 +93,16 @@ def create_helius_webhook():
 
     print("🚀 Creating Helius webhook...")
     print(f"📡 URL: {sanitized_data['webhookURL']}")
+    
+    # ── Tunnel Latency Warning ───────────────────────────────────────
+    webhook_url = sanitized_data['webhookURL']
+    if 'trycloudflare.com' in webhook_url or 'ngrok' in webhook_url or 'localhost' in webhook_url:
+        print("⚠️  WARNING: Tunnel/redirect URL detected!")
+        print("   Туннели (Cloudflare/ngrok) добавляют 400ms+ задержки, что критично для Jito-аукционов.")
+        print("   Рекомендуется использовать прямой IP сервера:")
+        print("   WEBHOOK_URL=http://<PUBLIC_IP>:3000/webhook")
+        print("   Сервер уже слушает 0.0.0.0:3000 — не требуется никаких дополнительных настроек.")
+        print()
     print(f"🎯 Monitoring {len(sanitized_data['accountAddresses'])} LST addresses")
     print(f"📊 Transaction types: {', '.join(sanitized_data['transactionTypes'])}")
 

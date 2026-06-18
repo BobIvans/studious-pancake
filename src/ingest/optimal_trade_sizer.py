@@ -184,6 +184,52 @@ class VelocitySlippageManager:
         net_after_fees = worst_case_out - Decimal(str(total_fees))
         return net_after_fees >= Decimal(str(borrowed_amount))
 
+    # ── ИСПРАВЛЕНИЕ: Unified Slippage Calculation ──────────────────────────────
+    # Объединяет VelocitySlippageManager с Anti-Sandwich Guardian и Dynamic Routing:
+    # Шаг 1: База из VelocitySlippageManager.get_dynamic_slippage() (сетевая активность)
+    # Шаг 2: Anti-Sandwich Guard — slippage не превышает 40% от expected_profit_bps
+    # Шаг 3: Ограничение снизу — минимум 5 BPS (требование Jupiter)
+    #
+    # Returns slipage in basis points (BPS).
+    def calculate_unified_slippage_bps(
+        self,
+        expected_profit_bps: float = 0.0,
+        base_slippage_bps: int = 15,
+    ) -> int:
+        """
+        Calculate unified slippage combining velocity, profit guard, and Jupiter minimum.
+
+        Args:
+            expected_profit_bps: Expected profit of the trade in BPS (0.01% units).
+            base_slippage_bps: Fallback slippage if no profit data available.
+
+        Returns:
+            Slippage in BPS (basis points), guaranteed >= 5 and <= 1000.
+        """
+        # Шаг 1: База от VelocitySlippageManager
+        velocity_slippage = self.get_dynamic_slippage()  # float (0.005 = 0.5% = 50 BPS)
+        velocity_bps = max(5, int(velocity_slippage * 10000))
+
+        # Шаг 2: Anti-Sandwich Guard — slippage не более 40% от expected_profit_bps
+        if expected_profit_bps > 0:
+            anti_sandwich_bps = int(expected_profit_bps * 0.4)
+            unified = min(velocity_bps, anti_sandwich_bps)
+        else:
+            unified = base_slippage_bps
+
+        # Шаг 3: Jupiter minimum и разумный максимум
+        unified = max(5, unified)  # Jupiter min 5 BPS
+        unified = min(unified, 1000)  # Max 10% (safety cap)
+
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.debug(
+            f"🛡️ Unified slippage: {unified} BPS "
+            f"(velocity={velocity_bps}, profit_bps={expected_profit_bps:.1f}, "
+            f"anti_sandwich={anti_sandwich_bps if expected_profit_bps > 0 else 'N/A'})"
+        )
+        return unified
+
 
 @dataclass
 class ArbitrageCycle:

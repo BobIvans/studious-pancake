@@ -4368,6 +4368,21 @@ async def execute_priority_opportunity(
     current_balance_sol = shared_state.stats.get("last_balance", 0.017)
     params = flywheel_scaler.get_trading_params(current_balance_sol)
 
+    # ── wSOL Death Spiral — реактивное разворачивание wSOL в hot path ──
+    if current_balance_sol < 0.015:
+        try:
+            from src.ingest.wsol_manager import WSOLManager
+            wsol_mgr = WSOLManager(keypair.pubkey(), session)
+            unwrapped = await wsol_mgr.check_and_unwrap_wsol(
+                rpc_url=rpc_manager.get_rpc(),
+                native_balance_sol=current_balance_sol,
+                unwrap_threshold_sol=0.015,
+            )
+            if unwrapped:
+                logger.info("🔓 Hot path wSOL unwrap — native balance replenished")
+        except Exception as wsol_err:
+            logger.debug(f"Hot path wSOL unwrap skipped: {wsol_err}")
+
     # Check circuit breaker
     if shared_state.GLOBAL_STOP_EVENT.is_set():
         logger.critical("Бот остановлен для анализа. Ожидание ручного рестарта.")
@@ -4922,6 +4937,22 @@ async def worker(
             # --- RESTORED MISSING QUOTE FETCHING LOGIC ---
             decimals_in = get_token_decimals(in_mint_str)
             amount_lamports = int(borrow_amount_sol * (10**decimals_in))
+            
+            # ── wSOL Death Spiral — проверка перед котированием ──
+            if current_balance_sol is not None and current_balance_sol < 0.015:
+                try:
+                    from src.ingest.wsol_manager import WSOLManager
+                    wsol_mgr = WSOLManager(keypair.pubkey(), session)
+                    unwrapped = await wsol_mgr.check_and_unwrap_wsol(
+                        rpc_url=rpc.get_rpc(),
+                        native_balance_sol=current_balance_sol,
+                        unwrap_threshold_sol=0.015,
+                    )
+                    if unwrapped:
+                        logger.info("🔓 Worker hot path wSOL unwrap — native balance replenished")
+                except Exception as wsol_err:
+                    logger.debug(f"Worker wSOL unwrap skipped: {wsol_err}")
+            
             routes = []
             route_types = []
 

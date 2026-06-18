@@ -53,7 +53,8 @@ class WebhookConfig:
         "Hp53XEtt4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp",  # JitoSOL/SOL pool
     ]
 
-    # Active Webhook IDs and the Helius event classes they monitor.
+    from src.config.addresses import get_enabled_addresses
+# Active Webhook IDs and the Helius event classes they monitor.
     # Task 17: Pure Code-Driven Webhook Authentication (No .env IDs)
     # We now rely strictly on HMAC authentication or API keys.
     WEBHOOK_IDS = []
@@ -79,11 +80,15 @@ class WebhookConfig:
             "webhookType": "enhanced",
             "transactionTypes": ["SWAP", "TRANSFER", "CREATE_POOL", "GRADUATION"],
             "accountAddresses": (
-                cls.LST_ADDRESSES +
-                cls.XSTOCK_ADDRESSES +
-                cls.PARCL_ADDRESSES +
-                cls.PYTH_ADDRESSES +
-                cls.ORCA_POOL_ADDRESSES
+                # Используем get_enabled_addresses() для фильтрации + оригинальные LST/xStock списки
+                list(set(
+                    cls.LST_ADDRESSES +
+                    cls.XSTOCK_ADDRESSES +
+                    cls.PARCL_ADDRESSES +
+                    cls.PYTH_ADDRESSES +
+                    cls.ORCA_POOL_ADDRESSES +
+                    list(get_enabled_addresses().keys())
+                ))
             ),
             "txnStatus": "success",  # OPTIMIZED: Only listen to successful trades (saves credits)
             "accountFilters": [  # Phase 49: Helius credit conservation — hard filter

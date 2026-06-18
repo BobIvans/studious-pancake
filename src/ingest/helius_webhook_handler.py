@@ -287,7 +287,13 @@ class HeliusWebhookHandler:
             try:
                 if self._signal_deque:
                     ts, ev, webhook_id = self._signal_deque.pop()
-                    await self._process_event(ev, webhook_id)
+                    
+                    # ── ИСПРАВЛЕНИЕ: Мгновенная конкурентная обработка ──
+                    task = asyncio.create_task(self._process_event(ev, webhook_id))
+                    import src.ingest.shared_state as shared_state
+                    if hasattr(shared_state, 'active_tasks'):
+                        shared_state.active_tasks.add(task)
+                        task.add_done_callback(lambda t: shared_state.active_tasks.discard(t))
                 else:
                     await asyncio.sleep(0.01)
             except asyncio.CancelledError:

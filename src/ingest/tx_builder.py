@@ -2328,31 +2328,14 @@ data=(
                     is_xs = is_xstock_token(token_mint_pk)
                     program_id = TOKEN_2022_PROGRAM_ID if is_xs else TOKEN_PROGRAM_ID
 
-                    # ── Fix 1 (Atomic Burn-Before-Close) ──────────────────────────────
-                    # Для Token-2022: сжигаем остаток ДО закрытия, иначе CloseAccount
-                    # упадёт с AccountNotEmpty из-за микро-пыли.
+                    # ── ИСПРАВЛЕНИЕ: Никакого атомарного сжигания u64::MAX ──
+                    # Solana не поддерживает u64::MAX как "сжечь всё". Транзакция упадет с InsufficientFunds.
+                    # Кроме того, Token-2022 нельзя закрывать, если осталась хотя бы 1 единица пыли.
+                    # Поэтому мы ПРОПУСКАЕМ закрытие Token-2022 аккаунтов в основной транзакции.
+                    # Asynchronous DustSweeper сделает это безопасно в фоне (сначала узнав точный баланс).
                     if is_xs:
-                        try:
-                            from spl.token.instructions import BurnParams, burn
-
-                            # Получаем баланс счёта, чтобы сжечь всё до нуля
-                            # Используем getTokenAccountBalance для точного количества
-                            # Если RPC недоступен — пропускаем Burn (close всё равно упадёт)
-                            burn_ix = burn(
-                                BurnParams(
-                                    program_id=program_id,
-                                    account=token_account,
-                                    mint=token_mint_pk,
-                                    owner=payer,
-                                    amount=2**64 - 1,  # u64::MAX — сжигает весь баланс
-                                )
-                            )
-                            recovery_instructions.append(burn_ix)
-                            logger.debug(
-                                f"🔥 Atomic Burn-Before-Close: burning xStock {token_mint[:8]} before close"
-                            )
-                        except Exception as _burn_err:
-                            logger.debug(f"Burn-Before-Close skipped: {_burn_err}")
+                        logger.debug(f"🛡️ Пропуск атомарного закрытия Token-2022 ATA {token_account} — делегировано DustSweeper")
+                        continue
 
                     from spl.token.instructions import CloseAccountParams, close_account
 

@@ -1106,8 +1106,9 @@ class ExecutionRouter:
         )
         try:
             # FIX 13: Acquire global Jupiter rate limiter before each request
-            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
-                async with _GLOBAL_JUPITER_LIMITER:
+            limiter = get_jupiter_limiter()
+            if limiter is not None:
+                async with limiter:
                     async with self.session.get(entry_quote_url, timeout=4.0) as resp:
                         if resp.status != 200:
                             if resp.status == 429:
@@ -1186,8 +1187,9 @@ class ExecutionRouter:
         )
         try:
             # FIX 13: Acquire global Jupiter rate limiter before each request
-            if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
-                async with _GLOBAL_JUPITER_LIMITER:
+            limiter = get_jupiter_limiter()
+            if limiter is not None:
+                async with limiter:
                     async with self.session.get(exit_quote_url, timeout=4.0) as resp:
                         if resp.status != 200:
                             if resp.status == 429:

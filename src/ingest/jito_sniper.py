@@ -11,10 +11,10 @@ import logging
 import random
 import time
 import os
+import socket
 import urllib.request
 from typing import Dict, List, Optional, Set, Tuple, Any, Callable
 import aiohttp
-import websockets
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.system_program import TransferParams, transfer
@@ -85,7 +85,9 @@ class JitoTipManager:
     async def _refresh_tip_accounts(self):
         """Fetch Jito tip accounts from API."""
         try:
-            async with aiohttp.ClientSession() as session:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(self.JITO_TIP_ACCOUNTS_URL) as resp:
                     if resp.status == 200:
                         data = await resp.json()
@@ -222,8 +224,9 @@ class JitoTipManager:
     async def fetch_tip_accounts(self) -> bool:
         """Fetch live Jito tip accounts from Block Engine (Phase 35)."""
         try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(self.JITO_TIP_ACCOUNTS_URL, timeout=5.0) as resp:
                     if resp.status == 200:
                         accounts = await resp.json()
@@ -330,7 +333,9 @@ class WssPoolCreationListener:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            self.session = aiohttp.ClientSession()
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):
@@ -351,6 +356,15 @@ class WssPoolCreationListener:
         if self.websocket:
             await self.websocket.close()
 
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create session with DoH resolver."""
+        if self.session is None or self.session.closed:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector)
+            self._session_owned = True
+        return self.session
+
     async def _maintain_connection(self):
         """Maintain WebSocket connection."""
         while self.running:
@@ -360,7 +374,13 @@ class WssPoolCreationListener:
             
             try:
                 logger.info(f"🔌 Connecting to {self.rpc_ws_url}...")
-                async with websockets.connect(self.rpc_ws_url) as websocket:
+                session = await self._get_session()
+                async with session.ws_connect(
+                    self.rpc_ws_url,
+                    heartbeat=15.0,
+                    timeout=30.0,
+                    compress=15,
+                ) as websocket:
                     self.websocket = websocket
                     logger.info("✅ Connected to RPC WebSocket")
                     self.last_msg_time = time.time()
@@ -409,7 +429,7 @@ class WssPoolCreationListener:
                 "method": "slotSubscribe",
                 "params": []
             }
-            await self.websocket.send(orjson.dumps(msg))
+            await self.websocket.send_str(orjson.dumps(msg).decode())
             logger.info("📡 Subscribed to slots for heartbeat watchdog")
         except Exception as e:
             logger.error(f"Failed to subscribe to slots: {e}")
@@ -446,7 +466,7 @@ class WssPoolCreationListener:
         }
 
         try:
-            await self.websocket.send(orjson.dumps(subscribe_request))
+            await self.websocket.send_str(orjson.dumps(subscribe_request).decode())
             self.subscriptions[program_id] = subscription_id
             logger.info(
                 f"📡 Subscribed to logs for {self.TARGET_PROGRAMS.get(program_id, program_id)[:8]}..."
@@ -455,10 +475,12 @@ class WssPoolCreationListener:
         except Exception as e:
             logger.error(f"Failed to subscribe to {program_id}: {e}")
 
-    async def _handle_message(self, message: str):
+    async def _handle_message(self, message):
         """Handle incoming WebSocket message."""
         try:
-            data = orjson.loads(message)
+            if message.type != aiohttp.WSMsgType.TEXT:
+                return
+            data = orjson.loads(message.data)
 
             # Handle subscription confirmations
             if "id" in data and data.get("result"):
@@ -470,7 +492,7 @@ class WssPoolCreationListener:
                 await self._handle_logs_notification(data["params"])
 
         except Exception:
-            logger.error(f"Invalid JSON message: {message[:100]}...")
+            logger.error(f"Invalid JSON message: {message.data[:100] if hasattr(message, 'data') else message[:100]}...")
         except Exception as e:
             logger.error(f"Error processing WebSocket message: {e}")
 
@@ -705,7 +727,9 @@ class JitoBundleSender:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            self.session = aiohttp.ClientSession()
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector)
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb):

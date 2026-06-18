@@ -9,9 +9,10 @@ latency in arbitrage scenarios.
 import asyncio
 import orjson
 import logging
+import socket
 from typing import Dict, List, Optional, Set, Callable, Any
 import aiohttp
-import websockets
+from aiohttp.resolver import AbstractResolver
 
 logger = logging.getLogger("MultiRpcManager")
 
@@ -114,7 +115,8 @@ class RpcEndpoint:
         self.ws_url = ws_url
         self.http_url = http_url
         self.priority = priority  # Lower number = higher priority
-        self.connection: Optional[websockets.WebSocketServerProtocol] = None
+        self.connection = None  # Will be aiohttp ClientWebSocketResponse
+        self.session: Optional[aiohttp.ClientSession] = None
         self.subscriptions: Dict[str, str] = {}  # subscription_id -> event_type
         self.is_connected = False
         self.last_event_time = 0.0
@@ -209,11 +211,13 @@ class MultiRpcManager:
         for task in self.connection_tasks:
             task.cancel()
 
-        # Close all websocket connections
+        # Close all websocket connections and sessions
         close_tasks = []
         for endpoint in self.endpoints:
-            if endpoint.connection and not endpoint.connection.closed:
+            if endpoint.connection and not getattr(endpoint.connection, 'closed', True):
                 close_tasks.append(endpoint.connection.close())
+            if endpoint.session and not endpoint.session.closed:
+                close_tasks.append(endpoint.session.close())
 
         if close_tasks:
             await asyncio.gather(*close_tasks, return_exceptions=True)
@@ -236,11 +240,14 @@ class MultiRpcManager:
     async def _connect_endpoint(self, endpoint: RpcEndpoint):
         """Establish WebSocket connection to endpoint."""
         logger.info(f"🔌 Connecting to {endpoint.name}...")
-        endpoint.connection = await websockets.connect(
+        from src.ingest.rpc_multiplexing import DoHResolver
+        connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+        endpoint.session = aiohttp.ClientSession(connector=connector)
+        endpoint.connection = await endpoint.session.ws_connect(
             endpoint.ws_url,
-            ping_interval=20,
-            ping_timeout=10,
-            close_timeout=5
+            heartbeat=15.0,
+            timeout=30.0,
+            receive_timeout=45.0
         )
         endpoint.is_connected = True
         logger.info(f"✅ Connected to {endpoint.name}")
@@ -249,8 +256,9 @@ class MultiRpcManager:
         """Handle incoming messages from endpoint."""
         try:
             async for message in endpoint.connection:
-                await self._process_message(endpoint, message)
-        except websockets.exceptions.ConnectionClosed:
+                if message.type == aiohttp.WSMsgType.TEXT:
+                    await self._process_message(endpoint, message.data)
+        except Exception:
             logger.warning(f"Connection closed for {endpoint.name}")
             endpoint.is_connected = False
 

@@ -123,7 +123,7 @@ from .tx_builder import JupiterTxBuilder
 from .epoch_tracker import EpochTracker
 
 # FIX 13: Shared global Jupiter rate limiter — 4 req/s across all modules
-from .jupiter_api_client import _GLOBAL_JUPITER_LIMITER, _limiter_available
+from .jupiter_api_client import get_jupiter_limiter
 
 logger = logging.getLogger(__name__)
 

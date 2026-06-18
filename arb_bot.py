@@ -5152,6 +5152,13 @@ async def worker(
             ]  # Output in in_mint lamports
             profit_lamports = expected_out_lamports - amount_lamports
 
+            # Получаем реальный минимум, который выдаст Jupiter при максимальном slippage
+            worst_case_out = int(chosen_route[-1].get("full_quote_response", {}).get("otherAmountThreshold", expected_out_lamports))
+            
+            if worst_case_out < amount_lamports:
+                logger.debug(f"🚫 Пропуск маршрута: worst_case_out ({worst_case_out}) < долга ({amount_lamports}). Риск невыплаты Flashloan!")
+                continue
+
             is_sol_base = str(in_mint) == "So11111111111111111111111111111111111111112"
             sol_entry = price_matrix.get(
                 "So11111111111111111111111111111111111111112"

@@ -432,8 +432,11 @@ class XStockOracleLagStrategy:
 
         # Convert trade amount from USDC lamports to SOL equivalent
         trade_usdc = trade_amount_lamports / 1_000_000
-        # Rough SOL price assumption: $150/SOL
-        sol_price = 150.0
+        # ── ИСПРАВЛЕНИЕ: Динамическая цена SOL вместо хардкода 150.0 ──
+        try:
+            sol_price = float(self.pyth_client.get_current_price("SOL") or 150.0)
+        except Exception:
+            sol_price = 150.0
         profit_usdc = trade_usdc * (effective_spread_pct / 100.0)
         profit_sol = profit_usdc / sol_price
         return profit_sol

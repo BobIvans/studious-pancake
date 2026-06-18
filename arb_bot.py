@@ -4845,6 +4845,7 @@ async def worker(
     arbitrage_scorer=None,
     priority_queue=None,
     alt_manager=None,
+    execution_router=None,
 ):
     # Stagger startup to prevent MacOS DNS gaierror(8)
     await asyncio.sleep(random.uniform(0.5, 5.0))
@@ -5879,6 +5880,7 @@ async def run():
         data_aggregator=data_aggregator,
         stats=shared_state.stats,
         stats_lock=shared_state.stats_lock,
+        blockhash_mgr=blockhash_mgr,
     )
     execution_router.start_processor()
 
@@ -6412,6 +6414,7 @@ async def run():
                     arbitrage_scorer,
                     priority_queue,
                     alt_manager=alt_manager,
+                    execution_router=execution_router,
                 )
             )
             for _ in range(cfg.WORKER_COUNT)

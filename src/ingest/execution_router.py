@@ -184,6 +184,7 @@ class ExecutionRouter:
         data_aggregator=None,
         stats=None,
         stats_lock=None,
+        blockhash_mgr=None,
     ):
         self.leader_tracker = leader_tracker
         self.jito_executor = jito_executor
@@ -199,6 +200,7 @@ class ExecutionRouter:
         self._static_rpc_url = rpc_url
         self.rpc_getter = rpc_getter
         self.blockhash_getter = blockhash_getter
+        self.blockhash_mgr = blockhash_mgr
         self.rpc_url = rpc_url
         self.optimal_trade_sizer = optimal_trade_sizer
         self.ata_cache = ata_cache if ata_cache is not None else set()
@@ -867,7 +869,12 @@ class ExecutionRouter:
 
             # Get blockhash (HFT optimization: use cached blockhash to save 300ms latency)
             recent_blockhash = None
-            if self.blockhash_getter:
+            if hasattr(self, 'blockhash_mgr') and self.blockhash_mgr:
+                bh_obj = await self.blockhash_mgr.get_fresh_blockhash()
+                if bh_obj:
+                    recent_blockhash = str(bh_obj)
+
+            if not recent_blockhash and self.blockhash_getter:
                 recent_blockhash = self.blockhash_getter()
             if not recent_blockhash:
                 logger.debug("Latency leak: blockhash not cached, fetching via RPC")

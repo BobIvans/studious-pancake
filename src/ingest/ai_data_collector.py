@@ -96,6 +96,10 @@ class AIDataCollector:
         trade = self._normalize_record(record)
         self._records.append(trade)
 
+        # ── ИСПРАВЛЕНИЕ: Защита от утечки ОЗУ (сохраняем только последние 10k) ──
+        if len(self._records) > 10000:
+            self._records.pop(0)
+
         if self.use_sqlite:
             self._insert_sqlite(trade)
         else:

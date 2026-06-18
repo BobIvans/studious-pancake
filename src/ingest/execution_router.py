@@ -870,6 +870,8 @@ class ExecutionRouter:
             # Get blockhash (HFT optimization: use cached blockhash to save 300ms latency)
             recent_blockhash = None
             if hasattr(self, 'blockhash_mgr') and self.blockhash_mgr:
+                # ИСПРАВЛЕНИЕ: Защита вебхук-бандлов от slot drift отклонений Jito
+                await self.blockhash_mgr.check_and_recover_drift()
                 bh_obj = await self.blockhash_mgr.get_fresh_blockhash()
                 if bh_obj:
                     recent_blockhash = str(bh_obj)
@@ -1408,18 +1410,20 @@ class ExecutionRouter:
                 "method": "getSlot",
                 "params": []
             }
-            async with session.post(rpc_url, json=payload) as resp:
-                if resp.status != 200:
-                    logger.error(f"Failed to get current slot. HTTP {resp.status}")
-                    return {"success": False, "error": "RPC Error"}
-                data = await resp.json()
-                
-                # ── ИСПРАВЛЕНИЕ: Защита от отсутствия ключа "result" ──
-                if "result" not in data:
-                    logger.error(f"Failed to parse slot, invalid RPC response: {data}")
-                    return {"success": False, "error": "RPC Format Error"}
-                    
-                current_slot = data["result"]
+            # ── ИСПРАВЛЕНИЕ: Мгновенное чтение слота из ОЗУ вместо HTTP-запроса ──
+            import src.ingest.shared_state as shared_state
+            current_slot = shared_state.stats.get("current_slot", 0)
+            if current_slot == 0:
+                # Фолбек на RPC, если в кэше пусто (первая секунда запуска)
+                async with session.post(rpc_url, json=payload) as resp:
+                    if resp.status != 200:
+                        logger.error(f"Failed to get current slot. HTTP {resp.status}")
+                        return {"success": False, "error": "RPC Error"}
+                    data = await resp.json()
+                    if "result" not in data:
+                        logger.error(f"Failed to parse slot, invalid RPC response: {data}")
+                        return {"success": False, "error": "RPC Format Error"}
+                    current_slot = data["result"]
 
             # ── Task 11: MarginFi Account Pooling ───────────────────────────
             # Instead of blocking for 450ms when current_slot == last_slot_executed,

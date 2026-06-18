@@ -334,7 +334,7 @@ class LiveTrader:
                     "slippageBps": slippage_bps,
                     "onlyDirectRoutes": "true",         # Task 14: force direct routes for micro-balance safety
                     "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
-                    "maxAccounts": "8",
+                    "maxAccounts": "28",
                 }
 
                 # Get quote from Jupiter API

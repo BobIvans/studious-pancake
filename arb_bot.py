@@ -273,12 +273,10 @@ class AsyncTradeLogger:
         if not lines:
             return
         try:
-            await self._loop.run_in_executor(  # type: ignore[union-attr]
-                None,
-                self.path.write_text,
-                "\n".join(lines) + "\n",
-                "a",
-            )
+            def _write_logs():
+                with open(self.path, "a", encoding="utf-8") as f:
+                    f.write("\n".join(lines) + "\n")
+            await self._loop.run_in_executor(None, _write_logs)
         except Exception as exc:
             logger.warning(f"[async-log] flush error: {exc}")
 
@@ -2671,6 +2669,14 @@ async def create_flashloan_arbitrage_tx(
                 expected_profit_sol=opportunity.expected_profit_sol if opportunity else 0.0,
             )
         )
+        # ── ИСПРАВЛЕНИЕ: Защита от краша при превышении MTU лимита (Task 11) ──
+        if optimized_instructions is None or optimized_instructions == "MTU_SIZE_LIMIT":
+            logger.warning(
+                f"⚠️ Сделка отменена: транзакция превышает лимит MTU (1180 байт) "
+                f"или компиляция завершилась с ошибкой. Пропуск сборки."
+            )
+            return None
+
         # cu_limit is already the dynamic profile value from build_optimized_transaction()
         # Calculate EXACT repay index dynamically using list introspection in optimized_instructions
         try:
@@ -4480,6 +4486,17 @@ async def execute_priority_opportunity(
     quote1 = opportunity.metadata.get("quote1")
     quote2 = opportunity.metadata.get("quote2")
     chosen_route = opportunity.metadata.get("chosen_route")
+    
+    # ── ИСПРАВЛЕНИЕ: Stale Quote Guard (Task 13 — TTL 1.5s) ──
+    if quote1 and "fetched_at" in quote1:
+        quote_age = time.time() - quote1["fetched_at"]
+        if quote_age > 1.5:
+            logger.warning(
+                f"⏭️ Stale Quote Guard: Quote for {opportunity.pair} is too old "
+                f"({quote_age:.2f}s > 1.5s TTL limit) — ABORTING execution to prevent slippage revert"
+            )
+            return
+    
     if not chosen_route and quote1 and quote2:
         chosen_route = [quote1, quote2]
 
@@ -6549,9 +6566,19 @@ async def run():
             # Balance Guard + Fix 68: Dust Reserve
             if current_balance < 0.005:
                 logger.critical(
-                    "🚨 DEBT CEILING REACHED: 0.005 SOL native - closing ATAs, swapping to SOL, SHUTDOWN"
+                    "🚨 DEBT CEILING REACHED: 0.005 SOL native. Starting emergency recovery before shutdown..."
                 )
-                # 1. close non-essential ATAs 2. swap USDC->SOL 3. exit
+                # ── ИСПРАВЛЕНИЕ: Реализация экстренной паники (Task 12) ──
+                try:
+                    # 1. Запускаем экстренное закрытие пустых ATA для возврата SOL
+                    if "dust_sweeper" in locals() and dust_sweeper:
+                        logger.info("🧹 Emergency recovery: sweeping empty ATAs...")
+                        await dust_sweeper._sweep_dust()
+                    # 2. Пытаемся конвертировать остатки USDC обратно в SOL для заправки бака
+                    from src.ingest.gas_manager import check_and_refill_gas
+                    await check_and_refill_gas(session, rpc, keypair)
+                except Exception as panic_err:
+                    logger.critical(f"Emergency recovery failed: {panic_err}")
                 shared_state.GLOBAL_STOP_EVENT.set()
                 break
             if current_balance < initial_balance * 0.3:

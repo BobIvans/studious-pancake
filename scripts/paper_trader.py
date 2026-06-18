@@ -95,7 +95,7 @@ class PaperTrader:
                 "slippageBps": "15",
                 "onlyDirectRoutes": "true",  # Task 14: force direct routes
                 "restrictIntermediateTokens": "true",  # Task 14: block intermediate tokens
-                "maxAccounts": "8",
+                "maxAccounts": "28",
             }
             try:
                 async with self.session.get(url, params=params) as resp:

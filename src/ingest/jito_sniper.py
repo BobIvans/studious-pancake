@@ -177,6 +177,16 @@ class JitoTipManager:
         - If competition is high -> Check if optimal tip exceeds MAX_TIP_SOL
         - Otherwise -> EMA 75th percentile * multiplier
         """
+        # ── ИСПРАВЛЕНИЕ: Интеграция с живым JitoBiddingManager через shared_state ──
+        try:
+            import src.ingest.shared_state as shared_state
+            if shared_state.jito_bidding_manager:
+                floor = shared_state.jito_bidding_manager.get_50th_percentile_lamports()
+                optimal_tip = int(floor * self.tip_multiplier)
+                return max(self.min_tip_lamports, min(optimal_tip, max_tip_lamports))
+        except Exception as e:
+            logger.debug(f"Failed to fetch dynamic tip for sniping, falling back: {e}")
+
         if is_jito_leader and competition_low:
             logger.info("🎮 Jito Leader + Low Competition: Using MIN TIP (10k)")
             return self.min_tip_lamports

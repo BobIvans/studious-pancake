@@ -98,7 +98,10 @@ class PythHermesClient:
         """Process incoming price update message."""
         try:
             if data.get("type") == "price_feed_update":
-                feed_id = data.get("price_feed_id")
+                # Убираем префикс 0x для совпадения с локальным реестром
+                raw_feed_id = data.get("price_feed_id") or data.get("price_feed", {}).get("id", "")
+                feed_id = str(raw_feed_id).replace("0x", "")
+                
                 ticker = self.feed_to_ticker.get(feed_id)
 
                 if not ticker:

@@ -1401,9 +1401,15 @@ class ExecutionRouter:
             }
             async with session.post(rpc_url, json=payload) as resp:
                 if resp.status != 200:
-                    logger.error("Failed to get current slot")
-                    return False
+                    logger.error(f"Failed to get current slot. HTTP {resp.status}")
+                    return {"success": False, "error": "RPC Error"}
                 data = await resp.json()
+                
+                # ── ИСПРАВЛЕНИЕ: Защита от отсутствия ключа "result" ──
+                if "result" not in data:
+                    logger.error(f"Failed to parse slot, invalid RPC response: {data}")
+                    return {"success": False, "error": "RPC Format Error"}
+                    
                 current_slot = data["result"]
 
             # ── Task 11: MarginFi Account Pooling ───────────────────────────

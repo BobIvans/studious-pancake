@@ -381,8 +381,8 @@ USE_GRPC_ENABLED = str(os.getenv("USE_GRPC", "false")).lower() == "true"
 yellowstone_stream = (
     None  # Will be initialized inside main() if USE_GRPC_ENABLED is True
 )
-# Global ATA Cache (Phase 48)
-ATA_CACHE = set()
+# Global ATA Cache (Phase 48) — синхронизирован с shared_state для DustSweeper
+ATA_CACHE = shared_state.ATA_CACHE
 
 # AI-powered trading components (moved to main() function)
 # arbitrage_scorer = ArbitrageScorer(session=session, rpc_url=rpc.get_rpc())
@@ -2345,13 +2345,20 @@ async def create_flashloan_arbitrage_tx(
     base_mint = _to_pubkey(base_mint_str)
     target_mint = _to_pubkey(target_mint_str)
 
-    if not cfg.MARGINFI_ACCOUNT_PUBKEY:
-        logger.error(
-            "MARGINFI_ACCOUNT is not set. A MarginfiAccount is required for flash loans."
-        )
-        return None
+    # Динамически берем аккаунт из пула для этой конкретной транзакции
+    pool_acct_str = cfg.MARGINFI_ACCOUNT_PUBKEY
+    try:
+        from src.ingest.shared_state import stats
+        current_slot = stats.get("current_slot", 0)
+        # Если роутер передан, просим у пула свободный аккаунт
+        if hasattr(opportunity, "metadata") and opportunity.metadata.get("execution_router"):
+            router = opportunity.metadata["execution_router"]
+            if hasattr(router, "marginfi_pool"):
+                pool_acct_str, _ = await router.marginfi_pool.checkout(current_slot)
+    except Exception as e:
+        logger.debug(f"Pool checkout fallback to env: {e}")
 
-    marginfi_account = Pubkey.from_string(cfg.MARGINFI_ACCOUNT_PUBKEY)
+    marginfi_account = Pubkey.from_string(pool_acct_str)
 
     # Phase 48: Dynamic Base_Mint Resolution (Task 23)
     # If target is an xStock/RWA, we borrow USDC instead of the xStock itself
@@ -2622,11 +2629,11 @@ async def create_flashloan_arbitrage_tx(
                 "🔄 Slot Drift Compensator: blockhash force-refreshed before TX compile"
             )
 
-    recent_blockhash = (
-        cached_blockhash
-        if (cached_blockhash and time.time() - cache_time < 0.8)
-        else None
-    )
+    recent_blockhash = None
+    if blockhash_mgr:
+        bh_obj = await blockhash_mgr.get_fresh_blockhash()
+        if bh_obj:
+            recent_blockhash = str(bh_obj)
     if not recent_blockhash:
         try:
             timeout = aiohttp.ClientTimeout(total=1.0)
@@ -2675,9 +2682,11 @@ async def create_flashloan_arbitrage_tx(
                 + struct.pack("<Q", actual_repay_index)
             )
             # Find and replace the borrow instruction inside optimized_instructions
+            # ИСПРАВЛЕНИЕ Python 3.13 StopIteration: Добавлен None как дефолтное значение
             borrow_idx = next(
-                i for i, ix in enumerate(optimized_instructions)
-                if ix.program_id == borrow_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_START
+                (i for i, ix in enumerate(optimized_instructions)
+                 if ix.program_id == borrow_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_START),
+                None
             )
             optimized_instructions[borrow_idx] = Instruction(
                 program_id=borrow_ix.program_id,
@@ -4456,26 +4465,14 @@ async def execute_priority_opportunity(
         f"🚀 Executing priority opportunity: {opportunity.pair} (score: {opportunity.score:.1f})"
     )
 
-    # Task 18: Patch Fatal Paper Trading Leak in "arb_bot.py"
-    if getattr(cfg, "PAPER_TRADING_ONLY", False):
-        logger.info(
-            f"🧪 [SIMULATION] Profitable opportunity found: {opportunity.pair} | "
-            f"Expected profit: {opportunity.expected_profit_sol:.6f} SOL. "
-            "Real execution skipped (PAPER_TRADING_ONLY=true)."
-        )
-        if data_aggregator:
-            try:
-                await data_aggregator.log_event(
-                    event_type="SimulatedOpportunity",
-                    parsed_opportunity={
-                        "pair": opportunity.pair,
-                        "score": opportunity.score,
-                        "expected_profit_sol": opportunity.expected_profit_sol,
-                    },
-                    metadata=opportunity.metadata,
-                )
-            except Exception as e:
-                logger.warning(f"Failed to log simulated opportunity: {e}")
+
+    # ── ИСПРАВЛЕНИЕ: Сквозная маршрутизация для Webhook ──
+    if opportunity.metadata.get("is_webhook"):
+        logger.info(f"🔄 Routing Webhook Signal directly to Execution Router: {opportunity.pair}")
+        raw_data = opportunity.metadata.get("raw_data", {})
+        if execution_router:
+            result = await execution_router.execute_arbitrage_opportunity(raw_data)
+            logger.debug(f"Webhook execution result: {result}")
         return
 
     # Extract saved quotes from metadata instead of re-fetching (saves API calls)
@@ -4672,6 +4669,30 @@ async def execute_priority_opportunity(
             tip_lamports=tip_amount_lamports,
             jito_endpoint=jito_endpoint,
         )
+        # ---> ИСПРАВЛЕНИЕ: PAPER_TRADING_ONLY после симуляции <---
+        if getattr(cfg, "PAPER_TRADING_ONLY", False):
+            simulated_profit = sim_result.balance_delta_sol if sim_result else opportunity.expected_profit_sol
+            logger.info(
+                f"🧪 [SIMULATION] Профит подтвержден: {opportunity.pair} | "
+                f"Симуляция: {simulated_profit:.6f} SOL. "
+                f"Статус: {is_profitable} ({reason}). Real execution skipped."
+            )
+            if data_aggregator:
+                try:
+                    await data_aggregator.log_event(
+                        event_type="SimulatedOpportunity",
+                        parsed_opportunity={
+                            "pair": opportunity.pair,
+                            "score": getattr(opportunity, 'score', 0),
+                            "expected_profit_sol": simulated_profit,
+                            "is_profitable": is_profitable,
+                            "reason": reason,
+                        },
+                        metadata=opportunity.metadata,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to log simulated opportunity: {e}")
+            return
 
         # Логируем попытку для ИИ
         if data_aggregator:
@@ -5360,6 +5381,7 @@ async def worker(
                     "chosen_route": chosen_route,
                     "strategy": strategy_label,
                     "expected_profit_sol": current_expected_profit,
+                    "execution_router": execution_router
                 },
             )
 
@@ -5937,7 +5959,7 @@ async def run():
         data_aggregator,
         cfg.WEBHOOK_PORT,
         opportunity_callback=handle_webhook_opportunity,
-        webhook_queue=lst_webhook_trigger,
+        webhook_queue=events_config.lst_webhook_trigger,  # ИСПРАВЛЕНИЕ ССЫЛКИ
         on_token_discovery=lambda x: None,
         jito_shotgun=jito_shotgun,  # Strat 3: Jito Shotgun webhook integration
     )
@@ -6410,7 +6432,9 @@ async def run():
 
     # Yellowstone gRPC connect is outside the list literal (cannot use bare `if` inside)
     if yellowstone_stream is not None:
-        asyncio.create_task(yellowstone_stream.connect())
+        task = asyncio.create_task(yellowstone_stream.connect())
+        shared_state.active_tasks.add(task)
+        task.add_done_callback(background_task_callback)
     # LST Depeg Flash-Arb Scanner (primary strategy)
     if cfg.LST_DEPEG_ENABLED:
         lst_task = asyncio.create_task(
@@ -6531,6 +6555,10 @@ async def run():
                 break
     finally:
         logger.debug("🛑 Shutting down arbitrage engine components...")
+        # ИСПРАВЛЕНИЕ: Итерируемся по копии списка, чтобы избежать RuntimeError
+        for task in list(shared_state.active_tasks):
+            if not task.done():
+                task.cancel()
         # AsyncLogger: flush remaining trade records before exit
         try:
             if "logger_obj" in locals():

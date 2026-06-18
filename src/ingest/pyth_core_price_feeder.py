@@ -155,7 +155,10 @@ class PythCorePriceFeeder:
             if data.get("type") != "price_feed_update":
                 return
 
-            feed_id = data.get("price_feed_id")
+            # Убираем префикс 0x для совпадения с локальным реестром
+            raw_feed_id = data.get("price_feed_id") or data.get("price_feed", {}).get("id", "")
+            feed_id = str(raw_feed_id).replace("0x", "")
+            
             mint_str = get_mint_for_core_feed(feed_id)
             if not mint_str:
                 return  # Not a core feed we're tracking

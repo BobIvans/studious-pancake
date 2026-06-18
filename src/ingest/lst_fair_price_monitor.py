@@ -129,18 +129,25 @@ class LstFairPriceMonitor:
     async def update_market_prices(self) -> Dict[str, float]:
         """Fetch live market prices from Jupiter Price API."""
         mints = [p[1] for p in self._pools]
-        ids_param = ",".join(mints)
+        # ИСПРАВЛЕНИЕ: Добавляем SOL_MINT в запрос, чтобы получить его USD цену
+        ids_param = ",".join(mints + [SOL_MINT])
         try:
-            params = {"ids": ids_param, "vsToken": SOL_MINT}
+            params = {"ids": ids_param}
             timeout = aiohttp.ClientTimeout(total=3.0)
             async with self.session.get(JUPITER_PRICE_URL, params=params, timeout=timeout) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     if "data" in data:
-                        for mint in mints:
-                            info = data["data"].get(mint)
-                            if info and info.get("price"):
-                                self._market_prices[mint] = float(info["price"])
+                        sol_data = data["data"].get(SOL_MINT, {})
+                        sol_usd_price = float(sol_data.get("price", 0))
+                        
+                        if sol_usd_price > 0:
+                            for mint in mints:
+                                info = data["data"].get(mint)
+                                if info and info.get("price"):
+                                    # Конвертируем USD цену LST в SOL эквивалент
+                                    token_usd_price = float(info["price"])
+                                    self._market_prices[mint] = token_usd_price / sol_usd_price
             self._last_market_update = time.time()
         except Exception as e:
             logger.warning(f"Market price fetch failed: {e}")

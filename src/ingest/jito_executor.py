@@ -279,6 +279,15 @@ class JitoExecutor:
     ) -> Dict[str, Any]:
         """Fire a bundle to all 4 regional endpoints via HTTP POST; first success wins."""
 
+        # ── ИСПРАВЛЕНИЕ: Абсолютный блокиратор реальных транзакций в Paper Mode ──
+        if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+            logger.info("🧪 [PAPER MODE JITO] Блокировка отправки бандла на Mainnet.")
+            fake_id = "paper_bundle_" + str(int(time.time() * 1000))
+            if deducted_amount > 0:
+                self._record_pending(fake_id, deducted_amount)
+                # confirmer_task will handle reconciliation
+            return {"success": True, "bundle_id": fake_id, "region": "paper_simulator"}
+
         if len(transactions) > 5:
             logger.error(
                 f"❌ Bundle rejected: {len(transactions)} txns > Jito limit of 5"

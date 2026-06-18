@@ -6,7 +6,6 @@ import asyncio
 import aiohttp
 import time
 import logging
-from aiohttp.resolver import ThreadedResolver
 logger = logging.getLogger(__name__)
 import random
 import os
@@ -1784,7 +1783,7 @@ class RPCManager:
                     async with aiohttp.ClientSession(
                         connector=aiohttp.TCPConnector(
                             family=socket.AF_INET,
-                            resolver=ThreadedResolver(),
+                            resolver=DoHResolver(),
                             tcp_nodelay=True,
                             force_close=False,  # Keep-Alive
                         )

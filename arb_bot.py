@@ -26,6 +26,7 @@ import resource
 from solders.pubkey import Pubkey
 from spl.token.instructions import get_associated_token_address
 from spl.token.constants import TOKEN_PROGRAM_ID
+from src.ingest.flywheel_scaler import PairReputationCircuitBreaker
 
 # Token-2022 Program ID for xStocks (RWA tokens)
 TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
@@ -128,7 +129,9 @@ STRATEGY_DISABLED_UNTIL: Dict[str, float] = {}
 # кошелька перед Jito и предотвращает сжигание газа на «высушенных» пулах.
 PAIR_FAILURES: Dict[str, int] = {}
 PAIR_DISABLED_UNTIL: Dict[str, float] = {}
-PAIR_COOLDOWN_SECONDS: int = 600  # 10 минут бана для пары
+PAIR_COOLDOWN_SECONDS: int = 600
+# Централизованный PairReputationCircuitBreaker (замена глобальных PAIR_FAILURES/PAIR_DISABLED_UNTIL)
+_pair_reputation = PairReputationCircuitBreaker(limit=3, cooldown_seconds=600, error_keywords=("slippage",))  # 10 минут бана для пары
 # ────────────────────────────────────────────────────────────────────────────
 
 
@@ -1676,42 +1679,19 @@ async def balance_reconciler(
 
 # ── Fix 2: Pair-level reputation guard functions ────────────────────────────
 def is_pair_allowed(pair_key: str) -> bool:
-    """Check if a pair (e.g. "SOL:jitoSOL") is allowed to trade.
-    Если пара в бане (3+ последовательных ошибок), возвращаем False.
-    """
-    disabled_until = PAIR_DISABLED_UNTIL.get(pair_key, 0.0)
-    if disabled_until > time.time():
-        remaining = int(disabled_until - time.time())
-        logger.debug(f"🛡️ Pair {pair_key} is banned for {remaining}s more — skipping")
-        return False
-    # Если бан истек — чистим счетчик
-    if disabled_until > 0 and disabled_until <= time.time():
-        PAIR_FAILURES.pop(pair_key, None)
-        PAIR_DISABLED_UNTIL.pop(pair_key, None)
-    return True
+    """Check if a pair is allowed to trade.
+    Delegates to module-level _pair_reputation."""
+    return not _pair_reputation.is_banned(pair_key)
 
 
 def record_pair_failure(pair_key: str, error_type: str = "unknown"):
-    """Record a consecutive failure for a pair.
-    3 consecutive fails → pair banned for PAIR_COOLDOWN_SECONDS.
-    """
-    PAIR_FAILURES[pair_key] = PAIR_FAILURES.get(pair_key, 0) + 1
-    fails = PAIR_FAILURES[pair_key]
-    logger.debug(f"⚠️ Pair failure #{fails} for {pair_key}: {error_type}")
-    if fails >= 3:
-        ban_until = time.time() + PAIR_COOLDOWN_SECONDS
-        PAIR_DISABLED_UNTIL[pair_key] = ban_until
-        logger.critical(
-            f"🚨 REPUTATION BREAKER (Pair): {pair_key} disabled for "
-            f"{PAIR_COOLDOWN_SECONDS}s after {fails} consecutive failures ({error_type})"
-        )
+    """Record a pair failure via module-level ReputationCircuitBreaker."""
+    _pair_reputation.record_failure(pair_key, error_type)
 
 
 def record_pair_success(pair_key: str):
-    """Reset consecutive failure counter on successful trade."""
-    if pair_key in PAIR_FAILURES:
-        PAIR_FAILURES.pop(pair_key, None)
-        logger.debug(f"✅ Pair {pair_key} failure counter reset after success")
+    """Reset pair failure counter via module-level ReputationCircuitBreaker."""
+    _pair_reputation.record_success(pair_key)
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -1956,6 +1936,27 @@ async def cleanup_temporary_tokens():
                     )
         except Exception as e:
             logger.error(f"Cleanup error: {e}")
+    async def get_token_account_balance(self, account_address: str) -> Optional[Dict[str, Any]]:
+        """
+        Fetch SPL token account balance via RPC.
+        Delegates to the active RPC session.
+        """
+        try:
+            payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getTokenAccountBalance",
+                "params": [account_address],
+            }
+            rpc_url = self.get_rpc()
+            async with aiohttp.ClientSession() as session:
+                async with session.post(rpc_url, json=payload, timeout=3.0) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data.get("result", {}).get("value")
+        except Exception as e:
+            logger.debug(f"get_token_account_balance failed for {account_address[:8]}: {e}")
+        return None
+
 
 
 class BankHealthMonitor:
@@ -1993,7 +1994,8 @@ class BankHealthMonitor:
             vault = bank_info["liquidity_vault"]
             res = await self.rpc.get_token_account_balance(str(vault))
             return float(res["amount"]) / 1e9 if res else 0
-        except:
+        except Exception as e:
+            logger.warning(f"Bank liquidity check failed: {e}")
             return 0
 
 

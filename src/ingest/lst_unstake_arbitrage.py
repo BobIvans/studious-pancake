@@ -358,9 +358,19 @@ class LstInstantUnstakeArbitrage:
             # Calculate dynamic Jito tip using JitoBiddingManager (Fix: replace hardcoded 100000)
             jito_tip_lamports = 0
             if jito_bidding_manager:
+                # Fetch current native SOL balance for tip cap (prevents over-tipping)
+                _current_native_sol_balance = None
+                try:
+                    import src.ingest.shared_state as shared_state
+                    _bal = shared_state.stats.get("last_balance", shared_state.stats.get("virtual_balance", None))
+                    if _bal is not None:
+                        _current_native_sol_balance = float(_bal)
+                except Exception:
+                    pass
                 jito_tip_lamports = jito_bidding_manager.calculate_blue_ocean_tip(
                     expected_profit_sol=expected_profit_sol,
-                    strategy="lst_unstake"
+                    strategy="lst_unstake",
+                    current_native_sol_balance=_current_native_sol_balance,
                 )
             else:
                 # Fallback to quote's calculated tip or default

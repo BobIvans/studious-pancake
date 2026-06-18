@@ -77,7 +77,10 @@ class DoHResolver(AbstractResolver):
                     for info in addr_infos
                 ]
             except Exception:
-                return []
+                # ИСПРАВЛЕНИЕ (StopIteration fix): вместо пустого списка [] кидаем gaierror.
+                # aiohappyeyeballs вызывает next() на результатах resolve(),
+                # пустой список -> StopIteration -> RuntimeError на Python 3.13.
+                raise socket.gaierror(socket.EAI_NONAME, "Name or service not known") from None
 
         return [
             {

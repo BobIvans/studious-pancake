@@ -185,6 +185,7 @@ class ExecutionRouter:
         stats=None,
         stats_lock=None,
         blockhash_mgr=None,
+        jito_bidding_manager=None,
     ):
         self.leader_tracker = leader_tracker
         self.jito_executor = jito_executor
@@ -205,6 +206,8 @@ class ExecutionRouter:
         self.optimal_trade_sizer = optimal_trade_sizer
         self.ata_cache = ata_cache if ata_cache is not None else set()
         self.flash_pivot_engine = flash_pivot_engine # Task 18
+        # JitoBiddingManager for dynamic tip calculation in LST strategy
+        self.jito_bidding_manager = jito_bidding_manager
         # Epoch Shield: Block trades during epoch boundary storm
         self.epoch_tracker = EpochTracker(rpc_url=rpc_url, session=session)
         self._epoch_killswitch_active = False
@@ -428,13 +431,15 @@ class ExecutionRouter:
                     optimal_trade_sizer=self.optimal_trade_sizer,
                     rpc_getter=self.rpc_getter,
                     ata_cache=self.ata_cache,
-                    keypair=self.keypair
+                    keypair=self.keypair,
+                    jito_bidding_manager=self.jito_bidding_manager
                 )
                 success = await lst_arb.execute_unstake_arbitrage(
                     opportunity=opportunity,
                     tx_builder=lst_arb.tx_builder,
                     keypair=self.keypair,
-                    jito_executor=self.jito_executor
+                    jito_executor=self.jito_executor,
+                    jito_bidding_manager=self.jito_bidding_manager
                 )
                 result = {"status": "success" if success else "error"}
 

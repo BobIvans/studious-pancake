@@ -537,14 +537,25 @@ class OptimalTradeSizer:
         effective_balance = virtual_balance if virtual_balance is not None else wallet_native_balance_sol
 
         # Task 2: Logarithmic/Tiered Risk Scale for Scaling Phase
-        # Upgrades SAFE_RISK_RATIO from linear 20% to dynamic tiers.
-        if effective_balance < 0.2:
-            SAFE_RISK_RATIO = 0.20  # Survival: 20%
-        elif effective_balance < 2.0:
-            SAFE_RISK_RATIO = 0.50  # Momentum: 50%
-        else:
-            # Scale: 90% budget allocation, capped mathematically only by pool slippage
-            SAFE_RISK_RATIO = 0.90 
+        # Синхронизировано с FlywheelScaler.SCALING_GRID для единого источника правды.
+        try:
+            from src.ingest.flywheel_scaler import SCALING_GRID
+            # Ищем тир по текущему балансу
+            SAFE_RISK_RATIO = 0.20  # fallback
+            for tier in SCALING_GRID:
+                if tier.min_balance <= effective_balance < tier.max_balance:
+                    # max_concurrent_trades как прокси для risk_ratio
+                    # Survival(1)→20%, Momentum(2)→50%, Growth(3)→70%, Pro(5)→90%
+                    tier_map = {1: 0.20, 2: 0.50, 3: 0.70, 5: 0.90}
+                    SAFE_RISK_RATIO = tier_map.get(tier.max_concurrent_trades, 0.20)
+                    break
+        except ImportError:
+            if effective_balance < 0.2:
+                SAFE_RISK_RATIO = 0.20
+            elif effective_balance < 2.0:
+                SAFE_RISK_RATIO = 0.50
+            else:
+                SAFE_RISK_RATIO = 0.90 
         
         max_loss_budget_sol = max(effective_balance - GAS_RESERVE_SOL, 0.0)
         # Dynamic maneuver budget based on balance tier

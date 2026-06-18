@@ -9,9 +9,10 @@ import asyncio
 import orjson
 import logging
 import time
+import socket
 from typing import Dict, List, Optional, Callable, Any
 from decimal import Decimal
-import websockets
+
 import aiohttp
 from queue import PriorityQueue
 
@@ -64,7 +65,8 @@ class OracleStreams:
                  chainlink_ws_url: Optional[str] = None,
                  pool_state_manager=None,
                  optimal_trade_sizer=None,
-                 opportunity_callback: Optional[Callable[[Dict[str, Any]], Any]] = None):
+                 opportunity_callback: Optional[Callable[[Dict[str, Any]], Any]] = None,
+                 session: Optional[aiohttp.ClientSession] = None):
         self.pyth_ws_url = pyth_ws_url
         self.chainlink_ws_url = chainlink_ws_url
         self.pool_state_manager = pool_state_manager
@@ -73,6 +75,10 @@ class OracleStreams:
         self.oracle_prices: Dict[str, OraclePrice] = {}
         self.price_callbacks: List[Callable[[str, OraclePrice], None]] = []
         self.running = False
+        self.session = session
+        self._session_owned = session is None
+        self.pyth_ws = None
+        self.chainlink_ws = None
 
         # PriorityQueue for handling multiple simultaneous signals
         # Priority based on expected profit (lower number = higher priority)
@@ -111,11 +117,28 @@ class OracleStreams:
                 await self.signal_processor_task
             except asyncio.CancelledError:
                 pass
+        if self.pyth_ws:
+            await self.pyth_ws.close()
+        if self.chainlink_ws:
+            await self.chainlink_ws.close()
+        if self._session_owned and self.session and not self.session.closed:
+            await self.session.close()
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create session with DoH resolver."""
+        if self.session is None or self.session.closed:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector)
+            self._session_owned = True
+        return self.session
 
     async def _pyth_stream(self):
         """Connect to Pyth Hermes WebSocket for real-time xStocks prices."""
         try:
-            async with websockets.connect(self.pyth_ws_url) as websocket:
+            session = await self._get_session()
+            async with session.ws_connect(self.pyth_ws_url) as websocket:
+                self.pyth_ws = websocket
                 logger.info(f"Connected to Pyth Hermes WebSocket: {self.pyth_ws_url}")
 
                 # Subscribe to ALL xStocks price feeds for Oracle Lag arbitrage
@@ -127,17 +150,18 @@ class OracleStreams:
                     "subscription_type": "price_feed_updates",
                     "price_feed_ids": feed_ids
                 }
-                await websocket.send(orjson.dumps(subscription_msg))
+                await websocket.send_str(orjson.dumps(subscription_msg).decode())
 
                 async for message in websocket:
                     if not self.running:
                         break
 
-                    try:
-                        data = orjson.loads(message)
-                        await self._process_pyth_update(data)
-                    except Exception:
-                        continue
+                    if message.type == aiohttp.WSMsgType.TEXT:
+                        try:
+                            data = orjson.loads(message.data)
+                            await self._process_pyth_update(data)
+                        except Exception:
+                            continue
 
         except Exception as e:
             logger.error(f"Pyth stream error: {e}")
@@ -148,7 +172,9 @@ class OracleStreams:
     async def _chainlink_stream(self):
         """Connect to Chainlink Data Streams WebSocket."""
         try:
-            async with websockets.connect(self.chainlink_ws_url) as websocket:
+            session = await self._get_session()
+            async with session.ws_connect(self.chainlink_ws_url) as websocket:
+                self.chainlink_ws = websocket
                 logger.info(f"Connected to Chainlink WebSocket: {self.chainlink_ws_url}")
 
                 # Chainlink subscription logic would go here
@@ -158,17 +184,18 @@ class OracleStreams:
                     "method": "subscribe",
                     "params": ["price_feeds"]  # Placeholder
                 }
-                await websocket.send(orjson.dumps(subscription_msg))
+                await websocket.send_str(orjson.dumps(subscription_msg).decode())
 
                 async for message in websocket:
                     if not self.running:
                         break
 
-                    try:
-                        data = orjson.loads(message)
-                        await self._process_chainlink_update(data)
-                    except Exception:
-                        continue
+                    if message.type == aiohttp.WSMsgType.TEXT:
+                        try:
+                            data = orjson.loads(message.data)
+                            await self._process_chainlink_update(data)
+                        except Exception:
+                            continue
 
         except Exception as e:
             logger.error(f"Chainlink stream error: {e}")

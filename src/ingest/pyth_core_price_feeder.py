@@ -20,8 +20,7 @@ import logging
 import time
 from typing import Dict, Optional, Any, Callable
 
-import websockets
-from websockets.exceptions import ConnectionClosedError
+import aiohttp
 
 from src.config.addresses import PYTH_CORE_FEEDS, get_mint_for_core_feed
 
@@ -56,10 +55,12 @@ class PythCorePriceFeeder:
     ═══════════════════════════════════════════════════════════════════════
     """
 
-    def __init__(self):
+    def __init__(self, session: Optional[aiohttp.ClientSession] = None):
         self.ws_url = HERMES_WS_URL
         self.websocket = None
         self.running = False
+        self.session = session
+        self._session_owned = session is None
 
         # price_cache: mint_str -> {"price_usd": float, "timestamp": float}
         self.price_cache: Dict[str, Dict[str, float]] = {}
@@ -103,32 +104,45 @@ class PythCorePriceFeeder:
                 pass
         if self.websocket:
             await self.websocket.close()
+        if self._session_owned and self.session and not self.session.closed:
+            await self.session.close()
         logger.info("🛑 PythCorePriceFeeder stopped")
 
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create session with DoH resolver."""
+        if self.session is None or self.session.closed:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector)
+            self._session_owned = True
+        return self.session
+
     async def _run(self):
-        """Main loop: connect + listen with auto-reconnect."""
+        """Internal task runner that loops _connect_and_listen with reconnect."""
+        reconnect_delay = 5.0
         while self.running:
             try:
                 await self._connect_and_listen()
+            except asyncio.CancelledError:
+                break
             except Exception as e:
-                logger.warning(f"PythCorePriceFeeder error: {e}")
-                if self.running:
-                    await asyncio.sleep(5)
+                logger.debug(f"PythCorePriceFeeder connection lost, reconnecting in {reconnect_delay}s: {e}")
+                await asyncio.sleep(reconnect_delay)
 
     async def _connect_and_listen(self):
         """Connect to Hermes WS, subscribe, and listen for price updates."""
         try:
-            async with websockets.connect(self.ws_url) as websocket:
+            session = await self._get_session()
+            async with session.ws_connect(self.ws_url) as websocket:
                 self.websocket = websocket
                 logger.debug("✅ PythCorePriceFeeder connected to Hermes")
 
-                # Subscribe to SOL, USDC, USDT
                 subscription = {
                     "type": "subscribe",
                     "subscription_type": "price_feed_updates",
                     "price_feed_ids": self.feed_ids,
                 }
-                await websocket.send(orjson.dumps(subscription))
+                await websocket.send_str(orjson.dumps(subscription).decode())
                 logger.debug(
                     f"📡 PythCorePriceFeeder subscribed to {len(self.feed_ids)} core feeds"
                 )
@@ -137,14 +151,12 @@ class PythCorePriceFeeder:
                     if not self.running:
                         break
                     try:
-                        data = orjson.loads(message)
-                        await self._process_message(data)
+                        if message.type == aiohttp.WSMsgType.TEXT:
+                            data = orjson.loads(message.data)
+                            await self._process_message(data)
                     except Exception as e:
                         logger.debug(f"Pyth core message parse error: {e}")
 
-        except ConnectionClosedError:
-            logger.debug("PythCorePriceFeeder WS disconnected (reconnecting...)")
-            raise
         except Exception as e:
             logger.warning(f"PythCorePriceFeeder WS error: {e}")
             raise

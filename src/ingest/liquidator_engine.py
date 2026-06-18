@@ -6,8 +6,10 @@ Zero capital required - pure arbitrage on distressed positions.
 
 import asyncio
 import logging
+import socket
 from typing import Dict, List, Optional, Callable, Any
 from decimal import Decimal
+import aiohttp
 from solders.pubkey import Pubkey
 from solders.instruction import Instruction, AccountMeta
 from solders.system_program import TransferParams, transfer
@@ -52,8 +54,9 @@ class LiquidationEngine:
         """Start WebSocket monitoring for lending protocols."""
         self.running = True
         try:
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.ws_connect(self.websocket_url, heartbeat=15.0, timeout=30.0, compress=15, receive_timeout=45.0) as ws:
                     self.websocket = ws
                     logger.info("Liquidation Engine WebSocket connected")
@@ -310,8 +313,9 @@ class LiquidationEngine:
                 ]
             }
             
-            import aiohttp
-            async with aiohttp.ClientSession() as session:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.post(self.websocket_url.replace("wss://", "https://"), json=payload) as resp:
                     if resp.status == 200:
                         data = await resp.json()

@@ -6,10 +6,11 @@ Hermes WebSocket integration for xStocks Oracle Lag Strategy
 import asyncio
 import orjson
 import logging
+import socket
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
-import websockets
-from websockets.exceptions import ConnectionClosedError, WebSocketException
+import aiohttp
+from aiohttp.resolver import AbstractResolver
 
 from oracle_streams import (
     HERMES_WS_URL,
@@ -26,11 +27,13 @@ class PythHermesClient:
     Maintains in-memory cache of latest prices for oracle lag detection.
     """
 
-    def __init__(self, reconnect_interval: int = 5):
+    def __init__(self, reconnect_interval: int = 5, session: Optional[aiohttp.ClientSession] = None):
         self.ws_url = HERMES_WS_URL
         self.reconnect_interval = reconnect_interval
         self.websocket = None
         self.running = False
+        self.session = session
+        self._session_owned = session is None
 
         # Price cache: ticker -> {"price": float, "timestamp": datetime, "confidence": float}
         self.price_cache: Dict[str, Dict[str, Any]] = {}
@@ -60,12 +63,24 @@ class PythHermesClient:
         self.running = False
         if self.websocket:
             await self.websocket.close()
+        if self._session_owned and self.session and not self.session.closed:
+            await self.session.close()
         logger.info("🛑 Pyth Hermes Client stopped")
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create session with DoH resolver."""
+        if self.session is None or self.session.closed:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector)
+            self._session_owned = True
+        return self.session
 
     async def _connect_and_listen(self):
         """Connect to Hermes WS and listen for price updates."""
         try:
-            async with websockets.connect(self.ws_url) as websocket:
+            session = await self._get_session()
+            async with session.ws_connect(self.ws_url) as websocket:
                 self.websocket = websocket
                 logger.info(f"✅ Connected to Pyth Hermes: {self.ws_url}")
 
@@ -76,22 +91,22 @@ class PythHermesClient:
                     "price_feed_ids": get_all_pyth_feed_ids()
                 }
 
-                await websocket.send(orjson.dumps(subscription))
+                await websocket.send_str(orjson.dumps(subscription).decode())
                 logger.info(f"📡 Subscribed to {len(get_all_pyth_feed_ids())} Pyth feeds")
 
                 # Listen for messages
-                async for message in websocket:
+                async for msg in websocket:
+                    if not self.running:
+                        break
                     try:
-                        data = orjson.loads(message)
-                        await self._process_message(data)
+                        if msg.type == aiohttp.WSMsgType.TEXT:
+                            data = orjson.loads(msg.data)
+                            await self._process_message(data)
                     except Exception as e:
                         logger.warning(f"Invalid JSON from Pyth: {e}")
 
-        except (ConnectionClosedError, WebSocketException) as e:
-            logger.warning(f"WebSocket connection error: {e}")
-            raise
         except Exception as e:
-            logger.error(f"Unexpected error in Pyth client: {e}")
+            logger.error(f"WebSocket connection error: {e}")
             raise
 
     async def _process_message(self, data: dict):

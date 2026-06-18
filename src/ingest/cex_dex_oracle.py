@@ -7,10 +7,11 @@ Statistical arbitrage exploiting latency differences.
 import asyncio
 import json
 import logging
+import socket
 from typing import Dict, List, Optional, Callable, Any
 from decimal import Decimal
-import websockets
 import aiohttp
+from aiohttp.resolver import AbstractResolver
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +33,8 @@ class CexDexOracle:
     """Monitors Binance WebSocket for lead-lag signals vs Solana DEXes."""
 
     def __init__(self, binance_ws_url: str = "wss://stream.binance.com:9443/ws",
-                 pool_state_manager = None):
+                 pool_state_manager = None,
+                 session = None):
         self.binance_ws_url = binance_ws_url
         self.pool_state_manager = pool_state_manager
         self.cex_prices: Dict[str, Dict[str, Any]] = {}  # asset -> price data
@@ -41,6 +43,8 @@ class CexDexOracle:
         self.running = False
         self.price_history: Dict[str, List[Dict]] = {}  # asset -> price history
         self.max_history = 10  # Keep last 10 prices per asset
+        self.session = session
+        self._session_owned = session is None
 
     def register_signal_callback(self, callback: Callable[[CexDexSignal], None]):
         """Register callback for arbitrage signals."""
@@ -55,13 +59,25 @@ class CexDexOracle:
         """Stop monitoring."""
         self.running = False
         self._stop_event.set()
+        if self._session_owned and self.session and not self.session.closed:
+            await self.session.close()
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        """Get or create session with DoH resolver."""
+        if self.session is None or self.session.closed:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector)
+            self._session_owned = True
+        return self.session
 
     async def _binance_stream(self):
         """Connect to Binance WebSocket for real-time prices."""
         try:
             while not self._stop_event.is_set():
                 try:
-                    async with websockets.connect(self.binance_ws_url) as websocket:
+                    session = await self._get_session()
+                    async with session.ws_connect(self.binance_ws_url) as websocket:
                         logger.info("Connected to Binance WebSocket for CEX-DEX arbitrage")
 
                         # Subscribe to book ticker streams for SOL and BTC
@@ -74,15 +90,16 @@ class CexDexOracle:
                             ],
                             "id": 1
                         }
-                        await websocket.send(json.dumps(subscription_msg))
+                        await websocket.send_str(json.dumps(subscription_msg))
 
                         async for message in websocket:
                             if self._stop_event.is_set():
                                 break
 
                             try:
-                                data = json.loads(message)
-                                await self._process_binance_update(data)
+                                if message.type == aiohttp.WSMsgType.TEXT:
+                                    data = json.loads(message.data)
+                                    await self._process_binance_update(data)
                             except json.JSONDecodeError:
                                 continue
 
@@ -95,8 +112,6 @@ class CexDexOracle:
             logger.info("Binance WebSocket stream gracefully cancelled")
         except Exception as e:
             logger.error(f"Binance stream error: {e}")
-        finally:
-            pass
 
     async def _process_binance_update(self, data: Dict[str, Any]):
         """Process Binance book ticker update."""

@@ -67,6 +67,10 @@ class DoHResolver(AbstractResolver):
             for ip in ips
         ]
 
+    async def close(self) -> None:
+        """Required by AbstractResolver for cleanup."""
+        pass
+
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
 from contextlib import asynccontextmanager
 import hashlib

@@ -90,7 +90,7 @@ class CexDexOracle:
                             ],
                             "id": 1
                         }
-                        await websocket.send(json.dumps(subscription_msg))
+                        await websocket.send_str(json.dumps(subscription_msg))
 
                         async for message in websocket:
                             if self._stop_event.is_set():

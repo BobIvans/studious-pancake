@@ -393,12 +393,15 @@ class WssPoolCreationListener:
                     await self._subscribe_to_slots()
 
                     # Listen for messages
-                    async for message in websocket:
+                    async for msg in websocket:
                         self.last_msg_time = time.time()
-                        try:
-                            await self._handle_message(message)
-                        except Exception as e:
-                            logger.error(f"Error handling message: {e}")
+                        if not self.running:
+                            break
+                        if msg.type == aiohttp.WSMsgType.TEXT:
+                            try:
+                                await self._handle_message(msg.data)
+                            except Exception as e:
+                                logger.error(f"Error handling message: {e}")
 
             except Exception as e:
                 logger.warning(f"WebSocket connection error: {e}")
@@ -475,12 +478,10 @@ class WssPoolCreationListener:
         except Exception as e:
             logger.error(f"Failed to subscribe to {program_id}: {e}")
 
-    async def _handle_message(self, message):
+    async def _handle_message(self, msg_data: str):
         """Handle incoming WebSocket message."""
         try:
-            if message.type != aiohttp.WSMsgType.TEXT:
-                return
-            data = orjson.loads(message.data)
+            data = orjson.loads(msg_data)
 
             # Handle subscription confirmations
             if "id" in data and data.get("result"):
@@ -491,8 +492,6 @@ class WssPoolCreationListener:
             if data.get("method") == "logsNotification":
                 await self._handle_logs_notification(data["params"])
 
-        except Exception:
-            logger.error(f"Invalid JSON message: {message.data[:100] if hasattr(message, 'data') else message[:100]}...")
         except Exception as e:
             logger.error(f"Error processing WebSocket message: {e}")
 

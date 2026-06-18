@@ -91,19 +91,22 @@ class PythHermesClient:
                     "price_feed_ids": get_all_pyth_feed_ids()
                 }
 
-                await websocket.send(orjson.dumps(subscription))
+                await websocket.send_str(orjson.dumps(subscription).decode())
                 logger.info(f"📡 Subscribed to {len(get_all_pyth_feed_ids())} Pyth feeds")
 
                 # Listen for messages
-                async for message in websocket:
+                async for msg in websocket:
+                    if not self.running:
+                        break
                     try:
-                        data = orjson.loads(message)
-                        await self._process_message(data)
+                        if msg.type == aiohttp.WSMsgType.TEXT:
+                            data = orjson.loads(msg.data)
+                            await self._process_message(data)
                     except Exception as e:
                         logger.warning(f"Invalid JSON from Pyth: {e}")
 
         except Exception as e:
-            logger.error(f"WebSocket connection error for {self.name}: {e}")
+            logger.error(f"WebSocket connection error: {e}")
             raise
 
     async def _process_message(self, data: dict):

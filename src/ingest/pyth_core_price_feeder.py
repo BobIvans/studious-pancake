@@ -142,7 +142,7 @@ class PythCorePriceFeeder:
                     "subscription_type": "price_feed_updates",
                     "price_feed_ids": self.feed_ids,
                 }
-                await websocket.send(orjson.dumps(subscription))
+                await websocket.send_str(orjson.dumps(subscription).decode())
                 logger.debug(
                     f"📡 PythCorePriceFeeder subscribed to {len(self.feed_ids)} core feeds"
                 )

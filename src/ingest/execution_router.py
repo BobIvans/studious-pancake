@@ -1521,12 +1521,6 @@ class ExecutionRouter:
             return self._stale_bundle_ids.pop()
         return None
 
-    def pop_and_clear_stale_bundle_id(self) -> Optional[str]:
-        """Return and consume one stale bundle id so the caller can log it."""
-        if self._stale_bundle_ids:
-            return self._stale_bundle_ids.pop()
-        return None
-
     @property
     def has_stale_bundle(self) -> bool:
         return bool(self._stale_bundle_ids)

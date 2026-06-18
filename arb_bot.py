@@ -5884,6 +5884,9 @@ async def run():
     )
     execution_router.start_processor()
 
+
+    # Сохраняем пул глобально для всех модулей
+    shared_state.marginfi_pool = execution_router.marginfi_pool
     # 4. Webhook & Strategy Routing
     async def handle_webhook_opportunity(opportunity, webhook_id):
         logger.debug(

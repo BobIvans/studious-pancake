@@ -87,19 +87,16 @@ class WebhookConfig:
             ),
             "txnStatus": "success",  # OPTIMIZED: Only listen to successful trades (saves credits)
             "accountFilters": [  # Phase 49: Helius credit conservation — hard filter
+                # ИСПРАВЛЕНИЕ: Удалены пустые "bytes": "", из-за которых падал Helius API
                 # Jupiter v6 program — only trigger for significant SOL volume (50 SOL)
                 {"accountKey": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
-                 "filters": [{"memcmp": {"offset": 0, "bytes": ""}}],
                  "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold
                 # Orca Whirlpools — only trigger for significant SOL volume (50 SOL)
                 {"accountKey": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
-                 "filters": [{"memcmp": {"offset": 0, "bytes": ""}}],
                  "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold
-                # Sanctum Router (LST) — 0.1 SOL is enough because LST pools deliver
-                # meaningful profit with 10-100× less volume than direct SOL swaps.
+                # Sanctum Router (LST) — only trigger for significant SOL volume (5 SOL)
                 {"accountKey": "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",
-                 "filters": [{"memcmp": {"offset": 0, "bytes": ""}}],
-                 "nativeFilters": [{"min": 5_000_000_000}]},   # 5 SOL (Whale Signal) for LST/xStocks
+                 "nativeFilters": [{"min": 5_000_000_000}]},   # 5 SOL threshold
             ],
             "webhookIds": cls.WEBHOOK_IDS,
             "managementIds": cls.MANAGEMENT_IDS,

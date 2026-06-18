@@ -387,13 +387,21 @@ class LstInstantUnstakeArbitrage:
                 return False
 
             # Convert to VersionedTransaction
+            # ── ИСПРАВЛЕНИЕ: Чтение блокхеша из ОЗУ (0 мс) вместо HTTP ──
             recent_blockhash = None
-            if self.rpc_getter:
-                rpc_url = self.rpc_getter()
-                payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"}
-                async with self.session.post(rpc_url, json=payload) as resp:
-                    bh_data = await resp.json()
-                    recent_blockhash = bh_data.get("result", {}).get("value", {}).get("blockhash")
+            from src.ingest.blockhash_racing import get_blockhash_manager
+            bh_mgr = get_blockhash_manager()
+            if bh_mgr:
+                bh_obj = await bh_mgr.get_fresh_blockhash()
+                if bh_obj:
+                    recent_blockhash = str(bh_obj)
+            if not recent_blockhash:
+                if self.rpc_getter:
+                    rpc_url = self.rpc_getter()
+                    payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"}
+                    async with self.session.post(rpc_url, json=payload) as resp:
+                        bh_data = await resp.json()
+                        recent_blockhash = bh_data.get("result", {}).get("value", {}).get("blockhash")
 
             if not recent_blockhash:
                 return False

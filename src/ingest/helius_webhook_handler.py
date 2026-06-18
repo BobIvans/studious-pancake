@@ -182,7 +182,9 @@ class HeliusWebhookHandler:
 
             # ── ДЕДУПЛИКАЦИЯ ────────────────────────────────────────────────────
             # Helius может слать по 3-4 вебхука на одно и то же событие.
-            signature = event.get('transaction', {}).get('signature') or event.get('signature')
+            # ── ИСПРАВЛЕНИЕ: Защита от {"transaction": null} ──
+            tx_data = event.get('transaction') or {}
+            signature = tx_data.get('signature') if isinstance(tx_data, dict) else event.get('signature')
             if signature:
                 now = time.time()
                 # Очищаем старые сигнатуры (старше 10 секунд)

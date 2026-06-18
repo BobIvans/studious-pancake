@@ -175,7 +175,11 @@ class DustSweeper:
         - Любой токен < 0.05: dust
         """
         try:
-            parsed_data = account_data.get("data", {}).get("parsed", {})
+            data_field = account_data.get("data", {})
+            # ── ИСПРАВЛЕНИЕ: Если RPC не смог распарсить аккаунт, он возвращает list. Пропускаем его. ──
+            if isinstance(data_field, list):
+                return False
+            parsed_data = data_field.get("parsed", {})
             info = parsed_data.get("info", {})
 
             ui_amount = float(info.get("tokenAmount", {}).get("uiAmountString", "0"))

@@ -48,6 +48,9 @@ alt_manager: Optional[Any] = None
 # Data Aggregator for paper trading and analytics
 data_aggregator: Optional[Any] = None
 
+# Глобальный пул MarginFi аккаунтов (синглтон для всех модулей)
+marginfi_pool: Optional[Any] = None
+
 ATA_CACHE: set = set()
 
 def initialize_shared_state():

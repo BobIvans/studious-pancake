@@ -1521,7 +1521,16 @@ data=(
                 "program_id", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
             )
         )
-        mfi_account = Pubkey.from_string(str(marginfi_config["marginfi_account"]))
+        # Глобальный пул аккаунтов через shared_state
+        pool_acct_str = str(marginfi_config["marginfi_account"])
+        try:
+            import src.ingest.shared_state as shared_state
+            if shared_state.marginfi_pool:
+                current_slot = shared_state.stats.get("current_slot", 0)
+                pool_acct_str, _ = await shared_state.marginfi_pool.checkout(current_slot)
+        except Exception as e:
+            logger.debug(f"Global pool checkout fallback: {e}")
+        mfi_account = Pubkey.from_string(pool_acct_str)
         bank = Pubkey.from_string(bank_pubkey)
         vault = Pubkey.from_string(str(marginfi_config["bank_liquidity_vault"]))
         vault_auth = Pubkey.from_string(
@@ -1550,6 +1559,9 @@ data=(
         # Dynamic CU limit via profile — strategy_type inferred from borrow_mint string.
         _native_profile = CU_PROFILES.get("flash_arbitrage", 600_000)
         all_instructions.append(set_compute_unit_limit(_native_profile))
+        # ── ИСПРАВЛЕНИЕ: Минимальная плата за приоритет для прохождения фильтров RPC ──
+        from solders.compute_budget import set_compute_unit_price
+        all_instructions.append(set_compute_unit_price(5000))  # 5,000 micro-lamports
 
         # ═══════════════════════════════════════════════════════════════════════
         # FIX 10 (SyncNative + wSOL ATA Recreation):

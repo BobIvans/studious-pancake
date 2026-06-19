@@ -48,19 +48,20 @@ async def resolve_doh_via_ip(hostname: str) -> Optional[list[str]]:
     
     connector = aiohttp.TCPConnector()
     async with aiohttp.ClientSession(connector=connector) as session:
-        tasks = [_fetch_one(session, url, host) for url, host in doh_endpoints]
-        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-        
-        for task in done:
-            result = task.result()
-            if result:
-                for p in pending:
-                    p.cancel()
-                return result
-        
-        # All failed - cleanup pending tasks
-        for p in pending:
-            p.cancel()
+        tasks = [asyncio.create_task(_fetch_one(session, url, host)) for url, host in doh_endpoints]
+        if tasks:
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            
+            for task in done:
+                result = task.result()
+                if result:
+                    for p in pending:
+                        p.cancel()
+                    return result
+            
+            # All failed - cleanup pending tasks
+            for p in pending:
+                p.cancel()
     
     return None
 

@@ -20,6 +20,8 @@ from typing import Callable, Dict, List, Optional, Tuple, Any
 
 import aiohttp
 
+from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
+
 logger = logging.getLogger("LstFairPrice")
 
 # ── Known stake-pool / program addresses ─────────────────────────────────

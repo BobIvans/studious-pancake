@@ -251,23 +251,17 @@ class ALTCacheManager:
             padded = base64_data + "=" * (-len(base64_data) % 4)
             data = base64.b64decode(padded)
 
-            # Phase 32: Dynamic ALT header parsing
+            # Phase 32: Fixed ALT header parsing (authoritized ALTs only)
             # ALT header layout:
             # - type: u64 (8)
             # - deactivation_slot: u64 (8)
             # - last_extended_slot: u64 (8)
             # - last_extended_slot_index_padding: u8 (1)
-            # - authority: Option<Pubkey> (1 byte flag + 32 bytes if exists)
+            # - authority: Option<Pubkey> (1 byte flag + 32 bytes) = always 33 bytes, padded to 56
             
-            # The 'authority' Option flag is at byte 21 (0-indexed)
-            if len(data) < 22:
+            if len(data) < 56:
                 return None
-                
-            authority_flag = data[21]
-            if authority_flag == 1:
-                header_len = 56 # 22 (pre-authority) + 32 (pubkey) + 2 (padding)
-            else:
-                header_len = 24 # 22 (pre-authority) + 2 (padding)
+            header_len = 56  # Fixed header for authoritized ALTs
 
             if len(data) < header_len:
                 return None

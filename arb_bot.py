@@ -3617,6 +3617,7 @@ async def lst_unstake_arbitrage_scanner(
         data_aggregator=data_aggregator,
         stats=shared_state.stats,
         stats_lock=shared_state.stats_lock,
+        jito_bidding_manager=jito_tip_manager,
     )
 
     cycle_count = 0
@@ -5872,6 +5873,7 @@ async def run():
         # Phase 35: Fetch live tip accounts before starting stream
         await jito_tip_manager.fetch_tip_accounts()
         await jito_tip_manager.start()
+        shared_state.jito_bidding_manager = jito_tip_manager
 
     global leader_tracker
     leader_tracker = LeaderTracker(
@@ -6542,7 +6544,7 @@ async def run():
     # LST Instant Unstake Arbitrage Scanner
     if cfg.LST_UNSTAKE_ARB_ENABLED:
         unstake_task = asyncio.create_task(
-            lst_unstake_arbitrage_scanner(session, cfg, rpc, keypair, jito_executor, jito_bidding_manager, data_aggregator=data_aggregator)
+            lst_unstake_arbitrage_scanner(session, cfg, rpc, keypair, jito_executor, jito_tip_manager, data_aggregator=data_aggregator)
         )
         tasks.append(unstake_task)
         logger.info("🔄 LST Instant Unstake Arbitrage Scanner ENABLED")

@@ -221,6 +221,44 @@ class JitoTipManager:
         """Check if cached tip data is still valid."""
         return time.time() - self.last_update < self.cache_timeout
 
+    def calculate_blue_ocean_tip(
+        self,
+        expected_profit_sol: float,
+        strategy: str = "lst_unstake",
+        current_native_sol_balance: Optional[float] = None,
+    ) -> int:
+        """Calculate dynamic Jito tip based on profit and strategy.
+        
+        Args:
+            expected_profit_sol: Expected profit in SOL
+            strategy: Strategy name (affects base tip)
+            current_native_sol_balance: Current SOL balance for tip cap
+            
+        Returns:
+            Tip amount in lamports
+        """
+        base_tips = {
+            "lst_unstake": 15000,
+            "xstocks_lag": 25000,
+            "default": 10000,
+        }
+        base_tip = base_tips.get(strategy, base_tips["default"])
+        
+        # Calculate tip as 30% of expected profit, capped at max
+        calculated_tip = int(expected_profit_sol * 0.30 * 1_000_000_000)
+        tip_amount = max(base_tip, min(calculated_tip, 150000))
+        
+        # Cap tip to 5% of balance if provided
+        if current_native_sol_balance is not None:
+            balance_tip_cap = int(current_native_sol_balance * 0.05 * 1_000_000_000)
+            tip_amount = min(tip_amount, balance_tip_cap)
+        
+        return tip_amount
+
+    def get_50th_percentile_lamports(self) -> int:
+        """Get 50th percentile tip from cached data or return default."""
+        return self.current_percentiles.get("50th", self.min_tip_lamports)
+
     async def fetch_tip_accounts(self) -> bool:
         """Fetch live Jito tip accounts from Block Engine (Phase 35)."""
         try:

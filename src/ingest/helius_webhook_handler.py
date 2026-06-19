@@ -271,8 +271,7 @@ class HeliusWebhookHandler:
                     return True
             account_data = event.get('accountData', [])
             for account_info in account_data:
-                account = account_info.get('account', {})
-                mint = account.get('mint')
+                mint = account_info.get('mint')
                 if mint and is_xstock_token(mint):
                     return True
             return False
@@ -298,7 +297,7 @@ class HeliusWebhookHandler:
         try:
             account_data = event.get('accountData', [])
             for account_info in account_data:
-                account_address = account_info.get('account', {}).get('address')
+                account_address = account_info.get('account')
                 if account_address in WebhookConfig.ORCA_POOL_ADDRESSES:
                     native_balance_change = account_info.get('nativeBalanceChange', 0)
                     token_balance_changes = account_info.get('tokenBalanceChanges', [])
@@ -377,7 +376,7 @@ class HeliusWebhookHandler:
                     if 'nativeBalanceChange' in account:
                         change = account['nativeBalanceChange']
                         opportunity['account_changes'].append({
-                            'address': account['account']['address'],
+                            'address': account.get('account'),
                             'balance_change': change
                         })
             lst_tokens = {

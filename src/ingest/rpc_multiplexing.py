@@ -8,67 +8,45 @@ import socket
 import aiohttp
 import ssl
 from typing import Optional
-from aiohttp.resolver import ThreadedResolver, AbstractResolver
+from aiohttp.resolver import AbstractResolver
 
 logger = logging.getLogger(__name__)
 
-# Async DoH with racing - Cloudflare IPs only (dns-query endpoints, JSON compatible)
-# Yandex /resolve and Google endpoints blocked/v404 in mobile networks
-async def resolve_doh_via_ip(hostname: str) -> Optional[list[str]]:
-    """Parallel DoH resolution with 0.5s timeout per provider.
-    
-    Uses racing pattern - first successful response wins.
-    Cloudflare dns-query endpoints guaranteed JSON response.
-    """
-    doh_endpoints = [
-        ("https://1.0.0.1/dns-query", "cloudflare-dns.com"),
-        ("https://1.1.6/dns-query", "cloudflare-dns.com"),
-        ("https://1.2.9/dns-query", "cloudflare-dns.com"),
-    ]
-    
-    async def _fetch_one(session: aiohttp.ClientSession, url_base: str, host_header: str) -> Optional[list[str]]:
-        url = f"{url_base}?name={hostname}&type=A"
-        try:
-            headers = {"Host": host_header, "Accept": "application/dns-json"}
-            timeout = aiohttp.ClientTimeout(total=0.5)
-            ssl_context = ssl.create_default_context()
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-            async with session.get(url, headers=headers, timeout=timeout, ssl=ssl_context) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    ips = []
-                    for answer in data.get("Answer", []):
-                        if answer.get("type") == 1:
-                            ips.append(answer["data"])
-                    return ips if ips else None
-        except Exception:
-            pass
-        return None
-    
-    connector = aiohttp.TCPConnector()
-    async with aiohttp.ClientSession(connector=connector) as session:
-        tasks = [asyncio.create_task(_fetch_one(session, url, host)) for url, host in doh_endpoints]
-        if tasks:
-            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-            
-            for task in done:
-                result = task.result()
-                if result:
-                    for p in pending:
-                        p.cancel()
-                    return result
-            
-            # All failed - cleanup pending tasks
-            for p in pending:
-                p.cancel()
-    
-    return None
-
+async def _fetch_one_doh(session: aiohttp.ClientSession, url: str, host_header: str, hostname: str, accept_header: str) -> list[str]:
+    """Асинхронный опрос одного DoH-провайдера напрямую по IP."""
+    target_url = f"{url}?name={hostname}&type=A"
+    headers = {
+        "Host": host_header,
+        "Accept": accept_header
+    }
+    try:
+        async with session.get(target_url, headers=headers, timeout=aiohttp.ClientTimeout(total=1.0)) as resp:
+            if resp.status == 200:
+                data = orjson.loads(await resp.read())
+                ips = []
+                for answer in data.get("Answer", []):
+                    if answer.get("type") == 1:  # A record
+                        ips.append(answer["data"])
+                return ips
+    except Exception:
+        pass
+    return []
 
 class DoHResolver(AbstractResolver):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.doh_session: Optional[aiohttp.ClientSession] = None
+
+    async def _get_doh_session(self) -> aiohttp.ClientSession:
+        """Инициализация изолированной сессии без рекурсивного резолвера."""
+        if self.doh_session is None or self.doh_session.closed:
+            # Подключаемся строго по IP, поэтому кастомный резолвер здесь не нужен
+            connector = aiohttp.TCPConnector(family=socket.AF_INET)
+            self.doh_session = aiohttp.ClientSession(connector=connector)
+        return self.doh_session
+
     async def resolve(self, host: str, port: int = 0, family: int = 0) -> list[dict]:
-        # Fast path: skip DoH for raw IP addresses
+        # Fast path: пропускаем резолв для сырых IP-адресов
         try:
             socket.inet_aton(host)
             return [{
@@ -82,14 +60,51 @@ class DoHResolver(AbstractResolver):
         except socket.error:
             pass
 
-        # Попытка разрешить имя через кастомный список DoH (асинхронно)
-        try:
-            ips = await resolve_doh_via_ip(host)
-        except socket.gaierror:
-            # DoH resolution failed, fallback to system resolver
+        # Отказоустойчивый пул JSON DoH-провайдеров
+        providers = [
+            ("https://1.0.0.1/dns-query", "cloudflare-dns.com", "application/dns-json"),
+            ("https://8.8.8.8/resolve", "dns.google", "application/json"),
+            ("https://8.8.4.4/resolve", "dns.google", "application/json"),
+            ("https://1.1.1.1/dns-query", "cloudflare-dns.com", "application/dns-json"),
+        ]
+
+        session = await self._get_doh_session()
+        
+        # ─── КОРРЕКТНЫЙ ПАРАЛЛЕЛЬНЫЙ ЗАПУСК ТАСКОВ (Python 3.11/3.12/3.13) ───
+        # Явно оборачиваем корутины в Tasks
+        tasks = []
+        for url, host_header, accept in providers:
+            tasks.append(
+                asyncio.create_task(
+                    _fetch_one_doh(session, url, host_header, host, accept)
+                )
+            )
+
+        ips = []
+        # Выполняем гонку (Racing) — первый успешный ответ выигрывает
+        for coro in asyncio.as_completed(tasks):
             try:
-                addr_infos = await asyncio.to_thread(socket.getaddrinfo, host, port, socket.AF_INET)
-                if not addr_infos:
+                res = await coro
+                if res:
+                    ips = res
+                    # Победа: немедленно отменяем все остальные незавершенные задачи
+                    for t in tasks:
+                        if not t.done():
+                            t.cancel()
+                    break
+            except Exception:
+                pass
+
+        # Финальная очистка повисших тасков во избежание утечки "never awaited"
+        for t in tasks:
+            if not t.done():
+                t.cancel()
+
+        # Если DoH-пул не вернул IP, делаем безопасный асинхронный фолбек на системный DNS
+        if not ips:
+            try:
+                infos = await asyncio.to_thread(socket.getaddrinfo, host, port, socket.AF_INET)
+                if not infos:
                     raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
                 return [
                     {
@@ -100,28 +115,28 @@ class DoHResolver(AbstractResolver):
                         'proto': 0,
                         'flags': 0
                     }
-                    for info in addr_infos
+                    for info in infos
                 ]
             except Exception:
+                # Избегаем StopIteration -> RuntimeError на Python 3.13
                 raise socket.gaierror(socket.EAI_NONAME, "Name or service not known") from None
 
-        if ips:
-            return [
-                {
-                    'hostname': host,
-                    'host': ip,
-                    'port': port,
-                    'family': socket.AF_INET,
-                    'proto': 0,
-                    'flags': 0
-                }
-                for ip in ips
-            ]
-        raise socket.gaierror(socket.EAI_NONAME, f"DoH resolution failed for {host}")
+        return [
+            {
+                'hostname': host,
+                'host': ip,
+                'port': port,
+                'family': socket.AF_INET,
+                'proto': 0,
+                'flags': 0
+            }
+            for ip in ips
+        ]
 
     async def close(self) -> None:
         """Required by AbstractResolver for cleanup."""
-        pass
+        if self.doh_session and not self.doh_session.closed:
+            await self.doh_session.close()
 
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
 from contextlib import asynccontextmanager

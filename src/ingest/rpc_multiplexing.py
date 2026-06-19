@@ -77,6 +77,8 @@ class DoHResolver(AbstractResolver):
             # DoH resolution failed, fallback to system resolver
             try:
                 addr_infos = await asyncio.to_thread(socket.getaddrinfo, host, port, socket.AF_INET)
+                if not addr_infos:
+                    raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
                 return [
                     {
                         'hostname': host,

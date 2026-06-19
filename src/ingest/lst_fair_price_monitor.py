@@ -199,7 +199,7 @@ class LstFairPriceMonitor:
                     # Dynamic sizing: fetch 95% of MarginFi SOL vault, pass to OptimalTradeSizer
                     # antes de cada señal para evitar slips excesivos (Step 2 — динамический сайзинг)
                     sol_mint_str = str(SOL_MINT)
-                    from arb_bot import MARGINFI_BANKS
+                    from src.ingest.shared_state import MARGINFI_BANKS
                     sol_bank_vault = (
                         str(MARGINFI_BANKS[sol_mint_str]["liquidity_vault"])
                         if sol_mint_str in MARGINFI_BANKS

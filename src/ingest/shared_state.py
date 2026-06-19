@@ -1,7 +1,9 @@
 import asyncio
 import logging
+import os
 import time
 from typing import Dict, Set, Any, Optional
+from solders.pubkey import Pubkey
 
 logger = logging.getLogger("SharedState")
 
@@ -12,12 +14,63 @@ stats_lock: Optional[asyncio.Lock] = None
 GLOBAL_STOP_EVENT: Optional[asyncio.Event] = None
 jito_bidding_manager: Optional[Any] = None
 
-# MarginFi banks configuration (shared to avoid circular imports)
-MARGINFI_BANKS: Dict[str, Any] = {}
-MARGINFI_BANKS_LOCK = asyncio.Lock()
+# MARGINFI PROGRAM ADDRESSES AND PDA DERIVATION
+MARGINFI_PROGRAM_ID = Pubkey.from_string(os.getenv("MARGINFI_PROGRAM_ID", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"))
+MARGINFI_GROUP = Pubkey.from_string(os.getenv("MARGINFI_GROUP", "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8"))
+
+# Task 11: Hardcoded MarginFi Liquidity Vaults (Mainnet)
+# In MarginFi v2 liquidity_vault is a real Token Account, NOT a PDA
+MARGINFI_LIQUIDITY_VAULTS: Dict[str, str] = {
+    "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj": "7uttpzxsHAcX97X5ZwaX8xMpsJc9aKx2V8t4Gf6A43XJ",
+    "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2": "73zNEAXx8vWeCReEwZgPZteXhH3RTo8gC1vC51g8x7j2",
+}
+
+def get_marginfi_bank_accounts(bank_pubkey: Pubkey):
+    def find_pda(seed_str):
+        pda, _ = Pubkey.find_program_address(
+            [seed_str.encode(), bytes(bank_pubkey)], MARGINFI_PROGRAM_ID
+        )
+        return pda
+
+    bank_str = str(bank_pubkey)
+    liquidity_vault_str = MARGINFI_LIQUIDITY_VAULTS.get(bank_str)
+    if not liquidity_vault_str:
+        logger.critical(
+            f"🛑 UNKNOWN MARGINFI BANK: {bank_str}\n"
+            "liquidity_vault not in MARGINFI_LIQUIDITY_VAULTS map — flash loan cannot proceed."
+        )
+
+    return {
+        "bank": bank_pubkey,
+        "liquidity_vault": Pubkey.from_string(liquidity_vault_str) if liquidity_vault_str else None,
+        "liquidity_vault_authority": find_pda("liquidity_vault_auth"),
+        "insurance_vault": find_pda("insurance_vault"),
+        "insurance_vault_authority": find_pda("insurance_vault_auth"),
+        "fee_vault": find_pda("fee_vault"),
+        "fee_vault_authority": find_pda("fee_vault_auth"),
+    }
+
+def get_marginfi_banks():
+    """Get MarginFi bank configurations with lazy initialization."""
+    try:
+        sol_bank = os.getenv("MARGINFI_SOL_BANK", "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj").strip()
+        usdc_bank = os.getenv("MARGINFI_USDC_BANK", "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2").strip()
+        correct_usdc = "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2"
+        if usdc_bank != correct_usdc:
+            logger.warning(f"⚠️ Self-healing .env: wrong MARGINFI_USDC_BANK {usdc_bank} -> {correct_usdc}")
+            usdc_bank = correct_usdc
+
+        return {
+            "So11111111111111111111111111111111111111112": get_marginfi_bank_accounts(Pubkey.from_string(sol_bank)),
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": get_marginfi_bank_accounts(Pubkey.from_string(usdc_bank)),
+        }
+    except Exception as e:
+        logger.warning(f"Failed to initialize MarginFi banks: {e}. Using empty dict.")
+        return {}
+
+MARGINFI_BANKS: Dict[str, Any] = get_marginfi_banks()
 
 # Fix 67: Balance lock flags
-
 stats: Dict[str, Any] = {
     "trades": 0,
     "last_balance": 0.0,

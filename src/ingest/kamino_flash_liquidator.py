@@ -229,7 +229,7 @@ class KaminoFlashLiquidationExecutor:
                 return False
 
             # 3. Build MarginFi flash loan transaction
-            from arb_bot import MARGINFI_BANKS
+            from src.ingest.shared_state import MARGINFI_BANKS
             sol_bank = MARGINFI_BANKS.get("So11111111111111111111111111111111111111112", {})
             vault = str(sol_bank.get("liquidity_vault", ""))
             vault_auth = str(sol_bank.get("liquidity_vault_authority", ""))

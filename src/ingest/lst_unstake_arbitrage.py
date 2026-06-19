@@ -84,7 +84,7 @@ class LstInstantUnstakeArbitrage:
             _jup = JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter)
 
         # Dynamic liquidity from MarginFi SOL bank
-        from arb_bot import MARGINFI_BANKS
+        from src.ingest.shared_state import MARGINFI_BANKS
         bank_info = MARGINFI_BANKS.get(SOL_MINT)
         if not bank_info:
             return []

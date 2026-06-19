@@ -1486,9 +1486,9 @@ def get_marginfi_banks():
         return {}
 
 
-MARGINFI_BANKS = get_marginfi_banks()
+# MARGINFI_BANKS is now defined in shared_state.py to avoid circular imports
 import src.ingest.shared_state as shared_state
-shared_state.MARGINFI_BANKS = MARGINFI_BANKS
+MARGINFI_BANKS = shared_state.MARGINFI_BANKS
 
 # Discriminators for our flash loan contract
 EXECUTE_ARBITRAGE_DISCRIMINATOR = bytes(
@@ -2496,7 +2496,7 @@ async def create_flashloan_arbitrage_tx(
     builder = JupiterTxBuilder(session=session)
 
     mfi_program = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
-    mfi_group = MARGINFI_GROUP
+    mfi_group = shared_state.MARGINFI_GROUP
     sol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
 
     # Calculate indices for Instruction Introspection
@@ -2835,7 +2835,7 @@ async def create_flashloan_arbitrage_tx(
             (
                 i
                 for i, ix in enumerate(optimized_instructions)
-                if ix.program_id == MARGINFI_PROGRAM_ID
+                if ix.program_id == shared_state.MARGINFI_PROGRAM_ID
                 and ix.data[:8] == MARGINFI_FLASHLOAN_START
             ),
             -1,
@@ -2844,7 +2844,7 @@ async def create_flashloan_arbitrage_tx(
             (
                 i
                 for i, ix in enumerate(optimized_instructions)
-                if ix.program_id == MARGINFI_PROGRAM_ID
+                if ix.program_id == shared_state.MARGINFI_PROGRAM_ID
                 and ix.data[:8] == MARGINFI_FLASHLOAN_END
             ),
             -1,

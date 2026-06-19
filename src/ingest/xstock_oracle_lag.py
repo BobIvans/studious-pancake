@@ -526,7 +526,7 @@ class XStockOracleLagStrategy:
                 return
 
             # ── Build and execute transaction ──────────────────────────────
-            from arb_bot import MARGINFI_BANKS
+            from src.ingest.shared_state import MARGINFI_BANKS
 
             usdc_bank_info = MARGINFI_BANKS.get(str(USDC_MINT), {})
             if not usdc_bank_info:

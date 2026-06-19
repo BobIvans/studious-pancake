@@ -6,55 +6,63 @@ import logging
 import time
 import socket
 import aiohttp
-import urllib.request
-import json
 import ssl
 from typing import Optional
 from aiohttp.resolver import ThreadedResolver, AbstractResolver
 
-def resolve_doh_via_ip(hostname: str) -> Optional[list[str]]:
-    """Query multiple DoH APIs directly via IP address (bypasses system DNS).
+logger = logging.getLogger(__name__)
 
-    Uses parallel resolution across multiple DoH providers for fault tolerance.
-    If all providers fail, raises gaierror to prevent StopIteration in aiohappyeyeballs.
+# Async DoH with racing - Cloudflare IPs only (dns-query endpoints, JSON compatible)
+# Yandex /resolve and Google endpoints blocked/v404 in mobile networks
+async def resolve_doh_via_ip(hostname: str) -> Optional[list[str]]:
+    """Parallel DoH resolution with 0.5s timeout per provider.
+    
+    Uses racing pattern - first successful response wins.
+    Cloudflare dns-query endpoints guaranteed JSON response.
     """
-# Список DoH-провайдеров с динамической подстановкой Host (устойчив к мобильным блокировкам)
-    # Порядок: Yandex (РФ/СНГ) -> Cloudflare (1.0.0.1, 1.1.6, 1.2.9) -> Google (8.8.8.8, 8.8.4.4)
-    doh_providers = [
-        ("https://77.88.8.1/resolve", "dns.yandex.ru"),
+    doh_endpoints = [
         ("https://1.0.0.1/dns-query", "cloudflare-dns.com"),
         ("https://1.1.6/dns-query", "cloudflare-dns.com"),
         ("https://1.2.9/dns-query", "cloudflare-dns.com"),
-        ("https://8.8.8.8/resolve", "dns.google"),
-        ("https://8.8.4.4/resolve", "dns.google"),
     ]
-
-    def _try_single_provider(url_base: str, host_header: str) -> Optional[list[str]]:
+    
+    async def _fetch_one(session: aiohttp.ClientSession, url_base: str, host_header: str) -> Optional[list[str]]:
         url = f"{url_base}?name={hostname}&type=A"
         try:
             headers = {"Host": host_header, "Accept": "application/dns-json"}
-            req = urllib.request.Request(url, headers=headers)
-            context = ssl._create_unverified_context()
-            with urllib.request.urlopen(req, context=context, timeout=2.0) as response:
-                data = json.loads(response.read().decode())
-                ips = []
-                for answer in data.get("Answer", []):
-                    if answer.get("type") == 1:  # A record
-                        ips.append(answer["data"])
-                return ips if ips else None
+            timeout = aiohttp.ClientTimeout(total=0.5)
+            ssl_context = ssl.create_default_context()
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+            async with session.get(url, headers=headers, timeout=timeout, ssl=ssl_context) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    ips = []
+                    for answer in data.get("Answer", []):
+                        if answer.get("type") == 1:
+                            ips.append(answer["data"])
+                    return ips if ips else None
         except Exception:
-            return None
-
-    results = []
-    for url_base, host_header in doh_providers:
-        ips = _try_single_provider(url_base, host_header)
-        if ips:
-            return ips
-        results.append((url_base, host_header))
-
-    # All providers failed - raise gaierror instead of returning empty list
-    # This prevents StopIteration in aiohappyeyeballs on Python 3.13
-    raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
+            pass
+        return None
+    
+    connector = aiohttp.TCPConnector()
+    async with aiohttp.ClientSession(connector=connector) as session:
+        tasks = [_fetch_one(session, url, host) for url, host in doh_endpoints]
+        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+        
+        for task in done:
+            result = task.result()
+            if result:
+                for p in pending:
+                    p.cancel()
+                return result
+        
+        # All failed - cleanup pending tasks
+        for p in pending:
+            p.cancel()
+    
+    return None
 
 
 class DoHResolver(AbstractResolver):
@@ -73,9 +81,9 @@ class DoHResolver(AbstractResolver):
         except socket.error:
             pass
 
-        # Попытка разрешить имя через кастомный список DoH
+        # Попытка разрешить имя через кастомный список DoH (асинхронно)
         try:
-            ips = await asyncio.to_thread(resolve_doh_via_ip, host)
+            ips = await resolve_doh_via_ip(host)
         except socket.gaierror:
             # DoH resolution failed, fallback to system resolver
             try:
@@ -96,17 +104,19 @@ class DoHResolver(AbstractResolver):
             except Exception:
                 raise socket.gaierror(socket.EAI_NONAME, "Name or service not known") from None
 
-        return [
-            {
-                'hostname': host,
-                'host': ip,
-                'port': port,
-                'family': socket.AF_INET,
-                'proto': 0,
-                'flags': 0
-            }
-            for ip in ips
-        ]
+        if ips:
+            return [
+                {
+                    'hostname': host,
+                    'host': ip,
+                    'port': port,
+                    'family': socket.AF_INET,
+                    'proto': 0,
+                    'flags': 0
+                }
+                for ip in ips
+            ]
+        raise socket.gaierror(socket.EAI_NONAME, f"DoH resolution failed for {host}")
 
     async def close(self) -> None:
         """Required by AbstractResolver for cleanup."""

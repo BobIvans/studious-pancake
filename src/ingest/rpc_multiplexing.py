@@ -61,12 +61,13 @@ class DoHResolver(AbstractResolver):
         except socket.error:
             pass
 
-        # Отказоустойчивый пул JSON DoH-провайдеров
+        # Отказоустойчивый азиатско-европейский пул DoH-провайдеров
+        # Alibaba (СНГ), AdGuard (Европа), Cloudflare, Google — обходят мобильные блокировки
         providers = [
+            ("https://223.5.5.5/resolve", "dns.alidns.com", "application/json"),
+            ("https://94.140.14.140/resolve", "dns.adguard-dns.com", "application/json"),
             ("https://1.0.0.1/dns-query", "cloudflare-dns.com", "application/dns-json"),
             ("https://8.8.8.8/resolve", "dns.google", "application/json"),
-            ("https://8.8.4.4/resolve", "dns.google", "application/json"),
-            ("https://1.1.1.1/dns-query", "cloudflare-dns.com", "application/dns-json"),
         ]
 
         session = await self._get_doh_session()
@@ -138,6 +139,16 @@ class DoHResolver(AbstractResolver):
         """Required by AbstractResolver for cleanup."""
         if self.doh_session and not self.doh_session.closed:
             await self.doh_session.close()
+
+    def __del__(self):
+        """Cleanup unclosed session on object destruction."""
+        if self.doh_session and not self.doh_session.closed:
+            try:
+                loop = asyncio.get_running_loop()
+                if loop.is_running():
+                    loop.create_task(self.doh_session.close())
+            except RuntimeError:
+                pass
 
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
 from contextlib import asynccontextmanager

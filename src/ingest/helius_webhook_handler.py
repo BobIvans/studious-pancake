@@ -322,6 +322,12 @@ class HeliusWebhookHandler:
                         await self.data_aggregator.log_opportunity_found(webhook_id, opportunity, metadata)
                         if self.opportunity_callback:
                             await self.opportunity_callback(opportunity, webhook_id)
+                        # Send to webhook_queue for immediate LST scanner trigger
+                        if self.webhook_queue:
+                            try:
+                                await self.webhook_queue.put(opportunity)
+                            except asyncio.QueueFull:
+                                logger.warning("Webhook queue full, dropping opportunity")
         except Exception as e:
             logger.error(f"Account update processing error: {e}")
 

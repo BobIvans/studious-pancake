@@ -75,34 +75,24 @@ class WebhookConfig:
     def get_webhook_config(cls) -> Dict[str, any]:
         """Get the complete webhook configuration for Helius API."""
         webhook_url = os.getenv("WEBHOOK_URL", "https://your-cloudflare-worker.dev/webhook")
-
+        
+        # Dynamic filtering: use only enabled addresses from addresses.py
+        # This prevents wasting Helius credits on disabled/noisy contracts
+        enabled_addr_keys = list(get_enabled_addresses().keys())
+        
         return {
             "webhookURL": webhook_url,
             "webhookType": "enhanced",
             "transactionTypes": ["SWAP", "TRANSFER", "CREATE_POOL", "GRADUATION"],
-            "accountAddresses": (
-                # Используем get_enabled_addresses() для фильтрации + оригинальные LST/xStock списки
-                list(set(
-                    cls.LST_ADDRESSES +
-                    cls.XSTOCK_ADDRESSES +
-                    cls.PARCL_ADDRESSES +
-                    cls.PYTH_ADDRESSES +
-                    cls.ORCA_POOL_ADDRESSES +
-                    list(get_enabled_addresses().keys())
-                ))
-            ),
+            "accountAddresses": enabled_addr_keys,
             "txnStatus": "success",  # OPTIMIZED: Only listen to successful trades (saves credits)
             "accountFilters": [  # Phase 49: Helius credit conservation — hard filter
-                # ИСПРАВЛЕНИЕ: Удалены пустые "bytes": "", из-за которых падал Helius API
-                # Jupiter v6 program — only trigger for significant SOL volume (50 SOL)
                 {"accountKey": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
-                 "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold
-                # Orca Whirlpools — only trigger for significant SOL volume (50 SOL)
+                 "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold - Jupiter
                 {"accountKey": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
-                 "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold
-                # Sanctum Router (LST) — only trigger for significant SOL volume (5 SOL)
+                 "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold - Orca
                 {"accountKey": "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",
-                 "nativeFilters": [{"min": 5_000_000_000}]},   # 5 SOL threshold
+                 "nativeFilters": [{"min": 5_000_000_000}]},   # 5 SOL threshold - Sanctum
             ],
             "webhookIds": cls.WEBHOOK_IDS,
             "managementIds": cls.MANAGEMENT_IDS,

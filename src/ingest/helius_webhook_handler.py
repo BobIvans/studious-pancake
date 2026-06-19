@@ -44,7 +44,7 @@ class HeliusWebhookHandler:
             await self.runner.setup()
             site = web.TCPSite(runner=self.runner, host='0.0.0.0', port=self.port)
             await site.start()
-            logger.info(f"🚀 Helius webhook server started on port {self.port}")
+            logger.warning(f"🚀 WEBHOOK SERVER ACTIVE: Listening on port {self.port}. Endpoint: http://0.0.0.0:{self.port}/webhook")
             # ИСПРАВЛЕНИЕ: Worker Pool — 3 фиксированных воркера
             for i in range(self.WORKER_COUNT):
                 worker = asyncio.create_task(self._worker(i))

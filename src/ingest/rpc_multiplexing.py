@@ -18,7 +18,7 @@ def resolve_doh_via_ip(hostname: str) -> Optional[list[str]]:
     Uses parallel resolution across multiple DoH providers for fault tolerance.
     If all providers fail, raises gaierror to prevent StopIteration in aiohappyeyeballs.
     """
-    # Список надежных DoH-провайдеров (Yandex первый для РФ/СНГ сетей, Cloudflare как резерв)
+# Список надежных DoH-провайдеров (Yandex первый для РФ/СНГ сетей, Cloudflare как резерв)
     doh_providers = [
         ("https://77.88.8.1/dns-query", "dns.yandex.ru"),
         ("https://8.8.8.8/resolve", "dns.google"),

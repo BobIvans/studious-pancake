@@ -88,7 +88,7 @@ class JitoTipManager:
             from src.ingest.rpc_multiplexing import DoHResolver
             connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
             async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.get(self.JITO_TIP_ACCOUNTS_URL) as resp:
+                async with session.get(self.JITO_TIP_ACCOUNTS_URL, ssl=False) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         self.tip_accounts = data if isinstance(data, list) else []
@@ -265,7 +265,7 @@ class JitoTipManager:
             from src.ingest.rpc_multiplexing import DoHResolver
             connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
             async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.get(self.JITO_TIP_ACCOUNTS_URL, timeout=5.0) as resp:
+                async with session.get(self.JITO_TIP_ACCOUNTS_URL, timeout=5.0, ssl=False) as resp:
                     if resp.status == 200:
                         accounts = await resp.json()
                         parsed_accounts = self._parse_tip_accounts(accounts)

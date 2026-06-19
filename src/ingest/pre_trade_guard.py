@@ -68,8 +68,8 @@ class TokenSecurityChecker:
             except Exception as e:
                 return False, f"No HTTP session available: {e}"
 
-        # Phase 20: Whitelist bypass
-        mint_str = str(mint_address) if isinstance(mint_address, Pubkey) else mint_address
+# Phase 20: Whitelist bypass
+        mint_str = str(mint_address) if isinstance(mint_address, Pubkey) else str(mint_address)
         if mint_str in SAFE_MINTS:
             logger.debug(
                 f"🛡️ Token {mint_address} is in SAFE_MINTS whitelist. Bypassing security checks."

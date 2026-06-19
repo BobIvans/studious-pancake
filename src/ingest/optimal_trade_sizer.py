@@ -421,7 +421,11 @@ class OptimalTradeSizer:
         jito_tip_sol,
         lag_pct: Optional[float] = None,
     ):
-        """Find optimal trade size using analytical formula for live routes."""
+        """Find optimal trade size using analytical formula for live routes.
+        
+        FIX: When reserves are unavailable (Jupiter public API), use priceImpactPct
+        to estimate liquidity and adjust trade size accordingly.
+        """
         CLMM_PROGRAMS = {
             "CAMMCkzFhJfPWvTv7SwbeCfFFmCd29S4mxS3vz5S2SEt",
             "whirLbMi2tG34uFp881tua2RZBY9oXKVvVf9xrq7Rqi",
@@ -474,7 +478,33 @@ class OptimalTradeSizer:
                                 logger.info(f"📈 Analytical optimal sizing: {optimal_size:.6f} (impact {price_impact:.3f}%)")
                                 return optimal_size
 
-                return Decimal(str(amount_in))
+                # FIX: Jupiter public API fallback using priceImpactPct
+                price_impact_pct = None
+                for hop in route if isinstance(route, list) else []:
+                    pip = hop.get("priceImpactPct") or hop.get("price_impact_pct")
+                    if pip is not None:
+                        try:
+                            price_impact_pct = float(pip)
+                        except (TypeError, ValueError):
+                            pass
+                
+                if price_impact_pct is not None and lag_pct is not None:
+                    # Calculate effective liquidity estimate
+                    # Liquidity_Est = Amount_In / Price_Impact_Pct (approximate formula)
+                    try:
+                        liquidity_est = Decimal(str(amount_in)) / Decimal(str(price_impact_pct / 100.0))
+                        
+                        # Adjust size to keep price impact < lag/2
+                        max_impact = lag_pct / 2.0
+                        scaling_factor = Decimal(str(max_impact / price_impact_pct)) if price_impact_pct > 0 else Decimal('0.01')
+                        optimal_size = max(Decimal('0.01'), Decimal(str(amount_in)) * scaling_factor)
+                        
+                        logger.info(f"📊 Jupiter sizing fallback: liquidity_est={liquidity_est:.0f}, size={optimal_size:.6f} (impact {price_impact_pct:.2f}%)")
+                        return optimal_size
+                    except Exception as calc_err:
+                        logger.debug(f"Price impact sizing fallback error: {calc_err}")
+
+            return Decimal(str(amount_in))
         except Exception as e:
             logger.warning(f"Error in find_optimal_trade_size: {e}")
             return Decimal('0')

@@ -126,31 +126,33 @@ class LstFairPriceMonitor:
         self._last_fair_update = time.time()
         return dict(self._fair_prices)
 
-    async def update_market_prices(self) -> Dict[str, float]:
-        """Fetch live market prices from Jupiter Price API."""
+    async def update_market_prices(self, price_matrix: Optional[Dict[str, tuple]] = None) -> Dict[str, float]:
+        """Fetch live market prices from in-memory price_matrix (PythCorePriceFeeder).
+
+        CRITICAL FIX: Removed direct Jupiter API calls to prevent HTTP 429 rate limiting and IP blocking.
+        Prices are now read from the shared price_matrix which is updated every ~400ms by PythCorePriceFeeder
+        via WebSocket, eliminating the network overhead and rate limit issues.
+        """
+        if price_matrix is None:
+            # Fallback: try to get from global feeder
+            feeder = get_pyth_core_feeder()
+            if feeder:
+                price_matrix = feeder.as_price_matrix()
+            else:
+                price_matrix = {}
+
         mints = [p[1] for p in self._pools]
-        # ИСПРАВЛЕНИЕ: Добавляем SOL_MINT в запрос, чтобы получить его USD цену
-        ids_param = ",".join(mints + [SOL_MINT])
-        try:
-            params = {"ids": ids_param}
-            timeout = aiohttp.ClientTimeout(total=3.0)
-            async with self.session.get(JUPITER_PRICE_URL, params=params, timeout=timeout) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if "data" in data:
-                        sol_data = data["data"].get(SOL_MINT, {})
-                        sol_usd_price = float(sol_data.get("price", 0))
-                        
-                        if sol_usd_price > 0:
-                            for mint in mints:
-                                info = data["data"].get(mint)
-                                if info and info.get("price"):
-                                    # Конвертируем USD цену LST в SOL эквивалент
-                                    token_usd_price = float(info["price"])
-                                    self._market_prices[mint] = token_usd_price / sol_usd_price
-            self._last_market_update = time.time()
-        except Exception as e:
-            logger.warning(f"Market price fetch failed: {e}")
+        sol_entry = price_matrix.get(SOL_MINT)
+
+        if sol_entry and sol_entry[0] > 0:
+            sol_usd_price = sol_entry[0]
+            for mint in mints:
+                token_entry = price_matrix.get(mint)
+                if token_entry and token_entry[0] > 0:
+                    # Convert USD price to SOL equivalent (price_matrix stores USD prices)
+                    self._market_prices[mint] = token_entry[0] / sol_usd_price
+
+        self._last_market_update = time.time()
         return dict(self._market_prices)
 
     def get_depeg_signals(self, threshold_bps: float = 15.0) -> List[DepegSignal]:
@@ -192,7 +194,10 @@ class LstFairPriceMonitor:
         while True:
             try:
                 await self.update_fair_prices()
-                await self.update_market_prices()
+                # Get price_matrix from PythCorePriceFeeder (updated every ~400ms via WebSocket)
+                feeder = get_pyth_core_feeder()
+                price_matrix = feeder.as_price_matrix() if feeder else {}
+                await self.update_market_prices(price_matrix)
                 signals = self.get_depeg_signals(threshold_bps)
 
                 if signals:

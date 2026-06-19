@@ -631,8 +631,10 @@ class JupiterTxBuilder:
         if isinstance(raw_b64, str):
             padded_b64 = raw_b64 + "=" * (-len(raw_b64) % 4)
             data_bytes = base64.b64decode(padded_b64)
-        else:
+        elif isinstance(raw_b64, (bytes, bytearray)):
             data_bytes = bytes(raw_b64)
+        else:
+            raise ValueError(f"Unexpected data type in instruction: {type(raw_b64)}")
 
         program_id = Pubkey.from_string(ix_data["programId"])
 

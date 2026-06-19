@@ -114,6 +114,8 @@ def get_anchor_discriminator(instruction_name: str) -> bytes:
 # MarginFi Flashloan Discriminators - dynamically computed (Phase 49)
 MARGINFI_FLASHLOAN_START = get_anchor_discriminator("lending_account_start_flashloan")
 MARGINFI_FLASHLOAN_END = get_anchor_discriminator("lending_account_end_flashloan")
+MARGINFI_WITHDRAW = get_anchor_discriminator("lending_account_withdraw")
+MARGINFI_REPAY = get_anchor_discriminator("lending_account_repay")
 
 # CU Profiles — single source of truth for all compute unit limits (P0 Priority)
 # Replace every hardcoded set_compute_unit_limit(600000) / (300000) / etc.
@@ -1610,47 +1612,59 @@ class JupiterTxBuilder:
             all_instructions.append(pv_ix)
         # Removed set_compute_unit_price - will be added by build_optimized_transaction
 
-        # 1. Borrow from MarginFi (Flashloan Start — placeholder index)
+        # 1. MarginFi Flashloan Start (3 accounts: mfi_account, wallet, ixs_sysvar)
         borrow_ix = self.build_marginfi_start_flashloan_ix(
-            mfi_program,
-            mfi_account,
-            wallet,
-            bank,
-            vault,
-            vault_auth,
-            user_sol_ata,
-            sol_prog_id,
-            borrow_amount_lamports,
-            [0],
+            mfi_program=mfi_program,
+            mfi_account=mfi_account,
+            wallet=wallet,
+            bank=bank,
+            user_token_account=user_sol_ata,
+            vault=vault,
+            vault_auth=vault_auth,
+            token_program=sol_prog_id,
+            amount=borrow_amount_lamports,
+            instruction_indices=[len(all_instructions) + 2],  # Points to repay instruction index
         )
         all_instructions.append(borrow_ix)
 
-        # 2. DEX Swaps
+        # 2. Withdraw from bank (actual token transfer) - Phase 50 MarginFi Protocol Fix
+        withdraw_ix = self.build_marginfi_withdraw_ix(
+            mfi_program=mfi_program,
+            mfi_account=mfi_account,
+            wallet=wallet,
+            bank=bank,
+            user_token_account=user_sol_ata,
+            vault=vault,
+            vault_auth=vault_auth,
+            token_program=sol_prog_id,
+            amount=borrow_amount_lamports,
+        )
+        all_instructions.append(withdraw_ix)
+
+        # 3. DEX Swaps
         all_instructions.extend(dex_swap_instructions)
 
-        # 4. SPL repay transfer, then MarginFi Flashloan End
-        transfer_repay_ix = spl_transfer(
-            TransferParams(
-                program_id=sol_prog_id,
-                source=user_sol_ata,
-                dest=vault,
-                owner=wallet,
-                amount=borrow_amount_lamports,
-                signers=[],
-            )
+        # 4. Repay via MarginFi (updates liability state correctly) - Phase 50 Fix
+        repay_ix = self.build_marginfi_repay_ix(
+            mfi_program=mfi_program,
+            mfi_account=mfi_account,
+            wallet=wallet,
+            bank=bank,
+            user_token_account=user_sol_ata,
+            vault=vault,
+            vault_auth=vault_auth,
+            token_program=sol_prog_id,
+            amount=borrow_amount_lamports,
         )
-        repay_ix = self.build_marginfi_end_flashloan_ix(
+        all_instructions.append(repay_ix)
+
+        # 5. MarginFi Flashloan End - validates completion (only 2 accounts)
+        end_ix = self.build_marginfi_end_flashloan_ix(
             mfi_program,
             mfi_account,
             wallet,
-            bank,
-            vault,
-            vault_auth,
-            user_sol_ata,
-            sol_prog_id,
         )
-        all_instructions.append(transfer_repay_ix)
-        all_instructions.append(repay_ix)
+        all_instructions.append(end_ix)
 
         # Flash Loan Pivot — exit swap (USDC → SOL): run AFTER arb repay so profit
         # is converted into the borrow asset (SOL) before returning to MarginFi.
@@ -2219,17 +2233,11 @@ class JupiterTxBuilder:
             "Sysvar1nstructions1111111111111111111111111"
         )
 
-        # СТРОГИЙ ПОРЯДОК АККАУНТОВ ДЛЯ MARGINFI V2 FLASHLOAN START (Сортировка отключена!)
-        # MarginFi v2 expects accounts in fixed positions - sorting breaks the contract
-        # Order matches MarginFi IDL exactly: account, signer, bank, destination, vault, vault_auth, token_program, sysvar
+        # MarginFi v2 lending_account_start_flashloan expects ONLY 3 accounts per spec:
+        # marginfi_account (writable), signer (wallet, signer/writable), ixs_sysvar (readonly)
         account_metas = [
             AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
             AccountMeta(pubkey=wallet, is_signer=True, is_writable=True),
-            AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
-            AccountMeta(pubkey=user_token_account, is_signer=False, is_writable=True),
-            AccountMeta(pubkey=vault, is_signer=False, is_writable=True),
-            AccountMeta(pubkey=vault_auth, is_signer=False, is_writable=False),
-            AccountMeta(pubkey=token_program, is_signer=False, is_writable=False),
             AccountMeta(pubkey=sysvar_instructions, is_signer=False, is_writable=False),
         ]
 
@@ -2260,15 +2268,88 @@ class JupiterTxBuilder:
         """
         data = MARGINFI_FLASHLOAN_END  # Only discriminator, no amount
 
-        # СТРОГИЙ ПОРЯДОК АККАУНТОВ ДЛЯ MARGINFI V2 END FLASHLOAN (Сортировка отключена!)
-        # MarginFi v2 expects 6 accounts in fixed positions
-        # Order: account, signer, bank, source_token, vault, token_program
+        # MarginFi v2 end_flashloan expects only 2 accounts per spec:
+        # marginfi_account (writable), signer (wallet)
+        account_metas = [
+            AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=wallet, is_signer=True, is_writable=False),
+        ]
+
+        return Instruction(
+            program_id=mfi_program,
+            accounts=account_metas,
+            data=data,
+        )
+
+    def build_marginfi_withdraw_ix(
+        self,
+        mfi_program: Pubkey,
+        mfi_account: Pubkey,
+        wallet: Pubkey,
+        bank: Pubkey,
+        user_token_account: Pubkey,
+        vault: Pubkey,
+        vault_auth: Pubkey,
+        token_program: Pubkey,
+        amount: int,
+    ) -> Instruction:
+        """Build MarginFi lending_account_withdraw instruction.
+
+        Withdraws tokens from the bank to user's token account.
+        This is the actual borrow step after start_flashloan.
+        """
+        import struct
+        data = (
+            MARGINFI_WITHDRAW
+            + amount.to_bytes(8, "little")
+        )
+
+        account_metas = [
+            AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=wallet, is_signer=True, is_writable=False),
+            AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=user_token_account, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=vault, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=vault_auth, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=token_program, is_signer=False, is_writable=False),
+        ]
+
+        return Instruction(
+            program_id=mfi_program,
+            accounts=account_metas,
+            data=data,
+        )
+
+    def build_marginfi_repay_ix(
+        self,
+        mfi_program: Pubkey,
+        mfi_account: Pubkey,
+        wallet: Pubkey,
+        bank: Pubkey,
+        user_token_account: Pubkey,
+        vault: Pubkey,
+        vault_auth: Pubkey,
+        token_program: Pubkey,
+        amount: int,
+    ) -> Instruction:
+        """Build MarginFi lending_account_repay instruction.
+
+        Repays borrowed tokens back to the bank.
+        This properly updates the account's liability state.
+        """
+        import struct
+        data = (
+            MARGINFI_REPAY
+            + amount.to_bytes(8, "little")
+        )
+
         account_metas = [
             AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
             AccountMeta(pubkey=wallet, is_signer=True, is_writable=True),
             AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
             AccountMeta(pubkey=user_token_account, is_signer=False, is_writable=True),
             AccountMeta(pubkey=vault, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=vault_auth, is_signer=False, is_writable=False),
             AccountMeta(pubkey=token_program, is_signer=False, is_writable=False),
         ]
 

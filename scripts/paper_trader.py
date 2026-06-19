@@ -185,4 +185,9 @@ class PaperTrader:
                 await self.session.close()
 
 if __name__ == "__main__":
-    asyncio.run(PaperTrader().run())
+    try:
+        import uvloop
+        uvloop.run(PaperTrader().run())
+    except ImportError:
+        import asyncio
+        asyncio.run(PaperTrader().run())

@@ -1817,8 +1817,10 @@ class RPCManager:
                 "params": [account_address],
             }
             rpc_url = self.get_rpc()
-            async with aiohttp.ClientSession() as session:
-                async with session.post(rpc_url, json=payload, timeout=3.0) as resp:
+            from src.ingest.rpc_multiplexing import DoHResolver
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), family=socket.AF_INET)
+            async with aiohttp.ClientSession(connector=connector) as session:
+                async with session.post(rpc_url, json=payload, timeout=3.0, ssl=False) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         return data.get("result", {}).get("value")
@@ -6640,33 +6642,37 @@ async def run():
                 await send_balance_alert(current_balance, initial_balance)
                 break
     finally:
-        logger.info("🛑 Shutting down arbitrage engine components...")
+        logger.debug("🛑 Shutting down arbitrage engine components...")
         
-        # 1. Сначала отменяем все фоновые задачи
+        # 1. Принудительно отменяем все фоновые задачи ДО закрытия сессии
         for task in list(shared_state.active_tasks):
             if not task.done():
                 task.cancel()
         
-        # 2. Даем им время завершиться
+        # 2. Ждем их корректного завершения
         if shared_state.active_tasks:
             await asyncio.gather(*shared_state.active_tasks, return_exceptions=True)
-        
-        # 3. Теперь безопасно закрываем сессию
+            
+        # 3. AsyncLogger: flush
+        try:
+            if "logger_obj" in locals() and logger_obj:
+                await logger_obj.stop()
+        except Exception:
+            pass
+
+        # 4. Только теперь безопасно закрываем HTTP сессию
         if "session" in locals() and session and not session.closed:
             await session.close()
-        
-        # AsyncLogger: flush remaining trade records before exit
-        try:
-            if "logger_obj" in locals():
-                await logger_obj.stop()
-        except Exception as _log_stop_err:
-            logger.debug(f"Async trade logger stop error: {_log_stop_err}")
-        
-        await jito_executor.stop()
-        await helius_webhook_handler.stop()
-        await data_aggregator.stop_batch_writer()
-        if cfg.JITO_SNIPER_ENABLED:
+
+        if 'jito_executor' in locals() and jito_executor:
+            await jito_executor.stop()
+        if 'helius_webhook_handler' in locals() and helius_webhook_handler:
+            await helius_webhook_handler.stop()
+        if 'data_aggregator' in locals() and data_aggregator:
+            await data_aggregator.stop_batch_writer()
+        if cfg.JITO_SNIPER_ENABLED and jito_tip_manager:
             await jito_tip_manager.stop()
+        if jito_pool_listener:
             await jito_pool_listener.stop()
 
 
@@ -7163,7 +7169,26 @@ if __name__ == "__main__":
     _convert_tokens_to_pubkeys()
     try:
         import uvloop
-        uvloop.run(run())  # uvloop.run() properly manages libuv lifecycle for Python 3.11/3.12/3.13
+        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+        logger.info("⚡ uvloop установлен (максимальная скорость)")
     except ImportError:
-        import asyncio
-        asyncio.run(run())
+        logger.info("ℹ️ uvloop не найден, используем стандартный asyncio")
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(run())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user.")
+    finally:
+        try:
+            pending = asyncio.all_tasks(loop=loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.run_until_complete(loop.shutdown_default_executor())
+        except Exception:
+            pass
+        loop.close()

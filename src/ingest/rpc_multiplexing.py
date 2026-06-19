@@ -1,167 +1,103 @@
 """RPC Multiplexing Engine for racing multiple WebSocket providers."""
 
+import socket
 import asyncio
-import orjson
 import logging
 import time
-import socket
 import aiohttp
-import ssl
-from typing import Optional
-from aiohttp.resolver import AbstractResolver
-
-logger = logging.getLogger(__name__)
-
-async def _fetch_one_doh(session: aiohttp.ClientSession, url: str, host_header: str, hostname: str, accept_header: str) -> list[str]:
-    """Асинхронный опрос одного DoH-провайдера напрямую по IP."""
-    target_url = f"{url}?name={hostname}&type=A"
-    headers = {
-        "Host": host_header,
-        "Accept": accept_header
-    }
-    try:
-        # ssl=False для обхода macOS Keychain SSL-проверки на сырых IP-адресах
-        async with session.get(target_url, headers=headers, timeout=aiohttp.ClientTimeout(total=1.0), ssl=False) as resp:
-            if resp.status == 200:
-                data = orjson.loads(await resp.read())
-                ips = []
-                for answer in data.get("Answer", []):
-                    if answer.get("type") == 1:  # A record
-                        ips.append(answer["data"])
-                return ips
-    except Exception:
-        pass
-    return []
-
-class DoHResolver(AbstractResolver):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.doh_session: Optional[aiohttp.ClientSession] = None
-
-    async def _get_doh_session(self) -> aiohttp.ClientSession:
-        """Инициализация изолированной сессии без рекурсивного резолвера."""
-        if self.doh_session is None or self.doh_session.closed:
-            # Подключаемся строго по IP, поэтому кастомный резолвер здесь не нужен
-            connector = aiohttp.TCPConnector(family=socket.AF_INET)
-            self.doh_session = aiohttp.ClientSession(connector=connector)
-        return self.doh_session
-
-    async def resolve(self, host: str, port: int = 0, family: int = 0) -> list[dict]:
-        # Fast path: пропускаем резолв для сырых IP-адресов
-        try:
-            socket.inet_aton(host)
-            return [{
-                'hostname': host,
-                'host': host,
-                'port': port,
-                'family': socket.AF_INET,
-                'proto': 0,
-                'flags': 0
-            }]
-        except socket.error:
-            pass
-
-        # Отказоустойчивый азиатско-европейский пул DoH-провайдеров
-        # Alibaba (СНГ), AdGuard (Европа), Cloudflare, Google — обходят мобильные блокировки
-        providers = [
-            ("https://223.5.5.5/resolve", "dns.alidns.com", "application/json"),
-            ("https://94.140.14.140/resolve", "dns.adguard-dns.com", "application/json"),
-            ("https://1.0.0.1/dns-query", "cloudflare-dns.com", "application/dns-json"),
-            ("https://8.8.8.8/resolve", "dns.google", "application/json"),
-        ]
-
-        session = await self._get_doh_session()
-        
-        # ─── КОРРЕКТНЫЙ ПАРАЛЛЕЛЬНЫЙ ЗАПУСК ТАСКОВ (Python 3.11/3.12/3.13) ───
-        # Явно оборачиваем корутины в Tasks
-        tasks = []
-        for url, host_header, accept in providers:
-            tasks.append(
-                asyncio.create_task(
-                    _fetch_one_doh(session, url, host_header, host, accept)
-                )
-            )
-
-        ips = []
-        # Выполняем гонку (Racing) — первый успешный ответ выигрывает
-        for coro in asyncio.as_completed(tasks):
-            try:
-                res = await coro
-                if res:
-                    ips = res
-                    # Победа: немедленно отменяем все остальные незавершенные задачи
-                    for t in tasks:
-                        if not t.done():
-                            t.cancel()
-                    break
-            except Exception:
-                pass
-
-        # Финальная очистка повисших тасков во избежание утечки "never awaited"
-        for t in tasks:
-            if not t.done():
-                t.cancel()
-
-        # Если DoH-пул не вернул IP, делаем безопасный асинхронный фолбек на системный DNS
-        if not ips:
-            try:
-                infos = await asyncio.to_thread(socket.getaddrinfo, host, port, socket.AF_INET)
-                if not infos:
-                    raise socket.gaierror(socket.EAI_NONAME, "Name or service not known")
-                return [
-                    {
-                        'hostname': host,
-                        'host': info[4][0],
-                        'port': port,
-                        'family': socket.AF_INET,
-                        'proto': 0,
-                        'flags': 0
-                    }
-                    for info in infos
-                ]
-            except Exception:
-                # Избегаем StopIteration -> RuntimeError на Python 3.13
-                raise socket.gaierror(socket.EAI_NONAME, "Name or service not known") from None
-
-        return [
-            {
-                'hostname': host,
-                'host': ip,
-                'port': port,
-                'family': socket.AF_INET,
-                'proto': 0,
-                'flags': 0
-            }
-            for ip in ips
-        ]
-
-    async def close(self) -> None:
-        """Required by AbstractResolver for cleanup."""
-        if self.doh_session and not self.doh_session.closed:
-            await self.doh_session.close()
-
-    def __del__(self):
-        """Cleanup unclosed session on object destruction."""
-        if self.doh_session and not self.doh_session.closed:
-            try:
-                loop = asyncio.get_running_loop()
-                if loop.is_running():
-                    loop.create_task(self.doh_session.close())
-            except RuntimeError:
-                pass
-
+import orjson
+import urllib3
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
+from aiohttp.resolver import AbstractResolver
 from contextlib import asynccontextmanager
 import hashlib
-from solders.keypair import Keypair
 from decimal import Decimal
-from .jito_bundle_handler import JitoBundleHandler, BackrunTrigger, _set_global_price_matrix
+from solders.keypair import Keypair
+
+try:
+    import requests
+except ImportError:
+    requests = None
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 if TYPE_CHECKING:
     from .optimal_trade_sizer import OptimalTradeSizer, VelocitySlippageManager
     from .pre_trade_guard import PreTradeGuard
 
 logger = logging.getLogger(__name__)
+
+# In-memory DNS cache to prevent spamming DoH APIs (TTL: 5 minutes)
+_DNS_CACHE = {}
+
+def _sync_doh_query(hostname: str) -> list[str]:
+    """Synchronous DoH query using RAW IP addresses (bypasses ALL local DNS blocks)."""
+    
+    # 1. Check local cache (0ms latency)
+    cache_entry = _DNS_CACHE.get(hostname)
+    if cache_entry and time.time() - cache_entry['time'] < 300:
+        return cache_entry['ips']
+
+    # 2. RAW IP Providers - connect directly to IP, bypassing system DNS
+    providers = [
+        ("https://1.0.0.1/dns-query", "cloudflare-dns.com", "application/dns-json"),
+        ("https://223.5.5.5/resolve", "dns.alidns.com", "application/json"),
+        ("https://8.8.4.4/resolve", "dns.google", "application/json")
+    ]
+    
+    for url_base, host_header, accept in providers:
+        try:
+            if requests is None:
+                continue
+            resp = requests.get(
+                f"{url_base}?name={hostname}&type=A",
+                headers={"Host": host_header, "Accept": accept, "User-Agent": "Mozilla/5.0"},
+                verify=False,
+                timeout=2.0
+            )
+            if resp.status_code == 200:
+                data = resp.json()
+                ips = [ans["data"] for ans in data.get("Answer", []) if ans.get("type") == 1]
+                if ips:
+                    _DNS_CACHE[hostname] = {'ips': ips, 'time': time.time()}
+                    return ips
+        except Exception as e:
+            logger.debug(f"Raw IP DoH via {url_base} failed for {hostname}: {e}")
+            continue
+
+    return []
+
+class DoHResolver(AbstractResolver):
+    """Zero-leak DNS-over-HTTPS resolver for aiohttp."""
+    
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    async def resolve(self, host: str, port: int = 0, family: int = 0) -> list[dict]:
+        # Fast path for raw IP addresses
+        try:
+            socket.inet_aton(host)
+            return [{'hostname': host, 'host': host, 'port': port, 'family': family, 'proto': 0, 'flags': 0}]
+        except socket.error:
+            pass
+
+        # Thread offload to prevent Event Loop freezing
+        ips = await asyncio.to_thread(_sync_doh_query, host)
+        
+        # Safe fallback to System DNS if all DoH fails
+        if not ips:
+            try:
+                infos = await asyncio.to_thread(socket.getaddrinfo, host, port, family)
+                return [{'hostname': host, 'host': info[4][0], 'port': port, 'family': family, 'proto': 0, 'flags': 0} for info in infos]
+            except Exception:
+                raise socket.gaierror(socket.EAI_NONAME, f"DoH and System DNS resolution failed for {host}")
+
+        return [{'hostname': host, 'host': ip, 'port': port, 'family': family, 'proto': 0, 'flags': 0} for ip in ips]
+
+    async def close(self) -> None:
+        pass
+
+from .jito_bundle_handler import JitoBundleHandler, BackrunTrigger, _set_global_price_matrix
 
 class WSSConnection:
     """Manages a single WebSocket connection with auto-reconnect."""

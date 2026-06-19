@@ -20,7 +20,8 @@ async def _fetch_one_doh(session: aiohttp.ClientSession, url: str, host_header: 
         "Accept": accept_header
     }
     try:
-        async with session.get(target_url, headers=headers, timeout=aiohttp.ClientTimeout(total=1.0)) as resp:
+        # ssl=False для обхода macOS Keychain SSL-проверки на сырых IP-адресах
+        async with session.get(target_url, headers=headers, timeout=aiohttp.ClientTimeout(total=1.0), ssl=False) as resp:
             if resp.status == 200:
                 data = orjson.loads(await resp.read())
                 ips = []

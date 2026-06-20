@@ -18,7 +18,7 @@ class DataAggregator:
 
     def __init__(self, db_path: str = "bot_history.db"):
         self.db_path = db_path
-        self.write_queue = asyncio.Queue()
+        self.write_queue = asyncio.Queue(maxsize=5000)
         self.write_task = None
         self.running = False
         self._ensure_db_exists()
@@ -160,7 +160,10 @@ class DataAggregator:
             }
 
             # Add to batch queue instead of direct DB write
-            self.write_queue.put_nowait(data)
+            try:
+                self.write_queue.put_nowait(data)
+            except asyncio.QueueFull:
+                logger.debug("Analytics queue full, dropping event to save memory.")
 
         except Exception as e:
             logger.warning(f"Failed to queue event {event_type}: {e}")

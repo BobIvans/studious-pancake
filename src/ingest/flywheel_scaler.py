@@ -33,7 +33,7 @@ ATA_RENT_SOL = 0.00204
 
 SCALING_GRID = [
     # Tier 1: Survival Phase (0.015 - 0.05 SOL) - SOL & Stables only, tightest parameters
-    ScalingTier(0.0, 0.05, 1, MANEUVER_BUDGET_SOL, 0.50, 0.0005, ["SS", "SL"], 15),
+    ScalingTier(0.0, 0.05, 1, MANEUVER_BUDGET_SOL, 0.50, 0.00005, ["SS", "SL"], 15),
     # Tier 2: Momentum Phase (0.05 - 0.20 SOL) - Enable major pairs
     ScalingTier(0.05, 0.20, 2, 0.50, 0.40, 0.0010, ["SS", "SL", "SM"], 25),
     # Tier 3: Growth Phase (0.20 - 1.00 SOL) - Introduce wrappers & stable yield ladders

@@ -33,31 +33,19 @@ class FlashPivotEngine:
         self.pool_state_manager = pool_state_manager
         self.stableswap_math = stableswap_math
 
-        # Available flashloan assets and their pivot chains
+        # Available flashloan assets and their pivot chains (Only SOL/USDC - MarginFi supported)
         self.flash_assets = {
-            "USDC": ["SOL", "USDT", "wBTC"],  # If USDC unavailable, try SOL->USDC etc.
-            "SOL": ["USDC", "USDT", "wBTC"],
-            "USDT": ["USDC", "SOL", "wBTC"],
-            "wBTC": ["USDC", "SOL", "USDT"],
+            "USDC": ["SOL"],  # Если USDC занят, берем SOL
+            "SOL": ["USDC"],  # Если SOL занят, берем USDC
         }
 
-        # Flashloan providers (MarginFi, Kamino, Solend)
+        # Flashloan providers (MarginFi only - primary cycle)
         self.providers = {
             "marginfi": {
                 "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
-                "supported_assets": ["USDC", "SOL", "USDT", "wBTC"],
-                "fee": 0  # 0% fee
-            },
-            "kamino": {
-                "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8bojiCLxnsfmk",
-                "supported_assets": ["USDC", "SOL", "USDT"],
-                "fee": 0  # 0% fee
-            },
-            "solend": {
-                "program_id": "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpVF",  # Placeholder
                 "supported_assets": ["USDC", "SOL"],
-                "fee": 0.001  # 0.1% fee
-            }
+                "fee": 0  # 0% fee
+            },
         }
 
     async def check_pivot_needed(self, desired_asset: str,

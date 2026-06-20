@@ -1635,7 +1635,7 @@ class JupiterTxBuilder:
             all_instructions.append(pv_ix)
         # Removed set_compute_unit_price - will be added by build_optimized_transaction
 
-        # 1. MarginFi Flashloan Start (3 accounts: mfi_account, wallet, ixs_sysvar)
+# 1. MarginFi Flashloan Start (3 accounts: mfi_account, wallet, ixs_sysvar)
         borrow_ix = self.build_marginfi_start_flashloan_ix(
             mfi_program=mfi_program,
             mfi_account=mfi_account,
@@ -1647,7 +1647,7 @@ class JupiterTxBuilder:
             token_program=sol_prog_id,
             amount=borrow_amount_lamports,
             instruction_indices=[len(all_instructions) + 2],  # Points to repay instruction index
-)
+        )
         all_instructions.append(borrow_ix)
 
         # 2. Withdraw from bank (actual token transfer) - Phase 50 MarginFi Protocol Fix
@@ -1665,17 +1665,17 @@ class JupiterTxBuilder:
         )
         all_instructions.append(withdraw_ix)
 
-# 3. DEX Swaps
-         all_instructions.extend(dex_swap_instructions)
+        # 3. DEX Swaps
+        all_instructions.extend(dex_swap_instructions)
 
-         # 4. Flash Loan Pivot — exit swap (USDC → SOL) BEFORE repay
-         # При пивоте: бот занял SOL, свапнул в USDC, заработал профит в USDC,
-         # свап обратно в SOL ДОЛЖЕН быть ДО возврата долга, иначе InsufficientFunds.
-         for pv_ix in exit_pivot_ixs or []:
-             all_instructions.append(pv_ix)
+        # 4. Flash Loan Pivot — exit swap (USDC → SOL) BEFORE repay
+        # При пивоте: бот занял SOL, свапнул в USDC, заработал профит в USDC,
+        # свап обратно в SOL ДОЛЖЕН быть ДО возврата долга, иначе InsufficientFunds.
+        for pv_ix in exit_pivot_ixs or []:
+            all_instructions.append(pv_ix)
 
-         # 5. Repay via MarginFi (updates liability state correctly) - Phase 50 Fix
-         repay_ix = self.build_marginfi_repay_ix(
+        # 5. Repay via MarginFi (updates liability state correctly) - Phase 50 Fix
+        repay_ix = self.build_marginfi_repay_ix(
             mfi_program=mfi_program,
             mfi_group=MARGINFI_GROUP,
             mfi_account=mfi_account,
@@ -1689,7 +1689,7 @@ class JupiterTxBuilder:
         )
         all_instructions.append(repay_ix)
 
-        # 5. MarginFi Flashloan End - validates completion (only 2 accounts)
+        # 6. MarginFi Flashloan End - validates completion (only 2 accounts)
         end_ix = self.build_marginfi_end_flashloan_ix(
             mfi_program,
             mfi_account,

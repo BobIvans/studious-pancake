@@ -569,14 +569,13 @@ class XStockOracleLagStrategy:
                         "token_out": token_mint,
                         "amount": float(trade_amount) / 1e6,
                         "actual_profit": float(actual_profit_sol),
-                        "balance_after": shared_state.stats.get("virtual_balance", 0.0) + float(actual_profit_sol),
+                        "balance_after": shared_state.stats.get("virtual_balance", 0.0),
                         "dex_pair": f"{ticker_name}/USDC",
                         "confidence": 1.0
                     }
                     await shared_state.data_aggregator.log_paper_trade(paper_trade_record)
                 
                 async with shared_state.stats_lock:
-                    shared_state.stats["virtual_balance"] += float(actual_profit_sol)
                     shared_state.stats["trades"] += 1
                     
                 return

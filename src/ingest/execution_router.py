@@ -585,7 +585,7 @@ class ExecutionRouter:
         """Execute xStock oracle lag arbitrage opportunity with Flash Loan Pivot support."""
         try:
             from .tx_builder import JupiterTxBuilder
-tx_builder = JupiterTxBuilder(
+            tx_builder = JupiterTxBuilder(
                 session=self.session,
                 rpc_getter=self.rpc_getter,
             )

@@ -10,6 +10,7 @@ from typing import Any, Dict, List, Optional, Set
 from decimal import Decimal
 import aiohttp
 from solders.pubkey import Pubkey
+from solders.hash import Hash
 from solders.system_program import TransferParams, transfer
 from solders.transaction import VersionedTransaction
 from solders.message import MessageV0
@@ -412,7 +413,7 @@ class DustSweeper:
             logger.error(f"Transaction send failed: {e}")
             return False
 
-    async def _get_recent_blockhash(self) -> Pubkey:
+    async def _get_recent_blockhash(self) -> Hash:
         """Get recent blockhash."""
         try:
             payload = {
@@ -427,13 +428,13 @@ class DustSweeper:
                     data = await resp.json()
                     blockhash_str = data.get("result", {}).get("value", {}).get("blockhash")
                     if blockhash_str:
-                        return Pubkey.from_string(blockhash_str)
+                        return Hash.from_string(blockhash_str)
 
         except Exception as e:
             logger.debug(f"Blockhash fetch failed: {e}")
 
         # Fallback
-        return Pubkey.from_string("11111111111111111111111111111112")
+        return Hash.from_string("11111111111111111111111111111111")
 
     def get_dust_stats(self) -> Dict[str, Any]:
         """Get statistics about dust sweeping."""

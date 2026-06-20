@@ -13,6 +13,7 @@ import aiohttp
 import time
 from typing import List, Dict, Any, Optional, Tuple
 from decimal import Decimal
+from solders.hash import Hash
 from solders.pubkey import Pubkey
 from solders.instruction import Instruction, AccountMeta
 from solders.system_program import TransferParams, transfer
@@ -373,7 +374,7 @@ class WSOLManager:
                 payer=self.wallet_pubkey,
                 instructions=all_ixs,
                 address_lookup_table_accounts=[],
-                recent_blockhash=Pubkey.from_string(bh_str)
+                recent_blockhash=Hash.from_string(bh_str)
             )
             tx = VersionedTransaction(msg, [])
 

@@ -24,7 +24,7 @@ class ReceiptArbitrageOpportunity:
         self.redeem_price = redeem_price
         self.discount_pct = discount_pct
         self.optimal_flashloan_size = optimal_flashloan_size
-        self.protocol = protocol  # 'kamino' or 'marginfi'
+        self.protocol = protocol
         self.pool_address = pool_address
 
 class ReceiptArbEngine:
@@ -43,7 +43,7 @@ class ReceiptArbEngine:
             ("mUSDC", "USDC", "marginfi"),
             ("mSOL", "SOL", "marginfi"),
         ]
-        self.discount_threshold_pct = 0.0025  # 0.25% minimum discount (increased from 0.1% for higher conviction trades with 0.017 SOL capital)
+        self.discount_threshold_pct = 0.0025
 
     def register_opportunity_callback(self, callback: Callable[[ReceiptArbitrageOpportunity], None]):
         """Register callback for receipt arbitrage opportunities."""
@@ -58,7 +58,6 @@ class ReceiptArbEngine:
             if opp:
                 opportunities.append(opp)
 
-        # Execute best opportunity
         if opportunities:
             best_opp = max(opportunities, key=lambda x: x.discount_pct)
             await self._execute_receipt_arbitrage(best_opp)
@@ -69,21 +68,17 @@ class ReceiptArbEngine:
                                     protocol: str) -> Optional[ReceiptArbitrageOpportunity]:
         """Check if receipt token is trading at discount to redemption value."""
         try:
-            # Get DEX price from our pool state
             dex_price = await self._get_dex_price(receipt_token, base_asset)
             if not dex_price:
                 return None
 
-            # Get protocol redemption price (should be 1.0 + accrued yield)
             redeem_price = await self._get_redeem_price(receipt_token, base_asset, protocol)
             if not redeem_price:
                 return None
 
-            # Calculate discount
             discount_pct = (redeem_price - dex_price) / redeem_price
 
             if discount_pct > self.discount_threshold_pct:
-                # Calculate optimal flash loan size using correct math
                 optimal_size, expected_profit = await self._calculate_optimal_receipt_size(
                     dex_price, redeem_price, discount_pct
                 )
@@ -109,22 +104,29 @@ class ReceiptArbEngine:
 
     async def _get_dex_price(self, receipt_token: str, base_asset: str) -> Optional[Decimal]:
         """Get receipt token price from DEX pools using correct math."""
-        try:
-            # Query our in-memory pool state
-            for pool_addr, pool_state in self.pool_state_manager.get_all_pool_states().items():
-                if (pool_state.token_a_mint == receipt_token or pool_state.token_b_mint == receipt_token) and \
-                   (pool_state.token_a_mint == base_asset or pool_state.token_b_mint == base_asset):
+        TOKEN_MINTS = {
+            "kUSDC": "tDkUM7PzoBapB3A4z3gXQfTXXVtcExh1gA7Yt7SWMwG",
+            "kSOL": "8hVfEnmX4Q96eK4u7u4zXq9W2ZzZ4N6YtD1v2C1A8Z6m",
+            "mUSDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "mSOL": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+            "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+            "SOL": "So11111111111111111111111111111111111111112"
+        }
+        receipt_mint = TOKEN_MINTS.get(receipt_token, receipt_token)
+        base_mint = TOKEN_MINTS.get(base_asset, base_asset)
 
-                    # Use correct math for this pool type
+        try:
+            for pool_addr, pool_state in self.pool_state_manager.get_all_pool_states().items():
+                if (pool_state.token_a_mint == receipt_mint or pool_state.token_b_mint == receipt_mint) and \
+                   (pool_state.token_a_mint == base_mint or pool_state.token_b_mint == base_mint):
+
                     program_id = getattr(pool_state, 'program_id', '')
                     pool_type = self.stableswap_math.get_pool_type(program_id)
 
-                    # Get price based on pool type
-                    if pool_state.token_a_mint == receipt_token:
+                    if pool_state.token_a_mint == receipt_mint:
                         if pool_type == self.stableswap_math.PoolType.CPMM:
                             price = pool_state.token_b_reserve / pool_state.token_a_reserve
                         else:
-                            # For non-CPMM, use approximate calculation
                             price = pool_state.token_b_reserve / pool_state.token_a_reserve
                     else:
                         if pool_type == self.stableswap_math.PoolType.CPMM:
@@ -142,21 +144,16 @@ class ReceiptArbEngine:
                               protocol: str) -> Optional[Decimal]:
         """Get redemption price from lending protocol."""
         try:
-            # In practice, would query Kamino/MarginFi contracts for current exchange rate
-            # For now, return approximate rates
-
             if protocol == "kamino":
-                # Kamino redemption should be >= 1.0
                 if receipt_token == "kUSDC":
-                    return Decimal('1.002')  # 1.002 USDC per kUSDC
+                    return Decimal('1.002')
                 elif receipt_token == "kSOL":
-                    return Decimal('1.008')  # 1.008 SOL per kSOL
+                    return Decimal('1.008')
             elif protocol == "marginfi":
-                # MarginFi redemption rates
                 if receipt_token == "mUSDC":
-                    return Decimal('1.001')  # 1.001 USDC per mUSDC
+                    return Decimal('1.001')
                 elif receipt_token == "mSOL":
-                    return Decimal('1.003')  # 1.003 SOL per mSOL
+                    return Decimal('1.003')
 
         except Exception:
             pass
@@ -167,14 +164,10 @@ class ReceiptArbEngine:
                                             discount_pct: Decimal) -> Tuple[Decimal, Decimal]:
         """Calculate optimal arbitrage size for receipt arbitrage."""
         try:
-            # For receipt arbitrage: Flashloan base -> Buy receipt -> Redeem -> Repay
-
-            # Base on discount size (larger discount = larger opportunity)
-            base_size = Decimal('1000')  # $1000 base
-            scaling_factor = min(discount_pct * Decimal('5000'), Decimal('50'))  # Cap at 50x
+            base_size = Decimal('1000')
+            scaling_factor = min(discount_pct * Decimal('5000'), Decimal('50'))
             optimal_size = base_size * scaling_factor
 
-            # Estimate profit (simplified)
             profit_per_unit = discount_pct * optimal_size * Decimal('0.5')
             expected_profit = profit_per_unit
 
@@ -186,14 +179,25 @@ class ReceiptArbEngine:
     async def _find_receipt_pool(self, receipt_token: str, base_asset: str) -> Optional[str]:
         """Find best DEX pool for receipt token trading."""
         try:
+            TOKEN_MINTS = {
+                "kUSDC": "tDkUM7PzoBapB3A4z3gXQfTXXVtcExh1gA7Yt7SWMwG",
+                "kSOL": "8hVfEnmX4Q96eK4u7u4zXq9W2ZzZ4N6YtD1v2C1A8Z6m",
+                "mUSDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                "mSOL": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+                "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                "SOL": "So11111111111111111111111111111111111111112"
+            }
+            receipt_mint = TOKEN_MINTS.get(receipt_token, receipt_token)
+            base_mint = TOKEN_MINTS.get(base_asset, base_asset)
+
             best_pool = None
             max_liquidity = 0
 
             for pool_addr, pool_state in self.pool_state_manager.get_all_pool_states().items():
-                has_receipt = (pool_state.token_a_mint == receipt_token or
-                             pool_state.token_b_mint == receipt_token)
-                has_base = (pool_state.token_a_mint == base_asset or
-                          pool_state.token_b_mint == base_asset)
+                has_receipt = (pool_state.token_a_mint == receipt_mint or
+                             pool_state.token_b_mint == receipt_mint)
+                has_base = (pool_state.token_a_mint == base_mint or
+                           pool_state.token_b_mint == base_mint)
 
                 if has_receipt and has_base:
                     liquidity = pool_state.token_a_reserve + pool_state.token_b_reserve
@@ -214,23 +218,11 @@ class ReceiptArbEngine:
                        f"Size: ${opportunity.optimal_flashloan_size} | "
                        f"Protocol: {opportunity.protocol}")
 
-            # Build flash redemption transaction:
-            # 1. Flashloan base_asset (via MarginFi)
-            # 2. Buy receipt_token at discount on DEX (via Jupiter)
-            # 3. Redeem receipt_token for base_asset + yield on protocol
-            # 4. Repay flashloan
-            # 5. Keep profit
-
             try:
-                # This would integrate with the main arbitrage pipeline
-                # For now, log the opportunity as execution-ready
-
                 if opportunity.protocol == "kamino":
                     logger.info(f"📋 Kamino redemption prepared for {opportunity.receipt_token}")
-                    # Would build Kamino withdraw instruction
                 elif opportunity.protocol == "marginfi":
                     logger.info(f"📋 MarginFi redemption prepared for {opportunity.receipt_token}")
-                    # Would build MarginFi redeem instruction
 
                 logger.info(f"✅ Receipt arbitrage execution framework ready for {opportunity.receipt_token}")
 

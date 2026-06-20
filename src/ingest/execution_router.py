@@ -588,13 +588,13 @@ class ExecutionRouter:
             tx_builder = JupiterTxBuilder(
                 session=self.session,
                 rpc_getter=self.rpc_getter,
-            )
+)
 
             # Extract opportunity data
             ticker = opportunity["ticker"]
             token_mint = opportunity["token_mint"]
             direction = opportunity["direction"]
-            optimal_size_lamports = opportunity["optimal_size_lamports"]
+            optimal_size_lamports = int(opportunity["optimal_size_lamports"])
             expected_profit_sol = opportunity["expected_profit_sol"]
             circular_quote = opportunity.get("quote")
             dex_swap_instructions = opportunity.get("dex_swap_instructions")

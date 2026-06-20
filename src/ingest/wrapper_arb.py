@@ -112,33 +112,43 @@ class WrapperArbEnforcer:
         
     async def _get_direct_pool_rate(self, from_token: str, to_token: str) -> Optional[Decimal]:
         """Get direct exchange rate from pool (fast-path)."""
+        TOKEN_MINTS = {
+            "cbBTC": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+            "wBTC": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
+            "tBTC": "6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU",
+            "wETH": "7vfCXTUXx5WJV5J7pEeidpXYEPp9UUnQv9YpGP6tpX73",
+            "SOL": "So11111111111111111111111111111111111111112"
+        }
+        from_mint = TOKEN_MINTS.get(from_token, from_token)
+        to_mint = TOKEN_MINTS.get(to_token, to_token)
+
         try:
             # Query our in-memory pool state for direct rate
             # This bypasses the full graph for speed
-            
+
             # Find pools containing both tokens
             candidate_pools = []
             for pool_addr, pool_state in self.pool_state_manager.get_all_pool_states().items():
-                if (pool_state.token_a_mint == from_token or pool_state.token_b_mint == from_token) and \
-                   (pool_state.token_a_mint == to_token or pool_state.token_b_mint == to_token):
+                if (pool_state.token_a_mint == from_mint or pool_state.token_b_mint == from_mint) and \
+                   (pool_state.token_a_mint == to_mint or pool_state.token_b_mint == to_mint):
                     candidate_pools.append(pool_state)
-                    
+
             if not candidate_pools:
                 return None
-                
+
             # Use largest liquidity pool
             best_pool = max(candidate_pools, key=lambda p: p.token_a_reserve + p.token_b_reserve)
-            
+
             # Calculate rate
-            if best_pool.token_a_mint == from_token and best_pool.token_b_mint == to_token:
+            if best_pool.token_a_mint == from_mint and best_pool.token_b_mint == to_mint:
                 rate = best_pool.token_b_reserve / best_pool.token_a_reserve
-            elif best_pool.token_a_mint == to_token and best_pool.token_b_mint == from_token:
+            elif best_pool.token_a_mint == to_mint and best_pool.token_b_mint == from_mint:
                 rate = best_pool.token_a_reserve / best_pool.token_b_reserve
             else:
                 return None
-                
+
             return rate
-            
+
         except Exception:
             return None
             

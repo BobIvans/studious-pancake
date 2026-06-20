@@ -1750,11 +1750,32 @@ class RPCManager:
         self.latencies: Dict[str, float] = {n: 999.0 for n in self.all_nodes}
         self.latest_slot = 0
         self.degraded_nodes: Set[str] = set()
+        self.session: Optional[aiohttp.ClientSession] = None
         
         if not self.all_nodes:
             logger.error("!!! КРИТИЧЕСКАЯ ОШИБКА: RPC ссылки не найдены в .env !!!")
         else:
-            asyncio.create_task(self._latency_ranker())
+            # Task 8: Keep strong reference to background task
+            self.latency_task = asyncio.create_task(self._latency_ranker())
+            shared_state.active_tasks.add(self.latency_task)
+            self.latency_task.add_done_callback(background_task_callback)
+
+    async def _get_session(self) -> aiohttp.ClientSession:
+        if self.session is None or self.session.closed:
+            import os
+            proxy_url = os.getenv("PROXY_URL")
+            if proxy_url and proxy_url.startswith("socks5"):
+                try:
+                    from aiohttp_socks import ProxyConnector
+                    connector = ProxyConnector.from_url(proxy_url, limit=100)
+                except ImportError:
+                    from src.ingest.rpc_multiplexing import DoHResolver
+                    connector = aiohttp.TCPConnector(resolver=DoHResolver(), family=socket.AF_INET, ttl_dns_cache=300)
+            else:
+                from src.ingest.rpc_multiplexing import DoHResolver
+                connector = aiohttp.TCPConnector(resolver=DoHResolver(), family=socket.AF_INET, ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector)
+        return self.session
 
     async def _latency_ranker(self):
         """Fix 63: Background latency ranking every 30s"""
@@ -1762,31 +1783,24 @@ class RPCManager:
             for node in list(self.all_nodes):
                 try:
                     t0 = time.time()
-                    async with aiohttp.ClientSession(
-                        connector=aiohttp.TCPConnector(
-                            family=socket.AF_INET,
-                            resolver=DoHResolver(),
-                            tcp_nodelay=True,
-                            force_close=False,
-                        )
-                    ) as s:
-                        async with s.post(
-                            node,
-                            json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"},
-                            timeout=2,
-                        ) as r:
-                            if r.status == 200:
-                                raw_bytes = await r.read()
-                                data = orjson.loads(raw_bytes)
-                                slot = int(data.get("result", 0))
-                                if slot > self.latest_slot:
-                                    self.latest_slot = slot
-                                if slot < self.latest_slot - 2:
-                                    self.degraded_nodes.add(node)
-                                    logger.warning(f"🐌 Slot Lag Alert: Node {node[:40]}... lagged by {self.latest_slot - slot} slots. Temporarily degraded.")
-                                else:
-                                    self.degraded_nodes.discard(node)
-                                self.latencies[node] = (time.time() - t0) * 1000
+                    s = await self._get_session()
+                    async with s.post(
+                        node,
+                        json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"},
+                        timeout=2,
+                    ) as r:
+                        if r.status == 200:
+                            raw_bytes = await r.read()
+                            data = orjson.loads(raw_bytes)
+                            slot = int(data.get("result", 0))
+                            if slot > self.latest_slot:
+                                self.latest_slot = slot
+                            if slot < self.latest_slot - 2:
+                                self.degraded_nodes.add(node)
+                                logger.warning(f"🐌 Slot Lag Alert: Node {node[:40]}... lagged by {self.latest_slot - slot} slots. Temporarily degraded.")
+                            else:
+                                self.degraded_nodes.discard(node)
+                            self.latencies[node] = (time.time() - t0) * 1000
                 except Exception:
                     self.latencies[node] = 999.0
             await asyncio.sleep(30)
@@ -1817,13 +1831,11 @@ class RPCManager:
                 "params": [account_address],
             }
             rpc_url = self.get_rpc()
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), family=socket.AF_INET)
-            async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.post(rpc_url, json=payload, timeout=3.0, ssl=False) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        return data.get("result", {}).get("value")
+            session = await self._get_session()
+            async with session.post(rpc_url, json=payload, timeout=3.0, ssl=False) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get("result", {}).get("value")
         except Exception as e:
             logger.debug(f"get_token_account_balance failed for {account_address[:8]}: {e}")
         return None

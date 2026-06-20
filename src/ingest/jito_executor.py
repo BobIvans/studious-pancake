@@ -124,11 +124,28 @@ class JitoExecutor:
             "https://api.jito.wtf/api/v1/bundles/tip_floor",
         ]
         mult = {"critical": 2.8, "high": 1.8, "normal": 1.0}.get(priority, 1.0)
-        for ep in endpoints:
-            for attempt in range(3):
+        
+        session_to_use = self.session
+        temp_session = None
+        if session_to_use is None or session_to_use.closed:
+            import os
+            proxy_url = os.getenv("PROXY_URL")
+            if proxy_url and proxy_url.startswith("socks5"):
                 try:
-                    async with aiohttp.ClientSession() as s:
-                        async with s.get(ep) as r:
+                    from aiohttp_socks import ProxyConnector
+                    connector = ProxyConnector.from_url(proxy_url, limit=10)
+                except ImportError:
+                    connector = None
+            else:
+                connector = None
+            temp_session = aiohttp.ClientSession(connector=connector)
+            session_to_use = temp_session
+
+        try:
+            for ep in endpoints:
+                for attempt in range(3):
+                    try:
+                        async with session_to_use.get(ep) as r:
                             if r.status == 200:
                                 data = await r.json()
                                 tip_value = None
@@ -139,11 +156,16 @@ class JitoExecutor:
                                     tip_value = data.get("landed_tips_25th_percentile")
 
                                 if tip_value is not None:
+                                    if temp_session:
+                                        await temp_session.close()
                                     return max(float(tip_value) * mult, 0.00005)
-                except Exception:
-                    await asyncio.sleep(0.7)
-        logger.warning(f"Tip fallback → {default}")
-        return default
+                    except Exception:
+                        await asyncio.sleep(0.7)
+            logger.warning(f"Tip fallback → {default}")
+            return default
+        finally:
+            if temp_session and not temp_session.closed:
+                await temp_session.close()
 
     async def _subscribe_to_tip_stream(self) -> None:
         """Background tip-rotation loop."""

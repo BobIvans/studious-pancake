@@ -6,7 +6,7 @@ import logging
 import time
 import aiohttp
 import orjson
-import urllib3
+import requests
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
 from aiohttp.resolver import AbstractResolver
 from contextlib import asynccontextmanager
@@ -14,83 +14,77 @@ import hashlib
 from decimal import Decimal
 from solders.keypair import Keypair
 
-try:
-    import requests
-except ImportError:
-    requests = None
-
-urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-
 if TYPE_CHECKING:
     from .optimal_trade_sizer import OptimalTradeSizer, VelocitySlippageManager
     from .pre_trade_guard import PreTradeGuard
 
 logger = logging.getLogger(__name__)
 
-# In-memory DNS cache to prevent spamming DoH APIs (TTL: 5 minutes)
 _DNS_CACHE = {}
 
 def _sync_doh_query(hostname: str) -> list[str]:
-    """Synchronous DoH query using RAW IP addresses (bypasses ALL local DNS blocks)."""
+    """Synchronous DoH query using direct IPs to beat asyncio limits and ISP DPI."""
+    import requests, time
+    import urllib3
+    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
     
-    # 1. Check local cache (0ms latency)
     cache_entry = _DNS_CACHE.get(hostname)
     if cache_entry and time.time() - cache_entry['time'] < 300:
         return cache_entry['ips']
 
-    # 2. RAW IP Providers - connect directly to IP, bypassing system DNS
+    # Идем напрямую по IP, передавая Host заголовок (провайдер не может подменить DNS)
     providers = [
-        ("https://1.0.0.1/dns-query", "cloudflare-dns.com", "application/dns-json"),
-        ("https://223.5.5.5/resolve", "dns.alidns.com", "application/json"),
-        ("https://8.8.4.4/resolve", "dns.google", "application/json")
+        ("https://8.8.8.8/resolve", "application/json", {"Host": "dns.google"}),
+        ("https://1.1.1.1/dns-query", "application/dns-json", {"Host": "cloudflare-dns.com"}),
     ]
     
-    for url_base, host_header, accept in providers:
+    for url_base, accept, extra_headers in providers:
         try:
-            if requests is None:
-                continue
-            resp = requests.get(
-                f"{url_base}?name={hostname}&type=A",
-                headers={"Host": host_header, "Accept": accept, "User-Agent": "Mozilla/5.0"},
-                verify=False,
-                timeout=2.0
-            )
+            headers = {"Accept": accept, "User-Agent": "Mozilla/5.0"}
+            headers.update(extra_headers)
+            resp = requests.get(f"{url_base}?name={hostname}&type=A", headers=headers, timeout=0.8, verify=False)
             if resp.status_code == 200:
-                data = resp.json()
-                ips = [ans["data"] for ans in data.get("Answer", []) if ans.get("type") == 1]
+                ips = [ans["data"] for ans in resp.json().get("Answer", []) if ans.get("type") == 1]
                 if ips:
                     _DNS_CACHE[hostname] = {'ips': ips, 'time': time.time()}
                     return ips
-        except Exception as e:
-            logger.debug(f"Raw IP DoH via {url_base} failed for {hostname}: {e}")
+        except Exception:
             continue
 
+    # Резервный публичный API (тоже по IP)
+    try:
+        resp = requests.get(f"https://104.21.25.96/api/dns/lookup/{hostname}", headers={"Host": "networkcalc.com", "User-Agent": "Mozilla/5.0"}, timeout=1.0, verify=False)
+        if resp.status_code == 200:
+            ips = [rec["address"] for rec in resp.json().get("records", {}).get("A", [])]
+            if ips:
+                _DNS_CACHE[hostname] = {'ips': ips, 'time': time.time()}
+                return ips
+    except Exception:
+        pass
     return []
 
 class DoHResolver(AbstractResolver):
-    """Zero-leak DNS-over-HTTPS resolver for aiohttp."""
+    """Bulletproof DNS resolver for aiohttp."""
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
     async def resolve(self, host: str, port: int = 0, family: int = 0) -> list[dict]:
-        # Fast path for raw IP addresses
+        # Fast path for raw IPs
         try:
             socket.inet_aton(host)
             return [{'hostname': host, 'host': host, 'port': port, 'family': family, 'proto': 0, 'flags': 0}]
         except socket.error:
             pass
 
-        # Thread offload to prevent Event Loop freezing
         ips = await asyncio.to_thread(_sync_doh_query, host)
         
-        # Safe fallback to System DNS if all DoH fails
         if not ips:
             try:
                 infos = await asyncio.to_thread(socket.getaddrinfo, host, port, family)
                 return [{'hostname': host, 'host': info[4][0], 'port': port, 'family': family, 'proto': 0, 'flags': 0} for info in infos]
             except Exception:
-                raise socket.gaierror(socket.EAI_NONAME, f"DoH and System DNS resolution failed for {host}")
+                raise socket.gaierror(socket.EAI_NONAME, f"All DNS and DoH resolution failed for {host}")
 
         return [{'hostname': host, 'host': ip, 'port': port, 'family': family, 'proto': 0, 'flags': 0} for ip in ips]
 

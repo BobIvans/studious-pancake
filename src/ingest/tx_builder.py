@@ -53,6 +53,7 @@ ATOKEN_PROGRAM = "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86"
 MARGINFI_PROGRAM_ID = Pubkey.from_string(
     os.getenv("MARGINFI_PROGRAM_ID", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
 )
+MARGINFI_GROUP = Pubkey.from_string("4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8")
 # Pre-computed SPL Token program discriminators (avoids hashlib.sha256 in hot path)
 SYNC_NATIVE_DISCRIMINATOR = bytes([0x35, 0x9A, 0xDC, 0x8E, 0x9A, 0x8B, 0xEA, 0x6A])
 CLOSE_ACCOUNT_DISCRIMINATOR = bytes([0x02, 0x9E, 0x8D, 0x1D, 0x11, 0x8E, 0x3B, 0x87])
@@ -554,6 +555,9 @@ class JupiterTxBuilder:
         #   Rust-origin panic and logs it before exiting gracefully (no bad data reaches try_compile).
         try:
             safe_alts = [a for a in address_lookup_tables if a is not None]
+            if not recent_blockhash:
+                logger.error("🚨 Blockhash is None! Aborting TX build to prevent Rust Panic.")
+                return None, 0, 0
             _bh = Hash.from_string(recent_blockhash)
             draft_msg = MessageV0.try_compile(
                 payer=payer,
@@ -587,6 +591,9 @@ class JupiterTxBuilder:
         # This is a local compile-only step — no RPC call.
         try:
             _mtu_alts = [a for a in (address_lookup_tables or []) if a is not None]
+            if not recent_blockhash:
+                logger.error("🚨 Blockhash is None! Aborting TX build to prevent Rust Panic.")
+                return None, 0, 0
             _mtu_bh = Hash.from_string(recent_blockhash)
             _mtu_msg = MessageV0.try_compile(
                 payer=payer,
@@ -669,12 +676,9 @@ class JupiterTxBuilder:
                 )
             )
 
-        # ── KERNEL TASK 2: Write-Lock Congestion guard ──────────────────────────
-        # Sort AccountMeta by is_writable — read-only (False) first, writable (True) last.
-# This minimises lock contention in the Solana SVM scheduler (QUIC / Agave)
-        # so that the hot-path accounts (writable DEX state) are not interleaved with
-        # immutable program IDs and sysvars.
-        accounts.sort(key=lambda am: (am.is_writable, str(am.pubkey)))
+        # Task 25: Removed accounts.sort() - Solana ABI requires strict account ordering
+# The order of accounts in instructions is defined by the program's IDL/ABI.
+# Sorting breaks the expected layout and causes InvalidAccountData errors.
 
         return Instruction(
             program_id=program_id,
@@ -760,9 +764,14 @@ class JupiterTxBuilder:
 
                 # Phase 12: Deduplicate Associated Token Account creation
                 if str(ix.program_id) == "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86":
-                    # Make creation idempotent by modifying bytecode (b'' or b'\x00' -> b'\x01')
+                    # Task 23: Make creation idempotent by recreating Instruction (b'' or b'\x00' -> b'\x01')
+                    # Cannot mutate ix.data directly - Rust structs are frozen
                     if ix.data == b'' or ix.data == b'\x00':
-                        ix.data = b'\x01'
+                        ix = Instruction(
+                            program_id=ix.program_id,
+                            accounts=ix.accounts,
+                            data=b'\x01',
+                        )
                         logger.debug("🛡️ Jupiter ATA instruction converted to Idempotent ATA")
 
                     if len(ix.accounts) >= 2:
@@ -808,6 +817,7 @@ class JupiterTxBuilder:
             # Build set of pubkey strings already covered by the swap instruction
             _covered_pks: set = {str(m.pubkey) for m in swap_ix.accounts}
             _injected = 0
+            new_accounts_for_swap = list(swap_ix.accounts)
             for ra in rem_accounts:
                 pk_str = ra.get("pubkey", "")
                 if not pk_str or pk_str in _covered_pks:
@@ -815,7 +825,8 @@ class JupiterTxBuilder:
                 is_signer = ra.get("isSigner", False)
                 is_writable = ra.get("isWritable", True)
                 _covered_pks.add(pk_str)
-                swap_ix.accounts.append(
+                # Task 24A: Append to list copy, then recreate Instruction (accounts are immutable)
+                new_accounts_for_swap.append(
                     AccountMeta(
                         pubkey=Pubkey.from_string(pk_str),
                         is_signer=is_signer,
@@ -828,7 +839,17 @@ class JupiterTxBuilder:
                     f"🔗 Task 14: Injected {_injected} remaining_accounts "
                     f"hook account(s) into swap instruction"
                 )
-                # Register in global registry for downstream validation
+                # Recreate swap_ix with updated accounts
+                swap_ix = Instruction(
+                    program_id=swap_ix.program_id,
+                    accounts=new_accounts_for_swap,
+                    data=swap_ix.data,
+                )
+                # Update the instructions list to replace old swap_ix
+                for i in range(len(instructions)):
+                    if instructions[i] == swap_ix:
+                        instructions[i] = swap_ix
+                        break
                 _REMAINING_ACCOUNTS_REGISTRY[id(swap_ix)] = _injected
 
         # FIX 1 (Jupiter Cleanup Sabotage): NEVER add cleanupInstruction from Jupiter.
@@ -970,7 +991,7 @@ class JupiterTxBuilder:
             logger.error(f"ALT validation error: {e}")
             raise
 
-    # === CRITICAL SAFETY CHECK METHODS ===
+# === CRITICAL SAFETY CHECK METHODS ===
 
     async def _estimate_transaction_size(
         self,
@@ -1626,12 +1647,13 @@ class JupiterTxBuilder:
             token_program=sol_prog_id,
             amount=borrow_amount_lamports,
             instruction_indices=[len(all_instructions) + 2],  # Points to repay instruction index
-        )
+)
         all_instructions.append(borrow_ix)
 
         # 2. Withdraw from bank (actual token transfer) - Phase 50 MarginFi Protocol Fix
         withdraw_ix = self.build_marginfi_withdraw_ix(
             mfi_program=mfi_program,
+            mfi_group=MARGINFI_GROUP,
             mfi_account=mfi_account,
             wallet=wallet,
             bank=bank,
@@ -1643,12 +1665,19 @@ class JupiterTxBuilder:
         )
         all_instructions.append(withdraw_ix)
 
-        # 3. DEX Swaps
-        all_instructions.extend(dex_swap_instructions)
+# 3. DEX Swaps
+         all_instructions.extend(dex_swap_instructions)
 
-        # 4. Repay via MarginFi (updates liability state correctly) - Phase 50 Fix
-        repay_ix = self.build_marginfi_repay_ix(
+         # 4. Flash Loan Pivot — exit swap (USDC → SOL) BEFORE repay
+         # При пивоте: бот занял SOL, свапнул в USDC, заработал профит в USDC,
+         # свап обратно в SOL ДОЛЖЕН быть ДО возврата долга, иначе InsufficientFunds.
+         for pv_ix in exit_pivot_ixs or []:
+             all_instructions.append(pv_ix)
+
+         # 5. Repay via MarginFi (updates liability state correctly) - Phase 50 Fix
+         repay_ix = self.build_marginfi_repay_ix(
             mfi_program=mfi_program,
+            mfi_group=MARGINFI_GROUP,
             mfi_account=mfi_account,
             wallet=wallet,
             bank=bank,
@@ -1667,11 +1696,6 @@ class JupiterTxBuilder:
             wallet,
         )
         all_instructions.append(end_ix)
-
-        # Flash Loan Pivot — exit swap (USDC → SOL): run AFTER arb repay so profit
-        # is converted into the borrow asset (SOL) before returning to MarginFi.
-        for pv_ix in exit_pivot_ixs or []:
-            all_instructions.append(pv_ix)
 
         # =====================================================================
         # Fix 1 (Non-burning Dust): Only close wSOL atomically.
@@ -1867,11 +1891,32 @@ class JupiterTxBuilder:
         }
 
         for ix in instructions:
-            # Force read-only for program accounts and known sysvars
+            # Task 22: Recreate AccountMeta objects instead of mutating immutable Rust structs
+            new_accounts = []
+            modified = False
             for meta in ix.accounts:
                 if str(meta.pubkey) in READ_ONLY_SYSTEM_IDS:
-                    # Принудительно отключаем блокировку на запись
-                    meta.is_writable = False
+                    if meta.is_writable:
+                        new_accounts.append(
+                            AccountMeta(
+                                pubkey=meta.pubkey,
+                                is_signer=meta.is_signer,
+                                is_writable=False,
+                            )
+                        )
+                        modified = True
+                    else:
+                        new_accounts.append(meta)
+                else:
+                    new_accounts.append(meta)
+
+            # Use new instruction if accounts were modified, otherwise keep original
+            if modified:
+                ix = Instruction(
+                    program_id=ix.program_id,
+                    accounts=new_accounts,
+                    data=ix.data,
+                )
 
             if ix.program_id == ata_prog:
                 # Associated Token Account program: target ATA is typically account at index 1
@@ -2286,6 +2331,7 @@ class JupiterTxBuilder:
     def build_marginfi_withdraw_ix(
         self,
         mfi_program: Pubkey,
+        mfi_group: Pubkey,
         mfi_account: Pubkey,
         wallet: Pubkey,
         bank: Pubkey,
@@ -2307,6 +2353,7 @@ class JupiterTxBuilder:
         )
 
         account_metas = [
+            AccountMeta(pubkey=mfi_group, is_signer=False, is_writable=False),  # <-- ДОБАВИТЬ ЭТО
             AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
             AccountMeta(pubkey=wallet, is_signer=True, is_writable=False),
             AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
@@ -2325,6 +2372,7 @@ class JupiterTxBuilder:
     def build_marginfi_repay_ix(
         self,
         mfi_program: Pubkey,
+        mfi_group: Pubkey,
         mfi_account: Pubkey,
         wallet: Pubkey,
         bank: Pubkey,
@@ -2346,6 +2394,7 @@ class JupiterTxBuilder:
         )
 
         account_metas = [
+            AccountMeta(pubkey=mfi_group, is_signer=False, is_writable=False),  # <-- ДОБАВИТЬ ЭТО
             AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
             AccountMeta(pubkey=wallet, is_signer=True, is_writable=True),
             AccountMeta(pubkey=bank, is_signer=False, is_writable=True),

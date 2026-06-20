@@ -585,7 +585,7 @@ class ExecutionRouter:
         """Execute xStock oracle lag arbitrage opportunity with Flash Loan Pivot support."""
         try:
             from .tx_builder import JupiterTxBuilder
-            tx_builder = JupiterTxBuilder(
+tx_builder = JupiterTxBuilder(
                 session=self.session,
                 rpc_getter=self.rpc_getter,
             )
@@ -594,7 +594,7 @@ class ExecutionRouter:
             ticker = opportunity["ticker"]
             token_mint = opportunity["token_mint"]
             direction = opportunity["direction"]
-            optimal_size_lamports = opportunity["optimal_size_lamports"]
+            optimal_size_lamports = int(opportunity["optimal_size_lamports"])
             expected_profit_sol = opportunity["expected_profit_sol"]
             circular_quote = opportunity.get("quote")
             dex_swap_instructions = opportunity.get("dex_swap_instructions")
@@ -862,9 +862,17 @@ class ExecutionRouter:
             extra_metas = _build_extra_account_metas(strategy_key)
             if extra_metas:
                 logger.info(f"🔧 Injecting {len(extra_metas)} discovered extra accounts for {strategy_key}")
-                for ix in reversed(fl_result["instructions"]):
+                # Task 24B: Recreate MarginFi instruction instead of mutating immutable accounts
+                for i in range(len(fl_result["instructions"]) - 1, -1, -1):
+                    ix = fl_result["instructions"][i]
                     if ix.program_id == Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"):
-                        ix.accounts.extend(extra_metas)
+                        new_accs = list(ix.accounts)
+                        new_accs.extend(extra_metas)
+                        fl_result["instructions"][i] = Instruction(
+                            program_id=ix.program_id,
+                            accounts=new_accs,
+                            data=ix.data,
+                        )
                         break
 
             # Convert to VersionedTransaction
@@ -974,7 +982,7 @@ class ExecutionRouter:
                         "token_out": str(token_mint),
                         "amount": float(optimal_size_lamports) / 1e9,
                         "actual_profit": float(expected_profit_sol),
-                        "balance_after": shared_state.stats.get("virtual_balance", 0.0) + float(expected_profit_sol),
+                        "balance_after": shared_state.stats.get("virtual_balance", 0.0),
                         "dex_pair": opportunity.get("pair"),
                         "confidence": float(opportunity.get("score", 1.0))
                     }
@@ -982,7 +990,6 @@ class ExecutionRouter:
                 
                 if shared_state.stats_lock:
                     async with shared_state.stats_lock:
-                        shared_state.stats["virtual_balance"] += float(expected_profit_sol)
                         shared_state.stats["trades"] += 1
                     
                 return {"status": "success", "message": "Paper trade simulated and logged"}

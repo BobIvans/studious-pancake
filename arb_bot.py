@@ -1940,43 +1940,22 @@ async def register_temporary_token(mint: str, duration: int = 1800):
 
 
 async def cleanup_temporary_tokens():
-    """Remove expired tokens from the dynamic registry."""
-    while True:
-        try:
-            await asyncio.sleep(300)  # Every 5 minutes
-            now = time.time()
-            async with temporary_tokens_lock:
-                to_remove = [
-                    m for m, expiry in temporary_tokens.items() if now > expiry
-                ]
-                for m in to_remove:
-                    del temporary_tokens[m]
-                    logger.info(
-                        f"🧹 Removed temporary token {str(m)[:8]} from registry (expired)"
-                    )
-        except Exception as e:
-            logger.error(f"Cleanup error: {e}")
-    async def get_token_account_balance(self, account_address: str) -> Optional[Dict[str, Any]]:
-        """
-        Fetch SPL token account balance via RPC.
-        Delegates to the active RPC session.
-        """
-        try:
-            payload = {
-                "jsonrpc": "2.0", "id": 1,
-                "method": "getTokenAccountBalance",
-                "params": [account_address],
-            }
-            rpc_url = self.get_rpc()
-            async with aiohttp.ClientSession() as session:
-                async with session.post(rpc_url, json=payload, timeout=3.0) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        return data.get("result", {}).get("value")
-        except Exception as e:
-            logger.debug(f"get_token_account_balance failed for {account_address[:8]}: {e}")
-        return None
-
+     """Remove expired tokens from the dynamic registry."""
+     while True:
+         try:
+             await asyncio.sleep(300)  # Every 5 minutes
+             now = time.time()
+             async with temporary_tokens_lock:
+                 to_remove = [
+                     m for m, expiry in temporary_tokens.items() if now > expiry
+                 ]
+                 for m in to_remove:
+                     del temporary_tokens[m]
+                     logger.info(
+                         f"🧹 Removed temporary token {str(m)[:8]} from registry (expired)"
+                     )
+         except Exception as e:
+             logger.error(f"Cleanup error: {e}")
 
 
 class BankHealthMonitor:
@@ -2233,8 +2212,8 @@ async def get_jupiter_quote(
         "amount": use_amount,  # Task 16: strict int→string to avoid HTTP 400
         "slippageBps": str(slippage_bps),
         "maxAccounts": "8",  # Fix 3: MTU Safety — 8 accounts × 32B = 256B overhead → TX stays within 1232-byte UDP limit
-        "onlyDirectRoutes": "true",  # Task 14: always force direct routes for micro-balance safety
-        "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
+        "onlyDirectRoutes": "false" if not restrict_intermediate else "true",  # Task 26: Dynamic route restriction
+        "restrictIntermediateTokens": "false" if not restrict_intermediate else "true",  # Task 26: Dynamic token restriction
         "cache_buster": str(time.time_ns()),
     }
     # ── ExactOut Mode (The ExactIn vs ExactOut Fix) ──────────────────────────────
@@ -2248,7 +2227,7 @@ async def get_jupiter_quote(
         headers["Authorization"] = f"Bearer {cfg.JUPITER_API_KEY}"
     try:
         async with session.get(
-            cfg.JUPITER_QUOTE_URL, params=params, headers=headers, timeout=5.0
+            cfg.JUPITER_QUOTE_URL, params=params, headers=headers, timeout=2.5
         ) as resp:
             if resp.status == 200:
                 data = orjson.loads(await resp.read())
@@ -2270,7 +2249,7 @@ async def get_jupiter_quote(
 
 def get_token_decimals(mint) -> int:
     """Return token decimals safe for str and Pubkey inputs."""
-    return TOKEN_DECIMALS.get(str(mint), 9)
+    return TOKEN_DECIMALS.get(str(mint), 6)  # 6 - стандарт для новых токенов на Solana
 
 
 async def get_best_quote_multi(
@@ -5706,16 +5685,17 @@ async def run():
     priority_queue = PriorityArbitrageQueue(max_size=50)
     trade_sizer = OptimalTradeSizer()
 
-    connector = aiohttp.TCPConnector(
-        resolver=DoHResolver(),
-        limit=100,
-        ttl_dns_cache=300,
-        use_dns_cache=True,
-        force_close=False,
-        keepalive_timeout=300,
-        ssl=False,
-    )
-
+    proxy_url = os.getenv("PROXY_URL")
+    if proxy_url and proxy_url.startswith("socks5"):
+        try:
+            from aiohttp_socks import ProxyConnector
+            connector = ProxyConnector.from_url(proxy_url, limit=100)
+            logger.info(f"🌐 SOCKS5 Proxy Enabled: {proxy_url}")
+        except ImportError:
+            logger.warning("aiohttp_socks not installed (pip install aiohttp-socks). Falling back.")
+            connector = aiohttp.TCPConnector(resolver=DoHResolver(), limit=100, ttl_dns_cache=300, use_dns_cache=True)
+    else:
+        connector = aiohttp.TCPConnector(resolver=DoHResolver(), limit=100, ttl_dns_cache=300, use_dns_cache=True)
 
     session = aiohttp.ClientSession(
         connector=connector,
@@ -5863,7 +5843,7 @@ async def run():
     except Exception as _load_err:
         logger.debug(f"extra_accounts.json loading failed: {_load_err}")
 
-    # 3. Execution Infrastructure (Jito & Leader Tracking)
+# 3. Execution Infrastructure (Jito & Leader Tracking)
     global jito_tip_manager
     jito_tip_manager = None
     if JITO_AVAILABLE:
@@ -5875,7 +5855,6 @@ async def run():
         # Phase 35: Fetch live tip accounts before starting stream
         await jito_tip_manager.fetch_tip_accounts()
         await jito_tip_manager.start()
-        shared_state.jito_bidding_manager = jito_tip_manager
 
     global leader_tracker
     leader_tracker = LeaderTracker(
@@ -5922,7 +5901,7 @@ async def run():
             )
             os._exit(1)
 
-    # God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
+# God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
     global jito_bidding_manager
     jito_bidding_manager = JitoBiddingManager()
     if JITO_AVAILABLE:
@@ -5937,6 +5916,7 @@ async def run():
         shared_state.active_tasks.add(_poll_task)
         _poll_task.add_done_callback(background_task_callback)
         logger.info("🎯 Jito bidding manager started (polling tip_floor every 10s)")
+        shared_state.jito_bidding_manager = jito_bidding_manager
 
     execution_router = ExecutionRouter(
         leader_tracker=leader_tracker,

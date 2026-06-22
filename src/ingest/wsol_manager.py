@@ -352,12 +352,13 @@ class WSOLManager:
         # Build and send a standalone CloseAccount transaction via RPC
         from solders.message import MessageV0
         from solders.transaction import VersionedTransaction
-        from solders.compute_budget import set_compute_unit_limit
+        from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
         import base64
 
         try:
             cu_limit_ix = set_compute_unit_limit(50_000)
-            all_ixs = [cu_limit_ix] + unwrap_ixs
+            cu_price_ix = set_compute_unit_price(20_000)
+            all_ixs = [cu_limit_ix, cu_price_ix] + unwrap_ixs
 
             # Use helius direct URL for fresh blockhash
             helius_url = rpc_url  # rpc_url IS the direct RPC HTTP URL

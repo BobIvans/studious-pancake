@@ -259,6 +259,7 @@ class JupiterClient:
             "wrapAndUnwrapSol": wrap_unwrap_sol,
             "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером
             "asVersionedTransaction": True,    # As specified in requirements
+            "prioritizationFeeLamports": "auto",  # ФИКС: Priority fee для избежания зависания в мемпуле
         }
 
         if fee_account:

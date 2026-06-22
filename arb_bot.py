@@ -2500,8 +2500,8 @@ async def create_flashloan_arbitrage_tx(
     sol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
 
     # Calculate indices for Instruction Introspection
-    # [Borrow, ...Swaps, Repay]
-    repay_index = 1 + len(swap_instructions)  # Borrow(0) + Swaps
+    # [Borrow, Withdraw, ...Swaps, Repay, End]
+    repay_index = 2 + len(swap_instructions) + 1  # borrow(0) + withdraw(1) + len(Swaps) + repay = end_ix
 
     borrow_ix = builder.build_marginfi_start_flashloan_ix(
         mfi_program,
@@ -2548,20 +2548,44 @@ async def create_flashloan_arbitrage_tx(
     except Exception as _rebuild_err:
         logger.debug(f"Borrow safe-rebuild skipped ({_rebuild_err}), using original")
 
-    repay_ix = builder.build_marginfi_end_flashloan_ix(
+    # ── MarginFi v2: withdraw borrowed tokens from vault ──
+    withdraw_ix = builder.build_marginfi_withdraw_ix(
+        mfi_program=borrow_ix.program_id,
+        mfi_group=shared_state.MARGINFI_GROUP,
+        mfi_account=marginfi_account,
+        wallet=keypair.pubkey(),
+        bank=bank_cfg["bank"],
+        user_token_account=user_token_account,
+        vault=bank_cfg["liquidity_vault"],
+        vault_auth=bank_cfg["liquidity_vault_authority"],
+        token_program=TOKEN_PROGRAM_ID,
+        amount=int(effective_base_amount),
+    )
+
+    # ── MarginFi v2: repay flashloan (lending_account_repay) ──
+    repay_ix = builder.build_marginfi_repay_ix(
+        mfi_program=borrow_ix.program_id,
+        mfi_group=shared_state.MARGINFI_GROUP,
+        mfi_account=marginfi_account,
+        wallet=keypair.pubkey(),
+        bank=bank_cfg["bank"],
+        user_token_account=user_token_account,
+        vault=bank_cfg["liquidity_vault"],
+        vault_auth=bank_cfg["liquidity_vault_authority"],
+        token_program=TOKEN_PROGRAM_ID,
+        amount=int(effective_base_amount),
+    )
+
+    # ── MarginFi v2: end flashloan introspection ──
+    end_ix = builder.build_marginfi_end_flashloan_ix(
         mfi_program,
         marginfi_account,
         keypair.pubkey(),
-        mfi_group,
-        bank_cfg["bank"],
-        bank_cfg["liquidity_vault"],
-        bank_cfg["liquidity_vault_authority"],
-        user_token_account,
-        TOKEN_PROGRAM_ID,
     )
 
     # Final instruction sequence for build_optimized_transaction
-    arbitrage_instructions = [borrow_ix] + swap_instructions + [repay_ix]
+    # Order: [borrow, withdraw, ...swaps, repay, end]
+    arbitrage_instructions = [borrow_ix, withdraw_ix] + swap_instructions + [repay_ix, end_ix]
 
     # ─── ALT CACHE: Resolve all ALTs in-MEMORY — Zero-Latency Lookup ──────────
     # Deduplicate and batch-resolve via cache. Only a single RPC call for any ALTs
@@ -2698,7 +2722,7 @@ async def create_flashloan_arbitrage_tx(
         # cu_limit is already the dynamic profile value from build_optimized_transaction()
         # Calculate EXACT repay index dynamically using list introspection in optimized_instructions
         try:
-            actual_repay_index = optimized_instructions.index(repay_ix)
+            actual_repay_index = optimized_instructions.index(end_ix)
             from src.ingest.tx_builder import MARGINFI_FLASHLOAN_START
             _safe_data = (
                 MARGINFI_FLASHLOAN_START

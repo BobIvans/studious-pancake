@@ -835,7 +835,7 @@ class Config:
 
     WORKER_COUNT: int = 1  # Fixed to 1 for sequential flash loan execution
     BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", 20))
-    BG_FETCH_INTERVAL: float = float(os.getenv("BG_FETCH_INTERVAL", 1.5))
+    BG_FETCH_INTERVAL: float = float(os.getenv("BG_FETCH_INTERVAL", "2.0"))
     SIMULATE_BEFORE_EXECUTE: bool = (
         str(os.getenv("SIMULATE_BEFORE_EXECUTE", "True")).lower() == "true"
     )
@@ -846,7 +846,7 @@ class Config:
     VELORA_QUOTE_URL: str = os.getenv(
         "VELORA_QUOTE_URL", "https://api.paraswap.io/prices"
     )
-    SCAN_INTERVAL: float = float(os.getenv("SCAN_INTERVAL", "0.2"))
+    SCAN_INTERVAL: float = float(os.getenv("SCAN_INTERVAL", "1.0"))
 
     TRADE_SIZE_PCT: float = float(os.getenv("TRADE_SIZE_PCT", 1.0))
     MIN_RESERVE_SOL: float = 0.005  # Phase 49: minimum gas reserve (confirmed by spec)

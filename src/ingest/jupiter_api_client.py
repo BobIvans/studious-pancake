@@ -19,8 +19,10 @@ def get_jupiter_limiter():
     global _GLOBAL_JUPITER_LIMITER, _limiter_available
     if _GLOBAL_JUPITER_LIMITER is None:
         try:
+            import os
             from aiolimiter import AsyncLimiter
-            _GLOBAL_JUPITER_LIMITER = AsyncLimiter(4, 1.0)
+            jup_rps = int(os.getenv("JUPITER_QUOTE_RPS", "1"))
+            _GLOBAL_JUPITER_LIMITER = AsyncLimiter(max(1, jup_rps), 1.0)
             _limiter_available = True
         except ImportError:
             _GLOBAL_JUPITER_LIMITER = None

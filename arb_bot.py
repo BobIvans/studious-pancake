@@ -5722,7 +5722,7 @@ async def run():
         elif proxy_url.startswith("http"):
             os.environ["HTTPS_PROXY"] = proxy_url
             os.environ["HTTP_PROXY"] = proxy_url
-            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)
+            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, trust_env=True)
             logger.info(f"🌐 HTTP Proxy Enabled: {proxy_url}")
         else:
             connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)

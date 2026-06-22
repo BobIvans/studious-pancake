@@ -47,13 +47,29 @@ class JupiterClient:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            connector = aiohttp.TCPConnector(
-                limit=150,
-                limit_per_host=30,
-                ttl_dns_cache=300,
-                use_dns_cache=True,
-                keepalive_timeout=60
-            )
+            import os
+            proxy_url = os.getenv("PROXY_URL")
+            if proxy_url and (proxy_url.startswith("socks5") or proxy_url.startswith("socks4")):
+                try:
+                    from aiohttp_socks import ProxyConnector
+                    connector = ProxyConnector.from_url(proxy_url, limit=150)
+                    logger.debug(f"🌐 JupiterClient using SOCKS Proxy: {proxy_url}")
+                except ImportError:
+                    logger.warning("aiohttp_socks not installed. Falling back.")
+                    connector = aiohttp.TCPConnector(limit=150, ttl_dns_cache=300, use_dns_cache=True)
+            elif proxy_url and proxy_url.startswith("http"):
+                os.environ["HTTPS_PROXY"] = proxy_url
+                os.environ["HTTP_PROXY"] = proxy_url
+                connector = aiohttp.TCPConnector(limit=150, ttl_dns_cache=300, use_dns_cache=True, trust_env=True)
+                logger.debug(f"🌐 JupiterClient using HTTP Proxy: {proxy_url}")
+            else:
+                connector = aiohttp.TCPConnector(
+                    limit=150,
+                    limit_per_host=30,
+                    ttl_dns_cache=300,
+                    use_dns_cache=True,
+                    keepalive_timeout=60
+                )
             self.session = aiohttp.ClientSession(
                 connector=connector,
                 timeout=aiohttp.ClientTimeout(total=12, sock_connect=8, sock_read=10),

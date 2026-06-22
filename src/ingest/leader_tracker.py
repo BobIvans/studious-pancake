@@ -2,9 +2,10 @@
 
 import asyncio
 import logging
-from typing import Dict, Optional, List, Any
+import os
+from typing import List, Dict, Any, Optional
 import aiohttp
-from solders.pubkey import Pubkey
+import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -22,12 +23,14 @@ class LeaderTracker:
         self.last_fetch = 0
         self.running = False
         self.session: Optional[aiohttp.ClientSession] = None
+        self._task: Optional[asyncio.Task] = None
 
     async def start(self, session: aiohttp.ClientSession):
-        """Start the leader tracker."""
         self.session = session
         self.running = True
-        asyncio.create_task(self._fetch_loop())
+        self._task = asyncio.create_task(self._fetch_loop())
+        shared_state.active_tasks.add(self._task)
+        self._task.add_done_callback(shared_state.active_tasks.discard)
 
     async def stop(self):
         """Stop the leader tracker."""

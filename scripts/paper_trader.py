@@ -17,7 +17,6 @@ from typing import Dict, Optional, Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 import aiohttp
-from src.ingest.rpc_multiplexing import DoHResolver
 from src.ingest.data_aggregator import DataAggregator
 from src.config.xstocks_registry import XSTOCK_MINTS
 from src.ingest.oracle_streams import OracleStreams
@@ -70,7 +69,7 @@ class PaperTrader:
         logger.info(f"📊 Загружено токенов: LST({len(LST_TOKENS)}), xStocks({len(XSTOCK_MINTS)}), DePIN({len(DEPIN_MEME_TOKENS)})")
 
     async def initialize(self):
-        connector = aiohttp.TCPConnector(limit=0, resolver=DoHResolver(), ttl_dns_cache=300)
+        connector = aiohttp.TCPConnector(limit=0, ttl_dns_cache=300)
         self.session = aiohttp.ClientSession(connector=connector)
 
         # Подключаем Pyth Oracle Streams для акций (xStocks)

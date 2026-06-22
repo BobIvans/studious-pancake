@@ -86,6 +86,12 @@ stats: Dict[str, Any] = {
 }
 
 active_tasks: Set[asyncio.Task] = set()
+
+def retain_background_task(task: asyncio.Task, callback=None) -> asyncio.Task:
+    active_tasks.add(task)
+    task.add_done_callback(callback or active_tasks.discard)
+    return task
+
 WSOL_JUST_CLOSED_ATOMICALLY: float = 0.0
 WSOL_CLOSE_COOLDOWN: float = 60.0
 

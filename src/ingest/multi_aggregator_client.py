@@ -200,8 +200,7 @@ class MultiAggregatorClient:
             return NaiveLimiter(rps)
 
     async def __aenter__(self):
-        from src.ingest.rpc_multiplexing import DoHResolver
-        connector = aiohttp.TCPConnector(resolver=DoHResolver(), limit=150, ttl_dns_cache=300)
+                connector = aiohttp.TCPConnector(, limit=150, ttl_dns_cache=300)
         self.session = aiohttp.ClientSession(connector=connector)
         return self
 

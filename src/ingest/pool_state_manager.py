@@ -173,8 +173,7 @@ class PoolStateManager:
                 "jsonrpc": "2.0", "id": 1, "method": "getMultipleAccounts",
                 "params": [self.pool_addresses, {"encoding": "jsonParsed", "commitment": "confirmed"}],
             }
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+                        connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.post(http_url, json=payload) as resp:
                     if resp.status == 200:
@@ -290,8 +289,7 @@ class PoolStateManager:
             self.subscription_ids.clear()
             self.sub_to_pool.clear()
             try:
-                from src.ingest.rpc_multiplexing import DoHResolver
-                connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+                                connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
                 async with aiohttp.ClientSession(connector=connector) as session:
                     async with session.ws_connect(
                         self.websocket_url,

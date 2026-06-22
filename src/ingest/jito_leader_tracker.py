@@ -6,8 +6,10 @@ Dynamically adjusts Jito tips based on leader schedule to prevent wasted transac
 import asyncio
 import logging
 import time
+import os
 from typing import Dict, Optional, List, Any
 import aiohttp
+import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -34,14 +36,17 @@ class JitoLeaderTracker:
         self.successful_checks = 0
 
     async def start(self, session: aiohttp.ClientSession):
-        """Start the leader tracking background task."""
         self.session = session
-        asyncio.create_task(self._tracking_loop())
+        self._task = asyncio.create_task(self._tracking_loop())
+        shared_state.active_tasks.add(self._task)
+        self._task.add_done_callback(shared_state.active_tasks.discard)
         logger.info("🎯 Jito Leader Tracker started")
 
     async def stop(self):
-        """Stop the leader tracker."""
         logger.info("🛑 Jito Leader Tracker stopped")
+        self.running = False
+        if hasattr(self, '_task') and self._task and not self._task.done():
+            self._task.cancel()
 
     async def get_optimal_tip(self, base_tip_lamports: int, current_slot: int) -> Dict[str, Any]:
         """

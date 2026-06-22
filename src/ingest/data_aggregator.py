@@ -4,12 +4,13 @@ import sqlite3
 import orjson
 import asyncio
 import time
+import os
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import logging
-import os
 import aiosqlite
 from pathlib import Path
+import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -74,9 +75,10 @@ class DataAggregator:
         conn.close()
 
     async def start_batch_writer(self):
-        """Start the background batch writer task."""
         self.running = True
         self.write_task = asyncio.create_task(self._batch_write_worker())
+        shared_state.active_tasks.add(self.write_task)
+        self.write_task.add_done_callback(shared_state.active_tasks.discard)
         logger.info("Data aggregator batch writer started")
 
     async def stop_batch_writer(self):

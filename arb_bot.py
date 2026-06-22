@@ -188,7 +188,7 @@ from src.ingest.helius_webhook_handler import HeliusWebhookHandler
 from src.ingest.optimal_trade_sizer import (
     OptimalTradeSizer,
 )  # VelocitySlippageManager not implemented
-from src.ingest.rpc_multiplexing import ExecutionPipeline, _set_global_price_matrix, DoHResolver
+from src.ingest.rpc_multiplexing import ExecutionPipeline, _set_global_price_matrix
 from src.ingest.pyth_core_price_feeder import init_pyth_core_feeder
 from src.ingest.helius_sender import HeliusSender, TransactionSender
 
@@ -949,6 +949,11 @@ class Config:
     )
     ORACLE_LAG_COOLDOWN_SECONDS: int = int(
         os.getenv("ORACLE_LAG_COOLDOWN_SECONDS", "60")
+    )
+
+    # Paper Trading Mode — if true, simulates trades without sending real transactions
+    PAPER_TRADING_ONLY: bool = (
+        str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true"
     )
 
 
@@ -1764,17 +1769,19 @@ class RPCManager:
         if self.session is None or self.session.closed:
             import os
             proxy_url = os.getenv("PROXY_URL")
-            if proxy_url and proxy_url.startswith("socks5"):
+            if proxy_url and (proxy_url.startswith("socks5") or proxy_url.startswith("socks4")):
                 try:
                     from aiohttp_socks import ProxyConnector
                     connector = ProxyConnector.from_url(proxy_url, limit=100)
                 except ImportError:
-                    from src.ingest.rpc_multiplexing import DoHResolver
-                    connector = aiohttp.TCPConnector(resolver=DoHResolver(), family=socket.AF_INET, ttl_dns_cache=300)
+                    connector = aiohttp.TCPConnector(family=socket.AF_INET, ttl_dns_cache=300)
+            elif proxy_url and proxy_url.startswith("http"):
+                os.environ["HTTPS_PROXY"] = proxy_url
+                os.environ["HTTP_PROXY"] = proxy_url
+                connector = aiohttp.TCPConnector(family=socket.AF_INET, ttl_dns_cache=300, trust_env=True)
             else:
-                from src.ingest.rpc_multiplexing import DoHResolver
-                connector = aiohttp.TCPConnector(resolver=DoHResolver(), family=socket.AF_INET, ttl_dns_cache=300)
-            self.session = aiohttp.ClientSession(connector=connector)
+                connector = aiohttp.TCPConnector(family=socket.AF_INET, ttl_dns_cache=300)
+            self.session = aiohttp.ClientSession(connector=connector, trust_env=True)
         return self.session
 
     async def _latency_ranker(self):
@@ -4914,11 +4921,16 @@ async def worker(
 
             # Fix 62: Price Freshness TTL — never trade stale data
             now = time.time()
+            is_stale = False
             for mint in (in_mint_str, target_mint_str):
                 entry = price_matrix.get(mint)
                 if entry and (now - entry[1]) > 5.0:
                     logger.debug(f"Skipping stale price for {mint}")
-                    continue  # skip this opportunity
+                    is_stale = True
+                    break
+
+            if is_stale:
+                continue  # skip this opportunity
 
             # Fix 44: Virtual Balance Guard — use virtual_balance so we never double-
             # commit capital while previous bundles are still in-flight.
@@ -5698,16 +5710,24 @@ async def run():
     trade_sizer = OptimalTradeSizer()
 
     proxy_url = os.getenv("PROXY_URL")
-    if proxy_url and proxy_url.startswith("socks5"):
-        try:
-            from aiohttp_socks import ProxyConnector
-            connector = ProxyConnector.from_url(proxy_url, limit=100)
-            logger.info(f"🌐 SOCKS5 Proxy Enabled: {proxy_url}")
-        except ImportError:
-            logger.warning("aiohttp_socks not installed (pip install aiohttp-socks). Falling back.")
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), limit=100, ttl_dns_cache=300, use_dns_cache=True)
+    if proxy_url:
+        if proxy_url.startswith("socks5") or proxy_url.startswith("socks4"):
+            try:
+                from aiohttp_socks import ProxyConnector
+                connector = ProxyConnector.from_url(proxy_url, limit=100)
+                logger.info(f"🌐 SOCKS Proxy Enabled: {proxy_url}")
+            except ImportError:
+                logger.warning("aiohttp_socks not installed. Using default resolver.")
+                connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)
+        elif proxy_url.startswith("http"):
+            os.environ["HTTPS_PROXY"] = proxy_url
+            os.environ["HTTP_PROXY"] = proxy_url
+            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)
+            logger.info(f"🌐 HTTP Proxy Enabled: {proxy_url}")
+        else:
+            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)
     else:
-        connector = aiohttp.TCPConnector(resolver=DoHResolver(), limit=100, ttl_dns_cache=300, use_dns_cache=True)
+        connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)
 
     session = aiohttp.ClientSession(
         connector=connector,

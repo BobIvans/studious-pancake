@@ -11,6 +11,7 @@ from typing import Dict, Any, List, Optional
 from datetime import datetime
 from aiohttp import web
 import aiohttp
+import src.ingest.shared_state as shared_state
 
 from .data_aggregator import DataAggregator
 from .webhook_config import WebhookConfig
@@ -248,7 +249,9 @@ class HeliusWebhookHandler:
                         logger.info(f"🎯 Sanctum LST opportunity detected: {opportunity.get('description', 'Unknown')}")
 
             if self.jito_shotgun and event_type in ('SWAP', 'CREATE_POOL', 'GRADUATION'):
-                asyncio.create_task(self._fire_jito_shotgun(event))
+                task = asyncio.create_task(self._fire_jito_shotgun(event))
+                shared_state.active_tasks.add(task)
+                task.add_done_callback(shared_state.active_tasks.discard)
 
         except Exception as e:
             logger.error(f"Event processing error: {e}")

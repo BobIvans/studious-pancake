@@ -6,9 +6,11 @@ Races multiple RPC endpoints to get the freshest blockhash every 15s
 import asyncio
 import logging
 import time
+import os
 from typing import List, Optional, Dict, Any
 from solders.hash import Hash
 import aiohttp
+import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -46,6 +48,7 @@ class BlockhashRacingManager:
         self.last_update_time = 0
         self.running = False
         self.session: Optional[aiohttp.ClientSession] = None
+        self._task: Optional[asyncio.Task] = None
 
         # Performance tracking
         self.total_races = 0
@@ -53,20 +56,18 @@ class BlockhashRacingManager:
         self.avg_response_time = 0
 
     async def start(self, session: aiohttp.ClientSession):
-        """Start the blockhash racing background task."""
         self.session = session
         self.running = True
-
-        # Initial blockhash fetch
         await self._race_blockhash_once()
-
-        # Start background racing task
-        asyncio.create_task(self._racing_loop())
+        self._task = asyncio.create_task(self._racing_loop())
+        shared_state.active_tasks.add(self._task)
+        self._task.add_done_callback(shared_state.active_tasks.discard)
         logger.info(f"🚀 Blockhash Racing Manager started with {len(self.rpc_endpoints)} RPC endpoints (interval={self.race_interval_ms}ms)")
 
     async def stop(self):
-        """Stop the racing manager."""
         self.running = False
+        if self._task and not self._task.done():
+            self._task.cancel()
         logger.info("🛑 Blockhash Racing Manager stopped")
 
     async def get_fresh_blockhash(self) -> Optional[Hash]:

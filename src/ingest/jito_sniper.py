@@ -85,8 +85,7 @@ class JitoTipManager:
     async def _refresh_tip_accounts(self):
         """Fetch Jito tip accounts from API."""
         try:
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+                        connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(self.JITO_TIP_ACCOUNTS_URL, ssl=False) as resp:
                     if resp.status == 200:
@@ -262,8 +261,7 @@ class JitoTipManager:
     async def fetch_tip_accounts(self) -> bool:
         """Fetch live Jito tip accounts from Block Engine (Phase 35)."""
         try:
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+                        connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(self.JITO_TIP_ACCOUNTS_URL, timeout=5.0, ssl=False) as resp:
                     if resp.status == 200:
@@ -371,8 +369,7 @@ class WssPoolCreationListener:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+                        connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=connector)
         return self
 
@@ -397,8 +394,7 @@ class WssPoolCreationListener:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create session with DoH resolver."""
         if self.session is None or self.session.closed:
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+                        connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=connector)
             self._session_owned = True
         return self.session
@@ -764,8 +760,7 @@ class JitoBundleSender:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+                        connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=connector)
         return self
 

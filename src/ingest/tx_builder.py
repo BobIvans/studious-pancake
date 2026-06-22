@@ -2051,8 +2051,8 @@ class JupiterTxBuilder:
             all_instructions = cleaned_ixs
 
             # Вычисляем индексы для MarginFi (Flashloan Introspection)
-            # borrow, swaps, SPL repay transfer, repay
-            repay_index = len(all_instructions) + 2
+            # cu_limit, pre_instructions, borrow_ix, withdraw_ix, swaps, repay_ix, end_ix
+            repay_index = len(all_instructions) + 3 + len(pre_instructions)
 
             borrow_ix = self.build_marginfi_start_flashloan_ix(
                 mfi_program,
@@ -2067,26 +2067,36 @@ class JupiterTxBuilder:
                 [repay_index],
             )
 
-            repay_ix = self.build_marginfi_end_flashloan_ix(
+            withdraw_ix = self.build_marginfi_withdraw_ix(
+                mfi_program=mfi_program,
+                mfi_group=MARGINFI_GROUP,
+                mfi_account=Pubkey.from_string(marginfi_account),
+                wallet=wallet,
+                bank=Pubkey.from_string(bank_pubkey),
+                user_token_account=user_borrow_ata,
+                vault=Pubkey.from_string(bank_liquidity_vault),
+                vault_auth=Pubkey.from_string(bank_liquidity_vault_authority),
+                token_program=TOKEN_PROGRAM_ID,
+                amount=borrow_amount_lamports,
+            )
+
+            repay_ix = self.build_marginfi_repay_ix(
+                mfi_program=mfi_program,
+                mfi_group=MARGINFI_GROUP,
+                mfi_account=Pubkey.from_string(marginfi_account),
+                wallet=wallet,
+                bank=Pubkey.from_string(bank_pubkey),
+                user_token_account=user_borrow_ata,
+                vault=Pubkey.from_string(bank_liquidity_vault),
+                vault_auth=Pubkey.from_string(bank_liquidity_vault_authority),
+                token_program=TOKEN_PROGRAM_ID,
+                amount=borrow_amount_lamports,
+            )
+
+            end_ix = self.build_marginfi_end_flashloan_ix(
                 mfi_program,
                 Pubkey.from_string(marginfi_account),
                 wallet,
-                Pubkey.from_string(bank_pubkey),
-                Pubkey.from_string(bank_liquidity_vault),
-                Pubkey.from_string(bank_liquidity_vault_authority),
-                user_borrow_ata,
-                TOKEN_PROGRAM_ID,
-            )
-
-            transfer_repay_ix = spl_transfer(
-                TransferParams(
-                    program_id=TOKEN_PROGRAM_ID,
-                    source=user_borrow_ata,
-                    dest=Pubkey.from_string(bank_liquidity_vault),
-                    owner=wallet,
-                    amount=borrow_amount_lamports,
-                    signers=[],
-                )
             )
 
             # ── ФИКС ЛОВУШКИ #2: Идемпотентное создание ATA для займа ─────────
@@ -2140,9 +2150,9 @@ class JupiterTxBuilder:
             final_instructions = (
                 [cu_limit_ix]
                 + pre_instructions
-                + [borrow_ix]
+                + [borrow_ix, withdraw_ix]
                 + all_instructions
-                + [transfer_repay_ix, repay_ix]
+                + [repay_ix, end_ix]
             )
 
             # =====================================================================

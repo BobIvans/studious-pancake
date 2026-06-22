@@ -248,13 +248,17 @@ class ExecutionRouter:
         self._self_cancel_task: Optional[asyncio.Task] = None
 
     def start_processor(self):
-        """Start the sequential execution processor."""
         if self._processor_task is None:
             self._processor_task = asyncio.create_task(self._process_queue())
+            shared_state.active_tasks.add(self._processor_task)
+            self._processor_task.add_done_callback(shared_state.active_tasks.discard)
         if self._self_cancel_task is None:
             self._self_cancel_task = asyncio.create_task(self._self_cancel_stale_bundles())
-        # Start Epoch Shield
-        asyncio.create_task(self.epoch_tracker.start())
+            shared_state.active_tasks.add(self._self_cancel_task)
+            self._self_cancel_task.add_done_callback(shared_state.active_tasks.discard)
+        epoch_task = asyncio.create_task(self.epoch_tracker.start())
+        shared_state.active_tasks.add(epoch_task)
+        epoch_task.add_done_callback(shared_state.active_tasks.discard)
 
     async def _process_queue(self):
         """Process execution tasks sequentially."""

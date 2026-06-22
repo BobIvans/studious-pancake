@@ -7,9 +7,11 @@ import asyncio
 import logging
 import math
 import time
+import os
 from typing import Dict, List, Tuple, Optional, Set, Callable
 from decimal import Decimal, getcontext
 from dataclasses import dataclass
+import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -107,11 +109,12 @@ class ArbitrageGraph:
         self.last_update = time.time()
         logger.debug(f"Updated rate {token_a}->{token_b}: {rate_a_to_b}")
 
-        # If rates updated, check for arbitrage
         cycles = self.detect_arbitrage_cycles()
         if cycles and self.cycle_callback:
             for cycle in cycles:
-                asyncio.create_task(self.cycle_callback(cycle))
+                task = asyncio.create_task(self.cycle_callback(cycle))
+                shared_state.active_tasks.add(task)
+                task.add_done_callback(shared_state.active_tasks.discard)
 
     def detect_arbitrage_cycles(self, max_hops: int = 3) -> List[ArbitrageCycle]:
         """
@@ -271,7 +274,9 @@ class ArbitrageGraph:
                     logger.info(f"🚨 Arbitrage detected from pool update: {cycles[0].path}")
                     if self.cycle_callback:
                         for cycle in cycles:
-                            asyncio.create_task(self.cycle_callback(cycle))
+                            task = asyncio.create_task(self.cycle_callback(cycle))
+                            shared_state.active_tasks.add(task)
+                            task.add_done_callback(shared_state.active_tasks.discard)
 
         pool_state_manager.register_arbitrage_callback(on_pool_update)
 
@@ -288,7 +293,9 @@ class ArbitrageGraph:
                 if price_diff_pct > 0.0025:  # >0.25%
                     logger.info(f"💰 Oracle lag detected: {symbol} | Oracle: ${oracle_price.price} | AMM: ${amm_price}")
                     if self.oracle_callback:
-                        asyncio.create_task(self.oracle_callback(symbol, oracle_price, amm_price))
+                        task = asyncio.create_task(self.oracle_callback(symbol, oracle_price, amm_price))
+                        shared_state.active_tasks.add(task)
+                        task.add_done_callback(shared_state.active_tasks.discard)
 
         oracle_streams.register_price_callback(on_oracle_update)
 

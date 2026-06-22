@@ -6,9 +6,11 @@ Predictive execution with zero API calls during execution.
 
 import asyncio
 import logging
+import os
 from typing import Dict, List, Optional, Callable, Any
 from decimal import Decimal
 import aiohttp
+import src.ingest.shared_state as shared_state
 from solders.rpc.requests import GetEpochInfo
 from solders.rpc.config import RpcAccountInfoConfig
 
@@ -35,7 +37,8 @@ class EpochTracker:
     def __init__(self, rpc_url: str, session: aiohttp.ClientSession,
                  sanctum_program_id: str = "4bfAEKj7q1VHJ1BKNWvcQWxHzb8hcqPjL8EoU3d2x7x"):
         self.rpc_url = rpc_url
-        self.session = session
+        self.session: Optional[aiohttp.ClientSession] = session
+        self._task: Optional[asyncio.Task] = None
         self.sanctum_program_id = sanctum_program_id
         self.opportunity_callbacks: List[Callable] = []
         self.running = False
@@ -49,9 +52,10 @@ class EpochTracker:
         self.opportunity_callbacks.append(callback)
 
     async def start(self):
-        """Start epoch monitoring."""
         self.running = True
-        asyncio.create_task(self._monitor_epochs())
+        self._task = asyncio.create_task(self._monitor_epochs())
+        shared_state.active_tasks.add(self._task)
+        self._task.add_done_callback(shared_state.active_tasks.discard)
 
     async def stop(self):
         """Stop epoch monitoring."""

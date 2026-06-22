@@ -1335,14 +1335,14 @@ class JupiterTxBuilder:
         arbitrage_instructions: List[Instruction],
         wallet_keypair,
     ) -> Optional[Dict[str, Any]]:
-        """Build MarginFi flashloan transaction using correct lending_account_flashloan instruction."""
+        """Build MarginFi flashloan transaction using correct MarginFi v2 lending_account instructions.
+
+        Fix: replaces legacy spl_transfer() repay with proper withdraw_ix + repay_ix + end_ix.
+        """
         try:
             borrow_amount_lamports = int(
                 borrow_amount * 1_000_000_000
             )  # Assume SOL for now
-            repay_amount = (
-                borrow_amount_lamports  # Fix 79: exact integer repayment, no drift
-            )
 
             # Setup pubkeys (placeholder values, would be fetched)
             wallet = wallet_keypair.pubkey()
@@ -1362,10 +1362,9 @@ class JupiterTxBuilder:
             sol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
             user_sol_ata = get_associated_token_address(wallet, sol_mint)
 
-            # Calculate repay index: after borrow + swaps + SPL repay transfer
-            repay_index = 2 + len(
-                arbitrage_instructions
-            )  # borrow at 0, swaps, transfer, repay at end
+            # Calculate repay index: [cu_limit] + [borrow, withdraw] + swaps + [repay, end]
+            # repay_index points to end_ix (MARGINFI_FLASHLOAN_END discriminator)
+            repay_index = 1 + 2 + len(arbitrage_instructions) + 1  # end_ix is last
 
             # Borrow instruction (Flashloan Start)
             borrow_ix = self.build_marginfi_start_flashloan_ix(
@@ -1381,31 +1380,49 @@ class JupiterTxBuilder:
                 [repay_index],
             )
 
-            # Repay instruction (Flashloan End)
-            repay_ix = self.build_marginfi_end_flashloan_ix(
+            # Withdraw from bank (actual token transfer) - MarginFi v2 requires this
+            withdraw_ix = self.build_marginfi_withdraw_ix(
+                mfi_program=mfi_program,
+                mfi_group=MARGINFI_GROUP,
+                mfi_account=mfi_account,
+                wallet=wallet,
+                bank=bank,
+                user_token_account=user_sol_ata,
+                vault=vault,
+                vault_auth=vault_auth,
+                token_program=TOKEN_PROGRAM_ID,
+                amount=borrow_amount_lamports,
+            )
+
+            # Repay instruction (lending_account_repay) - properly repays the debt
+            repay_ix = self.build_marginfi_repay_ix(
+                mfi_program=mfi_program,
+                mfi_group=MARGINFI_GROUP,
+                mfi_account=mfi_account,
+                wallet=wallet,
+                bank=bank,
+                user_token_account=user_sol_ata,
+                vault=vault,
+                vault_auth=vault_auth,
+                token_program=TOKEN_PROGRAM_ID,
+                amount=borrow_amount_lamports,
+            )
+
+            # End flashloan instruction - validates completion via introspection
+            end_ix = self.build_marginfi_end_flashloan_ix(
                 mfi_program,
                 mfi_account,
                 wallet,
-                bank,
-                vault,
-                vault_auth,
-                user_sol_ata,
-                TOKEN_PROGRAM_ID,
             )
 
-            transfer_repay_ix = spl_transfer(
-                TransferParams(
-                    program_id=TOKEN_PROGRAM_ID,
-                    source=user_sol_ata,
-                    dest=vault,
-                    owner=wallet,
-                    amount=repay_amount,
-                    signers=[],
-                )
-            )
+            # Build CU limit instruction
+            cu_limit_ix = set_compute_unit_limit(CU_PROFILES.get("flash_arbitrage", 600_000))
 
             all_instructions = (
-                [borrow_ix] + arbitrage_instructions + [transfer_repay_ix, repay_ix]
+                [cu_limit_ix]
+                + [borrow_ix, withdraw_ix]
+                + arbitrage_instructions
+                + [repay_ix, end_ix]
             )
 
             return {

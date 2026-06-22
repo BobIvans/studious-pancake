@@ -1652,7 +1652,7 @@ class JupiterTxBuilder:
             all_instructions.append(pv_ix)
         # Removed set_compute_unit_price - will be added by build_optimized_transaction
 
-# 1. MarginFi Flashloan Start (3 accounts: mfi_account, wallet, ixs_sysvar)
+        # 1. MarginFi Flashloan Start (3 accounts: mfi_account, wallet, ixs_sysvar)
         borrow_ix = self.build_marginfi_start_flashloan_ix(
             mfi_program=mfi_program,
             mfi_account=mfi_account,
@@ -2067,6 +2067,43 @@ class JupiterTxBuilder:
 
             all_instructions = cleaned_ixs
 
+            # ── ФИКС ЛОВУШКИ #2: Идемпотентное создание ATA для займа ─────────
+            # MarginFi lending_account_start_flashloan предполагает существование ATA
+            # для займного токена. Jupiter его не создаёт. create_idempotent не упадёт,
+            # если ATA уже есть — безопасно вызывать всегда.
+            pre_instructions = []
+            try:
+                from spl.token.instructions import (
+                    create_idempotent_associated_token_account,
+                )
+
+                # Определяем mint займа по bank_pubkey
+                _sol_bank = os.getenv(
+                    "MARGINFI_SOL_BANK", "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj"
+                )
+                _usdc_bank = "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2"
+                borrow_mint_str = (
+                    "So11111111111111111111111111111111111111112"
+                    if bank_pubkey == _sol_bank
+                    else (
+                        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+                        if bank_pubkey == _usdc_bank
+                        else "So11111111111111111111111111111111111111112"
+                    )  # fallback: SOL
+                )
+                borrow_mint_pk = Pubkey.from_string(borrow_mint_str)
+                init_ata_ix = create_idempotent_associated_token_account(
+                    payer=wallet, owner=wallet, mint=borrow_mint_pk
+                )
+                pre_instructions.append(init_ata_ix)
+                logger.debug(
+                    f"🛡️ Idempotent borrow ATA ensured for {borrow_mint_str[:8]}"
+                )
+            except ImportError:
+                logger.warning(
+                    "⚠️ create_idempotent_associated_token_account unavailable — relying on pre-existing ATA"
+                )
+
             # Вычисляем индексы для MarginFi (Flashloan Introspection)
             # cu_limit, pre_instructions, borrow_ix, withdraw_ix, swaps, repay_ix, end_ix
             repay_index = len(all_instructions) + 3 + len(pre_instructions)
@@ -2115,43 +2152,6 @@ class JupiterTxBuilder:
                 Pubkey.from_string(marginfi_account),
                 wallet,
             )
-
-            # ── ФИКС ЛОВУШКИ #2: Идемпотентное создание ATA для займа ─────────
-            # MarginFi lending_account_start_flashloan предполагает существование ATA
-            # для займного токена. Jupiter его не создаёт. create_idempotent не упадёт,
-            # если ATA уже есть — безопасно вызывать всегда.
-            pre_instructions = []
-            try:
-                from spl.token.instructions import (
-                    create_idempotent_associated_token_account,
-                )
-
-                # Определяем mint займа по bank_pubkey
-                _sol_bank = os.getenv(
-                    "MARGINFI_SOL_BANK", "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj"
-                )
-                _usdc_bank = "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2"
-                borrow_mint_str = (
-                    "So11111111111111111111111111111111111111112"
-                    if bank_pubkey == _sol_bank
-                    else (
-                        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-                        if bank_pubkey == _usdc_bank
-                        else "So11111111111111111111111111111111111111112"
-                    )  # fallback: SOL
-                )
-                borrow_mint_pk = Pubkey.from_string(borrow_mint_str)
-                init_ata_ix = create_idempotent_associated_token_account(
-                    payer=wallet, owner=wallet, mint=borrow_mint_pk
-                )
-                pre_instructions.append(init_ata_ix)
-                logger.debug(
-                    f"🛡️ Idempotent borrow ATA ensured for {borrow_mint_str[:8]}"
-                )
-            except ImportError:
-                logger.warning(
-                    "⚠️ create_idempotent_associated_token_account unavailable — relying on pre-existing ATA"
-                )
 
             # Dynamic CU limit from profile (strategy_type=2 → lst_depeg_arbitrage: 450k)
             _strategy_profile = CU_PROFILES.get(

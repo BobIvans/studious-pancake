@@ -127,7 +127,7 @@ class OracleStreams:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create session with DoH resolver."""
         if self.session is None or self.session.closed:
-                        connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=connector)
             self._session_owned = True
         return self.session

@@ -240,7 +240,7 @@ class MultiRpcManager:
     async def _connect_endpoint(self, endpoint: RpcEndpoint):
         """Establish WebSocket connection to endpoint."""
         logger.info(f"🔌 Connecting to {endpoint.name}...")
-                connector = aiohttp.TCPConnector(, ttl_dns_cache=300)
+        connector = aiohttp.TCPConnector(ttl_dns_cache=300)
         endpoint.session = aiohttp.ClientSession(connector=connector)
         endpoint.connection = await endpoint.session.ws_connect(
             endpoint.ws_url,

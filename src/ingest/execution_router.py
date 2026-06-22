@@ -592,7 +592,7 @@ class ExecutionRouter:
             tx_builder = JupiterTxBuilder(
                 session=self.session,
                 rpc_getter=self.rpc_getter,
-)
+            )
 
             # Extract opportunity data
             ticker = opportunity["ticker"]

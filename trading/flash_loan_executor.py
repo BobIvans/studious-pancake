@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Flash Loan + Jupiter Arbitrage Executor (Native Python Implementation)"""
 import asyncio
+import os
 import orjson
 from pathlib import Path
 from typing import Dict, Any, List
@@ -13,7 +14,7 @@ from trading.paper_trader import process_entry_signals  # для совмест�
 
 
 FLM_PROGRAM_ID = "1oanfPPN8r1i4UbugXHDxWMbWVJ5qLSN5qzNFZkz6Fg"
-JUPITER_QUOTE_API = "https://quote-api.jup.ag/v6/quote"
+JUPITER_QUOTE_API = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
 FLM_CLI_PATH = Path("flm-jupiter-arb")  # путь к папке с CLI из репозитория moshthepitt
 
 

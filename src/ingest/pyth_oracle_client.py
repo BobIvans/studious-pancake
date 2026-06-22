@@ -10,8 +10,6 @@ import socket
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
 import aiohttp
-from aiohttp.resolver import AbstractResolver
-
 from oracle_streams import (
     HERMES_WS_URL,
     PYTH_FEEDS,
@@ -70,8 +68,7 @@ class PythHermesClient:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create session with DoH resolver."""
         if self.session is None or self.session.closed:
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=connector)
             self._session_owned = True
         return self.session

@@ -855,9 +855,9 @@ class Config:
 
     JUP_RPS: int = int(os.getenv("JUPITER_QUOTE_RPS", 5))
 
-    JUPITER_PRICE_URL: str = "https://api.jup.ag/price/v2"
+    JUPITER_PRICE_URL: str = os.getenv("JUPITER_PRICE_URL", "https://api.jup.ag/price/v2")
     JUPITER_QUOTE_URL: str = os.getenv(
-        "JUPITER_QUOTE_URL", "https://quote-api.jup.ag/v6/quote"
+        "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
     )
     BASE_TIP_LAMPORTS: int = int(os.getenv("BASE_TIP_LAMPORTS", "10000"))
     FLASH_FEE_PCT: float = float(os.getenv("FLASH_FEE_PCT", "0.0"))

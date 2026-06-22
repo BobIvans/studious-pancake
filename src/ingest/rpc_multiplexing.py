@@ -8,7 +8,6 @@ import aiohttp
 import orjson
 import requests
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
-from aiohttp.resolver import AbstractResolver
 from contextlib import asynccontextmanager
 import hashlib
 from decimal import Decimal
@@ -63,34 +62,6 @@ def _sync_doh_query(hostname: str) -> list[str]:
         pass
     return []
 
-class DoHResolver(AbstractResolver):
-    """Bulletproof DNS resolver for aiohttp."""
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    async def resolve(self, host: str, port: int = 0, family: int = 0) -> list[dict]:
-        # Fast path for raw IPs
-        try:
-            socket.inet_aton(host)
-            return [{'hostname': host, 'host': host, 'port': port, 'family': family, 'proto': 0, 'flags': 0}]
-        except socket.error:
-            pass
-
-        ips = await asyncio.to_thread(_sync_doh_query, host)
-        
-        if not ips:
-            try:
-                infos = await asyncio.to_thread(socket.getaddrinfo, host, port, family)
-                return [{'hostname': host, 'host': info[4][0], 'port': port, 'family': family, 'proto': 0, 'flags': 0} for info in infos]
-            except Exception:
-                raise socket.gaierror(socket.EAI_NONAME, f"All DNS and DoH resolution failed for {host}")
-
-        return [{'hostname': host, 'host': ip, 'port': port, 'family': family, 'proto': 0, 'flags': 0} for ip in ips]
-
-    async def close(self) -> None:
-        pass
-
 from .jito_bundle_handler import JitoBundleHandler, BackrunTrigger, _set_global_price_matrix
 
 class WSSConnection:
@@ -111,7 +82,7 @@ class WSSConnection:
         try:
             if self.session and not self.session.closed:
                 await self.session.close()
-            _connector = aiohttp.TCPConnector(family=socket.AF_INET, resolver=DoHResolver(), ttl_dns_cache=300)
+            _connector = aiohttp.TCPConnector(family=socket.AF_INET, ttl_dns_cache=300)
             self.session = aiohttp.ClientSession(connector=_connector)
             self.websocket = await self.session.ws_connect(
                 self.url,

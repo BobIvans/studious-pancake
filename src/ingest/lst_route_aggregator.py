@@ -7,6 +7,7 @@ the full circuit: MarginFi Borrow → Buy LST → Sell LST → MarginFi Repay.
 
 import asyncio
 import logging
+import os
 import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -26,7 +27,7 @@ SOL_MINT = "So11111111111111111111111111111111111111112"
 SANCTUM_ROUTER = "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq"
 SANCTUM_INFINITY_POOL = "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm"
 
-JUPITER_QUOTE_URL = "https://quote-api.jup.ag/v6/quote"
+JUPITER_QUOTE_URL = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
 
 
 @dataclass

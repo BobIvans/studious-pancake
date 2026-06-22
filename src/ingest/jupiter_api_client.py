@@ -3,6 +3,7 @@
 import asyncio
 import base64
 import logging
+import os
 import time
 from typing import Any, Dict, Optional
 import aiohttp
@@ -26,10 +27,10 @@ def get_jupiter_limiter():
             _limiter_available = False
     return _GLOBAL_JUPITER_LIMITER
 
-# Jupiter API endpoints
-QUOTE_API_URL = "https://quote-api.jup.ag/v6/quote"
-
-SWAP_API_URL = "https://quote-api.jup.ag/v6/swap"
+# Jupiter API endpoints — динамически из .env
+QUOTE_API_URL = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
+SWAP_API_URL = os.getenv("JUPITER_SWAP_URL", "https://api.jup.ag/swap/v1/swap")
+SWAP_INSTRUCTIONS_API_URL = os.getenv("SWAP_INSTRUCTIONS_API_URL", "https://api.jup.ag/swap/v1/swap-instructions")
 
 class JupiterClient:
     """Async client for Jupiter API operations."""

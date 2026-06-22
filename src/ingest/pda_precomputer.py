@@ -227,8 +227,7 @@ class OpenBookMarketPredictor:
 
         try:
             import aiohttp
-            from src.ingest.rpc_multiplexing import DoHResolver
-            connector = aiohttp.TCPConnector(resolver=DoHResolver(), ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.ws_connect(self.websocket_url, heartbeat=15.0, timeout=30.0, compress=15, receive_timeout=45.0) as ws:
                     logger.info("OpenBook market predictor started")

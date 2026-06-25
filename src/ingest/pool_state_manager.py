@@ -173,7 +173,7 @@ class PoolStateManager:
                 "jsonrpc": "2.0", "id": 1, "method": "getMultipleAccounts",
                 "params": [self.pool_addresses, {"encoding": "jsonParsed", "commitment": "confirmed"}],
             }
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.post(http_url, json=payload) as resp:
                     if resp.status == 200:
@@ -289,7 +289,7 @@ class PoolStateManager:
             self.subscription_ids.clear()
             self.sub_to_pool.clear()
             try:
-                connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+                connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
                 async with aiohttp.ClientSession(connector=connector) as session:
                     async with session.ws_connect(
                         self.websocket_url,
@@ -354,10 +354,11 @@ class PoolStateManager:
             try:
                 now = asyncio.get_running_loop().time()
                 if self.last_slot_msg_time > 0 and (now - self.last_slot_msg_time) > 3.0:
-                    logger.critical(
-                        "🚨 SLOT WATCHDOG: No slot for >3s — forcing hard exit"
+                    logger.warning(
+                        "🚨 SLOT WATCHDOG: No slot for >3s — forcing reconnect"
                     )
-                    os._exit(1)
+                    if getattr(self, "websocket", None) and not self.websocket.closed:
+                        await self.websocket.close()
 
                 if (
                     getattr(self, "websocket", None)

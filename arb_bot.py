@@ -9,8 +9,6 @@ import logging
 logger = logging.getLogger(__name__)
 import random
 import os
-import orjson
-import orjson as json
 import base64
 import itertools
 import struct
@@ -398,27 +396,28 @@ ATA_CACHE = shared_state.ATA_CACHE
 # Multi-RPC racing configuration
 MULTI_RPC_ENABLED = str(os.getenv("MULTI_RPC_ENABLED", "false")).lower() == "true"
 
-# Configure RPC endpoints for racing (free tier providers)
-multi_rpc_endpoints = [
-    RpcEndpoint(
-        "helius",
-        "wss://api.mainnet-beta.solana.com",
-        "https://api.mainnet-beta.solana.com",
-        1,
-    ),
-    RpcEndpoint(
-        "quicknode",
-        "wss://api.mainnet-beta.solana.com",
-        "https://api.mainnet-beta.solana.com",
-        2,
-    ),
-    RpcEndpoint(
-        "alchemy",
-        "wss://api.mainnet-beta.solana.com",
-        "https://api.mainnet-beta.solana.com",
-        3,
-    ),
+# Configure RPC endpoints for racing — built from .env, NEVER fallback to public RPC
+# Use MULTI_RPC_WS_1, MULTI_RPC_HTTP_1, etc. or HELIUS_API_KEY to build Helius URLs
+multi_rpc_endpoints: List[RpcEndpoint] = []
+_rpc_ws_endpoints = [
+    os.getenv("MULTI_RPC_WS_1", "").strip(),
+    os.getenv("MULTI_RPC_WS_2", "").strip(),
+    os.getenv("MULTI_RPC_WS_3", "").strip(),
 ]
+_rpc_http_endpoints = [
+    os.getenv("MULTI_RPC_HTTP_1", "").strip(),
+    os.getenv("MULTI_RPC_HTTP_2", "").strip(),
+    os.getenv("MULTI_RPC_HTTP_3", "").strip(),
+]
+for i in range(3):
+    ws = _rpc_ws_endpoints[i] if i < len(_rpc_ws_endpoints) else ""
+    http = _rpc_http_endpoints[i] if i < len(_rpc_http_endpoints) else ""
+    if ws and http:
+        multi_rpc_endpoints.append(
+            RpcEndpoint(f"rpc_node_{i+1}", ws, http, priority=i+1)
+        )
+if not multi_rpc_endpoints and MULTI_RPC_ENABLED:
+    logger.warning("⚠️ MULTI_RPC endpoints не настроены — укажите MULTI_RPC_WS_1 и MULTI_RPC_HTTP_1 в .env")
 
 # Helius Sender initialization
 # helius_sender = HeliusSender(session, cfg.HELIUS_SENDER_URLS, cfg.HELIUS_TIP_ACCOUNTS)
@@ -520,7 +519,7 @@ async def check_time_sync(session, rpc_url):
                 local_time = time.time() - latency
                 diff = abs(local_time - server_time)
 
-                if diff > 0.2:
+                if diff > 2.0:
                     logger.critical(
                         f"🚨 CRITICAL: Time desync detected! Difference: {diff*1000:.0f}ms. Jito will reject bundles (BlockhashNotFound/AUTH_TIMESTAMP_EXPIRED)."
                     )
@@ -745,9 +744,11 @@ class Config:
     )
     MULTI_RPC_ENDPOINTS: List[str] = field(
         default_factory=lambda: [
-            os.getenv("MULTI_RPC_1", "wss://api.mainnet-beta.solana.com"),
-            os.getenv("MULTI_RPC_2", "wss://api.mainnet-beta.solana.com"),
-            os.getenv("MULTI_RPC_3", "wss://api.mainnet-beta.solana.com"),
+            u for u in [
+                os.getenv("MULTI_RPC_1", ""),
+                os.getenv("MULTI_RPC_2", ""),
+                os.getenv("MULTI_RPC_3", ""),
+            ] if u
         ]
     )
 
@@ -767,10 +768,12 @@ class Config:
     # RPC Multiplexing Configuration
     WSS_ENDPOINTS: List[str] = field(
         default_factory=lambda: [
-            os.getenv("WSS_ENDPOINT_1", "wss://api.mainnet-beta.solana.com"),
-            os.getenv("WSS_ENDPOINT_2", "wss://api.mainnet-beta.solana.com"),
-            os.getenv("WSS_ENDPOINT_3", "wss://api.mainnet-beta.solana.com"),
-            os.getenv("WSS_ENDPOINT_4", "wss://api.mainnet-beta.solana.com"),
+            u for u in [
+                os.getenv("WSS_ENDPOINT_1", ""),
+                os.getenv("WSS_ENDPOINT_2", ""),
+                os.getenv("WSS_ENDPOINT_3", ""),
+                os.getenv("WSS_ENDPOINT_4", ""),
+            ] if u
         ]
     )
 
@@ -846,14 +849,14 @@ class Config:
     VELORA_QUOTE_URL: str = os.getenv(
         "VELORA_QUOTE_URL", "https://api.paraswap.io/prices"
     )
-    SCAN_INTERVAL: float = float(os.getenv("SCAN_INTERVAL", "1.0"))
+    SCAN_INTERVAL: float = float(os.getenv("SCAN_INTERVAL", "3.0"))
 
     TRADE_SIZE_PCT: float = float(os.getenv("TRADE_SIZE_PCT", 1.0))
     MIN_RESERVE_SOL: float = 0.005  # Phase 49: minimum gas reserve (confirmed by spec)
     MIN_NET_PROFIT_PCT: float = float(os.getenv("MIN_NET_PROFIT_PCT", 0.005))
     MAX_DRAWDOWN_SOL: float = float(os.getenv("MAX_DRAWDOWN_SOL", 0.01))
 
-    JUP_RPS: int = int(os.getenv("JUPITER_QUOTE_RPS", 5))
+    JUP_RPS: int = int(os.getenv("JUPITER_QUOTE_RPS", 1))
 
     JUPITER_PRICE_URL: str = os.getenv("JUPITER_PRICE_URL", "https://api.jup.ag/price/v2")
     JUPITER_QUOTE_URL: str = os.getenv(
@@ -903,7 +906,7 @@ class Config:
     MIN_NET_PROFIT_BUFFER_SOL: float = float(
         os.getenv("MIN_NET_PROFIT_BUFFER_SOL", "0.0005")
     )
-    LST_SCAN_INTERVAL: float = float(os.getenv("LST_SCAN_INTERVAL", "5.0"))
+    LST_SCAN_INTERVAL: float = float(os.getenv("LST_SCAN_INTERVAL", "3.0"))
     SANCTUM_ROUTER_ENABLED: bool = (
         str(os.getenv("SANCTUM_ROUTER_ENABLED", "true")).lower() == "true"
     )  # BLUE OCEAN: Sanctum for LST instant unstake
@@ -1759,6 +1762,8 @@ class RPCManager:
         
         if not self.all_nodes:
             logger.error("!!! КРИТИЧЕСКАЯ ОШИБКА: RPC ссылки не найдены в .env !!!")
+            logger.critical("🛑 Укажите RPC_URL_1 (или HELIUS_API_KEY) в .env файле. Бот остановлен.")
+            sys.exit(1)
         else:
             # Task 8: Keep strong reference to background task
             self.latency_task = asyncio.create_task(self._latency_ranker())
@@ -1831,20 +1836,39 @@ class RPCManager:
         Fetch SPL token account balance via RPC.
         Delegates to the active RPC session.
         """
-        try:
-            payload = {
-                "jsonrpc": "2.0", "id": 1,
-                "method": "getTokenAccountBalance",
-                "params": [account_address],
-            }
-            rpc_url = self.get_rpc()
-            session = await self._get_session()
-            async with session.post(rpc_url, json=payload, timeout=3.0, ssl=False) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    return data.get("result", {}).get("value")
-        except Exception as e:
-            logger.debug(f"get_token_account_balance failed for {account_address[:8]}: {e}")
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                payload = {
+                    "jsonrpc": "2.0", "id": 1,
+                    "method": "getTokenAccountBalance",
+                    "params": [account_address],
+                }
+                rpc_url = self.get_rpc()
+                session = await self._get_session()
+                async with session.post(rpc_url, json=payload, timeout=3.0, ssl=False) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data.get("result", {}).get("value")
+                    elif resp.status == 429:
+                        backoff = 2.0 * (2 ** attempt)
+                        logger.warning(f"RPC 429 rate limit hit — backoff {backoff}s (attempt {attempt + 1}/{max_retries})")
+                        await asyncio.sleep(backoff)
+                        continue
+                    elif resp.status in (403, 401):
+                        logger.error(f"RPC {resp.status} forbidden/unauthorized - check API key for {account_address[:8]}")
+                        return None
+                    else:
+                        logger.debug(f"RPC Error {resp.status}: {await resp.text()}")
+                        return None
+            except asyncio.TimeoutError:
+                logger.debug(f"get_token_account_balance timeout (attempt {attempt + 1}/{max_retries})")
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(0.5 * (2 ** attempt))
+            except Exception as e:
+                logger.debug(f"get_token_account_balance failed for {account_address[:8]}: {e}")
+                if attempt == max_retries - 1:
+                    return None
         return None
 
     def blacklist(self, rpc_url):
@@ -2009,12 +2033,20 @@ class BankHealthMonitor:
 
     async def _get_bank_liquidity(self, bank_info):
         try:
-            vault = bank_info["liquidity_vault"]
-            res = await self.rpc.get_token_account_balance(str(vault))
-            return float(res["amount"]) / 1e9 if res else 0
+            vault = str(bank_info["liquidity_vault"])
+
+            # ALL MarginFi liquidity vaults are Token Accounts (even wSOL).
+            payload = {"jsonrpc": "2.0", "id": 1, "method": "getTokenAccountBalance", "params": [vault]}
+            session = await self.rpc._get_session()
+            async with session.post(self.rpc.get_rpc(), json=payload, timeout=5.0) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if "result" in data and "value" in data["result"]:
+                        vault_lamports = int(data["result"]["value"]["amount"])
+                        return vault_lamports / 1e9
         except Exception as e:
-            logger.warning(f"Bank liquidity check failed: {e}")
-            return 0
+            logger.error(f"Bank liquidity check failed: {e}")
+        return 0.0
 
 
 # ============================================================================
@@ -2101,6 +2133,7 @@ async def stable_scanner(queue, cfg):
                     pass  # HFT: stale data is trash — drop it, don't deadlock
                 await asyncio.sleep(scan_config["pair_delay"])
         await asyncio.sleep(scan_config["scan_interval"])
+        await asyncio.sleep(0.1)  # Safe 100ms yield to the OS event loop
 
 
 async def lst_scanner(queue, cfg):
@@ -2117,6 +2150,7 @@ async def lst_scanner(queue, cfg):
                     pass  # HFT: stale data is trash — drop it, don't deadlock
                 await asyncio.sleep(scan_config["pair_delay"])
         await asyncio.sleep(scan_config["scan_interval"])
+        await asyncio.sleep(0.1)  # Safe 100ms yield to the OS event loop
 
 
 def is_nyse_trading_hours() -> bool:
@@ -2178,6 +2212,7 @@ async def xstocks_scanner(queue, cfg, session, rpc):
                 await asyncio.sleep(scan_config["pair_delay"])
 
         await asyncio.sleep(current_interval)
+        await asyncio.sleep(0.1)  # Safe 100ms yield to the OS event loop
 
 
 async def rwa_rest_scanner(queue, cfg):
@@ -2214,7 +2249,8 @@ async def get_jupiter_quote(
     if pair_key in PENDING_QUOTES:
         return None  # Fix 84: dedup - skip duplicate RPS waste
     PENDING_QUOTES.add(pair_key)
-    await limiters["jupiter"].wait()
+    from src.ingest.jupiter_api_client import get_quote_limiter
+    limiter = get_quote_limiter()
     if slippage_bps is None:
         slippage_bps = cfg.SLIPPAGE_BPS
     # ── ExactOut Mode: amount param must be desired OUTPUT (borrow debt), not input ──
@@ -2228,11 +2264,10 @@ async def get_jupiter_quote(
     params = {
         "inputMint": str(input_mint),
         "outputMint": str(output_mint),
-        "amount": use_amount,  # Task 16: strict int→string to avoid HTTP 400
+        "amount": use_amount,
         "slippageBps": str(slippage_bps),
-        "maxAccounts": "8",  # Fix 3: MTU Safety — 8 accounts × 32B = 256B overhead → TX stays within 1232-byte UDP limit
-        "onlyDirectRoutes": "false" if not restrict_intermediate else "true",  # Task 26: Dynamic route restriction
-        "restrictIntermediateTokens": "false" if not restrict_intermediate else "true",  # Task 26: Dynamic token restriction
+        "onlyDirectRoutes": "false",
+        "restrictIntermediateTokens": "false",
         "cache_buster": str(time.time_ns()),
     }
     # ── ExactOut Mode (The ExactIn vs ExactOut Fix) ──────────────────────────────
@@ -2241,26 +2276,40 @@ async def get_jupiter_quote(
     if swap_mode:
         params["swapMode"] = swap_mode
     headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
-    # Добавляем ключ, если он есть
     if cfg.JUPITER_API_KEY:
-        headers["Authorization"] = f"Bearer {cfg.JUPITER_API_KEY}"
+        headers["x-api-key"] = cfg.JUPITER_API_KEY
+
     try:
-        async with session.get(
-            cfg.JUPITER_QUOTE_URL, params=params, headers=headers, timeout=2.5
-        ) as resp:
-            if resp.status == 200:
-                data = orjson.loads(await resp.read())
-                return {
-                    "source": "Jupiter",
-                    "out_amount": int(data["outAmount"]),
-                    "full_quote_response": data,
-                }
-            else:
-                error_text = await resp.text()
-                logger.warning(f"Jupiter API Error {resp.status}: {error_text}")
-                return None
-    except Exception as e:
-        logger.warning(f"Jupiter Exception: {repr(e)}")
+        max_retries = 3
+        async with limiter:
+            for attempt in range(max_retries):
+                try:
+                    async with session.get(
+                        cfg.JUPITER_QUOTE_URL, params=params, headers=headers
+                    ) as resp:
+                        if resp.status == 200:
+                            data = orjson.loads(await resp.read())
+                            return {
+                                "source": "Jupiter",
+                                "out_amount": int(data["outAmount"]),
+                                "full_quote_response": data,
+                            }
+                        elif resp.status == 429:
+                            backoff = min(2.0, 1.5 * (attempt + 1))
+                            logger.warning(f"Jupiter 429 on {cfg.JUPITER_QUOTE_URL} — backoff {backoff}s (attempt {attempt + 1}/{max_retries})")
+                            await asyncio.sleep(backoff)
+                            continue
+                        else:
+                            error_text = await resp.text()
+                            logger.warning(f"Jupiter API Error {resp.status}: {error_text}")
+                            return None
+                except asyncio.TimeoutError:
+                    logger.warning(f"Jupiter quote timeout (attempt {attempt + 1}/{max_retries})")
+                    if attempt < max_retries - 1:
+                        await asyncio.sleep(0.5 * (2 ** attempt))
+                except Exception as e:
+                    logger.warning(f"Jupiter Exception: {repr(e)}")
+                    return None
         return None
     finally:
         PENDING_QUOTES.discard(pair_key)
@@ -2325,7 +2374,7 @@ async def get_best_quote_multi(
                 swap_mode=swap_mode,
                 exact_out_amount=exact_out_amount,
             ),
-            timeout=3.0,
+            timeout=15.0,
         )
         return quote
     except Exception as e:
@@ -2722,7 +2771,11 @@ async def create_flashloan_arbitrage_tx(
         # cu_limit is already the dynamic profile value from build_optimized_transaction()
         # Calculate EXACT repay index dynamically using list introspection in optimized_instructions
         try:
-            actual_repay_index = optimized_instructions.index(end_ix)
+            actual_repay_index = next(
+                (i for i, ix in enumerate(optimized_instructions)
+                 if ix.program_id == end_ix.program_id and ix.data[:8] == end_ix.data[:8]),
+                None
+            )
             from src.ingest.tx_builder import MARGINFI_FLASHLOAN_START
             _safe_data = (
                 MARGINFI_FLASHLOAN_START
@@ -3050,6 +3103,8 @@ async def lst_depeg_scanner(
                 borrow_lamports = await tx_builder.get_max_marginfi_borrow(
                     str(bank_cfg["liquidity_vault"])
                 )
+                if borrow_lamports is None:
+                    borrow_lamports = 1_000_000_000
                 # DYNAMIC SIZING: Feed 95% vault into OptimalTradeSizer to find peak of AMM curve
                 optimal = trade_sizer.find_optimal_trade_size(
                     routes=[],
@@ -3218,302 +3273,304 @@ async def lst_depeg_scanner(
                     continue
                 jito_tip_lamports = capped_tip
 
-            if tip_adjustment["recommendation"] == "reduce_tip":
-                pass
+                if tip_adjustment["recommendation"] == "reduce_tip":
+                    pass
 
-            # ── Step 4: Build MarginFi flash loan TX ──────────────────
-            if not cfg.MARGINFI_ACCOUNT_PUBKEY:
-                logger.error("MARGINFI_ACCOUNT not set — cannot execute flash loan")
-                continue
+                # ── Step 4: Build MarginFi flash loan TX ──────────────────
+                if not cfg.MARGINFI_ACCOUNT_PUBKEY:
+                    logger.error("MARGINFI_ACCOUNT not set — cannot execute flash loan")
+                    continue
 
-            # Fix 2: Oracle Pivot consumption — flip borrow asset if prior StaleOracle hit
-            _pivot_borrow_mint = None
-            if _oracle_stale_hit:
-                _pivot_borrow_mint = (
-                    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
-                    if "SOL" in _oracle_stale_asset_hint
-                    else "So11111111111111111111111111111111111111112"
+                # Fix 2: Oracle Pivot consumption — flip borrow asset if prior StaleOracle hit
+                _pivot_borrow_mint = None
+                if _oracle_stale_hit:
+                    _pivot_borrow_mint = (
+                        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+                        if "SOL" in _oracle_stale_asset_hint
+                        else "So11111111111111111111111111111111111111112"
+                    )
+                    _oracle_stale_hit = False
+
+                fl_result = await tx_builder.build_marginfi_flashloan_tx(
+                    wallet_pubkey=str(keypair.pubkey()),
+                    borrow_amount_lamports=borrow_lamports,
+                    buy_quote_response=route.buy_quote.full_quote_response,
+                    sell_quote_response=route.sell_quote.full_quote_response,
+                    marginfi_account=cfg.MARGINFI_ACCOUNT_PUBKEY,
+                    bank_pubkey=str(bank_cfg["bank"]),
+                    bank_liquidity_vault=str(bank_cfg["liquidity_vault"]),
+                    bank_liquidity_vault_authority=str(
+                        bank_cfg["liquidity_vault_authority"]
+                    ),
+                    use_jito=True,
+                    strategy_type=2,
+                    tip_accounts=(
+                        jito_executor.tip_accounts if jito_executor else None
+                    ),  # Fix 2: dynamic tip accounts
+                    expected_profit_sol=route.profit_sol,  # Dynamic Rent Guard
+                    borrow_mint=_pivot_borrow_mint,  # FIX: Использование разворота (Pivot) при старом оракуле
                 )
-                _oracle_stale_hit = False
 
-            fl_result = await tx_builder.build_marginfi_flashloan_tx(
-                wallet_pubkey=str(keypair.pubkey()),
-                borrow_amount_lamports=borrow_lamports,
-                buy_quote_response=route.buy_quote.full_quote_response,
-                sell_quote_response=route.sell_quote.full_quote_response,
-                marginfi_account=cfg.MARGINFI_ACCOUNT_PUBKEY,
-                bank_pubkey=str(bank_cfg["bank"]),
-                bank_liquidity_vault=str(bank_cfg["liquidity_vault"]),
-                bank_liquidity_vault_authority=str(
-                    bank_cfg["liquidity_vault_authority"]
-                ),
-                use_jito=True,
-                strategy_type=2,
-                tip_accounts=(
-                    jito_executor.tip_accounts if jito_executor else None
-                ),  # Fix 2: dynamic tip accounts
-                expected_profit_sol=route.profit_sol,  # Dynamic Rent Guard
-            )
+                if not fl_result:
+                    logger.warning(
+                        f"Failed to build flash loan TX for {signal.token_symbol}"
+                    )
+                    continue
 
-            if not fl_result:
-                logger.warning(
-                    f"Failed to build flash loan TX for {signal.token_symbol}"
-                )
-                continue
+                # ── Step 5: Resolve ALTs and build final transaction ──────
+                instructions = fl_result["instructions"]
+                alt_pubkeys = fl_result["address_lookup_table_pubkeys"]
 
-            # ── Step 5: Resolve ALTs and build final transaction ──────
-            instructions = fl_result["instructions"]
-            alt_pubkeys = fl_result["address_lookup_table_pubkeys"]
-
-            # Fetch ALT account data
-            address_lookup_tables = []
-            if alt_pubkeys:
-                try:
-                    alt_payload = {
-                        "jsonrpc": "2.0",
-                        "id": 1,
-                        "method": "getMultipleAccounts",
-                        "params": [
-                            [str(pk) for pk in alt_pubkeys],
-                            {"encoding": "base64"},
-                        ],
-                    }
-                    timeout = aiohttp.ClientTimeout(total=2.0)
-                    async with session.post(
-                        rpc_manager.get_rpc(), json=alt_payload, timeout=timeout
-                    ) as resp:
-                        if resp.status == 200:
-                            alt_data = orjson.loads(await resp.read())
-                            if "result" in alt_data and "value" in alt_data["result"]:
-                                for acct in alt_data["result"]["value"]:
-                                    if acct:
-                                        try:
-                                            b64_data = acct["data"][0]
-                                            padded = b64_data + "=" * (
-                                                -len(b64_data) % 4
-                                            )
-                                            raw_data = base64.b64decode(padded)
-                                            keys = []
-                                            # Phase 32: Dynamic ALT header parsing
-                                            header_len = 56 if raw_data[21] == 1 else 24
-                                            for i in range(
-                                                header_len, len(raw_data), 32
-                                            ):
-                                                keys.append(
-                                                    Pubkey.from_bytes(
-                                                        raw_data[i : i + 32]
-                                                    )
+                # Fetch ALT account data
+                address_lookup_tables = []
+                if alt_pubkeys:
+                    try:
+                        alt_payload = {
+                            "jsonrpc": "2.0",
+                            "id": 1,
+                            "method": "getMultipleAccounts",
+                            "params": [
+                                [str(pk) for pk in alt_pubkeys],
+                                {"encoding": "base64"},
+                            ],
+                        }
+                        timeout = aiohttp.ClientTimeout(total=2.0)
+                        async with session.post(
+                            rpc_manager.get_rpc(), json=alt_payload, timeout=timeout
+                        ) as resp:
+                            if resp.status == 200:
+                                alt_data = orjson.loads(await resp.read())
+                                if "result" in alt_data and "value" in alt_data["result"]:
+                                    for acct in alt_data["result"]["value"]:
+                                        if acct:
+                                            try:
+                                                b64_data = acct["data"][0]
+                                                padded = b64_data + "=" * (
+                                                    -len(b64_data) % 4
                                                 )
-                                            # Use the pubkey from alt_pubkeys
-                                            index = alt_data["result"]["value"].index(
-                                                acct
-                                            )
-                                            alt_acct = AddressLookupTableAccount(
-                                                key=alt_pubkeys[index], addresses=keys
-                                            )
-                                            address_lookup_tables.append(alt_acct)
-                                        except Exception:
-                                            pass
+                                                raw_data = base64.b64decode(padded)
+                                                keys = []
+                                                # Phase 32: Dynamic ALT header parsing
+                                                header_len = 56 if raw_data[21] == 1 else 24
+                                                for i in range(
+                                                    header_len, len(raw_data), 32
+                                                ):
+                                                    keys.append(
+                                                        Pubkey.from_bytes(
+                                                            raw_data[i : i + 32]
+                                                        )
+                                                    )
+                                                # Use the pubkey from alt_pubkeys
+                                                index = alt_data["result"]["value"].index(
+                                                    acct
+                                                )
+                                                alt_acct = AddressLookupTableAccount(
+                                                    key=alt_pubkeys[index], addresses=keys
+                                                )
+                                                address_lookup_tables.append(alt_acct)
+                                            except Exception:
+                                                pass
+                    except Exception as e:
+                        logger.debug(f"ALT fetch error: {e}")
+
+                if alt_pubkeys and not address_lookup_tables:
+                    logger.warning(
+                        f"⚠️ ALT RESOLUTION FAILURE: Could not resolve {len(alt_pubkeys)} ALTs via RPC. "
+                        f"Aborting transaction to prevent MTU (1232 bytes) packet overflow."
+                    )
+                    continue  # Пропускаем эту попытку до следующего слота
+
+                # Get fresh blockhash
+                blockhash = cached_blockhash
+                if not blockhash or time.time() - cache_time > 2:
+                    blockhash = await get_current_blockhash(session, rpc_manager.get_rpc())
+                if not blockhash:
+                    logger.warning("Cannot get blockhash — skipping")
+                    continue
+
+                # Get fresh blockhash
+                blockhash = cached_blockhash
+                if not blockhash or time.time() - cache_time > 2:
+                    blockhash = await get_current_blockhash(session, rpc_manager.get_rpc())
+                if not blockhash:
+                    logger.warning("Cannot get blockhash — skipping")
+                    continue
+
+                try:
+                    msg = MessageV0.try_compile(
+                        payer=keypair.pubkey(),
+                        instructions=instructions,
+                        address_lookup_table_accounts=address_lookup_tables,
+                        recent_blockhash=Hash.from_string(blockhash),
+                    )
+                    tx = VersionedTransaction(msg, [keypair])
+                    tx_b64 = base64.b64encode(bytes(tx)).decode("ascii")
                 except Exception as e:
-                    logger.debug(f"ALT fetch error: {e}")
+                    logger.warning(f"TX compile error: {e}")
+                    continue
 
-            if alt_pubkeys and not address_lookup_tables:
-                logger.warning(
-                    f"⚠️ ALT RESOLUTION FAILURE: Could not resolve {len(alt_pubkeys)} ALTs via RPC. "
-                    f"Aborting transaction to prevent MTU (1232 bytes) packet overflow."
+                # ── Step 6: Pre-flight simulation ─────────────────────────
+                strategy = "lst_depeg"
+                if not is_strategy_allowed(strategy):
+                    continue
+                is_profitable, reason, sim_result = await flash_sim.validate_profitability(
+                    tx_b64=tx_b64,
+                    tx_signer_pubkey=str(keypair.pubkey()),
+                    min_profit_lamports=min_profit_lamports,
+                    tip_lamports=jito_tip_lamports,
+                    priority_fee_lamports=int(cfg.PRIORITY_FEE * 1e9),
                 )
-                continue  # Пропускаем эту попытку до следующего слота
 
-            # Get fresh blockhash
-            blockhash = cached_blockhash
-            if not blockhash or time.time() - cache_time > 2:
-                blockhash = await get_current_blockhash(session, rpc_manager.get_rpc())
-            if not blockhash:
-                logger.warning("Cannot get blockhash — skipping")
-                continue
+                if not is_profitable:
+                    # Fix 2: MarginFi Flash-Loan Asset Pivot
+                    if "StaleOracle" in reason or "stale" in reason.lower():
+                        # global _oracle_stale_hit, _oracle_stale_asset_hint  # (moved to function top)
+                        _oracle_stale_hit = True
+                        _oracle_stale_asset_hint = "USDC" if "USDC" in reason else "SOL"
 
-            # Get fresh blockhash
-            blockhash = cached_blockhash
-            if not blockhash or time.time() - cache_time > 2:
-                blockhash = await get_current_blockhash(session, rpc_manager.get_rpc())
-            if not blockhash:
-                logger.warning("Cannot get blockhash — skipping")
-                continue
+                    if "sim" in reason.lower() or "fail" in reason.lower():
+                        record_sim_failure(strategy)
+                    continue  # Skip this opportunity — do NOT send unprofitable tx to Jito
 
-            try:
-                msg = MessageV0.try_compile(
-                    payer=keypair.pubkey(),
-                    instructions=instructions,
-                    address_lookup_table_accounts=address_lookup_tables,
-                    recent_blockhash=Hash.from_string(blockhash),
-                )
-                tx = VersionedTransaction(msg, [keypair])
-                tx_b64 = base64.b64encode(bytes(tx)).decode("ascii")
-            except Exception as e:
-                logger.warning(f"TX compile error: {e}")
-                continue
-
-            # ── Step 6: Pre-flight simulation ─────────────────────────
-            strategy = "lst_depeg"
-            if not is_strategy_allowed(strategy):
-                continue
-            is_profitable, reason, sim_result = await flash_sim.validate_profitability(
-                tx_b64=tx_b64,
-                tx_signer_pubkey=str(keypair.pubkey()),
-                min_profit_lamports=min_profit_lamports,
-                tip_lamports=jito_tip_lamports,
-                priority_fee_lamports=int(cfg.PRIORITY_FEE * 1e9),
-            )
-
-            if not is_profitable:
-                # Fix 2: MarginFi Flash-Loan Asset Pivot
-                if "StaleOracle" in reason or "stale" in reason.lower():
-                    # global _oracle_stale_hit, _oracle_stale_asset_hint  # (moved to function top)
-                    _oracle_stale_hit = True
-                    _oracle_stale_asset_hint = "USDC" if "USDC" in reason else "SOL"
-
-                if "sim" in reason.lower() or "fail" in reason.lower():
-                    record_sim_failure(strategy)
-                continue  # Skip this opportunity — do NOT send unprofitable tx to Jito
-
-            else:
-                # ── Async: record profitable candidate before execution ──────────
-                if TRADE_LOG_QUEUE:
-                    await TRADE_LOG_QUEUE.put(
-                        orjson.dumps(
-                            {
-                                "ts": time.time(),
-                                "event": "sim_ok",
-                                "strategy": "lst_depeg",
-                                "token": signal.token_symbol,
-                            }
-                        ).decode()
-                    )
-
-                # ── Step 7: Send via Jito bundle ──────────────────────────
-                if JITO_AVAILABLE:
-                    tx_with_tip = tx  # Placeholder - tip will be added by JitoBundleHandler/JitoExecutor
-
-                    # ── Pre-Trade Guard: Re-check profit right before send_bundle (Fix Slippage Re-check)
-                    # Between fetching the quote and sending, 100-300ms may have passed.
-                    # If the price slipped and eats the profit — abort. Better to skip than burn gas.
-                    base_fee_lamports = int(cfg.PRIORITY_FEE * 1e9)
-                    est_gas_lamports = int(0.000005 * 1e9)
-                    expected_profit_lamports = int(route.profit_sol * 1e9)
-
-                    trade_ok, trade_reason, _ = (
-                        await pre_trade_guard.check_profit_before_execution(
-                            input_mint=str(
-                                route.buy_quote.input_mint
-                            ),  # entry token (SOL for buy-LST)
-                            output_mint=str(
-                                route.buy_quote.output_mint
-                            ),  # exit token (LST for buy-LST)
-                            amount_lamports=route.borrow_amount_lamports,
-                            jito_tip_lamports=jito_tip_lamports,
-                            base_fee_lamports=base_fee_lamports + est_gas_lamports,
-                            expected_profit_lamports=expected_profit_lamports,
-                            quote_url=cfg.JUPITER_QUOTE_URL,
-                            slippage_bps=cfg.SLIPPAGE_BPS,
+                else:
+                    # ── Async: record profitable candidate before execution ──────────
+                    if TRADE_LOG_QUEUE:
+                        await TRADE_LOG_QUEUE.put(
+                            orjson.dumps(
+                                {
+                                    "ts": time.time(),
+                                    "event": "sim_ok",
+                                    "strategy": "lst_depeg",
+                                    "token": signal.token_symbol,
+                                }
+                            ).decode()
                         )
-                    )
-                    if not trade_ok:
-                        logger.warning(
-                            f"🚫 Pre-Trade Guard BLOCKED: {trade_reason} | {signal.token_symbol}"
-                        )
-                        continue
 
-                    shared_state.stats["bundle_send_attempts"] += 1
+                    # ── Step 7: Send via Jito bundle ──────────────────────────
+                    if JITO_AVAILABLE:
+                        tx_with_tip = tx  # Placeholder - tip will be added by JitoBundleHandler/JitoExecutor
 
-                    # ── Fix "Blocking Discovery": Fire-and-Forget Execution ──────────
-                    # send_bundle itself is ~200ms, wait_for_confirmation wall-clock is up to 30 s.
-                    # Both are wrapped in a background task so the worker loop never blocks
-                    # and continues scanning new pairs while this bundle is pending.
-                    async def _post_send_processing(
-                        b_result,
-                        b_route,
-                        b_tip_lamports,
-                        b_token_symbol,
-                        b_borrow_lamports,
-                    ):
-                        if not b_result.get("success"):
-                            return
+                        # ── Pre-Trade Guard: Re-check profit right before send_bundle (Fix Slippage Re-check)
+                        # Between fetching the quote and sending, 100-300ms may have passed.
+                        # If the price slipped and eats the profit — abort. Better to skip than burn gas.
+                        base_fee_lamports = int(cfg.PRIORITY_FEE * 1e9)
+                        est_gas_lamports = int(0.000005 * 1e9)
+                        expected_profit_lamports = int(route.profit_sol * 1e9)
 
-                        shared_state.stats["bundle_successes"] += 1
-                        shared_state.stats["trades"] += 1
-                        bundle_id = b_result.get("bundle_id", "")
-
-                        # ── Async trade record (no blocking write) ─────────────────
-                        if TRADE_LOG_QUEUE:
-                            await TRADE_LOG_QUEUE.put(
-                                orjson.dumps(
-                                    {
-                                        "ts": time.time(),
-                                        "event": "bundle_sent",
-                                        "strategy": "lst_depeg",
-                                        "token": b_token_symbol,
-                                        "borrow_sol": round(b_borrow_lamports / 1e9, 6),
-                                        "tip_sol": round(b_tip_lamports / 1e9, 6),
-                                        "bundle_id": bundle_id,
-                                    }
-                                ).decode()
+                        trade_ok, trade_reason, _ = (
+                            await pre_trade_guard.check_profit_before_execution(
+                                input_mint=str(
+                                    route.buy_quote.input_mint
+                                ),  # entry token (SOL for buy-LST)
+                                output_mint=str(
+                                    route.buy_quote.output_mint
+                                ),  # exit token (LST for buy-LST)
+                                amount_lamports=route.borrow_amount_lamports,
+                                jito_tip_lamports=jito_tip_lamports,
+                                base_fee_lamports=base_fee_lamports + est_gas_lamports,
+                                expected_profit_lamports=expected_profit_lamports,
+                                quote_url=cfg.JUPITER_QUOTE_URL,
+                                slippage_bps=cfg.SLIPPAGE_BPS,
+                                is_circular=True,  # FIX: Требуем двухстороннюю проверку профита для Flash-loan
                             )
+                        )
+                        if not trade_ok:
+                            logger.warning(
+                                f"🚫 Pre-Trade Guard BLOCKED: {trade_reason} | {signal.token_symbol}"
+                            )
+                            continue
 
-                        # Wait for confirmation in background (non-blocking)
-                        confirmation = await jito_executor.wait_for_confirmation(
-                            bundle_id, max_wait_time=0.8
-                        )
-                        jito_bidding_manager.record_bundle_result(
-                            "lst_depeg",
-                            confirmation.get("status") in ["confirmed", "finalized"],
-                        )
-                        if confirmation.get("status") in ["confirmed", "finalized"]:
+                        shared_state.stats["bundle_send_attempts"] += 1
+
+                        # ── Fix "Blocking Discovery": Fire-and-Forget Execution ──────────
+                        # send_bundle itself is ~200ms, wait_for_confirmation wall-clock is up to 30 s.
+                        # Both are wrapped in a background task so the worker loop never blocks
+                        # and continues scanning new pairs while this bundle is pending.
+                        async def _post_send_processing(
+                            b_result,
+                            b_route,
+                            b_tip_lamports,
+                            b_token_symbol,
+                            b_borrow_lamports,
+                        ):
+                            if not b_result.get("success"):
+                                return
+
+                            shared_state.stats["bundle_successes"] += 1
+                            shared_state.stats["trades"] += 1
+                            bundle_id = b_result.get("bundle_id", "")
+
+                            # ── Async trade record (no blocking write) ─────────────────
                             if TRADE_LOG_QUEUE:
                                 await TRADE_LOG_QUEUE.put(
                                     orjson.dumps(
                                         {
                                             "ts": time.time(),
-                                            "event": "confirmed",
+                                            "event": "bundle_sent",
                                             "strategy": "lst_depeg",
+                                            "token": b_token_symbol,
+                                            "borrow_sol": round(b_borrow_lamports / 1e9, 6),
+                                            "tip_sol": round(b_tip_lamports / 1e9, 6),
                                             "bundle_id": bundle_id,
-                                            "status": confirmation.get("status"),
                                         }
                                     ).decode()
                                 )
-                            # Task 6 — Zero-Delay Post-Trade Dust Sweep
-                            try:
-                                from src.ingest.dust_sweeper import DustSweeper
 
-                                _sweeper = DustSweeper(keypair, rpc_url, session)
-                                _recovered = await _sweeper.sweep_after_successful_tx()
-                            except Exception:
-                                pass
-                        else:
-                            logger.warning(
-                                f"❌ LST bundle status: {confirmation.get('status', 'unknown')} "
-                                f"| {signal.token_symbol}"
+                            # Wait for confirmation in background (non-blocking)
+                            confirmation = await jito_executor.wait_for_confirmation(
+                                bundle_id, max_wait_time=0.8
                             )
-                            jito_bidding_manager.record_trade_result("lst_depeg", False)
+                            jito_bidding_manager.record_bundle_result(
+                                "lst_depeg",
+                                confirmation.get("status") in ["confirmed", "finalized"],
+                            )
+                            if confirmation.get("status") in ["confirmed", "finalized"]:
+                                if TRADE_LOG_QUEUE:
+                                    await TRADE_LOG_QUEUE.put(
+                                        orjson.dumps(
+                                            {
+                                                "ts": time.time(),
+                                                "event": "confirmed",
+                                                "strategy": "lst_depeg",
+                                                "bundle_id": bundle_id,
+                                                "status": confirmation.get("status"),
+                                            }
+                                        ).decode()
+                                    )
+                                # Task 6 — Zero-Delay Post-Trade Dust Sweep
+                                try:
+                                    from src.ingest.dust_sweeper import DustSweeper
 
-                        tx_with_tip = tx  # Placeholder — tip will be added by JitoBundleHandler/JitoExecutor
-                        bundle_result = await jito_executor.send_bundle([tx_with_tip])
-                        # Сохраняем сильную ссылку в глобальный набор shared_state.active_tasks (Fix GC Trap)
-                        task = asyncio.create_task(
-                            _post_send_processing(
-                                bundle_result,
-                                route,
-                                jito_tip_lamports,
-                                str(signal.token_symbol),
-                                route.borrow_amount_lamports,
-)
+                                    _sweeper = DustSweeper(keypair, rpc_url, session)
+                                    _recovered = await _sweeper.sweep_after_successful_tx()
+                                except Exception:
+                                    pass
+                            else:
+                                logger.warning(
+                                    f"❌ LST bundle status: {confirmation.get('status', 'unknown')} "
+                                    f"| {signal.token_symbol}"
+                                )
+                                jito_bidding_manager.record_trade_result("lst_depeg", False)
+
+                            tx_with_tip = tx  # Placeholder — tip will be added by JitoBundleHandler/JitoExecutor
+                            bundle_result = await jito_executor.send_bundle([tx_with_tip])
+                            # Сохраняем сильную ссылку в глобальный набор shared_state.active_tasks (Fix GC Trap)
+                            task = asyncio.create_task(
+                                _post_send_processing(
+                                    bundle_result,
+                                    route,
+                                    jito_tip_lamports,
+                                    str(signal.token_symbol),
+                                    route.borrow_amount_lamports,
+                                )
+                            )
+                            shared_state.active_tasks.add(task)
+                            task.add_done_callback(background_task_callback)
+
+                    else:
+                        logger.warning(
+                            "❌ Simulation failed or Jito unavailable. Skipping trade for capital protection."
                         )
-                        shared_state.active_tasks.add(task)
-                        task.add_done_callback(background_task_callback)
-
-                else:
-                    logger.warning(
-                        "❌ Simulation failed or Jito unavailable. Skipping trade for capital protection."
-                    )
         except Exception as e:
             logger.error(f"LST scanner error: {e}")
 
@@ -4417,7 +4474,7 @@ async def execute_priority_opportunity(
     if current_balance_sol < 0.015:
         try:
             from src.ingest.wsol_manager import WSOLManager
-            wsol_mgr = WSOLManager(keypair.pubkey(), session)
+            wsol_mgr = WSOLManager(keypair.pubkey(), keypair=keypair, session=session)
             unwrapped = await wsol_mgr.check_and_unwrap_wsol(
                 rpc_url=rpc_manager.get_rpc(),
                 native_balance_sol=current_balance_sol,
@@ -4927,6 +4984,11 @@ async def worker(
     pairs_checked = 0
     while True:
         priority, _tie_breaker, path = await queue.get()
+        logger.info(f"🔎 [1 RPS Queue]: Scanning route {str(path[0])[:8]} ➔ {str(path[1])[:8]}")
+        if priority_queue is not None and priority_queue.size() > 0:
+            await asyncio.sleep(1.0)
+            queue.task_done()
+            continue
         try:
             pairs_checked += 1
             if len(path) == 2:
@@ -4992,7 +5054,7 @@ async def worker(
             if balance is not None and balance < 0.015:
                 try:
                     from src.ingest.wsol_manager import WSOLManager
-                    wsol_mgr = WSOLManager(keypair.pubkey(), session)
+                    wsol_mgr = WSOLManager(keypair.pubkey(), keypair=keypair, session=session)
                     unwrapped = await wsol_mgr.check_and_unwrap_wsol(
                         rpc_url=rpc_manager.get_rpc(),
                         native_balance_sol=balance,
@@ -5010,6 +5072,7 @@ async def worker(
             quote1 = None
             quote_sol_usdc = None
 
+            logger.info(f"🔎 Очередь [1 RPS]: Ищу маршрут {in_mint_str[:4]} ➔ {target_mint_str[:4]}")
             if len(path) == 2:
                 # 2-hop Direct
                 quote1 = await get_best_quote_multi(
@@ -5360,7 +5423,7 @@ async def worker(
                 # Fix 39: Direct route — rebuild chain from anti-sandwich value
                 chosen_route = [quote1, quote2]
 
-            elif best_route_idx == 1:
+            elif route_type == "triangular":
                 # Triangular route re-fetch: use restrictIntermediateTokens=false (2 calls instead of 3)
                 quote1_multi = await get_best_quote_multi(
                     session,
@@ -5555,7 +5618,7 @@ async def tcp_heartbeat(session: aiohttp.ClientSession):
         "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
         "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
         "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://quote-api.jup.ag/v6/quote",
+        os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
     ]
 
     payload = {"jsonrpc": "2.0", "id": 1, "method": "getVersion"}
@@ -5612,7 +5675,7 @@ async def tcp_heartbeat(session: aiohttp.ClientSession):
         "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
         "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
         "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://quote-api.jup.ag/v6/quote"
+        os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
     ]
     payload = {"jsonrpc": "2.0", "id": 1, "method": "getVersion"}
     
@@ -5742,16 +5805,16 @@ async def run():
                 logger.info(f"🌐 SOCKS Proxy Enabled: {proxy_url}")
             except ImportError:
                 logger.warning("aiohttp_socks not installed. Using default resolver.")
-                connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)
+                connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, family=socket.AF_INET, force_close=True, enable_cleanup_closed=True)
         elif proxy_url.startswith("http"):
             os.environ["HTTPS_PROXY"] = proxy_url
             os.environ["HTTP_PROXY"] = proxy_url
-            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, trust_env=True)
+            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, trust_env=True, family=socket.AF_INET, force_close=True, enable_cleanup_closed=True)
             logger.info(f"🌐 HTTP Proxy Enabled: {proxy_url}")
         else:
-            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)
+            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, family=socket.AF_INET, force_close=True, enable_cleanup_closed=True)
     else:
-        connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True)
+        connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, family=socket.AF_INET, force_close=True, enable_cleanup_closed=True)
 
     session = aiohttp.ClientSession(
         connector=connector,
@@ -5789,22 +5852,26 @@ async def run():
     # Phase 49: Hardware & Performance Heartbeat
     asyncio.create_task(tcp_heartbeat(session))
     # ── Fix 53: Warm-up requests (3 dummy calls to prime DNS + TCP connections) ──────
-    try:
-        for _ in range(3):
-            try:
-                await session.get(
-                    "https://quote-api.jup.ag/v6/quote?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000&onlyDirectRoutes=true&restrictIntermediateTokens=true&maxAccounts=8",
-                    timeout=2,
-                )
-                await session.post(
-                    rpc.get_rpc(),
-                    json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"},
-                    timeout=2,
-                )
-            except:
-                pass
-    except Exception as e:
-        logger.debug(f"Warm-up request exception: {e}")
+    jup_quote_url = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
+    jup_key = os.getenv("JUPITER_API_KEY", "")
+    jup_headers = {"x-api-key": jup_key} if jup_key else {}
+    for _ in range(3):
+                try:
+                    await session.get(
+                        f"{jup_quote_url}?inputMint=So11111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000",
+                        headers=jup_headers,
+                        timeout=2,
+                    )
+                except:
+                    pass
+                try:
+                    await session.post(
+                        rpc.get_rpc(),
+                        json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"},
+                        timeout=2,
+                    )
+                except:
+                    pass
 
     # Fix 70: Log rotation + DB vacuum background task
     async def _maintenance():
@@ -5828,7 +5895,9 @@ async def run():
                 logger.warning("Low disk space — stopping logs")
 
     asyncio.create_task(_maintenance())
-    asyncio.create_task(_gc_idle_collector())  # Fix 57: manual GC on idle queue
+    _gc_task = asyncio.create_task(_gc_idle_collector())  # Fix 57: manual GC on idle queue
+    shared_state.active_tasks.add(_gc_task)
+    _gc_task.add_done_callback(background_task_callback)
     # Задача 50: Защита от Slot Drift (Time Sync Guard)
     await check_time_sync(session, rpc.get_rpc())
 
@@ -6337,7 +6406,9 @@ async def run():
 
             await asyncio.sleep(120)
 
-    asyncio.create_task(wallet_balance_listener())
+    _wallet_task = asyncio.create_task(wallet_balance_listener())
+    shared_state.active_tasks.add(_wallet_task)
+    _wallet_task.add_done_callback(background_task_callback)
 
     health_monitor = BankHealthMonitor(
         rpc,
@@ -6365,19 +6436,18 @@ async def run():
     # Seed Hard Floor Guard (Task 47)
     asyncio.create_task(hard_floor_guard())
 
-    # Jupiter Warm-up
+    # Jupiter Warm-up (Paper Trading Bypass: no route restriction)
     try:
-        url = "https://quote-api.jup.ag/v6/quote"
+        url = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
+        jup_key = os.getenv("JUPITER_API_KEY", "")
+        headers = {"x-api-key": jup_key} if jup_key else {}
         params = {
-            "inputMint": "So11111111111111111111111111111111111111112",
+            "inputMint": "So11111111111111111111111111111111111112",
             "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
             "amount": "100000000",
             "slippageBps": "50",
-            "onlyDirectRoutes": "true",        # Task 14: force direct routes for micro-balance safety
-            "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
-            "maxAccounts": "8",
         }
-        async with session.get(url, params=params) as resp:
+        async with session.get(url, params=params, headers=headers) as resp:
             if resp.status == 200:
                 logger.debug("✅ Jupiter warm-up successful")
     except:
@@ -6491,7 +6561,7 @@ async def run():
         logger.warning(f"PythCorePriceFeeder startup failed (non-fatal): {pyth_err}")
 
     # 9. Main Processing Loops
-    queue = asyncio.PriorityQueue(maxsize=100)
+    queue = asyncio.PriorityQueue(maxsize=1)
 
     tasks = [
         asyncio.create_task(update_prices(session, cfg)),
@@ -6582,7 +6652,7 @@ async def run():
     # LST Instant Unstake Arbitrage Scanner
     if cfg.LST_UNSTAKE_ARB_ENABLED:
         unstake_task = asyncio.create_task(
-            lst_unstake_arbitrage_scanner(session, cfg, rpc, keypair, jito_executor, jito_tip_manager, data_aggregator=data_aggregator)
+            lst_unstake_arbitrage_scanner(session, cfg, rpc, keypair, jito_executor, jito_bidding_manager=jito_bidding_manager, data_aggregator=data_aggregator)
         )
         tasks.append(unstake_task)
         logger.info("🔄 LST Instant Unstake Arbitrage Scanner ENABLED")
@@ -7201,14 +7271,17 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
 
 
 if __name__ == "__main__":
-    # Execute ZERO-STRING HOT LOOP optimization before running the bot
     _convert_tokens_to_pubkeys()
-    try:
-        import uvloop
-        asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
-        logger.info("⚡ uvloop установлен (максимальная скорость)")
-    except ImportError:
-        logger.info("ℹ️ uvloop не найден, используем стандартный asyncio")
+    import platform
+    if platform.system() != "Darwin":
+        try:
+            import uvloop
+            asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
+            logger.info("⚡ uvloop установлен (максимальная скорость)")
+        except ImportError:
+            logger.info("ℹ️ uvloop не найден, используем стандартный asyncio")
+    else:
+        logger.info("🍏 macOS detected: using standard asyncio to prevent SSL crashes")
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

@@ -15,6 +15,7 @@ from typing import List, Dict, Any, Optional, Tuple
 from decimal import Decimal
 from solders.hash import Hash
 from solders.pubkey import Pubkey
+from solders.keypair import Keypair
 from solders.instruction import Instruction, AccountMeta
 from solders.system_program import TransferParams, transfer
 from spl.token.instructions import get_associated_token_address, sync_native, close_account, CloseAccountParams, SyncNativeParams, create_associated_token_account
@@ -56,8 +57,9 @@ class WSOLManager:
     - Auto-unwrap wSOL when native balance drops below threshold (Fix 1)
     """
 
-    def __init__(self, wallet_pubkey: Pubkey, session: Optional[aiohttp.ClientSession] = None):
+    def __init__(self, wallet_pubkey: Pubkey, keypair: Optional[Keypair] = None, session: Optional[aiohttp.ClientSession] = None):
         self.wallet_pubkey = wallet_pubkey
+        self.keypair = keypair
         self.session = session
         self.wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         self.usdc_mint = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
@@ -281,6 +283,9 @@ class WSOLManager:
         Returns:
             True if wSOL was unwrapped, False if no action needed.
         """
+        import os
+        if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+            return True
         # Fix 74+78: Safe session fallback + safe str() casting on wsol_ata
         _session = self.session
         _session_owned = False
@@ -377,7 +382,10 @@ class WSOLManager:
                 address_lookup_table_accounts=[],
                 recent_blockhash=Hash.from_string(bh_str)
             )
-            tx = VersionedTransaction(msg, [])
+            if self.keypair is None:
+                logger.error("wSOL unwrap: keypair is None — cannot sign transaction")
+                return False
+            tx = VersionedTransaction(msg, [self.keypair])
 
             tx_b64 = base64.b64encode(bytes(tx)).decode("ascii")
             send_payload = {

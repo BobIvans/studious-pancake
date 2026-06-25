@@ -362,6 +362,8 @@ class MultiAggregatorClient:
 
                 # Shrink timeout to remaining time
                 elapsed = time.time() - start_race
+                if elapsed >= 4.0:
+                    break
                 timeout = max(0.1, 4.0 - elapsed)
 
         finally:

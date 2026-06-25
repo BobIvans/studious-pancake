@@ -13,6 +13,7 @@ from typing import Dict, Optional, Set, Tuple, Optional as OptionalType
 import aiohttp
 from solders.keypair import Keypair
 from solders.transaction import VersionedTransaction
+from solders.instruction import Instruction, AccountMeta
 
 from .jito_bundle_client import JitoBundleClient
 
@@ -188,9 +189,18 @@ class JitoManager:
             # Get recent blockhash from bundle client (real blockhash, not placeholder)
             recent_blockhash = await self.bundle_client._get_recent_blockhash(self.rpc_url)
 
-            # Send via bundle client
+            swap_instructions = []
+            if transaction is not None:
+                for compiled_ix in transaction.message.instructions:
+                    program_id = transaction.message.account_keys[compiled_ix.program_id_index]
+                    accounts = []
+                    for acc_idx in compiled_ix.accounts:
+                        pubkey = transaction.message.account_keys[acc_idx]
+                        accounts.append(AccountMeta(pubkey=pubkey, is_signer=False, is_writable=True))
+                    swap_instructions.append(Instruction(program_id=program_id, accounts=accounts, data=compiled_ix.data))
+
             result = await self.bundle_client.build_and_send_bundle(
-                swap_instructions=[],  # Transaction already contains instructions
+                swap_instructions=swap_instructions,
                 payer_keypair=payer_keypair,
                 recent_blockhash=recent_blockhash
             )
@@ -415,7 +425,13 @@ class JitoBiddingManager:
         # If not provided, we fall back to expected_profit_sol only.
         tip_lamports_float = tip_lamports
         if current_native_sol_balance is not None:
-            available_native_lamports = int((current_native_sol_balance - 0.005) * 1_000_000_000)  # leave 0.005 SOL for gas
+            if current_native_sol_balance < 0.1:
+                import os
+                min_reserve = float(os.getenv("MIN_RESERVE_SOL", "0.010"))
+                available_space = max(0.0, current_native_sol_balance - min_reserve)
+                available_native_lamports = int(available_space * 1_000_000_000)
+            else:
+                available_native_lamports = int((current_native_sol_balance - 0.005) * 1_000_000_000)
             tip_lamports_float = min(tip_lamports, available_native_lamports)
             logger.debug(
                 f"💰 Jito tip cap: balance={current_native_sol_balance:.6f} SOL | "

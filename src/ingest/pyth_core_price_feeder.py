@@ -21,6 +21,7 @@ import time
 from typing import Dict, Optional, Any, Callable
 
 import aiohttp
+import socket
 
 from src.config.addresses import PYTH_CORE_FEEDS, get_mint_for_core_feed
 
@@ -43,7 +44,7 @@ class PythCorePriceFeeder:
     Maintains an in-memory price dict that can be consumed by
     arb_bot's _set_global_price_matrix() or normalize_profit_to_sol().
 
-    Uses a separate Hermes connection from the xStocks Pyth client
+    Uses a separate Hermes connection
     to avoid cross-contamination and keep the subscription small (3 feeds).
 
     ═══════════════════════════════════════════════════════════════════════
@@ -111,7 +112,7 @@ class PythCorePriceFeeder:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create session with DoH resolver."""
         if self.session is None or self.session.closed:
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             self.session = aiohttp.ClientSession(connector=connector)
             self._session_owned = True
         return self.session

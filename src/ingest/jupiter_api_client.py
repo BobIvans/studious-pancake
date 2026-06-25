@@ -7,27 +7,36 @@ import os
 import time
 from typing import Any, Dict, Optional
 import aiohttp
+import socket
 import orjson
 from solders.transaction import VersionedTransaction
+from aiolimiter import AsyncLimiter
 
 logger = logging.getLogger(__name__)
 
-_GLOBAL_JUPITER_LIMITER = None
-_limiter_available = False
+_QUOTE_LIMITER = None
+
+def get_quote_limiter():
+    global _QUOTE_LIMITER
+    if _QUOTE_LIMITER is None:
+        rps = int(os.getenv("JUPITER_QUOTE_RPS", "1"))
+        _QUOTE_LIMITER = AsyncLimiter(max(1, rps), 1.0)
+    return _QUOTE_LIMITER
+
+def get_swap_limiter():
+    global _SWAP_LIMITER
+    if _SWAP_LIMITER is None:
+        jup_rps = int(os.getenv("JUPITER_SWAP_RPS", "45"))
+        _SWAP_LIMITER = AsyncLimiter(max(1, jup_rps), 1.0)
+    return _SWAP_LIMITER
 
 def get_jupiter_limiter():
-    global _GLOBAL_JUPITER_LIMITER, _limiter_available
-    if _GLOBAL_JUPITER_LIMITER is None:
-        try:
-            import os
-            from aiolimiter import AsyncLimiter
-            jup_rps = int(os.getenv("JUPITER_QUOTE_RPS", "1"))
-            _GLOBAL_JUPITER_LIMITER = AsyncLimiter(max(1, jup_rps), 1.0)
-            _limiter_available = True
-        except ImportError:
-            _GLOBAL_JUPITER_LIMITER = None
-            _limiter_available = False
-    return _GLOBAL_JUPITER_LIMITER
+    global _QUOTE_LIMITER, _SWAP_LIMITER
+    if _QUOTE_LIMITER is None:
+        get_quote_limiter()
+    if _SWAP_LIMITER is None:
+        get_swap_limiter()
+    return _QUOTE_LIMITER or _SWAP_LIMITER
 
 # Jupiter API endpoints — динамически из .env
 QUOTE_API_URL = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
@@ -55,7 +64,10 @@ class JupiterClient:
                 limit_per_host=30,
                 ttl_dns_cache=300,
                 use_dns_cache=True,
-                keepalive_timeout=60
+                keepalive_timeout=60,
+                family=socket.AF_INET,
+                force_close=True,
+                enable_cleanup_closed=True,
             )
             self.session = aiohttp.ClientSession(
                 connector=connector,
@@ -103,31 +115,32 @@ class JupiterClient:
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
-            "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
+            "amount": str(int(amount)),
             "slippageBps": slippage_bps,
-            "swapMode": swap_mode, # Task 16
-            "onlyDirectRoutes": str(only_direct_routes).lower(),
-            "restrictIntermediateTokens": "false", # Let Jupiter find triangular arbs
-            "cache_buster": str(time.time_ns()),  # Task 1: Anti-cache bomb for HFT
+            "swapMode": swap_mode,
+            "onlyDirectRoutes": "false",
+            "restrictIntermediateTokens": "false",
+            "cache_buster": str(time.time_ns()),
         }
 
         if fee_bps is not None:
             params["feeBps"] = str(fee_bps)
-
-        # Task 14: ATA Routing Drain mitigation (maxAccounts=8)
-        params["maxAccounts"] = "8"  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
 
         if as_legacy_transaction:
             params["asLegacyTransaction"] = "true"
 
         for attempt in range(self.max_retries):
             try:
-                limiter = get_jupiter_limiter()
+                limiter = get_quote_limiter()
+                headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}
+                if os.getenv("JUPITER_API_KEY"):
+                    headers["x-api-key"] = os.getenv("JUPITER_API_KEY")
                 if limiter is not None:
                     async with limiter:
                         async with self.session.get(
                             QUOTE_API_URL,
                             params=params,
+                            headers=headers,
                             timeout=self.timeout,
                         ) as response:
                             if response.status == 200:
@@ -136,9 +149,10 @@ class JupiterClient:
                                 logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
                                 return result
                             elif response.status == 429:
-                                # FIX 13: 429 Too Many Requests — mandatory 2.0s backoff
-                                logger.warning(f"Jupiter 429 rate limit hit — backoff 2.0s (attempt {attempt + 1})")
-                                await asyncio.sleep(2.0)
+                                # FIX 13: 429 Too Many Requests — mandatory backoff
+                                backoff = min(2.0, 1.5 * (attempt + 1))
+                                logger.warning(f"Jupiter 429 on {QUOTE_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
+                                await asyncio.sleep(backoff)
                                 continue
                             else:
                                 error_text = await response.text()
@@ -155,15 +169,18 @@ class JupiterClient:
                     async with self.session.get(
                         QUOTE_API_URL,
                         params=params,
+                        headers=headers,
                         timeout=self.timeout,
                     ) as response:
                         if response.status == 200:
                             result = orjson.loads(await response.read())
+                            result["fetched_at"] = time.time()  # Task 13: Stale Quote Guard
                             logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
                             return result
                         elif response.status == 429:
-                            logger.warning(f"Jupiter 429 rate limit hit — backoff 2.0s (attempt {attempt + 1})")
-                            await asyncio.sleep(2.0)
+                            backoff = min(2.0, 1.5 * (attempt + 1))
+                            logger.warning(f"Jupiter 429 on {QUOTE_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
+                            await asyncio.sleep(backoff)
                             continue
                         else:
                             error_text = await response.text()
@@ -257,13 +274,16 @@ class JupiterClient:
 
         for attempt in range(self.max_retries):
             try:
-                limiter = get_jupiter_limiter()
+                limiter = get_swap_limiter()
+                headers = {"Content-Type": "application/json"}
+                if os.getenv("JUPITER_API_KEY"):
+                    headers["x-api-key"] = os.getenv("JUPITER_API_KEY")
                 if limiter is not None:
                     async with limiter:
                         async with self.session.post(
                             SWAP_API_URL,
                             json=payload,
-                            headers={"Content-Type": "application/json"},
+                            headers=headers,
                             timeout=self.timeout,
                         ) as response:
                             if response.status == 200:
@@ -271,8 +291,9 @@ class JupiterClient:
                                 logger.debug(f"Successfully got swap transaction for user {user_public_key}")
                                 return result
                             elif response.status == 429:
-                                logger.warning(f"Jupiter swap 429 rate limit hit — backoff 2.0s (attempt {attempt + 1})")
-                                await asyncio.sleep(2.0)
+                                backoff = min(2.0, 1.5 * (attempt + 1))
+                                logger.warning(f"Jupiter swap 429 on {SWAP_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
+                                await asyncio.sleep(backoff)
                                 continue
                             else:
                                 error_text = await response.text()
@@ -287,7 +308,7 @@ class JupiterClient:
                     async with self.session.post(
                         SWAP_API_URL,
                         json=payload,
-                        headers={"Content-Type": "application/json"},
+                        headers=headers,
                         timeout=self.timeout,
                     ) as response:
                         if response.status == 200:
@@ -295,9 +316,9 @@ class JupiterClient:
                             logger.debug(f"Successfully got swap transaction for user {user_public_key}")
                             return result
                         elif response.status == 429:
-                            logger.warning(f"Jupiter swap 429 rate limit hit — backoff 2.0s (attempt {attempt + 1})")
-                            await asyncio.sleep(2.0)
-                            continue
+                            backoff = min(2.0, 1.5 * (attempt + 1))
+                            logger.warning(f"Jupiter swap 429 on {SWAP_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
+                            await asyncio.sleep(backoff)
                         else:
                             error_text = await response.text()
                             logger.warning(f"Swap API error (attempt {attempt + 1}): {response.status} - {error_text}")

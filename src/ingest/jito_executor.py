@@ -24,6 +24,7 @@ JITO_STATUS_ENDPOINT = "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
 
 # ── Regional Block Engine HTTP endpoints ──────────────────────────────────────
 JITO_HTTP_ENDPOINTS: List[str] = [
+    "https://bundles.jito.wtf/api/v1/bundles",
     "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
     "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
     "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
@@ -47,7 +48,10 @@ class JitoExecutor:
         self.bundle_endpoint  = bundle_endpoint or os.getenv(
             "JITO_RPC_URL", JITO_STATUS_ENDPOINT
         )
-        self.endpoints        = JITO_HTTP_ENDPOINTS
+        if str(os.getenv("STRICT_JITO_MODE", "false")).lower() == "true":
+            self.endpoints = JITO_HTTP_ENDPOINTS
+        else:
+            self.endpoints = JITO_HTTP_ENDPOINTS
         self.timeout          = timeout
         self.current_tip_data = None
 
@@ -119,9 +123,11 @@ class JitoExecutor:
     async def get_jito_tip(self, priority: str = "normal") -> float:
         default = 0.00009
         endpoints = [
-            "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_floor",
-            "https://bundles-api-rest.jito.wtf/api/v1/bundles/tip_floor",
-            "https://api.jito.wtf/api/v1/bundles/tip_floor",
+            "https://bundles.jito.wtf/api/v1/bundles/tip_floor",
+            "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles/tip_floor",
+            "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles/tip_floor",
+            "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles/tip_floor",
+            "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles/tip_floor",
         ]
         mult = {"critical": 2.8, "high": 1.8, "normal": 1.0}.get(priority, 1.0)
         

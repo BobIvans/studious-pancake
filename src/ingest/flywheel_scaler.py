@@ -158,7 +158,6 @@ class FlywheelScaler:
         self.initial_balance = initial_balance
         # Task 17: Use Token-2022 rent (0.0035) as conservative default since
         # pre_calculate_ata_budget cannot know which mints are involved.
-        # This prevents underestimating costs when xStocks are in the trade path.
         self.rent_per_ata = ATA_RENT_SOL  # SOL rent exemption used by Jupiter setupInstructions
         self.min_gas_reserve = 0.005  # STRICT_GAS_TANK floor
 

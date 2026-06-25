@@ -17,7 +17,7 @@ from .amm_math import AmmMath  # moved to top-level for reliability
 logger = logging.getLogger(__name__)
 
 MICRO_BALANCE_SOL = 0.015
-# Dynamic ATA rent: 0.00204 SOL for standard SPL Token, 0.0035 SOL for Token-2022 (xStocks/RWA)
+# Dynamic ATA rent: 0.00204 SOL for standard SPL Token, 0.0035 SOL for Token-2022
 ATA_RENT_SOL = 0.00204
 ATA_RENT_TOKEN2022_SOL = 0.0035
 GAS_RESERVE_SOL = 0.005
@@ -422,10 +422,13 @@ class OptimalTradeSizer:
         lag_pct: Optional[float] = None,
     ):
         """Find optimal trade size using analytical formula for live routes.
-        
+
         FIX: When reserves are unavailable (Jupiter public API), use priceImpactPct
         to estimate liquidity and adjust trade size accordingly.
         """
+        if not amount_in or amount_in <= 0:
+            return Decimal('0')
+
         CLMM_PROGRAMS = {
             "CAMMCkzFhJfPWvTv7SwbeCfFFmCd29S4mxS3vz5S2SEt",
             "whirLbMi2tG34uFp881tua2RZBY9oXKVvVf9xrq7Rqi",

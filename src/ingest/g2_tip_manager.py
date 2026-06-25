@@ -15,7 +15,6 @@ class G2TipManager:
         self.base_tips = {
             "LST_EPOCH": 15000,
             "SANCTUM_ROUTER": 15000,
-            "XSTOCKS_LAG": 25000,
             "GRADUATION": 35000,
             "DEFAULT": 15000,
         }
@@ -27,7 +26,7 @@ class G2TipManager:
         """Determine the starting tip based on strategy and expected profit.
 
         Args:
-            strategy: Strategy name (e.g. "LST_EPOCH", "XSTOCKS_LAG")
+            strategy: Strategy name (e.g. "LST_EPOCH")
             exp_profit_sol: Expected profit in SOL
 
         Returns:

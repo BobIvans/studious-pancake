@@ -16,9 +16,9 @@ from pathlib import Path
 from typing import Dict, Optional, Any
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
+import socket
 import aiohttp
 from src.ingest.data_aggregator import DataAggregator
-from src.config.xstocks_registry import XSTOCK_MINTS
 from src.ingest.oracle_streams import OracleStreams
 
 # ============================================================================
@@ -66,13 +66,12 @@ class PaperTrader:
         self.jup_sem = asyncio.Semaphore(self.jup_rps)
 
         logger.info(f"🚀 Инициализация. Jupiter RPS: {self.jup_rps}")
-        logger.info(f"📊 Загружено токенов: LST({len(LST_TOKENS)}), xStocks({len(XSTOCK_MINTS)}), DePIN({len(DEPIN_MEME_TOKENS)})")
+        logger.info(f"📊 Загружено токенов: LST({len(LST_TOKENS)}), DePIN({len(DEPIN_MEME_TOKENS)})")
 
     async def initialize(self):
-        connector = aiohttp.TCPConnector(limit=0, ttl_dns_cache=300)
+        connector = aiohttp.TCPConnector(limit=0, ttl_dns_cache=300, family=socket.AF_INET)
         self.session = aiohttp.ClientSession(connector=connector)
 
-        # Подключаем Pyth Oracle Streams для акций (xStocks)
         self.oracle = OracleStreams(
             opportunity_callback=self._on_oracle_opportunity
         )
@@ -85,20 +84,24 @@ class PaperTrader:
 
     async def _fetch_jupiter(self, input_mint: str, output_mint: str, amount: int):
         async with self.jup_sem:
-            url = "https://quote-api.jup.ag/v6/quote"
+            url = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
+            jup_key = os.getenv("JUPITER_API_KEY", "")
+            headers = {
+                "x-api-key": jup_key,
+                "Authorization": f"Bearer {jup_key}"
+            } if jup_key else {}
             # Fix 77: Safe str() wrapping on input_mint/output_mint to prevent
             # TypeError when Pubkey objects are passed instead of strings
             params = {
                 "inputMint": str(input_mint),
                 "outputMint": str(output_mint),
-                "amount": str(int(amount)),  # Task 16: strict int→string to avoid HTTP 400
+                "amount": str(int(amount)),
                 "slippageBps": "15",
-                "onlyDirectRoutes": "true",  # Task 14: force direct routes
-                "restrictIntermediateTokens": "true",  # Task 14: block intermediate tokens
-                "maxAccounts": "28",
+                "onlyDirectRoutes": "false",
+                "restrictIntermediateTokens": "false",
             }
             try:
-                async with self.session.get(url, params=params) as resp:
+                async with self.session.get(url, params=params, headers=headers) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         return {"source": "Jupiter", "out": int(data["outAmount"])}
@@ -155,7 +158,6 @@ class PaperTrader:
             for lst in LST_TOKENS.values():
                 tasks.append(self._scan_route(BASE_TOKENS["SOL"], lst, sol_amount))
 
-            # 2. Генерируем задачи для xStocks (к USDC)
             for stock in XSTOCK_MINTS.values():
                 tasks.append(self._scan_route(BASE_TOKENS["USDC"], str(stock), usdc_amount))
 
@@ -183,10 +185,8 @@ class PaperTrader:
             if self.session:
                 await self.session.close()
 
-if __name__ == "__main__":
-    try:
+    if __name__ == "__main__":
         import uvloop
-        uvloop.run(PaperTrader().run())
-    except ImportError:
+        uvloop.install()
         import asyncio
         asyncio.run(PaperTrader().run())

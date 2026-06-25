@@ -1,6 +1,6 @@
 """
 Pyth Oracle Client for Real-Time Price Feeds
-Hermes WebSocket integration for xStocks Oracle Lag Strategy
+Hermes WebSocket integration for price feeds
 """
 
 import asyncio
@@ -81,8 +81,7 @@ class PythHermesClient:
                 self.websocket = websocket
                 logger.info(f"✅ Connected to Pyth Hermes: {self.ws_url}")
 
-                # Subscribe to all xStocks feeds
-                subscription = {
+                        subscription = {
                     "type": "subscribe",
                     "subscription_type": "price_feed_updates",
                     "price_feed_ids": get_all_pyth_feed_ids()
@@ -117,7 +116,6 @@ class PythHermesClient:
                 ticker = self.feed_to_ticker.get(feed_id)
 
                 if not ticker:
-                    return  # Not an xStocks feed we're tracking
 
                 price_data = data.get("price_feed", {})
                 price_info = price_data.get("price", {})

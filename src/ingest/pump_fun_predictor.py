@@ -3,11 +3,13 @@
 import asyncio
 import json
 import logging
+import os
 import struct
 import time
 from typing import Dict, Any, Optional, List, Tuple
 from enum import Enum
 import aiohttp
+import socket
 
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYSTEM_PROGRAM_ID
@@ -364,7 +366,7 @@ class RaydiumMarketSubscriber:
 
     def __init__(self, session: Optional[aiohttp.ClientSession] = None, wss_url: Optional[str] = None):
         self.session = session
-        self.wss_url = wss_url or "wss://api.mainnet-beta.solana.com"
+        self.wss_url = wss_url or os.getenv("WSS_ENDPOINT_1", "") or os.getenv("RPC_WS_URL", "")
         self.market_cache: Dict[str, Dict] = {}  # mint -> market_info
 
     async def subscribe_to_market_creation(self, mint_address: str) -> Optional[str]:
@@ -405,7 +407,7 @@ class PumpFunMigrationPredictor:
         jito_endpoints: Optional[List[str]] = None
     ):
         self.session = session
-        self.wss_url = wss_url or "wss://api.mainnet-beta.solana.com"
+        self.wss_url = wss_url or os.getenv("WSS_ENDPOINT_1", "") or os.getenv("RPC_WS_URL", "")
         # Fix G: Use real Jito Block Engine URLs instead of hallucinated solana.com domains
         self.jito_endpoints = jito_endpoints or [
             "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",

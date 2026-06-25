@@ -6,6 +6,7 @@ bundle sending, and status polling for dropped bundle recovery.
 """
 
 import asyncio
+import base58
 import logging
 import random
 import time
@@ -168,6 +169,8 @@ class JitoManager:
         """
         Send transaction as Jito bundle with tip.
 
+        Uses the pre-built transaction directly instead of rebuilding instructions.
+
         Args:
             transaction: Transaction to send
             payer_keypair: Payer keypair
@@ -180,36 +183,23 @@ class JitoManager:
         try:
             logger.info("📦 Sending bundle via Jito")
 
-            # Create JitoPriorityContext using adapter
-            from .jito_priority_context import JitoPriorityContextAdapter
-            jito_adapter = JitoPriorityContextAdapter()
-            jito_context = jito_adapter.build_jito_context({"token_address": "SOL"})
-            jito_context.dynamic_tip_target_lamports = tip_lamports
+            tx_base58 = base58.b58encode(bytes(transaction)).decode("ascii")
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "sendBundle",
+                "params": [[tx_base58]]
+            }
 
-            # Get recent blockhash from bundle client (real blockhash, not placeholder)
-            recent_blockhash = await self.bundle_client._get_recent_blockhash(self.rpc_url)
-
-            swap_instructions = []
-            if transaction is not None:
-                for compiled_ix in transaction.message.instructions:
-                    program_id = transaction.message.account_keys[compiled_ix.program_id_index]
-                    accounts = []
-                    for acc_idx in compiled_ix.accounts:
-                        pubkey = transaction.message.account_keys[acc_idx]
-                        accounts.append(AccountMeta(pubkey=pubkey, is_signer=False, is_writable=True))
-                    swap_instructions.append(Instruction(program_id=program_id, accounts=accounts, data=compiled_ix.data))
-
-            result = await self.bundle_client.build_and_send_bundle(
-                swap_instructions=swap_instructions,
-                payer_keypair=payer_keypair,
-                recent_blockhash=recent_blockhash
+            result = await self.bundle_client._send_http_request(
+                self.bundle_client.endpoints[0], payload
             )
+            result["bundle_id"] = result.get("bundle_id")
 
             if result.get("success"):
                 bundle_id = result.get("bundle_id")
                 logger.info(f"✅ Bundle sent successfully: {bundle_id}")
 
-                # Fix #3: Track background task to prevent GC destruction
                 task = asyncio.create_task(self._poll_bundle_status(bundle_id))
                 self.background_tasks.add(task)
                 task.add_done_callback(lambda t: self.background_tasks.discard(t))
@@ -330,7 +320,7 @@ class JitoBiddingManager:
         """
         Blue Ocean Tip Strategy: 40% of Expected Net Profit with Tip Floor Filter.
 
-        Для стратегий LST Depeg, xStocks Oracle Lag, Sanctum Router — там нет жесткой
+        Для стратегий LST Depeg, Sanctum Router — там нет жесткой
         конкуренции за блок, поэтому Tip = 40% от Expected Net Profit достаточно для
         гарантированного включения в блок. Никаких Step-Up/Down, никакого Capital Guard
         (который может заблокировать сделку с 0.017 SOL).

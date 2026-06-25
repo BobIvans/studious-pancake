@@ -14,9 +14,10 @@ def run_simulation_test():
     """Run paper trading simulation"""
     print("🧪 Running Paper Trading Simulation...")
     try:
+        paper_trader_path = Path(__file__).parent.parent / "scripts" / "paper_trader.py"
         result = subprocess.run([
-            sys.executable, "paper_trader.py"
-        ], capture_output=True, text=True, timeout=60)  # 1 minute timeout
+            sys.executable, str(paper_trader_path)
+        ], capture_output=True, text=True, timeout=60)
 
         print("📄 Simulation Output:")
         print(result.stdout)

@@ -33,12 +33,8 @@ class DustSweeper:
         self.spl_token_2022_program = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
         self.usdc_mint = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
         self.wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
-        from src.config.xstocks_registry import is_xstock_token
         from spl.token.instructions import get_associated_token_address
-        if is_xstock_token(self.usdc_mint):
-            self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint, self.spl_token_2022_program))
-        else:
-            self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint))
+        self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint))
         self.wsol_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.wsol_mint))
         self.golden_atas = {self.wsol_ata, self.usdc_ata}
 
@@ -171,7 +167,6 @@ class DustSweeper:
 
         Fix #5 — Aggressive ATA Rent Recovery for 0.017 SOL capital:
         - Core Golden (USDC, wSOL): НИКОГДА не трогаем
-        - Token-2022 xStocks: проверяем withheld_fees; сжигаем если баланс 0
         - Zero-balance не-golden: dust
         - Любой токен < 0.05: dust
         """
@@ -198,25 +193,6 @@ class DustSweeper:
             ]:
                 return False
 
-            # Token-2022 (xStocks) — проверяем withheld fees
-            # У Token-2022 есть withheld_fees, которые блокируют CloseAccount
-            # Если баланс > 0 и есть withheld fees, не трогаем
-            from src.config.xstocks_registry import is_xstock_token
-            if mint and is_xstock_token(Pubkey.from_string(mint)):
-                # Извлекаем расширения Token-2022 (extensions находятся на уровне parsed)
-                extensions = parsed_data.get("extensions", [])
-                
-                # Ищем расширение удержанных комиссий
-                for ext in extensions:
-                    if ext.get("extension") == "transferFeeAmount":
-                        withheld_amount = int(ext.get("state", {}).get("withheldAmount", 0))
-                        if withheld_amount > 0:
-                            logger.debug(f"⏳ xStock {mint[:8]} has withheld fees ({withheld_amount}) — skipping close to prevent revert.")
-                            return False
-
-                # Для xStocks — ждем полного обнуления
-                return ui_amount == 0
-
             # Zero balance — всегда dust (кроме golden, уже проверено выше)
             if ui_amount == 0:
                 return True
@@ -234,20 +210,16 @@ class DustSweeper:
         """Build Burn instruction for SPL token (Phase 41)."""
         try:
             from spl.token.instructions import BurnParams, burn
-            from src.config.xstocks_registry import is_xstock_token
 
-            # Fix: use Token-2022 program ID for xStocks, classic SPL for everything else
-            if mint and is_xstock_token(Pubkey.from_string(mint)):
-                program_id = self.spl_token_2022_program
-            else:
-                program_id = self.spl_token_program
+            program_id = self.spl_token_program
 
             burn_params = BurnParams(
                 program_id=program_id,
                 account=Pubkey.from_string(token_account),
                 mint=Pubkey.from_string(mint),
                 owner=self.wallet_keypair.pubkey(),
-                amount=amount
+                amount=amount,
+                signers=[]
             )
             return burn(burn_params)
         except Exception as e:
@@ -324,19 +296,13 @@ class DustSweeper:
 
         Args:
             token_account: Token account address to close.
-            mint: Token mint string — used to detect Token-2022 xStocks so the
                   correct program ID (Tokenz… vs Tokenkeg…) is used.
                   If None, falls back to classic SPL Token program.
         """
         try:
             from spl.token.instructions import CloseAccountParams, close_account
-            from src.config.xstocks_registry import is_xstock_token
 
-            # Detect Token-2022 xStocks → use Token-2022 program ID
-            if mint and is_xstock_token(Pubkey.from_string(mint)):
-                program_id = self.spl_token_2022_program
-            else:
-                program_id = self.spl_token_program
+            program_id = self.spl_token_program
 
             close_params = CloseAccountParams(
                 account=Pubkey.from_string(token_account),
@@ -389,6 +355,9 @@ class DustSweeper:
 
     async def _send_transaction(self, tx: VersionedTransaction) -> bool:
         """Send transaction to network."""
+        import os
+        if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+            return True
         try:
             import base64
             tx_b64 = base64.b64encode(bytes(tx)).decode('ascii')

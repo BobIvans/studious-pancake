@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """AI Offline Analyzer for arbitrage trading data analysis and insights."""
 
+import asyncio
 import logging
 import json
 import statistics
@@ -27,12 +28,12 @@ class AIOfflineAnalyzer:
         self.data_collector = data_collector
         self.analysis_results = {}
 
-    def run_full_analysis(self, days_back: int = 7) -> Dict[str, Any]:
+    async def run_full_analysis(self, days_back: int = 7) -> Dict[str, Any]:
         """Run comprehensive analysis on recent trading data."""
         logger.info(f"🔍 Starting AI analysis for last {days_back} days...")
 
         # Get recent trades
-        trades = self.data_collector.get_recent_trades(50000)  # Last 50k trades
+        trades = await self.data_collector.get_recent_trades(50000)  # Last 50k trades
 
         if not trades:
             return {"error": "No trade data available for analysis"}
@@ -382,7 +383,7 @@ def main():
     analyzer = AIOfflineAnalyzer(collector)
 
     # Run analysis
-    results = analyzer.run_full_analysis(days_back=days_back)
+    results = asyncio.run(analyzer.run_full_analysis(days_back=days_back))
 
     if "error" in results:
         print(f"❌ Analysis failed: {results['error']}")

@@ -1,13 +1,11 @@
 import os
-import subprocess
 import traceback
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 app = FastAPI()
 
-# Автоматически берем ту папку, откуда запущен uvicorn
-BASE_DIR = os.getcwd() 
+BASE_DIR = os.getcwd()
 
 class FileContent(BaseModel):
     text: str
@@ -27,23 +25,3 @@ def write_file(path: str, content: FileContent):
     with open(full_path, 'w', encoding='utf-8') as f:
         f.write(content.text)
     return {"status": "success"}
-
-@app.post("/bash")
-def run_bash(cmd: str):
-    try:
-        result = subprocess.run(
-            cmd, shell=True, cwd=BASE_DIR, capture_output=True, text=True, timeout=120
-        )
-        return {
-            "status": "success",
-            "exit_code": result.returncode,
-            "stdout": result.stdout[-5000:] if result.stdout else "",
-            "stderr": result.stderr[-5000:] if result.stderr else ""
-        }
-    except Exception as e:
-        # Ловим любые сбои на Mac и отправляем лог обратно агенту
-        return {
-            "status": "error",
-            "stdout": "",
-            "stderr": f"Внутренняя ошибка сервера Mac:\n{traceback.format_exc()}"
-        }

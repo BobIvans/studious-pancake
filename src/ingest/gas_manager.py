@@ -63,6 +63,9 @@ async def check_and_refill_gas(session, rpc, keypair):
     🔴 THREAT #1 FIX: Auto-swap USDC → Native SOL when gas runs low.
     Ensures bot has enough Native SOL for Jito tips.
     """
+    import os
+    if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+        return
     try:
         # Check native balance
         native_bal = await StateManager.get_balance(session, rpc, keypair.pubkey())

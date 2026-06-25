@@ -85,7 +85,7 @@ class JitoTipManager:
     async def _refresh_tip_accounts(self):
         """Fetch Jito tip accounts from API."""
         try:
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(self.JITO_TIP_ACCOUNTS_URL, ssl=False) as resp:
                     if resp.status == 200:
@@ -238,7 +238,6 @@ class JitoTipManager:
         """
         base_tips = {
             "lst_unstake": 15000,
-            "xstocks_lag": 25000,
             "default": 10000,
         }
         base_tip = base_tips.get(strategy, base_tips["default"])
@@ -249,7 +248,14 @@ class JitoTipManager:
         
         # Cap tip to 5% of balance if provided
         if current_native_sol_balance is not None:
-            balance_tip_cap = int(current_native_sol_balance * 0.05 * 1_000_000_000)
+            if current_native_sol_balance < 0.1:
+                import os
+                min_reserve = float(os.getenv("MIN_RESERVE_SOL", "0.010"))
+                available_space = max(0.0, current_native_sol_balance - min_reserve)
+                balance_tip_cap = int(available_space * 1_000_000_000)
+            else:
+                balance_tip_cap = int(current_native_sol_balance * 0.05 * 1_000_000_000)
+            balance_tip_cap = max(balance_tip_cap, 10000)
             tip_amount = min(tip_amount, balance_tip_cap)
         
         return tip_amount
@@ -261,7 +267,7 @@ class JitoTipManager:
     async def fetch_tip_accounts(self) -> bool:
         """Fetch live Jito tip accounts from Block Engine (Phase 35)."""
         try:
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.get(self.JITO_TIP_ACCOUNTS_URL, timeout=5.0, ssl=False) as resp:
                     if resp.status == 200:
@@ -346,13 +352,14 @@ class WssPoolCreationListener:
 
     def __init__(
         self,
-        rpc_ws_url: str = "wss://api.mainnet-beta.solana.com",
-        rpc_http_url: str = "https://api.mainnet-beta.solana.com",
+        rpc_ws_url: Optional[str] = None,
+        rpc_http_url: Optional[str] = None,
         event_callback: Optional[Callable[[PoolCreationEvent], None]] = None,
         session: Optional[aiohttp.ClientSession] = None,
     ):
-        self.rpc_ws_url = rpc_ws_url
-        self.rpc_http_url = rpc_http_url
+        import os
+        self.rpc_ws_url = rpc_ws_url or os.getenv("RPC_WS_URL", "")
+        self.rpc_http_url = rpc_http_url or os.getenv("RPC_URL", "") or os.getenv("RPC_URL_1", "")
         self.event_callback = event_callback
         self.session = session
         self._session_owned = session is None  # Will be created in __aenter__
@@ -369,7 +376,7 @@ class WssPoolCreationListener:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             self.session = aiohttp.ClientSession(connector=connector)
         return self
 
@@ -394,7 +401,7 @@ class WssPoolCreationListener:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create session with DoH resolver."""
         if self.session is None or self.session.closed:
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             self.session = aiohttp.ClientSession(connector=connector)
             self._session_owned = True
         return self.session
@@ -760,7 +767,7 @@ class JitoBundleSender:
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             self.session = aiohttp.ClientSession(connector=connector)
         return self
 
@@ -928,7 +935,7 @@ class TransactionTipBuilder:
 
             # Phase 30: Inject fresh blockhash from racing manager at the last second
             if recent_blockhash is None:
-                from ingest.blockhash_racing import get_blockhash_manager
+                from src.ingest.blockhash_racing import get_blockhash_manager
                 bh_mgr = get_blockhash_manager()
                 if bh_mgr:
                     recent_blockhash = await bh_mgr.get_fresh_blockhash()

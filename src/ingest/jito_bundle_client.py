@@ -10,6 +10,7 @@ import asyncio
 import base58
 import logging
 import os
+import socket
 import time
 from typing import Any, Dict, List, Optional
 import aiohttp
@@ -62,7 +63,7 @@ class JitoBundleClient:
     async def __aenter__(self) -> "JitoBundleClient":
         if self._session_owned and self.session is None:
             self.session = aiohttp.ClientSession(
-                connector=aiohttp.TCPConnector(force_close=False, ttl_dns_cache=300)
+                connector=aiohttp.TCPConnector(force_close=False, ttl_dns_cache=300, family=socket.AF_INET)
             )
         return self
 

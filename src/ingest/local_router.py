@@ -70,7 +70,7 @@ class LocalRouter:
     def __init__(
         self,
         pool_state_manager: PoolStateManager,
-        jupiter_api_url: str = "https://quote-api.jup.ag/v6",
+        jupiter_api_url: str = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
         session: Optional[aiohttp.ClientSession] = None
     ):
         self.pool_state_manager = pool_state_manager

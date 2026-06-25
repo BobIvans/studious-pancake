@@ -1,13 +1,15 @@
 """AI data collection utilities for arbitrage trade history."""
 
 import csv
-import sqlite3
+import asyncio
 import time
 from collections import deque
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional
+from typing import Any, Dict, Iterable, List, Optional, Union
+
+import aiosqlite
 
 
 @dataclass
@@ -69,7 +71,7 @@ class AIDataCollector:
             self._init_sqlite()
 
     def _init_sqlite(self) -> None:
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(self.db_path, timeout=30) as conn:
             conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS arbitrage_trades (
@@ -93,18 +95,18 @@ class AIDataCollector:
             )
             conn.commit()
 
-    def record_trade(self, record: ArbitrageTradeRecord | Dict[str, Any]) -> None:
+    async def record_trade(self, record: Union[ArbitrageTradeRecord, Dict[str, Any]]) -> None:
         trade = self._normalize_record(record)
         self._records.append(trade)
 
         # deque(maxlen=10000) automatically drops oldest records — O(1), no pop(0) shift
 
         if self.use_sqlite:
-            self._insert_sqlite(trade)
+            await self._insert_sqlite(trade)
         else:
             self._append_csv(trade)
 
-    def _normalize_record(self, record: ArbitrageTradeRecord | Dict[str, Any]) -> Dict[str, Any]:
+    def _normalize_record(self, record: Union[ArbitrageTradeRecord, Dict[str, Any]]) -> Dict[str, Any]:
         if isinstance(record, ArbitrageTradeRecord):
             return record.to_dict()
 
@@ -133,9 +135,9 @@ class AIDataCollector:
             return None
         return float(value)
 
-    def _insert_sqlite(self, trade: Dict[str, Any]) -> None:
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute(
+    async def _insert_sqlite(self, trade: Dict[str, Any]) -> None:
+        async with aiosqlite.connect(self.db_path, timeout=30) as conn:
+            await conn.execute(
                 """
                 INSERT OR REPLACE INTO arbitrage_trades (
                     timestamp, datetime, pair, initial_score, expected_profit_sol,
@@ -162,7 +164,16 @@ class AIDataCollector:
                     trade["signature"],
                 ),
             )
-            conn.commit()
+            await conn.commit()
+
+    async def _load_sqlite_records(self) -> List[Dict[str, Any]]:
+        if not Path(self.db_path).exists():
+            return []
+        async with aiosqlite.connect(self.db_path, timeout=30) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute("SELECT * FROM arbitrage_trades ORDER BY timestamp DESC") as cursor:
+                rows = await cursor.fetchall()
+        return [dict(row) for row in rows]
 
     def _append_csv(self, trade: Dict[str, Any]) -> None:
         path = Path(self.csv_path)
@@ -173,8 +184,8 @@ class AIDataCollector:
                 writer.writeheader()
             writer.writerow({field: trade.get(field) for field in self.CSV_FIELDS})
 
-    def get_statistics(self) -> Dict[str, Any]:
-        trades = self._records or self._load_all_records()
+    async def get_statistics(self) -> Dict[str, Any]:
+        trades = self._records or await self._load_all_records()
         if not trades:
             return {
                 "total_trades": 0,
@@ -209,21 +220,22 @@ class AIDataCollector:
             "pair_counts": pair_counts,
         }
 
-    def get_recent_trades(self, limit: int = 5) -> List[Dict[str, Any]]:
-        trades = self._records or self._load_all_records()
+    async def get_recent_trades(self, limit: int = 5) -> List[Dict[str, Any]]:
+        trades = self._records or await self._load_all_records()
         return sorted(trades, key=lambda trade: float(trade.get("timestamp", 0.0)), reverse=True)[:limit]
 
-    def _load_all_records(self) -> List[Dict[str, Any]]:
+    async def _load_all_records(self) -> List[Dict[str, Any]]:
         if self.use_sqlite:
-            return self._load_sqlite_records()
+            return await self._load_sqlite_records()
         return self._load_csv_records()
 
-    def _load_sqlite_records(self) -> List[Dict[str, Any]]:
+    async def _load_sqlite_records(self) -> List[Dict[str, Any]]:
         if not Path(self.db_path).exists():
             return []
-        with sqlite3.connect(self.db_path) as conn:
-            conn.row_factory = sqlite3.Row
-            rows = conn.execute("SELECT * FROM arbitrage_trades ORDER BY timestamp DESC").fetchall()
+        async with aiosqlite.connect(self.db_path, timeout=30) as conn:
+            conn.row_factory = aiosqlite.Row
+            async with conn.execute("SELECT * FROM arbitrage_trades ORDER BY timestamp DESC") as cursor:
+                rows = await cursor.fetchall()
         return [dict(row) for row in rows]
 
     def _load_csv_records(self) -> List[Dict[str, Any]]:

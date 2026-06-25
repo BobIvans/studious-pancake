@@ -121,11 +121,11 @@ async def test_data_collection():
 
     # Record trades
     for record in records:
-        collector.record_trade(record)
+        await collector.record_trade(record)
         logger.info(f"📝 Recorded trade: {record.pair} - {record.result}")
 
     # Get statistics
-    stats = collector.get_statistics()
+    stats = await collector.get_statistics()
     logger.info("📊 Data Collection Statistics:")
     for key, value in stats.items():
         if isinstance(value, float):
@@ -134,7 +134,7 @@ async def test_data_collection():
             logger.info(f"  {key}: {value}")
 
     # Get recent trades
-    recent_trades = collector.get_recent_trades(limit=5)
+    recent_trades = await collector.get_recent_trades(limit=5)
     logger.info(f"📈 Recent trades: {len(recent_trades)}")
 
 async def test_offline_analysis():

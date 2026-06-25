@@ -153,7 +153,7 @@ def get_priority_order() -> List[str]:
     return ["HIGHEST", "HIGH", "MEDIUM", "LOW"]
 
 # ============================================================================
-# PYTH ORACLE FEEDS FOR XSTOCKS ORACLE LAG ARBITRAGE
+# PYTH ORACLE FEEDS
 # ============================================================================
 
 PYTH_FEEDS = {

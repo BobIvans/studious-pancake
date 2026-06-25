@@ -1,6 +1,6 @@
 """
 Oracle WebSocket Streams - Pyth Hermes API Integration
-Real-time price feeds from Pyth Network for xStocks Oracle Lag arbitrage.
+Real-time price feeds from Pyth Network.
 Triggers arbitrage when Oracle price deviates from AMM price by >0.25%.
 Supports PriorityQueue for multiple simultaneous signals.
 """
@@ -18,34 +18,13 @@ from queue import PriorityQueue
 
 logger = logging.getLogger(__name__)
 
-# Pyth Price Feeds Registry for xStocks
+# Pyth Price Feeds Registry
 PYTH_FEEDS = {
-    "NVDAx": "b1073854ed24cbc755dc527418f52b7d271f6cc967bbf8d8129112b18860a593",
-    "NVDAx_PRE": "61c4ca5b9731a79e285a01e24432d57d89f0ecdd4cd7828196ca8992d5eafef6",
-    "NVDAx_ON": "c949a96fd1626e82abc5e1496e6e8d44683ac8ac288015ee90bf37257e3e6bf6",
-    "NVDAx_POST": "25719379353a508b1531945f3c466759d6efd866f52fbaeb3631decb70ba381f",
-    "TSLAx": "713631e41c06db404e6a5d029f3eebfd5b885c59dce4a19f337c024e26584e26",
-    "AAPLx": "8c320e4cd87c6cef41513aead15db413cf9253211923fef6e87187a7f6688906",
-    "AMZNx": "82c59e36a8e0247e15283748d6cd51f5fa1019d73fbf3ab6d927e17d9e357a7f",
-    "MSFTx": "556b3e4dcc1c66448ba4054a0d9485545e3227ffc90a269f630620c5a38241ab",
-    "GOOGLx": "07d24bb76843496a45bce0add8b51555f2ea02098cb04f4c6d61f7b5720836b4",
-    "METAx": "ce0999c4f22f35f00e8f9913694868d00279c0b9efbd7cb1c358bf2fd76295c9",
-    "MSTRx": "c3055f49e1dc863a7f24d9b83e86fe10d7d16fb583bc6445505b01d230e0d647",
-    "COINx": "5c3bd92f2eed33779040caea9f82fac705f5121d26251f8f5e17ec35b9559cd4",
-    "HOODx": "306736a4035846ba15a3496eed57225b64cc19230a50d14f3ed20fd7219b7849",
-    "MARAx": "0fc2ad77a9ab75bcbc3ebd7a9ff60facd08c517309e2d684baa979c910a0e43e",
-    "RIOTx": "46417522a59b245c5af35c33c13426d991b36514c4c85aaefe1cf787e7daad90",
-    "SPYx": "05d590e94e9f51abe18ed0421bc302995673156750e914ac1600583fe2e03f99",
-    "QQQx": "9695e2b96ea7b3859da9ed25b7a46a920a776e2fdae19a7bcfdf2b219230452d",
-    "GLDx": "e190f467043db04548200354889dfe0d9d314c08b8d4e62fabf4d5a3140fecca",
-    "SLVx": "6fc08c9963d266069cbd9780d98383dabf2668322a5bef0b9491e11d67e5d7e7",
 }
 
 # Priority order for multiple signals (highest profit first)
 PRIORITY_ORDER = [
-    "MSTRx", "NVDAx", "TSLAx", "MARAx", "RIOTx",
-    "COINx", "HOODx", "AMZNx", "GOOGLx", "METAx",
-    "SPYx", "QQQx", "AAPLx", "MSFTx", "GLDx", "SLVx"
+
 ]
 
 class OraclePrice:
@@ -59,7 +38,7 @@ class OraclePrice:
         self.source = source
 
 class OracleStreams:
-    """Real-time oracle price streaming via Pyth Hermes WebSocket for xStocks arbitrage."""
+    """Real-time oracle price streaming via Pyth Hermes WebSocket."""
 
     def __init__(self, pyth_ws_url: str = "wss://hermes.pyth.network/ws",
                  chainlink_ws_url: Optional[str] = None,
@@ -98,7 +77,6 @@ class OracleStreams:
         """Start oracle WebSocket streams and signal processor."""
         self.running = True
 
-        # Start Pyth stream (primary oracle for xStocks)
         asyncio.create_task(self._pyth_stream())
 
         # Start Chainlink stream if provided
@@ -127,22 +105,20 @@ class OracleStreams:
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create session with DoH resolver."""
         if self.session is None or self.session.closed:
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             self.session = aiohttp.ClientSession(connector=connector)
             self._session_owned = True
         return self.session
 
     async def _pyth_stream(self):
-        """Connect to Pyth Hermes WebSocket for real-time xStocks prices."""
+        """Connect to Pyth Hermes WebSocket for real-time prices."""
         try:
             session = await self._get_session()
             async with session.ws_connect(self.pyth_ws_url) as websocket:
                 self.pyth_ws = websocket
                 logger.info(f"Connected to Pyth Hermes WebSocket: {self.pyth_ws_url}")
 
-                # Subscribe to ALL xStocks price feeds for Oracle Lag arbitrage
                 feed_ids = list(PYTH_FEEDS.values())
-                logger.info(f"Subscribing to {len(feed_ids)} Pyth price feeds for xStocks Oracle Lag")
 
                 subscription_msg = {
                     "type": "subscribe",
@@ -249,7 +225,6 @@ class OracleStreams:
             self.oracle_prices[ticker] = oracle_price
 
             # Check for Oracle Lag arbitrage opportunity
-            opportunity = await self._check_oracle_lag_opportunity(ticker, oracle_price)
             if opportunity:
                 # Add to PriorityQueue with tie-breaker
                 priority = PRIORITY_ORDER.index(ticker) if ticker in PRIORITY_ORDER else 99
@@ -274,7 +249,6 @@ class OracleStreams:
         except Exception as e:
             logger.debug(f"Pyth Hermes update processing error: {e}")
 
-    async def _check_oracle_lag_opportunity(self, ticker: str, oracle_price: OraclePrice) -> Optional[Dict[str, Any]]:
         """Check for Oracle Lag arbitrage opportunity."""
         try:
             # This would query AMM pools for current price and compare with oracle
@@ -299,7 +273,6 @@ class OracleStreams:
                 )
                 return None
 
-            # Check if above threshold (0.25% for xStocks)
             if price_diff_pct > 0.0025:
                 direction = "oracle_higher" if oracle_price.price > amm_price else "amm_higher"
 
@@ -356,7 +329,6 @@ class OracleStreams:
                     self.active_signals[ticker] = now
 
                     # Execute arbitrage for this opportunity
-                    await self._execute_oracle_lag_arbitrage(opportunity)
 
                     # Clean old active signals
                     cutoff = now - 30.0
@@ -368,66 +340,6 @@ class OracleStreams:
                 logger.error(f"Signal queue processing error: {e}")
                 await asyncio.sleep(1)
 
-    async def _execute_oracle_lag_arbitrage(self, opportunity: Dict[str, Any]):
-        """Execute Oracle Lag arbitrage transaction."""
-        try:
-            ticker = opportunity["ticker"]
-            logger.info(f"🎯 Executing Oracle Lag arbitrage for {ticker}: "
-                       f"{opportunity['expected_profit_pct']:.2%} expected profit")
-
-            # Get token addresses
-            token_mint = PYTH_FEEDS.get(ticker, {}).get('mint')
-            if not token_mint:
-                logger.error(f"No mint address found for {ticker}")
-                return
-
-            # Calculate optimal trade size using OptimalTradeSizer (Analytical)
-            oracle_price = opportunity["oracle_price"]
-            amm_price = opportunity["amm_price"]
-            
-            # Fetch real reserves from PoolStateManager
-            reserves = [Decimal('1000000'), Decimal('1000000')] # Default fallback
-            if self.pool_state_manager:
-                pool = self.pool_state_manager.get_pool_by_ticker(ticker)
-                if pool:
-                    reserves = [pool.reserve_x, pool.reserve_y]
-
-            if self.optimal_trade_sizer:
-                optimal_size = self.optimal_trade_sizer.calculate_analytical_optimal_size(
-                    reserves, [0.003] # 0.3% fee
-                )
-            else:
-                # Fallback to local simplified math
-                optimal_size = self.calculate_optimal_trade_size(
-                    oracle_price, amm_price,
-                    reserves[0], reserves[1],
-                    0.003
-                )
-
-            if not optimal_size or optimal_size <= 0:
-                logger.warning(f"Invalid optimal size for {ticker}: {optimal_size}")
-                return
-
-            # Phase 22: amount_lamports is already scaled or provided correctly
-            amount_lamports = int(optimal_size)
-
-            # Get arbitrage direction
-            if opportunity["direction"] == "oracle_higher":
-                # Oracle > AMM: Buy from AMM, sell to oracle (if possible)
-                # For xStocks, this means buying the token on DEX and holding until oracle catches up
-                logger.info(f"📈 Oracle > AMM for {ticker}: Buying {amount_lamports} lamports")
-                # Implementation would build flash loan + DEX swap transaction
-            else:
-                # Oracle < AMM: Buy from oracle, sell to AMM
-                logger.info(f"📉 Oracle < AMM for {ticker}: Short opportunity detected")
-                # This is more complex - would need synthetic short position
-
-            # For now, log the opportunity without executing
-            # Full implementation would integrate with MarginFi flash loans and Jito bundles
-            logger.info(f"✅ Oracle Lag signal processed for {ticker} (execution framework ready)")
-
-        except Exception as e:
-            logger.error(f"Oracle Lag execution error for {opportunity['ticker']}: {e}")
 
     async def _process_chainlink_update(self, data: Dict[str, Any]):
         """Process Chainlink price update."""

@@ -1,7 +1,7 @@
 """Webhook Configuration for Helius LST Arbitrage Monitoring."""
 
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from src.config.addresses import get_enabled_addresses
 
@@ -21,22 +21,6 @@ class WebhookConfig:
         "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE",  # cgntSOL — Cogent LST
         "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",  # vSOL — Vault LST
         "cPQPBN7WubB3zyQDpzTK2ormx1BMdAym9xkrYUJsctm",  # fwdSOL — Forward staking LST
-    ]
-
-    # xStocks Token Addresses for Oracle Lag Monitoring
-    XSTOCK_ADDRESSES = [
-        "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",  # NVDAx
-        "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",  # TSLAx
-        "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",  # AAPLx
-        "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",  # SPYx
-        "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX",  # QQQx / MSFTx
-        "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg",  # AMZNx
-        "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu",  # METAx
-        "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",  # GOOGLx
-        "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg",  # HOODx
-        "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",  # MSTRx
-        "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ",  # SPYx (backup / alt listing)
-        "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",  # GLDx — Gold xStock weekend arbitrage
     ]
 
     # Parcl Protocol Addresses for RWA Monitoring
@@ -72,7 +56,7 @@ class WebhookConfig:
     SECONDARY_MANAGEMENT_ID = ""
 
     @classmethod
-    def get_webhook_config(cls) -> Dict[str, any]:
+    def get_webhook_config(cls) -> Dict[str, Any]:
         """Get the complete webhook configuration for Helius API."""
         webhook_url = os.getenv("WEBHOOK_URL", "https://your-cloudflare-worker.dev/webhook")
         
@@ -120,11 +104,10 @@ class WebhookConfig:
         return management_id in cls.MANAGEMENT_IDS
 
     @classmethod
-    def get_webhook_info(cls) -> Dict[str, any]:
+    def get_webhook_info(cls) -> Dict[str, Any]:
         """Get comprehensive webhook information."""
         all_addresses = (
             cls.LST_ADDRESSES +
-            cls.XSTOCK_ADDRESSES +
             cls.PARCL_ADDRESSES +
             cls.PYTH_ADDRESSES +
             cls.ORCA_POOL_ADDRESSES
@@ -132,7 +115,6 @@ class WebhookConfig:
 
         return {
             "lst_addresses": cls.LST_ADDRESSES,
-            "xstock_addresses": cls.XSTOCK_ADDRESSES,
             "parcl_addresses": cls.PARCL_ADDRESSES,
             "pyth_addresses": cls.PYTH_ADDRESSES,
             "orca_pool_addresses": cls.ORCA_POOL_ADDRESSES,
@@ -141,12 +123,11 @@ class WebhookConfig:
             "management_ids": cls.MANAGEMENT_IDS,
             "total_addresses": len(all_addresses),
             "total_webhooks": len(cls.WEBHOOK_IDS),
-            "description": "Multi-Strategy Arbitrage: LST + xStocks Oracle Lag + RWA Monitoring"
+            "description": "Multi-Strategy Arbitrage: LST + RWA Monitoring"
         }
 
 # For backward compatibility and easy access
 LST_ADDRESSES = WebhookConfig.LST_ADDRESSES
-XSTOCK_ADDRESSES = WebhookConfig.XSTOCK_ADDRESSES
 PARCL_ADDRESSES = WebhookConfig.PARCL_ADDRESSES
 PYTH_ADDRESSES = WebhookConfig.PYTH_ADDRESSES
 WEBHOOK_IDS = WebhookConfig.WEBHOOK_IDS

@@ -528,7 +528,8 @@ class PreTradeGuard:
                 # Decode base64 data
                 import base64
 
-                raw_data = base64.b64decode(account_data["data"][0])
+                data_b64 = account_data["data"][0]
+                raw_data = base64.b64decode(data_b64 + "=" * (-len(data_b64) % 4))
 
                 # Token-2022 TLV (Type-Length-Value) Parsing
                 # Base Mint: 0-82 | Padding: 82-165 | AccountType: 165 | Extensions: 166+
@@ -780,7 +781,7 @@ class PreTradeGuard:
         jito_tip_lamports: int,
         base_fee_lamports: int,
         expected_profit_lamports: int,
-        quote_url: str = "https://quote-api.jup.ag/v6/quote",
+        quote_url: str = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
         slippage_bps: int = 30,
     ) -> Tuple[bool, str, int]:
         """Re-check Jupiter price ~50 ms before signing/bundling the transaction.
@@ -820,7 +821,7 @@ class PreTradeGuard:
             "outputMint": output_mint,
             "amount": str(int(amount_lamports)),  # Task 16: strict int→string to avoid HTTP 400
             "slippageBps": str(slippage_bps),
-            "maxAccounts": "8",
+            "maxAccounts": "28",
             "onlyDirectRoutes": "false",  # Fix B: allow multi-hop routes for triangular arbitrage
             "restrictIntermediateTokens": "false",  # Fix B: allow intermediate tokens for complex routes
         }

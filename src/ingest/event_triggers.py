@@ -1,6 +1,6 @@
 """
 Event-Driven State Machine for Ultra-Fast Arbitrage Triggers
-Implements specialized triggers for Oracle Lag (RWA) and Graduation Events.
+Implements specialized triggers for Graduation Events.
 """
 
 import asyncio
@@ -17,7 +17,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ArbitrageSignal:
     """Arbitrage opportunity signal."""
-    strategy_type: str  # 'oracle_lag', 'graduation', 'epoch_rebalance'
+    strategy_type: str  # 'graduation', 'epoch_rebalance'
     token_pair: tuple[str, str]  # (base, target)
     expected_profit_bps: int
     confidence_score: float  # 0-1
@@ -47,7 +47,6 @@ class EventTriggerEngine:
         self.amm_prices: Dict[str, Decimal] = {}
         self.active_signals: List[ArbitrageSignal] = []
         self.event_handlers: Dict[str, List[Callable]] = {
-            'oracle_lag': [],
             'graduation': [],
             'epoch_rebalance': []
         }
@@ -84,7 +83,6 @@ class EventTriggerEngine:
         self.oracle_prices[token_symbol] = oracle_price
 
         # Check for oracle lag arbitrage
-        await self._check_oracle_lag_arbitrage(token_symbol, oracle_price)
 
     async def process_amm_price_update(self, token_symbol: str, amm_price_usd: Decimal):
         """Process AMM pool price update."""
@@ -92,8 +90,7 @@ class EventTriggerEngine:
 
         # Check for oracle lag if we have oracle price
         if token_symbol in self.oracle_prices:
-            await self._check_oracle_lag_arbitrage(token_symbol, self.oracle_prices[token_symbol])
-
+    
     async def process_graduation_event(self, event_data: Dict[str, Any]):
         """
         Process token graduation event from launchpad.
@@ -155,44 +152,6 @@ class EventTriggerEngine:
                 expected_profit_bps=expected_profit_bps,
                 confidence_score=0.90,  # High confidence for epoch events
                 trigger_data=epoch_data,
-                timestamp=asyncio.get_running_loop().time()
-            )
-
-            await self._emit_signal(signal)
-
-    async def _check_oracle_lag_arbitrage(self, token_symbol: str, oracle_price: OraclePrice):
-        """Check for oracle lag arbitrage opportunities."""
-        if token_symbol not in self.amm_prices:
-            return
-
-        amm_price = self.amm_prices[token_symbol]
-
-        # Calculate price discrepancy
-        price_diff_pct = float((oracle_price.price_usd - amm_price) / amm_price)
-
-        # Check for significant lag (>0.5% and <10% to avoid manipulation)
-        if 0.005 <= abs(price_diff_pct) <= 0.10:
-            # Determine direction
-            if price_diff_pct > 0:
-                # Oracle > AMM: Buy from AMM, sell to oracle (if possible)
-                pair = (f"{token_symbol}x", "USDC")  # xStocks token
-                profit_bps = int(price_diff_pct * 10000 * 0.7)  # 70% capture rate
-            else:
-                # Oracle < AMM: Buy from oracle, sell to AMM
-                pair = ("USDC", f"{token_symbol}x")
-                profit_bps = int(abs(price_diff_pct) * 10000 * 0.7)
-
-            signal = ArbitrageSignal(
-                strategy_type='oracle_lag',
-                token_pair=pair,
-                expected_profit_bps=profit_bps,
-                confidence_score=0.85,  # Good confidence for oracle data
-                trigger_data={
-                    'oracle_price': float(oracle_price.price_usd),
-                    'amm_price': float(amm_price),
-                    'price_diff_pct': price_diff_pct,
-                    'oracle_source': oracle_price.source
-                },
                 timestamp=asyncio.get_running_loop().time()
             )
 

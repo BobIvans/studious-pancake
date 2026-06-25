@@ -229,9 +229,6 @@ class HeliusWebhookHandler:
                         }
                         await self.opportunity_callback(opportunity, webhook_id)
 
-                if event_type == 'SWAP' and self._is_xstocks_event(event):
-                    await self._process_xstocks_event(event, webhook_id)
-
             elif self._is_sanctum_router_transaction(event):
                 opportunity = self._parse_sanctum_opportunity(event)
                 if opportunity:
@@ -262,38 +259,6 @@ class HeliusWebhookHandler:
             self.jito_shotgun.update_acceptance_rate(True)
         except Exception as e:
             logger.debug(f"Jito Shotgun broadcast error: {e}")
-
-    def _is_xstocks_event(self, event: Dict[str, Any]) -> bool:
-        """Check if this is an xStocks-related event."""
-        try:
-            from src.config.xstocks_registry import is_xstock_token
-            token_transfers = event.get('tokenTransfers', [])
-            for transfer in token_transfers:
-                mint = transfer.get('mint')
-                if mint and is_xstock_token(mint):
-                    return True
-            account_data = event.get('accountData', [])
-            for account_info in account_data:
-                mint = account_info.get('mint')
-                if mint and is_xstock_token(mint):
-                    return True
-            return False
-        except Exception as e:
-            logger.error(f"Error checking xStocks event: {e}")
-            return False
-
-    async def _process_xstocks_event(self, event: Dict[str, Any], webhook_id: str):
-        """Process xStocks oracle lag event."""
-        try:
-            from .xstock_oracle_lag import get_xstock_strategy
-            strategy = get_xstock_strategy()
-            if strategy:
-                await strategy.process_swap_event(event)
-                logger.debug("✅ xStocks event processed by oracle lag strategy")
-            else:
-                logger.warning("❌ xStocks strategy not initialized")
-        except Exception as e:
-            logger.error(f"Error processing xStocks event: {e}")
 
     async def _process_account_update(self, event: Dict[str, Any], webhook_id: str):
         """Process account update events for Orca pools."""

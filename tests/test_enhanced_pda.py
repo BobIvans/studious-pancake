@@ -122,8 +122,7 @@ async def test_speed_comparison():
     start_time = time.time()
     addresses = RaydiumPDAPrecomputer.compute_complete_pool_addresses(sol_mint)
     precompute_time = (time.time() - start_time) * 1000
-
-    logger.info(".2f")
+    logger.info(f"   Pre-compute time: {precompute_time:.2f}ms")
     logger.info(f"   Generated {len(addresses)} addresses instantly")
 
     # Simulate traditional approach timing
@@ -134,8 +133,8 @@ async def test_speed_comparison():
     logger.info("   4. Build transaction: +20-50ms")
     logger.info("   📊 Total: 280-670ms")
 
-    advantage = 300 / max(precompute_time, 0.1)  # Assume 300ms traditional
-    logger.info(".0f")
+    advantage = 300 / max(precompute_time, 0.1)
+    logger.info(f"   Speed advantage: {advantage:.0f}x faster")
     logger.info("✅ Pre-computation provides massive speed advantage!")
 
 async def main():

@@ -19,6 +19,7 @@ from solders.pubkey import Pubkey
 from solders.transaction import VersionedTransaction
 
 from src.ingest.shared_state import MARGINFI_BANKS
+import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger("LstUnstakeArb")
 
@@ -84,7 +85,6 @@ class LstInstantUnstakeArbitrage:
             _jup = JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter)
 
         # Dynamic liquidity from MarginFi SOL bank
-        from src.ingest.shared_state import MARGINFI_BANKS
         bank_info = MARGINFI_BANKS.get(SOL_MINT)
         if not bank_info:
             return []

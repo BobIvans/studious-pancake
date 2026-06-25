@@ -5,8 +5,10 @@ Zero capital required - pure arbitrage on distressed positions.
 """
 
 import asyncio
+import base64
 import logging
 import socket
+import struct
 from typing import Dict, List, Optional, Callable, Any
 from decimal import Decimal
 import aiohttp
@@ -54,7 +56,7 @@ class LiquidationEngine:
         """Start WebSocket monitoring for lending protocols."""
         self.running = True
         try:
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.ws_connect(self.websocket_url, heartbeat=15.0, timeout=30.0, compress=15, receive_timeout=45.0) as ws:
                     self.websocket = ws
@@ -260,13 +262,55 @@ class LiquidationEngine:
 
     async def _extract_kamino_positions(self, account_data: Dict[str, Any]) -> tuple:
         """Extract positions from Kamino obligation."""
-        # Fix 103: return actual mainnet mint addresses
-        return "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", Decimal('1000')
+        try:
+            raw_data = account_data
+            if "account" in account_data:
+                raw_data = account_data["account"]
+            b64_data = raw_data.get("data", "")
+            if isinstance(b64_data, list):
+                b64_data = b64_data[0]
+            if not isinstance(b64_data, str) or not b64_data:
+                return "", "", Decimal('0')
+            padded = b64_data + "=" * (-len(b64_data) % 4)
+            raw_bytes = base64.b64decode(padded)
+            if len(raw_bytes) < 121:
+                return "", "", Decimal('0')
+            collateral_mint = str(Pubkey.from_bytes(raw_bytes[81:113]))
+            collateral_amount = struct.unpack('<Q', raw_bytes[113:121])[0]
+            return "", collateral_mint, Decimal(collateral_amount)
+        except Exception as e:
+            logger.debug(f"Failed to extract Kamino positions: {e}")
+            return "", "", Decimal('0')
 
     async def _extract_marginfi_positions(self, account_data: Dict[str, Any]) -> tuple:
         """Extract positions from MarginFi obligation."""
-        # Fix 103: return actual mainnet mint addresses
-        return "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "So11111111111111111111111111111111111111112", Decimal('1000')
+        try:
+            parsed = account_data.get("parsed", {})
+            info = parsed.get("info", {})
+            if info:
+                return (
+                    info.get("debtMint") or "",
+                    info.get("collateralMint") or "",
+                    Decimal(str(info.get("debtAmount", 0) or 0)),
+                )
+            raw_data = account_data
+            if "account" in account_data:
+                raw_data = account_data["account"]
+            b64_data = raw_data.get("data", "")
+            if isinstance(b64_data, list):
+                b64_data = b64_data[0]
+            if not isinstance(b64_data, str) or not b64_data:
+                return "", "", Decimal('0')
+            padded = b64_data + "=" * (-len(b64_data) % 4)
+            raw_bytes = base64.b64decode(padded)
+            if len(raw_bytes) >= 9:
+                debt_amount = struct.unpack('<Q', raw_bytes[1:9])[0]
+            else:
+                debt_amount = 0
+            return "", "", Decimal(debt_amount)
+        except Exception as e:
+            logger.debug(f"Failed to extract MarginFi positions: {e}")
+            return "", "", Decimal('0')
 
     async def _find_liquidation_pool(self, debt_asset: str, collateral_asset: str) -> Optional[str]:
         """Find best pool for liquidation swap."""
@@ -312,7 +356,7 @@ class LiquidationEngine:
                 ]
             }
             
-            connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+            connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             async with aiohttp.ClientSession(connector=connector) as session:
                 async with session.post(self.websocket_url.replace("wss://", "https://"), json=payload) as resp:
                     if resp.status == 200:

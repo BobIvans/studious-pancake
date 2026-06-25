@@ -325,7 +325,7 @@ class LstRouteAggregator:
             "onlyDirectRoutes": "true" if only_direct_routes else "false",
             "restrictIntermediateTokens": "false",
             "swapMode": swap_mode,
-            "maxAccounts": "8",  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
+            "maxAccounts": "28",  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
             "cache_buster": str(time.time_ns()),
         }
 

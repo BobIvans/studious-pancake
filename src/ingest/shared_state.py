@@ -132,3 +132,11 @@ _balance_lock_pause_until: float = 0.0
 def mark_wsol_atomically_closed():
     global WSOL_JUST_CLOSED_ATOMICALLY
     WSOL_JUST_CLOSED_ATOMICALLY = time.time()
+
+# Fix 5: Authoritative function for setting balance lock pause.
+# Both wsol_manager.py and arb_bot.py should call this instead of
+# directly setting _balance_lock_paused to prevent synchronization bugs.
+def set_balance_lock_paused(paused: bool, duration: float = 0.4) -> None:
+    global _balance_lock_paused, _balance_lock_pause_until
+    _balance_lock_paused = paused
+    _balance_lock_pause_until = time.time() + duration if paused else 0.0

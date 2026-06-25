@@ -276,7 +276,7 @@ class JitoBundleHandler:
                 decompiled.append(
                     SoldersInstruction(
                         program_id=all_keys[ci.program_id_index],
-                        accounts=[all_keys[i] for i in ci.accounts],
+                        accounts=[AccountMeta(all_keys[i], True, True) for i in ci.accounts],
                         data=bytes(ci.data),
                     )
                 )

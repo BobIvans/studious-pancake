@@ -63,19 +63,8 @@ class WSOLManager:
         self.session = session
         self.wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         self.usdc_mint = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
-        from src.config.xstocks_registry import is_xstock_token
-        # Token-2022 Program ID for xStocks
-        TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
-
-        if is_xstock_token(self.wsol_mint):
-            self.wsol_ata = get_associated_token_address(wallet_pubkey, self.wsol_mint, TOKEN_2022_PROGRAM_ID)
-        else:
-            self.wsol_ata = get_associated_token_address(wallet_pubkey, self.wsol_mint)
-
-        if is_xstock_token(self.usdc_mint):
-            self.usdc_ata = get_associated_token_address(wallet_pubkey, self.usdc_mint, TOKEN_2022_PROGRAM_ID)
-        else:
-            self.usdc_ata = get_associated_token_address(wallet_pubkey, self.usdc_mint)
+        self.wsol_ata = get_associated_token_address(wallet_pubkey, self.wsol_mint)
+        self.usdc_ata = get_associated_token_address(wallet_pubkey, self.usdc_mint)
 
         # Phase 48: ATA Cache (Golden ATAs that should NEVER be closed)
         self.golden_atas = {
@@ -230,12 +219,7 @@ class WSOLManager:
         wallet = self.wallet_pubkey
         wsol_mint = self.wsol_mint
 
-        # Determine correct token program (Token vs Token-2022)
-        from src.config.xstocks_registry import is_xstock_token
-        if is_xstock_token(wsol_mint):
-            prog_id = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
-        else:
-            prog_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+        prog_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
         # CloseAccount transfers all wSOL tokens + 0.002 SOL ATA rent
         # back to the main wallet as Native SOL lamports
@@ -398,8 +382,7 @@ class WSOLManager:
                     result = await send_resp.json()
                     if "result" in result:
                         # Fix 67: Use shared_state instead of import arb_bot
-                        _shared_state_lock._balance_lock_paused = True
-                        _shared_state_lock._balance_lock_pause_until = time.time() + 0.4
+                        _shared_state_lock.set_balance_lock_paused(True, 0.4)
                         logger.info(
                             f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL. "
                             f"Paused next trade for 400ms to allow account state convergence."

@@ -26,7 +26,7 @@ from spl.token.instructions import get_associated_token_address
 from spl.token.constants import TOKEN_PROGRAM_ID
 from src.ingest.flywheel_scaler import PairReputationCircuitBreaker
 
-# Token-2022 Program ID for xStocks (RWA tokens)
+# Token-2022 Program ID for RWA tokens
 TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
 
 try:
@@ -155,6 +155,22 @@ except ImportError:
     JITO_AVAILABLE = False
     logger.warning("Jito client not available, falling back to RPC execution")
 
+    class JitoBiddingManager:
+        async def update_tip_accounts(self, session):
+            return False
+        async def poll_tip_floor(self, session):
+            pass
+        def get_50th_percentile_lamports(self):
+            return 10000
+        def calculate_blue_ocean_tip(self, *args, **kwargs):
+            return 0
+        def calculate_optimal_tip(self, *args, **kwargs):
+            return 0
+        def record_bundle_result(self, *args, **kwargs):
+            pass
+        def record_trade_result(self, *args, **kwargs):
+            pass
+
 from src.ingest.tx_builder import JupiterTxBuilder
 from src.ingest.multi_aggregator_client import MultiAggregatorClient
 from src.ingest.transaction_prebuilder import TransactionPrebuilder
@@ -204,7 +220,6 @@ from src.ingest.liquidator_engine import LiquidationEngine
 from src.ingest.cex_dex_oracle import CexDexOracle
 from src.ingest.epoch_tracker import EpochTracker
 from src.ingest.jito_shotgun import JitoShotgun
-from src.ingest.grpc_stream import YellowstoneStream
 from src.ingest.dust_sweeper import DustSweeper
 from src.ingest.alt_manager import ALTCacheManager
 import src.ingest.shared_state as shared_state
@@ -218,7 +233,7 @@ from src.ingest.lst_route_aggregator import LstRouteAggregator, RouteResult
 from src.ingest.flash_simulator import FlashSimulator
 from src.ingest.flywheel_scaler import FlywheelScaler
 
-# Dynamic ATA rent: 0.00204 SOL for standard SPL Token, 0.0035 SOL for Token-2022 (xStocks/RWA)
+# Dynamic ATA rent: 0.00204 SOL for standard SPL Token, 0.0035 SOL for Token-2022
 RENT_SPL_ATA_SOL = 0.00204
 RENT_TOKEN2022_SOL = 0.0035
 MIN_RESERVE_SOL = 0.005
@@ -373,11 +388,7 @@ trade_sizer = OptimalTradeSizer()
 # k_hop_stitcher = KHopStitcher(wallet_keypair=keypair)
 
 # DISABLED for Free Tier: Yellowstone gRPC connects to premium Helius relay
-# and will timeout/hang on free tier accounts. Set USE_GRPC=true in .env to re-enable.
-USE_GRPC_ENABLED = str(os.getenv("USE_GRPC", "false")).lower() == "true"
-yellowstone_stream = (
-    None  # Will be initialized inside main() if USE_GRPC_ENABLED is True
-)
+# and will timeout/hang on free tier accounts.
 # Global ATA Cache (Phase 48) — синхронизирован с shared_state для DustSweeper
 ATA_CACHE = shared_state.ATA_CACHE
 
@@ -940,20 +951,6 @@ class Config:
     PHOENIX_MARKET_ADDRESS: str = os.getenv("PHOENIX_MARKET_ADDRESS", "")
     RAYDIUM_POOL_ADDRESS: str = os.getenv("RAYDIUM_POOL_ADDRESS", "")
 
-    # xStocks Oracle Lag Strategy Configuration
-    ENABLE_XSTOCKS_ORACLE_LAG: bool = (
-        str(os.getenv("ENABLE_XSTOCKS_ORACLE_LAG", "true")).lower() == "true"
-    )
-    ORACLE_LAG_MIN_PROFIT_SOL: float = float(
-        os.getenv("ORACLE_LAG_MIN_PROFIT_SOL", "0.25")
-    )
-    ORACLE_LAG_THRESHOLD_PCT: float = float(
-        os.getenv("ORACLE_LAG_THRESHOLD_PCT", "0.45")
-    )
-    ORACLE_LAG_COOLDOWN_SECONDS: int = int(
-        os.getenv("ORACLE_LAG_COOLDOWN_SECONDS", "60")
-    )
-
     # Paper Trading Mode — if true, simulates trades without sending real transactions
     PAPER_TRADING_ONLY: bool = (
         str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true"
@@ -990,19 +987,8 @@ TOKENS = {
     "compassSOL": "Comp4ssDzXcLeu2MnLuGNNFC4cmLPMng8qWHPvzAMU1h",
     "hSOL": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
     "kSOL": "kSoL6Y9p9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Y",
-    # === GOLDEN FUND: xStocks (Oracle Lag) ===
-    "NVDAx": "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
-    "TSLAx": "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB",
-    "AAPLx": "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp",
-    "SPYx": "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W",
-    "QQQx": "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ",
-    "MSFTx": "XspzcW1PRtgf6Wj92HCiZdjzKCyFekVD8P5Ueh3dRMX",
-    "AMZNx": "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg",
-    "METAx": "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu",
-    "GOOGLx": "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN",
-    "HOODx": "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg",
-    "MSTRx": "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ",
-    "GLDx": "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re",
+
+    # === BTC Wrappers (Step 5) ===
     # === BTC Wrappers (Step 5) ===
     "cbBTC": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
     "wBTC": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
@@ -1098,19 +1084,7 @@ TOKEN_DECIMALS = {
     "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A": 9,  # hSOL
     "kSoL6Y9p9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Y": 9,  # kSOL
     "BLVxek8YMXUQhcKmMvrFTrzh5FXg8ec88Crp6otEaCMf": 9,  # BELIEVE
-    # Golden Fund: xStocks (Fixed Mainnet IDs — Token-2022, 8 decimes = 6 in practice for display)
-    "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh": 6,  # NVDAx
-    "XsDoVfqeBukxuZHWhdvWHBhgEHjGNst4MLodqsJHzoB": 6,  # TSLAx
-    "XsbEhLAtcf6HdfpFZ5xEMdqW8nfAvcsP5bdudRLJzJp": 6,  # AAPLx
-    "XsoCS1TfEyfFhfvj8EtZ528L3CaKBDBRqRapnBbDF2W": 6,  # SPYx
-    "Xs8S1uUs1zvS2p7iwtsG3b6fkhpvmwz4GYU3gWAmWHZ": 6,  # QQQx
-    "Xs3eBt7uRfJX8QUs4suhyU8p2M6DoUDrJyWBa8LLZsg": 6,  # AMZNx
-    "Xsa62P5mvPszXL1krVUnU5ar38bBSVcWAB6fmPCo5Zu": 6,  # METAx
-    "XsCPL9dNWBMvFtTmwcCA5v3xWPSMEBCszbQdiLLq6aN": 6,  # GOOGLx
-    "XsvNBAYkrDRNhA7wPHQfX3ZUXZyZLdnCQDfHZ56bzpg": 6,  # HOODx
-    "XsP7xzNPvEHS1m6qfanPUGjNmdnmsLKEoNAnHjdxxyZ": 6,  # MSTRx
-    "Xsv9hRk1z5ystj9MhnA7Lq4vjSsLwzL2nxrwmwtD3re": 6,  # GLDx
-    # BTC Wrappers (8 decimals)
+                                                # BTC Wrappers (8 decimals)
     "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh": 8,  # wBTC (Wormhole)
     "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij": 8,  # cbBTC (Coinbase)
     "6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU": 8,  # tBTC
@@ -1190,33 +1164,6 @@ ARBITRAGE_REGISTRY = {
             "base": "SOL",
             "target": "vSOL",
             "description": "SOL/vSOL Vector staking arbitrage",
-        },
-    ],
-    "ultra_arb_rwa": [
-        {
-            "base": "AAPLx",
-            "target": "USDC",
-            "description": "Oracle Lag: Chainlink AAPL vs AMM price discrepancy",
-        },
-        {
-            "base": "TSLAx",
-            "target": "USDC",
-            "description": "Oracle Lag: Chainlink TSLA vs AMM price discrepancy",
-        },
-        {
-            "base": "SPYx",
-            "target": "USDC",
-            "description": "Oracle Lag: Chainlink SPY vs AMM price discrepancy",
-        },
-        {
-            "base": "NVDAx",
-            "target": "USDC",
-            "description": "Oracle Lag: Chainlink NVDA vs AMM price discrepancy",
-        },
-        {
-            "base": "METAx",
-            "target": "USDC",
-            "description": "Oracle Lag: Chainlink META vs AMM price discrepancy",
         },
     ],
     "ultra_arb_yield_stables": [
@@ -1667,8 +1614,7 @@ async def balance_reconciler(
                 # pause all trading for 400 ms (1 slot) to prevent cascade failures.
                 # Uses shared_state to avoid circular imports with wsol_manager.py.
                 if drift > 0.003:
-                    shared_state._balance_lock_paused = True
-                    shared_state._balance_lock_pause_until = time.time() + 0.4  # 1 Solana slot
+                    shared_state.set_balance_lock_paused(True, 0.4)  # 1 Solana slot
                     logger.critical(
                         f"🚨 BALANCE LOCK GUARD: virtual={prev:.6f} vs actual={actual_sol:.6f} "
                         f"drift={drift:.6f} > 0.003 SOL — pausing trading for 400ms"
@@ -2050,7 +1996,7 @@ class BankHealthMonitor:
 
 
 # ============================================================================
-# SCAN TARGETS — consumed by stable_scanner, lst_scanner, xstocks_scanner, rwa_rest_scanner
+# SCAN TARGETS — consumed by stable_scanner, lst_scanner, rwa_rest_scanner
 # ============================================================================
 
 SCAN_TARGETS = {
@@ -2090,19 +2036,6 @@ SCAN_TARGETS = {
             ("SOL", "hSOL"),
         ],
     },  # Step 5: new LSTs
-    "xstocks": {
-        "description": "xStocks RWA",
-        "scan_interval": 5.0,
-        "pair_delay": 0.2,
-        "pairs": [
-            ("USDC", "NVDAx"),
-            ("USDC", "MSTRx"),
-            ("USDC", "SPYx"),
-            ("USDC", "GOOGLx"),
-            ("USDC", "HOODx"),
-            ("USDC", "GLDx"),
-        ],
-    },  # Step 5
     "rwa_rest": {
         "description": "Other RWA/DePIN",
         "scan_interval": 15.0,
@@ -2178,41 +2111,6 @@ def get_market_aware_scan_interval(base_interval: float) -> float:
             base_interval * 10
         )  # 10x slower outside trading hours to save RPC credits
 
-
-async def xstocks_scanner(queue, cfg, session, rpc):
-    """Loop C (xStocks Priority): Oracle lag detection with market hours awareness."""
-    scan_config = SCAN_TARGETS["xstocks"]
-    logger.debug(
-        f"🎯 xStocks Scanner: {scan_config['description']} | Market Hours Aware"
-    )
-
-    # Initialize PreTradeGuard for Token-2022 fee checking
-    from src.ingest.pre_trade_guard import PreTradeGuard
-
-    pre_trade_guard = PreTradeGuard(session=session, rpc_url=rpc.get_rpc())
-
-    while True:
-        # Dynamic scan interval based on market hours
-        current_interval = get_market_aware_scan_interval(scan_config["scan_interval"])
-        market_open = is_nyse_trading_hours()
-
-        if market_open:
-            logger.debug("📈 NYSE trading hours active - full speed xStocks scanning")
-        else:
-            logger.debug("🌙 NYSE closed - reduced xStocks scanning frequency")
-
-        for base, target in scan_config["pairs"]:
-            # Special handling for MSTRx - always scan when BTC is volatile
-            # For now, always scan during market hours, reduced frequency otherwise
-            if base in TOKENS and target in TOKENS:
-                try:
-                    queue.put_nowait((1, time.time_ns(), (TOKENS[base], TOKENS[target])))
-                except asyncio.QueueFull:
-                    pass  # HFT: stale data is trash — drop it, don't deadlock
-                await asyncio.sleep(scan_config["pair_delay"])
-
-        await asyncio.sleep(current_interval)
-        await asyncio.sleep(0.1)  # Safe 100ms yield to the OS event loop
 
 
 async def rwa_rest_scanner(queue, cfg):
@@ -2425,26 +2323,8 @@ async def create_flashloan_arbitrage_tx(
 
     marginfi_account = Pubkey.from_string(pool_acct_str)
 
-    # Phase 48: Dynamic Base_Mint Resolution (Task 23)
-    # If target is an xStock/RWA, we borrow USDC instead of the xStock itself
     flashloan_mint_str = base_mint_str
-    from src.config.xstocks_registry import is_xstock_token
-
-    if is_xstock_token(_to_pubkey(target_mint_str)) or is_xstock_token(
-        _to_pubkey(base_mint_str)
-    ):
-        flashloan_mint_str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"  # USDC
-        logger.debug(f"🔄 RWA detected. Routing flashloan via USDC bank.")
-
-    # Token-2022 Safety Check: reduce volume 10x for xStocks with uncertain transfer fees
     effective_base_amount = base_amount_lamports
-    if is_xstock_token(_to_pubkey(target_mint_str)) or is_xstock_token(
-        _to_pubkey(base_mint_str)
-    ):
-        effective_base_amount = base_amount_lamports // 10
-        logger.debug(
-            f"🛡️ Token-2022 xStock safety: volume reduced 10x ({base_amount_lamports} -> {effective_base_amount} lamports)"
-        )
 
     if flashloan_mint_str not in MARGINFI_BANKS:
         logger.warning(f"Marginfi bank not configured for mint: {flashloan_mint_str}")
@@ -4543,16 +4423,13 @@ async def execute_priority_opportunity(
     actual_new_atas_needed = 0
     _rent_cost = 0.0
     from spl.token.instructions import get_associated_token_address
-    from src.config.xstocks_registry import is_xstock_token
 
     for mint_str in mints_involved:
         if not mint_str or mint_str in CORE_GOLDEN_MINTS:
             continue
 
         mint_pubkey = Pubkey.from_string(mint_str)
-        program_id = (
-            TOKEN_2022_PROGRAM_ID if is_xstock_token(mint_pubkey) else TOKEN_PROGRAM_ID
-        )
+        program_id = TOKEN_PROGRAM_ID
         ata_addr = str(
             get_associated_token_address(keypair.pubkey(), mint_pubkey, program_id)
         )
@@ -4563,7 +4440,7 @@ async def execute_priority_opportunity(
             )
             if not exists:
                 actual_new_atas_needed += 1
-                _rent_cost += RENT_TOKEN2022_SOL if is_xstock_token(mint_pubkey) else RENT_SPL_ATA_SOL
+                _rent_cost += RENT_SPL_ATA_SOL
             else:
                 ATA_CACHE.add(ata_addr)
 
@@ -4658,14 +4535,9 @@ async def execute_priority_opportunity(
         # Deduct 0.002 SOL from expected profit if a new ATA must be created for the target token.
         # Prevents Death-by-Success: don't let 5 simultaneous wins drain 0.01 SOL in rent deposits.
         from spl.token.instructions import get_associated_token_address
-        from src.config.xstocks_registry import is_xstock_token
 
         _dst_mint_str = str(out_mint)
-        _dst_prog_id = (
-            TOKEN_2022_PROGRAM_ID
-            if is_xstock_token(Pubkey.from_string(_dst_mint_str))
-            else TOKEN_PROGRAM_ID
-        )
+        _dst_prog_id = TOKEN_PROGRAM_ID
         _dst_ata = str(
             get_associated_token_address(
                 keypair.pubkey(), Pubkey.from_string(_dst_mint_str), _dst_prog_id
@@ -4679,7 +4551,7 @@ async def execute_priority_opportunity(
             if _ata_already:
                 ATA_CACHE.add(_dst_ata)
             else:
-                _rent_sol = RENT_TOKEN2022_SOL if is_xstock_token(Pubkey.from_string(_dst_mint_str)) else RENT_SPL_ATA_SOL
+                _rent_sol = RENT_SPL_ATA_SOL
                 logger.info(
                     f"⚠️ New ATA required for {_dst_mint_str[:8]} — deducting {_rent_sol:.5f} SOL from expected profit ({opportunity.expected_profit_sol:.6f} SOL)"
                 )
@@ -4709,22 +4581,19 @@ async def execute_priority_opportunity(
                     leg_mints.add(str(leg.get("outputMint", "")))
             leg_mints.discard("")
 
-            _golden = {str(TOKEN_PROGRAM_ID), str(TOKEN_2022_PROGRAM_ID)}
             _new_ata_count = 0
             _rent_cost = 0.0
             _new_atas_to_create = set()  # ФИКС 3: локальный сет — не в глобальный кэш!
             for mint_str in leg_mints:
                 mint_pk = Pubkey.from_string(mint_str)
-                _prog_id = (
-                    TOKEN_2022_PROGRAM_ID if is_xstock_token(mint_pk) else TOKEN_PROGRAM_ID
-                )
+                _prog_id = TOKEN_PROGRAM_ID
                 _ata = str(
                     get_associated_token_address(keypair.pubkey(), mint_pk, _prog_id)
                 )
                 if _ata not in ATA_CACHE:
                     _new_ata_count += 1
                     _new_atas_to_create.add(_ata)  # локально — только после подтверждения tx
-                    _rent_cost += RENT_TOKEN2022_SOL if is_xstock_token(mint_pk) else RENT_SPL_ATA_SOL
+                    _rent_cost += RENT_SPL_ATA_SOL
 
             _tip_sol = int(tip_amount_lamports) / 1e9
             _gas_sol = cfg.PRIORITY_FEE + 0.000005
@@ -4985,10 +4854,6 @@ async def worker(
     while True:
         priority, _tie_breaker, path = await queue.get()
         logger.info(f"🔎 [1 RPS Queue]: Scanning route {str(path[0])[:8]} ➔ {str(path[1])[:8]}")
-        if priority_queue is not None and priority_queue.size() > 0:
-            await asyncio.sleep(1.0)
-            queue.task_done()
-            continue
         try:
             pairs_checked += 1
             if len(path) == 2:
@@ -5045,6 +4910,15 @@ async def worker(
             # Dynamic sizing from ENV + safety (Issue 5)
             borrow_env_sol = float(os.getenv("FLASH_LOAN_SIZE_SOL", "1.0"))
             borrow_amount_sol = borrow_env_sol  # For quote sizing (line 2327, 2363)
+
+            # Fix 2: If base token is USDC (6 decimals), convert SOL amount to USDC equivalent
+            # Otherwise 1.0 SOL * 10^6 = 1 USDC () — too small to cover fees
+            usdc_mint_str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            if str(in_mint_str) == usdc_mint_str:
+                sol_entry = price_matrix.get("So11111111111111111111111111111111111111112")
+                sol_price = sol_entry[0] if sol_entry else 150.0
+                borrow_amount_sol = borrow_env_sol * sol_price
+                logger.debug(f"Fix 2: USDC borrow — scaling {borrow_env_sol} SOL * ${sol_price:.0f}/SOL = {borrow_amount_sol:.2f} USDC")
 
             # --- RESTORED MISSING QUOTE FETCHING LOGIC ---
             decimals_in = get_token_decimals(in_mint_str)
@@ -5305,13 +5179,8 @@ async def worker(
 
             # --- ЗАЩИТА АРЕНДЫ ATA (ATA Rent Guard) ---
             from spl.token.instructions import get_associated_token_address
-            from src.config.xstocks_registry import is_xstock_token
 
-            prog_id = (
-                TOKEN_2022_PROGRAM_ID
-                if is_xstock_token(target_mint)
-                else TOKEN_PROGRAM_ID
-            )
+            prog_id = TOKEN_PROGRAM_ID
             target_ata = str(
                 get_associated_token_address(keypair.pubkey(), target_mint, prog_id)
             )
@@ -5751,27 +5620,6 @@ async def run():
     cfg = Config()
     init_limiters(cfg)
 
-    # ── Optional gRPC (Yellowstone): only enabled when USE_GRPC=true in .env ──────
-    # Free tier Helius cannot connect to premium Yellowstone relay; gRPC stays None by default.
-    global yellowstone_stream
-    if USE_GRPC_ENABLED:
-        try:
-            yellowstone_stream = YellowstoneStream(
-                grpc_endpoint="yellowstone.helius.rpcpool.com:443",
-                api_key=cfg.HELIUS_API_KEY,
-            )
-            logger.info("✅ Yellowstone gRPC initialized (USE_GRPC=true)")
-        except Exception as _grpc_err:
-            logger.warning(
-                f"⚠️ Yellowstone gRPC init failed ({_grpc_err}) — falling back to WebSocket only"
-            )
-            yellowstone_stream = None
-    else:
-        yellowstone_stream = None
-        logger.info(
-            "ℹ️ Yellowstone gRPC disabled (USE_GRPC=false) — WebSocket-only mode"
-        )
-
     # ── Phase 49: Start async trade logger BEFORE any worker is scheduled ─────
     # This must fire before workers enqueue so TRADE_LOG_QUEUE is set.
     # Global so substasks (workers, executors) can access TRADE_LOG_QUEUE.
@@ -6083,27 +5931,6 @@ async def run():
         priority_queue.add_opportunity(arb_opp)
 
     # helius_webhook_handler created after jito_shotgun is initialized (see below)
-
-    # 5. Strategies Initialization
-    if cfg.ENABLE_XSTOCKS_ORACLE_LAG:
-        from src.ingest.pyth_oracle_client import start_pyth_client
-
-        asyncio.create_task(start_pyth_client())
-
-        from src.ingest.xstock_oracle_lag import init_xstock_strategy
-
-        xstock_strategy = init_xstock_strategy(
-            session=session,
-            cfg=cfg,
-            keypair=keypair,
-            optimal_trade_sizer=trade_sizer,
-            tx_builder=JupiterTxBuilder(session=session, rpc_getter=lambda: rpc.get_rpc()),
-            execution_router=execution_router,
-            ata_cache=ATA_CACHE,
-            data_aggregator=data_aggregator,
-        )
-        asyncio.create_task(xstock_strategy.periodic_lag_scan())
-        logger.info("🎯 xStocks Oracle Lag Strategy initialized")
 
     # ULTRA ARB Components
     # global pool_math_router, receipt_arb_engine, flash_pivot_engine, jito_shotgun
@@ -6561,7 +6388,7 @@ async def run():
         logger.warning(f"PythCorePriceFeeder startup failed (non-fatal): {pyth_err}")
 
     # 9. Main Processing Loops
-    queue = asyncio.PriorityQueue(maxsize=1)
+    queue = asyncio.PriorityQueue(maxsize=5000)
 
     tasks = [
         asyncio.create_task(update_prices(session, cfg)),
@@ -6571,9 +6398,6 @@ async def run():
         asyncio.create_task(
             lst_scanner(queue, cfg)
         ),  # Loop B: LST arbitrage (2.0s)
-        asyncio.create_task(
-            xstocks_scanner(queue, cfg, session, rpc)
-        ),  # Loop C: xStocks priority (5.0s)
         # DISABLED: rwa_rest_scanner — RPS-heavy polling (15.0s interval)
         # asyncio.create_task(rwa_rest_scanner(queue, cfg)),
         # DISABLED: dexscreener_scanner — RPS-heavy external API polling
@@ -6614,11 +6438,7 @@ async def run():
         ),
     ]
 
-    # Yellowstone gRPC connect is outside the list literal (cannot use bare `if` inside)
-    if yellowstone_stream is not None:
-        task = asyncio.create_task(yellowstone_stream.connect())
-        shared_state.active_tasks.add(task)
-        task.add_done_callback(background_task_callback)
+    # Yellowstone gRPC removed.
     # LST Depeg Flash-Arb Scanner (primary strategy)
     if cfg.LST_DEPEG_ENABLED:
         lst_task = asyncio.create_task(
@@ -6842,59 +6662,6 @@ class StateManager:
         return None if balance_lamports is None else balance_lamports / 1e9
 
 
-async def handle_oracle_lag_signal(
-    symbol, oracle_price, amm_price, session, cfg, rpc, keypair, priority_queue
-):
-    """Handle Oracle Lag signal from ArbitrageGraph."""
-    try:
-        # Convert signal to an ArbitrageOpportunity for the priority queue
-        # This allows the worker pool to pick it up and execute
-        arb_opp = ArbitrageOpportunity(
-            pair=f"{symbol}-USDC",
-            expected_profit_sol=0.005,
-            slippage_pct=0.01,
-            liquidity_depth_usd=50000,
-            network_congestion=50.0,
-            gas_cost_sol=0.0005,
-            execution_time_ms=0,
-            timestamp=time.time(),
-            metadata={"strategy": "oracle_lag"},
-        )
-
-        priority_queue.add_opportunity(arb_opp)
-        logger.debug(f"✅ Oracle Lag Graph Signal Queued: {symbol}")
-    except Exception as e:
-        logger.error(f"Error handling oracle lag signal: {e}")
-
-
-async def handle_oracle_lag(opportunity, session, cfg, rpc, keypair, priority_queue):
-    """Handle Oracle Lag arbitrage opportunity."""
-    try:
-        logger.info(
-            f"🐍 Oracle Lag Trigger: {opportunity.token_pair} | "
-            f"Diff: {opportunity.price_diff_pct:.2%}"
-        )
-
-        # Construct a formal opportunity object for the priority queue
-        arb_opp = ArbitrageOpportunity(
-            pair=opportunity.token_pair,
-            expected_profit_sol=0.005,
-            slippage_pct=0.01,
-            liquidity_depth_usd=50000,
-            network_congestion=50.0,
-            gas_cost_sol=0.0005,
-            execution_time_ms=0,
-            timestamp=time.time(),
-            metadata={"strategy": "oracle_lag"},
-        )
-
-        # Push to priority queue for execution
-        priority_queue.add_opportunity(arb_opp)
-        logger.debug(f"✅ Oracle Lag opportunity queued: {arb_opp.pair}")
-
-    except Exception as e:
-        logger.error(f"Oracle lag handling error: {e}")
-
 
 async def handle_graduation_event(opportunity, session, cfg, rpc, keypair):
     """Handle token graduation event."""
@@ -7036,16 +6803,11 @@ async def _build_burn_instruction_atlanta(
     token_account: str, mint: str, amount_lamports: int, keypair
 ):
     """Build TokenProgram.Burn instruction for SPL token (Task 52 — Phase 41).
-    Uses Token-2022 program for xStock tokens, classic SPL for everything else."""
+    Uses SPL Token program."""
     try:
         from spl.token.instructions import BurnParams, burn
-        from src.config.xstocks_registry import is_xstock_token
 
-        # Detect Token-2022 xStocks → use Token-2022 program ID
-        if mint and is_xstock_token(mint):
-            program_id = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
-        else:
-            program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+        program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
         burn_params = BurnParams(
             program_id=program_id,
@@ -7195,14 +6957,9 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                     )
 
             # Build CloseAccount instruction (runs regardless — handles zero-leftover path)
-            # Detect Token-2022 xStocks → use Token-2022 program ID for CloseAccount
             from spl.token.instructions import CloseAccountParams, close_account
-            from src.config.xstocks_registry import is_xstock_token
 
-            if mint and is_xstock_token(mint):
-                close_program_id = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
-            else:
-                close_program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+            close_program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 
             close_params = CloseAccountParams(
                 account=Pubkey.from_string(ata_address),

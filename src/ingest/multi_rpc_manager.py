@@ -134,10 +134,6 @@ class RpcEndpoint:
         self.latency_samples.append(latency_ms)
         if len(self.latency_samples) > 10:
             self.latency_samples.pop(0)
-        if slot and slot < self.latest_slot - 2:
-            self.degraded_nodes.add(self.name)  # Fix 74
-        if slot > self.latest_slot:
-            self.latest_slot = slot
 
 
 class MultiRpcManager:
@@ -148,13 +144,9 @@ class MultiRpcManager:
     delivers them first, ignoring duplicates from slower providers.
     """
 
-    # Default free RPC endpoints (can be configured via env)
-    DEFAULT_ENDPOINTS = [
-        RpcEndpoint("helius", "wss://api.mainnet-beta.solana.com", "https://api.mainnet-beta.solana.com", 1),
-        RpcEndpoint("quicknode", "wss://api.mainnet-beta.solana.com", "https://api.mainnet-beta.solana.com", 2),
-        RpcEndpoint("alchemy", "wss://api.mainnet-beta.solana.com", "https://api.mainnet-beta.solana.com", 3),
-        RpcEndpoint("getblock", "wss://api.mainnet-beta.solana.com", "https://api.mainnet-beta.solana.com", 4),
-    ]
+    # Default RPC endpoints - uses Helius by default if API key provided via env
+    # Falls back to empty list - caller must provide private RPC URLs
+    DEFAULT_ENDPOINTS = []
 
     def __init__(
         self,
@@ -240,7 +232,7 @@ class MultiRpcManager:
     async def _connect_endpoint(self, endpoint: RpcEndpoint):
         """Establish WebSocket connection to endpoint."""
         logger.info(f"🔌 Connecting to {endpoint.name}...")
-        connector = aiohttp.TCPConnector(ttl_dns_cache=300)
+        connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
         endpoint.session = aiohttp.ClientSession(connector=connector)
         endpoint.connection = await endpoint.session.ws_connect(
             endpoint.ws_url,

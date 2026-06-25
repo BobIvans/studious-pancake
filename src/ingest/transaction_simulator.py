@@ -146,7 +146,7 @@ class TransactionSimulator:
                 logger.info(f"📉 No profit detected: {net_profit_sol} SOL")
                 return False, 0.0
 
-            logger.info(".6f")
+            logger.info(f"Profit: {net_profit_sol:.6f} SOL")
             return True, net_profit_sol
 
         except Exception as e:

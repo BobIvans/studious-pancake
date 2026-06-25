@@ -315,7 +315,7 @@ class JitoBundleHandler:
             results = await self._shotgun_bundle(bundle, active_endpoints)
 
             execution_time = time.time() - start_time
-            logger.info(".2f")
+            logger.info(f"Execution time: {execution_time:.2f}s")
 
             return {
                 "success": any(r.get("success", False) for r in results),

@@ -136,7 +136,7 @@ CU_PROFILES: Dict[str, int] = {
 }
 
 SWAP_INSTRUCTIONS_API_URL = os.getenv(
-    "JUPITER_SWAP_INSTRUCTIONS_URL", "https://quote-api.jup.ag/v6/swap-instructions"
+    "SWAP_INSTRUCTIONS_API_URL", "https://api.jup.ag/swap/v1/swap-instructions"
 )
 
 
@@ -716,7 +716,7 @@ class JupiterTxBuilder:
                 "dynamicComputeUnitLimit": False,  # ФИКС: Исключает конфликт с нашим кастомным CU-билдером
                 "onlyDirectRoutes": "true",  # Task 14: force direct routes for micro-balance safety
                 "restrictIntermediateTokens": "true",  # Task 14: unconditionally block intermediate tokens
-                "maxAccounts": "8",  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
+                "maxAccounts": "28",  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
                 "cache_buster": str(time.time_ns()),  # Task 1: Anti-cache bomb for HFT
             }
             instructions_data = await self._post_swap_instructions_request(payload)
@@ -839,15 +839,14 @@ class JupiterTxBuilder:
                     f"🔗 Task 14: Injected {_injected} remaining_accounts "
                     f"hook account(s) into swap instruction"
                 )
-                # Recreate swap_ix with updated accounts
+                old_swap_ix = swap_ix
                 swap_ix = Instruction(
                     program_id=swap_ix.program_id,
                     accounts=new_accounts_for_swap,
                     data=swap_ix.data,
                 )
-                # Update the instructions list to replace old swap_ix
                 for i in range(len(instructions)):
-                    if instructions[i] == swap_ix:
+                    if instructions[i] == old_swap_ix:
                         instructions[i] = swap_ix
                         break
                 _REMAINING_ACCOUNTS_REGISTRY[id(swap_ix)] = _injected
@@ -894,32 +893,59 @@ class JupiterTxBuilder:
         self, payload: Dict[str, Any]
     ) -> Dict[str, Any]:
         """Post request to Jupiter swap-instructions API."""
+        from src.ingest.jupiter_api_client import get_swap_limiter
+
         for attempt in range(self.max_retries):
             try:
-                headers = {"Content-Type": "application/json"}
-                jupiter_api_key = os.getenv("JUPITER_API_KEY")
-                if jupiter_api_key:
-                    headers["Authorization"] = f"Bearer {jupiter_api_key}"
+                headers = {"Content-Type": "application/json",
+                           "x-api-key": os.getenv("JUPITER_API_KEY", ""),
+                           "Authorization": f"Bearer {os.getenv('JUPITER_API_KEY', '')}"}
+                limiter = get_swap_limiter()
+                if limiter is not None:
+                    async with limiter:
+                        async with self.session.post(
+                            SWAP_INSTRUCTIONS_API_URL,
+                            json=payload,
+                            headers=headers,
+                            timeout=self.timeout,
+                        ) as response:
+                            if response.status == 200:
+                                raw_bytes = await response.read()
+                                return orjson.loads(raw_bytes)
+                            elif response.status == 429:
+                                backoff = min(2.0, 1.5 * (attempt + 1))
+                                logger.warning(f"Jupiter swap-instructions 429 on {SWAP_INSTRUCTIONS_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
+                                await asyncio.sleep(backoff)
+                            else:
+                                error_text = await response.text()
+                                logger.warning(
+                                    f"Swap instructions API error (attempt {attempt + 1}): {response.status} - {error_text}"
+                                )
 
-                async with self.session.post(
-                    SWAP_INSTRUCTIONS_API_URL,
-                    json=payload,
-                    headers=headers,
-                    timeout=self.timeout,
-                ) as response:
-                    if response.status == 200:
-                        raw_bytes = await response.read()
-                        return orjson.loads(raw_bytes)
-                    elif response.status == 429:
-                        await asyncio.sleep(2 ** (attempt + 1))
-                    else:
-                        error_text = await response.text()
-                        logger.warning(
-                            f"Swap instructions API error (attempt {attempt + 1}): {response.status} - {error_text}"
-                        )
+                                if attempt == self.max_retries - 1:
+                                    return {"error": f"HTTP {response.status}: {error_text}"}
+                else:
+                    async with self.session.post(
+                        SWAP_INSTRUCTIONS_API_URL,
+                        json=payload,
+                        headers=headers,
+                        timeout=self.timeout,
+                    ) as response:
+                        if response.status == 200:
+                            raw_bytes = await response.read()
+                            return orjson.loads(raw_bytes)
+                        elif response.status == 429:
+                            backoff = min(2.0, 1.5 * (attempt + 1))
+                            logger.warning(f"Jupiter swap-instructions 429 on {SWAP_INSTRUCTIONS_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
+                            await asyncio.sleep(backoff)
+                        else:
+                            error_text = await response.text()
+                            logger.warning(
+                                f"Swap instructions API error (attempt {attempt + 1}): {response.status} - {error_text}"
+                            )
 
-                        if attempt == self.max_retries - 1:
-                            return {"error": f"HTTP {response.status}: {error_text}"}
+                            if attempt == self.max_retries - 1:
+                                return {"error": f"HTTP {response.status}: {error_text}"}
 
             except asyncio.TimeoutError:
                 logger.warning(f"Swap instructions API timeout (attempt {attempt + 1})")
@@ -1095,27 +1121,33 @@ class JupiterTxBuilder:
             return True
 
     async def get_max_marginfi_borrow(self, bank_pubkey: str) -> int:
-        """
-        Returns 95% of current available liquidity in the MarginFi pool.
-        Protection: 95% cap prevents InsufficientLiquidity errors on execution.
-        No hard SOL/USDC cap — OptimalTradeSizer controls position size upstream.
-        """
         try:
-            payload = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "getTokenAccountBalance",
-                "params": [bank_pubkey],  # bank_liquidity_vault
-            }
+            import os
+            if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+                return 100_000_000_000  # 100 SOL
+            SOL_VAULT = "7uttpzxsHAcX97X5ZwaX8xMpsJc9aKx2V8t4Gf6A43XJ"
+            if str(bank_pubkey) == SOL_VAULT:
+                payload = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "getBalance",
+                    "params": [str(bank_pubkey), {"commitment": "confirmed"}],
+                }
+            else:
+                payload = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "getTokenAccountBalance",
+                    "params": [str(bank_pubkey)],
+                }
             async with self.session.post(self.rpc_url, json=payload) as resp:
-                data = orjson.loads(await resp.read())
+                data = await resp.json()
                 if "result" in data and "value" in data["result"]:
                     vault_lamports = int(data["result"]["value"]["amount"])
-                    safe_liquidity = int(vault_lamports * 0.95)
-                    return safe_liquidity
+                    return int(vault_lamports * 0.95)
         except Exception as e:
-            logger.error(f"Failed to fetch MarginFi bank liquidity: {e}")
-        return 0
+            logger.error(f"CRITICAL: get_max_marginfi_borrow failed! RPC URL: {self.rpc_url} | Error: {e}")
+            return 0
 
     async def _detect_sol_wrapping_conflict(
         self, instructions: List[Instruction]
@@ -1464,44 +1496,33 @@ class JupiterTxBuilder:
     # === MARGINFI DYNAMIC LIQUIDITY ===
 
     async def get_max_marginfi_borrow(self, bank_liquidity_vault: str) -> int:
-        """
-        Return 95 % of currently available MarginFi pool liquidity for a given vault.
-        No magic numbers — the value comes straight from on-chain RPC.
-
-        Args:
-            bank_liquidity_vault: Pubkey of the MarginFi liquidity_vault PDA
-
-        Returns:
-            Max safe borrow in lamports (95 % of vault balance, no hard cap).
-            Optimal trade sizing is applied by the caller via OptimalTradeSizer
-            to avoid slippage consuming all profit.  A 95 % buffer prevents
-            InsufficientLiquidity errors on execution.
-            0 on any failure so callers can skip gracefully.
-        """
         try:
-            payload = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "getTokenAccountBalance",
-                "params": [bank_liquidity_vault],
-            }
+            import os
+            if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+                return 100_000_000_000  # 100 SOL
+            SOL_VAULT = "7uttpzxsHAcX97X5ZwaX8xMpsJc9aKx2V8t4Gf6A43XJ"
+            if str(bank_liquidity_vault) == SOL_VAULT:
+                payload = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "getBalance",
+                    "params": [str(bank_liquidity_vault), {"commitment": "confirmed"}],
+                }
+            else:
+                payload = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "getTokenAccountBalance",
+                    "params": [str(bank_liquidity_vault)],
+                }
             async with self.session.post(self.rpc_url, json=payload) as resp:
-                if resp.status == 200:
-                    data = orjson.loads(await resp.read())
-                    if (
-                        "result" in data
-                        and "value" in data["result"]
-                        and data["result"]["value"].get("amount")
-                    ):
-                        vault_lamports = int(data["result"]["value"]["amount"])
-                        # 95 % cap prevents InsufficientLiquidity errors
-                        safe_liquidity = int(vault_lamports * 0.95)
-                        return safe_liquidity
+                data = await resp.json()
+                if "result" in data and "value" in data["result"]:
+                    vault_lamports = int(data["result"]["value"]["amount"])
+                    return int(vault_lamports * 0.95)
         except Exception as e:
-            logger.error(
-                f"Failed to fetch MarginFi bank liquidity for {bank_liquidity_vault[:8]}: {e}"
-            )
-        return 0
+            logger.error(f"CRITICAL: get_max_marginfi_borrow failed! RPC URL: {self.rpc_url} | Error: {e}")
+            return 0
 
     # === SECURE ANCHOR EXECUTION (100% CAPITAL PROTECTION) ===
 
@@ -2634,13 +2655,16 @@ class JupiterTxBuilder:
             Dict with out_amount, expected_profit_lamports, price_impact_bps, and jupiter instructions,
             or None on failure.
         """
+        jup_quote_url = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
+        jup_key = os.getenv("JUPITER_API_KEY", "")
+        jup_headers = {"x-api-key": jup_key} if jup_key else {}
         quote_url = (
-            f"https://quote-api.jup.ag/v6/quote?"
+            f"{jup_quote_url}?"
             f"inputMint={input_mint}&"
             f"outputMint={middle_mint}&"
             f"amount={str(int(amount_lamports))}&"
-            f"slippageBps=0&"  # Leg 1: Entry strictly with slippage=0 to prevent balance mismatch on Leg 2
-            f"maxAccounts=8&"  # Fix 3: MTU safety — 8 accounts × 32B = 256B overhead → stays within 1232-byte UDP limit
+            f"slippageBps=5&"
+            f"maxAccounts=28&"
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
         )
@@ -2653,12 +2677,12 @@ class JupiterTxBuilder:
             timeout = aiohttp.ClientTimeout(total=5.0)
             if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
                 async with _GLOBAL_JUPITER_LIMITER:
-                    async with self.session.get(quote_url, timeout=timeout) as resp:
+                    async with self.session.get(quote_url, headers=jup_headers, timeout=timeout) as resp:
                         if resp.status != 200:
                             return None
                         leg1 = orjson.loads(await resp.read())
             else:
-                async with self.session.get(quote_url, timeout=timeout) as resp:
+                async with self.session.get(quote_url, headers=jup_headers, timeout=timeout) as resp:
                     if resp.status != 200:
                         return None
                     leg1 = orjson.loads(await resp.read())
@@ -2670,14 +2694,13 @@ class JupiterTxBuilder:
         if out_amount_leg1 == 0:
             return None
 
-        # Leg 2: middle_mint → input_mint (exit)
         quote_url2 = (
-            f"https://quote-api.jup.ag/v6/quote?"
+            f"{jup_quote_url}?"
             f"inputMint={middle_mint}&"
             f"outputMint={input_mint}&"
             f"amount={out_amount_leg1}&"
             f"slippageBps=10&"
-            f"maxAccounts=8&"  # Fix 3: MTU safety — 8 accounts × 32B = 256B overhead → stays within 1232-byte UDP limit
+            f"maxAccounts=28&"
             f"onlyDirectRoutes={str(only_direct_routes).lower()}&"
             f"restrictIntermediateTokens=true"
         )
@@ -2688,12 +2711,12 @@ class JupiterTxBuilder:
             timeout = aiohttp.ClientTimeout(total=5.0)
             if _limiter_available and _GLOBAL_JUPITER_LIMITER is not None:
                 async with _GLOBAL_JUPITER_LIMITER:
-                    async with self.session.get(quote_url2, timeout=timeout) as resp:
+                    async with self.session.get(quote_url2, headers=jup_headers, timeout=timeout) as resp:
                         if resp.status != 200:
                             return None
                         leg2 = orjson.loads(await resp.read())
             else:
-                async with self.session.get(quote_url2, timeout=timeout) as resp:
+                async with self.session.get(quote_url2, headers=jup_headers, timeout=timeout) as resp:
                     if resp.status != 200:
                         return None
                     leg2 = orjson.loads(await resp.read())

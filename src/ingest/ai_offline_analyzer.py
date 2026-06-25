@@ -244,11 +244,11 @@ class AIOfflineAnalyzer:
         score_corr = score_analysis.get("score_correlation", 0)
         if score_corr > 0.7:
             recommendations.append(
-                ".2f"                "Consider adjusting score weights for better prediction accuracy."
+                f"{score_corr:.2f} Consider adjusting score weights for better prediction accuracy."
             )
         elif score_corr < 0.3:
             recommendations.append(
-                ".2f"                "Score prediction needs significant improvement. Consider collecting more features."
+                f"{score_corr:.2f} Score prediction needs significant improvement. Consider collecting more features."
             )
 
         # Default recommendations if no specific insights

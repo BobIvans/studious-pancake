@@ -26,6 +26,7 @@ Execution flow (STRICT_JITO_MODE only):
 
 import asyncio
 import logging
+import os
 import time
 from typing import Dict, Optional, Any, List, Tuple
 from datetime import datetime, timedelta
@@ -691,7 +692,7 @@ class XStockOracleLagStrategy:
             if not hasattr(self.cfg, 'MARGINFI_ACCOUNT_PUBKEY') or not self.cfg.MARGINFI_ACCOUNT_PUBKEY:
                 return
 
-            rpc_url = getattr(self.cfg, 'WSS_ENDPOINTS', ["https://api.mainnet-beta.solana.com"])[0]
+            rpc_url = getattr(self.cfg, 'WSS_ENDPOINTS', [""])[0] if getattr(self.cfg, 'WSS_ENDPOINTS', [""])[0] else os.getenv("RPC_URL", "") or os.getenv("RPC_URL_1", "")
             rpc_url = rpc_url.replace("wss://", "https://").replace("ws://", "http://")
 
             payload = {

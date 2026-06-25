@@ -5,6 +5,7 @@ Provides unified interface for quotes, swaps, and instruction extraction.
 """
 
 import asyncio
+import socket
 import aiohttp
 import orjson
 import logging
@@ -126,12 +127,12 @@ class MultiAggregatorClient:
         # Jupiter (primary, most reliable)
         _jupiter_api_key = os.getenv("JUPITER_API_KEY", "")
         _jupiter_headers = (
-            {"Authorization": f"Bearer {_jupiter_api_key}"} if _jupiter_api_key else {}
+            {"x-api-key": _jupiter_api_key} if _jupiter_api_key else {}
         )
         self.jupiter = AggregatorClient(
             "jupiter",
-            "https://quote-api.jup.ag/v6/quote",
-            "https://quote-api.jup.ag/v6/swap",
+            os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
+            os.getenv("JUPITER_SWAP_URL", "https://api.jup.ag/swap/v1/swap"),
             headers=_jupiter_headers,
         )
 
@@ -200,7 +201,7 @@ class MultiAggregatorClient:
             return NaiveLimiter(rps)
 
     async def __aenter__(self):
-        connector = aiohttp.TCPConnector(limit=150, ttl_dns_cache=300)
+        connector = aiohttp.TCPConnector(limit=150, ttl_dns_cache=300, family=socket.AF_INET)
         self.session = aiohttp.ClientSession(connector=connector)
         return self
 
@@ -370,9 +371,9 @@ class MultiAggregatorClient:
             # handles the timeout naturally by reducing the remaining timeout.
             for t in pending:
                 t.cancel()
-            # ИСПРАВЛЕНИЕ УТЕЧКИ ПАМЯТИ: Дожидаемся отмены задач
-            if pending:
-                await asyncio.gather(*pending, return_exceptions=True)
+            # Fire-and-forget: do NOT await cancelled tasks in the hot path.
+            # A stuck task (bad socket / library swallowing CancelledError) would
+            # deadlock get_quote forever. Let them die in the background.
 
         logger.warning(f"All aggregators failed for {input_mint} -> {output_mint}")
         return None

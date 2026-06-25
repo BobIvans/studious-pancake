@@ -9,6 +9,7 @@ import logging
 from typing import Any, Dict, List, Optional, Callable, Tuple
 from decimal import Decimal
 from solders.pubkey import Pubkey
+from .stableswap_math import PoolType
 
 logger = logging.getLogger(__name__)
 
@@ -124,12 +125,12 @@ class ReceiptArbEngine:
                     pool_type = self.stableswap_math.get_pool_type(program_id)
 
                     if pool_state.token_a_mint == receipt_mint:
-                        if pool_type == self.stableswap_math.PoolType.CPMM:
+                        if pool_type == PoolType.CPMM:
                             price = pool_state.token_b_reserve / pool_state.token_a_reserve
                         else:
                             price = pool_state.token_b_reserve / pool_state.token_a_reserve
                     else:
-                        if pool_type == self.stableswap_math.PoolType.CPMM:
+                        if pool_type == PoolType.CPMM:
                             price = pool_state.token_a_reserve / pool_state.token_b_reserve
                         else:
                             price = pool_state.token_a_reserve / pool_state.token_b_reserve

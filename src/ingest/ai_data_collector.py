@@ -3,6 +3,7 @@
 import csv
 import sqlite3
 import time
+from collections import deque
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -62,7 +63,7 @@ class AIDataCollector:
         self.use_sqlite = use_sqlite
         self.db_path = db_path
         self.csv_path = csv_path
-        self._records: List[Dict[str, Any]] = []
+        self._records: deque = deque(maxlen=10000)
 
         if self.use_sqlite:
             self._init_sqlite()
@@ -96,9 +97,7 @@ class AIDataCollector:
         trade = self._normalize_record(record)
         self._records.append(trade)
 
-        # ── ИСПРАВЛЕНИЕ: Защита от утечки ОЗУ (сохраняем только последние 10k) ──
-        if len(self._records) > 10000:
-            self._records.pop(0)
+        # deque(maxlen=10000) automatically drops oldest records — O(1), no pop(0) shift
 
         if self.use_sqlite:
             self._insert_sqlite(trade)

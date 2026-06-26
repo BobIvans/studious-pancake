@@ -88,15 +88,15 @@ class HeliusWebhookHandler:
         if isinstance(data, list):
             events = data
             data_dict = {}
-            webhook_id = query_webhook_id or 'unknown'
+            webhook_id = request.query.get('webhook_id', 'unknown')
         elif isinstance(data, dict):
             events = data.get('events', [data])
             data_dict = data
-            webhook_id = data_dict.get('webhookId') or query_webhook_id or 'unknown'
+            webhook_id = data_dict.get('webhookId') or request.query.get('webhook_id', 'unknown')
         else:
             events = []
             data_dict = {}
-            webhook_id = query_webhook_id or 'unknown'
+            webhook_id = request.query.get('webhook_id', 'unknown')
         auth_header = request.headers.get('Authorization', '')
         auth_query = request.query.get('api-key') or request.query.get('api_key') or ''
         expected_auth = os.getenv("HELIUS_WEBHOOK_SECRET", os.getenv("HELIUS_API_KEY", ""))

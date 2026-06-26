@@ -148,23 +148,14 @@ class KHopStitcher:
 
     async def _build_hop_instruction(self, dex: str, from_token: str,
                                     to_token: str, amount_in: Decimal) -> Optional[HopInstruction]:
-        """Build DEX-specific swap instruction."""
-        try:
-            if dex.lower() == "raydium":
-                return await self._build_raydium_swap(from_token, to_token, amount_in)
-            elif dex.lower() == "orca":
-                return await self._build_orca_swap(from_token, to_token, amount_in)
-            elif dex.lower() == "meteora":
-                return await self._build_meteora_swap(from_token, to_token, amount_in)
-            elif dex.lower() == "sanctum":
-                return await self._build_sanctum_swap(from_token, to_token, amount_in)
-            else:
-                logger.warning(f"Unsupported DEX: {dex}")
-                return None
+        """Build DEX-specific swap instruction.
 
-        except Exception as e:
-            logger.debug(f"Hop instruction build failed: {e}")
-            return None
+        Fix 36: All DEX swap builders are stubs returning empty instructions.
+        Real swap assembly happens via JupiterTxBuilder in tx_builder.py.
+        This method is kept as a pass-through to prevent AttributeError.
+        """
+        logger.warning(f"⚠️ k_hop_stitcher: DEX swap builders are stubs. Use tx_builder for real swaps. dex={dex} tokens={from_token}->{to_token}")
+        return None
 
     async def _build_flashloan_borrow(self, asset: str, amount: Decimal) -> Instruction:
         """Build flashloan borrow instruction (MarginFi/Kamino)."""
@@ -215,114 +206,7 @@ class KHopStitcher:
             logger.error(f"Transaction build failed: {e}")
             raise
 
-    # DEX-specific instruction builders
-    async def _build_raydium_swap(self, from_token: str, to_token: str, amount: Decimal) -> Optional[HopInstruction]:
-        """Build Raydium CPMM swap instruction using Jupiter API data."""
-        try:
-            # Use Jupiter API to get Raydium-specific route
-            # This is a simplified implementation - in practice would parse Jupiter response
-            # for Raydium-specific instructions
-
-            # Placeholder instruction structure - would be replaced with real parsing
-            from solders.instruction import Instruction, AccountMeta
-            from solders.pubkey import Pubkey
-
-            # This would be replaced with actual instruction building
-            instruction = Instruction(
-                program_id=Pubkey.from_string("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"),  # Raydium CPMM
-                accounts=[],  # Would be populated from Jupiter response
-                data=b""  # Would be populated from Jupiter response
-            )
-
-            accounts = []  # Would extract from Jupiter response
-
-            return HopInstruction(
-                dex_name="raydium",
-                instruction=instruction,
-                input_amount=amount,
-                expected_output=amount * Decimal('0.995'),  # Estimated 0.5% fee
-                accounts=accounts
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to build Raydium swap: {e}")
-            return None
-
-    async def _build_orca_swap(self, from_token: str, to_token: str, amount: Decimal) -> Optional[HopInstruction]:
-        """Build Orca Whirlpool swap instruction using Jupiter API data."""
-        try:
-            # Similar to Raydium - would parse Jupiter response for Orca routes
-            from solders.instruction import Instruction, AccountMeta
-            from solders.pubkey import Pubkey
-
-            instruction = Instruction(
-                program_id=Pubkey.from_string("9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP"),  # Orca Whirlpool
-                accounts=[],  # Would be populated
-                data=b""  # Would be populated
-            )
-
-            accounts = []
-
-            return HopInstruction(
-                dex_name="orca",
-                instruction=instruction,
-                input_amount=amount,
-                expected_output=amount * Decimal('0.998'),  # Estimated 0.2% fee
-                accounts=accounts
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to build Orca swap: {e}")
-            return None
-
-    async def _build_meteora_swap(self, from_token: str, to_token: str, amount: Decimal) -> Optional[HopInstruction]:
-        """Build Meteora DLMM swap instruction using Jupiter API data."""
-        try:
-            from solders.instruction import Instruction, AccountMeta
-            from solders.pubkey import Pubkey
-
-            instruction = Instruction(
-                program_id=Pubkey.from_string("LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3"),  # Meteora DLMM
-                accounts=[],  # Would be populated
-                data=b""  # Would be populated
-            )
-
-            accounts = []
-
-            return HopInstruction(
-                dex_name="meteora",
-                instruction=instruction,
-                input_amount=amount,
-                expected_output=amount * Decimal('0.997'),  # Estimated 0.3% fee
-                accounts=accounts
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to build Meteora swap: {e}")
-            return None
-
-    async def _build_sanctum_swap(self, from_token: str, to_token: str, amount: Decimal) -> Optional[HopInstruction]:
-        """Build Sanctum Router swap instruction."""
-        try:
-            from solders.instruction import Instruction, AccountMeta
-            from solders.pubkey import Pubkey
-
-            instruction = Instruction(
-                program_id=Pubkey.from_string("stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq"),  # Sanctum Router
-                accounts=[],  # Would be populated
-                data=b""  # Would be populated
-            )
-
-            accounts = []
-
-            return HopInstruction(
-                dex_name="sanctum",
-                instruction=instruction,
-                input_amount=amount,
-                expected_output=amount * Decimal('0.999'),  # Estimated 0.1% fee
-                accounts=accounts
-            )
-
-        except Exception as e:
-            logger.error(f"Failed to build Sanctum swap: {e}")
-            return None
+    # Fix 36: All DEX-specific instruction builders removed.
+    # Real swap assembly happens via JupiterTxBuilder in tx_builder.py.
+    # These were empty stubs returning instructions with accounts=[] and data=b"",
+    # which would break any transaction they were included in.

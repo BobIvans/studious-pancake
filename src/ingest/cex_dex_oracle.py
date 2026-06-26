@@ -105,8 +105,7 @@ class CexDexOracle:
                 except Exception as e:
                     logger.error(f"Binance stream error: {e}")
                     if not self._stop_event.is_set():
-                        await asyncio.sleep(5)  # Reconnect
-                        asyncio.create_task(self._binance_stream())
+                        await asyncio.sleep(5)  # Reconnect (outer while handles the loop)
         except asyncio.CancelledError:
             logger.info("Binance WebSocket stream gracefully cancelled")
         except Exception as e:

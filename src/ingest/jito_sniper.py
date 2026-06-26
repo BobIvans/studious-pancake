@@ -905,7 +905,7 @@ class TransactionTipBuilder:
         self,
         pool_event: PoolCreationEvent,
         buyer_keypair: Keypair,
-        buy_amount_lamports: int = 1_000_000_000,  # 1 SOL
+        buy_amount_lamports: int = 10_000_000,  # 0.01 SOL (survival mode)
         recent_blockhash: Optional[Hash] = None,
     ) -> Optional[VersionedTransaction]:
         """
@@ -944,7 +944,13 @@ class TransactionTipBuilder:
             # Placeholder: In production, add swap instruction here
             # swap_ix = create_raydium_swap_instruction(...)
 
-            all_instructions = [tip_ix]  # Add swap_ix when implemented
+            # ── SAFETY GUARD: prevent sending tip-only txs (no swap = pure loss) ──
+            # Only allow send if there are non-tip instructions (real swap instructions)
+            non_tip_ixs = [ix for ix in all_instructions if str(ix.program_id) != "11111111111111111111111111111111"]
+            if not non_tip_ixs:
+                logger.warning("⚠️ No swap instructions in sniping tx — only Jito tip. Blocking send.")
+                logger.warning("🚫 Sniper would lose 0.01 SOL in tips with no swap. Aborting.")
+                return None
 
             # Phase 30: Inject fresh blockhash from racing manager at the last second
             if recent_blockhash is None:

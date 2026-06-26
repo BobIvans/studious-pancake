@@ -6,6 +6,7 @@ Supports Jupiter fallback for complex routes and integrates with pool state mana
 """
 
 import asyncio
+import os
 import logging
 from typing import Dict, List, Optional, Tuple, Any
 import aiohttp

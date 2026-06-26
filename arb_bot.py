@@ -198,6 +198,7 @@ from src.ingest.arbitrage_scorer import (
 # AI data collection classes - TODO: Implement when needed
 from src.ingest.pump_fun_predictor import PumpFunMigrationPredictor
 from src.ingest.data_aggregator import DataAggregator
+from src.ingest.ai_data_collector import AIDataCollector
 from src.ingest.helius_webhook_handler import HeliusWebhookHandler
 from src.ingest.optimal_trade_sizer import (
     OptimalTradeSizer,
@@ -395,7 +396,7 @@ ATA_CACHE = shared_state.ATA_CACHE
 # AI-powered trading components (moved to main() function)
 # arbitrage_scorer = ArbitrageScorer(session=session, rpc_url=rpc.get_rpc())
 # priority_queue = PriorityArbitrageQueue(max_size=50)
-# ai_data_collector = AIDataCollector()  # TODO: Implement
+ai_data_collector = AIDataCollector(db_path="bot_history.db")
 
 # Pump.fun migration predictor (moved to main() function)
 # pump_predictor = PumpFunMigrationPredictor(
@@ -4694,6 +4695,22 @@ async def execute_priority_opportunity(
                     )
                 except Exception as e:
                     logger.warning(f"Failed to log simulated opportunity: {e}")
+
+            # AI Data Collection: record simulated trade for ML training
+            if ai_data_collector:
+                try:
+                    await ai_data_collector.record_trade({
+                        "pair": opportunity.pair,
+                        "expected_profit_sol": simulated_profit,
+                        "actual_profit_sol": 0.0,
+                        "jito_tip_sol": 0.0,
+                        "execution_time_ms": 0.0,
+                        "result": "simulated",
+                        "initial_score": getattr(opportunity, 'score', 0),
+                        "network_congestion": 50.0,
+                    })
+                except Exception as e:
+                    logger.warning(f"AI data recording failed: {e}")
             return
 
         # Логируем попытку для ИИ

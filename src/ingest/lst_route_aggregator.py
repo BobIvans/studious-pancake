@@ -157,8 +157,10 @@ class LstRouteAggregator:
                     if lst_profit <= 0:
                         continue
                         
-                    # SOL equivalent of profit
-                    profit_sol = (lst_profit / buy_q.out_amount) * (borrow_amount_lamports / 1e9)
+                    # SOL equivalent of profit using actual exchange rate from sell quote
+                    # Fix 35: Use real sell rate (out/in) instead of assuming 1:1 LST:SOL
+                    sell_rate = sell_q.out_amount / max(sell_q.in_amount, 1)  # SOL per LST
+                    profit_sol = lst_profit * sell_rate / 1e9
                     net_profit = profit_sol - total_fees
                     profit_bps = (lst_profit / buy_q.out_amount) * 10000
 

@@ -450,8 +450,151 @@ class ExecutionRouter:
 
                 return result
             elif strategy == "wrapper_peg":
-                logger.warning("wrapper_peg strategy disabled: src/ingest/wrapper_arb.py removed per audit finding #53")
-                return {"status": "error", "message": "wrapper_peg strategy removed per audit"}
+                # BTC Wrapper Peg Arbitrage — USDC → cheap BTC → expensive BTC → USDC
+                pair = opportunity.get("pair", "unknown")
+                logger.info(f"🔄 Wrapper Peg: {pair}")
+
+                try:
+                    from .tx_builder import JupiterTxBuilder
+                    from .pre_trade_guard import PreTradeGuard
+                    from solders.transaction import VersionedTransaction
+                    from solders.message import MessageV0
+                    from solders.address_lookup_table_account import AddressLookupTableAccount
+
+                    cheap_mint = opportunity.get("cheap_mint", "")
+                    expensive_mint = opportunity.get("expensive_mint", "")
+                    borrow_amount = opportunity.get("borrow_amount_lamports", 0)
+                    expected_profit_sol = opportunity.get("expected_profit_sol", 0.0)
+                    jito_tip_pct = opportunity.get("jito_tip_pct", 0.40)
+
+                    # Build swap instructions from the quotes
+                    leg1_quote = opportunity.get("leg1_quote")
+                    leg2_quote = opportunity.get("leg2_quote")
+                    leg3_quote = opportunity.get("leg3_quote")
+
+                    if not all([leg1_quote, leg2_quote, leg3_quote]):
+                        logger.warning(f"Wrapper Peg {pair}: missing quotes")
+                        return {"status": "error", "message": "missing quotes"}
+
+                    # Get swap instructions from Jupiter for each leg
+                    tx_builder = JupiterTxBuilder(
+                        session=self.session,
+                        rpc_getter=self.rpc_getter,
+                    )
+
+                    all_swap_ixs = []
+                    wallet_pk = str(self.keypair.pubkey())
+                    for leg_quote in [leg1_quote, leg2_quote, leg3_quote]:
+                        ixs, _ = await tx_builder.get_swap_instructions(
+                            leg_quote, wallet_pk, use_custom_cu=True
+                        )
+                        all_swap_ixs.extend(ixs)
+
+                    if not all_swap_ixs:
+                        logger.warning(f"Wrapper Peg {pair}: no swap instructions")
+                        return {"status": "error", "message": "no swap instructions"}
+
+                    # Jito tip = 40% of expected profit
+                    jito_tip_sol = expected_profit_sol * jito_tip_pct
+                    jito_tip_lamports = max(int(jito_tip_sol * 1e9), 10000)
+
+                    # ATA rent: 2 new ATAs at conservative rate
+                    ata_rent_sol = 0.0035 * 2
+                    priority_fee_sol = 0.00001
+                    total_fees_sol = jito_tip_sol + ata_rent_sol + priority_fee_sol
+
+                    # Profit check via PreTradeGuard with is_circular=True
+                    pre_trade_guard = PreTradeGuard(
+                        session=self.session, rpc_url=self.rpc_url
+                    )
+                    profit_check = await pre_trade_guard.check_profit_before_execution(
+                        opportunity=opportunity,
+                        expected_profit_sol=expected_profit_sol,
+                        priority_fee_sol=priority_fee_sol,
+                        jito_tip_sol=jito_tip_sol,
+                        ata_rent_sol=ata_rent_sol,
+                        is_circular=True,
+                    )
+                    if not profit_check.get("is_profitable", False):
+                        reason = profit_check.get("reason", "profit check failed")
+                        logger.warning(f"Wrapper Peg {pair}: {reason}")
+                        return {"status": "skipped", "message": reason}
+
+                    # Build native flash loan tx
+                    marginfi_config = {
+                        "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+                        "marginfi_group": "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8",
+                        "bank_pubkey": "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2",
+                        "bank_liquidity_vault": "73zNEAXx8vWeCReEwZgPZteXhH3RTo8gC1vC51g8x7j2",
+                    }
+
+                    tx_data = await tx_builder.build_native_flashloan_tx(
+                        wallet_pubkey=wallet_pk,
+                        arbitrage_path=[str(USDC_MINT), cheap_mint, expensive_mint, str(USDC_MINT)],
+                        borrow_amount_lamports=borrow_amount,
+                        expected_min_profit_lamports=int(expected_profit_sol * 1e9),
+                        dex_swap_instructions=all_swap_ixs,
+                        marginfi_config=marginfi_config,
+                        jito_tip_lamports=jito_tip_lamports,
+                        wsol_manager=None,
+                        pool_state_manager=None,
+                        use_jito=True,
+                    )
+
+                    if not tx_data:
+                        logger.warning(f"Wrapper Peg {pair}: failed to build tx")
+                        return {"status": "error", "message": "tx build failed"}
+
+                    # Compile instructions into VersionedTransaction
+                    instructions = tx_data.get("instructions", [])
+                    if not instructions:
+                        logger.warning(f"Wrapper Peg {pair}: no instructions in tx_data")
+                        return {"status": "error", "message": "no instructions"}
+
+                    # Build ALTs from tx_data
+                    alts = []
+                    for alt_key in tx_data.get("address_lookup_table_pubkeys", []):
+                        alt_account = None
+                        if self.alt_manager:
+                            alt_account = await self.alt_manager.resolve_alt(
+                                Pubkey.from_string(alt_key)
+                            )
+                        alts.append(AddressLookupTableAccount(
+                            key=Pubkey.from_string(alt_key),
+                            addresses=alt_account or [],
+                        ))
+
+                    # Get recent blockhash
+                    blockhash = Hash.default()
+                    if self.blockhash_mgr:
+                        bh = await self.blockhash_mgr.get_fresh_blockhash()
+                        if bh:
+                            blockhash = bh
+
+                    msg = MessageV0.try_compile(
+                        payer=self.keypair.pubkey(),
+                        instructions=instructions,
+                        address_lookup_table_accounts=alts,
+                        recent_blockhash=blockhash,
+                    )
+                    versioned_tx = VersionedTransaction(msg, [self.keypair])
+
+                    # Execute via Jito
+                    result = await self._route_transaction(
+                        self.session, self.cfg, self.rpc_url,
+                        versioned_tx, jito_tip_lamports
+                    )
+
+                    if result.get("success"):
+                        logger.info(f"✅ Wrapper Peg executed: {pair} | tip={jito_tip_sol:.6f} SOL")
+                        return {"status": "success", "pair": pair, **result}
+                    else:
+                        logger.warning(f"❌ Wrapper Peg failed: {pair} | {result.get('error')}")
+                        return result
+
+                except Exception as e:
+                    logger.error(f"Wrapper Peg execution error: {e}")
+                    return {"status": "error", "message": str(e)}
             else:
                 logger.warning(f"Unknown strategy: {strategy}")
                 return {"status": "error", "message": f"Unknown strategy: {strategy}"}

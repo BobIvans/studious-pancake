@@ -88,37 +88,20 @@ class HeliusSender:
             return None
 
 class TransactionSender:
-    """Unified transaction sender with Helius and Jito fallback."""
+    """Unified transaction sender with Helius primary."""
 
-    def __init__(self, helius_sender: HeliusSender, jito_sender: Optional[object] = None):
+    def __init__(self, helius_sender: HeliusSender):
         self.helius_sender = helius_sender
-        self.jito_sender = jito_sender
 
     async def send_transaction(
         self,
         signed_tx: VersionedTransaction,
     ) -> Optional[str]:
-        """Send transaction with Helius primary, Jito fallback.
-
-        Fix 41: priority_fee_micro_lamports, tip_lamports, payer_pubkey removed
-        — these were never embedded into the transaction by Helius Sender.
-        Fee and tip must be set at build time.
-        """
-        # Try Helius first
+        """Send transaction with Helius primary."""
         result = await self.helius_sender.send_via_helius_sender(
             signed_tx
         )
-        if result:
-            return result
-
-        # Fallback to Jito if available
-        if self.jito_sender:
-            logger.info("Falling back to Jito sender")
-            # Assume jito_sender has send_bundle method
-            # result = await self.jito_sender.send_bundle(signed_tx)
-            # return result
-
-        return None
+        return result
 
     async def send_with_retry(
         self,

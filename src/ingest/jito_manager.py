@@ -129,36 +129,6 @@ class JitoManager:
         logger.info(f"💰 Calculated dynamic tip: {tip_sol:.6f} SOL ({tip_percentage*100:.1f}% of normalized profit)")
         return tip_lamports
 
-    async def add_tip_instruction(
-        self,
-        transaction: VersionedTransaction,
-        tip_amount_lamports: int,
-        tip_account: Optional[str] = None
-    ) -> VersionedTransaction:
-        """
-        Add tip instruction to transaction (must be at the end).
-
-        Args:
-            transaction: Original transaction
-            tip_amount_lamports: Tip amount in lamports
-            tip_account: Specific tip account (random if None)
-
-        Returns:
-            Transaction with tip instruction added
-        """
-        if tip_account is None:
-            tip_account = self.get_random_tip_account()
-
-        logger.debug(f"🎯 Adding tip instruction: {tip_amount_lamports} lamports to {tip_account}")
-
-        # Note: In the existing JitoBundleClient, tip is added during bundle building
-        # This method would modify the transaction directly if needed
-        # For now, we'll store tip info for the bundle client to use
-
-        # This is a placeholder - actual implementation would modify the transaction
-        # For now, return the original transaction and let bundle client handle tipping
-        return transaction
-
     async def send_bundle(
         self,
         transaction: VersionedTransaction,

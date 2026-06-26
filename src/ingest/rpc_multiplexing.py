@@ -390,8 +390,6 @@ class RPCMultiplexingEngine:
                 logger.error(f"Event processor error: {e}")
 
 
-class ExecutionPipeline:
-    """Unified execution pipeline integrating all components."""
 
     def __init__(
         self,

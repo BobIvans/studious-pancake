@@ -245,20 +245,8 @@ class HeliusWebhookHandler:
                     else:
                         logger.info(f"🎯 Sanctum LST opportunity detected: {opportunity.get('description', 'Unknown')}")
 
-            if self.jito_shotgun and event_type in ('SWAP', 'CREATE_POOL', 'GRADUATION'):
-                task = asyncio.create_task(self._fire_jito_shotgun(event))
-                shared_state.active_tasks.add(task)
-                task.add_done_callback(shared_state.active_tasks.discard)
-
         except Exception as e:
             logger.error(f"Event processing error: {e}")
-
-    async def _fire_jito_shotgun(self, event: Dict) -> None:
-        """Strat 3: Fire a noop Jito Shotgun broadcast."""
-        try:
-            self.jito_shotgun.update_acceptance_rate(True)
-        except Exception as e:
-            logger.debug(f"Jito Shotgun broadcast error: {e}")
 
     async def _process_account_update(self, event: Dict[str, Any], webhook_id: str):
         """Process account update events for Orca pools."""

@@ -149,10 +149,7 @@ WSOL_CLOSE_COOLDOWN: float = 60.0  # seconds — any recent atomic close is auth
 # Import Jito client
 try:
     from src.ingest.jito_bundle_client import JitoBundleClient
-    from src.ingest.jito_priority_context import (
-        JitoPriorityContext,
-        JitoPriorityContextAdapter,
-    )
+    from src.ingest.jito_bundle_handler import _set_global_price_matrix
     from src.ingest.jito_manager import JitoBiddingManager
     from src.ingest.jito_executor import JitoExecutor
 
@@ -188,12 +185,6 @@ from src.ingest.tx_builder import JupiterTxBuilder
 from src.ingest.multi_aggregator_client import MultiAggregatorClient
 from src.ingest.transaction_prebuilder import TransactionPrebuilder
 from src.ingest.multi_rpc_manager import MultiRpcManager, RpcEndpoint
-from src.ingest.jito_sniper import (
-    JitoTipManager,
-    WssPoolCreationListener,
-    JitoBundleSender,
-    TransactionTipBuilder,
-)
 from src.ingest.leader_tracker import LeaderTracker
 from src.ingest.execution_router import ExecutionRouter
 from src.ingest.blockhash_racing import init_blockhash_racing, get_blockhash_manager
@@ -210,21 +201,17 @@ from src.ingest.ai_data_collector import AIDataCollector
 from src.ingest.helius_webhook_handler import HeliusWebhookHandler
 from src.ingest.optimal_trade_sizer import (
     OptimalTradeSizer,
-)  # VelocitySlippageManager not implemented
-from src.ingest.rpc_multiplexing import ExecutionPipeline, _set_global_price_matrix
+)
 from src.ingest.pyth_core_price_feeder import init_pyth_core_feeder
 from src.ingest.helius_sender import HeliusSender, TransactionSender
 
 # ULTRA ARB MASTER - New In-Memory State Modules
 from src.ingest.graph_math import ArbitrageGraph, ArbitrageCycle
 from src.ingest.pool_state_manager import PoolStateManager
-from src.ingest.pool_fetcher import PoolFetcher
 from src.ingest.event_triggers import EventTriggerEngine, VolatilityWatcher
-from src.ingest.stableswap_math import PoolMathRouter
 from src.ingest.flash_pivot import FlashPivotEngine
 from src.ingest.liquidator_engine import LiquidationEngine
 from src.ingest.cex_dex_oracle import CexDexOracle
-from src.ingest.jito_shotgun import JitoShotgun
 from src.ingest.dust_sweeper import DustSweeper
 from src.ingest.alt_manager import ALTCacheManager
 import src.ingest.shared_state as shared_state
@@ -361,11 +348,9 @@ trade_sizer = OptimalTradeSizer()
 # arbitrage_graph = ArbitrageGraph(max_tokens=25)  # 25 Blue Ocean tokens
 # pool_state_manager = PoolStateManager(
 #     websocket_url=cfg.WSS_ENDPOINTS[0],
-#     pool_addresses=[]  # Will be populated by pool_fetcher
+#     pool_addresses=[]
 # )
-# oracle_streams = OracleStreams()
-# pool_fetcher = PoolFetcher(session)
-# event_triggers = EventTriggerEngine()
+# cex_dex_oracle = CexDexOracle(pool_state_manager=pool_state_manager)
 
 # ULTRA ARB - Initialize Advanced Strategy Engines (commented for minimal startup)
 # liquidation_engine = LiquidationEngine(
@@ -384,8 +369,7 @@ trade_sizer = OptimalTradeSizer()
 # volatility_watcher = VolatilityWatcher(pool_state_manager)
 
 # ULTRA ARB - Stable×Stable & Lending Rate Engines (commented for minimal startup)
-# pool_math_router = PoolMathRouter()
-# flash_pivot_engine = FlashPivotEngine(pool_state_manager, pool_math_router)
+# flash_pivot_engine = FlashPivotEngine(pool_state_manager)
 
 # k_hop_stitcher = KHopStitcher(wallet_keypair=keypair)
 
@@ -887,7 +871,7 @@ class Config:
 
     # Arbitrage Engine Settings
     MIN_PROFIT_THRESHOLD_SOL: float = float(
-        os.getenv("MIN_PROFIT_THRESHOLD_SOL", "0.001")
+        os.getenv("MIN_PROFIT_THRESHOLD_SOL", "0.0005")  # 500 micro-SOL for micro-balance
     )
     MIN_PROFIT_THRESHOLD_USDC: float = float(
         os.getenv("MIN_PROFIT_THRESHOLD_USDC", "0.01")
@@ -3886,70 +3870,6 @@ async def fetch_raydium_reserves(session, pool_address: str):
     return None
 
 
-async def start_jito_sniper():
-    """Start Jito sniper system for pool creation sniping."""
-    try:
-        logger.info("🎯 Starting Jito Sniper for pool creation sniping...")
-
-        # Start tip manager and pool listener
-        await jito_tip_manager.start()
-        await jito_pool_listener.start()
-
-        logger.info("✅ Jito Sniper active - monitoring for new pool creations")
-    except Exception as e:
-        logger.error(f"Failed to start Jito sniper: {e}")
-        raise
-
-
-async def handle_pool_creation_sniping(pool_event, keypair, session, rpc_manager):
-    """Handle pool creation event for sniping."""
-    try:
-        logger.debug(f"🎯 Sniping opportunity detected: {pool_event}")
-
-        # Pre-trade security validation
-        guard = PreTradeGuard(session=session, rpc_url=rpc_manager.get_rpc())
-
-        # Check both token mints for security
-        for mint_attr in ["base_mint", "quote_mint"]:
-            if hasattr(pool_event, mint_attr):
-                mint_address = getattr(pool_event, mint_attr)
-                can_trade, reason = await guard.validate_token_security(
-                    mint_address=mint_address, rpc_url=rpc_manager.get_rpc()
-                )
-                if not can_trade:
-                    logger.info(
-                        f"🚫 Pool sniping aborted for {str(mint_address)[:8]}: {reason}"
-                    )
-                    return
-
-        # Build sniping transaction with optimal tip
-        sniping_tx = await jito_tx_builder.build_sniping_transaction(
-            pool_event=pool_event,
-            buyer_keypair=keypair,
-            buy_amount_lamports=1_000_000_000,  # 1 SOL (configurable)
-        )
-
-        if not sniping_tx:
-            logger.error("Failed to build sniping transaction")
-            return
-
-        # Send as Jito bundle to multiple endpoints
-        bundle_result = await jito_bundle_sender.send_bundle(sniping_tx)
-
-        if bundle_result["success"]:
-            logger.debug(
-                f"🚀 Pool sniping bundle sent! Bundle ID: {bundle_result.get('first_bundle_id')}"
-            )
-            logger.debug(
-                f"   Sent to {bundle_result['success_count']}/{bundle_result['total_endpoints']} endpoints"
-            )
-        else:
-            logger.warning(f"❌ Pool sniping bundle failed: {bundle_result['errors']}")
-
-    except Exception as e:
-        logger.error(f"Error in pool creation sniping: {e}")
-
-
 async def create_simple_dummy_tx(session, keypair, rpc_getter):
     """Create a simple dummy transaction for priority fee estimation"""
     try:
@@ -5911,47 +5831,13 @@ async def run():
         arb_opp.score = 95.0
         priority_queue.add_opportunity(arb_opp)
 
-    # helius_webhook_handler created after jito_shotgun is initialized (see below)
-
-    # ULTRA ARB Components
-    # global pool_math_router, receipt_arb_engine, flash_pivot_engine, jito_shotgun
-    # pool_math_router = PoolMathRouter()
-    # receipt_arb_engine = ReceiptArbEngine(pool_state_manager, pool_math_router)
-    # flash_pivot_engine = FlashPivotEngine(pool_state_manager, pool_math_router)
-
-    # global wrapper_arb_enforcer, volatility_watcher
-    # wrapper_arb_enforcer = WrapperArbEnforcer(pool_state_manager)
-    # volatility_watcher = VolatilityWatcher(pool_state_manager)
-
-    # 6. Jito Sniper & Background Components
-    global jito_pool_listener, jito_tx_builder, jito_bundle_sender
-    jito_pool_listener = None
-    jito_tx_builder = None
-    jito_bundle_sender = None
-    jito_shotgun = None
-
-    if JITO_AVAILABLE:
-        jito_pool_listener = WssPoolCreationListener(
-            rpc_ws_url=cfg.WSS_ENDPOINTS[0] if cfg.WSS_ENDPOINTS else None,
-            rpc_http_url=rpc.get_rpc(),
-            event_callback=lambda event: None,
-            session=session,
-        )
-        jito_tx_builder = TransactionTipBuilder(jito_tip_manager)
-        jito_bundle_sender = JitoBundleSender(
-            jito_endpoints=cfg.JITO_ENDPOINTS, auth_key=cfg.JITO_AUTH_KEY
-        )
-        jito_shotgun = JitoShotgun(session)
-
-    # Strat 3: Helius webhook handler — created AFTER jito_shotgun so it can fire
-    # swap/graduation signals to all 4 Jito regional block engines instantly.
+    # Strat 3: Helius webhook handler
     helius_webhook_handler = HeliusWebhookHandler(
         data_aggregator,
         cfg.WEBHOOK_PORT,
         opportunity_callback=handle_webhook_opportunity,
-        webhook_queue=events_config.lst_webhook_trigger,  # ИСПРАВЛЕНИЕ ССЫЛКИ
+        webhook_queue=events_config.lst_webhook_trigger,
         on_token_discovery=lambda x: None,
-        jito_shotgun=jito_shotgun,  # Strat 3: Jito Shotgun webhook integration
     )
 
     if cfg.HELIUS_WEBHOOK_ENABLED:
@@ -6589,8 +6475,6 @@ async def run():
             await data_aggregator.stop_batch_writer()
         if cfg.JITO_SNIPER_ENABLED and jito_tip_manager:
             await jito_tip_manager.stop()
-        if jito_pool_listener:
-            await jito_pool_listener.stop()
 
 
 class StateManager:

@@ -181,47 +181,6 @@ class BundleTemplate:
 
         return VersionedTransaction(msg, [self.keypair])
 
-    async def instantiate_template(
-        self, template_key: str, recent_blockhash: str, **kwargs
-    ) -> Optional[VersionedTransaction]:
-        """Fix 32: Redirect to working tx_builder.build_native_flashloan_tx when available."""
-        if self.tx_builder is not None:
-            try:
-                tx_data = await self.tx_builder.build_native_flashloan_tx(
-                    wallet_pubkey=str(self.keypair.pubkey()),
-                    arbitrage_path=kwargs.get("arbitrage_path", []),
-                    borrow_amount_lamports=kwargs.get("borrow_amount_lamports", 0),
-                    expected_min_profit_lamports=kwargs.get("expected_min_profit_lamports", 0),
-                    dex_swap_instructions=kwargs.get("dex_swap_instructions", []),
-                    marginfi_config=kwargs.get("marginfi_config", {}),
-                    jito_tip_lamports=0,
-                    use_jito=True,
-                    recent_blockhash=recent_blockhash,
-                )
-                if tx_data and "instructions" in tx_data:
-                    alts = [
-                        AddressLookupTableAccount(
-                            key=Pubkey.from_string(alt),
-                            addresses=[],
-                        )
-                        for alt in tx_data.get("address_lookup_table_pubkeys", [])
-                    ]
-                    msg = MessageV0.try_compile(
-                        payer=self.keypair.pubkey(),
-                        instructions=tx_data["instructions"],
-                        address_lookup_table_accounts=alts,
-                        recent_blockhash=Hash.from_string(recent_blockhash),
-                    )
-                    return VersionedTransaction(msg, [self.keypair])
-            except Exception as e:
-                logger.error(f"Failed to instantiate template via tx_builder: {e}")
-
-        logger.error(
-            "⚠️ BundleTemplate.instantiate_template fallback failed. "
-            "Provide tx_builder for real assembly."
-        )
-        return None
-
     def _select_tip_account_sync(self) -> str:
         """Synchronous tip account selection for instantiate_template."""
         if self.jito_tip_accounts:
@@ -624,22 +583,8 @@ class JitoBundleHandler:
             return self.jito_tip_accounts[index]
         return "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"  # Final fallback
 
-    async def simulate_bundle_locally(
-        self, bundle: List[VersionedTransaction], rpc_url: str
-    ) -> Dict[str, Any]:
-        """Asynchronous local simulation (doesn't block bundle sending)."""
-        # This runs in parallel with bundle sending
-        # Used for validation but doesn't delay execution
-        try:
-            # Simulate each transaction in bundle
-            # This would check if arbitrage tx would succeed
-            logger.debug("🔍 Local bundle simulation started")
-            await asyncio.sleep(0.1)  # Simulate async work
-            return {"simulated": True, "would_succeed": True}
-        except Exception as e:
-            logger.warning(f"Local simulation failed: {e}")
-            return {"simulated": False, "error": str(e)}
-
+    # simulate_bundle_locally REMOVED: was a stub returning {"simulated": True} after asyncio.sleep(0.1).
+    # Real simulation requires full SVM execution which is not implemented here.
 
 class BackrunTrigger:
     """Signature-based trigger for backrunning opportunities."""

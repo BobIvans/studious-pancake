@@ -17,19 +17,29 @@ from solders.transaction import VersionedTransaction
 from solders.message import MessageV0
 from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
 from src.ingest.tx_builder import validate_cb_ordering
+
 COMPUTE_BUDGET_PROG = Pubkey.from_string("ComputeBudget111111111111111111111111111111")
 
 logger = logging.getLogger(__name__)
 
+
 class HopInstruction:
     """Represents a single hop in the arbitrage path."""
-    def __init__(self, dex_name: str, instruction: Instruction, input_amount: Decimal,
-                 expected_output: Decimal, accounts: List[AccountMeta]):
+
+    def __init__(
+        self,
+        dex_name: str,
+        instruction: Instruction,
+        input_amount: Decimal,
+        expected_output: Decimal,
+        accounts: List[AccountMeta],
+    ):
         self.dex_name = dex_name
         self.instruction = instruction
         self.input_amount = input_amount
         self.expected_output = expected_output
         self.accounts = accounts
+
 
 class KHopStitcher:
     """Stitches multi-hop arbitrage paths into executable transactions."""
@@ -39,17 +49,19 @@ class KHopStitcher:
         self.max_hops = 4  # Solana transaction limit constraint
         self.max_tx_size = 1232  # bytes
 
-    async def stitch_arbitrage_path(self,
-                                    arbitrage_path: List[str],
-                                    hop_amounts: List[Decimal],
-                                    dex_protocols: List[str],
-                                    flashloan_asset: str,
-                                    flashloan_amount: Decimal,
-                                    jito_tip_lamports: int,
-                                    tx_builder: Optional[Any] = None,
-                                    wsol_manager: Optional[Any] = None,
-                                    alt_manager: Optional[Any] = None,
-                                    use_jito: bool = False) -> Optional[Dict[str, Any]]:
+    async def stitch_arbitrage_path(
+        self,
+        arbitrage_path: List[str],
+        hop_amounts: List[Decimal],
+        dex_protocols: List[str],
+        flashloan_asset: str,
+        flashloan_amount: Decimal,
+        jito_tip_lamports: int,
+        tx_builder: Optional[Any] = None,
+        wsol_manager: Optional[Any] = None,
+        alt_manager: Optional[Any] = None,
+        use_jito: bool = False,
+    ) -> Optional[Dict[str, Any]]:
         """
         Stitch a multi-hop arbitrage path into a native instruction-chained transaction.
 
@@ -82,7 +94,9 @@ class KHopStitcher:
                 amount_in = hop_amounts[i] if i < len(hop_amounts) else hop_amounts[-1]
                 dex = dex_protocols[i] if i < len(dex_protocols) else dex_protocols[-1]
 
-                hop_ix = await self._build_hop_instruction(dex, from_token, to_token, amount_in)
+                hop_ix = await self._build_hop_instruction(
+                    dex, from_token, to_token, amount_in
+                )
                 if hop_ix:
                     dex_swap_instructions.append(hop_ix.instruction)
 
@@ -95,12 +109,14 @@ class KHopStitcher:
                 logger.error("tx_builder required for native chaining")
                 return None
 
-            borrow_amount_lamports = math.ceil(flashloan_amount * 1_000_000_000)  # Convert SOL to lamports (ceil to ensure full repayment)
+            borrow_amount_lamports = math.ceil(
+                flashloan_amount * 1_000_000_000
+            )  # Convert SOL to lamports (ceil to ensure full repayment)
 
             # Build secure flashloan arbitrage transaction wrapped in Anchor
             # Expected min profit = 0.1% for safety, or pass from sizer
-            expected_min_profit_lamports = 1000 # Placeholder for 0.000001 SOL
-            
+            expected_min_profit_lamports = 1000  # Placeholder for 0.000001 SOL
+
             # Use real MarginFi config
             marginfi_config = {
                 "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
@@ -108,7 +124,7 @@ class KHopStitcher:
                 "marginfi_account": "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2",
                 "bank_pubkey": "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2",
                 "bank_liquidity_vault": "2s37YhpR...",
-                "bank_liquidity_vault_authority": "..."
+                "bank_liquidity_vault_authority": "...",
             }
 
             tx_data = await tx_builder.build_native_flashloan_tx(
@@ -120,8 +136,8 @@ class KHopStitcher:
                 marginfi_config=marginfi_config,
                 jito_tip_lamports=jito_tip_lamports,
                 wsol_manager=wsol_manager,
-                pool_state_manager=None, # Would be passed
-                use_jito=use_jito
+                pool_state_manager=None,  # Would be passed
+                use_jito=use_jito,
             )
 
             if not tx_data:
@@ -146,27 +162,19 @@ class KHopStitcher:
             logger.error(f"Native stitching failed: {e}")
             return None
 
-    async def _build_hop_instruction(self, dex: str, from_token: str,
-                                    to_token: str, amount_in: Decimal) -> Optional[HopInstruction]:
+    async def _build_hop_instruction(
+        self, dex: str, from_token: str, to_token: str, amount_in: Decimal
+    ) -> Optional[HopInstruction]:
         """Build DEX-specific swap instruction.
 
         Fix 36: All DEX swap builders are stubs returning empty instructions.
         Real swap assembly happens via JupiterTxBuilder in tx_builder.py.
         This method is kept as a pass-through to prevent AttributeError.
         """
-        logger.warning(f"⚠️ k_hop_stitcher: DEX swap builders are stubs. Use tx_builder for real swaps. dex={dex} tokens={from_token}->{to_token}")
+        logger.warning(
+            f"⚠️ k_hop_stitcher: DEX swap builders are stubs. Use tx_builder for real swaps. dex={dex} tokens={from_token}->{to_token}"
+        )
         return None
-
-    async def _build_flashloan_borrow(self, asset: str, amount: Decimal) -> Instruction:
-        """Build flashloan borrow instruction (MarginFi/Kamino)."""
-        # Implementation would create protocol-specific flashloan instruction
-        # Placeholder - integrate with flash_pivot.py for fallback logic
-        pass
-
-    async def _build_flashloan_repay(self, asset: str, amount: Decimal) -> Instruction:
-        """Build flashloan repay instruction."""
-        # Implementation would create protocol-specific repay instruction
-        pass
 
     async def _validate_transaction_size(self, instructions: List[Instruction]) -> bool:
         """Validate that stitched transaction fits Solana limits."""
@@ -182,22 +190,28 @@ class KHopStitcher:
         except Exception:
             return False
 
-    async def _build_transaction(self, instructions: List[Instruction]) -> VersionedTransaction:
+    async def _build_transaction(
+        self, instructions: List[Instruction]
+    ) -> VersionedTransaction:
         """Build VersionedTransaction from instructions."""
         try:
             # Get recent blockhash (would be injected)
             blockhash = "11111111111111111111111111111112"  # Placeholder
 
             # ── FIX 2: Compute Budget Strict Ordering check ────────────────
-            if not validate_cb_ordering(instructions, "k_hop_stitcher._build_transaction"):
-                logger.critical("CRITICAL: ComputeBudget ordering violation in k_hop_stitcher. Skipping TX.")
+            if not validate_cb_ordering(
+                instructions, "k_hop_stitcher._build_transaction"
+            ):
+                logger.critical(
+                    "CRITICAL: ComputeBudget ordering violation in k_hop_stitcher. Skipping TX."
+                )
                 raise RuntimeError("ComputeBudget instructions not at index 0/1")
             # ─────────────────────────────────────────────────────────────────
             message = MessageV0.try_compile(
                 payer=self.wallet_keypair.pubkey(),
                 instructions=instructions,
                 address_lookup_table_accounts=[],
-                recent_blockhash=Pubkey.from_string(blockhash)
+                recent_blockhash=Pubkey.from_string(blockhash),
             )
 
             return VersionedTransaction(message, [self.wallet_keypair])

@@ -1,11 +1,13 @@
 from __future__ import annotations
 from dotenv import load_dotenv
+
 load_dotenv(override=True)
 import orjson
 import asyncio
 import aiohttp
 import time
 import logging
+
 logger = logging.getLogger(__name__)
 import random
 import os
@@ -27,7 +29,9 @@ from spl.token.constants import TOKEN_PROGRAM_ID
 from src.ingest.flywheel_scaler import PairReputationCircuitBreaker
 
 # Token-2022 Program ID for RWA tokens
-TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
+TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
+    "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m"
+)
 
 try:
     # Увеличиваем лимит открытых файлов до максимума (65535)
@@ -129,7 +133,9 @@ PAIR_FAILURES: Dict[str, int] = {}
 PAIR_DISABLED_UNTIL: Dict[str, float] = {}
 PAIR_COOLDOWN_SECONDS: int = 600
 # Централизованный PairReputationCircuitBreaker (замена глобальных PAIR_FAILURES/PAIR_DISABLED_UNTIL)
-_pair_reputation = PairReputationCircuitBreaker(limit=3, cooldown_seconds=600, error_keywords=("slippage",))  # 10 минут бана для пары
+_pair_reputation = PairReputationCircuitBreaker(
+    limit=3, cooldown_seconds=600, error_keywords=("slippage",)
+)  # 10 минут бана для пары
 # ────────────────────────────────────────────────────────────────────────────
 
 
@@ -158,18 +164,25 @@ except ImportError:
     class JitoBiddingManager:
         async def update_tip_accounts(self, session):
             return False
+
         async def poll_tip_floor(self, session):
             pass
+
         def get_50th_percentile_lamports(self):
             return 10000
+
         def calculate_blue_ocean_tip(self, *args, **kwargs):
             return 0
+
         def calculate_optimal_tip(self, *args, **kwargs):
             return 0
+
         def record_bundle_result(self, *args, **kwargs):
             pass
+
         def record_trade_result(self, *args, **kwargs):
             pass
+
 
 from src.ingest.tx_builder import JupiterTxBuilder
 from src.ingest.multi_aggregator_client import MultiAggregatorClient
@@ -283,9 +296,11 @@ class AsyncTradeLogger:
         if not lines:
             return
         try:
+
             def _write_logs():
                 with open(self.path, "a", encoding="utf-8") as f:
                     f.write("\n".join(lines) + "\n")
+
             await self._loop.run_in_executor(None, _write_logs)
         except Exception as exc:
             logger.warning(f"[async-log] flush error: {exc}")
@@ -420,10 +435,12 @@ for i in range(3):
     http = _rpc_http_endpoints[i] if i < len(_rpc_http_endpoints) else ""
     if ws and http:
         multi_rpc_endpoints.append(
-            RpcEndpoint(f"rpc_node_{i+1}", ws, http, priority=i+1)
+            RpcEndpoint(f"rpc_node_{i+1}", ws, http, priority=i + 1)
         )
 if not multi_rpc_endpoints and MULTI_RPC_ENABLED:
-    logger.warning("⚠️ MULTI_RPC endpoints не настроены — укажите MULTI_RPC_WS_1 и MULTI_RPC_HTTP_1 в .env")
+    logger.warning(
+        "⚠️ MULTI_RPC endpoints не настроены — укажите MULTI_RPC_WS_1 и MULTI_RPC_HTTP_1 в .env"
+    )
 
 # Helius Sender initialization
 # helius_sender = HeliusSender(session, cfg.HELIUS_SENDER_URLS, cfg.HELIUS_TIP_ACCOUNTS)
@@ -456,7 +473,11 @@ def ensure_pubkey(val) -> Pubkey:
 async def update_stats(key: str, value: Any = 1):
     """Thread-safe stats update."""
     async with shared_state.stats_lock:
-        if isinstance(value, int) and key in shared_state.stats and isinstance(shared_state.stats[key], int):
+        if (
+            isinstance(value, int)
+            and key in shared_state.stats
+            and isinstance(shared_state.stats[key], int)
+        ):
             shared_state.stats[key] += value
         else:
             shared_state.stats[key] = value
@@ -750,11 +771,13 @@ class Config:
     )
     MULTI_RPC_ENDPOINTS: List[str] = field(
         default_factory=lambda: [
-            u for u in [
+            u
+            for u in [
                 os.getenv("MULTI_RPC_1", ""),
                 os.getenv("MULTI_RPC_2", ""),
                 os.getenv("MULTI_RPC_3", ""),
-            ] if u
+            ]
+            if u
         ]
     )
 
@@ -774,12 +797,14 @@ class Config:
     # RPC Multiplexing Configuration
     WSS_ENDPOINTS: List[str] = field(
         default_factory=lambda: [
-            u for u in [
+            u
+            for u in [
                 os.getenv("WSS_ENDPOINT_1", ""),
                 os.getenv("WSS_ENDPOINT_2", ""),
                 os.getenv("WSS_ENDPOINT_3", ""),
                 os.getenv("WSS_ENDPOINT_4", ""),
-            ] if u
+            ]
+            if u
         ]
     )
 
@@ -864,7 +889,9 @@ class Config:
 
     JUP_RPS: int = int(os.getenv("JUPITER_QUOTE_RPS", 1))
 
-    JUPITER_PRICE_URL: str = os.getenv("JUPITER_PRICE_URL", "https://api.jup.ag/price/v2")
+    JUPITER_PRICE_URL: str = os.getenv(
+        "JUPITER_PRICE_URL", "https://api.jup.ag/price/v2"
+    )
     JUPITER_QUOTE_URL: str = os.getenv(
         "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
     )
@@ -982,7 +1009,6 @@ TOKENS = {
     "compassSOL": "Comp4ssDzXcLeu2MnLuGNNFC4cmLPMng8qWHPvzAMU1h",
     "hSOL": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
     "kSOL": "kSoL6Y9p9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Y",
-
     # === BTC Wrappers (Step 5) ===
     # === BTC Wrappers (Step 5) ===
     "cbBTC": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
@@ -1079,7 +1105,7 @@ TOKEN_DECIMALS = {
     "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A": 9,  # hSOL
     "kSoL6Y9p9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Y": 9,  # kSOL
     "BLVxek8YMXUQhcKmMvrFTrzh5FXg8ec88Crp6otEaCMf": 9,  # BELIEVE
-                                                # BTC Wrappers (8 decimals)
+    # BTC Wrappers (8 decimals)
     "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh": 8,  # wBTC (Wormhole)
     "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij": 8,  # cbBTC (Coinbase)
     "6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU": 8,  # tBTC
@@ -1341,8 +1367,12 @@ DEFAULT_HEADERS = {
 }
 
 # Marginfi Config - loaded from environment with defaults
-MARGINFI_PROGRAM_ID = Pubkey.from_string(os.getenv("MARGINFI_PROGRAM_ID", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"))
-MARGINFI_GROUP = Pubkey.from_string(os.getenv("MARGINFI_GROUP", "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8"))
+MARGINFI_PROGRAM_ID = Pubkey.from_string(
+    os.getenv("MARGINFI_PROGRAM_ID", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
+)
+MARGINFI_GROUP = Pubkey.from_string(
+    os.getenv("MARGINFI_GROUP", "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8")
+)
 
 # ── Task 11: Hardcoded MarginFi Liquidity Vaults (Mainnet) ─────────────────
 # In MarginFi v2 liquidity_vault is a standard Token Account, NOT a PDA.
@@ -1351,11 +1381,9 @@ MARGINFI_GROUP = Pubkey.from_string(os.getenv("MARGINFI_GROUP", "4qp6Fx6tnZkY5Wr
 # These are the real on-chain vault addresses for the two active Mainnet banks.
 MARGINFI_LIQUIDITY_VAULTS: Dict[str, str] = {
     # SOL Bank (CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj)  →  SOL Liquidity Vault
-    "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj":
-        "7uttpzxsHAcX97X5ZwaX8xMpsJc9aKx2V8t4Gf6A43XJ",
+    "CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj": "7uttpzxsHAcX97X5ZwaX8xMpsJc9aKx2V8t4Gf6A43XJ",
     # USDC Bank (2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2)  →  USDC Liquidity Vault
-    "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2":
-        "73zNEAXx8vWeCReEwZgPZteXhH3RTo8gC1vC51g8x7j2",
+    "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2": "73zNEAXx8vWeCReEwZgPZteXhH3RTo8gC1vC51g8x7j2",
 }
 
 
@@ -1379,7 +1407,9 @@ def get_marginfi_bank_accounts(bank_pubkey: Pubkey):
     return {
         "bank": bank_pubkey,
         # Task 11: liquidity_vault is a real Token Account, NOT derived via PDA
-        "liquidity_vault": Pubkey.from_string(liquidity_vault_str) if liquidity_vault_str else None,
+        "liquidity_vault": (
+            Pubkey.from_string(liquidity_vault_str) if liquidity_vault_str else None
+        ),
         # liquidity_vault_authority IS a PDA — keep find_program_address
         "liquidity_vault_authority": find_pda("liquidity_vault_auth"),
         "insurance_vault": find_pda("insurance_vault"),
@@ -1438,6 +1468,7 @@ def get_marginfi_banks():
 
 # MARGINFI_BANKS is now defined in shared_state.py to avoid circular imports
 import src.ingest.shared_state as shared_state
+
 MARGINFI_BANKS = shared_state.MARGINFI_BANKS
 
 # Discriminators for our flash loan contract
@@ -1473,6 +1504,7 @@ openocean_ban_time = 60
 # Global production settings
 MAX_CONCURRENT_TASKS = 1  # Sequential mode to prevent MarginFi account lock
 
+
 # Fix 3: Silent Exception Swallower - Background task callback for exception logging
 def background_task_callback(t: asyncio.Task):
     """Log hidden exceptions in background tasks and prevent silent failures."""
@@ -1482,7 +1514,10 @@ def background_task_callback(t: asyncio.Task):
     except asyncio.CancelledError:
         pass  # Task was cancelled, not an error
     except Exception as e:
-        logger.error(f"💥 Hidden failure in background task ({t.get_name()}): {e}", exc_info=True)
+        logger.error(
+            f"💥 Hidden failure in background task ({t.get_name()}): {e}", exc_info=True
+        )
+
 
 TOTAL_FAILED_BUNDLES_IN_A_ROW = 0  # Fix 64: Slippage loop breaker
 
@@ -1700,10 +1735,12 @@ class RPCManager:
         self.latest_slot = 0
         self.degraded_nodes: Set[str] = set()
         self.session: Optional[aiohttp.ClientSession] = None
-        
+
         if not self.all_nodes:
             logger.error("!!! КРИТИЧЕСКАЯ ОШИБКА: RPC ссылки не найдены в .env !!!")
-            logger.critical("🛑 Укажите RPC_URL_1 (или HELIUS_API_KEY) в .env файле. Бот остановлен.")
+            logger.critical(
+                "🛑 Укажите RPC_URL_1 (или HELIUS_API_KEY) в .env файле. Бот остановлен."
+            )
             sys.exit(1)
         else:
             # Task 8: Keep strong reference to background task
@@ -1714,19 +1751,29 @@ class RPCManager:
     async def _get_session(self) -> aiohttp.ClientSession:
         if self.session is None or self.session.closed:
             import os
+
             proxy_url = os.getenv("PROXY_URL")
-            if proxy_url and (proxy_url.startswith("socks5") or proxy_url.startswith("socks4")):
+            if proxy_url and (
+                proxy_url.startswith("socks5") or proxy_url.startswith("socks4")
+            ):
                 try:
                     from aiohttp_socks import ProxyConnector
+
                     connector = ProxyConnector.from_url(proxy_url, limit=100)
                 except ImportError:
-                    connector = aiohttp.TCPConnector(family=socket.AF_INET, ttl_dns_cache=300)
+                    connector = aiohttp.TCPConnector(
+                        family=socket.AF_INET, ttl_dns_cache=300
+                    )
             elif proxy_url and proxy_url.startswith("http"):
                 os.environ["HTTPS_PROXY"] = proxy_url
                 os.environ["HTTP_PROXY"] = proxy_url
-                connector = aiohttp.TCPConnector(family=socket.AF_INET, ttl_dns_cache=300, trust_env=True)
+                connector = aiohttp.TCPConnector(
+                    family=socket.AF_INET, ttl_dns_cache=300, trust_env=True
+                )
             else:
-                connector = aiohttp.TCPConnector(family=socket.AF_INET, ttl_dns_cache=300)
+                connector = aiohttp.TCPConnector(
+                    family=socket.AF_INET, ttl_dns_cache=300
+                )
             self.session = aiohttp.ClientSession(connector=connector, trust_env=True)
         return self.session
 
@@ -1750,7 +1797,9 @@ class RPCManager:
                                 self.latest_slot = slot
                             if slot < self.latest_slot - 2:
                                 self.degraded_nodes.add(node)
-                                logger.warning(f"🐌 Slot Lag Alert: Node {node[:40]}... lagged by {self.latest_slot - slot} slots. Temporarily degraded.")
+                                logger.warning(
+                                    f"🐌 Slot Lag Alert: Node {node[:40]}... lagged by {self.latest_slot - slot} slots. Temporarily degraded."
+                                )
                             else:
                                 self.degraded_nodes.discard(node)
                             self.latencies[node] = (time.time() - t0) * 1000
@@ -1764,15 +1813,17 @@ class RPCManager:
                 "!!! КРИТИЧЕСКАЯ ОШИХА: Все RPC узлы заблокированы (401) или отсутствуют !!!"
             )
             raise Exception("No available RPC nodes. Pool is empty.")
-            
+
         active_nodes = [n for n in self.all_nodes if n not in self.degraded_nodes]
         # Если все ноды просели, откатываемся на полный список для выживания
         nodes_to_query = active_nodes if active_nodes else self.all_nodes
-        
+
         # Return fastest (lowest latency)
         return min(nodes_to_query, key=lambda n: self.latencies.get(n, 999.0))
 
-    async def get_token_account_balance(self, account_address: str) -> Optional[Dict[str, Any]]:
+    async def get_token_account_balance(
+        self, account_address: str
+    ) -> Optional[Dict[str, Any]]:
         """
         Fetch SPL token account balance via RPC.
         Delegates to the active RPC session.
@@ -1781,33 +1832,44 @@ class RPCManager:
         for attempt in range(max_retries):
             try:
                 payload = {
-                    "jsonrpc": "2.0", "id": 1,
+                    "jsonrpc": "2.0",
+                    "id": 1,
                     "method": "getTokenAccountBalance",
                     "params": [account_address],
                 }
                 rpc_url = self.get_rpc()
                 session = await self._get_session()
-                async with session.post(rpc_url, json=payload, timeout=3.0, ssl=False) as resp:
+                async with session.post(
+                    rpc_url, json=payload, timeout=3.0, ssl=False
+                ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         return data.get("result", {}).get("value")
                     elif resp.status == 429:
-                        backoff = 2.0 * (2 ** attempt)
-                        logger.warning(f"RPC 429 rate limit hit — backoff {backoff}s (attempt {attempt + 1}/{max_retries})")
+                        backoff = 2.0 * (2**attempt)
+                        logger.warning(
+                            f"RPC 429 rate limit hit — backoff {backoff}s (attempt {attempt + 1}/{max_retries})"
+                        )
                         await asyncio.sleep(backoff)
                         continue
                     elif resp.status in (403, 401):
-                        logger.error(f"RPC {resp.status} forbidden/unauthorized - check API key for {account_address[:8]}")
+                        logger.error(
+                            f"RPC {resp.status} forbidden/unauthorized - check API key for {account_address[:8]}"
+                        )
                         return None
                     else:
                         logger.debug(f"RPC Error {resp.status}: {await resp.text()}")
                         return None
             except asyncio.TimeoutError:
-                logger.debug(f"get_token_account_balance timeout (attempt {attempt + 1}/{max_retries})")
+                logger.debug(
+                    f"get_token_account_balance timeout (attempt {attempt + 1}/{max_retries})"
+                )
                 if attempt < max_retries - 1:
-                    await asyncio.sleep(0.5 * (2 ** attempt))
+                    await asyncio.sleep(0.5 * (2**attempt))
             except Exception as e:
-                logger.debug(f"get_token_account_balance failed for {account_address[:8]}: {e}")
+                logger.debug(
+                    f"get_token_account_balance failed for {account_address[:8]}: {e}"
+                )
                 if attempt == max_retries - 1:
                     return None
         return None
@@ -1895,12 +1957,16 @@ async def dexscreener_scanner(queue, session, cfg):
                         if mint and mint not in [str(m) for m in TOKENS.values()]:
                             # Dynamically inject new mint into worker queue
                             try:
-                                queue.put_nowait((2, time.time_ns(), (str(TOKENS["SOL"]), mint)))
+                                queue.put_nowait(
+                                    (2, time.time_ns(), (str(TOKENS["SOL"]), mint))
+                                )
                             except asyncio.QueueFull:
                                 pass  # HFT: stale data is trash — drop it, don't deadlock
                             if mint in [str(m) for m in MARGINFI_BANKS.keys()]:
                                 try:
-                                    queue.put_nowait((2, time.time_ns(), (mint, str(TOKENS["SOL"]))))
+                                    queue.put_nowait(
+                                        (2, time.time_ns(), (mint, str(TOKENS["SOL"])))
+                                    )
                                 except asyncio.QueueFull:
                                     pass  # HFT: stale data is trash — drop it, don't deadlock
         except Exception as e:
@@ -1924,22 +1990,22 @@ async def register_temporary_token(mint: str, duration: int = 1800):
 
 
 async def cleanup_temporary_tokens():
-     """Remove expired tokens from the dynamic registry."""
-     while True:
-         try:
-             await asyncio.sleep(300)  # Every 5 minutes
-             now = time.time()
-             async with temporary_tokens_lock:
-                 to_remove = [
-                     m for m, expiry in temporary_tokens.items() if now > expiry
-                 ]
-                 for m in to_remove:
-                     del temporary_tokens[m]
-                     logger.info(
-                         f"🧹 Removed temporary token {str(m)[:8]} from registry (expired)"
-                     )
-         except Exception as e:
-             logger.error(f"Cleanup error: {e}")
+    """Remove expired tokens from the dynamic registry."""
+    while True:
+        try:
+            await asyncio.sleep(300)  # Every 5 minutes
+            now = time.time()
+            async with temporary_tokens_lock:
+                to_remove = [
+                    m for m, expiry in temporary_tokens.items() if now > expiry
+                ]
+                for m in to_remove:
+                    del temporary_tokens[m]
+                    logger.info(
+                        f"🧹 Removed temporary token {str(m)[:8]} from registry (expired)"
+                    )
+        except Exception as e:
+            logger.error(f"Cleanup error: {e}")
 
 
 class BankHealthMonitor:
@@ -1977,9 +2043,16 @@ class BankHealthMonitor:
             vault = str(bank_info["liquidity_vault"])
 
             # ALL MarginFi liquidity vaults are Token Accounts (even wSOL).
-            payload = {"jsonrpc": "2.0", "id": 1, "method": "getTokenAccountBalance", "params": [vault]}
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "getTokenAccountBalance",
+                "params": [vault],
+            }
             session = await self.rpc._get_session()
-            async with session.post(self.rpc.get_rpc(), json=payload, timeout=5.0) as resp:
+            async with session.post(
+                self.rpc.get_rpc(), json=payload, timeout=5.0
+            ) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     if "result" in data and "value" in data["result"]:
@@ -2056,7 +2129,9 @@ async def stable_scanner(queue, cfg):
         for base, target in scan_config["pairs"]:
             if base in TOKENS and target in TOKENS:
                 try:
-                    queue.put_nowait((1, time.time_ns(), (TOKENS[base], TOKENS[target])))
+                    queue.put_nowait(
+                        (1, time.time_ns(), (TOKENS[base], TOKENS[target]))
+                    )
                 except asyncio.QueueFull:
                     pass  # HFT: stale data is trash — drop it, don't deadlock
                 await asyncio.sleep(scan_config["pair_delay"])
@@ -2073,7 +2148,9 @@ async def lst_scanner(queue, cfg):
         for base, target in scan_config["pairs"]:
             if base in TOKENS and target in TOKENS:
                 try:
-                    queue.put_nowait((1, time.time_ns(), (TOKENS[base], TOKENS[target])))
+                    queue.put_nowait(
+                        (1, time.time_ns(), (TOKENS[base], TOKENS[target]))
+                    )
                 except asyncio.QueueFull:
                     pass  # HFT: stale data is trash — drop it, don't deadlock
                 await asyncio.sleep(scan_config["pair_delay"])
@@ -2105,7 +2182,6 @@ def get_market_aware_scan_interval(base_interval: float) -> float:
         return (
             base_interval * 10
         )  # 10x slower outside trading hours to save RPC credits
-
 
 
 async def rwa_rest_scanner(queue, cfg):
@@ -2143,6 +2219,7 @@ async def get_jupiter_quote(
         return None  # Fix 84: dedup - skip duplicate RPS waste
     PENDING_QUOTES.add(pair_key)
     from src.ingest.jupiter_api_client import get_quote_limiter
+
     limiter = get_quote_limiter()
     if slippage_bps is None:
         slippage_bps = cfg.SLIPPAGE_BPS
@@ -2189,17 +2266,23 @@ async def get_jupiter_quote(
                             }
                         elif resp.status == 429:
                             backoff = min(2.0, 1.5 * (attempt + 1))
-                            logger.warning(f"Jupiter 429 on {cfg.JUPITER_QUOTE_URL} — backoff {backoff}s (attempt {attempt + 1}/{max_retries})")
+                            logger.warning(
+                                f"Jupiter 429 on {cfg.JUPITER_QUOTE_URL} — backoff {backoff}s (attempt {attempt + 1}/{max_retries})"
+                            )
                             await asyncio.sleep(backoff)
                             continue
                         else:
                             error_text = await resp.text()
-                            logger.warning(f"Jupiter API Error {resp.status}: {error_text}")
+                            logger.warning(
+                                f"Jupiter API Error {resp.status}: {error_text}"
+                            )
                             return None
                 except asyncio.TimeoutError:
-                    logger.warning(f"Jupiter quote timeout (attempt {attempt + 1}/{max_retries})")
+                    logger.warning(
+                        f"Jupiter quote timeout (attempt {attempt + 1}/{max_retries})"
+                    )
                     if attempt < max_retries - 1:
-                        await asyncio.sleep(0.5 * (2 ** attempt))
+                        await asyncio.sleep(0.5 * (2**attempt))
                 except Exception as e:
                     logger.warning(f"Jupiter Exception: {repr(e)}")
                     return None
@@ -2307,9 +2390,12 @@ async def create_flashloan_arbitrage_tx(
     pool_acct_str = cfg.MARGINFI_ACCOUNT_PUBKEY
     try:
         from src.ingest.shared_state import stats
+
         current_slot = stats.get("current_slot", 0)
         # Если роутер передан, просим у пула свободный аккаунт
-        if hasattr(opportunity, "metadata") and opportunity.metadata.get("execution_router"):
+        if hasattr(opportunity, "metadata") and opportunity.metadata.get(
+            "execution_router"
+        ):
             router = opportunity.metadata["execution_router"]
             if hasattr(router, "marginfi_pool"):
                 pool_acct_str, _ = await router.marginfi_pool.checkout(current_slot)
@@ -2327,9 +2413,7 @@ async def create_flashloan_arbitrage_tx(
     bank_cfg = MARGINFI_BANKS[flashloan_mint_str]
 
     tx_builder = JupiterTxBuilder(
-        session=session,
-        rpc_getter=lambda: rpc_getter(),
-        alt_manager=alt_manager
+        session=session, rpc_getter=lambda: rpc_getter(), alt_manager=alt_manager
     )
 
     # Get Jupiter swap instructions for all legs
@@ -2364,12 +2448,8 @@ async def create_flashloan_arbitrage_tx(
 
     # Convert SOL fees to base_mint equivalents if base_mint is not SOL
     is_sol_base = base_mint_str == "So11111111111111111111111111111111111111112"
-    sol_entry = price_matrix.get(
-        "So11111111111111111111111111111111111111112"
-    )
-    sol_price_in_usd = (
-        sol_entry[0] if isinstance(sol_entry, (tuple, list)) else 150.0
-    )
+    sol_entry = price_matrix.get("So11111111111111111111111111111111111111112")
+    sol_price_in_usd = sol_entry[0] if isinstance(sol_entry, (tuple, list)) else 150.0
 
     base_fee_sol = cfg.BASE_FEE + (tip_lamports / 1e9)
     if is_sol_base:
@@ -2425,7 +2505,9 @@ async def create_flashloan_arbitrage_tx(
 
     # Calculate indices for Instruction Introspection
     # [Borrow, Withdraw, ...Swaps, Repay, End]
-    repay_index = 2 + len(swap_instructions) + 1  # borrow(0) + withdraw(1) + len(Swaps) + repay = end_ix
+    repay_index = (
+        2 + len(swap_instructions) + 1
+    )  # borrow(0) + withdraw(1) + len(Swaps) + repay = end_ix
 
     borrow_ix = builder.build_marginfi_start_flashloan_ix(
         mfi_program,
@@ -2509,7 +2591,9 @@ async def create_flashloan_arbitrage_tx(
 
     # Final instruction sequence for build_optimized_transaction
     # Order: [borrow, withdraw, ...swaps, repay, end]
-    arbitrage_instructions = [borrow_ix, withdraw_ix] + swap_instructions + [repay_ix, end_ix]
+    arbitrage_instructions = (
+        [borrow_ix, withdraw_ix] + swap_instructions + [repay_ix, end_ix]
+    )
 
     # ─── ALT CACHE: Resolve all ALTs in-MEMORY — Zero-Latency Lookup ──────────
     # Deduplicate and batch-resolve via cache. Only a single RPC call for any ALTs
@@ -2632,7 +2716,9 @@ async def create_flashloan_arbitrage_tx(
                 operation_type="flash_arbitrage",
                 use_jito=use_jito,
                 rpc_url=rpc_getter(),
-                expected_profit_sol=opportunity.expected_profit_sol if opportunity else 0.0,
+                expected_profit_sol=(
+                    opportunity.expected_profit_sol if opportunity else 0.0
+                ),
             )
         )
         # ── ИСПРАВЛЕНИЕ: Защита от краша при превышении MTU лимита (Task 11) ──
@@ -2647,11 +2733,16 @@ async def create_flashloan_arbitrage_tx(
         # Calculate EXACT repay index dynamically using list introspection in optimized_instructions
         try:
             actual_repay_index = next(
-                (i for i, ix in enumerate(optimized_instructions)
-                 if ix.program_id == end_ix.program_id and ix.data[:8] == end_ix.data[:8]),
-                None
+                (
+                    i
+                    for i, ix in enumerate(optimized_instructions)
+                    if ix.program_id == end_ix.program_id
+                    and ix.data[:8] == end_ix.data[:8]
+                ),
+                None,
             )
             from src.ingest.tx_builder import MARGINFI_FLASHLOAN_START
+
             _safe_data = (
                 MARGINFI_FLASHLOAN_START
                 + int(effective_base_amount).to_bytes(8, "little")
@@ -2660,9 +2751,13 @@ async def create_flashloan_arbitrage_tx(
             # Find and replace the borrow instruction inside optimized_instructions
             # ИСПРАВЛЕНИЕ Python 3.13 StopIteration: Добавлен None как дефолтное значение
             borrow_idx = next(
-                (i for i, ix in enumerate(optimized_instructions)
-                 if ix.program_id == borrow_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_START),
-                None
+                (
+                    i
+                    for i, ix in enumerate(optimized_instructions)
+                    if ix.program_id == borrow_ix.program_id
+                    and ix.data[:8] == MARGINFI_FLASHLOAN_START
+                ),
+                None,
             )
             if borrow_idx is not None:
                 optimized_instructions[borrow_idx] = Instruction(
@@ -2674,7 +2769,9 @@ async def create_flashloan_arbitrage_tx(
                     f"🛠️ Safe Flashloan Start Data Re-serialized and Replaced at index {borrow_idx}: repay_index={actual_repay_index}"
                 )
         except (ValueError, StopIteration) as e:
-            logger.error(f"CRITICAL: Failed to locate and update borrow/repay instruction: {e}")
+            logger.error(
+                f"CRITICAL: Failed to locate and update borrow/repay instruction: {e}"
+            )
             return None
 
         logger.debug(
@@ -2914,7 +3011,6 @@ async def lst_depeg_scanner(
         rpc_url=rpc_url,
     )
 
-
     # Pre-Trade Guard: prevent sending unprofitable bundles (right before jito_executor.send_bundle)
     pre_trade_guard = PreTradeGuard(session=session, rpc_url=rpc_url)
 
@@ -2949,7 +3045,9 @@ async def lst_depeg_scanner(
         # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
         try:
             _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
-                shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
+                shared_state.stats.get(
+                    "virtual_balance", shared_state.stats.get("last_balance", 0.0)
+                )
             )
             if not _gas_ok:
                 logger.critical(
@@ -2961,12 +3059,19 @@ async def lst_depeg_scanner(
             logger.debug(f"LST scanner gas tank check skipped: {_ge}")
 
         # Fix 6 + 67: Balance Lock Guard — pause if lock is active
-        if shared_state._balance_lock_paused and time.time() < shared_state._balance_lock_pause_until:
-            _lock_wait_ms = (shared_state._balance_lock_pause_until - time.time()) * 1000
+        if (
+            shared_state._balance_lock_paused
+            and time.time() < shared_state._balance_lock_pause_until
+        ):
+            _lock_wait_ms = (
+                shared_state._balance_lock_pause_until - time.time()
+            ) * 1000
             logger.debug(
                 f"🔒 Balance Lock active — waiting {_lock_wait_ms:.0f}ms (lst_depeg_scanner)"
             )
-            await asyncio.sleep(max(0, shared_state._balance_lock_pause_until - time.time()))
+            await asyncio.sleep(
+                max(0, shared_state._balance_lock_pause_until - time.time())
+            )
 
         try:
             # --- TASK 3 — Dynamic Max Borrow with Slippage-Pegged Sizing (FIX 4) ---
@@ -2988,7 +3093,9 @@ async def lst_depeg_scanner(
                     decimals_out=9,
                     jito_tip_sol=0.0001,
                 )
-                if optimal and int(optimal) > 1_000_000:  # Min 0.001 SOL (survival phase)
+                if (
+                    optimal and int(optimal) > 1_000_000
+                ):  # Min 0.001 SOL (survival phase)
                     borrow_lamports = int(optimal)
                     logger.debug(
                         f"📈 LST optimal size: {borrow_lamports/1e9:.4f} SOL (AMM curve peak)"
@@ -3074,7 +3181,9 @@ async def lst_depeg_scanner(
                     await asyncio.sleep(5)
                     continue
 
-                current_wallet_balance = shared_state.stats.get("last_balance", 0.017)  # Task 14: wallet balance for direct-route guard
+                current_wallet_balance = shared_state.stats.get(
+                    "last_balance", 0.017
+                )  # Task 14: wallet balance for direct-route guard
                 route = await route_aggregator.find_best_route(
                     borrow_amount_lamports=borrow_lamports,
                     lst_mint=signal.token_mint,
@@ -3092,7 +3201,11 @@ async def lst_depeg_scanner(
                 # ── ExactIn Safety: Validate debt coverage via otherAmountThreshold ─────
                 # Ensures worst-case swap output covers MarginFi repayment
                 sell_quote_resp = route.sell_quote.full_quote_response
-                worst_case_out = int(sell_quote_resp.get("otherAmountThreshold", sell_quote_resp.get("outAmount", 0)))
+                worst_case_out = int(
+                    sell_quote_resp.get(
+                        "otherAmountThreshold", sell_quote_resp.get("outAmount", 0)
+                    )
+                )
                 if worst_case_out < borrow_lamports:
                     logger.warning(
                         f"🚫 Trade cancelled: worst-case out {worst_case_out} < debt {borrow_lamports} "
@@ -3125,9 +3238,7 @@ async def lst_depeg_scanner(
                 # 0.0025 SOL is the gas/rent safety reserve; exceeding it causes
                 # InsufficientFundsForFee pre-flight failure on a 0.015 SOL wallet.
                 current_native_for_tip = shared_state.stats.get("last_balance", 0.015)
-                available_for_tip = (
-                    current_native_for_tip - 0.0025
-                ) * 1e9
+                available_for_tip = (current_native_for_tip - 0.0025) * 1e9
                 if available_for_tip <= 0:
                     logger.warning(
                         f"🚫 Native balance {current_native_for_tip:.6f} SOL < 0.0025 gas reserve "
@@ -3210,7 +3321,10 @@ async def lst_depeg_scanner(
                         ) as resp:
                             if resp.status == 200:
                                 alt_data = orjson.loads(await resp.read())
-                                if "result" in alt_data and "value" in alt_data["result"]:
+                                if (
+                                    "result" in alt_data
+                                    and "value" in alt_data["result"]
+                                ):
                                     for acct in alt_data["result"]["value"]:
                                         if acct:
                                             try:
@@ -3221,7 +3335,9 @@ async def lst_depeg_scanner(
                                                 raw_data = base64.b64decode(padded)
                                                 keys = []
                                                 # Phase 32: Dynamic ALT header parsing
-                                                header_len = 56 if raw_data[21] == 1 else 24
+                                                header_len = (
+                                                    56 if raw_data[21] == 1 else 24
+                                                )
                                                 for i in range(
                                                     header_len, len(raw_data), 32
                                                 ):
@@ -3231,11 +3347,12 @@ async def lst_depeg_scanner(
                                                         )
                                                     )
                                                 # Use the pubkey from alt_pubkeys
-                                                index = alt_data["result"]["value"].index(
-                                                    acct
-                                                )
+                                                index = alt_data["result"][
+                                                    "value"
+                                                ].index(acct)
                                                 alt_acct = AddressLookupTableAccount(
-                                                    key=alt_pubkeys[index], addresses=keys
+                                                    key=alt_pubkeys[index],
+                                                    addresses=keys,
                                                 )
                                                 address_lookup_tables.append(alt_acct)
                                             except Exception:
@@ -3253,7 +3370,9 @@ async def lst_depeg_scanner(
                 # Get fresh blockhash
                 blockhash = cached_blockhash
                 if not blockhash or time.time() - cache_time > 2:
-                    blockhash = await get_current_blockhash(session, rpc_manager.get_rpc())
+                    blockhash = await get_current_blockhash(
+                        session, rpc_manager.get_rpc()
+                    )
                 if not blockhash:
                     logger.warning("Cannot get blockhash — skipping")
                     continue
@@ -3261,7 +3380,9 @@ async def lst_depeg_scanner(
                 # Get fresh blockhash
                 blockhash = cached_blockhash
                 if not blockhash or time.time() - cache_time > 2:
-                    blockhash = await get_current_blockhash(session, rpc_manager.get_rpc())
+                    blockhash = await get_current_blockhash(
+                        session, rpc_manager.get_rpc()
+                    )
                 if not blockhash:
                     logger.warning("Cannot get blockhash — skipping")
                     continue
@@ -3283,12 +3404,14 @@ async def lst_depeg_scanner(
                 strategy = "lst_depeg"
                 if not is_strategy_allowed(strategy):
                     continue
-                is_profitable, reason, sim_result = await flash_sim.validate_profitability(
-                    tx_b64=tx_b64,
-                    tx_signer_pubkey=str(keypair.pubkey()),
-                    min_profit_lamports=min_profit_lamports,
-                    tip_lamports=jito_tip_lamports,
-                    priority_fee_lamports=int(cfg.PRIORITY_FEE * 1e9),
+                is_profitable, reason, sim_result = (
+                    await flash_sim.validate_profitability(
+                        tx_b64=tx_b64,
+                        tx_signer_pubkey=str(keypair.pubkey()),
+                        min_profit_lamports=min_profit_lamports,
+                        tip_lamports=jito_tip_lamports,
+                        priority_fee_lamports=int(cfg.PRIORITY_FEE * 1e9),
+                    )
                 )
 
                 if not is_profitable:
@@ -3379,7 +3502,9 @@ async def lst_depeg_scanner(
                                             "event": "bundle_sent",
                                             "strategy": "lst_depeg",
                                             "token": b_token_symbol,
-                                            "borrow_sol": round(b_borrow_lamports / 1e9, 6),
+                                            "borrow_sol": round(
+                                                b_borrow_lamports / 1e9, 6
+                                            ),
                                             "tip_sol": round(b_tip_lamports / 1e9, 6),
                                             "bundle_id": bundle_id,
                                         }
@@ -3392,7 +3517,8 @@ async def lst_depeg_scanner(
                             )
                             jito_bidding_manager.record_bundle_result(
                                 "lst_depeg",
-                                confirmation.get("status") in ["confirmed", "finalized"],
+                                confirmation.get("status")
+                                in ["confirmed", "finalized"],
                             )
                             if confirmation.get("status") in ["confirmed", "finalized"]:
                                 if TRADE_LOG_QUEUE:
@@ -3412,7 +3538,9 @@ async def lst_depeg_scanner(
                                     from src.ingest.dust_sweeper import DustSweeper
 
                                     _sweeper = DustSweeper(keypair, rpc_url, session)
-                                    _recovered = await _sweeper.sweep_after_successful_tx()
+                                    _recovered = (
+                                        await _sweeper.sweep_after_successful_tx()
+                                    )
                                 except Exception:
                                     pass
                             else:
@@ -3420,10 +3548,14 @@ async def lst_depeg_scanner(
                                     f"❌ LST bundle status: {confirmation.get('status', 'unknown')} "
                                     f"| {signal.token_symbol}"
                                 )
-                                jito_bidding_manager.record_trade_result("lst_depeg", False)
+                                jito_bidding_manager.record_trade_result(
+                                    "lst_depeg", False
+                                )
 
                             tx_with_tip = tx  # Placeholder — tip will be added by JitoBundleHandler/JitoExecutor
-                            bundle_result = await jito_executor.send_bundle([tx_with_tip])
+                            bundle_result = await jito_executor.send_bundle(
+                                [tx_with_tip]
+                            )
                             # Сохраняем сильную ссылку в глобальный набор shared_state.active_tasks (Fix GC Trap)
                             task = asyncio.create_task(
                                 _post_send_processing(
@@ -3542,7 +3674,13 @@ async def kamino_liquidation_scanner(session, cfg, rpc_manager, keypair, jito_ex
 
 
 async def lst_unstake_arbitrage_scanner(
-    session, cfg, rpc_manager, keypair, jito_executor, jito_bidding_manager=None, data_aggregator=None
+    session,
+    cfg,
+    rpc_manager,
+    keypair,
+    jito_executor,
+    jito_bidding_manager=None,
+    data_aggregator=None,
 ):
     """Main LST instant unstake arbitrage scanner for MarginFi flash loans.
 
@@ -3584,7 +3722,9 @@ async def lst_unstake_arbitrage_scanner(
         try:
             # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
             _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
-                shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
+                shared_state.stats.get(
+                    "virtual_balance", shared_state.stats.get("last_balance", 0.0)
+                )
             )
             if not _gas_ok:
                 logger.critical(
@@ -3608,7 +3748,9 @@ async def lst_unstake_arbitrage_scanner(
             for opportunity in opportunities:
                 # opportunity is a dict with keys: lst_mint, expected_profit_lamports, borrow_amount, quote
                 lst_mint_str = opportunity.get("lst_mint", "")
-                expected_profit_sol = opportunity.get("expected_profit_lamports", 0) / 1e9
+                expected_profit_sol = (
+                    opportunity.get("expected_profit_lamports", 0) / 1e9
+                )
                 borrow_amount_sol = opportunity.get("borrow_amount", 0) / 1e9
 
                 logger.info(
@@ -3619,7 +3761,11 @@ async def lst_unstake_arbitrage_scanner(
 
                 # Execute the arbitrage
                 success = await unstake_arb.execute_unstake_arbitrage(
-                    opportunity, tx_builder, keypair, jito_executor, jito_bidding_manager
+                    opportunity,
+                    tx_builder,
+                    keypair,
+                    jito_executor,
+                    jito_bidding_manager,
                 )
 
                 if success:
@@ -4006,7 +4152,9 @@ async def execute_enhanced_migration_arbitrage(
     # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
     try:
         _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
-            shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
+            shared_state.stats.get(
+                "virtual_balance", shared_state.stats.get("last_balance", 0.0)
+            )
         )
         if not _gas_ok:
             logger.critical(
@@ -4017,12 +4165,17 @@ async def execute_enhanced_migration_arbitrage(
         logger.debug(f"Migration gas tank check skipped: {_ge}")
 
     # Fix 6 + 67: Balance Lock Guard — pause if lock is active
-    if shared_state._balance_lock_paused and time.time() < shared_state._balance_lock_pause_until:
+    if (
+        shared_state._balance_lock_paused
+        and time.time() < shared_state._balance_lock_pause_until
+    ):
         _lock_wait_ms = (shared_state._balance_lock_pause_until - time.time()) * 1000
         logger.debug(
             f"🔒 Balance Lock active — waiting {_lock_wait_ms:.0f}ms (execute_enhanced_migration)"
         )
-        await asyncio.sleep(max(0, shared_state._balance_lock_pause_until - time.time()))
+        await asyncio.sleep(
+            max(0, shared_state._balance_lock_pause_until - time.time())
+        )
 
     try:
         start_time = time.time()
@@ -4240,7 +4393,9 @@ async def check_bundle_confirmation(
             if virtual_balance_to_deduct > 0:
                 async with shared_state.stats_lock:
                     shared_state.stats["virtual_balance"] += virtual_balance_to_deduct
-                logger.info(f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored.")
+                logger.info(
+                    f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored."
+                )
 
             # MEV: Losing an auction is normal. Only trigger circuit breaker for critical errors.
             error_msg = str(confirmation.get("error", "")).lower()
@@ -4278,7 +4433,9 @@ async def check_bundle_confirmation(
             if virtual_balance_to_deduct > 0:
                 async with shared_state.stats_lock:
                     shared_state.stats["virtual_balance"] += virtual_balance_to_deduct
-                logger.info(f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored.")
+                logger.info(
+                    f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored."
+                )
 
             await data_aggregator.log_tx_failed(
                 bundle_id, confirmation, {"tx": tx_b64, "reason": "timeout"}
@@ -4287,7 +4444,9 @@ async def check_bundle_confirmation(
             # ФИКС 3: Добавляем ATA в глобальный кэш ТОЛЬКО после подтверждения
             if new_atas_to_create:
                 ATA_CACHE.update(new_atas_to_create)
-                logger.debug(f"✅ ATA_CACHE updated with {len(new_atas_to_create)} new ATAs after successful confirmation")
+                logger.debug(
+                    f"✅ ATA_CACHE updated with {len(new_atas_to_create)} new ATAs after successful confirmation"
+                )
 
             # Log successful confirmation + TASK 1: zero-delay ATA close for any outcome
             await data_aggregator.log_tx_confirmed(
@@ -4344,6 +4503,7 @@ async def execute_priority_opportunity(
     if current_balance_sol < 0.015:
         try:
             from src.ingest.wsol_manager import WSOLManager
+
             wsol_mgr = WSOLManager(keypair.pubkey(), keypair=keypair, session=session)
             unwrapped = await wsol_mgr.check_and_unwrap_wsol(
                 rpc_url=rpc_manager.get_rpc(),
@@ -4395,13 +4555,19 @@ async def execute_priority_opportunity(
 
     rent_per_ata = 0.00204
     # Fix 44: Use virtual_balance for affordability check (doesn't rely on last_WS_update)
-    current_sol = shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
+    current_sol = shared_state.stats.get(
+        "virtual_balance", shared_state.stats.get("last_balance", 0.0)
+    )
     tip_sol = tip_amount_lamports / 1e9
 
     # Integrate the preventative check (TASK 4)
-    max_allowed = flywheel_scaler.pre_calculate_ata_budget(current_sol, tip_sol, cfg.PRIORITY_FEE)
+    max_allowed = flywheel_scaler.pre_calculate_ata_budget(
+        current_sol, tip_sol, cfg.PRIORITY_FEE
+    )
     if actual_new_atas_needed > max_allowed:
-        logger.warning(f"🚫 [Pre-emptive ATA Guard] Required new ATAs ({actual_new_atas_needed}) exceed safe budget limit ({max_allowed}). Dropping trade.")
+        logger.warning(
+            f"🚫 [Pre-emptive ATA Guard] Required new ATAs ({actual_new_atas_needed}) exceed safe budget limit ({max_allowed}). Dropping trade."
+        )
         return None
 
     mints_involved = set()
@@ -4434,7 +4600,9 @@ async def execute_priority_opportunity(
             else:
                 ATA_CACHE.add(ata_addr)
 
-    current_sol = shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
+    current_sol = shared_state.stats.get(
+        "virtual_balance", shared_state.stats.get("last_balance", 0.0)
+    )
     tip_sol = tip_amount_lamports / 1e9
     rent_cost_sol = _rent_cost
 
@@ -4454,10 +4622,11 @@ async def execute_priority_opportunity(
         f"🚀 Executing priority opportunity: {opportunity.pair} (score: {opportunity.score:.1f})"
     )
 
-
     # ── ИСПРАВЛЕНИЕ: Сквозная маршрутизация для Webhook ──
     if opportunity.metadata.get("is_webhook"):
-        logger.info(f"🔄 Routing Webhook Signal directly to Execution Router: {opportunity.pair}")
+        logger.info(
+            f"🔄 Routing Webhook Signal directly to Execution Router: {opportunity.pair}"
+        )
         raw_data = opportunity.metadata.get("raw_data", {})
         if execution_router:
             result = await execution_router.execute_arbitrage_opportunity(raw_data)
@@ -4468,7 +4637,7 @@ async def execute_priority_opportunity(
     quote1 = opportunity.metadata.get("quote1")
     quote2 = opportunity.metadata.get("quote2")
     chosen_route = opportunity.metadata.get("chosen_route")
-    
+
     # ── ИСПРАВЛЕНИЕ: Stale Quote Guard (Task 13 — TTL 1.5s) ──
     if quote1 and "fetched_at" in quote1:
         quote_age = time.time() - quote1["fetched_at"]
@@ -4478,7 +4647,7 @@ async def execute_priority_opportunity(
                 f"({quote_age:.2f}s > 1.5s TTL limit) — ABORTING execution to prevent slippage revert"
             )
             return
-    
+
     if not chosen_route and quote1 and quote2:
         chosen_route = [quote1, quote2]
 
@@ -4582,7 +4751,9 @@ async def execute_priority_opportunity(
                 )
                 if _ata not in ATA_CACHE:
                     _new_ata_count += 1
-                    _new_atas_to_create.add(_ata)  # локально — только после подтверждения tx
+                    _new_atas_to_create.add(
+                        _ata
+                    )  # локально — только после подтверждения tx
                     _rent_cost += RENT_SPL_ATA_SOL
 
             _tip_sol = int(tip_amount_lamports) / 1e9
@@ -4663,7 +4834,11 @@ async def execute_priority_opportunity(
         )
         # ---> ИСПРАВЛЕНИЕ: PAPER_TRADING_ONLY после симуляции <---
         if getattr(cfg, "PAPER_TRADING_ONLY", False):
-            simulated_profit = sim_result.balance_delta_sol if sim_result else opportunity.expected_profit_sol
+            simulated_profit = (
+                sim_result.balance_delta_sol
+                if sim_result
+                else opportunity.expected_profit_sol
+            )
             logger.info(
                 f"🧪 [SIMULATION] Профит подтвержден: {opportunity.pair} | "
                 f"Симуляция: {simulated_profit:.6f} SOL. "
@@ -4675,7 +4850,7 @@ async def execute_priority_opportunity(
                         event_type="SimulatedOpportunity",
                         parsed_opportunity={
                             "pair": opportunity.pair,
-                            "score": getattr(opportunity, 'score', 0),
+                            "score": getattr(opportunity, "score", 0),
                             "expected_profit_sol": simulated_profit,
                             "is_profitable": is_profitable,
                             "reason": reason,
@@ -4688,16 +4863,18 @@ async def execute_priority_opportunity(
             # AI Data Collection: record simulated trade for ML training
             if ai_data_collector:
                 try:
-                    await ai_data_collector.record_trade({
-                        "pair": opportunity.pair,
-                        "expected_profit_sol": simulated_profit,
-                        "actual_profit_sol": 0.0,
-                        "jito_tip_sol": 0.0,
-                        "execution_time_ms": 0.0,
-                        "result": "simulated",
-                        "initial_score": getattr(opportunity, 'score', 0),
-                        "network_congestion": 50.0,
-                    })
+                    await ai_data_collector.record_trade(
+                        {
+                            "pair": opportunity.pair,
+                            "expected_profit_sol": simulated_profit,
+                            "actual_profit_sol": 0.0,
+                            "jito_tip_sol": 0.0,
+                            "execution_time_ms": 0.0,
+                            "result": "simulated",
+                            "initial_score": getattr(opportunity, "score", 0),
+                            "network_congestion": 50.0,
+                        }
+                    )
                 except Exception as e:
                     logger.warning(f"AI data recording failed: {e}")
             return
@@ -4735,7 +4912,9 @@ async def execute_priority_opportunity(
                     desired_asset=opportunity.metadata.get(
                         "in_mint", "So11111111111111111111111111111111111111112"
                     ),
-                    required_amount=Decimal(opportunity.metadata.get("amount_lamports", 0))
+                    required_amount=Decimal(
+                        opportunity.metadata.get("amount_lamports", 0)
+                    )
                     / Decimal(1_000_000_000),
                     arbitrage_profit=Decimal(str(opportunity.expected_profit_sol)),
                 )
@@ -4765,7 +4944,7 @@ async def execute_priority_opportunity(
         )
         est_gas_lamports = int((cfg.PRIORITY_FEE + 0.000005) * 1e9)
         virtual_balance_to_deduct = (tip_lamports + est_gas_lamports) / 1e9
-        
+
         async with shared_state.stats_lock:
             shared_state.stats["virtual_balance"] = max(
                 0.0, shared_state.stats["virtual_balance"] - virtual_balance_to_deduct
@@ -4783,7 +4962,11 @@ async def execute_priority_opportunity(
         logger.debug("🔥 Priority transaction sent successfully!")
 
         if "bundle_id" in result:
-            out_ata = str(get_associated_token_address(keypair.pubkey(), out_mint)) if out_mint_str != str(TOKENS["SOL"]) else None
+            out_ata = (
+                str(get_associated_token_address(keypair.pubkey(), out_mint))
+                if out_mint_str != str(TOKENS["SOL"])
+                else None
+            )
             task = asyncio.create_task(
                 check_bundle_confirmation(
                     result["bundle_id"],
@@ -4797,7 +4980,7 @@ async def execute_priority_opportunity(
                     rpc_getter=lambda: rpc_manager.get_rpc(),
                     target_mint_ata=out_ata,
                     virtual_balance_to_deduct=virtual_balance_to_deduct,
-new_atas_to_create=_new_atas_to_create,  # ФИКС 3
+                    new_atas_to_create=_new_atas_to_create,  # ФИКС 3
                 )
             )
             shared_state.active_tasks.add(task)
@@ -4805,14 +4988,23 @@ new_atas_to_create=_new_atas_to_create,  # ФИКС 3
     else:
         err_msg = result.get("error", "")
         logger.warning(f"❌ Priority transaction failed to send: {err_msg}")
-        
+
         # Refund virtual balance if submission failed
         async with shared_state.stats_lock:
-            shared_state.stats["virtual_balance"] = max(0.0, shared_state.stats["virtual_balance"] + virtual_balance_to_deduct)
-        logger.info(f"♻️ Capital Guard: Refunded {virtual_balance_to_deduct:.6f} SOL to virtual_balance due to send failure.")
+            shared_state.stats["virtual_balance"] = max(
+                0.0, shared_state.stats["virtual_balance"] + virtual_balance_to_deduct
+            )
+        logger.info(
+            f"♻️ Capital Guard: Refunded {virtual_balance_to_deduct:.6f} SOL to virtual_balance due to send failure."
+        )
 
-        if err_msg and ("remaining account" in err_msg.lower() or "missing required signature" in err_msg.lower()):
-            discover_ri_extra_account(err_msg, getattr(opportunity, "metadata", {}).get("strategy", "default"))
+        if err_msg and (
+            "remaining account" in err_msg.lower()
+            or "missing required signature" in err_msg.lower()
+        ):
+            discover_ri_extra_account(
+                err_msg, getattr(opportunity, "metadata", {}).get("strategy", "default")
+            )
         record_pair_failure(opportunity.pair, error_type=err_msg or "unknown")
 
 
@@ -4859,7 +5051,9 @@ async def worker(
     pairs_checked = 0
     while True:
         priority, _tie_breaker, path = await queue.get()
-        logger.info(f"🔎 [1 RPS Queue]: Scanning route {str(path[0])[:8]} ➔ {str(path[1])[:8]}")
+        logger.info(
+            f"🔎 [1 RPS Queue]: Scanning route {str(path[0])[:8]} ➔ {str(path[1])[:8]}"
+        )
         try:
             pairs_checked += 1
             if len(path) == 2:
@@ -4891,7 +5085,9 @@ async def worker(
 
             # Fix 44: Virtual Balance Guard — use virtual_balance so we never double-
             # commit capital while previous bundles are still in-flight.
-            balance = shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance", 0.0))
+            balance = shared_state.stats.get(
+                "virtual_balance", shared_state.stats.get("last_balance", 0.0)
+            )
 
             # Fix 5 (Strict Gas Tank): never trade if balance < 0.005 SOL
             try:
@@ -4906,12 +5102,19 @@ async def worker(
                 logger.debug(f"Worker gas tank check skipped: {_ge}")
 
             # Fix 6 + 67: Balance Lock Guard — pause if lock is active
-            if shared_state._balance_lock_paused and time.time() < shared_state._balance_lock_pause_until:
-                _lock_wait_ms = (shared_state._balance_lock_pause_until - time.time()) * 1000
+            if (
+                shared_state._balance_lock_paused
+                and time.time() < shared_state._balance_lock_pause_until
+            ):
+                _lock_wait_ms = (
+                    shared_state._balance_lock_pause_until - time.time()
+                ) * 1000
                 logger.debug(
                     f"🔒 Balance Lock active — waiting {_lock_wait_ms:.0f}ms (worker)"
                 )
-                await asyncio.sleep(max(0, shared_state._balance_lock_pause_until - time.time()))
+                await asyncio.sleep(
+                    max(0, shared_state._balance_lock_pause_until - time.time())
+                )
 
             # Dynamic sizing from ENV + safety (Issue 5)
             borrow_env_sol = float(os.getenv("FLASH_LOAN_SIZE_SOL", "1.0"))
@@ -4921,30 +5124,39 @@ async def worker(
             # Otherwise 1.0 SOL * 10^6 = 1 USDC () — too small to cover fees
             usdc_mint_str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
             if str(in_mint_str) == usdc_mint_str:
-                sol_entry = price_matrix.get("So11111111111111111111111111111111111111112")
+                sol_entry = price_matrix.get(
+                    "So11111111111111111111111111111111111111112"
+                )
                 sol_price = sol_entry[0] if sol_entry else 150.0
                 borrow_amount_sol = borrow_env_sol * sol_price
-                logger.debug(f"Fix 2: USDC borrow — scaling {borrow_env_sol} SOL * ${sol_price:.0f}/SOL = {borrow_amount_sol:.2f} USDC")
+                logger.debug(
+                    f"Fix 2: USDC borrow — scaling {borrow_env_sol} SOL * ${sol_price:.0f}/SOL = {borrow_amount_sol:.2f} USDC"
+                )
 
             # --- RESTORED MISSING QUOTE FETCHING LOGIC ---
             decimals_in = get_token_decimals(in_mint_str)
             amount_lamports = int(borrow_amount_sol * (10**decimals_in))
-            
+
             # ── wSOL Death Spiral — проверка перед котированием ──
             if balance is not None and balance < 0.015:
                 try:
                     from src.ingest.wsol_manager import WSOLManager
-                    wsol_mgr = WSOLManager(keypair.pubkey(), keypair=keypair, session=session)
+
+                    wsol_mgr = WSOLManager(
+                        keypair.pubkey(), keypair=keypair, session=session
+                    )
                     unwrapped = await wsol_mgr.check_and_unwrap_wsol(
                         rpc_url=rpc_manager.get_rpc(),
                         native_balance_sol=balance,
                         unwrap_threshold_sol=0.015,
                     )
                     if unwrapped:
-                        logger.info("🔓 Worker hot path wSOL unwrap — native balance replenished")
+                        logger.info(
+                            "🔓 Worker hot path wSOL unwrap — native balance replenished"
+                        )
                 except Exception as wsol_err:
                     logger.debug(f"Worker wSOL unwrap skipped: {wsol_err}")
-            
+
             routes = []
             route_types = []
 
@@ -4952,7 +5164,9 @@ async def worker(
             quote1 = None
             quote_sol_usdc = None
 
-            logger.info(f"🔎 Очередь [1 RPS]: Ищу маршрут {in_mint_str[:4]} ➔ {target_mint_str[:4]}")
+            logger.info(
+                f"🔎 Очередь [1 RPS]: Ищу маршрут {in_mint_str[:4]} ➔ {target_mint_str[:4]}"
+            )
             if len(path) == 2:
                 # 2-hop Direct
                 quote1 = await get_best_quote_multi(
@@ -5154,19 +5368,31 @@ async def worker(
                     f"Re-fetching quotes to prevent InsufficientFunds..."
                 )
                 new_quote1 = await get_best_quote_multi(
-                    session, in_mint_str, target_mint_str, optimal_amount, cfg,
+                    session,
+                    in_mint_str,
+                    target_mint_str,
+                    optimal_amount,
+                    cfg,
                     slippage_bps=0,
                 )
                 if not new_quote1 or "out_amount" not in new_quote1:
-                    logger.debug("Re-fetch failed (leg 1) for optimized amount — skipping")
+                    logger.debug(
+                        "Re-fetch failed (leg 1) for optimized amount — skipping"
+                    )
                     continue
 
                 new_quote2 = await get_best_quote_multi(
-                    session, target_mint_str, in_mint_str, new_quote1["out_amount"], cfg,
+                    session,
+                    target_mint_str,
+                    in_mint_str,
+                    new_quote1["out_amount"],
+                    cfg,
                     slippage_bps=0,
                 )
                 if not new_quote2 or "out_amount" not in new_quote2:
-                    logger.debug("Re-fetch failed (leg 2) for optimized amount — skipping")
+                    logger.debug(
+                        "Re-fetch failed (leg 2) for optimized amount — skipping"
+                    )
                     continue
 
                 chosen_route = [new_quote1, new_quote2]
@@ -5210,16 +5436,20 @@ async def worker(
             profit_lamports = expected_out_lamports - amount_lamports
 
             # Получаем реальный минимум, который выдаст Jupiter при максимальном slippage
-            worst_case_out = int(chosen_route[-1].get("full_quote_response", {}).get("otherAmountThreshold", expected_out_lamports))
-            
+            worst_case_out = int(
+                chosen_route[-1]
+                .get("full_quote_response", {})
+                .get("otherAmountThreshold", expected_out_lamports)
+            )
+
             if worst_case_out < amount_lamports:
-                logger.debug(f"🚫 Пропуск маршрута: worst_case_out ({worst_case_out}) < долга ({amount_lamports}). Риск невыплаты Flashloan!")
+                logger.debug(
+                    f"🚫 Пропуск маршрута: worst_case_out ({worst_case_out}) < долга ({amount_lamports}). Риск невыплаты Flashloan!"
+                )
                 continue
 
             is_sol_base = str(in_mint) == "So11111111111111111111111111111111111111112"
-            sol_entry = price_matrix.get(
-                "So11111111111111111111111111111111111111112"
-            )
+            sol_entry = price_matrix.get("So11111111111111111111111111111111111111112")
             sol_price_in_usd = (
                 sol_entry[0] if isinstance(sol_entry, (tuple, list)) else 150.0
             )
@@ -5417,7 +5647,7 @@ async def worker(
                     "chosen_route": chosen_route,
                     "strategy": strategy_label,
                     "expected_profit_sol": current_expected_profit,
-                    "execution_router": execution_router
+                    "execution_router": execution_router,
                 },
             )
 
@@ -5550,10 +5780,10 @@ async def tcp_heartbeat(session: aiohttp.ClientSession):
         "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
         "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
         "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
+        os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
     ]
     payload = {"jsonrpc": "2.0", "id": 1, "method": "getVersion"}
-    
+
     while True:
         try:
             tasks = [session.post(ep, json=payload, timeout=0.3) for ep in ENDPOINTS]
@@ -5571,16 +5801,16 @@ async def run():
     import gc
 
     logger.info("=== RUN() STARTED ===")
-    
+
     # HFT optimization: Disable automatic GC to prevent Stop-the-World pauses
     gc.disable()
-    
+
     # Fix 1: Initialize asyncio locks inside the running event loop
     initialize_shared_state()
 
     import src.config.events as events_config
+
     events_config.lst_webhook_trigger = asyncio.Queue()
-    
 
     # Делаем сборку мусора реже, но эффективнее, чтобы не мешать горячим циклам
     gc.set_threshold(7000, 10, 10)
@@ -5655,20 +5885,50 @@ async def run():
         if proxy_url.startswith("socks5") or proxy_url.startswith("socks4"):
             try:
                 from aiohttp_socks import ProxyConnector
+
                 connector = ProxyConnector.from_url(proxy_url, limit=100)
                 logger.info(f"🌐 SOCKS Proxy Enabled: {proxy_url}")
             except ImportError:
                 logger.warning("aiohttp_socks not installed. Using default resolver.")
-                connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, family=socket.AF_INET, force_close=True, enable_cleanup_closed=True)
+                connector = aiohttp.TCPConnector(
+                    limit=100,
+                    ttl_dns_cache=300,
+                    use_dns_cache=True,
+                    family=socket.AF_INET,
+                    force_close=True,
+                    enable_cleanup_closed=True,
+                )
         elif proxy_url.startswith("http"):
             os.environ["HTTPS_PROXY"] = proxy_url
             os.environ["HTTP_PROXY"] = proxy_url
-            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, trust_env=True, family=socket.AF_INET, force_close=True, enable_cleanup_closed=True)
+            connector = aiohttp.TCPConnector(
+                limit=100,
+                ttl_dns_cache=300,
+                use_dns_cache=True,
+                trust_env=True,
+                family=socket.AF_INET,
+                force_close=True,
+                enable_cleanup_closed=True,
+            )
             logger.info(f"🌐 HTTP Proxy Enabled: {proxy_url}")
         else:
-            connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, family=socket.AF_INET, force_close=True, enable_cleanup_closed=True)
+            connector = aiohttp.TCPConnector(
+                limit=100,
+                ttl_dns_cache=300,
+                use_dns_cache=True,
+                family=socket.AF_INET,
+                force_close=True,
+                enable_cleanup_closed=True,
+            )
     else:
-        connector = aiohttp.TCPConnector(limit=100, ttl_dns_cache=300, use_dns_cache=True, family=socket.AF_INET, force_close=True, enable_cleanup_closed=True)
+        connector = aiohttp.TCPConnector(
+            limit=100,
+            ttl_dns_cache=300,
+            use_dns_cache=True,
+            family=socket.AF_INET,
+            force_close=True,
+            enable_cleanup_closed=True,
+        )
 
     session = aiohttp.ClientSession(
         connector=connector,
@@ -5681,9 +5941,7 @@ async def run():
     balance_lamports = await StateManager.get_balance_lamports(
         session, rpc, keypair.pubkey()
     )
-    balance_sol = (
-        None if balance_lamports is None else balance_lamports / 1e9
-    )
+    balance_sol = None if balance_lamports is None else balance_lamports / 1e9
     logger.info("==================================================")
     logger.info("Post-authorization diagnostics")
     logger.info(f"Loaded Keypair file path: {cfg.WALLET_PATH}")
@@ -5710,22 +5968,22 @@ async def run():
     jup_key = os.getenv("JUPITER_API_KEY", "")
     jup_headers = {"x-api-key": jup_key} if jup_key else {}
     for _ in range(3):
-                try:
-                    await session.get(
-                        f"{jup_quote_url}?inputMint=So11111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000",
-                        headers=jup_headers,
-                        timeout=2,
-                    )
-                except:
-                    pass
-                try:
-                    await session.post(
-                        rpc.get_rpc(),
-                        json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"},
-                        timeout=2,
-                    )
-                except:
-                    pass
+        try:
+            await session.get(
+                f"{jup_quote_url}?inputMint=So11111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000000",
+                headers=jup_headers,
+                timeout=2,
+            )
+        except:
+            pass
+        try:
+            await session.post(
+                rpc.get_rpc(),
+                json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"},
+                timeout=2,
+            )
+        except:
+            pass
 
     # Fix 70: Log rotation + DB vacuum background task
     async def _maintenance():
@@ -5749,7 +6007,9 @@ async def run():
                 logger.warning("Low disk space — stopping logs")
 
     asyncio.create_task(_maintenance())
-    _gc_task = asyncio.create_task(_gc_idle_collector())  # Fix 57: manual GC on idle queue
+    _gc_task = asyncio.create_task(
+        _gc_idle_collector()
+    )  # Fix 57: manual GC on idle queue
     shared_state.active_tasks.add(_gc_task)
     _gc_task.add_done_callback(background_task_callback)
     # Задача 50: Защита от Slot Drift (Time Sync Guard)
@@ -5822,7 +6082,7 @@ async def run():
     except Exception as _load_err:
         logger.debug(f"extra_accounts.json loading failed: {_load_err}")
 
-# 3. Execution Infrastructure (Jito & Leader Tracking)
+    # 3. Execution Infrastructure (Jito & Leader Tracking)
     global jito_tip_manager
     jito_tip_manager = None
     if JITO_AVAILABLE:
@@ -5876,16 +6136,14 @@ async def run():
             )
             os._exit(1)
 
-# God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
+    # God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
     global jito_bidding_manager
     jito_bidding_manager = JitoBiddingManager()
     if JITO_AVAILABLE:
         # Phase 35: Dynamic Jito Tip Accounts pre-fetch
         await jito_bidding_manager.update_tip_accounts(session)
 
-        _poll_task = asyncio.create_task(
-            jito_bidding_manager.poll_tip_floor(session)
-        )
+        _poll_task = asyncio.create_task(jito_bidding_manager.poll_tip_floor(session))
         # noinspection PyTypeChecker
         # _poll_task is intentionally fire-and-forget; it exits when run() exits
         shared_state.active_tasks.add(_poll_task)
@@ -5910,14 +6168,12 @@ async def run():
     )
     execution_router.start_processor()
 
-
     # Сохраняем пул глобально для всех модулей
     shared_state.marginfi_pool = execution_router.marginfi_pool
+
     # 4. Webhook & Strategy Routing
     async def handle_webhook_opportunity(opportunity, webhook_id):
-        logger.debug(
-            f"🚨 Webhook Triggered: {opportunity.get('strategy', 'unknown')}"
-        )
+        logger.debug(f"🚨 Webhook Triggered: {opportunity.get('strategy', 'unknown')}")
         arb_opp = ArbitrageOpportunity(
             pair=opportunity.get("description", "Webhook/Arb"),
             expected_profit_sol=opportunity.get("expected_profit_sol", 0.01),
@@ -6007,9 +6263,7 @@ async def run():
             set_compute_unit_price,
         )
 
-        wsol_mint = Pubkey.from_string(
-            "So11111111111111111111111111111111111111112"
-        )
+        wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         wsol_ata = get_associated_token_address(keypair.pubkey(), wsol_mint)
 
         while True:
@@ -6046,9 +6300,7 @@ async def run():
                             "method": "getTokenAccountBalance",
                             "params": [str(wsol_ata)],
                         }
-                        async with session.post(
-                            rpc.get_rpc(), json=payload
-                        ) as resp:
+                        async with session.post(rpc.get_rpc(), json=payload) as resp:
                             data = orjson.loads(await resp.read())
                             if "result" in data and "value" in data["result"]:
                                 wsol_amount = int(data["result"]["value"]["amount"])
@@ -6085,9 +6337,7 @@ async def run():
                                         Hash.from_string(blockhash),
                                     )
                                     tx = VersionedTransaction(msg, [keypair])
-                                    tx_b64 = base64.b64encode(bytes(tx)).decode(
-                                        "ascii"
-                                    )
+                                    tx_b64 = base64.b64encode(bytes(tx)).decode("ascii")
                                     await session.post(
                                         rpc.get_rpc(),
                                         json={
@@ -6108,7 +6358,10 @@ async def run():
                         native_after_unwrap = await StateManager.get_balance(
                             session, rpc, keypair.pubkey()
                         )
-                        if native_after_unwrap is not None and native_after_unwrap < 0.005:
+                        if (
+                            native_after_unwrap is not None
+                            and native_after_unwrap < 0.005
+                        ):
                             USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
                             usdc_ata = get_associated_token_address(
                                 keypair.pubkey(), Pubkey.from_string(USDC_MINT)
@@ -6143,7 +6396,9 @@ async def run():
                                                 SWAP_API_URL,
                                             )
 
-                                            async with JupiterClient(session=session) as jup:
+                                            async with JupiterClient(
+                                                session=session
+                                            ) as jup:
                                                 # Step 1: Get quote for USDC → SOL swap (exactly 2 USDC)
                                                 quote = await jup.get_quote(
                                                     input_mint=USDC_MINT,
@@ -6158,10 +6413,12 @@ async def run():
                                                     continue
 
                                                 # Step 2: Build signed swap transaction
-                                                swap_tx = await jup.get_swap_transaction(
-                                                    quote,
-                                                    str(keypair.pubkey()),
-                                                    wrap_unwrap_sol=False,
+                                                swap_tx = (
+                                                    await jup.get_swap_transaction(
+                                                        quote,
+                                                        str(keypair.pubkey()),
+                                                        wrap_unwrap_sol=False,
+                                                    )
                                                 )
                                                 if "error" in swap_tx:
                                                     logger.error(
@@ -6170,10 +6427,8 @@ async def run():
                                                     continue
 
                                                 # Step 3: Decode the versioned transaction
-                                                signed_tx = (
-                                                    JupiterClient.decode_swap_transaction(
-                                                        swap_tx
-                                                    )
+                                                signed_tx = JupiterClient.decode_swap_transaction(
+                                                    swap_tx
                                                 )
                                                 if signed_tx is None:
                                                     logger.error(
@@ -6249,9 +6504,7 @@ async def run():
     # 8. Warm-up
     initial_balance = None
     while initial_balance is None:
-        initial_balance = await StateManager.get_balance(
-            session, rpc, keypair.pubkey()
-        )
+        initial_balance = await StateManager.get_balance(session, rpc, keypair.pubkey())
         if initial_balance is None:
             logger.warning("⏳ Ожидание готовности RPC... Повтор через 5 секунд")
             await asyncio.sleep(5)
@@ -6353,7 +6606,9 @@ async def run():
                     jito_rtt = 0.0
 
                 if jito_rtt > 500:
-                    logger.warning(f"🐌 Jito Engine Congested (RTT {jito_rtt:.0f}ms). Entering safety cooldown...")
+                    logger.warning(
+                        f"🐌 Jito Engine Congested (RTT {jito_rtt:.0f}ms). Entering safety cooldown..."
+                    )
                     await asyncio.sleep(5.0)
                     continue
 
@@ -6367,14 +6622,13 @@ async def run():
                         rpc,
                         keypair,
                         jito_executor,
-                        None,
+                        ai_data_collector,
                         flywheel_scaler,
                         data_aggregator,
                         alt_manager=alt_manager,
                         execution_router=execution_router,
                         flash_pivot_engine=None,
-                        blockhash_mgr=blockhash_mgr,  # Task 5: Slot Drift Compensator
-                        opportunity=opportunity,
+                        blockhash_mgr=blockhash_mgr,
                     )
                 )
             except Exception as e:
@@ -6385,8 +6639,12 @@ async def run():
     # Updates both arb_bot.price_matrix and _set_global_price_matrix atomically
     try:
         pyth_feeder = init_pyth_core_feeder()
-        asyncio.create_task(pyth_feeder.start(on_price_update=update_global_price_matrix))
-        logger.info("📡 PythCorePriceFeeder started with unified price matrix callback (Fix 62)")
+        asyncio.create_task(
+            pyth_feeder.start(on_price_update=update_global_price_matrix)
+        )
+        logger.info(
+            "📡 PythCorePriceFeeder started with unified price matrix callback (Fix 62)"
+        )
     except Exception as pyth_err:
         logger.warning(f"PythCorePriceFeeder startup failed (non-fatal): {pyth_err}")
 
@@ -6398,9 +6656,7 @@ async def run():
         # asyncio.create_task(blockhash_updater(session, lambda: rpc.get_rpc())),
         # DISABLED: stable_scanner — RPS-heavy polling (Helius 429 prevention)
         # asyncio.create_task(stable_scanner(queue, cfg)),        # Fast stables (1.5s)
-        asyncio.create_task(
-            lst_scanner(queue, cfg)
-        ),  # Loop B: LST arbitrage (2.0s)
+        asyncio.create_task(lst_scanner(queue, cfg)),  # Loop B: LST arbitrage (2.0s)
         # DISABLED: rwa_rest_scanner — RPS-heavy polling (15.0s interval)
         # asyncio.create_task(rwa_rest_scanner(queue, cfg)),
         # DISABLED: dexscreener_scanner — RPS-heavy external API polling
@@ -6475,7 +6731,15 @@ async def run():
     # LST Instant Unstake Arbitrage Scanner
     if cfg.LST_UNSTAKE_ARB_ENABLED:
         unstake_task = asyncio.create_task(
-            lst_unstake_arbitrage_scanner(session, cfg, rpc, keypair, jito_executor, jito_bidding_manager=jito_bidding_manager, data_aggregator=data_aggregator)
+            lst_unstake_arbitrage_scanner(
+                session,
+                cfg,
+                rpc,
+                keypair,
+                jito_executor,
+                jito_bidding_manager=jito_bidding_manager,
+                data_aggregator=data_aggregator,
+            )
         )
         tasks.append(unstake_task)
         logger.info("🔄 LST Instant Unstake Arbitrage Scanner ENABLED")
@@ -6492,9 +6756,7 @@ async def run():
     else:
         logger.debug("ℹ️ Orderbook-AMM Arbitrage Scanner DISABLED")
 
-    logger.debug(
-        f"🚀 Matrix Scanner launched! Initial Balance: {initial_balance} SOL"
-    )
+    logger.debug(f"🚀 Matrix Scanner launched! Initial Balance: {initial_balance} SOL")
 
     try:
         while True:
@@ -6510,22 +6772,26 @@ async def run():
             # Задача 52: Локальный мониторинг (Health Check File)
             try:
                 with open("bot_health.json", "wb") as f:
-                    f.write(orjson.dumps(
-                        {
-                            "last_ping": time.time(),
-                            "balance": shared_state.stats.get("last_balance"),
-                            "trades": shared_state.stats.get("trades"),
-                        }
-                    ))
+                    f.write(
+                        orjson.dumps(
+                            {
+                                "last_ping": time.time(),
+                                "balance": shared_state.stats.get("last_balance"),
+                                "trades": shared_state.stats.get("trades"),
+                            }
+                        )
+                    )
             except Exception as e:
                 logger.debug(f"Heartbeat write error: {e}")
 
             # Update metrics & Log Stats
-            working_cap = (
-                current_balance - cfg.MIN_RESERVE_SOL
-            ) * cfg.TRADE_SIZE_PCT
+            working_cap = (current_balance - cfg.MIN_RESERVE_SOL) * cfg.TRADE_SIZE_PCT
             bir = (
-                (shared_state.stats["bundle_successes"] / shared_state.stats["bundle_send_attempts"]) * 100
+                (
+                    shared_state.stats["bundle_successes"]
+                    / shared_state.stats["bundle_send_attempts"]
+                )
+                * 100
                 if shared_state.stats["bundle_send_attempts"] > 0
                 else 0
             )
@@ -6536,7 +6802,10 @@ async def run():
                 else 0
             )
             flash_miss_rate = (
-                (shared_state.stats["flash_loan_miss_count"] / shared_state.stats["flash_loan_attempt_count"])
+                (
+                    shared_state.stats["flash_loan_miss_count"]
+                    / shared_state.stats["flash_loan_attempt_count"]
+                )
                 * 100
                 if shared_state.stats["flash_loan_attempt_count"] > 0
                 else 0
@@ -6559,6 +6828,7 @@ async def run():
                         await dust_sweeper._sweep_dust()
                     # 2. Пытаемся конвертировать остатки USDC обратно в SOL для заправки бака
                     from src.ingest.gas_manager import check_and_refill_gas
+
                     await check_and_refill_gas(session, rpc, keypair)
                 except Exception as panic_err:
                     logger.critical(f"Emergency recovery failed: {panic_err}")
@@ -6572,16 +6842,16 @@ async def run():
                 break
     finally:
         logger.debug("🛑 Shutting down arbitrage engine components...")
-        
+
         # 1. Принудительно отменяем все фоновые задачи ДО закрытия сессии
         for task in list(shared_state.active_tasks):
             if not task.done():
                 task.cancel()
-        
+
         # 2. Ждем их корректного завершения
         if shared_state.active_tasks:
             await asyncio.gather(*shared_state.active_tasks, return_exceptions=True)
-            
+
         # 3. AsyncLogger: flush
         try:
             if "logger_obj" in locals() and logger_obj:
@@ -6593,11 +6863,11 @@ async def run():
         if "session" in locals() and session and not session.closed:
             await session.close()
 
-        if 'jito_executor' in locals() and jito_executor:
+        if "jito_executor" in locals() and jito_executor:
             await jito_executor.stop()
-        if 'helius_webhook_handler' in locals() and helius_webhook_handler:
+        if "helius_webhook_handler" in locals() and helius_webhook_handler:
             await helius_webhook_handler.stop()
-        if 'data_aggregator' in locals() and data_aggregator:
+        if "data_aggregator" in locals() and data_aggregator:
             await data_aggregator.stop_batch_writer()
         if cfg.JITO_SNIPER_ENABLED and jito_tip_manager:
             await jito_tip_manager.stop()
@@ -6663,7 +6933,6 @@ class StateManager:
             session, rpc_manager, pubkey
         )
         return None if balance_lamports is None else balance_lamports / 1e9
-
 
 
 async def handle_graduation_event(opportunity, session, cfg, rpc, keypair):
@@ -6962,7 +7231,9 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
             # Build CloseAccount instruction (runs regardless — handles zero-leftover path)
             from spl.token.instructions import CloseAccountParams, close_account
 
-            close_program_id = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
+            close_program_id = Pubkey.from_string(
+                "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+            )
 
             close_params = CloseAccountParams(
                 account=Pubkey.from_string(ata_address),
@@ -7033,9 +7304,11 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
 if __name__ == "__main__":
     _convert_tokens_to_pubkeys()
     import platform
+
     if platform.system() != "Darwin":
         try:
             import uvloop
+
             asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
             logger.info("⚡ uvloop установлен (максимальная скорость)")
         except ImportError:
@@ -7055,7 +7328,9 @@ if __name__ == "__main__":
             for task in pending:
                 task.cancel()
             if pending:
-                loop.run_until_complete(asyncio.gather(*pending, return_exceptions=True))
+                loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
             loop.run_until_complete(loop.shutdown_asyncgens())
             loop.run_until_complete(loop.shutdown_default_executor())
         except Exception:

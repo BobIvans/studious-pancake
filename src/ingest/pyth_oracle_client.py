@@ -81,7 +81,7 @@ class PythHermesClient:
                 self.websocket = websocket
                 logger.info(f"✅ Connected to Pyth Hermes: {self.ws_url}")
 
-                        subscription = {
+                subscription = {
                     "type": "subscribe",
                     "subscription_type": "price_feed_updates",
                     "price_feed_ids": get_all_pyth_feed_ids()
@@ -116,6 +116,7 @@ class PythHermesClient:
                 ticker = self.feed_to_ticker.get(feed_id)
 
                 if not ticker:
+                    return
 
                 price_data = data.get("price_feed", {})
                 price_info = price_data.get("price", {})

@@ -1614,26 +1614,15 @@ class JupiterTxBuilder:
         all_instructions.append(end_ix)
 
         # =====================================================================
-        # Fix 1 (Non-burning Dust): Only close wSOL atomically.
-        # CloseAccount reverts the FULL transaction if token balance != 0.
-        # wSOL is safe: close_account unwraps all wSOL + 0.00203928 SOL rent in one instruction.
-        # All other ATA are cleaned asynchronously by dust_sweeper post-tx.
-        wsol_mint_pk = Pubkey.from_string("So11111111111111111111111111111111111111112")
-        wsol_ata = get_associated_token_address(wallet, wsol_mint_pk)
-        all_instructions.append(
-            close_account(
-                CloseAccountParams(
-                    program_id=TOKEN_PROGRAM_ID,
-                    account=wsol_ata,
-                    dest=wallet,
-                    owner=wallet,
-                    signers=[],
-                )
-            )
-        )
-        logger.debug(
-            "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
-        )
+        # FIX 1 (Non-burning Dust): Only close wSOL via dust_sweeper async.
+        # DO NOT close wSOL atomically here — Jupiter may leave 1 lamport dust,
+        # causing CloseAccount to revert the ENTIRE flashloan + arb transaction.
+        # DustSweeper handles this asynchronously post-trade.
+        # To close wSOL atomically safely, first add a transfer instruction to
+        # drain the wSOL balance to the wallet, then close:
+        #   from solders.system_program import TransferParams, transfer
+        #   drain = transfer(TransferParams(from_pubkey=wsol_ata, to_pubkey=wallet, lamports=wsol_balance))
+        # This balance is unknown at compile time, so we delegate to DustSweeper.
         # =====================================================================
 
         # ЗАЩИТА КАПИТАЛА (0.017 SOL): Чаевые Jito СТРОГО в конце единой транзакции.
@@ -2071,15 +2060,17 @@ class JupiterTxBuilder:
             )
 
                 # =====================================================================
-            # Fix 1 (Non-burning Dust): Only close wSOL atomically.
-            # CloseAccount reverts if token balance != 0 (full tx rollback).
-            # wSOL is safe — close_account unwraps all wSOL + 0.00203928 SOL rent at once.
-            # All other ATA cleaned asynchronously by dust_sweeper post-tx.
+            # FIX 1 (Non-burning Dust): Only close wSOL atomically, NOT user_borrow_ata.
+            # user_borrow_ata may be a USDC ATA (if borrow_mint=USDC) — closing it
+            # would destroy the ability to receive USDC without paying rent again.
+            # Only close wSOL ATA (SOL borrow path). Use sol_wrapped_mint explicitly.
+            wsol_mint_pk_for_close = Pubkey.from_string("So11111111111111111111111111111111111111112")
+            wsol_ata_for_close = get_associated_token_address(wallet, wsol_mint_pk_for_close)
             final_instructions.append(
                 close_account(
                     CloseAccountParams(
                         program_id=TOKEN_PROGRAM_ID,
-                        account=user_borrow_ata,
+                        account=wsol_ata_for_close,
                         dest=wallet,
                         owner=wallet,
                         signers=[],
@@ -2087,7 +2078,7 @@ class JupiterTxBuilder:
                 )
             )
             logger.debug(
-                "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
+                "🔓 Fix 1 (Non-burning Dust): wSOL ATA closed atomically | intermediate ATA delegated to dust_sweeper"
             )
             # =====================================================================
 

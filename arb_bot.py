@@ -876,7 +876,7 @@ class Config:
     BASE_TIP_LAMPORTS: int = int(os.getenv("BASE_TIP_LAMPORTS", "10000"))
     FLASH_FEE_PCT: float = float(os.getenv("FLASH_FEE_PCT", "0.0"))
 
-    MARGINFI_ACCOUNT_PUBKEY: str = os.getenv("MARGINFI_ACCOUNT", "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2")
+    MARGINFI_ACCOUNT_PUBKEY: str = os.getenv("MARGINFI_ACCOUNT", "")
 
     # Arbitrage Engine Settings
     MIN_PROFIT_THRESHOLD_SOL: float = float(

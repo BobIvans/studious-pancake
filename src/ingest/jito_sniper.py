@@ -788,6 +788,19 @@ class JitoBundleSender:
         Returns:
             Dict with results from all endpoints
         """
+        # PAPER TRADING SAFETY: never send real bundles in simulation mode
+        import os
+        if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+            logger.info("📄 Paper Trading: bypassing Jito bundle send")
+            import time
+            return {
+                "success": True,
+                "bundle_id": f"paper_{int(time.time())}",
+                "success_count": 1,
+                "total_endpoints": len(self.jito_endpoints),
+                "errors": [],
+            }
+
         # Convert transaction to bundle format (Jito requires base58)
         import base58
         tx_base58 = base58.b58encode(bytes(transaction)).decode('ascii')

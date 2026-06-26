@@ -131,10 +131,22 @@ class PaperTrader:
             return
 
         final_amount = sell["out"]
+
+        # Fix: normalize profit by token decimals before comparing across assets
+        # USDC/USDT have 6 decimals, SOL has 9 — dividing 6-dec lamports by 1e9 gives false profit.
+        _usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        _usdt_mint = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+        _is_stable_6dec = base_mint.endswith(_usdc_mint) or base_mint.endswith(_usdt_mint)
+        _base_dec = 6 if _is_stable_6dec else 9
         profit_lamports = final_amount - amount
 
         if profit_lamports > 0:
-            profit_sol = profit_lamports / 1e9
+            profit_native = profit_lamports / (10 ** _base_dec)
+            # Convert profit to SOL equivalent (TODO: fetch live rate from Pyth oracle)
+            if _base_dec == 6:
+                profit_sol = profit_native / 150.0  # USDC/SOL ~$150 (stale — update periodically)
+            else:
+                profit_sol = profit_native
             net_profit = profit_sol - 0.00015
 
             if net_profit > 0.0005:

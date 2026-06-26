@@ -543,7 +543,9 @@ class JupiterTxBuilder:
                 address_lookup_table_accounts=safe_alts,
                 recent_blockhash=_bh,
             )
-            draft_tx = VersionedTransaction(draft_msg, [])
+            # Fix: use dummy keypair for size estimation — empty [] causes Rust panic in solders
+            _dummy_keypair = Keypair.from_bytes(bytes([0]*64))
+            draft_tx = VersionedTransaction(draft_msg, [_dummy_keypair])
             _size = len(bytes(draft_tx))
             if _size > 1180:
                 logger.warning(
@@ -579,7 +581,9 @@ class JupiterTxBuilder:
                 address_lookup_table_accounts=_mtu_alts,
                 recent_blockhash=_mtu_bh,
             )
-            _mtu_tx = VersionedTransaction(_mtu_msg, [])
+            # Fix: use dummy keypair for MTU size estimation — empty [] causes Rust panic
+            _mtu_dummy = Keypair.from_bytes(bytes([0]*64))
+            _mtu_tx = VersionedTransaction(_mtu_msg, [_mtu_dummy])
             _mtu_size = len(bytes(_mtu_tx))
             if 0 < _mtu_size < 500:
                 pass # MTU padding disabled: duplicate ComputeBudget causes rejection
@@ -1211,18 +1215,7 @@ class JupiterTxBuilder:
                 "fee": 0,  # 0% fee
                 "priority": 1,
             },
-            {
-                "name": "Kamino",
-                "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8bojiCLxnsfmk",
-                "fee": 0,  # 0% fee
-                "priority": 2,
-            },
-            {
-                "name": "Solend",
-                "program_id": "So1endDq2YkqhipRh3WViPa8hdiSpxWy6z3Z6tMCpVF",  # Placeholder
-                "fee": 0.001,  # 0.1% fee
-                "priority": 3,
-            },
+            # Removed: Kamino and Solend (stubs, not implemented)
         ]
 
         # Filter providers that support the asset
@@ -1304,14 +1297,7 @@ class JupiterTxBuilder:
                 return await self._build_marginfi_flashloan(
                     borrow_asset, borrow_amount, arbitrage_instructions, wallet_keypair
                 )
-            elif provider["name"] == "Kamino":
-                return await self._build_kamino_flashloan(
-                    borrow_asset, borrow_amount, arbitrage_instructions, wallet_keypair
-                )
-            elif provider["name"] == "Solend":
-                return await self._build_solend_flashloan(
-                    borrow_asset, borrow_amount, arbitrage_instructions, wallet_keypair
-                )
+            # Removed: Kamino and Solend dispatch (stubs removed)
             else:
                 return None
 
@@ -1426,31 +1412,7 @@ class JupiterTxBuilder:
             logger.error(f"Failed to build MarginFi flashloan: {e}")
             return None
 
-    async def _build_kamino_flashloan(
-        self,
-        borrow_asset: str,
-        borrow_amount: Decimal,
-        arbitrage_instructions: List[Instruction],
-        wallet_keypair,
-    ) -> Optional[Dict[str, Any]]:
-        """Build Kamino flashloan transaction."""
-        # Implement Kamino-specific flashloan
-        # Placeholder - would implement Kamino-specific instructions
-        logger.debug("Kamino flashloan placeholder - needs implementation")
-        return None
-
-    async def _build_solend_flashloan(
-        self,
-        borrow_asset: str,
-        borrow_amount: Decimal,
-        arbitrage_instructions: List[Instruction],
-        wallet_keypair,
-    ) -> Optional[Dict[str, Any]]:
-        """Build Solend flashloan transaction."""
-        # Implement Solend-specific flashloan
-        # Placeholder - would implement Solend-specific instructions
-        logger.debug("Solend flashloan placeholder - needs implementation")
-        return None
+    # Removed: _build_kamino_flashloan and _build_solend_flashloan (stubs, not implemented)
 
     # === SECURE ANCHOR EXECUTION (100% CAPITAL PROTECTION) ===
 
@@ -1654,24 +1616,24 @@ class JupiterTxBuilder:
         # =====================================================================
         # Fix 1 (Non-burning Dust): Only close wSOL atomically.
         # CloseAccount reverts the FULL transaction if token balance != 0.
-        # wSOL is safe because close_account unwraps all wSOL + 0.002 SOL rent in one instruction.
+        # wSOL is safe: close_account unwraps all wSOL + 0.00203928 SOL rent in one instruction.
         # All other ATA are cleaned asynchronously by dust_sweeper post-tx.
-        # wsol_mint_pk = Pubkey.from_string("So11111111111111111111111111111111111111112")
-        # wsol_ata = get_associated_token_address(wallet, wsol_mint_pk)
-        # all_instructions.append(
-        #     close_account(
-        #         CloseAccountParams(
-        #             program_id=TOKEN_PROGRAM_ID,
-        #             account=wsol_ata,
-        #             dest=wallet,
-        #             owner=wallet,
-        #             signers=[],
-        #         )
-        #     )
-        # )
-        # logger.debug(
-        #     "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
-        # )
+        wsol_mint_pk = Pubkey.from_string("So11111111111111111111111111111111111111112")
+        wsol_ata = get_associated_token_address(wallet, wsol_mint_pk)
+        all_instructions.append(
+            close_account(
+                CloseAccountParams(
+                    program_id=TOKEN_PROGRAM_ID,
+                    account=wsol_ata,
+                    dest=wallet,
+                    owner=wallet,
+                    signers=[],
+                )
+            )
+        )
+        logger.debug(
+            "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
+        )
         # =====================================================================
 
         # ЗАЩИТА КАПИТАЛА (0.017 SOL): Чаевые Jito СТРОГО в конце единой транзакции.
@@ -2108,25 +2070,25 @@ class JupiterTxBuilder:
                 + [repay_ix, end_ix]
             )
 
-            # =====================================================================
+                # =====================================================================
             # Fix 1 (Non-burning Dust): Only close wSOL atomically.
             # CloseAccount reverts if token balance != 0 (full tx rollback).
-            # wSOL is safe — close_account unwraps all wSOL + 0.002 SOL rent at once.
+            # wSOL is safe — close_account unwraps all wSOL + 0.00203928 SOL rent at once.
             # All other ATA cleaned asynchronously by dust_sweeper post-tx.
-            # final_instructions.append(
-            #     close_account(
-            #         CloseAccountParams(
-            #             program_id=TOKEN_PROGRAM_ID,
-            #             account=user_borrow_ata,
-            #             dest=wallet,
-            #             owner=wallet,
-            #             signers=[],
-            #         )
-            #     )
-            # )
-            # logger.debug(
-            #     "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
-            # )
+            final_instructions.append(
+                close_account(
+                    CloseAccountParams(
+                        program_id=TOKEN_PROGRAM_ID,
+                        account=user_borrow_ata,
+                        dest=wallet,
+                        owner=wallet,
+                        signers=[],
+                    )
+                )
+            )
+            logger.debug(
+                "🔓 Fix 1 (Non-burning Dust): wSOL ata closed atomically | intermediate ATA delegated to dust_sweeper"
+            )
             # =====================================================================
 
             # 5. ATOMIC JITO TIP (100% CAPITAL PROTECTION)

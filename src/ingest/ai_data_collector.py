@@ -66,13 +66,14 @@ class AIDataCollector:
         self.db_path = db_path
         self.csv_path = csv_path
         self._records: deque = deque(maxlen=10000)
+        self._sqlite_initialized = False
 
-        if self.use_sqlite:
-            self._init_sqlite()
-
-    def _init_sqlite(self) -> None:
-        with sqlite3.connect(self.db_path, timeout=30) as conn:
-            conn.execute(
+    async def _ensure_sqlite(self) -> None:
+        """Lazy async SQLite initialization — does not block event loop on startup."""
+        if self._sqlite_initialized:
+            return
+        async with aiosqlite.connect(self.db_path, timeout=30) as conn:
+            await conn.execute(
                 """
                 CREATE TABLE IF NOT EXISTS arbitrage_trades (
                     timestamp REAL PRIMARY KEY,
@@ -93,15 +94,15 @@ class AIDataCollector:
                 )
                 """
             )
-            conn.commit()
+            await conn.commit()
+        self._sqlite_initialized = True
 
     async def record_trade(self, record: Union[ArbitrageTradeRecord, Dict[str, Any]]) -> None:
         trade = self._normalize_record(record)
         self._records.append(trade)
 
-        # deque(maxlen=10000) automatically drops oldest records — O(1), no pop(0) shift
-
         if self.use_sqlite:
+            await self._ensure_sqlite()
             await self._insert_sqlite(trade)
         else:
             self._append_csv(trade)
@@ -229,15 +230,6 @@ class AIDataCollector:
             return await self._load_sqlite_records()
         return self._load_csv_records()
 
-    async def _load_sqlite_records(self) -> List[Dict[str, Any]]:
-        if not Path(self.db_path).exists():
-            return []
-        async with aiosqlite.connect(self.db_path, timeout=30) as conn:
-            conn.row_factory = aiosqlite.Row
-            async with conn.execute("SELECT * FROM arbitrage_trades ORDER BY timestamp DESC") as cursor:
-                rows = await cursor.fetchall()
-        return [dict(row) for row in rows]
-
     def _load_csv_records(self) -> List[Dict[str, Any]]:
         path = Path(self.csv_path)
         if not path.exists():
@@ -245,11 +237,11 @@ class AIDataCollector:
         with path.open(newline="") as file:
             return list(csv.DictReader(file))
 
-    def export_for_analysis(self, days: int = 1) -> str:
+    async def export_for_analysis(self, days: int = 1) -> str:
         cutoff = time.time() - days * 86400
         trades = [trade for trade in self._records if float(trade.get("timestamp", 0.0)) >= cutoff]
         if not trades:
-            trades = self._load_all_records()
+            trades = await self._load_all_records()
             cutoff = time.time() - days * 86400
             trades = [trade for trade in trades if float(trade.get("timestamp", 0.0)) >= cutoff]
 
@@ -265,7 +257,7 @@ class AIDataCollector:
         self._records.clear()
         if self.use_sqlite and Path(self.db_path).exists():
             Path(self.db_path).unlink()
-            self._init_sqlite()
+            self._sqlite_initialized = False
         csv_path = Path(self.csv_path)
         if csv_path.exists():
             csv_path.unlink()

@@ -90,7 +90,11 @@ class EventTriggerEngine:
 
         # Check for oracle lag if we have oracle price
         if token_symbol in self.oracle_prices:
-    
+            oracle_price = self.oracle_prices[token_symbol]
+            oracle_usd = float(oracle_price.price_usd)
+            if oracle_usd > 0 and abs(float(amm_price_usd) - oracle_usd) / oracle_usd > 0.005:
+                logger.debug(f"🔍 Oracle lag detected for {token_symbol}: AMM={amm_price_usd:.4f} vs Oracle={oracle_price.price_usd:.4f}")
+
     async def process_graduation_event(self, event_data: Dict[str, Any]):
         """
         Process token graduation event from launchpad.

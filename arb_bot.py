@@ -2993,7 +2993,7 @@ async def lst_depeg_scanner(
                     decimals_out=9,
                     jito_tip_sol=0.0001,
                 )
-                if optimal and int(optimal) > 100_000_000:  # Min 0.1 SOL
+                if optimal and int(optimal) > 1_000_000:  # Min 0.001 SOL (survival phase)
                     borrow_lamports = int(optimal)
                     logger.debug(
                         f"📈 LST optimal size: {borrow_lamports/1e9:.4f} SOL (AMM curve peak)"
@@ -3024,7 +3024,7 @@ async def lst_depeg_scanner(
                 )
                 borrow_lamports = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
 
-            if borrow_lamports < 100_000_000:  # Если в MarginFi меньше 0.1 SOL, ждем
+            if borrow_lamports < 1_000_000:  # Если в MarginFi меньше 0.001 SOL, ждем
                 logger.warning(
                     "📉 MarginFi SOL Bank is nearly empty. Waiting for liquidity..."
                 )
@@ -6285,7 +6285,8 @@ async def run():
     # in rent and hits STRICT_GAS_TANK immediately, freezing the bot before
     # the first trade. Jupiter swap-instructions (setupInstructions) already
     # create ATAs atomic-ally and recover the rent when the TX finalizes.
-    # await warmup_golden_atas(session, rpc.get_rpc(), keypair.pubkey())
+    # Pre-warm ATA cache to avoid slow RPC calls in hot path
+    await warmup_golden_atas(session, rpc.get_rpc(), keypair.pubkey())
 
     # ── TASK 3: WebSocket Liveness Guard (StaleStreamGuard) ───────────────────
     # Monitors shared_state.stats["current_slot"] (updated by blockhash_updater every 2 s).

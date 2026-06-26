@@ -300,15 +300,22 @@ class JitoBiddingManager:
             await asyncio.sleep(2.0)
 
     def get_50th_percentile_lamports(self) -> int:
+        """Safe tip floor parser — handles empty list/dict/None from Jito API."""
         try:
+            if not self.tip_floor_data:
+                return 10000
             if isinstance(self.tip_floor_data, list) and len(self.tip_floor_data) > 0:
-                val = self.tip_floor_data[0].get("landed_tips_50th_percentile", 10000)
+                entry = self.tip_floor_data[0]
+                if isinstance(entry, dict):
+                    val = entry.get("landed_tips_50th_percentile", 10000)
+                else:
+                    val = 10000
             elif isinstance(self.tip_floor_data, dict):
                 val = self.tip_floor_data.get("landed_tips_50th_percentile", 10000)
             else:
                 val = 10000
             return int(val)
-        except Exception:
+        except (IndexError, TypeError, ValueError, AttributeError):
             return 10000
 
     def calculate_blue_ocean_tip(

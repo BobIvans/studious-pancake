@@ -24,7 +24,6 @@ class StateManager:
         timeout = aiohttp.ClientTimeout(total=3.0)
         headers = {
             "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
         }
 
         for attempt in range(3):
@@ -62,6 +61,7 @@ async def check_and_refill_gas(session, rpc, keypair):
     """
     🔴 THREAT #1 FIX: Auto-swap USDC → Native SOL when gas runs low.
     Ensures bot has enough Native SOL for Jito tips.
+    Uses dynamic deficit calculation instead of hardcoded 2 USDC.
     """
     import os
     if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
@@ -69,7 +69,13 @@ async def check_and_refill_gas(session, rpc, keypair):
     try:
         # Check native balance
         native_bal = await StateManager.get_balance(session, rpc, keypair.pubkey())
-        if native_bal is None or native_bal >= 0.015:  # Increased threshold to 0.015 SOL
+        min_reserve = float(os.getenv("MIN_RESERVE_SOL", "0.010"))
+        target_balance = float(os.getenv("TARGET_GAS_SOL", "0.020"))
+
+        if native_bal is None:
+            return
+        # Don't refill if balance is above reserve + small buffer
+        if native_bal > (min_reserve + 0.003):
             return
 
         USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
@@ -83,7 +89,7 @@ async def check_and_refill_gas(session, rpc, keypair):
             "params": [str(usdc_ata)],
         }
         async with session.post(
-            rpc.get_rpc(), json=usdc_payload
+            rpc.get_rpc(), json=usdc_payload, headers={"Content-Type": "application/json"}
         ) as usdc_resp:
             usdc_data = await usdc_resp.json()
             if (
@@ -93,20 +99,25 @@ async def check_and_refill_gas(session, rpc, keypair):
                 usdc_amount = int(
                     usdc_data["result"]["value"]["amount"]
                 )
-                # Need at least $2 in USDC to cover gas refill
-                if usdc_amount > 2_000_000:
+
+                # Calculate dynamic deficit instead of hardcoded 2 USDC
+                deficit_sol = target_balance - native_bal
+                deficit_usdc_lamports = int(deficit_sol * 150 * 1_000_000)  # ~$150 SOL → USDC
+                # Cap at available USDC balance, minimum 0.5 USDC
+                swap_amount = max(min(deficit_usdc_lamports, usdc_amount), 500_000)
+
+                if usdc_amount > 500_000:  # At least $0.50 USDC
                     logger.info(
-                        f"🔄 GAS REPLENISHMENT: Swapping exactly 2 USDC ({2_000_000} micro-USDC) to Native SOL "
-                        f"(Current SOL: {native_bal:.4f}, USDC balance: {usdc_amount / 1_000_000:.2f})"
+                        f"🔄 GAS REPLENISHMENT: Swapping {swap_amount / 1_000_000:.2f} USDC to Native SOL "
+                        f"(deficit={deficit_sol:.4f} SOL, Current: {native_bal:.4f} SOL, USDC: {usdc_amount / 1_000_000:.2f})"
                     )
                     try:
                         async with JupiterClient(session=session) as jup:
-                            # Step 1: Get quote for USDC → SOL swap (exactly 2 USDC)
-                            # Task 14: Dynamic onlyDirectRoutes for gas refill
+                            # Step 1: Get quote for USDC → SOL swap (dynamic amount)
                             quote = await jup.get_quote(
                                 input_mint=USDC_MINT,
                                 output_mint="So11111111111111111111111111111111111111112",
-                                amount=2_000_000,  # Exactly 2 USDC
+                                amount=swap_amount,
                                 slippage_bps=50,  # Increased slippage for reliability
                                 wallet_balance_sol=native_bal
                             )

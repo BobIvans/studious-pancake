@@ -179,29 +179,48 @@ class LstRouteAggregator:
             return best_result
 
         elif direction == "SELL_LST":
-            # SELL_LST: Borrow SOL → Buy LST at fair → Sell LST at market → Repay SOL
-            # Leg 1: SOL → LST (ExactIn) - Fair buy
-            buy_quotes = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports, wallet_balance_sol=wallet_balance_sol)
+            # SELL_LST: Market overprices LST → borrow SOL → mint LST at fair (Sanctum/Jupiter) → sell at market (Jupiter) → repay
+            # Leg 1: SOL → LST via Sanctum/Jupiter (fair/cheap mint) — try Sanctum first, fallback Jupiter
+            if self.sanctum_enabled:
+                buy_quotes = []
+                sanctum_q = await self._jupiter_quote(
+                    SOL_MINT, lst_mint, borrow_amount_lamports,
+                    only_direct_routes=True,
+                    dex_filter=["Sanctum", "Sanctum Infinity"],
+                    wallet_balance_sol=wallet_balance_sol,
+                )
+                if sanctum_q and sanctum_q.price_impact_pct < 0.5:
+                    buy_quotes.append(sanctum_q)
+                else:
+                    # Fallback to Jupiter multi-hop
+                    fallback = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports,
+                                                      wallet_balance_sol=wallet_balance_sol)
+                    if fallback:
+                        buy_quotes = fallback
+            else:
+                buy_quotes = await self._get_quotes(SOL_MINT, lst_mint, borrow_amount_lamports,
+                                                    wallet_balance_sol=wallet_balance_sol)
+
             if not buy_quotes:
                 return None
 
             best_result = None
             for buy_q in buy_quotes:
-                # Leg 2: LST → SOL (ExactOut) - Repay exact borrow
+                # Leg 2: LST → SOL via Jupiter (sell at market-high price) — ExactIn to maximize profit
                 sell_quotes = await self._get_quotes(
-                    lst_mint, SOL_MINT, borrow_amount_lamports,
-                    wallet_balance_sol=wallet_balance_sol, swap_mode="ExactOut"
+                    lst_mint, SOL_MINT, buy_q.out_amount,
+                    wallet_balance_sol=wallet_balance_sol
                 )
                 if not sell_quotes:
                     continue
                 for sell_q in sell_quotes:
-                    lst_profit = buy_q.out_amount - sell_q.in_amount
+                    lst_profit = sell_q.out_amount - borrow_amount_lamports
                     if lst_profit <= 0:
                         continue
-                        
-                    profit_sol = (lst_profit / buy_q.out_amount) * (borrow_amount_lamports / 1e9)
+
+                    profit_sol = lst_profit / 1e9
                     net_profit = profit_sol - total_fees
-                    profit_bps = (lst_profit / buy_q.out_amount) * 10000
+                    profit_bps = (lst_profit / borrow_amount_lamports) * 10000
 
                     result = RouteResult(
                         profit_sol=net_profit,

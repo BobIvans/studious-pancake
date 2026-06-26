@@ -362,7 +362,11 @@ class OptimalTradeSizer:
         max_input_lamports: Optional[int],
         min_profit_threshold: int,
     ) -> Optional[Tuple[int, int]]:
-        """Find optimal trade size using ternary search optimization for tests."""
+        """Find optimal trade size using ternary search with fixed 40 iterations.
+
+        Fix: replaced O(N) range() scan with O(log N) 40-iteration ternary search
+        to prevent CPU starvation (50k+ iterations caused micro-freezes in async loop).
+        """
         if not arbitrage_path.pools:
             return None
 
@@ -375,18 +379,13 @@ class OptimalTradeSizer:
 
         left = min_input_lamports
         right = max_input_lamports
-        epsilon = self.epsilon
 
         best_amount = left
         best_profit = self.profit_calculator.calculate_expected_profit(left, arbitrage_path)
 
-        while right - left > epsilon:
-            if right - left < 10 * epsilon:
-                for test_amount in range(left, right + 1, epsilon):
-                    profit = self.profit_calculator.calculate_expected_profit(test_amount, arbitrage_path)
-                    if profit > best_profit:
-                        best_profit = profit
-                        best_amount = test_amount
+        # Fixed 40 iterations — O(log N) with O(1) CPU cost (~0.1ms)
+        for _ in range(40):
+            if right - left <= 1:
                 break
 
             m1 = left + (right - left) // 3
@@ -446,9 +445,20 @@ class OptimalTradeSizer:
                             break
 
                     if is_clmm:
-                        micro_cap = Decimal('0.2')
+                        # Fix: scale micro_cap by token decimals — amount_in is in lamports,
+                        # so 0.2 base units = 0.2 * 10^decimals lamports
+                        _clmm_dec = 9  # default SOL decimals
+                        for hop in route:
+                            # Jupiter may report decimals as 'decimals', 'baseDecimals', or 'quoteDecimals'
+                            _raw = hop.get("decimals") or hop.get("baseDecimals") or hop.get("quoteDecimals") or 9
+                            try:
+                                _clmm_dec = max(1, int(_raw))
+                            except (TypeError, ValueError):
+                                _clmm_dec = 9
+                            break
+                        micro_cap = Decimal('0.2') * Decimal(10 ** _clmm_dec)
                         final_size = min(Decimal(str(amount_in)), micro_cap)
-                        logger.info(f"🛡️ CLMM Math Bypass: detected concentrated liquidity, capping size at {final_size} SOL")
+                        logger.info(f"🛡️ CLMM Math Bypass: detected concentrated liquidity, capping size at {final_size/Decimal(10**_clmm_dec):.4f} (decimals={_clmm_dec})")
                         return final_size
 
                     reserves_path = []

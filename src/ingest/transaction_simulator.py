@@ -128,25 +128,23 @@ class TransactionSimulator:
             # - SOL after flash loan + fees
             # - SOL after swap back to SOL
 
-            # This is simplified - real implementation would track specific account changes
-            # For now, assume profit if no error and valid accounts
-            net_profit_sol = 0.001  # Placeholder - would parse actual balances
-
-            # Parse logs for more detailed information
-            logs = value.get("logs", [])
-            if logs:
-                # Look for swap success/failure indicators
-                for log in logs:
-                    if "success" in log.lower():
-                        logger.debug("Swap success detected in logs")
-                    elif "slippage" in log.lower():
-                        logger.warning("Slippage detected in logs")
+            # Try to parse actual balance changes from preBalances/postBalances arrays
+            net_profit_sol = 0.0
+            try:
+                pre_balances = value.get("preBalances", [])
+                post_balances = value.get("postBalances", [])
+                if pre_balances and post_balances and len(pre_balances) > 0 and len(post_balances) > 0:
+                    delta_lamports = post_balances[0] - pre_balances[0]
+                    if delta_lamports > 0:
+                        net_profit_sol = delta_lamports / 1e9
+            except (ValueError, TypeError, IndexError, AttributeError):
+                net_profit_sol = 0.0
 
             if net_profit_sol <= 0:
-                logger.info(f"📉 No profit detected: {net_profit_sol} SOL")
+                logger.info(f"📉 No real profit detected from simulation balances: {net_profit_sol:.6f} SOL")
                 return False, 0.0
 
-            logger.info(f"Profit: {net_profit_sol:.6f} SOL")
+            logger.info(f"Profit from simulation: {net_profit_sol:.6f} SOL")
             return True, net_profit_sol
 
         except Exception as e:

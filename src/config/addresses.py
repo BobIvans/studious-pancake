@@ -81,16 +81,7 @@ MONITORED_ADDRESSES = {
         "cooldown_seconds": 30,
         "last_triggered": 0
     },
-    "LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3": {
-        "name": "Meteora DLMM",
-        "strategies": ["meteora_pool_creation", "cross_dex", "dynamic_fee_arb"],
-        "priority": "HIGH",
-        "enabled": False,
-        "transaction_types": ["CREATE_POOL", "SWAP"],
-        "note": "Высокий трафик",
-        "cooldown_seconds": 15,
-        "last_triggered": 0
-    },
+    # REMOVED: Duplicate Meteora DLMM entry (had enabled: False, conflicting with the enabled: True entry above)
     "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8": {
         "name": "Raydium AMM v4",
         "strategies": ["raydium_graduation", "letsbonk_graduation", "launchlab_graduation"],

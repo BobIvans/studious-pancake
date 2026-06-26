@@ -256,8 +256,8 @@ class KaminoFlashLiquidationExecutor:
             # Send via Jito
             # TODO: Send bundle
 
-            logger.info(f"Executed Kamino liquidation: profit {opportunity.expected_profit_sol:.6f} SOL")
-            return True
+            logger.warning(f"⚠️ Kamino liquidation is a stub — no real execution implemented. profit={opportunity.expected_profit_sol:.6f} SOL")
+            return False
 
         except Exception as e:
             logger.error(f"Liquidation execution failed: {e}")

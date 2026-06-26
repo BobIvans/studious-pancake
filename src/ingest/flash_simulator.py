@@ -18,7 +18,7 @@ logger = logging.getLogger("FlashSim")
 # Phase 49: Local Math Confidence — skip RPC simulation when local O(1) math
 # says profit is clearly above threshold.  At 0.017 SOL you cannot afford
 # to pay 100-200 ms RPC round-trip for every opportunity.
-LOCAL_MATH_CONFIDENCE_THRESHOLD_SOL = 0.00005  # Bypass if confident > 0.00005 SOL
+LOCAL_MATH_CONFIDENCE_THRESHOLD_SOL = 0.001  # Bypass if confident > 0.001 SOL (up from 0.00005 to protect AI dataset quality)
 
 
 class SimulationResult:
@@ -198,27 +198,36 @@ class FlashSimulator:
                         simulation_time_ms=(time.time() - start) * 1000,
                     )
 
-                # ── Phase 49: Trust the contract, not manual balance parsing ────────
-                # For flash loan arbitrage via MarginFi, the smart contract performs
-                # an atomic repay + profit check (require!(profit >= expected_min_return))
-                # directly on-chain during simulation.  If err is None, the contract
-                # has mathematically confirmed the trade is profitable.
-                #
-                # Manual RPC balance parsing (pre_balance / post_balance) is unreliable:
-                #   post_balance = pre_balance  →  delta = 0  →  ALL trades rejected.
-                # See: "Phantom Simulation Profit" audit.
-                #
-                # We trust the contract's success and return an assumed profit delta
-                # that passes the local min_profit_lamports check.
+                # ── Parse real pre/post balances for accurate profit delta ──
+                # Solana simulateTransaction returns preBalances/postBalances as
+                # top-level arrays in result.value (NOT inside individual account objects).
+                # Wallet index 0 = signer/payer.
                 self._stats["successful"] += 1
-                assumed_profit = min_profit_lamports + 1000
+                actual_delta = 0
+                try:
+                    pre_balances = result.get("preBalances", [])
+                    post_balances = result.get("postBalances", [])
+                    if pre_balances and post_balances and len(pre_balances) > 0 and len(post_balances) > 0:
+                        actual_delta = post_balances[0] - pre_balances[0]
+                        logger.debug(f"📊 FlashSim real delta: {actual_delta} lamports ({actual_delta/1e9:.6f} SOL)")
+                except (ValueError, TypeError, IndexError):
+                    actual_delta = 0
+
+                if actual_delta <= 0 and min_profit_lamports > 0:
+                    logger.warning(f"🚫 FlashSim real delta {actual_delta/1e9:.6f} SOL <= 0 — trade not profitable")
+                    return SimulationResult(
+                        success=False,
+                        error=f"Real balance delta {actual_delta/1e9:.6f} SOL <= 0",
+                        simulation_time_ms=(time.time() - start) * 1000,
+                    )
+
                 return SimulationResult(
                     success=True,
                     units_consumed=units_consumed,
-                    pre_balances=[],
-                    post_balances=[],
-                    balance_delta_lamports=assumed_profit,
-                    balance_delta_sol=assumed_profit / 1e9,
+                    pre_balances=pre_balances if 'pre_balances' in dir() else [],
+                    post_balances=post_balances if 'post_balances' in dir() else [],
+                    balance_delta_lamports=max(actual_delta, 0),
+                    balance_delta_sol=max(actual_delta, 0) / 1e9,
                     logs=logs,
                     simulation_time_ms=(time.time() - start) * 1000,
                 )

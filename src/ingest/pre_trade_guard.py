@@ -18,19 +18,24 @@ TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
     "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m"
 )
 
-# Minimum vault balance threshold (equivalent to $100 worth of tokens)
-MIN_VAULT_BALANCE_THRESHOLD = 100_000_000  # 0.1 SOL in lamports as example
+def get_vault_threshold(decimals: int = 6) -> int:
+    """Calculate vault liquidity threshold for a given token decimals.
+    
+    Threshold = 100 * (10 ** decimals) — equivalent to ~$100 worth at $1/token.
+    For 6-decimals (USDC): threshold = 100 * 10^6 = 100_000_000 ($100)
+    For 5-decimals (BONK): threshold = 100 * 10^5 = 10_000_000 (~$1.80 at BONK prices)
+    For 9-decimals (SOL): threshold = 100 * 10^9 = 100_000_000_000 (100 SOL — too high; SOL paths bypass this check via OptimalTradeSizer)
+    """
+    return 100 * (10 ** max(decimals, 0))
 
 # Whitelist of safe tokens (stablecoins and LSTs)
 SAFE_MINTS = {
     "So11111111111111111111111111111111111111112",  # wSOL
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
     "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",  # USDT
-    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL  (mainnet verified)
-    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL     (mainnet verified)
-    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",  # bSOL     (mainnet verified)
-    "So11111111111111111111111111111111111111112",  # wSOL
-    "DezXAZ8z7P8gVmFiDQ6cEhPmmF9rj3ZfVGg3LyZ3mTKV",  # BONK    (mainnet verified)
+    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL (mainnet verified)
+    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL    (mainnet verified)
+    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",  # bSOL    (mainnet verified)
 }
 
 
@@ -301,12 +306,14 @@ class LiquidityValidator:
                     return False, "Vault account not found or not a token account"
 
                 amount_str = balance_info.get("amount", "0")
+                decimals = balance_info.get("decimals", 6)
                 try:
                     amount = int(amount_str)
-                    if amount < MIN_VAULT_BALANCE_THRESHOLD:
+                    threshold = get_vault_threshold(decimals)
+                    if amount < threshold:
                         return (
                             False,
-                            f"Insufficient vault balance: {amount} (min: {MIN_VAULT_BALANCE_THRESHOLD})",
+                            f"Insufficient vault balance: {amount} (min: {threshold} for {decimals} decimals)",
                         )
 
                     return True, f"Vault has sufficient balance: {amount}"
@@ -408,10 +415,10 @@ class LiquidityValidator:
                             0
                         ]  # little endian uint64
 
-                        if balance < MIN_VAULT_BALANCE_THRESHOLD:
+                        if balance < get_vault_threshold(6):
                             return (
                                 False,
-                                f"Insufficient vault balance: {balance} (min: {MIN_VAULT_BALANCE_THRESHOLD})",
+                                f"Insufficient vault balance: {balance} (min: {get_vault_threshold(6)})",
                             )
 
                         return True, f"Token is secure and vault has balance: {balance}"
@@ -698,19 +705,21 @@ class PreTradeGuard:
         return float(os.getenv("MIN_RESERVE_SOL", "0.010"))
 
     # ─── Hard Floor Guard (Rent-Exemption Killswitch) ───────────────────────────
-    # If native SOL balance drops below 0.002 SOL, the Solana network garbage-
-    # collector will DELETE the wallet account. Kill the process at 0.002 SOL to
-    # prevent that from ever happening — never allow the wallet to be erased.
-    HARD_FLOOR_SOL = 0.002
+    # If native SOL balance drops below 0.004 SOL, we trigger emergency shutdown:
+    # 1. Set GLOBAL_STOP_EVENT to stop all trading
+    # 2. DustSweeper runs to close ATAs and recover rent
+    # At 0.002 SOL the Solana network garbage-collector will DELETE the wallet account.
+    # We raise the floor to 0.004 SOL to buy time for emergency rent recovery.
+    HARD_FLOOR_SOL = 0.004
 
     @staticmethod
     def enforce_hard_floor(native_sol_balance: float) -> None:
         """
         💀 Hard Floor Guard — absolute rent-exemption killswitch.
 
-        If native_sol_balance < 0.002 SOL, the Solana network garbage-collector
-        will delete the wallet account. This function calls os._exit(1) instantly
-        to prevent that from ever happening.
+        If native_sol_balance < 0.004 SOL, trigger graceful shutdown via
+        GLOBAL_STOP_EVENT so DustSweeper can close ATAs and recover rent
+        before the process dies. At 0.002 SOL the wallet gets garbage-collected.
 
         Args:
             native_sol_balance: Current wallet balance in SOL.
@@ -718,9 +727,21 @@ class PreTradeGuard:
         if native_sol_balance < PreTradeGuard.HARD_FLOOR_SOL:
             logger.critical(
                 f"💀 RENT DEATH KILLSWITCH: Balance {native_sol_balance:.6f} SOL < "
-                f"{PreTradeGuard.HARD_FLOOR_SOL} SOL — calling os._exit(1) to preserve wallet state"
+                f"{PreTradeGuard.HARD_FLOOR_SOL} SOL — triggering emergency shutdown via GLOBAL_STOP_EVENT"
             )
-            os._exit(1)
+            try:
+                import src.ingest.shared_state as _ss
+                _ss.GLOBAL_STOP_EVENT.set()
+            except Exception:
+                pass
+            # Still call os._exit(1) as last resort after 500ms grace for DustSweeper
+            async def _emergency_exit():
+                await asyncio.sleep(0.5)
+                os._exit(1)
+            try:
+                asyncio.create_task(_emergency_exit())
+            except Exception:
+                os._exit(1)
 
     # ─── Main Wallet Rent-Exemption Killswitch ──────────────────────────────────
     # Urgent RPC-balance check: call this after every successful Jito bundle
@@ -754,7 +775,8 @@ class PreTradeGuard:
               Second element: available_sol = balance - gas_reserve.
         """
         if native_sol_balance is None:
-            return True, 0.0  # Нет данных — оптимистично пропускаем
+            logger.warning("🚫 check_gas_tank: native_sol_balance is None — fail-closed, blocking trade")
+            return False, 0.0  # Нет данных — fail-closed
 
         min_reserve = PreTradeGuard.get_min_reserve_sol()
         if native_sol_balance < min_reserve:
@@ -783,6 +805,10 @@ class PreTradeGuard:
         expected_profit_lamports: int,
         quote_url: str = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
         slippage_bps: int = 30,
+        is_circular: bool = False,
+        priority_fee_lamports: int = 0,
+        flashloan_fee_lamports: int = 0,
+        ata_rent_lamports: int = 0,
     ) -> Tuple[bool, str, int]:
         """Re-check Jupiter price ~50 ms before signing/bundling the transaction.
 
@@ -790,6 +816,18 @@ class PreTradeGuard:
         bundle 100-300 ms later the pool price may have moved enough to eat the expected
         profit entirely.  Aborting here is always cheaper than burning gas + Jito tip on
         a transaction that cannot be profitable.
+
+        When `is_circular=True`, the route is cross-asset (e.g., USDC → xStock → USDC).
+        A single-leg Jupiter quote cannot compute profit in this case — the full route
+        simulation handles it. The check passes optimistically and delegates to the
+        pre-trade simulator for the actual profitability verification.
+
+        Full Cost Stack includes:
+        - jito_tip_lamports: Jito searcher tip
+        - base_fee_lamports: Network base fee
+        - priority_fee_lamports: Compute unit priority fee
+        - flashloan_fee_lamports: Flash loan provider fee (0 for MarginFi, else up to 0.1%)
+        - ata_rent_lamports: ATA rent exemption for new accounts (2_039_280 lamports each)
 
         Args:
             input_mint:  Entry token mint string.
@@ -800,6 +838,11 @@ class PreTradeGuard:
             expected_profit_lamports:  Profit that was projected at quote time.
             quote_url:            Jupiter quote endpoint.
             slippage_bps:         Slippage tolerance for the re-check.
+            is_circular:          True if route is cross-asset (USDC→xStock→USDC).
+                                  Skips single-leg profit math — simulator handles it.
+            priority_fee_lamports: Compute unit priority fee (SetComputeUnitPrice * CU limit).
+            flashloan_fee_lamports: Flash loan provider fee (0 for MarginFi).
+            ata_rent_lamports:    ATA rent for new accounts (2_039_280 per new ATA).
 
         Returns:
             Tuple[bool, str, int]:
@@ -849,8 +892,19 @@ class PreTradeGuard:
             if actual_out == 0:
                 return False, "Pre-trade quote: outAmount == 0", 0
 
+            # FIX is_circular: for cross-asset routes (USDC→xStock), single-leg
+            # profit math subtracts apples from oranges. Delegate to full route sim.
+            if is_circular:
+                logger.debug(
+                    f"🔄 is_circular route detected (input={input_mint[:8]}→"
+                    f"output={output_mint[:8]}) — skipping single-leg profit math. "
+                    f"Full route simulation will verify profitability."
+                )
+                total_cost_lamports = jito_tip_lamports + base_fee_lamports + priority_fee_lamports + flashloan_fee_lamports + ata_rent_lamports
+                return True, f"Circular route — delegated to simulator (cost={total_cost_lamports/1e9:.6f} SOL)", 0
+
             actual_gross_profit = actual_out - amount_lamports
-            total_cost_lamports = jito_tip_lamports + base_fee_lamports
+            total_cost_lamports = jito_tip_lamports + base_fee_lamports + priority_fee_lamports + flashloan_fee_lamports + ata_rent_lamports
             actual_net_profit = actual_gross_profit - total_cost_lamports
 
             latency_ms = (time.time() - now) * 1000

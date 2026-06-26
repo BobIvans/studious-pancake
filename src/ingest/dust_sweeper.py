@@ -107,7 +107,7 @@ class DustSweeper:
                         "mint": mint
                     })
                     # Estimate rent recovery (0.002 SOL = 2_000_000 lamports)
-                    total_rent_recovered += 2_000_000
+                    total_rent_recovered += 2_039_280
 
             if not dust_accounts:
                 logger.debug("No dust accounts to clean")
@@ -219,7 +219,7 @@ class DustSweeper:
                 mint=Pubkey.from_string(mint),
                 owner=self.wallet_keypair.pubkey(),
                 amount=amount,
-                signers=[]
+                signers=[self.wallet_keypair]
             )
             return burn(burn_params)
         except Exception as e:
@@ -274,7 +274,7 @@ class DustSweeper:
                         pass
                 
                 # Return estimated rent recovered
-                rent_per_account = 2_000_000  # 0.002 SOL in lamports
+                rent_per_account = 2_039_280  # Exact rent-exemption lamports
                 closed_count = len(valid_batch)
                 return closed_count * rent_per_account
             else:
@@ -410,6 +410,6 @@ class DustSweeper:
         return {
             "wallet": str(self.wallet_keypair.pubkey()),
             "rpc_url": self.rpc_url,
-            "rent_per_account_lamports": 2_000_000,
-            "rent_per_account_sol": 0.002
+            "rent_per_account_lamports": 2_039_280,
+            "rent_per_account_sol": 0.00203928
         }

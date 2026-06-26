@@ -141,6 +141,12 @@ class JitoBundleClient:
         recent_blockhash: Optional[Hash] = None,
     ) -> Dict[str, Any]:
         """Отправка бандла через бесплатный Jito REST API (HTTP POST)"""
+        # PAPER TRADING SAFETY: never send real bundles in simulation mode
+        import os
+        if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+            logger.info("📄 Paper Trading: bypassing Jito bundle send (build_and_send_bundle)")
+            import time
+            return {"success": True, "bundle_id": f"paper_{int(time.time())}", "endpoint": "paper"}
         try:
             if recent_blockhash is None:
                 recent_blockhash = await self._get_recent_blockhash()

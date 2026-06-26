@@ -96,7 +96,6 @@ def main():
     # 3. Clean databases
     logger.info("\n🗄️ Step 3: Cleaning databases...")
     clean_database("bot_history.db")
-    clean_database("paper_trading.db")
     clean_database("ai_training_data.db")
     
     logger.info("\n✅ Clean State complete - Bot is ready for fresh deployment.")

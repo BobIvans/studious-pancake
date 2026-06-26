@@ -404,27 +404,9 @@ class ExecutionRouter:
         try:
             strategy = opportunity.get("strategy")
 
-
-                # Reputation Circuit Breaker: track slippage failures per pair
-                pair_key = self._pair_key(opportunity.get("ticker", ""), opportunity.get("token_mint", ""))
-                if result.get("status") == "error" and "slippage" in str(result.get("message", "")).lower():
-                    self.record_pair_slippage(pair_key)
-                elif result.get("status") == "success":
-                    # Reset failure counter on success
-                    entry = self._pair_reputation.get(pair_key)
-                    if entry and entry.get("failures", 0) > 0:
-                        entry["failures"] = 0
-                        logger.info(f"✅ Pair {pair_key} reputation cleared after successful trade")
-
-                # Check rent recovery success
-                if result.get("status") == "success":
-                    await self._verify_rent_recovery()
-                elif result.get("status") == "error":
-                    self.consecutive_failures += 1
-                    # ATA Rent Trap Protection: Aggressive cleanup on failure
-                    await self._emergency_ata_cleanup()
-
-                return result
+            if strategy == "flash_loan_pivot":
+                logger.warning("⚠️ flash_loan_pivot strategy called but engine not available")
+                return {"status": "error", "message": "flash_pivot_engine not initialized"}
             elif strategy == "lst_unstake":
                 # LST Instant Unstake Arbitrage
                 from .lst_unstake_arbitrage import LstInstantUnstakeArbitrage
@@ -461,6 +443,7 @@ class ExecutionRouter:
             else:
                 logger.warning(f"Unknown strategy: {strategy}")
                 return {"status": "error", "message": f"Unknown strategy: {strategy}"}
+
         except Exception as e:
             logger.error(f"Error executing arbitrage opportunity: {e}")
             self.consecutive_failures += 1

@@ -404,6 +404,7 @@ class ExecutionPipeline:
         slippage_manager: Optional['VelocitySlippageManager'] = None,
         session: Optional[aiohttp.ClientSession] = None,
         price_matrix: Optional[Dict[str, tuple]] = None,
+        tx_builder: Optional[Any] = None,
     ):
         self.rpc_engine = RPCMultiplexingEngine(wss_endpoints, rpc_endpoints)
         self.monitored_addresses = monitored_addresses
@@ -412,7 +413,7 @@ class ExecutionPipeline:
         self.pre_trade_guard = pre_trade_guard
 
         # Jito bundle components
-        self.bundle_handler = JitoBundleHandler(keypair, session)
+        self.bundle_handler = JitoBundleHandler(keypair, session, tx_builder=tx_builder)
         self.backrun_trigger = BackrunTrigger(self.bundle_handler)
         self.running = False
 

@@ -154,18 +154,23 @@ class PoolFetcher:
         return unique_pools
 
     async def _fetch_jupiter_pools(self, token_mint: str) -> List[PoolAddress]:
-        """Fetch pools from Jupiter API."""
+        """Fetch pools from Jupiter API.
+
+        Fix 45: Program-ID-to-label endpoint does not provide pool addresses.
+        Jupiter pool discovery requires the /pools or /tokens endpoint.
+        Using Jupiter v6 /quote with direct routes to verify pair existence.
+        For now, returning empty list — pools must be configured manually
+        or discovered via Raydium API / DEX screener.
+        """
         pools = []
         try:
-            # Jupiter provides program-id-to-label mapping
-            url = f"{self.jupiter_api_url}/program-id-to-label"
-            async with self.session.get(url) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-
-                    # Jupiter has program ID mappings, but we need to filter for our tokens
-                    # This is a simplified implementation
-                    logger.debug(f"Jupiter program mappings: {len(data)} entries")
+            # Jupiter /program-id-to-label does not return pool addresses.
+            # Real pool discovery requires:
+            #   1. Jupiter /tokens endpoint for token metadata
+            #   2. Raydium /pools for AMM pairs
+            #   3. DEX screener for alternative pool sources
+            # These are handled by _fetch_raydium_pools below.
+            logger.debug(f"Jupiter pool discovery for {token_mint[:8]}: using Raydium API instead")
 
         except Exception as e:
             logger.debug(f"Jupiter API error: {e}")

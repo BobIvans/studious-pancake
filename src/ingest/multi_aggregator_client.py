@@ -38,12 +38,12 @@ class AggregatorClient:
     async def get_quote(
         self, session: aiohttp.ClientSession, params: Dict[str, Any]
     ) -> Optional[Dict[str, Any]]:
-        """Get quote from this aggregator."""
+        """Get quote from this aggregator.
+
+        Fix 51: Manual rate-limit sleep removed — parent MultiAggregatorClient
+        already enforces RPS via independent AsyncLimiter per aggregator.
+        """
         try:
-            # Rate limiting: 1 request per second per aggregator
-            elapsed = time.time() - self.last_request
-            if elapsed < 1.0:
-                await asyncio.sleep(1.0 - elapsed)
 
             url = self.quote_url
 

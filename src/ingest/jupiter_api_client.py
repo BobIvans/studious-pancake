@@ -19,7 +19,7 @@ _QUOTE_LIMITER = None
 def get_quote_limiter():
     global _QUOTE_LIMITER
     if _QUOTE_LIMITER is None:
-        rps = int(os.getenv("JUPITER_QUOTE_RPS", "1"))
+        rps = int(os.getenv("JUPITER_QUOTE_RPS", "5"))  # Fix 48: default 5 (was 1 — blocked scanning speed)
         _QUOTE_LIMITER = AsyncLimiter(max(1, rps), 1.0)
     return _QUOTE_LIMITER
 

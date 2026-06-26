@@ -156,24 +156,42 @@ class FlywheelScaler:
 
     def __init__(self, initial_balance: float = 0.017):
         self.initial_balance = initial_balance
-        # Task 17: Use Token-2022 rent (0.0035) as conservative default since
-        # pre_calculate_ata_budget cannot know which mints are involved.
-        self.rent_per_ata = ATA_RENT_SOL  # SOL rent exemption used by Jupiter setupInstructions
-        self.min_gas_reserve = 0.005  # STRICT_GAS_TANK floor
-
-        # Reputation Circuit Breaker — per-pair slippage cooldown
+        self.rent_per_ata = ATA_RENT_SOL
+        self.min_gas_reserve = 0.005
         self.reputation = PairReputationCircuitBreaker(
-            limit=3,
-            cooldown_seconds=600,   # 10 minutes
-            error_keywords=("slippage",),
+            limit=3, cooldown_seconds=600, error_keywords=("slippage",),
         )
+        # Fix 49: Hysteresis — track previous tier to prevent flapping at boundaries
+        self._current_tier_index: int = 0
+        self._hysteresis_buffer: float = 0.95  # 5% buffer: need 5% below threshold to downgrade
 
     def get_tier(self, current_balance: float) -> ScalingTier:
-        """Finds the active scaling tier based on current balance."""
-        for tier in SCALING_GRID:
+        """Finds the active scaling tier based on current balance.
+
+        Fix 49: Hysteresis — prevents flapping when balance oscillates near boundaries.
+        Upgrades are instant (balance >= min_balance of next tier).
+        Downgrades need balance < min_balance * 0.95 (5% buffer).
+        """
+        target_index = self._current_tier_index
+
+        for i, tier in enumerate(SCALING_GRID):
             if tier.min_balance <= current_balance < tier.max_balance:
-                return tier
-        return SCALING_GRID[-1]
+                target_index = i
+                break
+            # Handle edge: balance >= max_balance of all tiers
+            if current_balance >= SCALING_GRID[-1].min_balance:
+                target_index = len(SCALING_GRID) - 1
+                break
+
+        # Apply hysteresis on downgrade
+        if target_index < self._current_tier_index:
+            current_tier = SCALING_GRID[self._current_tier_index]
+            # Only downgrade if balance is 5% below the next tier's threshold
+            if current_balance >= current_tier.min_balance * self._hysteresis_buffer:
+                target_index = self._current_tier_index  # Stay in current tier
+
+        self._current_tier_index = target_index
+        return SCALING_GRID[target_index]
 
     def pre_calculate_ata_budget(self, virtual_balance: float, jito_tip_sol: float, priority_fee_sol: float) -> int:
         """

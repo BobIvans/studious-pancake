@@ -19,7 +19,7 @@ class DexScreenerClient:
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
         self.base_url = os.getenv("DEXSCREENER_BASE_URL", "https://api.dexscreener.com")
-        self.rps = int(os.getenv("DEXSCREENER_RPS", 4))
+        self.rps = int(os.getenv("DEXSCREENER_RPS", 1))  # Fix 47: default 1 (free tier safe)
         self.semaphore = asyncio.Semaphore(self.rps)
         
         # TTL cache for dynamically discovered tokens (Phase 4: Memory Leak Prevention)
@@ -28,6 +28,8 @@ class DexScreenerClient:
 
     async def _fetch_trending(self) -> List[Dict]:
         """Fetch latest trending tokens on Solana."""
+        # Fix 47: sleep BEFORE semaphore to avoid blocking concurrent requests
+        await asyncio.sleep(1.0 / self.rps)
         async with self.semaphore:
             url = f"{self.base_url}/tokens/v1/solana"
             try:
@@ -37,7 +39,6 @@ class DexScreenerClient:
                         return data if isinstance(data, list) else []
             except Exception as e:
                 logger.warning(f"DexScreener fetch failed: {e}")
-            await asyncio.sleep(1.0 / self.rps)
         return []
 
     def _filter_quality_tokens(self, tokens: List[Dict]) -> List[Dict]:

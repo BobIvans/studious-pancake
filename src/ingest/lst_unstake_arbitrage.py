@@ -44,6 +44,7 @@ class LstInstantUnstakeArbitrage:
         keypair: Any = None,
         cfg=None,
         data_aggregator=None,
+        data_collector=None,
         stats=None,
         stats_lock=None,
         min_deviation_pct: Optional[float] = None,
@@ -60,6 +61,7 @@ class LstInstantUnstakeArbitrage:
         self.keypair = keypair
         self.cfg = cfg
         self.data_aggregator = data_aggregator
+        self.data_collector = data_collector
         self.stats = stats
         self.stats_lock = stats_lock
         self.min_deviation_pct = min_deviation_pct

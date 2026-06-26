@@ -97,14 +97,16 @@ class TransactionSender:
     async def send_transaction(
         self,
         signed_tx: VersionedTransaction,
-        priority_fee_micro_lamports: int = 50000,
-        tip_lamports: int = 20000,
-        payer_pubkey: Optional[Pubkey] = None,
     ) -> Optional[str]:
-        """Send transaction with Helius primary, Jito fallback."""
+        """Send transaction with Helius primary, Jito fallback.
+
+        Fix 41: priority_fee_micro_lamports, tip_lamports, payer_pubkey removed
+        — these were never embedded into the transaction by Helius Sender.
+        Fee and tip must be set at build time.
+        """
         # Try Helius first
         result = await self.helius_sender.send_via_helius_sender(
-            signed_tx, priority_fee_micro_lamports, tip_lamports, payer_pubkey
+            signed_tx
         )
         if result:
             return result
@@ -122,18 +124,13 @@ class TransactionSender:
         self,
         signed_tx: VersionedTransaction,
         max_retries: int = 3,
-        priority_fee_micro_lamports: int = 50000,
-        tip_lamports: int = 20000,
-        payer_pubkey: Optional[Pubkey] = None,
     ) -> Optional[str]:
-        """Send with retry and fee increase."""
+        """Send with retry.
+
+        Fix 41: Removed unused fee/tip params — Helius Sender does not embed them.
+        """
         for attempt in range(max_retries):
-            result = await self.send_transaction(
-                signed_tx,
-                priority_fee_micro_lamports * (2 ** attempt),  # Double fee on retry
-                tip_lamports * (2 ** attempt),
-                payer_pubkey
-            )
+            result = await self.send_transaction(signed_tx)
             if result:
                 return result
             logger.warning(f"Send attempt {attempt + 1} failed, retrying")

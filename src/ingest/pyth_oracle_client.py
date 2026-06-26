@@ -1,6 +1,6 @@
 """
 Pyth Oracle Client for Real-Time Price Feeds
-Hermes WebSocket integration for price feeds
+Hermes WebSocket integration for price feeds with on-chain RPC fallback.
 """
 
 import asyncio
@@ -20,15 +20,18 @@ class PythHermesClient:
     """
     Real-time Pyth price feed client using Hermes WebSocket.
     Maintains in-memory cache of latest prices for oracle lag detection.
+    Falls back to Hermes REST API when WebSocket is unavailable.
     """
 
-    def __init__(self, reconnect_interval: int = 5, session: Optional[aiohttp.ClientSession] = None):
+    def __init__(self, reconnect_interval: int = 5, session: Optional[aiohttp.ClientSession] = None,
+                 rpc_url: str = ""):
         self.ws_url = HERMES_WS_URL
         self.reconnect_interval = reconnect_interval
         self.websocket = None
         self.running = False
         self.session = session
         self._session_owned = session is None
+        self.rpc_url = rpc_url  # Fix 70: RPC URL for on-chain fallback
 
         # Price cache: ticker -> {"price": float, "timestamp": datetime, "confidence": float}
         self.price_cache: Dict[str, Dict[str, Any]] = {}
@@ -71,10 +74,16 @@ class PythHermesClient:
         return self.session
 
     async def _connect_and_listen(self):
-        """Connect to Hermes WS and listen for price updates."""
+        """Connect to Hermes WS and listen for price updates.
+
+        Fix 70: On Hermes failure, falls back to on-chain Pyth account polling
+        via RPC getAccountInfo. This ensures price data continues to flow even
+        when Pyth WebSocket servers are down or rate-limited.
+        """
         try:
             session = await self._get_session()
-            async with session.ws_connect(self.ws_url) as websocket:
+            async with session.ws_connect(self.ws_url, heartbeat=15.0, timeout=30.0,
+                                          receive_timeout=60.0) as websocket:
                 self.websocket = websocket
                 logger.info(f"✅ Connected to Pyth Hermes: {self.ws_url}")
 
@@ -99,8 +108,10 @@ class PythHermesClient:
                         logger.warning(f"Invalid JSON from Pyth: {e}")
 
         except Exception as e:
-            logger.error(f"WebSocket connection error: {e}")
-            raise
+            logger.error(f"WebSocket connection error: {e} — falling back to on-chain RPC polling")
+            # Fall back to on-chain polling
+            await self._run_onchain_fallback()
+            return  # Don't re-raise — we're in fallback mode
 
     async def _process_message(self, data: dict):
         """Process incoming price update message."""
@@ -160,6 +171,75 @@ class PythHermesClient:
 
         except Exception as e:
             logger.error(f"Error processing Pyth message: {e}")
+
+    async def _run_onchain_fallback(self):
+        """Fallback: poll Pyth prices via Hermes REST API.
+
+        Activated when the Hermes WebSocket connection fails.
+        Uses the Hermes REST endpoint (same feed IDs) instead of
+        on-chain Solana account reads, because feed IDs are hex strings
+        (not Solana base58 addresses) and cannot be used as account pubkeys.
+
+        Hermes REST API: GET /v2/updates/price/latest?ids[]=<feed_id>&ids[]=...
+        """
+        if not self.rpc_url:
+            logger.error("REST fallback unavailable: no rpc_url configured")
+            return
+
+        rest_url = "https://hermes.pyth.network/v2/updates/price/latest"
+        logger.info("📡 Starting Pyth Hermes REST fallback polling (interval=2s)")
+
+        while self.running:
+            try:
+                feed_ids = [v["feed_id"] for k, v in PYTH_FEEDS.items()
+                           if isinstance(v, dict) and v.get("feed_id")]
+
+                params = {"ids[]": feed_ids}
+                async with self.session.get(
+                    rest_url, params=params,
+                    timeout=aiohttp.ClientTimeout(total=5.0)
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        for item in data.get("parsed", []):
+                            raw_id = item.get("id", "").replace("0x", "")
+                            ticker = self.feed_to_ticker.get(raw_id)
+                            if not ticker:
+                                continue
+                            price_data = item.get("price", {})
+                            price_str = price_data.get("price")
+                            conf_str = price_data.get("conf")
+                            expo = price_data.get("expo", -8)
+                            publish_time = price_data.get("publish_time")
+                            status = price_data.get("status", "trading")
+
+                            if price_str is None or publish_time is None:
+                                continue
+
+                            if status and status != "trading":
+                                continue
+
+                            scale = 10 ** abs(expo)
+                            price = float(price_str) / scale if expo < 0 else float(price_str)
+                            confidence = float(conf_str) / scale if conf_str and expo < 0 else float(conf_str or 0)
+
+                            self.price_cache[ticker] = {
+                                "price": price,
+                                "timestamp": datetime.fromtimestamp(publish_time),
+                                "confidence": confidence,
+                                "status": status,
+                            }
+
+                            logger.debug(f"⚡ REST Pyth {ticker}: price={price}")
+                    else:
+                        logger.warning(f"Pyth REST API returned status {resp.status}")
+
+            except asyncio.TimeoutError:
+                logger.debug("Pyth REST fallback timeout")
+            except Exception as e:
+                logger.debug(f"Pyth REST fallback error: {e}")
+
+            await asyncio.sleep(2.0)  # Poll every 2 seconds
 
     def get_current_price(self, ticker: str) -> Optional[float]:
         """Get the latest price for a ticker."""

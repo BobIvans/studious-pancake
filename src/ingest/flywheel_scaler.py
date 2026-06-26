@@ -29,7 +29,7 @@ class ScalingTier:
 MICRO_BALANCE_SOL = 0.015
 GAS_RESERVE_SOL = 0.005
 MANEUVER_BUDGET_SOL = MICRO_BALANCE_SOL - GAS_RESERVE_SOL
-ATA_RENT_SOL = 0.00204
+ATA_RENT_SOL = 0.0035  # Fix 68: Conservative Token-2022 rent (was 0.00204 for SPL)
 
 SCALING_GRID = [
     # Tier 1: Survival Phase (0.015 - 0.05 SOL) - SOL & Stables only, tightest parameters

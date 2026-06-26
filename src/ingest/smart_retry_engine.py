@@ -1,5 +1,6 @@
 """Smart Retry Engine - Universal transaction recalculation without cooldown blocks."""
 
+import asyncio
 import logging
 from typing import Dict, Any, Optional, Callable, Tuple
 
@@ -71,14 +72,23 @@ class SmartRetryEngine:
             Result dict from retry execution
         """
         retry_state = opportunity.get("_smart_retry", {})
-        if retry_state.get("used"):
-            return {"status": "error", "message": f"Retry exhausted: {reason}"}
+        retry_count = retry_state.get("count", 0)
+        
+        # Fix 65: Max 3 retries with exponential backoff
+        max_retries = 3
+        if retry_count >= max_retries:
+            return {"status": "error", "message": f"Retry exhausted ({max_retries}/{max_retries}): {reason}"}
         
         should_retry, mode = SmartRetryEngine.should_retry(reason)
         if not should_retry:
             return {"status": "error", "message": reason}
         
-        retry_count = retry_state.get("count", 0)
+        # Exponential backoff: delay = 0.5 * (2 ** retry_count) seconds
+        delay = 0.5 * (2 ** retry_count)
+        logger.warning(f"🔄 SmartRetry Engine: attempt {retry_count + 1}/{max_retries}, "
+                       f"mode={mode}, backing off {delay:.1f}s...")
+        await asyncio.sleep(delay)
+        
         retry_opportunity = dict(opportunity)
         retry_opportunity["_smart_retry"] = {"used": True, "count": retry_count + 1, "mode": mode}
         

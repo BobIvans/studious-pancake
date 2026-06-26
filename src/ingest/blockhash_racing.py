@@ -14,18 +14,9 @@ import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
-# Jito regional nodes and Regional Helius endpoints for blockhash racing
-# Reduces staleness by ~200ms by matching validator regions (Frankfurt/NY/Tokyo)
-JITO_REGIONAL_NODES = [
-    "https://mainnet.block-engine.jito.wtf", # Task 17: Jito-Native Blockhash
-    "https://frankfurt.mainnet.block-engine.jito.wtf",
-    "https://amsterdam.mainnet.block-engine.jito.wtf",
-    "https://ny.mainnet.block-engine.jito.wtf",
-    "https://tokyo.mainnet.block-engine.jito.wtf",
-    # Regional Helius Affinity (Phase 49)
-    "https://eu.helius-rpc.com", # Europe (Frankfurt)
-    "https://us-east.helius-rpc.com", # US East (NY)
-]
+# Fix 67: Jito regional nodes removed — Jito Block Engines do NOT support
+# standard Solana JSON-RPC methods (getLatestBlockhash). Racing them against
+# Helius RPC was dead code that could never succeed. Only Helius RPC remains.
 
 
 class BlockhashRacingManager:
@@ -39,12 +30,10 @@ class BlockhashRacingManager:
     """
 
     def __init__(self, rpc_endpoints: List[str], race_interval_ms: int = 15000):
-        # Fix 66: Only use standard RPC endpoints — Jito Block Engines do NOT support
-        # standard Solana JSON-RPC methods (getSlot, getBlockTime, getLatestBlockhash).
-        # JITO_REGIONAL_NODES are excluded from the standard querying pool.
         self.rpc_endpoints = list(set(rpc_endpoints))
         self.race_interval_ms = race_interval_ms
         self.current_blockhash: Optional[Hash] = None
+        self.current_last_valid_block_height: int = 0  # Fix 67: Track expiry slot
         self.last_update_time = 0
         self.running = False
         self.session: Optional[aiohttp.ClientSession] = None
@@ -70,13 +59,21 @@ class BlockhashRacingManager:
             self._task.cancel()
         logger.info("🛑 Blockhash Racing Manager stopped")
 
-    async def get_fresh_blockhash(self) -> Optional[Hash]:
+    async def get_fresh_blockhash(self, current_slot: int = 0) -> Optional[Hash]:
         """
         Get a blockhash from cache or fetch a new one if stale.
         Cache TTL is set to 15 seconds to save Helius credits.
+
+        Fix 67: Also checks slot-based expiry via check_expiry_and_refresh().
+        If within 10 slots of lastValidBlockHeight, force-refreshes to
+        prevent Jito from rejecting transactions as "too old".
         """
         current_time = time.time()
         age_ms = (current_time - self.last_update_time) * 1000
+
+        # Slot-based expiry guard: refresh if close to deadline
+        if current_slot > 0:
+            await self.check_expiry_and_refresh(current_slot)
 
         # Only fetch if blockhash is older than 15 seconds
         if age_ms > 15000 or not self.current_blockhash:
@@ -180,7 +177,13 @@ class BlockhashRacingManager:
         return False
 
     async def _race_blockhash_once(self):
-        """Race all RPC endpoints to get the freshest blockhash."""
+        """Race all RPC endpoints to get the freshest blockhash.
+
+        Fix 67: Removed dead Jito-racing logic. Jito Block Engines do NOT support
+        getLatestBlockhash, so racing against them was unreachable code.
+        Now races standard RPC endpoints only and saves lastValidBlockHeight
+        for proactive expiry detection.
+        """
         if not self.session:
             return
 
@@ -193,40 +196,14 @@ class BlockhashRacingManager:
             task = asyncio.create_task(self._fetch_blockhash_from_endpoint(endpoint))
             tasks.append(task)
 
-        # Wait for responses, preferring Jito if it's within a reasonable window
-        results = []
-        jito_win = False
-        
+        # Wait for first successful response (no Jito-preference logic)
+        winner = None
         for coro in asyncio.as_completed(tasks):
             try:
                 result = await coro
                 if result:
-                    results.append(result)
-                    # If this is a Jito node, we win immediately
-                    if "jito" in result["endpoint"].lower():
-                        jito_win = True
-                        break
-                    
-                    # If not Jito, wait a tiny bit to see if Jito comes in (HFT priority)
-                    if len(results) == 1:
-                        try:
-                            # 50ms buffer for Jito to respond
-                            await asyncio.wait_for(asyncio.sleep(0.05), timeout=0.05)
-                        except asyncio.TimeoutError:
-                            pass
-                        # Check if any Jito tasks finished in that 50ms
-                        for t in tasks:
-                            if t.done() and not t.cancelled():
-                                try:
-                                    r = t.result()
-                                    if r and "jito" in r["endpoint"].lower():
-                                        results.insert(0, r)
-                                        jito_win = True
-                                        break
-                                except: pass
-                        
-                    if len(results) >= 1:
-                        break
+                    winner = result
+                    break
             except Exception as e:
                 logger.debug(f"Blockhash race task error: {e}")
 
@@ -236,20 +213,43 @@ class BlockhashRacingManager:
                 task.cancel()
 
         # Update if we got a result
-        if results:
-            # Prefer the first one if jito_win was set, otherwise first result
-            winner = results[0]
+        if winner:
             self.current_blockhash = winner["blockhash"]
+            self.current_last_valid_block_height = winner.get("last_valid_block_height", 0)
             self.last_update_time = time.time()
             self.successful_races += 1
 
             response_time = (time.time() - start_time) * 1000  # ms
             self.avg_response_time = (self.avg_response_time + response_time) / 2
 
-            source_label = "JITO" if "jito" in winner["endpoint"].lower() else "RPC"
-            logger.debug(f"🏁 Blockhash race won by {source_label} in {response_time:.1f}ms")
+            logger.debug(f"🏁 Blockhash race won in {response_time:.1f}ms "
+                         f"(last_valid={self.current_last_valid_block_height})")
         else:
             logger.warning("❌ All blockhash racing tasks failed")
+
+    async def check_expiry_and_refresh(self, current_slot: int) -> bool:
+        """Check if blockhash is close to expiry and force-refresh if needed.
+
+        Solana blockhashes are valid for ~60s (150 slots).
+        We force-refresh when within 10 slots (~4 seconds) of expiry
+        to prevent Jito from rejecting transactions as "too old".
+
+        Args:
+            current_slot: Current slot from RPC
+
+        Returns:
+            True if blockhash was refreshed
+        """
+        if not self.current_last_valid_block_height or current_slot == 0:
+            return False
+
+        remaining_slots = self.current_last_valid_block_height - current_slot
+        if remaining_slots <= 10:
+            logger.warning(f"⚠️ Blockhash near expiry: {remaining_slots} slots remaining — force-refreshing")
+            await self._race_blockhash_once()
+            return True
+
+        return False
 
     async def _fetch_blockhash_from_endpoint(self, endpoint: str) -> Optional[Dict[str, Any]]:
         """Fetch blockhash from a single RPC endpoint."""
@@ -266,9 +266,16 @@ class BlockhashRacingManager:
                 if resp.status == 200:
                     data = await resp.json()
                     if "result" in data and "value" in data["result"]:
-                        blockhash_str = data["result"]["value"]["blockhash"]
+                        value = data["result"]["value"]
+                        blockhash_str = value["blockhash"]
                         blockhash = Hash.from_string(blockhash_str)
-                        return {"blockhash": blockhash, "endpoint": endpoint}
+                        # Fix 67: Save lastValidBlockHeight for proactive expiry detection
+                        last_valid = value.get("lastValidBlockHeight", 0)
+                        return {
+                            "blockhash": blockhash,
+                            "endpoint": endpoint,
+                            "last_valid_block_height": last_valid,
+                        }
                 else:
                     logger.debug(f"Blockhash fetch failed from {endpoint}: HTTP {resp.status}")
 

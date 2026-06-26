@@ -368,7 +368,6 @@ trade_sizer = OptimalTradeSizer()
 # volatility_watcher = VolatilityWatcher(pool_state_manager)
 
 # ULTRA ARB - Stable×Stable & Lending Rate Engines (commented for minimal startup)
-# flash_pivot_engine = FlashPivotEngine(pool_state_manager)
 
 # k_hop_stitcher = KHopStitcher(wallet_keypair=keypair)
 
@@ -4546,30 +4545,6 @@ async def execute_priority_opportunity(
                 logger.warning(f"Failed to log AI training data: {e}")
 
         if not is_profitable:
-            if "StaleOracle" in reason and flash_pivot_engine:
-                logger.warning(
-                    f"⚠️ StaleOracle detected for {opportunity.pair}. Triggering FlashPivotEngine (Phase 39)..."
-                )
-                from decimal import Decimal
-
-                pivot_opp = await flash_pivot_engine.check_pivot_needed(
-                    desired_asset=opportunity.metadata.get(
-                        "in_mint", "So11111111111111111111111111111111111111112"
-                    ),
-                    required_amount=Decimal(
-                        opportunity.metadata.get("amount_lamports", 0)
-                    )
-                    / Decimal(1_000_000_000),
-                    arbitrage_profit=Decimal(str(opportunity.expected_profit_sol)),
-                )
-
-                if pivot_opp and pivot_opp.should_pivot:
-                    logger.debug(
-                        f"🔄 Pivoting flash loan from {pivot_opp.original_asset} to {pivot_opp.pivot_asset} to bypass stale oracle"
-                    )
-                    # In a real HFT scenario, we would rebuild and re-simulate here.
-                    # For now, we trigger the engine as requested.
-
             logger.warning(f"Sim failed: {reason}. Skipping execution.")
             return
 
@@ -6232,12 +6207,11 @@ async def run():
                         rpc,
                         keypair,
                         jito_executor,
-                        ai_data_collector,
+                        data_collector,
                         flywheel_scaler,
                         data_aggregator,
                         alt_manager=alt_manager,
                         execution_router=execution_router,
-                        flash_pivot_engine=None,
                         blockhash_mgr=blockhash_mgr,
                     )
                 )

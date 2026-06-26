@@ -178,7 +178,6 @@ class ExecutionRouter:
         blockhash_getter: Optional[Callable[[], str]] = None,
         optimal_trade_sizer=None,
         ata_cache=None,
-        flash_pivot_engine=None,
         cfg=None,
         data_aggregator=None,
         stats=None,
@@ -204,7 +203,6 @@ class ExecutionRouter:
         self.rpc_url = rpc_url
         self.optimal_trade_sizer = optimal_trade_sizer
         self.ata_cache = ata_cache if ata_cache is not None else set()
-        self.flash_pivot_engine = flash_pivot_engine # Task 18
         # JitoBiddingManager for dynamic tip calculation in LST strategy
         self.jito_bidding_manager = jito_bidding_manager
         # Epoch Shield: Block trades during epoch boundary storm (direct RPC, no stubs)
@@ -414,9 +412,6 @@ class ExecutionRouter:
         try:
             strategy = opportunity.get("strategy")
 
-            if strategy == "flash_loan_pivot":
-                logger.warning("⚠️ flash_loan_pivot strategy called but engine not available")
-                return {"status": "error", "message": "flash_pivot_engine not initialized"}
             elif strategy == "lst_unstake":
                 # LST Instant Unstake Arbitrage
                 from .lst_unstake_arbitrage import LstInstantUnstakeArbitrage

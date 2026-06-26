@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Test script for AI-powered Ranking Engine and Data Collection."""
+"""Test script for arbitrage ranking engine and data collection."""
 
 import asyncio
 import logging
 from decimal import Decimal
 from src.ingest.arbitrage_scorer import ArbitrageScorer, PriorityArbitrageQueue, ArbitrageOpportunity
-from src.ingest.ai_data_collector import AIDataCollector, ArbitrageTradeRecord
+from src.ingest.data_collector import DataCollector, ArbitrageTradeRecord
 import time
 
 logging.basicConfig(level=logging.INFO)
@@ -77,7 +77,7 @@ async def test_data_collection():
     logger.info("🧪 Testing AI Data Collection...")
 
     # Initialize collector
-    collector = AIDataCollector(use_sqlite=False)  # Use CSV for testing
+    collector = DataCollector(use_sqlite=False)  # Use CSV for testing
 
     # Create test trade records
     records = [
@@ -142,9 +142,9 @@ async def test_offline_analysis():
     logger.info("🧪 Testing Offline AI Analysis...")
 
     try:
-        from src.ingest.ai_offline_analyzer import OfflineStatsReporter
+        from src.ingest.offline_stats_reporter import OfflineStatsReporter
 
-        collector = AIDataCollector(use_sqlite=False)
+        collector = DataCollector(use_sqlite=False)
         analyzer = OfflineStatsReporter(collector)
 
         # Generate sample analysis (would need real data)
@@ -165,16 +165,16 @@ async def test_offline_analysis():
         logger.info("📄 Analysis framework ready for data collection")
 
 async def main():
-    """Run all AI system tests."""
-    logger.info("🚀 Starting AI-Powered Trading System Tests...")
+    """Run all system tests."""
+    logger.info("🚀 Starting Trading System Tests...")
 
     try:
         await test_ranking_engine()
         await test_data_collection()
         await test_offline_analysis()
-        logger.info("✅ All AI system tests completed successfully!")
+        logger.info("✅ All system tests completed successfully!")
     except Exception as e:
-        logger.error(f"❌ AI system test failed: {e}")
+        logger.error(f"❌ System test failed: {e}")
         import traceback
         traceback.print_exc()
 

@@ -46,6 +46,7 @@ from solders.message import MessageV0
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.system_program import transfer, TransferParams
+from solders.address_lookup_table_account import AddressLookupTableAccount
 
 logger = logging.getLogger(__name__)
 
@@ -131,10 +132,11 @@ class JitoLeaderChecker:
 class BundleTemplate:
     """Pre-signed transaction template for instant bundle creation."""
 
-    def __init__(self, keypair: Keypair, jito_tip_accounts: Optional[List[str]] = None):
+    def __init__(self, keypair: Keypair, jito_tip_accounts: Optional[List[str]] = None, tx_builder: Optional[Any] = None):
         self.keypair = keypair
         self.templates: Dict[str, Dict] = {}
         self.jito_tip_accounts = jito_tip_accounts or []
+        self.tx_builder = tx_builder
 
     def create_arbitrage_template(
         self, base_mint: str, quote_mint: str, amount_sol: float
@@ -178,17 +180,44 @@ class BundleTemplate:
 
         return VersionedTransaction(msg, [self.keypair])
 
-    def instantiate_template(
-        self, template_key: str, recent_blockhash: str
+    async def instantiate_template(
+        self, template_key: str, recent_blockhash: str, **kwargs
     ) -> Optional[VersionedTransaction]:
-        """Fix 32: Dead code stub.
+        """Fix 32: Redirect to working tx_builder.build_native_flashloan_tx when available."""
+        if self.tx_builder is not None:
+            try:
+                tx_data = await self.tx_builder.build_native_flashloan_tx(
+                    wallet_pubkey=str(self.keypair.pubkey()),
+                    arbitrage_path=kwargs.get("arbitrage_path", []),
+                    borrow_amount_lamports=kwargs.get("borrow_amount_lamports", 0),
+                    expected_min_profit_lamports=kwargs.get("expected_min_profit_lamports", 0),
+                    dex_swap_instructions=kwargs.get("dex_swap_instructions", []),
+                    marginfi_config=kwargs.get("marginfi_config", {}),
+                    jito_tip_lamports=0,
+                    use_jito=True,
+                    recent_blockhash=recent_blockhash,
+                )
+                if tx_data and "instructions" in tx_data:
+                    alts = [
+                        AddressLookupTableAccount(
+                            key=Pubkey.from_string(alt),
+                            addresses=[],
+                        )
+                        for alt in tx_data.get("address_lookup_table_pubkeys", [])
+                    ]
+                    msg = MessageV0.try_compile(
+                        payer=self.keypair.pubkey(),
+                        instructions=tx_data["instructions"],
+                        address_lookup_table_accounts=alts,
+                        recent_blockhash=Hash.from_string(recent_blockhash),
+                    )
+                    return VersionedTransaction(msg, [self.keypair])
+            except Exception as e:
+                logger.error(f"Failed to instantiate template via tx_builder: {e}")
 
-        Real transaction assembly is done via tx_builder.build_native_flashloan_tx.
-        This always returns None to prevent callers from sending empty/tip-only txs.
-        """
         logger.error(
-            "⚠️ BundleTemplate.instantiate_template is dead code. "
-            "Use tx_builder.build_native_flashloan_tx for real assembly."
+            "⚠️ BundleTemplate.instantiate_template fallback failed. "
+            "Provide tx_builder for real assembly."
         )
         return None
 
@@ -210,13 +239,15 @@ class JitoBundleHandler:
         jito_endpoints: Optional[List[str]] = None,
         auth_key: Optional[str] = None,
         tip_percent: float = 0.6,
+        tx_builder: Optional[Any] = None,
     ):
         self.keypair = keypair
         self.session = session
         self.auth_key = auth_key
         self.tip_percent = tip_percent
+        self.tx_builder = tx_builder
         self.bundle_template = BundleTemplate(
-            keypair, jito_tip_accounts=self.jito_tip_accounts
+            keypair, jito_tip_accounts=self.jito_tip_accounts, tx_builder=tx_builder
         )
         self.leader_checker = JitoLeaderChecker(session)
 
@@ -294,8 +325,19 @@ class JitoBundleHandler:
             arb_template_key = self.bundle_template.create_arbitrage_template(
                 base_mint, quote_mint, amount_sol
             )
-            arbitrage_tx = self.bundle_template.instantiate_template(
-                arb_template_key, recent_blockhash
+            arbitrage_tx = await self.bundle_template.instantiate_template(
+                arb_template_key,
+                recent_blockhash,
+                arbitrage_path=[base_mint, quote_mint, base_mint],
+                borrow_amount_lamports=int(amount_sol * 1_000_000_000),
+                expected_min_profit_lamports=int(expected_profit_sol * 1_000_000_000),
+                dex_swap_instructions=[],
+                marginfi_config={
+                    "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+                    "marginfi_account": "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2",
+                    "bank_liquidity_vault": "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2",
+                    "bank_liquidity_vault_authority": "...",
+                },
             )
 
             if not arbitrage_tx:

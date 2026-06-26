@@ -450,7 +450,7 @@ class ExecutionRouter:
 
                 return result
             elif strategy == "wrapper_peg":
-                # Wrapper Peg Arbitrage (USDC -> Cheap BTC -> Expensive BTC -> USDC)
+                # Wrapper Peg Arbitrage
                 from .wrapper_arb import WrapperArbEnforcer, WrapperPegOpportunity
 
                 tx_builder = JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter)
@@ -462,13 +462,13 @@ class ExecutionRouter:
                 if amount_lamports <= 0:
                     return {"status": "error", "message": "Invalid amount_lamports"}
 
-                await self._execute_wrapper_peg_arbitrage(
+                success = await self._execute_wrapper_peg_arbitrage(
                     session=self.session,
                     tx_builder=tx_builder,
                     opportunity=opportunity,
                     rpc_url=self.rpc_url,
                 )
-                return {"status": "success", "strategy": "wrapper_peg"}
+                return {"status": "success" if success else "error", "strategy": "wrapper_peg"}
             else:
                 logger.warning(f"Unknown strategy: {strategy}")
                 return {"status": "error", "message": f"Unknown strategy: {strategy}"}
@@ -972,3 +972,113 @@ class ExecutionRouter:
     @property
     def has_stale_bundle(self) -> bool:
         return bool(self._stale_bundle_ids)
+
+    async def _execute_wrapper_peg_arbitrage(
+        self,
+        session,
+        tx_builder,
+        opportunity,
+        rpc_url: str,
+    ) -> bool:
+        """Execute wrapper peg arbitrage via flashloan.
+
+        USDC -> Cheap BTC -> Expensive BTC -> USDC.
+        Uses Jupiter three-hop circular quote and calls _ptg.check_profit_before_execution.
+        """
+        from .pre_trade_guard import PreTradeGuard
+
+        amount_lamports = int(opportunity.get("amount_lamports", 0))
+        cheap = opportunity.get("cheap_wrapper")
+        expensive = opportunity.get("expensive_wrapper")
+
+        if not cheap or not expensive or amount_lamports <= 0:
+            return False
+
+        usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+
+        quote = await tx_builder.get_three_hop_circular_quote(
+            input_mint=usdc_mint,
+            middle_mint_1=cheap,
+            middle_mint_2=expensive,
+            amount_lamports=amount_lamports,
+        )
+        if not quote:
+            return False
+
+        swap_ixs = []
+        for leg_key in ["dex_leg1", "dex_leg2", "dex_leg3"]:
+            leg_quote = quote.get(leg_key)
+            if leg_quote:
+                ixs, _ = await tx_builder.get_swap_instructions(
+                    leg_quote, str(self.keypair.pubkey()), use_custom_cu=True,
+                    expected_profit_sol=0.0,
+                )
+                swap_ixs.extend(ixs)
+
+        if not swap_ixs:
+            return False
+
+        profit_usdc_lamports = quote["gross_profit_lamports"]
+        jito_tip_lamports = max(int(profit_usdc_lamports * 0.4 / 1e6), 10000)
+
+        _ptg = PreTradeGuard(session=session, rpc_url=rpc_url)
+        trade_ok, trade_reason, _ = await _ptg.check_profit_before_execution(
+            input_mint=usdc_mint,
+            output_mint=usdc_mint,
+            amount_lamports=amount_lamports,
+            jito_tip_lamports=jito_tip_lamports,
+            base_fee_lamports=int(0.000005 * 1e9),
+            expected_profit_lamports=profit_usdc_lamports,
+            quote_url="https://api.jup.ag/swap/v1/quote",
+            slippage_bps=5,
+            is_circular=True,
+            priority_fee_lamports=int(0.00005 * 1e9),
+            ata_rent_lamports=0,
+        )
+        if not trade_ok:
+            logger.warning(f"Pre-trade blocked for wrapper_peg: {trade_reason}")
+            return False
+
+        marginfi_account = os.getenv("MARGINFI_ACCOUNT", "")
+        usdc_bank = "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2"
+
+        fl_result = await tx_builder.build_native_flashloan_tx(
+            wallet_pubkey=str(self.keypair.pubkey()),
+            arbitrage_path=[usdc_mint, cheap, expensive, usdc_mint],
+            borrow_amount_lamports=amount_lamports,
+            expected_min_profit_lamports=1000,
+            dex_swap_instructions=swap_ixs,
+            marginfi_config={
+                "marginfi_account": Pubkey.from_string(marginfi_account) if marginfi_account else None,
+                "bank_liquidity_vault": Pubkey.from_string(usdc_bank),
+                "bank_liquidity_vault_authority": Pubkey.from_string(usdc_bank),
+            },
+            jito_tip_lamports=jito_tip_lamports,
+            borrow_mint=usdc_mint,
+            tip_accounts=self.jito_executor.tip_accounts if self.jito_executor else None,
+            use_jito=True,
+        )
+        if not fl_result:
+            return False
+
+        bh_obj = None
+        if self.blockhash_mgr:
+            bh_obj = await self.blockhash_mgr.get_fresh_blockhash()
+        if not bh_obj:
+            payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"}
+            async with session.post(rpc_url, json=payload) as resp:
+                bh_data = await resp.json()
+                bh_obj = bh_data.get("result", {}).get("value", {}).get("blockhash")
+        if not bh_obj:
+            return False
+
+        msg = MessageV0.try_compile(
+            payer=self.keypair.pubkey(),
+            instructions=fl_result["instructions"],
+            address_lookup_table_accounts=[],
+            recent_blockhash=Hash.from_string(bh_obj) if not isinstance(bh_obj, Hash) else bh_obj,
+        )
+        tx = VersionedTransaction(msg, [self.keypair])
+
+        bundle_result = await self.jito_executor.send_bundle([tx])
+        return bundle_result.get("success", False)

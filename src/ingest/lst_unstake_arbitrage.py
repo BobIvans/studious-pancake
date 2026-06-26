@@ -93,7 +93,7 @@ class LstInstantUnstakeArbitrage:
         # Fix 3 (MarginFi Slippage Margin): cap borrow to FLASH_LOAN_SIZE_SOL
         env_max_borrow = int(float(os.getenv("FLASH_LOAN_SIZE_SOL", "0.5")) * 1_000_000_000)
         max_borrow_lamports = min(max_borrow_lamports, env_max_borrow)
-        if max_borrow_lamports < 1_000_000_000:  # Min 1 SOL
+        if max_borrow_lamports < 100_000_000:  # Fix 40: Min 0.1 SOL (was 1 SOL, blocked 0.015 SOL balance)
             return []
 
         # ── Шаг А — OptimalTradeSizer: динамический сайзинг без итераций ──────────
@@ -136,7 +136,7 @@ class LstInstantUnstakeArbitrage:
                                 expected_profit_sol=self.min_profit_lamports / 1e9,
                             )
                         )
-                        if optimal_size and optimal_size > 1_000_000_000:  # Min 1 SOL
+                        if optimal_size and optimal_size > 100_000_000:  # Fix 40: Min 0.1 SOL (was 1 SOL)
                             test_amount_lamports = optimal_size
                             logger.debug(f"📈 LST unstake optimal borrow: {test_amount_lamports/1e9:.4f} SOL (AMM curve peak)")
                     except Exception as e:

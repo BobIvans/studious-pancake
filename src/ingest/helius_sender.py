@@ -37,22 +37,14 @@ class HeliusSender:
     async def send_via_helius_sender(
         self,
         signed_tx: VersionedTransaction,
-        priority_fee_micro_lamports: int = 50000,
-        tip_lamports: int = 20000,
-        payer_pubkey: Optional[Pubkey] = None,
     ) -> Optional[str]:
-        """Send transaction via Helius Sender with tip and priority fee."""
-        try:
-            # Add tip instruction if payer provided
-            if payer_pubkey:
-                tip_ix = transfer(TransferParams(
-                    from_pubkey=payer_pubkey,
-                    to_pubkey=Pubkey.from_string(self.get_random_tip_account()),
-                    lamports=tip_lamports,
-                ))
-                # Note: For VersionedTransaction, need to modify message
-                # This is simplified; in practice, rebuild transaction with tip
+        """Send transaction via Helius Sender.
 
+        Fix 41: Removed unused tip_lamports and priority_fee_micro_lamports params.
+        These were never actually embedded into the transaction — Helius Sender
+        simply relays the pre-signed tx as-is. Tip and fee must be set at build time.
+        """
+        try:
             tx_b64 = base64.b64encode(bytes(signed_tx)).decode('ascii')
 
             payload = {

@@ -98,7 +98,7 @@ WSOL_CLOSE_COOLDOWN: float = 60.0
 # Jito Tip Accounts & Bidding Manager
 jito_tip_manager = None
 jito_bidding_manager = None
-jito_leader_tracker = None
+# Fix 37: jito_leader_tracker removed (RNG-based)
 leader_tracker = None
 
 # RPC and Network

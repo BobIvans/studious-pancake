@@ -78,6 +78,11 @@ class EventTriggerEngine:
         if not token_symbol or price_usd <= 0:
             return
 
+        # Fix 39: Staleness guard — reject oracle data older than 5 seconds
+        if time.time() - timestamp > 5.0:
+            logger.warning(f"⏰ Stale oracle data for {token_symbol}: age={time.time()-timestamp:.1f}s > 5s. Rejecting.")
+            return
+
         # Store oracle price
         oracle_price = OraclePrice(token_symbol, price_usd, timestamp, source)
         self.oracle_prices[token_symbol] = oracle_price

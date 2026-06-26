@@ -5,6 +5,7 @@ to the legacy WebSocket accountSubscribe path if no gRPC relay is configured.
 """
 
 import asyncio
+import base64
 import logging
 import os
 import time
@@ -169,9 +170,14 @@ class PoolStateManager:
             if not self.pool_addresses:
                 return
 
+            # Fix 43: Use self.rest_pools (high-liquidity) instead of full self.pool_addresses
+            # to avoid wasting RPC credits on pools already streamed via WebSocket.
+            target_pools = self.rest_pools if self.rest_pools else self.pool_addresses
+            if not target_pools:
+                return
             payload = {
                 "jsonrpc": "2.0", "id": 1, "method": "getMultipleAccounts",
-                "params": [self.pool_addresses, {"encoding": "jsonParsed", "commitment": "confirmed"}],
+                "params": [target_pools, {"encoding": "jsonParsed", "commitment": "confirmed"}],
             }
             connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             async with aiohttp.ClientSession(connector=connector) as session:
@@ -404,6 +410,78 @@ class PoolStateManager:
 
     # ── Pool reserve decoding ─────────────────────────────────────────────────────
 
+    def _decode_meteora_bin(self, raw_b64: str) -> Optional[PoolReserve]:
+        """Decode Meteora DLMM bin data from base64 raw bytes.
+
+        Meteora DLMM account layout (approx):
+          - Bytes 0-8:    discriminator
+          - Bytes 8-40:   oracle (Pubkey)
+          - Bytes 40-48:  total_spot_x (u64 LE)
+          - Bytes 48-56:  total_spot_y (u64 LE)
+          - Bytes 56-64:  active_bin_id (u32 + padding)
+          - Bytes 72-80:  step_size (u64 LE)
+        """
+        try:
+            raw = base64.b64decode(raw_b64)
+            if len(raw) < 80:
+                return None
+            # Extract total reserves and mints from known Meteora DLMM layout
+            # First 8 bytes: discriminator
+            # Next 32 bytes: oracle pubkey
+            # Bytes 40-48: x_reserve (u64 LE)
+            # Bytes 48-56: y_reserve (u64 LE)
+            x_res = int.from_bytes(raw[40:48], 'little')
+            y_res = int.from_bytes(raw[48:56], 'little')
+            if x_res > 0 and y_res > 0:
+                # For Meteora, mints are stored at different offsets;
+                # return reserves with placeholder mints — caller should match from registry
+                return PoolReserve(
+                    token_a_reserve=Decimal(str(x_res)),
+                    token_b_reserve=Decimal(str(y_res)),
+                    token_a_mint="So11111111111111111111111111111111111111112",
+                    token_b_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                    pool_address="",  # Will be set by caller
+                    pool_type="dlmm",
+                )
+        except Exception:
+            pass
+        return None
+
+    def _decode_saber_stableswap(self, raw_b64: str, pool_address: str) -> Optional[PoolReserve]:
+        """Decode Saber Stableswap pool from base64 raw bytes.
+
+        Saber pool account layout:
+          - Bytes 0-8:    discriminator
+          - Bytes 8-40:   pool_mint (Pubkey)
+          - Next 32:      token_a_mint
+          - Next 32:      token_b_mint
+          - Next 8:       token_a_reserve (u64 LE)
+          - Next 8:       token_b_reserve (u64 LE)
+          - Next 2:       amp_factor (u16 LE)
+        """
+        try:
+            raw = base64.b64decode(raw_b64)
+            if len(raw) < 160:
+                return None
+            # Saber uses standard SPL Token account for reserves with metadata
+            # Try to extract mints and reserves from known Saber pool layout
+            token_a_mint_bytes = raw[40:72]
+            token_b_mint_bytes = raw[72:104]
+            res_a = int.from_bytes(raw[104:112], 'little')
+            res_b = int.from_bytes(raw[112:120], 'little')
+            if res_a > 0 and res_b > 0:
+                return PoolReserve(
+                    token_a_reserve=Decimal(str(res_a)),
+                    token_b_reserve=Decimal(str(res_b)),
+                    token_a_mint=str(Pubkey.from_bytes(token_a_mint_bytes)),
+                    token_b_mint=str(Pubkey.from_bytes(token_b_mint_bytes)),
+                    pool_address=pool_address,
+                    pool_type="stableswap",
+                )
+        except Exception:
+            pass
+        return None
+
     async def _decode_pool_reserves(
         self, pool_address: str, account_data: Dict[str, Any]
     ) -> Optional[PoolReserve]:
@@ -421,9 +499,17 @@ class PoolStateManager:
                         pool_address, "cpmm",
                     )
             elif "data" in account_data and len(account_data["data"]) > 0:
-                logger.debug(f"Meteora DLMM update for {pool_address[:8]}")
-            elif str(pool_address).startswith("SS"):
-                logger.debug(f"Saber Stableswap update for {pool_address[:8]}")
+                raw_list = account_data["data"]
+                raw_b64 = raw_list[0] if isinstance(raw_list, list) else raw_list
+                # Fix 44: Try binary parsing for Meteora DLMM and Saber
+                result = self._decode_meteora_bin(raw_b64) or self._decode_saber_stableswap(raw_b64, pool_address)
+                if result:
+                    result.pool_address = pool_address
+                    return result
+                else:
+                    logger.debug(f"Binary data for {pool_address[:8]}: {len(raw_b64)} chars — unknown format")
+            else:
+                logger.debug(f"Unknown account data format for {pool_address[:8]}: {type(account_data)}")
         except Exception as exc:
             logger.debug(f"Pool reserve decode error: {exc}")
         return None

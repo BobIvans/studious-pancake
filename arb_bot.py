@@ -184,10 +184,6 @@ from src.ingest.jito_sniper import (
 from src.ingest.leader_tracker import LeaderTracker
 from src.ingest.execution_router import ExecutionRouter
 from src.ingest.blockhash_racing import init_blockhash_racing, get_blockhash_manager
-from src.ingest.jito_leader_tracker import (
-    init_jito_leader_tracker,
-    get_jito_leader_tracker,
-)
 from src.ingest.pre_trade_guard import PreTradeGuard
 from src.ingest.arbitrage_scorer import (
     ArbitrageScorer,
@@ -219,7 +215,6 @@ from src.ingest.receipt_arb import ReceiptArbEngine
 from src.ingest.flash_pivot import FlashPivotEngine
 from src.ingest.liquidator_engine import LiquidationEngine
 from src.ingest.cex_dex_oracle import CexDexOracle
-from src.ingest.epoch_tracker import EpochTracker
 from src.ingest.jito_shotgun import JitoShotgun
 from src.ingest.dust_sweeper import DustSweeper
 from src.ingest.alt_manager import ALTCacheManager
@@ -3124,11 +3119,6 @@ async def lst_depeg_scanner(
                 # Build tip lamports for trade execution (already optimized by bidding manager)
                 jito_tip_lamports = god_tip_lamports
 
-                # Jito Tip Trap Prevention: Adjust tip based on leader schedule
-                tip_adjustment = await jito_leader_tracker.get_optimal_tip(
-                    base_tip_lamports=jito_tip_lamports,
-                    current_slot=0,  # TODO: Get actual current slot
-                )
                 jito_tip_lamports = tip_adjustment["tip_lamports"]
 
                 # ── Task 13: InsufficientFunds Protection ─────────────────────────
@@ -5852,11 +5842,7 @@ async def run():
     )
     await leader_tracker.start(session)
 
-    global jito_leader_tracker
-    jito_leader_tracker = None
-    if JITO_AVAILABLE:
-        jito_leader_tracker = init_jito_leader_tracker(cfg.JITO_ENDPOINTS)
-        await jito_leader_tracker.start(session)
+    # Fix 37: jito_leader_tracker removed (RNG-based, replaced by real leader_tracker above)
 
     jito_executor = None
     if JITO_AVAILABLE:

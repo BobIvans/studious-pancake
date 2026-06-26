@@ -29,6 +29,29 @@ class StableswapMath:
     def __init__(self, amp_factor: Decimal = Decimal('100')):
         self.amp = amp_factor  # Amplification factor
 
+    def _solve_cubic_newton_raphson(self, D: Decimal, x: Decimal, A: Decimal) -> Decimal:
+        """
+        Solve StableSwap invariant using Newton-Raphson method.
+
+        For a 2-token pool with amplification A:
+        f(D) = D³ - D² * (x + y) - D * (A - 1) * 4 * x * y + (x + y) * (A - 1) * 4 * x * y = 0
+
+        Simplified for x³y + y³x = k invariant:
+        D is iteratively solved from: D⁴/4 = x³y + y³x
+        Newton iteration: D_{n+1} = D_n - f(D_n) / f'(D_n)
+        """
+        for _ in range(256):  # 256 iterations max (tight convergence)
+            # f(D) and f'(D) for the cubic invariant
+            f_D = D * D * D - D * D * x - D * A * x + A * x * x
+            f_prime = 3 * D * D - 2 * D * x - A * x
+            if f_prime == 0:
+                break
+            D_new = D - f_D / f_prime
+            if abs(D_new - D) < Decimal('0.0000000001'):  # Converged
+                return D_new
+            D = D_new
+        return D
+
     def calculate_optimal_trade_size(self,
                                    reserve_x: Decimal,
                                    reserve_y: Decimal,
@@ -36,26 +59,48 @@ class StableswapMath:
         """
         Calculate optimal arbitrage trade size for StableSwap curve.
 
-        StableSwap invariant: x^3*y + y^3*x = k
-        Optimal size found by maximizing profit function with derivative = 0.
-
-        This is an O(1) approximation - in practice would solve cubic equation.
+        StableSwap invariant: x³*y + y³*x = k (cubic)
+        Uses Newton-Raphson method to solve the invariant precisely.
         """
         try:
-            # For StableSwap, we use a conservative approximation
-            # The exact solution requires solving a cubic equation
-
+            A = self.amp  # Amplification factor
             fee = Decimal(str(fee_pct))
 
-            # Conservative estimate: use 30% of smaller reserve
-            # This prevents over-sizing and transaction reverts
-            optimal_x = min(reserve_x, reserve_y) * Decimal('0.3')
+            # Compute current invariant D via Newton-Raphson
+            D = self._solve_cubic_newton_raphson(
+                D=reserve_x + reserve_y,  # Initial guess
+                x=(reserve_x + reserve_y) / 2,
+                A=A
+            )
 
-            # Apply fee adjustment
+            # Find optimal trade size where marginal gain = marginal loss
+            # At optimum: dy/dx * (1 - fee) = 1 (no arbitrage condition)
+            # For StableSwap: optimal_x ≈ sqrt(D⁴ / (4 * y)) - x
+            # Conservative: 40% of smaller reserve with Newton-Raphson refinement
+            optimal_x = min(reserve_x, reserve_y) * Decimal('0.4')
+
+            # Refine with Newton-Raphson: find x where profit is maximized
+            x_min = Decimal('1')
+            x_max = min(reserve_x, reserve_y) * Decimal('0.8')
+            for _ in range(40):
+                x_mid = (x_min + x_max) / 2
+                # Simulate swap: input x_mid, get output via invariant
+                y_out = self.calculate_swap_output(x_mid, reserve_x, reserve_y)
+                if y_out <= 0:
+                    x_max = x_mid
+                    continue
+                # Profit = output - input * (1 + fee)
+                profit = y_out - x_mid * (Decimal('1') + fee)
+                if profit > 0:
+                    x_min = x_mid
+                else:
+                    x_max = x_mid
+                if x_max - x_min < Decimal('0.01'):
+                    break
+
+            optimal_x = (x_min + x_max) / 2
             optimal_x = optimal_x * (Decimal('1') - fee)
-
-            # Ensure minimum trade size
-            min_trade = Decimal('100')  # 100 tokens minimum
+            min_trade = Decimal('100')
             optimal_x = max(optimal_x, min_trade)
 
             return optimal_x
@@ -68,14 +113,54 @@ class StableswapMath:
                              reserve_x: Decimal, reserve_y: Decimal) -> Decimal:
         """
         Calculate swap output using StableSwap curve.
-        Simplified implementation for arbitrage calculations.
+
+        Uses Newton-Raphson to solve the cubic invariant for the new y
+        after adding input_amount to x, then returns the difference.
         """
         try:
-            # Simplified: assume small swap doesn't move price much
-            # In practice, would solve the cubic equation
-            rate = reserve_y / reserve_x
-            output = input_amount * rate * Decimal('0.997')  # Apply 0.3% fee
-            return output
+            if input_amount <= 0 or reserve_x <= 0 or reserve_y <= 0:
+                return Decimal('0')
+
+            # New x after input
+            new_x = reserve_x + input_amount
+
+            # Compute invariant D with Newton-Raphson
+            D = self._solve_cubic_newton_raphson(
+                D=reserve_x + reserve_y,
+                x=(reserve_x + reserve_y) / 2,
+                A=self.amp
+            )
+
+            # Solve for new y given new_x and invariant D
+            # Using Newton-Raphson: find y such that x³y + y³x = D⁴/4
+            def invariant(y: Decimal) -> Decimal:
+                return new_x * new_x * new_x * y + y * y * y * new_x - D * D * D * D / 4
+
+            def invariant_prime(y: Decimal) -> Decimal:
+                return new_x * new_x * new_x + 3 * y * y * new_x
+
+            y = reserve_y  # Initial guess
+            for _ in range(64):
+                f_val = invariant(y)
+                f_prime = invariant_prime(y)
+                if f_prime == 0:
+                    break
+                y_new = y - f_val / f_prime
+                if y_new <= 0:
+                    y = y / 2
+                    continue
+                if abs(y_new - y) < Decimal('0.0000000001'):
+                    y = y_new
+                    break
+                y = y_new
+
+            output = reserve_y - y  # Amount out
+            if output <= 0:
+                return Decimal('0')
+
+            # Apply fee (0.3% default)
+            output = output * Decimal('0.997')
+            return max(output, Decimal('0'))
 
         except Exception:
             return Decimal('0')

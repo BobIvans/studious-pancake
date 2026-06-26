@@ -120,7 +120,6 @@ class MarginFiAccountPool:
 from .leader_tracker import LeaderTracker
 from .g2_tip_manager import ExecutionGuard
 from .tx_builder import JupiterTxBuilder
-from .epoch_tracker import EpochTracker
 
 # FIX 13: Shared global Jupiter rate limiter — 4 req/s across all modules
 from .jupiter_api_client import get_jupiter_limiter
@@ -208,8 +207,9 @@ class ExecutionRouter:
         self.flash_pivot_engine = flash_pivot_engine # Task 18
         # JitoBiddingManager for dynamic tip calculation in LST strategy
         self.jito_bidding_manager = jito_bidding_manager
-        # Epoch Shield: Block trades during epoch boundary storm
-        self.epoch_tracker = EpochTracker(rpc_url=rpc_url, session=session)
+        # Epoch Shield: Block trades during epoch boundary storm (direct RPC, no stubs)
+        self._epoch_info: Dict[str, Any] = {}
+        self._epoch_last_update = 0.0
         self._epoch_killswitch_active = False
         self._epoch_last_reason = ""
         # Fix 3: ALT Manager for MTU-safe tx compilation
@@ -256,9 +256,7 @@ class ExecutionRouter:
             self._self_cancel_task = asyncio.create_task(self._self_cancel_stale_bundles())
             shared_state.active_tasks.add(self._self_cancel_task)
             self._self_cancel_task.add_done_callback(shared_state.active_tasks.discard)
-        epoch_task = asyncio.create_task(self.epoch_tracker.start())
-        shared_state.active_tasks.add(epoch_task)
-        epoch_task.add_done_callback(shared_state.active_tasks.discard)
+        # Fix 38: epoch_tracker removed — epoch info fetched lazily via RPC in _check_epoch_killswitch
 
     async def _process_queue(self):
         """Process execution tasks sequentially."""
@@ -329,7 +327,19 @@ class ExecutionRouter:
         SECONDS_TO_EPOCH_END = 30
 
         try:
-            info = self.epoch_tracker.epoch_info
+            info = self._epoch_info
+            # Lazy-fetch epoch info via RPC if stale
+            if not info or (time.time() - self._epoch_last_update) > 30.0:
+                try:
+                    payload = {"jsonrpc": "2.0", "id": 1, "method": "getEpochInfo", "params": []}
+                    async with self.session.post(self.rpc_url, json=payload, timeout=3.0) as resp:
+                        if resp.status == 200:
+                            data = await resp.json()
+                            self._epoch_info = data.get("result", {})
+                            self._epoch_last_update = time.time()
+                            info = self._epoch_info
+                except Exception as exc:
+                    logger.debug(f"Epoch info fetch failed: {exc}")
             if not info:
                 return True   # no epoch data yet — default safe
 

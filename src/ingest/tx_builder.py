@@ -19,6 +19,7 @@ from solders.compute_budget import set_compute_unit_limit, set_compute_unit_pric
 from solders.message import MessageV0
 from solders.transaction import VersionedTransaction
 from solders.keypair import Keypair
+from solders.signature import Signature
 from spl.token.instructions import (
     get_associated_token_address,
     create_associated_token_account,
@@ -549,9 +550,9 @@ class JupiterTxBuilder:
                 address_lookup_table_accounts=safe_alts,
                 recent_blockhash=_bh,
             )
-            # Fix: use dummy keypair for size estimation — empty [] causes Rust panic in solders
-            _dummy_keypair = Keypair.from_bytes(bytes([0] * 64))
-            draft_tx = VersionedTransaction(draft_msg, [_dummy_keypair])
+            # Fix: use dummy signature for size estimation — empty [] causes Rust panic in solders
+            _dummy_signature = Signature.from_bytes(bytes([0] * 64))
+            draft_tx = VersionedTransaction(draft_msg, [_dummy_signature])
             _size = len(bytes(draft_tx))
             if _size > 1180:
                 logger.warning(
@@ -589,8 +590,8 @@ class JupiterTxBuilder:
                 address_lookup_table_accounts=_mtu_alts,
                 recent_blockhash=_mtu_bh,
             )
-            # Fix: use dummy keypair for MTU size estimation — empty [] causes Rust panic
-            _mtu_dummy = Keypair.from_bytes(bytes([0] * 64))
+            # Fix: use dummy signature for MTU size estimation — empty [] causes Rust panic
+            _mtu_dummy = Signature.from_bytes(bytes([0] * 64))
             _mtu_tx = VersionedTransaction(_mtu_msg, [_mtu_dummy])
             _mtu_size = len(bytes(_mtu_tx))
             if 0 < _mtu_size < 500:

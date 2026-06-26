@@ -9,6 +9,7 @@ import asyncio
 import logging
 import math
 import os
+import aiohttp
 from typing import List, Dict, Optional, Any
 from decimal import Decimal
 from solders.pubkey import Pubkey
@@ -19,6 +20,12 @@ from solders.compute_budget import set_compute_unit_limit, set_compute_unit_pric
 from src.ingest.tx_builder import validate_cb_ordering
 
 COMPUTE_BUDGET_PROG = Pubkey.from_string("ComputeBudget111111111111111111111111111111")
+
+_TOKEN_MINT_MAP = {
+    "SOL": "So11111111111111111111111111111111111111112",
+    "USDC": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "USDT": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+}
 
 logger = logging.getLogger(__name__)
 
@@ -86,22 +93,29 @@ class KHopStitcher:
                 logger.warning(f"Invalid path length: {len(arbitrage_path)}")
                 return None
 
-            # Build DEX swap instructions for each hop
+            # Build Jupiter swap instructions for each hop
             dex_swap_instructions = []
-            for i in range(len(arbitrage_path) - 1):
-                from_token = arbitrage_path[i]
-                to_token = arbitrage_path[i + 1]
-                amount_in = hop_amounts[i] if i < len(hop_amounts) else hop_amounts[-1]
-                dex = dex_protocols[i] if i < len(dex_protocols) else dex_protocols[-1]
+            if tx_builder and hasattr(tx_builder, 'session') and tx_builder.session:
+                for i in range(len(arbitrage_path) - 1):
+                    from_token = arbitrage_path[i]
+                    to_token = arbitrage_path[i + 1]
+                    amount_in = int(
+                        (hop_amounts[i] if i < len(hop_amounts) else hop_amounts[-1]) * 1e9
+                    )
+                    from_mint = _TOKEN_MINT_MAP.get(from_token, from_token)
+                    to_mint = _TOKEN_MINT_MAP.get(to_token, to_token)
 
-                hop_ix = await self._build_hop_instruction(
-                    dex, from_token, to_token, amount_in
-                )
-                if hop_ix:
-                    dex_swap_instructions.append(hop_ix.instruction)
+                    quote = await self._get_jupiter_quote(
+                        tx_builder.session, from_mint, to_mint, amount_in
+                    )
+                    if quote:
+                        ixs, _ = await tx_builder.get_swap_instructions(
+                            quote, str(self.wallet_keypair.pubkey()), use_custom_cu=True
+                        )
+                        dex_swap_instructions.extend(ixs)
 
             if not dex_swap_instructions:
-                logger.warning("No DEX swap instructions built")
+                logger.warning("No DEX swap instructions built via Jupiter")
                 return None
 
             # Use native instruction chaining instead of custom contract
@@ -162,21 +176,10 @@ class KHopStitcher:
             logger.error(f"Native stitching failed: {e}")
             return None
 
-    async def _build_hop_instruction(
-        self, dex: str, from_token: str, to_token: str, amount_in: Decimal
-    ) -> Optional[HopInstruction]:
-        """Build DEX-specific swap instruction.
-
-        Fix 36: All DEX swap builders are stubs returning empty instructions.
-        Real swap assembly happens via JupiterTxBuilder in tx_builder.py.
-        This method is kept as a pass-through to prevent AttributeError.
-        """
-        logger.warning(
-            f"⚠️ k_hop_stitcher: DEX swap builders are stubs. Use tx_builder for real swaps. dex={dex} tokens={from_token}->{to_token}"
-        )
-        return None
-
-    async def _validate_transaction_size(self, instructions: List[Instruction]) -> bool:
+    # Fix 36: All DEX-specific instruction builders removed.
+    # Real swap assembly happens via JupiterTxBuilder in tx_builder.py.
+    # These were empty stubs returning instructions with accounts=[] and data=b"",
+    # which would break any transaction they were included in.
         """Validate that stitched transaction fits Solana limits."""
         try:
             # Rough size estimation

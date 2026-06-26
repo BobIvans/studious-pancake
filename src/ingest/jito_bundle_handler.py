@@ -274,6 +274,32 @@ class JitoBundleHandler:
             "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
         ]
 
+    async def _get_jupiter_quote(
+        self, input_mint: str, output_mint: str, amount: int
+    ) -> Optional[Dict]:
+        url = os.getenv(
+            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
+        )
+        params = {
+            "inputMint": input_mint,
+            "outputMint": output_mint,
+            "amount": str(int(amount)),
+            "slippageBps": "5",
+            "onlyDirectRoutes": "false",
+            "restrictIntermediateTokens": "false",
+        }
+        try:
+            timeout = aiohttp.ClientTimeout(total=5.0)
+            async with self.session.get(
+                url, params=params, timeout=timeout
+            ) as resp:
+                if resp.status != 200:
+                    return None
+                return await resp.json()
+        except Exception as e:
+            logger.debug(f"Jupiter quote failed: {e}")
+            return None
+
     async def execute_backrun_bundle(
         self,
         trigger_signature: str,
@@ -321,6 +347,26 @@ class JitoBundleHandler:
                 f"🎯 Targeting {len(active_endpoints)} active Jito Block Engines for shotgun execution"
             )
 
+            # Build Jupiter swap instructions for the arbitrage path
+            swap_ixs = []
+            if self.tx_builder and self.session:
+                amount_lamports = int(amount_sol * 1e9)
+                leg1_quote = await self._get_jupiter_quote(
+                    self.session, base_mint, quote_mint, amount_lamports
+                )
+                if leg1_quote:
+                    leg1_out = int(leg1_quote.get("outAmount", 0))
+                    if leg1_out > 0:
+                        leg2_quote = await self._get_jupiter_quote(
+                            self.session, quote_mint, base_mint, leg1_out
+                        )
+                        if leg2_quote:
+                            for leg_quote in [leg1_quote, leg2_quote]:
+                                ixs, _ = await self.tx_builder.get_swap_instructions(
+                                    leg_quote, str(self.keypair.pubkey()), use_custom_cu=True
+                                )
+                                swap_ixs.extend(ixs)
+
             # Create arbitrage transaction
             arb_template_key = self.bundle_template.create_arbitrage_template(
                 base_mint, quote_mint, amount_sol
@@ -331,7 +377,7 @@ class JitoBundleHandler:
                 arbitrage_path=[base_mint, quote_mint, base_mint],
                 borrow_amount_lamports=int(amount_sol * 1_000_000_000),
                 expected_min_profit_lamports=int(expected_profit_sol * 1_000_000_000),
-                dex_swap_instructions=[],
+                dex_swap_instructions=swap_ixs,
                 marginfi_config={
                     "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
                     "marginfi_account": "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2",

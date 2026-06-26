@@ -9,8 +9,7 @@ This is a pure mathematical arb: all BTC wrappers should trade at 1:1 peg.
 
 import asyncio
 import logging
-from decimal import Decimal
-from typing import Dict, List, Optional, Any, Tuple
+from typing import Dict, List, Optional, Any
 
 logger = logging.getLogger(__name__)
 

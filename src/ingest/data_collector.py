@@ -1,7 +1,8 @@
-"""AI data collection utilities for arbitrage trade history."""
+"""Data collection utilities for arbitrage trade history."""
 
 import csv
 import asyncio
+import logging
 import time
 from collections import deque
 from dataclasses import asdict, dataclass, field
@@ -35,7 +36,7 @@ class ArbitrageTradeRecord:
         return data
 
 
-class AIDataCollector:
+class DataCollector:
     """Collects arbitrage trade records into SQLite or CSV storage."""
 
     CSV_FIELDS = [
@@ -59,17 +60,47 @@ class AIDataCollector:
     def __init__(
         self,
         use_sqlite: bool = False,
-        db_path: str = "ai_training_data.db",
-        csv_path: str = "ai_training_data.csv",
+        db_path: str = "bot_history.db",
+        csv_path: str = "trade_history.csv",
     ):
         self.use_sqlite = use_sqlite
         self.db_path = db_path
         self.csv_path = csv_path
         self._records: deque = deque(maxlen=10000)
         self._sqlite_initialized = False
+        self._sqlite_queue: Optional[asyncio.Queue] = None
+        self._sqlite_writer_task: Optional[asyncio.Task] = None
+
+    async def start(self) -> None:
+        if self.use_sqlite and self._sqlite_writer_task is None:
+            self._sqlite_queue = asyncio.Queue(maxsize=10000)
+            self._sqlite_writer_task = asyncio.create_task(self._sqlite_writer())
+            await self._ensure_sqlite()
+
+    async def stop(self) -> None:
+        if self._sqlite_writer_task:
+            await self._sqlite_queue.join()
+            self._sqlite_writer_task.cancel()
+            try:
+                await self._sqlite_writer_task
+            except asyncio.CancelledError:
+                pass
+            self._sqlite_writer_task = None
+            self._sqlite_queue = None
+
+    async def _sqlite_writer(self) -> None:
+        assert self._sqlite_queue is not None
+        while True:
+            trade = await self._sqlite_queue.get()
+            try:
+                await self._insert_sqlite(trade)
+            except Exception as exc:
+                logger = logging.getLogger("DataCollector")
+                logger.warning(f"SQLite write failed: {exc}")
+            finally:
+                self._sqlite_queue.task_done()
 
     async def _ensure_sqlite(self) -> None:
-        """Lazy async SQLite initialization — does not block event loop on startup."""
         if self._sqlite_initialized:
             return
         async with aiosqlite.connect(self.db_path, timeout=30) as conn:
@@ -102,8 +133,11 @@ class AIDataCollector:
         self._records.append(trade)
 
         if self.use_sqlite:
-            await self._ensure_sqlite()
-            await self._insert_sqlite(trade)
+            if self._sqlite_queue is not None:
+                await self._sqlite_queue.put(trade)
+            else:
+                await self._ensure_sqlite()
+                await self._insert_sqlite(trade)
         else:
             self._append_csv(trade)
 
@@ -245,7 +279,7 @@ class AIDataCollector:
             cutoff = time.time() - days * 86400
             trades = [trade for trade in trades if float(trade.get("timestamp", 0.0)) >= cutoff]
 
-        export_path = Path(f"ai_training_export_{int(time.time())}.csv")
+        export_path = Path(f"trade_export_{int(time.time())}.csv")
         with export_path.open("w", newline="") as file:
             writer = csv.DictWriter(file, fieldnames=self.CSV_FIELDS)
             writer.writeheader()

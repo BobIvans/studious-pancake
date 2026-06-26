@@ -197,7 +197,7 @@ from src.ingest.arbitrage_scorer import (
 
 # AI data collection classes - TODO: Implement when needed
 from src.ingest.data_aggregator import DataAggregator
-from src.ingest.ai_data_collector import AIDataCollector
+from src.ingest.data_collector import DataCollector
 from src.ingest.helius_webhook_handler import HeliusWebhookHandler
 from src.ingest.optimal_trade_sizer import (
     OptimalTradeSizer,
@@ -209,7 +209,6 @@ from src.ingest.helius_sender import HeliusSender, TransactionSender
 from src.ingest.graph_math import ArbitrageGraph, ArbitrageCycle
 from src.ingest.pool_state_manager import PoolStateManager
 from src.ingest.event_triggers import EventTriggerEngine, VolatilityWatcher
-from src.ingest.flash_pivot import FlashPivotEngine
 from src.ingest.liquidator_engine import LiquidationEngine
 from src.ingest.cex_dex_oracle import CexDexOracle
 from src.ingest.dust_sweeper import DustSweeper
@@ -381,7 +380,7 @@ ATA_CACHE = shared_state.ATA_CACHE
 # AI-powered trading components (moved to main() function)
 # arbitrage_scorer = ArbitrageScorer(session=session, rpc_url=rpc.get_rpc())
 # priority_queue = PriorityArbitrageQueue(max_size=50)
-ai_data_collector = AIDataCollector(db_path="bot_history.db")
+data_collector = DataCollector(db_path="bot_history.db")
 
 # Multi-RPC racing configuration
 MULTI_RPC_ENABLED = str(os.getenv("MULTI_RPC_ENABLED", "false")).lower() == "true"
@@ -3095,7 +3094,7 @@ async def lst_depeg_scanner(
                 )
                 borrow_lamports = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
 
-            if borrow_lamports < 1_000_000:  # Если в MarginFi меньше 0.001 SOL, ждем
+            if borrow_lamports <= 0:  # Микро-баланс: пропускаем только если borrow == 0
                 logger.warning(
                     "📉 MarginFi SOL Bank is nearly empty. Waiting for liquidity..."
                 )
@@ -3145,7 +3144,7 @@ async def lst_depeg_scanner(
                 )
 
                 # ── Step 3: Find best route ───────────────────────────────
-                if borrow_lamports < 1_000_000_000:
+                if borrow_lamports <= 0:  # Микро-баланс: убран жёсткий порог 1 SOL
                     logger.warning("MarginFi SOL bank is dry. Waiting...")
                     await asyncio.sleep(5)
                     continue
@@ -4127,12 +4126,11 @@ async def execute_priority_opportunity(
     rpc_manager,
     keypair,
     jito_executor,
-    ai_collector,
+    data_collector,
     flywheel_scaler,
     data_aggregator,
     alt_manager=None,
     execution_router=None,
-    flash_pivot_engine=None,
     blockhash_mgr=None,
 ):
     """Execute a high-priority arbitrage opportunity."""
@@ -4503,10 +4501,10 @@ async def execute_priority_opportunity(
                 except Exception as e:
                     logger.warning(f"Failed to log simulated opportunity: {e}")
 
-            # AI Data Collection: record simulated trade for ML training
-            if ai_data_collector:
+            # Data Collection: record simulated trade for post-factum analysis
+            if data_collector:
                 try:
-                    await ai_data_collector.record_trade(
+                    await data_collector.record_trade(
                         {
                             "pair": opportunity.pair,
                             "expected_profit_sol": simulated_profit,
@@ -4515,11 +4513,14 @@ async def execute_priority_opportunity(
                             "execution_time_ms": 0.0,
                             "result": "simulated",
                             "initial_score": getattr(opportunity, "score", 0),
-                            "network_congestion": 50.0,
+                            "network_congestion": opportunity.network_congestion,
+                            "liquidity_depth_usd": opportunity.liquidity_depth_usd,
+                            "slippage_realized": opportunity.slippage_pct,
+                            "route": opportunity.metadata.get("route") if opportunity.metadata else None,
                         }
                     )
                 except Exception as e:
-                    logger.warning(f"AI data recording failed: {e}")
+                    logger.warning(f"Data recording failed: {e}")
             return
 
         # Логируем попытку для ИИ

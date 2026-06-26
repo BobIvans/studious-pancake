@@ -1,0 +1,7 @@
+timestamp,datetime,pair,initial_score,expected_profit_sol,actual_profit_sol,jito_tip_sol,execution_time_ms,result,competitor_tip_sol,network_congestion,liquidity_depth_usd,slippage_realized,route,signature
+1782481839.037305,2026-06-26T16:50:39.037305,SOL/USDC,85.5,0.01,0.008,0.005,45,success,0.004,40.0,150000,,,
+1782483639.0373309,2026-06-26T17:20:39.037331,SOL/jitoSOL,65.2,0.005,0.0,0.003,89,failed_slippage,,,,0.03,,
+1782484839.0373418,2026-06-26T17:40:39.037342,USDC/SOL,92.1,0.015,0.013,0.007,52,success,,25.0,180000,,,
+1782481917.3260539,2026-06-26T16:51:57.326054,SOL/USDC,85.5,0.01,0.008,0.005,45,success,0.004,40.0,150000,,,
+1782483717.326071,2026-06-26T17:21:57.326071,SOL/jitoSOL,65.2,0.005,0.0,0.003,89,failed_slippage,,,,0.03,,
+1782484917.326077,2026-06-26T17:41:57.326077,USDC/SOL,92.1,0.015,0.013,0.007,52,success,,25.0,180000,,,

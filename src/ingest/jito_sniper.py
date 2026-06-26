@@ -57,9 +57,16 @@ class JitoTipManager:
     DEFAULT_TIP_ACCOUNTS = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
 
     JITO_TIP_STREAM_URL = "ws://bundles.jito.wtf/api/v1/bundles/tip_stream"
-    JITO_TIP_ACCOUNTS_URL = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
+    JITO_TIP_ACCOUNTS_URL = (
+        "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
+    )
 
-    def __init__(self, percentile: float = 75.0, min_tip_lamports: int = 10000, tip_multiplier: float = 1.1):
+    def __init__(
+        self,
+        percentile: float = 75.0,
+        min_tip_lamports: int = 10000,
+        tip_multiplier: float = 1.1,
+    ):
         self.percentile = percentile
         self.min_tip_lamports = min_tip_lamports
         self.tip_multiplier = tip_multiplier
@@ -92,11 +99,13 @@ class JitoTipManager:
                         data = await resp.json()
                         self.tip_accounts = data if isinstance(data, list) else []
                         if self.tip_accounts:
-                            logger.info(f"✅ Dynamically fetched {len(self.tip_accounts)} Jito tip accounts")
+                            logger.info(
+                                f"✅ Dynamically fetched {len(self.tip_accounts)} Jito tip accounts"
+                            )
                             return
         except Exception as e:
             logger.warning(f"Failed to fetch Jito tip accounts: {e}")
-        
+
         # Absolute fallback if API is down
         self.tip_accounts = ["96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"]
 
@@ -121,7 +130,9 @@ class JitoTipManager:
             try:
                 if self.websocket and self.last_msg_time > 0:
                     if time.time() - self.last_msg_time > 5.0:
-                        logger.warning("🚨 Jito stream watchdog: No messages for 5s! Force reconnecting...")
+                        logger.warning(
+                            "🚨 Jito stream watchdog: No messages for 5s! Force reconnecting..."
+                        )
                         await self.websocket.close()
                 await asyncio.sleep(1.0)
             except Exception as e:
@@ -145,7 +156,9 @@ class JitoTipManager:
                     if self.ema_75th is None:
                         self.ema_75th = p75
                     else:
-                        self.ema_75th = self.ema_alpha * p75 + (1 - self.ema_alpha) * self.ema_75th
+                        self.ema_75th = (
+                            self.ema_alpha * p75 + (1 - self.ema_alpha) * self.ema_75th
+                        )
 
                     logger.debug(
                         f"📊 Updated percentiles: {self.current_percentiles}, EMA 75th: {self.ema_75th:.0f} lamports"
@@ -169,10 +182,15 @@ class JitoTipManager:
         except Exception as e:
             logger.error(f"Error parsing tip data: {e}")
 
-    def get_optimal_tip(self, is_jito_leader: bool = False, competition_low: bool = True, max_tip_lamports: int = 500000) -> int:
+    def get_optimal_tip(
+        self,
+        is_jito_leader: bool = False,
+        competition_low: bool = True,
+        max_tip_lamports: int = 500000,
+    ) -> int:
         """
         Get optimal tip amount with Game Theory optimizations.
-        
+
         Logic:
         - If Jito is leader and competition is low -> Min Tip (10k)
         - If competition is high -> Check if optimal tip exceeds MAX_TIP_SOL
@@ -181,6 +199,7 @@ class JitoTipManager:
         # ── ИСПРАВЛЕНИЕ: Интеграция с живым JitoBiddingManager через shared_state ──
         try:
             import src.ingest.shared_state as shared_state
+
             if shared_state.jito_bidding_manager:
                 floor = shared_state.jito_bidding_manager.get_50th_percentile_lamports()
                 optimal_tip = int(floor * self.tip_multiplier)
@@ -201,11 +220,13 @@ class JitoTipManager:
 
         try:
             optimal_tip = int(self.ema_75th * self.tip_multiplier)
-            
+
             # Competition Skip Logic
             if not competition_low and optimal_tip > max_tip_lamports:
-                logger.warning(f"🚫 Competition too high: Optimal tip {optimal_tip} > Max tip {max_tip_lamports}. Skipping.")
-                return -1 # Signal to skip
+                logger.warning(
+                    f"🚫 Competition too high: Optimal tip {optimal_tip} > Max tip {max_tip_lamports}. Skipping."
+                )
+                return -1  # Signal to skip
 
             optimal_tip = max(optimal_tip, self.min_tip_lamports)
             optimal_tip = min(optimal_tip, max_tip_lamports)
@@ -227,12 +248,12 @@ class JitoTipManager:
         current_native_sol_balance: Optional[float] = None,
     ) -> int:
         """Calculate dynamic Jito tip based on profit and strategy.
-        
+
         Args:
             expected_profit_sol: Expected profit in SOL
             strategy: Strategy name (affects base tip)
             current_native_sol_balance: Current SOL balance for tip cap
-            
+
         Returns:
             Tip amount in lamports
         """
@@ -241,15 +262,16 @@ class JitoTipManager:
             "default": 10000,
         }
         base_tip = base_tips.get(strategy, base_tips["default"])
-        
+
         # Calculate tip as 30% of expected profit, capped at max
         calculated_tip = int(expected_profit_sol * 0.30 * 1_000_000_000)
         tip_amount = max(base_tip, min(calculated_tip, 150000))
-        
+
         # Cap tip to 5% of balance if provided
         if current_native_sol_balance is not None:
             if current_native_sol_balance < 0.1:
                 import os
+
                 min_reserve = float(os.getenv("MIN_RESERVE_SOL", "0.010"))
                 available_space = max(0.0, current_native_sol_balance - min_reserve)
                 balance_tip_cap = int(available_space * 1_000_000_000)
@@ -257,7 +279,7 @@ class JitoTipManager:
                 balance_tip_cap = int(current_native_sol_balance * 0.05 * 1_000_000_000)
             balance_tip_cap = max(balance_tip_cap, 10000)
             tip_amount = min(tip_amount, balance_tip_cap)
-        
+
         return tip_amount
 
     def get_50th_percentile_lamports(self) -> int:
@@ -269,22 +291,33 @@ class JitoTipManager:
         try:
             connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
             async with aiohttp.ClientSession(connector=connector) as session:
-                async with session.get(self.JITO_TIP_ACCOUNTS_URL, timeout=5.0, ssl=False) as resp:
+                async with session.get(
+                    self.JITO_TIP_ACCOUNTS_URL, timeout=5.0, ssl=False
+                ) as resp:
                     if resp.status == 200:
                         accounts = await resp.json()
                         parsed_accounts = self._parse_tip_accounts(accounts)
                         if parsed_accounts:
                             self.tip_accounts = parsed_accounts
-                            logger.info(f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active accounts")
+                            logger.info(
+                                f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active accounts"
+                            )
                             return True
         except Exception as e:
-            logger.warning(f"Failed to fetch dynamic Jito tip accounts: {e}. Using defaults.")
-            
+            logger.warning(
+                f"Failed to fetch dynamic Jito tip accounts: {e}. Using defaults."
+            )
+
         return False
 
     def _parse_tip_accounts(self, accounts: Any) -> List[str]:
         if isinstance(accounts, dict):
-            accounts = accounts.get("value") or accounts.get("accounts") or accounts.get("tip_accounts") or []
+            accounts = (
+                accounts.get("value")
+                or accounts.get("accounts")
+                or accounts.get("tip_accounts")
+                or []
+            )
         if not isinstance(accounts, list):
             return []
         parsed_accounts: List[str] = []
@@ -296,13 +329,17 @@ class JitoTipManager:
 
     def _fetch_tip_accounts_sync(self, timeout: float = 1.5) -> bool:
         try:
-            with urllib.request.urlopen(self.JITO_TIP_ACCOUNTS_URL, timeout=timeout) as resp:
+            with urllib.request.urlopen(
+                self.JITO_TIP_ACCOUNTS_URL, timeout=timeout
+            ) as resp:
                 if resp.status == 200:
                     accounts = orjson.loads(resp.read().decode("utf-8"))
                     parsed_accounts = self._parse_tip_accounts(accounts)
                     if parsed_accounts:
                         self.tip_accounts = parsed_accounts
-                        logger.info(f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active accounts")
+                        logger.info(
+                            f"🔄 Jito tip accounts updated: {len(self.tip_accounts)} active accounts"
+                        )
                         return True
         except Exception as e:
             logger.debug(f"Synchronous Jito tip account fetch failed: {e}")
@@ -330,7 +367,9 @@ class JitoTipManager:
                 logger.warning("Using JITO_TIP_ACCOUNTS fallback tip accounts")
                 return random.choice(self.tip_accounts)
 
-            logger.warning("Jito tip accounts unavailable; using emergency fallback tip account")
+            logger.warning(
+                "Jito tip accounts unavailable; using emergency fallback tip account"
+            )
             self.tip_accounts = list(self.DEFAULT_TIP_ACCOUNTS)
 
         return random.choice(self.tip_accounts)
@@ -344,9 +383,9 @@ class WssPoolCreationListener:
         "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8": "raydium_amm_v4",
         "6EF8rrecthR5Dkzon8NQtmB3MtyyRSKCMWNgBtygzRh": "raydium_clmm",
         "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C": "raydium_cpmm_v4",  # New Raydium CPMM
-        "LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3": "meteora_dlmm",      # Blue Ocean - Meteora DLMM
-        "MoonCVVNZFSYkqNXP6bxHL13nk21VGGf25sUnyP6HjU": "moonshot",           # Blue Ocean - Moonshot
-        "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg": "pump_migration",     # Pump.fun Migration
+        "LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3": "meteora_dlmm",  # Blue Ocean - Meteora DLMM
+        "MoonCVVNZFSYkqNXP6bxHL13nk21VGGf25sUnyP6HjU": "moonshot",  # Blue Ocean - Moonshot
+        "39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg": "pump_migration",  # Pump.fun Migration
         # Add more Blue Ocean programs as they emerge
     }
 
@@ -358,8 +397,11 @@ class WssPoolCreationListener:
         session: Optional[aiohttp.ClientSession] = None,
     ):
         import os
+
         self.rpc_ws_url = rpc_ws_url or os.getenv("RPC_WS_URL", "")
-        self.rpc_http_url = rpc_http_url or os.getenv("RPC_URL", "") or os.getenv("RPC_URL_1", "")
+        self.rpc_http_url = (
+            rpc_http_url or os.getenv("RPC_URL", "") or os.getenv("RPC_URL_1", "")
+        )
         self.event_callback = event_callback
         self.session = session
         self._session_owned = session is None  # Will be created in __aenter__
@@ -371,7 +413,7 @@ class WssPoolCreationListener:
         # Phase 40: WebSocket Watchdog
         self.last_msg_time = 0.0
         self.watchdog_task = None
-        
+
         # Target DEX programs to listen to for pool creation
 
     async def __aenter__(self):
@@ -412,7 +454,7 @@ class WssPoolCreationListener:
             # Phase 25: Clear subscription tracking to prevent memory leaks on reconnect
             self.subscriptions.clear()
             self.subscription_counter = 1
-            
+
             try:
                 logger.info(f"🔌 Connecting to {self.rpc_ws_url}...")
                 session = await self._get_session()
@@ -455,7 +497,9 @@ class WssPoolCreationListener:
             try:
                 if self.websocket and self.last_msg_time > 0:
                     if time.time() - self.last_msg_time > 5.0:
-                        logger.warning("🚨 RPC WebSocket watchdog: No messages for 5s! Force reconnecting...")
+                        logger.warning(
+                            "🚨 RPC WebSocket watchdog: No messages for 5s! Force reconnecting..."
+                        )
                         await self.websocket.close()
                 await asyncio.sleep(1.0)
             except Exception as e:
@@ -467,12 +511,7 @@ class WssPoolCreationListener:
         if not self.websocket:
             return
         try:
-            msg = {
-                "jsonrpc": "2.0",
-                "id": 999,
-                "method": "slotSubscribe",
-                "params": []
-            }
+            msg = {"jsonrpc": "2.0", "id": 999, "method": "slotSubscribe", "params": []}
             await self.websocket.send_str(orjson.dumps(msg).decode())
             logger.info("📡 Subscribed to slots for heartbeat watchdog")
         except Exception as e:
@@ -503,9 +542,16 @@ class WssPoolCreationListener:
                     "commitment": "processed",
                     "filters": [
                         # Phase 21: Raydium AMM v4 pool state is 752 bytes, standard SPL is 165
-                        {"dataSize": 752 if program_id == "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8" else 165},
-                    ]
-                }
+                        {
+                            "dataSize": (
+                                752
+                                if program_id
+                                == "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+                                else 165
+                            )
+                        },
+                    ],
+                },
             ],
         }
 
@@ -726,7 +772,9 @@ class WssPoolCreationListener:
                     # Placeholder addresses - in production would parse from instruction data
                     # This requires decoding the actual transaction instructions
                     pool_address = "Sysvar1nstructions1111111111111111111111111"
-                    base_mint = "So11111111111111111111111111111111111111112"  # Corrected SOL
+                    base_mint = (
+                        "So11111111111111111111111111111111111111112"  # Corrected SOL
+                    )
                     quote_mint = "Sysvar1nstructions1111111111111111111111111"
 
                     return PoolCreationEvent(
@@ -790,9 +838,11 @@ class JitoBundleSender:
         """
         # PAPER TRADING SAFETY: never send real bundles in simulation mode
         import os
+
         if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
             logger.info("📄 Paper Trading: bypassing Jito bundle send")
             import time
+
             return {
                 "success": True,
                 "bundle_id": f"paper_{int(time.time())}",
@@ -803,7 +853,8 @@ class JitoBundleSender:
 
         # Convert transaction to bundle format (Jito requires base58)
         import base58
-        tx_base58 = base58.b58encode(bytes(transaction)).decode('ascii')
+
+        tx_base58 = base58.b58encode(bytes(transaction)).decode("ascii")
         bundle_data = [[tx_base58]]
 
         # Send to the single configured endpoint (geo-single mode to prevent blockhash drift)
@@ -845,9 +896,7 @@ class JitoBundleSender:
         }
 
         if success_count > 0:
-            logger.info(
-                f"✅ Bundle delivered: {success_count}/1 endpoint"
-            )
+            logger.info(f"✅ Bundle delivered: {success_count}/1 endpoint")
         else:
             logger.error(f"❌ Bundle send failed on the sole endpoint: {errors}")
 
@@ -941,26 +990,38 @@ class TransactionTipBuilder:
                 )
             )
 
+            all_instructions = [tip_ix]
+
             # Placeholder: In production, add swap instruction here
             # swap_ix = create_raydium_swap_instruction(...)
 
             # ── SAFETY GUARD: prevent sending tip-only txs (no swap = pure loss) ──
             # Only allow send if there are non-tip instructions (real swap instructions)
-            non_tip_ixs = [ix for ix in all_instructions if str(ix.program_id) != "11111111111111111111111111111111"]
+            SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
+            non_tip_ixs = [
+                ix for ix in all_instructions if str(ix.program_id) != SYSTEM_PROGRAM_ID
+            ]
             if not non_tip_ixs:
-                logger.warning("⚠️ No swap instructions in sniping tx — only Jito tip. Blocking send.")
-                logger.warning("🚫 Sniper would lose 0.01 SOL in tips with no swap. Aborting.")
+                logger.warning(
+                    "⚠️ No swap instructions in sniping tx — only Jito tip. Blocking send."
+                )
+                logger.warning(
+                    "🚫 Sniper would lose 0.01 SOL in tips with no swap. Aborting."
+                )
                 return None
 
             # Phase 30: Inject fresh blockhash from racing manager at the last second
             if recent_blockhash is None:
                 from src.ingest.blockhash_racing import get_blockhash_manager
+
                 bh_mgr = get_blockhash_manager()
                 if bh_mgr:
                     recent_blockhash = await bh_mgr.get_fresh_blockhash()
-                
+
                 if recent_blockhash is None:
-                    logger.error("❌ Failed to get fresh blockhash for sniping transaction")
+                    logger.error(
+                        "❌ Failed to get fresh blockhash for sniping transaction"
+                    )
                     return None
 
             # Build message

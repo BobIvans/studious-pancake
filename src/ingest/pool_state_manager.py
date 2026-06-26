@@ -186,8 +186,8 @@ class PoolStateManager:
                         data        = await resp.json()
                         accounts    = data.get("result", {}).get("value", [])
                         for i, acct_data in enumerate(accounts):
-                            if acct_data and i < len(self.pool_addresses):
-                                addr     = self.pool_addresses[i]
+                            if acct_data and i < len(target_pools):
+                                addr     = target_pools[i]
                                 reserve  = await self._decode_pool_reserves(addr, acct_data)
                                 if reserve:
                                     self.pool_states[addr] = reserve

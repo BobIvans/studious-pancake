@@ -11,6 +11,7 @@ from .jupiter_api_client import JupiterClient
 
 logger = logging.getLogger("GasManager")
 
+
 class StateManager:
     @staticmethod
     async def get_balance(session, rpc_manager, pubkey):
@@ -57,6 +58,7 @@ class StateManager:
         logger.error("Все 3 попытки RPC провалились, возвращаем None")
         return None
 
+
 async def check_and_refill_gas(session, rpc, keypair):
     """
     🔴 THREAT #1 FIX: Auto-swap USDC → Native SOL when gas runs low.
@@ -64,6 +66,7 @@ async def check_and_refill_gas(session, rpc, keypair):
     Uses dynamic deficit calculation instead of hardcoded 2 USDC.
     """
     import os
+
     if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
         return
     try:
@@ -89,20 +92,19 @@ async def check_and_refill_gas(session, rpc, keypair):
             "params": [str(usdc_ata)],
         }
         async with session.post(
-            rpc.get_rpc(), json=usdc_payload, headers={"Content-Type": "application/json"}
+            rpc.get_rpc(),
+            json=usdc_payload,
+            headers={"Content-Type": "application/json"},
         ) as usdc_resp:
             usdc_data = await usdc_resp.json()
-            if (
-                "result" in usdc_data
-                and "value" in usdc_data["result"]
-            ):
-                usdc_amount = int(
-                    usdc_data["result"]["value"]["amount"]
-                )
+            if "result" in usdc_data and "value" in usdc_data["result"]:
+                usdc_amount = int(usdc_data["result"]["value"]["amount"])
 
                 # Calculate dynamic deficit instead of hardcoded 2 USDC
                 deficit_sol = target_balance - native_bal
-                deficit_usdc_lamports = int(deficit_sol * 150 * 1_000_000)  # ~$150 SOL → USDC
+                deficit_usdc_lamports = int(
+                    deficit_sol * 150 * 1_000_000
+                )  # ~$150 SOL → USDC
                 # Cap at available USDC balance, minimum 0.5 USDC
                 swap_amount = max(min(deficit_usdc_lamports, usdc_amount), 500_000)
 
@@ -119,7 +121,7 @@ async def check_and_refill_gas(session, rpc, keypair):
                                 output_mint="So11111111111111111111111111111111111111112",
                                 amount=swap_amount,
                                 slippage_bps=50,  # Increased slippage for reliability
-                                wallet_balance_sol=native_bal
+                                wallet_balance_sol=native_bal,
                             )
                             if "error" in quote:
                                 logger.error(
@@ -140,11 +142,7 @@ async def check_and_refill_gas(session, rpc, keypair):
                                 return
 
                             # Step 3: Decode the versioned transaction
-                            signed_tx = (
-                                JupiterClient.decode_swap_transaction(
-                                    swap_tx
-                                )
-                            )
+                            signed_tx = JupiterClient.decode_swap_transaction(swap_tx)
                             if signed_tx is None:
                                 logger.error(
                                     "❌ Failed to decode Jupiter swap transaction"
@@ -158,9 +156,9 @@ async def check_and_refill_gas(session, rpc, keypair):
                             )
 
                             # Step 5: Broadcast via direct RPC
-                            tx_b64_swap = base64.b64encode(
-                                bytes(signed_tx)
-                            ).decode("ascii")
+                            tx_b64_swap = base64.b64encode(bytes(signed_tx)).decode(
+                                "ascii"
+                            )
                             send_response = await session.post(
                                 rpc.get_rpc(),
                                 json={
@@ -177,9 +175,7 @@ async def check_and_refill_gas(session, rpc, keypair):
                                 },
                             )
                             if send_response.status == 200:
-                                swap_result = (
-                                    await send_response.json()
-                                )
+                                swap_result = await send_response.json()
                                 logger.info(
                                     f"✅ GAS REFILL: USDC→SOL swap relayed: "
                                     f"{swap_result}"
@@ -191,8 +187,6 @@ async def check_and_refill_gas(session, rpc, keypair):
                                     f"{await send_response.text()}"
                                 )
                     except Exception as jup_err:
-                        logger.error(
-                            f"❌ USDC→SOL swap failed: {jup_err}"
-                        )
+                        logger.error(f"❌ USDC→SOL swap failed: {jup_err}")
     except Exception as e:
         logger.debug(f"Gas refill error: {e}")

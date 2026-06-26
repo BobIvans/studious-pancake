@@ -442,7 +442,6 @@ class ExecutionRouter:
                 )
                 result = {"status": "success" if success else "error"}
 
-                # Reputation Circuit Breaker: track slippage failures per pair
                 pair_key = self._pair_key("LST", opportunity.get("lst_mint", ""))
                 if result.get("status") == "error":
                     self.record_pair_slippage(pair_key)
@@ -450,6 +449,26 @@ class ExecutionRouter:
                     self.reset_pair_reputation(pair_key)
 
                 return result
+            elif strategy == "wrapper_peg":
+                # Wrapper Peg Arbitrage (USDC -> Cheap BTC -> Expensive BTC -> USDC)
+                from .wrapper_arb import WrapperArbEnforcer, WrapperPegOpportunity
+
+                tx_builder = JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter)
+
+                if not self.optimal_trade_sizer or not self.rpc_url:
+                    return {"status": "error", "message": "Missing required dependencies for wrapper_peg"}
+
+                amount_lamports = int(opportunity.get("amount_lamports", 0))
+                if amount_lamports <= 0:
+                    return {"status": "error", "message": "Invalid amount_lamports"}
+
+                await self._execute_wrapper_peg_arbitrage(
+                    session=self.session,
+                    tx_builder=tx_builder,
+                    opportunity=opportunity,
+                    rpc_url=self.rpc_url,
+                )
+                return {"status": "success", "strategy": "wrapper_peg"}
             else:
                 logger.warning(f"Unknown strategy: {strategy}")
                 return {"status": "error", "message": f"Unknown strategy: {strategy}"}
@@ -809,7 +828,7 @@ class ExecutionRouter:
                         # wallet account. Kill process immediately to prevent that.
                         try:
                             from src.ingest.pre_trade_guard import PreTradeGuard
-                            PreTradeGuard.enforce_hard_floor(balance_sol)
+                            PreTradeGuard.enforce_hard_floor(balance_sol, keypair=self.keypair, rpc_url=self.rpc_url, session=self.session)
                         except Exception:
                             pass
                         # ──────────────────────────────────────────────────────────────
@@ -821,7 +840,7 @@ class ExecutionRouter:
                             # ── Task 3: Event-Driven Gas Refill ───────────────────
                             # Hook into arb_bot's check_and_refill_gas for immediate replenishment
                             try:
-                                from .gas_manager import check_and_refill_gas
+                                from .gas_refiller import check_and_refill_gas
                                 asyncio.create_task(check_and_refill_gas(self.session, shared_state.rpc, self.keypair))
                             except Exception as refill_err:
                                 logger.debug(f"Event-driven refill trigger failed: {refill_err}")

@@ -18,15 +18,19 @@ TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
     "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m"
 )
 
+
 def get_vault_threshold(decimals: int = 6) -> int:
     """Calculate vault liquidity threshold for a given token decimals.
-    
+
     Threshold = 100 * (10 ** decimals) — equivalent to ~$100 worth at $1/token.
     For 6-decimals (USDC): threshold = 100 * 10^6 = 100_000_000 ($100)
     For 5-decimals (BONK): threshold = 100 * 10^5 = 10_000_000 (~$1.80 at BONK prices)
     For 9-decimals (SOL): threshold = 100 * 10^9 = 100_000_000_000 (100 SOL — too high; SOL paths bypass this check via OptimalTradeSizer)
     """
     return 100 * (10 ** max(decimals, 0))
+
+
+RENT_EXEMPT_LAMPORT = 2_039_280
 
 # Whitelist of safe tokens (stablecoins and LSTs)
 SAFE_MINTS = {
@@ -69,12 +73,16 @@ class TokenSecurityChecker:
             try:
                 _session = aiohttp.ClientSession()
                 _session_owned = True
-                logger.debug("Fix 73: Created ad-hoc aiohttp session for check_token_security")
+                logger.debug(
+                    "Fix 73: Created ad-hoc aiohttp session for check_token_security"
+                )
             except Exception as e:
                 return False, f"No HTTP session available: {e}"
 
-# Phase 20: Whitelist bypass
-        mint_str = str(mint_address) if isinstance(mint_address, Pubkey) else str(mint_address)
+        # Phase 20: Whitelist bypass
+        mint_str = (
+            str(mint_address) if isinstance(mint_address, Pubkey) else str(mint_address)
+        )
         if mint_str in SAFE_MINTS:
             logger.debug(
                 f"🛡️ Token {mint_address} is in SAFE_MINTS whitelist. Bypassing security checks."
@@ -702,6 +710,7 @@ class PreTradeGuard:
     def get_min_reserve_sol() -> float:
         """Get minimum reserve SOL from environment or default."""
         import os
+
         return float(os.getenv("MIN_RESERVE_SOL", "0.010"))
 
     # ─── Hard Floor Guard (Rent-Exemption Killswitch) ───────────────────────────
@@ -710,19 +719,24 @@ class PreTradeGuard:
     # 2. DustSweeper runs to close ATAs and recover rent
     # At 0.002 SOL the Solana network garbage-collector will DELETE the wallet account.
     # We raise the floor to 0.004 SOL to buy time for emergency rent recovery.
-    HARD_FLOOR_SOL = 0.004
+    HARD_FLOOR_SOL = 0.005
 
     @staticmethod
-    def enforce_hard_floor(native_sol_balance: float) -> None:
+    def enforce_hard_floor(
+        native_sol_balance: float, keypair=None, rpc_url=None, session=None
+    ) -> None:
         """
         💀 Hard Floor Guard — absolute rent-exemption killswitch.
 
-        If native_sol_balance < 0.004 SOL, trigger graceful shutdown via
+        If native_sol_balance < 0.005 SOL, trigger graceful shutdown via
         GLOBAL_STOP_EVENT so DustSweeper can close ATAs and recover rent
         before the process dies. At 0.002 SOL the wallet gets garbage-collected.
 
         Args:
             native_sol_balance: Current wallet balance in SOL.
+            keypair: Wallet keypair for emergency dust sweep.
+            rpc_url: RPC URL for emergency dust sweep.
+            session: aiohttp session for emergency dust sweep.
         """
         if native_sol_balance < PreTradeGuard.HARD_FLOOR_SOL:
             logger.critical(
@@ -731,17 +745,18 @@ class PreTradeGuard:
             )
             try:
                 import src.ingest.shared_state as _ss
+
                 _ss.GLOBAL_STOP_EVENT.set()
             except Exception:
                 pass
-            # Still call os._exit(1) as last resort after 500ms grace for DustSweeper
-            async def _emergency_exit():
-                await asyncio.sleep(0.5)
-                os._exit(1)
-            try:
-                asyncio.create_task(_emergency_exit())
-            except Exception:
-                os._exit(1)
+            if keypair and rpc_url and session:
+                try:
+                    from src.ingest.dust_sweeper import DustSweeper
+
+                    sweeper = DustSweeper(keypair, rpc_url, session)
+                    asyncio.create_task(sweeper.sweep_on_shutdown())
+                except Exception as sweep_err:
+                    logger.warning(f"Emergency dust sweep failed: {sweep_err}")
 
     # ─── Main Wallet Rent-Exemption Killswitch ──────────────────────────────────
     # Urgent RPC-balance check: call this after every successful Jito bundle
@@ -775,7 +790,9 @@ class PreTradeGuard:
               Second element: available_sol = balance - gas_reserve.
         """
         if native_sol_balance is None:
-            logger.warning("🚫 check_gas_tank: native_sol_balance is None — fail-closed, blocking trade")
+            logger.warning(
+                "🚫 check_gas_tank: native_sol_balance is None — fail-closed, blocking trade"
+            )
             return False, 0.0  # Нет данных — fail-closed
 
         min_reserve = PreTradeGuard.get_min_reserve_sol()
@@ -803,7 +820,9 @@ class PreTradeGuard:
         jito_tip_lamports: int,
         base_fee_lamports: int,
         expected_profit_lamports: int,
-        quote_url: str = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
+        quote_url: str = os.getenv(
+            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
+        ),
         slippage_bps: int = 30,
         is_circular: bool = False,
         priority_fee_lamports: int = 0,
@@ -862,7 +881,9 @@ class PreTradeGuard:
         params = {
             "inputMint": input_mint,
             "outputMint": output_mint,
-            "amount": str(int(amount_lamports)),  # Task 16: strict int→string to avoid HTTP 400
+            "amount": str(
+                int(amount_lamports)
+            ),  # Task 16: strict int→string to avoid HTTP 400
             "slippageBps": str(slippage_bps),
             "maxAccounts": "28",
             "onlyDirectRoutes": "false",  # Fix B: allow multi-hop routes for triangular arbitrage
@@ -873,15 +894,24 @@ class PreTradeGuard:
             now = time.time()
             # ИСПРАВЛЕНИЕ: Используем глобальный Jupiter лимитер для избежания HTTP 429
             from src.ingest.jupiter_api_client import get_jupiter_limiter
+
             limiter = get_jupiter_limiter()
             if limiter is not None:
                 async with limiter:
-                    async with self.session.get(quote_url, params=params, timeout=2.0) as resp:
+                    async with self.session.get(
+                        quote_url, params=params, timeout=2.0
+                    ) as resp:
                         if resp.status != 200:
-                            return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
+                            return (
+                                False,
+                                f"Pre-trade quote failed: HTTP {resp.status}",
+                                0,
+                            )
                         fresh_quote = await resp.json()
             else:
-                async with self.session.get(quote_url, params=params, timeout=2.0) as resp:
+                async with self.session.get(
+                    quote_url, params=params, timeout=2.0
+                ) as resp:
                     if resp.status != 200:
                         return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
                     fresh_quote = await resp.json()
@@ -900,11 +930,27 @@ class PreTradeGuard:
                     f"output={output_mint[:8]}) — skipping single-leg profit math. "
                     f"Full route simulation will verify profitability."
                 )
-                total_cost_lamports = jito_tip_lamports + base_fee_lamports + priority_fee_lamports + flashloan_fee_lamports + ata_rent_lamports
-                return True, f"Circular route — delegated to simulator (cost={total_cost_lamports/1e9:.6f} SOL)", 0
+                total_cost_lamports = (
+                    jito_tip_lamports
+                    + base_fee_lamports
+                    + priority_fee_lamports
+                    + flashloan_fee_lamports
+                    + ata_rent_lamports
+                )
+                return (
+                    True,
+                    f"Circular route — delegated to simulator (cost={total_cost_lamports/1e9:.6f} SOL)",
+                    0,
+                )
 
             actual_gross_profit = actual_out - amount_lamports
-            total_cost_lamports = jito_tip_lamports + base_fee_lamports + priority_fee_lamports + flashloan_fee_lamports + ata_rent_lamports
+            total_cost_lamports = (
+                jito_tip_lamports
+                + base_fee_lamports
+                + priority_fee_lamports
+                + flashloan_fee_lamports
+                + ata_rent_lamports
+            )
             actual_net_profit = actual_gross_profit - total_cost_lamports
 
             latency_ms = (time.time() - now) * 1000

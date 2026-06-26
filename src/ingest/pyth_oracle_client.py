@@ -10,10 +10,7 @@ import socket
 from typing import Dict, Optional, Any
 from datetime import datetime, timedelta
 import aiohttp
-from .oracle_streams import (
-    HERMES_WS_URL,
-    PYTH_FEEDS,
-)
+from src.config.addresses import PYTH_FEEDS, HERMES_WS_URL
 from src.config.addresses import get_all_pyth_feed_ids
 
 logger = logging.getLogger(__name__)

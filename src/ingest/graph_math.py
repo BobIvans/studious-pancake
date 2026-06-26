@@ -59,6 +59,9 @@ class ArbitrageGraph:
         self.last_update = 0.0
         self.cycle_callback: Optional[Callable] = None
         self.oracle_callback: Optional[Callable] = None
+        self._last_cycle_check = 0.0
+        self._cycle_check_interval = 0.5
+        self._last_edge_rates: Dict[Tuple[str, str], Decimal] = {}
 
     def add_token(self, symbol: str, mint: str, decimals: int) -> None:
         """Add token to arbitrage graph."""
@@ -109,12 +112,23 @@ class ArbitrageGraph:
         self.last_update = time.time()
         logger.debug(f"Updated rate {token_a}->{token_b}: {rate_a_to_b}")
 
-        cycles = self.detect_arbitrage_cycles()
-        if cycles and self.cycle_callback:
-            for cycle in cycles:
-                task = asyncio.create_task(self.cycle_callback(cycle))
-                shared_state.active_tasks.add(task)
-                task.add_done_callback(shared_state.active_tasks.discard)
+        now = time.time()
+        edge_key = (token_a, token_b)
+        last_rate = self._last_edge_rates.get(edge_key)
+        should_check = (
+            now - self._last_cycle_check >= self._cycle_check_interval or
+            (last_rate is not None and last_rate > 0 and
+             abs(rate_a_to_b - last_rate) / last_rate > Decimal('0.001'))
+        )
+        if should_check:
+            self._last_cycle_check = now
+            self._last_edge_rates[edge_key] = rate_a_to_b
+            cycles = self.detect_arbitrage_cycles()
+            if cycles and self.cycle_callback:
+                for cycle in cycles:
+                    task = asyncio.create_task(self.cycle_callback(cycle))
+                    shared_state.active_tasks.add(task)
+                    task.add_done_callback(shared_state.active_tasks.discard)
 
     def detect_arbitrage_cycles(self, max_hops: int = 3) -> List[ArbitrageCycle]:
         """
@@ -218,21 +232,36 @@ class ArbitrageGraph:
         return profit_ratio
 
     def _calculate_optimal_flash_loan(self, cycle: List[str]) -> Decimal:
-        """
-        Calculate optimal flash loan size for arbitrage cycle.
-        Uses simplified analytical formula for CPMM pools.
-        """
         if len(cycle) < 3:
             return Decimal('0')
 
-        # For complex cycles, use conservative estimate
-        # In practice, this would use the calculus formula
         base_token = cycle[0]
-        if base_token in self.nodes:
-            # Estimate based on typical pool liquidity
-            return Decimal('10')  # 10 base tokens
+        next_token = cycle[1] if len(cycle) > 1 else base_token
 
-        return Decimal('1')
+        node_start = self.nodes.get(base_token)
+        node_next = self.nodes.get(next_token)
+
+        if node_start is None or node_next is None:
+            return Decimal('10')
+
+        reserve_x = node_start.reserve_in
+        reserve_y = node_next.reserve_out
+
+        if reserve_x is None or reserve_y is None or reserve_x <= 0 or reserve_y <= 0:
+            return Decimal('10')
+
+        gamma = Decimal('0.9975')
+        target_price = Decimal('1')
+
+        try:
+            discriminant = reserve_x * reserve_y * gamma * target_price
+            if discriminant <= reserve_x * reserve_x:
+                return Decimal('1')
+            x_opt = (Decimal.sqrt(discriminant) - reserve_x) / gamma
+            max_flash = reserve_x * Decimal('0.1')
+            return min(x_opt, max_flash)
+        except Exception:
+            return Decimal('10')
 
     def _deduplicate_cycles(self, cycles: List[ArbitrageCycle]) -> List[ArbitrageCycle]:
         """Remove duplicate cycles (same path, different rotation)."""
@@ -268,21 +297,11 @@ class ArbitrageGraph:
                     pool_reserve.token_b_reserve
                 )
 
-                # Run arbitrage detection immediately
-                cycles = self.detect_arbitrage_cycles()
-                if cycles:
-                    logger.info(f"🚨 Arbitrage detected from pool update: {cycles[0].path}")
-                    if self.cycle_callback:
-                        for cycle in cycles:
-                            task = asyncio.create_task(self.cycle_callback(cycle))
-                            shared_state.active_tasks.add(task)
-                            task.add_done_callback(shared_state.active_tasks.discard)
-
         pool_state_manager.register_arbitrage_callback(on_pool_update)
 
     def integrate_oracle_updates(self, oracle_streams):
         """Integrate with OracleStreams for price discrepancies."""
-        from src.ingest.oracle_streams import OracleStreams
+        from src.config.addresses import PYTH_FEEDS  # noqa: F401
 
         async def on_oracle_update(symbol: str, oracle_price):
             """Callback when oracle price updates."""

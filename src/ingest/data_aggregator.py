@@ -80,6 +80,22 @@ class DataAggregator:
             "CREATE INDEX IF NOT EXISTS idx_webhook_id ON events(webhook_id)"
         )
 
+        # Fix 63: Schema versioning table — prevents OperationalError on schema changes
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS schema_version (
+                version INTEGER PRIMARY KEY,
+                applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        """
+        )
+        cursor.execute("SELECT MAX(version) FROM schema_version")
+        row = cursor.fetchone()
+        current_version = row[0] if row[0] else 0
+        if current_version < 1:
+            cursor.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (1)")
+            logger.info("Schema migrated to version 1")
+
         conn.commit()
         conn.close()
 
@@ -334,10 +350,12 @@ class DataAggregator:
 
         async with aiosqlite.connect(self.db_path, timeout=30) as db:
             # Delete old events
-            await db.execute(
+            cursor = await db.execute(
                 "DELETE FROM events WHERE timestamp < ?", (cutoff_timestamp,)
             )
-            deleted_count = db.total_changes
+            # Fix 63: Use cursor.rowcount instead of db.total_changes
+            # total_changes is cumulative across all connections, rowcount is per-statement
+            deleted_count = cursor.rowcount
             logger.info(f"Cleaned up {deleted_count} old events")
 
             # Update daily stats for the cleaned period

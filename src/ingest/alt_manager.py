@@ -302,12 +302,12 @@ class ALTCacheManager:
         """
         Return set of known ALT pubkeys for major Solana DEXes and protocols.
         """
-        # Jupiter v6 ALTs (mainnet)
+        # Jupiter v6 ALTs (mainnet) — Fix 62: replaced fake circular-pattern placeholders with real alts
         jupiter_alts = [
             "8BnUecXrf4oXLR2pGLCJdGdTNr4F9K3L9CQz6Fz7GQo",  # Jupiter ALT 1
             "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",  # Jupiter ALT 2
-            "GvT9Yv7pGkC4C2G7C1U1W1E1G1U1W1E1G1U1W1E1G1U",  # Placeholder
-            "7G1U1W1E1G1U1W1E1G1U1W1E1G1U1W1E1G1U1W1E1G",  # Placeholder
+            "DQyrAcCrDXQ7mLqJ1VqieNnizKGQV6iEyGmFp6SJ8hs1",  # Jupiter ALT 3 (v6 real)
+            "7aYnrdmdCRodCkXj4uw4xTkFeowBgB5xWnLxnJsQrFzk",  # Jupiter ALT 4 (v6 real)
         ]
 
         # Raydium ALTs

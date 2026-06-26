@@ -142,10 +142,10 @@ async def test_offline_analysis():
     logger.info("🧪 Testing Offline AI Analysis...")
 
     try:
-        from src.ingest.ai_offline_analyzer import AIOfflineAnalyzer
+        from src.ingest.ai_offline_analyzer import OfflineStatsReporter
 
         collector = AIDataCollector(use_sqlite=False)
-        analyzer = AIOfflineAnalyzer(collector)
+        analyzer = OfflineStatsReporter(collector)
 
         # Generate sample analysis (would need real data)
         logger.info("🔍 AI Analysis Structure Test:")

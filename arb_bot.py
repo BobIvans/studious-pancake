@@ -205,7 +205,6 @@ from src.ingest.arbitrage_scorer import (
 )
 
 # AI data collection classes - TODO: Implement when needed
-from src.ingest.pump_fun_predictor import PumpFunMigrationPredictor
 from src.ingest.data_aggregator import DataAggregator
 from src.ingest.ai_data_collector import AIDataCollector
 from src.ingest.helius_webhook_handler import HeliusWebhookHandler
@@ -221,9 +220,7 @@ from src.ingest.graph_math import ArbitrageGraph, ArbitrageCycle
 from src.ingest.pool_state_manager import PoolStateManager
 from src.ingest.pool_fetcher import PoolFetcher
 from src.ingest.event_triggers import EventTriggerEngine, VolatilityWatcher
-from src.ingest.wrapper_arb import WrapperArbEnforcer
 from src.ingest.stableswap_math import PoolMathRouter
-from src.ingest.receipt_arb import ReceiptArbEngine
 from src.ingest.flash_pivot import FlashPivotEngine
 from src.ingest.liquidator_engine import LiquidationEngine
 from src.ingest.cex_dex_oracle import CexDexOracle
@@ -350,10 +347,7 @@ else:
 
 from src.ingest.lst_unstake_arbitrage import LstInstantUnstakeArbitrage
 
-if _ORDERBOOK_ENABLED:
-    from src.ingest.orderbook_amm_solver import BipartiteOrderbookAmmSolver
-else:
-    BipartiteOrderbookAmmSolver = None  # type: ignore[assignment,misc]
+BipartiteOrderbookAmmSolver = None  # type: ignore[assignment,misc]
 
 # Webhook trigger for LST scanner
 
@@ -387,12 +381,10 @@ trade_sizer = OptimalTradeSizer()
 # )
 
 # ULTRA ARB - Market Expansion Engines (commented for minimal startup)
-# wrapper_arb_enforcer = WrapperArbEnforcer(pool_state_manager)
 # volatility_watcher = VolatilityWatcher(pool_state_manager)
 
 # ULTRA ARB - Stable×Stable & Lending Rate Engines (commented for minimal startup)
 # pool_math_router = PoolMathRouter()
-# receipt_arb_engine = ReceiptArbEngine(pool_state_manager, pool_math_router)
 # flash_pivot_engine = FlashPivotEngine(pool_state_manager, pool_math_router)
 
 # k_hop_stitcher = KHopStitcher(wallet_keypair=keypair)
@@ -406,13 +398,6 @@ ATA_CACHE = shared_state.ATA_CACHE
 # arbitrage_scorer = ArbitrageScorer(session=session, rpc_url=rpc.get_rpc())
 # priority_queue = PriorityArbitrageQueue(max_size=50)
 ai_data_collector = AIDataCollector(db_path="bot_history.db")
-
-# Pump.fun migration predictor (moved to main() function)
-# pump_predictor = PumpFunMigrationPredictor(
-#     session=session,
-#     wss_url=cfg.WSS_ENDPOINTS[0] if cfg.WSS_ENDPOINTS else None,
-#     jito_endpoints=cfg.JITO_ENDPOINTS
-# )
 
 # Multi-RPC racing configuration
 MULTI_RPC_ENABLED = str(os.getenv("MULTI_RPC_ENABLED", "false")).lower() == "true"
@@ -3798,23 +3783,28 @@ async def orderbook_amm_scanner(session, cfg, rpc_manager, keypair, jito_executo
     Monitors Phoenix orderbook vs Raydium AMM for arbitrage opportunities
     using mathematical optimization for flash loan sizing.
     """
-    rpc_url = rpc_manager.get_rpc()
+    if BipartiteOrderbookAmmSolver is None:
+        logger.info("🌊 Orderbook-AMM strategy disabled: module removed per audit finding #54")
+        while True:
+            await asyncio.sleep(cfg.ORDERBOOK_AMM_SCAN_INTERVAL)
+    else:
+        rpc_url = rpc_manager.get_rpc()
 
-    # Initialize components
-    solver = BipartiteOrderbookAmmSolver()
-    tx_builder = JupiterTxBuilder(
-        session=session,
-        rpc_getter=lambda: rpc_manager.get_rpc(),
-    )
+        # Initialize components
+        solver = BipartiteOrderbookAmmSolver()
+        tx_builder = JupiterTxBuilder(
+            session=session,
+            rpc_getter=lambda: rpc_manager.get_rpc(),
+        )
 
-    cycle_count = 0
+        cycle_count = 0
 
-    logger.debug(
-        f"🚀 Orderbook-AMM Scanner started | "
-        f"phoenix_market={cfg.PHOENIX_MARKET_ADDRESS[:8] if cfg.PHOENIX_MARKET_ADDRESS else 'none'} | "
-        f"raydium_pool={cfg.RAYDIUM_POOL_ADDRESS[:8] if cfg.RAYDIUM_POOL_ADDRESS else 'none'} | "
-        f"scan_interval={cfg.ORDERBOOK_AMM_SCAN_INTERVAL}s"
-    )
+        logger.debug(
+            f"🚀 Orderbook-AMM Scanner started | "
+            f"phoenix_market={cfg.PHOENIX_MARKET_ADDRESS[:8] if cfg.PHOENIX_MARKET_ADDRESS else 'none'} | "
+            f"raydium_pool={cfg.RAYDIUM_POOL_ADDRESS[:8] if cfg.RAYDIUM_POOL_ADDRESS else 'none'} | "
+            f"scan_interval={cfg.ORDERBOOK_AMM_SCAN_INTERVAL}s"
+        )
 
     while True:
         cycle_count += 1
@@ -4040,273 +4030,6 @@ async def _daily_cleanup(data_aggregator: DataAggregator):
         except Exception as e:
             logger.error(f"Daily cleanup failed: {e}")
 
-
-async def start_pump_predictor(predictor: PumpFunMigrationPredictor):
-    """Start Pump.fun migration predictor with initial curve addresses."""
-    try:
-        logger.info("🎯 Starting Pump.fun migration predictor...")
-
-        # For demonstration, monitor a few example curves
-        # In production, you'd get these from logs or configuration
-        example_curves = [
-            # Add real Pump.fun curve addresses here
-            # "CurveAddress1", "CurveAddress2"
-        ]
-
-        if example_curves:
-            await predictor.start_monitoring(example_curves)
-            logger.info(f"✅ Monitoring {len(example_curves)} Pump.fun curves")
-        else:
-            logger.info("ℹ️ No Pump.fun curves configured for monitoring")
-
-        # Keep predictor running
-        while True:
-            await asyncio.sleep(10)
-            # Log status periodically
-            status = predictor.get_migration_status()
-            if status:
-                active_curves = len(
-                    [s for s in status.values() if s["phase"] != "early"]
-                )
-                if active_curves > 0:
-                    logger.info(
-                        f"📊 Pump.fun status: {active_curves} curves in active phases"
-                    )
-
-    except Exception as e:
-        logger.error(f"Pump.fun predictor failed: {e}")
-
-
-async def handle_pump_migration(
-    migration_data: Dict[str, Any],
-    session,
-    cfg,
-    rpc_manager,
-    keypair,
-    jito_executor,
-    ai_collector,
-):
-    """Handle Pump.fun migration event with enhanced PDA system."""
-    try:
-        logger.info(f"🚀 Pump.fun migration detected: {migration_data}")
-
-        # Extract migration details
-        curve_address = migration_data.get("curve_address")
-        mint_address = migration_data.get("mint_address")
-        raydium_addresses = migration_data.get("raydium_addresses")
-        transaction_template = migration_data.get("transaction_template")
-        market_id = migration_data.get("market_id")
-
-        if not mint_address:
-            logger.error("Missing mint address in migration data")
-            return
-
-        logger.info(f"💎 Migration details:")
-        logger.info(f"   Mint: {mint_address[:8]}...")
-        logger.info(f"   Curve: {curve_address[:8] if curve_address else 'N/A'}...")
-        logger.info(
-            f"   Pool: {raydium_addresses.get('amm_id', 'N/A')[:8] if raydium_addresses else 'N/A'}..."
-        )
-        logger.info(f"   Market: {market_id[:8] if market_id else 'N/A'}...")
-        logger.info(
-            f"   Template: {'✅ Ready' if transaction_template else '❌ Missing'}"
-        )
-
-        # Execute enhanced migration arbitrage
-        success = await execute_enhanced_migration_arbitrage(
-            mint_address=mint_address,
-            raydium_addresses=raydium_addresses,
-            transaction_template=transaction_template,
-            market_id=market_id,
-            session=session,
-            cfg=cfg,
-            rpc_manager=rpc_manager,
-            keypair=keypair,
-            jito_executor=jito_executor,
-            ai_collector=ai_collector,
-        )
-
-        if success:
-            logger.info(f"🎉 Enhanced migration arbitrage executed successfully!")
-        else:
-            logger.warning(f"❌ Enhanced migration arbitrage failed")
-
-    except Exception as e:
-        logger.error(f"Migration handling failed: {e}")
-
-
-async def execute_enhanced_migration_arbitrage(
-    mint_address,
-    raydium_addresses,
-    transaction_template,
-    market_id,
-    session,
-    cfg,
-    rpc_manager,
-    keypair,
-    jito_executor,
-    ai_collector,
-):
-    """Execute migration arbitrage with enhanced PDA system."""
-
-    # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
-    try:
-        _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
-            shared_state.stats.get(
-                "virtual_balance", shared_state.stats.get("last_balance", 0.0)
-            )
-        )
-        if not _gas_ok:
-            logger.critical(
-                "🚨 STRICT GAS TANK: Migration arb halted — balance below 0.005 SOL"
-            )
-            return False
-    except Exception as _ge:
-        logger.debug(f"Migration gas tank check skipped: {_ge}")
-
-    # Fix 6 + 67: Balance Lock Guard — pause if lock is active
-    if (
-        shared_state._balance_lock_paused
-        and time.time() < shared_state._balance_lock_pause_until
-    ):
-        _lock_wait_ms = (shared_state._balance_lock_pause_until - time.time()) * 1000
-        logger.debug(
-            f"🔒 Balance Lock active — waiting {_lock_wait_ms:.0f}ms (execute_enhanced_migration)"
-        )
-        await asyncio.sleep(
-            max(0, shared_state._balance_lock_pause_until - time.time())
-        )
-
-    try:
-        start_time = time.time()
-
-        # Get current blockhash
-        blockhash = await get_current_blockhash(session, rpc_manager.get_rpc())
-        if not blockhash:
-            logger.error("Failed to get blockhash for migration execution")
-            return False
-
-        # Prepare transaction with pre-computed addresses
-        if transaction_template and raydium_addresses:
-            # Instantiate template with current data
-            user_token_accounts = {
-                "user_token_account": "placeholder",  # Would compute actual ATA
-                "user_pc_token_account": "placeholder",  # Would compute actual WSOL ATA
-            }
-
-            transaction_data = transaction_template.instantiate_with_blockhash(
-                blockhash, user_token_accounts
-            )
-
-            if transaction_data:
-                logger.info("✅ Transaction instantiated with pre-computed addresses")
-                logger.info(f"   Using {len(raydium_addresses)} pre-computed addresses")
-                if market_id:
-                    logger.info("   Market-aware execution enabled")
-            else:
-                logger.warning("Failed to instantiate transaction template")
-                return False
-        else:
-            logger.warning("Missing transaction template or addresses")
-            return False
-
-        # Execute via Jito with enhanced tip calculation
-        expected_profit_sol = 0.5  # Would be calculated based on migration
-        jito_tip_sol = expected_profit_sol * cfg.JITO_TIP_PERCENT
-
-        # Create tip instruction and inject it into transaction_data (atomic fix)
-        # The Jito tip must be part of the SAME transaction so it reverts atomically.
-        tip_ix = transfer(
-            TransferParams(
-                from_pubkey=keypair.pubkey(),
-                to_pubkey=Pubkey.from_string(
-                    "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
-                ),
-                lamports=int(jito_tip_sol * 1_000_000_000),
-            )
-        )
-
-        if not transaction_data:
-            logger.warning("No transaction data available")
-            return False
-
-        # Inject tip instruction: decompile VersionedTransaction, add tip, recompile
-        from solders.message import MessageV0
-        from solders.instruction import Instruction as SoldersInstruction
-        from solders.transaction import VersionedTransaction
-
-        msg = transaction_data.message
-        all_keys = list(msg.account_keys)
-
-        # Decompile existing compiled instructions back to Instruction objects
-        decompiled = []
-        for ci in msg.instructions:
-            decompiled.append(
-                SoldersInstruction(
-                    program_id=all_keys[ci.program_id_index],
-                    accounts=[all_keys[i] for i in ci.accounts],
-                    data=bytes(ci.data),
-                )
-            )
-
-        # Add tip instruction to the end (before any cleanup ixs)
-        all_ixs = decompiled + [tip_ix]
-
-        # Recompile new message with blockhash preserved
-        new_msg = MessageV0.try_compile(
-            payer=msg.account_keys[0],
-            instructions=all_ixs,
-            address_lookup_table_accounts=list(msg.address_lookup_table_accounts),
-            recent_blockhash=msg.recent_blockhash,
-        )
-
-        transaction_data = VersionedTransaction(new_msg, [keypair])
-
-        # Send bundle as exactly ONE transaction (atomic: tip OR arb, never partial)
-        bundle_to_send = [transaction_data]
-
-        # Send enhanced bundle (single transaction with merged tip)
-        # Fix "Blocking Discovery": send_bundle is ~200ms; we do not await confirmation here.
-        # Confirmation is handled by a fire-and-forget background task so the caller is
-        # never stalled by 10–30 s `wait_for_confirmation`.
-        shared_state.stats["bundle_send_attempts"] += 1
-
-        async def _migration_post_send(b_result: dict) -> None:
-            global TOTAL_FAILED_BUNDLES_IN_A_ROW
-            _exec_ms = (time.time() - start_time) * 1000
-            if b_result["success"]:
-                TOTAL_FAILED_BUNDLES_IN_A_ROW = 0
-                shared_state.stats["bundle_successes"] += 1
-                bid = b_result.get("bundle_id", "")
-                logger.info(f"🔥 Enhanced migration bundle sent! ID: {bid}")
-                logger.info(
-                    f"⚡ Executed in {_exec_ms:.2f}ms with pre-computed addresses"
-                )
-
-                confirmation = await jito_executor.wait_for_confirmation(
-                    bid, max_wait_time=0.8
-                )
-            else:
-                err = str(b_result.get("error", ""))
-                if "SlippageExceeded" in err:
-                    TOTAL_FAILED_BUNDLES_IN_A_ROW += 1
-                    if TOTAL_FAILED_BUNDLES_IN_A_ROW >= 10:
-                        logger.critical(
-                            "🚨 10 consecutive SlippageExceeded — activating shared_state.GLOBAL_STOP_EVENT"
-                        )
-                        shared_state.GLOBAL_STOP_EVENT.set()
-                else:
-                    TOTAL_FAILED_BUNDLES_IN_A_ROW = 0
-                logger.warning(f"❌ Enhanced bundle failed: {err}")
-                confirmation = None
-
-        bundle_result = await jito_executor.send_bundle(bundle_to_send)
-        asyncio.create_task(_migration_post_send(bundle_result))
-        return True
-
-    except Exception as e:
-        logger.error(f"Enhanced migration execution failed: {e}")
-        return False
 
 
 async def get_current_blockhash(session, rpc_url):
@@ -6683,11 +6406,6 @@ async def run():
             for _ in range(cfg.WORKER_COUNT)
         ],
         # ULTRA ARB MASTER — background tasks commented out (components disabled)
-        # ULTRA ARB - Market Expansion Tasks
-        # asyncio.create_task(wrapper_arb_background_scanner()),
-        # asyncio.create_task(volatility_monitor_background()),
-        # ULTRA ARB - Stable×Stable & Lending Rate Tasks
-        # asyncio.create_task(receipt_arb_background_scanner()),
         # ULTRA ARB - Production-Ready Tasks
         asyncio.create_task(dust_sweep_background()),
         asyncio.create_task(cleanup_temporary_tokens()),
@@ -7041,18 +6759,8 @@ async def execute_ultra_arbitrage(cycle: ArbitrageCycle, session, rpc, keypair):
 
 
 # ULTRA ARB - Background Scanning Functions
-async def wrapper_arb_background_scanner():
-    """Background scanner for wrapper peg opportunities."""
-    pass
-
-
 async def volatility_monitor_background():
     """Background monitor for token volatility."""
-    pass
-
-
-async def receipt_arb_background_scanner():
-    """Background scanner for receipt token arbitrage opportunities."""
     pass
 
 

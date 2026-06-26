@@ -6,6 +6,7 @@ import base58
 import logging
 import time
 import random
+import os
 import aiohttp
 from typing import List, Dict, Any, Optional, Tuple
 
@@ -290,12 +291,21 @@ class JitoBundleHandler:
         }
         try:
             timeout = aiohttp.ClientTimeout(total=5.0)
-            async with self.session.get(
-                url, params=params, timeout=timeout
-            ) as resp:
-                if resp.status != 200:
-                    return None
-                return await resp.json()
+            if self.session and not self.session.closed:
+                async with self.session.get(
+                    url, params=params, timeout=timeout
+                ) as resp:
+                    if resp.status != 200:
+                        return None
+                    return await resp.json()
+            else:
+                async with aiohttp.ClientSession() as session:
+                    async with session.get(
+                        url, params=params, timeout=timeout
+                    ) as resp:
+                        if resp.status != 200:
+                            return None
+                        return await resp.json()
         except Exception as e:
             logger.debug(f"Jupiter quote failed: {e}")
             return None
@@ -352,13 +362,13 @@ class JitoBundleHandler:
             if self.tx_builder and self.session:
                 amount_lamports = int(amount_sol * 1e9)
                 leg1_quote = await self._get_jupiter_quote(
-                    self.session, base_mint, quote_mint, amount_lamports
+                    base_mint, quote_mint, amount_lamports
                 )
                 if leg1_quote:
                     leg1_out = int(leg1_quote.get("outAmount", 0))
                     if leg1_out > 0:
                         leg2_quote = await self._get_jupiter_quote(
-                            self.session, quote_mint, base_mint, leg1_out
+                            quote_mint, base_mint, leg1_out
                         )
                         if leg2_quote:
                             for leg_quote in [leg1_quote, leg2_quote]:

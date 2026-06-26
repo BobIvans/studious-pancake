@@ -2,7 +2,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Dict, Set, Any, Optional
+from typing import Dict, Set, Any, Optional, List
 from solders.pubkey import Pubkey
 
 logger = logging.getLogger("SharedState")
@@ -13,6 +13,11 @@ marginfi_account_lock: Optional[asyncio.Lock] = None
 stats_lock: Optional[asyncio.Lock] = None
 GLOBAL_STOP_EVENT: Optional[asyncio.Event] = None
 jito_bidding_manager: Optional[Any] = None
+
+# Fix 64: Lock for ATA_CACHE and WSOL flags to prevent race conditions
+ata_cache_lock: Optional[asyncio.Lock] = None
+wsol_state_lock: Optional[asyncio.Lock] = None
+marginfi_init_lock: Optional[asyncio.Lock] = None
 
 # MARGINFI PROGRAM ADDRESSES AND PDA DERIVATION
 MARGINFI_PROGRAM_ID = Pubkey.from_string(os.getenv("MARGINFI_PROGRAM_ID", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"))
@@ -68,7 +73,30 @@ def get_marginfi_banks():
         logger.warning(f"Failed to initialize MarginFi banks: {e}. Using empty dict.")
         return {}
 
-MARGINFI_BANKS: Dict[str, Any] = get_marginfi_banks()
+# Fix 64: Lazy initialization wrapper — call init_marginfi_banks() after .env is loaded
+MARGINFI_BANKS: Dict[str, Any] = {}
+_MARGINFI_BANKS_INITIALIZED: bool = False
+
+
+def init_marginfi_banks() -> Dict[str, Any]:
+    """(Re)initialize MarginFi bank configs.
+    
+    Must be called after .env is fully loaded to read MARGINFI_SOL_BANK and
+    MARGINFI_USDC_BANK from environment.  The module-level dict was previously
+    initialized at import time when .env may not have been loaded yet.
+    
+    IMPORTANT: Mutates the existing dict in-place so that all existing
+    references from other modules (arb_bot, lst_unstake_arbitrage, etc.)
+    see the populated data.
+    Returns the populated MARGINFI_BANKS dict.
+    """
+    global _MARGINFI_BANKS_INITIALIZED
+    banks = get_marginfi_banks()
+    MARGINFI_BANKS.clear()
+    MARGINFI_BANKS.update(banks)
+    _MARGINFI_BANKS_INITIALIZED = True
+    logger.info(f"✅ MarginFi banks initialized: {len(MARGINFI_BANKS)} banks")
+    return MARGINFI_BANKS
 
 # Fix 67: Balance lock flags
 stats: Dict[str, Any] = {
@@ -80,7 +108,7 @@ stats: Dict[str, Any] = {
     "bundle_successes": 0,
     "flash_loan_attempt_count": 0,
     "flash_loan_miss_count": 0,
-    "state_to_execution_latencies": [],
+    "state_to_execution_latencies": [],  # Fix 64: Capped to 1000 max via append_latency()
     "current_slot": 0,
     "errors": {},
 }
@@ -118,9 +146,13 @@ ATA_CACHE: set = set()
 
 def initialize_shared_state():
     global execution_lock, marginfi_account_lock, stats_lock, GLOBAL_STOP_EVENT
+    global ata_cache_lock, wsol_state_lock, marginfi_init_lock
     execution_lock = asyncio.Lock()
     marginfi_account_lock = asyncio.Lock()
     stats_lock = asyncio.Lock()
+    ata_cache_lock = asyncio.Lock()
+    wsol_state_lock = asyncio.Lock()
+    marginfi_init_lock = asyncio.Lock()
     GLOBAL_STOP_EVENT = asyncio.Event()
     logger.info("✅ Shared state initialized with asyncio locks")
 
@@ -128,6 +160,16 @@ def initialize_shared_state():
 # to eliminate circular imports (wsol_manager was importing arb_bot and vice versa).
 _balance_lock_paused: bool = False
 _balance_lock_pause_until: float = 0.0
+
+# Fix 64: Appends a latency measurement to the capped list (max 1000 entries)
+def append_latency(value: float) -> None:
+    """Append latency measurement, capping list at 1000 entries to prevent memory leak."""
+    global stats
+    latencies = stats.get("state_to_execution_latencies", [])
+    if len(latencies) >= 1000:
+        latencies.pop(0)  # Remove oldest
+    latencies.append(value)
+
 
 def mark_wsol_atomically_closed():
     global WSOL_JUST_CLOSED_ATOMICALLY

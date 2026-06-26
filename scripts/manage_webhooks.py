@@ -146,7 +146,7 @@ class WebhookManager:
             if webhook:
                 active_webhooks.append(webhook_id)
                 addresses = webhook.get("accountAddresses", [])
-                expected_addresses = set(WebhookConfig.LST_ADDRESSES + WebhookConfig.XSTOCK_ADDRESSES + WebhookConfig.PARCL_ADDRESSES + WebhookConfig.PYTH_ADDRESSES + WebhookConfig.ORCA_POOL_ADDRESSES)
+                expected_addresses = set(WebhookConfig.LST_ADDRESSES + WebhookConfig.PARCL_ADDRESSES + WebhookConfig.PYTH_ADDRESSES + WebhookConfig.ORCA_POOL_ADDRESSES)
                 actual_addresses = set(addresses)
 
                 if expected_addresses <= actual_addresses:

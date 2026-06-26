@@ -68,7 +68,7 @@ class LstFairPriceMonitor:
 
     # SPL Stake Pool layout offsets (v0.7+)
     # total_lamports at offset 258 (u64), pool_token_supply at offset 266 (u64)
-    _SPL_POOL_TOTAL_LAMPORTS_OFFSET = 289
+    _SPL_POOL_TOTAL_LAMPORTS_OFFSET = 258  # Fix 61: corrected from 289 to real on-chain offset
     _SPL_POOL_TOKEN_SUPPLY_OFFSET = 266
 
     # Marinade State layout (custom)
@@ -272,10 +272,60 @@ class LstFairPriceMonitor:
     # ── On-chain parsers ──────────────────────────────────────────────────
 
     def _parse_spl_stake_pool(self, raw_bytes: bytes, symbol: str) -> Optional[float]:
-        return self._fair_prices.get(symbol) # Deprecated
+        """Parse SPL Stake Pool account data to derive fair price.
+
+        On-chain fallback when Sanctum API is unavailable.
+        SPL Stake Pool layout (v0.7+):
+          - total_lamports at offset 258 (u64, 8 bytes)
+          - pool_token_supply at offset 266 (u64, 8 bytes)
+        Fair price = total_lamports / pool_token_supply (SOL per 1 LST)
+        """
+        try:
+            if len(raw_bytes) < 274:
+                logger.debug(f"{symbol}: raw_bytes too short ({len(raw_bytes)}) for SPL Stake Pool parsing")
+                return None
+
+            total_lamports = struct.unpack_from('<Q', raw_bytes, self._SPL_POOL_TOTAL_LAMPORTS_OFFSET)[0]
+            token_supply = struct.unpack_from('<Q', raw_bytes, self._SPL_POOL_TOKEN_SUPPLY_OFFSET)[0]
+
+            if total_lamports == 0 or token_supply == 0:
+                return None
+
+            fair_price = total_lamports / token_supply
+            logger.debug(f"{symbol}: on-chain fair price = {fair_price:.6f} SOL/LST "
+                         f"(lamports={total_lamports}, supply={token_supply})")
+            return fair_price
+        except Exception as e:
+            logger.warning(f"{symbol}: SPL Stake Pool parsing failed: {e}")
+            return None
 
     def _parse_marinade_state(self, raw_bytes: bytes, symbol: str) -> Optional[float]:
-        return self._fair_prices.get(symbol) # Deprecated
+        """Parse Marinade State account data to derive fair price.
+
+        On-chain fallback when Sanctum API is unavailable.
+        Marinade State layout:
+          - total_virtual_staked_lamports at offset 192 (u64, 8 bytes)
+          - mSOL supply at offset 200 (u64, 8 bytes)
+        Fair price = total_virtual_staked_lamports / mSOL_supply
+        """
+        try:
+            if len(raw_bytes) < 208:
+                logger.debug(f"{symbol}: raw_bytes too short ({len(raw_bytes)}) for Marinade parsing")
+                return None
+
+            total_lamports = struct.unpack_from('<Q', raw_bytes, self._MARINADE_TOTAL_LAMPORTS_OFFSET)[0]
+            msol_supply = struct.unpack_from('<Q', raw_bytes, self._MARINADE_MSOL_SUPPLY_OFFSET)[0]
+
+            if total_lamports == 0 or msol_supply == 0:
+                return None
+
+            fair_price = total_lamports / msol_supply
+            logger.debug(f"{symbol}: on-chain fair price = {fair_price:.6f} SOL/LST "
+                         f"(lamports={total_lamports}, msol_supply={msol_supply})")
+            return fair_price
+        except Exception as e:
+            logger.warning(f"{symbol}: Marinade parsing failed: {e}")
+            return None
 
     # ── RPC helpers ───────────────────────────────────────────────────────
 

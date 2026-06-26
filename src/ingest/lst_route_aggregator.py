@@ -348,6 +348,9 @@ class LstRouteAggregator:
             "swapMode": swap_mode,
             "maxAccounts": "28",  # FIX 8: Lowered to 8 for micro-balance safety (prevent ATA drain)
             "cache_buster": str(time.time_ns()),
+            # Fix 60: Explicitly exclude Marinade Delayed Unstake accounts
+            # Delayed unstake takes 1-2 epochs, would cause flash loan revert
+            "excludeDexes": "Marinade",
         }
 
         # Add DEX filter if specified

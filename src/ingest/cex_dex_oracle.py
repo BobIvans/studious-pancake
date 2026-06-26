@@ -45,6 +45,8 @@ class CexDexOracle:
         self.max_history = 10  # Keep last 10 prices per asset
         self.session = session
         self._session_owned = session is None
+        self._last_binance_update: float = 0.0  # Heartbeat: last Binance message timestamp
+        self._binance_heartbeat_timeout: float = 15.0  # Seconds before considering Binance stale
 
     def register_signal_callback(self, callback: Callable[[CexDexSignal], None]):
         """Register callback for arbitrage signals."""
@@ -113,6 +115,13 @@ class CexDexOracle:
 
     async def _process_binance_update(self, data: Dict[str, Any]):
         """Process Binance book ticker update."""
+        # Heartbeat check: if too long since last update, log warning and reset state
+        if self._last_binance_update > 0:
+            elapsed = asyncio.get_running_loop().time() - self._last_binance_update
+            if elapsed > self._binance_heartbeat_timeout:
+                logger.warning(f"Binance heartbeat lost: {elapsed:.1f}s since last update — clearing stale prices")
+                self.cex_prices.clear()
+                self.price_history.clear()
         try:
             if "stream" not in data or "data" not in data:
                 return
@@ -141,6 +150,8 @@ class CexDexOracle:
             timestamp = asyncio.get_running_loop().time()
 
             # Store price data
+            # Heartbeat: track last update for staleness check
+            self._last_binance_update = timestamp
             price_data = {
                 "price": mid_price,
                 "bid": best_bid,
@@ -230,7 +241,7 @@ class CexDexOracle:
             token_mint_map = {
                 "SOL": "So11111111111111111111111111111111111111112",
                 "BTC": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",  # wBTC
-                "ETH": "wETHv2ZvE6W2FuDvG8GXzLtjNfH5noTfYvKvvHgMj",     # wETH placeholder
+                "ETH": "7vfCXTUXx5WJV5J7pEeidpXYEPp9UUnQv9YpGP6tpX73",     # wETH mainnet
             }
 
             token_mint = token_mint_map.get(asset)

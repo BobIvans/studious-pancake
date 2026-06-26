@@ -19,7 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import socket
 import aiohttp
 from src.ingest.data_aggregator import DataAggregator
-from src.ingest.oracle_streams import OracleStreams
+from src.config.addresses import XSTOCK_MINTS
 
 # ============================================================================
 # ДИНАМИЧЕСКАЯ ЗАГРУЗКА ПАР ИЗ ТВОИХ РЕЕСТРОВ
@@ -72,11 +72,11 @@ class PaperTrader:
         connector = aiohttp.TCPConnector(limit=0, ttl_dns_cache=300, family=socket.AF_INET)
         self.session = aiohttp.ClientSession(connector=connector)
 
-        self.oracle = OracleStreams(
-            opportunity_callback=self._on_oracle_opportunity
-        )
-        asyncio.create_task(self.oracle.start())
-        logger.info("🕸️ Pyth WebSockets запущены (Слушаем акции...)")
+        self.simulator = None  # Simulator implemented elsewhere
+        self.oracle = None
+        if self.oracle:
+            asyncio.create_task(self.oracle.start())
+        logger.info("🕸️ OracleStreams отключен (oracle_streams.py удалён)")
 
     async def _on_oracle_opportunity(self, opp: dict):
         """Коллбек, который срабатывает, когда WebSockets видят лаг оракула"""

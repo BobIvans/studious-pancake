@@ -300,18 +300,44 @@ PYTH_FEEDS = {
     "SLVx": {
         "feed_id": "6fc08c9963d266069cbd9780d98383dabf2668322a5bef0b9491e11d67e5d7e7",
         "symbol": "Equity.US.SLV/USD",
-        "asset_type": "equity",
+        "asset_type": "etf_index",
         "category": "etf_index",
         "variant": "main",
         "priority": 4,
     },
 }
 
+XSTOCK_MINTS = {
+    "USDY": "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",
+    "USDe": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
+    "sUSDe": "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
+    "sUSDS": "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",
+    "USD+": "B7vF87HGPJLcQwPhNn8apCH5n1E4DfRrG8HYXoS9dPEo",
+    "JupUSD": "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",
+}
+
+XSTOCK_ADDRESSES = list(XSTOCK_MINTS.values())
+
+
+def is_xstock_token(mint: str) -> bool:
+    """Return True if mint is a registered xStocks/RWA token."""
+    return str(mint) in XSTOCK_MINTS.values()
+
+
+def get_xstock_ticker(mint: str) -> Optional[str]:
+    """Reverse lookup: mint address → ticker name."""
+    for ticker, address in XSTOCK_MINTS.items():
+        if address == str(mint):
+            return ticker
+    return None
+
 # ============================================================================
 # PYTH CORE TOKEN FEEDS (Task 13: Real-Time Tip Normalization)
 # Used to bypass Jupiter Price API (10-30s cache lag) for SOL/USDC/USDT.
 # Pyth Hermes updates every ~400ms directly from validators.
 # ============================================================================
+
+HERMES_WS_URL = "wss://hermes.pyth.network/ws"
 
 PYTH_CORE_FEEDS: Dict[str, Dict[str, Any]] = {
     "SOL": {

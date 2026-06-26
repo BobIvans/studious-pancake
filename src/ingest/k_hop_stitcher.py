@@ -106,7 +106,7 @@ class KHopStitcher:
                     to_mint = _TOKEN_MINT_MAP.get(to_token, to_token)
 
                     quote = await self._get_jupiter_quote(
-                        tx_builder.session, from_mint, to_mint, amount_in
+                        from_mint, to_mint, amount_in, session=tx_builder.session
                     )
                     if quote:
                         ixs, _ = await tx_builder.get_swap_instructions(
@@ -176,10 +176,9 @@ class KHopStitcher:
             logger.error(f"Native stitching failed: {e}")
             return None
 
-    # Fix 36: All DEX-specific instruction builders removed.
-    # Real swap assembly happens via JupiterTxBuilder in tx_builder.py.
-    # These were empty stubs returning instructions with accounts=[] and data=b"",
-    # which would break any transaction they were included in.
+    async def _validate_transaction_size(
+        self, instructions: List[Instruction]
+    ) -> bool:
         """Validate that stitched transaction fits Solana limits."""
         try:
             # Rough size estimation
@@ -192,6 +191,41 @@ class KHopStitcher:
 
         except Exception:
             return False
+
+    async def _get_jupiter_quote(
+        self, input_mint: str, output_mint: str, amount: int, session: Optional[aiohttp.ClientSession] = None
+    ) -> Optional[Dict]:
+        url = os.getenv(
+            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
+        )
+        params = {
+            "inputMint": input_mint,
+            "outputMint": output_mint,
+            "amount": str(int(amount)),
+            "slippageBps": "5",
+            "onlyDirectRoutes": "false",
+            "restrictIntermediateTokens": "false",
+        }
+        try:
+            timeout = aiohttp.ClientTimeout(total=5.0)
+            if session and not session.closed:
+                async with session.get(
+                    url, params=params, timeout=timeout
+                ) as resp:
+                    if resp.status != 200:
+                        return None
+                    return await resp.json()
+            else:
+                async with aiohttp.ClientSession() as temp_session:
+                    async with temp_session.get(
+                        url, params=params, timeout=timeout
+                    ) as resp:
+                        if resp.status != 200:
+                            return None
+                        return await resp.json()
+        except Exception as e:
+            logger.debug(f"Jupiter quote failed: {e}")
+            return None
 
     async def _build_transaction(
         self, instructions: List[Instruction]
@@ -222,8 +256,3 @@ class KHopStitcher:
         except Exception as e:
             logger.error(f"Transaction build failed: {e}")
             raise
-
-    # Fix 36: All DEX-specific instruction builders removed.
-    # Real swap assembly happens via JupiterTxBuilder in tx_builder.py.
-    # These were empty stubs returning instructions with accounts=[] and data=b"",
-    # which would break any transaction they were included in.

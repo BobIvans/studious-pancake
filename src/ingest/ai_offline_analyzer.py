@@ -21,7 +21,7 @@ from src.ingest.ai_data_collector import AIDataCollector
 
 logger = logging.getLogger(__name__)
 
-class AIOfflineAnalyzer:
+class OfflineStatsReporter:
     """Analyzes collected arbitrage data to provide AI insights and recommendations."""
 
     def __init__(self, data_collector: AIDataCollector):
@@ -155,7 +155,7 @@ class AIOfflineAnalyzer:
                 "total_trades": len(hour_trades),
                 "success_rate": len(successful) / len(hour_trades),
                 "avg_profit": statistics.mean(t["actual_profit_sol"] for t in hour_trades),
-                "peak_hour": len(hour_trades) > statistics.mean(len(h["trades"]) for h in hourly_stats.values())
+                "peak_hour": len(hour_trades) > statistics.mean(len(h) for h in hourly_stats.values())
             }
 
         # Find best and worst hours
@@ -380,7 +380,7 @@ def main():
 
     # Initialize components
     collector = AIDataCollector()
-    analyzer = AIOfflineAnalyzer(collector)
+    analyzer = OfflineStatsReporter(collector)
 
     # Run analysis
     results = asyncio.run(analyzer.run_full_analysis(days_back=days_back))

@@ -180,6 +180,7 @@ class ExecutionRouter:
         ata_cache=None,
         cfg=None,
         data_aggregator=None,
+        data_collector=None,
         stats=None,
         stats_lock=None,
         blockhash_mgr=None,
@@ -190,6 +191,7 @@ class ExecutionRouter:
         self.standard_tx_sender = StandardTransactionSender(session, rpc_url)
         self.cfg = cfg
         self.data_aggregator = data_aggregator
+        self.data_collector = data_collector
         self.stats = stats
         self.stats_lock = stats_lock
         self.execution_queue = asyncio.Queue(maxsize=100)
@@ -412,7 +414,7 @@ class ExecutionRouter:
         try:
             strategy = opportunity.get("strategy")
 
-            elif strategy == "lst_unstake":
+            if strategy == "lst_unstake":
                 # LST Instant Unstake Arbitrage
                 from .lst_unstake_arbitrage import LstInstantUnstakeArbitrage
                 lst_arb = LstInstantUnstakeArbitrage(
@@ -420,6 +422,7 @@ class ExecutionRouter:
                     rpc_url=self.rpc_url,
                     cfg=self.cfg,
                     data_aggregator=self.data_aggregator,
+                    data_collector=getattr(self, 'data_collector', None),
                     marginfi_account=os.getenv("MARGINFI_ACCOUNT", ""),
                     tx_builder=JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter),
                     optimal_trade_sizer=self.optimal_trade_sizer,

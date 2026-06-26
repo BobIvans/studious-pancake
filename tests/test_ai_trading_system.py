@@ -138,8 +138,8 @@ async def test_data_collection():
     logger.info(f"📈 Recent trades: {len(recent_trades)}")
 
 async def test_offline_analysis():
-    """Test offline AI analysis."""
-    logger.info("🧪 Testing Offline AI Analysis...")
+    """Test offline statistics analysis."""
+    logger.info("🧪 Testing Offline Statistics Analysis...")
 
     try:
         from src.ingest.offline_stats_reporter import OfflineStatsReporter
@@ -147,21 +147,18 @@ async def test_offline_analysis():
         collector = DataCollector(use_sqlite=False)
         analyzer = OfflineStatsReporter(collector)
 
-        # Generate sample analysis (would need real data)
-        logger.info("🔍 AI Analysis Structure Test:")
+        logger.info("🔍 Stats Analysis Structure Test:")
         logger.info("  - Summary statistics: ✓")
         logger.info("  - Score effectiveness analysis: ✓")
         logger.info("  - Pair performance analysis: ✓")
         logger.info("  - Timing pattern analysis: ✓")
         logger.info("  - Network impact analysis: ✓")
-        logger.info("  - AI recommendations: ✓")
 
-        # Test report generation with empty data
         report = analyzer.generate_report()
         logger.info("📄 Empty report generated successfully")
 
     except ImportError:
-        logger.warning("⚠️ Offline analyzer requires additional dependencies (matplotlib, seaborn)")
+        logger.warning("⚠️ Offline stats reporter requires additional dependencies (matplotlib, seaborn)")
         logger.info("📄 Analysis framework ready for data collection")
 
 async def main():

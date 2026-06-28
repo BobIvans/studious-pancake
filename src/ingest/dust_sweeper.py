@@ -1,6 +1,6 @@
 """
 Zero-Dust Guard & Crash Recovery
-Automatically cleans stranded Token Accounts (value < $1.00) and recovers ATA rent (0.002 SOL per account).
+Automatically cleans stranded Token Accounts (value < $1.00) and recovers ATA rent (0.00203928 SOL per account).
 Critical for protecting the 0.015 SOL budget from accumulation of low-value dust.
 """
 
@@ -106,7 +106,7 @@ class DustSweeper:
                         "amount": raw_amount,
                         "mint": mint
                     })
-                    # Estimate rent recovery (0.002 SOL = 2_000_000 lamports)
+                    # Estimate rent recovery (0.00203928 SOL = 2_039_280 lamports)
                     total_rent_recovered += 2_039_280
 
             if not dust_accounts:
@@ -165,10 +165,14 @@ class DustSweeper:
         """
         Determine if a token account should be swept.
 
+        P0-13: Added USD value check via Pyth price feeder.
+        Only sweeps if the total USD value is less than $1.00.
+        If price cannot be obtained, conservatively returns False (not dust).
+
         Fix #5 — Aggressive ATA Rent Recovery for 0.017 SOL capital:
         - Core Golden (USDC, wSOL): НИКОГДА не трогаем
-        - Zero-balance не-golden: dust
-        - Любой токен < 0.05: dust
+        - Zero-balance не-golden: dust (no USD risk)
+        - Все остальные: < $1.00 = dust, >= $1.00 = keep
         """
         try:
             data_field = account_data.get("data", {})
@@ -197,10 +201,32 @@ class DustSweeper:
             if ui_amount == 0:
                 return True
 
-            # Для всех остальных токенов — порог 0.01
-            if ui_amount < 0.01:
+            # P0-13: USD value check — only sweep if < $1.00
+            usd_price = None
+            try:
+                from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
+                feeder = get_pyth_core_feeder()
+                if feeder is not None:
+                    usd_price = feeder.get_price(mint)
+            except Exception:
+                pass
+
+            if usd_price is not None and usd_price > 0:
+                usd_value = ui_amount * usd_price
+                # Only dust if < $1.00
+                if usd_value >= 1.0:
+                    return False
+                logger.debug(
+                    f"💸 Dust check: {mint[:8]} amount={ui_amount:.6f} "
+                    f"@ ${usd_price:.4f} = ${usd_value:.2f} < $1.00 — is dust"
+                )
                 return True
 
+            # Price unavailable — conservative: assume NOT dust (P0-13 safety)
+            logger.debug(
+                f"⚠️ Dust check: {mint[:8]} amount={ui_amount:.6f}, "
+                f"no price data — safe default: NOT dust"
+            )
             return False
 
         except Exception:

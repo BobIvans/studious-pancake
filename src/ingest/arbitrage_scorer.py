@@ -105,12 +105,13 @@ class ArbitrageScorer:
 
     def _calculate_profit_score(self, opp: ArbitrageOpportunity) -> float:
         """Calculate profit attractiveness score (0-100)."""
-        profit = opp.expected_profit_sol
+        net_profit = opp.expected_profit_sol - opp.gas_cost_sol
 
-        if profit <= 0:
+        if net_profit <= 0:
             return 0.0
 
-        # Normalize profit score with diminishing returns
+        profit = net_profit
+
         if profit < 0.001:  # < 0.001 SOL
             return profit * 1000  # Linear for small profits
         elif profit < 0.01:  # 0.001 - 0.01 SOL

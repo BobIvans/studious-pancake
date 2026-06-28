@@ -274,38 +274,6 @@ class FlashSimulator:
         Returns:
             Tuple of (is_profitable, reason, simulation_result)
         """
-        # ── Phase 49: Local Math Confidence (Dark Forest evasion) ─────────────
-        # If our O(1) local math says the trade is clearly profitable, skip RPC simulation.
-        # This hides our strategy from RPC-provider MEV monitors and saves 100-200 ms.
-        if expected_profit_sol is not None and expected_profit_sol >= LOCAL_MATH_CONFIDENCE_THRESHOLD_SOL:
-            logger.info(
-                f"🛡️ Phase 49 — Local Math Bypass: expected profit {expected_profit_sol:.6f} SOL "
-                f">= {LOCAL_MATH_CONFIDENCE_THRESHOLD_SOL} SOL threshold → skipping RPC simulation"
-            )
-            assumed_sim = SimulationResult(
-                success=True,
-                units_consumed=250000,
-                balance_delta_lamports=min_profit_lamports + 1000,
-                balance_delta_sol=(min_profit_lamports + 1000) / 1e9,
-                logs=["Phase 49: Local Math Confidence — RPC simulation bypassed"],
-                simulation_time_ms=0.0,
-            )
-            return True, "Phase 49: Local Math Confidence (RPC bypass)", assumed_sim
-
-        # Phase 43: Local Math Bypass (Bypassing RPC Dark Forest entirely)
-        if self.bypass_rpc_simulation:
-            logger.info("🛡️ OpSec: Bypassing RPC simulation. Relying on local O(1) confidence.")
-            # Assume success based on caller's local math confidence
-            assumed_sim = SimulationResult(
-                success=True,
-                units_consumed=250000,
-                balance_delta_lamports=min_profit_lamports + tip_lamports + 1000,
-                balance_delta_sol=(min_profit_lamports + tip_lamports + 1000) / 1e9,
-                logs=["Local math confidence bypass"],
-                simulation_time_ms=0.0,
-            )
-            return True, "Confidence: Local Math (O1)", assumed_sim
-
         sim = await self.simulate_transaction(tx_b64, tx_signer_pubkey, wallet_index, min_profit_lamports, jito_endpoint)
 
         if not sim.success:
@@ -314,32 +282,27 @@ class FlashSimulator:
                 self.record_bank_cooldown(bank_vault_pubkey)
             return False, f"Simulation failed: {sim.error}", sim
 
-        # For flash loan arbitrage: if simulation succeeds (no error), MarginFi accepted repayment
-        # This means arbitrage was profitable enough to cover the loan + fees
-        # We trust the contract logic rather than trying to parse balances
-        self._stats["profitable"] += 1
+        net_profit_lamports = sim.balance_delta_lamports - tip_lamports - priority_fee_lamports
+        if net_profit_lamports < min_profit_lamports:
+            return False, f"Net {net_profit_lamports} < min {min_profit_lamports}", sim
 
-        # Set a dummy positive delta for logging purposes
-        assumed_profit_lamports = min_profit_lamports + tip_lamports + 1000  # Add buffer
-        profit_sol = assumed_profit_lamports / 1e9
+        profit_sol = net_profit_lamports / 1e9
 
         logger.info(
-            f"✅ Flash Simulator APPROVED: MarginFi accepted repayment "
-            f"(assumed profit ≥{profit_sol:.6f} SOL) | "
+            f"✅ Flash Simulator APPROVED: net profit {profit_sol:.6f} SOL | "
             f"{sim.simulation_time_ms:.0f}ms"
         )
 
-        # Return successful result with assumed profit
         successful_sim = SimulationResult(
             success=True,
             units_consumed=sim.units_consumed,
-            balance_delta_lamports=assumed_profit_lamports,
+            balance_delta_lamports=net_profit_lamports,
             balance_delta_sol=profit_sol,
             logs=sim.logs,
             simulation_time_ms=sim.simulation_time_ms,
         )
 
-        return True, "Profitable (MarginFi confirmed)", successful_sim
+        return True, f"Profitable: {profit_sol:.6f} SOL", successful_sim
 
     def is_bank_on_cooldown(self, bank_vault_pubkey: str) -> bool:
         """

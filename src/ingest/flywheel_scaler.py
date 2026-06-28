@@ -43,6 +43,41 @@ SCALING_GRID = [
 ]
 
 
+class DynamicThresholds:
+    """Balance-aware thresholds for survival-mode trading."""
+
+    def __init__(self, wallet_balance_sol: float):
+        self.balance = wallet_balance_sol
+
+    @property
+    def min_profit_sol(self) -> float:
+        if self.balance < 0.020:
+            return 0.0003
+        elif self.balance < 0.100:
+            return 0.0002
+        elif self.balance < 1.000:
+            return 0.0001
+        return 0.00005
+
+    @property
+    def max_borrow_sol(self) -> float:
+        return min(0.4, self.balance * 30)
+
+    @property
+    def max_new_atas_per_trade(self) -> int:
+        if self.balance < 0.020:
+            return 0
+        if self.balance < 0.100:
+            return 1
+        if self.balance < 1.000:
+            return 2
+        return 4
+
+    @property
+    def hard_floor_sol(self) -> float:
+        return max(0.0089, self.balance * 0.5)
+
+
 class PairReputationCircuitBreaker:
     """Per-pair failure tracker with configurable cooldown.
 
@@ -208,10 +243,14 @@ class FlywheelScaler:
     def get_trading_params(self, current_balance_sol: float) -> dict:
         """Return dynamic trading parameters appropriate for the current balance."""
         tier = self.get_tier(current_balance_sol)
+        dynamic = DynamicThresholds(current_balance_sol)
         return {
             "max_concurrent_trades": tier.max_concurrent_trades,
             "jito_tip_pct": tier.jito_tip_percent,
-            "min_net_profit_sol": tier.min_profit_sol,
+            "min_net_profit_sol": dynamic.min_profit_sol,
+            "max_borrow_sol": dynamic.max_borrow_sol,
+            "max_new_atas_per_trade": dynamic.max_new_atas_per_trade,
+            "hard_floor_sol": dynamic.hard_floor_sol,
             "allowed_strategies": tier.allowed_strategies,
             "max_slippage_bps": tier.max_slippage_bps,
             "flash_loan_size": tier.flash_loan_size

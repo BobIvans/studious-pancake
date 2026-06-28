@@ -301,33 +301,20 @@ class ALTCacheManager:
     def _get_known_alt_pubkeys(self) -> Set[Pubkey]:
         """
         Return set of known ALT pubkeys for major Solana DEXes and protocols.
+        P0-11: Only real ALT addresses — removed program IDs that were masquerading as ALTs.
         """
-        # Jupiter v6 ALTs (mainnet) — Fix 62: replaced fake circular-pattern placeholders with real alts
+        # Jupiter v6 ALTs (mainnet) — real Lookup Table addresses (P0-11)
         jupiter_alts = [
-            "8BnUecXrf4oXLR2pGLCJdGdTNr4F9K3L9CQz6Fz7GQo",  # Jupiter ALT 1
-            "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",  # Jupiter ALT 2
-            "DQyrAcCrDXQ7mLqJ1VqieNnizKGQV6iEyGmFp6SJ8hs1",  # Jupiter ALT 3 (v6 real)
-            "7aYnrdmdCRodCkXj4uw4xTkFeowBgB5xWnLxnJsQrFzk",  # Jupiter ALT 4 (v6 real)
-        ]
-
-        # Raydium ALTs
-        raydium_alts = [
-            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8", # Raydium Main
-            "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP", # Orca
-        ]
-
-        # Meteora ALTs
-        meteora_alts = [
-            "LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3",
+            "DQyrAcCrDXQ7mLqJ1VqieNnizKGQV6iEyGmFp6SJ8hs1",  # Jupiter ALT (v6 real)
+            "7aYnrdmdCRodCkXj4uw4xTkFeowBgB5xWnLxnJsQrFzk",  # Jupiter ALT (v6 real)
         ]
 
         # Convert to Pubkey objects
         all_alts = []
-        for alt_list in [jupiter_alts, raydium_alts, meteora_alts]:
-            for alt_str in alt_list:
-                try:
-                    all_alts.append(Pubkey.from_string(alt_str))
-                except Exception as e:
-                    logger.debug(f"Invalid ALT pubkey {alt_str}: {e}")
+        for alt_str in jupiter_alts:
+            try:
+                all_alts.append(Pubkey.from_string(alt_str))
+            except Exception as e:
+                logger.debug(f"Invalid ALT pubkey {alt_str}: {e}")
 
         return set(all_alts)

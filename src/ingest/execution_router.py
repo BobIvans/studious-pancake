@@ -53,19 +53,29 @@ class MarginFiAccountPool:
         """
         Create pool from MARGINFI_ACCOUNTS env var (comma-separated list).
         Falls back to MARGINFI_ACCOUNT if only one account is configured.
+
+        Raises RuntimeError if no MarginFi account is configured (P0-15).
         """
         accounts_str = os.getenv("MARGINFI_ACCOUNTS", "")
         if accounts_str.strip():
             accounts = [a.strip() for a in accounts_str.split(",") if a.strip()]
             logger.info(f"🏦 MarginFi Account Pool: {len(accounts)} accounts (MARGINFI_ACCOUNTS)")
         else:
-            single = os.getenv("MARGINFI_ACCOUNT", "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2")
-            accounts = [single.strip()] if single.strip() else []
-            logger.info(f"🏦 MarginFi Account Pool: 1 account (MARGINFI_ACCOUNT fallback)")
+            single = os.getenv("MARGINFI_ACCOUNT")
+            if single and single.strip():
+                accounts = [single.strip()]
+                logger.info(f"🏦 MarginFi Account Pool: 1 account (MARGINFI_ACCOUNT)")
+            else:
+                raise RuntimeError(
+                    "MARGINFI_ACCOUNT env var is required. "
+                    "Refusing to start with hardcoded fallback (P0-15)."
+                )
 
         if not accounts:
-            logger.warning("🏦 No MarginFi accounts configured — using hardcoded default")
-            accounts = ["Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2"]
+            raise RuntimeError(
+                "No MarginFi accounts configured. "
+                "Set MARGINFI_ACCOUNTS or MARGINFI_ACCOUNT in .env (P0-15)."
+            )
 
         return cls(accounts)
 
@@ -246,6 +256,7 @@ class ExecutionRouter:
         self._pending_bundle_slots: Dict[str, Dict[str, Any]] = {}
         self._stale_bundle_ids: Set[str] = set()
         self._self_cancel_task: Optional[asyncio.Task] = None
+        self._pending_lock = asyncio.Lock()  # P0-17: thread safety for _pending_bundle_slots
 
     def start_processor(self):
         if self._processor_task is None:
@@ -423,7 +434,7 @@ class ExecutionRouter:
                     cfg=self.cfg,
                     data_aggregator=self.data_aggregator,
                     data_collector=getattr(self, 'data_collector', None),
-                    marginfi_account=os.getenv("MARGINFI_ACCOUNT", ""),
+                    marginfi_account=os.getenv("MARGINFI_ACCOUNT"),
                     tx_builder=JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter),
                     optimal_trade_sizer=self.optimal_trade_sizer,
                     rpc_getter=self.rpc_getter,
@@ -501,21 +512,22 @@ class ExecutionRouter:
                     priority_fee_sol = 0.00001
                     total_fees_sol = jito_tip_sol + ata_rent_sol + priority_fee_sol
 
-                    # Profit check via PreTradeGuard with is_circular=True
+                    # Profit check via PreTradeGuard with is_circular=True (P0-8: fixed kwargs)
                     pre_trade_guard = PreTradeGuard(
                         session=self.session, rpc_url=self.rpc_url
                     )
-                    profit_check = await pre_trade_guard.check_profit_before_execution(
-                        opportunity=opportunity,
-                        expected_profit_sol=expected_profit_sol,
-                        priority_fee_sol=priority_fee_sol,
-                        jito_tip_sol=jito_tip_sol,
-                        ata_rent_sol=ata_rent_sol,
+                    is_profitable, reason, net_profit = await pre_trade_guard.check_profit_before_execution(
+                        input_mint=str(USDC_MINT),
+                        output_mint=expensive_mint,
+                        amount_lamports=borrow_amount,
+                        jito_tip_lamports=jito_tip_lamports,
+                        base_fee_lamports=int(priority_fee_sol * 1e9),
+                        expected_profit_lamports=int(expected_profit_sol * 1e9),
+                        ata_rent_lamports=int(ata_rent_sol * 1e9),
                         is_circular=True,
                     )
-                    if not profit_check.get("is_profitable", False):
-                        reason = profit_check.get("reason", "profit check failed")
-                        logger.warning(f"Wrapper Peg {pair}: {reason}")
+                    if not is_profitable:
+                        logger.warning(f"Wrapper Peg {pair}: {reason} (net={net_profit/1e9:.6f} SOL)")
                         return {"status": "skipped", "message": reason}
 
                     # Build native flash loan tx
@@ -1019,15 +1031,34 @@ class ExecutionRouter:
             # stale (~100% outdated). Jito Block Engine auto-inserts bundles into the
             # next Jito slot within 5 slots — no local leader check needed.
             # See: https://jito-labs.gitbook.io/mev/searcher-resources/bundles
+
+            # P0-9: Pre-trade guard — check gas tank before sending
+            try:
+                import src.ingest.shared_state as _ss
+                _bal = _ss.stats.get("last_balance", _ss.stats.get("virtual_balance", 0.0))
+                from src.ingest.pre_trade_guard import PreTradeGuard
+                gas_ok, _ = PreTradeGuard.check_gas_tank(_bal)
+                if not gas_ok:
+                    logger.warning("🚫 Pre-trade guard: gas tank empty — skipping bundle")
+                    return {"success": False, "error": "Gas tank empty"}
+            except Exception as _gas_err:
+                logger.debug(f"Pre-trade gas check error (non-fatal): {_gas_err}")
+
             logger.info(f"🎯 Sending bundle to Jito Block Engine unconditionally (slot={current_slot})...")
-            bundle_result = await self.jito_executor.send_bundle([transaction])
+            # P0-16: Pass tip_amount_lamports and deducted_amount to send_bundle
+            bundle_result = await self.jito_executor.send_bundle(
+                [transaction],
+                tip_amount_lamports=jito_tip_lamports,
+                deducted_amount=jito_tip_lamports / 1e9,
+            )
             if bundle_result.get("success") and bundle_result.get("bundle_id"):
-                self._pending_bundle_slots[bundle_result["bundle_id"]] = {
-                    "sent_slot": current_slot,
-                    "sent_at": time.time(),
-                    "tip_lamports": jito_tip_lamports,
-                    "deducted_amount": jito_tip_lamports / 1_000_000_000,
-                }
+                async with self._pending_lock:  # P0-17: thread-safe write
+                    self._pending_bundle_slots[bundle_result["bundle_id"]] = {
+                        "sent_slot": current_slot,
+                        "sent_at": time.time(),
+                        "tip_lamports": jito_tip_lamports,
+                        "deducted_amount": jito_tip_lamports / 1_000_000_000,
+                    }
                 # ── Phase 49: Optimistic State ───────────────────────────────────
                 tip_deducted = jito_tip_lamports / 1e9
                 async with shared_state.stats_lock:
@@ -1051,37 +1082,29 @@ class ExecutionRouter:
     # ───────────── Fix 51: Jito Bundle Self-Cancellation + Ghost Balance Refund ──────────────────────
 
     async def _self_cancel_stale_bundles(self):
-        """Detect bundles dropped by Jito (>5 seconds old) and refund the virtual balance.
-        Prevents "Ghost Balance" bug where virtual_balance is never returned after a dropped bundle.
+        """Detect bundles dropped by Jito (>5 seconds old) and log them.
+        Refund is handled exclusively by jito_executor.py to prevent double-counting (P0-17).
         """
         while True:
             try:
-                if not self._pending_bundle_slots:
-                    await asyncio.sleep(0.5)
-                    continue
+                async with self._pending_lock:  # P0-17: thread-safe iteration
+                    if not self._pending_bundle_slots:
+                        await asyncio.sleep(0.5)
+                        continue
 
-                current_time = time.time()
-                for bid, meta in list(self._pending_bundle_slots.items()):
-                    # Если прошло больше 5 секунд (бандл 100% умер в Jito)
-                    if current_time - meta.get("sent_at", current_time) > 5.0:
-                        logger.warning(
-                            f"⚡ Bundle {bid[:8]} dropped by Jito. Refunding virtual balance."
-                        )
+                    current_time = time.time()
+                    for bid, meta in list(self._pending_bundle_slots.items()):
+                        if current_time - meta.get("sent_at", current_time) > 5.0:
+                            logger.warning(
+                                f"⚡ Bundle {bid[:8]} dropped by Jito. "
+                                f"Refund handled by jito_executor (P0-17)."
+                            )
+                            self._stale_bundle_ids.add(bid)
 
-                        # ВОЗВРАЩАЕМ БАЛАНС
-                        try:
-                            refund_amount = meta.get("deducted_amount", 0)
-                            async with shared_state.stats_lock:
-                                shared_state.stats["virtual_balance"] += refund_amount
-                        except (ImportError, AttributeError, KeyError) as e:
-                            logger.debug(f"Ghost balance refund unavailable: {e}")
-
-                        self._stale_bundle_ids.add(bid)
-
-                # Очистка
-                for bid in list(self._stale_bundle_ids):
-                    self._pending_bundle_slots.pop(bid, None)
-                    self._stale_bundle_ids.discard(bid)
+                    # Cleanup stale bundle IDs
+                    for bid in list(self._stale_bundle_ids):
+                        self._pending_bundle_slots.pop(bid, None)
+                        self._stale_bundle_ids.discard(bid)
 
             except Exception as e:
                 logger.debug(f"Reconciliation error: {e}")

@@ -182,17 +182,27 @@ class WSOLManager:
         """
         Create instructions to wrap SOL into wSOL.
 
-        Phase 48 (MTU Optimization): CreateIdempotentATA removed from arb TX.
-        The wSOL ATA is held permanently (golden ATA) and must be pre-funded
-        via the DustSweeper or manual wrap, not created per-transaction.
-        AMMs accept wSOL directly; Jupiter routes handle syncNative internally.
+        P0-12: Fixed implementation — was returning empty list [].
+        Now correctly creates a SystemProgram.transfer to move SOL into the wSOL ATA
+        followed by a SyncNative instruction so the token program recognizes the balance.
 
         Returns:
-            List of wrapping instructions (empty — wrap/pre-fund ATA externally)
+            List of wrapping instructions [transfer, sync_native]
         """
-        # Phase 48: Zero-instruction wrap — ATA is held permanently
-        # Any required syncNative is handled by Jupiter swap-instructions
-        return []
+        from solders.system_program import transfer as system_transfer, TransferParams
+        from spl.token.instructions import sync_native, SyncNativeParams
+
+        return [
+            system_transfer(TransferParams(
+                from_pubkey=self.wallet_pubkey,
+                to_pubkey=self.wsol_ata,
+                lamports=amount
+            )),
+            sync_native(SyncNativeParams(
+                program_id=TOKEN_PROGRAM_ID,
+                account=self.wsol_ata
+            ))
+        ]
 
     def _create_unwrap_instructions(self) -> List[Instruction]:
         """

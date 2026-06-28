@@ -714,12 +714,10 @@ class PreTradeGuard:
         return float(os.getenv("MIN_RESERVE_SOL", "0.010"))
 
     # ─── Hard Floor Guard (Rent-Exemption Killswitch) ───────────────────────────
-    # If native SOL balance drops below 0.004 SOL, we trigger emergency shutdown:
+    # If native SOL balance drops below dynamic floor, we trigger emergency shutdown:
     # 1. Set GLOBAL_STOP_EVENT to stop all trading
     # 2. DustSweeper runs to close ATAs and recover rent
     # At 0.002 SOL the Solana network garbage-collector will DELETE the wallet account.
-    # We raise the floor to 0.004 SOL to buy time for emergency rent recovery.
-    HARD_FLOOR_SOL = 0.005
 
     @staticmethod
     def enforce_hard_floor(
@@ -728,9 +726,9 @@ class PreTradeGuard:
         """
         💀 Hard Floor Guard — absolute rent-exemption killswitch.
 
-        If native_sol_balance < 0.005 SOL, trigger graceful shutdown via
-        GLOBAL_STOP_EVENT so DustSweeper can close ATAs and recover rent
-        before the process dies. At 0.002 SOL the wallet gets garbage-collected.
+        If native_sol_balance < DynamicThresholds(native_sol_balance).hard_floor_sol,
+        trigger graceful shutdown via GLOBAL_STOP_EVENT so DustSweeper can close ATAs
+        and recover rent before the process dies.
 
         Args:
             native_sol_balance: Current wallet balance in SOL.
@@ -738,10 +736,13 @@ class PreTradeGuard:
             rpc_url: RPC URL for emergency dust sweep.
             session: aiohttp session for emergency dust sweep.
         """
-        if native_sol_balance < PreTradeGuard.HARD_FLOOR_SOL:
+        from src.ingest.flywheel_scaler import DynamicThresholds
+
+        floor = DynamicThresholds(native_sol_balance).hard_floor_sol
+        if native_sol_balance < floor:
             logger.critical(
                 f"💀 RENT DEATH KILLSWITCH: Balance {native_sol_balance:.6f} SOL < "
-                f"{PreTradeGuard.HARD_FLOOR_SOL} SOL — triggering emergency shutdown via GLOBAL_STOP_EVENT"
+                f"{floor:.6f} SOL — triggering emergency shutdown via GLOBAL_STOP_EVENT"
             )
             try:
                 import src.ingest.shared_state as _ss
@@ -828,6 +829,7 @@ class PreTradeGuard:
         priority_fee_lamports: int = 0,
         flashloan_fee_lamports: int = 0,
         ata_rent_lamports: int = 0,
+        min_profit_lamports: int = 0,
     ) -> Tuple[bool, str, int]:
         """Re-check Jupiter price ~50 ms before signing/bundling the transaction.
 
@@ -961,11 +963,12 @@ class PreTradeGuard:
                 f"net={actual_net_profit/1e9:.6f} SOL"
             )
 
-            if actual_net_profit <= 0:
+            threshold = min_profit_lamports if min_profit_lamports > 0 else 0
+            if actual_net_profit < threshold:
                 logger.warning(
                     f"🚫 Pre-trade BLOCKED: profit eroded to {actual_net_profit/1e9:.6f} SOL "
                     f"(tip={jito_tip_lamports/1e9:.6f} + fee={base_fee_lamports/1e9:.6f} = "
-                    f"{total_cost_lamports/1e9:.6f} SOL)"
+                    f"{total_cost_lamports/1e9:.6f} SOL, threshold={threshold/1e9:.6f} SOL)"
                 )
                 return (
                     False,

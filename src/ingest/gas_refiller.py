@@ -102,9 +102,12 @@ async def check_and_refill_gas(session, rpc, keypair):
 
                 # Calculate dynamic deficit instead of hardcoded 2 USDC
                 deficit_sol = target_balance - native_bal
+                from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
+                feeder = get_pyth_core_feeder()
+                sol_price = feeder.get_price("So11111111111111111111111111111111111111112") if feeder else 150.0
                 deficit_usdc_lamports = int(
-                    deficit_sol * 150 * 1_000_000
-                )  # ~$150 SOL → USDC
+                    deficit_sol * sol_price * 1_000_000
+                )  # Dynamic SOL price via Pyth
                 # Cap at available USDC balance, minimum 0.5 USDC
                 swap_amount = max(min(deficit_usdc_lamports, usdc_amount), 500_000)
 

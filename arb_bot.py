@@ -25,13 +25,8 @@ from typing import List, Dict, Tuple, Optional, Any, Callable, Set
 import resource
 from solders.pubkey import Pubkey
 from spl.token.instructions import get_associated_token_address
-from spl.token.constants import TOKEN_PROGRAM_ID
+from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID
 from src.ingest.flywheel_scaler import PairReputationCircuitBreaker
-
-# Token-2022 Program ID for RWA tokens
-TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
-    "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m"
-)
 
 try:
     # Увеличиваем лимит открытых файлов до максимума (65535)
@@ -179,6 +174,8 @@ except ImportError:
 
         def record_trade_result(self, *args, **kwargs):
             pass
+
+
 
 
 from src.ingest.tx_builder import JupiterTxBuilder
@@ -694,7 +691,7 @@ async def check_marginfi_health_factor(
                     # In production: deserialize MarginFi lending account and compute
                     # assets / (assets - liabilities) = health_factor
                     # Return 1.0 as neutral default when we cannot parse on-chain.
-                    logger.warning(
+                    logger.debug(
                         "MarginFi health-factor check returned neutral 1.0 (on-chain parsing not yet implemented)."
                     )
                     return 1.0
@@ -1437,6 +1434,7 @@ def get_marginfi_banks():
 import src.ingest.shared_state as shared_state
 
 MARGINFI_BANKS = shared_state.MARGINFI_BANKS
+shared_state.init_marginfi_banks()
 
 # Discriminators for our flash loan contract
 EXECUTE_ARBITRAGE_DISCRIMINATOR = bytes(
@@ -1975,61 +1973,6 @@ async def cleanup_temporary_tokens():
             logger.error(f"Cleanup error: {e}")
 
 
-class BankHealthMonitor:
-    """Monitors MarginFi bank liquidity and switches banks if health is low."""
-
-    def __init__(self, rpc_manager, sol_bank, usdc_bank):
-        self.rpc = rpc_manager
-        self.sol_bank = sol_bank
-        self.usdc_bank = usdc_bank
-        self.active_bank = sol_bank
-        self.running = False
-
-    async def start(self):
-        self.running = True
-        asyncio.create_task(self._monitor_loop())
-
-    async def _monitor_loop(self):
-        while self.running:
-            try:
-                # Check SOL Bank liquidity
-                sol_liq = await self._get_bank_liquidity(self.sol_bank)
-                if sol_liq < 5.0:
-                    logger.warning(
-                        f"⚠️ SOL Bank liquidity low: {sol_liq:.2f} SOL. Switching to USDC."
-                    )
-                    self.active_bank = self.usdc_bank
-                else:
-                    self.active_bank = self.sol_bank
-            except Exception as e:
-                logger.error(f"Health monitor error: {e}")
-            await asyncio.sleep(300)
-
-    async def _get_bank_liquidity(self, bank_info):
-        try:
-            vault = str(bank_info["liquidity_vault"])
-
-            # ALL MarginFi liquidity vaults are Token Accounts (even wSOL).
-            payload = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "getTokenAccountBalance",
-                "params": [vault],
-            }
-            session = await self.rpc._get_session()
-            async with session.post(
-                self.rpc.get_rpc(), json=payload, timeout=5.0
-            ) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if "result" in data and "value" in data["result"]:
-                        vault_lamports = int(data["result"]["value"]["amount"])
-                        return vault_lamports / 1e9
-        except Exception as e:
-            logger.error(f"Bank liquidity check failed: {e}")
-        return 0.0
-
-
 # ============================================================================
 # SCAN TARGETS — consumed by stable_scanner, lst_scanner, rwa_rest_scanner
 # ============================================================================
@@ -2430,7 +2373,6 @@ async def create_flashloan_arbitrage_tx(
     if profit_lamports < total_fees_in_base:
         return None
 
-    from spl.token.constants import TOKEN_PROGRAM_ID
     from spl.token.instructions import (
         get_associated_token_address,
         close_account,
@@ -3093,10 +3035,8 @@ async def lst_depeg_scanner(
                 )
                 borrow_lamports = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
 
-            if borrow_lamports <= 0:  # Микро-баланс: пропускаем только если borrow == 0
-                logger.warning(
-                    "📉 MarginFi SOL Bank is nearly empty. Waiting for liquidity..."
-                )
+            if borrow_lamports < 1_000_000:  # Если меньше 0.001 SOL
+                logger.warning(f"📉 MarginFi SOL Bank is low ({borrow_lamports/1e9:.4f} SOL). Waiting...")
                 await asyncio.sleep(10)
                 continue
             # -------------------------------------------------------------------
@@ -3198,8 +3138,6 @@ async def lst_depeg_scanner(
                 # Build tip lamports for trade execution (already optimized by bidding manager)
                 jito_tip_lamports = god_tip_lamports
 
-                jito_tip_lamports = tip_adjustment["tip_lamports"]
-
                 # ── Task 13: InsufficientFunds Protection ─────────────────────────
                 # Hard cap: tip must never exceed (native_balance - 0.0025) SOL.
                 # 0.0025 SOL is the gas/rent safety reserve; exceeding it causes
@@ -3220,9 +3158,6 @@ async def lst_depeg_scanner(
                     )
                     continue
                 jito_tip_lamports = capped_tip
-
-                if tip_adjustment["recommendation"] == "reduce_tip":
-                    pass
 
                 # ── Step 4: Build MarginFi flash loan TX ──────────────────
                 if not cfg.MARGINFI_ACCOUNT_PUBKEY:
@@ -3674,7 +3609,7 @@ async def lst_unstake_arbitrage_scanner(
         data_collector=data_collector,
         stats=shared_state.stats,
         stats_lock=shared_state.stats_lock,
-        jito_bidding_manager=jito_tip_manager,
+        jito_bidding_manager=jito_bidding_manager,
     )
 
     cycle_count = 0
@@ -4360,9 +4295,11 @@ async def execute_priority_opportunity(
         # This prevents capital drain from creating unnecessary ATAs for tiny profits.
         if _rent_sol > 0:
             _profit_after_rent = opportunity.expected_profit_sol - _rent_sol
-            if _profit_after_rent < float(cfg.MIN_PROFIT_SOL):
+            from src.ingest.flywheel_scaler import DynamicThresholds
+            dynamic_min_profit = DynamicThresholds(current_balance_sol).min_profit_sol
+            if _profit_after_rent < dynamic_min_profit:
                 logger.warning(
-                    f"⏭️ Dynamic Rent Guard: Profit {_profit_after_rent:.6f} SOL after ATA rent ({_rent_sol} SOL) < MIN_PROFIT_SOL ({cfg.MIN_PROFIT_SOL}) — ABORTING trade {opportunity.pair}"
+                    f"⏭️ Dynamic Rent Guard: Profit {_profit_after_rent:.6f} SOL after ATA rent ({_rent_sol} SOL) < min profit {dynamic_min_profit:.6f} SOL — ABORTING trade {opportunity.pair}"
                 )
                 return None  # Correctly abort execution to protect capital
         else:
@@ -4905,7 +4842,7 @@ async def worker(
                         competition_low = False
 
                 # 3. God-mode tip via JitoBiddingManager (tip_floor poller + step-up/down + capital guard)
-                #       replaces JitoTipManager (WebSocket) + inline dynamic tip.
+                #       replaces inline dynamic tip logic.
                 # Capital Guard is inside calculate_optimal_tip: returns -1 if 50th > 80% profit.
                 strategy_label = "arbitrage"
                 calculated_tip = jito_bidding_manager.calculate_optimal_tip(
@@ -5103,9 +5040,11 @@ async def worker(
                 ) / sol_price_in_usd
             current_expected_profit = net_profit
 
-            if net_profit < float(cfg.MIN_PROFIT_SOL):
+            from src.ingest.flywheel_scaler import DynamicThresholds
+            dynamic_min_profit = DynamicThresholds(current_native_sol).min_profit_sol
+            if net_profit < dynamic_min_profit:
                 logger.debug(
-                    f"Skipping: Net profit {net_profit:.6f} SOL < MIN_PROFIT_SOL ({cfg.MIN_PROFIT_SOL})"
+                    f"Skipping: Net profit {net_profit:.6f} SOL < dynamic min profit {dynamic_min_profit:.6f} SOL"
                 )
                 continue
 
@@ -5702,19 +5641,6 @@ async def run():
     except Exception as _load_err:
         logger.debug(f"extra_accounts.json loading failed: {_load_err}")
 
-    # 3. Execution Infrastructure (Jito & Leader Tracking)
-    global jito_tip_manager
-    jito_tip_manager = None
-    if JITO_AVAILABLE:
-        jito_tip_manager = JitoTipManager(
-            percentile=cfg.JITO_TIP_PERCENTILE,
-            min_tip_lamports=cfg.JITO_MIN_TIP_LAMPORTS,
-            tip_multiplier=cfg.TIP_MULTIPLIER,
-        )
-        # Phase 35: Fetch live tip accounts before starting stream
-        await jito_tip_manager.fetch_tip_accounts()
-        await jito_tip_manager.start()
-
     global leader_tracker
     leader_tracker = LeaderTracker(
         rpc_url=rpc.get_rpc(), fetch_interval_ms=cfg.LEADER_FETCH_INTERVAL
@@ -5843,7 +5769,6 @@ async def run():
     # 7. Balance & Health Monitoring
     async def wallet_balance_listener():
         from spl.token.instructions import close_account, CloseAccountParams
-        from spl.token.constants import TOKEN_PROGRAM_ID
         from spl.token.instructions import get_associated_token_address
         from solders.compute_budget import (
             set_compute_unit_limit,
@@ -5856,6 +5781,10 @@ async def run():
         while True:
             try:
                 # 1. Проверяем нативный баланс
+                # PAPER TRADING GUARD: skip real wallet maintenance in paper mode
+                if cfg.PAPER_TRADING_ONLY:
+                    await asyncio.sleep(120)
+                    continue
                 current_balance = await StateManager.get_balance(
                     session, rpc, keypair.pubkey()
                 )
@@ -5924,6 +5853,8 @@ async def run():
                                         Hash.from_string(blockhash),
                                     )
                                     tx = VersionedTransaction(msg, [keypair])
+                                    if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+                                        continue
                                     tx_b64 = base64.b64encode(bytes(tx)).decode("ascii")
                                     await session.post(
                                         rpc.get_rpc(),
@@ -6039,6 +5970,8 @@ async def run():
                                                 tx_b64_swap = base64.b64encode(
                                                     bytes(signed_tx)
                                                 ).decode("ascii")
+                                                if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+                                                    continue
                                                 send_response = await session.post(
                                                     rpc.get_rpc(),
                                                     json={
@@ -6081,12 +6014,6 @@ async def run():
     shared_state.active_tasks.add(_wallet_task)
     _wallet_task.add_done_callback(background_task_callback)
 
-    health_monitor = BankHealthMonitor(
-        rpc,
-        MARGINFI_BANKS["So11111111111111111111111111111111111111112"],
-        MARGINFI_BANKS["EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"],
-    )
-    await health_monitor.start()
 
     # 8. Warm-up
     initial_balance = None
@@ -6450,8 +6377,6 @@ async def run():
             await helius_webhook_handler.stop()
         if "data_aggregator" in locals() and data_aggregator:
             await data_aggregator.stop_batch_writer()
-        if cfg.JITO_SNIPER_ENABLED and jito_tip_manager:
-            await jito_tip_manager.stop()
 
 
 class StateManager:

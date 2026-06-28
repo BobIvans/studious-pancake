@@ -19,6 +19,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import socket
 import aiohttp
 from src.ingest.data_aggregator import DataAggregator
+from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
 from src.config.addresses import XSTOCK_MINTS
 
 # ============================================================================
@@ -72,8 +73,10 @@ class PaperTrader:
         connector = aiohttp.TCPConnector(limit=0, ttl_dns_cache=300, family=socket.AF_INET)
         self.session = aiohttp.ClientSession(connector=connector)
 
+        self.aggregator = DataAggregator("bot_history.db")
         self.simulator = None  # Simulator implemented elsewhere
         self.oracle = None
+        self.pyth_feeder = get_pyth_core_feeder()
         if self.oracle:
             asyncio.create_task(self.oracle.start())
         logger.info("🕸️ OracleStreams отключен (oracle_streams.py удалён)")
@@ -142,20 +145,58 @@ class PaperTrader:
 
         if profit_lamports > 0:
             profit_native = profit_lamports / (10 ** _base_dec)
-            # Convert profit to SOL equivalent (TODO: fetch live rate from Pyth oracle)
+            sol_price = self.pyth_feeder.get_price("So11111111111111111111111111111111111111112") if self.pyth_feeder else 150.0
             if _base_dec == 6:
-                profit_sol = profit_native / 150.0  # USDC/SOL ~$150 (stale — update periodically)
+                profit_sol = profit_native / sol_price
             else:
                 profit_sol = profit_native
-            net_profit = profit_sol - 0.00015
 
-            if net_profit > 0.0005:
+            flashloan_fee_lamports = int(amount * 0.0005)
+            dex_fee_lamports = int(amount * 0.003)
+            slippage_bps = 15
+            compute_cost_lamports = 5000
+            network_fee_lamports = 5000
+            priority_fee_lamports = 10000
+            jito_tip_lamports = int(profit_lamports * 0.4)
+            ata_rent_lamports = 0
+            total_cost_lamports = (
+                flashloan_fee_lamports + dex_fee_lamports + compute_cost_lamports +
+                network_fee_lamports + priority_fee_lamports + jito_tip_lamports +
+                ata_rent_lamports
+            )
+            net_profit_lamports = profit_lamports - total_cost_lamports
+            net_profit_sol = net_profit_lamports / (10 ** _base_dec)
+            roi_pct = (net_profit_lamports / amount * 100) if amount > 0 else 0.0
+            decision = "EXECUTE" if net_profit_sol > 0.0005 else "SKIP_LOW_MARGIN"
+
+            trade_data = {
+                "route": f"{base_name}->{target_name}->{base_name}",
+                "token_in": base_mint,
+                "token_out": target_mint,
+                "amount_lamports": amount,
+                "gross_revenue_lamports": final_amount,
+                "flashloan_fee_lamports": flashloan_fee_lamports,
+                "dex_fee_lamports": dex_fee_lamports,
+                "slippage_bps": slippage_bps,
+                "compute_cost_lamports": compute_cost_lamports,
+                "network_fee_lamports": network_fee_lamports,
+                "priority_fee_lamports": priority_fee_lamports,
+                "jito_tip_lamports": jito_tip_lamports,
+                "ata_rent_lamports": ata_rent_lamports,
+                "total_cost_lamports": total_cost_lamports,
+                "net_profit_lamports": net_profit_lamports,
+                "roi_pct": roi_pct,
+                "decision": decision,
+            }
+            await self.aggregator.log_paper_trade(trade_data)
+
+            if net_profit_sol > 0.0005:
                 self.trades += 1
-                self.total_profit += net_profit
-                self.current_balance += net_profit
+                self.total_profit += net_profit_sol
+                self.current_balance += net_profit_sol
                 logger.info(
                     f"🔥 АРБИТРАЖ (Jupiter) | {base_name} ➔ {target_name} ➔ {base_name} | "
-                    f"Профит: +{net_profit:.5f} SOL"
+                    f"Профит: +{net_profit_sol:.5f} SOL"
                 )
 
     async def _monitor_loop(self):

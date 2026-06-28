@@ -434,17 +434,37 @@ class JitoBiddingManager:
     ) -> int:
         """Start + Step-Up/Down + Capital Guard.
 
-        🛡️ Tip Floor Filter: Если 40% профита < 50й перцентиль Jito — отменяем сделку.
+        🛡️ Tip Floor Filter (P1): Если 40% профита < 50й перцентиль Jito — отменяем сделку.
         Не пытаемся перебить пол (floor), если это съедает > 80% профита.
         Ждем, когда конкуренция упадет.
         """
         if expected_profit_sol <= 0:
             return 0
 
-        # ── Dynamic Jito Tip Floor Filtering ──────────────────
+        # ── Dynamic Jito Tip Floor Filtering (P1) ──────────────────
         p50 = self.get_50th_percentile_lamports() / 1e9
         forty_pct_tip = expected_profit_sol * 0.40
-        base = forty_pct_tip # Ignore p50 to allow highly profitable trades without arbitrary floors
+
+        # P1: Compare 40% tip against 50th percentile floor
+        if forty_pct_tip < p50:
+            # If the floor would eat more than 80% of profit, reject the trade
+            if p50 > expected_profit_sol * 0.80:
+                logger.warning(
+                    f"🚫 Tip Floor Filter (P1): {strategy} profit {expected_profit_sol:.6f} SOL "
+                    f"too small to cover 50th percentile floor ({p50:.6f} SOL). "
+                    f"40% tip ({forty_pct_tip:.6f} SOL) < floor ({p50:.6f} SOL). Skipping."
+                )
+                return -1
+            # Otherwise, bump to p50 + random jitter
+            import random
+            bump_jitter = random.randint(100, 500)
+            base = p50 + (bump_jitter / 1e9)
+            logger.debug(
+                f"🚀 Tip Floor Bump (P1): {strategy} 40% tip ({forty_pct_tip:.6f} SOL) "
+                f"< floor ({p50:.6f} SOL). Bumping to {base:.6f} SOL + jitter."
+            )
+        else:
+            base = forty_pct_tip
 
         # Success rate last 10 min
         import time

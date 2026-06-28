@@ -96,6 +96,35 @@ class DataAggregator:
             cursor.execute("INSERT OR IGNORE INTO schema_version (version) VALUES (1)")
             logger.info("Schema migrated to version 1")
 
+        # Phase 6: Paper trades table — normalized cost breakdown for backtest analysis
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS paper_trades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ts TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                slot BIGINT,
+                blockhash TEXT,
+                route TEXT,
+                token_in TEXT,
+                token_out TEXT,
+                amount_lamports BIGINT,
+                gross_revenue_lamports BIGINT,
+                flashloan_fee_lamports BIGINT,
+                dex_fee_lamports BIGINT,
+                slippage_bps INTEGER,
+                compute_cost_lamports BIGINT,
+                network_fee_lamports BIGINT,
+                priority_fee_lamports BIGINT,
+                jito_tip_lamports BIGINT,
+                ata_rent_lamports BIGINT,
+                total_cost_lamports BIGINT,
+                net_profit_lamports BIGINT,
+                roi_pct REAL,
+                decision TEXT
+            )
+        """
+        )
+
         conn.commit()
         conn.close()
 
@@ -640,82 +669,82 @@ class DataAggregator:
             return results
 
     async def log_paper_trade(self, trade_data: Dict[str, Any]):
-        """Log a paper trading transaction to the database via non-blocking write queue."""
+        """Log a paper trading transaction directly into the paper_trades table."""
         try:
-            input_data = {
-                "route": trade_data.get("route"),
-                "token_in": trade_data.get("token_in"),
-                "token_out": trade_data.get("token_out"),
-                "amount": trade_data.get("amount"),
-                "expected_profit_sol": trade_data.get("expected_profit_sol"),
-                "slippage_bps": trade_data.get("slippage_bps"),
-                "jito_tip_lamports": trade_data.get("jito_tip_lamports"),
-                "priority_fee_lamports": trade_data.get("priority_fee_lamports"),
-            }
-            execution_result = {
-                "profit": trade_data.get("actual_profit"),
-                "balance_after": trade_data.get("balance_after"),
-                "network_load": trade_data.get("network_load"),
-                "jito_tip_sol": trade_data.get("jito_tip_sol"),
-                "flash_loan_fee_sol": trade_data.get("flash_loan_fee_sol"),
-                "ata_rent_sol": trade_data.get("ata_rent_sol"),
-            }
-            metadata = {
-                "paper_trading": True,
-                "dex_pair": trade_data.get("dex_pair"),
-                "confidence": trade_data.get("confidence"),
-                "execution_time_ms": trade_data.get("execution_time_ms"),
-                "price_impact_pct": trade_data.get("price_impact_pct"),
-                "pool_liquidity_usd": trade_data.get("pool_liquidity_usd"),
-            }
-
-            await self.log_event(
-                "PaperTrade",
-                transaction_signature=trade_data.get("trade_id", "unknown"),
-                input_data=input_data,
-                execution_result=execution_result,
-                metadata=metadata,
-            )
-
+            async with aiosqlite.connect(self.db_path, timeout=30) as db:
+                await db.execute(
+                    """
+                    INSERT INTO paper_trades (
+                        ts, slot, blockhash, route, token_in, token_out,
+                        amount_lamports, gross_revenue_lamports, flashloan_fee_lamports,
+                        dex_fee_lamports, slippage_bps, compute_cost_lamports,
+                        network_fee_lamports, priority_fee_lamports, jito_tip_lamports,
+                        ata_rent_lamports, total_cost_lamports, net_profit_lamports,
+                        roi_pct, decision
+                    ) VALUES (
+                        datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    )
+                """,
+                    (
+                        trade_data.get("slot"),
+                        trade_data.get("blockhash"),
+                        trade_data.get("route"),
+                        trade_data.get("token_in"),
+                        trade_data.get("token_out"),
+                        trade_data.get("amount_lamports"),
+                        trade_data.get("gross_revenue_lamports"),
+                        trade_data.get("flashloan_fee_lamports"),
+                        trade_data.get("dex_fee_lamports"),
+                        trade_data.get("slippage_bps"),
+                        trade_data.get("compute_cost_lamports"),
+                        trade_data.get("network_fee_lamports"),
+                        trade_data.get("priority_fee_lamports"),
+                        trade_data.get("jito_tip_lamports"),
+                        trade_data.get("ata_rent_lamports"),
+                        trade_data.get("total_cost_lamports"),
+                        trade_data.get("net_profit_lamports"),
+                        trade_data.get("roi_pct"),
+                        trade_data.get("decision"),
+                    ),
+                )
+                await db.commit()
         except Exception as e:
-            logger.error(f"Failed to queue paper trade: {e}")
+            logger.error(f"Failed to log paper trade: {e}")
 
     async def get_paper_trading_stats(self, days: int = 7) -> Dict[str, Any]:
-        """Get paper trading statistics."""
+        """Get paper trading statistics from the normalized paper_trades table."""
         cutoff_timestamp = time.time() - (days * 24 * 60 * 60)
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(self.db_path, timeout=30) as db:
             # Total paper trades
             cursor = await db.execute(
                 """
-                SELECT COUNT(*) FROM events
-                WHERE timestamp >= ? AND event_type = 'PaperTrade'
+                SELECT COUNT(*) FROM paper_trades
+                WHERE ts >= datetime(?, 'unixepoch')
             """,
                 (cutoff_timestamp,),
             )
             total_trades = (await cursor.fetchone())[0]
 
-            # Total profit
+            # Total net profit
             cursor = await db.execute(
                 """
-                SELECT SUM(CAST(json_extract(execution_result, '$.profit') AS REAL))
-                FROM events
-                WHERE timestamp >= ? AND event_type = 'PaperTrade'
+                SELECT SUM(net_profit_lamports) FROM paper_trades
+                WHERE ts >= datetime(?, 'unixepoch')
             """,
                 (cutoff_timestamp,),
             )
-            total_profit = (await cursor.fetchone())[0] or 0.0
+            total_profit_lamports = (await cursor.fetchone())[0] or 0
+            total_profit_sol = total_profit_lamports / 1e9
 
             # Most profitable routes
             cursor = await db.execute(
                 """
-                SELECT json_extract(input_data, '$.route') as route,
-                       COUNT(*) as count,
-                       AVG(CAST(json_extract(execution_result, '$.profit') AS REAL)) as avg_profit
-                FROM events
-                WHERE timestamp >= ? AND event_type = 'PaperTrade'
+                SELECT route, COUNT(*) as count, AVG(net_profit_lamports) as avg_profit_lamports
+                FROM paper_trades
+                WHERE ts >= datetime(?, 'unixepoch')
                 GROUP BY route
-                ORDER BY avg_profit DESC
+                ORDER BY avg_profit_lamports DESC
                 LIMIT 5
             """,
                 (cutoff_timestamp,),
@@ -724,12 +753,28 @@ class DataAggregator:
             top_routes = []
             async for row in cursor:
                 top_routes.append(
-                    {"route": row[0], "count": row[1], "avg_profit": row[2]}
+                    {
+                        "route": row[0],
+                        "count": row[1],
+                        "avg_profit_sol": (row[2] or 0) / 1e9,
+                    }
                 )
+
+            # Win rate
+            cursor = await db.execute(
+                """
+                SELECT COUNT(*) FROM paper_trades
+                WHERE ts >= datetime(?, 'unixepoch') AND net_profit_lamports > 0
+            """,
+                (cutoff_timestamp,),
+            )
+            wins = (await cursor.fetchone())[0]
+            win_rate = wins / total_trades if total_trades > 0 else 0.0
 
             return {
                 "total_trades": total_trades,
-                "total_profit": total_profit,
+                "total_profit": total_profit_sol,
+                "win_rate": win_rate,
                 "top_routes": top_routes,
                 "period_days": days,
             }

@@ -607,7 +607,7 @@ class JupiterTxBuilder:
                 #     address_lookup_table_accounts=_mtu_alts,
                 #     recent_blockhash=_mtu_bh,
                 # )
-                # _padded_tx = VersionedTransaction(_padded_msg, [])
+                # _padded_tx = VersionedTransaction(_padded_msg, [Keypair.from_bytes(bytes([0]*64))])
                 # _padded_size = len(bytes(_padded_tx))
                 # logger.debug(
                 #     f"📦 MTU padding applied: {_mtu_size} B → {_padded_size} B "
@@ -1124,25 +1124,25 @@ class JupiterTxBuilder:
     async def get_max_marginfi_borrow(self, bank_pubkey: str) -> int:
         try:
             payload = {
-                "jsonrpc": "2.0",
-                "id": 1,
+                "jsonrpc": "2.0", "id": 1,
                 "method": "getTokenAccountBalance",
-                "params": [bank_pubkey],
+                "params": [str(bank_pubkey)]
             }
-            async with self.session.post(
-                self.rpc_url, json=payload, timeout=5.0
-            ) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if "result" in data and "value" in data["result"]:
-                        vault_lamports = int(data["result"]["value"]["amount"])
-                        safe_liquidity = int(vault_lamports * 0.95)
-                        return safe_liquidity
-                else:
-                    logger.error(f"RPC Error {resp.status} fetching MarginFi liquidity")
+            async with self.session.post(self.rpc_url, json=payload) as resp:
+                data = await resp.json()
+                if "result" in data and "value" in data["result"]:
+                    val = data["result"]["value"]
+                    if isinstance(val, dict) and "amount" in val:
+                        vault_lamports = int(val["amount"])
+                    elif isinstance(val, (int, float)):
+                        vault_lamports = int(val)
+                    else:
+                        return 0
+                    return int(vault_lamports * 0.95)
+            return 0
         except Exception as e:
-            logger.error(f"CRITICAL: Failed to read real MarginFi liquidity: {e}")
-        return 0
+            logger.error(f"CRITICAL: get_max_marginfi_borrow failed! RPC: {self.rpc_url} | Error: {e}")
+            return 0
 
     async def _detect_sol_wrapping_conflict(
         self, instructions: List[Instruction]
@@ -1592,6 +1592,7 @@ class JupiterTxBuilder:
         # Removed set_compute_unit_price - will be added by build_optimized_transaction
 
         # 1. MarginFi Flashloan Start (3 accounts: mfi_account, wallet, ixs_sysvar)
+        end_index = len(all_instructions) + 3 + len(dex_swap_instructions) + len(exit_pivot_ixs or [])
         borrow_ix = self.build_marginfi_start_flashloan_ix(
             mfi_program=mfi_program,
             mfi_account=mfi_account,
@@ -1602,9 +1603,7 @@ class JupiterTxBuilder:
             vault_auth=vault_auth,
             token_program=sol_prog_id,
             amount=borrow_amount_lamports,
-            instruction_indices=[
-                len(all_instructions) + 2
-            ],  # Points to repay instruction index
+            instruction_indices=[end_index],
         )
         all_instructions.append(borrow_ix)
 
@@ -1655,17 +1654,9 @@ class JupiterTxBuilder:
         )
         all_instructions.append(end_ix)
 
-        # =====================================================================
-        # FIX 1 (Non-burning Dust): Only close wSOL via dust_sweeper async.
-        # DO NOT close wSOL atomically here — Jupiter may leave 1 lamport dust,
-        # causing CloseAccount to revert the ENTIRE flashloan + arb transaction.
-        # DustSweeper handles this asynchronously post-trade.
-        # To close wSOL atomically safely, first add a transfer instruction to
-        # drain the wSOL balance to the wallet, then close:
-        #   from solders.system_program import TransferParams, transfer
-        #   drain = transfer(TransferParams(from_pubkey=wsol_ata, to_pubkey=wallet, lamports=wsol_balance))
-        # This balance is unknown at compile time, so we delegate to DustSweeper.
-        # =====================================================================
+        # P0-10: Removed unconditional close_account(wsol_ata) from flashloan tx.
+        # wSOL ATA closing is handled asynchronously by DustSweeper between trades.
+        # CloseAccount in the middle of a flashloan reverts if Jupiter leaves 1-lamport dust.
 
         # ЗАЩИТА КАПИТАЛА (0.017 SOL): Чаевые Jito СТРОГО в конце единой транзакции.
         # Если DEX Swap выдаст SlippageExceeded или MarginFi Repay выдаст InsufficientFunds ->
@@ -1673,7 +1664,7 @@ class JupiterTxBuilder:
         if jito_tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
 
-            # Fix 1: wSOL already closed atomically above.
+            # wSOL is closed atomically above.
             # Dynamic tip accounts — caller must supply, abort if empty (no hardcoded fallback).
             if not tip_accounts:
                 logger.critical(
@@ -2121,32 +2112,8 @@ class JupiterTxBuilder:
                 + [repay_ix, end_ix]
             )
 
-            # =====================================================================
-            # FIX 1 (Non-burning Dust): Only close wSOL atomically, NOT user_borrow_ata.
-            # user_borrow_ata may be a USDC ATA (if borrow_mint=USDC) — closing it
-            # would destroy the ability to receive USDC without paying rent again.
-            # Only close wSOL ATA (SOL borrow path). Use sol_wrapped_mint explicitly.
-            wsol_mint_pk_for_close = Pubkey.from_string(
-                "So11111111111111111111111111111111111111112"
-            )
-            wsol_ata_for_close = get_associated_token_address(
-                wallet, wsol_mint_pk_for_close
-            )
-            final_instructions.append(
-                close_account(
-                    CloseAccountParams(
-                        program_id=TOKEN_PROGRAM_ID,
-                        account=wsol_ata_for_close,
-                        dest=wallet,
-                        owner=wallet,
-                        signers=[],
-                    )
-                )
-            )
-            logger.debug(
-                "🔓 Fix 1 (Non-burning Dust): wSOL ATA closed atomically | intermediate ATA delegated to dust_sweeper"
-            )
-            # =====================================================================
+            # P0-10: Removed unconditional close_account(wsol_ata) from build_marginfi_flashloan_tx.
+            # wSOL ATA closing is handled asynchronously by DustSweeper between trades.
 
             # 5. ATOMIC JITO TIP (100% CAPITAL PROTECTION)
             if jito_tip_lamports > 0:
@@ -2435,7 +2402,7 @@ class JupiterTxBuilder:
     async def _add_ata_rent_recovery(
         self, instructions: List[Instruction], payer: Pubkey
     ) -> List[Instruction]:
-        """Add ATA rent recovery instructions to reclaim 0.002 SOL per token account."""
+        """Add ATA rent recovery instructions to reclaim 2_039_280 lamports (0.00203928 SOL) per token account."""
         recovery_instructions = []
         WHITELIST_MINTS = [
             "So11111111111111111111111111111111111111112",  # SOL

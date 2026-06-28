@@ -328,7 +328,12 @@ class LstInstantUnstakeArbitrage:
 
             # Clone bank_info and inject marginfi_account to prevent compile KeyError
             active_bank_info = dict(bank_info)
-            _acct_to_use = os.getenv("MARGINFI_ACCOUNT", "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2")
+            _acct_to_use = os.getenv("MARGINFI_ACCOUNT")
+            if not _acct_to_use:
+                raise RuntimeError(
+                    "MARGINFI_ACCOUNT env var is required. "
+                    "Refusing to start with hardcoded fallback (P0-15)."
+                )
             active_bank_info["marginfi_account"] = Pubkey.from_string(_acct_to_use)
 
             dex_leg1 = quote.get("dex_leg1", {})
@@ -458,6 +463,39 @@ class LstInstantUnstakeArbitrage:
                     borrow_amount,
                     opportunity["expected_profit_lamports"]
                 )
+
+            # P0-9: Pre-trade guard — gas tank check before sending
+            try:
+                import src.ingest.shared_state as _ss
+                _bal = _ss.stats.get("last_balance", _ss.stats.get("virtual_balance", 0.0))
+                from src.ingest.pre_trade_guard import PreTradeGuard
+                gas_ok, _ = PreTradeGuard.check_gas_tank(_bal)
+                if not gas_ok:
+                    logger.warning("🚫 Pre-trade guard (LST): gas tank empty — skipping bundle")
+                    jito_result = {"success": False, "error": "Gas tank empty"}
+                    return False
+            except Exception as _gas_err:
+                logger.debug(f"Pre-trade gas check error (non-fatal): {_gas_err}")
+
+            # P0-9: Final simulation check before send_bundle
+            try:
+                from .pre_trade_guard import PreTradeGuard
+                _ptg_check = PreTradeGuard(session=self.session, rpc_url=self._static_rpc_url)
+                _prof_ok, _reason, _net = await _ptg_check.check_profit_before_execution(
+                    input_mint=SOL_MINT,
+                    output_mint=lst_mint,
+                    amount_lamports=borrow_amount,
+                    jito_tip_lamports=jito_tip_lamports,
+                    base_fee_lamports=0,
+                    expected_profit_lamports=opportunity["expected_profit_lamports"],
+                    is_circular=True,
+                )
+                if not _prof_ok:
+                    logger.warning(f"🚫 Pre-trade guard (LST): {_reason}")
+                    jito_result = {"success": False, "error": _reason}
+                    return False
+            except Exception as _ptg_err:
+                logger.debug(f"Pre-trade check error (non-fatal): {_ptg_err}")
 
             # Send via Jito
             jito_result = await jito_executor.send_bundle([transaction])

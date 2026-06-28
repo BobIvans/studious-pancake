@@ -111,6 +111,8 @@ stats: Dict[str, Any] = {
     "state_to_execution_latencies": [],  # Fix 64: Capped to 1000 max via append_latency()
     "current_slot": 0,
     "errors": {},
+    "last_opportunity_ts": 0.0,
+    "consecutive_failures": 0,
 }
 
 active_tasks: Set[asyncio.Task] = set()

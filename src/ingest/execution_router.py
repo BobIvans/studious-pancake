@@ -893,6 +893,7 @@ class ExecutionRouter:
         if self.consecutive_failures >= self.max_consecutive_failures:
             logger.critical(f"🚨 CIRCUIT BREAKER: {self.consecutive_failures} consecutive failures detected")
             self.dust_alert_triggered = True
+            shared_state.stats["consecutive_failures"] = self.consecutive_failures
             return True
 
         return False
@@ -906,6 +907,7 @@ class ExecutionRouter:
             # This would check actual wallet balance vs expected
             # For now, reset consecutive failures on success
             self.consecutive_failures = max(0, self.consecutive_failures - 1)
+            shared_state.stats["consecutive_failures"] = self.consecutive_failures
 
         except Exception as e:
             logger.error(f"Rent recovery verification error: {e}")
@@ -935,6 +937,7 @@ class ExecutionRouter:
         """Reset circuit breaker (for manual intervention)."""
         self.dust_alert_triggered = False
         self.consecutive_failures = 0
+        shared_state.stats["consecutive_failures"] = 0
         logger.info("🔄 Circuit breaker reset - trading resumed")
 
     async def _check_wallet_balance_after_execution(self):
@@ -1077,6 +1080,8 @@ class ExecutionRouter:
             if "remaining account" in err.lower():
                 self.discover_extra_account(err, "current_strategy")
             logger.error(f"Execution routing failed: {e}")
+            self.consecutive_failures += 1
+            shared_state.stats["consecutive_failures"] = self.consecutive_failures
             return {"success": False, "error": str(e)}
 
     # ───────────── Fix 51: Jito Bundle Self-Cancellation + Ghost Balance Refund ──────────────────────

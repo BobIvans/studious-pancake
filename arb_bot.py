@@ -456,6 +456,30 @@ logging.basicConfig(
 logger = logging.getLogger("ArbBot")
 
 
+def redact_url(url: str) -> str:
+    """P0-4.2a: Redact API keys from URLs for safe logging.
+    Replaces api-key, apikey, token query params with [REDACTED].
+    """
+    if not url:
+        return url
+    try:
+        parsed = urllib.parse.urlparse(url)
+        query_params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+        redacted = False
+        for sensitive_key in {"api-key", "apikey", "api_key", "token", "key"}:
+            if sensitive_key in query_params:
+                query_params[sensitive_key] = ["[REDACTED]"]
+                redacted = True
+        if redacted:
+            new_query = urllib.parse.urlencode(query_params, doseq=True)
+            return urllib.parse.urlunparse(
+                (parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment)
+            )
+        return url
+    except Exception:
+        return url
+
+
 def clean_rpc_urls(env_string: str, is_helius: bool = False) -> List[str]:
     """Железобетонная очистка ссылок и ключей от любого мусора"""
     if not env_string:
@@ -1804,8 +1828,9 @@ class RPCManager:
                 }
                 rpc_url = self.get_rpc()
                 session = await self._get_session()
+                # P0-4.2b: Removed ssl=False — using default TLS verification
                 async with session.post(
-                    rpc_url, json=payload, timeout=3.0, ssl=False
+                    rpc_url, json=payload, timeout=3.0
                 ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
@@ -1941,7 +1966,8 @@ async def dexscreener_scanner(queue, session, cfg):
 
 # Dynamic Token Registry for Webhook-discovered tokens
 temporary_tokens: Dict[str, float] = {}  # Mint -> Expiry Timestamp
-temporary_tokens_lock = asyncio.Lock()
+# P0-2.1a: Initialized as None — set inside async def run() to bind to correct event loop
+temporary_tokens_lock = None
 
 
 async def register_temporary_token(mint: str, duration: int = 1800):
@@ -4174,7 +4200,8 @@ async def execute_priority_opportunity(
                 actual_new_atas_needed += 1
                 _rent_cost += RENT_SPL_ATA_SOL
             else:
-                ATA_CACHE.add(ata_addr)
+                async with shared_state.ata_cache_lock:
+                    ATA_CACHE.add(ata_addr)
 
     current_sol = shared_state.stats.get(
         "virtual_balance", shared_state.stats.get("last_balance", 0.0)
@@ -4248,7 +4275,8 @@ async def execute_priority_opportunity(
     try:
         in_mint = Pubkey.from_string(in_mint_str) if in_mint_str else TOKENS["SOL"]
         out_mint = Pubkey.from_string(out_mint_str) if out_mint_str else TOKENS["SOL"]
-    except:
+    except Exception as e:
+        logger.debug(f"Pubkey parse fallback to SOL: {e}")
         in_mint = TOKENS["SOL"]
         out_mint = TOKENS["SOL"]
 
@@ -4284,7 +4312,8 @@ async def execute_priority_opportunity(
                 session, rpc_manager.get_rpc, keypair.pubkey(), _dst_mint_str
             )
             if _ata_already:
-                ATA_CACHE.add(_dst_ata)
+                async with shared_state.ata_cache_lock:
+                    ATA_CACHE.add(_dst_ata)
             else:
                 _rent_sol = RENT_SPL_ATA_SOL
                 logger.info(
@@ -4979,7 +5008,8 @@ async def worker(
                     session, rpc_manager.get_rpc, keypair.pubkey(), str(target_mint)
                 )
                 if ata_exists:
-                    ATA_CACHE.add(target_ata)
+                    async with shared_state.ata_cache_lock:
+                        ATA_CACHE.add(target_ata)
                 else:
                     rent_fee_sol = 0.00204
                     logger.debug(
@@ -5180,6 +5210,7 @@ async def worker(
             await DataAggregator().log_opportunity_found(
                 "internal", parsed_opportunity, metadata
             )
+            shared_state.stats["last_opportunity_ts"] = time.time()
 
             # Calculate working capital locally (current balance for liquidity estimate)
             working_cap = (
@@ -5263,8 +5294,8 @@ async def blockhash_updater(session, rpc_getter):
                             # StaleStreamGuard: record timestamp of last slot update
                             shared_state.stats["_sg_last_slot"] = item["result"]
                             shared_state.stats["_sg_last_slot_ts"] = time.time()
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"blockhash_updater warning: {e}")
         await asyncio.sleep(
             4.0
         )  # 4s cache — confirmed blockhash for Jito geo-propagation
@@ -5319,11 +5350,12 @@ async def hard_floor_guard():
             if balance < 0.003:
                 logger.critical(
                     f"💀 RENT DEATH GUARD: Balance {balance:.6f} SOL < 0.003 SOL. "
-                    f"Killing process to preserve wallet existence."
+                    f"Triggering graceful shutdown."
                 )
-                import os
-
-                os._exit(1)
+                shared_state.GLOBAL_STOP_EVENT.set()
+                with open(".hard_floor_triggered", "w") as _hf:
+                    _hf.write("blocked")
+                break
         except Exception:
             pass
         await asyncio.sleep(1.0)
@@ -5358,6 +5390,7 @@ async def tcp_heartbeat(session: aiohttp.ClientSession):
 
 async def run():
     import gc
+    import signal
 
     logger.info("=== RUN() STARTED ===")
 
@@ -5366,6 +5399,17 @@ async def run():
 
     # Fix 1: Initialize asyncio locks inside the running event loop
     initialize_shared_state()
+
+    # P0-2.3b: Check if hard floor was triggered on previous run
+    if os.path.exists(".hard_floor_triggered"):
+        logger.critical("🚫 .hard_floor_triggered file found — previous run hit hard floor. Refusing to start.")
+        sys.exit(1)
+
+    # P0-3.2a: Register SIGTERM/SIGINT handlers for graceful shutdown
+    _loop = asyncio.get_running_loop()
+    for _sig in (signal.SIGTERM, signal.SIGINT):
+        _loop.add_signal_handler(_sig, shared_state.GLOBAL_STOP_EVENT.set)
+    logger.info("🔔 SIGTERM/SIGINT handlers registered for graceful shutdown")
 
     import src.config.events as events_config
 
@@ -5427,6 +5471,10 @@ async def run():
     global KEYPAIR
     # Fix 81 / Memory Hardening: load keypair once at startup with context manager.
     # No disk I/O during the hot trade loop — KEYPAIR stays resident in RAM.
+    # P0-4.1b: Set restrictive permissions before reading wallet
+    wallet_path_obj = pathlib.Path(cfg.WALLET_PATH)
+    if wallet_path_obj.exists():
+        os.chmod(str(wallet_path_obj), 0o600)
     with open(cfg.WALLET_PATH, "r") as _f:
         KEYPAIR = Keypair.from_bytes(bytes(orjson.loads(_f.read())))
 
@@ -5533,16 +5581,16 @@ async def run():
                 headers=jup_headers,
                 timeout=2,
             )
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"Jupiter warm-up GET failed: {e}")
         try:
             await session.post(
                 rpc.get_rpc(),
                 json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"},
                 timeout=2,
             )
-        except:
-            pass
+        except Exception as e:
+            logger.debug(f"RPC warm-up POST failed: {e}")
 
     # Fix 70: Log rotation + DB vacuum background task
     async def _maintenance():
@@ -5559,8 +5607,8 @@ async def run():
                 conn = sqlite3.connect("bot_history.db")
                 conn.execute("VACUUM;")
                 conn.close()
-            except:
-                pass
+            except Exception as e:
+                logger.debug(f"DB vacuum failed: {e}")
             # disk check
             if shutil.disk_usage(".").free < 500 * 1024 * 1024:
                 logger.warning("Low disk space — stopping logs")
@@ -5680,7 +5728,8 @@ async def run():
                 "Aborting startup to prevent trading with stale tip accounts. "
                 "Manual inspection required (Check network/Jito API status)."
             )
-            os._exit(1)
+            shared_state.GLOBAL_STOP_EVENT.set()
+            return
 
     # God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
     global jito_bidding_manager
@@ -5734,6 +5783,7 @@ async def run():
         )
         arb_opp.score = 95.0
         priority_queue.add_opportunity(arb_opp)
+        shared_state.stats["last_opportunity_ts"] = time.time()
 
     # Strat 3: Helius webhook handler
     helius_webhook_handler = HeliusWebhookHandler(
@@ -6046,8 +6096,8 @@ async def run():
         async with session.get(url, params=params, headers=headers) as resp:
             if resp.status == 200:
                 logger.debug("✅ Jupiter warm-up successful")
-    except:
-        pass
+    except Exception as e:
+        logger.debug(f"Jupiter warm-up failed: {e}")
 
     # ── TASK 1: ATA Ghosting Pre-Warm ─────────────────────────────────────────
     # DISABLED for micro-capital (0.017 SOL): creating 5 ATAs costs ~0.01 SOL
@@ -6286,6 +6336,8 @@ async def run():
                                 "last_ping": time.time(),
                                 "balance": shared_state.stats.get("last_balance"),
                                 "trades": shared_state.stats.get("trades"),
+                                "last_opportunity_ts": shared_state.stats.get("last_opportunity_ts", 0.0),
+                                "consecutive_failures": shared_state.stats.get("consecutive_failures", 0),
                             }
                         )
                     )
@@ -6785,7 +6837,8 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                         logger.debug(
                             f"✅ ATA burn+close done, rent recovered: {str(send_data['result'])[:8]}"
                         )
-                        ATA_CACHE.discard(ata_address)
+                        async with shared_state.ata_cache_lock:
+                            ATA_CACHE.discard(ata_address)
                     else:
                         logger.debug(f"ATA burn+close failed: {send_data}")
                 else:

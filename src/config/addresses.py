@@ -4,7 +4,10 @@ Contains program addresses and their associated arbitrage strategies with priori
 """
 
 import os
+import logging
 from typing import Any, Dict, List, Optional, Union
+
+logger = logging.getLogger(__name__)
 
 # Main monitored addresses dictionary - OPTIMIZED FOR MINIMAL HELIUS USAGE
 MONITORED_ADDRESSES = {
@@ -119,11 +122,11 @@ def get_enabled_addresses() -> Dict[str, Dict]:
             enabled_addresses[addr] = data
             enabled_count += 1
 
-    print(f"📊 Address monitoring: {enabled_count}/{total_count} enabled")
+    logger.info(f"📊 Address monitoring: {enabled_count}/{total_count} enabled")
     for addr, data in enabled_addresses.items():
         priority = data.get("priority", "UNKNOWN")
         note = data.get("note", "")
-        print(f"  ✓ {data['name']} ({priority}) - {note}")
+        logger.info(f"  ✓ {data['name']} ({priority}) - {note}")
 
     return enabled_addresses
 

@@ -101,6 +101,11 @@ class DustSweeper:
                         logger.debug(f"Skipping golden ATA: {account_address}")
                         continue
 
+                    # Phase 8: Skip blacklisted accounts to avoid burning gas on broken accounts
+                    if str(account_address) in self._blacklist:
+                        logger.debug(f"Skipping blacklisted dust account: {account_address}")
+                        continue
+
                     dust_accounts.append({
                         "address": account_address,
                         "amount": raw_amount,
@@ -262,6 +267,12 @@ class DustSweeper:
                 account_addr = entry["address"]
                 amount = entry["amount"]
                 mint = entry["mint"]
+
+                # Phase 8: Skip blacklisted accounts
+                if str(account_addr) in self._blacklist:
+                    logger.debug(f"Skipping blacklisted account in batch: {account_addr}")
+                    continue
+
                 is_dust = amount > 0 or entry.get("is_dust_zero_balance", False)
                 
                 if not is_dust:

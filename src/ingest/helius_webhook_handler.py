@@ -74,7 +74,25 @@ class HeliusWebhookHandler:
 
     async def handle_health(self, request):
         """Handle healthcheck requests."""
-        return web.json_response({"status": "alive", "timestamp": datetime.now().isoformat()})
+        last_opp_ts = shared_state.stats.get("last_opportunity_ts", 0.0)
+        consecutive_failures = shared_state.stats.get("consecutive_failures", 0)
+        now = time.time()
+
+        status = "alive"
+        http_status = 200
+        if now - last_opp_ts > 3600:
+            status = "degraded"
+            http_status = 500
+        if consecutive_failures > 5:
+            status = "degraded"
+            http_status = 500
+
+        return web.json_response({
+            "status": status,
+            "timestamp": datetime.now().isoformat(),
+            "last_opportunity_ts": last_opp_ts,
+            "consecutive_failures": consecutive_failures,
+        }, status=http_status)
 
     async def handle_webhook(self, request):
         """Handle incoming webhook from Helius."""

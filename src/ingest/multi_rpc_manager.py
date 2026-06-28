@@ -232,6 +232,9 @@ class MultiRpcManager:
     async def _connect_endpoint(self, endpoint: RpcEndpoint):
         """Establish WebSocket connection to endpoint."""
         logger.info(f"🔌 Connecting to {endpoint.name}...")
+        # P0-2.1b: Close old session before creating new one to prevent socket leaks
+        if endpoint.session and not endpoint.session.closed:
+            await endpoint.session.close()
         connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
         endpoint.session = aiohttp.ClientSession(connector=connector)
         endpoint.connection = await endpoint.session.ws_connect(

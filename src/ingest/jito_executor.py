@@ -362,8 +362,12 @@ class JitoExecutor:
                     first_success = result
                     break
 
-            for t in tasks:
+            # R2-8: Gather and await cancelled tasks to avoid dangling aiohttp requests
+            cancelled_tasks = [t for t in tasks if not t.done()]
+            for t in cancelled_tasks:
                 t.cancel()
+            if cancelled_tasks:
+                await asyncio.gather(*cancelled_tasks, return_exceptions=True)
             if first_success:
                 break
 

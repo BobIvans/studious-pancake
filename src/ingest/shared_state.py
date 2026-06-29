@@ -4,6 +4,7 @@ import os
 import time
 from typing import Dict, Set, Any, Optional, List
 from solders.pubkey import Pubkey
+from src.ingest.circuit_breaker import CapitalProtection
 
 logger = logging.getLogger("SharedState")
 
@@ -134,6 +135,9 @@ leader_tracker = None
 # RPC and Network
 rpc = None  # Will be set in run()
 cached_blockhash: Optional[str] = None
+
+# Capital Protection (Circuit Breaker for realized losses)
+capital_protection: Optional[CapitalProtection] = None
 
 # ALT Manager for Address Lookup Table resolution
 alt_manager: Optional[Any] = None

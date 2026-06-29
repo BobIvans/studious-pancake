@@ -125,8 +125,71 @@ class DataAggregator:
         """
         )
 
+        # Phase 49: In-Flight Bundle Tracking table
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS inflight_bundles (
+                bundle_id TEXT PRIMARY KEY,
+                sent_at REAL NOT NULL,
+                tx_sigs_json TEXT NOT NULL,
+                deducted_sol REAL NOT NULL,
+                tip_lamports INTEGER NOT NULL,
+                status TEXT NOT NULL,
+                finalized_at REAL
+            )
+        """
+        )
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_inflight_status ON inflight_bundles(status)")
+
         conn.commit()
         conn.close()
+
+    async def log_inflight_bundle(self, bundle_id: str, signatures: list[str], deducted_sol: float, tip_lamports: int):
+        """
+        Instantly persist an inflight bundle to SQLite.
+        Uses synchronous sqlite3 (not write_queue) for crash safety.
+        """
+        try:
+            import sqlite3
+            conn = sqlite3.connect(self.db_path, timeout=10)
+            conn.execute(
+                "INSERT OR REPLACE INTO inflight_bundles (bundle_id, sent_at, tx_sigs_json, deducted_sol, tip_lamports, status) VALUES (?, ?, ?, ?, ?, ?)",
+                (bundle_id, time.time(), orjson.dumps(signatures).decode(), deducted_sol, tip_lamports, 'sent'),
+            )
+            conn.commit()
+            conn.close()
+            logger.debug(f"Inflight bundle logged: {bundle_id[:12]} (tip={tip_lamports}, deducted={deducted_sol:.8f} SOL)")
+        except Exception as e:
+            logger.error(f"Failed to log inflight bundle: {e}")
+
+    async def update_inflight_status(self, bundle_id: str, new_status: str):
+        """Update the status of an inflight bundle."""
+        try:
+            import sqlite3
+            conn = sqlite3.connect(self.db_path, timeout=10)
+            conn.execute(
+                "UPDATE inflight_bundles SET status = ?, finalized_at = ? WHERE bundle_id = ?",
+                (new_status, time.time() if new_status in ('confirmed', 'refunded', 'failed') else None, bundle_id),
+            )
+            conn.commit()
+            conn.close()
+            logger.debug(f"Inflight bundle status updated: {bundle_id[:12]} -> {new_status}")
+        except Exception as e:
+            logger.error(f"Failed to update inflight status: {e}")
+
+    async def backup_database(self):
+        """Create a backup of the database to prevent corruption."""
+        try:
+            os.makedirs("backups", exist_ok=True)
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            backup_path = f"backups/bot_history_{timestamp}.db"
+            import sqlite3
+            conn = sqlite3.connect(self.db_path, timeout=10)
+            conn.execute(f"VACUUM INTO '{backup_path}'")
+            conn.close()
+            logger.info(f"Database backup created: {backup_path}")
+        except Exception as e:
+            logger.warning(f"Failed to backup database: {e}")
 
     async def start_batch_writer(self):
         self.running = True

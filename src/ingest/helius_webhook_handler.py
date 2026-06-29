@@ -87,7 +87,7 @@ class HeliusWebhookHandler:
         http_status = 200
 
         reasons = []
-        if now - last_opp_ts > 300:  # 5 минут без возможностей (проблема с сетью/вебхуком)
+        if now - last_opp_ts > 300:  # 5 min without opportunities
             reasons.append("no_opportunities_5min")
         if consecutive_failures >= 3:
             reasons.append("high_failure_rate")

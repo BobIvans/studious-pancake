@@ -51,6 +51,7 @@ scipy==1.17.0
 six==1.17.0
 aiolimiter==1.1.0
 aiosqlite==0.20.0
+prometheus_client==0.20.0
 solana==0.33.0
 solders==0.21.0
 uvloop>=0.22.1

@@ -295,15 +295,17 @@ class PoolStateManager:
             self.subscription_ids.clear()
             self.sub_to_pool.clear()
             try:
+                if getattr(self, '_ws_session', None) and not self._ws_session.closed:
+                    await self._ws_session.close()
                 connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
-                async with aiohttp.ClientSession(connector=connector) as session:
-                    async with session.ws_connect(
-                        self.websocket_url,
-                        heartbeat=15.0,
-                        timeout=30.0,
-                        compress=15,
-                        receive_timeout=45.0,
-                    ) as ws:
+                self._ws_session = aiohttp.ClientSession(connector=connector)
+                async with self._ws_session.ws_connect(
+                    self.websocket_url,
+                    heartbeat=15.0,
+                    timeout=30.0,
+                    compress=15,
+                    receive_timeout=45.0,
+                ) as ws:
                         self.websocket           = ws
                         reconnect_delay          = 1.0
                         self.last_msg_time       = asyncio.get_running_loop().time()
@@ -352,6 +354,8 @@ class PoolStateManager:
             await self.grpc_stream.disconnect()
         if self.websocket:
             await self.websocket.close()
+        if getattr(self, '_ws_session', None) and not self._ws_session.closed:
+            await self._ws_session.close()
 
     # ── WebSocket internals (only active in WebSocket fallback path) ─────────────
 

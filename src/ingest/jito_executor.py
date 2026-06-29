@@ -259,6 +259,13 @@ class JitoExecutor:
                 f"✅ Bundle {bundle_id[:12]} confirmed — "
                 f"deducted {entry['deducted']:.8f} SOL kept final."
             )
+            # Этап 1: Update inflight bundle status to confirmed
+            try:
+                from src.ingest.shared_state import data_aggregator
+                if data_aggregator and hasattr(data_aggregator, 'update_inflight_status'):
+                    asyncio.create_task(data_aggregator.update_inflight_status(bundle_id, 'confirmed'))
+            except Exception:
+                pass
 
     async def _reconcile_pending(self) -> None:
         while self._running:
@@ -276,12 +283,18 @@ class JitoExecutor:
                     meta["refunded"] = True
                     refunded_total += refund
                     try:
-                        from src.ingest.shared_state import stats, stats_lock
+                        from src.ingest.shared_state import stats, stats_lock, data_aggregator
                         async with stats_lock:  # type: ignore[misc]
                             stats["virtual_balance"] += refund
                         logger.warning(
                             f"⚡ Ghost bundle {bid[:12]} refunded {refund:.8f} SOL"
                         )
+                        # Этап 1: Update inflight bundle status to refunded
+                        if data_aggregator and hasattr(data_aggregator, 'update_inflight_status'):
+                            try:
+                                await data_aggregator.update_inflight_status(bid, 'refunded')
+                            except Exception:
+                                pass
                     except Exception as exc:
                         logger.debug(f"Ghost-balance refund unavailable: {exc}")
 

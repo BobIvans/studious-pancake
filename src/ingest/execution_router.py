@@ -1,6 +1,7 @@
 """Execution Router for Hybrid Jito/Standard Transaction Switching."""
 
 import asyncio
+import base58
 import logging
 import base64
 import re
@@ -1062,6 +1063,19 @@ class ExecutionRouter:
                         "tip_lamports": jito_tip_lamports,
                         "deducted_amount": jito_tip_lamports / 1_000_000_000,
                     }
+                    # ── Этап 1: Inflight Bundle Persistence ──────────────────────
+                    if self.data_aggregator and hasattr(self.data_aggregator, 'log_inflight_bundle'):
+                        try:
+                            sigs = [base58.b58encode(bytes(sig)).decode('ascii') for sig in transaction.signatures]
+                            tip_deducted = jito_tip_lamports / 1e9
+                            await self.data_aggregator.log_inflight_bundle(
+                                bundle_id=bundle_result["bundle_id"],
+                                signatures=sigs,
+                                deducted_sol=tip_deducted,
+                                tip_lamports=jito_tip_lamports,
+                            )
+                        except Exception as _log_err:
+                            logger.debug(f"Inflight bundle logging failed: {_log_err}")
                 # ── Phase 49: Optimistic State ───────────────────────────────────
                 tip_deducted = jito_tip_lamports / 1e9
                 async with shared_state.stats_lock:

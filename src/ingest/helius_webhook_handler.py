@@ -73,25 +73,34 @@ class HeliusWebhookHandler:
             logger.info("🛑 Helius webhook server stopped")
 
     async def handle_health(self, request):
-        """Handle healthcheck requests."""
+        """Handle healthcheck requests with strict production checks."""
         last_opp_ts = shared_state.stats.get("last_opportunity_ts", 0.0)
         consecutive_failures = shared_state.stats.get("consecutive_failures", 0)
+        virtual_balance = shared_state.stats.get("virtual_balance", 1.0)
         now = time.time()
 
         status = "alive"
         http_status = 200
-        if now - last_opp_ts > 3600:
+
+        reasons = []
+        if now - last_opp_ts > 300:  # 5 min without opportunities
+            reasons.append("no_opportunities_5min")
+        if consecutive_failures >= 3:
+            reasons.append("high_failure_rate")
+        if virtual_balance < 0.005:
+            reasons.append("low_balance")
+        if shared_state.GLOBAL_STOP_EVENT and shared_state.GLOBAL_STOP_EVENT.is_set():
+            reasons.append("global_stop_event_set")
+
+        if reasons:
             status = "degraded"
-            http_status = 500
-        if consecutive_failures > 5:
-            status = "degraded"
-            http_status = 500
+            http_status = 503  # Service Unavailable
 
         return web.json_response({
             "status": status,
+            "reasons": reasons,
             "timestamp": datetime.now().isoformat(),
-            "last_opportunity_ts": last_opp_ts,
-            "consecutive_failures": consecutive_failures,
+            "virtual_balance": virtual_balance
         }, status=http_status)
 
     async def handle_webhook(self, request):

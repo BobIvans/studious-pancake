@@ -28,6 +28,14 @@ from spl.token.instructions import get_associated_token_address
 from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID
 from src.ingest.flywheel_scaler import PairReputationCircuitBreaker
 
+# ── Этап 3: Prometheus Metrics ─────────────────────────────────────────
+from prometheus_client import Counter, Gauge, start_http_server
+
+PROMETHEUS_VIRTUAL_BALANCE = Gauge("marginfy_virtual_balance_sol", "Bot virtual balance in SOL")
+PROMETHEUS_TRADES = Counter("marginfy_trades_executed_total", "Total executed trades")
+PROMETHEUS_SIM_FAILS = Counter("marginfy_sim_fails_total", "Total simulation failures")
+
+
 try:
     # Увеличиваем лимит открытых файлов до максимума (65535)
     soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
@@ -210,6 +218,7 @@ from src.ingest.liquidator_engine import LiquidationEngine
 from src.ingest.cex_dex_oracle import CexDexOracle
 from src.ingest.dust_sweeper import DustSweeper
 from src.ingest.alt_manager import ALTCacheManager
+from src.ingest.circuit_breaker import CapitalProtection
 import src.ingest.shared_state as shared_state
 from src.ingest.shared_state import (
     initialize_shared_state,
@@ -1455,6 +1464,7 @@ def get_marginfi_banks():
 
 
 # MARGINFI_BANKS is now defined in shared_state.py to avoid circular imports
+from src.ingest.circuit_breaker import CapitalProtection
 import src.ingest.shared_state as shared_state
 
 MARGINFI_BANKS = shared_state.MARGINFI_BANKS
@@ -2891,20 +2901,115 @@ async def create_flashloan_arbitrage_tx(
         return None
 
 
-async def send_balance_alert(current_balance: float, initial_balance: float):
-    """Send notification about balance drop."""
-    # Placeholder for notification implementation
-    # Could integrate with Telegram, Discord, email, etc.
-    logger.critical(
-        f"ALERT: Balance dropped to {current_balance:.8f} SOL from initial {initial_balance:.8f} SOL"
-    )
-    # TODO: Implement actual notification (Telegram bot, email, etc.)
+async def send_telegram_alert(message: str):
+    """Send an emergency alert via Telegram."""
+    tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    tg_chat = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not tg_token or not tg_chat:
+        logger.error(f"Telegram alert not sent (missing env vars): {message}")
+        return
+
+    url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
+    payload = {
+        "chat_id": tg_chat,
+        "text": f"\U0001f6a8 [ARB BOT ALERT]\n\n{message}",
+        "parse_mode": "HTML"
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, timeout=5.0) as resp:
+                if resp.status != 200:
+                    logger.error(f"Failed to send TG alert: {await resp.text()}")
+    except Exception as e:
+        logger.error(f"Telegram API exception: {e}")
 
 
 # ═══════════════════════════════════════════════════════════════════════════
 #  LST DEPEG FLASH-ARB SCANNER
 # ═══════════════════════════════════════════════════════════════════════════
 
+
+async def reconcile_inflight_bundles(session: aiohttp.ClientSession, rpc_url: str):
+    """Reconcile inflight bundles on startup: check status and refund if failed."""
+    try:
+        import aiosqlite
+        db_path = "bot_history.db"
+        async with aiosqlite.connect(db_path, timeout=10) as db:
+            cursor = await db.execute(
+                "SELECT bundle_id, tx_sigs_json, deducted_sol, sent_at FROM inflight_bundles WHERE status = 'sent'"
+            )
+            rows = await cursor.fetchall()
+
+        if not rows:
+            logger.info("No inflight bundles to reconcile")
+            return
+
+        logger.info(f"🔄 Reconciling {len(rows)} inflight bundles...")
+        for bundle_id, tx_sigs_json, deducted_sol, sent_at in rows:
+            try:
+                sigs = orjson.loads(tx_sigs_json)
+                if not sigs:
+                    continue
+
+                # Check transaction status via RPC
+                payload = {
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "getSignatureStatuses",
+                    "params": [sigs],
+                }
+                async with session.post(rpc_url, json=payload, timeout=5.0) as resp:
+                    if resp.status == 200:
+                        data = orjson.loads(await resp.read())
+                        statuses = data.get("result", {}).get("value", [])
+
+                        for sig_status in statuses:
+                            if sig_status is None:
+                                # Transaction not found by RPC — check if older than 60 seconds
+                                if time.time() - sent_at > 60:
+                                    async with shared_state.stats_lock:
+                                        shared_state.stats["virtual_balance"] += deducted_sol
+                                    async with aiosqlite.connect(db_path, timeout=10) as db:
+                                        await db.execute(
+                                            "UPDATE inflight_bundles SET status = 'refunded', finalized_at = ? WHERE bundle_id = ?",
+                                            (time.time(), bundle_id),
+                                        )
+                                        await db.commit()
+                                    logger.warning(
+                                        f"Recovery: refunded {deducted_sol:.6f} SOL for stale bundle {bundle_id[:12]} (not found on-chain)"
+                                    )
+                                continue
+                            err = sig_status.get("err")
+
+                            if err is not None:
+                                # Transaction failed — refund virtual balance
+                                async with shared_state.stats_lock:
+                                    shared_state.stats["virtual_balance"] += deducted_sol
+                                async with aiosqlite.connect(db_path, timeout=10) as db:
+                                    await db.execute(
+                                        "UPDATE inflight_bundles SET status = 'refunded', finalized_at = ? WHERE bundle_id = ?",
+                                        (time.time(), bundle_id),
+                                    )
+                                    await db.commit()
+                                logger.warning(
+                                    f"Recovery: refunded {deducted_sol:.6f} SOL for failed bundle {bundle_id[:12]}"
+                                )
+                            elif sig_status.get("confirmation_status") in ("confirmed", "finalized"):
+                                async with aiosqlite.connect(db_path, timeout=10) as db:
+                                    await db.execute(
+                                        "UPDATE inflight_bundles SET status = 'confirmed', finalized_at = ? WHERE bundle_id = ?",
+                                        (time.time(), bundle_id),
+                                    )
+                                    await db.commit()
+                                logger.info(
+                                    f"Recovery: bundle {bundle_id[:12]} confirmed already on-chain"
+                                )
+            except Exception as e:
+                logger.warning(f"Recovery error for bundle {bundle_id[:12]}: {e}")
+    except Exception as e:
+        logger.warning(f"Reconciliation error: {e}")
 
 async def lst_depeg_scanner(
     session,
@@ -4000,6 +4105,10 @@ async def check_bundle_confirmation(
                     f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored."
                 )
 
+            # ── Этап 2: Record loss in CapitalProtection ──────────────────────
+            if shared_state.capital_protection and virtual_balance_to_deduct > 0:
+                shared_state.capital_protection.record_trade(-virtual_balance_to_deduct)
+
             # MEV: Losing an auction is normal. Only trigger circuit breaker for critical errors.
             error_msg = str(confirmation.get("error", "")).lower()
             critical_errors = [
@@ -4018,11 +4127,12 @@ async def check_bundle_confirmation(
                 # Prevents ATA rent trap accumulation — every failed trade that created a new ATA
                 # costs 0.002 SOL if we don't close it. Fire-and-forget is safe here.
                 if target_mint_ata and session and keypair and rpc_getter:
-                    asyncio.create_task(
+                    task = asyncio.create_task(
                         close_ata_after_arbitrage(
                             session, keypair, rpc_getter, target_mint_ata
                         )
                     )
+                    shared_state.retain_background_task(task)
             else:
                 logger.debug(
                     "ℹ️ Auction lost or bundle dropped - normal operation continues"
@@ -4039,6 +4149,10 @@ async def check_bundle_confirmation(
                 logger.info(
                     f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored."
                 )
+
+            # ── Этап 2: Record loss in CapitalProtection on timeout ──────────
+            if shared_state.capital_protection and virtual_balance_to_deduct > 0:
+                shared_state.capital_protection.record_trade(-virtual_balance_to_deduct)
 
             await data_aggregator.log_tx_failed(
                 bundle_id, confirmation, {"tx": tx_b64, "reason": "timeout"}
@@ -4058,6 +4172,10 @@ async def check_bundle_confirmation(
                 {"execution_time_ms": execution_time},
             )
 
+            # ── Этап 2: Record PnL in CapitalProtection (TODO: use real profit) ─
+            if shared_state.capital_protection and virtual_balance_to_deduct > 0:
+                shared_state.capital_protection.record_trade(virtual_balance_to_deduct)
+
             # FIX 3 (Zero-Delay Post-Trade Sweep): Fire-and-forget targeted ATA close + dust sweep.
             # After Jito bundle is Confirmed, immediately sweep the intermediate token ATA
             # used in this trade. Burn-before-close prevents dust from blocking CloseAccount.
@@ -4068,14 +4186,16 @@ async def check_bundle_confirmation(
                 logger.info(
                     f"♻️ Zero-Delay Post-Trade Sweep: closing intermediate ATA {target_mint_ata[:8]}..."
                 )
-                asyncio.create_task(
+                task = asyncio.create_task(
                     close_ata_after_arbitrage(
                         session, keypair, rpc_getter, target_mint_ata
                     )
                 )
+                shared_state.retain_background_task(task)
             # General dust sweep for any other stranded accounts
             if dust_sweeper:
-                asyncio.create_task(dust_sweeper.sweep_after_successful_tx())
+                task = asyncio.create_task(dust_sweeper.sweep_after_successful_tx())
+                shared_state.retain_background_task(task)
     except Exception as e:
         logger.error(f"Confirmation check failed: {e}")
 
@@ -4192,15 +4312,15 @@ async def execute_priority_opportunity(
             get_associated_token_address(keypair.pubkey(), mint_pubkey, program_id)
         )
 
-        if ata_addr not in ATA_CACHE:
-            exists = await check_ata_exists(
-                session, rpc_manager.get_rpc, keypair.pubkey(), mint_str
-            )
-            if not exists:
-                actual_new_atas_needed += 1
-                _rent_cost += RENT_SPL_ATA_SOL
-            else:
-                async with shared_state.ata_cache_lock:
+        async with shared_state.ata_cache_lock:
+            if ata_addr not in ATA_CACHE:
+                exists = await check_ata_exists(
+                    session, rpc_manager.get_rpc, keypair.pubkey(), mint_str
+                )
+                if not exists:
+                    actual_new_atas_needed += 1
+                    _rent_cost += RENT_SPL_ATA_SOL
+                else:
                     ATA_CACHE.add(ata_addr)
 
     current_sol = shared_state.stats.get(
@@ -4307,18 +4427,18 @@ async def execute_priority_opportunity(
             )
         )
         _rent_sol = 0.0
-        if _dst_ata not in ATA_CACHE:
-            _ata_already = await check_ata_exists(
-                session, rpc_manager.get_rpc, keypair.pubkey(), _dst_mint_str
-            )
-            if _ata_already:
-                async with shared_state.ata_cache_lock:
-                    ATA_CACHE.add(_dst_ata)
-            else:
-                _rent_sol = RENT_SPL_ATA_SOL
-                logger.info(
-                    f"⚠️ New ATA required for {_dst_mint_str[:8]} — deducting {_rent_sol:.5f} SOL from expected profit ({opportunity.expected_profit_sol:.6f} SOL)"
+        async with shared_state.ata_cache_lock:
+            if _dst_ata not in ATA_CACHE:
+                _ata_already = await check_ata_exists(
+                    session, rpc_manager.get_rpc, keypair.pubkey(), _dst_mint_str
                 )
+                if _ata_already:
+                    ATA_CACHE.add(_dst_ata)
+                else:
+                    _rent_sol = RENT_SPL_ATA_SOL
+                    logger.info(
+                        f"⚠️ New ATA required for {_dst_mint_str[:8]} — deducting {_rent_sol:.5f} SOL from expected profit ({opportunity.expected_profit_sol:.6f} SOL)"
+                    )
         # FIX 2 (Dynamic Rent Guard): Deduct 0.00204 SOL rent if NEW ATA must be created.
         # If ATA already exists (cached), skip deduction — rent was already paid.
         # This prevents capital drain from creating unnecessary ATAs for tiny profits.
@@ -4356,12 +4476,13 @@ async def execute_priority_opportunity(
                 _ata = str(
                     get_associated_token_address(keypair.pubkey(), mint_pk, _prog_id)
                 )
-                if _ata not in ATA_CACHE:
-                    _new_ata_count += 1
-                    _new_atas_to_create.add(
-                        _ata
-                    )  # локально — только после подтверждения tx
-                    _rent_cost += RENT_SPL_ATA_SOL
+                async with shared_state.ata_cache_lock:
+                    if _ata not in ATA_CACHE:
+                        _new_ata_count += 1
+                        _new_atas_to_create.add(
+                            _ata
+                        )  # локально — только после подтверждения tx
+                        _rent_cost += RENT_SPL_ATA_SOL
 
             _tip_sol = int(tip_amount_lamports) / 1e9
             _gas_sol = cfg.PRIORITY_FEE + 0.000005
@@ -5003,18 +5124,18 @@ async def worker(
                 get_associated_token_address(keypair.pubkey(), target_mint, prog_id)
             )
             rent_fee_sol = 0.0
-            if target_ata not in ATA_CACHE:
-                ata_exists = await check_ata_exists(
-                    session, rpc_manager.get_rpc, keypair.pubkey(), str(target_mint)
-                )
-                if ata_exists:
-                    async with shared_state.ata_cache_lock:
-                        ATA_CACHE.add(target_ata)
-                else:
-                    rent_fee_sol = 0.00204
-                    logger.debug(
-                        f"⚠️ New ATA required for {str(target_mint)[:8]}. Deducting 0.002 SOL from expected profit."
+            async with shared_state.ata_cache_lock:
+                if target_ata not in ATA_CACHE:
+                    ata_exists = await check_ata_exists(
+                        session, rpc_manager.get_rpc, keypair.pubkey(), str(target_mint)
                     )
+                    if ata_exists:
+                        ATA_CACHE.add(target_ata)
+                    else:
+                        rent_fee_sol = 0.00204
+                        logger.debug(
+                            f"⚠️ New ATA required for {str(target_mint)[:8]}. Deducting 0.002 SOL from expected profit."
+                        )
 
             # Calculate profit properly: convert all SOL fees to in_mint equivalents
             expected_out_lamports = chosen_route[-1][
@@ -5562,6 +5683,18 @@ async def run():
         logger.info("Fetched SOL balance: unavailable")
     logger.info("==================================================")
 
+    # ── Этап 2: Initialize Capital Protection ──────────────────────────────
+    initial_balance = balance_sol if balance_sol is not None else 0.017
+    shared_state.capital_protection = CapitalProtection(initial_balance)
+    logger.info(f"🛡️ Capital Protection initialized (start_balance={initial_balance:.6f} SOL)")
+
+    # ── Этап 3: Start Prometheus metrics server ─────────────────────────────
+    try:
+        start_http_server(9100)
+        logger.info("📊 Prometheus metrics server started on port 9100")
+    except Exception as e:
+        logger.warning(f"Failed to start Prometheus server: {e}")
+
     # ── Fix 46: MARGINFI_ACCOUNT .env sanitization ─────────────────────────────
     if not validate_marginfi_account(cfg):
         logger.critical("Bot cannot start — MarginFi account validation failed.")
@@ -5569,7 +5702,8 @@ async def run():
         sys.exit(1)
 
     # Phase 49: Hardware & Performance Heartbeat
-    asyncio.create_task(tcp_heartbeat(session))
+    task = asyncio.create_task(tcp_heartbeat(session))
+    shared_state.retain_background_task(task)
     # ── Fix 53: Warm-up requests (3 dummy calls to prime DNS + TCP connections) ──────
     jup_quote_url = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
     jup_key = os.getenv("JUPITER_API_KEY", "")
@@ -5613,7 +5747,8 @@ async def run():
             if shutil.disk_usage(".").free < 500 * 1024 * 1024:
                 logger.warning("Low disk space — stopping logs")
 
-    asyncio.create_task(_maintenance())
+    task = asyncio.create_task(_maintenance())
+    shared_state.retain_background_task(task)
     _gc_task = asyncio.create_task(
         _gc_idle_collector()
     )  # Fix 57: manual GC on idle queue
@@ -5643,6 +5778,13 @@ async def run():
     data_aggregator = DataAggregator()
     shared_state.data_aggregator = data_aggregator
     await data_aggregator.start_batch_writer()
+
+    # ── Этап 1: Backup DB and reconcile inflight bundles ────────────────────
+    await data_aggregator.backup_database()
+    await reconcile_inflight_bundles(session, rpc_url)
+
+    # ── Этап 3: Prometheus metric update ────────────────────────────────────
+    PROMETHEUS_VIRTUAL_BALANCE.set(shared_state.stats.get("virtual_balance", balance_sol if balance_sol else 0.0))
 
     flywheel_scaler = FlywheelScaler(initial_balance=0.017)
     arbitrage_scorer = ArbitrageScorer(session=session, rpc_url=rpc.get_rpc())
@@ -5803,7 +5945,8 @@ async def run():
 
     global dust_sweeper
     dust_sweeper = DustSweeper(keypair, rpc.get_rpc(), session)
-    asyncio.create_task(dust_sweeper.sweep_on_startup())
+    task = asyncio.create_task(dust_sweeper.sweep_on_startup())
+    shared_state.retain_background_task(task)
 
     # [TASK 49] Periodic Dust Sweep (15-min fallback, primary sweep is post-trade)
     async def periodic_dust_sweep():
@@ -5814,7 +5957,8 @@ async def run():
             except Exception as e:
                 logger.error(f"Periodic dust sweep failed: {e}")
 
-    asyncio.create_task(periodic_dust_sweep())
+    task = asyncio.create_task(periodic_dust_sweep())
+    shared_state.retain_background_task(task)
 
     # 7. Balance & Health Monitoring
     async def wallet_balance_listener():
@@ -6080,7 +6224,8 @@ async def run():
     shared_state.stats["initial_balance"] = initial_balance
 
     # Seed Hard Floor Guard (Task 47)
-    asyncio.create_task(hard_floor_guard())
+    task = asyncio.create_task(hard_floor_guard())
+    shared_state.retain_background_task(task)
 
     # Jupiter Warm-up (Paper Trading Bypass: no route restriction)
     try:
@@ -6139,7 +6284,8 @@ async def run():
                             try:
                                 await helius_webhook_handler.stop()
                                 await asyncio.sleep(0.5)
-                                asyncio.create_task(helius_webhook_handler.start())
+                                task = asyncio.create_task(helius_webhook_handler.start())
+                                shared_state.retain_background_task(task)
                             except Exception:
                                 pass
                         # Reset tracker so we don't loop-spam restarts
@@ -6151,7 +6297,8 @@ async def run():
                 logger.debug(f"StaleStreamGuard tick error: {_sg_err}")
                 await asyncio.sleep(0.25)
 
-    asyncio.create_task(_stale_stream_guard())
+    task = asyncio.create_task(_stale_stream_guard())
+    shared_state.retain_background_task(task)
 
     # Priority queue processor for AI-scored opportunities
     async def priority_queue_processor():
@@ -6178,7 +6325,7 @@ async def run():
 
                 # Phase 24: Process high-priority opportunities concurrently
                 # Removing 'await' allows multiple simulations to run in parallel.
-                asyncio.create_task(
+                task = asyncio.create_task(
                     execute_priority_opportunity(
                         opportunity,
                         session,
@@ -6194,6 +6341,7 @@ async def run():
                         blockhash_mgr=blockhash_mgr,
                     )
                 )
+                shared_state.retain_background_task(task)
             except Exception as e:
                 logger.error(f"Priority queue processor error: {e}")
                 await asyncio.sleep(1)
@@ -6202,9 +6350,10 @@ async def run():
     # Updates both arb_bot.price_matrix and _set_global_price_matrix atomically
     try:
         pyth_feeder = init_pyth_core_feeder()
-        asyncio.create_task(
+        task = asyncio.create_task(
             pyth_feeder.start(on_price_update=update_global_price_matrix)
         )
+        shared_state.retain_background_task(task)
         logger.info(
             "📡 PythCorePriceFeeder started with unified price matrix callback (Fix 62)"
         )
@@ -6375,6 +6524,20 @@ async def run():
                 f"📊 [STATS] Balance: {current_balance:.8f} | WC: {working_cap:.8f} | Trades: {shared_state.stats['trades']} | BIR: {bir:.1f}% | SEL: {avg_sel:.1f}ms"
             )
 
+            # ── Этап 2: Capital Protection circuit breaker check ─────────────────
+            if shared_state.capital_protection:
+                stop, reason = shared_state.capital_protection.should_stop()
+                if stop:
+                    logger.critical(f"🚨 CAPITAL PROTECTION TRIGGERED: {reason}")
+                    with open(".capital_protection_triggered", "w") as f:
+                        f.write(reason)
+                    await send_telegram_alert(f"<b>CAPITAL PROTECTION TRIGGERED</b>\n{reason}")
+                    shared_state.GLOBAL_STOP_EVENT.set()
+                    break
+
+            # ── Этап 3: Update Prometheus metrics ──────────────────────────────
+            PROMETHEUS_VIRTUAL_BALANCE.set(shared_state.stats.get("virtual_balance", current_balance))
+
             # Balance Guard + Fix 68: Dust Reserve
             if current_balance < 0.005:
                 logger.critical(
@@ -6398,7 +6561,7 @@ async def run():
                 logger.critical(
                     f"🚨 BALANCE GUARD ACTIVATED: Balance {current_balance:.8f} SOL dropped below 30%"
                 )
-                await send_balance_alert(current_balance, initial_balance)
+                await send_telegram_alert(f"<b>BALANCE GUARD ACTIVATED</b>\nBalance dropped to {current_balance:.6f} SOL")
                 break
     finally:
         logger.debug("🛑 Shutting down arbitrage engine components...")

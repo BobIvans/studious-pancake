@@ -31,5 +31,6 @@ module.exports = {
     out_file: "logs/pm2-out.log",
     merge_logs: true,
     max_memory_restart: "1024M", // ФИКС: Даем боту дышать в моменты пиковой нагрузки
+    kill_timeout: 30000, // 30s graceful shutdown before SIGKILL
   }]
 };

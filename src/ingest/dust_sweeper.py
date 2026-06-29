@@ -37,6 +37,7 @@ class DustSweeper:
         self.usdc_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.usdc_mint))
         self.wsol_ata = str(get_associated_token_address(wallet_keypair.pubkey(), self.wsol_mint))
         self.golden_atas = {self.wsol_ata, self.usdc_ata}
+        self._sweep_lock = asyncio.Lock()
 
     async def sweep_on_startup(self) -> int:
         """Sweep dust on bot startup. Returns SOL recovered."""
@@ -65,73 +66,74 @@ class DustSweeper:
 
     async def _sweep_dust(self) -> int:
         """Core dust sweeping logic."""
-        try:
-            # Find all Token Accounts owned by our wallet
-            token_accounts = await self._get_wallet_token_accounts()
+        async with self._sweep_lock:
+            try:
+                # Find all Token Accounts owned by our wallet
+                token_accounts = await self._get_wallet_token_accounts()
 
-            if not token_accounts:
-                logger.debug("No token accounts found")
-                return 0
+                if not token_accounts:
+                    logger.debug("No token accounts found")
+                    return 0
 
-            # Filter for dust/empty accounts
-            dust_accounts = []
-            total_rent_recovered = 0
+                # Filter for dust/empty accounts
+                dust_accounts = []
+                total_rent_recovered = 0
 
-            for account_info in token_accounts:
-                account_address = account_info["pubkey"]
-                account_data = account_info.get("account", {})
+                for account_info in token_accounts:
+                    account_address = account_info["pubkey"]
+                    account_data = account_info.get("account", {})
 
-                # ── ПЕРВАЯ ЛИНИЯ ЗАЩИТЫ: Никогда не трогать Golden ATAs ──────────
-                # Абсолютная защита wSOL и USDC ATAs от sweep, даже если звание
-                # dust_check вдруг вернёт True из-за ошибки парса.
-                if str(account_address) in self.golden_atas:
-                    continue
-
-                # Check if account has zero balance (dust)
-                info = account_data.get("data", {}).get("parsed", {}).get("info", {})
-                token_amount = info.get("tokenAmount", {})
-                raw_amount = int(token_amount.get("amount", "0"))
-                mint = info.get("mint")
-
-                is_dust = await self._is_dust_account(account_data)
-
-                if is_dust:
-                    # Phase 48: Protect Golden ATAs from being swept
+                    # ── ПЕРВАЯ ЛИНИЯ ЗАЩИТЫ: Никогда не трогать Golden ATAs ──────────
+                    # Абсолютная защита wSOL и USDC ATAs от sweep, даже если звание
+                    # dust_check вдруг вернёт True из-за ошибки парса.
                     if str(account_address) in self.golden_atas:
-                        logger.debug(f"Skipping golden ATA: {account_address}")
                         continue
 
-                    # Phase 8: Skip blacklisted accounts to avoid burning gas on broken accounts
-                    if str(account_address) in self._blacklist:
-                        logger.debug(f"Skipping blacklisted dust account: {account_address}")
-                        continue
+                    # Check if account has zero balance (dust)
+                    info = account_data.get("data", {}).get("parsed", {}).get("info", {})
+                    token_amount = info.get("tokenAmount", {})
+                    raw_amount = int(token_amount.get("amount", "0"))
+                    mint = info.get("mint")
 
-                    dust_accounts.append({
-                        "address": account_address,
-                        "amount": raw_amount,
-                        "mint": mint
-                    })
-                    # Estimate rent recovery (0.00203928 SOL = 2_039_280 lamports)
-                    total_rent_recovered += 2_039_280
+                    is_dust = await self._is_dust_account(account_data)
 
-            if not dust_accounts:
-                logger.debug("No dust accounts to clean")
+                    if is_dust:
+                        # Phase 48: Protect Golden ATAs from being swept
+                        if str(account_address) in self.golden_atas:
+                            logger.debug(f"Skipping golden ATA: {account_address}")
+                            continue
+
+                        # Phase 8: Skip blacklisted accounts to avoid burning gas on broken accounts
+                        if str(account_address) in self._blacklist:
+                            logger.debug(f"Skipping blacklisted dust account: {account_address}")
+                            continue
+
+                        dust_accounts.append({
+                            "address": account_address,
+                            "amount": raw_amount,
+                            "mint": mint
+                        })
+                        # Estimate rent recovery (0.00203928 SOL = 2_039_280 lamports)
+                        total_rent_recovered += 2_039_280
+
+                if not dust_accounts:
+                    logger.debug("No dust accounts to clean")
+                    return 0
+
+                # Close dust accounts in batches
+                batch_size = 10  # Solana transaction limits
+                total_recovered = 0
+
+                for i in range(0, len(dust_accounts), batch_size):
+                    batch = dust_accounts[i:i + batch_size]
+                    recovered = await self._close_dust_accounts_batch(batch)
+                    total_recovered += recovered
+
+                return total_recovered
+
+            except Exception as e:
+                logger.error(f"Dust sweep failed: {e}")
                 return 0
-
-            # Close dust accounts in batches
-            batch_size = 10  # Solana transaction limits
-            total_recovered = 0
-
-            for i in range(0, len(dust_accounts), batch_size):
-                batch = dust_accounts[i:i + batch_size]
-                recovered = await self._close_dust_accounts_batch(batch)
-                total_recovered += recovered
-
-            return total_recovered
-
-        except Exception as e:
-            logger.error(f"Dust sweep failed: {e}")
-            return 0
 
     async def _get_wallet_token_accounts(self) -> List[Dict]:
         """Get all Token Accounts owned by our wallet (classic SPL + Token-2022)."""

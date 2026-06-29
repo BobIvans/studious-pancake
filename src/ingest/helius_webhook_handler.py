@@ -2,15 +2,16 @@
 
 import os
 import hmac
+import hashlib
 import orjson
 import logging
 import asyncio
 import time
-
-from typing import Dict, Any, List, Optional
-from datetime import datetime
+from collections import defaultdict
 from aiohttp import web
 import aiohttp
+from typing import Dict, Any, Optional
+from datetime import datetime
 import src.ingest.shared_state as shared_state
 
 from .data_aggregator import DataAggregator
@@ -33,6 +34,9 @@ class HeliusWebhookHandler:
         self.app.router.add_get('/', self.handle_health)
         self.app.router.add_get('/health', self.handle_health)
         self.runner = None
+        # Rate limiter for DoS protection
+        self.ip_limits = defaultdict(list)
+        self.MAX_REQ_PER_SEC = 5  # Max 5 requests per second per IP
         # ── ИСПРАВЛЕНИЕ: asyncio.Queue вместо deque — без потери событий ────────
         self._signal_queue: asyncio.Queue = asyncio.Queue(maxsize=500)
         self.WORKER_COUNT = 3
@@ -73,92 +77,122 @@ class HeliusWebhookHandler:
             logger.info("🛑 Helius webhook server stopped")
 
     async def handle_health(self, request):
-        """Handle healthcheck requests."""
+        """Handle healthcheck requests with strict production checks."""
         last_opp_ts = shared_state.stats.get("last_opportunity_ts", 0.0)
         consecutive_failures = shared_state.stats.get("consecutive_failures", 0)
+        virtual_balance = shared_state.stats.get("virtual_balance", 1.0)
         now = time.time()
 
         status = "alive"
         http_status = 200
-        if now - last_opp_ts > 3600:
+
+        reasons = []
+        if now - last_opp_ts > 300:  # 5 минут без возможностей (проблема с сетью/вебхуком)
+            reasons.append("no_opportunities_5min")
+        if consecutive_failures >= 3:
+            reasons.append("high_failure_rate")
+        if virtual_balance < 0.005:
+            reasons.append("low_balance")
+        if shared_state.GLOBAL_STOP_EVENT and shared_state.GLOBAL_STOP_EVENT.is_set():
+            reasons.append("global_stop_event_set")
+
+        if reasons:
             status = "degraded"
-            http_status = 500
-        if consecutive_failures > 5:
-            status = "degraded"
-            http_status = 500
+            http_status = 503  # Service Unavailable
 
         return web.json_response({
             "status": status,
+            "reasons": reasons,
             "timestamp": datetime.now().isoformat(),
-            "last_opportunity_ts": last_opp_ts,
-            "consecutive_failures": consecutive_failures,
+            "virtual_balance": virtual_balance
         }, status=http_status)
 
     async def handle_webhook(self, request):
-        """Handle incoming webhook from Helius."""
+        """Handle incoming webhook from Helius with HMAC signature verification and rate limiting."""
+        # 1. STRICT RATE LIMITER BY IP
+        client_ip = request.headers.get("X-Forwarded-For", request.remote)
+        if "," in client_ip:
+            client_ip = client_ip.split(",")[0].strip()
+        
+        now = time.time()
+        self.ip_limits[client_ip] = [t for t in self.ip_limits[client_ip] if now - t < 1.0]
+        
+        if len(self.ip_limits[client_ip]) >= self.MAX_REQ_PER_SEC:
+            logger.warning(f"🚨 Webhook Rate Limit hit for IP: {client_ip} ({len(self.ip_limits[client_ip])} req/sec)")
+            return web.Response(status=429, text='Too Many Requests')
+        
+        self.ip_limits[client_ip].append(now)
+
+        # 2. IP WHITELISTING (Optional)
+        allowed_ips_raw = os.getenv("ALLOWED_WEBHOOK_IPS", "")
+        if allowed_ips_raw:
+            allowed_ips = [ip.strip() for ip in allowed_ips_raw.split(",") if ip.strip()]
+            if client_ip not in allowed_ips:
+                logger.critical(f"🚨 WEBHOOK BLOCKED: Request from unauthorized IP: {client_ip}")
+                return web.Response(status=403, text='Forbidden')
+
+        # Read raw body for HMAC computation
         raw_bytes = await request.read()
+        
+        # 3. CRYPTOGRAPHIC SIGNATURE VERIFICATION (HMAC-SHA256)
+        helius_signature = request.headers.get("X-Helius-Signature")
+        webhook_secret = os.getenv("HELIUS_WEBHOOK_SECRET")
+
+        if webhook_secret:
+            if not helius_signature:
+                logger.critical(f"🚨 SEC-BREACH: Request from {client_ip} missing X-Helius-Signature header!")
+                return web.Response(status=401, text='Unauthorized: Missing Signature')
+            
+            expected_signature = hmac.new(
+                webhook_secret.encode('utf-8'),
+                raw_bytes,
+                hashlib.sha256
+            ).hexdigest()
+            
+            if not hmac.compare_digest(expected_signature, helius_signature):
+                logger.critical(f"🚨 SEC-BREACH: Invalid signature from IP {client_ip}! Computed={expected_signature[:8]}..., Got={helius_signature[:8]}...")
+                return web.Response(status=401, text='Unauthorized: Invalid Signature')
+        else:
+            # Fallback insecure method (if secret not configured in .env)
+            logger.warning("⚠️ HELIUS_WEBHOOK_SECRET is not configured! Falling back to weak token verification...")
+            auth_header = request.headers.get('Authorization', '')
+            expected_auth = os.getenv("HELIUS_API_KEY", "")
+            
+            if not expected_auth or not hmac.compare_digest(auth_header, expected_auth):
+                logger.critical(f"🚨 SEC-BREACH: Unauthorized fallback webhook attempt from {client_ip}")
+                return web.Response(status=401, text='Unauthorized')
+
+        # 4. PARSE PAYLOAD (after successful authorization)
         try:
             data = orjson.loads(raw_bytes) if raw_bytes else []
         except Exception:
-            logger.error("Invalid Helius webhook JSON payload")
+            logger.error(f"Invalid JSON payload from {client_ip}")
             return web.Response(status=400, text='Bad JSON')
 
+        # Parse webhook data
         if isinstance(data, list):
             events = data
-            data_dict = {}
             webhook_id = request.query.get('webhook_id', 'unknown')
         elif isinstance(data, dict):
             events = data.get('events', [data])
-            data_dict = data
-            webhook_id = data_dict.get('webhookId') or request.query.get('webhook_id', 'unknown')
+            webhook_id = data.get('webhookId') or request.query.get('webhook_id', 'unknown')
         else:
             events = []
-            data_dict = {}
-            webhook_id = request.query.get('webhook_id', 'unknown')
-        auth_header = request.headers.get('Authorization', '')
-        auth_query = request.query.get('api-key') or request.query.get('api_key') or ''
-        expected_auth = os.getenv("HELIUS_WEBHOOK_SECRET", os.getenv("HELIUS_API_KEY", ""))
+            webhook_id = 'unknown'
 
-        auth_ok = bool(
-            expected_auth
-            and (
-                (auth_header and hmac.compare_digest(auth_header, expected_auth))
-                or (auth_query and hmac.compare_digest(auth_query, expected_auth))
-            )
-        )
-
-        if not auth_ok:
-            logger.critical(
-                f"🚨 WEBHOOK SECURITY BREACH: Unauthorized POST attempt from {request.remote} "
-                f"for webhook {webhook_id}"
-            )
-            return web.Response(status=401, text='Unauthorized')
-
-        logger.debug(f"Authorized Helius webhook accepted: {webhook_id}")
-
-        # Phase 49: Direct IP Webhook Injection Check
-        host = request.host
-        if "trycloudflare.com" in host or "localhost" in host:
-             logger.critical(
-                 f"🚨 WEBHOOK LATENCY ALERT: Receiving signals via {host}. "
-                 f"Tunneling introduces 400ms+ lag. Use Direct IP for production competitive advantage."
-             )
+        logger.info(f"📡 Authorized Helius webhook accepted: {webhook_id} from {client_ip} ({len(events)} events)")
 
         if not hasattr(self, '_sem'):
             self._sem = asyncio.Semaphore(10)
+        
         async with self._sem:
             try:
-                logger.info(f"📡 Received webhook {webhook_id} with {len(events)} events")
-
-                now = time.time()
                 for event in events:
                     try:
-                        self._signal_queue.put_nowait((now, event, webhook_id))
+                        self._signal_queue.put_nowait((time.time(), event, webhook_id))
                     except asyncio.QueueFull:
-                        logger.warning(f"Webhook queue full (500), dropping event {webhook_id}")
-
+                        logger.warning(f"Webhook queue full, dropping event from {webhook_id}")
                 return web.Response(text='OK')
-
             except Exception as e:
                 logger.error(f"Webhook processing error: {e}")
                 return web.Response(status=500, text='Internal Server Error')

@@ -5,12 +5,37 @@ import json
 import hmac
 import hashlib
 import os
-from unittest.mock import MagicMock, Mock
 from aiohttp import web
 import pytest
 
 from src.ingest.helius_webhook_handler import HeliusWebhookHandler
 from src.ingest.data_aggregator import DataAggregator
+
+
+def test_hmac_signature_computation():
+    """Test HMAC-SHA256 signature computation logic."""
+    secret = "test_webhook_secret_12345"
+    body = json.dumps({"test": "data"}).encode('utf-8')
+    
+    expected_sig = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).hexdigest()
+    
+    assert len(expected_sig) == 64, "Signature should be 64 hex chars"
+    assert isinstance(expected_sig, str), "Signature should be string"
+    
+    wrong_sig = "a" * 64
+    assert not hmac.compare_digest(expected_sig, wrong_sig), "Different signatures should not match"
+    
+    same_sig = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).hexdigest()
+    assert hmac.compare_digest(expected_sig, same_sig), "Same computation should match"
+
+
+def test_rate_limiter_structure():
+    """Test rate limiter data structure initialization."""
+    da = DataAggregator("test_rate.db")
+    handler = HeliusWebhookHandler(da, 9999)
+    
+    assert hasattr(handler, 'ip_limits'), "Handler should have ip_limits attribute"
+    assert handler.MAX_REQ_PER_SEC == 5, "MAX_REQ_PER_SEC should be 5"
 
 
 async def test_webhook_handler_basic():
@@ -47,9 +72,6 @@ async def test_webhook_handler_basic():
 
     handler = HeliusWebhookHandler(data_aggregator, 8081, mock_callback)
 
-    for i in range(3):
-        handler.ip_limits["test_ip"].append(handler.ip_limits["test_ip"][-1] if handler.ip_limits["test_ip"] else asyncio.get_event_loop().time())
-
     for event in sample_webhook_data["events"]:
         await handler._process_event(event, sample_webhook_data["webhookId"])
 
@@ -57,32 +79,6 @@ async def test_webhook_handler_basic():
 
     export_file = await data_aggregator.export_for_analysis(days=1)
     print(f"📊 Test data exported to {export_file}")
-
-
-def test_hmac_signature_computation():
-    """Test HMAC-SHA256 signature computation logic."""
-    secret = "test_webhook_secret_12345"
-    body = json.dumps({"test": "data"}).encode('utf-8')
-    
-    expected_sig = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).hexdigest()
-    
-    assert len(expected_sig) == 64, "Signature should be 64 hex chars"
-    assert isinstance(expected_sig, str), "Signature should be string"
-    
-    wrong_sig = "a" * 64
-    assert not hmac.compare_digest(expected_sig, wrong_sig), "Different signatures should not match"
-    
-    same_sig = hmac.new(secret.encode('utf-8'), body, hashlib.sha256).hexdigest()
-    assert hmac.compare_digest(expected_sig, same_sig), "Same computation should match"
-
-
-def test_rate_limiter_structure():
-    """Test rate limiter data structure initialization."""
-    da = DataAggregator("test_rate.db")
-    handler = HeliusWebhookHandler(da, 9999)
-    
-    assert hasattr(handler, 'ip_limits'), "Handler should have ip_limits attribute"
-    assert handler.MAX_REQ_PER_SEC == 5, "MAX_REQ_PER_SEC should be 5"
 
 
 if __name__ == "__main__":

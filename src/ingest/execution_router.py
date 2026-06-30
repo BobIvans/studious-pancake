@@ -314,6 +314,12 @@ class ExecutionRouter:
                 if result.get("status") == "success":
                     await self._check_wallet_balance_after_execution()
                     self.execution_guard.record_success()
+                    try:
+                        from src.ingest.dust_sweeper import DustSweeper
+                        sweeper = DustSweeper(self.keypair, self.rpc_url, self.session)
+                        asyncio.create_task(sweeper.sweep_after_successful_tx())
+                    except Exception as _sweep_err:
+                        logger.debug(f"Post-tx wSOL sweep schedule failed: {_sweep_err}")
                 elif result.get("status") == "timeout" or "Slippage" in str(result):
                     self.execution_guard.record_failure()
                 return result
@@ -395,6 +401,13 @@ class ExecutionRouter:
         Returns:
             Execution result dict
         """
+        # ── БЛОК 8: Stale Quote Guard — проверка свежести котировок ────────────
+        if not await self._validate_quote_freshness(opportunity):
+            return {
+                "status": "stale_quote",
+                "message": "Quote is stale (>1.5s) — rejected by Stale Quote Guard",
+            }
+
         # ── Epoch Shield: never trade near epoch boundary ───────────────────────
         if not await self._check_epoch_killswitch():
             logger.warning(f"🛡️ Epoch killswitch: {self._epoch_last_reason} — trade rejected")
@@ -614,6 +627,38 @@ class ExecutionRouter:
             logger.error(f"Error executing arbitrage opportunity: {e}")
             self.consecutive_failures += 1
             return {"status": "error", "message": str(e)}
+
+    # ─── БЛОК 8: Stale Quote Guard ────────────────────────────────────────────
+
+    async def _validate_quote_freshness(self, opportunity: Dict[str, Any]) -> bool:
+        """Проверяет свежесть всех котировок в opportunity.
+        Если любая котировка старше 1.5 секунд — возвращает False (abort).
+        """
+        quote_fields = ["leg1_quote", "leg2_quote", "leg3_quote", "buy_quote", "sell_quote"]
+        for field in quote_fields:
+            quote = opportunity.get(field)
+            if quote and isinstance(quote, dict):
+                fetched_at = quote.get("fetched_at") or quote.get("full_quote_response", {}).get("fetched_at")
+                if fetched_at and time.time() - fetched_at > 1.5:
+                    logger.warning(
+                        f"🚫 БЛОК 8: Quote stale (>1.5s) for {field}. Age: {time.time() - fetched_at:.2f}s. Aborting."
+                    )
+                    return False
+        # Also check nested quote in opportunity metadata
+        route = opportunity.get("route")
+        if route:
+            for leg_key in ("buy_quote", "sell_quote"):
+                leg = getattr(route, leg_key, None) or route.get(leg_key)
+                if leg:
+                    qr = getattr(leg, "full_quote_response", None) or (leg.get("full_quote_response") if isinstance(leg, dict) else None)
+                    if isinstance(qr, dict):
+                        fetched_at = qr.get("fetched_at")
+                        if fetched_at and time.time() - fetched_at > 1.5:
+                            logger.warning(
+                                f"🚫 БЛОК 8: Quote stale (>1.5s) for route.{leg_key}. Aborting."
+                            )
+                            return False
+        return True
 
     # ─── Reputation Circuit Breaker (per-pair slippage cooldown) ────────────────
 

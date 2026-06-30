@@ -55,14 +55,140 @@ class DustSweeper:
         logger.info(f"✅ Shutdown sweep complete. Recovered: {recovered_sol:.6f} SOL")
         return recovered_lamports
 
-    async def sweep_after_successful_tx(self) -> int:
+    async def sweep_after_successful_tx(self, wsol_ata: Optional[str] = None) -> int:
         """Light post-tx dust sweep — called by execution_router after confirmed arbitrage.
-        Skips startup/shutdown log noise; returns lamports recovered for metrics."""
+
+        БЛОК 4: wSOL 1-lamport Dust Revert Protection.
+        Jupiter swaps can leave 1-lamport dust in the wSOL ATA.  A direct
+        close_account on a non-zero-balance ATA reverts, killing the entire
+        flashloan.  When wsol_ata is provided, this method first drains ALL wSOL
+        tokens (burns the dust), then closes the empty ATA in a standalone
+        transaction.  The rent-exempt lamports (0.00203928 SOL) return to native
+        SOL, replenishing the gas tank for the next trade.
+        """
+        # ── Step 1: wSOL dust drain — called OUTSIDE the atomic flashloan tx ─
+        wsol_recovered = 0
+        if wsol_ata is not None:
+            wsol_recovered = await self._drain_wsol_ata()
+
+        # ── Step 2: general dust sweep for intermediate ATAs ─────────────
         logger.debug("🧹 Post-tx dust sweep...")
         recovered = await self._sweep_dust()
-        if recovered > 0:
-            logger.info(f"✅ Post-tx sweep recovered {recovered / 1e9:.6f} SOL")
-        return recovered
+        total = wsol_recovered + recovered
+
+        if total > 0:
+            logger.info(f"✅ Post-tx sweep recovered {total / 1e9:.6f} SOL (wSOL={wsol_recovered / 1e9:.6f})")
+        return total
+
+    async def _drain_wsol_ata(self) -> int:
+        """Drain wSOL ATA dust, then close the ATA to recover rent-exempt lamports.
+
+        Returns lamports recovered (tokens + rent-exempt).
+        This is called OUTSIDE the atomic flashloan tx to avoid 1-lamport dust revert.
+        """
+        try:
+            wsol_ata_str = str(self.wsol_ata)
+            payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getTokenAccountBalance",
+                "params": [wsol_ata_str]
+            }
+            async with self.session.post(self.rpc_url, json=payload,
+                                         timeout=aiohttp.ClientTimeout(total=2.0)) as resp:
+                if resp.status != 200:
+                    return 0
+                data = await resp.json()
+                balance = int(data.get("result", {}).get("value", {}).get("amount", "0"))
+
+            if balance <= 0:
+                return 0
+
+            logger.debug(f"💧 wSOL ATA has {balance} lamports — draining dust before close")
+
+            from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
+            from solders.message import MessageV0
+            from spl.token.instructions import (
+                burn, BurnParams,
+                close_account, CloseAccountParams,
+            )
+            import base64
+
+            wallet_pk = self.wallet_keypair.pubkey()
+
+            burn_ix = burn(BurnParams(
+                program_id=self.spl_token_program,
+                account=self.wsol_ata,
+                mint=self.wsol_mint,
+                owner=wallet_pk,
+                amount=balance,
+                signers=[],
+            ))
+
+            close_ix = close_account(CloseAccountParams(
+                program_id=self.spl_token_program,
+                account=self.wsol_ata,
+                dest=wallet_pk,
+                owner=wallet_pk,
+                signers=[],
+            ))
+
+            cu_limit_ix = set_compute_unit_limit(50_000)
+            cu_price_ix = set_compute_unit_price(20_000)
+            all_ixs = [cu_limit_ix, cu_price_ix, burn_ix, close_ix]
+
+            bh_payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getLatestBlockhash",
+                "params": [{"commitment": "confirmed"}]
+            }
+            async with self.session.post(self.rpc_url, json=bh_payload,
+                                         timeout=aiohttp.ClientTimeout(total=2.0)) as bh_resp:
+                if bh_resp.status != 200:
+                    return 0
+                bh_data = await bh_resp.json()
+                bh_str = bh_data["result"]["value"]["blockhash"]
+
+            msg = MessageV0.try_compile(
+                payer=wallet_pk,
+                instructions=all_ixs,
+                address_lookup_table_accounts=[],
+                recent_blockhash=Hash.from_string(bh_str),
+            )
+            tx = VersionedTransaction(msg, [self.wallet_keypair])
+            tx_b64 = base64.b64encode(bytes(tx)).decode("ascii")
+
+            send_payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "sendTransaction",
+                "params": [tx_b64, {"encoding": "base64"}]
+            }
+            async with self.session.post(self.rpc_url, json=send_payload,
+                                         timeout=aiohttp.ClientTimeout(total=3.0)) as send_resp:
+                if send_resp.status == 200:
+                    result = await send_resp.json()
+                    if "result" in result:
+                        try:
+                            import src.ingest.shared_state as _ss
+                            _ss.ATA_CACHE.discard(wsol_ata_str)
+                        except Exception:
+                            pass
+                        total_recovered = balance + 2_039_280
+                        logger.info(
+                            f"✅ wSOL dust drained: burned {balance} tokens + "
+                            f"recovered {2_039_280 / 1e9:.6f} SOL rent = "
+                            f"{total_recovered / 1e9:.6f} SOL total"
+                        )
+                        return total_recovered
+                    else:
+                        logger.warning(f"wSOL drain send rejected: {result}")
+                else:
+                    logger.warning(f"wSOL drain HTTP {send_resp.status}")
+
+            return 0
+
+        except Exception as e:
+            logger.debug(f"wSOL ATA dust drain failed (non-fatal): {e}")
+            return 0
 
     async def _sweep_dust(self) -> int:
         """Core dust sweeping logic."""

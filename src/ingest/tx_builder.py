@@ -28,18 +28,13 @@ from spl.token.instructions import (
     TransferParams,
     transfer as spl_transfer,
 )
-
-logger = logging.getLogger(__name__)
-
 try:
     from spl.token.instructions import create_idempotent_associated_token_account
 
     CREATE_ATA_FUNCTION = create_idempotent_associated_token_account
 except ImportError:
     CREATE_ATA_FUNCTION = create_associated_token_account
-    logger.warning(
-        "create_idempotent_associated_token_account not available, using regular create_associated_token_account"
-    )
+    logger.warning("create_idempotent_associated_token_account not available")
 from spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
 from solders.system_program import ID as SYSTEM_PROGRAM_ID
 
@@ -1618,6 +1613,23 @@ class JupiterTxBuilder:
             logger.warning(f"FIX 10: wSOL ATA setup failed (non-fatal): {_wsol_err}")
         # ═══════════════════════════════════════════════════════════════════════
 
+        # ═══════════════════════════════════════════════════════════════════
+        # БЛОК 8: Anti-Sandwich Slippage — проверка otherAmountThreshold
+        # для build_native_flashloan_tx. Гарантирует, что минимальный выход
+        # со свопа >= borrow_amount + jito_tip.
+        # Параметр передаётся через marginfi_config["sell_quote_threshold"]
+        # или проверяется на уровне caller.
+        # ═══════════════════════════════════════════════════════════════════
+        _sell_threshold = marginfi_config.get("sell_quote_threshold", 0)
+        if _sell_threshold > 0:
+            _required_repay = borrow_amount_lamports + jito_tip_lamports
+            if _sell_threshold < _required_repay:
+                logger.warning(
+                    f"🚫 БЛОК 8 [native]: otherAmountThreshold ({_sell_threshold}) < "
+                    f"repay + jito_tip ({_required_repay}). Aborting bundle."
+                )
+                return None
+
         # ── Flash Loan Pivot: Entry swap FIRST (wallet SOL → USDC before borrow) ──
         # This converts the wallet's native SOL into USDC so the arb can run in USDC.
         # Net effect: wallet balance (-SOL_entry + USDC_gain) + borrowed USDC = total USDC for arb
@@ -2009,6 +2021,30 @@ class JupiterTxBuilder:
             all_instructions = []
             alts = []
 
+            # ═══════════════════════════════════════════════════════════════════
+            # БЛОК 8: Anti-Sandwich Slippage — otherAmountThreshold Guard
+            # Проверяем, что минимально гарантированный выход со свопа
+            # (otherAmountThreshold) покрывает repay_amount + jito_tip.
+            # Если нет — отменяем отправку бандла, чтобы не попасть в
+            # ситуацию, когда своп не даёт достаточно средств для возврата
+            # долга MarginFi + оплаты Jito.
+            # ═══════════════════════════════════════════════════════════════════
+            if sell_quote_response:
+                _threshold = int(sell_quote_response.get(
+                    "otherAmountThreshold", sell_quote_response.get("outAmount", 0)
+                ))
+                _required = borrow_amount_lamports + jito_tip_lamports
+                if _threshold < _required:
+                    logger.warning(
+                        f"🚫 БЛОК 8: otherAmountThreshold ({_threshold}) < "
+                        f"repay_amount + jito_tip ({_required}). "
+                        f"Anti-Sandwich guard aborts bundle to prevent InsufficientFunds."
+                    )
+                    return None
+                logger.debug(
+                    f"🛡️ БЛОК 8: otherAmountThreshold OK ({_threshold} >= {_required})"
+                )
+
             # Get Buy Swaps (если quote не пустой)
             if buy_quote_response:
                 buy_ixs, buy_alts = await self.get_swap_instructions(
@@ -2162,11 +2198,15 @@ class JupiterTxBuilder:
                 _strategy_profile, CU_PROFILES["flash_arbitrage"]
             )
             cu_limit_ix = set_compute_unit_limit(_profile_cu)
+            # БЛОК 7: Priority Fee — без set_compute_unit_price транзакция
+            # пессимизируется валидаторами во время перегрузок (0 priority = lowest).
+            # 5000 micro-lamports — минимальный жизнеспособный пол для флешлоанов.
+            cu_price_ix = set_compute_unit_price(5000)
             logger.debug(
                 f"🛡️ CU Profile: strategy_type={strategy_type} → {_strategy_profile} ({_profile_cu:,} CU)"
             )
             final_instructions = (
-                [cu_limit_ix]
+                [cu_limit_ix, cu_price_ix]
                 + pre_instructions
                 + [borrow_ix, withdraw_ix]
                 + all_instructions
@@ -2468,45 +2508,6 @@ class JupiterTxBuilder:
         )
 
     # === CAPITAL PROTECTION METHODS ===
-
-    async def _add_ata_rent_recovery(
-        self, instructions: List[Instruction], payer: Pubkey
-    ) -> List[Instruction]:
-        """Add ATA rent recovery instructions to reclaim 2_039_280 lamports (0.00203928 SOL) per token account."""
-        recovery_instructions = []
-        WHITELIST_MINTS = [
-            "So11111111111111111111111111111111111111112",  # SOL
-            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
-        ]
-
-        for ix in instructions:
-            if hasattr(ix, "program_id") and str(ix.program_id) == str(
-                ASSOCIATED_TOKEN_PROGRAM_ID
-            ):
-                if len(ix.accounts) >= 4:
-                    token_mint = str(ix.accounts[3].pubkey)
-                    if token_mint in WHITELIST_MINTS:
-                        continue
-
-                    token_account = ix.accounts[1].pubkey
-
-                    from spl.token.instructions import CloseAccountParams, close_account
-
-                    close_ix = close_account(
-                        CloseAccountParams(
-                            account=token_account,
-                            dest=payer,
-                            owner=payer,
-                            program_id=TOKEN_PROGRAM_ID,
-                            signers=[],
-                        )
-                    )
-                    recovery_instructions.append(close_ix)
-                    logger.debug(
-                        f"🛠️ Enforcing rent recovery for SPL ATA: {token_account}"
-                    )
-
-        return recovery_instructions
 
     async def _estimate_transaction_cu(
         self, instructions: List[Instruction], current_cu_limit: int, rpc_url: str

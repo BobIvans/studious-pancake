@@ -25,8 +25,6 @@ from solders.signature import Signature
 from spl.token.instructions import (
     get_associated_token_address,
     create_associated_token_account,
-    close_account,
-    CloseAccountParams,
     TransferParams,
     transfer as spl_transfer,
 )
@@ -1630,7 +1628,7 @@ class JupiterTxBuilder:
         # 1. MarginFi Flashloan Start (9 accounts per MarginFi v2 IDL)
         end_index = len(all_instructions) + 3 + len(dex_swap_instructions) + len(exit_pivot_ixs or [])
         borrow_ix = self.build_marginfi_start_flashloan_ix(
-            marginfi_group=Mfi_GROUP,
+            marginfi_group=MARGINFI_GROUP,
             marginfi_account=mfi_account,
             bank=bank,
             liquidity_vault=vault,
@@ -1708,7 +1706,8 @@ class JupiterTxBuilder:
         if jito_tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
 
-            # wSOL is closed atomically above.
+            # wSOL ATA closing is handled asynchronously by DustSweeper between trades.
+            # CloseAccount in the middle of a flashloan reverts if Jupiter leaves 1-lamport dust.
             # Dynamic tip accounts — caller must supply, abort if empty (no hardcoded fallback).
             if not tip_accounts:
                 logger.critical(
@@ -2349,7 +2348,7 @@ class JupiterTxBuilder:
             AccountMeta(pubkey=bank_liquidity_vault_authority, is_signer=False, is_writable=False),
             AccountMeta(pubkey=token_program, is_signer=False, is_writable=False),
             AccountMeta(pubkey=instructions_sysvar, is_signer=False, is_writable=False),
-            AccountMeta(pubkey=signer, is_signer=True, is_writable=False),
+            AccountMeta(pubkey=signer, is_signer=True, is_writable=True),
         ]
 
         mfi_program = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")

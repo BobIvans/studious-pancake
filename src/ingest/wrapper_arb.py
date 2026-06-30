@@ -45,12 +45,14 @@ class WrapperPegArb:
         optimal_trade_sizer=None,
         execution_router=None,
         min_profit_sol: float = 0.0005,
+        price_matrix: Optional[Dict[str, tuple]] = None,
     ):
         self.session = session
         self.tx_builder = tx_builder
         self.optimal_trade_sizer = optimal_trade_sizer
         self.execution_router = execution_router
         self.min_profit_sol = min_profit_sol
+        self.price_matrix = price_matrix or {}
 
     async def scan_and_execute(self, usdc_borrow_lamports: int) -> Dict[str, Any]:
         """
@@ -149,10 +151,15 @@ class WrapperPegArb:
                     "profit_lamports": profit_lamports,
                 }
 
-            # Convert USDC profit to SOL for min_profit check (~$150/SOL)
-            # USDC has 6 decimals, so profit_lamports / 1e6 = USDC amount
+            # Convert USDC profit to SOL using live price from price_matrix
+            usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            sol_mint = "So11111111111111111111111111111111111111112"
+            sol_price_usd = 150.0
+            sol_entry = self.price_matrix.get(sol_mint)
+            if sol_entry:
+                sol_price_usd = sol_entry[0]
             profit_usdc = profit_lamports / 1_000_000
-            profit_sol = profit_usdc / 150.0  # Approximate SOL price
+            profit_sol = profit_usdc / sol_price_usd
 
             if profit_sol < self.min_profit_sol:
                 logger.debug(

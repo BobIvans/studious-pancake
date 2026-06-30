@@ -563,6 +563,7 @@ class ExecutionRouter:
                         wsol_manager=None,
                         pool_state_manager=None,
                         use_jito=True,
+                        tip_accounts=self.jito_executor.tip_accounts if self.jito_executor else None,
                     )
 
                     if not tx_data:

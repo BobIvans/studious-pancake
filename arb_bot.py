@@ -232,6 +232,7 @@ from src.ingest.lst_fair_price_monitor import LstFairPriceMonitor, DepegSignal
 from src.ingest.lst_route_aggregator import LstRouteAggregator, RouteResult
 from src.ingest.flash_simulator import FlashSimulator
 from src.ingest.flywheel_scaler import FlywheelScaler
+from src.ingest.wrapper_arb import WrapperPegArb
 
 # Dynamic ATA rent: 0.00204 SOL for standard SPL Token, 0.0035 SOL for Token-2022
 RENT_SPL_ATA_SOL = 0.00204
@@ -3869,6 +3870,82 @@ async def lst_unstake_arbitrage_scanner(
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+#  BTC WRAPPER PEG ARBITRAGE SCANNER
+# ═══════════════════════════════════════════════════════════════════════════
+
+
+async def wrapper_peg_scanner(
+    session,
+    cfg,
+    rpc_manager,
+    keypair,
+    jito_executor,
+    execution_router=None,
+):
+    """BTC Wrapper Peg Arbitrage scanner (cbBTC/wBTC/tBTC).
+
+    Monitors peg deviations between BTC wrapper tokens and executes
+    a 3-leg flash loan arbitrage via execution_router.
+    """
+    rpc_url = rpc_manager.get_rpc()
+
+    tx_builder = JupiterTxBuilder(
+        session=session,
+        rpc_getter=lambda: rpc_manager.get_rpc(),
+    )
+
+    borrow_env_sol = float(os.getenv("FLASH_LOAN_SIZE_SOL", "1.0"))
+
+    wrapper_arb = WrapperPegArb(
+        session=session,
+        tx_builder=tx_builder,
+        execution_router=execution_router,
+        min_profit_sol=getattr(cfg, "MIN_PROFIT_THRESHOLD_SOL", 0.0005),
+        price_matrix=price_matrix,
+    )
+
+    cycle_count = 0
+
+    logger.info(
+        f"🚀 Wrapper Peg Scanner started | "
+        f"scan_interval={getattr(cfg, 'LST_UNSTAKE_SCAN_INTERVAL', 3.0)}s"
+    )
+
+    while True:
+        cycle_count += 1
+        try:
+            _gas_ok, _ = await PreTradeGuard.check_gas_tank(
+                shared_state.stats.get(
+                    "virtual_balance", shared_state.stats.get("last_balance", 0.0)
+                )
+            )
+            if not _gas_ok:
+                logger.critical(
+                    "🚨 STRICT GAS TANK: Wrapper Peg scanner halted — balance below 0.005 SOL"
+                )
+                await asyncio.sleep(30)
+                continue
+
+            sol_mint_str = "So11111111111111111111111111111111111111112"
+            sol_price = 150.0
+            sol_entry = price_matrix.get(sol_mint_str)
+            if sol_entry:
+                sol_price = sol_entry[0]
+            borrow_usdc_lamports = int(borrow_env_sol * sol_price * 1_000_000)
+
+            result = await wrapper_arb.scan_and_execute(borrow_usdc_lamports)
+            trades = result.get("trades", [])
+            if trades:
+                shared_state.stats["trades"] += len(trades)
+                logger.info(f"💰 Wrapper Peg: {len(trades)} trade(s) executed")
+
+        except Exception as e:
+            logger.error(f"Wrapper Peg scanner error: {e}")
+
+        await asyncio.sleep(getattr(cfg, "LST_UNSTAKE_SCAN_INTERVAL", 3.0))
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 #  ORDERBOOK-AMM BIPARTITE SOLVER SCANNER
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -6516,6 +6593,20 @@ async def run():
         logger.info("🌊 Orderbook-AMM Arbitrage Scanner ENABLED (Blue Ocean)")
     else:
         logger.debug("ℹ️ Orderbook-AMM Arbitrage Scanner DISABLED")
+
+    # Wrapper Peg Arbitrage Scanner
+    wrapper_peg_task = asyncio.create_task(
+        wrapper_peg_scanner(
+            session,
+            cfg,
+            rpc,
+            keypair,
+            jito_executor,
+            execution_router=execution_router,
+        )
+    )
+    tasks.append(wrapper_peg_task)
+    logger.info("🔄 BTC Wrapper Peg Arbitrage Scanner ENABLED")
 
     logger.debug(f"🚀 Matrix Scanner launched! Initial Balance: {initial_balance} SOL")
 

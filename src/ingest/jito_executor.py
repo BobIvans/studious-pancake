@@ -424,7 +424,7 @@ class JitoExecutor:
     async def wait_for_confirmation(
         self,
         bundle_id:       str,
-        max_wait_time:   float  = 3.0,
+        max_wait_time:   float  = 5.0,
         check_interval:  float  = 0.5,
     ) -> Dict[str, Any]:
         start = time.time()

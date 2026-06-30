@@ -9,6 +9,7 @@ import orjson
 import time
 import hashlib
 import os
+import struct
 import urllib.parse
 from decimal import Decimal
 from typing import Any, Dict, Optional, List, Tuple, Callable
@@ -69,6 +70,10 @@ _REMAINING_ACCOUNTS_REGISTRY: Dict[int, int] = {}
 
 COMPUTE_BUDGET_PROGRAM_ID = Pubkey.from_string(
     "ComputeBudget111111111111111111111111111111"
+)
+
+INSTRUCTIONS_SYSVAR = Pubkey.from_string(
+    "Sysvar1nstructions1111111111111111111111111"
 )
 
 
@@ -1400,18 +1405,20 @@ class JupiterTxBuilder:
             # repay_index points to end_ix (MARGINFI_FLASHLOAN_END discriminator)
             repay_index = 1 + 2 + len(arbitrage_instructions) + 1  # end_ix is last
 
-            # Borrow instruction (Flashloan Start)
+            # Borrow instruction (Flashloan Start) - 9 accounts per MarginFi v2 IDL
             borrow_ix = self.build_marginfi_start_flashloan_ix(
-                mfi_program,
-                mfi_account,
-                wallet,
-                bank,
-                vault,
-                vault_auth,
-                user_sol_ata,
-                TOKEN_PROGRAM_ID,
-                borrow_amount_lamports,
-                [repay_index],
+                marginfi_group=MARGINFI_GROUP,
+                marginfi_account=mfi_account,
+                bank=bank,
+                liquidity_vault=vault,
+                bank_liquidity_vault_authority=vault_auth,
+                token_program=TOKEN_PROGRAM_ID,
+                instructions_sysvar=INSTRUCTIONS_SYSVAR,
+                signer=wallet,
+                fee_payer=wallet,
+                bank_index=0,
+                amount=borrow_amount_lamports,
+                repay_index=repay_index,
             )
 
             # Withdraw from bank (actual token transfer) - MarginFi v2 requires this
@@ -1444,9 +1451,15 @@ class JupiterTxBuilder:
 
             # End flashloan instruction - validates completion via introspection
             end_ix = self.build_marginfi_end_flashloan_ix(
-                mfi_program,
-                mfi_account,
-                wallet,
+                marginfi_group=MARGINFI_GROUP,
+                marginfi_account=mfi_account,
+                bank=bank,
+                liquidity_vault=vault,
+                bank_liquidity_vault_authority=vault_auth,
+                token_program=TOKEN_PROGRAM_ID,
+                instructions_sysvar=INSTRUCTIONS_SYSVAR,
+                signer=wallet,
+                repay_index=repay_index,
             )
 
             # Build CU limit instruction
@@ -1614,19 +1627,21 @@ class JupiterTxBuilder:
             all_instructions.append(pv_ix)
         # Removed set_compute_unit_price - will be added by build_optimized_transaction
 
-        # 1. MarginFi Flashloan Start (3 accounts: mfi_account, wallet, ixs_sysvar)
+        # 1. MarginFi Flashloan Start (9 accounts per MarginFi v2 IDL)
         end_index = len(all_instructions) + 3 + len(dex_swap_instructions) + len(exit_pivot_ixs or [])
         borrow_ix = self.build_marginfi_start_flashloan_ix(
-            mfi_program=mfi_program,
-            mfi_account=mfi_account,
-            wallet=wallet,
+            marginfi_group=Mfi_GROUP,
+            marginfi_account=mfi_account,
             bank=bank,
-            user_token_account=user_sol_ata,
-            vault=vault,
-            vault_auth=vault_auth,
+            liquidity_vault=vault,
+            bank_liquidity_vault_authority=vault_auth,
             token_program=sol_prog_id,
+            instructions_sysvar=INSTRUCTIONS_SYSVAR,
+            signer=wallet,
+            fee_payer=wallet,
+            bank_index=0,
             amount=borrow_amount_lamports,
-            instruction_indices=[end_index],
+            repay_index=end_index,
         )
         all_instructions.append(borrow_ix)
 
@@ -1669,11 +1684,17 @@ class JupiterTxBuilder:
         )
         all_instructions.append(repay_ix)
 
-        # 6. MarginFi Flashloan End - validates completion (only 2 accounts)
+        # 6. MarginFi Flashloan End (8 accounts per MarginFi v2 IDL)
         end_ix = self.build_marginfi_end_flashloan_ix(
-            mfi_program,
-            mfi_account,
-            wallet,
+            marginfi_group=MARGINFI_GROUP,
+            marginfi_account=mfi_account,
+            bank=bank,
+            liquidity_vault=vault,
+            bank_liquidity_vault_authority=vault_auth,
+            token_program=sol_prog_id,
+            instructions_sysvar=INSTRUCTIONS_SYSVAR,
+            signer=wallet,
+            repay_index=end_index,
         )
         all_instructions.append(end_ix)
 
@@ -1763,8 +1784,9 @@ class JupiterTxBuilder:
                 )
                 return None
 
-            # ── БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (Первые 8 байт - дискриминатор, затем 8 байт - u64 amount) ──
-            # Формат: discriminator(8) + amount(8) + index(1)
+            # ── БЕЗОПАСНАЯ ПЕРЕСБОРКА ДАННЫХ (discriminator 8 + bank_index 2 + amount 8 + repay_index 2) ──
+            # Формат: discriminator(8) + bank_index(2 u16 LE) + amount(8 u64 LE) + repay_index(2 u16 LE)
+            # reconstruct from scratch, avoiding slice mutation which loses bank_index
             import struct
             from solders.instruction import Instruction
 
@@ -1783,9 +1805,18 @@ class JupiterTxBuilder:
                     "CRITICAL: borrow_ix not found in sanitized instruction list"
                 )
                 return None
-            original_data_without_index = borrow_ix.data[:16]
-            safe_index_bytes = struct.pack("<Q", actual_repay_index)
-            new_data = original_data_without_index + safe_index_bytes
+
+            # Extract bank_index from original data (bytes 8-10)
+            bank_index_val = struct.unpack("<H", borrow_ix.data[8:10])[0] if len(borrow_ix.data) >= 10 else 0
+            # Extract amount from original data (bytes 10-18)
+            amount_val = struct.unpack("<Q", borrow_ix.data[10:18])[0] if len(borrow_ix.data) >= 18 else 0
+
+            new_data = (
+                MARGINFI_FLASHLOAN_START
+                + struct.pack("<H", bank_index_val)
+                + struct.pack("<Q", amount_val)
+                + struct.pack("<H", actual_repay_index)
+            )
             new_borrow_ix = Instruction(
                 program_id=borrow_ix.program_id,
                 accounts=borrow_ix.accounts,
@@ -2072,16 +2103,18 @@ class JupiterTxBuilder:
             repay_index = len(all_instructions) + 3 + len(pre_instructions)
 
             borrow_ix = self.build_marginfi_start_flashloan_ix(
-                mfi_program,
-                Pubkey.from_string(marginfi_account),
-                wallet,
-                Pubkey.from_string(bank_pubkey),
-                Pubkey.from_string(bank_liquidity_vault),
-                Pubkey.from_string(bank_liquidity_vault_authority),
-                user_borrow_ata,
-                TOKEN_PROGRAM_ID,
-                borrow_amount_lamports,
-                [repay_index],
+                marginfi_group=MARGINFI_GROUP,
+                marginfi_account=Pubkey.from_string(marginfi_account),
+                bank=Pubkey.from_string(bank_pubkey),
+                liquidity_vault=Pubkey.from_string(bank_liquidity_vault),
+                bank_liquidity_vault_authority=Pubkey.from_string(bank_liquidity_vault_authority),
+                token_program=TOKEN_PROGRAM_ID,
+                instructions_sysvar=INSTRUCTIONS_SYSVAR,
+                signer=wallet,
+                fee_payer=wallet,
+                bank_index=0,
+                amount=borrow_amount_lamports,
+                repay_index=repay_index,
             )
 
             withdraw_ix = self.build_marginfi_withdraw_ix(
@@ -2111,9 +2144,15 @@ class JupiterTxBuilder:
             )
 
             end_ix = self.build_marginfi_end_flashloan_ix(
-                mfi_program,
-                Pubkey.from_string(marginfi_account),
-                wallet,
+                marginfi_group=MARGINFI_GROUP,
+                marginfi_account=Pubkey.from_string(marginfi_account),
+                bank=Pubkey.from_string(bank_pubkey),
+                liquidity_vault=Pubkey.from_string(bank_liquidity_vault),
+                bank_liquidity_vault_authority=Pubkey.from_string(bank_liquidity_vault_authority),
+                token_program=TOKEN_PROGRAM_ID,
+                instructions_sysvar=INSTRUCTIONS_SYSVAR,
+                signer=wallet,
+                repay_index=repay_index,
             )
 
             # Dynamic CU limit from profile (strategy_type=2 → lst_depeg_arbitrage: 450k)
@@ -2185,13 +2224,19 @@ class JupiterTxBuilder:
                 )
                 return None
 
-            # ФИКС: flashloan layout = discriminator(8) + amount(8 u64 LE) + repay_index(8 u64 LE)
-            original_data_without_index = borrow_ix.data[:16]
-            safe_index_bytes = struct.pack("<Q", actual_repay_index)
+            # ФИКС: flashloan layout = discriminator(8) + bank_index(2 u16 LE) + amount(8 u64 LE) + repay_index(2 u16 LE)
+            # Extract bank_index (bytes 8-10) and amount (bytes 10-18) from original, repack with correct repay_index
+            bank_index_val = struct.unpack("<H", borrow_ix.data[8:10])[0] if len(borrow_ix.data) >= 10 else 0
+            amount_val = struct.unpack("<Q", borrow_ix.data[10:18])[0] if len(borrow_ix.data) >= 18 else 0
             new_borrow_ix = Instruction(
                 program_id=borrow_ix.program_id,
                 accounts=borrow_ix.accounts,
-                data=original_data_without_index + safe_index_bytes,
+                data=(
+                    MARGINFI_FLASHLOAN_START
+                    + struct.pack("<H", bank_index_val)
+                    + struct.pack("<Q", amount_val)
+                    + struct.pack("<H", actual_repay_index)
+                ),
             )
 
             # Find borrow_ix in sanitized list using same generator pattern (Fix 63)
@@ -2228,49 +2273,46 @@ class JupiterTxBuilder:
 
     def build_marginfi_start_flashloan_ix(
         self,
-        mfi_program: Pubkey,
-        mfi_account: Pubkey,
-        wallet: Pubkey,
+        marginfi_group: Pubkey,
+        marginfi_account: Pubkey,
         bank: Pubkey,
-        vault: Pubkey,
-        vault_auth: Pubkey,
-        user_token_account: Pubkey,
+        liquidity_vault: Pubkey,
+        bank_liquidity_vault_authority: Pubkey,
         token_program: Pubkey,
-        amount: int,
-        instruction_indices: Optional[List[int]] = None,
+        instructions_sysvar: Pubkey,
+        signer: Pubkey,
+        fee_payer: Pubkey,
+        bank_index: int = 0,
+        amount: int = 0,
+        repay_index: int = 0,
     ) -> Instruction:
         """Build MarginFi lending_account_start_flashloan instruction.
 
-        ФИКС (Phase 49): Используем настоящий flashloan эндпоинт MarginFi v2.
-        Стандартный borrow привязан к Risk Engine и отклоняется при Health Factor < 0.
-        start_flashloan обходит Risk Engine и не требует обеспечения.
-
-        Data layout: discriminator(8) + amount(8 u64 LE) + repay_index(8 u64 LE) = 24 bytes
-
-        Args:
-            instruction_indices: List with one element — the index of the end_flashloan
-                                 instruction in the full transaction. Encoded as u64.
+        MarginFi v2 flashloan start instruction layout:
+        - Accounts: 9 (marginfi_group, marginfi_account, bank, liquidity_vault,
+          bank_liquidity_vault_authority, token_program, instructions_sysvar, signer, fee_payer)
+        - Data: 20 bytes = discriminator (8) + bank_index (u16, 2) + amount (u64, 8) + repay_index (u16, 2)
         """
-        index = instruction_indices[0] if instruction_indices else 0
-        import struct
-
         data = (
             MARGINFI_FLASHLOAN_START
-            + amount.to_bytes(8, "little")
-            + struct.pack("<Q", index)
+            + struct.pack("<H", bank_index)
+            + struct.pack("<Q", amount)
+            + struct.pack("<H", repay_index)
         )
 
-        sysvar_instructions = Pubkey.from_string(
-            "Sysvar1nstructions1111111111111111111111111"
-        )
-
-        # MarginFi v2 lending_account_start_flashloan expects ONLY 3 accounts per spec:
-        # marginfi_account (writable), signer (wallet, signer/writable), ixs_sysvar (readonly)
         account_metas = [
-            AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
-            AccountMeta(pubkey=wallet, is_signer=True, is_writable=True),
-            AccountMeta(pubkey=sysvar_instructions, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=marginfi_group, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=marginfi_account, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=liquidity_vault, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=bank_liquidity_vault_authority, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=token_program, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=instructions_sysvar, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=signer, is_signer=True, is_writable=True),
+            AccountMeta(pubkey=fee_payer, is_signer=True, is_writable=True),
         ]
+
+        mfi_program = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
 
         return Instruction(
             program_id=mfi_program,
@@ -2280,31 +2322,37 @@ class JupiterTxBuilder:
 
     def build_marginfi_end_flashloan_ix(
         self,
-        mfi_program: Pubkey,
-        mfi_account: Pubkey,
-        wallet: Pubkey,
+        marginfi_group: Pubkey,
+        marginfi_account: Pubkey,
         bank: Pubkey,
-        vault: Pubkey,
-        vault_auth: Pubkey,
-        user_token_account: Pubkey,
+        liquidity_vault: Pubkey,
+        bank_liquidity_vault_authority: Pubkey,
         token_program: Pubkey,
+        instructions_sysvar: Pubkey,
+        signer: Pubkey,
+        repay_index: int = 0,
     ) -> Instruction:
         """Build MarginFi lending_account_end_flashloan instruction.
 
-        ФИКС (Phase 49): Используем настоящий flashloan эндпоинт MarginFi v2.
-        end_flashloan принимает ТОЛЬКО дискриминатор (8 байт), без суммы.
-        Сумма возврата определяется смарт-контрактом через интроспекцию.
-
-        Data layout: discriminator(8) only — no amount field.
+        MarginFi v2 flashloan end instruction layout:
+        - Accounts: 8 (marginfi_group, marginfi_account, bank, liquidity_vault,
+          bank_liquidity_vault_authority, token_program, instructions_sysvar, signer)
+        - Data: 10 bytes = discriminator (8) + repay_index (u16, 2)
         """
-        data = MARGINFI_FLASHLOAN_END  # Only discriminator, no amount
+        data = MARGINFI_FLASHLOAN_END + struct.pack("<H", repay_index)
 
-        # MarginFi v2 end_flashloan expects only 2 accounts per spec:
-        # marginfi_account (writable), signer (wallet)
         account_metas = [
-            AccountMeta(pubkey=mfi_account, is_signer=False, is_writable=True),
-            AccountMeta(pubkey=wallet, is_signer=True, is_writable=False),
+            AccountMeta(pubkey=marginfi_group, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=marginfi_account, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=liquidity_vault, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=bank_liquidity_vault_authority, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=token_program, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=instructions_sysvar, is_signer=False, is_writable=False),
+            AccountMeta(pubkey=signer, is_signer=True, is_writable=False),
         ]
+
+        mfi_program = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
 
         return Instruction(
             program_id=mfi_program,

@@ -125,7 +125,8 @@ def normalize_profit_to_sol(
 
 # ULTRA ARB MASTER - Unified Shared State (Imported from src.ingest.shared_state)
 KEYPAIR = None  # Fix 81: memory-mapped wallet - never read disk during arb
-PENDING_QUOTES: Set[str] = set()  # Fix 84: RPS shield - dedup Jupiter requests
+_QUOTE_TASKS: Dict[str, asyncio.Task] = {}  # Fix 84: RPS shield - task-based dedup Jupiter requests
+_QUOTE_TASKS_LOCK = asyncio.Lock()
 LAST_SIGNAL_TIME: Dict[str, float] = {}  # Fix 88: per-pair 400ms cooldown (1 slot)
 STRATEGY_FAILURES: Dict[str, int] = {}  # Fix 90: reputation circuit breaker
 STRATEGY_DISABLED_UNTIL: Dict[str, float] = {}
@@ -2150,7 +2151,7 @@ async def rwa_rest_scanner(queue, cfg):
         await asyncio.sleep(scan_config["scan_interval"])
 
 
-async def get_jupiter_quote(
+async def _fetch_quote_internal(
     session,
     input_mint,
     output_mint,
@@ -2162,10 +2163,7 @@ async def get_jupiter_quote(
     wallet_balance_sol: float = 0.0,  # Task 14: micro-balance ATA routing guard
     exact_out_amount: Optional[int] = None,  # Fix: ExactOut desired output (debt)
 ):
-    pair_key = f"{input_mint}:{output_mint}:{amount_lamports}"
-    if pair_key in PENDING_QUOTES:
-        return None  # Fix 84: dedup - skip duplicate RPS waste
-    PENDING_QUOTES.add(pair_key)
+    """Internal quote fetcher — all original HTTP logic lives here."""
     from src.ingest.jupiter_api_client import get_quote_limiter
 
     limiter = get_quote_limiter()
@@ -2197,46 +2195,84 @@ async def get_jupiter_quote(
     if cfg.JUPITER_API_KEY:
         headers["x-api-key"] = cfg.JUPITER_API_KEY
 
+    max_retries = 3
+    async with limiter:
+        for attempt in range(max_retries):
+            try:
+                async with session.get(
+                    cfg.JUPITER_QUOTE_URL, params=params, headers=headers
+                ) as resp:
+                    if resp.status == 200:
+                        data = orjson.loads(await resp.read())
+                        return {
+                            "source": "Jupiter",
+                            "out_amount": int(data["outAmount"]),
+                            "full_quote_response": data,
+                        }
+                    elif resp.status == 429:
+                        backoff = min(2.0, 1.5 * (attempt + 1))
+                        logger.warning(
+                            f"Jupiter 429 on {cfg.JUPITER_QUOTE_URL} — backoff {backoff}s (attempt {attempt + 1}/{max_retries})"
+                        )
+                        await asyncio.sleep(backoff)
+                        continue
+                    else:
+                        error_text = await resp.text()
+                        logger.warning(
+                            f"Jupiter API Error {resp.status}: {error_text}"
+                        )
+                        return None
+            except asyncio.TimeoutError:
+                logger.warning(
+                    f"Jupiter quote timeout (attempt {attempt + 1}/{max_retries})"
+                )
+                if attempt < max_retries - 1:
+                    await asyncio.sleep(0.5 * (2**attempt))
+            except Exception as e:
+                logger.warning(f"Jupiter Exception: {repr(e)}")
+                return None
+    return None
+
+
+async def get_jupiter_quote(
+    session,
+    input_mint,
+    output_mint,
+    amount_lamports,
+    cfg,
+    slippage_bps=None,
+    restrict_intermediate: bool = True,
+    swap_mode: Optional[str] = None,
+    wallet_balance_sol: float = 0.0,  # Task 14: micro-balance ATA routing guard
+    exact_out_amount: Optional[int] = None,  # Fix: ExactOut desired output (debt)
+):
+    """Deduplicated quote fetcher — if a request for the same key is in-flight,
+    subsequent callers await the same task instead of making a duplicate RPC call."""
+    pair_key = f"{input_mint}:{output_mint}:{amount_lamports}:{swap_mode}:{exact_out_amount}"
+
+    async with _QUOTE_TASKS_LOCK:
+        if pair_key in _QUOTE_TASKS:
+            # Если кто-то уже делает этот запрос, ждем его результата (shield защищает от отмены)
+            try:
+                return await asyncio.shield(_QUOTE_TASKS[pair_key])
+            except Exception as e:
+                logger.debug(f"Shielded quote task failed: {e}")
+                return None
+
+        # Создаем новую задачу
+        coro = _fetch_quote_internal(
+            session, input_mint, output_mint, amount_lamports, cfg,
+            slippage_bps, restrict_intermediate, swap_mode, wallet_balance_sol, exact_out_amount
+        )
+        task = asyncio.create_task(coro)
+        _QUOTE_TASKS[pair_key] = task
+
     try:
-        max_retries = 3
-        async with limiter:
-            for attempt in range(max_retries):
-                try:
-                    async with session.get(
-                        cfg.JUPITER_QUOTE_URL, params=params, headers=headers
-                    ) as resp:
-                        if resp.status == 200:
-                            data = orjson.loads(await resp.read())
-                            return {
-                                "source": "Jupiter",
-                                "out_amount": int(data["outAmount"]),
-                                "full_quote_response": data,
-                            }
-                        elif resp.status == 429:
-                            backoff = min(2.0, 1.5 * (attempt + 1))
-                            logger.warning(
-                                f"Jupiter 429 on {cfg.JUPITER_QUOTE_URL} — backoff {backoff}s (attempt {attempt + 1}/{max_retries})"
-                            )
-                            await asyncio.sleep(backoff)
-                            continue
-                        else:
-                            error_text = await resp.text()
-                            logger.warning(
-                                f"Jupiter API Error {resp.status}: {error_text}"
-                            )
-                            return None
-                except asyncio.TimeoutError:
-                    logger.warning(
-                        f"Jupiter quote timeout (attempt {attempt + 1}/{max_retries})"
-                    )
-                    if attempt < max_retries - 1:
-                        await asyncio.sleep(0.5 * (2**attempt))
-                except Exception as e:
-                    logger.warning(f"Jupiter Exception: {repr(e)}")
-                    return None
-        return None
+        result = await task
+        return result
     finally:
-        PENDING_QUOTES.discard(pair_key)
+        async with _QUOTE_TASKS_LOCK:
+            _QUOTE_TASKS.pop(pair_key, None)
 
 
 def get_token_decimals(mint) -> int:
@@ -2406,7 +2442,9 @@ async def create_flashloan_arbitrage_tx(
         # Assuming base_mint is a stablecoin (6 decimals)
         fee_in_base_token_lamports = int(base_fee_sol * sol_price_in_usd * 1e6)
 
-    total_fees_in_base = fee_in_base_token_lamports
+    # MarginFi берет 0.05% (5 BPS) от суммы займа в базовом токене
+    flashloan_fee_lamports = int(base_amount_lamports * 0.0005)
+    total_fees_in_base = fee_in_base_token_lamports + flashloan_fee_lamports
 
     if profit_lamports < total_fees_in_base:
         return None
@@ -2457,24 +2495,24 @@ async def create_flashloan_arbitrage_tx(
     )  # borrow(0) + withdraw(1) + len(Swaps) + repay = end_ix
 
     borrow_ix = builder.build_marginfi_start_flashloan_ix(
-        mfi_program,
-        marginfi_account,
-        keypair.pubkey(),
-        mfi_group,
-        bank_cfg["bank"],
-        bank_cfg["liquidity_vault"],
-        bank_cfg["liquidity_vault_authority"],
-        user_token_account,
-        TOKEN_PROGRAM_ID,
-        int(effective_base_amount),
-        [repay_index],
-    )
+            marginfi_group=mfi_group,
+            marginfi_account=marginfi_account,
+            bank=bank_cfg["bank"],
+            liquidity_vault=bank_cfg["liquidity_vault"],
+            bank_liquidity_vault_authority=bank_cfg["liquidity_vault_authority"],
+            token_program=TOKEN_PROGRAM_ID,
+            instructions_sysvar=Pubkey.from_string("Sysvar1nstructions1111111111111111111111111"),
+            signer=keypair.pubkey(),
+            fee_payer=keypair.pubkey(),
+            bank_index=0,
+            amount=int(effective_base_amount),
+            repay_index=repay_index,
+        )
 
     # ═══════════════════════════════════════════════════════════════════════════
-    # SAFE FLASHLOAN START DATA RECONSTRUCTION (avoids slice-patching fragile to CDDL changes)
-    # MarginFi flashloan start layout: discriminator(8) | amount(8 u64 LE) | repay index(8 u64 LE)
-    # We rebuild data from scratch instead of borrow_ix.data[:N] + bytes([index])
-    # to prevent byte shifts if Jupiter ever adds another param between amount and index.
+    # SAFE FLASHLOAN START DATA RECONSTRUCTION (discriminator 8 + bank_index 2 + amount 8 + repay_index 2)
+    # MarginFi v2 flashloan start layout: discriminator(8) | bank_index(2 u16 LE) | amount(8 u64 LE) | repay_index(2 u16 LE)
+    # Total: 20 bytes. Rebuild from scratch to ensure correct indexing after sanitization.
     # ═══════════════════════════════════════════════════════════════════════════
     try:
         from src.ingest.tx_builder import MARGINFI_FLASHLOAN_START
@@ -2482,13 +2520,14 @@ async def create_flashloan_arbitrage_tx(
         from src.ingest.tx_builder import MARGINFI_FLASHLOAN_START
 
     try:
-        # Exact re-serialization: discriminator (8) + amount (8 u64 LE) + repay index (8 u64 LE)
+        # Exact re-serialization: 20 bytes total
         _new_data = (
             MARGINFI_FLASHLOAN_START
-            + int(effective_base_amount).to_bytes(8, "little")
-            + struct.pack("<Q", repay_index)
+            + struct.pack("<H", 0)  # bank_index
+            + struct.pack("<Q", int(effective_base_amount))  # amount
+            + struct.pack("<H", repay_index)  # repay_index
         )
-        if len(_new_data) == 24:
+        if len(_new_data) == 20:
             borrow_ix = Instruction(
                 program_id=borrow_ix.program_id,
                 accounts=borrow_ix.accounts,
@@ -2529,11 +2568,17 @@ async def create_flashloan_arbitrage_tx(
         amount=int(effective_base_amount),
     )
 
-    # ── MarginFi v2: end flashloan introspection ──
+    # ── MarginFi v2: end flashloan introspection (8 accounts) ──
     end_ix = builder.build_marginfi_end_flashloan_ix(
-        mfi_program,
-        marginfi_account,
-        keypair.pubkey(),
+        marginfi_group=mfi_group,
+        marginfi_account=marginfi_account,
+        bank=bank_cfg["bank"],
+        liquidity_vault=bank_cfg["liquidity_vault"],
+        bank_liquidity_vault_authority=bank_cfg["liquidity_vault_authority"],
+        token_program=TOKEN_PROGRAM_ID,
+        instructions_sysvar=Pubkey.from_string("Sysvar1nstructions1111111111111111111111111"),
+        signer=keypair.pubkey(),
+        repay_index=repay_index,
     )
 
     # Final instruction sequence for build_optimized_transaction
@@ -4517,10 +4562,14 @@ async def execute_priority_opportunity(
         # Fix 39: Pass the ACTUAL dynamic chosen_route (not hardcoded [quote1, quote2])
         # Fix 81: Pre-calculate net profit to prevent USDC math divide-by-1e9 bug
         tip_amount_sol = tip_amount_lamports / 1e9 if tip_amount_lamports else 0.0
+        borrow_amount_sol = opportunity.metadata.get("borrow_amount_sol", 0.0)
+        flashloan_fee_sol = borrow_amount_sol * 0.0005  # 0.05% от MarginFi
+
         est_net_profit_sol = max(
             0.0,
             float(opportunity.expected_profit_sol)
             - tip_amount_sol
+            - flashloan_fee_sol
             - (cfg.PRIORITY_FEE + cfg.BASE_FEE + cfg.ATA_FEE),
         )
         # For triangular, this carries all 3 legs; for direct, 2 legs.
@@ -5038,6 +5087,9 @@ async def worker(
                     getattr(cfg, "BASE_TIP_LAMPORTS", 10000),
                     int(max_safe_tip_sol * 1e9),
                 )
+                # The Tie-Breaker Fix: Micro-Jitter
+                import random
+                tip_lamports += random.randint(11, 142)
                 jito_tip_sol = tip_lamports / 1e9
 
             # Find optimal size comparing routes
@@ -5874,31 +5926,6 @@ async def run():
             keypair=keypair,
         )
         await jito_executor.start()
-
-        # Fix 2: Hardcoded Jito Tip Accounts — retry fetch_tip_accounts() up to 3 times.
-        # If still empty after retries, log CRITICAL so the operator knows tips may go to stale accounts.
-        _fetch_attempts = 0
-        while _fetch_attempts < 3:
-            if jito_executor.tip_accounts and len(jito_executor.tip_accounts) > 1:
-                logger.info(
-                    f"✅ Jito tip accounts loaded: {len(jito_executor.tip_accounts)} active accounts"
-                )
-                break
-            _fetch_attempts += 1
-            logger.warning(
-                f"⚠️ Jito tip accounts attempt {_fetch_attempts}/3: "
-                f"{len(jito_executor.tip_accounts)} accounts — retrying in 2s..."
-            )
-            await asyncio.sleep(2)
-            await jito_executor.fetch_tip_accounts()
-        if _fetch_attempts >= 3 and len(jito_executor.tip_accounts) <= 1:
-            logger.critical(
-                "🚨 JITO TIP ACCOUNTS: Dynamic fetch failed after 3 attempts! "
-                "Aborting startup to prevent trading with stale tip accounts. "
-                "Manual inspection required (Check network/Jito API status)."
-            )
-            shared_state.GLOBAL_STOP_EVENT.set()
-            return
 
     # God-mode Jito Bidding Manager — tip_floor poller + step-up/down + capital guard
     global jito_bidding_manager

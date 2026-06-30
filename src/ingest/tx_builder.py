@@ -1621,7 +1621,12 @@ class JupiterTxBuilder:
         # или проверяется на уровне caller.
         # ═══════════════════════════════════════════════════════════════════
         _sell_threshold = marginfi_config.get("sell_quote_threshold", 0)
-        if _sell_threshold > 0:
+        if _sell_threshold == 0:
+            logger.debug(
+                "БЛОК 8 [native]: sell_quote_threshold not set in marginfi_config — "
+                "otherAmountThreshold check skipped (caller must pass it for protection)"
+            )
+        else:
             _required_repay = borrow_amount_lamports + jito_tip_lamports
             if _sell_threshold < _required_repay:
                 logger.warning(

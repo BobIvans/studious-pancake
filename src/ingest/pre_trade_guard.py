@@ -198,53 +198,52 @@ class TokenSecurityChecker:
         try:
             import base64
 
+            DANGEROUS_EXTENSIONS = {3, 7, 16}
+
             data_b64 = account_info.get("data", [""])[0]
             if not data_b64:
                 return False, "No account data"
 
-            # Decode base64 data (with padding fix)
             data = base64.b64decode(data_b64 + "=" * (-len(data_b64) % 4))
 
-            # Token-2022 has extensions before the base mint data
-            # We need to parse the extensions and then check the base mint data
-
-            if len(data) < 82:  # Minimum size
+            if len(data) < 82:
                 return False, "Invalid Token-2022 account data size"
 
-            # For Token-2022, check transfer fee extension
-            # The extensions are at the beginning, followed by base mint data
-
-            # Check if there's a transfer fee extension
-            # This is complex - for now, we'll check the base mint authorities
-            # and add transfer fee checking as a TODO
-
-            # Base mint data starts after extensions
-            # For basic check, look at the end of the data where authorities should be
-
-            # Token-2022 TLV (Type-Length-Value) Parsing
-            # Base Mint: 0-82 | AccountType: 165 | Extensions: 166+
             if len(data) >= 166:
                 offset = 166
                 while offset + 4 <= len(data):
                     ext_type = struct.unpack("<H", data[offset : offset + 2])[0]
                     ext_len = struct.unpack("<H", data[offset + 2 : offset + 4])[0]
 
-                    if ext_type == 11:  # TransferFeeConfig
-                        # Newer Transfer Fee bps is at offset 106 within extension value
+                    if ext_type in DANGEROUS_EXTENSIONS:
+                        logger.critical(
+                            f"🚨 HONEYPOT DETECTED: Token-2022 has dangerous extension {ext_type} on {mint_address}"
+                        )
+                        return False, f"Dangerous Token-2022 extension {ext_type} (Potential Honeypot)"
+
+                    if ext_type == 11:
                         if ext_len >= 108:
                             bps_offset = offset + 4 + 106
                             if bps_offset + 2 <= len(data):
                                 fee_bps = struct.unpack(
                                     "<H", data[bps_offset : bps_offset + 2]
                                 )[0]
-                                if fee_bps > 0:
+                                if fee_bps > 500:
+                                    fee_pct = fee_bps / 100.0
+                                    logger.critical(
+                                        f"🚨 HONEYPOT DETECTED: Token-2022 transfer fee {fee_pct}% > 5% on {mint_address}"
+                                    )
+                                    return (
+                                        False,
+                                        f"Token-2022 transfer fee {fee_pct}% exceeds 5% (Potential Honeypot)",
+                                    )
+                                elif fee_bps > 0:
                                     fee_pct = fee_bps / 100.0
                                     return (
                                         False,
                                         f"Token-2022 has transfer fee: {fee_pct}% ({fee_bps} bps)",
                                     )
 
-                    # Move to next extension (must be 8-byte aligned in account data, but sequential here)
                     offset += 4 + ext_len
 
             return True, "Token-2022 appears safe (fee check passed)"

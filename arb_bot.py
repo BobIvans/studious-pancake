@@ -11,6 +11,8 @@ import logging
 logger = logging.getLogger(__name__)
 import random
 import os
+import stat
+import pathlib
 import base64
 import itertools
 import struct
@@ -5593,11 +5595,36 @@ async def run():
     # Fix 81 / Memory Hardening: load keypair once at startup with context manager.
     # No disk I/O during the hot trade loop — KEYPAIR stays resident in RAM.
     # P0-4.1b: Set restrictive permissions before reading wallet
-    wallet_path_obj = pathlib.Path(cfg.WALLET_PATH)
-    if wallet_path_obj.exists():
-        os.chmod(str(wallet_path_obj), 0o600)
-    with open(cfg.WALLET_PATH, "r") as _f:
-        KEYPAIR = Keypair.from_bytes(bytes(orjson.loads(_f.read())))
+    wallet_path = cfg.WALLET_PATH
+    try:
+        st = os.stat(wallet_path)
+        if st.st_mode & (stat.S_IRGRP | stat.S_IROTH | stat.S_IWGRP | stat.S_IWOTH):
+            logger.warning(f"⚠️ {wallet_path} has insecure permissions. Fixing to 0o600...")
+            os.chmod(wallet_path, 0o600)
+    except Exception as e:
+        logger.error(f"Failed to verify/fix wallet permissions: {e}")
+    
+    # 2. Безопасное считывание и зануление сырых байт в памяти
+    with open(wallet_path, "rb") as _f:
+        raw_data = _f.read()
+    
+    try:
+        key_ints = orjson.loads(raw_data)
+        key_bytes = bytes(key_ints)
+        
+        KEYPAIR = Keypair.from_bytes(key_bytes)
+        keypair = KEYPAIR
+        
+        # Стираем приватные байты из памяти сразу после инициализации
+        # Превращаем массивы чисел в нули, чтобы они не утекли из Heap
+        if isinstance(key_ints, list):
+            for i in range(len(key_ints)):
+                key_ints[i] = 0
+        del key_bytes
+        del raw_data
+    except Exception as e:
+        logger.critical(f"Failed to load wallet securely: {e}")
+        sys.exit(1)
 
     keypair = KEYPAIR
 
@@ -5674,7 +5701,7 @@ async def run():
     logger.info("Post-authorization diagnostics")
     logger.info(f"Loaded Keypair file path: {cfg.WALLET_PATH}")
     logger.info(f"Resolved public key address: {keypair.pubkey()}")
-    logger.info(f"Active RPC endpoint URL being queried: {rpc_url}")
+    logger.info(f"Active RPC endpoint URL being queried: {redact_url(rpc_url)}")
     if balance_lamports is not None:
         logger.info(
             f"Fetched SOL balance: {balance_lamports} lamports / {balance_sol:.9f} SOL"

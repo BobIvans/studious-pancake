@@ -9,6 +9,7 @@ import orjson
 import time
 import hashlib
 import os
+import urllib.parse
 from decimal import Decimal
 from typing import Any, Dict, Optional, List, Tuple, Callable
 import aiohttp
@@ -106,6 +107,28 @@ def get_marginfi_vault_pdas(bank_pubkey: str):
 
 
 logger = logging.getLogger(__name__)
+
+
+def redact_url(url: str) -> str:
+    """Redact API keys from URLs for safe logging."""
+    if not url:
+        return url
+    try:
+        parsed = urllib.parse.urlparse(url)
+        query_params = urllib.parse.parse_qs(parsed.query, keep_blank_values=True)
+        redacted = False
+        for sensitive_key in {"api-key", "apikey", "api_key", "token", "key"}:
+            if sensitive_key in query_params:
+                query_params[sensitive_key] = ["[REDACTED]"]
+                redacted = True
+        if redacted:
+            new_query = urllib.parse.urlencode(query_params, doseq=True)
+            return urllib.parse.urlunparse(
+                (parsed.scheme, parsed.netloc, parsed.path, parsed.params, new_query, parsed.fragment)
+            )
+        return url
+    except Exception:
+        return url
 
 
 def get_anchor_discriminator(instruction_name: str) -> bytes:
@@ -1141,7 +1164,7 @@ class JupiterTxBuilder:
                     return int(vault_lamports * 0.95)
             return 0
         except Exception as e:
-            logger.error(f"CRITICAL: get_max_marginfi_borrow failed! RPC: {self.rpc_url} | Error: {e}")
+            logger.error(f"CRITICAL: get_max_marginfi_borrow failed! RPC: {redact_url(self.rpc_url)} | Error: {e}")
             return 0
 
     async def _detect_sol_wrapping_conflict(

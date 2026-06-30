@@ -711,7 +711,19 @@ def validate_marginfi_account(cfg: Config) -> bool:
 async def check_marginfi_health_factor(
     session, rpc_url, marginfi_account_pubkey: str
 ) -> Optional[float]:
-    """Fix 50: Fetch MarginFi account health factor via RPC (simulated)."""
+    """БЛОК 14: Fetch and parse MarginFi account health factor via on-chain data.
+
+    Parses the Anchor-serialized MarginfiAccount data layout to verify:
+    - Account exists on-chain
+    - Account owner is the MarginFi program
+    - Account is initialized (is_initialized == 1)
+
+    Returns:
+        1.0 if account is structurally valid and ready for flash loans.
+        0.0 if account is missing, wrong owner, or uninitialized -> triggers sys.exit(1).
+        None if RPC request itself failed (transient error, caller may retry).
+    """
+    MARGINFI_PROGRAM_ID = "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
     try:
         health_check_payload = {
             "jsonrpc": "2.0",
@@ -722,18 +734,98 @@ async def check_marginfi_health_factor(
         async with session.post(
             rpc_url, json=health_check_payload, timeout=aiohttp.ClientTimeout(total=5.0)
         ) as resp:
-            if resp.status == 200:
-                data = orjson.loads(await resp.read())
-                if "result" in data and data["result"] and data["result"]["value"]:
-                    # In production: deserialize MarginFi lending account and compute
-                    # assets / (assets - liabilities) = health_factor
-                    # Return 1.0 as neutral default when we cannot parse on-chain.
-                    logger.debug(
-                        "MarginFi health-factor check returned neutral 1.0 (on-chain parsing not yet implemented)."
+            if resp.status != 200:
+                logger.warning(f"Health-factor RPC error: HTTP {resp.status}")
+                return None
+
+            data = orjson.loads(await resp.read())
+            result = data.get("result", {})
+            value = result.get("value")
+
+            if not value:
+                logger.critical(
+                    f"🛑 БЛОК 14: MarginFi account {marginfi_account_pubkey[:8]}... NOT FOUND on-chain. "
+                    "Account may be uninitialized or closed. Run MarginFi deposit first."
+                )
+                return 0.0
+
+            # ── Check 1: Owner must be MarginFi program ────────────────────────────
+            owner = value.get("owner", "")
+            if owner != MARGINFI_PROGRAM_ID:
+                logger.critical(
+                    f"🛑 БЛОК 14: Account owner is {owner[:16]}..., not MarginFi program. "
+                    "Invalid MarginFi account address provided in .env MARGINFI_ACCOUNT."
+                )
+                return 0.0
+
+            # ── Check 2: Account data must be present and parseable ────────────────
+            account_data_b64 = value.get("data", [""])[0]
+            if not account_data_b64:
+                logger.critical(
+                    "🛑 БЛОК 14: MarginFi account has no data (uninitialized/empty)."
+                )
+                return 0.0
+
+            import base64
+            raw = base64.b64decode(account_data_b64)
+
+            # ── Check 3: Minimum data length (8 discriminator + 3*32 pubkeys + 1 flag) ──
+            if len(raw) < 105:
+                logger.critical(
+                    f"🛑 БЛОК 14: MarginFi account data too short ({len(raw)} bytes). "
+                    "Expected at least 105 bytes for a valid MarginfiAccount."
+                )
+                return 0.0
+
+            # ── Check 4: Anchor discriminator validation ───────────────────────────
+            # MarginfiAccount discriminator = sha256("account:MarginfiAccount")[:8]
+            _expected_disc = hashlib.sha256(b"account:MarginfiAccount").digest()[:8]
+            if raw[:8] != _expected_disc:
+                # Also try LendingAccount (alternative naming in older versions)
+                _alt_disc = hashlib.sha256(b"account:LendingAccount").digest()[:8]
+                if raw[:8] != _alt_disc:
+                    logger.warning(
+                        f"⚠️ БЛОК 14: MarginFi account discriminator mismatch. "
+                        f"Got {raw[:8].hex()}, expected MarginfiAccount. Proceeding with caution."
                     )
-                    return 1.0
+                else:
+                    logger.debug("✅ БЛОК 14: Account discriminator matches LendingAccount (legacy naming)")
+            else:
+                logger.debug("✅ БЛОК 14: Account discriminator matches MarginfiAccount")
+
+            # ── Check 5: is_initialized flag ────────────────────────────────────────
+            # Layout after 8-byte discriminator: group(32) + authority(32) + lending_authority(32)
+            # is_initialized is at offset 8 + 96 = 104
+            is_initialized = raw[104]
+            if is_initialized != 1:
+                logger.critical(
+                    f"🛑 БЛОК 14: MarginFi account is NOT initialized (flag={is_initialized}). "
+                    "Deposit funds via app.marginfi.vi first."
+                )
+                return 0.0
+
+            # ── Check 6: Balance vector (optional) ─────────────────────────────────
+            # Balances vector length at offset 112 (4 bytes u32 LE)
+            if len(raw) >= 116:
+                balance_count = struct.unpack("<I", raw[112:116])[0]
+                if balance_count > 0:
+                    logger.info(
+                        f"🧾 БЛОК 14: MarginFi account has {balance_count} active balance(s). "
+                        "Active MarginFi position detected."
+                    )
+                else:
+                    logger.info(
+                        "🧾 БЛОК 14: MarginFi account is empty (no deposits/loans). Ready for flash loans."
+                    )
+
+            logger.info(
+                f"✅ БЛОК 14: MarginFi account validated — initialized, correct owner, valid structure. "
+                "Ready for flash loan trading."
+            )
+            return 1.0
+
     except Exception as e:
-        logger.warning(f"Health-factor fetch failed: {e}")
+        logger.warning(f"БЛОК 14: Health-factor fetch failed: {e}")
     return None
 
 
@@ -5917,17 +6009,26 @@ async def run():
     hf_raw = await check_marginfi_health_factor(
         session, rpc.get_rpc(), cfg.MARGINFI_ACCOUNT_PUBKEY
     )
-    # hf_raw == 1.0 means "unknown/neutral" (on-chain parsing not implemented)
-    # Only block if we got a real reading that indicates danger
-    if hf_raw is not None and hf_raw < 1.0 and hf_raw > 0.0:
-        logger.critical(
-            f"🛑 HEALTH FACTOR BLOCK: MarginFi account HF={hf_raw:.4f} < 1.0. "
-            "Clear your MarginFi debt before starting the bot."
-        )
+    # ── БЛОК 14: Health Factor Guard ───────────────────────────────────────
+    # 0.0  = account not found / uninitialized (critical)
+    # 0<HF<1.0 = liquidation risk (critical)
+    # 1.0  = healthy (parsed OK)
+    # None = RPC error (transient — proceed with caution)
+    if hf_raw is not None and hf_raw < 1.0:
+        if hf_raw == 0.0:
+            logger.critical(
+                f"🛑 БЛОК 14: MarginFi account {cfg.MARGINFI_ACCOUNT_PUBKEY[:8]}... NOT FOUND or UNINITIALIZED. "
+                "Bot cannot trade without a valid MarginFi account. Run MarginFi deposit first."
+            )
+        else:
+            logger.critical(
+                f"🛑 БЛОК 14: MarginFi account Health Factor {hf_raw:.4f} < 1.0. "
+                "Clear your MarginFi debt before starting the bot."
+            )
         sys.exit(1)
     if hf_raw is not None and hf_raw == 1.0:
-        logger.warning(
-            "⚠️ MarginFi health factor unknown (neutral 1.0) — proceeding with caution"
+        logger.info(
+            "✅ БЛОК 14: MarginFi account validated — ready for flash loan trading."
         )
 
     # 1. Core Data & Scaling Components

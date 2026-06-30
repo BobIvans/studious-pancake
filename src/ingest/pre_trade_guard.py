@@ -221,6 +221,20 @@ class TokenSecurityChecker:
                         )
                         return False, f"Dangerous Token-2022 extension {ext_type} (Potential Honeypot)"
 
+                    # ─── БЛОК 13: PermanentDelegate Honeypot Detection ─────────────────────
+                    if ext_type == 13:  # PermanentDelegate
+                        logger.critical(
+                            f"🚨 HONEYPOT DETECTED: Token-2022 has PermanentDelegate (type 13) on {mint_address}"
+                        )
+                        return False, "Honeypot: PermanentDelegate active (creator can seize tokens at any time)"
+
+                    # ─── БЛОК 13: TransferHook Honeypot Detection ──────────────────────────
+                    if ext_type == 14:  # TransferHook
+                        logger.critical(
+                            f"🚨 HONEYPOT DETECTED: Token-2022 has TransferHook (type 14) on {mint_address}"
+                        )
+                        return False, "Honeypot: Unknown TransferHook (can freeze/fail transfers)"
+
                     if ext_type == 11:
                         if ext_len >= 108:
                             bps_offset = offset + 4 + 106

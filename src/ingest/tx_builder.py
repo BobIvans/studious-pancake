@@ -54,6 +54,15 @@ MARGINFI_GROUP = Pubkey.from_string("4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG
 SYNC_NATIVE_DISCRIMINATOR = bytes([0x11])
 CLOSE_ACCOUNT_DISCRIMINATOR = bytes([0x09])
 
+# Kamino Lending flashloan discriminators
+KAMINO_PROGRAM_ID = Pubkey.from_string("KLend2g3cP87fffoy8q1mQqGKjrxjC8bojiCLxnsfmk")
+KAMINO_FLASH_BORROW = hashlib.sha256(
+    b"global:flash_borrow_reserve_liquidity"
+).digest()[:8]
+KAMINO_FLASH_REPAY = hashlib.sha256(
+    b"global:flash_repay_reserve_liquidity"
+).digest()[:8]
+
 # ── Task 14: Token-2022 Transfer Hook Account Registry ──────────────────
 # Tracks remaining_accounts injected into swap instructions so that
 # sanitize_instructions() and build_native_flashloan_tx() can validate
@@ -888,7 +897,11 @@ class JupiterTxBuilder:
             and instructions_data["addressLookupTableAddresses"]
         ):
             raw_alts = instructions_data["addressLookupTableAddresses"]
-            alt_pubkeys = [Pubkey.from_string(alt) for alt in raw_alts]
+            # БЛОК 15: строгая дедупликация ALT pubkeys через set() — предотвращает
+            # MTU_OVERFLOW при дублировании ALTs от Jupiter для multi-hop маршрутов.
+            # Когда несколько пулов возвращают одинаковые ALTs, дубликаты раздувают
+            # транзакцию за пределы лимита в 1232 байта.
+            alt_pubkeys = list({Pubkey.from_string(alt) for alt in raw_alts})
             # Cache unknown ALTs in-MEMORY so subsequent calls never hit RPC for these tables.
             # Known ALTs are pre-cached at startup; unknown ones ("discovered" ALTs from Jupiter)
             # are fetched once and cached forever. Cost: 1 RPC call per unique ALT. Benefit: 50–150 ms
@@ -1268,7 +1281,12 @@ class JupiterTxBuilder:
                 "fee": 0,  # 0% fee
                 "priority": 1,
             },
-            # Removed: Kamino and Solend (stubs, not implemented)
+            {
+                "name": "Kamino",
+                "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8bojiCLxnsfmk",
+                "fee": 0.0005,  # 0.05% flash loan fee
+                "priority": 2,
+            },
         ]
 
         # Filter providers that support the asset
@@ -1350,7 +1368,10 @@ class JupiterTxBuilder:
                 return await self._build_marginfi_flashloan(
                     borrow_asset, borrow_amount, arbitrage_instructions, wallet_keypair
                 )
-            # Removed: Kamino and Solend dispatch (stubs removed)
+            if provider["name"] == "Kamino":
+                return await self._build_kamino_flashloan(
+                    borrow_asset, borrow_amount, arbitrage_instructions, wallet_keypair
+                )
             else:
                 return None
 

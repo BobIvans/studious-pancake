@@ -13,6 +13,7 @@ from decimal import Decimal, getcontext
 from dataclasses import dataclass
 
 from .amm_math import AmmMath  # moved to top-level for reliability
+from .amm_math_dispatcher import AmmMathDispatcher  # multi-curve dispatch (CPMM/stableswap/CLMM/DLMM)
 
 logger = logging.getLogger(__name__)
 
@@ -428,37 +429,37 @@ class OptimalTradeSizer:
         if not amount_in or amount_in <= 0:
             return Decimal('0')
 
-        CLMM_PROGRAMS = {
-            "CAMMCkzFhJfPWvTv7SwbeCfFFmCd29S4mxS3vz5S2SEt",
-            "whirLbMi2tG34uFp881tua2RZBY9oXKVvVf9xrq7Rqi",
-            "LbS9W8ioppRE44Yfczz7Spx3SJJ86VNoX8s6iF5K1nL",
-        }
-
         try:
             for route in routes:
                 if isinstance(route, list) and len(route) > 0 and "reserves" in route[0]:
-                    is_clmm = False
+                    # Classify the dominant pool type of this route via the dispatcher.
+                    # pool_type drives the price-impact/amount-out curve below.
+                    route_pool_type = "constant_product"
                     for hop in route:
-                        program_id = hop.get("programId")
-                        if program_id in CLMM_PROGRAMS:
-                            is_clmm = True
+                        hop_pt = hop.get("pool_type") or AmmMathDispatcher.classify_pool_type(hop.get("programId"))
+                        if hop_pt != "constant_product":
+                            route_pool_type = hop_pt
                             break
 
-                    if is_clmm:
-                        # Fix: scale micro_cap by token decimals — amount_in is in lamports,
-                        # so 0.2 base units = 0.2 * 10^decimals lamports
-                        _clmm_dec = 9  # default SOL decimals
+                    # Concentrated-liquidity pools (CLMM/DLMM) without rich tick/bin
+                    # state use a pessimistic curve, so we still cap the size
+                    # conservatively — but the cap is now derived from the actual
+                    # (dispatcher-computed) price impact, not a flat 0.2 base units.
+                    if route_pool_type in ("clmm", "dlmm"):
+                        _dec = 9  # default SOL decimals
                         for hop in route:
-                            # Jupiter may report decimals as 'decimals', 'baseDecimals', or 'quoteDecimals'
                             _raw = hop.get("decimals") or hop.get("baseDecimals") or hop.get("quoteDecimals") or 9
                             try:
-                                _clmm_dec = max(1, int(_raw))
+                                _dec = max(1, int(_raw))
                             except (TypeError, ValueError):
-                                _clmm_dec = 9
+                                _dec = 9
                             break
-                        micro_cap = Decimal('0.2') * Decimal(10 ** _clmm_dec)
+                        micro_cap = Decimal('0.2') * Decimal(10 ** _dec)
                         final_size = min(Decimal(str(amount_in)), micro_cap)
-                        logger.info(f"🛡️ CLMM Math Bypass: detected concentrated liquidity, capping size at {final_size/Decimal(10**_clmm_dec):.4f} (decimals={_clmm_dec})")
+                        logger.info(
+                            f"🛡️ {route_pool_type.upper()} conservative cap: "
+                            f"{final_size/Decimal(10**_dec):.4f} base units (decimals={_dec})"
+                        )
                         return final_size
 
                     reserves_path = []
@@ -467,28 +468,35 @@ class OptimalTradeSizer:
                     for hop in route:
                         reserves = hop.get("reserves")
                         if reserves:
-                            reserves_path.extend([Decimal(str(reserves.get("reserve_in", 0))), 
+                            reserves_path.extend([Decimal(str(reserves.get("reserve_in", 0))),
                                                 Decimal(str(reserves.get("reserve_out", 0)))])
                             fees.append(float(hop.get("fee_bps", 25)) / 10000.0)
-                        
+
                         if len(reserves_path) >= 2:
                             optimal_size = OptimalTradeSizer().calculate_analytical_optimal_size(reserves_path, fees)
-                            
+
                             if optimal_size and optimal_size > 0:
                                 reserve_in = int(reserves_path[0])
                                 reserve_out = int(reserves_path[1])
                                 amount_in_int = int(optimal_size)
-                                price_impact = AmmMath.calculate_price_impact(
-                                    amount_in_int, reserve_in, reserve_out
+                                # Dispatcher: stableswap uses the Curve impact curve,
+                                # constant_product the CPMM one.
+                                price_impact = AmmMathDispatcher.calculate_price_impact(
+                                    amount_in_int, reserve_in, reserve_out,
+                                    pool_type=route_pool_type,
                                 )
                                 if lag_pct is not None and price_impact > (lag_pct / 2.0):
                                     logger.warning(
                                         f"🚫 Price impact {price_impact:.2f}% > lag/2 ({lag_pct/2:.2f}%) — "
-                                        f"skipping trade to prevent slippage eating profit"
+                                        f"skipping trade to prevent slippage eating profit "
+                                        f"(pool_type={route_pool_type})"
                                     )
                                     return Decimal('0')
-                                
-                                logger.info(f"📈 Analytical optimal sizing: {optimal_size:.6f} (impact {price_impact:.3f}%)")
+
+                                logger.info(
+                                    f"📈 Analytical optimal sizing: {optimal_size:.6f} "
+                                    f"(impact {price_impact:.3f}%, pool_type={route_pool_type})"
+                                )
                                 return optimal_size
 
                 # FIX: Jupiter public API fallback using priceImpactPct

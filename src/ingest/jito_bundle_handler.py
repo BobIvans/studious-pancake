@@ -189,6 +189,9 @@ class BundleTemplate:
         return "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
 
 
+from solders.instruction import AccountMeta
+
+
 class JitoBundleHandler:
     """Atomic backrunning with Jito bundles for MEV execution."""
 

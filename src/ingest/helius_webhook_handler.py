@@ -10,7 +10,7 @@ import time
 from collections import defaultdict
 from aiohttp import web
 import aiohttp
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from datetime import datetime
 import src.ingest.shared_state as shared_state
 

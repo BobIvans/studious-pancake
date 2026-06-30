@@ -15,10 +15,6 @@ import aiohttp
 
 logger = logging.getLogger("FlashSim")
 
-# Phase 49: Local Math Confidence — skip RPC simulation when local O(1) math
-# says profit is clearly above threshold.  At 0.017 SOL you cannot afford
-# to pay 100-200 ms RPC round-trip for every opportunity.
-LOCAL_MATH_CONFIDENCE_THRESHOLD_SOL = 0.001  # Bypass if confident > 0.001 SOL (up from 0.00005 to protect AI dataset quality)
 
 
 class SimulationResult:
@@ -77,13 +73,11 @@ class FlashSimulator:
         rpc_url: str,
         timeout: float = 3.0,
         private_rpc_only: bool = True,  # Phase 43: OpSec Guard
-        bypass_rpc_simulation: bool = False, # Phase 43: Local O(1) confidence
     ):
         self.session = session
         self.rpc_url = rpc_url
         self.timeout = timeout
         self.private_rpc_only = private_rpc_only
-        self.bypass_rpc_simulation = bypass_rpc_simulation
         # Track simulation stats for monitoring
         # FIX 11 (MarginFi Utilization Guard): cooldown tracking for banks that
         # return simulation errors. Prevents infinite RPC spam when a bank is at capacity.
@@ -255,42 +249,51 @@ class FlashSimulator:
         tip_lamports: int = 0,
         priority_fee_lamports: int = 0,
         wallet_index: int = 0,
-        max_slippage_pct: float = 5.0,  # Max slippage impact %
         jito_endpoint: Optional[str] = None,
-        expected_profit_sol: Optional[float] = None,  # Phase 49: local math confidence
-        bank_vault_pubkey: Optional[str] = None,  # FIX 11: track cooldowns per bank vault
+        bank_vault_pubkey: Optional[str] = None,
     ) -> Tuple[bool, str, SimulationResult]:
         """Simulate and validate that the transaction is profitable.
 
+        Runs a real RPC simulateTransaction, then STRICTLY calculates
+        NET profit = balance_delta - tip_lamports - priority_fee_lamports.
+        Never skips simulation. Never returns gross profit.
+
         Args:
             tx_b64: Base64-encoded transaction
-            min_profit_lamports: Minimum profit threshold in lamports
+            min_profit_lamports: Minimum NET profit threshold in lamports
             tip_lamports: Jito tip cost in lamports
             priority_fee_lamports: Priority fee cost in lamports
             wallet_index: Index of wallet in transaction accounts
-            expected_profit_sol: Expected profit in SOL.  If set and > LOCAL_MATH_CONFIDENCE_THRESHOLD_SOL,
-                                the RPC simulation is skipped entirely (Dark Forest evasion — saves 100-200 ms).
 
         Returns:
             Tuple of (is_profitable, reason, simulation_result)
         """
+        # 1. Запускаем реальную симуляцию — никаких обходов
         sim = await self.simulate_transaction(tx_b64, tx_signer_pubkey, wallet_index, min_profit_lamports, jito_endpoint)
 
         if not sim.success:
-            # FIX 11: If simulation failed with MarginFi-specific error, record cooldown
             if bank_vault_pubkey and self._is_marginfi_error(sim.error):
                 self.record_bank_cooldown(bank_vault_pubkey)
             return False, f"Simulation failed: {sim.error}", sim
 
+        # 2. СТРОГИЙ РАСЧЕТ ЧИСТОЙ ПРИБЫЛИ (Net Profit)
         net_profit_lamports = sim.balance_delta_lamports - tip_lamports - priority_fee_lamports
+
+        # 3. ПРОВЕРКА ПОРОГА ПРИБЫЛИ
         if net_profit_lamports < min_profit_lamports:
-            return False, f"Net {net_profit_lamports} < min {min_profit_lamports}", sim
+            reason = (
+                f"Unprofitable trade: Net profit {net_profit_lamports} lamports "
+                f"is below min_profit threshold {min_profit_lamports} "
+                f"(Gross: {sim.balance_delta_lamports}, Tip: {tip_lamports}, Gas: {priority_fee_lamports})"
+            )
+            logger.warning(f"🚫 {reason}")
+            return False, reason, sim
 
         profit_sol = net_profit_lamports / 1e9
-
         logger.info(
-            f"✅ Flash Simulator APPROVED: net profit {profit_sol:.6f} SOL | "
-            f"{sim.simulation_time_ms:.0f}ms"
+            f"✅ Flash Simulator APPROVED: Net Profit {profit_sol:.6f} SOL | "
+            f"Gross Delta: {sim.balance_delta_lamports/1e9:.6f} SOL | "
+            f"Sim Time: {sim.simulation_time_ms:.0f}ms"
         )
 
         successful_sim = SimulationResult(

@@ -238,8 +238,8 @@ class PaperTrader:
             if self.session:
                 await self.session.close()
 
-    if __name__ == "__main__":
-        import uvloop
-        uvloop.install()
-        import asyncio
-        asyncio.run(PaperTrader().run())
+
+if __name__ == "__main__":
+    import uvloop
+    uvloop.install()
+    asyncio.run(PaperTrader().run())

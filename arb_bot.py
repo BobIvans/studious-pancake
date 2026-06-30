@@ -6493,8 +6493,11 @@ async def run():
     logger.debug(f"🚀 Matrix Scanner launched! Initial Balance: {initial_balance} SOL")
 
     try:
-        while True:
-            await asyncio.sleep(10)
+        while not shared_state.GLOBAL_STOP_EVENT.is_set():
+            try:
+                await asyncio.wait_for(shared_state.GLOBAL_STOP_EVENT.wait(), timeout=10.0)
+            except asyncio.TimeoutError:
+                pass
             current_balance = await StateManager.get_balance(
                 session, rpc, keypair.pubkey()
             )

@@ -104,8 +104,13 @@ class ArbitrageScorer:
             return 0.0
 
     def _calculate_profit_score(self, opp: ArbitrageOpportunity) -> float:
-        """Calculate profit attractiveness score (0-100)."""
+        """Calculate profit attractiveness score (0-100) based on NET profit."""
+        # Вычитаем стоимость газа и чаевые Jito
         net_profit = opp.expected_profit_sol - opp.gas_cost_sol
+
+        # Если в метаданных сохранен размер чаевых, вычитаем его
+        tip_sol = opp.metadata.get("tip_lamports", 0) / 1e9
+        net_profit -= tip_sol
 
         if net_profit <= 0:
             return 0.0

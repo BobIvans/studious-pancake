@@ -31,7 +31,6 @@ def get_swap_limiter():
     return _SWAP_LIMITER
 
 def get_jupiter_limiter():
-    global _QUOTE_LIMITER, _SWAP_LIMITER
     if _QUOTE_LIMITER is None:
         get_quote_limiter()
     if _SWAP_LIMITER is None:

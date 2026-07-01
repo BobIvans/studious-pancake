@@ -316,10 +316,10 @@ class HeliusWebhookHandler:
                 if account_address in WebhookConfig.ORCA_POOL_ADDRESSES:
                     now = time.time()
                     last_trigger = self._last_scan_trigger.get(account_address, 0)
-                if now - last_trigger < 2.0:
-                    continue
-                self._last_scan_trigger[account_address] = now
-                    token_balance_changes = event.get('tokenBalanceChanges', [])
+                    if now - last_trigger < 2.0:
+                        continue
+                    self._last_scan_trigger[account_address] = now
+                    native_balance_change = account_info.get('nativeBalanceChange', 0)
                     token_balance_changes = event.get('tokenBalanceChanges', [])
                     if abs(native_balance_change) > 10_000_000:
                         logger.info(f"💹 Significant pool balance change: {native_balance_change / 1e9:.6f} SOL")

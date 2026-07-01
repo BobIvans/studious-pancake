@@ -14,13 +14,14 @@ from dataclasses import dataclass
 
 from .amm_math import AmmMath  # moved to top-level for reliability
 from .amm_math_dispatcher import AmmMathDispatcher  # multi-curve dispatch (CPMM/stableswap/CLMM/DLMM)
+from src.ingest.shared_state import ATA_RENT_SOL_SPL, ATA_RENT_SOL_TOKEN2022
 
 logger = logging.getLogger(__name__)
 
 MICRO_BALANCE_SOL = 0.015
-# Dynamic ATA rent: 0.00204 SOL for standard SPL Token, 0.0035 SOL for Token-2022
-ATA_RENT_SOL = 0.00204
-ATA_RENT_TOKEN2022_SOL = 0.0035
+# Phase 9: unified ATA rent constants from shared_state (single source of truth)
+ATA_RENT_SOL = ATA_RENT_SOL_SPL  # Default: SPL Token rent (0.00203928 SOL)
+ATA_RENT_TOKEN2022_SOL = ATA_RENT_SOL_TOKEN2022
 GAS_RESERVE_SOL = 0.005
 MANEUVER_BUDGET_SOL = MICRO_BALANCE_SOL - GAS_RESERVE_SOL
 FLASH_LOAN_ENV_CAP_SOL = "FLASH_LOAN_SIZE_SOL"
@@ -105,23 +106,26 @@ class ProfitCalculator:
     """Calculates expected profit for arbitrage paths."""
     
     def calculate_expected_profit(self, amount_in: int, path: ArbitragePath) -> int:
-        """Calculate expected profit (positive) or loss (negative) for a path."""
+        """Calculate expected profit (positive) or loss (negative) for a path.
+
+        Phase 8 fix: flash loan fee applies to the BORROWED amount, NOT the
+        output amount.  Old logic subtracted fees from the output which gave
+        an incorrect profit for high-fee (e.g. Kamino 0.05%) flash loans.
+        """
         if not path.pools:
             return 0
-        
+
         current_amount = amount_in
-        
+
         for pool in path.pools:
             amount_out = PoolSimulator.get_amount_out(
                 current_amount, pool.reserve_in, pool.reserve_out
             )
             current_amount = amount_out
-        
-        # Apply flash loan fee if applicable
-        fee_multiplier = (10000 - path.flash_loan_fee_bps) / 10000
-        final_amount = int(current_amount * fee_multiplier)
-        
-        profit = final_amount - amount_in
+
+        # Phase 8: flash loan fee applies to the BORROWED amount, not the output
+        flashloan_fee = int(amount_in * (path.flash_loan_fee_bps / 10000.0))
+        profit = current_amount - amount_in - flashloan_fee
         return profit
     
     def get_max_feasible_input(self, path: ArbitragePath) -> int:
@@ -319,7 +323,7 @@ class OptimalTradeSizer:
         arbitrage_path: ArbitragePath = None,
         min_input_lamports: int = None,
         max_input_lamports: Optional[int] = None,
-        min_profit_threshold: int = 1_000,
+        min_profit_threshold: int = 50_000,  # Phase 8: increased from 1_000 to 50_000 (0.00005 SOL min)
         quote1=None,
         quote2=None,
         base_mint_decimals=None,

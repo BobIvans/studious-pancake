@@ -187,6 +187,11 @@ class BlockhashRacingManager:
         if not self.session:
             return
 
+        if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+            self.current_blockhash = Hash.from_string("11111111111111111111111111111111")
+            self.last_update_time = time.time()
+            return
+
         self.total_races += 1
         start_time = time.time()
 

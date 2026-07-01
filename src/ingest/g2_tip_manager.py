@@ -16,7 +16,7 @@ class G2TipManager:
             "LST_EPOCH": 15000,
             "SANCTUM_ROUTER": 15000,
             "GRADUATION": 35000,
-            "DEFAULT": 15000,
+            "DEFAULT": 50000,  # Jito Relay floor is ~50k lamports
         }
         self.max_tip = 150000  # Maximum 0.00015 SOL (capital protection!)
         self.escalation = 1.5

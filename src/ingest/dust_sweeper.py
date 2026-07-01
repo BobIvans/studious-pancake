@@ -133,7 +133,7 @@ class DustSweeper:
             ))
 
             cu_limit_ix = set_compute_unit_limit(50_000)
-            cu_price_ix = set_compute_unit_price(20_000)
+            cu_price_ix = set_compute_unit_price(5_000)
             all_ixs = [cu_limit_ix, cu_price_ix, burn_ix, close_ix]
 
             bh_payload = {
@@ -492,10 +492,7 @@ class DustSweeper:
             # Add compute unit limits
             from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
             cu_limit_ix = set_compute_unit_limit(200_000)
-            # FIX 9 (Dust Sweeper Mempool Freezing): Add priority fee instruction
-            # so garbage-collection transactions don't get stuck in the mempool.
-            # 100_000 micro-lamports = 0.00001 SOL priority fee — negligible but vital.
-            cu_price_ix = set_compute_unit_price(100_000)
+            cu_price_ix = set_compute_unit_price(5_000)
 
             all_instructions = [cu_limit_ix, cu_price_ix] + close_instructions
 

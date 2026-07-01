@@ -432,26 +432,32 @@ class JitoBiddingManager:
         expected_profit_sol: float,
         strategy: str = "default",
         current_native_sol_balance: Optional[float] = None,
+        ata_rent_sol: float = 0.0,
+        gas_sol: float = 0.0,
     ) -> int:
         """Start + Step-Up/Down + Capital Guard.
 
         🛡️ Tip Floor Filter (P1): Если 40% профита < 50й перцентиль Jito — отменяем сделку.
         Не пытаемся перебить пол (floor), если это съедает > 80% профита.
         Ждем, когда конкуренция упадет.
+
+        Tips are computed from NET profit (after ATA rent and gas), never GROSS.
         """
-        if expected_profit_sol <= 0:
+        # Compute net profit after ATA rent and gas; tip from net, not gross.
+        net_profit_sol = expected_profit_sol - ata_rent_sol - gas_sol
+        if net_profit_sol <= 0:
             return 0
 
         # ── Dynamic Jito Tip Floor Filtering (P1) ──────────────────
         p50 = self.get_50th_percentile_lamports() / 1e9
-        forty_pct_tip = expected_profit_sol * 0.40
+        forty_pct_tip = net_profit_sol * 0.40
 
         # P1: Compare 40% tip against 50th percentile floor
         if forty_pct_tip < p50:
             # If the floor would eat more than 80% of profit, reject the trade
-            if p50 > expected_profit_sol * 0.80:
+            if p50 > net_profit_sol * 0.80:
                 logger.warning(
-                    f"🚫 Tip Floor Filter (P1): {strategy} profit {expected_profit_sol:.6f} SOL "
+                    f"🚫 Tip Floor Filter (P1): {strategy} net profit {net_profit_sol:.6f} SOL "
                     f"too small to cover 50th percentile floor ({p50:.6f} SOL). "
                     f"40% tip ({forty_pct_tip:.6f} SOL) < floor ({p50:.6f} SOL). Skipping."
                 )
@@ -476,7 +482,7 @@ class JitoBiddingManager:
         tip_sol = base
         if success_rate < 0.2:
             # Step-Up
-            tip_sol = min(base * 1.05, expected_profit_sol * 0.7)
+            tip_sol = min(base * 1.05, net_profit_sol * 0.7)
             logger.info(f"📈 Step-Up tip for {strategy}: success_rate={success_rate:.0%}")
         elif self.consecutive_success >= 5:
             # Step-Down

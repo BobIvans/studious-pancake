@@ -12,6 +12,8 @@ import logging
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 
+from src.ingest.shared_state import ATA_RENT_SOL_SPL, ATA_RENT_SOL_TOKEN2022
+
 logger = logging.getLogger("FlywheelScaler")
 
 @dataclass
@@ -29,7 +31,8 @@ class ScalingTier:
 MICRO_BALANCE_SOL = 0.015
 GAS_RESERVE_SOL = 0.005
 MANEUVER_BUDGET_SOL = MICRO_BALANCE_SOL - GAS_RESERVE_SOL
-ATA_RENT_SOL = 0.0035  # Fix 68: Conservative Token-2022 rent (was 0.00204 for SPL)
+# Phase 9: unified constants from shared_state (single source of truth)
+ATA_RENT_SOL = ATA_RENT_SOL_TOKEN2022  # Conservative default: Token-2022 rent (LSTs use T22)
 
 SCALING_GRID = [
     # Tier 1: Survival Phase (0.015 - 0.05 SOL) - SOL & Stables only, tightest parameters
@@ -52,12 +55,12 @@ class DynamicThresholds:
     @property
     def min_profit_sol(self) -> float:
         if self.balance < 0.020:
-            return 0.0003
+            return 0.0001
         elif self.balance < 0.100:
             return 0.0002
         elif self.balance < 1.000:
-            return 0.0001
-        return 0.00005
+            return 0.0003
+        return 0.0005
 
     @property
     def max_borrow_sol(self) -> float:
@@ -65,8 +68,10 @@ class DynamicThresholds:
 
     @property
     def max_new_atas_per_trade(self) -> int:
+        # Survival mode: allow up to 2 new ATAs only if it leaves a ≥0.005 SOL buffer
+        # after reserving rent for both accounts (0.00204 SOL each).
         if self.balance < 0.020:
-            return 0
+            return 2 if (self.balance - (2 * 0.00204)) >= 0.005 else 0
         if self.balance < 0.100:
             return 1
         if self.balance < 1.000:
@@ -75,7 +80,9 @@ class DynamicThresholds:
 
     @property
     def hard_floor_sol(self) -> float:
-        return max(0.0089, self.balance * 0.5)
+        # Phase 10: exact minimum gas reserve — no longer scales with balance.
+        # 0.005 SOL is the precise gas floor for one flashloan + Jito tip.
+        return 0.0050
 
 
 class PairReputationCircuitBreaker:

@@ -373,7 +373,7 @@ class JupiterTxBuilder:
             logger.warning(
                 "No RPC URL provided for priority fee estimation, using default"
             )
-            return 1000  # Default 1000 micro-lamports
+            return 1  # Fallback 1 micro-lamport (1000 caused ~0.6 SOL fees on 600k CU → InsufficientFundsForFee)
 
         try:
             payload = {
@@ -399,32 +399,31 @@ class JupiterTxBuilder:
                             # Apply aggressiveness multiplier (1.1x)
                             priority_fee = int(priority_fee * 1.1)
 
-                            # ── Dynamic Priority Fee Cap ──
+                            # ── Phase 8: Cost Accounting — Priority Fee Floor & Cap ──
                             # Budget: 0.015 SOL starting capital. We cannot afford high network fees.
                             # Dynamic Threshold: 5% of expected profit.
-                            # If exceeded, force down to 0.00001 SOL (min viable) to stay in the race without dying.
-                            # Guard: At least 0.00001 SOL if expected profit is tiny.
+                            # If exceeded, return 0 (skip sentinel) to abort the trade entirely
+                            # rather than paying a fee that eats all profit.
+                            # Strict floor: 5000 micro-lamports for Jito/Helius reliability.
                             dynamic_cap_sol = max(expected_profit_sol * 0.05, 0.00001)
                             max_micro_lamports = int(
                                 (dynamic_cap_sol * 1e9) / cu_limit * 1e6
                             )
-                            min_viable_micro_lamports = int(
-                                (0.00001 * 1e9) / cu_limit * 1e6
-                            )
+                            min_viable_micro_lamports = 5000  # Phase 8: Jito/Helius reliability minimum
 
                             if priority_fee > max_micro_lamports:
                                 logger.warning(
                                     f"⚠️ PRIORITY FEE SATURATION: {priority_fee} µ-lamports "
                                     f"exceeds {dynamic_cap_sol:.6f} SOL (5% profit cap). "
-                                    f"Forcing down to min viable {min_viable_micro_lamports} µ-lamports."
+                                    f"Returning 0 (skip sentinel) to protect capital."
                                 )
-                                return max(min_viable_micro_lamports, 1)
+                                return 0  # Phase 8: 0 = skip sentinel, caller will abort
 
                             final_fee = min(priority_fee, max_micro_lamports)
                             logger.debug(
                                 f"Dynamic priority fee: {final_fee} micro-lamports"
                             )
-                            return max(final_fee, 1)  # Minimum 1 micro-lamport
+                            return max(final_fee, min_viable_micro_lamports)  # Minimum 5000 micro-lamport floor
                 else:
                     logger.warning(
                         f"Priority fee request failed with status {resp.status}"
@@ -433,7 +432,7 @@ class JupiterTxBuilder:
         except Exception as e:
             logger.warning(f"Dynamic priority fee estimation failed: {e}")
 
-        return 1000  # Default fallback
+        return 1  # Fallback 1 micro-lamport (1000 caused ~0.6 SOL fees on 600k CU → InsufficientFundsForFee)
 
     async def build_optimized_transaction(
         self,
@@ -757,7 +756,9 @@ class JupiterTxBuilder:
                 for ix in setup_instructions
                 if ix.get("programId", "") == ATOKEN_PROGRAM
             )
-            rent_cost = new_atas_needed * 0.00204  # 0.00204 SOL per ATA
+            # Phase 9: unified ATA rent constant from shared_state
+            from src.ingest.shared_state import ATA_RENT_SOL_SPL
+            rent_cost = new_atas_needed * ATA_RENT_SOL_SPL
             if expected_profit_sol > 0 and rent_cost > expected_profit_sol:
                 logger.warning(
                     f"🚫 SKIP: profit {expected_profit_sol:.6f} SOL < ATA rent {rent_cost:.6f} SOL ({new_atas_needed} ATAs)"
@@ -1609,23 +1610,37 @@ class JupiterTxBuilder:
             wsol_mint_pk = Pubkey.from_string(
                 "So11111111111111111111111111111111111111112"
             )
-            # Create wSOL ATA idempotently (no-op if already exists)
-            create_wsol_ata_ix = create_idempotent_associated_token_account(
-                payer=wallet, owner=wallet, mint=wsol_mint_pk
-            )
-            all_instructions.append(create_wsol_ata_ix)
-            logger.debug(
-                f"🛡️ FIX 10: Idempotent wSOL ATA ensured for {wallet_pubkey[:8]}"
-            )
-            # SyncNative — ensures token program recognises native SOL in the ATA
             wsol_ata_pk = get_associated_token_address(wallet, wsol_mint_pk)
-            sync_native_ix = sync_native(
-                SyncNativeParams(program_id=TOKEN_PROGRAM_ID, account=wsol_ata_pk)
-            )
-            all_instructions.append(sync_native_ix)
-            logger.debug(
-                f"🔄 FIX 10: SyncNative appended for wSOL ATA {str(wsol_ata_pk)[:8]}"
-            )
+            import src.ingest.shared_state as _ss
+
+            # Skip create_idempotent ATA + SyncNative if wSOL ATA is already cached.
+            # Saves ~1500 CU and transaction size bytes on the hot-path.
+            if str(wsol_ata_pk) not in _ss.ATA_CACHE:
+                # Create wSOL ATA idempotently (no-op if already exists)
+                create_wsol_ata_ix = create_idempotent_associated_token_account(
+                    payer=wallet, owner=wallet, mint=wsol_mint_pk
+                )
+                all_instructions.append(create_wsol_ata_ix)
+                logger.debug(
+                    f"🛡️ FIX 10: Idempotent wSOL ATA ensured for {wallet_pubkey[:8]}"
+                )
+                # SyncNative — ensures token program recognises native SOL in the ATA
+                sync_native_ix = sync_native(
+                    SyncNativeParams(program_id=TOKEN_PROGRAM_ID, account=wsol_ata_pk)
+                )
+                all_instructions.append(sync_native_ix)
+                logger.debug(
+                    f"🔄 FIX 10: SyncNative appended for wSOL ATA {str(wsol_ata_pk)[:8]}"
+                )
+            else:
+                logger.debug(
+                    f"⚡ wSOL ATA {str(wsol_ata_pk)[:8]} already cached — skipping create+sync instructions"
+                )
+            # Phase 9: Re-cache wSOL ATA after creation — DustSweeper._drain_wsol_ata
+            # removes it from ATA_CACHE when closing wSOL, but we recreate it here.
+            # Without this re-add, the next trade loop deducts 0.00204 SOL rent
+            # from expected profit (phantom rent tax ~27% of 0.015 SOL capital).
+            _ss.ATA_CACHE.add(str(wsol_ata_pk))
         except ImportError as _wsol_import_err:
             logger.warning(
                 f"FIX 10: create_idempotent_ata / SyncNative not available, skipping: {_wsol_import_err}"
@@ -1642,19 +1657,25 @@ class JupiterTxBuilder:
         # или проверяется на уровне caller.
         # ═══════════════════════════════════════════════════════════════════
         _sell_threshold = marginfi_config.get("sell_quote_threshold", 0)
+        _required_repay = borrow_amount_lamports + jito_tip_lamports
         if _sell_threshold == 0:
-            logger.debug(
-                "БЛОК 8 [native]: sell_quote_threshold not set in marginfi_config — "
-                "otherAmountThreshold check skipped (caller must pass it for protection)"
+            # Anti-Sandwich: the caller didn't pass a threshold, so we CANNOT verify
+            # that the swap output covers the flashloan repay + tip. Block the bundle
+            # rather than risk a sandwich that leaves us unable to repay.
+            logger.warning(
+                "🚫 БЛОК 8 [native]: sell_quote_threshold not set in marginfi_config — "
+                "otherAmountThreshold check cannot be skipped (anti-sandwich). Aborting bundle."
             )
-        else:
-            _required_repay = borrow_amount_lamports + jito_tip_lamports
-            if _sell_threshold < _required_repay:
-                logger.warning(
-                    f"🚫 БЛОК 8 [native]: otherAmountThreshold ({_sell_threshold}) < "
-                    f"repay + jito_tip ({_required_repay}). Aborting bundle."
-                )
-                return None
+            return None
+        if _sell_threshold < _required_repay:
+            logger.warning(
+                f"🚫 БЛОК 8 [native]: otherAmountThreshold ({_sell_threshold}) < "
+                f"repay + jito_tip ({_required_repay}). Aborting bundle."
+            )
+            return None
+        logger.debug(
+            f"🛡️ БЛОК 8 [native]: otherAmountThreshold OK ({_sell_threshold} >= {_required_repay})"
+        )
 
         # ── Flash Loan Pivot: Entry swap FIRST (wallet SOL → USDC before borrow) ──
         # This converts the wallet's native SOL into USDC so the arb can run in USDC.
@@ -1960,10 +1981,14 @@ class JupiterTxBuilder:
                     data=ix.data,
                 )
 
-            if ix.program_id == ata_prog:
-                # Associated Token Account program: target ATA is typically account at index 1
-                if len(ix.accounts) >= 2:
-                    ata_pubkey = str(ix.accounts[1].pubkey)
+            # Phase 9: Safe ATA parsing — verify program_id is AToken AND len(accounts) >= 2
+            # before accessing accounts[1].pubkey.  Jupiter may pass SystemProgram
+            # instructions that look similar but would crash with IndexError.
+            if (
+                str(ix.program_id) == "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86"
+                and len(ix.accounts) >= 2
+            ):
+                ata_pubkey = str(ix.accounts[1].pubkey)
                     if ata_pubkey in seen_atas:
                         logger.debug(
                             f"✂️ Deduplicated ATA creation for {ata_pubkey[:8]}"

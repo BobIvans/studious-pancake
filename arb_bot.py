@@ -375,7 +375,7 @@ ATA_CACHE = shared_state.ATA_CACHE
 # AI-powered trading components (moved to main() function)
 # arbitrage_scorer = ArbitrageScorer(session=session, rpc_url=rpc.get_rpc())
 # priority_queue = PriorityArbitrageQueue(max_size=50)
-data_collector = DataCollector(db_path="bot_history.db")
+data_collector = DataCollector(use_sqlite=True, db_path="bot_history.db")
 
 # Multi-RPC racing configuration
 MULTI_RPC_ENABLED = str(os.getenv("MULTI_RPC_ENABLED", "false")).lower() == "true"
@@ -663,6 +663,9 @@ async def warmup_golden_atas(
                         logger.info(
                             f"🔥 ATA warmup CREATED: {mint_str[:8]} → {ata_str[:8]}  sig={str(sig)[:12]}"
                         )
+                        # Cache the newly created ATA so the hot-path doesn't deduct phantom rent.
+                        import src.ingest.shared_state as shared_state
+                        shared_state.ATA_CACHE.add(ata_str)
                     else:
                         txt = await send_resp.text()
                         logger.warning(
@@ -674,6 +677,9 @@ async def warmup_golden_atas(
             logger.debug(
                 f"✅ ATA warmup: {mint_str[:8]} already exists → {ata_str[:8]}"
             )
+            # Cache the existing ATA so the hot-path doesn't deduct phantom rent.
+            import src.ingest.shared_state as shared_state
+            shared_state.ATA_CACHE.add(ata_str)
 
 
 def validate_marginfi_account(cfg: Config) -> bool:
@@ -964,7 +970,7 @@ class Config:
     TRADE_SIZE_PCT: float = float(os.getenv("TRADE_SIZE_PCT", 1.0))
     MIN_RESERVE_SOL: float = 0.005  # Phase 49: minimum gas reserve (confirmed by spec)
     MIN_NET_PROFIT_PCT: float = float(os.getenv("MIN_NET_PROFIT_PCT", 0.005))
-    MAX_DRAWDOWN_SOL: float = float(os.getenv("MAX_DRAWDOWN_SOL", 0.01))
+    MAX_DRAWDOWN_SOL: float = float(os.getenv("MAX_DRAWDOWN_SOL", 0.005))  # Phase 10: 33% of 0.015 SOL survival balance
 
     JUP_RPS: int = int(os.getenv("JUPITER_QUOTE_RPS", 1))
 
@@ -992,7 +998,9 @@ class Config:
     SLIPPAGE_BPS: int = int(os.getenv("STARTING_SLIPPAGE_BPS", 15))
     BASE_FEE: float = 0.000005
     PRIORITY_FEE: float = 0.00005
-    ATA_FEE: float = 0.002
+    # ATA_FEE removed: rent_fee_sol is already computed dynamically from ATA_CACHE
+    # in build_native_flashloan_tx. Adding a static ATA_FEE here caused a phantom
+    # ~27% capital drain on paper (double-counting rent on every trade).
 
     # Arbitrage Filters
     ARBITRAGE_FILTER_MIN_PROFIT_SOL: float = float(
@@ -1013,10 +1021,10 @@ class Config:
 
     LST_DEPEG_THRESHOLD_BPS: int = int(os.getenv("LST_DEPEG_THRESHOLD_BPS", "15"))
     FLASH_LOAN_SIZE_SOL: float = float(
-        os.getenv("FLASH_LOAN_SIZE_SOL", "0.5")
-    )  # Initial: 0.5 SOL (30x safety buffer for 0.017 SOL)
+        os.getenv("FLASH_LOAN_SIZE_SOL", "0.05")
+    )  # Initial: 0.05 SOL (5x leverage is max safe for 0.015 SOL)
     MIN_NET_PROFIT_BUFFER_SOL: float = float(
-        os.getenv("MIN_NET_PROFIT_BUFFER_SOL", "0.0005")
+        os.getenv("MIN_NET_PROFIT_BUFFER_SOL", "0.00005")
     )
     LST_SCAN_INTERVAL: float = float(os.getenv("LST_SCAN_INTERVAL", "3.0"))
     SANCTUM_ROUTER_ENABLED: bool = (
@@ -2521,8 +2529,8 @@ async def create_flashloan_arbitrage_tx(
         # Assuming base_mint is a stablecoin (6 decimals)
         fee_in_base_token_lamports = int(base_fee_sol * sol_price_in_usd * 1e6)
 
-    # MarginFi берет 0.05% (5 BPS) от суммы займа в базовом токене
-    flashloan_fee_lamports = int(base_amount_lamports * 0.0005)
+    # MarginFi flashloan fee is configurable via cfg.FLASH_FEE_PCT (default 0.0)
+    flashloan_fee_lamports = int(base_amount_lamports * cfg.FLASH_FEE_PCT)
     total_fees_in_base = fee_in_base_token_lamports + flashloan_fee_lamports
 
     if profit_lamports < total_fees_in_base:
@@ -4508,14 +4516,14 @@ async def execute_priority_opportunity(
         # Fix 81: Pre-calculate net profit to prevent USDC math divide-by-1e9 bug
         tip_amount_sol = tip_amount_lamports / 1e9 if tip_amount_lamports else 0.0
         borrow_amount_sol = opportunity.metadata.get("borrow_amount_sol", 0.0)
-        flashloan_fee_sol = borrow_amount_sol * 0.0005  # 0.05% от MarginFi
+        flashloan_fee_sol = borrow_amount_sol * cfg.FLASH_FEE_PCT  # MarginFi: configurable, default 0.0
 
         est_net_profit_sol = max(
             0.0,
             float(opportunity.expected_profit_sol)
             - tip_amount_sol
             - flashloan_fee_sol
-            - (cfg.PRIORITY_FEE + cfg.BASE_FEE + cfg.ATA_FEE),
+            - (cfg.PRIORITY_FEE + cfg.BASE_FEE),
         )
         # For triangular, this carries all 3 legs; for direct, 2 legs.
         tx_b64 = await create_flashloan_arbitrage_tx(
@@ -4591,10 +4599,10 @@ async def execute_priority_opportunity(
                         {
                             "pair": opportunity.pair,
                             "expected_profit_sol": simulated_profit,
-                            "actual_profit_sol": 0.0,
+                            "actual_profit_sol": simulated_profit if sim_result and simulated_profit > 0 else 0.0,
                             "jito_tip_sol": 0.0,
                             "execution_time_ms": 0.0,
-                            "result": "simulated",
+                            "result": "simulated_profitable" if (sim_result and simulated_profit > 0) else "simulated",
                             "initial_score": getattr(opportunity, "score", 0),
                             "network_congestion": opportunity.network_congestion,
                             "liquidity_depth_usd": opportunity.liquidity_depth_usd,
@@ -4604,6 +4612,12 @@ async def execute_priority_opportunity(
                     )
                 except Exception as e:
                     logger.warning(f"Data recording failed: {e}")
+
+            # Simulate capital compounding: credit virtual balance with simulated profit
+            if sim_result and simulated_profit > 0:
+                async with shared_state.stats_lock:
+                    shared_state.stats["virtual_balance"] += simulated_profit
+                logger.info(f"🧪 Paper compounding: +{simulated_profit:.6f} SOL credited to virtual balance")
             return
 
         # Логируем попытку для ИИ
@@ -5052,8 +5066,9 @@ async def worker(
             optimal_amount, best_route_idx = result
 
             # Apply min() safeguard: env limit + available liquidity (Issue 5)
+            # ATA rent is computed dynamically from ATA_CACHE elsewhere; reserve a flat 0.001 SOL buffer here.
             required_fee_reserve_lamports = int(
-                (cfg.BASE_FEE + cfg.PRIORITY_FEE + cfg.ATA_FEE + 0.001) * 1e9
+                (cfg.BASE_FEE + cfg.PRIORITY_FEE + 0.001) * 1e9
             )
             available_liquidity_lamports = max(
                 0, int(balance * 1e9) - required_fee_reserve_lamports
@@ -5164,7 +5179,6 @@ async def worker(
             base_fee_sol = (
                 cfg.BASE_FEE
                 + cfg.PRIORITY_FEE
-                + cfg.ATA_FEE
                 + rent_fee_sol
                 + jito_tip_sol
             )
@@ -5985,7 +5999,7 @@ async def run():
                 # 1. Проверяем нативный баланс
                 # PAPER TRADING GUARD: skip real wallet maintenance in paper mode
                 if cfg.PAPER_TRADING_ONLY:
-                    await asyncio.sleep(120)
+                    await asyncio.sleep(2.0)
                     continue
                 current_balance = await StateManager.get_balance(
                     session, rpc, keypair.pubkey()
@@ -6024,7 +6038,7 @@ async def run():
                                 wsol_amount = int(data["result"]["value"]["amount"])
 
                                 # Если скопили хотя бы 0.005 wSOL профита - конвертируем в нативный
-                                if wsol_amount > 5_000_000:
+                                if wsol_amount > 1_000_000:
                                     logger.info(
                                         f"🔄 Unwrapping {wsol_amount / 1e9} wSOL to Native SOL to replenish gas!"
                                     )

@@ -440,6 +440,13 @@ class ExecutionRouter:
             strategy = opportunity.get("strategy")
 
             if strategy == "lst_unstake":
+                import src.ingest.shared_state as shared_state
+                current_balance_sol = shared_state.stats.get("last_balance", shared_state.stats.get("virtual_balance", 0.015))
+                from .flywheel_scaler import FlywheelScaler
+                _scaler = FlywheelScaler(initial_balance=current_balance_sol)
+                _tier = _scaler.get_tier(current_balance_sol)
+                _dynamic_min_profit_lamports = int(_tier.min_profit_sol * 1_000_000_000)
+
                 # LST Instant Unstake Arbitrage
                 from .lst_unstake_arbitrage import LstInstantUnstakeArbitrage
                 lst_arb = LstInstantUnstakeArbitrage(
@@ -454,6 +461,7 @@ class ExecutionRouter:
                     rpc_getter=self.rpc_getter,
                     ata_cache=self.ata_cache,
                     keypair=self.keypair,
+                    min_profit_lamports=_dynamic_min_profit_lamports,
                     jito_bidding_manager=self.jito_bidding_manager
                 )
                 success = await lst_arb.execute_unstake_arbitrage(
@@ -470,6 +478,12 @@ class ExecutionRouter:
                     self.record_pair_slippage(pair_key)
                 elif result.get("status") == "success":
                     self.reset_pair_reputation(pair_key)
+                    try:
+                        from src.ingest.dust_sweeper import DustSweeper
+                        sweeper = DustSweeper(self.keypair, self.rpc_url, self.session)
+                        asyncio.create_task(sweeper.sweep_after_successful_tx())
+                    except Exception as _sweep_err:
+                        logger.debug(f"Post-LST sweep schedule failed: {_sweep_err}")
 
                 return result
             elif strategy == "wrapper_peg":
@@ -517,31 +531,35 @@ class ExecutionRouter:
                         logger.warning(f"Wrapper Peg {pair}: no swap instructions")
                         return {"status": "error", "message": "no swap instructions"}
 
-                    # Jito tip via Dynamic Bidding Manager
+                    # Jito tip via Dynamic Blue Ocean Engine (replace stale hardcoded jito_tip_sol = expected_profit_sol * jito_tip_pct)
                     import src.ingest.shared_state as shared_state
                     current_native_sol = shared_state.stats.get("last_balance", shared_state.stats.get("virtual_balance", 0.015))
-                    
+
                     if self.jito_bidding_manager:
-                        jito_tip_lamports = self.jito_bidding_manager.calculate_optimal_tip(
+                        jito_tip_lamports = self.jito_bidding_manager.calculate_blue_ocean_tip(
                             expected_profit_sol=expected_profit_sol,
                             strategy="wrapper_peg",
-                            current_native_sol_balance=current_native_sol
+                            current_native_sol_balance=current_native_sol,
                         )
                     else:
                         fallback_tip_sol = expected_profit_sol * jito_tip_pct
                         jito_tip_lamports = max(int(fallback_tip_sol * 1e9), 10000)
 
-                    # Capital Guard / Tip Floor Filter rejection
-                    if jito_tip_lamports < 0:
+                    # Blue Ocean returns 0 (not -1) when tip floor too high or profit too small
+                    if jito_tip_lamports <= 0:
                         logger.warning(f"🚫 Wrapper Peg {pair}: Rejected by Jito Tip Floor Guard (margin too low)")
                         return {"status": "skipped", "message": "Rejected by Tip Floor Guard"}
-                        
+
                     jito_tip_sol = jito_tip_lamports / 1e9
 
-                    # ATA rent: 2 new ATAs at conservative rate
-                    ata_rent_sol = 0.0035 * 2
-                    priority_fee_sol = 0.00001
-                    total_fees_sol = jito_tip_sol + ata_rent_sol + priority_fee_sol
+                    # Dynamic ATA rent: only charge for ATAs not already in cache (remove hardcoded 0.0035 * 2)
+                    ata_rent_sol = 0.0
+                    for _mint in [str(USDC_MINT), cheap_mint, expensive_mint]:
+                        if _mint not in self.ata_cache:
+                            ata_rent_sol += 0.00203928
+
+                    # Transaction builder already applies a dynamic priority fee — do not double-count it here
+                    priority_fee_sol = 0.0
 
                     # Profit check via PreTradeGuard with is_circular=True (P0-8: fixed kwargs)
                     pre_trade_guard = PreTradeGuard(
@@ -628,6 +646,12 @@ class ExecutionRouter:
                     )
 
                     if result.get("success"):
+                        try:
+                            from src.ingest.dust_sweeper import DustSweeper
+                            sweeper = DustSweeper(self.keypair, self.rpc_url, self.session)
+                            asyncio.create_task(sweeper.sweep_after_successful_tx())
+                        except Exception as _sweep_err:
+                            logger.debug(f"Post-wrapper-peg sweep schedule failed: {_sweep_err}")
                         logger.info(f"✅ Wrapper Peg executed: {pair} | tip={jito_tip_sol:.6f} SOL")
                         return {"status": "success", "pair": pair, **result}
                     else:
@@ -657,7 +681,12 @@ class ExecutionRouter:
             quote = opportunity.get(field)
             if quote and isinstance(quote, dict):
                 fetched_at = quote.get("fetched_at") or quote.get("full_quote_response", {}).get("fetched_at")
-                if fetched_at and time.time() - fetched_at > 1.5:
+                if fetched_at is None:
+                    logger.warning(
+                        f"🚫 БЛОК 8: Quote missing fetched_at for {field}. Rejecting stale/malformed quote."
+                    )
+                    return False
+                if time.time() - fetched_at > 1.5:
                     logger.warning(
                         f"🚫 БЛОК 8: Quote stale (>1.5s) for {field}. Age: {time.time() - fetched_at:.2f}s. Aborting."
                     )

@@ -12,6 +12,8 @@ class SmartRetryEngine:
     When simulation fails due to slippage/liquidity, immediately recalculates
     optimal borrow size and refetches quotes rather than blocking the strategy.
     """
+
+    MIN_FLASH_LOAN_SIZE_LAMPORTS = 10_000_000  # 0.01 SOL floor — dust-sized flashloans waste gas
     
     @staticmethod
     def should_retry(reason: str) -> Tuple[bool, str]:
@@ -41,9 +43,12 @@ class SmartRetryEngine:
         Returns:
             Tuple of (new_amount_lamports, new_expected_profit_sol)
         """
-        # Exponential decay: 50% reduction per retry, min 1 lamport
+        # Exponential decay: 50% reduction per retry, but enforce MIN_FLASH_LOAN_SIZE_LAMPORTS floor
         decay_factor = 0.5 ** (retry_count + 1)
-        new_amount = max(int(original_amount * decay_factor), 1)
+        raw_amount = int(original_amount * decay_factor)
+        if raw_amount < SmartRetryEngine.MIN_FLASH_LOAN_SIZE_LAMPORTS:
+            return -1, 0.0  # abort signal: flashloan below minimum viable size
+        new_amount = raw_amount
         new_profit = max(expected_profit * decay_factor, 0.0)
         return new_amount, new_profit
     

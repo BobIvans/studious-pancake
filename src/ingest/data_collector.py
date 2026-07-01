@@ -29,6 +29,12 @@ class ArbitrageTradeRecord:
     slippage_realized: Optional[float] = None
     route: Optional[str] = None
     signature: Optional[str] = None
+    # Phase 10: ML Data Pipeline fields
+    borrow_amount_lamports: int = 0
+    repay_amount_lamports: int = 0
+    num_new_atas: int = 0
+    priority_fee_lamports: int = 0
+    simulated_profit_sol: float = 0.0
 
     def to_dict(self) -> Dict[str, Any]:
         data = asdict(self)
@@ -55,6 +61,12 @@ class DataCollector:
         "slippage_realized",
         "route",
         "signature",
+        # Phase 10: ML Data Pipeline fields
+        "borrow_amount_lamports",
+        "repay_amount_lamports",
+        "num_new_atas",
+        "priority_fee_lamports",
+        "simulated_profit_sol",
     ]
 
     def __init__(
@@ -121,7 +133,13 @@ class DataCollector:
                     liquidity_depth_usd REAL,
                     slippage_realized REAL,
                     route TEXT,
-                    signature TEXT
+                    signature TEXT,
+                    -- Phase 10: ML Data Pipeline fields
+                    borrow_amount_lamports INTEGER DEFAULT 0,
+                    repay_amount_lamports INTEGER DEFAULT 0,
+                    num_new_atas INTEGER DEFAULT 0,
+                    priority_fee_lamports INTEGER DEFAULT 0,
+                    simulated_profit_sol REAL DEFAULT 0.0
                 )
                 """
             )
@@ -162,6 +180,12 @@ class DataCollector:
             "slippage_realized": self._optional_float(record.get("slippage_realized")),
             "route": record.get("route"),
             "signature": record.get("signature"),
+            # Phase 10: ML Data Pipeline fields
+            "borrow_amount_lamports": int(record.get("borrow_amount_lamports", 0)),
+            "repay_amount_lamports": int(record.get("repay_amount_lamports", 0)),
+            "num_new_atas": int(record.get("num_new_atas", 0)),
+            "priority_fee_lamports": int(record.get("priority_fee_lamports", 0)),
+            "simulated_profit_sol": float(record.get("simulated_profit_sol", 0.0)),
         }
         return data
 
@@ -178,8 +202,10 @@ class DataCollector:
                     timestamp, datetime, pair, initial_score, expected_profit_sol,
                     actual_profit_sol, jito_tip_sol, execution_time_ms, result,
                     competitor_tip_sol, network_congestion, liquidity_depth_usd,
-                    slippage_realized, route, signature
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    slippage_realized, route, signature,
+                    borrow_amount_lamports, repay_amount_lamports, num_new_atas,
+                    priority_fee_lamports, simulated_profit_sol
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     trade["timestamp"],
@@ -197,6 +223,11 @@ class DataCollector:
                     trade["slippage_realized"],
                     trade["route"],
                     trade["signature"],
+                    trade["borrow_amount_lamports"],
+                    trade["repay_amount_lamports"],
+                    trade["num_new_atas"],
+                    trade["priority_fee_lamports"],
+                    trade["simulated_profit_sol"],
                 ),
             )
             await conn.commit()

@@ -168,6 +168,12 @@ def initialize_shared_state():
 _balance_lock_paused: bool = False
 _balance_lock_pause_until: float = 0.0
 
+# Phase 9: Centralised ATA rent constants — single source of truth for all modules.
+# Standard SPL Token ATA rent-exempt lamports: 2_039_280 lamports = 0.00203928 SOL
+# Token-2022 ATA rent is higher due to extension space: 0.0035 SOL
+ATA_RENT_SOL_SPL = 0.00203928
+ATA_RENT_SOL_TOKEN2022 = 0.0035
+
 # Fix 64: Appends a latency measurement to the capped list (max 1000 entries)
 def append_latency(value: float) -> None:
     """Append latency measurement, capping list at 1000 entries to prevent memory leak."""

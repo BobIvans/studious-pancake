@@ -54,7 +54,7 @@ logger = logging.getLogger("MultiTrader")
 
 class PaperTrader:
     def __init__(self):
-        self.starting_balance = 1.0
+        self.starting_balance = float(os.getenv("PAPER_TRADE_SIZE_SOL", "0.015"))
         self.current_balance = self.starting_balance
         self.total_profit = 0.0
         self.trades = 0
@@ -73,7 +73,7 @@ class PaperTrader:
         connector = aiohttp.TCPConnector(limit=0, ttl_dns_cache=300, family=socket.AF_INET)
         self.session = aiohttp.ClientSession(connector=connector)
 
-        self.aggregator = DataAggregator("bot_history.db")
+        self.aggregator = DataAggregator(os.getenv("PAPER_TRADING_DB", "paper_trading.db"))
         self.simulator = None  # Simulator implemented elsewhere
         self.oracle = None
         self.pyth_feeder = get_pyth_core_feeder()
@@ -133,7 +133,7 @@ class PaperTrader:
         if not sell:
             return
 
-        final_amount = sell["out"]
+        final_amount = int(sell["out"] * (1 - 15 / 10000))
 
         # Fix: normalize profit by token decimals before comparing across assets
         # USDC/USDT have 6 decimals, SOL has 9 — dividing 6-dec lamports by 1e9 gives false profit.
@@ -151,14 +151,14 @@ class PaperTrader:
             else:
                 profit_sol = profit_native
 
-            flashloan_fee_lamports = int(amount * 0.0005)
+            flashloan_fee_lamports = 0  # MarginFi flashloan fee is 0%
             dex_fee_lamports = int(amount * 0.003)
             slippage_bps = 15
             compute_cost_lamports = 5000
             network_fee_lamports = 5000
             priority_fee_lamports = 10000
             jito_tip_lamports = int(profit_lamports * 0.4)
-            ata_rent_lamports = 0
+            ata_rent_lamports = 2_039_280  # ATA rent if new account needed
             total_cost_lamports = (
                 flashloan_fee_lamports + dex_fee_lamports + compute_cost_lamports +
                 network_fee_lamports + priority_fee_lamports + jito_tip_lamports +
@@ -201,7 +201,7 @@ class PaperTrader:
 
     async def _monitor_loop(self):
         """Непрерывный цикл сканирования всех очередей"""
-        sol_amount = int(1.0 * 1e9)  # 1 SOL
+        sol_amount = int(self.starting_balance * 1e9)
         usdc_amount = int(150 * 1e6) # 150 USDC
 
         while True:

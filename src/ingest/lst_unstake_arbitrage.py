@@ -20,6 +20,7 @@ from solders.transaction import VersionedTransaction
 
 from src.ingest.shared_state import MARGINFI_BANKS
 import src.ingest.shared_state as shared_state
+from src.ingest.flywheel_scaler import FlywheelScaler
 
 logger = logging.getLogger("LstUnstakeArb")
 
@@ -56,7 +57,11 @@ class LstInstantUnstakeArbitrage:
         self.lst_mints = lst_mints
         self.tx_builder = tx_builder
         self.optimal_trade_sizer = optimal_trade_sizer
-        self.min_profit_lamports = min_profit_lamports
+        # Phase 8: min_profit_lamports is now a dynamic property fetched from
+        # flywheel_scaler tier thresholds.  The constructor arg is kept as an
+        # absolute minimum floor for safety.
+        self._min_profit_lamports_floor = min_profit_lamports
+        self.flywheel_scaler = FlywheelScaler()
         self.ata_cache = ata_cache if ata_cache is not None else set()
         self.keypair = keypair
         self.cfg = cfg
@@ -162,7 +167,15 @@ class LstInstantUnstakeArbitrage:
                 jito_tip = quote.get("jito_tip_lamports", 0)
                 net_profit = expected_profit - jito_tip
 
-                if net_profit > self.min_profit_lamports:
+                # Phase 8: dynamically fetch min_profit from flywheel_scaler tier
+                from src.ingest.shared_state import stats
+                current_balance = stats.get("last_balance", stats.get("virtual_balance", 0.015))
+                dynamic_min = int(
+                    self.flywheel_scaler.get_tier(current_balance).min_profit_sol * 1e9
+                )
+                effective_min = max(dynamic_min, self._min_profit_lamports_floor)
+
+                if net_profit > effective_min:
                     logger.info(
                         f"✅ LST unstake opp: {lst_mint[:8]} | "
                         f"borrow={test_amount_lamports/1e9:.2f} SOL | "

@@ -785,6 +785,7 @@ class PreTradeGuard:
     @staticmethod
     async def check_gas_tank(
         native_sol_balance: Optional[float] = None,
+        num_new_atas: int = 0,
     ) -> Tuple[bool, float]:
         """
         🔋 Strict Gas Tank — последняя линия обороны капитала.
@@ -796,12 +797,14 @@ class PreTradeGuard:
 
         Args:
             native_sol_balance: Текущий баланс в SOL, или None для пропуска.
+            num_new_atas: Количество новых ATA, которые будут созданы в сделке.
+              Каждый требует ~0.00204 SOL rent, вычитаемого из available.
 
         Returns:
             Tuple[bool, float]:
               True  = достаточно газа, можно торговать.
               False = баланс на нуле — trading halted.
-              Second element: available_sol = balance - gas_reserve.
+              Second element: available_sol = balance - gas_reserve - ata_rent.
         """
         if native_sol_balance is None:
             logger.warning(
@@ -810,17 +813,20 @@ class PreTradeGuard:
             return False, 0.0  # Нет данных — fail-closed
 
         min_reserve = PreTradeGuard.get_min_reserve_sol()
-        if native_sol_balance < min_reserve:
+        ata_rent = num_new_atas * 0.00204
+        if native_sol_balance < min_reserve + ata_rent:
             logger.critical(
                 f"🚨 STRICT GAS TANK: Balance {native_sol_balance:.6f} SOL < "
-                f"{min_reserve} SOL (MIN_RESERVE_SOL). TRADING HALTED. "
+                f"{min_reserve + ata_rent:.6f} SOL (reserve {min_reserve} + "
+                f"{num_new_atas} ATA rent {ata_rent:.6f}). TRADING HALTED. "
                 f"Deposit SOL or run dust_sweeper to recover rent before resuming."
             )
             return False, 0.0
 
-        available = native_sol_balance - min_reserve
+        available = native_sol_balance - min_reserve - ata_rent
         logger.debug(
-            f"🔋 Gas Tank: {native_sol_balance:.6f} SOL → {available:.6f} SOL available (reserve={min_reserve})"
+            f"🔋 Gas Tank: {native_sol_balance:.6f} SOL → {available:.6f} SOL available "
+            f"(reserve={min_reserve}, ata_rent={ata_rent:.6f} for {num_new_atas} new ATAs)"
         )
         return True, available
 
@@ -938,13 +944,11 @@ class PreTradeGuard:
                 return False, "Pre-trade quote: outAmount == 0", 0
 
             # FIX is_circular: for cross-asset routes (USDC→xStock), single-leg
-            # profit math subtracts apples from oranges. Delegate to full route sim.
+            # profit math is meaningless across asset boundaries, BUT we must still
+            # mathematically verify that the fresh quote covers the trade size + total
+            # cost. Previously this returned True unconditionally — a hole that let
+            # unprofitable circular routes through to execution.
             if is_circular:
-                logger.debug(
-                    f"🔄 is_circular route detected (input={input_mint[:8]}→"
-                    f"output={output_mint[:8]}) — skipping single-leg profit math. "
-                    f"Full route simulation will verify profitability."
-                )
                 total_cost_lamports = (
                     jito_tip_lamports
                     + base_fee_lamports
@@ -952,10 +956,28 @@ class PreTradeGuard:
                     + flashloan_fee_lamports
                     + ata_rent_lamports
                 )
+                required_out = amount_lamports + total_cost_lamports
+                if actual_out < required_out:
+                    logger.warning(
+                        f"🚫 Circular route BLOCKED: fresh out {actual_out/1e9:.6f} SOL "
+                        f"< required {required_out/1e9:.6f} SOL (size + cost "
+                        f"{total_cost_lamports/1e9:.6f} SOL)"
+                    )
+                    return (
+                        False,
+                        f"Circular route unprofitable: out {actual_out/1e9:.6f} < required {required_out/1e9:.6f} SOL",
+                        actual_out - amount_lamports - total_cost_lamports,
+                    )
+                net_profit = actual_out - amount_lamports - total_cost_lamports
+                logger.debug(
+                    f"🔄 is_circular route OK (input={input_mint[:8]}→"
+                    f"output={output_mint[:8]}): fresh out covers size + cost "
+                    f"(net≈{net_profit/1e9:.6f} SOL)"
+                )
                 return (
                     True,
-                    f"Circular route — delegated to simulator (cost={total_cost_lamports/1e9:.6f} SOL)",
-                    0,
+                    f"Circular route verified (net≈{net_profit/1e9:.6f} SOL, cost={total_cost_lamports/1e9:.6f} SOL)",
+                    net_profit,
                 )
 
             actual_gross_profit = actual_out - amount_lamports

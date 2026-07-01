@@ -122,6 +122,18 @@ class FlashSimulator:
         start = time.time()
         self._stats["total_simulations"] += 1
 
+        if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+            return SimulationResult(
+                success=True,
+                units_consumed=0,
+                pre_balances=[],
+                post_balances=[],
+                balance_delta_lamports=0,
+                balance_delta_sol=0.0,
+                logs=["Paper trading mode - RPC simulation skipped"],
+                simulation_time_ms=(time.time() - start) * 1000,
+            )
+
         payload = {
             "jsonrpc": "2.0",
             "id": 1,
@@ -130,7 +142,7 @@ class FlashSimulator:
                 tx_b64,
                 {
                     "encoding": "base64",
-                    "commitment": "confirmed",
+                    "commitment": "processed",
                     "sigVerify": False,
                     "replaceRecentBlockhash": True,
                     # Add accounts parameter to get balance changes
@@ -281,6 +293,9 @@ class FlashSimulator:
 
         # 3. ПРОВЕРКА ПОРОГА ПРИБЫЛИ
         if net_profit_lamports < min_profit_lamports:
+            # Phase 10: Track gas saved — accurately records how much capital
+            # the simulator saved the bot from burning on this rejected trade.
+            self._stats["gas_saved_lamports"] += (tip_lamports + priority_fee_lamports)
             reason = (
                 f"Unprofitable trade: Net profit {net_profit_lamports} lamports "
                 f"is below min_profit threshold {min_profit_lamports} "

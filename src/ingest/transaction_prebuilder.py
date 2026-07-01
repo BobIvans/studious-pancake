@@ -32,7 +32,6 @@ class TransactionPrebuilder:
         """
         ATTACHED_PROGRAM_IDS = {
             "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86",  # Associated Token Account
-            "ComputeBudget111111111111111111111111111111",       # Compute Budget
         }
         has_dynamic = any(
             str(ix.program_id) in ATTACHED_PROGRAM_IDS

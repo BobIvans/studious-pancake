@@ -223,6 +223,7 @@ from src.ingest.circuit_breaker import CapitalProtection
 import src.ingest.shared_state as shared_state
 from src.ingest.shared_state import (
     initialize_shared_state,
+    send_telegram_alert,
 )
 
 # LST Depeg Flash-Arb modules
@@ -3026,36 +3027,6 @@ async def create_flashloan_arbitrage_tx(
         return None
 
 
-async def send_telegram_alert(message: str):
-    """Send an emergency alert via Telegram."""
-    tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
-    tg_chat = os.getenv("TELEGRAM_CHAT_ID")
-
-    if not tg_token or not tg_chat:
-        logger.error(f"Telegram alert not sent (missing env vars): {message}")
-        return
-
-    url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
-    payload = {
-        "chat_id": tg_chat,
-        "text": f"\U0001f6a8 [ARB BOT ALERT]\n\n{message}",
-        "parse_mode": "HTML"
-    }
-
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, timeout=5.0) as resp:
-                if resp.status != 200:
-                    logger.error(f"Failed to send TG alert: {await resp.text()}")
-    except Exception as e:
-        logger.error(f"Telegram API exception: {e}")
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  LST DEPEG FLASH-ARB SCANNER
-# ═══════════════════════════════════════════════════════════════════════════
-
-
 async def reconcile_inflight_bundles(session: aiohttp.ClientSession, rpc_url: str):
     """Reconcile inflight bundles on startup: check status and refund if failed."""
     try:
@@ -4116,6 +4087,9 @@ async def check_bundle_confirmation(
             if virtual_balance_to_deduct > 0:
                 async with shared_state.stats_lock:
                     shared_state.stats["virtual_balance"] += virtual_balance_to_deduct
+                # 🚨 ATOMIC REFUND FIX: Cancel pending in Jito to prevent double-refund loop
+                if jito_executor:
+                    jito_executor._cancel_pending(bundle_id)
                 logger.info(
                     f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored."
                 )
@@ -4161,6 +4135,9 @@ async def check_bundle_confirmation(
             if virtual_balance_to_deduct > 0:
                 async with shared_state.stats_lock:
                     shared_state.stats["virtual_balance"] += virtual_balance_to_deduct
+                # 🚨 ATOMIC REFUND FIX: Cancel pending in Jito to prevent double-refund loop
+                if jito_executor:
+                    jito_executor._cancel_pending(bundle_id)
                 logger.info(
                     f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored."
                 )

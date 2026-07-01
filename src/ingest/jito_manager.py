@@ -17,6 +17,7 @@ from solders.transaction import VersionedTransaction
 from solders.instruction import Instruction, AccountMeta
 
 from .jito_bundle_client import JitoBundleClient
+from src.ingest.shared_state import send_telegram_alert
 
 logger = logging.getLogger("JitoManager")
 
@@ -532,17 +533,15 @@ class JitoBiddingManager:
             self.consecutive_success = 0
 
     def record_bundle_result(self, strategy: str, landed: bool):
-        """Phase 49: Track consecutive bundle failures for dynamic step-up.
-
-        Called with ``landed=True`` when Jito confirms the bundle landed on-chain,
-        or ``landed=False`` when the bundle was dropped / failed.
-        """
+        """Phase 49: Track consecutive bundle failures for dynamic step-up."""
         import time
+        import asyncio
         if landed:
             # Success — reset failure counter and collapse step-up window
             self._consecutive_failures = 0
             self._step_up_until = 0.0
             self.record_trade_result(strategy, True)
+            asyncio.create_task(send_telegram_alert(f"✅ <b>BUNDLE LANDED!</b>\nStrategy: <code>{strategy}</code> executed successfully."))
         else:
             # Accumulate failure — trigger step-up window once threshold is hit
             self._consecutive_failures += 1
@@ -550,6 +549,7 @@ class JitoBiddingManager:
                 self._step_up_until = time.time() + self.STEP_UP_DURATION_S
                 logger.warning(
                     f"📈 Phase 49 Bidding Manager: {self.STEP_UP_THRESHOLD} consecutive failures → "
-                    f"step-up window activated for {self.STEP_UP_DURATION_S}s (tip {self.STEP_UP_TIP_PCT_LOW*100:.0f}–{self.STEP_UP_TIP_PCT_HIGH*100:.0f}%)"
+                    f"step-up window activated for {self.STEP_UP_DURATION_S}s"
                 )
+                asyncio.create_task(send_telegram_alert(f"⚠️ <b>JITO STEP-UP ACTIVATED</b>\n{self.STEP_UP_THRESHOLD} consecutive rejected bundles for <code>{strategy}</code>. Raising tip percentage!"))
             self.record_trade_result(strategy, False)

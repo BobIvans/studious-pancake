@@ -267,6 +267,14 @@ class JitoExecutor:
             except Exception:
                 pass
 
+    def _cancel_pending(self, bundle_id: str) -> None:
+        """Remove a bundle from pending_bundles without applying double-refund.
+        Used when the caller (check_bundle_confirmation) manually refunds the balance.
+        """
+        entry = self.pending_bundles.pop(bundle_id, None)
+        if entry:
+            logger.debug(f"⚙️ Bundle {bundle_id[:12]} cancelled and removed from Jito memory queue (refunded by caller).")
+
     async def _reconcile_pending(self) -> None:
         while self._running:
             try:

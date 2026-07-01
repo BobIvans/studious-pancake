@@ -1,3 +1,4 @@
+import aiohttp
 import asyncio
 import logging
 import os
@@ -195,3 +196,27 @@ def to_lamports(amount_ui: float, decimals: int) -> int:
 def to_ui_amount(amount_lamports: int, decimals: int) -> float:
     """Convert raw lamports/base units to UI token amount."""
     return float(amount_lamports) / (10 ** decimals)
+
+async def send_telegram_alert(message: str):
+    """Send an emergency alert via Telegram."""
+    tg_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    tg_chat = os.getenv("TELEGRAM_CHAT_ID")
+
+    if not tg_token or not tg_chat:
+        logger.error(f"Telegram alert not sent (missing env vars): {message}")
+        return
+
+    url = f"https://api.telegram.org/bot{tg_token}/sendMessage"
+    payload = {
+        "chat_id": tg_chat,
+        "text": f"🚨 [ARB BOT ALERT]\n\n{message}",
+        "parse_mode": "HTML"
+    }
+
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, timeout=5.0) as resp:
+                if resp.status != 200:
+                    logger.error(f"Failed to send TG alert: {await resp.text()}")
+    except Exception as e:
+        logger.error(f"Telegram API exception: {e}")

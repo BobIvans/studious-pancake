@@ -47,9 +47,10 @@ class HeliusWebhookHandler:
         try:
             self.runner = web.AppRunner(self.app)
             await self.runner.setup()
-            site = web.TCPSite(runner=self.runner, host='0.0.0.0', port=self.port)
+            host = os.getenv("WEBHOOK_HOST", "127.0.0.1")
+            site = web.TCPSite(runner=self.runner, host=host, port=self.port)
             await site.start()
-            logger.warning(f"🚀 WEBHOOK SERVER ACTIVE: Listening on port {self.port}. Endpoint: http://0.0.0.0:{self.port}/webhook")
+            logger.warning(f"🚀 WEBHOOK SERVER ACTIVE: Listening on port {self.port} ({host}). Endpoint: http://{host}:{self.port}/webhook")
             # ИСПРАВЛЕНИЕ: Worker Pool — 3 фиксированных воркера
             for i in range(self.WORKER_COUNT):
                 worker = asyncio.create_task(self._worker(i))
@@ -122,6 +123,11 @@ class HeliusWebhookHandler:
             return web.Response(status=429, text='Too Many Requests')
         
         self.ip_limits[client_ip].append(now)
+
+        # 0. STRICT PAYLOAD SIZE LIMITER (1 MB max)
+        if request.content_length and request.content_length > 1024 * 1024:
+            logger.critical(f"🚨 DoS PROTECT: Payload too large from {client_ip} ({request.content_length} bytes)")
+            return web.Response(status=413, text='Payload Too Large')
 
         # 2. IP WHITELISTING (Optional)
         allowed_ips_raw = os.getenv("ALLOWED_WEBHOOK_IPS", "")

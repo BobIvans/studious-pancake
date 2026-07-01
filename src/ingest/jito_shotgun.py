@@ -237,7 +237,8 @@ class JitoShotgun:
         try:
             # Query the first available endpoint for status
             # Jito usually syncs bundle statuses across all regions
-            endpoint = self.endpoints[0].replace("/bundles", "/bundleStatuses")
+            # Jito JSON-RPC uses the exact same /api/v1/bundles endpoint for both send and check
+            endpoint = self.endpoints[0]
             
             payload = {
                 "jsonrpc": "2.0",

@@ -33,8 +33,9 @@ class DataAggregator:
         # Enable WAL mode to prevent locking
         cursor.execute("PRAGMA journal_mode=WAL;")
         cursor.execute("PRAGMA synchronous=NORMAL;")
-        cursor.execute("PRAGMA cache_size=1000;")
+        cursor.execute("PRAGMA cache_size=-2000;")  # 2MB cache
         cursor.execute("PRAGMA temp_store=MEMORY;")
+        cursor.execute("PRAGMA busy_timeout=5000;") # Ждать до 5 секунд снятия лока
 
         # Main events table
         cursor.execute(

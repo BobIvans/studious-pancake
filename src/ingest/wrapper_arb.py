@@ -160,7 +160,7 @@ class WrapperPegArb:
             sol_entry = self.price_matrix.get(sol_mint)
             if sol_entry:
                 sol_price_usd = sol_entry[0]
-            profit_usdc = profit_lamports / 1_000_000
+            profit_usdc = to_ui_amount(profit_lamports, 6)
             profit_sol = profit_usdc / sol_price_usd
 
             if profit_sol < self.min_profit_sol:

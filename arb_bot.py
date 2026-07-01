@@ -214,11 +214,9 @@ from src.ingest.pyth_core_price_feeder import init_pyth_core_feeder
 from src.ingest.helius_sender import HeliusSender, TransactionSender
 
 # ULTRA ARB MASTER - New In-Memory State Modules
-from src.ingest.graph_math import ArbitrageGraph, ArbitrageCycle
 from src.ingest.pool_state_manager import PoolStateManager
 from src.ingest.event_triggers import EventTriggerEngine, VolatilityWatcher
 from src.ingest.liquidator_engine import LiquidationEngine
-from src.ingest.cex_dex_oracle import CexDexOracle
 from src.ingest.dust_sweeper import DustSweeper
 from src.ingest.alt_manager import ALTCacheManager
 from src.ingest.circuit_breaker import CapitalProtection
@@ -331,19 +329,6 @@ ALL_GOLDEN_MINTS = CORE_GOLDEN_MINTS | EXTENDED_GOLDEN_MINTS
 # New MarginFi-compatible arbitrage modules
 # TASK 5 — hard-guarded imports: Kamino & Orderbook are DISABLED at import time
 # so that changing .env doesn't silently resurrect Red-Ocean scanners
-_KAMINO_ENABLED = (
-    str(os.getenv("KAMINO_LIQUIDATION_ENABLED", "false")).lower() == "true"
-)
-_ORDERBOOK_ENABLED = str(os.getenv("ORDERBOOK_AMM_ENABLED", "false")).lower() == "true"
-
-if _KAMINO_ENABLED:
-    from src.ingest.kamino_flash_liquidator import KaminoFlashLiquidationExecutor
-else:
-    KaminoFlashLiquidationExecutor = None  # type: ignore[assignment,misc]
-
-from src.ingest.lst_unstake_arbitrage import LstInstantUnstakeArbitrage
-
-BipartiteOrderbookAmmSolver = None  # type: ignore[assignment,misc]
 
 # Webhook trigger for LST scanner
 
@@ -3757,95 +3742,6 @@ async def lst_depeg_scanner(
 # ═══════════════════════════════════════════════════════════════════════════
 
 
-async def kamino_liquidation_scanner(session, cfg, rpc_manager, keypair, jito_executor):
-    """Main Kamino flash-liquidation scanner for MarginFi flash loans.
-
-    Continuously monitors Kamino lending obligations for Health Factor < 1.0,
-    executes profitable liquidations using atomic MarginFi flash loans.
-    """
-    rpc_url = rpc_manager.get_rpc()
-
-    # Initialize components
-    liquidator = KaminoFlashLiquidationExecutor(
-        session=session,
-        rpc_url=rpc_url,
-        marginfi_account=cfg.MARGINFI_ACCOUNT_PUBKEY,
-        min_profit_sol=cfg.KAMINO_MIN_PROFIT_SOL,
-    )
-    tx_builder = JupiterTxBuilder(
-        session=session,
-        rpc_getter=lambda: rpc_manager.get_rpc(),
-    )
-
-    cycle_count = 0
-
-    logger.debug(
-        f"🚀 Kamino Liquidation Scanner started | "
-        f"min_profit={cfg.KAMINO_MIN_PROFIT_SOL} SOL | "
-        f"scan_interval={cfg.KAMINO_SCAN_INTERVAL}s"
-    )
-
-    while True:
-        cycle_count += 1
-        try:
-            # ── Step 1: Scan for unhealthy obligations ───────────────────────
-            obligations = await liquidator.scan_for_liquidations()
-
-            if not obligations:
-                if cycle_count % 60 == 0:  # Log status every ~5 min
-                    logger.debug(
-                        f"📡 Kamino Scanner heartbeat #{cycle_count} | scanned {len(obligations)} obligations"
-                    )
-                await asyncio.sleep(cfg.KAMINO_SCAN_INTERVAL)
-                continue
-
-            logger.debug(f"🎯 Found {len(obligations)} unhealthy Kamino obligations")
-
-            # ── Step 2: Find profitable liquidation opportunities ───────────
-            opportunities = await liquidator.find_profitable_liquidations(obligations)
-
-            if not opportunities:
-                logger.debug("No profitable liquidation opportunities found")
-                await asyncio.sleep(cfg.KAMINO_SCAN_INTERVAL)
-                continue
-
-            # ── Step 3: Execute liquidations ────────────────────────────────
-            for opportunity in opportunities:
-                logger.debug(
-                    f"💰 Profitable liquidation: {str(opportunity.obligation.address)[:8]}... | "
-                    f"debt={opportunity.borrow_amount/1e6:.2f} USDC | "
-                    f"profit={opportunity.expected_profit_sol:.6f} SOL"
-                )
-
-                # Execute the liquidation
-                success = await liquidator.execute_liquidation(
-                    opportunity, tx_builder, keypair, jito_executor
-                )
-
-                if success:
-                    shared_state.stats["trades"] += 1
-                    logger.debug(
-                        f"✅ Kamino liquidation successful | profit={opportunity.expected_profit_sol:.6f} SOL"
-                    )
-                else:
-                    shared_state.stats["sim_fails"] += 1
-                    record_sim_failure("kamino_liquidation")
-                    logger.warning("❌ Kamino liquidation failed")
-
-                # Small delay between executions
-                await asyncio.sleep(0.1)
-
-        except Exception as e:
-            logger.error(f"Kamino scanner error: {e}")
-
-        await asyncio.sleep(cfg.KAMINO_SCAN_INTERVAL)
-
-
-# ═══════════════════════════════════════════════════════════════════════════
-#  LST INSTANT UNSTAKE ARBITRAGE SCANNER
-# ═══════════════════════════════════════════════════════════════════════════
-
-
 async def lst_unstake_arbitrage_scanner(
     session,
     cfg,
@@ -4040,103 +3936,6 @@ async def wrapper_peg_scanner(
 # ═══════════════════════════════════════════════════════════════════════════
 #  ORDERBOOK-AMM BIPARTITE SOLVER SCANNER
 # ═══════════════════════════════════════════════════════════════════════════
-
-
-async def orderbook_amm_scanner(session, cfg, rpc_manager, keypair, jito_executor):
-    """Main orderbook-AMM arbitrage scanner using bipartite solver.
-
-    Monitors Phoenix orderbook vs Raydium AMM for arbitrage opportunities
-    using mathematical optimization for flash loan sizing.
-    """
-    if BipartiteOrderbookAmmSolver is None:
-        logger.info("🌊 Orderbook-AMM strategy disabled: module removed per audit finding #54")
-        while True:
-            await asyncio.sleep(cfg.ORDERBOOK_AMM_SCAN_INTERVAL)
-    else:
-        rpc_url = rpc_manager.get_rpc()
-
-        # Initialize components
-        solver = BipartiteOrderbookAmmSolver()
-        tx_builder = JupiterTxBuilder(
-            session=session,
-            rpc_getter=lambda: rpc_manager.get_rpc(),
-        )
-
-        cycle_count = 0
-
-        logger.debug(
-            f"🚀 Orderbook-AMM Scanner started | "
-            f"phoenix_market={cfg.PHOENIX_MARKET_ADDRESS[:8] if cfg.PHOENIX_MARKET_ADDRESS else 'none'} | "
-            f"raydium_pool={cfg.RAYDIUM_POOL_ADDRESS[:8] if cfg.RAYDIUM_POOL_ADDRESS else 'none'} | "
-            f"scan_interval={cfg.ORDERBOOK_AMM_SCAN_INTERVAL}s"
-        )
-
-    while True:
-        cycle_count += 1
-        try:
-            # ── Step 1: Fetch orderbook and AMM data ───────────────────────
-            if not cfg.PHOENIX_MARKET_ADDRESS or not cfg.RAYDIUM_POOL_ADDRESS:
-                if cycle_count % 120 == 0:
-                    logger.warning(
-                        "Orderbook-AMM scanner disabled: missing market/pool addresses"
-                    )
-                await asyncio.sleep(cfg.ORDERBOOK_AMM_SCAN_INTERVAL)
-                continue
-
-            orderbook_data = await fetch_phoenix_orderbook(
-                session, cfg.PHOENIX_MARKET_ADDRESS
-            )
-            amm_data = await fetch_raydium_reserves(session, cfg.RAYDIUM_POOL_ADDRESS)
-
-            if not orderbook_data or not amm_data:
-                await asyncio.sleep(cfg.ORDERBOOK_AMM_SCAN_INTERVAL)
-                continue
-
-            # ── Step 2: Solve for optimal arbitrage ─────────────────────────
-            result = solver.solve_optimal_arbitrage(
-                orderbook_asks=orderbook_data["asks"],
-                amm_reserves=amm_data["reserves"],
-                available_liquidity=amm_data["available_liquidity"],
-            )
-
-            if not result or result.expected_profit <= 0:
-                if cycle_count % 60 == 0:  # Log status every ~1 min
-                    logger.debug(f"📡 Orderbook-AMM Scanner heartbeat #{cycle_count}")
-                await asyncio.sleep(cfg.ORDERBOOK_AMM_SCAN_INTERVAL)
-                continue
-
-            logger.debug(
-                f"💰 Orderbook-AMM opportunity: borrow={result.optimal_borrow_amount:.2f} | "
-                f"profit={result.expected_profit:.6f} | "
-                f"levels={len(result.buy_levels_used)} | "
-                f"impact={result.final_price_impact:.4f}"
-            )
-
-            # ── Step 3: Execute arbitrage ───────────────────────────────────
-            success = await solver.execute_arbitrage(
-                result,
-                tx_builder,
-                keypair,
-                jito_executor,
-                phoenix_program_id="Phoe9gjQAJbkx6F9Eg1x4gMWmz1wxmVcX2X1dWH1Kt",
-                raydium_program_id="675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
-                strategy_type=4,
-            )
-
-            if success:
-                shared_state.stats["trades"] += 1
-                logger.debug(
-                    f"✅ Orderbook-AMM arbitrage successful | profit={result.expected_profit:.6f}"
-                )
-            else:
-                shared_state.stats["sim_fails"] += 1
-                record_sim_failure("orderbook_amm")
-                logger.warning("❌ Orderbook-AMM arbitrage failed")
-
-        except Exception as e:
-            logger.error(f"Orderbook-AMM scanner error: {e}")
-
-        await asyncio.sleep(cfg.ORDERBOOK_AMM_SCAN_INTERVAL)
 
 
 async def fetch_phoenix_orderbook(session, market_address: str):
@@ -6655,17 +6454,6 @@ async def run():
     else:
         logger.debug("ℹ️ LST Depeg Flash-Arb Scanner DISABLED")
 
-    # Kamino Flash-Liquidation Scanner (FROZEN: Red Ocean)
-    if cfg.KAMINO_LIQUIDATION_ENABLED:
-        kamino_task = asyncio.create_task(
-            kamino_liquidation_scanner(session, cfg, rpc, keypair, jito_executor)
-        )
-        tasks.append(kamino_task)
-        logger.debug("🏦 Kamino Flash-Liquidation Scanner ENABLED")
-    else:
-        logger.info(
-            "❌ Kamino Flash-Liquidation Scanner FROZEN (Red Ocean competition)"
-        )
 
     # LST Instant Unstake Arbitrage Scanner
     if cfg.LST_UNSTAKE_ARB_ENABLED:
@@ -6685,15 +6473,6 @@ async def run():
     else:
         logger.info("ℹ️ LST Instant Unstake Arbitrage Scanner DISABLED")
 
-    # Orderbook-AMM Bipartite Solver Scanner
-    if cfg.ORDERBOOK_AMM_ENABLED:
-        orderbook_task = asyncio.create_task(
-            orderbook_amm_scanner(session, cfg, rpc, keypair, jito_executor)
-        )
-        tasks.append(orderbook_task)
-        logger.info("🌊 Orderbook-AMM Arbitrage Scanner ENABLED (Blue Ocean)")
-    else:
-        logger.debug("ℹ️ Orderbook-AMM Arbitrage Scanner DISABLED")
 
     # Wrapper Peg Arbitrage Scanner
     wrapper_peg_task = asyncio.create_task(
@@ -6939,29 +6718,6 @@ async def handle_liquidation_opportunity(opportunity, liquidation_engine, keypai
 
     except Exception as e:
         logger.error(f"Liquidation handling error: {e}")
-
-
-async def handle_cex_dex_signal(signal, cex_dex_oracle):
-    """Handle CEX-DEX lead-lag arbitrage signal."""
-    try:
-        logger.debug(
-            f"📊 CEX-DEX Signal: {signal.asset} | Direction: {signal.direction} | "
-            f"Confidence: {signal.confidence:.2%}"
-        )
-
-        # Calculate optimal trade size using O(1) math
-        optimal_size = Decimal("1000")  # Placeholder - would use actual calculation
-
-        # Execute arbitrage
-        success = await cex_dex_oracle.execute_lead_lag_arbitrage(signal, optimal_size)
-
-        if success:
-            logger.debug("✅ CEX-DEX arbitrage executed successfully")
-        else:
-            logger.warning("❌ CEX-DEX arbitrage execution failed")
-
-    except Exception as e:
-        logger.error(f"CEX-DEX signal handling error: {e}")
 
 
 async def handle_epoch_opportunity(opportunity, epoch_tracker, keypair, jito_executor):

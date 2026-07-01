@@ -330,8 +330,8 @@ class DustSweeper:
             ]:
                 return False
 
-            # Zero balance — всегда dust (кроме golden, уже проверено выше)
-            if ui_amount == 0:
+            # Zero balance or micro-dust (Jupiter often leaves 1-100 lamports)
+            if ui_amount == 0 or raw_amount <= 100:
                 return True
 
             # P0-13: USD value check — only sweep if < $1.00

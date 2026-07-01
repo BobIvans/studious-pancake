@@ -187,3 +187,11 @@ def set_balance_lock_paused(paused: bool, duration: float = 0.4) -> None:
     global _balance_lock_paused, _balance_lock_pause_until
     _balance_lock_paused = paused
     _balance_lock_pause_until = time.time() + duration if paused else 0.0
+
+def to_lamports(amount_ui: float, decimals: int) -> int:
+    """Convert UI token amount to raw lamports/base units."""
+    return int(amount_ui * (10 ** decimals))
+
+def to_ui_amount(amount_lamports: int, decimals: int) -> float:
+    """Convert raw lamports/base units to UI token amount."""
+    return float(amount_lamports) / (10 ** decimals)

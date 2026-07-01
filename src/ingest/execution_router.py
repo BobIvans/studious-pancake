@@ -517,9 +517,26 @@ class ExecutionRouter:
                         logger.warning(f"Wrapper Peg {pair}: no swap instructions")
                         return {"status": "error", "message": "no swap instructions"}
 
-                    # Jito tip = 40% of expected profit
-                    jito_tip_sol = expected_profit_sol * jito_tip_pct
-                    jito_tip_lamports = max(int(jito_tip_sol * 1e9), 10000)
+                    # Jito tip via Dynamic Bidding Manager
+                    import src.ingest.shared_state as shared_state
+                    current_native_sol = shared_state.stats.get("last_balance", shared_state.stats.get("virtual_balance", 0.015))
+                    
+                    if self.jito_bidding_manager:
+                        jito_tip_lamports = self.jito_bidding_manager.calculate_optimal_tip(
+                            expected_profit_sol=expected_profit_sol,
+                            strategy="wrapper_peg",
+                            current_native_sol_balance=current_native_sol
+                        )
+                    else:
+                        fallback_tip_sol = expected_profit_sol * jito_tip_pct
+                        jito_tip_lamports = max(int(fallback_tip_sol * 1e9), 10000)
+
+                    # Capital Guard / Tip Floor Filter rejection
+                    if jito_tip_lamports < 0:
+                        logger.warning(f"🚫 Wrapper Peg {pair}: Rejected by Jito Tip Floor Guard (margin too low)")
+                        return {"status": "skipped", "message": "Rejected by Tip Floor Guard"}
+                        
+                    jito_tip_sol = jito_tip_lamports / 1e9
 
                     # ATA rent: 2 new ATAs at conservative rate
                     ata_rent_sol = 0.0035 * 2

@@ -46,6 +46,8 @@ class ExecutionGuard:
     is failing repeatedly (e.g. Jito issues, slippage cascades).
     """
 
+    BACKOFF_STAGES = [60, 300, 1800]  # 60s → 300s → 1800s → permanent halt
+
     def __init__(self):
         self.fail_streak = 0
         self.pause_until = 0
@@ -55,15 +57,22 @@ class ExecutionGuard:
         self.fail_streak = 0
 
     def record_failure(self):
-        """Increment fail streak and trigger pause if >= 4 consecutive failures."""
+        """Increment fail streak and trigger exponential backoff."""
         self.fail_streak += 1
         if self.fail_streak >= 4:
-            self.pause_until = time.time() + 120  # 2 minute pause
-            self.fail_streak = 0
-            logger.warning(
-                "🚨 CIRCUIT BREAKER: 4 failures in a row. "
-                "Pausing execution for 120 seconds."
-            )
+            stage = min(self.fail_streak - 1, len(self.BACKOFF_STAGES))
+            if stage >= len(self.BACKOFF_STAGES):
+                self.pause_until = float('inf')
+                logger.critical(
+                    "🚨 CIRCUIT BREAKER: permanent halt after repeated failures. Manual restart required."
+                )
+            else:
+                backoff = self.BACKOFF_STAGES[stage - 1] if stage > 0 else self.BACKOFF_STAGES[0]
+                self.pause_until = time.time() + backoff
+                logger.warning(
+                    f"🚨 CIRCUIT BREAKER: {self.fail_streak} failures in a row. "
+                    f"Pausing execution for {backoff} seconds."
+                )
 
     def can_execute(self) -> bool:
         """Check if execution is allowed.
@@ -71,4 +80,6 @@ class ExecutionGuard:
         Returns:
             True if we can execute, False if circuit breaker is active.
         """
+        if self.pause_until == float('inf'):
+            return False
         return time.time() >= self.pause_until

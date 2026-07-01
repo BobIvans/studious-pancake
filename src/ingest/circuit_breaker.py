@@ -11,12 +11,13 @@ class CapitalProtection:
         self.daily_pnl_sol = 0.0
         self.weekly_pnl_sol = 0.0
         self.consecutive_losses = 0
+        self.consecutive_failed_attempts = 0
         self.last_daily_reset = datetime.utcnow()
         self.last_weekly_reset = datetime.utcnow()
 
     @property
     def daily_limit_sol(self) -> float:
-        return max(0.001, self.starting_balance * 0.08)  # 8% or 0.001 SOL min
+        return min(0.005, self.starting_balance * 0.33)  # survival phase
 
     @property
     def weekly_limit_sol(self) -> float:
@@ -37,11 +38,23 @@ class CapitalProtection:
         else:
             self.consecutive_losses = 0
 
+    def record_failed_attempt(self, cost_sol: float):
+        """Record a failed trading attempt (e.g. failed simulation, Jito drop)."""
+        self.consecutive_failed_attempts += 1
+        self.daily_pnl_sol -= cost_sol
+        self.weekly_pnl_sol -= cost_sol
+        logger.warning(
+            f"🚫 Failed attempt recorded (cost={cost_sol:.6f} SOL). "
+            f"Consecutive failed attempts: {self.consecutive_failed_attempts}"
+        )
+
     def should_stop(self) -> Tuple[bool, str]:
         """Check time resets and verify all risk limits."""
         now = datetime.utcnow()
 
-        # Reset periods if needed
+        if self.consecutive_failed_attempts >= 5:
+            return True, f"5 consecutive failed attempts: trading halted"
+
         if (now - self.last_daily_reset).total_seconds() > 86400:
             self.daily_pnl_sol = 0.0
             self.last_daily_reset = now

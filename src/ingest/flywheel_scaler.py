@@ -97,7 +97,7 @@ class PairReputationCircuitBreaker:
         self,
         limit: int = 3,
         cooldown_seconds: int = 600,
-        error_keywords: tuple = ("slippage", "exceeded"),
+        error_keywords: tuple = ("slippage", "insufficient", "liquidity", "simulation failed", "blockhash"),
     ):
         self.limit = limit
         self.cooldown_seconds = cooldown_seconds
@@ -201,7 +201,7 @@ class FlywheelScaler:
         self.rent_per_ata = ATA_RENT_SOL
         self.min_gas_reserve = 0.005
         self.reputation = PairReputationCircuitBreaker(
-            limit=3, cooldown_seconds=600, error_keywords=("slippage",),
+            limit=3, cooldown_seconds=600, error_keywords=("slippage", "insufficient", "liquidity", "simulation failed", "blockhash"),
         )
         # Fix 49: Hysteresis — track previous tier to prevent flapping at boundaries
         self._current_tier_index: int = 0

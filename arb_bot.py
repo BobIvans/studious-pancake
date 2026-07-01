@@ -140,7 +140,7 @@ PAIR_DISABLED_UNTIL: Dict[str, float] = {}
 PAIR_COOLDOWN_SECONDS: int = 600
 # Централизованный PairReputationCircuitBreaker (замена глобальных PAIR_FAILURES/PAIR_DISABLED_UNTIL)
 _pair_reputation = PairReputationCircuitBreaker(
-    limit=3, cooldown_seconds=600, error_keywords=("slippage",)
+    limit=3, cooldown_seconds=600, error_keywords=("slippage", "insufficient", "liquidity", "simulation failed", "blockhash")
 )  # 10 минут бана для пары
 # ────────────────────────────────────────────────────────────────────────────
 
@@ -4593,21 +4593,56 @@ async def execute_priority_opportunity(
                     logger.warning(f"Failed to log simulated opportunity: {e}")
 
             # Data Collection: record simulated trade for post-factum analysis
-            if data_collector:
+            if data_aggregator:
                 try:
-                    await data_collector.record_trade(
+                    net_profit_sol = simulated_profit
+                    net_profit_lamports = int(net_profit_sol * 1e9)
+                    gross_revenue_lamports = (
+                        net_profit_lamports + int(net_profit_sol * 0.15 * 1e9)
+                        if net_profit_sol > 0
+                        else 0
+                    )
+                    total_cost_lamports = gross_revenue_lamports - net_profit_lamports
+                    roi_pct = (
+                        (net_profit_sol / (gross_revenue_lamports / 1e9) * 100)
+                        if gross_revenue_lamports > 0
+                        else 0.0
+                    )
+                    await data_aggregator.log_paper_trade(
                         {
-                            "pair": opportunity.pair,
-                            "expected_profit_sol": simulated_profit,
-                            "actual_profit_sol": simulated_profit if sim_result and simulated_profit > 0 else 0.0,
-                            "jito_tip_sol": 0.0,
-                            "execution_time_ms": 0.0,
-                            "result": "simulated_profitable" if (sim_result and simulated_profit > 0) else "simulated",
-                            "initial_score": getattr(opportunity, "score", 0),
-                            "network_congestion": opportunity.network_congestion,
-                            "liquidity_depth_usd": opportunity.liquidity_depth_usd,
-                            "slippage_realized": opportunity.slippage_pct,
-                            "route": opportunity.metadata.get("route") if opportunity.metadata else None,
+                            "slot": shared_state.stats.get("current_slot", 0),
+                            "blockhash": cached_blockhash,
+                            "route": opportunity.metadata.get("route")
+                            if opportunity.metadata
+                            else opportunity.pair,
+                            "token_in": opportunity.metadata.get("input_mint", "")
+                            if opportunity.metadata
+                            else "",
+                            "token_out": opportunity.metadata.get("output_mint", "")
+                            if opportunity.metadata
+                            else "",
+                            "amount_lamports": int(
+                                opportunity.metadata.get("amount_lamports", 0)
+                                if opportunity.metadata
+                                else 0
+                            ),
+                            "gross_revenue_lamports": gross_revenue_lamports,
+                            "flashloan_fee_lamports": 0,
+                            "dex_fee_lamports": int(net_profit_sol * 0.003 * 1e9)
+                            if net_profit_sol > 0
+                            else 0,
+                            "slippage_bps": opportunity.slippage_pct or 15,
+                            "compute_cost_lamports": 5_000,
+                            "network_fee_lamports": 5_000,
+                            "priority_fee_lamports": 10_000,
+                            "jito_tip_lamports": int(net_profit_sol * 0.4 * 1e9)
+                            if net_profit_sol > 0
+                            else 0,
+                            "ata_rent_lamports": 2_039_280,
+                            "total_cost_lamports": total_cost_lamports,
+                            "net_profit_lamports": net_profit_lamports,
+                            "roi_pct": roi_pct,
+                            "decision": "EXECUTE" if net_profit_sol > 0 else "SKIP_LOW_MARGIN",
                         }
                     )
                 except Exception as e:

@@ -943,6 +943,60 @@ class PreTradeGuard:
             if actual_out == 0:
                 return False, "Pre-trade quote: outAmount == 0", 0
 
+            # Phase 12: Cross-Currency Accounting — convert actual_out to SOL lamports
+            # before subtracting fees (which are denominated in SOL).
+            # actual_out is in output_mint native units (e.g. USDC micro-units),
+            # while all cost params are in SOL lamports. Subtracting directly
+            # corrupts profit for non-SOL routes ("Apples to Oranges" bug).
+            is_sol_route = output_mint == "So11111111111111111111111111111111111111112"
+            _sol_price_usd = 150.0
+            _output_price_usd = 1.0  # default: assume 1:1 with SOL
+
+            # Phase 12: fetch prices via Pyth for cross-currency conversion.
+            # If price fetch fails for a non-SOL route, delegate to simulator
+            # by returning True (the simulator handles profitability verification).
+            if not is_sol_route:
+                try:
+                    from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
+                    feeder = get_pyth_core_feeder()
+                    if feeder is not None:
+                        _output_price_usd = feeder.get_price(output_mint) or 1.0
+                        _sol_price_usd = feeder.get_price("So11111111111111111111111111111111111111112") or 150.0
+                except Exception:
+                    # Price feed unavailable — delegate to simulator for accuracy
+                    logger.debug("Phase 12: Price feed unavailable for non-SOL route — delegating to simulator")
+                    return True, "Price unavailable — delegate to simulator", 0
+
+            # Convert actual_out from output_mint units to SOL lamports
+            if is_sol_route:
+                gross_profit_sol_lamports = actual_out - amount_lamports
+            else:
+                # Phase 12: expanded decimals mapping covering all active token types
+                _decimals = {
+                    # Stables (6 decimals)
+                    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6,  # USDC
+                    "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": 6,  # USDT
+                    "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": 6,  # PYUSD
+                    # SOL and LSTs (9 decimals)
+                    "So11111111111111111111111111111111111111112": 9,  # wSOL
+                    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": 9,  # jitoSOL
+                    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": 9,  # mSOL
+                    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": 9,  # bSOL
+                    "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v": 9,  # JupSOL
+                    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": 9,  # INF
+                    # Memes (variable decimals)
+                    "DezXAZ8z7P8gVmFiDQ6cEhPmmF9rj3ZfVGg3LyZ3mTKV": 5,  # BONK
+                    "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm": 6,  # WIF
+                }.get(output_mint, 6)  # default 6 for unknown tokens
+                amount_ui = amount_lamports / (10 ** _decimals)
+                actual_out_ui = actual_out / (10 ** _decimals)
+                # Step 2: convert gross profit to SOL via price bridge
+                gross_profit_ui = actual_out_ui - amount_ui
+                gross_profit_sol_lamports = int((gross_profit_ui * _output_price_usd / _sol_price_usd) * 1e9)
+
+            # ── Define threshold BEFORE is_circular branch ─────────────────────
+            threshold = min_profit_lamports if min_profit_lamports > 0 else 0
+
             # FIX is_circular: for cross-asset routes (USDC→xStock), single-leg
             # profit math is meaningless across asset boundaries, BUT we must still
             # mathematically verify that the fresh quote covers the trade size + total
@@ -956,31 +1010,29 @@ class PreTradeGuard:
                     + flashloan_fee_lamports
                     + ata_rent_lamports
                 )
-                required_out = amount_lamports + total_cost_lamports
-                if actual_out < required_out:
+                # For circular routes, the gross profit is already in SOL lamports
+                actual_net_profit = gross_profit_sol_lamports - total_cost_lamports
+                if actual_net_profit < threshold:
                     logger.warning(
-                        f"🚫 Circular route BLOCKED: fresh out {actual_out/1e9:.6f} SOL "
-                        f"< required {required_out/1e9:.6f} SOL (size + cost "
-                        f"{total_cost_lamports/1e9:.6f} SOL)"
+                        f"🚫 Circular route BLOCKED: net {actual_net_profit/1e9:.6f} SOL "
+                        f"< threshold (cost {total_cost_lamports/1e9:.6f} SOL)"
                     )
                     return (
                         False,
-                        f"Circular route unprofitable: out {actual_out/1e9:.6f} < required {required_out/1e9:.6f} SOL",
-                        actual_out - amount_lamports - total_cost_lamports,
+                        f"Circular route unprofitable: net {actual_net_profit/1e9:.6f} SOL",
+                        actual_net_profit,
                     )
-                net_profit = actual_out - amount_lamports - total_cost_lamports
                 logger.debug(
-                    f"🔄 is_circular route OK (input={input_mint[:8]}→"
-                    f"output={output_mint[:8]}): fresh out covers size + cost "
-                    f"(net≈{net_profit/1e9:.6f} SOL)"
+                    f"🔄 Circular route OK: net≈{actual_net_profit/1e9:.6f} SOL "
+                    f"(cost={total_cost_lamports/1e9:.6f} SOL)"
                 )
                 return (
                     True,
-                    f"Circular route verified (net≈{net_profit/1e9:.6f} SOL, cost={total_cost_lamports/1e9:.6f} SOL)",
-                    net_profit,
+                    f"Circular route verified (net≈{actual_net_profit/1e9:.6f} SOL)",
+                    actual_net_profit,
                 )
 
-            actual_gross_profit = actual_out - amount_lamports
+            # Non-circular: gross_profit_sol_lamports already in SOL denomination
             total_cost_lamports = (
                 jito_tip_lamports
                 + base_fee_lamports
@@ -988,17 +1040,16 @@ class PreTradeGuard:
                 + flashloan_fee_lamports
                 + ata_rent_lamports
             )
-            actual_net_profit = actual_gross_profit - total_cost_lamports
+            actual_net_profit = gross_profit_sol_lamports - total_cost_lamports
 
             latency_ms = (time.time() - now) * 1000
             logger.debug(
                 f"🔍 Pre-trade re-check ({latency_ms:.0f}ms): "
-                f"gross={actual_gross_profit/1e9:.6f} SOL | "
+                f"gross={gross_profit_sol_lamports/1e9:.6f} SOL | "
                 f"cost={total_cost_lamports/1e9:.6f} SOL | "
                 f"net={actual_net_profit/1e9:.6f} SOL"
             )
 
-            threshold = min_profit_lamports if min_profit_lamports > 0 else 0
             if actual_net_profit < threshold:
                 logger.warning(
                     f"🚫 Pre-trade BLOCKED: profit eroded to {actual_net_profit/1e9:.6f} SOL "

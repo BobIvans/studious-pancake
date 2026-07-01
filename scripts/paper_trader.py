@@ -135,38 +135,42 @@ class PaperTrader:
 
         final_amount = int(sell["out"] * (1 - 15 / 10000))
 
-        # Fix: normalize profit by token decimals before comparing across assets
-        # USDC/USDT have 6 decimals, SOL has 9 — dividing 6-dec lamports by 1e9 gives false profit.
+        # Phase 12: Cross-Currency Accounting — normalize ALL profit to SOL before
+        # subtracting fees (which are always in SOL).  Old code subtracted SOL lamports
+        # directly from USDC micro-units, corrupting profit for non-SOL routes.
         _usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
         _usdt_mint = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
         _is_stable_6dec = base_mint.endswith(_usdc_mint) or base_mint.endswith(_usdt_mint)
         _base_dec = 6 if _is_stable_6dec else 9
-        profit_lamports = final_amount - amount
 
-        if profit_lamports > 0:
-            profit_native = profit_lamports / (10 ** _base_dec)
+        gross_profit_native = final_amount - amount  # in token native units (e.g. USDC micro-units)
+
+        if gross_profit_native > 0:
+            # Step 1: convert gross profit to SOL immediately
+            gross_profit_ui = gross_profit_native / (10 ** _base_dec)  # UI units (e.g. 1.5 USDC)
             sol_price = self.pyth_feeder.get_price("So11111111111111111111111111111111111111112") if self.pyth_feeder else 150.0
             if _base_dec == 6:
-                profit_sol = profit_native / sol_price
+                gross_profit_sol = gross_profit_ui / sol_price  # convert USDC → SOL via USD bridge
             else:
-                profit_sol = profit_native
+                gross_profit_sol = gross_profit_ui  # already in SOL
 
-            flashloan_fee_lamports = 0  # MarginFi flashloan fee is 0%
-            dex_fee_lamports = int(amount * 0.003)
+            # Step 2: all fees strictly in SOL
+            flashloan_fee_sol = 0.0  # MarginFi flashloan fee is 0%
+            dex_fee_sol = (amount * 0.003) / 1e9
             slippage_bps = 15
-            compute_cost_lamports = 5000
-            network_fee_lamports = 5000
-            priority_fee_lamports = 10000
-            jito_tip_lamports = int(profit_lamports * 0.4)
-            ata_rent_lamports = 2_039_280  # ATA rent if new account needed
-            total_cost_lamports = (
-                flashloan_fee_lamports + dex_fee_lamports + compute_cost_lamports +
-                network_fee_lamports + priority_fee_lamports + jito_tip_lamports +
-                ata_rent_lamports
+            compute_cost_sol = 5000 / 1e9
+            network_fee_sol = 5000 / 1e9
+            priority_fee_sol = 10000 / 1e9
+            jito_tip_sol = gross_profit_sol * 0.4
+            ata_rent_sol = 2_039_280 / 1e9  # ATA rent if new account needed
+            total_fees_sol = (
+                flashloan_fee_sol + dex_fee_sol + compute_cost_sol +
+                network_fee_sol + priority_fee_sol + jito_tip_sol +
+                ata_rent_sol
             )
-            net_profit_lamports = profit_lamports - total_cost_lamports
-            net_profit_sol = net_profit_lamports / (10 ** _base_dec)
-            roi_pct = (net_profit_lamports / amount * 100) if amount > 0 else 0.0
+            net_profit_sol = gross_profit_sol - total_fees_sol
+            net_profit_lamports = int(net_profit_sol * 1e9)
+            roi_pct = (net_profit_sol / (gross_profit_sol + 1e-12)) * 100 if amount > 0 else 0.0
             decision = "EXECUTE" if net_profit_sol > 0.0005 else "SKIP_LOW_MARGIN"
 
             trade_data = {
@@ -175,15 +179,15 @@ class PaperTrader:
                 "token_out": target_mint,
                 "amount_lamports": amount,
                 "gross_revenue_lamports": final_amount,
-                "flashloan_fee_lamports": flashloan_fee_lamports,
-                "dex_fee_lamports": dex_fee_lamports,
+                "flashloan_fee_lamports": int(flashloan_fee_sol * 1e9),
+                "dex_fee_lamports": int(dex_fee_sol * 1e9),
                 "slippage_bps": slippage_bps,
-                "compute_cost_lamports": compute_cost_lamports,
-                "network_fee_lamports": network_fee_lamports,
-                "priority_fee_lamports": priority_fee_lamports,
-                "jito_tip_lamports": jito_tip_lamports,
-                "ata_rent_lamports": ata_rent_lamports,
-                "total_cost_lamports": total_cost_lamports,
+                "compute_cost_lamports": int(compute_cost_sol * 1e9),
+                "network_fee_lamports": int(network_fee_sol * 1e9),
+                "priority_fee_lamports": int(priority_fee_sol * 1e9),
+                "jito_tip_lamports": int(jito_tip_sol * 1e9),
+                "ata_rent_lamports": int(ata_rent_sol * 1e9),
+                "total_cost_lamports": int(total_fees_sol * 1e9),
                 "net_profit_lamports": net_profit_lamports,
                 "roi_pct": roi_pct,
                 "decision": decision,

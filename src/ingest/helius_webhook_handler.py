@@ -41,6 +41,7 @@ class HeliusWebhookHandler:
         self._signal_queue: asyncio.Queue = asyncio.Queue(maxsize=500)
         self.WORKER_COUNT = 3
         self._worker_pool: List[asyncio.Task] = []
+        self._last_scan_trigger: Dict[str, float] = {}
 
     async def start(self):
         """Start the webhook server and the worker pool."""
@@ -313,8 +314,13 @@ class HeliusWebhookHandler:
             for account_info in account_data:
                 account_address = account_info.get('account')
                 if account_address in WebhookConfig.ORCA_POOL_ADDRESSES:
-                    native_balance_change = account_info.get('nativeBalanceChange', 0)
-                    token_balance_changes = account_info.get('tokenBalanceChanges', [])
+                    now = time.time()
+                    last_trigger = self._last_scan_trigger.get(account_address, 0)
+                if now - last_trigger < 2.0:
+                    continue
+                self._last_scan_trigger[account_address] = now
+                    token_balance_changes = event.get('tokenBalanceChanges', [])
+                    token_balance_changes = event.get('tokenBalanceChanges', [])
                     if abs(native_balance_change) > 10_000_000:
                         logger.info(f"💹 Significant pool balance change: {native_balance_change / 1e9:.6f} SOL")
                         opportunity = {

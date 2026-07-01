@@ -138,29 +138,28 @@ class LstRouteAggregator:
             
             best_result = None
             for buy_q in buy_quotes:
-                # Leg 2: LST → SOL (ExactOut) — Force exact repayment amount
-                # We request exactly borrow_amount_lamports output.
-                # The in_amount will be the amount of LST needed.
+                # Phase 12: Changed Leg 2 from ExactOut to ExactIn with the entire LST bag.
+                # Old ExactOut logic: repay exactly borrow_amount_lamports, profit stays
+                # as residual LST tokens in wallet → can't pay Jito tips in Native SOL
+                # with 0.015 SOL capital (gas tank drain).
+                # New ExactIn logic: sweep ALL LST back to SOL → profit realized in
+                # Native SOL, can safely pay Jito tip.
                 sell_quotes = await self._get_quotes(
-                    lst_mint, SOL_MINT, borrow_amount_lamports, 
-                    wallet_balance_sol=wallet_balance_sol, swap_mode="ExactOut"
+                    lst_mint, SOL_MINT, buy_q.out_amount,  # Full LST bag amount (ExactIn)
+                    wallet_balance_sol=wallet_balance_sol, swap_mode="ExactIn"
                 )
                 if not sell_quotes:
                     continue
 
                 for sell_q in sell_quotes:
-                    # Profit calculation for ExactOut:
-                    # Total LST bought (buy_q.out_amount) - LST needed for repayment (sell_q.in_amount)
-                    # The residual LST is our profit. 
-                    # To calculate SOL profit, we use the buy_q price.
-                    lst_profit = buy_q.out_amount - sell_q.in_amount
+                    # Profit calculation for ExactIn:
+                    # sell_q.out_amount = total SOL returned after selling all LST
+                    # Profit = SOL returned - SOL borrowed (realized in Native SOL)
+                    lst_profit = sell_q.out_amount - borrow_amount_lamports
                     if lst_profit <= 0:
                         continue
                         
-                    # SOL equivalent of profit using actual exchange rate from sell quote
-                    # Fix 35: Use real sell rate (out/in) instead of assuming 1:1 LST:SOL
-                    sell_rate = sell_q.out_amount / max(sell_q.in_amount, 1)  # SOL per LST
-                    profit_sol = lst_profit * sell_rate / 1e9
+                    profit_sol = lst_profit / 1e9  # Already in SOL lamports
                     net_profit = profit_sol - total_fees
                     profit_bps = (lst_profit / buy_q.out_amount) * 10000
 

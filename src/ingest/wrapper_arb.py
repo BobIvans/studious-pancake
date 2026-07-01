@@ -130,21 +130,31 @@ class WrapperPegArb:
 
             expensive_btc_out = int(leg2_quote.get("outAmount", 0))
 
-            # Step 3: Get quote for expensive BTC → USDC (third leg — repay)
+            # Step 3: Get ExactOut quote for expensive BTC → USDC (third leg — repay)
+            # Use ExactOut to guarantee we get exactly usdc_borrow_lamports USDC,
+            # leaving any residual expensive_btc as pure profit.
             leg3_quote = await self._get_jupiter_quote(
                 input_mint=expensive_mint,
                 output_mint=USDC_MINT,
-                amount=expensive_btc_out,
+                amount=usdc_borrow_lamports,
+                swap_mode="ExactOut",
             )
             if not leg3_quote:
                 logger.debug(f"{cheap_label}→{expensive_label}: no leg3 quote")
                 return {"status": "no_quote", "pair": f"{cheap_label}→{expensive_label}"}
 
+            # With ExactOut, outAmount is fixed at usdc_borrow_lamports;
+            # inAmount tells us how much expensive_btc must be spent.
+            expensive_btc_spent = int(leg3_quote.get("inAmount", 0))
             usdc_out = int(leg3_quote.get("outAmount", 0))
+            residual_expensive_btc = expensive_btc_out - expensive_btc_spent
 
-            # Calculate profit: output USDC - borrowed USDC
-            # Divide by 1e6 because USDC has 6 decimals
-            profit_lamports = usdc_out - usdc_borrow_lamports
+            # Profit = residual expensive_btc valued at the swap rate from this quote
+            if residual_expensive_btc > 0 and expensive_btc_spent > 0:
+                rate = usdc_out / expensive_btc_spent
+                profit_lamports = int(residual_expensive_btc * rate)
+            else:
+                profit_lamports = usdc_out - usdc_borrow_lamports
             if profit_lamports <= 0:
                 logger.debug(f"{cheap_label}→{expensive_label}: no profit ({profit_lamports} lamports)")
                 return {
@@ -210,7 +220,7 @@ class WrapperPegArb:
             return {"status": "error", "message": str(e)}
 
     async def _get_jupiter_quote(
-        self, input_mint: str, output_mint: str, amount: int
+        self, input_mint: str, output_mint: str, amount: int, swap_mode: str = "ExactIn"
     ) -> Optional[Dict]:
         """Fetch a quote from Jupiter Quote API."""
         import os
@@ -225,6 +235,7 @@ class WrapperPegArb:
             "onlyDirectRoutes": "false",
             "restrictIntermediateTokens": "false",
             "maxAccounts": "28",
+            "swapMode": swap_mode,
         }
         try:
             timeout = aiohttp.ClientTimeout(total=5.0)

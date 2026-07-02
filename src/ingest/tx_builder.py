@@ -52,7 +52,7 @@ CLOSE_ACCOUNT_DISCRIMINATOR = bytes([0x09])
 # Kamino Lending flashloan discriminators
 KAMINO_PROGRAM_ID = Pubkey.from_string("KLend2g3cP87fffoy8q1mQqGKjrxjC8bojiCLxnsfmk")
 KAMINO_FLASH_BORROW = hashlib.sha256(
-    b"global:flash_borrow_reserve_liquidity"
+    b"global:flash_loan_reserve_liquidity"
 ).digest()[:8]
 KAMINO_FLASH_REPAY = hashlib.sha256(
     b"global:flash_repay_reserve_liquidity"
@@ -645,6 +645,27 @@ class JupiterTxBuilder:
             raise ValueError(f"Unexpected data type in instruction: {type(raw_b64)}")
 
         program_id = Pubkey.from_string(ix_data["programId"])
+
+        # PROTO-012: DEX Program ID Whitelist — prevents RPC/Jupiter poisoning attacks
+        # If a compromised Jupiter API returns SystemProgram.transfer or other
+        # malicious instructions, this guard rejects them before signing.
+        SAFE_DEX_PROGRAMS = {
+            "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",  # Jupiter v6
+            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",  # Raydium AMM v4
+            "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",  # Raydium CPMM
+            "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",  # Orca Whirlpool
+            "LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3",  # Meteora DLMM
+            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  # SPL Token
+            "TokenzQdBNbLqP5VEhfqASPWnGD1x1gUghStfV2hLwx",  # Token-2022
+            "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",  # Associated Token
+            "11111111111111111111111111111111",              # System Program
+            "ComputeBudget111111111111111111111111111111",  # Compute Budget
+            "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",  # MarginFi
+        }
+        str_program_id = str(program_id)
+        if str_program_id not in SAFE_DEX_PROGRAMS:
+            logger.critical(f"🚨 SECURITY BREACH: Jupiter API returned unwhitelisted programId: {str_program_id}. Aborting.")
+            raise ValueError(f"Unwhitelisted programId: {str_program_id}")
 
         READ_ONLY_SYSTEM_IDS = {
             str(TOKEN_PROGRAM_ID),
@@ -1596,6 +1617,17 @@ class JupiterTxBuilder:
                 logger.debug(
                     f"🛡️ FIX 10: Idempotent wSOL ATA ensured for {wallet_pubkey[:8]}"
                 )
+
+                # DEX-009: Transfer 1 lamport to wSOL ATA so sync_native does not revert
+                # on newly created empty accounts.
+                from solders.system_program import transfer as sys_transfer, TransferParams
+                transfer_ix = sys_transfer(TransferParams(
+                    from_pubkey=wallet,
+                    to_pubkey=wsol_ata_pk,
+                    lamports=1
+                ))
+                all_instructions.append(transfer_ix)
+
                 # SyncNative — ensures token program recognises native SOL in the ATA
                 sync_native_ix = sync_native(
                     SyncNativeParams(program_id=TOKEN_PROGRAM_ID, account=wsol_ata_pk)
@@ -1799,15 +1831,14 @@ class JupiterTxBuilder:
         # Find the (possibly new) indices within the sanitized list
         # so the repay_index we pack into borrow_ix.data is 100% correct.
         try:
-            actual_repay_index = next(
-                (
-                    i
-                    for i, ix in enumerate(sanitized)
-                    if ix.program_id == repay_ix.program_id
-                    and ix.data[:8] == MARGINFI_FLASHLOAN_END
-                ),
-                None,
-            )
+            # Search backwards to prevent index hijacking by injected swap instructions
+            actual_repay_index = None
+            for i in range(len(sanitized) - 1, -1, -1):
+                ix = sanitized[i]
+                if ix.program_id == repay_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END:
+                    actual_repay_index = i
+                    break
+
             if actual_repay_index is None:
                 logger.error(
                     "CRITICAL: repay_ix not found in sanitized instruction list"
@@ -1820,16 +1851,14 @@ class JupiterTxBuilder:
             import struct
             from solders.instruction import Instruction
 
-            # Find borrow_ix in the SANITIZED list using generator (Fix 57)
-            new_borrow_idx = next(
-                (
-                    i
-                    for i, ix in enumerate(sanitized)
-                    if ix.program_id == borrow_ix.program_id
-                    and ix.data[:8] == MARGINFI_FLASHLOAN_START
-                ),
-                None,
-            )
+            # Find borrow_ix in the SANITIZED list using backward search (Fix 57 + Index Hijack prevention)
+            new_borrow_idx = None
+            for i in range(len(sanitized) - 1, -1, -1):
+                ix = sanitized[i]
+                if ix.program_id == borrow_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_START:
+                    new_borrow_idx = i
+                    break
+
             if new_borrow_idx is None:
                 logger.error(
                     "CRITICAL: borrow_ix not found in sanitized instruction list"
@@ -2268,15 +2297,14 @@ class JupiterTxBuilder:
             # instruction in the sanitized list.
             import struct
 
-            actual_repay_index = next(
-                (
-                    i
-                    for i, ix in enumerate(sanitized_instructions)
-                    if ix.program_id == repay_ix.program_id
-                    and ix.data[:8] == MARGINFI_FLASHLOAN_END
-                ),
-                None,
-            )
+            # Search backwards to prevent index hijacking by injected swap instructions
+            actual_repay_index = None
+            for i in range(len(sanitized_instructions) - 1, -1, -1):
+                ix = sanitized_instructions[i]
+                if ix.program_id == repay_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END:
+                    actual_repay_index = i
+                    break
+
             if actual_repay_index is None:
                 logger.error(
                     "CRITICAL: repay_ix not found in sanitized instruction list (Fix 63)"
@@ -2319,6 +2347,10 @@ class JupiterTxBuilder:
             logger.debug(
                 f"🛠️ Safe Dynamic Repay Index calculated on sanitized array: {actual_repay_index} (Fix 63)"
             )
+
+            if not validate_cb_ordering(sanitized_instructions, location="build_native_flashloan_tx"):
+                logger.error("CRITICAL: ComputeBudget ordering violated in native flashloan. Aborting.")
+                return None
 
             return {
                 "instructions": sanitized_instructions,

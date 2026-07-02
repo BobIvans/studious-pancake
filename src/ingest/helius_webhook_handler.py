@@ -1,6 +1,7 @@
 """Helius Webhook Handler for Sanctum LST Arbitrage Opportunities."""
 
 import os
+import re
 import hmac
 import hashlib
 import orjson
@@ -183,13 +184,18 @@ class HeliusWebhookHandler:
         # Parse webhook data
         if isinstance(data, list):
             events = data
-            webhook_id = request.query.get('webhook_id', 'unknown')
+            raw_webhook_id = request.query.get('webhook_id', 'unknown')
         elif isinstance(data, dict):
             events = data.get('events', [data])
-            webhook_id = data.get('webhookId') or request.query.get('webhook_id', 'unknown')
-        else:
-            events = []
-            webhook_id = 'unknown'
+            raw_webhook_id = data.get('webhookId') or request.query.get('webhook_id', 'unknown')
+
+        # Sanitize to prevent Log Injection / SQLi
+        webhook_id = re.sub(r'[^a-zA-Z0-9_-]', '', str(raw_webhook_id))[:64]
+
+        # TASK 4.2 (SEC-003): Webhook ID Whitelisting
+        if WebhookConfig.WEBHOOK_IDS and webhook_id not in WebhookConfig.WEBHOOK_IDS:
+            logger.critical(f"🚨 SEC-BREACH: Unrecognized Webhook ID {webhook_id} from {client_ip}")
+            return web.Response(status=403, text='Forbidden: Unknown Webhook ID')
 
         logger.info(f"📡 Authorized Helius webhook accepted: {webhook_id} from {client_ip} ({len(events)} events)")
 
@@ -238,6 +244,14 @@ class HeliusWebhookHandler:
                     event = ev
                     webhook_id = w_id
                 except asyncio.QueueEmpty:
+                    return
+
+            # TASK 4.1 (SEC-002): Webhook Replay Attack Protection
+            event_timestamp = event.get('timestamp')
+            if event_timestamp:
+                age = time.time() - event_timestamp
+                if age > 30.0:
+                    logger.warning(f"🚨 REPLAY ATTACK BLOCKED: Event is {age:.1f}s old. Ignored.")
                     return
 
             # ── ДЕДУПЛИКАЦИЯ (CONC-001 & CONC-012) ────────────────────────────────

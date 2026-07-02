@@ -109,6 +109,7 @@ class DataAggregator:
                 token_in TEXT,
                 token_out TEXT,
                 amount_lamports BIGINT,
+                expected_profit_lamports BIGINT,
                 gross_revenue_lamports BIGINT,
                 flashloan_fee_lamports BIGINT,
                 dex_fee_lamports BIGINT,
@@ -122,14 +123,46 @@ class DataAggregator:
                 net_profit_lamports BIGINT,
                 roi_pct REAL,
                 decision TEXT,
+                sim_success INTEGER DEFAULT 0,
+                sim_error TEXT,
+                quote_age_ms BIGINT,
+                num_new_atas INTEGER DEFAULT 0,
+                signature TEXT,
+                price_impact_pct REAL DEFAULT 0.0,
+                executed INTEGER DEFAULT 1,
                 sol_usd_price REAL DEFAULT 0.0
             )
         """
         )
-        try:
-            cursor.execute("ALTER TABLE paper_trades ADD COLUMN sol_usd_price REAL DEFAULT 0.0")
-        except Exception:
-            pass
+
+        columns_to_add = [
+            ("expected_profit_lamports", "BIGINT"),
+            ("sim_success", "INTEGER DEFAULT 0"),
+            ("sim_error", "TEXT"),
+            ("quote_age_ms", "BIGINT"),
+            ("num_new_atas", "INTEGER DEFAULT 0"),
+            ("signature", "TEXT"),
+            ("price_impact_pct", "REAL DEFAULT 0.0"),
+            ("executed", "INTEGER DEFAULT 1"),
+            ("sol_usd_price", "REAL DEFAULT 0.0"),
+        ]
+        for col_name, col_type in columns_to_add:
+            try:
+                cursor.execute(
+                    f"ALTER TABLE paper_trades ADD COLUMN {col_name} {col_type};"
+                )
+            except Exception:
+                pass
+
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_paper_trades_ts ON paper_trades(ts)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_paper_trades_route ON paper_trades(route)"
+        )
+        cursor.execute(
+            "CREATE INDEX IF NOT EXISTS idx_paper_trades_executed ON paper_trades(executed)"
+        )
 
         # Phase 49: In-Flight Bundle Tracking table
         cursor.execute(
@@ -751,13 +784,15 @@ class DataAggregator:
                     """
                     INSERT INTO paper_trades (
                         ts, slot, blockhash, route, token_in, token_out,
-                        amount_lamports, gross_revenue_lamports, flashloan_fee_lamports,
-                        dex_fee_lamports, slippage_bps, compute_cost_lamports,
-                        network_fee_lamports, priority_fee_lamports, jito_tip_lamports,
-                        ata_rent_lamports, total_cost_lamports, net_profit_lamports,
-                        roi_pct, decision, sol_usd_price
+                        amount_lamports, expected_profit_lamports, gross_revenue_lamports,
+                        flashloan_fee_lamports, dex_fee_lamports, slippage_bps,
+                        compute_cost_lamports, network_fee_lamports, priority_fee_lamports,
+                        jito_tip_lamports, ata_rent_lamports, total_cost_lamports,
+                        net_profit_lamports, roi_pct, decision, sim_success, sim_error,
+                        quote_age_ms, num_new_atas, signature, price_impact_pct,
+                        executed, sol_usd_price
                     ) VALUES (
-                        datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                     )
                 """,
                     (
@@ -767,6 +802,7 @@ class DataAggregator:
                         trade_data.get("token_in"),
                         trade_data.get("token_out"),
                         trade_data.get("amount_lamports"),
+                        trade_data.get("expected_profit_lamports"),
                         trade_data.get("gross_revenue_lamports"),
                         trade_data.get("flashloan_fee_lamports"),
                         trade_data.get("dex_fee_lamports"),
@@ -780,6 +816,13 @@ class DataAggregator:
                         trade_data.get("net_profit_lamports"),
                         trade_data.get("roi_pct"),
                         trade_data.get("decision"),
+                        trade_data.get("sim_success"),
+                        trade_data.get("sim_error"),
+                        trade_data.get("quote_age_ms"),
+                        trade_data.get("num_new_atas"),
+                        trade_data.get("signature"),
+                        trade_data.get("price_impact_pct"),
+                        trade_data.get("executed", 1),
                         trade_data.get("sol_usd_price", 0.0),
                     ),
                 )

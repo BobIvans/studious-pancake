@@ -146,13 +146,14 @@ class PaperTrader:
         sell_price_impact = sell.get("priceImpactPct", 0.0) if sell else 0.0
         combined_impact_pct = max(buy_price_impact, sell_price_impact)
         fee_bps = sell.get("feeBps", 0) if sell else 0
-        dex_fee_pct = (fee_bps / 10000.0) if fee_bps else (0.0004 if combined_impact_pct < 0.005 else 0.01)
-
-        dex_fee_sol = (amount * dex_fee_pct) / 1e9
         _usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
         _usdt_mint = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
         _is_stable_6dec = base_mint.endswith(_usdc_mint) or base_mint.endswith(_usdt_mint)
         _base_dec = 6 if _is_stable_6dec else 9
+
+        dex_fee_pct = (fee_bps / 10000.0) if fee_bps else (0.0004 if combined_impact_pct < 0.005 else 0.01)
+        amount_ui = amount / (10 ** _base_dec)
+        dex_fee_sol = amount_ui * dex_fee_pct
 
         gross_profit_native = final_amount - amount  # in token native units (e.g. USDC micro-units)
 
@@ -192,6 +193,7 @@ class PaperTrader:
                 "token_in": base_mint,
                 "token_out": target_mint,
                 "amount_lamports": amount,
+                "expected_profit_lamports": int((net_profit_sol + total_fees_sol) * 1e9),
                 "gross_revenue_lamports": final_amount,
                 "flashloan_fee_lamports": int(flashloan_fee_sol * 1e9),
                 "dex_fee_lamports": int(dex_fee_sol * 1e9),
@@ -204,6 +206,9 @@ class PaperTrader:
                 "net_profit_lamports": net_profit_lamports,
                 "roi_pct": roi_pct,
                 "decision": decision,
+                "executed": 1 if decision == "EXECUTE" else 0,
+                "sim_success": 1 if net_profit_sol > 0 else 0,
+                "price_impact_pct": combined_impact_pct,
                 "sol_usd_price": sol_price,
             }
             await self.aggregator.log_paper_trade(trade_data)

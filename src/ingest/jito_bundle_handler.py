@@ -647,11 +647,22 @@ class JitoBundleHandler:
                     url = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
                     async with session.get(url, timeout=3.0) as resp:
                         if resp.status == 200:
-                            accounts = await resp.json()
+                            accounts_data = await resp.json()
+                            accounts = []
+                            if isinstance(accounts_data, list):
+                                accounts = accounts_data
+                            elif isinstance(accounts_data, dict):
+                                if "value" in accounts_data:
+                                    accounts = accounts_data["value"]
+                                elif "result" in accounts_data:
+                                    accounts = accounts_data["result"]
+                                    if isinstance(accounts, dict) and "value" in accounts:
+                                        accounts = accounts["value"]
+                                        
                             if accounts and isinstance(accounts, list):
                                 self.jito_tip_accounts = accounts
                                 logger.info(
-                                    f"🔄 Fetched {len(accounts)} live tip accounts"
+                                    f"🔄 {self.__class__.__name__}: Fetched {len(accounts)} live tip accounts"
                                 )
             except Exception as e:
                 logger.warning(f"Live tip account fetch failed: {e}")

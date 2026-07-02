@@ -322,7 +322,7 @@ class ExecutionRouter:
                 logger.warning("⏰ Bundle ghosting timeout - transaction stuck, releasing lock")
                 self.execution_guard.record_failure()
                 # Mark as timeout error but don't block the queue
-                return {"status": "timeout", "message": "Bundle stuck - timeout after 2.0s"}
+                return {"status": "timeout", "message": "Bundle stuck - timeout after 5.0s"}
 
         except asyncio.QueueFull:
             logger.error("Execution queue is full - dropping transaction to prevent deadlock")

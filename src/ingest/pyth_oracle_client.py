@@ -198,8 +198,13 @@ class PythHermesClient:
 
         while self.running:
             try:
-                feed_ids = [v["feed_id"] for k, v in PYTH_FEEDS.items()
-                           if isinstance(v, dict) and v.get("feed_id")]
+                from src.config.addresses import PYTH_FEEDS, PYTH_CORE_FEEDS
+                all_feeds = {**PYTH_FEEDS, **PYTH_CORE_FEEDS}
+                feed_ids = [
+                    v["feed_id"]
+                    for k, v in all_feeds.items()
+                    if isinstance(v, dict) and v.get("feed_id")
+                ]
 
                 params = {"ids[]": feed_ids}
                 async with self.session.get(

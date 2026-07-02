@@ -1722,7 +1722,7 @@ async def balance_reconciler(
             # 2. Subtract pending Jito bundle deductions (lamports already reserved but unconfirmed)
             pending_lamports = 0
             try:
-                for meta in jito_exec_ref.pending_bundles.values():
+                for meta in list(jito_exec_ref.pending_bundles.values()):
                     pending_lamports += int(meta.get("deducted", 0.0) * 1e9)
             except Exception:
                 pass
@@ -4128,7 +4128,7 @@ async def check_bundle_confirmation(
     """Check bundle confirmation asynchronously without blocking."""
     try:
         confirmation = await jito_executor.wait_for_confirmation(
-            bundle_id, max_wait_time=0.8
+            bundle_id, max_wait_time=4.0
         )
         if confirmation.get("status") == "failed":
             logger.error(f"❌ ТРЕЙД УПАЛ (Bundle Failed): {confirmation}")
@@ -6472,7 +6472,7 @@ async def run():
 
     tasks = [
         asyncio.create_task(update_prices(session, cfg)),
-        # asyncio.create_task(blockhash_updater(session, lambda: rpc.get_rpc())),
+        asyncio.create_task(blockhash_updater(session, lambda: rpc.get_rpc())),
         # DISABLED: stable_scanner — RPS-heavy polling (Helius 429 prevention)
         # asyncio.create_task(stable_scanner(queue, cfg)),        # Fast stables (1.5s)
         asyncio.create_task(lst_scanner(queue, cfg)),  # Loop B: LST arbitrage (2.0s)

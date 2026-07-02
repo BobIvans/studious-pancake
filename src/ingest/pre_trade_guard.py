@@ -9,6 +9,7 @@ from typing import Optional, Dict, Any, Tuple
 import aiohttp
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYSTEM_PROGRAM_ID
+from src.ingest.flywheel_scaler import DynamicThresholds
 
 logger = logging.getLogger(__name__)
 
@@ -461,6 +462,10 @@ class LiquidityValidator:
 class PreTradeGuard:
     """Orchestrates pre-trade security and liquidity checks."""
 
+    _shared_pool_fail_counter: Dict[str, int] = {}
+    _shared_blacklisted_pools: Dict[str, float] = {}
+    _shared_blacklist_duration: int = 3600
+
     def __init__(
         self,
         session: Optional[aiohttp.ClientSession] = None,
@@ -470,9 +475,18 @@ class PreTradeGuard:
         self.rpc_url = rpc_url
         self.security_checker = TokenSecurityChecker(session, rpc_url)
         self.liquidity_validator = LiquidityValidator(session, rpc_url)
-        self.pool_fail_counter: Dict[str, int] = {}
-        self.blacklisted_pools: Dict[str, float] = {}
-        self.blacklist_duration = 3600  # 1 hour
+
+    @property
+    def pool_fail_counter(self) -> Dict[str, int]:
+        return self.__class__._shared_pool_fail_counter
+
+    @property
+    def blacklisted_pools(self) -> Dict[str, float]:
+        return self.__class__._shared_blacklisted_pools
+
+    @property
+    def blacklist_duration(self) -> int:
+        return self.__class__._shared_blacklist_duration
 
     def record_failure(self, pool_id: str):
         """Record a trade failure for a pool."""

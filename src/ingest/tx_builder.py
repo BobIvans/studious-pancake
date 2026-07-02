@@ -1993,12 +1993,12 @@ class JupiterTxBuilder:
                 and len(ix.accounts) >= 2
             ):
                 ata_pubkey = str(ix.accounts[1].pubkey)
-                    if ata_pubkey in seen_atas:
-                        logger.debug(
-                            f"✂️ Deduplicated ATA creation for {ata_pubkey[:8]}"
-                        )
-                        continue
-                    seen_atas.add(ata_pubkey)
+                if ata_pubkey in seen_atas:
+                    logger.debug(
+                        f"✂️ Deduplicated ATA creation for {ata_pubkey[:8]}"
+                    )
+                    continue
+                seen_atas.add(ata_pubkey)
             # FIX 1 (Golden ATA Protection): NEVER close wSOL or USDC ATAs.
             # Jupiter's cleanupInstruction or our own sanitize must NEVER touch these.
             if str(ix.program_id) == "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA":

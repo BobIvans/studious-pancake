@@ -224,6 +224,26 @@ class BlockhashRacingManager:
             self.last_update_time = time.time()
             self.successful_races += 1
 
+            try:
+                payload_slot = {
+                    "jsonrpc": "2.0", "id": 1,
+                    "method": "getSlot",
+                    "params": [{"commitment": "confirmed"}],
+                }
+                timeout = aiohttp.ClientTimeout(total=1.0)
+                async with self.session.post(
+                    self.rpc_endpoints[0], json=payload_slot, timeout=timeout
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        current_slot = data.get("result")
+                if current_slot is not None:
+                    shared_state.stats["current_slot"] = current_slot
+                    shared_state.stats["_sg_last_slot"] = current_slot
+                    shared_state.stats["_sg_last_slot_ts"] = time.time()
+            except Exception:
+                pass
+
             response_time = (time.time() - start_time) * 1000  # ms
             self.avg_response_time = (self.avg_response_time + response_time) / 2
 

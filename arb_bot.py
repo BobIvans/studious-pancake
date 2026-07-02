@@ -152,6 +152,11 @@ _pair_reputation = PairReputationCircuitBreaker(
 WSOL_JUST_CLOSED_ATOMICALLY: float = 0.0
 WSOL_CLOSE_COOLDOWN: float = 60.0  # seconds — any recent atomic close is authoritative
 
+# Phase 19 T2: Deferred refund queue for timed-out bundles
+# Place bundle here instead of instantly refunding virtual_balance.
+# The balance_reconciler (runs every 30s) catches late landings.
+RECENTLY_TIMED_OUT_BUNDLES: Dict[str, dict] = {}
+
 # Import Jito client
 try:
     from src.ingest.jito_bundle_client import JitoBundleClient
@@ -1753,6 +1758,44 @@ async def balance_reconciler(
 
 
 # ── Fix 2: Pair-level reputation guard functions ────────────────────────────
+
+
+# =============================================================================
+# Phase 19 T2: Deferred Timeout Refund — Grace Period for Late Bundle Landings
+# =============================================================================
+async def _monitor_timed_out_bundles(grace_period: float = 15.0) -> None:
+    """
+    Background task that waits for the grace period, then refunds virtual_balance
+    for bundles that truly expired.  The balance_reconciler (every 30s) catches
+    late landings during this window, so we don't need Jito polling here.
+    """
+    global RECENTLY_TIMED_OUT_BUNDLES
+    if not RECENTLY_TIMED_OUT_BUNDLES:
+        return
+
+    await asyncio.sleep(grace_period)
+
+    for bundle_id, meta in list(RECENTLY_TIMED_OUT_BUNDLES.items()):
+        vid = meta["virtual_balance_to_deduct"]
+        async with shared_state.stats_lock:
+            shared_state.stats["virtual_balance"] += vid
+
+        jito_exec = meta.get("jito_executor_ref")
+        if jito_exec:
+            try:
+                jito_exec._cancel_pending(bundle_id)
+            except Exception:
+                pass
+
+        if shared_state.capital_protection and vid > 0:
+            shared_state.capital_protection.record_trade(-vid)
+
+        logger.info(
+            f"♻️ Deferred Reconciler: Refunded {vid:.6f} SOL for expired bundle {bundle_id}. "
+            f"Bundle did not land within {grace_period}s grace period."
+        )
+
+        RECENTLY_TIMED_OUT_BUNDLES.pop(bundle_id, None)
 def is_pair_allowed(pair_key: str) -> bool:
     """Check if a pair is allowed to trade.
     Delegates to module-level _pair_reputation."""
@@ -4093,14 +4136,21 @@ async def check_bundle_confirmation(
 
             # ♻️ 0ms Reconciler: Instantly refund virtual balance on failure
             if virtual_balance_to_deduct > 0:
-                async with shared_state.stats_lock:
-                    shared_state.stats["virtual_balance"] += virtual_balance_to_deduct
-                # 🚨 ATOMIC REFUND FIX: Cancel pending in Jito to prevent double-refund loop
-                if jito_executor:
-                    jito_executor._cancel_pending(bundle_id)
+                # Phase 19 T2: Deferred refund — don't instantly refund.
+                # Queue the bundle for 15s grace period. The balance_reconciler
+                # (runs every 30s) will catch late landings and adjust accordingly.
+                RECENTLY_TIMED_OUT_BUNDLES[bundle_id] = {
+                    "virtual_balance_to_deduct": virtual_balance_to_deduct,
+                    "timed_out_at": time.time(),
+                    "jito_executor_ref": jito_executor,
+                }
                 logger.info(
-                    f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored."
+                    f"♻️ Deferred Reconciler: {bundle_id} queued for 15s grace. "
+                    f"Virtual balance NOT refunded yet ({virtual_balance_to_deduct:.6f} SOL at risk)."
                 )
+                # Spawn background task to process the deferred refund
+                task = asyncio.create_task(_monitor_timed_out_bundles())
+                shared_state.retain_background_task(task)
 
             # ── Этап 2: Record loss in CapitalProtection ──────────────────────
             if shared_state.capital_protection and virtual_balance_to_deduct > 0:

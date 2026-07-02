@@ -334,6 +334,11 @@ class DustSweeper:
             if ui_amount == 0 or raw_amount <= 100:
                 return True
 
+            # Phase 19: TransferHook protection — skip burn for Token-2022 with hooks
+            if self._is_transfer_hook_token(mint):
+                logger.debug(f"Phase 19: Skipping burn for {mint[:8]}: TransferHook active")
+                return False
+
             # P0-13: USD value check — only sweep if < $1.00
             usd_price = None
             try:
@@ -566,6 +571,18 @@ class DustSweeper:
 
         # Fallback
         return Hash.from_string("11111111111111111111111111111111")
+
+    def _is_transfer_hook_token(self, mint: str) -> bool:
+        """Phase 19: Check if mint has TransferHook extension.
+        Token-2022 Transfer Hooks require extra metadata accounts that static
+        burn instructions do not provide, causing MissingRequiredSignature errors.
+        """
+        known_hook_mints = {
+            "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL
+            "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL
+            "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",  # INF
+        }
+        return mint in known_hook_mints
 
     def get_dust_stats(self) -> Dict[str, Any]:
         """Get statistics about dust sweeping."""

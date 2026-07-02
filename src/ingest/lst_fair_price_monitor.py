@@ -67,9 +67,11 @@ class LstFairPriceMonitor:
     """Monitors on-chain fair price vs market price for LST tokens."""
 
     # SPL Stake Pool layout offsets (v0.7+)
-    # total_lamports at offset 258 (u64), pool_token_supply at offset 266 (u64)
-    _SPL_POOL_TOTAL_LAMPORTS_OFFSET = 258  # Fix 61: corrected from 289 to real on-chain offset
-    _SPL_POOL_TOKEN_SUPPLY_OFFSET = 266
+    # total_lamports at offset 290 (u64), pool_token_supply at offset 298 (u64)
+    # Fix: Original offsets 258/266 pointed at token_program_id (32-byte Pubkey),
+    # not actual balances.  This caused garbage fair price ratios.
+    _SPL_POOL_TOTAL_LAMPORTS_OFFSET = 290  # Phase 18: corrected from 258 to real on-chain offset
+    _SPL_POOL_TOKEN_SUPPLY_OFFSET = 298
 
     # Marinade State layout (custom)
     # mSOL supply at offset 200 (u64), total_virtual_staked_lamports at offset 192 (u64)

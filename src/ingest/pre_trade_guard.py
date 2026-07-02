@@ -104,7 +104,7 @@ class TokenSecurityChecker:
                 "id": 1,
                 "method": "getAccountInfo",
                 "params": [
-                    mint_address,
+                    str(mint_address),  # Phase 18: str() cast prevents JSON serialization crash for Pubkey objects
                     {"encoding": "base64", "commitment": "confirmed"},
                 ],
             }

@@ -154,6 +154,15 @@ ATA_CACHE: set = set()
 def initialize_shared_state():
     global execution_lock, marginfi_account_lock, stats_lock, GLOBAL_STOP_EVENT
     global ata_cache_lock, wsol_state_lock, marginfi_init_lock
+    # Phase 19: Safety check — asyncio.Lock()/Event() must be created inside a running event loop
+    # to avoid binding to a dummy loop (Python 3.10+), which causes future await calls to hang.
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError as e:
+        raise RuntimeError(
+            f"initialize_shared_state() called outside a running event loop: {e}. "
+            "Call this function inside async def run() after the event loop is active."
+        ) from e
     execution_lock = asyncio.Lock()
     marginfi_account_lock = asyncio.Lock()
     stats_lock = asyncio.Lock()

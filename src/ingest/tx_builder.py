@@ -1417,8 +1417,12 @@ class JupiterTxBuilder:
             user_sol_ata = get_associated_token_address(wallet, sol_mint)
 
             # Calculate repay index: [cu_limit] + [borrow, withdraw] + swaps + [repay, end]
-            # repay_index points to end_ix (MARGINFI_FLASHLOAN_END discriminator)
-            repay_index = 1 + 2 + len(arbitrage_instructions) + 1  # end_ix is last
+            # Phase 18: repay_index MUST point to repay_ix (end_index - 1), NOT end_ix
+            # MarginFi v2 introspection expects repay_index to point to the Repay instruction,
+            # not the EndFlashloan instruction.  Pointing to end_ix causes the program to parse
+            # the end-flashloan discriminator as a repay discriminator, failing with
+            # FlashloanIntrospectionFailed (Error 6000+).
+            repay_index = 1 + 2 + len(arbitrage_instructions) + 1  # end_ix is last (repay_index points to repay_ix = end_ix - 1)
 
             # Borrow instruction (Flashloan Start) - 9 accounts per MarginFi v2 IDL
             borrow_ix = self.build_marginfi_start_flashloan_ix(
@@ -1698,7 +1702,7 @@ class JupiterTxBuilder:
             fee_payer=wallet,
             bank_index=0,
             amount=borrow_amount_lamports,
-            repay_index=end_index,
+            repay_index=end_index - 1,
         )
         all_instructions.append(borrow_ix)
 
@@ -1751,7 +1755,7 @@ class JupiterTxBuilder:
             token_program=sol_prog_id,
             instructions_sysvar=INSTRUCTIONS_SYSVAR,
             signer=wallet,
-            repay_index=end_index,
+            repay_index=end_index - 1,
         )
         all_instructions.append(end_ix)
 

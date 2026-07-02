@@ -294,6 +294,8 @@ class JitoBiddingManager:
         expected_profit_sol: float,
         strategy: str = "blue_ocean",
         current_native_sol_balance: Optional[float] = None,
+        target_mint_str: str = "So11111111111111111111111111111111111111112",  # Phase 19: mint for cross-currency normalization
+        price_matrix: Optional[Dict[str, tuple]] = None,  # Phase 19: price matrix for USD conversion
     ) -> int:
         """
         Blue Ocean Tip Strategy: 40% of Expected Net Profit with Tip Floor Filter.
@@ -318,6 +320,25 @@ class JitoBiddingManager:
         """
         if expected_profit_sol <= 0:
             return 0
+
+        # Phase 19: Cross-currency normalization — prevent tip suicide for non-SOL profits
+        sol_mint = "So11111111111111111111111111111111111111112"
+        profit_sol = expected_profit_sol
+        if target_mint_str != sol_mint and price_matrix:
+            try:
+                sol_entry = price_matrix.get(sol_mint)
+                sol_usd = sol_entry[0] if sol_entry else 150.0
+                token_entry = price_matrix.get(target_mint_str)
+                if token_entry and token_entry[0] > 0:
+                    profit_sol = (expected_profit_sol * token_entry[0]) / sol_usd
+                    logger.debug(
+                        f"🔄 JitoBiddingManager normalized profit {expected_profit_sol:.6f} "
+                        f"{target_mint_str[:8]} → {profit_sol:.6f} SOL"
+                    )
+            except Exception as e:
+                logger.warning(f"JitoBiddingManager normalization failed: {e}")
+        # Replace expected_profit_sol with normalized value for all subsequent calculations
+        expected_profit_sol = profit_sol
 
         # ── Task 4: Logarithmic Jito Tip (Tapering Curve) ──────────────────
         # Taper tip % as profit increases to prevent excessive overpayment.

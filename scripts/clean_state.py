@@ -99,9 +99,11 @@ def main():
     logger.info("\n📄 Step 2: Removing .jsonl files...")
     clean_jsonl_files()
 
-    # 3. Clean databases
+    # 3. Clean databases (Fix: clean all database environments)
     logger.info("\n🗄️ Step 3: Cleaning databases...")
     clean_database("bot_history.db")
+    clean_database("paper_trading.db")
+    clean_database("test.db")
 
     logger.info("\n✅ Clean State complete - Bot is ready for fresh deployment.")
 

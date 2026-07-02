@@ -5,8 +5,8 @@ High-frequency MEV arbitrage bot on Solana utilizing MarginFi flash loans and Ji
 
 ## Operational Constraints
 - **Current Working Capital:** 0.015 SOL (Survival Phase)
-- **Minimum Reserve (Gas/Rent):** 0.010 SOL (`MIN_RESERVE_SOL`)
-- **Maneuver Budget:** 0.005 SOL (Available for Jito tips and ATA rent)
+- **Minimum Reserve (Gas/Rent):** 0.003 - 0.005 SOL (Configured via `MIN_RESERVE_SOL` in `.env`)
+- **Maneuver Budget:** 0.010 - 0.012 SOL (Dynamic, available for Jito tips and ATA rent)
 
 ## Critical Formats
 - **MarginFi Account:** Base58 Solana Pubkey (32-44 alphanumeric characters).

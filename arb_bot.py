@@ -1790,6 +1790,14 @@ async def _monitor_timed_out_bundles(grace_period: float = 15.0) -> None:
         if shared_state.capital_protection and vid > 0:
             shared_state.capital_protection.record_trade(-vid)
 
+        # Phase 22 T3: Reset WSOL atomic close flag on bundle failure
+        # If the bundle that timed out contained a wSOL close instruction,
+        # the wallet_balance_listener was blocked from unwrapping for 60s.
+        # Reset now so it can recover gas immediately.
+        if shared_state.WSOL_JUST_CLOSED_ATOMICALLY > 0:
+            shared_state.WSOL_JUST_CLOSED_ATOMICALLY = 0.0
+            logger.debug(f"♻️ Phase 22: Reset WSOL_JUST_CLOSED_ATOMICALLY after bundle timeout")
+
         logger.info(
             f"♻️ Deferred Reconciler: Refunded {vid:.6f} SOL for expired bundle {bundle_id}. "
             f"Bundle did not land within {grace_period}s grace period."
@@ -3666,7 +3674,7 @@ async def lst_depeg_scanner(
                             )
                             continue
 
-                        shared_state.stats["bundle_send_attempts"] += 1
+                        await shared_state.increment_stat("bundle_send_attempts")
 
                         # ── Fix "Blocking Discovery": Fire-and-Forget Execution ──────────
                         # send_bundle itself is ~200ms, wait_for_confirmation wall-clock is up to 30 s.
@@ -3682,8 +3690,8 @@ async def lst_depeg_scanner(
                             if not b_result.get("success"):
                                 return
 
-                            shared_state.stats["bundle_successes"] += 1
-                            shared_state.stats["trades"] += 1
+                            await shared_state.increment_stat("bundle_successes")
+                            await shared_state.increment_stat("trades")
                             bundle_id = b_result.get("bundle_id", "")
 
                             # ── Async trade record (no blocking write) ─────────────────
@@ -3874,12 +3882,12 @@ async def lst_unstake_arbitrage_scanner(
                 )
 
                 if success:
-                    shared_state.stats["trades"] += 1
+                    await shared_state.increment_stat("trades")
                     logger.info(
                         f"✅ LST unstake arbitrage successful | profit={expected_profit_sol:.6f} SOL"
                     )
                 else:
-                    shared_state.stats["sim_fails"] += 1
+                    await shared_state.increment_stat("sim_fails")
                     record_sim_failure("lst_unstake")
                     logger.warning("❌ LST unstake arbitrage failed")
 
@@ -3959,7 +3967,7 @@ async def wrapper_peg_scanner(
             result = await wrapper_arb.scan_and_execute(borrow_usdc_lamports)
             trades = result.get("trades", [])
             if trades:
-                shared_state.stats["trades"] += len(trades)
+                await shared_state.increment_stat("trades", len(trades))
                 logger.info(f"💰 Wrapper Peg: {len(trades)} trade(s) executed")
 
         except Exception as e:

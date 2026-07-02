@@ -218,9 +218,13 @@ class JitoBundleClient:
         if not self.session:
             return {"success": False, "error": "No session"}
         try:
+            import orjson
+            raw_body = orjson.dumps(payload)
             headers = {"Content-Type": "application/json"}
+            # Phase 22: Explicit Content-Length prevents HTTP 411 Length Required from strict CDN/WAF
+            headers["Content-Length"] = str(len(raw_body))
 
-            async with self.session.post(url, json=payload, headers=headers, timeout=2.0) as resp:
+            async with self.session.post(url, data=raw_body, headers=headers, timeout=2.0) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     if "result" in data:

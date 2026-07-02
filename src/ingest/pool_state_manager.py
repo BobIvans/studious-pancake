@@ -278,13 +278,25 @@ class PoolStateManager:
             for addr in self.wss_pools:
                 self.grpc_stream.register_account_callback(addr, _handler)
 
-            # Connect the gRPC stream
-            await self.grpc_stream.connect()
-            logger.info(
-                f"PoolStateManager ▶ Yellowstone gRPC: "
-                f"{len(self.grpc_stream.account_callbacks)} accounts subscribed"
-            )
-            return
+            # Connect the gRPC stream with fallback
+            # Phase 22: If gRPC fails (e.g. free-tier API key), fall back to WebSocket
+            try:
+                await self.grpc_stream.connect()
+            except Exception as grpc_err:
+                logger.critical(
+                    f"⚠️ Phase 22: gRPC stream connection failed: {grpc_err}. "
+                    f"Falling back to WebSocket path to keep bot alive."
+                )
+                self.grpc_stream = None
+
+            if self.grpc_stream is not None:
+                logger.info(
+                    f"PoolStateManager ▶ Yellowstone gRPC: "
+                    f"{len(self.grpc_stream.account_callbacks)} accounts subscribed"
+                )
+                return
+
+            # Phase 22: If gRPC is None here, fall through to WebSocket path below
 
         # ── WebSocket fallback ───────────────────────────────────────────────────
         logger.info("PoolStateManager ▶ WebSocket fallback path (gRPC not configured)")

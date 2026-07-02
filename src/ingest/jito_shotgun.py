@@ -209,6 +209,10 @@ class JitoShotgun:
 
             # Phase 14: Conditional Auth Headers (Jito vs bloXroute)
             headers = {"Content-Type": "application/json"}
+            import orjson
+            raw_body = orjson.dumps(payload)
+            # Phase 22: Explicit Content-Length prevents HTTP 411 Length Required from strict CDN/WAF
+            headers["Content-Length"] = str(len(raw_body))
             if "blxrbdn.com" in endpoint:
                 # bloXroute authorization: <token> format
                 blx_token = os.getenv("BLOXROUTE_TOKEN")
@@ -219,7 +223,7 @@ class JitoShotgun:
                 headers["Authorization"] = f"Bearer {self.auth_key}"
 
             # Short timeout for HFT - better miss one endpoint than lose arbitrage window
-            async with self.session.post(url, json=payload, headers=headers, timeout=0.5) as resp:
+            async with self.session.post(url, data=raw_body, headers=headers, timeout=0.5) as resp:
                 if resp.status == 200:
                     return await resp.json()
                 else:

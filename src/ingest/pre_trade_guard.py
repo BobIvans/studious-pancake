@@ -596,6 +596,10 @@ class PreTradeGuard:
                         # Offset within extension value: 32 + 32 + 8 + 18 + 16 = 106
                         if ext_len >= 108:
                             bps_offset = offset + 4 + 106
+                            # Phase 22: Bounds check — prevent IndexError on truncated RPC response
+                            if bps_offset + 2 > len(raw_data):
+                                logger.warning(f"Phase 22: Truncated Token-2022 account data for {mint_address} — skipping fee check")
+                                break
                             fee_bps = struct.unpack(
                                 "<H", raw_data[bps_offset : bps_offset + 2]
                             )[0]

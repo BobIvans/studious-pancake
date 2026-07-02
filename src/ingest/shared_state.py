@@ -192,6 +192,20 @@ def append_latency(value: float) -> None:
     latencies.append(value)
 
 
+# Phase 22 T4: Thread-safe stats increment helper
+async def increment_stat(key: str, amount: int = 1) -> None:
+    """Increment a numeric stat counter atomically under stats_lock.
+    
+    Prevents read-modify-write race conditions when multiple async tasks
+    mutate shared_state.stats concurrently (e.g. stats["trades"] += 1).
+    """
+    async with stats_lock:
+        if key in stats and isinstance(stats[key], (int, float)):
+            stats[key] += amount
+        else:
+            stats[key] = amount
+
+
 def mark_wsol_atomically_closed():
     global WSOL_JUST_CLOSED_ATOMICALLY
     WSOL_JUST_CLOSED_ATOMICALLY = time.time()

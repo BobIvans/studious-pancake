@@ -193,9 +193,6 @@ class HeliusWebhookHandler:
 
         logger.info(f"📡 Authorized Helius webhook accepted: {webhook_id} from {client_ip} ({len(events)} events)")
 
-        if not hasattr(self, '_sem'):
-            self._sem = asyncio.Semaphore(10)
-        
         async with self._sem:
             try:
                 for event in events:

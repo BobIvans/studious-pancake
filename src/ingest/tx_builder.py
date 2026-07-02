@@ -65,6 +65,9 @@ KAMINO_FLASH_REPAY = hashlib.sha256(
 # Structure: {id(instruction): injected_count}
 _REMAINING_ACCOUNTS_REGISTRY: Dict[int, int] = {}
 
+# Jupiter v6 and Raydium AMM v4 program IDs
+JUPITER_V6_PROGRAM_ID = Pubkey.from_string("JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4")  # True Jupiter v6
+RAYDIUM_AMM_V4_PROGRAM_ID = Pubkey.from_string("675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8")  # Raydium AMM v4
 COMPUTE_BUDGET_PROGRAM_ID = Pubkey.from_string(
     "ComputeBudget111111111111111111111111111111"
 )
@@ -435,7 +438,7 @@ class JupiterTxBuilder:
         address_lookup_tables: List,
         payer: Pubkey,
         recent_blockhash: str,
-        program_id: str = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",  # Jupiter v6 program ID
+        program_id: str = str(JUPITER_V6_PROGRAM_ID),
         operation_type: str = "swap",
         use_jito: bool = False,
         rpc_url: Optional[str] = None,
@@ -652,7 +655,7 @@ class JupiterTxBuilder:
             "Sysvar1nstructions1111111111111111111111111",  # Instructions Sysvar
             "SysvarRent111111111111111111111111111111111",  # Rent Sysvar
             "SysvarC1ock111111111111111111111111111111111",  # Clock Sysvar
-            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",  # Jupiter v6
+            str(RAYDIUM_AMM_V4_PROGRAM_ID),  # Raydium AMM v4
         }
 
         accounts = []
@@ -1081,16 +1084,12 @@ class JupiterTxBuilder:
         max_depth = 1  # Base level
 
         for ix in instructions:
-            # Jupiter swaps can have nested CPI calls
-            if "Jupiter" in str(
-                ix.program_id
-            ) or "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8" in str(ix.program_id):
-                max_depth = max(max_depth, 3)  # Jupiter can go 2-3 levels deep
-            # Raydium/Orca AMM calls
+            if JUPITER_V6_PROGRAM_ID in str(ix.program_id):
+                max_depth = max(max_depth, 3)
             elif any(
                 pid in str(ix.program_id)
                 for pid in [
-                    "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
+                    RAYDIUM_AMM_V4_PROGRAM_ID,
                     "9W959DqEETiGZocYWCQPaJ6sBmUzgfxXfqGeTEdp3aQP",
                 ]
             ):
@@ -1780,7 +1779,7 @@ class JupiterTxBuilder:
                 # The instruction was tagged with remaining_accounts — check
                 # that the extra accounts weren't stripped during sanitize.
                 # We can only approximate: count the Jupiter program accounts.
-                _jup_prog = "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+                _jup_prog = str(JUPITER_V6_PROGRAM_ID)
                 if str(_ix.program_id) == _jup_prog and len(_ix.accounts) < 20:
                     # Jupiter swaps typically have 15-25 accounts.
                     # < 20 after expecting rem_accounts means some were lost.
@@ -1922,7 +1921,7 @@ class JupiterTxBuilder:
             "Sysvar1nstructions1111111111111111111111111",  # Instructions Sysvar
             "SysvarRent111111111111111111111111111111111",  # Rent Sysvar
             "SysvarC1ock111111111111111111111111111111111",  # Clock Sysvar
-            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",  # Jupiter v6
+            str(RAYDIUM_AMM_V4_PROGRAM_ID),  # Raydium AMM v4
         }
 
         for ix in instructions:

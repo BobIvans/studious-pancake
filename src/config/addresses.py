@@ -157,7 +157,6 @@ XSTOCK_MINTS = {
     "USDe": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
     "sUSDe": "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
     "sUSDS": "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",
-    "USD+": "B7vF87HGPJLcQwPhNn8apCH5n1E4DfRrG8HYXoS9dPEo",
     "JupUSD": "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",
 }
 

@@ -34,32 +34,25 @@ def run_simulation_test():
         return False
 
 def check_code_syntax():
-    """Check Python syntax of main files"""
+    """Check Python syntax of all source files"""
     print("🧪 Checking Python syntax...")
-    files_to_check = [
-        "arb_bot.py",
-        "paper_trader.py",
-        "src/ingest/tx_builder.py",
-        "src/ingest/jito_bundle_client.py"
-    ]
+    src_root = Path(__file__).parent.parent / "src"
+    files_to_check = sorted(str(p) for p in src_root.rglob("*.py"))
 
     all_good = True
     for file_path in files_to_check:
-        if os.path.exists(file_path):
-            try:
-                result = subprocess.run([
-                    sys.executable, "-m", "py_compile", file_path
-                ], capture_output=True, text=True)
-                if result.returncode == 0:
-                    print(f"✅ {file_path}")
-                else:
-                    print(f"❌ {file_path}: {result.stderr}")
-                    all_good = False
-            except Exception as e:
-                print(f"❌ {file_path}: {e}")
+        try:
+            result = subprocess.run([
+                sys.executable, "-m", "py_compile", file_path
+            ], capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"✅ {file_path}")
+            else:
+                print(f"❌ {file_path}: {result.stderr}")
                 all_good = False
-        else:
-            print(f"⚠️  {file_path} not found")
+        except Exception as e:
+            print(f"❌ {file_path}: {e}")
+            all_good = False
 
     return all_good
 

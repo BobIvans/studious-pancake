@@ -111,10 +111,11 @@ class SmartRetryEngine:
         
         # Refetch quotes with reduced amount
         try:
+            # Ensure smart retry strictly uses onlyDirectRoutes=True to prevent rent traps
             retry_quote = await refetch_func(
                 opportunity.get("quote", {}),
                 new_amount,
-                only_direct_routes=False
+                only_direct_routes=True
             )
             if not retry_quote:
                 return {"status": "error", "message": f"Quote rebuild failed for {mode}: {reason}"}

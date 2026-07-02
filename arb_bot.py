@@ -3236,10 +3236,16 @@ async def lst_depeg_scanner(
 
         # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
         try:
+            from src.ingest.shared_state import get_ata_rent_for_mint
+            estimated_rent = 0.0
+            if str(signal.token_mint) not in shared_state.ATA_CACHE:
+                estimated_rent = get_ata_rent_for_mint(str(signal.token_mint))
+
             _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
                 shared_state.stats.get(
                     "virtual_balance", shared_state.stats.get("last_balance", 0.0)
-                )
+                ),
+                estimated_rent,
             )
             if not _gas_ok:
                 logger.critical(
@@ -3632,8 +3638,14 @@ async def lst_depeg_scanner(
                         # Between fetching the quote and sending, 100-300ms may have passed.
                         # If the price slipped and eats the profit — abort. Better to skip than burn gas.
                         base_fee_lamports = int(cfg.PRIORITY_FEE * 1e9)
-                        est_gas_lamports = int(0.000005 * 1e9)
+                        import src.ingest.shared_state as shared_state
+                        _cu_limit = shared_state.DYNAMIC_CU_CACHE.get("flash_arbitrage_MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA", 600_000)
+                        _priority_fee_micro = 1 if JITO_AVAILABLE else int(cfg.PRIORITY_FEE * 1e6)
+                        est_gas_lamports = 5000 + (_priority_fee_micro * _cu_limit // 1_000_000)
                         expected_profit_lamports = int(route.profit_sol * 1e9)
+                        from src.ingest.shared_state import get_ata_rent_for_mint
+                        _rent_lamports = 0 if str(signal.token_mint) in shared_state.ATA_CACHE else int(get_ata_rent_for_mint(str(signal.token_mint)) * 1e9)
+                        _priority_fee_lamports = int(cfg.PRIORITY_FEE * 1e9)
 
                         trade_ok, trade_reason, _ = (
                             await pre_trade_guard.check_profit_before_execution(
@@ -3647,6 +3659,8 @@ async def lst_depeg_scanner(
                                 jito_tip_lamports=jito_tip_lamports,
                                 base_fee_lamports=base_fee_lamports + est_gas_lamports,
                                 expected_profit_lamports=expected_profit_lamports,
+                                priority_fee_lamports=_priority_fee_lamports,
+                                ata_rent_lamports=_rent_lamports,
                                 quote_url=cfg.JUPITER_QUOTE_URL,
                                 slippage_bps=cfg.SLIPPAGE_BPS,
                                 is_circular=True,  # FIX: Требуем двухстороннюю проверку профита для Flash-loan
@@ -4197,17 +4211,6 @@ async def check_bundle_confirmation(
                 f"⏰ BUNDLE TIMEOUT: {bundle_id} - normal in competitive Jito auctions"
             )
 
-            # ♻️ 0ms Reconciler: Instantly refund virtual balance on timeout
-            if virtual_balance_to_deduct > 0:
-                async with shared_state.stats_lock:
-                    shared_state.stats["virtual_balance"] += virtual_balance_to_deduct
-                # 🚨 ATOMIC REFUND FIX: Cancel pending in Jito to prevent double-refund loop
-                if jito_executor:
-                    jito_executor._cancel_pending(bundle_id)
-                logger.info(
-                    f"♻️ 0ms Reconciler: Instantly refunded {virtual_balance_to_deduct:.6f} SOL. Virtual balance restored."
-                )
-
             # ── Этап 2: Record loss in CapitalProtection on timeout ──────────
             if shared_state.capital_protection and virtual_balance_to_deduct > 0:
                 shared_state.capital_protection.record_trade(-virtual_balance_to_deduct)
@@ -4630,6 +4633,11 @@ async def execute_priority_opportunity(
             tip_lamports=tip_amount_lamports,
             jito_endpoint=jito_endpoint,
         )
+        # TASK 10: Update dynamic CU cache on successful simulation
+        if sim_result and sim_result.success and sim_result.units_consumed > 0:
+            import src.ingest.shared_state as shared_state
+            strategy_key = "flash_arbitrage_MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+            shared_state.DYNAMIC_CU_CACHE[strategy_key] = int(sim_result.units_consumed * 1.1)
         # ---> ИСПРАВЛЕНИЕ: PAPER_TRADING_ONLY после симуляции <---
         if getattr(cfg, "PAPER_TRADING_ONLY", False):
             simulated_profit = (
@@ -4661,40 +4669,32 @@ async def execute_priority_opportunity(
             # Data Collection: record simulated trade for post-factum analysis
             if data_aggregator:
                 try:
-                    net_profit_sol = simulated_profit
-                    net_profit_lamports = int(net_profit_sol * 1e9)
+                    jito_tip_sol = tip_amount_lamports / 1e9
+                    est_gas_sol = cfg.BASE_FEE + cfg.PRIORITY_FEE
+                    total_cost_sol = jito_tip_sol + est_gas_sol + _rent_cost
+
+                    gross_profit_sol = simulated_profit
+                    net_profit_sol = gross_profit_sol - total_cost_sol
+
                     base_fee_lamports = int(cfg.BASE_FEE * 1e9)
                     priority_fee_lamports = int(cfg.PRIORITY_FEE * 1e9)
-                    jito_tip_lamports = (
-                        max(10_000, int(net_profit_sol * 0.4 * 1e9))
-                        if net_profit_sol > 0
-                        else 0
-                    )
-                    # DEX-006: Asset-specific flashloan fee
-                    __in_mint_str = str(in_mint) if not isinstance(in_mint, str) else in_mint
-                    if __in_mint_str in [_usdc_mint_str, _usdt_mint_str]:
-                        __flashloan_pct = 0.0005
-                    else:
-                        __flashloan_pct = 0.0
+                    jito_tip_lamports = int(jito_tip_sol * 1e9)
                     flashloan_fee_lamports = int(amount_lamports * __flashloan_pct)
-                    ata_rent_lamports = int((_rent_cost) * 1e9)
-                    total_cost_lamports = (
-                        base_fee_lamports
-                        + priority_fee_lamports
-                        + jito_tip_lamports
-                        + flashloan_fee_lamports
-                        + ata_rent_lamports
-                    )
+                    ata_rent_lamports = int(_rent_cost * 1e9)
+                    total_cost_lamports = int(total_cost_sol * 1e9)
+                    net_profit_lamports = int(net_profit_sol * 1e9)
                     gross_revenue_lamports = (
                         net_profit_lamports + total_cost_lamports
                         if net_profit_sol > 0
                         else 0
                     )
+                    decision = "EXECUTE" if net_profit_sol > 0 else "SKIP_LOW_MARGIN"
                     roi_pct = (
                         (net_profit_sol / (gross_revenue_lamports / 1e9) * 100)
                         if gross_revenue_lamports > 0
                         else 0.0
                     )
+
                     await data_aggregator.log_paper_trade(
                         {
                             "slot": shared_state.stats.get("current_slot", 0),
@@ -4713,6 +4713,10 @@ async def execute_priority_opportunity(
                                 if opportunity.metadata
                                 else 0
                             ),
+                            "expected_profit_lamports": opportunity.expected_profit_sol
+                            * 1e9
+                            if hasattr(opportunity, "expected_profit_sol")
+                            else 0,
                             "gross_revenue_lamports": gross_revenue_lamports,
                             "flashloan_fee_lamports": flashloan_fee_lamports,
                             "dex_fee_lamports": int(net_profit_sol * 0.003 * 1e9)
@@ -4727,17 +4731,33 @@ async def execute_priority_opportunity(
                             "total_cost_lamports": total_cost_lamports,
                             "net_profit_lamports": net_profit_lamports,
                             "roi_pct": roi_pct,
-                            "decision": "EXECUTE" if net_profit_sol > 0 else "SKIP_LOW_MARGIN",
+                            "decision": decision,
+                            "executed": 1 if decision == "EXECUTE" else 0,
+                            "sim_success": 1 if sim_result and sim_result.success else 0,
+                            "sim_error": reason if not is_profitable else None,
+                            "price_impact_pct": getattr(opportunity, "slippage_pct", 0.0),
+                            "sol_usd_price": 0.0,
                         }
                     )
                 except Exception as e:
                     logger.warning(f"Data recording failed: {e}")
 
-            # Simulate capital compounding: credit virtual balance with simulated profit
-            if sim_result and simulated_profit > 0:
+            # Paper compounding / loss: update virtual_balance with NET profit
+            if sim_result and net_profit_sol > 0:
                 async with shared_state.stats_lock:
-                    shared_state.stats["virtual_balance"] += simulated_profit
-                logger.info(f"🧪 Paper compounding: +{simulated_profit:.6f} SOL credited to virtual balance")
+                    shared_state.stats["virtual_balance"] += net_profit_sol
+                logger.info(
+                    f"🧪 Paper compounding: +{net_profit_sol:.6f} SOL (Net) credited to virtual balance"
+                )
+            elif sim_result and net_profit_sol <= 0 and total_cost_sol > 0:
+                async with shared_state.stats_lock:
+                    shared_state.stats["virtual_balance"] = max(
+                        0.0,
+                        shared_state.stats["virtual_balance"] - total_cost_sol,
+                    )
+                logger.warning(
+                    f"💸 Paper loss: Deducted cost -{total_cost_sol:.6f} SOL from virtual balance"
+                )
             return
 
         # Логируем попытку для ИИ
@@ -4928,7 +4948,11 @@ async def worker(
 
             # Fix 5 (Strict Gas Tank): never trade if balance < 0.005 SOL
             try:
-                _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(balance)
+                from src.ingest.shared_state import get_ata_rent_for_mint
+                _estimated_rent = 0.0
+                if target_mint_str not in shared_state.ATA_CACHE:
+                    _estimated_rent = get_ata_rent_for_mint(target_mint_str)
+                _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(balance, _estimated_rent)
                 if not _gas_ok:
                     logger.critical(
                         f"🚨 STRICT GAS TANK: Balance {balance:.6f} SOL < 0.005 SOL. Worker halting."
@@ -6429,9 +6453,17 @@ async def run():
             await asyncio.sleep(5)
 
     shared_state.stats["last_balance"] = initial_balance
-    shared_state.stats["virtual_balance"] = (
-        initial_balance  # Fix 44: seed virtual balance from actual balance
-    )
+    try:
+        with open("bot_health.json", "r") as f:
+            health_data = orjson.loads(f.read())
+            shared_state.stats["virtual_balance"] = health_data.get(
+                "balance", initial_balance
+            )
+            logger.info(
+                f"⚖️ Loaded persisted virtual balance: {shared_state.stats['virtual_balance']:.6f} SOL"
+            )
+    except Exception:
+        shared_state.stats["virtual_balance"] = initial_balance
     shared_state.stats["initial_balance"] = initial_balance
 
     # Seed Hard Floor Guard (Task 47)
@@ -6515,43 +6547,29 @@ async def run():
     async def priority_queue_processor():
         """Реактивный обработчик очереди: 0 мс задержки на запуск транзакции."""
         logger.info("🧠 Реактивный процессор очереди запущен (0ms polling penalty)")
+        sem = asyncio.Semaphore(cfg.MAX_CONCURRENT_ARBITRAGES)
+        
+        async def _execute_with_sem(opp):
+            async with sem:
+                await execute_priority_opportunity(
+                    opp,
+                    session,
+                    cfg,
+                    rpc,
+                    keypair,
+                    jito_executor,
+                    data_collector,
+                    flywheel_scaler,
+                    data_aggregator,
+                    alt_manager=alt_manager,
+                    execution_router=execution_router,
+                    blockhash_mgr=blockhash_mgr,
+                )
+        
         while True:
             try:
-                # Метод get_next_opportunity_async засыпает и просыпается по прерыванию,
-                # исключая холостой sleep(0.1) из горячего пути
                 opportunity = await priority_queue.get_next_opportunity_async()
-
-                # Fix: Jito RTT Protection - measure network latency before executing
-                try:
-                    jito_rtt = await jito_executor.get_jito_rtt_ms()
-                except Exception:
-                    jito_rtt = 0.0
-
-                if jito_rtt > 500:
-                    logger.warning(
-                        f"🐌 Jito Engine Congested (RTT {jito_rtt:.0f}ms). Entering safety cooldown..."
-                    )
-                    await asyncio.sleep(5.0)
-                    continue
-
-                # Phase 24: Process high-priority opportunities concurrently
-                # Removing 'await' allows multiple simulations to run in parallel.
-                task = asyncio.create_task(
-                    execute_priority_opportunity(
-                        opportunity,
-                        session,
-                        cfg,
-                        rpc,
-                        keypair,
-                        jito_executor,
-                        data_collector,
-                        flywheel_scaler,
-                        data_aggregator,
-                        alt_manager=alt_manager,
-                        execution_router=execution_router,
-                        blockhash_mgr=blockhash_mgr,
-                    )
-                )
+                task = asyncio.create_task(_execute_with_sem(opportunity))
                 shared_state.retain_background_task(task)
             except Exception as e:
                 logger.error(f"Priority queue processor error: {e}")

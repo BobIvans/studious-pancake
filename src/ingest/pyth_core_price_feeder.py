@@ -167,34 +167,46 @@ class PythCorePriceFeeder:
             if data.get("type") != "price_feed_update":
                 return
 
-            # Убираем префикс 0x для совпадения с локальным реестром
             raw_feed_id = data.get("price_feed_id") or data.get("price_feed", {}).get("id", "")
             feed_id = str(raw_feed_id).replace("0x", "")
             
             mint_str = get_mint_for_core_feed(feed_id)
             if not mint_str:
-                return  # Not a core feed we're tracking
+                return
 
             price_feed = data.get("price_feed", {})
             price_info = price_feed.get("price", {})
             raw_price = price_info.get("price")
             expo = price_info.get("expo", 0)
             publish_time = price_info.get("publish_time")
+            status = price_info.get("status")
 
             if raw_price is None:
                 return
 
-            # Pyth uses exponents: price * 10^expo
+            if status and status != "trading":
+                logger.warning(f"⏭️ Pyth core feed {mint_str[:8]} status is '{status}' (not trading). Skipping price update.")
+                return
+
             price_usd = float(raw_price) * (10 ** expo)
+
+            conf_val = float(price_info.get("conf") or 0)
+            conf_usd = conf_val * (10 ** expo) if expo < 0 else conf_val
+
+            if price_usd > 0 and (conf_usd / price_usd) > 0.02:
+                logger.warning(
+                    f"🚫 Pyth core feed {mint_str[:8]} has unsafe confidence interval: "
+                    f"conf_usd={conf_usd:.4f}, price_usd={price_usd:.4f}, ratio={conf_usd/price_usd:.2%} (> 2.0%). Skipping."
+                )
+                return
+
             timestamp = publish_time or time.time()
 
-            # Update cache
             self.price_cache[mint_str] = {
                 "price_usd": price_usd,
                 "timestamp": timestamp,
             }
 
-            # Fire callback with a price_matrix-like dict
             if self.on_price_update:
                 matrix = {mint_str: (price_usd, timestamp)}
                 try:
@@ -217,14 +229,14 @@ class PythCorePriceFeeder:
         Returns None if:
         - The mint is not core (SOL/USDC/USDT)
         - No price has been received yet
-        - The cached price is >30s old
+        - The cached price is >5s old
         """
         entry = self.price_cache.get(mint_str)
         if entry is None:
             return None
         age = time.time() - entry["timestamp"]
-        if age > 30.0:
-            logger.debug(f"Pyth core price stale for {mint_str[:8]}: {age:.0f}s old")
+        if age > 5.0:
+            logger.warning(f"Pyth core price stale for {mint_str[:8]}: {age:.0f}s old")
             return None
         return entry["price_usd"]
 
@@ -236,7 +248,7 @@ class PythCorePriceFeeder:
         return {
             mint: entry["price_usd"]
             for mint, entry in self.price_cache.items()
-            if now - entry["timestamp"] < 30.0
+            if now - entry["timestamp"] < 5.0
         }
 
     def as_price_matrix(self) -> Dict[str, tuple]:
@@ -248,7 +260,7 @@ class PythCorePriceFeeder:
         return {
             mint: (entry["price_usd"], entry["timestamp"])
             for mint, entry in self.price_cache.items()
-            if now - entry["timestamp"] < 30.0
+            if now - entry["timestamp"] < 5.0
         }
 
 

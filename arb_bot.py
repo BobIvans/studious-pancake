@@ -996,7 +996,7 @@ class Config:
     ARBITRAGE_TIMEOUT_SECONDS: int = int(os.getenv("ARBITRAGE_TIMEOUT_SECONDS", "30"))
     MAX_CONCURRENT_ARBITRAGES: int = int(os.getenv("MAX_CONCURRENT_ARBITRAGES", "3"))
 
-    SLIPPAGE_BPS: int = int(os.getenv("STARTING_SLIPPAGE_BPS", 15))
+    SLIPPAGE_BPS: int = int(os.getenv("SLIPPAGE_BPS", os.getenv("STARTING_SLIPPAGE_BPS", "15")))
     BASE_FEE: float = 0.000005
     PRIORITY_FEE: float = 0.00005
     # ATA_FEE removed: rent_fee_sol is already computed dynamically from ATA_CACHE
@@ -1065,6 +1065,13 @@ class Config:
     PAPER_TRADING_ONLY: bool = (
         str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true"
     )
+
+    # CFG-006: Range validation for critical numeric parameters
+    def __post_init__(self):
+        assert 0.0 <= self.JITO_TIP_PERCENTILE <= 100.0, f"JITO_TIP_PERCENTILE must be between 0 and 100, got {self.JITO_TIP_PERCENTILE}"
+        assert 0.0 < self.TIP_MULTIPLIER <= 5.0, f"TIP_MULTIPLIER must be between 0 and 5, got {self.TIP_MULTIPLIER}"
+        assert 0.0 < self.TRADE_SIZE_PCT <= 1.0, f"TRADE_SIZE_PCT must be between 0 and 1, got {self.TRADE_SIZE_PCT}"
+        assert 0.0 < self.MAX_PRIORITY_FEE_SOL <= 0.1, f"MAX_PRIORITY_FEE_SOL must be reasonable (< 0.1 SOL), got {self.MAX_PRIORITY_FEE_SOL}"
 
 
 TOKENS = {

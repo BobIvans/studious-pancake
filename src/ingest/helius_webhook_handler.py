@@ -42,6 +42,8 @@ class HeliusWebhookHandler:
         self.WORKER_COUNT = 3
         self._worker_pool: List[asyncio.Task] = []
         self._last_scan_trigger: Dict[str, float] = {}
+        self._dedup_lock = asyncio.Lock()
+        self._sem = asyncio.Semaphore(10)
 
     async def start(self):
         """Start the webhook server and the worker pool."""
@@ -241,18 +243,21 @@ class HeliusWebhookHandler:
                 except asyncio.QueueEmpty:
                     return
 
-            # ── ДЕДУПЛИКАЦИЯ ────────────────────────────────────────────────────
-            tx_data = event.get('transaction') or {}
-            signature = tx_data.get('signature') if isinstance(tx_data, dict) else event.get('signature')
-            if signature:
-                now = time.time()
-                self.processed_signatures = {
-                    k: v for k, v in self.processed_signatures.items() if now - v < 10
-                }
-                if signature in self.processed_signatures:
-                    logger.debug(f"♻️ Webhook event duplicate ignored: {signature[:8]}")
-                    return
-                self.processed_signatures[signature] = now
+            # ── ДЕДУПЛИКАЦИЯ (CONC-001 & CONC-012) ────────────────────────────────
+            async with self._dedup_lock:
+                tx_data = event.get('transaction') or {}
+                signature = tx_data.get('signature') if isinstance(tx_data, dict) else event.get('signature')
+                if signature:
+                    now = time.time()
+                    # Prune old signatures only if cache size grows too large (optimizes CPU cycles)
+                    if len(self.processed_signatures) > 1000:
+                        self.processed_signatures = {
+                            k: v for k, v in self.processed_signatures.items() if now - v < 10
+                        }
+                    if signature in self.processed_signatures:
+                        logger.debug(f"♻️ Webhook event duplicate ignored: {signature[:8]}")
+                        return
+                    self.processed_signatures[signature] = now
 
             # Log raw webhook event
             await self.data_aggregator.log_webhook_event(webhook_id, event)
@@ -353,7 +358,11 @@ class HeliusWebhookHandler:
             logger.error(f"Account update processing error: {e}")
 
     def _is_sanctum_router_transaction(self, event: Dict[str, Any]) -> bool:
-        """Check if event involves Sanctum Router or monitored LST addresses."""
+        """Check if event involves the Sanctum Router program ID.
+
+        Uses LST_PROGRAMS (program IDs) rather than LST_ADDRESSES (token mints),
+        because this check is detecting program-level invocation, not token transfers.
+        """
         account_addresses = []
         if 'accountData' in event:
             for account in event['accountData']:
@@ -367,7 +376,7 @@ class HeliusWebhookHandler:
                     account_addresses.append(transfer['toUserAccount'])
                 if 'mint' in transfer:
                     account_addresses.append(transfer['mint'])
-        monitored_addresses = set(WebhookConfig.LST_ADDRESSES)
+        monitored_addresses = set(WebhookConfig.LST_PROGRAMS)
         involved_addresses = set(account_addresses)
         return bool(monitored_addresses.intersection(involved_addresses))
 

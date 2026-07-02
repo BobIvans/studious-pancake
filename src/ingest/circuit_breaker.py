@@ -22,7 +22,7 @@ class CapitalProtection:
 
     @property
     def weekly_realized_loss_limit_sol(self) -> float:
-        return max(0.003, self.starting_balance * 0.20)
+        return max(self.daily_realized_loss_limit_sol * 3, self.starting_balance * 0.20)
 
     @property
     def max_daily_failed_cost_sol(self) -> float:

@@ -131,22 +131,29 @@ class PythHermesClient:
                 price = price_info.get("price")
                 confidence = price_info.get("confidence")
                 publish_time = price_info.get("publish_time")
-                status = price_info.get("status")  # "trading", "halted", "auction", "ignored", "unknown"
+                status = price_info.get("status")
+                expo = price_info.get("expo", 0)
 
-                # ── Pyth Feed Status Guard ───────────────────────────────────────
-                # Pyth может отдавать «Last Known Price», даже если рынок акций США
-                # закрыт (ночь или выходные). Игнорируем все статусы кроме "trading",
-                # чтобы не торговать по устаревшей цене.
                 if status and status != "trading":
                     logger.debug(f"⏭️ Pyth feed {ticker} status={status} — not trading, skipping")
                     return
 
                 if price and publish_time:
-                    # Update cache
+                    price_val = float(price)
+                    conf_val = float(confidence) if confidence else 0.0
+                    conf_usd = conf_val * (10 ** expo) if expo < 0 else conf_val
+
+                    if price_val > 0 and (conf_usd / price_val) > 0.02:
+                        logger.warning(
+                            f"🚫 Pyth feed {ticker} has unsafe confidence interval: "
+                            f"conf={conf_usd:.4f}, price={price_val:.4f}, ratio={conf_usd/price_val:.2%} (> 2.0%). Skipping."
+                        )
+                        return
+
                     self.price_cache[ticker] = {
-                        "price": float(price),
+                        "price": price_val,
                         "timestamp": datetime.fromtimestamp(publish_time),
-                        "confidence": float(confidence) if confidence else 0.0,
+                        "confidence": conf_usd,
                         "status": status,
                     }
 
@@ -223,6 +230,13 @@ class PythHermesClient:
                             price = float(price_str) / scale if expo < 0 else float(price_str)
                             confidence = float(conf_str) / scale if conf_str and expo < 0 else float(conf_str or 0)
 
+                            if price > 0 and (confidence / price) > 0.02:
+                                logger.warning(
+                                    f"🚫 Pyth REST feed {ticker} has unsafe confidence: "
+                                    f"conf={confidence:.4f}, price={price:.4f}, ratio={confidence/price:.2%} (> 2.0%). Skipping."
+                                )
+                                continue
+
                             self.price_cache[ticker] = {
                                 "price": price,
                                 "timestamp": datetime.fromtimestamp(publish_time),
@@ -245,8 +259,7 @@ class PythHermesClient:
         """Get the latest price for a ticker."""
         if ticker in self.price_cache:
             cache_entry = self.price_cache[ticker]
-            # Check if price is fresh (within 3 seconds for HFT lag detection)
-            if datetime.now() - cache_entry["timestamp"] < timedelta(seconds=3):
+            if datetime.now() - cache_entry["timestamp"] < timedelta(seconds=5):
                 return cache_entry["price"]
             else:
                 logger.warning(f"Stale price for {ticker}: {cache_entry['timestamp']}")
@@ -257,7 +270,7 @@ class PythHermesClient:
         return self.price_cache.get(ticker)
 
     def get_average_lag(self, ticker: str) -> Optional[float]:
-        """Get average lag for a ticker in seconds."""
+        """Get average lag for ticker in seconds."""
         if ticker in self.lag_stats and self.lag_stats[ticker]:
             return sum(self.lag_stats[ticker]) / len(self.lag_stats[ticker])
         return None
@@ -267,7 +280,7 @@ class PythHermesClient:
         return {
             ticker: info["price"]
             for ticker, info in self.price_cache.items()
-            if datetime.now() - info["timestamp"] < timedelta(seconds=3)
+            if datetime.now() - info["timestamp"] < timedelta(seconds=5)
         }
 
     def get_lag_report(self) -> Dict[str, Dict[str, Any]]:
@@ -281,7 +294,7 @@ class PythHermesClient:
                 "current_price": price_info["price"] if price_info else None,
                 "last_update": price_info["timestamp"].isoformat() if price_info else None,
                 "average_lag_seconds": avg_lag,
-                "is_fresh": price_info and (datetime.now() - price_info["timestamp"]) < timedelta(seconds=3)
+                "is_fresh": price_info and (datetime.now() - price_info["timestamp"]) < timedelta(seconds=5)
             }
 
         return report

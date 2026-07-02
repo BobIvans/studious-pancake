@@ -91,7 +91,11 @@ class DataCollector:
 
     async def stop(self) -> None:
         if self._sqlite_writer_task:
-            await self._sqlite_queue.join()
+            try:
+                await asyncio.wait_for(self._sqlite_queue.join(), timeout=5.0)
+            except asyncio.TimeoutError:
+                logger = logging.getLogger("DataCollector")
+                logger.warning("Timeout waiting for SQLite queue to empty during shutdown.")
             self._sqlite_writer_task.cancel()
             try:
                 await self._sqlite_writer_task

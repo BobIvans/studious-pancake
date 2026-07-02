@@ -223,8 +223,10 @@ class DataAggregator:
                 if len(batch) >= batch_size or (
                     batch and time.time() - batch[0]["timestamp"] > flush_interval
                 ):
-                    await self._flush_batch(batch)
-                    batch = []
+                    try:
+                        await self._flush_batch(batch)
+                    finally:
+                        batch = []
 
             except Exception as e:
                 logger.error(f"Batch write worker error: {e}")

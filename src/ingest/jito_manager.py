@@ -85,8 +85,11 @@ class JitoManager:
         return False
 
     def get_random_tip_account(self) -> str:
-        """Select a random tip account for load balancing."""
-        return random.choice(self.tip_accounts)
+        """Select a random tip account for load balancing (thread-safe copy-on-read)."""
+        accounts_snapshot = list(self.tip_accounts)
+        if not accounts_snapshot:
+            return "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
+        return random.choice(accounts_snapshot)
 
     def calculate_tip(self, expected_profit_sol: float, target_mint_str: str = "So11111111111111111111111111111111111111112", price_matrix: Optional[Dict[str, tuple]] = None) -> int:
         """

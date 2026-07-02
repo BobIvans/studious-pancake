@@ -8,19 +8,23 @@ from src.config.addresses import get_enabled_addresses
 class WebhookConfig:
     """Configuration for Helius webhooks monitoring LST arbitrage."""
 
-    # LST Token Addresses to Monitor
+    # LST Token Mints to Monitor
     LST_ADDRESSES = [
         "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # JitoSOL
         "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL
         "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",  # bSOL
         "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",  # INF (Sanctum Infinity)
-        "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",  # Sanctum Router program
         "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",  # JupSOL — Jupiter LST
         "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX",  # hubSOL
         "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs",  # bonkSOL
         "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE",  # cgntSOL — Cogent LST
         "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",  # vSOL — Vault LST
         "cPQPBN7WubB3zyQDpzTK2ormx1BMdAym9xkrYUJsctm",  # fwdSOL — Forward staking LST
+    ]
+
+    # LST Program IDs — used for program-level activity detection, not token-filtering
+    LST_PROGRAMS = [
+        "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",  # Sanctum Router
     ]
 
     # Parcl Protocol Addresses for RWA Monitoring
@@ -37,6 +41,9 @@ class WebhookConfig:
     # Orca Pool Addresses for LST Depeg Monitoring
     ORCA_POOL_ADDRESSES = [
         "Hp53XEtt4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp",  # JitoSOL/SOL pool
+        "996779v88TxhK6C7H7F5z3u3rL5FvP9SwBeCfFFmCd29",  # mSOL/SOL pool
+        "6v6t7p4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp",  # bSOL/SOL pool
+        "5p8yY7uDSwR8jQ9SjSwH7SwSwH7SwSwH7SwSwH7SwSw",  # INF/SOL pool
     ]
 
     # Active Webhook IDs and the Helius event classes they monitor.
@@ -59,24 +66,30 @@ class WebhookConfig:
     def get_webhook_config(cls) -> Dict[str, Any]:
         """Get the complete webhook configuration for Helius API."""
         webhook_url = os.getenv("WEBHOOK_URL", "https://your-cloudflare-worker.dev/webhook")
-        
+        if "your-cloudflare-worker.dev" in webhook_url:
+            raise ValueError("CRITICAL: WEBHOOK_URL must be configured in .env for production.")
+
+        # BL-001: Relaxed Helius credit conservation filters with env-configurable thresholds
+        min_dex_filter_lamports = int(float(os.getenv("HELIUS_MIN_DEX_FILTER_SOL", "0.5")) * 1e9)
+        min_lst_filter_lamports = int(float(os.getenv("HELIUS_MIN_LST_FILTER", "0.1")) * 1e9)
+
         # Dynamic filtering: use only enabled addresses from addresses.py
         # This prevents wasting Helius credits on disabled/noisy contracts
         enabled_addr_keys = list(get_enabled_addresses().keys())
-        
+
         return {
             "webhookURL": webhook_url,
             "webhookType": "enhanced",
             "transactionTypes": ["SWAP", "TRANSFER", "CREATE_POOL", "GRADUATION"],
             "accountAddresses": enabled_addr_keys,
             "txnStatus": "success",  # OPTIMIZED: Only listen to successful trades (saves credits)
-            "accountFilters": [  # Phase 49: Helius credit conservation — hard filter
+            "accountFilters": [
                 {"accountKey": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",
-                 "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold - Jupiter
+                 "nativeFilters": [{"min": min_dex_filter_lamports}]},  # DEX filter - Jupiter/Raydium
                 {"accountKey": "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",
-                 "nativeFilters": [{"min": 50_000_000_000}]},  # 50 SOL threshold - Orca
+                 "nativeFilters": [{"min": min_dex_filter_lamports}]},  # DEX filter - Orca
                 {"accountKey": "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",
-                 "nativeFilters": [{"min": 5_000_000_000}]},   # 5 SOL threshold - Sanctum
+                 "nativeFilters": [{"min": min_lst_filter_lamports}]},   # LST filter - Sanctum Router
             ],
             "webhookIds": cls.WEBHOOK_IDS,
             "managementIds": cls.MANAGEMENT_IDS,
@@ -108,6 +121,7 @@ class WebhookConfig:
         """Get comprehensive webhook information."""
         all_addresses = (
             cls.LST_ADDRESSES +
+            cls.LST_PROGRAMS +
             cls.PARCL_ADDRESSES +
             cls.PYTH_ADDRESSES +
             cls.ORCA_POOL_ADDRESSES
@@ -115,6 +129,7 @@ class WebhookConfig:
 
         return {
             "lst_addresses": cls.LST_ADDRESSES,
+            "lst_programs": cls.LST_PROGRAMS,
             "parcl_addresses": cls.PARCL_ADDRESSES,
             "pyth_addresses": cls.PYTH_ADDRESSES,
             "orca_pool_addresses": cls.ORCA_POOL_ADDRESSES,
@@ -128,6 +143,7 @@ class WebhookConfig:
 
 # For backward compatibility and easy access
 LST_ADDRESSES = WebhookConfig.LST_ADDRESSES
+LST_PROGRAMS = WebhookConfig.LST_PROGRAMS
 PARCL_ADDRESSES = WebhookConfig.PARCL_ADDRESSES
 PYTH_ADDRESSES = WebhookConfig.PYTH_ADDRESSES
 WEBHOOK_IDS = WebhookConfig.WEBHOOK_IDS

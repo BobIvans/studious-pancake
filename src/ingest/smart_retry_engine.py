@@ -94,6 +94,11 @@ class SmartRetryEngine:
                        f"mode={mode}, backing off {delay:.1f}s...")
         await asyncio.sleep(delay)
         
+        from src.ingest.blockhash_racing import get_blockhash_manager
+        bh_mgr = get_blockhash_manager()
+        if bh_mgr:
+            await bh_mgr.fetch_fresh_blockhash()
+        
         retry_opportunity = dict(opportunity)
         retry_opportunity["_smart_retry"] = {"used": True, "count": retry_count + 1, "mode": mode}
         
@@ -109,7 +114,7 @@ class SmartRetryEngine:
             retry_quote = await refetch_func(
                 opportunity.get("quote", {}),
                 new_amount,
-                only_direct_routes=True
+                only_direct_routes=False
             )
             if not retry_quote:
                 return {"status": "error", "message": f"Quote rebuild failed for {mode}: {reason}"}

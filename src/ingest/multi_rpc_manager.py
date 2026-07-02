@@ -272,7 +272,7 @@ class MultiRpcManager:
             if "method" in data and data["method"] == "logsNotification":
                 await self._handle_logs_event(endpoint, data["params"])
 
-        except Exception:
+        except orjson.JSONDecodeError:
             logger.error(f"Invalid JSON from {endpoint.name}: {message[:100]}...")
         except Exception as e:
             logger.error(f"Error processing message from {endpoint.name}: {e}")

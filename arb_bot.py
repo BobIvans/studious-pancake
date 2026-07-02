@@ -2342,6 +2342,52 @@ def get_token_decimals(mint) -> int:
     return TOKEN_DECIMALS.get(str(mint), 6)  # 6 - стандарт для новых токенов на Solana
 
 
+async def get_token_decimals_dynamic(session: aiohttp.ClientSession, rpc_url: str, mint_address: str) -> int:
+    """Dynamically fetch token decimals via jsonParsed RPC with caching (P2-024).
+
+    Resolution order:
+    1. Check hardcoded TOKEN_DECIMALS dict
+    2. Check shared_state.DYNAMIC_DECIMALS_CACHE
+    3. Query RPC getAccountInfo with jsonParsed encoding
+    4. Fallback to 6 (safe conservative default)
+    """
+    mint_str = str(mint_address)
+
+    # 1. Check hardcoded dictionary first
+    if mint_str in TOKEN_DECIMALS:
+        return TOKEN_DECIMALS[mint_str]
+
+    # 2. Check in-memory dynamic cache
+    import src.ingest.shared_state as _ss
+    if mint_str in _ss.DYNAMIC_DECIMALS_CACHE:
+        return _ss.DYNAMIC_DECIMALS_CACHE[mint_str]
+
+    # 3. Query RPC with jsonParsed encoding
+    payload = {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "getAccountInfo",
+        "params": [mint_str, {"encoding": "jsonParsed", "commitment": "confirmed"}],
+    }
+    try:
+        async with session.post(rpc_url, json=payload, timeout=3.0) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                value = data.get("result", {}).get("value")
+                if value and "data" in value:
+                    parsed_info = value["data"].get("parsed", {}).get("info", {})
+                    decimals = parsed_info.get("decimals")
+                    if decimals is not None:
+                        decimals_val = int(decimals)
+                        _ss.DYNAMIC_DECIMALS_CACHE[mint_str] = decimals_val
+                        logger.info(f"✨ Dynamically resolved decimals for {mint_str[:8]}...: {decimals_val}")
+                        return decimals_val
+    except Exception as e:
+        logger.debug(f"Dynamic decimals fetch failed for {mint_str[:8]}: {e}")
+
+    return 6  # Safe conservative fallback
+
+
 async def get_best_quote_multi(
     session,
     in_mint,
@@ -4898,7 +4944,7 @@ async def worker(
                 )
 
             # --- RESTORED MISSING QUOTE FETCHING LOGIC ---
-            decimals_in = get_token_decimals(in_mint_str)
+            decimals_in = await get_token_decimals_dynamic(session, None, in_mint_str)
             amount_lamports = int(borrow_amount_sol * (10**decimals_in))
 
             # ── wSOL Death Spiral — проверка перед котированием ──
@@ -5103,7 +5149,7 @@ async def worker(
                 routes=routes,
                 amount_in=amount_lamports,
                 decimals_in=decimals_in,
-                decimals_out=get_token_decimals(target_mint),
+                decimals_out=await get_token_decimals_dynamic(session, None, target_mint),
                 jito_tip_sol=jito_tip_sol,
             )
 
@@ -5575,6 +5621,12 @@ async def run():
 
     logger.info("=== RUN() STARTED ===")
 
+    # Phase 6B LOG-009: Silence noisy default library loggers
+    logging.getLogger("aiohttp").setLevel(logging.WARNING)
+    logging.getLogger("asyncio").setLevel(logging.WARNING)
+    logging.getLogger("urllib3").setLevel(logging.WARNING)
+    logger.info("🔕 Noisy internal library loggers muted (aiohttp/asyncio set to WARNING)")
+
     # HFT optimization: Disable automatic GC to prevent Stop-the-World pauses
     gc.disable()
 
@@ -5650,6 +5702,13 @@ async def run():
 
     cfg = Config()
     init_limiters(cfg)
+
+    # Phase 6B CFG-001: Block placeholder Helius API keys
+    if any("YOUR_KEY" in url for url in cfg.HELIUS_SENDER_URLS):
+        raise ValueError(
+            "CRITICAL CONFIG ERROR: You are using the default HELIUS_SENDER_URL placeholder. "
+            "Please configure your actual Helius API key in the .env file."
+        )
 
     # ── Phase 49: Start async trade logger BEFORE any worker is scheduled ─────
     # This must fire before workers enqueue so TRADE_LOG_QUEUE is set.
@@ -5761,6 +5820,30 @@ async def run():
         },  # Fix 53 + 92: Brotli compression cuts quote payload size
     )
 
+    # Phase 6B CFG-009: Startup Handshake Sentinel — validate all RPC nodes before entering hot loops
+    logger.info("⏱️ Initiating startup handshake to validate all RPC nodes...")
+    verified_nodes = []
+    for node_url in list(rpc.all_nodes):
+        try:
+            payload = {"jsonrpc": "2.0", "id": 1, "method": "getSlot"}
+            timeout = aiohttp.ClientTimeout(total=2.0)
+            async with session.post(node_url, json=payload, timeout=timeout) as resp:
+                if resp.status == 200:
+                    verified_nodes.append(node_url)
+                    logger.info(f"  ✓ RPC Node validated: {redact_url(node_url)[:45]}...")
+                elif resp.status in (401, 403):
+                    logger.warning(f"  ✗ RPC Node REJECTED (HTTP {resp.status} - Invalid key): {redact_url(node_url)[:45]}...")
+                    rpc.blacklist(node_url)
+                else:
+                    logger.warning(f"  ✗ RPC Node degraded (HTTP {resp.status}): {redact_url(node_url)[:45]}...")
+                    rpc.blacklist(node_url)
+        except Exception as e:
+            logger.warning(f"  ✗ RPC Node connection failed: {redact_url(node_url)[:45]}... Error: {e}")
+            rpc.blacklist(node_url)
+
+    if not rpc.all_nodes:
+        raise RuntimeError("CRITICAL: All RPC endpoints in your pool failed the startup handshake. Check your API keys and internet connection.")
+
     rpc_url = rpc.get_rpc()
     balance_lamports = await StateManager.get_balance_lamports(
         session, rpc, keypair.pubkey()
@@ -5841,7 +5924,8 @@ async def run():
                 logger.debug(f"DB vacuum failed: {e}")
             # disk check
             if shutil.disk_usage(".").free < 500 * 1024 * 1024:
-                logger.warning("Low disk space — stopping logs")
+                logger.critical("🚨 CRITICAL: Low disk space (<500MB)! Muting non-critical logs to prevent DB corruption.")
+                logging.getLogger().setLevel(logging.ERROR)
 
     task = asyncio.create_task(_maintenance())
     shared_state.retain_background_task(task)

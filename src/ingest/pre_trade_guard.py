@@ -232,10 +232,16 @@ class TokenSecurityChecker:
 
                     # ─── БЛОК 13: TransferHook Honeypot Detection ──────────────────────────
                     if ext_type == 14:  # TransferHook
-                        logger.critical(
-                            f"🚨 HONEYPOT DETECTED: Token-2022 has TransferHook (type 14) on {mint_address}"
-                        )
-                        return False, "Honeypot: Unknown TransferHook (can freeze/fail transfers)"
+                        allow_unknown_hooks = os.getenv("ALLOW_UNKNOWN_TRANSFER_HOOKS", "false").lower() == "true"
+                        if not allow_unknown_hooks:
+                            logger.critical(
+                                f"🚨 HONEYPOT DETECTED: Token-2022 has TransferHook (type 14) on {mint_address}"
+                            )
+                            return False, "Honeypot: Unknown TransferHook (can freeze/fail transfers)"
+                        else:
+                            logger.info(
+                                f"✅ Token-2022 has TransferHook on {mint_address} — allowed via ALLOW_UNKNOWN_TRANSFER_HOOKS override"
+                            )
 
                     if ext_type == 11:
                         if ext_len >= 108:

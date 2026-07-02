@@ -3976,8 +3976,11 @@ async def get_dynamic_priority_fee(
                     return fee_microlamports
     except Exception as e:
         logger.debug(f"Priority fee API error: {e}")
-    # Fallback to hardcoded value
-    return cfg.PRIORITY_FEE
+    # Fallback to hardcoded value (convert SOL → micro-lamports/CU)
+    default_cu = 200_000
+    fallback_lamports = int(cfg.PRIORITY_FEE * 1e9)
+    fallback_micro_lamports = int(fallback_lamports * 1e6 / default_cu)
+    return max(50_000, fallback_micro_lamports)
 
 
 async def _daily_cleanup(data_aggregator: DataAggregator):
@@ -5582,6 +5585,17 @@ async def run():
         _loop.add_signal_handler(_sig, shared_state.GLOBAL_STOP_EVENT.set)
     logger.info("🔔 SIGTERM/SIGINT handlers registered for graceful shutdown")
 
+    # OPS-001: SIGHUP/SIGPIPE shield — prevent SSH disconnects and broken pipes from killing the bot
+    try:
+        _loop.add_signal_handler(
+            signal.SIGHUP,
+            lambda: logger.warning("Received SIGHUP, ignoring to keep bot alive during terminal disconnect."),
+        )
+        signal.signal(signal.SIGPIPE, signal.SIG_IGN)
+        logger.info("🛡️ SIGHUP/SIGPIPE shield active — bot survives SSH disconnects and broken pipe failures")
+    except (ValueError, AttributeError, NotImplementedError):
+        logger.warning("⚠️ SIGHUP/SIGPIPE shield not available on this platform")
+
     import src.config.events as events_config
 
     events_config.lst_webhook_trigger = asyncio.Queue()
@@ -6582,6 +6596,7 @@ async def run():
 
             # ── Этап 2: Capital Protection circuit breaker check ─────────────────
             if shared_state.capital_protection:
+                shared_state.capital_protection.reset_if_needed()
                 stop, reason = shared_state.capital_protection.should_stop()
                 if stop:
                     logger.critical(f"🚨 CAPITAL PROTECTION TRIGGERED: {reason}")

@@ -169,7 +169,7 @@ async def recover_rent():
             # Add priority fee instructions to ensure the rescue tx lands during congestion
             # Phase 8.1: Priority Fee for Emergency Recovery
             instructions.append(set_compute_unit_limit(100_000))
-            instructions.append(set_compute_unit_price(10_000))  # 10k micro-lamports
+            instructions.append(set_compute_unit_price(1_000_000))  # 1M micro-lamports (1 lamport/CU) to guarantee instant rescue
             for acc_pubkey in batch:
                 ix = close_account(CloseAccountParams(
                     program_id=Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),

@@ -150,11 +150,12 @@ class JitoBundleClient:
         return False
 
     def _select_tip_account(self) -> str:
-        import random
-        if not self.tip_accounts:
+        """Select a random tip account for load balancing (thread-safe copy-on-read)."""
+        accounts_snapshot = list(self.tip_accounts)
+        if not accounts_snapshot:
             logger.critical("🚨 JITO TIP ACCOUNTS: No dynamic tip_accounts available. Call fetch_tip_accounts() at bot startup.")
             return ""
-        return random.choice(self.tip_accounts)
+        return random.choice(accounts_snapshot)
 
     # ── Blockhash ───────────────────────────────────────────────────────────────
 
@@ -272,7 +273,7 @@ class JitoBundleClient:
             # Phase 22: Explicit Content-Length prevents HTTP 411 Length Required from strict CDN/WAF
             headers["Content-Length"] = str(len(raw_body))
 
-            async with self.session.post(url, data=raw_body, headers=headers, timeout=2.0) as resp:
+            async with self.session.post(url, data=raw_body, headers=headers, timeout=5.0) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     if "result" in data:

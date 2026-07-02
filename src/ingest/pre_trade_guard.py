@@ -186,7 +186,10 @@ class TokenSecurityChecker:
             # Check freezeAuthority (starts at byte 46: 1 byte option + 32 byte pubkey)
             freeze_auth_option = data[46]
             if freeze_auth_option != 0:  # 0 = None, 1 = Some
-                return False, "Freeze authority is set (tokens can be frozen)"
+                allow_freeze = os.getenv("ALLOW_FREEZE_AUTHORITY", "false").lower() == "true"
+                if not allow_freeze:
+                    return False, "Freeze authority is set (Tokens can be frozen by authority)"
+                logger.info(f"✅ Token has freeze authority on {mint_address} — allowed via ALLOW_FREEZE_AUTHORITY override")
 
             return True, "Token appears safe"
 
@@ -652,6 +655,7 @@ class PreTradeGuard:
         mint_address: Pubkey,
         base_profit_threshold: float,
         rpc_url: Optional[str] = None,
+        trade_volume_sol: float = 0.0,
     ) -> float:
         """
         Get profit threshold adjusted for Token-2022 transfer fees.
@@ -660,23 +664,23 @@ class PreTradeGuard:
             mint_address: Token mint Pubkey
             base_profit_threshold: Base profit threshold in SOL
             rpc_url: Optional RPC URL
+            trade_volume_sol: Actual trade volume in SOL (round-trip, both legs)
 
         Returns:
-            Adjusted profit threshold accounting for transfer fees
+            Adjusted profit threshold accounting for transfer fees on volume
         """
         has_fee, fee_pct, reason = await self.check_token_2022_transfer_fee(
             mint_address, rpc_url
         )
 
         if has_fee and fee_pct > 0:
-            # Add transfer fee to required profit (assume fee applies to output amount)
-            # Conservative estimate: add 2x the fee to account for round-trip
-            adjustment_factor = 1 + (fee_pct / 100) * 2
-            adjusted_threshold = base_profit_threshold * adjustment_factor
+            fee_loss_sol = trade_volume_sol * (fee_pct / 100.0) * 2
+            adjusted_threshold = base_profit_threshold + fee_loss_sol
 
             logger.info(
-                f"💰 Transfer fee adjustment for {mint_address}: {fee_pct:.2f}% "
-                f"-> threshold {base_profit_threshold:.6f} -> {adjusted_threshold:.6f} SOL"
+                f"💰 Transfer fee volume adjustment for {mint_address}: {fee_pct:.2f}% "
+                f"on volume {trade_volume_sol:.4f} SOL -> added {fee_loss_sol:.6f} SOL to required threshold "
+                f"({base_profit_threshold:.6f} -> {adjusted_threshold:.6f} SOL)"
             )
             return adjusted_threshold
         else:
@@ -974,6 +978,15 @@ class PreTradeGuard:
                         return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
                     fresh_quote = await resp.json()
 
+            # ── DEX-002: Strict Price Impact Guard ─────────────────────────────────
+            try:
+                price_impact = float(fresh_quote.get("priceImpactPct", 0))
+            except (ValueError, TypeError):
+                price_impact = 0.0
+            if price_impact > 5.0:  # 5% max
+                logger.warning(f"🚫 Pre-trade BLOCKED: Price impact too high ({price_impact}%)")
+                return False, f"Price impact {price_impact}% exceeds 5% maximum", 0
+
             actual_out = int(
                 fresh_quote.get("otherAmountThreshold", fresh_quote.get("outAmount", 0))
             )
@@ -1009,23 +1022,57 @@ class PreTradeGuard:
             if is_sol_route:
                 gross_profit_sol_lamports = actual_out - amount_lamports
             else:
-                # Phase 12: expanded decimals mapping covering all active token types
-                _decimals = {
-                    # Stables (6 decimals)
-                    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6,  # USDC
-                    "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": 6,  # USDT
-                    "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": 6,  # PYUSD
-                    # SOL and LSTs (9 decimals)
-                    "So11111111111111111111111111111111111111112": 9,  # wSOL
-                    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": 9,  # jitoSOL
-                    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": 9,  # mSOL
-                    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": 9,  # bSOL
-                    "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v": 9,  # JupSOL
-                    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": 9,  # INF
-                    # Memes (variable decimals)
-                    "DezXAZ8z7P8gVmFiDQ6cEhPmmF9rj3ZfVGg3LyZ3mTKV": 5,  # BONK
-                    "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm": 6,  # WIF
-                }.get(output_mint, 6)  # default 6 for unknown tokens
+                # Phase 5C (P2-024): Dynamic on-chain decimal resolution via jsonParsed RPC
+                # Falls back through: hardcoded TOKEN_DECIMALS -> dynamic cache -> RPC call -> 6
+                import src.ingest.shared_state as _shared_state
+                
+                # 1. Check the hardcoded dict first (would normally be from arb_bot.TOKEN_DECIMALS
+                #    but avoid circular import — inline the known values)
+                _hardcoded_decimals = {
+                    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6,
+                    "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": 6,
+                    "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": 6,
+                    "So11111111111111111111111111111111111111112": 9,
+                    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": 9,
+                    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": 9,
+                    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": 9,
+                    "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v": 9,
+                    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": 9,
+                    "DezXAZ8z7P8gVmFiDQ6cEhPmmF9rj3ZfVGg3LyZ3mTKV": 5,
+                    "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm": 6,
+                }
+                _decimals = _hardcoded_decimals.get(output_mint)
+                
+                # 2. Check dynamic cache if not in hardcoded dict
+                if _decimals is None:
+                    _decimals = _shared_state.DYNAMIC_DECIMALS_CACHE.get(output_mint)
+                
+                # 3. Query RPC with jsonParsed on cache miss
+                if _decimals is None and self.session and self.rpc_url:
+                    try:
+                        _payload = {
+                            "jsonrpc": "2.0",
+                            "id": 1,
+                            "method": "getAccountInfo",
+                            "params": [output_mint, {"encoding": "jsonParsed", "commitment": "confirmed"}],
+                        }
+                        async with self.session.post(self.rpc_url, json=_payload, timeout=3.0) as _resp:
+                            if _resp.status == 200:
+                                _data = await _resp.json()
+                                _value = _data.get("result", {}).get("value")
+                                if _value and "data" in _value:
+                                    _parsed_info = _value["data"].get("parsed", {}).get("info", {})
+                                    _decimals_val = _parsed_info.get("decimals")
+                                    if _decimals_val is not None:
+                                        _decimals = int(_decimals_val)
+                                        _shared_state.DYNAMIC_DECIMALS_CACHE[output_mint] = _decimals
+                                        logger.info(f"✨ Dynamically resolved decimals for {output_mint[:8]}...: {_decimals}")
+                    except Exception as _e:
+                        logger.debug(f"Dynamic decimals fetch failed for {output_mint[:8]}: {_e}")
+                
+                # 4. Safe fallback
+                if _decimals is None:
+                    _decimals = 6
                 amount_ui = amount_lamports / (10 ** _decimals)
                 actual_out_ui = actual_out / (10 ** _decimals)
                 # Step 2: convert gross profit to SOL via price bridge

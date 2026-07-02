@@ -230,6 +230,10 @@ class ALTCacheManager:
                                 try:
                                     # getMultipleAccounts returns array of account objects directly in "value"
                                     account_info = account_data.get("account", account_data)
+                                    owner = account_info.get("owner")
+                                    if owner != "AddressLookupTab1e1111111111111111111111111":
+                                        logger.critical(f"🚨 ALT POISONING PREVENTED: ALT {alt_pubkey} is owned by {owner}, not the official ALT program.")
+                                        continue
                                     if "data" in account_info:
                                         resolved_accounts = self._parse_alt_data(account_info["data"][0])
                                         if resolved_accounts:

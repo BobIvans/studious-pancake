@@ -395,11 +395,11 @@ class LstInstantUnstakeArbitrage:
                 )
             else:
                 # Fallback to quote's calculated tip or default
-                jito_tip_lamports = quote.get("jito_tip_lamports", 100000)
+                jito_tip_lamports = quote.get("jito_tip_lamports", 10000)
 
             if jito_tip_lamports <= 0:
-                logger.warning(f"LST Unstake tip calculation returned 0 or negative ({jito_tip_lamports}), using fallback 100000")
-                jito_tip_lamports = 100000
+                logger.warning(f"LST Unstake tip calculation returned 0 or negative ({jito_tip_lamports}), using fallback 10000")
+                jito_tip_lamports = 10000
 
             fl_result = await tx_builder.build_native_flashloan_tx(
                 wallet_pubkey=str(keypair.pubkey()),

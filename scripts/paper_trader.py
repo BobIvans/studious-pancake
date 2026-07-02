@@ -204,6 +204,7 @@ class PaperTrader:
                 "net_profit_lamports": net_profit_lamports,
                 "roi_pct": roi_pct,
                 "decision": decision,
+                "sol_usd_price": sol_price,
             }
             await self.aggregator.log_paper_trade(trade_data)
 

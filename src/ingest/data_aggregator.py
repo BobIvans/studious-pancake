@@ -121,10 +121,15 @@ class DataAggregator:
                 total_cost_lamports BIGINT,
                 net_profit_lamports BIGINT,
                 roi_pct REAL,
-                decision TEXT
+                decision TEXT,
+                sol_usd_price REAL DEFAULT 0.0
             )
         """
         )
+        try:
+            cursor.execute("ALTER TABLE paper_trades ADD COLUMN sol_usd_price REAL DEFAULT 0.0")
+        except Exception:
+            pass
 
         # Phase 49: In-Flight Bundle Tracking table
         cursor.execute(
@@ -175,15 +180,23 @@ class DataAggregator:
             logger.error(f"Failed to update inflight status: {e}")
 
     async def backup_database(self):
-        """Create a backup of the database to prevent corruption."""
+        """Create a backup of the database to prevent corruption.
+
+        Uses asyncio.to_thread to offload blocking sqlite3 VACUUM INTO
+        to a thread pool, preventing event loop blocking (PERF-002).
+        """
         try:
             os.makedirs("backups", exist_ok=True)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = f"backups/bot_history_{timestamp}.db"
-            import sqlite3
-            conn = sqlite3.connect(self.db_path, timeout=10)
-            conn.execute(f"VACUUM INTO '{backup_path}'")
-            conn.close()
+
+            def _do_backup():
+                import sqlite3
+                conn = sqlite3.connect(self.db_path, timeout=10)
+                conn.execute(f"VACUUM INTO '{backup_path}'")
+                conn.close()
+
+            await asyncio.to_thread(_do_backup)
             logger.info(f"Database backup created: {backup_path}")
         except Exception as e:
             logger.warning(f"Failed to backup database: {e}")
@@ -742,9 +755,9 @@ class DataAggregator:
                         dex_fee_lamports, slippage_bps, compute_cost_lamports,
                         network_fee_lamports, priority_fee_lamports, jito_tip_lamports,
                         ata_rent_lamports, total_cost_lamports, net_profit_lamports,
-                        roi_pct, decision
+                        roi_pct, decision, sol_usd_price
                     ) VALUES (
-                        datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        datetime('now'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                     )
                 """,
                     (
@@ -767,6 +780,7 @@ class DataAggregator:
                         trade_data.get("net_profit_lamports"),
                         trade_data.get("roi_pct"),
                         trade_data.get("decision"),
+                        trade_data.get("sol_usd_price", 0.0),
                     ),
                 )
                 await db.commit()
@@ -798,6 +812,16 @@ class DataAggregator:
             )
             total_profit_lamports = (await cursor.fetchone())[0] or 0
             total_profit_sol = total_profit_lamports / 1e9
+
+            # Total net profit in USD
+            cursor = await db.execute(
+                """
+                SELECT SUM((net_profit_lamports / 1e9) * sol_usd_price) FROM paper_trades
+                WHERE ts >= datetime(?, 'unixepoch')
+            """,
+                (cutoff_timestamp,),
+            )
+            total_profit_usd = (await cursor.fetchone())[0] or 0
 
             # Most profitable routes
             cursor = await db.execute(
@@ -836,6 +860,7 @@ class DataAggregator:
             return {
                 "total_trades": total_trades,
                 "total_profit": total_profit_sol,
+                "total_profit_usd": total_profit_usd,
                 "win_rate": win_rate,
                 "top_routes": top_routes,
                 "period_days": days,

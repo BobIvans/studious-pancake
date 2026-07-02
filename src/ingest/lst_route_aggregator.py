@@ -158,6 +158,16 @@ class LstRouteAggregator:
                     lst_profit = sell_q.out_amount - borrow_amount_lamports
                     if lst_profit <= 0:
                         continue
+
+                    # DEX-003: Subtract Jupiter platform fee (totalFee from final quote)
+                    jupiter_fee_lamports = int(
+                        sell_q.full_quote_response
+                        .get("fees", {})
+                        .get("totalFee", 0)
+                    )
+                    lst_profit -= jupiter_fee_lamports
+                    if lst_profit <= 0:
+                        continue
                         
                     profit_sol = lst_profit / 1e9  # Already in SOL lamports
                     net_profit = profit_sol - total_fees
@@ -216,6 +226,16 @@ class LstRouteAggregator:
                     continue
                 for sell_q in sell_quotes:
                     lst_profit = sell_q.out_amount - borrow_amount_lamports
+                    if lst_profit <= 0:
+                        continue
+
+                    # DEX-003: Subtract Jupiter platform fee from profit
+                    jupiter_fee_lamports = int(
+                        sell_q.full_quote_response
+                        .get("fees", {})
+                        .get("totalFee", 0)
+                    )
+                    lst_profit -= jupiter_fee_lamports
                     if lst_profit <= 0:
                         continue
 

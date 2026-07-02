@@ -66,11 +66,13 @@ def run_pytest():
             "tests/"
         ], capture_output=True, text=True, timeout=300)
 
-        print("📄 Pytest Output:")
-        print(result.stdout)
-        if result.stderr:
-            print("⚠️  Pytest Errors:")
-            print(result.stderr)
+        if result.returncode == 0:
+            print("✅ Pytest Suite passed successfully.")
+        else:
+            print("❌ Pytest Suite failed. Error logs:")
+            print(result.stdout)
+            if result.stderr:
+                print(result.stderr)
 
         return result.returncode == 0
     except subprocess.TimeoutExpired:

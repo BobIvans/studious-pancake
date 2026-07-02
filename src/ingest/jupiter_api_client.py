@@ -59,7 +59,7 @@ class JupiterClient:
                 use_dns_cache=True,
                 keepalive_timeout=60,
                 family=socket.AF_INET,
-                force_close=True,
+                force_close=False,
                 enable_cleanup_closed=True,
             )
             self.session = aiohttp.ClientSession(
@@ -115,7 +115,7 @@ class JupiterClient:
             "amount": str(int(amount)),
             "slippageBps": slippage_bps,
             "swapMode": swap_mode,
-            "onlyDirectRoutes": "false",
+            "onlyDirectRoutes": "true" if only_direct_routes else "false",
             "restrictIntermediateTokens": "false",
             "cache_buster": str(time.time_ns()),
         }

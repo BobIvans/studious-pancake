@@ -23,7 +23,7 @@ async def main():
         stats = await aggregator.get_paper_trading_stats(days=1)  # Last 24 hours
 
         print(f"📈 Total Paper Trades: {stats['total_trades']}")
-        print(f"💰 Total Profit: {stats['total_profit']:.6f} SOL")
+        print(f"💰 Total Profit: {stats['total_profit']:.6f} SOL (${stats.get('total_profit_usd', 0):.2f})")
         print(f"📅 Period: {stats['period_days']} days")
         print()
 

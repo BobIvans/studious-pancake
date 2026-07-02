@@ -3,12 +3,16 @@
 
 import asyncio
 import logging
+import os
 from decimal import Decimal
+from dotenv import load_dotenv
 from src.ingest.optimal_trade_sizer import OptimalTradeSizer, VelocitySlippageManager
 from src.ingest.pre_trade_guard import PreTradeGuard
 from src.ingest.jito_bundle_handler import JitoBundleHandler
 from src.ingest.rpc_multiplexing import ExecutionPipeline
 from solders.keypair import Keypair
+
+load_dotenv()
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -62,12 +66,12 @@ async def test_execution_pipeline():
     """Test the execution pipeline integration."""
     logger.info("⚡ Testing Execution Pipeline Integration...")
 
-    # This would require actual RPC connections, so we'll just test structure
+    test_rpc = os.getenv("RPC_URL_1", "https://api.mainnet-beta.solana.com")
     keypair = Keypair()
     pipeline = ExecutionPipeline(
-        rpc_endpoints=["https://api.mainnet-beta.solana.com"],
-        wss_endpoints=["wss://api.mainnet-beta.solana.com"],
-        monitored_addresses=["675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"],  # Jupiter program
+        rpc_endpoints=[test_rpc],
+        wss_endpoints=[os.getenv("WSS_ENDPOINT_1", "wss://api.mainnet-beta.solana.com")],
+        monitored_addresses=["675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"],
         trade_sizer=OptimalTradeSizer(),
         slippage_manager=VelocitySlippageManager(),
         pre_trade_guard=PreTradeGuard(),

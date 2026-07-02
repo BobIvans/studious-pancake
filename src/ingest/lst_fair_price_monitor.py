@@ -159,7 +159,7 @@ class LstFairPriceMonitor:
         self._last_market_update = time.time()
         return dict(self._market_prices)
 
-    def get_depeg_signals(self, threshold_bps: float = 15.0) -> List[DepegSignal]:
+    def get_depeg_signals(self, threshold_bps: float = 50.0) -> List[DepegSignal]:
         """Compare fair prices to market prices and return depeg signals."""
         signals = []
         for pool_addr, mint, symbol, _ in self._pools:
@@ -187,7 +187,7 @@ class LstFairPriceMonitor:
     async def subscribe_to_depeg(
         self,
         callback: Callable[[DepegSignal], None],
-        threshold_bps: float = 15.0,
+        threshold_bps: float = 50.0,
         interval: float = 0.5,
     ):
         """Continuously monitor for depeg opportunities and invoke callback."""

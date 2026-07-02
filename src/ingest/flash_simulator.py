@@ -133,7 +133,7 @@ class FlashSimulator:
                     "encoding": "base64",
                     "commitment": "processed",
                     "sigVerify": False,
-                    "replaceRecentBlockhash": True,
+                    "replaceRecentBlockhash": False,
                     # Add accounts parameter to get balance changes
                     "accounts": {
                         "encoding": "base64",
@@ -254,6 +254,7 @@ class FlashSimulator:
         wallet_index: int = 0,
         jito_endpoint: Optional[str] = None,
         bank_vault_pubkey: Optional[str] = None,
+        backup_rpc_url: Optional[str] = None,
     ) -> Tuple[bool, str, SimulationResult]:
         """Simulate and validate that the transaction is profitable.
 
@@ -267,6 +268,7 @@ class FlashSimulator:
             tip_lamports: Jito tip cost in lamports
             priority_fee_lamports: Priority fee cost in lamports
             wallet_index: Index of wallet in transaction accounts
+            backup_rpc_url: Optional secondary RPC URL for cross-validation (SEC-007)
 
         Returns:
             Tuple of (is_profitable, reason, simulation_result)
@@ -286,6 +288,49 @@ class FlashSimulator:
             # Kamino flashloan fee: 0.05% = 5 bps = 5/10000
             flashloan_fee_lamports = min_profit_lamports * 5 // 10000
         net_profit_lamports = sim.balance_delta_lamports - tip_lamports - priority_fee_lamports - flashloan_fee_lamports
+
+        # SEC-007: Cross-RPC Validation Guard — double-check simulation on backup RPC
+        if backup_rpc_url and backup_rpc_url != self.rpc_url and net_profit_lamports >= min_profit_lamports:
+            logger.debug(f"🔎 Cross-validating simulation on backup RPC: {backup_rpc_url[:50]}...")
+            backup_sim = await self.simulate_transaction(
+                tx_b64, tx_signer_pubkey, wallet_index, min_profit_lamports, jito_endpoint
+            )
+            # Use backup_rpc_url for the actual request by temporarily swapping
+            import aiohttp
+            backup_session = aiohttp.ClientSession()
+            try:
+                backup_payload = {
+                    "jsonrpc": "2.0", "id": 1, "method": "simulateTransaction",
+                    "params": [
+                        tx_b64,
+                        {
+                            "encoding": "base64", "commitment": "processed",
+                            "sigVerify": False, "replaceRecentBlockhash": False,
+                            "accounts": {"encoding": "base64", "addresses": [tx_signer_pubkey]}
+                        }
+                    ]
+                }
+                async with backup_session.post(backup_rpc_url, json=backup_payload, timeout=aiohttp.ClientTimeout(total=self.timeout)) as backup_resp:
+                    if backup_resp.status == 200:
+                        backup_data = await backup_resp.json()
+                        backup_result = backup_data.get("result", {}).get("value", {})
+                        if backup_result.get("err"):
+                            reason = f"RPC Poisoning Guard: Backup RPC simulation failed ({backup_result['err']})"
+                            logger.critical(f"🚨 {reason}")
+                            return False, reason, sim
+                        backup_pre = backup_result.get("preBalances", []) or []
+                        backup_post = backup_result.get("postBalances", []) or []
+                        if backup_pre and backup_post and len(backup_pre) > 0 and len(backup_post) > 0:
+                            backup_delta = backup_post[0] - backup_pre[0]
+                            if backup_delta < min_profit_lamports:
+                                reason = f"RPC Poisoning Guard: Backup RPC shows unprofitable ({backup_delta} lamports vs {net_profit_lamports} on primary)"
+                                logger.critical(f"🚨 {reason}")
+                                return False, reason, sim
+                            logger.debug(f"✅ Cross-RPC validation passed: backup delta={backup_delta} lamports")
+            except Exception as _backup_err:
+                logger.warning(f"Cross-RPC backup simulation failed (non-blocking): {_backup_err}")
+            finally:
+                await backup_session.close()
 
         # 3. ПРОВЕРКА ПОРОГА ПРИБЫЛИ
         if net_profit_lamports < min_profit_lamports:

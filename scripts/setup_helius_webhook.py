@@ -20,7 +20,7 @@ def check_existing_webhooks(api_key: str):
 
     try:
         response = requests.get(url)
-        if response.status_code == 200:
+        if response.status_code in (200, 201):
             webhooks = response.json()
             existing_lst_webhooks = []
 
@@ -111,7 +111,7 @@ def create_helius_webhook():
             "Content-Type": "application/json"
         })
 
-        if response.status_code == 200:
+        if response.status_code in (200, 201):
             result = response.json()
             webhook_id = result.get("webhookId")
 

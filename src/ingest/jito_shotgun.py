@@ -85,14 +85,14 @@ class JitoShotgun:
         # else:
         #     logger.warning("Multiple transactions detected - consider merging for capital protection")
 
-        # Convert to base58 - use EXACT same serialized tx (same sig) for all regions (Fix 82)
-        # Never re-sign with different blockhash per region to avoid double-spend rejection
-        tx_base58 = [base58.b58encode(bytes(tx)).decode('ascii') for tx in transactions]
+        # Convert to base64 - ~10x faster than base58, saves CPU in hot loop (PERF-008)
+        import base64
+        serialized_bundle = [base64.b64encode(bytes(tx)).decode("ascii") for tx in transactions]
 
         # Send to all endpoints simultaneously
         tasks = []
         for endpoint in self.endpoints:
-            task = self._send_bundle_to_endpoint(tx_base58, endpoint)
+            task = self._send_bundle_to_endpoint(serialized_bundle, endpoint)
             tasks.append(task)
 
         # Wait for all responses
@@ -195,8 +195,8 @@ class JitoShotgun:
             logger.error(f"Failed to merge tip into transaction: {e}")
             return transaction
 
-    async def _send_bundle_to_endpoint(self, tx_base58: List[str], endpoint: str) -> Dict[str, Any]:
-        """Send bundle to specific Jito endpoint."""
+    async def _send_bundle_to_endpoint(self, serialized_bundle: List[str], endpoint: str) -> Dict[str, Any]:
+        """Send bundle to specific Jito endpoint using base64 encoding."""
         try:
             url = endpoint
 
@@ -204,7 +204,7 @@ class JitoShotgun:
                 "jsonrpc": "2.0",
                 "id": 1,
                 "method": "sendBundle",
-                "params": [tx_base58]
+                "params": [serialized_bundle, {"encoding": "base64"}]
             }
 
             # Phase 14: Conditional Auth Headers (Jito vs bloXroute)
@@ -222,8 +222,8 @@ class JitoShotgun:
                 # Jito authorization: Bearer <token> format
                 headers["Authorization"] = f"Bearer {self.auth_key}"
 
-            # Short timeout for HFT - better miss one endpoint than lose arbitrage window
-            async with self.session.post(url, data=raw_body, headers=headers, timeout=0.5) as resp:
+            # Increased timeout for global Jito Block Engine coverage (Frankfurt/Tokyo need up to 1.5s)
+            async with self.session.post(url, data=raw_body, headers=headers, timeout=1.5) as resp:
                 if resp.status == 200:
                     return await resp.json()
                 else:

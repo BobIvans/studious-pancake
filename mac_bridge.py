@@ -12,16 +12,20 @@ class FileContent(BaseModel):
 
 @app.get("/read")
 def read_file(path: str):
-    full_path = os.path.join(BASE_DIR, path)
-    if not os.path.exists(full_path):
+    resolved_path = os.path.abspath(os.path.join(BASE_DIR, path))
+    if not resolved_path.startswith(os.path.abspath(BASE_DIR)):
+        raise HTTPException(status_code=403, detail="Directory traversal detected. Access denied.")
+    if not os.path.exists(resolved_path):
         raise HTTPException(status_code=404, detail="File not found")
-    with open(full_path, 'r', encoding='utf-8') as f:
+    with open(resolved_path, 'r', encoding='utf-8') as f:
         return {"content": f.read()}
 
 @app.post("/write")
 def write_file(path: str, content: FileContent):
-    full_path = os.path.join(BASE_DIR, path)
-    os.makedirs(os.path.dirname(full_path), exist_ok=True)
-    with open(full_path, 'w', encoding='utf-8') as f:
+    resolved_path = os.path.abspath(os.path.join(BASE_DIR, path))
+    if not resolved_path.startswith(os.path.abspath(BASE_DIR)):
+        raise HTTPException(status_code=403, detail="Directory traversal detected. Access denied.")
+    os.makedirs(os.path.dirname(resolved_path), exist_ok=True)
+    with open(resolved_path, 'w', encoding='utf-8') as f:
         f.write(content.text)
     return {"status": "success"}

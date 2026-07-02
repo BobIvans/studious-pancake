@@ -266,15 +266,29 @@ class ExecutionRouter:
         # Fix 38: epoch_tracker removed — epoch info fetched lazily via RPC in _check_epoch_killswitch
 
     async def _process_queue(self):
-        """Process execution tasks sequentially."""
+        """Process execution tasks concurrently.
+
+        Spawns each task as a background asyncio task so the queue never blocks
+        on slow operations (Jito bundle send, balance checks, etc.).
+        This enables true concurrent processing of multiple arbitrage opportunities
+        across the MarginFi account pool (PERF, HFT Concurrency).
+        """
+        async def _execute_task_wrapper(task_item):
+            try:
+                await self._execute_task(task_item)
+            finally:
+                self.execution_queue.task_done()
+
         while True:
             try:
                 task = await self.execution_queue.get()
-                await self._execute_task(task)
-                self.execution_queue.task_done()
+                # Spawn a background task so the queue never blocks
+                bg_task = asyncio.create_task(_execute_task_wrapper(task))
+                shared_state.active_tasks.add(bg_task)
+                bg_task.add_done_callback(shared_state.active_tasks.discard)
             except Exception as e:
                 logger.error(f"Queue processing error: {e}")
-                await asyncio.sleep(0.1) # Prevent tight loop on error
+                await asyncio.sleep(0.1)
 
     async def _execute_task(self, task):
         """Execute a single task."""
@@ -1129,11 +1143,14 @@ class ExecutionRouter:
                         try:
                             sigs = [base58.b58encode(bytes(sig)).decode('ascii') for sig in transaction.signatures]
                             tip_deducted = jito_tip_lamports / 1e9
-                            await self.data_aggregator.log_inflight_bundle(
-                                bundle_id=bundle_result["bundle_id"],
-                                signatures=sigs,
-                                deducted_sol=tip_deducted,
-                                tip_lamports=jito_tip_lamports,
+                            # PERF-002: Fire-and-forget — never block the hot path on DB I/O
+                            asyncio.create_task(
+                                self.data_aggregator.log_inflight_bundle(
+                                    bundle_id=bundle_result["bundle_id"],
+                                    signatures=sigs,
+                                    deducted_sol=tip_deducted,
+                                    tip_lamports=jito_tip_lamports,
+                                )
                             )
                         except Exception as _log_err:
                             logger.debug(f"Inflight bundle logging failed: {_log_err}")

@@ -198,6 +198,11 @@ _balance_lock_pause_until: float = 0.0
 ATA_RENT_SOL_SPL = 0.00203928
 ATA_RENT_SOL_TOKEN2022 = 0.0035
 
+# Phase 5C (P2-024): Dynamic decimals cache for on-chain token decimal resolution
+# Populated by get_token_decimals_dynamic() in arb_bot.py when a mint is not
+# found in the hardcoded TOKEN_DECIMALS dictionary.
+DYNAMIC_DECIMALS_CACHE: Dict[str, int] = {}
+
 # Fix 64: Appends a latency measurement to the capped list (max 1000 entries)
 def append_latency(value: float) -> None:
     """Append latency measurement, capping list at 1000 entries to prevent memory leak."""

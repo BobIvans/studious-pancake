@@ -2550,9 +2550,21 @@ async def create_flashloan_arbitrage_tx(
         # Assuming base_mint is a stablecoin (6 decimals)
         fee_in_base_token_lamports = int(base_fee_sol * sol_price_in_usd * 1e6)
 
-    # MarginFi flashloan fee is configurable via cfg.FLASH_FEE_PCT (default 0.0)
-    flashloan_fee_lamports = int(base_amount_lamports * cfg.FLASH_FEE_PCT)
-    total_fees_in_base = fee_in_base_token_lamports + flashloan_fee_lamports
+    # DEX-003: Subtract Jupiter platform fee (totalFee from final quote)
+    jupiter_fee_lamports = int(
+        last_quote.get("full_quote_response", {})
+        .get("fees", {})
+        .get("totalFee", 0)
+    )
+    # DEX-006: Asset-specific flashloan fee (0.05% for USDC/USDT, 0% for SOL)
+    _usdc_mint_str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    _usdt_mint_str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+    if str(base_mint_str) in [_usdc_mint_str, _usdt_mint_str]:
+        _flashloan_fee_pct = 0.0005  # 0.05% for stablecoins
+    else:
+        _flashloan_fee_pct = 0.0     # 0% for SOL
+    flashloan_fee_lamports = int(base_amount_lamports * _flashloan_fee_pct)
+    total_fees_in_base = fee_in_base_token_lamports + flashloan_fee_lamports + jupiter_fee_lamports
 
     if profit_lamports < total_fees_in_base:
         return None
@@ -4562,7 +4574,15 @@ async def execute_priority_opportunity(
         # Fix 81: Pre-calculate net profit to prevent USDC math divide-by-1e9 bug
         tip_amount_sol = tip_amount_lamports / 1e9 if tip_amount_lamports else 0.0
         borrow_amount_sol = opportunity.metadata.get("borrow_amount_sol", 0.0)
-        flashloan_fee_sol = borrow_amount_sol * cfg.FLASH_FEE_PCT  # MarginFi: configurable, default 0.0
+        # DEX-006: Asset-specific flashloan fee (0.05% for USDC/USDT, 0% for SOL)
+        _usdc_mint_str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+        _usdt_mint_str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+        _in_mint_str = str(in_mint) if not isinstance(in_mint, str) else in_mint
+        if _in_mint_str in [_usdc_mint_str, _usdt_mint_str]:
+            _flashloan_pct = 0.0005  # 0.05%
+        else:
+            _flashloan_pct = 0.0     # 0% for SOL
+        flashloan_fee_sol = borrow_amount_sol * _flashloan_pct
 
         est_net_profit_sol = max(
             0.0,
@@ -4650,7 +4670,13 @@ async def execute_priority_opportunity(
                         if net_profit_sol > 0
                         else 0
                     )
-                    flashloan_fee_lamports = int(amount_lamports * cfg.FLASH_FEE_PCT)
+                    # DEX-006: Asset-specific flashloan fee
+                    __in_mint_str = str(in_mint) if not isinstance(in_mint, str) else in_mint
+                    if __in_mint_str in [_usdc_mint_str, _usdt_mint_str]:
+                        __flashloan_pct = 0.0005
+                    else:
+                        __flashloan_pct = 0.0
+                    flashloan_fee_lamports = int(amount_lamports * __flashloan_pct)
                     ata_rent_lamports = int((_rent_cost) * 1e9)
                     total_cost_lamports = (
                         base_fee_lamports
@@ -5282,7 +5308,23 @@ async def worker(
                 # Assuming in_mint is a stablecoin (6 decimals)
                 fee_in_base_token_lamports = int(base_fee_sol * sol_price_in_usd * 1e6)
 
-            total_fees_in_base = fee_in_base_token_lamports
+            # DEX-003: Jupiter platform fee from final quote
+            jupiter_fee_lamports = int(
+                chosen_route[-1]
+                .get("full_quote_response", {})
+                .get("fees", {})
+                .get("totalFee", 0)
+            )
+            # DEX-006: MarginFi flashloan fee (asset-specific)
+            _usdc_mint_str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            _usdt_mint_str = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+            _in_mint_str = str(in_mint) if not isinstance(in_mint, str) else in_mint
+            if _in_mint_str in [_usdc_mint_str, _usdt_mint_str]:
+                _flashloan_pct = 0.0005
+            else:
+                _flashloan_pct = 0.0
+            flashloan_fee_lamports = int(amount_lamports * _flashloan_pct)
+            total_fees_in_base = fee_in_base_token_lamports + flashloan_fee_lamports + jupiter_fee_lamports
             if profit_lamports < total_fees_in_base:
                 logger.debug(
                     f"Skipping: Profit {profit_lamports} lamports doesn't cover total fees ({total_fees_in_base} lamports)"

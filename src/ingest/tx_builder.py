@@ -572,7 +572,7 @@ class JupiterTxBuilder:
                     "🚨 Blockhash is None! Aborting TX build to prevent Rust Panic."
                 )
                 return None, 0, 0
-            _bh = Hash.from_string(recent_blockhash)
+            _bh = Hash.from_string(str(recent_blockhash))
             draft_msg = MessageV0.try_compile(
                 payer=payer,
                 instructions=final_instructions,
@@ -612,7 +612,7 @@ class JupiterTxBuilder:
                     "🚨 Blockhash is None! Aborting TX build to prevent Rust Panic."
                 )
                 return None, 0, 0
-            _mtu_bh = Hash.from_string(recent_blockhash)
+            _mtu_bh = Hash.from_string(str(recent_blockhash))
             _mtu_msg = MessageV0.try_compile(
                 payer=payer,
                 instructions=final_instructions,
@@ -1550,7 +1550,8 @@ class JupiterTxBuilder:
             usdc_bank_id = correct_usdc
 
         # Determine which bank to use based on borrow_mint
-        bank_pubkey = sol_bank_id if "So111" in borrow_mint else usdc_bank_id
+        # Phase 21: str() cast prevents TypeError: argument of type 'Pubkey' is not iterable
+        bank_pubkey = sol_bank_id if "So111" in str(borrow_mint) else usdc_bank_id
 
         # Real-time Liquidity Check with 95% Cap
         if not await self._check_marginfi_liquidity_realtime(

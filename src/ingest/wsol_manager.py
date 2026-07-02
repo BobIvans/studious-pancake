@@ -44,7 +44,7 @@ def _balance_lock_can_trade() -> bool:
 
 # Constants
 SOL_MINT = Pubkey.from_string("So11111111111111111111111111111111111111112")
-SYSTEM_PROGRAM_ID = Pubkey.from_string("11111111111111111111111111111112")
+SYSTEM_PROGRAM_ID = Pubkey.from_string("11111111111111111111111111111111")
 
 
 class WSOLManager:

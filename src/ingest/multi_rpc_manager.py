@@ -199,11 +199,9 @@ class MultiRpcManager:
         self.running = False
         logger.info("🛑 Stopping Multi-RPC manager...")
 
-        # Cancel all connection tasks
         for task in self.connection_tasks:
             task.cancel()
 
-        # Close all websocket connections and sessions
         close_tasks = []
         for endpoint in self.endpoints:
             if endpoint.connection and not getattr(endpoint.connection, 'closed', True):
@@ -216,6 +214,10 @@ class MultiRpcManager:
 
         await asyncio.gather(*self.connection_tasks, return_exceptions=True)
         logger.info("✅ Multi-RPC manager stopped")
+
+    async def close(self):
+        """Close all RPC sessions and websocket connections (Phase 20 Task 5)."""
+        await self.stop()
 
     async def _manage_endpoint_connection(self, endpoint: RpcEndpoint):
         """Manage connection lifecycle for a single endpoint."""

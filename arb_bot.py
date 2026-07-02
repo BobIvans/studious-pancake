@@ -2868,7 +2868,7 @@ async def create_flashloan_arbitrage_tx(
             _safe_data = (
                 MARGINFI_FLASHLOAN_START
                 + int(effective_base_amount).to_bytes(8, "little")
-                + struct.pack("<Q", actual_repay_index)
+                + struct.pack("<H", actual_repay_index)
             )
             # Find and replace the borrow instruction inside optimized_instructions
             # ИСПРАВЛЕНИЕ Python 3.13 StopIteration: Добавлен None как дефолтное значение
@@ -3209,6 +3209,19 @@ async def lst_depeg_scanner(
     bank_cfg = MARGINFI_BANKS[sol_mint_str]
 
     min_profit_lamports = int(cfg.MIN_NET_PROFIT_BUFFER_SOL * 1_000_000_000)
+    # Phase 21: Adjust min profit for Token-2022 transfer fees (silent capital loss)
+    try:
+        _ptg = PreTradeGuard(session=session, rpc_url=rpc_url)
+        _adjusted = await _ptg.get_adjusted_profit_threshold(
+            lst_mint, min_profit_lamports / 1e9, rpc_url
+        )
+        if abs(_adjusted - min_profit_lamports / 1e9) > 1e-12:
+            min_profit_lamports_orig = min_profit_lamports
+            min_profit_lamports = int(_adjusted * 1e9)
+            logger.info(f"💰 Phase 21: min profit adjusted for Token-2022 fee: "
+                        f"{min_profit_lamports_orig/1e9:.6f} → {min_profit_lamports/1e9:.6f} SOL")
+    except Exception as _e21:
+        logger.debug(f"Phase 21 fee adjustment skipped: {_e21}")
     cycle_count = 0
 
     logger.debug(
@@ -6690,6 +6703,13 @@ async def run():
         if "session" in locals() and session and not session.closed:
             await session.close()
 
+        # Phase 20 Task 5: Close RPCManager to release ClientSession sockets
+        if "rpc" in locals() and rpc is not None:
+            try:
+                await rpc.close()
+            except Exception as _rpc_close_err:
+                logger.warning(f"RPCManager close failed: {_rpc_close_err}")
+
         if "jito_executor" in locals() and jito_executor:
             await jito_executor.stop()
         if "helius_webhook_handler" in locals() and helius_webhook_handler:
@@ -7007,6 +7027,18 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
 
             # Task 52: Burn-before-close — flush non-zero residue to prevent TokenAccountNotEmpty
             # ФИКС 2: raw_amount_str уже в базовых единицах, умножение на децимали НЕ ТРЕБУЕТСЯ
+            # Phase 21: Remove from ATA_CACHE optimistically BEFORE async close
+            # Prevents race: if next trade starts and checks ATA_CACHE, it sees
+            # stale entry and skips ATA creation — then the close lands and swap fails.
+            try:
+                import src.ingest.shared_state as _ss_t2
+                ata_str = str(ata_address) if not isinstance(ata_address, str) else ata_address
+                if ata_str in _ss_t2.ATA_CACHE:
+                    _ss_t2.ATA_CACHE.discard(ata_str)
+                    logger.debug(f"🧹 Phase 21: Removed {ata_str[:8]} from ATA_CACHE before close")
+            except Exception:
+                pass
+
             raw_amount = int(raw_amount_str or 0)
             if raw_amount > 0:
                 burn_ix = await _build_burn_instruction_atlanta(

@@ -111,6 +111,16 @@ class JitoBundleClient:
     # ── Blockhash ───────────────────────────────────────────────────────────────
 
     async def _get_recent_blockhash(self, rpc_url: Optional[str] = None) -> Optional[Hash]:
+        # Phase 21: Try BlockhashRacingManager cache first (0ms vs 100ms+ HTTP POST)
+        try:
+            from src.ingest.blockhash_racing import get_blockhash_manager
+            bh_mgr = get_blockhash_manager()
+            if bh_mgr and bh_mgr.current_blockhash:
+                logger.debug("⚡ Phase 21: Using cached blockhash from BlockhashRacingManager")
+                return bh_mgr.current_blockhash
+        except Exception:
+            pass
+
         if not self.session:
             return None
         endpoint = (rpc_url or self.rpc_url or "").strip()

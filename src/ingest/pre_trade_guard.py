@@ -31,7 +31,7 @@ def get_vault_threshold(decimals: int = 6) -> int:
     return 100 * (10 ** max(decimals, 0))
 
 
-RENT_EXEMPT_LAMPORT = 2_039_280
+RENT_EXEMPT_LAMPORT = 3_500_000
 
 # Whitelist of safe tokens (stablecoins and LSTs)
 SAFE_MINTS = {

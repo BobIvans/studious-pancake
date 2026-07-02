@@ -232,7 +232,7 @@ class JitoBiddingManager:
         self.last_poll = 0.0
         # ── Phase 49: Adaptive Tip Step-Up ───────────────────────────────────
         # After N consecutive failed bundle submissions (simulation passed), ramp tip%
-        self._consecutive_failures = 0
+        self._consecutive_failures: Dict[str, int] = {}  # Phase 21: per-strategy counter (Dict[str,int])
         self._step_up_until = 0.0   # epoch when elevated tip window expires
         self.STEP_UP_THRESHOLD = 3  # failures before step-up
         self.STEP_UP_DURATION_S = 300  # 5-minute elevated tip window
@@ -390,11 +390,11 @@ class JitoBiddingManager:
         tip_pct = base_tip_pct
         if time.time() < self._step_up_until:
             tip_pct = self.STEP_UP_TIP_PCT_HIGH
-        elif self._consecutive_failures >= self.STEP_UP_THRESHOLD:
+        elif self._consecutive_failures.get(strategy, 0) >= self.STEP_UP_THRESHOLD:
             self._step_up_until = time.time() + self.STEP_UP_DURATION_S
             tip_pct = self.STEP_UP_TIP_PCT_HIGH
             logger.warning(
-                f"📈 Phase 49 Step-Up: {self._consecutive_failures} consecutive failures → "
+                f"📈 Phase 49 Step-Up: {self._consecutive_failures.get(strategy, 0)} consecutive failures for {strategy} → "
                 f"tip raised to {tip_pct*100:.0f}% for {self.STEP_UP_DURATION_S}s"
             )
 
@@ -560,22 +560,24 @@ class JitoBiddingManager:
             self.consecutive_success = 0
 
     def record_bundle_result(self, strategy: str, landed: bool):
-        """Phase 49: Track consecutive bundle failures for dynamic step-up."""
+        """Phase 49 + Phase 21: Track consecutive bundle failures per strategy for dynamic step-up."""
         import time
         import asyncio
+        # Phase 21: per-strategy counter
+        prev = self._consecutive_failures.get(strategy, 0)
         if landed:
-            # Success — reset failure counter and collapse step-up window
-            self._consecutive_failures = 0
+            # Success — reset per-strategy counter and collapse step-up window
+            self._consecutive_failures[strategy] = 0
             self._step_up_until = 0.0
             self.record_trade_result(strategy, True)
             asyncio.create_task(send_telegram_alert(f"✅ <b>BUNDLE LANDED!</b>\nStrategy: <code>{strategy}</code> executed successfully."))
         else:
-            # Accumulate failure — trigger step-up window once threshold is hit
-            self._consecutive_failures += 1
-            if self._consecutive_failures == self.STEP_UP_THRESHOLD:
+            # Accumulate per-strategy failure — trigger step-up window once threshold is hit
+            self._consecutive_failures[strategy] = prev + 1
+            if self._consecutive_failures[strategy] >= self.STEP_UP_THRESHOLD:
                 self._step_up_until = time.time() + self.STEP_UP_DURATION_S
                 logger.warning(
-                    f"📈 Phase 49 Bidding Manager: {self.STEP_UP_THRESHOLD} consecutive failures → "
+                    f"📈 Phase 49 Bidding Manager: {self._consecutive_failures[strategy]} consecutive failures for {strategy} → "
                     f"step-up window activated for {self.STEP_UP_DURATION_S}s"
                 )
                 asyncio.create_task(send_telegram_alert(f"⚠️ <b>JITO STEP-UP ACTIVATED</b>\n{self.STEP_UP_THRESHOLD} consecutive rejected bundles for <code>{strategy}</code>. Raising tip percentage!"))

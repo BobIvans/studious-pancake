@@ -18,7 +18,7 @@ module.exports = {
     name: "ultra-arb",
     script: "arb_bot.py",
     interpreter: "python3",
-    cron_restart: "0 4 * * 1", // Понедельник утро — минимальная волатильность
+    cron_restart: "0 4,16 * * *", // Auto-restart every 12 hours (04:00 and 16:00 UTC) to clean sockets/memory
     autorestart: true,
     max_restarts: 10,
     min_uptime: "120s", // Боту нужно время на warm-up ATA и ALTs

@@ -670,7 +670,7 @@ async def warmup_golden_atas(
                         )
                         # Cache the newly created ATA so the hot-path doesn't deduct phantom rent.
                         import src.ingest.shared_state as shared_state
-                        shared_state.ATA_CACHE.add(ata_str)
+                        await shared_state.add_to_ata_cache(ata_str)
                     else:
                         txt = await send_resp.text()
                         logger.warning(
@@ -684,7 +684,7 @@ async def warmup_golden_atas(
             )
             # Cache the existing ATA so the hot-path doesn't deduct phantom rent.
             import src.ingest.shared_state as shared_state
-            shared_state.ATA_CACHE.add(ata_str)
+            await shared_state.add_to_ata_cache(ata_str)
 
 
 def validate_marginfi_account(cfg: Config) -> bool:
@@ -4221,7 +4221,8 @@ async def check_bundle_confirmation(
         else:
             # ФИКС 3: Добавляем ATA в глобальный кэш ТОЛЬКО после подтверждения
             if new_atas_to_create:
-                ATA_CACHE.update(new_atas_to_create)
+                for _ata_addr in new_atas_to_create:
+                    await shared_state.add_to_ata_cache(_ata_addr)
                 logger.debug(
                     f"✅ ATA_CACHE updated with {len(new_atas_to_create)} new ATAs after successful confirmation"
                 )
@@ -4382,7 +4383,7 @@ async def execute_priority_opportunity(
                     actual_new_atas_needed += 1
                     _rent_cost += RENT_SPL_ATA_SOL
                 else:
-                    ATA_CACHE.add(ata_addr)
+                    await shared_state.add_to_ata_cache(ata_addr)
 
     current_sol = shared_state.stats.get(
         "virtual_balance", shared_state.stats.get("last_balance", 0.0)
@@ -4494,7 +4495,7 @@ async def execute_priority_opportunity(
                     session, rpc_manager.get_rpc, keypair.pubkey(), _dst_mint_str
                 )
                 if _ata_already:
-                    ATA_CACHE.add(_dst_ata)
+                    await shared_state.add_to_ata_cache(_dst_ata)
                 else:
                     _rent_sol = RENT_SPL_ATA_SOL
                     logger.info(
@@ -4946,12 +4947,14 @@ async def worker(
                 "virtual_balance", shared_state.stats.get("last_balance", 0.0)
             )
 
-            # Fix 5 (Strict Gas Tank): never trade if balance < 0.005 SOL
+            # Task 24/25: Expand rent check to include borrow_mint and SOL_MINT ATAs
+            _SOL_MINT_STR = "So11111111111111111111111111111111111111112"
             try:
                 from src.ingest.shared_state import get_ata_rent_for_mint
                 _estimated_rent = 0.0
-                if target_mint_str not in shared_state.ATA_CACHE:
-                    _estimated_rent = get_ata_rent_for_mint(target_mint_str)
+                for _check_mint in {target_mint_str, str(in_mint_str), _SOL_MINT_STR}:
+                    if _check_mint not in shared_state.ATA_CACHE:
+                        _estimated_rent += get_ata_rent_for_mint(_check_mint)
                 _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(balance, _estimated_rent)
                 if not _gas_ok:
                     logger.critical(
@@ -4977,8 +4980,12 @@ async def worker(
                     max(0, shared_state._balance_lock_pause_until - time.time())
                 )
 
-            # Dynamic sizing from ENV + safety (Issue 5)
-            borrow_env_sol = float(os.getenv("FLASH_LOAN_SIZE_SOL", "1.0"))
+            # Task 29: Dynamic params from FlywheelScaler (balance-dependent scaling)
+            current_balance_sol = shared_state.stats.get("last_balance", 0.017)
+            params = flywheel_scaler.get_trading_params(current_balance_sol)
+            cfg.SLIPPAGE_BPS = params["max_slippage_bps"]
+            cfg.MIN_PROFIT_SOL = params["min_net_profit_sol"]
+            borrow_env_sol = params["flash_loan_size"]
             borrow_amount_sol = borrow_env_sol  # For quote sizing (line 2327, 2363)
 
             # Fix 2: If base token is USDC (6 decimals), convert SOL amount to USDC equivalent
@@ -5288,7 +5295,7 @@ async def worker(
                         session, rpc_manager.get_rpc, keypair.pubkey(), str(target_mint)
                     )
                     if ata_exists:
-                        ATA_CACHE.add(target_ata)
+                        await shared_state.add_to_ata_cache(target_ata)
                     else:
                         rent_fee_sol = 0.00204
                         logger.debug(
@@ -7151,7 +7158,7 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                 import src.ingest.shared_state as _ss_t2
                 ata_str = str(ata_address) if not isinstance(ata_address, str) else ata_address
                 if ata_str in _ss_t2.ATA_CACHE:
-                    _ss_t2.ATA_CACHE.discard(ata_str)
+                    await _ss_t2.discard_from_ata_cache(ata_str)
                     logger.debug(f"🧹 Phase 21: Removed {ata_str[:8]} from ATA_CACHE before close")
             except Exception:
                 pass
@@ -7230,8 +7237,7 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                         logger.debug(
                             f"✅ ATA burn+close done, rent recovered: {str(send_data['result'])[:8]}"
                         )
-                        async with shared_state.ata_cache_lock:
-                            ATA_CACHE.discard(ata_address)
+                        await shared_state.discard_from_ata_cache(ata_address)
                     else:
                         logger.debug(f"ATA burn+close failed: {send_data}")
                 else:

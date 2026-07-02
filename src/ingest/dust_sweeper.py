@@ -174,7 +174,7 @@ class DustSweeper:
                     if "result" in result:
                         try:
                             import src.ingest.shared_state as _ss
-                            _ss.ATA_CACHE.discard(wsol_ata_str)
+                            await _ss.discard_from_ata_cache(wsol_ata_str)
                         except Exception:
                             pass
                         total_recovered = balance + 2_039_280
@@ -244,8 +244,9 @@ class DustSweeper:
                             "amount": raw_amount,
                             "mint": mint
                         })
-                        # Estimate rent recovery (0.00203928 SOL = 2_039_280 lamports)
-                        total_rent_recovered += 2_039_280
+                        from src.ingest.shared_state import get_ata_rent_for_mint
+                        rent_per_account = int(get_ata_rent_for_mint(mint or "") * 1e9)
+                        total_rent_recovered += rent_per_account
 
                 if not dust_accounts:
                     logger.debug("No dust accounts to clean")
@@ -376,11 +377,13 @@ class DustSweeper:
             return False
 
     def _build_burn_instruction(self, token_account: str, mint: str, amount: int):
-        """Build Burn instruction for SPL token (Phase 41)."""
+        """Build Burn instruction for SPL/Token-2022 token."""
         try:
             from spl.token.instructions import BurnParams, burn
+            from src.ingest.shared_state import TOKEN_2022_MINTS
 
-            program_id = self.spl_token_program
+            # Task 26: Resolve correct program ID dynamically
+            program_id = self.spl_token_2022_program if mint in TOKEN_2022_MINTS else self.spl_token_program
 
             burn_params = BurnParams(
                 program_id=program_id,
@@ -444,14 +447,18 @@ class DustSweeper:
                     # СИНХРОНИЗАЦИЯ КЭША ATA_CACHE
                     try:
                         import src.ingest.shared_state as _shared_state
-                        _shared_state.ATA_CACHE.discard(str(addr))
+                        await _shared_state.discard_from_ata_cache(str(addr))
                     except Exception:
                         pass
                 
                 # Return estimated rent recovered
-                rent_per_account = 2_039_280  # Exact rent-exemption lamports
-                closed_count = len(valid_batch)
-                return closed_count * rent_per_account
+                from src.ingest.shared_state import get_ata_rent_for_mint
+                valid_batch_set = set(valid_batch)
+                rent_total = 0
+                for entry in batch:
+                    if entry["address"] in valid_batch_set:
+                        rent_total += int(get_ata_rent_for_mint(entry.get("mint", "")) * 1e9)
+                return rent_total
             else:
                 # Task 14: Track failures
                 for addr in valid_batch:
@@ -471,13 +478,19 @@ class DustSweeper:
 
         Args:
             token_account: Token account address to close.
-                  correct program ID (Tokenz… vs Tokenkeg…) is used.
+            mint: Token mint address. Used to resolve the correct program ID
+                  (Tokenz… vs Tokenkeg…).
                   If None, falls back to classic SPL Token program.
         """
         try:
             from spl.token.instructions import CloseAccountParams, close_account
+            from src.ingest.shared_state import TOKEN_2022_MINTS
 
-            program_id = self.spl_token_program
+            # Task 26: Resolve correct program ID dynamically
+            if mint and mint in TOKEN_2022_MINTS:
+                program_id = self.spl_token_2022_program
+            else:
+                program_id = self.spl_token_program
 
             close_params = CloseAccountParams(
                 account=Pubkey.from_string(token_account),
@@ -578,14 +591,20 @@ class DustSweeper:
         return Hash.from_string("11111111111111111111111111111111")
 
     def _is_transfer_hook_token(self, mint: str) -> bool:
-        """Phase 19: Check if mint has TransferHook extension.
+        """Task 27: Check if mint has TransferHook extension.
         Token-2022 Transfer Hooks require extra metadata accounts that static
         burn instructions do not provide, causing MissingRequiredSignature errors.
+        Includes all known xStocks and Token-2022 LSTs with transfer hooks.
         """
         known_hook_mints = {
             "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL
             "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL
             "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",  # INF
+            "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",  # USDY
+            "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",  # USDe
+            "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",  # sUSDe
+            "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",  # sUSDS
+            "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",  # JupUSD
         }
         return mint in known_hook_mints
 

@@ -366,10 +366,24 @@ class JitoBiddingManager:
         else:
             base_tip_pct = 0.10  # 10% for large whale trades
 
-        tip_sol = expected_profit_sol * base_tip_pct
+        # ── Phase 49: Adaptive Tip Step-Up ───────────────────────────────────
+        # If we are inside a step-up window (>= 3 consecutive failures earlier),
+        # raise tip to competitive levels (up to 60%).
+        tip_pct = base_tip_pct
+        if time.time() < self._step_up_until:
+            tip_pct = self.STEP_UP_TIP_PCT_HIGH
+        elif self._consecutive_failures.get(strategy, 0) >= self.STEP_UP_THRESHOLD:
+            self._step_up_until = time.time() + self.STEP_UP_DURATION_S
+            tip_pct = self.STEP_UP_TIP_PCT_HIGH
+            logger.warning(
+                f"📈 Phase 49 Step-Up: {self._consecutive_failures.get(strategy, 0)} consecutive failures for {strategy} → "
+                f"tip raised to {tip_pct*100:.0f}% for {self.STEP_UP_DURATION_S}s"
+            )
 
-        # Apply absolute hard cap
-        tip_sol = min(tip_sol, MAX_TIP_SOL)
+        tip_sol = expected_profit_sol * tip_pct
+        # Still respect MAX_TIP_SOL unless step-up is active (HFT survival priority)
+        if time.time() >= self._step_up_until:
+            tip_sol = min(tip_sol, MAX_TIP_SOL)
 
         # Convert to lamports
         tip_lamports = int(tip_sol * 1_000_000_000)
@@ -397,27 +411,6 @@ class JitoBiddingManager:
                     f"to cover 50th percentile floor ({floor_lamports/1e9:.6f} SOL). skipping."
                 )
                 return 0
-
-        # ── Phase 49: Adaptive Tip Step-Up ───────────────────────────────────
-        # If we are inside a step-up window (>= 3 consecutive failures earlier),
-        # raise tip to competitive levels (up to 60%).
-        tip_pct = base_tip_pct
-        if time.time() < self._step_up_until:
-            tip_pct = self.STEP_UP_TIP_PCT_HIGH
-        elif self._consecutive_failures.get(strategy, 0) >= self.STEP_UP_THRESHOLD:
-            self._step_up_until = time.time() + self.STEP_UP_DURATION_S
-            tip_pct = self.STEP_UP_TIP_PCT_HIGH
-            logger.warning(
-                f"📈 Phase 49 Step-Up: {self._consecutive_failures.get(strategy, 0)} consecutive failures for {strategy} → "
-                f"tip raised to {tip_pct*100:.0f}% for {self.STEP_UP_DURATION_S}s"
-            )
-
-        tip_sol = expected_profit_sol * tip_pct
-        # Still respect MAX_TIP_SOL unless step-up is active (HFT survival priority)
-        if time.time() >= self._step_up_until:
-            tip_sol = min(tip_sol, MAX_TIP_SOL)
-
-        tip_lamports = int(tip_sol * 1_000_000_000)
 
         # ── Fix 2 (Unfunded Jito Tip): Cap tip by actual native SOL balance ──
         # Jito Tip is a native SOL transfer. If the wallet has 0.017 SOL and

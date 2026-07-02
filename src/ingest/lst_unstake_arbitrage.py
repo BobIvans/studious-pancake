@@ -482,7 +482,14 @@ class LstInstantUnstakeArbitrage:
                 import src.ingest.shared_state as _ss
                 _bal = _ss.stats.get("last_balance", _ss.stats.get("virtual_balance", 0.0))
                 from src.ingest.pre_trade_guard import PreTradeGuard
-                gas_ok, _ = PreTradeGuard.check_gas_tank(_bal)
+                # Task 24/25: Expand rent check to include borrow_mint (SOL_MINT) and LST mint ATAs
+                _SOL_MINT_STR = "So11111111111111111111111111111111111111112"
+                from src.ingest.shared_state import get_ata_rent_for_mint
+                _estimated_rent = 0.0
+                for _check_mint in {str(lst_mint), _SOL_MINT_STR}:
+                    if _check_mint not in shared_state.ATA_CACHE:
+                        _estimated_rent += get_ata_rent_for_mint(_check_mint)
+                gas_ok, _ = PreTradeGuard.check_gas_tank(_bal, _estimated_rent)
                 if not gas_ok:
                     logger.warning("🚫 Pre-trade guard (LST): gas tank empty — skipping bundle")
                     jito_result = {"success": False, "error": "Gas tank empty"}
@@ -501,6 +508,8 @@ class LstInstantUnstakeArbitrage:
                     jito_tip_lamports=jito_tip_lamports,
                     base_fee_lamports=0,
                     expected_profit_lamports=opportunity["expected_profit_lamports"],
+                    priority_fee_lamports=int(5_000 * 1e9),
+                    ata_rent_lamports=int(_estimated_rent * 1e9),
                     is_circular=True,
                 )
                 if not _prof_ok:

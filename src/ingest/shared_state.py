@@ -157,6 +157,22 @@ pair_reputation: Optional["PairReputationCircuitBreaker"] = None
 
 ATA_CACHE: set = set()
 
+# Task 28: Thread-safe ATA_CACHE helpers — use these instead of raw ATA_CACHE.add/discard
+# to prevent TOCTOU race conditions in concurrent async loops.
+# The ata_cache_lock is initialized in initialize_shared_state().
+async def add_to_ata_cache(ata_str: str) -> None:
+    """Add an ATA address to the global cache under the lock."""
+    global ATA_CACHE
+    async with ata_cache_lock:
+        ATA_CACHE.add(ata_str)
+
+
+async def discard_from_ata_cache(ata_str: str) -> None:
+    """Remove an ATA address from the global cache under the lock."""
+    global ATA_CACHE
+    async with ata_cache_lock:
+        ATA_CACHE.discard(ata_str)
+
 # Default slippage in basis points — single source of truth for all modules
 # Phase 8.2: Unified 15 bps default (0.15%) across arb_bot, jupiter_api_client, and paper_trader
 DEFAULT_SLIPPAGE_BPS: int = int(os.getenv("SLIPPAGE_BPS", "15"))
@@ -197,6 +213,25 @@ _balance_lock_pause_until: float = 0.0
 # Token-2022 ATA rent is higher due to extension space: 0.0035 SOL
 ATA_RENT_SOL_SPL = 0.00203928
 ATA_RENT_SOL_TOKEN2022 = 0.0035
+
+# TASK 10: Dynamic CU Profiling Cache
+DYNAMIC_CU_CACHE: Dict[str, int] = {}
+
+# TASK 1: Whitelist-Aware Rent Resolver Helper
+TOKEN_2022_MINTS = {
+    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL
+    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",   # mSOL
+    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",   # INF
+    "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",   # USDY
+    "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",   # USDe
+    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",   # sUSDe
+    "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",   # sUSDS
+    "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",   # JupUSD
+}
+
+def get_ata_rent_for_mint(mint_str: str) -> float:
+    """Return rent in SOL based on token program (Standard SPL vs Token-2022)."""
+    return 0.0035 if str(mint_str) in TOKEN_2022_MINTS else 0.00203928
 
 # Phase 5C (P2-024): Dynamic decimals cache for on-chain token decimal resolution
 # Populated by get_token_decimals_dynamic() in arb_bot.py when a mint is not

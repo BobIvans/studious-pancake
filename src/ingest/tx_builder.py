@@ -468,8 +468,10 @@ class JupiterTxBuilder:
         }
         _profile_key = _operation_profile_map.get(operation_type, operation_type)
 
-        profile_cu = CU_PROFILES.get(_profile_key, CU_PROFILES["default"])
-        cu_limit = profile_cu
+        import src.ingest.shared_state as shared_state
+        strategy_key = f"{operation_type}_{program_id}"
+        cached_cu = shared_state.DYNAMIC_CU_CACHE.get(strategy_key)
+        cu_limit = cached_cu if cached_cu else CU_PROFILES.get(_profile_key, CU_PROFILES["default"])
 
         # СТРОГИЙ ФИЛЬТР ЛОКАЛЬНЫХ РЫНКОВ (Защита от переплаты за газ)
         # Исключаем системные программы, сисвары и всё, что read-only.
@@ -1644,7 +1646,7 @@ class JupiterTxBuilder:
             # removes it from ATA_CACHE when closing wSOL, but we recreate it here.
             # Without this re-add, the next trade loop deducts 0.00204 SOL rent
             # from expected profit (phantom rent tax ~27% of 0.015 SOL capital).
-            _ss.ATA_CACHE.add(str(wsol_ata_pk))
+            await _ss.add_to_ata_cache(str(wsol_ata_pk))
         except ImportError as _wsol_import_err:
             logger.warning(
                 f"FIX 10: create_idempotent_ata / SyncNative not available, skipping: {_wsol_import_err}"

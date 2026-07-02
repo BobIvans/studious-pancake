@@ -581,6 +581,7 @@ class ExecutionRouter:
                         jito_tip_lamports=jito_tip_lamports,
                         base_fee_lamports=int(priority_fee_sol * 1e9),
                         expected_profit_lamports=int(expected_profit_sol * 1e9),
+                        priority_fee_lamports=int(priority_fee_sol * 1e9),
                         ata_rent_lamports=int(ata_rent_sol * 1e9),
                         is_circular=True,
                     )
@@ -647,6 +648,23 @@ class ExecutionRouter:
                         recent_blockhash=blockhash,
                     )
                     versioned_tx = VersionedTransaction(msg, [self.keypair])
+
+                    # TASK 14: Force pre-flight simulation for wrapper_peg
+                    import base64
+                    from src.ingest.flash_simulator import FlashSimulator
+                    flash_sim = FlashSimulator(self.session, self.rpc_url)
+                    tx_b64 = base64.b64encode(bytes(versioned_tx)).decode("ascii")
+                    is_profitable, reason, sim_result = await flash_sim.validate_profitability(
+                        tx_b64=tx_b64,
+                        tx_signer_pubkey=str(self.keypair.pubkey()),
+                        min_profit_lamports=int(expected_profit_sol * 1e9),
+                        tip_lamports=jito_tip_lamports,
+                        priority_fee_lamports=0,
+                        bank_vault_pubkey="73zNEAXx8vWeCReEwZgPZteXhH3RTo8gC1vC51g8x7j2"
+                    )
+                    if not is_profitable:
+                        logger.warning(f"Wrapper Peg simulation failed: {reason}")
+                        return {"status": "error", "message": reason}
 
                     # Execute via Jito
                     result = await self._route_transaction(

@@ -826,26 +826,26 @@ class PreTradeGuard:
     @staticmethod
     async def check_gas_tank(
         native_sol_balance: Optional[float] = None,
-        num_new_atas: int = 0,
+        estimated_rent_sol: float = 0.0,
     ) -> Tuple[bool, float]:
         """
         🔋 Strict Gas Tank — последняя линия обороны капитала.
 
-        Если нативный SOL-баланс падает ниже Config.MIN_RESERVE_SOL, мы ОСТАНАВЛИВАЕМ
-        ВСЮ ТОРГОВЛЮ. Никаких сделок, никаких чаевых Jito, никаких
-        флеш-лоанов. Бот должен сначала восстановить баланс (через
+        Если нативный SOL-баланс падает ниже Config.MIN_RESERVE_SOL + estimated_rent_sol,
+        мы ОСТАНАВЛИВАЕМ ВСЮ ТОРГОВЛЮ. Никаких сделок, никаких чаевых Jito,
+        никаких флеш-лоанов. Бот должен сначала восстановить баланс (через
         dust_sweeper, внешний депозит, или ATA rent recovery).
 
         Args:
             native_sol_balance: Текущий баланс в SOL, или None для пропуска.
-            num_new_atas: Количество новых ATA, которые будут созданы в сделке.
-              Каждый требует ~0.00204 SOL rent, вычитаемого из available.
+            estimated_rent_sol: Оценочная аренда новых ATA в SOL, уже рассчитанная
+              через whitelist-aware get_ata_rent_for_mint().
 
         Returns:
             Tuple[bool, float]:
               True  = достаточно газа, можно торговать.
               False = баланс на нуле — trading halted.
-              Second element: available_sol = balance - gas_reserve - ata_rent.
+              Second element: available_sol = balance - gas_reserve - estimated_rent_sol.
         """
         if native_sol_balance is None:
             logger.warning(
@@ -854,20 +854,19 @@ class PreTradeGuard:
             return False, 0.0  # Нет данных — fail-closed
 
         min_reserve = PreTradeGuard.get_min_reserve_sol()
-        ata_rent = num_new_atas * 0.00204
-        if native_sol_balance < min_reserve + ata_rent:
+        if native_sol_balance < min_reserve + estimated_rent_sol:
             logger.critical(
                 f"🚨 STRICT GAS TANK: Balance {native_sol_balance:.6f} SOL < "
-                f"{min_reserve + ata_rent:.6f} SOL (reserve {min_reserve} + "
-                f"{num_new_atas} ATA rent {ata_rent:.6f}). TRADING HALTED. "
+                f"{min_reserve + estimated_rent_sol:.6f} SOL (reserve {min_reserve} + "
+                f"estimated rent {estimated_rent_sol:.6f}). TRADING HALTED. "
                 f"Deposit SOL or run dust_sweeper to recover rent before resuming."
             )
             return False, 0.0
 
-        available = native_sol_balance - min_reserve - ata_rent
+        available = native_sol_balance - min_reserve - estimated_rent_sol
         logger.debug(
             f"🔋 Gas Tank: {native_sol_balance:.6f} SOL → {available:.6f} SOL available "
-            f"(reserve={min_reserve}, ata_rent={ata_rent:.6f} for {num_new_atas} new ATAs)"
+            f"(reserve={min_reserve}, estimated_rent={estimated_rent_sol:.6f})"
         )
         return True, available
 

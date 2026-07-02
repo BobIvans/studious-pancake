@@ -846,11 +846,7 @@ class Config:
         ]
     )
     HELIUS_TIP_ACCOUNTS: List[str] = field(
-        default_factory=lambda: [
-            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
-            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",
-            "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLk",
-        ]
+        default_factory=lambda: []
     )
     # ⚠️ FALLBACK: Jito rotates tip accounts regularly. Always use dynamic fetch_tip_accounts().
     # See: https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts
@@ -1153,9 +1149,6 @@ def _convert_tokens_to_pubkeys():
     TOKENS = converted_tokens
     logger.info(f"✅ Pre-cached {len(TOKENS)} token Pubkey objects for HFT performance")
 
-
-# Execute ZERO-STRING HOT LOOP optimization
-_convert_tokens_to_pubkeys()
 
 # ============================================================================
 # SELF-HEALING STATE: Emergency balance recovery
@@ -2092,7 +2085,6 @@ SCAN_TARGETS = {
             ("USDC", "USDe"),
             ("USDC", "sUSDe"),
             ("USDC", "sUSDS"),
-            ("USDC", "USD+"),
             ("USDC", "JupUSD"),
         ],
     },  # Step 5: yield stables
@@ -2861,10 +2853,11 @@ async def create_flashloan_arbitrage_tx(
         if tip_lamports > 0:
             from solders.system_program import TransferParams, transfer
 
-            # Fix 2: Use dynamic tip account from jito_executor (never hardcoded)
-            _tip_accounts_list = tip_accounts or [
-                "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
-            ]
+            # Use dynamic tip accounts from jito_executor (never hardcoded)
+            _tip_accounts_list = tip_accounts or []
+            if not _tip_accounts_list:
+                logger.critical("🚨 JITO TIP ACCOUNTS: tip_accounts is empty! Aborting to prevent hardcoded fallback.")
+                return None
             selected_tip_account = random.choice(_tip_accounts_list)
             tip_ix = transfer(
                 TransferParams(

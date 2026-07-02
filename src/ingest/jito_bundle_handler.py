@@ -189,7 +189,8 @@ class BundleTemplate:
         if self.jito_tip_accounts:
             index = int(time.time() * 1000) % len(self.jito_tip_accounts)
             return self.jito_tip_accounts[index]
-        return "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
+        logger.critical("🚨 JITO TIP ACCOUNTS: No dynamic tip_accounts available. Aborting to prevent hardcoded fallback.")
+        return ""
 
 
 from solders.instruction import AccountMeta
@@ -212,25 +213,11 @@ class JitoBundleHandler:
         self.auth_key = auth_key
         self.tip_percent = tip_percent
         self.tx_builder = tx_builder
+        self.jito_tip_accounts = []
         self.bundle_template = BundleTemplate(
             keypair, jito_tip_accounts=self.jito_tip_accounts, tx_builder=tx_builder
         )
         self.leader_checker = JitoLeaderChecker(session)
-
-        # Jito tip accounts (rotate for better distribution)
-        self.jito_tip_accounts = [
-            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
-            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",
-            "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLk",
-            "ADuUkR4vqLUMWXxW9gh6D6L8pMSawDBQW5ypTcRqMoKY",
-            "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh",
-            "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
-            "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
-            "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBVCmLzFZu",
-        ]
-        logger.warning(
-            "JitoBundleHandler: tip_accounts initialized with fallback defaults. Fetch dynamic accounts via jito_executor.fetch_tip_accounts() at bot startup."
-        )
 
         # Default Jito endpoints if not provided
         self.jito_endpoints = jito_endpoints or [
@@ -613,7 +600,8 @@ class JitoBundleHandler:
         if self.jito_tip_accounts:
             index = int(time.time() * 1000) % len(self.jito_tip_accounts)
             return self.jito_tip_accounts[index]
-        return "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"  # Final fallback
+        logger.critical("🚨 JITO TIP ACCOUNTS: No dynamic tip_accounts available. Aborting.")
+        return ""
 
     # simulate_bundle_locally REMOVED: was a stub returning {"simulated": True} after asyncio.sleep(0.1).
     # Real simulation requires full SVM execution which is not implemented here.

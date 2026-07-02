@@ -55,17 +55,6 @@ class JitoExecutor:
         self.timeout          = timeout
         self.current_tip_data = None
 
-        # Phase 35: Dynamic Jito tip accounts
-        self.tip_accounts = [
-            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
-            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",
-            "Cw8CFyM9FkoMi7K7Crf6HNQqf4uEMzpKw6QNghXLvLk",
-            "ADuUkR4vqLUMWXxW9gh6D6L8pMSawDBQW5ypTcRqMoKY",
-            "DfXygSm4jCyNCybVYYK6DwvWqjKee8pbDmJGcLWNDXjh",
-            "ADaUMid9yfUytqMBgopwjb2DTLSokTSzL1zt6iGPaS49",
-            "DttWaMuVvTiduZRnguLF7jNxTgiMBZ1hyAumKUiL2KRL",
-            "3AVi9Tg9Uo68tJfuvoKvqKNWKkC5wPdSSdeBVCmLzFZu"
-        ]
         self.tip_subscription_task     = None
         self._tip_accounts_refresh_task: Optional[asyncio.Task] = None
         self._running                  = False

@@ -170,7 +170,6 @@ class PaperTrader:
 
             # Step 2: all fees strictly in SOL
             flashloan_fee_sol = 0.0  # MarginFi flashloan fee is 0%
-            dex_fee_sol = (amount * 0.003) / 1e9
             slippage_bps = 15
             network_fee_sol = 5000 / 1e9
             priority_fee_sol = 10000 / 1e9

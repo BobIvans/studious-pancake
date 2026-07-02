@@ -139,11 +139,10 @@ class JitoBundleClient:
 
     def _select_tip_account(self) -> str:
         import random
-        return (
-            random.choice(self.tip_accounts)
-            if self.tip_accounts
-            else "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
-        )
+        if not self.tip_accounts:
+            logger.critical("🚨 JITO TIP ACCOUNTS: No dynamic tip_accounts available. Call fetch_tip_accounts() at bot startup.")
+            return ""
+        return random.choice(self.tip_accounts)
 
     # ── Blockhash ───────────────────────────────────────────────────────────────
 

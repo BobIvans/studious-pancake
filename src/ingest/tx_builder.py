@@ -2515,10 +2515,13 @@ class JupiterTxBuilder:
         from solders.system_program import TransferParams, transfer
 
         if not tip_account:
-            logger.warning(
-                "🚨 JITO TIP ACCOUNTS: No dynamic tip_account provided, using fallback. Call fetch_tip_accounts() at bot startup."
-            )
-            tip_account = "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5"
+            try:
+                from src.ingest.jito_manager import JitoBiddingManager
+                _jbm = JitoBiddingManager()
+                tip_account = _jbm.get_random_tip_account()
+            except Exception:
+                logger.critical("🚨 JITO TIP ACCOUNTS: No dynamic tip_account provided and jito_manager unavailable. Aborting.")
+                return None
 
         return transfer(
             TransferParams(

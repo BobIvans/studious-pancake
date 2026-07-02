@@ -39,6 +39,7 @@ class BlockhashRacingManager:
         self.session: Optional[aiohttp.ClientSession] = None
         self._task: Optional[asyncio.Task] = None
 
+        self._fetch_lock = asyncio.Lock()
         self.total_races = 0
         self.successful_races = 0
         self.avg_response_time = 0
@@ -63,28 +64,33 @@ class BlockhashRacingManager:
             self._task.cancel()
         logger.info("🛑 Blockhash Racing Manager stopped")
 
-    async def get_fresh_blockhash(self, current_slot: int = 0) -> Optional[Hash]:
+    async def get_fresh_blockhash(self, current_block_height: int = 0) -> Optional[Hash]:
         """
         Get a blockhash from cache or fetch a new one if stale.
         Cache TTL is set to 15 seconds to save Helius credits.
 
         Fix 67: Also checks slot-based expiry via check_expiry_and_refresh().
-        If within 10 slots of lastValidBlockHeight, force-refreshes to
+        If within 10 blocks of lastValidBlockHeight, force-refreshes to
         prevent Jito from rejecting transactions as "too old".
         """
         current_time = time.time()
         age_ms = (current_time - self.last_update_time) * 1000
 
-        # Slot-based expiry guard: refresh if close to deadline
-        if current_slot > 0:
-            await self.check_expiry_and_refresh(current_slot)
+        # Block-height-based expiry guard: refresh if close to deadline
+        if current_block_height > 0:
+            await self.check_expiry_and_refresh(current_block_height)
 
         # Only fetch if blockhash is older than 15 seconds
         if age_ms > 15000 or not self.current_blockhash:
-            logger.debug(
-                f"🔄 Blockhash stale ({age_ms/1000:.1f}s) or missing — fetching fresh value"
-            )
-            await self._race_blockhash_once()
+            async with self._fetch_lock:
+                # Double-check inside the lock to ensure another task didn't already fetch it
+                current_time = time.time()
+                age_ms = (current_time - self.last_update_time) * 1000
+                if age_ms > 15000 or not self.current_blockhash:
+                    logger.debug(
+                        f"🔄 Blockhash stale ({age_ms/1000:.1f}s) or missing — fetching fresh value"
+                    )
+                    await self._race_blockhash_once()
             
         return self.current_blockhash
 
@@ -247,6 +253,20 @@ class BlockhashRacingManager:
                     shared_state.stats["current_slot"] = current_slot
                     shared_state.stats["_sg_last_slot"] = current_slot
                     shared_state.stats["_sg_last_slot_ts"] = time.time()
+                # BUG-007: Also fetch block height for expiry math
+                payload_height = {
+                    "jsonrpc": "2.0", "id": 2,
+                    "method": "getBlockHeight",
+                    "params": [{"commitment": "confirmed"}],
+                }
+                async with self.session.post(
+                    self.rpc_endpoints[0], json=payload_height, timeout=timeout
+                ) as resp2:
+                    if resp2.status == 200:
+                        bh_data = await resp2.json()
+                        bh = bh_data.get("result")
+                        if bh is not None:
+                            shared_state.stats["current_block_height"] = bh
             except Exception:
                 pass
 
@@ -258,25 +278,25 @@ class BlockhashRacingManager:
         else:
             logger.warning("❌ All blockhash racing tasks failed")
 
-    async def check_expiry_and_refresh(self, current_slot: int) -> bool:
+    async def check_expiry_and_refresh(self, current_block_height: int) -> bool:
         """Check if blockhash is close to expiry and force-refresh if needed.
 
-        Solana blockhashes are valid for ~60s (150 slots).
-        We force-refresh when within 10 slots (~4 seconds) of expiry
+        Solana blockhashes are valid for ~60s (150 blocks).
+        We force-refresh when within 10 blocks (~4 seconds) of expiry
         to prevent Jito from rejecting transactions as "too old".
 
         Args:
-            current_slot: Current slot from RPC
+            current_block_height: Current block height from RPC (getBlockHeight)
 
         Returns:
             True if blockhash was refreshed
         """
-        if not self.current_last_valid_block_height or current_slot == 0:
+        if not self.current_last_valid_block_height or current_block_height == 0:
             return False
 
-        remaining_slots = self.current_last_valid_block_height - current_slot
-        if remaining_slots <= 10:
-            logger.warning(f"⚠️ Blockhash near expiry: {remaining_slots} slots remaining — force-refreshing")
+        remaining_blocks = self.current_last_valid_block_height - current_block_height
+        if remaining_blocks <= 10:
+            logger.warning(f"⚠️ Blockhash near expiry: {remaining_blocks} blocks remaining — force-refreshing")
             await self._race_blockhash_once()
             return True
 

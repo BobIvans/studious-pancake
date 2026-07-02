@@ -111,8 +111,9 @@ async def check_and_refill_gas(session, rpc, keypair):
                 deficit_usdc_lamports = int(
                     deficit_sol * sol_price * 1_000_000
                 )  # Dynamic SOL price via Pyth
-                # Cap at available USDC balance, minimum 0.5 USDC
-                swap_amount = max(min(deficit_usdc_lamports, usdc_amount), 500_000)
+                # Cap at 50% of available USDC balance to protect trading capital (BL-013)
+                max_allowed_usdc = int(usdc_amount * 0.5)
+                swap_amount = max(min(deficit_usdc_lamports, max_allowed_usdc), 500_000)
 
                 if usdc_amount > 500_000:  # At least $0.50 USDC
                     logger.info(

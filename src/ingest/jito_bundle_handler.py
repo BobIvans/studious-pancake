@@ -44,6 +44,7 @@ def _normalize_tip_sol(expected_profit_sol: float, target_mint_str: str) -> floa
 
 from solders.transaction import VersionedTransaction
 from solders.message import MessageV0
+from solders.hash import Hash
 from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.system_program import transfer, TransferParams
@@ -185,12 +186,66 @@ class BundleTemplate:
         return VersionedTransaction(msg, [self.keypair])
 
     def _select_tip_account_sync(self) -> str:
-        """Synchronous tip account selection for instantiate_template."""
-        if self.jito_tip_accounts:
-            index = int(time.time() * 1000) % len(self.jito_tip_accounts)
-            return self.jito_tip_accounts[index]
+        """Synchronous tip account selection for instantiate_template (thread-safe copy-on-read)."""
+        accounts_snapshot = list(self.jito_tip_accounts)
+        if accounts_snapshot:
+            index = int(time.time() * 1000) % len(accounts_snapshot)
+            return accounts_snapshot[index]
         logger.critical("🚨 JITO TIP ACCOUNTS: No dynamic tip_accounts available. Aborting to prevent hardcoded fallback.")
         return ""
+
+    async def instantiate_template(
+        self,
+        template_key: str,
+        recent_blockhash: str,
+        arbitrage_path: List[str],
+        borrow_amount_lamports: int,
+        expected_min_profit_lamports: int,
+        dex_swap_instructions: List[Any],
+        marginfi_config: Dict[str, Any],
+    ) -> Optional[VersionedTransaction]:
+        """Compile and sign a transaction template into a ready-to-send VersionedTransaction."""
+        if not self.tx_builder:
+            return None
+
+        try:
+            tx_data = await self.tx_builder.build_native_flashloan_tx(
+                wallet_pubkey=str(self.keypair.pubkey()),
+                arbitrage_path=arbitrage_path,
+                borrow_amount_lamports=borrow_amount_lamports,
+                expected_min_profit_lamports=expected_min_profit_lamports,
+                dex_swap_instructions=dex_swap_instructions,
+                marginfi_config=marginfi_config,
+                jito_tip_lamports=0,
+                wsol_manager=None,
+                pool_state_manager=None,
+                use_jito=True,
+            )
+
+            if not tx_data:
+                return None
+
+            instructions = tx_data["instructions"]
+            alt_keys = tx_data.get("address_lookup_table_pubkeys", [])
+
+            alts = []
+            if shared_state.alt_manager:
+                for alt_str in alt_keys:
+                    resolved = await shared_state.alt_manager.resolve_alt(Pubkey.from_string(alt_str))
+                    if resolved:
+                        alts.append(AddressLookupTableAccount(key=Pubkey.from_string(alt_str), addresses=resolved))
+
+            msg = MessageV0.try_compile(
+                payer=self.keypair.pubkey(),
+                instructions=instructions,
+                address_lookup_table_accounts=alts,
+                recent_blockhash=Hash.from_string(recent_blockhash),
+            )
+
+            return VersionedTransaction(msg, [self.keypair])
+        except Exception as e:
+            logger.error(f"Template instantiation failed: {e}")
+            return None
 
 
 from solders.instruction import AccountMeta
@@ -347,7 +402,10 @@ class JitoBundleHandler:
 
             if _marginfi_bank_cfg:
                 _mfi_program_id = "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
-                _mfi_account = str(_marginfi_bank_cfg.get("bank", Pubkey.from_string("CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj")))
+                _mfi_account = os.getenv("MARGINFI_ACCOUNT")
+                if not _mfi_account:
+                    logger.error("MARGINFI_ACCOUNT env var missing, cannot build backrun bundle.")
+                    return {"success": False, "error": "Missing MarginFi Account"}
                 _mfi_vault = str(_marginfi_bank_cfg.get("liquidity_vault", Pubkey.from_string("CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj")))
                 _mfi_vault_auth = str(_marginfi_bank_cfg["liquidity_vault_authority"])
                 _marginfi_config = {
@@ -578,8 +636,9 @@ class JitoBundleHandler:
         return await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _select_tip_account(self) -> str:
-        """Select optimal Jito tip account (rotate for distribution) with live fetch."""
-        if not self.jito_tip_accounts:
+        """Select optimal Jito tip account (rotate for distribution) with live fetch and thread-safe copy-on-read."""
+        accounts_snapshot = list(self.jito_tip_accounts)
+        if not accounts_snapshot:
             # Fallback: fetch live accounts from Jito Block Engine
             try:
                 import aiohttp
@@ -597,9 +656,9 @@ class JitoBundleHandler:
             except Exception as e:
                 logger.warning(f"Live tip account fetch failed: {e}")
 
-        if self.jito_tip_accounts:
-            index = int(time.time() * 1000) % len(self.jito_tip_accounts)
-            return self.jito_tip_accounts[index]
+        if accounts_snapshot:
+            index = int(time.time() * 1000) % len(accounts_snapshot)
+            return accounts_snapshot[index]
         logger.critical("🚨 JITO TIP ACCOUNTS: No dynamic tip_accounts available. Aborting.")
         return ""
 

@@ -32,16 +32,6 @@ logger = logging.getLogger(__name__)
 # Previously imported arb_bot, which caused recursive module execution.
 import src.ingest.shared_state as _shared_state_lock
 
-
-def _balance_lock_can_trade() -> bool:
-    """Check if trading is allowed (not paused after wSOL unwrap)."""
-    if _shared_state_lock._balance_lock_paused and time.time() < _shared_state_lock._balance_lock_pause_until:
-        return False
-    if _shared_state_lock._balance_lock_paused and time.time() >= _shared_state_lock._balance_lock_pause_until:
-        _shared_state_lock._balance_lock_paused = False
-        _shared_state_lock._balance_lock_pause_until = 0.0
-    return True
-
 # Constants
 SOL_MINT = Pubkey.from_string("So11111111111111111111111111111111111111112")
 SYSTEM_PROGRAM_ID = Pubkey.from_string("11111111111111111111111111111111")

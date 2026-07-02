@@ -42,6 +42,11 @@ class ALTCacheManager:
         # Cache settings
         self.default_ttl = 30  # Phase 38: Reduced TTL for high-frequency updates
         self.max_cache_age = 7200  # 2 hours
+        # Phase 3A: Thread-safe ALT cache iteration (CONC-006)
+        self._cache_lock = asyncio.Lock()
+        # BUG-010: Real hit/miss counters for accurate cache hit ratio metric
+        self._hits: int = 0
+        self._misses: int = 0
 
     async def __aenter__(self):
         if self._session_owned and self.session is None:
@@ -82,20 +87,23 @@ class ALTCacheManager:
         """
         alt_key = str(alt_pubkey)
 
-        # Check if cached and not expired
-        if alt_key in self.alt_metadata:
-            last_updated, ttl = self.alt_metadata[alt_key]
-            if time.time() - last_updated < ttl:
-                resolved_accounts = self.alt_cache.get(alt_key)
-                if resolved_accounts:
-                    logger.debug(f"ALT cache hit for {alt_key[:8]}... ({len(resolved_accounts)} accounts)")
-                    return resolved_accounts
+        async with self._cache_lock:
+            # Check if cached and not expired
+            if alt_key in self.alt_metadata:
+                last_updated, ttl = self.alt_metadata[alt_key]
+                if time.time() - last_updated < ttl:
+                    resolved_accounts = self.alt_cache.get(alt_key)
+                    if resolved_accounts:
+                        self._hits += 1
+                        logger.debug(f"ALT cache hit for {alt_key[:8]}... ({len(resolved_accounts)} accounts)")
+                        return resolved_accounts
 
-            # Expired - remove from cache
-            else:
-                logger.debug(f"ALT cache expired for {alt_key[:8]}...")
-                self._remove_expired_alt(alt_key)
+                # Expired - remove from cache
+                else:
+                    logger.debug(f"ALT cache expired for {alt_key[:8]}...")
+                    self._remove_expired_alt(alt_key)
 
+        self._misses += 1
         logger.warning(f"ALT cache miss for {alt_key[:8]}... - cache miss during tx building!")
         return None
 
@@ -140,9 +148,10 @@ class ALTCacheManager:
         try:
             resolved = await self._fetch_single_alt(alt_pubkey)
             if resolved:
-                alt_key = str(alt_pubkey)
-                self.alt_cache[alt_key] = resolved
-                self.alt_metadata[alt_key] = (time.time(), ttl_seconds or self.default_ttl)
+                async with self._cache_lock:
+                    alt_key = str(alt_pubkey)
+                    self.alt_cache[alt_key] = resolved
+                    self.alt_metadata[alt_key] = (time.time(), ttl_seconds or self.default_ttl)
                 logger.debug(f"Added dynamic ALT {alt_key[:8]}... to cache")
                 return True
         except Exception as e:
@@ -156,14 +165,18 @@ class ALTCacheManager:
         expired_count = 0
         current_time = time.time()
 
-        for alt_key, (last_updated, ttl) in self.alt_metadata.items():
+        for alt_key, (last_updated, ttl) in list(self.alt_metadata.items()):
             if current_time - last_updated >= ttl:
                 expired_count += 1
 
+        total_queries = self._hits + self._misses
+        hit_ratio = float(self._hits) / total_queries if total_queries > 0 else 0.0
         return {
             'total_cached_alts': total_alts,
             'expired_alts': expired_count,
-            'cache_hit_ratio': 1.0 if total_alts > 0 else 0.0,  # Would track hits/misses in practice
+            'cache_hit_ratio': hit_ratio,
+            'hits': self._hits,
+            'misses': self._misses,
             'oldest_entry_age': self._get_oldest_entry_age()
         }
 
@@ -226,8 +239,9 @@ class ALTCacheManager:
                                             if len(resolved_accounts) >= len(existing):
                                                 if len(resolved_accounts) > len(existing):
                                                     logger.info(f"🔄 ALT {alt_key[:8]}... grew: {len(existing)} -> {len(resolved_accounts)} accounts")
-                                                self.alt_cache[alt_key] = resolved_accounts
-                                                self.alt_metadata[alt_key] = (time.time(), self.default_ttl)
+                                                async with self._cache_lock:
+                                                    self.alt_cache[alt_key] = resolved_accounts
+                                                    self.alt_metadata[alt_key] = (time.time(), self.default_ttl)
                                                 logger.debug(f"Cached ALT {alt_key[:8]}... with {len(resolved_accounts)} accounts")
                                 except Exception as e:
                                     logger.debug(f"Failed to parse ALT {alt_pubkey}: {e}")
@@ -281,7 +295,7 @@ class ALTCacheManager:
             return None
 
     def _remove_expired_alt(self, alt_key: str) -> None:
-        """Remove expired ALT from cache."""
+        """Remove expired ALT from cache (must be called under _cache_lock)."""
         self.alt_cache.pop(alt_key, None)
         self.alt_metadata.pop(alt_key, None)
 

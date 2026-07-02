@@ -62,7 +62,18 @@ class JitoManager:
             url = "https://mainnet.block-engine.jito.wtf/api/v1/bundles/tip_accounts"
             async with self.session.get(url, timeout=5.0) as resp:
                 if resp.status == 200:
-                    accounts = await resp.json()
+                    accounts_data = await resp.json()
+                    accounts = []
+                    if isinstance(accounts_data, list):
+                        accounts = accounts_data
+                    elif isinstance(accounts_data, dict):
+                        if "value" in accounts_data:
+                            accounts = accounts_data["value"]
+                        elif "result" in accounts_data:
+                            accounts = accounts_data["result"]
+                            if isinstance(accounts, dict) and "value" in accounts:
+                                accounts = accounts["value"]
+                                
                     if accounts and isinstance(accounts, list):
                         self.tip_accounts = accounts
                         self.bundle_client.tip_accounts = accounts

@@ -103,14 +103,15 @@ class MarginFiAccountPool:
 
             # All accounts used in this slot — return the next one anyway
             # (better to risk AccountInUse than to delay 450ms)
-            acct = self.accounts[self._current_index % len(self.accounts)]
+            idx = self._current_index
+            acct = self.accounts[idx]
             self._current_index = (self._current_index + 1) % len(self.accounts)
             self._last_used_slot[acct] = current_slot
             logger.warning(
                 f"🏦 All accounts busy in slot {current_slot}, "
                 f"re-using {acct[:8]}... (risk: AccountInUse)"
             )
-            return acct, self._current_index
+            return acct, idx
 
     def get_bank_config(self, account: str, default_config: Dict) -> Dict:
         """Get bank config for a specific account, falling back to default."""
@@ -359,7 +360,7 @@ class ExecutionRouter:
             slot_index     = info.get("slotIndex", 0)
 
             # ── Case 1: epoch just started (<60 s = ~150 slots at 400 ms) ──
-            if slot_index < SECONDS_FROM_EPOCH_START * 3:
+            if slot_index < SECONDS_FROM_EPOCH_START * 2.5:
                 self._epoch_killswitch_active = True
                 self._epoch_last_reason = (
                     f"Epoch just started (slotIndex={slot_index}, "

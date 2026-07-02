@@ -131,7 +131,19 @@ class JitoBundleClient:
                 timeout=5.0,
             ) as resp:
                 if resp.status == 200:
-                    self.tip_accounts = await resp.json()
+                    accounts_data = await resp.json()
+                    accounts = []
+                    if isinstance(accounts_data, list):
+                        accounts = accounts_data
+                    elif isinstance(accounts_data, dict):
+                        if "value" in accounts_data:
+                            accounts = accounts_data["value"]
+                        elif "result" in accounts_data:
+                            accounts = accounts_data["result"]
+                            if isinstance(accounts, dict) and "value" in accounts:
+                                accounts = accounts["value"]
+                                
+                    self.tip_accounts = accounts
                     return bool(self.tip_accounts)
         except Exception as e:
             logger.debug(f"Failed to fetch tip accounts: {e}")

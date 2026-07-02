@@ -1172,9 +1172,9 @@ class ExecutionRouter:
                 try:
                     import src.ingest.shared_state as _ss_18
                     _sent_meta = self._pending_bundle_slots.get(bundle_result.get("bundle_id", ""), {})
-                if isinstance(_sent_meta, dict) and _sent_meta.get("sent_at", 0) > 0:
-                    _elapsed = time.time() - _sent_meta["sent_at"]
-                    _ss_18.append_latency(_elapsed)
+                    if isinstance(_sent_meta, dict) and _sent_meta.get("sent_at", 0) > 0:
+                        _elapsed = time.time() - _sent_meta["sent_at"]
+                        _ss_18.append_latency(_elapsed)
                 except Exception:
                     pass
 

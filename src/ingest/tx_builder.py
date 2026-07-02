@@ -489,7 +489,7 @@ class JupiterTxBuilder:
         # Минимальный пол для Priority Fee в размере 5000 микролампортов/CU даже в режиме Jito,
         # чтобы гарантировать прохождение пре-фильтров RPC-узлов для сложных транзакций (>200k CU).
         priority_fee = (
-            5000
+            1  # FIXED: Do not overpay base priority fee when using Jito Tip
             if use_jito
             else await self.get_dynamic_priority_fee(
                 rpc_url,
@@ -2348,7 +2348,7 @@ class JupiterTxBuilder:
         """Build MarginFi lending_account_start_flashloan instruction.
 
         MarginFi v2 flashloan start instruction layout:
-        - Accounts: 9 (marginfi_group, marginfi_account, bank, liquidity_vault,
+        - Accounts: 10 (marginfi_group, marginfi_account, lending_account_authority, bank, liquidity_vault,
           bank_liquidity_vault_authority, token_program, instructions_sysvar, signer, fee_payer)
         - Data: 20 bytes = discriminator (8) + bank_index (u16, 2) + amount (u64, 8) + repay_index (u16, 2)
         """
@@ -2359,9 +2359,16 @@ class JupiterTxBuilder:
             + struct.pack("<H", repay_index)
         )
 
+        mfi_program = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
+        lending_account_authority, _ = Pubkey.find_program_address(
+            [b"lending_account_auth", bytes(marginfi_account), bytes(signer)],
+            mfi_program,
+        )
+
         account_metas = [
             AccountMeta(pubkey=marginfi_group, is_signer=False, is_writable=False),
             AccountMeta(pubkey=marginfi_account, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=lending_account_authority, is_signer=False, is_writable=False),
             AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
             AccountMeta(pubkey=liquidity_vault, is_signer=False, is_writable=True),
             AccountMeta(pubkey=bank_liquidity_vault_authority, is_signer=False, is_writable=False),
@@ -2370,8 +2377,6 @@ class JupiterTxBuilder:
             AccountMeta(pubkey=signer, is_signer=True, is_writable=True),
             AccountMeta(pubkey=fee_payer, is_signer=True, is_writable=True),
         ]
-
-        mfi_program = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
 
         return Instruction(
             program_id=mfi_program,
@@ -2394,15 +2399,22 @@ class JupiterTxBuilder:
         """Build MarginFi lending_account_end_flashloan instruction.
 
         MarginFi v2 flashloan end instruction layout:
-        - Accounts: 8 (marginfi_group, marginfi_account, bank, liquidity_vault,
+        - Accounts: 9 (marginfi_group, marginfi_account, lending_account_authority, bank, liquidity_vault,
           bank_liquidity_vault_authority, token_program, instructions_sysvar, signer)
         - Data: 10 bytes = discriminator (8) + repay_index (u16, 2)
         """
         data = MARGINFI_FLASHLOAN_END + struct.pack("<H", repay_index)
 
+        mfi_program = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
+        lending_account_authority, _ = Pubkey.find_program_address(
+            [b"lending_account_auth", bytes(marginfi_account), bytes(signer)],
+            mfi_program,
+        )
+
         account_metas = [
             AccountMeta(pubkey=marginfi_group, is_signer=False, is_writable=False),
             AccountMeta(pubkey=marginfi_account, is_signer=False, is_writable=True),
+            AccountMeta(pubkey=lending_account_authority, is_signer=False, is_writable=False),
             AccountMeta(pubkey=bank, is_signer=False, is_writable=True),
             AccountMeta(pubkey=liquidity_vault, is_signer=False, is_writable=True),
             AccountMeta(pubkey=bank_liquidity_vault_authority, is_signer=False, is_writable=False),
@@ -2410,8 +2422,6 @@ class JupiterTxBuilder:
             AccountMeta(pubkey=instructions_sysvar, is_signer=False, is_writable=False),
             AccountMeta(pubkey=signer, is_signer=True, is_writable=True),
         ]
-
-        mfi_program = Pubkey.from_string("MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
 
         return Instruction(
             program_id=mfi_program,

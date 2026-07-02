@@ -5330,14 +5330,16 @@ async def worker(
             quote3 = None  # Triangular leg 3
 
             if route_type == "direct" and quote1:
-                # Direct route re-fetch: update quote2 in-situ with anti-sandwich slippage
+                # Direct route re-fetch: update quote2 with ExactOut to guarantee repayment
                 quote2 = await get_best_quote_multi(
                     session,
                     target_mint_str,
                     in_mint_str,
-                    quote1["out_amount"],
+                    amount_lamports,
                     cfg,
-                    expected_profit_bps=expected_profit_bps,
+                    slippage_bps=0,
+                    swap_mode="ExactOut",
+                    exact_out_amount=amount_lamports,
                 )
                 if not quote2:
                     logger.debug("Anti-sandwich re-fetch of leg 2 failed; skipping")
@@ -5366,9 +5368,11 @@ async def worker(
                     session,
                     target_mint_str,
                     in_mint_str,
-                    quote1_multi["out_amount"],
+                    amount_lamports,
                     cfg,
-                    expected_profit_bps=expected_profit_bps,
+                    slippage_bps=0,
+                    swap_mode="ExactOut",
+                    exact_out_amount=amount_lamports,
                     restrict_intermediate=False,
                 )
                 if not q2_multi:

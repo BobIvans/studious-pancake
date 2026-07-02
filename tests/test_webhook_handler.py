@@ -5,6 +5,7 @@ import json
 import hmac
 import hashlib
 import os
+import glob
 from aiohttp import web
 import pytest
 
@@ -80,6 +81,21 @@ async def test_webhook_handler_basic():
     export_file = await data_aggregator.export_for_analysis(days=1)
     print(f"📊 Test data exported to {export_file}")
 
+    import glob
+    for jsonl_file in glob.glob("bot_analysis_*.jsonl"):
+        try:
+            os.remove(jsonl_file)
+        except Exception:
+            pass
+
 
 if __name__ == "__main__":
-    asyncio.run(test_webhook_handler_basic())
+    try:
+        asyncio.run(test_webhook_handler_basic())
+    finally:
+        for temp_file in ["test_bot_history.db", "test_bot_history.db-shm", "test_bot_history.db-wal"]:
+            if os.path.exists(temp_file):
+                try:
+                    os.remove(temp_file)
+                except Exception:
+                    pass

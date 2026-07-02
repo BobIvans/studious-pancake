@@ -3192,7 +3192,8 @@ async def lst_depeg_scanner(
     try:
         _ptg = PreTradeGuard(session=session, rpc_url=rpc_url)
         _adjusted = await _ptg.get_adjusted_profit_threshold(
-            lst_mint, min_profit_lamports / 1e9, rpc_url
+            lst_mint, min_profit_lamports / 1e9, rpc_url,
+            trade_volume_sol=cfg.FLASH_LOAN_SIZE_SOL,
         )
         if abs(_adjusted - min_profit_lamports / 1e9) > 1e-12:
             min_profit_lamports_orig = min_profit_lamports
@@ -4944,7 +4945,7 @@ async def worker(
                 )
 
             # --- RESTORED MISSING QUOTE FETCHING LOGIC ---
-            decimals_in = await get_token_decimals_dynamic(session, None, in_mint_str)
+            decimals_in = await get_token_decimals_dynamic(session, rpc_manager.get_rpc(), in_mint_str)
             amount_lamports = int(borrow_amount_sol * (10**decimals_in))
 
             # ── wSOL Death Spiral — проверка перед котированием ──
@@ -5149,7 +5150,7 @@ async def worker(
                 routes=routes,
                 amount_in=amount_lamports,
                 decimals_in=decimals_in,
-                decimals_out=await get_token_decimals_dynamic(session, None, target_mint),
+                decimals_out=await get_token_decimals_dynamic(session, rpc_manager.get_rpc(), target_mint),
                 jito_tip_sol=jito_tip_sol,
             )
 
@@ -6727,6 +6728,13 @@ async def run():
                 break
     finally:
         logger.debug("🛑 Shutting down arbitrage engine components...")
+
+        try:
+            if "leader_tracker" in locals() and leader_tracker:
+                await leader_tracker.stop()
+                logger.info("⚙️ Leader tracker components stopped cleanly.")
+        except Exception as e:
+            logger.debug(f"Failed to cleanly stop leader_tracker: {e}")
 
         # 1. Принудительно отменяем все фоновые задачи ДО закрытия сессии
         for task in list(shared_state.active_tasks):

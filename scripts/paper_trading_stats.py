@@ -12,7 +12,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'src
 from ingest.data_aggregator import DataAggregator
 
 async def main():
-    aggregator = DataAggregator("bot_history.db")
+    import os
+    paper_db = os.getenv("PAPER_TRADING_DB", "paper_trading.db")
+    aggregator = DataAggregator(paper_db)
 
     print("📊 PAPER TRADING STATISTICS")
     print("=" * 50)

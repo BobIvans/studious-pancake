@@ -33,16 +33,20 @@ class BlockhashRacingManager:
         self.rpc_endpoints = list(set(rpc_endpoints))
         self.race_interval_ms = race_interval_ms
         self.current_blockhash: Optional[Hash] = None
-        self.current_last_valid_block_height: int = 0  # Fix 67: Track expiry slot
+        self.current_last_valid_block_height: int = 0
         self.last_update_time = 0
         self.running = False
         self.session: Optional[aiohttp.ClientSession] = None
         self._task: Optional[asyncio.Task] = None
 
-        # Performance tracking
         self.total_races = 0
         self.successful_races = 0
         self.avg_response_time = 0
+
+        self._multi_rpc_enabled = str(os.getenv("MULTI_RPC_ENABLED", "false")).lower() == "true"
+        if not self._multi_rpc_enabled and len(rpc_endpoints) > 1:
+            self.rpc_endpoints = [rpc_endpoints[0]]
+            logger.info("BlockhashRacingManager: MULTI_RPC_ENABLED=false, limiting to 1 RPC endpoint to save credits")
 
     async def start(self, session: aiohttp.ClientSession):
         self.session = session
@@ -161,15 +165,17 @@ class BlockhashRacingManager:
 
     async def check_and_recover_drift(self) -> bool:
         """
-        Check local vs RPC time drift and force-refresh the blockhash if > 200 ms.
+        Check local vs RPC time drift and force-refresh the blockhash if > 1500 ms.
         Prevents Jito from rejecting our bundles due to clock skew ("too old" error).
+        Increased from 200ms to 1500ms to avoid false positives caused by normal
+        Solana block age (one slot ≈ 400ms) and network latency.
 
         Returns True if drift was detected and the blockhash was refreshed.
         """
         drift_ms = await self.get_slot_drift_ms()
-        if drift_ms is not None and drift_ms > 200:
+        if drift_ms is not None and drift_ms > 1500:
             logger.critical(
-                f"🚨 SLOT DRIFT CRITICAL: {drift_ms:.0f} ms > 200 ms — "
+                f"🚨 SLOT DRIFT CRITICAL: {drift_ms:.0f} ms > 1500 ms — "
                 f"force-refreshing blockhash to prevent Jito rejection"
             )
             await self._race_blockhash_once()

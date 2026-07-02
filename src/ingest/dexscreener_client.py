@@ -20,7 +20,9 @@ class DexScreenerClient:
         self.session = session
         self.base_url = os.getenv("DEXSCREENER_BASE_URL", "https://api.dexscreener.com")
         self.rps = int(os.getenv("DEXSCREENER_RPS", 1))  # Fix 47: default 1 (free tier safe)
-        self.semaphore = asyncio.Semaphore(self.rps)
+        # Fix 5.3: Use aiolimiter instead of manual sleep + semaphore
+        from aiolimiter import AsyncLimiter
+        self._limiter = AsyncLimiter(max(1, self.rps), 1.0)
         
         # TTL cache for dynamically discovered tokens (Phase 4: Memory Leak Prevention)
         self.discovered_tokens: Dict[str, datetime] = {}
@@ -28,9 +30,8 @@ class DexScreenerClient:
 
     async def _fetch_trending(self) -> List[Dict]:
         """Fetch latest trending tokens on Solana."""
-        # Fix 47: sleep BEFORE semaphore to avoid blocking concurrent requests
-        await asyncio.sleep(1.0 / self.rps)
-        async with self.semaphore:
+        # Fix 5.3: Use aiolimiter instead of manual sleep + semaphore
+        async with self._limiter:
             url = f"{self.base_url}/tokens/v1/solana"
             try:
                 async with self.session.get(url, timeout=10) as resp:

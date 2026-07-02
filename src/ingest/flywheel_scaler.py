@@ -12,7 +12,7 @@ import logging
 from typing import Dict, List, Any, Optional
 from dataclasses import dataclass
 
-from src.ingest.shared_state import ATA_RENT_SOL_SPL, ATA_RENT_SOL_TOKEN2022
+from src.ingest.shared_state import ATA_RENT_SOL_SPL, ATA_RENT_SOL_TOKEN2022, pair_reputation
 
 logger = logging.getLogger("FlywheelScaler")
 
@@ -35,8 +35,10 @@ MANEUVER_BUDGET_SOL = MICRO_BALANCE_SOL - GAS_RESERVE_SOL
 ATA_RENT_SOL = ATA_RENT_SOL_TOKEN2022  # Conservative default: Token-2022 rent (LSTs use T22)
 
 SCALING_GRID = [
-    # Tier 1: Survival Phase (0.015 - 0.05 SOL) - SOL & Stables only, tightest parameters
-    ScalingTier(0.0, 0.05, 1, MANEUVER_BUDGET_SOL, 0.50, 0.00005, ["SS", "SL"], 15),
+    # Tier 1: Survival Phase (0.0 - 0.03 SOL) - SOL & Stables only, tightest parameters
+    ScalingTier(0.0, 0.03, 1, MANEUVER_BUDGET_SOL, 0.50, 0.00005, ["SS", "SL"], 15),
+    # Tier 1.5: Growth Phase (0.03 - 0.05 SOL) - Smooth upgrade jump
+    ScalingTier(0.03, 0.05, 1, 0.10, 0.45, 0.00007, ["SS", "SL"], 18),
     # Tier 2: Momentum Phase (0.05 - 0.20 SOL) - Enable major pairs
     ScalingTier(0.05, 0.20, 2, 0.50, 0.40, 0.0010, ["SS", "SL", "SM"], 25),
     # Tier 3: Growth Phase (0.20 - 1.00 SOL) - Introduce wrappers & stable yield ladders
@@ -64,7 +66,17 @@ class DynamicThresholds:
 
     @property
     def max_borrow_sol(self) -> float:
-        return min(0.4, self.balance * 30)
+        balance = self.balance
+        if balance < 0.03:
+            return min(0.10, balance * 3)
+        elif balance < 0.05:
+            return min(0.15, balance * 3)
+        elif balance < 0.20:
+            return min(0.50, balance * 5)
+        elif balance < 1.00:
+            return min(1.00, balance * 10)
+        else:
+            return min(2.50, balance * 10)
 
     @property
     def max_new_atas_per_trade(self) -> int:
@@ -200,9 +212,7 @@ class FlywheelScaler:
         self.initial_balance = initial_balance
         self.rent_per_ata = ATA_RENT_SOL
         self.min_gas_reserve = 0.005
-        self.reputation = PairReputationCircuitBreaker(
-            limit=3, cooldown_seconds=600, error_keywords=("slippage", "insufficient", "liquidity", "simulation failed", "blockhash"),
-        )
+        self.reputation = pair_reputation
         # Fix 49: Hysteresis — track previous tier to prevent flapping at boundaries
         self._current_tier_index: int = 0
         self._hysteresis_buffer: float = 0.95  # 5% buffer: need 5% below threshold to downgrade

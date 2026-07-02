@@ -28,7 +28,6 @@ import resource
 from solders.pubkey import Pubkey
 from spl.token.instructions import get_associated_token_address
 from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID
-from src.ingest.flywheel_scaler import PairReputationCircuitBreaker
 
 # ── Этап 3: Prometheus Metrics ─────────────────────────────────────────
 from prometheus_client import Counter, Gauge, start_http_server
@@ -78,7 +77,7 @@ def normalize_profit_to_sol(
     profit_raw: float,
     target_mint_str: str,
     price_matrix: Dict[str, tuple],
-    sol_price_usd: float = 150.0,
+    sol_price_usd: float = None,
 ) -> float:
     """
     Convert profit denominated in any token to SOL equivalent.
@@ -106,21 +105,32 @@ def normalize_profit_to_sol(
         return profit_raw
 
     # If profit is in USDC (6 decimals), convert via USD
+    # Fail-Closed: require SOL price for conversion
     if target_mint_str == usdc_mint_str:
+        if sol_price_usd is None:
+            logger.warning(
+                f"🚫 normalize_profit_to_sol: no SOL price for USDC route — cannot verify profitability"
+            )
+            return None
         return profit_raw / sol_price_usd
 
     # For any other token: get its USD price and convert
     token_entry = price_matrix.get(target_mint_str)
     if token_entry and token_entry[0] > 0:
         token_price_usd = token_entry[0]
+        if sol_price_usd is None:
+            logger.warning(
+                f"🚫 normalize_profit_to_sol: no SOL price for {target_mint_str[:8]} route — cannot verify profitability"
+            )
+            return None
         return (profit_raw * token_price_usd) / sol_price_usd
 
-    # Fallback: assume 1:1 with SOL (conservative for LSTs, dangerous for others)
-    # Log a warning so the operator knows to add this mint to the price feed
+    # Fallback: Fail-Closed - cannot convert cross-currency without price feed
+    # Log a warning and return None to signal failure
     logger.warning(
-        f"⚠️ normalize_profit_to_sol: no price for {target_mint_str[:8]}, assuming 1:1 SOL"
+        f"🚫 normalize_profit_to_sol: no price for {target_mint_str[:8]} — cannot verify profitability"
     )
-    return profit_raw
+    return None  # Fail-Closed: abort trade when conversion impossible
 
 
 # ULTRA ARB MASTER - Unified Shared State (Imported from src.ingest.shared_state)
@@ -135,13 +145,7 @@ STRATEGY_DISABLED_UNTIL: Dict[str, float] = {}
 # Если конкретная пара (напр. SOL/jitoSOL) выдает 3 ошибки Slippage подряд,
 # отправляем пару в бан (cooldown) на 600 секунд. Это сохраняет репутацию
 # кошелька перед Jito и предотвращает сжигание газа на «высушенных» пулах.
-PAIR_FAILURES: Dict[str, int] = {}
-PAIR_DISABLED_UNTIL: Dict[str, float] = {}
 PAIR_COOLDOWN_SECONDS: int = 600
-# Централизованный PairReputationCircuitBreaker (замена глобальных PAIR_FAILURES/PAIR_DISABLED_UNTIL)
-_pair_reputation = PairReputationCircuitBreaker(
-    limit=3, cooldown_seconds=600, error_keywords=("slippage", "insufficient", "liquidity", "simulation failed", "blockhash")
-)  # 10 минут бана для пары
 # ────────────────────────────────────────────────────────────────────────────
 
 
@@ -562,15 +566,11 @@ async def check_time_sync(session, rpc_url):
 # =============================================================================
 # Maps each golden mint to the correct token program (SPL vs Token-2022).
 _GOLDEN_ATA_MINTS: Dict[str, str] = {
-    # SPL Token Program mints
     "So11111111111111111111111111111111111111112": str(TOKEN_PROGRAM_ID),  # wSOL
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": str(TOKEN_PROGRAM_ID),  # USDC
-    # Token-2022 LST mints
-    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": str(
-        TOKEN_2022_PROGRAM_ID
-    ),  # jitoSOL
-    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": str(TOKEN_2022_PROGRAM_ID),  # mSOL
-    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": str(TOKEN_2022_PROGRAM_ID),  # INF
+    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": str(TOKEN_PROGRAM_ID),  # jitoSOL
+    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": str(TOKEN_PROGRAM_ID),  # mSOL
+    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": str(TOKEN_PROGRAM_ID),  # INF
 }
 
 
@@ -1082,7 +1082,6 @@ TOKENS = {
     "USDe": "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",
     "sUSDe": "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",
     "sUSDS": "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",
-    "USD+": "B7vSST99S2pJ9Z9H9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y",
     "JupUSD": "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",
     # === GOLDEN FUND: LSTs ===
     "jitoSOL": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
@@ -1100,8 +1099,6 @@ TOKENS = {
     "vSOL": "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7",
     "compassSOL": "Comp4ssDzXcLeu2MnLuGNNFC4cmLPMng8qWHPvzAMU1h",
     "hSOL": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
-    "kSOL": "kSoL6Y9p9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Y",
-    # === BTC Wrappers (Step 5) ===
     # === BTC Wrappers (Step 5) ===
     "cbBTC": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
     "wBTC": "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh",
@@ -1176,7 +1173,6 @@ TOKEN_DECIMALS = {
     "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT": 6,  # USDe
     "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN": 9,  # sUSDe
     "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW": 6,  # sUSDS
-    "B7vSST99S2pJ9Z9H9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y9Y": 6,  # USD+
     # Yield Stables (new — 6 decimals)
     "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD": 6,  # JupUSD
     # Golden Fund: LSTs (9 decimals)
@@ -1195,8 +1191,6 @@ TOKEN_DECIMALS = {
     "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7": 9,  # vSOL
     "Comp4ssDzXcLeu2MnLuGNNFC4cmLPMng8qWHPvzAMU1h": 9,  # compassSOL
     "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A": 9,  # hSOL
-    "kSoL6Y9p9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Yp9Y": 9,  # kSOL
-    "BLVxek8YMXUQhcKmMvrFTrzh5FXg8ec88Crp6otEaCMf": 9,  # BELIEVE
     # BTC Wrappers (8 decimals)
     "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh": 8,  # wBTC (Wormhole)
     "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij": 8,  # cbBTC (Coinbase)
@@ -1291,11 +1285,6 @@ ARBITRAGE_REGISTRY = {
             "description": "Stable-Yield Accrual Drift: USDY vs USDC yield differential",
         },
         {
-            "base": "USD+",
-            "target": "USDC",
-            "description": "Stable-Yield Accrual Drift: USD+ vs USDC yield differential",
-        },
-        {
             "base": "JupUSD",
             "target": "USDC",
             "description": "Stable-Yield Accrual Drift: JupUSD vs USDC yield differential",
@@ -1320,72 +1309,9 @@ ARBITRAGE_REGISTRY = {
             "description": "USDC/kUSDC rate differential between MarginFi and Kamino",
         },
         {
-            "base": "SOL",
-            "target": "kSOL",
-            "description": "SOL/kSOL flash-liquidation on Kamino Health Factor < 1.0",
-        },
-        {
             "base": "USDC",
             "target": "kJLP",
             "description": "USDC/kJLP Jupiter Perps LP value revaluation",
-        },
-    ],
-    "ultra_arb_wrappers": [
-        {
-            "base": "cbBTC",
-            "target": "wBTC",
-            "description": "1:1 BTC wrapper peg enforcement",
-        },
-        {
-            "base": "wBTC",
-            "target": "tBTC",
-            "description": "1:1 BTC wrapper peg enforcement",
-        },
-        {
-            "base": "cbBTC",
-            "target": "tBTC",
-            "description": "1:1 BTC wrapper peg enforcement",
-        },
-        {"base": "wETH", "target": "SOL", "description": "ETH wrapper vs native token"},
-    ],
-    "ultra_arb_depin": [
-        {"base": "HNT", "target": "USDC", "description": "DePIN volatility arbitrage"},
-        {
-            "base": "GRASS",
-            "target": "USDC",
-            "description": "AI DePIN volatility arbitrage",
-        },
-        {
-            "base": "RENDER",
-            "target": "USDC",
-            "description": "GPU DePIN volatility arbitrage",
-        },
-        {
-            "base": "MOBILE",
-            "target": "USDC",
-            "description": "Mobile DePIN volatility arbitrage",
-        },
-        {
-            "base": "HONEY",
-            "target": "USDC",
-            "description": "Yield DePIN volatility arbitrage",
-        },
-    ],
-    "ultra_arb_memes": [
-        {
-            "base": "BONK",
-            "target": "USDC",
-            "description": "Viral meme volatility arbitrage",
-        },
-        {
-            "base": "WIF",
-            "target": "USDC",
-            "description": "Viral meme volatility arbitrage",
-        },
-        {
-            "base": "POPCAT",
-            "target": "USDC",
-            "description": "Viral meme volatility arbitrage",
         },
     ],
     "ultra_arb_wrappers": [
@@ -1805,19 +1731,18 @@ async def _monitor_timed_out_bundles(grace_period: float = 15.0) -> None:
 
         RECENTLY_TIMED_OUT_BUNDLES.pop(bundle_id, None)
 def is_pair_allowed(pair_key: str) -> bool:
-    """Check if a pair is allowed to trade.
-    Delegates to module-level _pair_reputation."""
-    return not _pair_reputation.is_banned(pair_key)
+    """Check if a pair is allowed to trade."""
+    return not shared_state.pair_reputation.is_banned(pair_key)
 
 
 def record_pair_failure(pair_key: str, error_type: str = "unknown"):
-    """Record a pair failure via module-level ReputationCircuitBreaker."""
-    _pair_reputation.record_failure(pair_key, error_type)
+    """Record a pair failure via shared pair reputation."""
+    shared_state.pair_reputation.record_failure(pair_key, error_type)
 
 
 def record_pair_success(pair_key: str):
-    """Reset pair failure counter via module-level ReputationCircuitBreaker."""
-    _pair_reputation.record_success(pair_key)
+    """Reset pair failure counter via shared pair reputation."""
+    shared_state.pair_reputation.record_success(pair_key)
 
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -4668,12 +4593,27 @@ async def execute_priority_opportunity(
                 try:
                     net_profit_sol = simulated_profit
                     net_profit_lamports = int(net_profit_sol * 1e9)
-                    gross_revenue_lamports = (
-                        net_profit_lamports + int(net_profit_sol * 0.15 * 1e9)
+                    base_fee_lamports = int(cfg.BASE_FEE * 1e9)
+                    priority_fee_lamports = int(cfg.PRIORITY_FEE * 1e9)
+                    jito_tip_lamports = (
+                        max(10_000, int(net_profit_sol * 0.4 * 1e9))
                         if net_profit_sol > 0
                         else 0
                     )
-                    total_cost_lamports = gross_revenue_lamports - net_profit_lamports
+                    flashloan_fee_lamports = int(amount_lamports * cfg.FLASH_FEE_PCT)
+                    ata_rent_lamports = int((_rent_cost) * 1e9)
+                    total_cost_lamports = (
+                        base_fee_lamports
+                        + priority_fee_lamports
+                        + jito_tip_lamports
+                        + flashloan_fee_lamports
+                        + ata_rent_lamports
+                    )
+                    gross_revenue_lamports = (
+                        net_profit_lamports + total_cost_lamports
+                        if net_profit_sol > 0
+                        else 0
+                    )
                     roi_pct = (
                         (net_profit_sol / (gross_revenue_lamports / 1e9) * 100)
                         if gross_revenue_lamports > 0
@@ -4698,18 +4638,16 @@ async def execute_priority_opportunity(
                                 else 0
                             ),
                             "gross_revenue_lamports": gross_revenue_lamports,
-                            "flashloan_fee_lamports": 0,
+                            "flashloan_fee_lamports": flashloan_fee_lamports,
                             "dex_fee_lamports": int(net_profit_sol * 0.003 * 1e9)
                             if net_profit_sol > 0
                             else 0,
                             "slippage_bps": opportunity.slippage_pct or 15,
-                            "compute_cost_lamports": 5_000,
-                            "network_fee_lamports": 5_000,
-                            "priority_fee_lamports": 10_000,
-                            "jito_tip_lamports": int(net_profit_sol * 0.4 * 1e9)
-                            if net_profit_sol > 0
-                            else 0,
-                            "ata_rent_lamports": 2_039_280,
+                            "compute_cost_lamports": 0,
+                            "network_fee_lamports": base_fee_lamports,
+                            "priority_fee_lamports": priority_fee_lamports,
+                            "jito_tip_lamports": jito_tip_lamports,
+                            "ata_rent_lamports": ata_rent_lamports,
                             "total_cost_lamports": total_cost_lamports,
                             "net_profit_lamports": net_profit_lamports,
                             "roi_pct": roi_pct,
@@ -5115,7 +5053,7 @@ async def worker(
                     expected_profit_sol=current_expected_profit,
                     strategy=strategy_label,
                 )
-                if calculated_tip < 0:  # Capital Guard hit
+                if calculated_tip <= 0:
                     logger.warning(
                         f"🚫 Capital Guard: Jito 50th > 80% of expected profit — skipping whale market for {path}"
                     )

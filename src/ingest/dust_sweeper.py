@@ -17,6 +17,7 @@ from solders.message import MessageV0
 from solders.keypair import Keypair
 from solders.rpc.requests import GetProgramAccounts, GetAccountInfo
 from solders.rpc.config import RpcAccountInfoConfig
+from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID
 
 logger = logging.getLogger(__name__)
 
@@ -29,8 +30,8 @@ class DustSweeper:
         self.session = session
         self._fail_tracker = {}
         self._blacklist = set()
-        self.spl_token_program = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-        self.spl_token_2022_program = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
+        self.spl_token_program = TOKEN_PROGRAM_ID
+        self.spl_token_2022_program = TOKEN_2022_PROGRAM_ID
         self.usdc_mint = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
         self.wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         from spl.token.instructions import get_associated_token_address
@@ -135,6 +136,10 @@ class DustSweeper:
             cu_limit_ix = set_compute_unit_limit(50_000)
             cu_price_ix = set_compute_unit_price(5_000)
             all_ixs = [cu_limit_ix, cu_price_ix, burn_ix, close_ix]
+
+            from src.ingest.tx_builder import validate_cb_ordering
+            if not validate_cb_ordering(all_ixs, location="dust_sweeper"):
+                return 0
 
             bh_payload = {
                 "jsonrpc": "2.0", "id": 1,

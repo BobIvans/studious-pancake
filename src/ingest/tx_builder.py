@@ -35,16 +35,11 @@ try:
 except ImportError:
     CREATE_ATA_FUNCTION = create_associated_token_account
     logger.warning("create_idempotent_associated_token_account not available")
-from spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
 from solders.system_program import ID as SYSTEM_PROGRAM_ID
 
-# Token-2022 Program ID
-TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
-    "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m"
-)
-
 # AToken Program ID constant for ATA detection
-ATOKEN_PROGRAM = "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86"
+ATOKEN_PROGRAM = str(ASSOCIATED_TOKEN_PROGRAM_ID)
 # MarginFi Program ID - loaded from environment with default
 MARGINFI_PROGRAM_ID = Pubkey.from_string(
     os.getenv("MARGINFI_PROGRAM_ID", "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA")
@@ -373,7 +368,7 @@ class JupiterTxBuilder:
             logger.warning(
                 "No RPC URL provided for priority fee estimation, using default"
             )
-            return 1  # Fallback 1 micro-lamport (1000 caused ~0.6 SOL fees on 600k CU → InsufficientFundsForFee)
+            return 0  # Fallback: skip sentinel (TX will be aborted to prevent MicroFee trap)
 
         try:
             payload = {
@@ -432,7 +427,7 @@ class JupiterTxBuilder:
         except Exception as e:
             logger.warning(f"Dynamic priority fee estimation failed: {e}")
 
-        return 1  # Fallback 1 micro-lamport (1000 caused ~0.6 SOL fees on 600k CU → InsufficientFundsForFee)
+        return 0  # Fallback: skip sentinel (TX will be aborted to prevent MicroFee trap)
 
     async def build_optimized_transaction(
         self,
@@ -461,34 +456,17 @@ class JupiterTxBuilder:
         Returns:
             Tuple of (modified_instructions, cu_limit, priority_fee_micro_lamports)
         """
-        # Compute Unit Profiling: Strategy-specific CU limits for capital protection
-        cu_profiles = {
-            "stables_swap": 45000,  # Simple stablecoin swaps
-            "lst_arbitrage": 65000,  # LST arbitrage with flash loans
-            "flash_arbitrage": 300000,  # Full flash loan arbitrage
-            "default": 60000,  # Standard Jupiter swaps
-        }
-
-        cu_limit = cu_profiles.get(operation_type, cu_profiles["default"])
-
-        # Use cached CU only if it's lower than our conservative (buffered) limit
-        cached_cu = self._get_cached_cu(program_id, operation_type)
-        if cached_cu and cached_cu < cu_limit:
-            cu_limit = cached_cu
-
-        # ╔══════════════════════════════════════════════════════════════════════╗
-        # ║  CU PROFILES — dynamic limits from module-level CU_PROFILES dict      ║
-        # ╚══════════════════════════════════════════════════════════════════════╝
-        _profile_key = {
+        _operation_profile_map = {
             "flash_arbitrage": "flash_arbitrage",
             "lst_arbitrage": "lst_depeg_arbitrage",
             "stables_swap": "stables_swap",
             "swap": "stables_swap",
             "default": "default",
-        }.get(operation_type, operation_type)
+        }
+        _profile_key = _operation_profile_map.get(operation_type, operation_type)
 
         profile_cu = CU_PROFILES.get(_profile_key, CU_PROFILES["default"])
-        cu_limit = max(cu_limit, profile_cu)  # Always at least the profile floor
+        cu_limit = profile_cu
 
         # СТРОГИЙ ФИЛЬТР ЛОКАЛЬНЫХ РЫНКОВ (Защита от переплаты за газ)
         # Исключаем системные программы, сисвары и всё, что read-only.
@@ -665,18 +643,16 @@ class JupiterTxBuilder:
 
         program_id = Pubkey.from_string(ix_data["programId"])
 
-        # Static list of program IDs and sysvars that should NEVER be writable
         READ_ONLY_SYSTEM_IDS = {
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  # Token Program
-            "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m",  # Token-2022 Program
-            "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86",  # Associated Token Program
+            str(TOKEN_PROGRAM_ID),
+            str(TOKEN_2022_PROGRAM_ID),
+            str(ASSOCIATED_TOKEN_PROGRAM_ID),
             "11111111111111111111111111111111",  # System Program
             "ComputeBudget111111111111111111111111111111",  # Compute Budget
             "Sysvar1nstructions1111111111111111111111111",  # Instructions Sysvar
             "SysvarRent111111111111111111111111111111111",  # Rent Sysvar
             "SysvarC1ock111111111111111111111111111111111",  # Clock Sysvar
-            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",  # Jupiter V6
-            "JUP6LkbZbjS1jKKpphs4268Z9mUXas6W2L95sc376vv",  # Jupiter V6 alternative
+            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",  # Jupiter v6
         }
 
         accounts = []
@@ -783,7 +759,7 @@ class JupiterTxBuilder:
                     continue
 
                 # Phase 12: Deduplicate Associated Token Account creation
-                if str(ix.program_id) == "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86":
+                if str(ix.program_id) == ATOKEN_PROGRAM:
                     # Task 23: Make creation idempotent by recreating Instruction (b'' or b'\x00' -> b'\x01')
                     # Cannot mutate ix.data directly - Rust structs are frozen
                     if ix.data == b"" or ix.data == b"\x00":
@@ -913,10 +889,12 @@ class JupiterTxBuilder:
                     if _cached:
                         continue
                     # Not in cache — fetch asynchronously and cache (non-blocking)
-                    asyncio.create_task(self.alt_manager.add_dynamic_alt(_pk))
+                    import src.ingest.shared_state as _ss
+                    _ss.retain_background_task(asyncio.create_task(self.alt_manager.add_dynamic_alt(_pk)))
             # Non-blocking ALT validation (background task)
             if self.alt_manager:
-                asyncio.create_task(self._validate_alt_accounts(alt_pubkeys))
+                import src.ingest.shared_state as _ss
+                _ss.retain_background_task(asyncio.create_task(self._validate_alt_accounts(alt_pubkeys)))
 
         return instructions, alt_pubkeys
 
@@ -944,7 +922,7 @@ class JupiterTxBuilder:
                                 raw_bytes = await response.read()
                                 return orjson.loads(raw_bytes)
                             elif response.status == 429:
-                                backoff = min(2.0, 1.5 * (attempt + 1))
+                                backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                                 logger.warning(
                                     f"Jupiter swap-instructions 429 on {SWAP_INSTRUCTIONS_API_URL} — backoff {backoff}s (attempt {attempt + 1})"
                                 )
@@ -970,7 +948,7 @@ class JupiterTxBuilder:
                             raw_bytes = await response.read()
                             return orjson.loads(raw_bytes)
                         elif response.status == 429:
-                            backoff = min(2.0, 1.5 * (attempt + 1))
+                            backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                             logger.warning(
                                 f"Jupiter swap-instructions 429 on {SWAP_INSTRUCTIONS_API_URL} — backoff {backoff}s (attempt {attempt + 1})"
                             )
@@ -1150,11 +1128,11 @@ class JupiterTxBuilder:
                         return False
 
                     return True
-
-            return True  # Fallback if RPC fails
+                else:
+                    return False  # Fail-Closed: abort if RPC response invalid
         except Exception as e:
             logger.error(f"Real-time liquidity check failed: {e}")
-            return True
+            return False  # Fail-Closed: abort trade if RPC unavailable
 
     async def get_max_marginfi_borrow(self, bank_pubkey: str) -> int:
         try:
@@ -1334,18 +1312,8 @@ class JupiterTxBuilder:
         self, provider: Dict[str, Any], asset: str
     ) -> float:
         """Get utilization rate for provider/asset pair."""
-        # In practice, would query on-chain data
-        # For simulation, return mock values
-
-        # Simulate MarginFi often at capacity
-        if provider["name"] == "MarginFi" and asset == "USDC":
-            return 0.98  # 98% utilized
-
-        # Kamino more stable
-        if provider["name"] == "Kamino":
-            return 0.70  # 70% utilized
-
-        return 0.50  # Default 50% utilization
+        # Default conservative utilization until on-chain parser is implemented
+        return 0.50
 
     async def _provider_supports_asset(
         self, provider: Dict[str, Any], asset: str
@@ -1919,7 +1887,7 @@ class JupiterTxBuilder:
         """
         seen_atas = set()
         sanitized = []
-        ata_prog = Pubkey.from_string("ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86")
+        ata_prog = ASSOCIATED_TOKEN_PROGRAM_ID
         # Golden ATAs that must NEVER be closed
         # FIX 6 (wSOL Death Spiral): wSOL REMOVED from golden ATAs.
         # We MUST allow CloseAccount on wSOL so the native SOL is unwrapped
@@ -1946,16 +1914,15 @@ class JupiterTxBuilder:
 
         # Phase 49: SVM Account Locking Optimization (Sanitizer Level)
         READ_ONLY_SYSTEM_IDS = {
-            "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  # Token Program
-            "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m",  # Token-2022 Program
-            "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86",  # Associated Token Program
+            str(TOKEN_PROGRAM_ID),
+            str(TOKEN_2022_PROGRAM_ID),
+            str(ASSOCIATED_TOKEN_PROGRAM_ID),
             "11111111111111111111111111111111",  # System Program
             "ComputeBudget111111111111111111111111111111",  # Compute Budget
             "Sysvar1nstructions1111111111111111111111111",  # Instructions Sysvar
             "SysvarRent111111111111111111111111111111111",  # Rent Sysvar
             "SysvarC1ock111111111111111111111111111111111",  # Clock Sysvar
-            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",  # Jupiter V6
-            "JUP6LkbZbjS1jKKpphs4268Z9mUXas6W2L95sc376vv",  # Jupiter V6 alternative
+            "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8",  # Jupiter v6
         }
 
         for ix in instructions:
@@ -1990,7 +1957,7 @@ class JupiterTxBuilder:
             # before accessing accounts[1].pubkey.  Jupiter may pass SystemProgram
             # instructions that look similar but would crash with IndexError.
             if (
-                str(ix.program_id) == "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86"
+                str(ix.program_id) == ATOKEN_PROGRAM
                 and len(ix.accounts) >= 2
             ):
                 ata_pubkey = str(ix.accounts[1].pubkey)
@@ -2060,14 +2027,17 @@ class JupiterTxBuilder:
                 bank_pubkey = os.getenv(
                     "MARGINFI_USDC_BANK", "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2"
                 ).strip()
-                bank_liquidity_vault = os.getenv(
-                    "MARGINFI_USDC_VAULT",
-                    "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2",
-                ).strip()
-                bank_liquidity_vault_authority = os.getenv(
-                    "MARGINFI_USDC_VAULT_AUTH",
-                    "EhBxU585Rdru5WS8k4KjprGegcGLM8igXy3hDph5yVLy",
-                ).strip()
+                # Task 1.2: Use vault from shared_state or derive dynamically - NOT hardcoded fallback
+                from src.ingest.shared_state import MARGINFI_LIQUIDITY_VAULTS
+                bank_liquidity_vault = MARGINFI_LIQUIDITY_VAULTS.get(
+                    bank_pubkey, bank_pubkey
+                )
+                # Derive vault authority dynamically
+                bank_liquidity_vault_authority = str(
+                    Pubkey.from_string(
+                        get_marginfi_vault_pdas(bank_pubkey)[1]
+                    )
+                )
                 logger.debug(
                     f"🔄 Oracle Pivot: switched bank config to USDC (bank={bank_pubkey[:8]}...)"
                 )
@@ -2089,11 +2059,13 @@ class JupiterTxBuilder:
                 _threshold = int(sell_quote_response.get(
                     "otherAmountThreshold", sell_quote_response.get("outAmount", 0)
                 ))
-                _required = borrow_amount_lamports + jito_tip_lamports
+                _fee_buffer_lamports = 5000  # base fee
+                _priority_fee_estimate_lamports = 100_000  # conservative buffer
+                _required = borrow_amount_lamports + jito_tip_lamports + _fee_buffer_lamports + _priority_fee_estimate_lamports
                 if _threshold < _required:
                     logger.warning(
                         f"🚫 БЛОК 8: otherAmountThreshold ({_threshold}) < "
-                        f"repay_amount + jito_tip ({_required}). "
+                        f"repay_amount + jito_tip + fees ({_required}). "
                         f"Anti-Sandwich guard aborts bundle to prevent InsufficientFunds."
                     )
                     return None
@@ -2131,16 +2103,13 @@ class JupiterTxBuilder:
             # Удаляем дубли до сборки транзакции.
             from solders.pubkey import Pubkey
 
-            ATOKEN_PROGRAM = Pubkey.from_string(
-                "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86"
-            )
             seen_atas: set = set()
             cleaned_ixs: list = []
 
             for ix in (buy_ixs if buy_quote_response else []) + (
                 sell_ixs if sell_quote_response else []
             ):
-                if ix.program_id == ATOKEN_PROGRAM and len(ix.accounts) >= 2:
+                if ix.program_id == Pubkey.from_string(ATOKEN_PROGRAM) and len(ix.accounts) >= 2:
                     ata_addr = str(ix.accounts[1].pubkey)
                     if ata_addr in seen_atas:
                         logger.debug(
@@ -2254,15 +2223,11 @@ class JupiterTxBuilder:
                 _strategy_profile, CU_PROFILES["flash_arbitrage"]
             )
             cu_limit_ix = set_compute_unit_limit(_profile_cu)
-            # БЛОК 7: Priority Fee — без set_compute_unit_price транзакция
-            # пессимизируется валидаторами во время перегрузок (0 priority = lowest).
-            # 5000 micro-lamports — минимальный жизнеспособный пол для флешлоанов.
-            cu_price_ix = set_compute_unit_price(5000)
             logger.debug(
                 f"🛡️ CU Profile: strategy_type={strategy_type} → {_strategy_profile} ({_profile_cu:,} CU)"
             )
             final_instructions = (
-                [cu_limit_ix, cu_price_ix]
+                [cu_limit_ix]
                 + pre_instructions
                 + [borrow_ix, withdraw_ix]
                 + all_instructions

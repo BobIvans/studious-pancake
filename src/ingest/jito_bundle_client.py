@@ -8,16 +8,20 @@ from __future__ import annotations
 
 import asyncio
 import base58
+import base64
 import logging
 import os
+import random
 import socket
 import time
 from typing import Any, Dict, List, Optional
 import aiohttp
 
 from solders.hash import Hash
+from solders.instruction import Instruction, AccountMeta
 from solders.keypair import Keypair
 from solders.message import MessageV0
+from solders.pubkey import Pubkey
 from solders.transaction import VersionedTransaction
 
 logger = logging.getLogger(__name__)
@@ -77,6 +81,39 @@ class JitoBundleClient:
             await self.session.close()
 
     # ── Lifecycle ────────────────────────────────────────────────────────────────
+
+    def _ensure_instruction(self, ix: Any) -> Instruction:
+        """Coerce a Jupiter instruction dict into a solders Instruction.
+
+        Jupiter API v6 quote responses serialize instructions as dictionaries
+        with ``programId``, ``accounts`` and ``data`` fields.  ``MessageV0.
+        try_compile`` requires actual ``solders.instruction.Instruction``
+        objects, so any dict-shaped items must be converted first.
+        """
+        if isinstance(ix, Instruction):
+            return ix
+        if isinstance(ix, dict):
+            raw_b64 = ix.get("data", "")
+            if isinstance(raw_b64, str):
+                padded_b64 = raw_b64 + "=" * (-len(raw_b64) % 4)
+                data_bytes = base64.b64decode(padded_b64)
+            elif isinstance(raw_b64, (bytes, bytearray)):
+                data_bytes = bytes(raw_b64)
+            else:
+                raise ValueError(f"Unexpected instruction data type: {type(raw_b64)}")
+            program_id = Pubkey.from_string(ix["programId"])
+            accounts = [
+                AccountMeta(
+                    pubkey=Pubkey.from_string(meta["pubkey"]),
+                    is_signer=meta.get("isSigner", False),
+                    is_writable=meta.get("isWritable", False),
+                )
+                for meta in ix.get("accounts", [])
+            ]
+            return Instruction(program_id=program_id, accounts=accounts, data=data_bytes)
+        raise TypeError(
+            f"Unsupported instruction type for MessageV0.try_compile: {type(ix)}"
+        )
 
     async def start(self) -> None:
         """Start background tasks."""
@@ -163,9 +200,9 @@ class JitoBundleClient:
             if not recent_blockhash:
                 return {"success": False, "error": "No blockhash", "bundle_id": None}
 
-            # Сборка транзакции
+            instructions = [self._ensure_instruction(ix) for ix in swap_instructions]
             message = MessageV0.try_compile(
-                payer_keypair.pubkey(), swap_instructions, [], recent_blockhash,
+                payer_keypair.pubkey(), instructions, [], recent_blockhash,
             )
             transaction = VersionedTransaction(message, [payer_keypair])
 

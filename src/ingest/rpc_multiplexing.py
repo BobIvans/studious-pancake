@@ -41,7 +41,7 @@ def _sync_doh_query(hostname: str) -> list[str]:
         try:
             headers = {"Accept": accept, "User-Agent": "Mozilla/5.0"}
             headers.update(extra_headers)
-            resp = requests.get(f"{url_base}?name={hostname}&type=A", headers=headers, timeout=0.8, verify=False)
+            resp = requests.get(f"{url_base}?name={hostname}&type=A", headers=headers, timeout=0.8, verify=True)
             if resp.status_code == 200:
                 ips = [ans["data"] for ans in resp.json().get("Answer", []) if ans.get("type") == 1]
                 if ips:
@@ -52,7 +52,7 @@ def _sync_doh_query(hostname: str) -> list[str]:
 
     # Резервный публичный API (тоже по IP)
     try:
-        resp = requests.get(f"https://104.21.25.96/api/dns/lookup/{hostname}", headers={"Host": "networkcalc.com", "User-Agent": "Mozilla/5.0"}, timeout=1.0, verify=False)
+        resp = requests.get(f"https://104.21.25.96/api/dns/lookup/{hostname}", headers={"Host": "networkcalc.com", "User-Agent": "Mozilla/5.0"}, timeout=1.0, verify=True)
         if resp.status_code == 200:
             ips = [rec["address"] for rec in resp.json().get("records", {}).get("A", [])]
             if ips:
@@ -184,7 +184,8 @@ class BlockhashManager:
 
     async def start(self, session: aiohttp.ClientSession):
         self.running = True
-        asyncio.create_task(self._race_blockhashes(session))
+        import src.ingest.shared_state as _ss
+        _ss.retain_background_task(asyncio.create_task(self._race_blockhashes(session)))
 
     async def _race_blockhashes(self, session: aiohttp.ClientSession):
         while self.running:
@@ -391,6 +392,9 @@ class RPCMultiplexingEngine:
 
 
 
+class ExecutionPipeline:
+    """Execution Pipeline — orchestrates RPC events through the full trade pipeline."""
+
     def __init__(
         self,
         wss_endpoints: List[str],
@@ -427,7 +431,8 @@ class RPCMultiplexingEngine:
         await self.rpc_engine.start(self.monitored_addresses)
 
         # Start event processing loop
-        asyncio.create_task(self._process_events())
+        import src.ingest.shared_state as _ss
+        _ss.retain_background_task(asyncio.create_task(self._process_events()))
 
     async def stop(self):
         """Stop the execution pipeline."""

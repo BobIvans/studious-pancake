@@ -148,17 +148,15 @@ class DataAggregator:
     async def log_inflight_bundle(self, bundle_id: str, signatures: list[str], deducted_sol: float, tip_lamports: int):
         """
         Instantly persist an inflight bundle to SQLite.
-        Uses synchronous sqlite3 (not write_queue) for crash safety.
+        Uses aiosqlite to avoid blocking the event loop.
         """
         try:
-            import sqlite3
-            conn = sqlite3.connect(self.db_path, timeout=10)
-            conn.execute(
-                "INSERT OR REPLACE INTO inflight_bundles (bundle_id, sent_at, tx_sigs_json, deducted_sol, tip_lamports, status) VALUES (?, ?, ?, ?, ?, ?)",
-                (bundle_id, time.time(), orjson.dumps(signatures).decode(), deducted_sol, tip_lamports, 'sent'),
-            )
-            conn.commit()
-            conn.close()
+            async with aiosqlite.connect(self.db_path, timeout=30) as db:
+                await db.execute(
+                    "INSERT OR REPLACE INTO inflight_bundles (bundle_id, sent_at, tx_sigs_json, deducted_sol, tip_lamports, status) VALUES (?, ?, ?, ?, ?, ?)",
+                    (bundle_id, time.time(), orjson.dumps(signatures).decode(), deducted_sol, tip_lamports, 'sent'),
+                )
+                await db.commit()
             logger.debug(f"Inflight bundle logged: {bundle_id[:12]} (tip={tip_lamports}, deducted={deducted_sol:.8f} SOL)")
         except Exception as e:
             logger.error(f"Failed to log inflight bundle: {e}")
@@ -166,14 +164,12 @@ class DataAggregator:
     async def update_inflight_status(self, bundle_id: str, new_status: str):
         """Update the status of an inflight bundle."""
         try:
-            import sqlite3
-            conn = sqlite3.connect(self.db_path, timeout=10)
-            conn.execute(
-                "UPDATE inflight_bundles SET status = ?, finalized_at = ? WHERE bundle_id = ?",
-                (new_status, time.time() if new_status in ('confirmed', 'refunded', 'failed') else None, bundle_id),
-            )
-            conn.commit()
-            conn.close()
+            async with aiosqlite.connect(self.db_path, timeout=30) as db:
+                await db.execute(
+                    "UPDATE inflight_bundles SET status = ?, finalized_at = ? WHERE bundle_id = ?",
+                    (new_status, time.time() if new_status in ('confirmed', 'refunded', 'failed') else None, bundle_id),
+                )
+                await db.commit()
             logger.debug(f"Inflight bundle status updated: {bundle_id[:12]} -> {new_status}")
         except Exception as e:
             logger.error(f"Failed to update inflight status: {e}")

@@ -45,6 +45,13 @@ class HeliusWebhookHandler:
 
     async def start(self):
         """Start the webhook server and the worker pool."""
+        # Safety check: HELIUS_WEBHOOK_SECRET must be configured in production
+        webhook_secret = os.getenv("HELIUS_WEBHOOK_SECRET")
+        if not webhook_secret:
+            raise RuntimeError(
+                "HELIUS_WEBHOOK_SECRET environment variable is required for production. "
+                "Set it in your .env file or use 'openssl rand -hex 32' to generate one."
+            )
         try:
             self.runner = web.AppRunner(self.app)
             await self.runner.setup()
@@ -52,18 +59,17 @@ class HeliusWebhookHandler:
             site = web.TCPSite(runner=self.runner, host=host, port=self.port)
             await site.start()
             logger.warning(f"🚀 WEBHOOK SERVER ACTIVE: Listening on port {self.port} ({host}). Endpoint: http://{host}:{self.port}/webhook")
-            # ИСПРАВЛЕНИЕ: Worker Pool — 3 фиксированных воркера
-            for i in range(self.WORKER_COUNT):
-                worker = asyncio.create_task(self._worker(i))
-                self._worker_pool.append(worker)
-            logger.info(f"🔄 Webhook worker pool started with {self.WORKER_COUNT} workers")
         except OSError as e:
             if "Address already in use" in str(e):
                 logger.warning(f"⚠️ Port {self.port} already in use. Webhook server disabled for this session.")
                 logger.info("💡 Tip: Stop other instances of the bot before starting a new one.")
-                return
             else:
                 raise
+
+        for i in range(self.WORKER_COUNT):
+            worker = asyncio.create_task(self._worker(i))
+            self._worker_pool.append(worker)
+        logger.info(f"🔄 Webhook worker pool started with {self.WORKER_COUNT} workers")
 
     async def stop(self):
         """Stop the webhook server and worker pool."""
@@ -160,14 +166,10 @@ class HeliusWebhookHandler:
                 logger.critical(f"🚨 SEC-BREACH: Invalid signature from IP {client_ip}! Computed={expected_signature[:8]}..., Got={helius_signature[:8]}...")
                 return web.Response(status=401, text='Unauthorized: Invalid Signature')
         else:
-            # Fallback insecure method (if secret not configured in .env)
-            logger.warning("⚠️ HELIUS_WEBHOOK_SECRET is not configured! Falling back to weak token verification...")
-            auth_header = request.headers.get('Authorization', '')
-            expected_auth = os.getenv("HELIUS_API_KEY", "")
-            
-            if not expected_auth or not hmac.compare_digest(auth_header, expected_auth):
-                logger.critical(f"🚨 SEC-BREACH: Unauthorized fallback webhook attempt from {client_ip}")
-                return web.Response(status=401, text='Unauthorized')
+            # Безопасность: Не использовать небезопасный fallback. Если webhook_secret не задан,
+            # отвечаем 401 Unauthorized. Production требует HELIUS_WEBHOOK_SECRET.
+            logger.critical(f"🚨 SEC-BREACH: HELIUS_WEBHOOK_SECRET not configured! Request from {client_ip} rejected.")
+            return web.Response(status=401, text='Unauthorized: Webhook secret not configured')
 
         # 4. PARSE PAYLOAD (after successful authorization)
         try:

@@ -15,11 +15,12 @@ from aiolimiter import AsyncLimiter
 logger = logging.getLogger(__name__)
 
 _QUOTE_LIMITER = None
+_SWAP_LIMITER = None
 
 def get_quote_limiter():
     global _QUOTE_LIMITER
     if _QUOTE_LIMITER is None:
-        rps = int(os.getenv("JUPITER_QUOTE_RPS", "5"))  # Fix 48: default 5 (was 1 — blocked scanning speed)
+        rps = int(os.getenv("JUPITER_QUOTE_RPS", "5"))
         _QUOTE_LIMITER = AsyncLimiter(max(1, rps), 1.0)
     return _QUOTE_LIMITER
 
@@ -29,13 +30,6 @@ def get_swap_limiter():
         jup_rps = int(os.getenv("JUPITER_SWAP_RPS", "45"))
         _SWAP_LIMITER = AsyncLimiter(max(1, jup_rps), 1.0)
     return _SWAP_LIMITER
-
-def get_jupiter_limiter():
-    if _QUOTE_LIMITER is None:
-        get_quote_limiter()
-    if _SWAP_LIMITER is None:
-        get_swap_limiter()
-    return _QUOTE_LIMITER or _SWAP_LIMITER
 
 # Jupiter API endpoints — динамически из .env
 QUOTE_API_URL = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
@@ -48,8 +42,8 @@ class JupiterClient:
     def __init__(
         self,
         session: Optional[aiohttp.ClientSession] = None,
-        timeout: float = 30.0,
-        max_retries: int = 3,
+        timeout: float = 5.0,
+        max_retries: int = 2,
     ):
         self.session = session
         self.timeout = timeout
@@ -84,7 +78,7 @@ class JupiterClient:
         input_mint: str,
         output_mint: str,
         amount: int,
-        slippage_bps: int = 50,
+        slippage_bps: int = None,
         *,
         fee_bps: Optional[int] = None,
         only_direct_routes: bool = False,
@@ -110,6 +104,10 @@ class JupiterClient:
         """
         if not self.session:
             raise RuntimeError("Client session not available")
+
+        if slippage_bps is None:
+            from src.ingest.shared_state import DEFAULT_SLIPPAGE_BPS
+            slippage_bps = DEFAULT_SLIPPAGE_BPS
 
         params = {
             "inputMint": input_mint,
@@ -148,8 +146,7 @@ class JupiterClient:
                                 logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
                                 return result
                             elif response.status == 429:
-                                # FIX 13: 429 Too Many Requests — mandatory backoff
-                                backoff = min(2.0, 1.5 * (attempt + 1))
+                                backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                                 logger.warning(f"Jupiter 429 on {QUOTE_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
                                 await asyncio.sleep(backoff)
                                 continue
@@ -177,7 +174,7 @@ class JupiterClient:
                             logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
                             return result
                         elif response.status == 429:
-                            backoff = min(2.0, 1.5 * (attempt + 1))
+                            backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                             logger.warning(f"Jupiter 429 on {QUOTE_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
                             await asyncio.sleep(backoff)
                             continue
@@ -290,7 +287,7 @@ class JupiterClient:
                                 logger.debug(f"Successfully got swap transaction for user {user_public_key}")
                                 return result
                             elif response.status == 429:
-                                backoff = min(2.0, 1.5 * (attempt + 1))
+                                backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                                 logger.warning(f"Jupiter swap 429 on {SWAP_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
                                 await asyncio.sleep(backoff)
                                 continue
@@ -315,7 +312,7 @@ class JupiterClient:
                             logger.debug(f"Successfully got swap transaction for user {user_public_key}")
                             return result
                         elif response.status == 429:
-                            backoff = min(2.0, 1.5 * (attempt + 1))
+                            backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                             logger.warning(f"Jupiter swap 429 on {SWAP_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
                             await asyncio.sleep(backoff)
                         else:

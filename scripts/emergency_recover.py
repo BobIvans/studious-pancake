@@ -161,10 +161,15 @@ async def recover_rent():
             logger.info(f"Identified {len(empty_accounts)} empty accounts to close.")
 
         # 3. Create close instructions (batch in groups of 10)
+        from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
         batch_size = 10
         for i in range(0, len(empty_accounts), batch_size):
             batch = empty_accounts[i:i + batch_size]
             instructions = []
+            # Add priority fee instructions to ensure the rescue tx lands during congestion
+            # Phase 8.1: Priority Fee for Emergency Recovery
+            instructions.append(set_compute_unit_limit(100_000))
+            instructions.append(set_compute_unit_price(10_000))  # 10k micro-lamports
             for acc_pubkey in batch:
                 ix = close_account(CloseAccountParams(
                     program_id=Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),

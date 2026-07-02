@@ -17,7 +17,7 @@ from solders.hash import Hash
 from solders.message import MessageV0
 from solders.system_program import TransferParams, transfer
 from spl.token.instructions import get_associated_token_address
-from spl.token.constants import TOKEN_PROGRAM_ID
+from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
 import src.ingest.shared_state as shared_state
 
 
@@ -132,16 +132,13 @@ from .leader_tracker import LeaderTracker
 from .g2_tip_manager import ExecutionGuard
 from .tx_builder import JupiterTxBuilder
 
-# FIX 13: Shared global Jupiter rate limiter — 4 req/s across all modules
-from .jupiter_api_client import get_jupiter_limiter
+# FIX 13: Shared global Jupiter rate limiter — quotes use the quote limiter
+from .jupiter_api_client import get_quote_limiter
 
 logger = logging.getLogger(__name__)
 
 RENT_SPL_ATA_SOL = 0.00204
 RENT_TOKEN2022_SOL = 0.0035
-
-# Token-2022 Program ID
-TOKEN_2022_PROGRAM_ID = Pubkey.from_string("TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m")
 
 # Flash Loan Pivot: Jupiter swap helper constants
 SOL_MINT = Pubkey.from_string("So11111111111111111111111111111111111111112")
@@ -242,10 +239,7 @@ class ExecutionRouter:
         self.execution_guard = ExecutionGuard()
 
         # Reputation Circuit Breaker: per-pair cooldown after 3 consecutive slippage fails
-        # Format: pair_key -> {"failures": int, "banned_until": float, "last_error": str}
-        self._pair_reputation: Dict[str, Dict[str, Any]] = {}
-        self.PAIR_SLIPPAGE_LIMIT = 3          # 3 consecutive slippage errors → cooldown
-        self.PAIR_COOLDOWN_SECONDS = 600      # 10 minutes cooldown per pair
+        # (uses shared instance from shared_state.pair_reputation)
 
         # ── Phase 49: Optimistic State ─────────────────────────────────────────
         # When a bundle is sent via Jito we do NOT wait for on-chain confirmation
@@ -714,44 +708,16 @@ class ExecutionRouter:
         return f"{ticker}/{mint[:12]}"
 
     def record_pair_slippage(self, pair_key: str) -> None:
-        """Record a slippage failure for a specific pair. Ban it if limit exceeded."""
-        now = time.time()
-        entry = self._pair_reputation.get(pair_key)
-        if entry is None or entry.get("banned_until", 0) < now:
-            # Either first failure or cooldown expired — reset counter
-            self._pair_reputation[pair_key] = {
-                "failures": 1,
-                "banned_until": 0,
-                "last_error": "slippage",
-            }
-            logger.debug(f"📊 Pair {pair_key}: 1st slippage noted (cooldown not yet active)")
-            return
-
-        entry["failures"] += 1
-        entry["last_error"] = "slippage"
-        if entry["failures"] >= self.PAIR_SLIPPAGE_LIMIT:
-            entry["banned_until"] = now + self.PAIR_COOLDOWN_SECONDS
-            logger.critical(
-                f"🚨 REPUTATION BREAKER: Pair {pair_key} banned for "
-                f"{self.PAIR_COOLDOWN_SECONDS}s ({entry['failures']} consecutive slippage fails)"
-            )
-        else:
-            logger.warning(
-                f"⚠️ Pair {pair_key}: {entry['failures']}/{self.PAIR_SLIPPAGE_LIMIT} "
-                f"consecutive slippage failures"
-            )
+        """Record a slippage failure for a specific pair via the shared reputation instance."""
+        shared_state.pair_reputation.record_failure(pair_key, "slippage")
 
     def is_pair_banned(self, pair_key: str) -> bool:
-        """Return True if the pair is currently in cooldown."""
-        now = time.time()
-        entry = self._pair_reputation.get(pair_key)
-        if entry and entry.get("banned_until", 0) > now:
-            return True
-        return False
+        """Return True if the pair is currently in cooldown via the shared reputation instance."""
+        return shared_state.pair_reputation.is_banned(pair_key)
 
     def reset_pair_reputation(self, pair_key: str) -> None:
-        """Manually reset the failure counter for a pair (e.g. after a successful trade)."""
-        self._pair_reputation.pop(pair_key, None)
+        """Manually reset the failure counter for a pair via the shared reputation instance."""
+        shared_state.pair_reputation.record_success(pair_key)
         logger.info(f"🔄 Pair reputation reset: {pair_key}")
 
     # ─── Flash Loan Pivot Helpers ───────────────────────────────────────────────
@@ -806,7 +772,7 @@ class ExecutionRouter:
         )
         try:
             # FIX 13: Acquire global Jupiter rate limiter before each request
-            limiter = get_jupiter_limiter()
+            limiter = get_quote_limiter()
             if limiter is not None:
                 async with limiter:
                     async with self.session.get(entry_quote_url, timeout=4.0) as resp:
@@ -887,7 +853,7 @@ class ExecutionRouter:
         )
         try:
             # FIX 13: Acquire global Jupiter rate limiter before each request
-            limiter = get_jupiter_limiter()
+            limiter = get_quote_limiter()
             if limiter is not None:
                 async with limiter:
                     async with self.session.get(exit_quote_url, timeout=4.0) as resp:
@@ -1076,6 +1042,8 @@ class ExecutionRouter:
                                 asyncio.create_task(check_and_refill_gas(self.session, shared_state.rpc, self.keypair))
                             except Exception as refill_err:
                                 logger.debug(f"Event-driven refill trigger failed: {refill_err}")
+                        async with shared_state.stats_lock:
+                            shared_state.stats["last_balance"] = balance_sol
                     else:
                         logger.warning("Failed to parse balance from RPC response")
                 else:

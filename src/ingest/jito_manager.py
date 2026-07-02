@@ -482,14 +482,15 @@ class JitoBiddingManager:
                     f"too small to cover 50th percentile floor ({p50:.6f} SOL). "
                     f"40% tip ({forty_pct_tip:.6f} SOL) < floor ({p50:.6f} SOL). Skipping."
                 )
-                return -1
+                return 0
             # Otherwise, bump to p50 + random jitter
             import random
             bump_jitter = random.randint(100, 500)
-            base = p50 + (bump_jitter / 1e9)
+            tip_lamports = int((p50 + bump_jitter / 1e9) * 1e9)
             logger.debug(
-                f"🚀 Tip Floor Bump (P1): {strategy} 40% tip ({forty_pct_tip:.6f} SOL) "
-                f"< floor ({p50:.6f} SOL). Bumping to {base:.6f} SOL + jitter."
+                f"🚀 Tip Bump (Task 7): {tip_lamports} lamports "
+                f"(floor={p50 * 1e9:.0f}, jitter={bump_jitter}) "
+                f"for {strategy}"
             )
         else:
             base = forty_pct_tip
@@ -521,16 +522,16 @@ class JitoBiddingManager:
             if available_native <= 0:
                 logger.warning(
                     f"🚫 Native balance {current_native_sol_balance:.6f} SOL < gas reserve — "
-                    f"returning -1 for {strategy}"
+                    f"returning 0 for {strategy}"
                 )
-                return -1
+                return 0
             capped = min(tip_lamports, available_native)
             if capped < 10_000:
                 logger.warning(
                     f"⏭️ Optimal tip {capped} < {10_000} lamports minimum "
-                    f"after native cap — returning -1 for {strategy}"
+                    f"after native cap — returning 0 for {strategy}"
                 )
-                return -1
+                return 0
             logger.debug(
                 f"💰 Optimal tip native cap: {tip_lamports / 1e9:.6f} SOL → "
                 f"{capped / 1e9:.6f} SOL (native={current_native_sol_balance:.6f} SOL)"

@@ -48,6 +48,9 @@ from solders.keypair import Keypair
 from solders.pubkey import Pubkey
 from solders.system_program import transfer, TransferParams
 from solders.address_lookup_table_account import AddressLookupTableAccount
+from solders.instruction import AccountMeta
+
+import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -343,6 +346,37 @@ class JitoBundleHandler:
             arb_template_key = self.bundle_template.create_arbitrage_template(
                 base_mint, quote_mint, amount_sol
             )
+            # Resolve real MarginFi bank accounts for the base mint.
+            # This avoids the stale "..." authority placeholder that crashes
+            # MessageV0.try_compile with an invalid public key.
+            _marginfi_bank_cfg = None
+            try:
+                if base_mint in shared_state.MARGINFI_BANKS:
+                    _raw_bank_cfg = shared_state.MARGINFI_BANKS[base_mint]
+                    if isinstance(_raw_bank_cfg, dict) and _raw_bank_cfg.get("liquidity_vault_authority"):
+                        _marginfi_bank_cfg = _raw_bank_cfg
+            except Exception as _bank_err:
+                logger.debug(f"Marginfi bank account lookup failed (non-fatal): {_bank_err}")
+
+            if _marginfi_bank_cfg:
+                _mfi_program_id = "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+                _mfi_account = str(_marginfi_bank_cfg.get("bank", Pubkey.from_string("CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj")))
+                _mfi_vault = str(_marginfi_bank_cfg.get("liquidity_vault", Pubkey.from_string("CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj")))
+                _mfi_vault_auth = str(_marginfi_bank_cfg["liquidity_vault_authority"])
+                _marginfi_config = {
+                    "program_id": _mfi_program_id,
+                    "marginfi_account": _mfi_account,
+                    "bank_liquidity_vault": _mfi_vault,
+                    "bank_liquidity_vault_authority": _mfi_vault_auth,
+                }
+            else:
+                _marginfi_config = {
+                    "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+                    "marginfi_account": "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2",
+                    "bank_liquidity_vault": "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2",
+                    "bank_liquidity_vault_authority": "",
+                }
+
             arbitrage_tx = await self.bundle_template.instantiate_template(
                 arb_template_key,
                 recent_blockhash,
@@ -350,12 +384,7 @@ class JitoBundleHandler:
                 borrow_amount_lamports=int(amount_sol * 1_000_000_000),
                 expected_min_profit_lamports=int(expected_profit_sol * 1_000_000_000),
                 dex_swap_instructions=swap_ixs,
-                marginfi_config={
-                    "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
-                    "marginfi_account": "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2",
-                    "bank_liquidity_vault": "2s37akK2eyBbp8DZgCm7RtsaEz8eWhVKGfHGA3cKMEW2",
-                    "bank_liquidity_vault_authority": "...",
-                },
+                marginfi_config=_marginfi_config,
             )
 
             if not arbitrage_tx:

@@ -10,14 +10,9 @@ import aiohttp
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYSTEM_PROGRAM_ID
 from src.ingest.flywheel_scaler import DynamicThresholds
+from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID
 
 logger = logging.getLogger(__name__)
-
-# Token program IDs
-TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
-TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
-    "TokenzQdBNbLqP5VEhdkAS6EP2rHEjaChQX6n57TR5m"
-)
 
 
 def get_vault_threshold(decimals: int = 6) -> int:
@@ -41,6 +36,12 @@ SAFE_MINTS = {
     "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL (mainnet verified)
     "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL    (mainnet verified)
     "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",  # bSOL    (mainnet verified)
+    "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",  # USDY
+    "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",  # USDe
+    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",  # sUSDe
+    "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",  # sUSDS
+    "B7vF87HGPJLcQwPhNn8apCH5n1E4DfRrG8HYXoS9dPEo",  # USD+
+    "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",  # JupUSD
 }
 
 
@@ -252,11 +253,17 @@ class TokenSecurityChecker:
                                         False,
                                         f"Token-2022 transfer fee {fee_pct}% exceeds 5% (Potential Honeypot)",
                                     )
-                                elif fee_bps > 0:
+                                elif fee_bps > 100:
                                     fee_pct = fee_bps / 100.0
                                     return (
                                         False,
-                                        f"Token-2022 has transfer fee: {fee_pct}% ({fee_bps} bps)",
+                                        f"Token-2022 transfer fee {fee_pct}% > 1% — exceeds safe threshold",
+                                    )
+                                elif fee_bps > 0:
+                                    fee_pct = fee_bps / 100.0
+                                    # Fee within 1% — allowed; accounted for via get_adjusted_profit_threshold
+                                    logger.info(
+                                        f"✅ Token-2022 transfer fee {fee_pct}% ({fee_bps} bps) within 1% — allowed"
                                     )
 
                     offset += 4 + ext_len
@@ -604,12 +611,18 @@ class PreTradeGuard:
                                 "<H", raw_data[bps_offset : bps_offset + 2]
                             )[0]
 
-                            if fee_bps > 0:
+                            if fee_bps > 100:
                                 fee_pct = fee_bps / 100.0
                                 logger.info(
-                                    f"🛡️ Token-2022 Transfer Fee detected: {fee_pct}% ({fee_bps} bps)"
+                                    f"🛡️ Token-2022 Transfer Fee detected: {fee_pct}% ({fee_bps} bps) — exceeds 100 bps threshold"
                                 )
                                 return True, fee_pct, f"Transfer fee: {fee_pct}%"
+                            elif fee_bps > 0:
+                                fee_pct = fee_bps / 100.0
+                                logger.info(
+                                    f"✅ Token-2022 Transfer Fee {fee_pct}% ({fee_bps} bps) within 100 bps limit — allowed (fee accounted in profit threshold)"
+                                )
+                                return True, fee_pct, f"Transfer fee: {fee_pct}% (within 100 bps)"
 
                     # Move to next extension (must be 8-byte aligned)
                     offset += 4 + ext_len
@@ -932,9 +945,9 @@ class PreTradeGuard:
         try:
             now = time.time()
             # ИСПРАВЛЕНИЕ: Используем глобальный Jupiter лимитер для избежания HTTP 429
-            from src.ingest.jupiter_api_client import get_jupiter_limiter
+            from src.ingest.jupiter_api_client import get_quote_limiter
 
-            limiter = get_jupiter_limiter()
+            limiter = get_quote_limiter()
             if limiter is not None:
                 async with limiter:
                     async with self.session.get(
@@ -967,23 +980,24 @@ class PreTradeGuard:
             # while all cost params are in SOL lamports. Subtracting directly
             # corrupts profit for non-SOL routes ("Apples to Oranges" bug).
             is_sol_route = output_mint == "So11111111111111111111111111111111111111112"
-            _sol_price_usd = 150.0
-            _output_price_usd = 1.0  # default: assume 1:1 with SOL
+            _sol_price_usd = None
+            _output_price_usd = None
 
             # Phase 12: fetch prices via Pyth for cross-currency conversion.
-            # If price fetch fails for a non-SOL route, delegate to simulator
-            # by returning True (the simulator handles profitability verification).
+            # Fail-Closed: if price unavailable, abort the trade.
             if not is_sol_route:
                 try:
                     from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
                     feeder = get_pyth_core_feeder()
                     if feeder is not None:
-                        _output_price_usd = feeder.get_price(output_mint) or 1.0
-                        _sol_price_usd = feeder.get_price("So11111111111111111111111111111111111111112") or 150.0
+                        _output_price_usd = feeder.get_price(output_mint)
+                        _sol_price_usd = feeder.get_price("So11111111111111111111111111111111111111112")
                 except Exception:
-                    # Price feed unavailable — delegate to simulator for accuracy
-                    logger.debug("Phase 12: Price feed unavailable for non-SOL route — delegating to simulator")
-                    return True, "Price unavailable — delegate to simulator", 0
+                    pass
+                
+                if _sol_price_usd is None or _output_price_usd is None:
+                    logger.warning("Phase 12: Price feed unavailable for non-SOL route — Fail-Closed: aborting trade")
+                    return False, "Price unavailable — cannot verify profitability", 0
 
             # Convert actual_out from output_mint units to SOL lamports
             if is_sol_route:

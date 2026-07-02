@@ -59,6 +59,7 @@ class PaperTrader:
         self.total_profit = 0.0
         self.trades = 0
         self.session = None
+        self.existing_atas = set()
 
         # RPS limits
         self.jup_rps = int(os.getenv("JUPITER_QUOTE_RPS", 5))
@@ -85,7 +86,7 @@ class PaperTrader:
         """Коллбек, который срабатывает, когда WebSockets видят лаг оракула"""
         logger.info(f"🚨 [WEBSOCKET СИГНАЛ] Oracle Lag: {opp.get('ticker')} | Оракул: ${opp.get('oracle_price'):.2f} | Спред: {opp.get('price_diff_pct', 0)*100:.2f}%")
 
-    async def _fetch_jupiter(self, input_mint: str, output_mint: str, amount: int):
+    async def _fetch_jupiter(self, input_mint: str, output_mint: str, amount: int) -> dict:
         async with self.jup_sem:
             url = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
             jup_key = os.getenv("JUPITER_API_KEY", "")
@@ -93,8 +94,6 @@ class PaperTrader:
                 "x-api-key": jup_key,
                 "Authorization": f"Bearer {jup_key}"
             } if jup_key else {}
-            # Fix 77: Safe str() wrapping on input_mint/output_mint to prevent
-            # TypeError when Pubkey objects are passed instead of strings
             params = {
                 "inputMint": str(input_mint),
                 "outputMint": str(output_mint),
@@ -107,7 +106,15 @@ class PaperTrader:
                 async with self.session.get(url, params=params, headers=headers) as resp:
                     if resp.status == 200:
                         data = await resp.json()
-                        return {"source": "Jupiter", "out": int(data["outAmount"])}
+                        out = int(data["outAmount"])
+                        price_impact = float(data.get("priceImpactPct", 0) or 0)
+                        fee_bps = int(data.get("feeBps", 0) or 0)
+                        return {
+                            "source": "Jupiter",
+                            "out": out,
+                            "priceImpactPct": price_impact,
+                            "feeBps": fee_bps,
+                        }
             except Exception as e:
                 logger.warning(f"Jupiter query failed: {repr(e)}")
             await asyncio.sleep(1.0 / self.jup_rps)
@@ -135,9 +142,13 @@ class PaperTrader:
 
         final_amount = int(sell["out"] * (1 - 15 / 10000))
 
-        # Phase 12: Cross-Currency Accounting — normalize ALL profit to SOL before
-        # subtracting fees (which are always in SOL).  Old code subtracted SOL lamports
-        # directly from USDC micro-units, corrupting profit for non-SOL routes.
+        buy_price_impact = buy.get("priceImpactPct", 0.0) if buy else 0.0
+        sell_price_impact = sell.get("priceImpactPct", 0.0) if sell else 0.0
+        combined_impact_pct = max(buy_price_impact, sell_price_impact)
+        fee_bps = sell.get("feeBps", 0) if sell else 0
+        dex_fee_pct = (fee_bps / 10000.0) if fee_bps else (0.0004 if combined_impact_pct < 0.005 else 0.01)
+
+        dex_fee_sol = (amount * dex_fee_pct) / 1e9
         _usdc_mint = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
         _usdt_mint = "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
         _is_stable_6dec = base_mint.endswith(_usdc_mint) or base_mint.endswith(_usdt_mint)
@@ -148,7 +159,10 @@ class PaperTrader:
         if gross_profit_native > 0:
             # Step 1: convert gross profit to SOL immediately
             gross_profit_ui = gross_profit_native / (10 ** _base_dec)  # UI units (e.g. 1.5 USDC)
-            sol_price = self.pyth_feeder.get_price("So11111111111111111111111111111111111111112") if self.pyth_feeder else 150.0
+            sol_price = self.pyth_feeder.get_price("So11111111111111111111111111111111111111112") if self.pyth_feeder else None
+            if sol_price is None:
+                logger.warning("🚫 SOL price unavailable from Pyth oracle — skipping trade (Fail-Closed)")
+                return
             if _base_dec == 6:
                 gross_profit_sol = gross_profit_ui / sol_price  # convert USDC → SOL via USD bridge
             else:
@@ -158,13 +172,14 @@ class PaperTrader:
             flashloan_fee_sol = 0.0  # MarginFi flashloan fee is 0%
             dex_fee_sol = (amount * 0.003) / 1e9
             slippage_bps = 15
-            compute_cost_sol = 5000 / 1e9
             network_fee_sol = 5000 / 1e9
             priority_fee_sol = 10000 / 1e9
-            jito_tip_sol = gross_profit_sol * 0.4
-            ata_rent_sol = 2_039_280 / 1e9  # ATA rent if new account needed
+            jito_tip_sol = max(10_000 / 1e9, gross_profit_sol * 0.4)
+            ata_rent_sol = (
+                2_039_280 / 1e9 if target_mint not in self.existing_atas else 0.0
+            )
             total_fees_sol = (
-                flashloan_fee_sol + dex_fee_sol + compute_cost_sol +
+                flashloan_fee_sol + dex_fee_sol +
                 network_fee_sol + priority_fee_sol + jito_tip_sol +
                 ata_rent_sol
             )
@@ -182,7 +197,6 @@ class PaperTrader:
                 "flashloan_fee_lamports": int(flashloan_fee_sol * 1e9),
                 "dex_fee_lamports": int(dex_fee_sol * 1e9),
                 "slippage_bps": slippage_bps,
-                "compute_cost_lamports": int(compute_cost_sol * 1e9),
                 "network_fee_lamports": int(network_fee_sol * 1e9),
                 "priority_fee_lamports": int(priority_fee_sol * 1e9),
                 "jito_tip_lamports": int(jito_tip_sol * 1e9),
@@ -198,6 +212,7 @@ class PaperTrader:
                 self.trades += 1
                 self.total_profit += net_profit_sol
                 self.current_balance += net_profit_sol
+                self.existing_atas.add(target_mint)
                 logger.info(
                     f"🔥 АРБИТРАЖ (Jupiter) | {base_name} ➔ {target_name} ➔ {base_name} | "
                     f"Профит: +{net_profit_sol:.5f} SOL"

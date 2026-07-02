@@ -104,7 +104,10 @@ async def check_and_refill_gas(session, rpc, keypair):
                 deficit_sol = target_balance - native_bal
                 from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
                 feeder = get_pyth_core_feeder()
-                sol_price = feeder.get_price("So11111111111111111111111111111111111111112") if feeder else 150.0
+                sol_price = feeder.get_price("So11111111111111111111111111111111111111112") if feeder else None
+                if sol_price is None:
+                    logger.warning("🚫 SOL price unavailable from Pyth oracle — skipping gas refill (Fail-Closed)")
+                    return
                 deficit_usdc_lamports = int(
                     deficit_sol * sol_price * 1_000_000
                 )  # Dynamic SOL price via Pyth

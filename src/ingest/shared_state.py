@@ -149,11 +149,18 @@ data_aggregator: Optional[Any] = None
 # Глобальный пул MarginFi аккаунтов (синглтон для всех модулей)
 marginfi_pool: Optional[Any] = None
 
+# Unified Pair Reputation Circuit Breaker (single instance for all modules)
+pair_reputation: Optional["PairReputationCircuitBreaker"] = None
+
 ATA_CACHE: set = set()
+
+# Default slippage in basis points — single source of truth for all modules
+# Phase 8.2: Unified 15 bps default (0.15%) across arb_bot, jupiter_api_client, and paper_trader
+DEFAULT_SLIPPAGE_BPS: int = int(os.getenv("SLIPPAGE_BPS", "15"))
 
 def initialize_shared_state():
     global execution_lock, marginfi_account_lock, stats_lock, GLOBAL_STOP_EVENT
-    global ata_cache_lock, wsol_state_lock, marginfi_init_lock
+    global ata_cache_lock, wsol_state_lock, marginfi_init_lock, pair_reputation
     # Phase 19: Safety check — asyncio.Lock()/Event() must be created inside a running event loop
     # to avoid binding to a dummy loop (Python 3.10+), which causes future await calls to hang.
     try:
@@ -170,7 +177,12 @@ def initialize_shared_state():
     wsol_state_lock = asyncio.Lock()
     marginfi_init_lock = asyncio.Lock()
     GLOBAL_STOP_EVENT = asyncio.Event()
-    logger.info("✅ Shared state initialized with asyncio locks")
+    from src.ingest.flywheel_scaler import PairReputationCircuitBreaker
+    pair_reputation = PairReputationCircuitBreaker(
+        limit=3, cooldown_seconds=600,
+        error_keywords=("slippage", "insufficient", "liquidity", "simulation failed", "blockhash"),
+    )
+    logger.info("✅ Shared state initialized with asyncio locks and unified pair reputation")
 
 # Fix 67: Balance lock flags — moved here from wsol_manager.py and arb_bot.py
 # to eliminate circular imports (wsol_manager was importing arb_bot and vice versa).

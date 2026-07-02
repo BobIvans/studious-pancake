@@ -9,6 +9,7 @@ Phase 30: Ensures blockhashes are NOT cached and TTL is strictly limited to 30s.
 import logging
 import time
 from typing import Dict, List, Optional, Any, Tuple
+from spl.token.constants import ASSOCIATED_TOKEN_PROGRAM_ID
 
 logger = logging.getLogger("TransactionPrebuilder")
 
@@ -30,8 +31,9 @@ class TransactionPrebuilder:
         that may change between calls (CreateATA, SyncNative, etc.), preventing
         stale repay-index references from cached templates.
         """
+        ATA_PROGRAM = str(ASSOCIATED_TOKEN_PROGRAM_ID)
         ATTACHED_PROGRAM_IDS = {
-            "ATokenGPvbdQxrVyoUXYLdG6A8P5F8L8ytxHBSxl86",  # Associated Token Account
+            ATA_PROGRAM,  # Associated Token Account
         }
         has_dynamic = any(
             str(ix.program_id) in ATTACHED_PROGRAM_IDS

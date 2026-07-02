@@ -7,6 +7,7 @@ This is critical for protecting the 0.017 SOL operating budget.
 
 import base64
 import logging
+import os
 import time
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
@@ -122,18 +123,6 @@ class FlashSimulator:
         start = time.time()
         self._stats["total_simulations"] += 1
 
-        if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
-            return SimulationResult(
-                success=True,
-                units_consumed=0,
-                pre_balances=[],
-                post_balances=[],
-                balance_delta_lamports=0,
-                balance_delta_sol=0.0,
-                logs=["Paper trading mode - RPC simulation skipped"],
-                simulation_time_ms=(time.time() - start) * 1000,
-            )
-
         payload = {
             "jsonrpc": "2.0",
             "id": 1,
@@ -210,16 +199,18 @@ class FlashSimulator:
                 # Wallet index 0 = signer/payer.
                 self._stats["successful"] += 1
                 actual_delta = 0
+                pre_balances = []
+                post_balances = []
                 try:
-                    pre_balances = result.get("preBalances", [])
-                    post_balances = result.get("postBalances", [])
+                    pre_balances = result.get("preBalances", []) or []
+                    post_balances = result.get("postBalances", []) or []
                     if pre_balances and post_balances and len(pre_balances) > 0 and len(post_balances) > 0:
                         actual_delta = post_balances[0] - pre_balances[0]
                         logger.debug(f"📊 FlashSim real delta: {actual_delta} lamports ({actual_delta/1e9:.6f} SOL)")
                 except (ValueError, TypeError, IndexError):
                     actual_delta = 0
 
-                if actual_delta <= 0 and min_profit_lamports > 0:
+                if actual_delta <= 0:
                     logger.warning(f"🚫 FlashSim real delta {actual_delta/1e9:.6f} SOL <= 0 — trade not profitable")
                     return SimulationResult(
                         success=False,
@@ -230,8 +221,8 @@ class FlashSimulator:
                 return SimulationResult(
                     success=True,
                     units_consumed=units_consumed,
-                    pre_balances=pre_balances if 'pre_balances' in dir() else [],
-                    post_balances=post_balances if 'post_balances' in dir() else [],
+                    pre_balances=pre_balances,
+                    post_balances=post_balances,
                     balance_delta_lamports=max(actual_delta, 0),
                     balance_delta_sol=max(actual_delta, 0) / 1e9,
                     logs=logs,
@@ -289,7 +280,12 @@ class FlashSimulator:
             return False, f"Simulation failed: {sim.error}", sim
 
         # 2. СТРОГИЙ РАСЧЕТ ЧИСТОЙ ПРИБЫЛИ (Net Profit)
-        net_profit_lamports = sim.balance_delta_lamports - tip_lamports - priority_fee_lamports
+        # Вычитаем flashloan_fee (например, для Kamino 0.05% = 5bps)
+        flashloan_fee_lamports = 0
+        if min_profit_lamports > 0:
+            # Kamino flashloan fee: 0.05% = 5 bps = 5/10000
+            flashloan_fee_lamports = min_profit_lamports * 5 // 10000
+        net_profit_lamports = sim.balance_delta_lamports - tip_lamports - priority_fee_lamports - flashloan_fee_lamports
 
         # 3. ПРОВЕРКА ПОРОГА ПРИБЫЛИ
         if net_profit_lamports < min_profit_lamports:

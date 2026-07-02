@@ -30,16 +30,18 @@ class OraclePrice:
     token_symbol: str
     price_usd: Decimal
     timestamp: float
-    source: str  # 'chainlink', 'pyth', etc.
+    source: str  # 'pyth', etc.
 
 class EventTriggerEngine:
     """
     Event-driven state machine for arbitrage triggers.
 
     Supports:
-    - Oracle Lag: Chainlink/Pyth vs AMM price discrepancies
+    - Oracle Lag: Pyth vs AMM price discrepancies
     - Graduation Events: Pump.fun/Moonshot/BelieveApp pool creation
     - Epoch Rebalance: LST protocol epoch transitions
+
+    Note: Only Pyth oracle is used on Solana. Chainlink references have been removed.
     """
 
     def __init__(self):
@@ -60,14 +62,14 @@ class EventTriggerEngine:
 
     async def process_oracle_update(self, price_data: Dict[str, Any]):
         """
-        Process oracle price update (Chainlink/Pyth WebSocket).
+        Process oracle price update (Pyth WebSocket).
 
         Expected format:
         {
             'token': 'AAPL',
             'price': 150.25,
             'timestamp': 1640995200.0,
-            'source': 'chainlink'
+            'source': 'pyth'
         }
         """
         token_symbol = price_data.get('token')

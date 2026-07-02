@@ -36,7 +36,7 @@ class LstInstantUnstakeArbitrage:
         session: aiohttp.ClientSession,
         rpc_url: str,
         marginfi_account: str,
-        lst_mints: List[str] = ["mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So", "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"],
+        lst_mints: List[str] = None,
         tx_builder: Any = None,
         optimal_trade_sizer: Any = None,
         min_profit_lamports: int = 50000,
@@ -54,7 +54,7 @@ class LstInstantUnstakeArbitrage:
         self._static_rpc_url = rpc_url
         self.rpc_getter = rpc_getter
         self.marginfi_account = marginfi_account
-        self.lst_mints = lst_mints
+        self.lst_mints = lst_mints if lst_mints is not None else []
         self.tx_builder = tx_builder
         self.optimal_trade_sizer = optimal_trade_sizer
         # Phase 8: min_profit_lamports is now a dynamic property fetched from

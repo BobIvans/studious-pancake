@@ -87,8 +87,8 @@ class PoolStateManager:
 
         # REST sync settings
         self.last_sync_time        = 0
-        self.sync_interval         = 600
-        self.state_drift_threshold = 400
+        self.sync_interval         = 60
+        self.state_drift_threshold = 1500
 
         # Phase 40 / Fix 55: WebSocket watchdog (WebSocket path only)
         self.last_msg_time         = 0

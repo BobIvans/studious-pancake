@@ -52,3 +52,14 @@ helius_webhook_id.txt
 helius_webhook_ids.txt
 helius_webhook_config.json
 webhook_status.json
+helius-sanctum-lst-webhook.json
+
+# ── Runtime state files (bot-generated, never commit) ──────────────────────────
+bot_health.json
+bot_history.json
+paper_trades.jsonl
+trades.jsonl
+extra_accounts.json
+
+# ── AI training data (large generated files) ───────────────────────────────────
+ai_training_data.csv

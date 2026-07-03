@@ -217,6 +217,18 @@ ATA_RENT_SOL_TOKEN2022 = 0.0035
 # TASK 10: Dynamic CU Profiling Cache
 DYNAMIC_CU_CACHE: Dict[str, int] = {}
 
+# Phase 9: Централизованные константы аренды
+ATA_RENT_SOL_SPL = 0.00203928
+ATA_RENT_SOL_TOKEN2022 = 0.0035
+
+def get_ata_rent_for_mint(mint_str: str) -> float:
+    """Определяет стоимость аренды в SOL на основе типа токена (SPL vs Token-2022)."""
+    return ATA_RENT_SOL_TOKEN2022 if str(mint_str) in TOKEN_2022_MINTS else ATA_RENT_SOL_SPL
+
+def get_ata_rent_lamports_for_mint(mint_str: str) -> int:
+    """Возвращает стоимость аренды в лампортах."""
+    return int(get_ata_rent_for_mint(mint_str) * 1e9)
+
 # TASK 1: Whitelist-Aware Rent Resolver Helper
 TOKEN_2022_MINTS = {
     "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL

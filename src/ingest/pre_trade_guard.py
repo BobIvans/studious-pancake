@@ -1089,27 +1089,35 @@ class PreTradeGuard:
                     + flashloan_fee_lamports
                     + ata_rent_lamports
                 )
-                # For circular routes, the gross profit is already in SOL lamports
+                
+                # Для круговых путей запрашиваем котировку возврата во входящий токен (круг замкнут)
+                # actual_out — это объем входящего токена, полученный на выходе всей цепочки
+                if input_mint == output_mint:
+                    # Путь уже замкнут (например, SOL -> LST -> SOL)
+                    gross_profit_sol_lamports = actual_out - amount_lamports
+                else:
+                    # Если передан только первый сегмент, запрашиваем котировку замыкания круга
+                    params_back = {
+                        "inputMint": output_mint,
+                        "outputMint": input_mint,
+                        "amount": str(int(actual_out)),
+                        "slippageBps": str(slippage_bps),
+                        "onlyDirectRoutes": "true"
+                    }
+                    async with self.session.get(quote_url, params=params_back, timeout=2.0) as resp_back:
+                        if resp_back.status == 200:
+                            quote_back = await resp_back.json()
+                            final_out = int(quote_back.get("otherAmountThreshold", quote_back.get("outAmount", 0)))
+                            gross_profit_sol_lamports = final_out - amount_lamports
+                        else:
+                            return False, "Failed to fetch circular route exit leg quote", 0
+
                 actual_net_profit = gross_profit_sol_lamports - total_cost_lamports
-                if actual_net_profit < threshold:
-                    logger.warning(
-                        f"🚫 Circular route BLOCKED: net {actual_net_profit/1e9:.6f} SOL "
-                        f"< threshold (cost {total_cost_lamports/1e9:.6f} SOL)"
-                    )
-                    return (
-                        False,
-                        f"Circular route unprofitable: net {actual_net_profit/1e9:.6f} SOL",
-                        actual_net_profit,
-                    )
-                logger.debug(
-                    f"🔄 Circular route OK: net≈{actual_net_profit/1e9:.6f} SOL "
-                    f"(cost={total_cost_lamports/1e9:.6f} SOL)"
-                )
-                return (
-                    True,
-                    f"Circular route verified (net≈{actual_net_profit/1e9:.6f} SOL)",
-                    actual_net_profit,
-                )
+                
+                if actual_net_profit < min_profit_lamports:
+                    return False, f"Circular profit {actual_net_profit} < min {min_profit_lamports}", actual_net_profit
+                    
+                return True, f"Circular profit verified: {actual_net_profit/1e9:.6f} SOL", actual_net_profit
 
             # Non-circular: gross_profit_sol_lamports already in SOL denomination
             total_cost_lamports = (

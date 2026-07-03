@@ -649,22 +649,24 @@ class ExecutionRouter:
                     )
                     versioned_tx = VersionedTransaction(msg, [self.keypair])
 
-                    # TASK 14: Force pre-flight simulation for wrapper_peg
-                    import base64
+                    # ── ЗАЩИТА КАПИТАЛА: Локальная симуляция перед отправкой ──
                     from src.ingest.flash_simulator import FlashSimulator
                     flash_sim = FlashSimulator(self.session, self.rpc_url)
                     tx_b64 = base64.b64encode(bytes(versioned_tx)).decode("ascii")
+                    
+                    # Симулируем исполнение на ноде
                     is_profitable, reason, sim_result = await flash_sim.validate_profitability(
                         tx_b64=tx_b64,
                         tx_signer_pubkey=str(self.keypair.pubkey()),
                         min_profit_lamports=int(expected_profit_sol * 1e9),
                         tip_lamports=jito_tip_lamports,
                         priority_fee_lamports=0,
-                        bank_vault_pubkey="73zNEAXx8vWeCReEwZgPZteXhH3RTo8gC1vC51g8x7j2"
+                        bank_vault_pubkey="73zNEAXx8vWeCReEwZgPZteXhH3RTo8gC1vC51g8x7j2" # USDC Vault
                     )
+                    
                     if not is_profitable:
-                        logger.warning(f"Wrapper Peg simulation failed: {reason}")
-                        return {"status": "error", "message": reason}
+                        logger.warning(f"🚫 [WRAPPER PEG SIM FAILED] Отмена отправки: {reason}")
+                        return {"status": "simulation_failed", "message": reason}
 
                     # Execute via Jito
                     result = await self._route_transaction(

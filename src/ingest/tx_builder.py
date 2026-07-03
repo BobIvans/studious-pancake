@@ -2346,6 +2346,24 @@ class JupiterTxBuilder:
 
             sanitized_instructions[borrow_idx] = new_borrow_ix
             borrow_ix = new_borrow_ix
+
+            # Находим и обновляем end_ix в санированном списке (Task 19)
+            new_end_idx = None
+            for i in range(len(sanitized_instructions) - 1, -1, -1):
+                ix = sanitized_instructions[i]
+                if ix.program_id == end_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END:
+                    new_end_idx = i
+                    break
+
+            if new_end_idx is not None:
+                new_end_data = MARGINFI_FLASHLOAN_END + struct.pack("<H", actual_repay_index)
+                sanitized_instructions[new_end_idx] = Instruction(
+                    program_id=end_ix.program_id,
+                    accounts=end_ix.accounts,
+                    data=new_end_data
+                )
+                logger.debug(f"🛠️ Introspection Fix (MarginFi Path): end_ix repacked с индексом {actual_repay_index} на позиции {new_end_idx}")
+
             logger.debug(
                 f"🛠️ Safe Dynamic Repay Index calculated on sanitized array: {actual_repay_index} (Fix 63)"
             )

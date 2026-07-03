@@ -4362,14 +4362,22 @@ async def execute_priority_opportunity(
 
     actual_new_atas_needed = 0
     _rent_cost = 0.0
-    from spl.token.instructions import get_associated_token_address
 
-    for mint_str in mints_involved:
+    # Добавляем в проверку заемный токен (borrow_mint)
+    # Находим его из метаданных или параметров сделки
+    borrow_mint_str = opportunity.metadata.get("in_mint", "So11111111111111111111111111111111111111112")
+    check_mints = set(mints_involved)
+    check_mints.add(borrow_mint_str)
+
+    for mint_str in check_mints:
         if not mint_str or mint_str in CORE_GOLDEN_MINTS:
             continue
 
         mint_pubkey = Pubkey.from_string(mint_str)
-        program_id = TOKEN_PROGRAM_ID
+        # Определяем программу токена
+        from src.ingest.shared_state import TOKEN_2022_MINTS, get_ata_rent_for_mint
+        program_id = TOKEN_2022_PROGRAM_ID if mint_str in TOKEN_2022_MINTS else TOKEN_PROGRAM_ID
+        
         ata_addr = str(
             get_associated_token_address(keypair.pubkey(), mint_pubkey, program_id)
         )
@@ -4381,9 +4389,10 @@ async def execute_priority_opportunity(
                 )
                 if not exists:
                     actual_new_atas_needed += 1
-                    _rent_cost += RENT_SPL_ATA_SOL
+                    _rent_cost += get_ata_rent_for_mint(mint_str)
                 else:
-                    await shared_state.add_to_ata_cache(ata_addr)
+                    # Напрямую модифицируем кэш во избежание дедлока (Задача 1)
+                    ATA_CACHE.add(ata_addr)
 
     current_sol = shared_state.stats.get(
         "virtual_balance", shared_state.stats.get("last_balance", 0.0)
@@ -4684,16 +4693,10 @@ async def execute_priority_opportunity(
                     ata_rent_lamports = int(_rent_cost * 1e9)
                     total_cost_lamports = int(total_cost_sol * 1e9)
                     net_profit_lamports = int(net_profit_sol * 1e9)
-                    gross_revenue_lamports = (
-                        net_profit_lamports + total_cost_lamports
-                        if net_profit_sol > 0
-                        else 0
-                    )
+                    gross_revenue_lamports = int(gross_profit_sol * 1e9)
                     decision = "EXECUTE" if net_profit_sol > 0 else "SKIP_LOW_MARGIN"
                     roi_pct = (
-                        (net_profit_sol / (gross_revenue_lamports / 1e9) * 100)
-                        if gross_revenue_lamports > 0
-                        else 0.0
+                        (net_profit_sol / (gross_profit_sol + 1e-12)) * 100
                     )
 
                     await data_aggregator.log_paper_trade(
@@ -4714,14 +4717,15 @@ async def execute_priority_opportunity(
                                 if opportunity.metadata
                                 else 0
                             ),
-                            "expected_profit_lamports": opportunity.expected_profit_sol
-                            * 1e9
+                            "expected_profit_lamports": int(
+                                opportunity.expected_profit_sol * 1e9
+                            )
                             if hasattr(opportunity, "expected_profit_sol")
                             else 0,
                             "gross_revenue_lamports": gross_revenue_lamports,
                             "flashloan_fee_lamports": flashloan_fee_lamports,
-                            "dex_fee_lamports": int(net_profit_sol * 0.003 * 1e9)
-                            if net_profit_sol > 0
+                            "dex_fee_lamports": int(gross_profit_sol * 0.003 * 1e9)
+                            if gross_profit_sol > 0
                             else 0,
                             "slippage_bps": opportunity.slippage_pct or 15,
                             "compute_cost_lamports": 0,
@@ -4737,7 +4741,11 @@ async def execute_priority_opportunity(
                             "sim_success": 1 if sim_result and sim_result.success else 0,
                             "sim_error": reason if not is_profitable else None,
                             "price_impact_pct": getattr(opportunity, "slippage_pct", 0.0),
-                            "sol_usd_price": 0.0,
+                            "sol_usd_price": price_matrix.get(
+                                "So11111111111111111111111111111111111111112", (150.0, 0)
+                            )[0] if isinstance(
+                                price_matrix.get("So11111111111111111111111111111111111111112"), tuple
+                            ) else 150.0,
                         }
                     )
                 except Exception as e:
@@ -4784,7 +4792,35 @@ async def execute_priority_opportunity(
                 logger.warning(f"Failed to log AI training data: {e}")
 
         if not is_profitable:
-            logger.warning(f"Sim failed: {reason}. Skipping execution.")
+            logger.warning(f"Sim failed: {reason}. Attempting Smart Retry...")
+            from src.ingest.smart_retry_engine import SmartRetryEngine
+            
+            # Определяем функцию пере-котирования для ретрая
+            async def refetch_quotes(old_quote, new_amount, only_direct_routes=True):
+                return await get_best_quote_multi(
+                    session,
+                    in_mint_str,
+                    target_mint_str,
+                    new_amount,
+                    cfg,
+                    slippage_bps=0,
+                    restrict_intermediate=not only_direct_routes
+                )
+            
+            # Рекурсивный запуск через Smart Retry Engine
+            retry_result = await SmartRetryEngine.execute_retry(
+                opportunity=opportunity.metadata,
+                refetch_func=refetch_quotes,
+                execute_func=lambda opp: execute_priority_opportunity(
+                    opportunity, session, cfg, rpc_manager, keypair, jito_executor,
+                    data_collector, flywheel_scaler, data_aggregator, alt_manager, execution_router
+                ),
+                jito_bidding_manager=jito_bidding_manager,
+                original_amount=amount_lamports,
+                original_profit=net_profit_sol,
+                reason=reason
+            )
+            logger.info(f"🔄 Smart Retry execution status: {retry_result.get('status')}")
             return
 
         # 3. Hybrid Execution (Jito/Standard)
@@ -5302,11 +5338,39 @@ async def worker(
                             f"⚠️ New ATA required for {str(target_mint)[:8]}. Deducting 0.002 SOL from expected profit."
                         )
 
-            # Calculate profit properly: convert all SOL fees to in_mint equivalents
-            expected_out_lamports = chosen_route[-1][
-                "out_amount"
-            ]  # Output in in_mint lamports
-            profit_lamports = expected_out_lamports - amount_lamports
+            # Task 10: Исправление расчета прибыли для режима ExactOut
+            quote_leg1 = chosen_route[0]
+            quote_leg2 = chosen_route[-1]
+
+            is_exact_out_route = (
+                quote_leg2.get("full_quote_response", {}).get("swapMode") == "ExactOut"
+            )
+
+            if is_exact_out_route:
+                # 1. Полученный объем промежуточного токена на первом шаге
+                bought_lst_lamports = int(quote_leg1["out_amount"])
+
+                # 2. Потраченный объем промежуточного токена для выкупа SOL долга на втором шаге
+                spent_lst_lamports = int(
+                    quote_leg2.get("full_quote_response", {}).get("inAmount", bought_lst_lamports)
+                )
+
+                # 3. Чистый неизрасходованный остаток LST на балансе
+                leftover_lst_lamports = max(0, bought_lst_lamports - spent_lst_lamports)
+
+                # 4. Переводим остаток LST в SOL-эквивалент по обменному курсу второй ноги
+                sol_out_leg2 = int(quote_leg2["out_amount"])
+                if spent_lst_lamports > 0:
+                    lst_to_sol_rate = sol_out_leg2 / spent_lst_lamports
+                    profit_lamports = int(leftover_lst_lamports * lst_to_sol_rate)
+                else:
+                    profit_lamports = 0
+            else:
+                # Классический расчет для ExactIn (SOL -> LST -> SOL)
+                expected_out_lamports = chosen_route[-1][
+                    "out_amount"
+                ]  # Output in in_mint lamports
+                profit_lamports = expected_out_lamports - amount_lamports
 
             # Получаем реальный минимум, который выдаст Jupiter при максимальном slippage
             worst_case_out = int(
@@ -6716,7 +6780,7 @@ async def run():
                         orjson.dumps(
                             {
                                 "last_ping": time.time(),
-                                "balance": shared_state.stats.get("last_balance"),
+                                "balance": shared_state.stats.get("virtual_balance", shared_state.stats.get("last_balance")),
                                 "trades": shared_state.stats.get("trades"),
                                 "last_opportunity_ts": shared_state.stats.get("last_opportunity_ts", 0.0),
                                 "consecutive_failures": shared_state.stats.get("consecutive_failures", 0),

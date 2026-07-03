@@ -486,7 +486,10 @@ class DataAggregator:
         cutoff_timestamp = time.time() - (keep_hours * 60 * 60)
 
         async with aiosqlite.connect(self.db_path, timeout=30) as db:
-            # Delete old events
+            # 1. First aggregate daily stats from raw events before cleanup
+            await self._update_daily_stats(db)
+            
+            # 2. Then safely delete old raw event logs
             cursor = await db.execute(
                 "DELETE FROM events WHERE timestamp < ?", (cutoff_timestamp,)
             )
@@ -494,9 +497,6 @@ class DataAggregator:
             # total_changes is cumulative across all connections, rowcount is per-statement
             deleted_count = cursor.rowcount
             logger.info(f"Cleaned up {deleted_count} old events")
-
-            # Update daily stats for the cleaned period
-            await self._update_daily_stats(db)
             await db.commit()
 
     async def _update_daily_stats(self, db):

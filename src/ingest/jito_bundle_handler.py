@@ -107,9 +107,10 @@ class JitoLeaderChecker:
                 payload = {
                     "jsonrpc": "2.0",
                     "id": 1,
-                    "method": "getNextScheduledLeader",
-                    "params": [],
+                    "method": "getSlotLeaders",
+                    "params": [current_slot, 100]
                 }
+                # Запрос отправляется на self.rpc_url основной ноды, а не на Jito Block Engine URL
 
                 timeout = aiohttp.ClientTimeout(total=0.5)
                 async with _session.post(
@@ -637,9 +638,8 @@ class JitoBundleHandler:
 
     async def _select_tip_account(self) -> str:
         """Select optimal Jito tip account (rotate for distribution) with live fetch and thread-safe copy-on-read."""
-        accounts_snapshot = list(self.jito_tip_accounts)
-        if not accounts_snapshot:
-            # Fallback: fetch live accounts from Jito Block Engine
+        # Сначала проверяем кэш; если пуст — запрашиваем актуальные адреса у Block Engine
+        if not self.jito_tip_accounts:
             try:
                 import aiohttp
 
@@ -658,7 +658,7 @@ class JitoBundleHandler:
                                     accounts = accounts_data["result"]
                                     if isinstance(accounts, dict) and "value" in accounts:
                                         accounts = accounts["value"]
-                                        
+
                             if accounts and isinstance(accounts, list):
                                 self.jito_tip_accounts = accounts
                                 logger.info(
@@ -667,9 +667,12 @@ class JitoBundleHandler:
             except Exception as e:
                 logger.warning(f"Live tip account fetch failed: {e}")
 
+        # Обновляем снимок коллекции ПОСЛЕ возможного сетевого запроса
+        accounts_snapshot = list(self.jito_tip_accounts)
         if accounts_snapshot:
             index = int(time.time() * 1000) % len(accounts_snapshot)
             return accounts_snapshot[index]
+
         logger.critical("🚨 JITO TIP ACCOUNTS: No dynamic tip_accounts available. Aborting.")
         return ""
 

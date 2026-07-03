@@ -14,6 +14,7 @@ from typing import Any, Callable, Dict, List, Optional
 from decimal import Decimal
 
 import aiohttp
+import orjson
 from aiohttp.resolver import AbstractResolver
 from solders.pubkey import Pubkey
 
@@ -41,7 +42,10 @@ class PoolReserve:
         self.token_b_mint    = token_b_mint
         self.pool_address    = pool_address
         self.pool_type       = pool_type
-        self.last_update     = asyncio.get_running_loop().time()
+        try:
+            self.last_update = asyncio.get_running_loop().time()
+        except RuntimeError:
+            self.last_update = time.time()
 
 
 class PoolStateManager:
@@ -303,14 +307,15 @@ class PoolStateManager:
         reconnect_delay = 1.0
         last_heal       = time.time()
 
+        # Инициализируем сессию ЕДИНОЖДЫ перед входом в цикл реконнектов (Task 51)
+        connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
+        self._ws_session = aiohttp.ClientSession(connector=connector)
+
         while self.running:
             self.subscription_ids.clear()
             self.sub_to_pool.clear()
             try:
-                if getattr(self, '_ws_session', None) and not self._ws_session.closed:
-                    await self._ws_session.close()
-                connector = aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
-                self._ws_session = aiohttp.ClientSession(connector=connector)
+                # Переподключаем только WebSocket, используя постоянную сессию
                 async with self._ws_session.ws_connect(
                     self.websocket_url,
                     heartbeat=15.0,
@@ -341,7 +346,8 @@ class PoolStateManager:
                                 break
 
                             if msg.type == aiohttp.WSMsgType.TEXT:
-                                data = msg.json()
+                                # orjson.loads работает до 10 раз быстрее стандартного json
+                                data = orjson.loads(msg.data)
                                 result = data.get("params", {}).get("result", {})
                                 if result and isinstance(result, dict) and "slot" in result:
                                     self.last_slot_msg_time = self.last_msg_time
@@ -449,14 +455,20 @@ class PoolStateManager:
             x_res = int.from_bytes(raw[40:48], 'little')
             y_res = int.from_bytes(raw[48:56], 'little')
             if x_res > 0 and y_res > 0:
-                # For Meteora, mints are stored at different offsets;
-                # return reserves with placeholder mints — caller should match from registry
+                # Извлекаем адреса токенов из структуры LBPair Meteora DLMM
+                # token_x (32 байта) на смещении 72, token_y (32 байта) на смещении 104
+                token_x_bytes = raw[72:104]
+                token_y_bytes = raw[104:136]
+
+                token_a_mint = str(Pubkey.from_bytes(token_x_bytes))
+                token_b_mint = str(Pubkey.from_bytes(token_y_bytes))
+
                 return PoolReserve(
                     token_a_reserve=Decimal(str(x_res)),
                     token_b_reserve=Decimal(str(y_res)),
-                    token_a_mint="So11111111111111111111111111111111111111112",
-                    token_b_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-                    pool_address="",  # Will be set by caller
+                    token_a_mint=token_a_mint,
+                    token_b_mint=token_b_mint,
+                    pool_address=pool_address,
                     pool_type="dlmm",
                 )
         except Exception:

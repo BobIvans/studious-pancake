@@ -850,6 +850,12 @@ class PreTradeGuard:
 
         min_reserve = PreTradeGuard.get_min_reserve_sol()
         if native_sol_balance < min_reserve + estimated_rent_sol:
+            # В режиме симуляции проверка газа проводится на виртуальном балансе
+            is_paper = str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true"
+            if is_paper:
+                logger.debug(f"🧪 [PAPER MODE] Проверка газа пройдена виртуально (Баланс: {native_sol_balance:.6f} SOL)")
+                return True, native_sol_balance
+
             logger.critical(
                 f"🚨 STRICT GAS TANK: Balance {native_sol_balance:.6f} SOL < "
                 f"{min_reserve + estimated_rent_sol:.6f} SOL (reserve {min_reserve} + "
@@ -974,7 +980,10 @@ class PreTradeGuard:
 
             # ── DEX-002: Strict Price Impact Guard ─────────────────────────────────
             try:
-                price_impact = float(fresh_quote.get("priceImpactPct", 0))
+                raw_impact = fresh_quote.get("priceImpactPct", "0")
+                if isinstance(raw_impact, str):
+                    raw_impact = raw_impact.replace("%", "").strip()
+                price_impact = float(raw_impact)
             except (ValueError, TypeError):
                 price_impact = 0.0
             if price_impact > 5.0:  # 5% max

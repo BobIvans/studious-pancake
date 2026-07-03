@@ -112,8 +112,13 @@ class LstRouteAggregator:
         jito_tip_sol: float = 0.0001,
         min_profit_buffer_sol: float = 0.0005,
         wallet_balance_sol: float = 0.0,  # Task 14: wallet balance — forces direct routes when < 0.5 SOL
+        active_slippage_bps: Optional[int] = None,
     ) -> Optional[RouteResult]:
         """Find the best buy+sell route for a given LST depeg opportunity.
+
+        Args:
+            active_slippage_bps: Override self.slippage_bps for this quote request.
+                When None, falls back to the aggregator's default slippage_bps.
 
         For BUY_LST direction:
           Leg 1 (Buy):  SOL → LST (market is underpriced → buy cheap)
@@ -128,6 +133,8 @@ class LstRouteAggregator:
         Returns the best RouteResult or None if no profitable route found.
         """
         total_fees = base_fee_sol + priority_fee_sol + jito_tip_sol
+        if active_slippage_bps is not None:
+            self.slippage_bps = active_slippage_bps
 
         if direction == "BUY_LST":
             # ── Task 16: ExactOut Repayment Guard (Atomic Reliability) ───────────

@@ -359,8 +359,10 @@ class LstInstantUnstakeArbitrage:
                 # Pass expected_profit_sol for Dynamic Rent Guard in Leg1
                 expected_profit_sol = opportunity["expected_profit_lamports"] / 1e9
                 leg1_ixs, _ = await tx_builder.get_swap_instructions(dex_leg1, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol)
-                if leg1_ixs:
-                    all_swap_ixs.extend(leg1_ixs)
+                if not leg1_ixs:
+                    logger.warning("❌ [LST UNSTAKE] Инструкции Leg 1 пусты (сработал Rent Guard или ошибка API). Сборка прервана.")
+                    return False
+                all_swap_ixs.extend(leg1_ixs)
             except Exception as _leg1_err:
                 logger.warning(f"Leg1 swap-instructions fetch failed (non-fatal): {_leg1_err}")
 

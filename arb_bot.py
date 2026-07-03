@@ -3231,7 +3231,7 @@ async def lst_depeg_scanner(
     logger.debug(f"📊 Initial fair prices: {status['fair_prices']}")
     logger.debug(f"📊 Initial market prices: {status['market_prices']}")
 
-    while True:
+    while not shared_state.GLOBAL_STOP_EVENT.is_set():
         cycle_count += 1
 
         # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
@@ -3389,6 +3389,7 @@ async def lst_depeg_scanner(
                     jito_tip_sol=0.0,  # Placeholder — tip optimized below after route is confirmed
                     min_profit_buffer_sol=cfg.MIN_NET_PROFIT_BUFFER_SOL,
                     wallet_balance_sol=current_wallet_balance,  # Task 14: pass balance to enforce direct routes under 0.5 SOL
+                    active_slippage_bps=cfg.SLIPPAGE_BPS,
                 )
 
                 if route is None:
@@ -3828,7 +3829,7 @@ async def lst_unstake_arbitrage_scanner(
         f"scan_interval={cfg.LST_UNSTAKE_SCAN_INTERVAL}s"
     )
 
-    while True:
+    while not shared_state.GLOBAL_STOP_EVENT.is_set():
         cycle_count += 1
         try:
             # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
@@ -3941,7 +3942,7 @@ async def wrapper_peg_scanner(
         f"scan_interval={getattr(cfg, 'LST_UNSTAKE_SCAN_INTERVAL', 3.0)}s"
     )
 
-    while True:
+    while not shared_state.GLOBAL_STOP_EVENT.is_set():
         cycle_count += 1
         try:
             _gas_ok, _ = await PreTradeGuard.check_gas_tank(
@@ -5781,7 +5782,7 @@ async def tcp_heartbeat(session: aiohttp.ClientSession):
                     await r.release()
         except Exception:
             pass
-        await asyncio.sleep(0.4)  # One Solana slot interval
+        await asyncio.sleep(3.0)  # 3.0 seconds sufficient to keep TCP keep-alive connection open
 
 
 async def run():

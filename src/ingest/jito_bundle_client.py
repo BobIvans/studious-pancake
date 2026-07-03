@@ -212,7 +212,21 @@ class JitoBundleClient:
             if not recent_blockhash:
                 return {"success": False, "error": "No blockhash", "bundle_id": None}
 
-            instructions = [self._ensure_instruction(ix) for ix in swap_instructions]
+            raw_instructions = [self._ensure_instruction(ix) for ix in swap_instructions]
+            
+            cb_exists = any(
+                str(ix.program_id) == "ComputeBudget111111111111111111111111111111"
+                for ix in raw_instructions
+            )
+            
+            if not cb_exists:
+                from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
+                instructions = [
+                    set_compute_unit_limit(450_000),
+                    set_compute_unit_price(10_000)
+                ] + raw_instructions
+            else:
+                instructions = raw_instructions
             message = MessageV0.try_compile(
                 payer_keypair.pubkey(), instructions, [], recent_blockhash,
             )

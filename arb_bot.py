@@ -3713,7 +3713,7 @@ async def lst_depeg_scanner(
 
                             # Wait for confirmation in background (non-blocking)
                             confirmation = await jito_executor.wait_for_confirmation(
-                                bundle_id, max_wait_time=0.8
+                                bundle_id, max_wait_time=5.0
                             )
                             jito_bidding_manager.record_bundle_result(
                                 "lst_depeg",
@@ -4234,7 +4234,7 @@ async def check_bundle_confirmation(
             # Log successful confirmation + TASK 1: zero-delay ATA close for any outcome
             await data_aggregator.log_tx_confirmed(
                 tx_id,
-                {"real_profit_sol": 0.001, "status": "confirmed"},  # Placeholder profit
+                {"real_profit_sol": real_profit_sol, "status": "confirmed"},  # FIXED: Использование реального профита
                 {"execution_time_ms": execution_time},
             )
 
@@ -4879,7 +4879,7 @@ async def execute_priority_opportunity(
                     target_mint_ata=out_ata,
                     virtual_balance_to_deduct=virtual_balance_to_deduct,
                     new_atas_to_create=_new_atas_to_create,  # ФИКС 3
-                    real_profit_sol=actual_net_profit_sol if "actual_net_profit_sol" in dir() else 0.0,  # Task 43
+                    real_profit_sol=est_net_profit_sol,  # FIXED: Передача фактического расчетного чистого профита
                 )
             )
             shared_state.active_tasks.add(task)
@@ -5806,6 +5806,11 @@ async def run():
     # P0-2.3b: Check if hard floor was triggered on previous run
     if os.path.exists(".hard_floor_triggered"):
         logger.critical("🚫 .hard_floor_triggered file found — previous run hit hard floor. Refusing to start.")
+        sys.exit(1)
+    if os.path.exists(".capital_protection_triggered"):
+        with open(".capital_protection_triggered", "r", encoding="utf-8") as f_cp:
+            cp_reason = f_cp.read().strip()
+        logger.critical(f"🚫 .capital_protection_triggered file found — previous run hit Capital Protection: {cp_reason}. Refusing to start.")
         sys.exit(1)
 
     # P0-3.2a: Register SIGTERM/SIGINT handlers for graceful shutdown

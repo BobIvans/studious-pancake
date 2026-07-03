@@ -254,7 +254,7 @@ class RPCMultiplexingEngine:
         self.connections: List[WSSConnection] = []
         self.deduplicator = TransactionDeduplicator(deduplication_ttl)
         self.blockhash_manager = BlockhashManager(rpc_endpoints)
-        self.event_queue = asyncio.Queue()
+        self.event_queue = asyncio.Queue(maxsize=1000)  # FIXED: Ограничение очереди для предотвращения OOM
         self.running = False
         self.tasks: List[asyncio.Task] = []
 

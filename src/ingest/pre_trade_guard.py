@@ -273,12 +273,10 @@ class TokenSecurityChecker:
                                     # Fee within 1% — allowed; accounted for via get_adjusted_profit_threshold
                                     logger.info(
                                         f"✅ Token-2022 transfer fee {fee_pct}% ({fee_bps} bps) within 1% — allowed"
-                                    )
-
-                    offset += 4 + ext_len
+                                    )                    # Смещаемся к следующему расширению с учетом обязательного 8-байтового выравнивания
+                    offset += (4 + ext_len + 7) & ~7
 
             return True, "Token-2022 appears safe (fee check passed)"
-
         except Exception as e:
             return False, f"Token-2022 analysis failed: {str(e)}"
 
@@ -633,11 +631,8 @@ class PreTradeGuard:
                                 )
                                 return True, fee_pct, f"Transfer fee: {fee_pct}% (within 100 bps)"
 
-                    # Move to next extension (must be 8-byte aligned)
-                    offset += 4 + ext_len
-                    # Note: SPL Token-2022 extensions are usually padded to 8 bytes,
-                    # but the 'length' field doesn't include the padding.
-                    # For simple sequential parsing, we just follow the length.
+                    # Смещаемся к следующему расширению с учетом обязательного 8-байтового выравнивания
+                    offset += (4 + ext_len + 7) & ~7
 
                 return False, 0.0, "No transfer fee extension found"
 

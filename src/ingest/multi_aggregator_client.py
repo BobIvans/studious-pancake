@@ -153,7 +153,7 @@ class MultiAggregatorClient:
         # NEW: Odos Aggregator (strict RPS limiting for micro-balance safety)
         self.odos = AggregatorClient(
             "odos",
-            os.getenv("ODOS_QUOTE_URL", "https://api.odos.xyz/sor/cat"),
+            os.getenv("ODOS_QUOTE_URL", "https://api.odos.xyz/sor/quote"),
             os.getenv("ODOS_SWAP_URL", "https://api.odos.xyz/sor/assemble"),
         )
 

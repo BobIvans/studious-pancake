@@ -153,7 +153,17 @@ class PaperTrader:
 
         dex_fee_pct = (fee_bps / 10000.0) if fee_bps else (0.0004 if combined_impact_pct < 0.005 else 0.01)
         amount_ui = amount / (10 ** _base_dec)
-        dex_fee_sol = amount_ui * dex_fee_pct
+        raw_fee_base_token = amount_ui * dex_fee_pct  # Комиссия в единицах базового токена (например, USDC)
+
+        if _base_dec == 6:  # Если базовый токен USDC/USDT (6 децималов)
+            # Конвертируем доллары в SOL-номинал
+            if sol_price and sol_price > 0:
+                dex_fee_sol = raw_fee_base_token / sol_price
+            else:
+                dex_fee_sol = raw_fee_base_token / 150.0  # резервный консервативный курс
+        else:
+            # Базовый актив — SOL, конвертация не требуется
+            dex_fee_sol = raw_fee_base_token
 
         gross_profit_native = final_amount - amount  # in token native units (e.g. USDC micro-units)
 

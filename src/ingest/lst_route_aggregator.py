@@ -159,16 +159,21 @@ class LstRouteAggregator:
                     if lst_profit <= 0:
                         continue
 
-                    # DEX-003: Subtract Jupiter platform fee (totalFee from final quote)
-                    jupiter_fee_lamports = int(
-                        sell_q.full_quote_response
-                        .get("fees", {})
-                        .get("totalFee", 0)
-                    )
+                    # DEX-003: Суммируем комиссии всех шагов маршрута из routePlan (Jupiter v6 API)
+                    jupiter_fee_lamports = 0
+                    try:
+                        route_plan = sell_q.full_quote_response.get("routePlan", [])
+                        for step in route_plan:
+                            swap_info = step.get("swapInfo", {})
+                            fee_mint = swap_info.get("feeMint")
+                            if fee_mint == "So11111111111111111111111111111111111111112":
+                                jupiter_fee_lamports += int(swap_info.get("feeAmount", 0))
+                    except Exception as e_fee:
+                        logger.debug(f"Игнорирование ошибки парсинга комиссий Jupiter: {e_fee}")
                     lst_profit -= jupiter_fee_lamports
                     if lst_profit <= 0:
                         continue
-                        
+
                     profit_sol = lst_profit / 1e9  # Already in SOL lamports
                     net_profit = profit_sol - total_fees
                     profit_bps = (lst_profit / buy_q.out_amount) * 10000
@@ -229,12 +234,17 @@ class LstRouteAggregator:
                     if lst_profit <= 0:
                         continue
 
-                    # DEX-003: Subtract Jupiter platform fee from profit
-                    jupiter_fee_lamports = int(
-                        sell_q.full_quote_response
-                        .get("fees", {})
-                        .get("totalFee", 0)
-                    )
+                    # DEX-003: Суммируем комиссии всех шагов маршрута из routePlan (Jupiter v6 API)
+                    jupiter_fee_lamports = 0
+                    try:
+                        route_plan = sell_q.full_quote_response.get("routePlan", [])
+                        for step in route_plan:
+                            swap_info = step.get("swapInfo", {})
+                            fee_mint = swap_info.get("feeMint")
+                            if fee_mint == "So11111111111111111111111111111111111111112":
+                                jupiter_fee_lamports += int(swap_info.get("feeAmount", 0))
+                    except Exception as e_fee:
+                        logger.debug(f"Игнорирование ошибки парсинга комиссий Jupiter: {e_fee}")
                     lst_profit -= jupiter_fee_lamports
                     if lst_profit <= 0:
                         continue

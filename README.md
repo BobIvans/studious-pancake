@@ -143,8 +143,8 @@ opportunities = await data_aggregator.get_lst_arbitrage_opportunities()
 ```
 
 ### Webhook IDs и управление:
-- **Webhook IDs**: 39azUYFWPz3VHgKCf3VChUwbpURdCHRxjWVowf5jUJjg, dbcij3LWUppTiACKHVKtjUi2Vn3JBmXu4quMErSMFpN, LanMV9sAd7wArD4vJFi2qDdfnVhFxYSUg6eADduJ3uj
-- **Management IDs**: d0f65273-6427-48fc-b3cf-b70af928b0fc, 8d929e15-b845-4a58-b25a-935eb688c6ac
+- **Webhook IDs**: <YOUR_HELIUS_WEBHOOK_ID_1>, <YOUR_HELIUS_WEBHOOK_ID_2>
+- **Management IDs**: <YOUR_HELIUS_MANAGEMENT_ID_1>, <YOUR_HELIUS_MANAGEMENT_ID_2>
 - **Мониторятся адреса**: JitoSOL, mSOL, bSOL, INF, Sanctum Router
 
 ## Безопасность

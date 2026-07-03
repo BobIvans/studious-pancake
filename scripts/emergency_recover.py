@@ -112,7 +112,8 @@ async def recover_rent():
 
     # Fallback: empty wallet.json → try WALLET_PATH env var
     if keypair is None:
-        alt_path = os.getenv("WALLET_PATH", "/Users/ivansbobrovs/.config/solana/new_id.json")
+        solana_cli_default = os.path.expanduser("~/.config/solana/id.json")
+        alt_path = os.getenv("WALLET_PATH", solana_cli_default)
         logger.warning(f"wallet.json is empty or missing; falling back to {alt_path}")
         if os.path.exists(alt_path):
             with open(alt_path, 'r') as f:
@@ -169,7 +170,8 @@ async def recover_rent():
             # Add priority fee instructions to ensure the rescue tx lands during congestion
             # Phase 8.1: Priority Fee for Emergency Recovery
             instructions.append(set_compute_unit_limit(100_000))
-            instructions.append(set_compute_unit_price(1_000_000))  # 1M micro-lamports (1 lamport/CU) to guarantee instant rescue
+            # Ограничение сверху до 50 000 микролампортов во избежание сжигания капитала в конгестии
+            instructions.append(set_compute_unit_price(50_000))
             for acc_pubkey in batch:
                 ix = close_account(CloseAccountParams(
                     program_id=Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"),

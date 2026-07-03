@@ -14,6 +14,7 @@ import os
 import glob
 import sqlite3
 import logging
+import argparse
 from pathlib import Path
 
 logging.basicConfig(
@@ -89,17 +90,32 @@ def clean_database(db_name: str):
 
 
 def main():
-    logger.info("🧹 Clean State Script - Starting full state wipe...")
+    parser = argparse.ArgumentParser(description="Clean State Script")
+    parser.add_argument("--dry-run", action="store_true", help="Показать файлы для удаления без физической очистки")
+    parser.add_argument("--force", action="store_true", help="Пропустить интерактивное подтверждение")
+    args = parser.parse_args()
 
-    # 1. Truncate log files
+    logger.info("🧹 Clean State Script - Инициализация...")
+
+    if not args.force and not args.dry_run:
+        confirm = input("⚠️  ВНИМАНИЕ: Это действие безвозвратно удалит все базы данных, логи и историю торгов. Продолжить? [y/N]: ")
+        if confirm.lower() != 'y':
+            logger.info("❌ Очистка отменена пользователем.")
+            return
+
+    if args.dry_run:
+        logger.info("[DRY-RUN] Будут очищены логи в logs/")
+        logger.info("[DRY-RUN] Будут удалены все файлы *.jsonl")
+        logger.info("[DRY-RUN] Будут очищены таблицы в bot_history.db, paper_trading.db, test.db")
+        return
+
+    # Выполнение оригинальной очистки
     logger.info("\n📁 Step 1: Truncating log files...")
     truncate_logs()
 
-    # 2. Clean .jsonl files
     logger.info("\n📄 Step 2: Removing .jsonl files...")
     clean_jsonl_files()
 
-    # 3. Clean databases (Fix: clean all database environments)
     logger.info("\n🗄️ Step 3: Cleaning databases...")
     clean_database("bot_history.db")
     clean_database("paper_trading.db")

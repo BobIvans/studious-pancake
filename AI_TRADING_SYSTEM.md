@@ -64,7 +64,7 @@ Score = (Profit × 0.5) + (Liquidity × 0.3) - (Risk × 0.2) - TimePenalty
 - **40-59**: Normal priority
 - **< 40**: Ignore/low priority
 
-## 📈 AI Data Collection (`AIDataCollector`)
+## 📈 AI Data Collection (`DataCollector`)
 
 ### Recorded Metrics
 ```json
@@ -96,7 +96,7 @@ Score = (Profit × 0.5) + (Liquidity × 0.3) - (Risk × 0.2) - TimePenalty
 - Timing pattern recognition
 - Network condition impact assessment
 
-## 🔍 Offline AI Analyzer (`AIOfflineAnalyzer`)
+## 🔍 Offline AI Analyzer (`OfflineStatsReporter`)
 
 ### Analysis Types
 
@@ -153,10 +153,10 @@ Opportunity Detected → Security Check → Score Calculation → Priority Queue
 ## 📊 Performance Metrics
 
 ### Current Test Results
-- **Ranking Accuracy**: 88.8 avg score for successful trades vs 65.2 for failed
-- **Success Rate**: 66.7% on test data
-- **Queue Efficiency**: Proper priority ordering maintained
-- **Data Collection**: 100% trade recording success
+- **Ranking Accuracy**: 88.8 avg score for successful trades vs 65.2 for failed (measured in verified local integration tests under mock conditions)
+- **Success Rate**: 66.7% on historical test fixtures
+- **Queue Efficiency**: Proper priority ordering maintained in `PriorityArbitrageQueue`
+- **Data Collection**: 100% trade recording success using `DataCollector` and `OfflineStatsReporter`
 
 ### Expected Improvements
 - **Score Correlation**: Target >0.75 with real market data
@@ -174,7 +174,7 @@ scorer = ArbitrageScorer(
 )
 
 # Data collection settings
-collector = AIDataCollector(
+collector = DataCollector(
     db_path="ai_training_data.db",
     use_sqlite=True
 )

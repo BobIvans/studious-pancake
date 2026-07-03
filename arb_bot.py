@@ -3835,7 +3835,8 @@ async def lst_unstake_arbitrage_scanner(
             _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
                 shared_state.stats.get(
                     "virtual_balance", shared_state.stats.get("last_balance", 0.0)
-                )
+                ),
+                0.0,  # Task 41: estimated_rent_sol (LST unstake — rent already handled at route level)
             )
             if not _gas_ok:
                 logger.critical(
@@ -3946,7 +3947,8 @@ async def wrapper_peg_scanner(
             _gas_ok, _ = await PreTradeGuard.check_gas_tank(
                 shared_state.stats.get(
                     "virtual_balance", shared_state.stats.get("last_balance", 0.0)
-                )
+                ),
+                0.0,  # Task 41: estimated_rent_sol (wrapper peg — rent already handled at route level)
             )
             if not _gas_ok:
                 logger.critical(
@@ -4146,6 +4148,7 @@ async def check_bundle_confirmation(
     target_mint_ata=None,
     virtual_balance_to_deduct=0.0,
     new_atas_to_create=None,  # ФИКС 3: ATA кэшируем только после подтверждения
+    real_profit_sol: float = 0.0,  # Task 43: фактический чистый профит сделки
 ):
     """Check bundle confirmation asynchronously without blocking."""
     try:
@@ -4234,9 +4237,9 @@ async def check_bundle_confirmation(
                 {"execution_time_ms": execution_time},
             )
 
-            # ── Этап 2: Record PnL in CapitalProtection (TODO: use real profit) ─
-            if shared_state.capital_protection and virtual_balance_to_deduct > 0:
-                shared_state.capital_protection.record_trade(virtual_balance_to_deduct)
+            # ── Этап 2: Record PnL in CapitalProtection (используем реальный профит) ─
+            if shared_state.capital_protection:
+                shared_state.capital_protection.record_trade(real_profit_sol)
 
             # FIX 3 (Zero-Delay Post-Trade Sweep): Fire-and-forget targeted ATA close + dust sweep.
             # After Jito bundle is Confirmed, immediately sweep the intermediate token ATA
@@ -4875,6 +4878,7 @@ async def execute_priority_opportunity(
                     target_mint_ata=out_ata,
                     virtual_balance_to_deduct=virtual_balance_to_deduct,
                     new_atas_to_create=_new_atas_to_create,  # ФИКС 3
+                    real_profit_sol=actual_net_profit_sol if "actual_net_profit_sol" in dir() else 0.0,  # Task 43
                 )
             )
             shared_state.active_tasks.add(task)
@@ -5019,22 +5023,21 @@ async def worker(
             # Task 29: Dynamic params from FlywheelScaler (balance-dependent scaling)
             current_balance_sol = shared_state.stats.get("last_balance", 0.017)
             params = flywheel_scaler.get_trading_params(current_balance_sol)
-            cfg.SLIPPAGE_BPS = params["max_slippage_bps"]
-            cfg.MIN_PROFIT_SOL = params["min_net_profit_sol"]
-            borrow_env_sol = params["flash_loan_size"]
-            borrow_amount_sol = borrow_env_sol  # For quote sizing (line 2327, 2363)
+            active_slippage_bps = params["max_slippage_bps"]
+            active_borrow_sol = params["flash_loan_size"]
 
             # Fix 2: If base token is USDC (6 decimals), convert SOL amount to USDC equivalent
             # Otherwise 1.0 SOL * 10^6 = 1 USDC () — too small to cover fees
             usdc_mint_str = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+            borrow_amount_sol = active_borrow_sol
             if str(in_mint_str) == usdc_mint_str:
                 sol_entry = price_matrix.get(
                     "So11111111111111111111111111111111111111112"
                 )
                 sol_price = sol_entry[0] if sol_entry else 150.0
-                borrow_amount_sol = borrow_env_sol * sol_price
+                borrow_amount_sol = active_borrow_sol * sol_price
                 logger.debug(
-                    f"Fix 2: USDC borrow — scaling {borrow_env_sol} SOL * ${sol_price:.0f}/SOL = {borrow_amount_sol:.2f} USDC"
+                    f"Fix 2: USDC borrow — scaling {active_borrow_sol} SOL * ${sol_price:.0f}/SOL = {borrow_amount_sol:.2f} USDC"
                 )
 
             # --- RESTORED MISSING QUOTE FETCHING LOGIC ---
@@ -5079,11 +5082,12 @@ async def worker(
                     target_mint_str,
                     amount_lamports,
                     cfg,
-                    slippage_bps=0,
+                    slippage_bps=active_slippage_bps,
                 )
                 if quote1 and "out_amount" in quote1:
                     q2 = await get_best_quote_multi(
-                        session, target_mint_str, in_mint_str, quote1["out_amount"], cfg
+                        session, target_mint_str, in_mint_str, quote1["out_amount"], cfg,
+                        slippage_bps=active_slippage_bps,
                     )
                     if q2 and "out_amount" in q2:
                         routes.append([quote1, q2])
@@ -5097,6 +5101,7 @@ async def worker(
                     amount_lamports,
                     cfg,
                     restrict_intermediate=False,
+                    slippage_bps=active_slippage_bps,
                 )
                 if quote1_multi and "out_amount" in quote1_multi:
                     q2_multi = await get_best_quote_multi(
@@ -5106,6 +5111,7 @@ async def worker(
                         quote1_multi["out_amount"],
                         cfg,
                         restrict_intermediate=False,
+                        slippage_bps=active_slippage_bps,
                     )
                     if q2_multi and "out_amount" in q2_multi:
                         routes.append([quote1_multi, q2_multi])
@@ -5120,6 +5126,7 @@ async def worker(
                     amount_lamports,
                     cfg,
                     restrict_intermediate=False,
+                    slippage_bps=active_slippage_bps,
                 )
                 if q1 and "out_amount" in q1:
                     q2 = await get_best_quote_multi(
@@ -5129,6 +5136,7 @@ async def worker(
                         q1["out_amount"],
                         cfg,
                         restrict_intermediate=False,
+                        slippage_bps=active_slippage_bps,
                     )
                     if q2 and "out_amount" in q2:
                         routes.append([q1, q2])
@@ -5702,7 +5710,7 @@ async def tcp_heartbeat(session: aiohttp.ClientSession):
 
         except Exception:
             pass
-        await asyncio.sleep(0.4)  # 400ms heartbeat
+        await asyncio.sleep(3.0)  # 3.0s heartbeat — достаточно для удержания TCP keep-alive без спама
 
 
 async def hard_floor_guard():
@@ -5718,12 +5726,31 @@ async def hard_floor_guard():
 
             if balance < 0.003:
                 logger.critical(
-                    f"💀 RENT DEATH GUARD: Balance {balance:.6f} SOL < 0.003 SOL. "
-                    f"Triggering graceful shutdown."
+                    f"💀 RENT DEATH SHUTDOWN: Баланс {balance:.6f} SOL упал ниже критического лимита 0.003 SOL. "
+                    f"Запуск экстренного завершения работы во избежание удаления аккаунта кошелька сетью!"
                 )
+
+                # Устанавливаем маркер блокировки перезапуска
+                with open(".hard_floor_triggered", "w") as f_marker:
+                    f_marker.write(f"blocked_at_{time.time()}")
+
+                # Сигнализируем всем системам на экстренную остановку
                 shared_state.GLOBAL_STOP_EVENT.set()
-                with open(".hard_floor_triggered", "w") as _hf:
-                    _hf.write("blocked")
+
+                # Экстренный сбор пыли и возврат аренды со всех ATA перед смертью процесса
+                try:
+                    _kp = globals().get("KEYPAIR")
+                    if _kp is not None:
+                        from src.ingest.dust_sweeper import DustSweeper
+                        _rpc_url = rpc_manager.get_rpc() if 'rpc_manager' in globals() else None
+                        if _rpc_url:
+                            _http_session = aiohttp.ClientSession()
+                            sweeper = DustSweeper(_kp, _rpc_url, _http_session)
+                            await sweeper.sweep_on_shutdown()
+                            await _http_session.close()
+                except Exception as e_panic:
+                    logger.error(f"Panic sweep failed: {e_panic}")
+
                 break
         except Exception:
             pass

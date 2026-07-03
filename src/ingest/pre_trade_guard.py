@@ -757,10 +757,10 @@ class PreTradeGuard:
     # stop ALL trading immediately. At 0 SOL we can't even close ATAs to recover rent.
     @staticmethod
     def get_min_reserve_sol() -> float:
-        """Get minimum reserve SOL from environment or default."""
-        import os
+        """Get minimum reserve SOL from shared state (single source of truth)."""
+        import src.ingest.shared_state as _ss
 
-        return float(os.getenv("MIN_RESERVE_SOL", "0.010"))
+        return _ss.MIN_RESERVE_SOL
 
     # ─── Hard Floor Guard (Rent-Exemption Killswitch) ───────────────────────────
     # If native SOL balance drops below dynamic floor, we trigger emergency shutdown:

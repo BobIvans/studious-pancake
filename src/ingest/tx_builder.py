@@ -163,7 +163,7 @@ CU_PROFILES: Dict[str, int] = {
 }
 
 SWAP_INSTRUCTIONS_API_URL = os.getenv(
-    "SWAP_INSTRUCTIONS_API_URL", "https://api.jup.ag/swap/v1/swap-instructions"
+    "SWAP_INSTRUCTIONS_API_URL", "https://api.jup.ag/swap/v2/swap-instructions"
 )
 
 
@@ -1539,9 +1539,9 @@ class JupiterTxBuilder:
         if usdc_bank_id != correct_usdc:
             usdc_bank_id = correct_usdc
 
-        # Determine which bank to use based on borrow_mint
-        # Phase 21: str() cast prevents TypeError: argument of type 'Pubkey' is not iterable
-        bank_pubkey = sol_bank_id if "So111" in str(borrow_mint) else usdc_bank_id
+        # Task 44: Гарантируем, что при отсутствии аргумента заемным активом считается SOL
+        safe_borrow_mint = str(borrow_mint) if borrow_mint else "So11111111111111111111111111111111111111112"
+        bank_pubkey = sol_bank_id if "So111" in safe_borrow_mint else usdc_bank_id
 
         # Real-time Liquidity Check with 95% Cap
         if not await self._check_marginfi_liquidity_realtime(
@@ -2703,7 +2703,7 @@ class JupiterTxBuilder:
             or None on failure.
         """
         jup_quote_url = os.getenv(
-            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
+            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote"
         )
         jup_key = os.getenv("JUPITER_API_KEY", "")
         jup_headers = {"Accept": "application/json"}
@@ -2820,7 +2820,7 @@ class JupiterTxBuilder:
         Returns profit in lamports (converted to SOL by caller).
         """
         jup_quote_url = os.getenv(
-            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
+            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote"
         )
         jup_key = os.getenv("JUPITER_API_KEY", "")
         jup_headers = {"User-Agent": "Mozilla/5.0", "Accept": "application/json"}

@@ -31,10 +31,10 @@ def get_swap_limiter():
         _SWAP_LIMITER = AsyncLimiter(max(1, jup_rps), 1.0)
     return _SWAP_LIMITER
 
-# Jupiter API endpoints — динамически из .env
-QUOTE_API_URL = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
-SWAP_API_URL = os.getenv("JUPITER_SWAP_URL", "https://api.jup.ag/swap/v1/swap")
-SWAP_INSTRUCTIONS_API_URL = os.getenv("SWAP_INSTRUCTIONS_API_URL", "https://api.jup.ag/swap/v1/swap-instructions")
+# Jupiter API endpoints — v2 API для нативной поддержки Token-2022 Transfer Fee
+QUOTE_API_URL = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote")
+SWAP_API_URL = os.getenv("JUPITER_SWAP_URL", "https://api.jup.ag/swap/v2/swap")
+SWAP_INSTRUCTIONS_API_URL = os.getenv("SWAP_INSTRUCTIONS_API_URL", "https://api.jup.ag/swap/v2/swap-instructions")
 
 class JupiterClient:
     """Async client for Jupiter API operations."""

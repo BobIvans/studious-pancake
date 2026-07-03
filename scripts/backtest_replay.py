@@ -73,36 +73,22 @@ def backtest_trade(
     tip_pct: float,
     slippage_bps: int,
 ) -> Dict:
-    """Re-evaluate a single paper trade under new parameters.
-
-    Returns a dict with keys:
-      - original_net_profit_sol
-      - backtested_net_profit_sol
-      - decision (EXECUTED / SKIPPED)
-      - delta_sol
-      - reason (if skipped)
-    """
+    """Полная математическая модель переоценки исторической сделки."""
     gross = trade.get("gross_revenue_lamports", 0) or 0
+    amount = trade.get("amount_lamports", 0) or 0
+    num_new_atas = trade.get("num_new_atas", 0) or 0
+
     flashloan_fee = trade.get("flashloan_fee_lamports", 0) or 0
     dex_fee = trade.get("dex_fee_lamports", 0) or 0
     network_fee = trade.get("network_fee_lamports", 0) or 0
     priority_fee = trade.get("priority_fee_lamports", 0) or 0
-    ata_rent = trade.get("ata_rent_lamports", 0) or 0
-    amount = trade.get("amount_lamports", 0) or 0
 
-    # Original net profit (as logged)
-    original_total_cost = (
-        flashloan_fee + dex_fee + network_fee + priority_fee + ata_rent
-    )
-    original_net = gross - original_total_cost
-    original_net_sol = original_net / 1e9
+    token_out = trade.get("token_out", "")
+    from src.ingest.shared_state import TOKEN_2022_MINTS
+    rent_per_ata = 0.0035 if token_out in TOKEN_2022_MINTS else 0.00203928
+    ata_rent = int(num_new_atas * rent_per_ata * 1e9)
 
-    # Backtested: compute Jito tip from gross profit and tip_pct
-    original_jito_tip = trade.get("jito_tip_lamports", 0) or 0
-
-    # Recompute net profit with the new tip percentage applied to gross profit
-    backtested_jito_tip = int(max(gross * tip_pct, 10_000))  # 10k lamports floor
-    backtested_jito_tip_lamports = max(backtested_jito_tip, original_jito_tip)
+    backtested_jito_tip_lamports = int(max(gross * tip_pct, 10_000))
 
     backtested_total_cost = (
         flashloan_fee
@@ -112,17 +98,20 @@ def backtest_trade(
         + ata_rent
         + backtested_jito_tip_lamports
     )
+
     backtested_net = gross - backtested_total_cost
     backtested_net_sol = backtested_net / 1e9
+    original_total_cost = flashloan_fee + dex_fee + network_fee + priority_fee + ata_rent
+    original_net_sol = ((gross - original_total_cost) / 1e9) if gross else 0.0
 
-    # Decision
     min_profit_lamports = int(min_profit_sol * 1e9)
+
     if backtested_net < min_profit_lamports:
         return {
             "original_net_profit_sol": original_net_sol,
-            "backtested_net_profit_sol": backtested_net_sol,
+            "backtested_net_profit_sol": 0.0,
             "decision": "SKIPPED",
-            "delta_sol": backtested_net_sol - original_net_sol,
+            "delta_sol": -original_net_sol if original_net_sol > 0 else 0.0,
             "reason": f"net {backtested_net_sol:.6f} SOL < min {min_profit_sol:.6f} SOL",
             "amount_sol": amount / 1e9,
             "slippage_bps": slippage_bps,

@@ -150,7 +150,46 @@ def get_priority_order() -> List[str]:
 # PYTH ORACLE FEEDS
 # ============================================================================
 
-PYTH_FEEDS = {}
+PYTH_FEEDS = {
+    # SOL / USDC / USDT дублируются здесь для надежности обратного поиска
+    "SOL": {
+        "feed_id": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+        "mint": "So11111111111111111111111111111111111111112"
+    },
+    "USDC": {
+        "feed_id": "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+        "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    },
+    "USDT": {
+        "feed_id": "2b89b9dc8fdf9f34709a5b106b472f0f39bb6ca9ce04b0fd7f2e971688e2e53b",
+        "mint": "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB"
+    },
+    # LST-токены (Mainnet Price Feed IDs)
+    "jitoSOL": {
+        "feed_id": "67be9f519b95cf24338801051f9a808eff0a578ccb388db73b7f6fe1de019ffb",
+        "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+    },
+    "mSOL": {
+        "feed_id": "c2289a6a43d2ce91c6f55caec370f4acc38a2ed477f58813334c6d03749ff2a4",
+        "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So"
+    },
+    "INF": {
+        "feed_id": "f51570985c642c49c2d6e50156390fdba80bb6d5f7fa389d2f012ced4f7d208f",
+        "mint": "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm"
+    },
+    "JUP": {
+        "feed_id": "0a0408d619e9380abad35060f9192039ed5042fa6f82301d0e48bb52be830996",
+        "mint": "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN"
+    },
+    "WIF": {
+        "feed_id": "b3e32b8aa075775f0a0ffaa2a9bfccdbdb21df4ff1a6c1e54a012ced4f7d208f",
+        "mint": "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm"
+    },
+    "BONK": {
+        "feed_id": "72b021217ca3fe68922a19aaf990109cb9d84e9ad004b4d2025ad6f529314419",
+        "mint": "DezXAZ8z7P8gVmFiDQ6cEhPmmF9rj3ZfVGg3LyZ3mTKV"
+    }
+}
 
 XSTOCK_MINTS = {
     "USDY": "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",

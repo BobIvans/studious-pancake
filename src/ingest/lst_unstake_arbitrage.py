@@ -61,7 +61,6 @@ class LstInstantUnstakeArbitrage:
         # flywheel_scaler tier thresholds.  The constructor arg is kept as an
         # absolute minimum floor for safety.
         self._min_profit_lamports_floor = min_profit_lamports
-        self.flywheel_scaler = FlywheelScaler()
         self.ata_cache = ata_cache if ata_cache is not None else set()
         self.keypair = keypair
         self.cfg = cfg
@@ -70,6 +69,7 @@ class LstInstantUnstakeArbitrage:
         self.stats = stats
         self.stats_lock = stats_lock
         self.min_deviation_pct = min_deviation_pct
+        self.flywheel_scaler = shared_state.flywheel_scaler
 
     async def scan_unstake_opportunities(self) -> List[Dict[str, Any]]:
         """

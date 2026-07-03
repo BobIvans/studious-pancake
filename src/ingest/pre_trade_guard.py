@@ -876,7 +876,7 @@ class PreTradeGuard:
         base_fee_lamports: int,
         expected_profit_lamports: int,
         quote_url: str = os.getenv(
-            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
+            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote"
         ),
         slippage_bps: int = 30,
         is_circular: bool = False,

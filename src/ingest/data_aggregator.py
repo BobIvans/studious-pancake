@@ -835,43 +835,43 @@ class DataAggregator:
         cutoff_timestamp = time.time() - (days * 24 * 60 * 60)
 
         async with aiosqlite.connect(self.db_path, timeout=30) as db:
-            # Total paper trades
+            # Total paper trades (executed only — aligns denominator with win_rate)
             cursor = await db.execute(
                 """
                 SELECT COUNT(*) FROM paper_trades
-                WHERE ts >= datetime(?, 'unixepoch')
+                WHERE ts >= datetime(?, 'unixepoch') AND executed = 1
             """,
                 (cutoff_timestamp,),
             )
             total_trades = (await cursor.fetchone())[0]
 
-            # Total net profit
+            # Total net profit (executed trades only — SKIP trades must not distort P&L)
             cursor = await db.execute(
                 """
                 SELECT SUM(net_profit_lamports) FROM paper_trades
-                WHERE ts >= datetime(?, 'unixepoch')
+                WHERE ts >= datetime(?, 'unixepoch') AND executed = 1
             """,
                 (cutoff_timestamp,),
             )
             total_profit_lamports = (await cursor.fetchone())[0] or 0
             total_profit_sol = total_profit_lamports / 1e9
 
-            # Total net profit in USD
+            # Total net profit in USD (executed trades only)
             cursor = await db.execute(
                 """
                 SELECT SUM((net_profit_lamports / 1e9) * sol_usd_price) FROM paper_trades
-                WHERE ts >= datetime(?, 'unixepoch')
+                WHERE ts >= datetime(?, 'unixepoch') AND executed = 1
             """,
                 (cutoff_timestamp,),
             )
             total_profit_usd = (await cursor.fetchone())[0] or 0
 
-            # Most profitable routes
+            # Most profitable routes (executed trades only)
             cursor = await db.execute(
                 """
                 SELECT route, COUNT(*) as count, AVG(net_profit_lamports) as avg_profit_lamports
                 FROM paper_trades
-                WHERE ts >= datetime(?, 'unixepoch')
+                WHERE ts >= datetime(?, 'unixepoch') AND executed = 1
                 GROUP BY route
                 ORDER BY avg_profit_lamports DESC
                 LIMIT 5
@@ -889,11 +889,11 @@ class DataAggregator:
                     }
                 )
 
-            # Win rate
+            # Win rate (executed trades only)
             cursor = await db.execute(
                 """
                 SELECT COUNT(*) FROM paper_trades
-                WHERE ts >= datetime(?, 'unixepoch') AND net_profit_lamports > 0
+                WHERE ts >= datetime(?, 'unixepoch') AND executed = 1 AND net_profit_lamports > 0
             """,
                 (cutoff_timestamp,),
             )

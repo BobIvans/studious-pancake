@@ -144,8 +144,8 @@ RENT_TOKEN2022_SOL = 0.0035
 # Flash Loan Pivot: Jupiter swap helper constants
 SOL_MINT = Pubkey.from_string("So11111111111111111111111111111111111111112")
 USDC_MINT = Pubkey.from_string("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v")
-JUPITER_QUOTE_URL = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
-JUPITER_SWAP_IX_URL = os.getenv("SWAP_INSTRUCTIONS_API_URL", "https://api.jup.ag/swap/v1/swap-instructions")
+JUPITER_QUOTE_URL = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote")
+JUPITER_SWAP_IX_URL = os.getenv("SWAP_INSTRUCTIONS_API_URL", "https://api.jup.ag/swap/v2/swap-instructions")
 
 STRATEGY_EXTRA_ACCOUNTS: Dict[str, Set[str]] = {}  # Fix 91: auto-discovered remaining accounts for transfer hooks
 
@@ -165,11 +165,41 @@ class StandardTransactionSender:
         self.rpc_url = rpc_url
 
     async def send_transaction(self, transaction: VersionedTransaction, priority_fee_sol: float) -> bool:
-        """
-        Phase 48: Standard Sender DISABLED for Capital Protection.
-        Trades with 0.017 SOL cannot risk standard RPC delays/front-running.
-        """
-        logger.warning("🚫 Standard transaction blocked by STRICT_JITO_MODE.")
+        """Резервный путь: отправка транзакции напрямую через пулы RPC при сбоях Jito"""
+        try:
+            import base64
+            tx_bytes = bytes(transaction)
+            tx_b64 = base64.b64encode(tx_bytes).decode("ascii")
+
+            payload = {
+                "jsonrpc": "2.0",
+                "id": 1,
+                "method": "sendTransaction",
+                "params": [
+                    tx_b64,
+                    {
+                        "encoding": "base64",
+                        "skipPreflight": False,
+                        "preflightCommitment": "confirmed"
+                    }
+                ]
+            }
+
+            headers = {"Content-Type": "application/json"}
+            async with self.session.post(self.rpc_url, json=payload, headers=headers, timeout=5.0) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    if "result" in data:
+                        sig = data["result"]
+                        logger.info(f"🚀 Резервный RPC-путь: транзакция отправлена в сеть! Sig: {sig}")
+                        return True
+                    else:
+                        logger.warning(f"⚠️ Резервный RPC-путь отклонил транзакцию: {data.get('error')}")
+                else:
+                    logger.warning(f"⚠️ Резервный RPC-путь вернул код: {resp.status}")
+
+        except Exception as e:
+            logger.error(f"Ошибка резервной отправки транзакции: {e}")
         return False
 
 class ExecutionRouter:
@@ -451,10 +481,13 @@ class ExecutionRouter:
             if strategy == "lst_unstake":
                 import src.ingest.shared_state as shared_state
                 current_balance_sol = shared_state.stats.get("last_balance", shared_state.stats.get("virtual_balance", 0.015))
-                from .flywheel_scaler import FlywheelScaler
-                _scaler = FlywheelScaler(initial_balance=current_balance_sol)
-                _tier = _scaler.get_tier(current_balance_sol)
-                _dynamic_min_profit_lamports = int(_tier.min_profit_sol * 1_000_000_000)
+                _scaler = shared_state.flywheel_scaler
+                if _scaler is not None:
+                    _tier = _scaler.get_tier(current_balance_sol)
+                    _dynamic_min_profit_lamports = int(_tier.min_profit_sol * 1_000_000_000)
+                else:
+                    _dynamic_min_profit_lamports = int(self.cfg.MIN_NET_PROFIT_SOL * 1_000_000_000) if self.cfg else 50_000
+
 
                 # LST Instant Unstake Arbitrage
                 from .lst_unstake_arbitrage import LstInstantUnstakeArbitrage

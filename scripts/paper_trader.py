@@ -88,7 +88,7 @@ class PaperTrader:
 
     async def _fetch_jupiter(self, input_mint: str, output_mint: str, amount: int) -> dict:
         async with self.jup_sem:
-            url = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote")
+            url = os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote")
             jup_key = os.getenv("JUPITER_API_KEY", "")
             headers = {
                 "x-api-key": jup_key,

@@ -131,8 +131,8 @@ class MultiAggregatorClient:
         )
         self.jupiter = AggregatorClient(
             "jupiter",
-            os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
-            os.getenv("JUPITER_SWAP_URL", "https://api.jup.ag/swap/v1/swap"),
+            os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote"),
+            os.getenv("JUPITER_SWAP_URL", "https://api.jup.ag/swap/v2/swap"),
             headers=_jupiter_headers,
         )
 

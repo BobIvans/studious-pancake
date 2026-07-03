@@ -285,8 +285,7 @@ class WSOLManager:
         wsol_balance_lamports = 0
         
         if unwrap_threshold_sol is None:
-            import os
-            unwrap_threshold_sol = float(os.getenv("MIN_RESERVE_SOL", "0.010"))
+            unwrap_threshold_sol = _shared_state_lock.MIN_RESERVE_SOL
 
         # Only run the check when native balance is already below threshold
         if native_balance_sol >= unwrap_threshold_sol:

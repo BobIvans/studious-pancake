@@ -173,6 +173,13 @@ async def discard_from_ata_cache(ata_str: str) -> None:
     async with ata_cache_lock:
         ATA_CACHE.discard(ata_str)
 
+# Task 30: Unified system-wide survival floor for gas/trade safety.
+# Modules including gas_refiller, wsol_manager, and arb_bot were using
+# locally differing defaults (0.005 vs 0.010 SOL), causing panicked refills
+# when actual balance was still inside the arb_bot reserve. Any module that
+# needs the reserve threshold should import this value from shared_state.
+MIN_RESERVE_SOL: float = 0.0050
+
 # Default slippage in basis points — single source of truth for all modules
 # Phase 8.2: Unified 15 bps default (0.15%) across arb_bot, jupiter_api_client, and paper_trader
 DEFAULT_SLIPPAGE_BPS: int = int(os.getenv("SLIPPAGE_BPS", "15"))
@@ -209,10 +216,27 @@ _balance_lock_paused: bool = False
 _balance_lock_pause_until: float = 0.0
 
 # Phase 9: Centralised ATA rent constants — single source of truth for all modules.
-# Standard SPL Token ATA rent-exempt lamports: 2_039_280 lamports = 0.00203928 SOL
-# Token-2022 ATA rent is higher due to extension space: 0.0035 SOL
+# Standard SPL Token ATA rent-exemption balance: 0.00203928 SOL
 ATA_RENT_SOL_SPL = 0.00203928
+# Token-2022 ATA rent-exemption balance: 0.0035 SOL (extra space for extension data)
 ATA_RENT_SOL_TOKEN2022 = 0.0035
+
+# Task 29: Shared singleton for FlywheelScaler.
+# Initialized once at bot startup via init_global_scaler() below to prevent
+# per-scan/reset tier-flapping when scanners create local scaler instances.
+flywheel_scaler: Optional[Any] = None
+
+
+def init_global_scaler(initial_balance: float):
+    """Initialize the global FlywheelScaler singleton with current wallet balance."""
+    global flywheel_scaler
+    from src.ingest.flywheel_scaler import FlywheelScaler
+
+    flywheel_scaler = FlywheelScaler(initial_balance=initial_balance)
+    logger.info(
+        f"📈 Global FlywheelScaler initialized with balance {initial_balance:.6f} SOL"
+    )
+
 
 # TASK 10: Dynamic CU Profiling Cache
 DYNAMIC_CU_CACHE: Dict[str, int] = {}

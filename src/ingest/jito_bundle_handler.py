@@ -286,7 +286,7 @@ class JitoBundleHandler:
         self, input_mint: str, output_mint: str, amount: int
     ) -> Optional[Dict]:
         url = os.getenv(
-            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
+            "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote"
         )
         params = {
             "inputMint": input_mint,

@@ -72,7 +72,8 @@ async def check_and_refill_gas(session, rpc, keypair):
     try:
         # Check native balance
         native_bal = await StateManager.get_balance(session, rpc, keypair.pubkey())
-        min_reserve = float(os.getenv("MIN_RESERVE_SOL", "0.010"))
+        import src.ingest.shared_state as _ss
+        min_reserve = _ss.MIN_RESERVE_SOL
         target_balance = float(os.getenv("TARGET_GAS_SOL", "0.020"))
 
         if native_bal is None:

@@ -35,3 +35,9 @@ def write_file(path: str, content: FileContent):
     with open(resolved_path, 'w', encoding='utf-8') as f:
         f.write(content.text)
     return {"status": "success"}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    # Привязка СТРОГО к локальной петле 127.0.0.1 для предотвращения утечки wallet.json
+    uvicorn.run(app, host="127.0.0.1", port=8000, log_level="warning")

@@ -1,0 +1,16 @@
+# FIX 238: Strictly ignore wallet and secrets from Docker image builds
+wallet.json
+.env
+*.db
+*.db-shm
+*.db-wal
+backups/
+logs/
+trades.jsonl
+__pycache__/
+*.pyc
+.git/
+.github/
+.worktrees/
+*.swp
+*.swo

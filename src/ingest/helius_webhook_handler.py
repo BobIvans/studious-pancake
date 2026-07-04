@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 class HeliusWebhookHandler:
     """Handles incoming Helius webhooks for LST arbitrage detection."""
 
-    def __init__(self, data_aggregator: DataAggregator, port: int = 8080, opportunity_callback=None, webhook_queue=None, on_token_discovery=None, jito_shotgun=None):
+    def __init__(self, data_aggregator: DataAggregator, port: int = 3000, opportunity_callback=None, webhook_queue=None, on_token_discovery=None, jito_shotgun=None):
         self.data_aggregator = data_aggregator
         self.port = port
         self.opportunity_callback = opportunity_callback  # Callback to process opportunities
@@ -37,17 +37,41 @@ class HeliusWebhookHandler:
         self.runner = None
         # Rate limiter for DoS protection
         self.ip_limits = defaultdict(list)
-        self.MAX_REQ_PER_SEC = 5  # Max 5 requests per second per IP
+        self.MAX_REQ_PER_SEC = 50  # FIX 139: Raised to 50 for Helius bursts
         # ── ИСПРАВЛЕНИЕ: asyncio.Queue вместо deque — без потери событий ────────
         self._signal_queue: asyncio.Queue = asyncio.Queue(maxsize=500)
-        self.WORKER_COUNT = 3
+        self.WORKER_COUNT = int(os.getenv("WEBHOOK_WORKERS", "10"))  # FIX 142
         self._worker_pool: List[asyncio.Task] = []
         self._last_scan_trigger: Dict[str, float] = {}
         self._dedup_lock = asyncio.Lock()
         self._sem = asyncio.Semaphore(10)
 
+    async def _load_signatures_from_db(self):
+        """FIX 140: Load processed signatures from SQLite on startup to prevent duplicates after crash"""
+        try:
+            import aiosqlite
+            db_path = self.data_aggregator.db_path
+            if not os.path.exists(db_path):
+                return
+            async with aiosqlite.connect(db_path, timeout=10) as db:
+                cutoff = time.time() - 7200  # last 2 hours
+                async with db.execute(
+                    "SELECT transaction_signature FROM events WHERE timestamp > ? AND transaction_signature IS NOT NULL",
+                    (cutoff,)
+                ) as cursor:
+                    rows = await cursor.fetchall()
+                    now = time.time()
+                    for row in rows:
+                        sig = row[0]
+                        if sig:
+                            self.processed_signatures[sig] = now
+            logger.info(f"💾 Persistent dedup: loaded {len(self.processed_signatures)} signatures from database on startup.")
+        except Exception as e:
+            logger.warning(f"Failed to load signatures: {e}")
+
     async def start(self):
         """Start the webhook server and the worker pool."""
+        await self._load_signatures_from_db()  # FIX 140: Restore persistent dedup
         # Safety check: HELIUS_WEBHOOK_SECRET must be configured in production
         webhook_secret = os.getenv("HELIUS_WEBHOOK_SECRET")
         if not webhook_secret:
@@ -58,8 +82,22 @@ class HeliusWebhookHandler:
         try:
             self.runner = web.AppRunner(self.app)
             await self.runner.setup()
-            host = os.getenv("WEBHOOK_HOST", "127.0.0.1")
-            site = web.TCPSite(runner=self.runner, host=host, port=self.port)
+            import ssl  # FIX 137
+            host = os.getenv("WEBHOOK_HOST", "0.0.0.0")  # FIX 138: Bind to all interfaces
+            
+            # FIX 137: SSL context for HTTPS support
+            ssl_context = None
+            cert_file = os.getenv("SSL_CERT_FILE")
+            key_file = os.getenv("SSL_KEY_FILE")
+            if cert_file and key_file and os.path.exists(cert_file) and os.path.exists(key_file):
+                try:
+                    ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                    ssl_context.load_cert_chain(certfile=cert_file, keyfile=key_file)
+                    logger.info("🔒 HTTPS/TLS successfully initialized for Helius Webhook server")
+                except Exception as ssl_err:
+                    logger.error(f"Failed to load SSL chain: {ssl_err}. Falling back to plain HTTP.")
+
+            site = web.TCPSite(runner=self.runner, host=host, port=self.port, ssl_context=ssl_context)
             await site.start()
             logger.warning(f"🚀 WEBHOOK SERVER ACTIVE: Listening on port {self.port} ({host}). Endpoint: http://{host}:{self.port}/webhook")
         except OSError as e:
@@ -89,6 +127,15 @@ class HeliusWebhookHandler:
 
     async def handle_health(self, request):
         """Handle healthcheck requests with strict production checks."""
+        # FIX 143: Secure health check from public scanners leaking virtual_balance
+        health_token = request.headers.get("X-Health-Token")
+        expected_token = os.getenv("HEALTH_TOKEN")
+        if not expected_token or health_token != expected_token:
+            return web.json_response({
+                "status": "alive",
+                "timestamp": datetime.now().isoformat()
+            })
+
         last_opp_ts = shared_state.stats.get("last_opportunity_ts", 0.0)
         consecutive_failures = shared_state.stats.get("consecutive_failures", 0)
         virtual_balance = shared_state.stats.get("virtual_balance", 1.0)
@@ -126,7 +173,12 @@ class HeliusWebhookHandler:
             client_ip = client_ip.split(",")[0].strip()
         
         now = time.time()
-        self.ip_limits[client_ip] = [t for t in self.ip_limits[client_ip] if now - t < 1.0]
+        # FIX 158: Prune and completely delete empty IP keys to avoid memory leaks
+        pruned_limits = [t for t in self.ip_limits.get(client_ip, []) if now - t < 1.0]
+        if not pruned_limits:
+            self.ip_limits.pop(client_ip, None)
+        else:
+            self.ip_limits[client_ip] = pruned_limits
         
         if len(self.ip_limits[client_ip]) >= self.MAX_REQ_PER_SEC:
             logger.warning(f"🚨 Webhook Rate Limit hit for IP: {client_ip} ({len(self.ip_limits[client_ip])} req/sec)")
@@ -166,7 +218,8 @@ class HeliusWebhookHandler:
             ).hexdigest()
             
             if not hmac.compare_digest(expected_signature, helius_signature):
-                logger.critical(f"🚨 SEC-BREACH: Invalid signature from IP {client_ip}! Computed={expected_signature[:8]}..., Got={helius_signature[:8]}...")
+                # FIX 239: Do not leak signature prefix in logs to protect HMAC from brute force
+                logger.critical(f"🚨 SEC-BREACH: Invalid signature from IP {client_ip}!")
                 return web.Response(status=401, text='Unauthorized: Invalid Signature')
         else:
             # Безопасность: Не использовать небезопасный fallback. Если webhook_secret не задан,
@@ -184,15 +237,18 @@ class HeliusWebhookHandler:
         # Parse webhook data
         if isinstance(data, list):
             events = data
-        # FIX 108: Пытаемся забрать ID вебхука из заголовка Helius или JSON тела
+        elif isinstance(data, dict):
+            events = data.get('events', [data])
+        else:
+            events = []
+
+        # FIX 108: Извлекаем ID вебхука из заголовка Helius или JSON тела
         webhook_id = (
             request.headers.get("X-Helius-Webhook-Id") 
             or request.query.get('webhook_id') 
             or (data.get('webhookId') if isinstance(data, dict) else None) 
             or 'unknown'
         )
-        elif isinstance(data, dict):
-            events = data.get('events', [data])
 
         # Sanitize to prevent Log Injection / SQLi
         webhook_id = re.sub(r'[^a-zA-Z0-9_-]', '', str(webhook_id))[:64]
@@ -204,17 +260,18 @@ class HeliusWebhookHandler:
 
         logger.info(f"📡 Authorized Helius webhook accepted: {webhook_id} from {client_ip} ({len(events)} events)")
 
-        async with self._sem:
-            try:
-                for event in events:
-                    try:
-                        self._signal_queue.put_nowait((time.time(), event, webhook_id))
-                    except asyncio.QueueFull:
-                        logger.warning(f"Webhook queue full, dropping event from {webhook_id}")
-                return web.Response(text='OK')
-            except Exception as e:
-                logger.error(f"Webhook processing error: {e}")
-                return web.Response(status=500, text='Internal Server Error')
+        # FIX 178: Removed useless semaphore to prevent Helius delivery timeout on bursts
+        try:
+            for event in events:
+                try:
+                    self._signal_queue.put_nowait((time.time(), event, webhook_id))
+                except asyncio.QueueFull:
+                    logger.warning(f"Webhook queue full, returning 503 to Helius: {webhook_id}")
+                    return web.Response(status=503, text='Queue Full')  # FIX 136
+            return web.Response(text='OK')
+        except Exception as e:
+            logger.error(f"Webhook processing error: {e}")
+            return web.Response(status=500, text='Internal Server Error')
 
     async def _worker(self, worker_id: int) -> None:
         """Worker pool task: consumes events from _signal_queue and processes them."""
@@ -266,9 +323,10 @@ class HeliusWebhookHandler:
                 if signature:
                     now = time.time()
                     # Prune old signatures only if cache size grows too large (optimizes CPU cycles)
-                    if len(self.processed_signatures) > 1000:
+                    # FIX 141: Increase dedup TTL to 600 seconds (10 min) to cover Helius retries
+                    if len(self.processed_signatures) > 5000:
                         self.processed_signatures = {
-                            k: v for k, v in self.processed_signatures.items() if now - v < 10
+                            k: v for k, v in self.processed_signatures.items() if now - v < 600
                         }
                     if signature in self.processed_signatures:
                         logger.debug(f"♻️ Webhook event duplicate ignored: {signature[:8]}")

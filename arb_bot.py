@@ -3259,6 +3259,10 @@ async def reconcile_inflight_bundles(session: aiohttp.ClientSession, rpc_url: st
                                                     if h_status in ("confirmed", "finalized") and hist_statuses[0].get("err") is None:
                                                         logger.info(f"Double-Credit Prevented: bundle {bundle_id[:12]} confirmed late. No refund applied.")
                                                         continue
+                                                    # FIX 208: Network Reorg/Revert handling
+                                                    elif hist_statuses[0].get("err") is not None:
+                                                        logger.warning(f"🚨 Network Reorg/Revert detected for {bundle_id[:12]}: applying refund.")
+                                                        # Let it fall through to the refund logic below
                                     except Exception as history_err:
                                         logger.debug(f"History cross-validation failed: {history_err}")
 
@@ -3880,6 +3884,7 @@ async def lst_depeg_scanner(
                                 "lst_depeg",
                                 confirmation.get("status")
                                 in ["confirmed", "finalized"],
+                                jito_tip_lamports  # FIX 205
                             )
                             if confirmation.get("status") in ["confirmed", "finalized"]:
                                 if TRADE_LOG_QUEUE:
@@ -6274,8 +6279,9 @@ async def run():
 
     # ── Этап 3: Start Prometheus metrics server ─────────────────────────────
     try:
-        start_http_server(9100)
-        logger.info("📊 Prometheus metrics server started on port 9100")
+        # FIX 234: Строго привязываем сокет к localhost для исключения публичной утечки баланса
+        start_http_server(9100, addr="127.0.0.1")
+        logger.info("📊 Prometheus metrics server started securely on 127.0.0.1:9100")
     except Exception as e:
         logger.warning(f"Failed to start Prometheus server: {e}")
 
@@ -7041,8 +7047,10 @@ async def run():
 
     # FIX 122: Add all loops to active_tasks for graceful shutdown
     shared_state.active_tasks.update(tasks)
+    def make_cb(task_to_remove):
+        return lambda _: shared_state.active_tasks.discard(task_to_remove)
     for t in list(shared_state.active_tasks):
-        t.add_done_callback(lambda _: shared_state.active_tasks.discard(t))
+        t.add_done_callback(make_cb(t))
 
     # Yellowstone gRPC removed.
     # LST Depeg Flash-Arb Scanner (primary strategy)

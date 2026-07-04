@@ -163,9 +163,8 @@ class LstInstantUnstakeArbitrage:
 
                 expected_profit = quote.get("expected_profit_lamports", 0)
 
-                # Вычитаем Jito tip из чистой прибыли
-                jito_tip = quote.get("jito_tip_lamports", 0)
-                net_profit = expected_profit - jito_tip
+                # FIX 121: Expected profit is already net profit (tip already subtracted in get_circular_quote)
+                net_profit = expected_profit
 
                 # Phase 8: dynamically fetch min_profit from flywheel_scaler tier
                 from src.ingest.shared_state import stats
@@ -356,27 +355,24 @@ class LstInstantUnstakeArbitrage:
             all_swap_ixs = []
 
             try:
-                # Pass expected_profit_sol for Dynamic Rent Guard in Leg1
                 expected_profit_sol = opportunity["expected_profit_lamports"] / 1e9
-                leg1_ixs, _ = await tx_builder.get_swap_instructions(dex_leg1, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol)
-                if not leg1_ixs:
-                    logger.warning("❌ [LST UNSTAKE] Инструкции Leg 1 пусты (сработал Rent Guard или ошибка API). Сборка прервана.")
-                    return False
-                all_swap_ixs.extend(leg1_ixs)
-            except Exception as _leg1_err:
-                logger.warning(f"Leg1 swap-instructions fetch failed (non-fatal): {_leg1_err}")
 
-            try:
-                # Pass expected_profit_sol for Dynamic Rent Guard in Leg2
-                leg2_ixs, _ = await tx_builder.get_swap_instructions(dex_leg2, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol)
-                if leg2_ixs:
-                    all_swap_ixs.extend(leg2_ixs)
-                else:
-                    logger.error("LEG2 (exit) swap instructions empty — aborting")
-                    return False
-            except Exception as _leg2_err:
-                logger.error(f"LEG2 swap-instructions fetch failed: {_leg2_err} — aborting")
-                return False
+                # FIX 254: Parallel swap-instructions fetch for 2-leg unstake arbitrage
+                tasks = [
+                    tx_builder.get_swap_instructions(dex_leg1, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol),
+                    tx_builder.get_swap_instructions(dex_leg2, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol),
+                ]
+                results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                for i, res in enumerate(results):
+                    if isinstance(res, Exception) or not res or not res[0]:
+                        logger.error(f"❌ [LST UNSTAKE] Parallel swap-instructions failed for Leg {i+1}: {res}")
+                        return False
+
+                leg1_ixs, _ = results[0]
+                leg2_ixs, _ = results[1]
+                all_swap_ixs.extend(leg1_ixs)
+                all_swap_ixs.extend(leg2_ixs)
 
             # Calculate dynamic Jito tip using JitoBiddingManager (Fix: replace hardcoded 100000)
             jito_tip_lamports = 0

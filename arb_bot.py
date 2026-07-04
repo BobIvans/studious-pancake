@@ -1746,44 +1746,27 @@ async def balance_reconciler(
                 actual_lamports = result_data["result"]["value"]
             actual_sol = actual_lamports / 1e9
 
-            # 2. Subtract pending Jito bundle deductions (lamports already reserved but unconfirmed)
-            pending_lamports = 0
-            try:
-                for meta in list(jito_exec_ref.pending_bundles.values()):
-                    pending_lamports += int(meta.get("deducted", 0.0) * 1e9)
-            except Exception:
-                pass
-
-            reconciled_sol = max((actual_lamports - pending_lamports) / 1e9, 0.0)
-
-            # 3. Update virtual_balance atomically
+            # 2. Atomic recalculation of virtual_balance UNDER LOCK (FIX 245)
             async with shared_state.stats_lock:
+                pending_lamports = 0
+                if jito_exec_ref and hasattr(jito_exec_ref, 'pending_bundles'):
+                    for meta in list(jito_exec_ref.pending_bundles.values()):
+                        # Only count unrefunded bundles
+                        if not meta.get("refunded", False):
+                            pending_lamports += int(meta.get("deducted", 0.0) * 1e9)
+
+                reconciled_sol = max((actual_lamports - pending_lamports) / 1e9, 0.0)
                 prev = shared_state.stats.get("virtual_balance", 0.0)
-                shared_state.stats["virtual_balance"] = reconciled_sol
                 drift = abs(reconciled_sol - prev)
 
-                # FIX 172: Explicit warning for network reorg or pool slippage drift
+                shared_state.stats["virtual_balance"] = reconciled_sol
+                shared_state.stats["last_balance"] = actual_sol
+
                 if drift > 0.003:
                     shared_state.set_balance_lock_paused(True, 0.4)
                     logger.critical(
-                        f"🚨 NETWORK REORG / SLIPPAGE DRIFT DETECTED! "
-                        f"virtual={prev:.6f} vs actual={reconciled_sol:.6f} | "
-                        f"drift={drift:.6f} > 0.003 SOL. Force-adjusting virtual_balance to match real state."
-                    )
-                # Fix 6 + 67: Balance Lock Guard — if virtual vs actual diff > 0.003 SOL
-                # pause all trading for 400 ms (1 slot) to prevent cascade failures.
-                # Uses shared_state to avoid circular imports with wsol_manager.py.
-                if drift > 0.003:
-                    shared_state.set_balance_lock_paused(True, 0.4)  # 1 Solana slot
-                    logger.critical(
-                        f"🚨 BALANCE LOCK GUARD: virtual={prev:.6f} vs actual={actual_sol:.6f} "
-                        f"drift={drift:.6f} > 0.003 SOL — pausing trading for 400ms"
-                    )
-                if drift > 0.000001:  # Only log when meaningful (> 1 µSOL)
-                    logger.info(
-                        f"⚖️ Virtual Balance Reconciled: {prev:.6f} → {reconciled_sol:.6f} SOL "
-                        f"(actual={actual_sol:.6f}, pending={pending_lamports/1e9:.6f}, "
-                        f"drift={drift:.6f})"
+                        f"🚨 BALANCE DRIFT DETECTED: prev={prev:.6f} -> reconciled={reconciled_sol:.6f} SOL "
+                        f"(actual={actual_sol:.6f}, pending={pending_lamports/1e9:.6f}). Pausing trades for 400ms."
                     )
 
         except Exception as e:
@@ -2627,17 +2610,29 @@ async def create_flashloan_arbitrage_tx(
         session=session, rpc_getter=lambda: rpc_getter(), alt_manager=alt_manager
     )
 
-    # Get Jupiter swap instructions for all legs
+    # FIX 254: Parallel swap-instructions fetch to reduce hot-path latency
     instructions = []
+    if not quotes:
+        return None
+    wallet_pubkey_str = str(wallet_pubkey)
+    swap_tasks = []
     for i, quote in enumerate(quotes):
         if "full_quote_response" not in quote:
             return None
-        ixs, alts = await tx_builder.get_swap_instructions(
-            quote["full_quote_response"], wallet_pubkey, use_custom_cu=True
+        swap_tasks.append(
+            tx_builder.get_swap_instructions(
+                quote["full_quote_response"],
+                wallet_pubkey_str,
+                use_custom_cu=True,
+                expected_profit_sol=expected_profit_sol,
+            )
         )
-        if not ixs:
-            logger.warning(f"Failed to fetch swap instructions for leg {i}")
+    swap_results = await asyncio.gather(*swap_tasks, return_exceptions=True)
+    for i, res in enumerate(swap_results):
+        if isinstance(res, Exception) or not res or not res[0]:
+            logger.warning(f"❌ [Parallel Swap] Leg {i} swap-instructions fetch failed: {res}")
             return None
+        ixs, alts = res
         instructions.append((ixs, alts))
 
     if len(instructions) < 2:
@@ -4847,6 +4842,10 @@ async def execute_priority_opportunity(
         # FIX 186: Select a random Jito endpoint for simulation to prevent single region point of failure
         import random
         jito_endpoint = random.choice(cfg.JITO_ENDPOINTS) if cfg.JITO_ENDPOINTS else "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles"
+        # FIX 249: Check GLOBAL_STOP_EVENT before simulation (capital guard)
+        if shared_state.GLOBAL_STOP_EVENT.is_set():
+            logger.critical("🛑 [Capital Guard] GLOBAL_STOP_EVENT set mid-trade (pre-simulation) — aborting transaction build.")
+            return {"status": "aborted", "message": "Global stop triggered mid-trade"}
         is_profitable, reason, sim_result = await flash_sim.validate_profitability(
             tx_b64=tx_b64,
             tx_signer_pubkey=str(keypair.pubkey()),
@@ -5037,6 +5036,10 @@ async def execute_priority_opportunity(
         # 3. Hybrid Execution (Jito/Standard)
         tx_bytes = base64.b64decode(tx_b64)
         arbitrage_tx = VersionedTransaction.from_bytes(tx_bytes)
+        # FIX 249: Check GLOBAL_STOP_EVENT before Jito submission (capital guard)
+        if shared_state.GLOBAL_STOP_EVENT.is_set():
+            logger.critical("🛑 [Capital Guard] GLOBAL_STOP_EVENT set mid-trade (pre-execution) — aborting submission.")
+            return {"status": "aborted", "message": "Global stop triggered before Jito send"}
         result = await execution_router.execute_opportunity(
             session, cfg, rpc_manager.get_rpc(), arbitrage_tx, tip_amount_lamports
         )

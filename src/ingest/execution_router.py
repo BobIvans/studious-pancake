@@ -444,7 +444,7 @@ class ExecutionRouter:
         if not await self._validate_quote_freshness(opportunity):
             return {
                 "status": "stale_quote",
-                "message": "Quote is stale (>1.5s) — rejected by Stale Quote Guard",
+                "message": "Quote is stale (>3.0s) — rejected by Stale Quote Guard",
             }
 
         # ── Epoch Shield: never trade near epoch boundary ───────────────────────
@@ -561,12 +561,23 @@ class ExecutionRouter:
                         rpc_getter=self.rpc_getter,
                     )
 
-                    all_swap_ixs = []
+                    # FIX 254: Parallel swap-instructions fetch for wrapper peg legs
                     wallet_pk = str(self.keypair.pubkey())
+                    swap_tasks = []
                     for leg_quote in [leg1_quote, leg2_quote, leg3_quote]:
-                        ixs, _ = await tx_builder.get_swap_instructions(
-                            leg_quote, wallet_pk, use_custom_cu=True
+                        swap_tasks.append(
+                            tx_builder.get_swap_instructions(
+                                leg_quote, wallet_pk, use_custom_cu=True, expected_profit_sol=expected_profit_sol
+                            )
                         )
+                    swap_results = await asyncio.gather(*swap_tasks, return_exceptions=True)
+
+                    all_swap_ixs = []
+                    for i, res in enumerate(swap_results):
+                        if isinstance(res, Exception) or not res or not res[0]:
+                            logger.error(f"❌ [WRAPPER PEG] Failed to get swap instructions for Leg {i+1}: {res}")
+                            return {"status": "error", "message": f"Leg {i+1} swap-instructions failed"}
+                        ixs, _ = res
                         all_swap_ixs.extend(ixs)
 
                     if not all_swap_ixs:
@@ -736,7 +747,7 @@ class ExecutionRouter:
 
     async def _validate_quote_freshness(self, opportunity: Dict[str, Any]) -> bool:
         """Проверяет свежесть всех котировок в opportunity.
-        Если любая котировка старше 1.5 секунд — возвращает False (abort).
+        Если любая котировка старше 3.0 секунд  # FIX 252 — возвращает False (abort).
         """
         quote_fields = ["leg1_quote", "leg2_quote", "leg3_quote", "buy_quote", "sell_quote"]
         for field in quote_fields:
@@ -748,9 +759,9 @@ class ExecutionRouter:
                         f"🚫 БЛОК 8: Quote missing fetched_at for {field}. Rejecting stale/malformed quote."
                     )
                     return False
-                if time.time() - fetched_at > 1.5:
+                if time.time() - fetched_at > 3.0:  # FIX 252
                     logger.warning(
-                        f"🚫 БЛОК 8: Quote stale (>1.5s) for {field}. Age: {time.time() - fetched_at:.2f}s. Aborting."
+                        f"🚫 БЛОК 8: Quote stale (>3.0s) for {field}. Age: {time.time() - fetched_at:.2f}s. Aborting."
                     )
                     return False
         # Also check nested quote in opportunity metadata
@@ -762,9 +773,9 @@ class ExecutionRouter:
                     qr = getattr(leg, "full_quote_response", None) or (leg.get("full_quote_response") if isinstance(leg, dict) else None)
                     if isinstance(qr, dict):
                         fetched_at = qr.get("fetched_at")
-                        if fetched_at and time.time() - fetched_at > 1.5:
+                        if fetched_at and time.time() - fetched_at > 3.0:  # FIX 252
                             logger.warning(
-                                f"🚫 БЛОК 8: Quote stale (>1.5s) for route.{leg_key}. Aborting."
+                                f"🚫 БЛОК 8: Quote stale (>3.0s) for route.{leg_key}. Aborting."
                             )
                             return False
         return True
@@ -1212,6 +1223,7 @@ class ExecutionRouter:
             if jito_result.get("success") and jito_result.get("bundle_id"):
                 # Task 73: Фиксируем слот последней отправки для дедупликации
                 self.last_slot_executed = current_slot
+                # FIX 248: Fast dict modification under lock — zero I/O inside lock
                 async with self._pending_lock:  # P0-17: thread-safe write
                     self._pending_bundle_slots[jito_result["bundle_id"]] = {
                         "sent_slot": current_slot,
@@ -1219,22 +1231,22 @@ class ExecutionRouter:
                         "tip_lamports": jito_tip_lamports,
                         "deducted_amount": jito_tip_lamports / 1_000_000_000,
                     }
-                    # ── Этап 1: Inflight Bundle Persistence ──────────────────────
-                    if self.data_aggregator and hasattr(self.data_aggregator, 'log_inflight_bundle'):
-                        try:
-                            sigs = [base58.b58encode(bytes(sig)).decode('ascii') for sig in transaction.signatures]
-                            tip_deducted = jito_tip_lamports / 1e9
-                            # PERF-002: Fire-and-forget — never block the hot path on DB I/O
-                            asyncio.create_task(
-                                self.data_aggregator.log_inflight_bundle(
-                                    bundle_id=jito_result["bundle_id"],
-                                    signatures=sigs,
-                                    deducted_sol=tip_deducted,
-                                    tip_lamports=jito_tip_lamports,
-                                )
+                # ── Этап 1: Inflight Bundle Persistence (outside lock) ─────────
+                if self.data_aggregator and hasattr(self.data_aggregator, 'log_inflight_bundle'):
+                    try:
+                        sigs = [base58.b58encode(bytes(sig)).decode('ascii') for sig in transaction.signatures]
+                        tip_deducted = jito_tip_lamports / 1e9
+                        # PERF-002: Fire-and-forget — never block the hot path on DB I/O
+                        asyncio.create_task(
+                            self.data_aggregator.log_inflight_bundle(
+                                bundle_id=jito_result["bundle_id"],
+                                signatures=sigs,
+                                deducted_sol=tip_deducted,
+                                tip_lamports=jito_tip_lamports,
                             )
-                        except Exception as _log_err:
-                            logger.debug(f"Inflight bundle logging failed: {_log_err}")
+                        )
+                    except Exception as _log_err:
+                        logger.debug(f"Inflight bundle logging failed: {_log_err}")
                 # Phase 18 T5: Populate latency metrics
                 try:
                     import src.ingest.shared_state as _ss_18

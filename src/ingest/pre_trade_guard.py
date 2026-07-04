@@ -33,15 +33,15 @@ SAFE_MINTS = {
     "So11111111111111111111111111111111111111112",  # wSOL
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
     "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",  # USDT
-    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL (mainnet verified)
-    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL    (mainnet verified)
-    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",  # bSOL    (mainnet verified)
-    "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",  # USDY
-    "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",  # USDe
+    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL
+    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",   # mSOL
+    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",   # bSOL
+    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",   # INF
+    "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v",   # JupSOL (FIX 145)
+    "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX",  # hubSOL (FIX 145)
+    "cPQPBN7WubB3zyQDpzTK2ormx1BMdAym9xkrYUJsctm",  # fwdSOL (FIX 145)
     "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",  # sUSDe
-    "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",  # sUSDS
-    "B7vF87HGPJLcQwPhNn8apCH5n1E4DfRrG8HYXoS9dPEo",  # USD+
-    "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",  # JupUSD
+    "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",  # PYUSD (FIX 146)
 }
 
 
@@ -1031,18 +1031,40 @@ class PreTradeGuard:
                 
                 # 1. Check the hardcoded dict first (would normally be from arb_bot.TOKEN_DECIMALS
                 #    but avoid circular import — inline the known values)
+                # FIX 147: Full copy-on-read decimals registry to prevent synchronous RPC latency on Hot Path
                 _hardcoded_decimals = {
-                    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6,
-                    "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": 6,
-                    "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": 6,
-                    "So11111111111111111111111111111111111111112": 9,
-                    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": 9,
-                    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": 9,
-                    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": 9,
-                    "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v": 9,
-                    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": 9,
-                    "DezXAZ8z7P8gVmFiDQ6cEhPmmF9rj3ZfVGg3LyZ3mTKV": 5,
-                    "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm": 6,
+                    "So11111111111111111111111111111111111111112": 9,  # SOL
+                    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6,  # USDC
+                    "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": 6,  # USDT
+                    "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": 6,  # PYUSD
+                    "USDSwr9ApdHk5bvJKMjzff41FfhJbZkp9bHqzZdduoP": 6,  # USDS
+                    "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6": 6,  # USDY
+                    "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT": 6,  # USDe
+                    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN": 18, # sUSDe
+                    "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW": 6,  # sUSDS
+                    "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD": 6,  # JupUSD
+                    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": 9,  # INF
+                    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": 9,  # jitoSOL
+                    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": 9,  # mSOL
+                    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": 9,  # bSOL
+                    "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v": 9,  # JupSOL
+                    "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX": 9,  # hubSOL
+                    "BonK1YhkXEGLZzwtcvRTip3gAL9nCeQD7ppZBLXhtTs": 9,  # bonkSOL
+                    "CgnTSoL3DgY9SFHxcLj6CgCgKKoTBr6tp4CPAEWy25DE": 9,  # cgntSOL
+                    "Gekfj7SL2fVpTDxJZmeC46cTYxinjB6gkAnb6EGT6mnn": 9,  # dzSOL
+                    "pSo1f9nQXWgXibFtKf7NWYxb5enAM4qfP6UJSiXRQfL": 9,  # psol
+                    "cPQPBN7WubB3zyQDpzTK2ormx1BMdAym9xkrYUJsctm": 9,  # fwdSOL
+                    "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ": 9,  # dSOL
+                    "vSoLxydx6akxyMD9XEcPvGYNGq6Nn66oqVb3UkGkei7": 9,  # vSOL
+                    "Comp4ssDzXcLeu2MnLuGNNFC4cmLPMng8qWHPvzAMU1h": 9,  # compassSOL
+                    "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A": 9,  # hSOL
+                    "3NZ9JMVBmGAqocybic2c7LQCJScmgsAZ6vQqTDzcqmJh": 8,  # wBTC
+                    "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij": 8,  # cbBTC
+                    "6DNSN2BJsaPFdFFc1zP37kkeNe4Usc1Sqkzr9C9vPWcU": 8,  # tBTC
+                    "JUPyiwrYJFskUPiHa7hkeR8VUtAeFoSYbKedZNsDvCN": 6,  # JUP
+                    "EKpQGSJtjMFqKZ9KQanSqYXRcF8fBopzLHYxdM65zcjm": 6,  # WIF
+                    "DezXAZ8z7P8gVmFiDQ6cEhPmmF9rj3ZfVGg3LyZ3mTKV": 5,  # BONK
+                    "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr": 9,  # POPCAT
                 }
                 _decimals = _hardcoded_decimals.get(output_mint)
                 
@@ -1076,7 +1098,9 @@ class PreTradeGuard:
                 # 4. Safe fallback
                 if _decimals is None:
                     _decimals = 6
-                amount_ui = amount_lamports / (10 ** _decimals)
+                # FIX 148: Safe cross-currency division (using correct input decimals)
+                in_decimals = _hardcoded_decimals.get(input_mint, 9)
+                amount_ui = amount_lamports / (10 ** in_decimals)
                 actual_out_ui = actual_out / (10 ** _decimals)
                 # Step 2: convert gross profit to SOL via price bridge
                 gross_profit_ui = actual_out_ui - amount_ui

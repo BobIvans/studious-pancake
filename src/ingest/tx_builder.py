@@ -1541,7 +1541,7 @@ class JupiterTxBuilder:
 
         # Task 44: Гарантируем, что при отсутствии аргумента заемным активом считается SOL
         safe_borrow_mint = str(borrow_mint) if borrow_mint else "So11111111111111111111111111111111111111112"
-        bank_pubkey = sol_bank_id if "So111" in safe_borrow_mint else usdc_bank_id
+        bank_pubkey = marginfi_config.get("bank_pubkey") or (sol_bank_id if "So111" in safe_borrow_mint else usdc_bank_id)
 
         # Real-time Liquidity Check with 95% Cap
         if not await self._check_marginfi_liquidity_realtime(
@@ -1567,7 +1567,9 @@ class JupiterTxBuilder:
 
         sol_mint = Pubkey.from_string(borrow_mint)
 
-        sol_prog_id = TOKEN_PROGRAM_ID
+        # FIX 144: Динамически определяем программу токена для займа (Token-2022 vs SPL)
+        from src.ingest.shared_state import TOKEN_2022_MINTS
+        sol_prog_id = TOKEN_2022_PROGRAM_ID if safe_borrow_mint in TOKEN_2022_MINTS else TOKEN_PROGRAM_ID
         user_sol_ata = get_associated_token_address(wallet, sol_mint, sol_prog_id)
 
         # 3. Assemble Instructions ──────────────────────────────────
@@ -2744,7 +2746,7 @@ class JupiterTxBuilder:
             logger.debug(f"Circular quote leg 1 failed: {e}")
             return None
 
-        out_amount_leg1 = int(leg1.get("outAmount", 0))
+        out_amount_leg1 = int(leg1.get("outAmount") or 0)
         if out_amount_leg1 == 0:
             return None
 
@@ -2781,17 +2783,18 @@ class JupiterTxBuilder:
             logger.debug(f"Circular quote leg 2 failed: {e}")
             return None
 
-        out_amount_leg2 = int(leg2.get("outAmount", 0))
+        out_amount_leg2 = int(leg2.get("outAmount") or 0)
         if out_amount_leg2 == 0:
             return None
 
         gross_profit_lamports = out_amount_leg2 - amount_lamports
         net_profit_lamports = gross_profit_lamports - jito_tip_lamports
-        price_impact_bps = (
-            int(float(leg2.get("priceImpactPct", "0").replace("%", "")) * 100)
-            if leg2.get("priceImpactPct")
-            else 0
-        )
+        # FIX 119: Safe BPS parsing supporting both fractional and percentage formats
+        raw_pct = leg2.get("priceImpactPct", "0")
+        if "%" in str(raw_pct):
+            price_impact_bps = int(float(str(raw_pct).replace("%", "")) * 100)
+        else:
+            price_impact_bps = int(float(raw_pct) * 10000)
 
         return {
             "expected_profit_lamports": net_profit_lamports,
@@ -2838,7 +2841,7 @@ class JupiterTxBuilder:
                     return None
                 leg1 = orjson.loads(await resp.read())
 
-            out1 = int(leg1.get("outAmount", 0))
+            out1 = int(leg1.get("outAmount") or 0)
             if out1 == 0:
                 return None
 
@@ -2851,7 +2854,7 @@ class JupiterTxBuilder:
                     return None
                 leg2 = orjson.loads(await resp.read())
 
-            out2 = int(leg2.get("outAmount", 0))
+            out2 = int(leg2.get("outAmount") or 0)
             if out2 == 0:
                 return None
 
@@ -2864,7 +2867,7 @@ class JupiterTxBuilder:
                     return None
                 leg3 = orjson.loads(await resp.read())
 
-            out3 = int(leg3.get("outAmount", 0))
+            out3 = int(leg3.get("outAmount") or 0)
             if out3 == 0:
                 return None
 

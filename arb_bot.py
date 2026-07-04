@@ -4160,6 +4160,23 @@ async def check_bundle_confirmation(
             logger.error(f"❌ ТРЕЙД УПАЛ (Bundle Failed): {confirmation}")
             await data_aggregator.log_tx_failed(bundle_id, confirmation, {"tx": tx_b64})
 
+            error_msg = str(confirmation.get("error", "")).lower()
+
+            # ВЕТВЛЕНИЕ 1: Сбой из-за устаревшего блокхеша -> принудительный апдейт racing-менеджера
+            if "blockhash" in error_msg or "expired" in error_msg:
+                logger.warning("⏰ Jito reported BlockhashNotFound/Expired! Force-refreshing blockhash immediately.")
+                from src.ingest.blockhash_racing import get_blockhash_manager
+                bh_mgr = get_blockhash_manager()
+                if bh_mgr:
+                    asyncio.create_task(bh_mgr.fetch_fresh_blockhash())
+
+            # ВЕТВЛЕНИЕ 2: Проскальзывание в пуле -> отправляем конкретную пару на 10-минутный cooldown
+            elif "slippage" in error_msg or "custom program error: 0x1" in error_msg:
+                logger.warning(f"🚫 Slippage Exceeded on-chain! Activating 10-minute cooldown for pair: {tx_id}")
+                from src.ingest.shared_state import pair_reputation
+                if pair_reputation:
+                    pair_reputation.record_failure(tx_id, "slippage")
+
             # ♻️ 0ms Reconciler: Instantly refund virtual balance on failure
             if virtual_balance_to_deduct > 0:
                 # Phase 19 T2: Deferred refund — don't instantly refund.

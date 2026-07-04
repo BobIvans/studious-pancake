@@ -146,13 +146,20 @@ class DataAggregator:
             ("executed", "INTEGER DEFAULT 1"),
             ("sol_usd_price", "REAL DEFAULT 0.0"),
         ]
+
+        # FIXED: Полноценный, безопасный механизм сверки схемы БД без дублирования ошибок
+        cursor.execute("PRAGMA table_info(paper_trades);")
+        existing_columns = {row[1] for row in cursor.fetchall()}
+
         for col_name, col_type in columns_to_add:
-            try:
-                cursor.execute(
-                    f"ALTER TABLE paper_trades ADD COLUMN {col_name} {col_type};"
-                )
-            except Exception:
-                pass
+            if col_name not in existing_columns:
+                try:
+                    cursor.execute(
+                        f"ALTER TABLE paper_trades ADD COLUMN {col_name} {col_type};"
+                    )
+                    logger.info(f"📁 Database Migration: Added missing column {col_name} to paper_trades")
+                except Exception as migration_err:
+                    logger.debug(f"Non-blocking migration warning for {col_name}: {migration_err}")
 
         cursor.execute(
             "CREATE INDEX IF NOT EXISTS idx_paper_trades_ts ON paper_trades(ts)"

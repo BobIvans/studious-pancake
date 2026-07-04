@@ -66,7 +66,7 @@ class ArbitrageScorer:
         """Calculate comprehensive score for an arbitrage opportunity."""
         try:
             # Base components
-            profit_score = self._calculate_profit_score(opportunity)
+            profit_score = self._calculate_profit_score(opportunity, wallet_balance=wallet_balance)
             liquidity_score = self._calculate_liquidity_score(opportunity)
             risk_score = self._calculate_risk_score(opportunity)
 
@@ -103,8 +103,8 @@ class ArbitrageScorer:
             logger.warning(f"Failed to score opportunity for {opportunity.pair}: {e}")
             return 0.0
 
-    def _calculate_profit_score(self, opp: ArbitrageOpportunity) -> float:
-        """Calculate profit attractiveness score (0-100) based on NET profit."""
+    def _calculate_profit_score(self, opp: ArbitrageOpportunity, wallet_balance: float = 0.0) -> float:
+        """Calculate profit attractiveness score (0-100) dynamically scaled by wallet size."""
         # Вычитаем стоимость газа и чаевые Jito
         net_profit = opp.expected_profit_sol - opp.gas_cost_sol
 
@@ -115,8 +115,19 @@ class ArbitrageScorer:
         if net_profit <= 0:
             return 0.0
 
-        profit = net_profit
+        # FIXED: Баланс-зависимый расчет (Balance-Aware Profit Scoring)
+        # Если баланс кошелька не передан, берем консервативный дефолт выживания
+        effective_balance = max(wallet_balance, 0.015)
 
+        # Если баланс микроскопический (фаза выживания), оцениваем ROI относительно кошелька
+        if effective_balance < 0.2:
+            roi = net_profit / effective_balance
+            # 1% прибыли к кошельку дает 50 баллов, 2% и выше — максимальные 100 баллов
+            score = min(100.0, roi * 5000.0)
+            return max(1.0, score)
+
+        # Стандартная абсолютная шкала для выросшего капитала
+        profit = net_profit
         if profit < 0.001:  # < 0.001 SOL
             return profit * 1000  # Linear for small profits
         elif profit < 0.01:  # 0.001 - 0.01 SOL

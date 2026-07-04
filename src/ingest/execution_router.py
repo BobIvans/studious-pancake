@@ -1143,6 +1143,14 @@ class ExecutionRouter:
             # ── ИСПРАВЛЕНИЕ: Мгновенное чтение слота из ОЗУ вместо HTTP-запроса ──
             import src.ingest.shared_state as shared_state
             current_slot = shared_state.stats.get("current_slot", 0)
+
+            # Task 73: Slot-Level Deduplication — prevent duplicate bundle sends in same slot
+            if current_slot > 0 and current_slot == self.last_slot_executed:
+                logger.warning(
+                    f"🚫 [ExecutionRouter] Transaction already sent in slot {current_slot}. "
+                    f"Skipping duplicate execution to protect capital."
+                )
+                return {"success": False, "error": "Duplicate slot execution blocked"}
             if current_slot == 0:
                 # Фолбек на RPC, если в кэше пусто (первая секунда запуска)
                 async with session.post(rpc_url, json=payload) as resp:
@@ -1184,6 +1192,8 @@ class ExecutionRouter:
                 deducted_amount=jito_tip_lamports / 1e9,
             )
             if bundle_result.get("success") and bundle_result.get("bundle_id"):
+                # Task 73: Фиксируем слот последней отправки для дедупликации
+                self.last_slot_executed = current_slot
                 async with self._pending_lock:  # P0-17: thread-safe write
                     self._pending_bundle_slots[bundle_result["bundle_id"]] = {
                         "sent_slot": current_slot,

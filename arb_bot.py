@@ -458,10 +458,54 @@ async def update_stats(key: str, value: Any = 1):
 from solders.system_program import transfer, TransferParams
 
 
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s | %(message)s", datefmt="%H:%M:%S"
-)
+import logging
+from logging.handlers import RotatingFileHandler
+import orjson
+
+class JsonFormatter(logging.Formatter):
+    """Сериализатор логов в структурированный JSON для Grafana Loki/ELK."""
+    def format(self, record):
+        log_data = {
+            "timestamp": self.formatTime(record, "%Y-%m-%dT%H:%M:%S"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage()
+        }
+        if record.exc_info:
+            log_data["exception"] = self.formatException(record.exc_info)
+        return orjson.dumps(log_data).decode("utf-8")
+
+root_logger = logging.getLogger()
+root_logger.setLevel(logging.INFO)
+
+stdout_handler = logging.StreamHandler()
+stdout_handler.setFormatter(JsonFormatter())
+root_logger.addHandler(stdout_handler)
+
+try:
+    os.makedirs("logs", exist_ok=True)
+    file_handler = RotatingFileHandler(
+        "logs/bot-start.log",
+        maxBytes=50 * 1024 * 1024,
+        backupCount=3,
+        encoding="utf-8"
+    )
+    file_handler.setFormatter(JsonFormatter())
+    root_logger.addHandler(file_handler)
+except Exception as log_file_err:
+    print(f"Failed to initialize rotating file handler: {log_file_err}")
+
 logger = logging.getLogger("ArbBot")
+
+# FIXED: Подключение автоматического Telegram-обработчика для всех CRITICAL ошибок системы
+try:
+    from src.ingest.shared_state import TelegramAlertHandler
+    tg_handler = TelegramAlertHandler()
+    tg_handler.setLevel(logging.CRITICAL)
+    logging.getLogger().addHandler(tg_handler)
+    logger.info("📡 Automated Telegram Alert Handler successfully attached to root logger")
+except Exception as tg_init_err:
+    logger.warning(f"Failed to attach Telegram Alert Handler: {tg_init_err}")
 
 
 def redact_url(url: str) -> str:
@@ -3607,6 +3651,8 @@ async def lst_depeg_scanner(
                 )
 
                 if not is_profitable:
+                    # FIXED: Инкремент счетчика неудачных симуляций
+                    PROMETHEUS_SIM_FAILS.inc()
                     # Fix 2: MarginFi Flash-Loan Asset Pivot
                     if "StaleOracle" in reason or "stale" in reason.lower():
                         # global _oracle_stale_hit, _oracle_stale_asset_hint  # (moved to function top)
@@ -4160,6 +4206,9 @@ async def check_bundle_confirmation(
             logger.error(f"❌ ТРЕЙД УПАЛ (Bundle Failed): {confirmation}")
             await data_aggregator.log_tx_failed(bundle_id, confirmation, {"tx": tx_b64})
 
+            # FIXED: Инкремент счетчика сбоев в Prometheus
+            PROMETHEUS_SIM_FAILS.inc()
+
             error_msg = str(confirmation.get("error", "")).lower()
 
             # ВЕТВЛЕНИЕ 1: Сбой из-за устаревшего блокхеша -> принудительный апдейт racing-менеджера
@@ -4254,6 +4303,9 @@ async def check_bundle_confirmation(
                 {"real_profit_sol": real_profit_sol, "status": "confirmed"},  # FIXED: Использование реального профита
                 {"execution_time_ms": execution_time},
             )
+
+            # FIXED: Инкремент счетчика успешных сделок в Prometheus
+            PROMETHEUS_TRADES.inc()
 
             # ── Этап 2: Record PnL in CapitalProtection (используем реальный профит) ─
             if shared_state.capital_protection:

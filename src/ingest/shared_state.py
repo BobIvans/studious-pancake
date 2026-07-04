@@ -340,3 +340,14 @@ async def send_telegram_alert(message: str):
                     logger.error(f"Failed to send TG alert: {await resp.text()}")
     except Exception as e:
         logger.error(f"Telegram API exception: {e}")
+
+
+class TelegramAlertHandler(logging.Handler):
+    """Кастомный лог-обработчик для автоматической трансляции CRITICAL логов в Telegram."""
+    def emit(self, record):
+        if record.levelno >= logging.CRITICAL:
+            try:
+                message = record.getMessage()
+                asyncio.create_task(send_telegram_alert(f"<b>CRITICAL ERROR DETECTED</b>\n\n{message}"))
+            except Exception:
+                pass

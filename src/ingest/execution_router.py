@@ -1185,17 +1185,35 @@ class ExecutionRouter:
                 logger.debug(f"Pre-trade gas check error (non-fatal): {_gas_err}")
 
             logger.info(f"🎯 Sending bundle to Jito Block Engine unconditionally (slot={current_slot})...")
-            # P0-16: Pass tip_amount_lamports and deducted_amount to send_bundle
-            bundle_result = await self.jito_executor.send_bundle(
+            jito_result = await self.jito_executor.send_bundle(
                 [transaction],
                 tip_amount_lamports=jito_tip_lamports,
                 deducted_amount=jito_tip_lamports / 1e9,
             )
-            if bundle_result.get("success") and bundle_result.get("bundle_id"):
+
+            # FIXED: Автоматический резервный путь (RPC Fallback Path) при сбоях Jito
+            if not jito_result.get("success"):
+                logger.warning(
+                    f"⚠️ Jito Block Engine rejected bundle (Error: {jito_result.get('error')}). "
+                    f"Initiating standard RPC fallback path..."
+                )
+                fallback_success = await self.standard_tx_sender.send_transaction(
+                    transaction, priority_fee_sol=cfg.PRIORITY_FEE
+                )
+                if fallback_success:
+                    return {
+                        "success": True,
+                        "bundle_id": "rpc_fallback_tx",
+                        "region": "standard_rpc_pool"
+                    }
+                else:
+                    return {"success": False, "error": "Both Jito and RPC fallback failed"}
+
+            if jito_result.get("success") and jito_result.get("bundle_id"):
                 # Task 73: Фиксируем слот последней отправки для дедупликации
                 self.last_slot_executed = current_slot
                 async with self._pending_lock:  # P0-17: thread-safe write
-                    self._pending_bundle_slots[bundle_result["bundle_id"]] = {
+                    self._pending_bundle_slots[jito_result["bundle_id"]] = {
                         "sent_slot": current_slot,
                         "sent_at": time.time(),
                         "tip_lamports": jito_tip_lamports,
@@ -1209,7 +1227,7 @@ class ExecutionRouter:
                             # PERF-002: Fire-and-forget — never block the hot path on DB I/O
                             asyncio.create_task(
                                 self.data_aggregator.log_inflight_bundle(
-                                    bundle_id=bundle_result["bundle_id"],
+                                    bundle_id=jito_result["bundle_id"],
                                     signatures=sigs,
                                     deducted_sol=tip_deducted,
                                     tip_lamports=jito_tip_lamports,
@@ -1220,7 +1238,7 @@ class ExecutionRouter:
                 # Phase 18 T5: Populate latency metrics
                 try:
                     import src.ingest.shared_state as _ss_18
-                    _sent_meta = self._pending_bundle_slots.get(bundle_result.get("bundle_id", ""), {})
+                    _sent_meta = self._pending_bundle_slots.get(jito_result.get("bundle_id", ""), {})
                     if isinstance(_sent_meta, dict) and _sent_meta.get("sent_at", 0) > 0:
                         _elapsed = time.time() - _sent_meta["sent_at"]
                         _ss_18.append_latency(_elapsed)
@@ -1238,7 +1256,7 @@ class ExecutionRouter:
                     f"⚡ Optimistic balance: virtual_balance {prev:.6f} → "
                     f"{shared_state.stats['virtual_balance']:.6f} SOL (tip {tip_deducted:.6f})"
                 )
-            return bundle_result
+            return jito_result
 
         except Exception as e:
             err = str(e)

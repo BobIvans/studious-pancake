@@ -136,10 +136,9 @@ class JitoManager:
         tip_lamports = int(tip_sol * 1_000_000_000)  # Convert SOL to lamports
 
         # Ensure minimum tip + Micro-Jitter (The Tie-Breaker Fix)
-        # Never submit a tip ending in 000. Adding random 11-142 lamports guarantees
-        # our tip advances past all robot rivals betting exactly 10000 lamports.
+        # FIXED: Расширен диапазон джиттера до +500..1500 лампортов для победы в аукционах
         tip_lamports = max(tip_lamports, self.default_tip_lamports)
-        tip_lamports += random.randint(11, 142)
+        tip_lamports += random.randint(500, 1500)
 
         logger.info(f"💰 Calculated dynamic tip: {tip_sol:.6f} SOL ({tip_percentage*100:.1f}% of normalized profit)")
         return tip_lamports
@@ -443,10 +442,8 @@ class JitoBiddingManager:
             return 0
         tip_lamports = int(tip_lamports_float)
 
-        # ── The Tie-Breaker Fix: Micro-Jitter ─────────────────────────────────────
-        # Never submit a tip ending in 000. Adding random 11–142 lamports makes our
-        # bundle hash/bid strictly larger than every competing micro-bot at exactly 10000.
-        tip_lamports += random.randint(11, 142)
+        # ── FIXED: Расширен диапазон джиттера до +500..1500 для защиты от перебивания ботами-конкурентами
+        tip_lamports += random.randint(500, 1500)
 
         # Максимальный tip: никогда больше 70% от профита
         logger.info(
@@ -545,10 +542,8 @@ class JitoBiddingManager:
             )
             tip_lamports = capped
 
-        # ── The Tie-Breaker Fix: Micro-Jitter ─────────────────────────────────────
-        # Never submit a tip ending in 000. Adding random 11–142 lamports makes our
-        # bundle hash/bid strictly larger than every competing micro-bot at exactly 10000.
-        tip_lamports += random.randint(11, 142)
+        # ── FIXED: Расширен диапазон джиттера до +500..1500 для защиты от перебивания ботами-конкурентами
+        tip_lamports += random.randint(500, 1500)
 
         return tip_lamports
 

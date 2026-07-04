@@ -351,9 +351,8 @@ class JitoBundleHandler:
             tip_lamports = max(tip_lamports, 10000)  # Minimum 0.00001 SOL
 
             # ── Task 15: Micro-Jitter (The Tie-Breaker) ────────────────────────────────
-            # Never submit a tip ending in ≈000. Adding random 11–142 lamports makes our
-            # bundle mathematically-strictly larger than every free-bot competitor at 10000.
-            tip_lamports += random.randint(11, 142)
+            # FIXED: Расширен диапазон до +500..1500 для защиты от перебивания ботами-конкурентами
+            tip_lamports += random.randint(500, 1500)
 
             logger.info(
                 f"💰 Using dynamic tip: {tip_lamports / 1e9:.6f} SOL ({self.tip_percent:.1%} of expected profit, normalized from {expected_profit_sol:.6f} {tip_target_mint[:8]} SOL-equiv)"

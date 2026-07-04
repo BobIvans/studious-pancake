@@ -1108,7 +1108,8 @@ class Config:
         str(os.getenv("LST_DEPEG_ENABLED", "true")).lower() == "true"
     )  # BLUE OCEAN: LST depeg (0.017 SOL start)
 
-    LST_DEPEG_THRESHOLD_BPS: int = get_env_int("LST_DEPEG_THRESHOLD_BPS", 15)
+    # FIX 202: Повышаем порог депега по умолчанию до 30 BPS для гарантированной окупаемости после вычета всех комиссий
+    LST_DEPEG_THRESHOLD_BPS: int = get_env_int("LST_DEPEG_THRESHOLD_BPS", 30)
     FLASH_LOAN_SIZE_SOL: float = float(
         os.getenv("FLASH_LOAN_SIZE_SOL", "0.05")
     )  # Initial: 0.05 SOL (5x leverage is max safe for 0.015 SOL)
@@ -3184,6 +3185,15 @@ async def create_flashloan_arbitrage_tx(
             return None
 
         return base64.b64encode(bytes(tx)).decode("ascii")
+    except (ValueError, TypeError, SystemError) as key_err:
+        # FIX 198: Catch fatal signature/keypair errors and halt the bot
+        logger.critical(f"🚨 CRITICAL WALLET ERROR: Private key is corrupted or invalid! {key_err}. Stopping bot.")
+        try:
+            import src.ingest.shared_state as _ss
+            _ss.GLOBAL_STOP_EVENT.set()
+        except Exception:
+            pass
+        return None
     except Exception as e:
         logger.debug(f"Tx construction error: {e}")
         return None

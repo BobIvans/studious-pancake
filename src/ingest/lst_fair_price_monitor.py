@@ -161,6 +161,10 @@ class LstFairPriceMonitor:
 
     def get_depeg_signals(self, threshold_bps: float = 50.0) -> List[DepegSignal]:
         """Compare fair prices to market prices and return depeg signals."""
+        # FIX 152: Sanctum API outage protection (TTL check)
+        if time.time() - self._last_fair_update > 300.0:
+            logger.warning("🚫 Sanctum fair price cache expired (>300s old) — ignoring depeg signals to prevent trading blind")
+            return []
         signals = []
         for pool_addr, mint, symbol, _ in self._pools:
             fair = self._fair_prices.get(mint)
@@ -283,7 +287,8 @@ class LstFairPriceMonitor:
         Fair price = total_lamports / pool_token_supply (SOL per 1 LST)
         """
         try:
-            if len(raw_bytes) < 274:
+            # FIX 204: Корректная проверка размера структуры SPL Stake Pool (минимум 306 байт для смещения 298)
+            if len(raw_bytes) < 306:
                 logger.debug(f"{symbol}: raw_bytes too short ({len(raw_bytes)}) for SPL Stake Pool parsing")
                 return None
 

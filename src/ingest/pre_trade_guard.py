@@ -203,7 +203,9 @@ class TokenSecurityChecker:
         try:
             import base64
 
-            DANGEROUS_EXTENSIONS = {3, 7, 16}
+            # FIX 201: Исключаем безопасные расширения (3 - MintCloseAuthority, 7 - ImmutableOwner) из черного списка.
+            # Оставляем только критически опасные (12 - PermanentDelegate, 15 - TransferHookAccount)
+            DANGEROUS_EXTENSIONS = {12, 15}
 
             data_b64 = account_info.get("data", [""])[0]
             if not data_b64:
@@ -451,10 +453,12 @@ class LiquidityValidator:
                             0
                         ]  # little endian uint64
 
-                        if balance < get_vault_threshold(6):
+                        # FIX 203: Динамически определяем децимилы токена вместо хардкода 6
+                        decimals = _hardcoded_decimals.get(mint_address, 6)
+                        if balance < get_vault_threshold(decimals):
                             return (
                                 False,
-                                f"Insufficient vault balance: {balance} (min: {get_vault_threshold(6)})",
+                                f"Insufficient vault balance: {balance} (min: {get_vault_threshold(decimals)})",
                             )
 
                         return True, f"Token is secure and vault has balance: {balance}"
@@ -1153,12 +1157,16 @@ class PreTradeGuard:
                 return True, f"Circular profit verified: {actual_net_profit/1e9:.6f} SOL", actual_net_profit
 
             # Non-circular: gross_profit_sol_lamports already in SOL denomination
+            # FIX 150: Support dynamic MarginFi flash loan fee from .env
+            marginfi_fee_pct = float(os.getenv("MARGINFI_FLASH_LOAN_FEE_PCT", "0.0"))
+            env_flashloan_fee_lamports = int(amount_lamports * (marginfi_fee_pct / 100.0))
             total_cost_lamports = (
                 jito_tip_lamports
                 + base_fee_lamports
                 + priority_fee_lamports
                 + flashloan_fee_lamports
                 + ata_rent_lamports
+                + env_flashloan_fee_lamports
             )
             actual_net_profit = gross_profit_sol_lamports - total_cost_lamports
 

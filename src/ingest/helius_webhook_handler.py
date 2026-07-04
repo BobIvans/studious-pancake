@@ -184,7 +184,13 @@ class HeliusWebhookHandler:
         # Parse webhook data
         if isinstance(data, list):
             events = data
-            raw_webhook_id = request.query.get('webhook_id', 'unknown')
+            raw_# FIX 108: Пытаемся забрать ID вебхука из заголовка Helius или JSON тела
+        webhook_id = (
+            request.headers.get("X-Helius-Webhook-Id") 
+            or request.query.get('webhook_id') 
+            or (data.get('webhookId') if isinstance(data, dict) else None) 
+            or 'unknown'
+        )
         elif isinstance(data, dict):
             events = data.get('events', [data])
             raw_webhook_id = data.get('webhookId') or request.query.get('webhook_id', 'unknown')
@@ -256,8 +262,8 @@ class HeliusWebhookHandler:
 
             # ── ДЕДУПЛИКАЦИЯ (CONC-001 & CONC-012) ────────────────────────────────
             async with self._dedup_lock:
-                tx_data = event.get('transaction') or {}
-                signature = tx_data.get('signature') if isinstance(tx_data, dict) else event.get('signature')
+                # FIX 107: Извлекаем сигнатуру напрямую из корня события Helius
+                signature = event.get('signature') or (event.get('transaction') or {}).get('signature')
                 if signature:
                     now = time.time()
                     # Prune old signatures only if cache size grows too large (optimizes CPU cycles)
@@ -277,6 +283,22 @@ class HeliusWebhookHandler:
 
             if event_type == 'ACCOUNT_UPDATE':
                 await self._process_account_update(event, webhook_id)
+            # FIX 106: Ставим проверку Sanctum ПЕРВОЙ, чтобы SWAP-события не перехватывали ее
+            elif self._is_sanctum_router_transaction(event):
+                opportunity = self._parse_sanctum_opportunity(event)
+                if opportunity:
+                    metadata = {
+                        'webhook_source': 'helius',
+                        'sanctum_router_involved': True,
+                        'event_type': event_type,
+                        'slot': event.get('slot'),
+                        'timestamp': event.get('timestamp')
+                    }
+                    await self.data_aggregator.log_opportunity_found(webhook_id, opportunity, metadata)
+                    if self.opportunity_callback:
+                        await self.opportunity_callback(opportunity, webhook_id)
+                    else:
+                        logger.info(f"🎯 Sanctum LST opportunity detected: {opportunity.get('description', 'Unknown')}")
             elif event_type in ['SWAP', 'CREATE_POOL', 'ADD_LIQUIDITY']:
                 token_transfers = event.get('tokenTransfers', [])
                 discovered_mints = []
@@ -305,22 +327,6 @@ class HeliusWebhookHandler:
                             'priority': 'high'
                         }
                         await self.opportunity_callback(opportunity, webhook_id)
-
-            elif self._is_sanctum_router_transaction(event):
-                opportunity = self._parse_sanctum_opportunity(event)
-                if opportunity:
-                    metadata = {
-                        'webhook_source': 'helius',
-                        'sanctum_router_involved': True,
-                        'event_type': event_type,
-                        'slot': event.get('slot'),
-                        'timestamp': event.get('timestamp')
-                    }
-                    await self.data_aggregator.log_opportunity_found(webhook_id, opportunity, metadata)
-                    if self.opportunity_callback:
-                        await self.opportunity_callback(opportunity, webhook_id)
-                    else:
-                        logger.info(f"🎯 Sanctum LST opportunity detected: {opportunity.get('description', 'Unknown')}")
 
         except Exception as e:
             logger.error(f"Event processing error: {e}")

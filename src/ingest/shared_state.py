@@ -70,9 +70,7 @@ def get_marginfi_banks():
         return {
             "So11111111111111111111111111111111111111112": get_marginfi_bank_accounts(Pubkey.from_string(sol_bank)),
             "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": get_marginfi_bank_accounts(Pubkey.from_string(usdc_bank)),
-            "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": get_marginfi_bank_accounts(Pubkey.from_string(sol_bank)),
-            "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": get_marginfi_bank_accounts(Pubkey.from_string(sol_bank)),
-            "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": get_marginfi_bank_accounts(Pubkey.from_string(sol_bank)),
+            # FIX 112: Убираем некорректный алиасинг LST-токенов на SOL-банк для безопасности транзакций
         }
     except Exception as e:
         logger.warning(f"Failed to initialize MarginFi banks: {e}. Using empty dict.")

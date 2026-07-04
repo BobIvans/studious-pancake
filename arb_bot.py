@@ -1215,7 +1215,7 @@ TOKEN_DECIMALS = {
     "USDSwr9ApdHk5bvJKMjzff41FfhJbZkp9bHqzZdduoP": 6,  # USDS
     "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6": 6,  # USDY
     "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT": 6,  # USDe
-    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN": 9,  # sUSDe
+    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN": 18,  # FIX 113: sUSDe 18 decimals
     "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW": 6,  # sUSDS
     # Yield Stables (new — 6 decimals)
     "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD": 6,  # JupUSD
@@ -2310,6 +2310,7 @@ async def _fetch_quote_internal(
                 ) as resp:
                     if resp.status == 200:
                         data = orjson.loads(await resp.read())
+                        data["fetched_at"] = time.time()  # FIX 104: Добавляем метку времени во внутренний ответ
                         return {
                             "source": "Jupiter",
                             "out_amount": int(data["outAmount"]),
@@ -3855,6 +3856,7 @@ async def lst_unstake_arbitrage_scanner(
         session=session,
         rpc_url=rpc_url,
         marginfi_account=cfg.MARGINFI_ACCOUNT_PUBKEY,
+        lst_mints=[str(TOKENS["jitoSOL"]), str(TOKENS["mSOL"]), str(TOKENS["bSOL"]), str(TOKENS["INF"]), str(TOKENS["JupSOL"])],  # FIX 111
         min_deviation_pct=cfg.LST_UNSTAKE_MIN_DEVIATION_PCT,
         tx_builder=tx_builder,
         optimal_trade_sizer=trade_sizer,
@@ -4228,21 +4230,25 @@ async def check_bundle_confirmation(
 
             # ♻️ 0ms Reconciler: Instantly refund virtual balance on failure
             if virtual_balance_to_deduct > 0:
-                # Phase 19 T2: Deferred refund — don't instantly refund.
-                # Queue the bundle for 15s grace period. The balance_reconciler
-                # (runs every 30s) will catch late landings and adjust accordingly.
-                RECENTLY_TIMED_OUT_BUNDLES[bundle_id] = {
-                    "virtual_balance_to_deduct": virtual_balance_to_deduct,
-                    "timed_out_at": time.time(),
-                    "jito_executor_ref": jito_executor,
-                }
-                logger.info(
-                    f"♻️ Deferred Reconciler: {bundle_id} queued for 15s grace. "
-                    f"Virtual balance NOT refunded yet ({virtual_balance_to_deduct:.6f} SOL at risk)."
-                )
-                # Spawn background task to process the deferred refund
-                task = asyncio.create_task(_monitor_timed_out_bundles())
-                shared_state.retain_background_task(task)
+                # FIX 103: Check if already refunded by jito_executor
+                if bundle_id in jito_executor.pending_bundles and jito_executor.pending_bundles[bundle_id].get('refunded'):
+                    pass
+                else:
+                    # Phase 19 T2: Deferred refund — don't instantly refund.
+                    # Queue the bundle for 15s grace period. The balance_reconciler
+                    # (runs every 30s) will catch late landings and adjust accordingly.
+                    RECENTLY_TIMED_OUT_BUNDLES[bundle_id] = {
+                        "virtual_balance_to_deduct": virtual_balance_to_deduct,
+                        "timed_out_at": time.time(),
+                        "jito_executor_ref": jito_executor,
+                    }
+                    logger.info(
+                        f"♻️ Deferred Reconciler: {bundle_id} queued for 15s grace. "
+                        f"Virtual balance NOT refunded yet ({virtual_balance_to_deduct:.6f} SOL at risk)."
+                    )
+                    # Spawn background task to process the deferred refund
+                    task = asyncio.create_task(_monitor_timed_out_bundles())
+                    shared_state.retain_background_task(task)
 
             # ── Этап 2: Record loss in CapitalProtection ──────────────────────
             if shared_state.capital_protection and virtual_balance_to_deduct > 0:
@@ -5863,6 +5869,16 @@ async def tcp_heartbeat(session: aiohttp.ClientSession):
 async def run():
     import gc
     import signal
+    import fcntl
+    import sys
+    
+    # FIX 126: PID Lock (Prevent double instances from draining MarginFi account)
+    pid_file = open('arb_bot.pid', 'w')
+    try:
+        fcntl.lockf(pid_file, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        print("🚨 CRITICAL: Another instance of arb_bot is already running! Exiting to prevent MarginFi collision.")
+        sys.exit(1)
 
     logger.info("=== RUN() STARTED ===")
 
@@ -6814,6 +6830,11 @@ async def run():
         ),
     ]
 
+    # FIX 122: Add all loops to active_tasks for graceful shutdown
+    shared_state.active_tasks.update(tasks)
+    for t in list(shared_state.active_tasks):
+        t.add_done_callback(lambda _: shared_state.active_tasks.discard(t))
+
     # Yellowstone gRPC removed.
     # LST Depeg Flash-Arb Scanner (primary strategy)
     if cfg.LST_DEPEG_ENABLED:
@@ -7008,12 +7029,27 @@ async def run():
             except Exception as _rpc_close_err:
                 logger.warning(f"RPCManager close failed: {_rpc_close_err}")
 
+        # FIX 123: Stop Pyth Feeder to prevent WSS leak
+        try:
+            if "pyth_feeder" in locals() and pyth_feeder:
+                await pyth_feeder.stop()
+        except Exception:
+            pass
         if "jito_executor" in locals() and jito_executor:
-            await jito_executor.stop()
+            try:
+                await jito_executor.stop()
+            except Exception:
+                pass
         if "helius_webhook_handler" in locals() and helius_webhook_handler:
-            await helius_webhook_handler.stop()
+            try:
+                await helius_webhook_handler.stop()
+            except Exception:
+                pass
         if "data_aggregator" in locals() and data_aggregator:
-            await data_aggregator.stop_batch_writer()
+            try:
+                await data_aggregator.stop_batch_writer()
+            except Exception:
+                pass
 
 
 class StateManager:
@@ -7217,53 +7253,9 @@ _MTU_PAD_TARGET_BYTES = 600  # target size after padding
 def _ensure_mtu_size(
     tx: VersionedTransaction, cu_limit: int = 0
 ) -> VersionedTransaction:
-    """Return *tx* (possibly padded) so its serialised byte length >= _MTU_PAD_MIN_BYTES.
-
-    Padding strategy: append a no-op ``SetComputeUnitLimit`` instruction using the
-    same *cu_limit* as the real one — the SVM silently accepts a duplicate at the
-    tail, and the packet lands in the 'medium-size' QUIC priority bucket.
-    """
-    try:
-        raw_size = len(bytes(tx))
-        if raw_size >= _MTU_PAD_MIN_BYTES:
-            return tx
-        from solders.compute_budget import set_compute_unit_limit
-
-        msg = tx.message
-        alts = list(msg.address_lookup_table_accounts)
-        all_ixs = list(msg.instructions)  # CompiledInstruction objects
-        # Convert CompiledInstruction → Instruction
-        keys = list(msg.account_keys)
-        ixs: list = []
-        for ci in all_ixs:
-            ixs.append(
-                Instruction(
-                    program_id=keys[ci.program_id_index],
-                    accounts=[keys[i] for i in ci.accounts],
-                    data=bytes(ci.data),
-                )
-            )
-        # Append no-op CU-limit instruction
-        pad_cu = cu_limit if cu_limit > 0 else 200_000
-        ixs.append(set_compute_unit_limit(pad_cu))
-        from solders.message import MessageV0 as _MV0
-        from solders.hash import Hash
-
-        new_msg = _MV0.try_compile(
-            payer=msg.account_keys[0],
-            instructions=ixs,
-            address_lookup_table_accounts=alts,
-            recent_blockhash=msg.recent_blockhash,
-        )
-        padded_size = len(bytes(VersionedTransaction(new_msg, tx.signatures)))
-        logger.debug(
-            f"📦 MTU padding: {raw_size} B → {padded_size} B  "
-            f"(SetComputeUnitLimit no-op appended)"
-        )
-        return VersionedTransaction(new_msg, tx.signatures)
-    except Exception as _mtu_exc:
-        logger.debug(f"MTU padding skipped: {_mtu_exc}")
-        return tx
+    # FIX 117: Do not append instructions after the transaction is signed,
+    # otherwise SignatureVerificationFailed occurs. Return as is.
+    return tx
 
 
 async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: str):

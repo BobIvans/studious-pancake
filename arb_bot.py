@@ -4072,7 +4072,7 @@ async def _daily_cleanup(data_aggregator: DataAggregator):
         # Wait until next day (simplified - runs every 24 hours)
         await asyncio.sleep(24 * 60 * 60)
         try:
-            await data_aggregator.cleanup_old_data(keep_days=14)
+            await data_aggregator.cleanup_old_data(keep_hours=336)
             logger.info("✅ Daily data cleanup completed")
         except Exception as e:
             logger.error(f"Daily cleanup failed: {e}")
@@ -4969,13 +4969,17 @@ async def worker(
                 logger.warning(f"Unsupported path length: {len(path)}")
                 continue
 
-            # Fix 62: Price Freshness TTL — never trade stale data
+            # Fix 62: Price Freshness TTL — never trade stale or missing data (Fail-Closed)
             now = time.time()
             is_stale = False
             for mint in (in_mint_str, target_mint_str):
                 entry = price_matrix.get(mint)
-                if entry and (now - entry[1]) > 5.0:
-                    logger.debug(f"Skipping stale price for {mint}")
+                if not entry:
+                    logger.warning(f"🚫 Price missing for {mint[:8]} — Fail-Closed.")
+                    is_stale = True
+                    break
+                if (now - entry[1]) > 5.0:
+                    logger.warning(f"⏰ Stale price for {mint[:8]} ({now - entry[1]:.1f}s old) — Fail-Closed.")
                     is_stale = True
                     break
 
@@ -5572,9 +5576,10 @@ async def worker(
                     "amount_lamports": int(amount_lamports),
                     "reason": reason,
                 }
-                await DataAggregator().log_opportunity_skipped(
-                    "internal", parsed_opportunity, reason
-                )
+                if shared_state.data_aggregator:
+                    await shared_state.data_aggregator.log_opportunity_skipped(
+                        "internal", parsed_opportunity, reason
+                    )
                 continue
 
             # Log opportunity found
@@ -5585,9 +5590,10 @@ async def worker(
                 "route": "triangular" if route_type == "triangular" else "direct",
             }
             metadata = {"borrow_amount_sol": borrow_amount_sol, "decimals": decimals_in}
-            await DataAggregator().log_opportunity_found(
-                "internal", parsed_opportunity, metadata
-            )
+            if shared_state.data_aggregator:
+                await shared_state.data_aggregator.log_opportunity_found(
+                    "internal", parsed_opportunity, metadata
+                )
             shared_state.stats["last_opportunity_ts"] = time.time()
 
             # Calculate working capital locally (current balance for liquidity estimate)
@@ -6731,6 +6737,8 @@ async def run():
         # ULTRA ARB - Production-Ready Tasks
         asyncio.create_task(dust_sweep_background()),
         asyncio.create_task(cleanup_temporary_tokens()),
+        # FIXED: Запуск ежедневного обслуживания и ротации БД
+        asyncio.create_task(_daily_cleanup(data_aggregator)),
         # Virtual Balance Reconciler — re-anchors virtual_balance every 30 s
         asyncio.create_task(
             balance_reconciler(session, rpc.get_rpc(), keypair, jito_executor)

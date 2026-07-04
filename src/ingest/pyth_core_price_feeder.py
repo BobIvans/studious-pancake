@@ -193,10 +193,10 @@ class PythCorePriceFeeder:
             conf_val = float(price_info.get("conf") or 0)
             conf_usd = conf_val * (10 ** expo) if expo < 0 else conf_val
 
-            if price_usd > 0 and (conf_usd / price_usd) > 0.02:
+            if price_usd > 0 and (conf_usd / price_usd) > 0.0015:
                 logger.warning(
                     f"🚫 Pyth core feed {mint_str[:8]} has unsafe confidence interval: "
-                    f"conf_usd={conf_usd:.4f}, price_usd={price_usd:.4f}, ratio={conf_usd/price_usd:.2%} (> 2.0%). Skipping."
+                    f"conf_usd={conf_usd:.4f}, price_usd={price_usd:.4f}, ratio={conf_usd/price_usd:.2%} (> 0.15%). Skipping."
                 )
                 return
 

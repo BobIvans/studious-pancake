@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import aiohttp
 from src.config.addresses import PYTH_FEEDS, HERMES_WS_URL
 from src.config.addresses import get_all_pyth_feed_ids
+import random
 
 logger = logging.getLogger(__name__)
 
@@ -42,23 +43,24 @@ class PythHermesClient:
         # Lag monitoring
         self.lag_stats: Dict[str, list] = {}
 
-    async def start(self):
-        """Start the WebSocket connection and price monitoring."""
-        self.running = True
-        logger.info("🚀 Starting Pyth Hermes Client...")
+        # Task 58: Background main loop task
+        self._main_task: Optional[asyncio.Task] = None
 
-        while self.running:
-            try:
-                await self._connect_and_listen()
-            except Exception as e:
-                logger.error(f"Pyth client error: {e}")
-                if self.running:
-                    logger.info(f"Reconnecting in {self.reconnect_interval}s...")
-                    await asyncio.sleep(self.reconnect_interval)
+    async def start(self):
+        """Start the WebSocket connection with Auto-Recovery."""
+        self.running = True
+        logger.info("🚀 Starting Pyth Hermes Client with Auto-Recovery...")
+        self._main_task = asyncio.create_task(self._main_loop())
 
     async def stop(self):
-        """Stop the client and close connections."""
+        """Stop the client and cancel all loops."""
         self.running = False
+        if self._main_task:
+            self._main_task.cancel()
+            try:
+                await self._main_task
+            except (asyncio.CancelledError, Exception):
+                pass
         if self.websocket:
             await self.websocket.close()
         if self._session_owned and self.session and not self.session.closed:
@@ -73,45 +75,60 @@ class PythHermesClient:
             self._session_owned = True
         return self.session
 
-    async def _connect_and_listen(self):
-        """Connect to Hermes WS and listen for price updates.
+    async def _main_loop(self):
+        """Main loop with WebSocket connection, auto-recovery, and REST fallback."""
+        reconnect_delay = float(self.reconnect_interval)
+        fallback_task = None
 
-        Fix 70: On Hermes failure, falls back to on-chain Pyth account polling
-        via RPC getAccountInfo. This ensures price data continues to flow even
-        when Pyth WebSocket servers are down or rate-limited.
-        """
-        try:
-            session = await self._get_session()
-            async with session.ws_connect(self.ws_url, heartbeat=15.0, timeout=30.0,
-                                          receive_timeout=60.0) as websocket:
-                self.websocket = websocket
-                logger.info(f"✅ Connected to Pyth Hermes: {self.ws_url}")
+        while self.running:
+            try:
+                session = await self._get_session()
+                logger.info("Attempting Pyth Hermes WebSocket connection...")
 
-                subscription = {
-                    "type": "subscribe",
-                    "subscription_type": "price_feed_updates",
-                    "price_feed_ids": get_all_pyth_feed_ids()
-                }
+                async with session.ws_connect(
+                    self.ws_url, heartbeat=15.0, timeout=10.0, receive_timeout=30.0
+                ) as websocket:
+                    self.websocket = websocket
+                    logger.info("✅ Pyth Hermes WebSocket connected!")
 
-                await websocket.send_str(orjson.dumps(subscription).decode())
-                logger.info(f"📡 Subscribed to {len(get_all_pyth_feed_ids())} Pyth feeds")
+                    # Cancel REST fallback task if it was running
+                    if fallback_task and not fallback_task.done():
+                        fallback_task.cancel()
+                        logger.info("🔌 Stopped Pyth Hermes REST fallback (WebSocket recovered)")
+                        fallback_task = None
 
-                # Listen for messages
-                async for msg in websocket:
-                    if not self.running:
-                        break
-                    try:
+                    reconnect_delay = float(self.reconnect_interval)  # Reset delay
+
+                    subscription = {
+                        "type": "subscribe",
+                        "subscription_type": "price_feed_updates",
+                        "price_feed_ids": get_all_pyth_feed_ids()
+                    }
+                    await websocket.send_str(orjson.dumps(subscription).decode())
+
+                    async for msg in websocket:
+                        if not self.running:
+                            break
                         if msg.type == aiohttp.WSMsgType.TEXT:
                             data = orjson.loads(msg.data)
                             await self._process_message(data)
-                    except Exception as e:
-                        logger.warning(f"Invalid JSON from Pyth: {e}")
 
-        except Exception as e:
-            logger.error(f"WebSocket connection error: {e} — falling back to on-chain RPC polling")
-            # Fall back to on-chain polling
-            await self._run_onchain_fallback()
-            return  # Don't re-raise — we're in fallback mode
+            except Exception as e:
+                logger.error(f"Pyth WebSocket connection error: {e}")
+                # Spawn REST fallback if not already running
+                if not fallback_task or fallback_task.done():
+                    logger.info("📡 Spawning Pyth Hermes REST fallback polling task...")
+                    fallback_task = asyncio.create_task(self._run_onchain_fallback_loop())
+
+                # Jitter + Exponential backoff (Anti Thundering Herd)
+                jitter = random.uniform(0.8, 1.2)
+                reconnect_delay = min(reconnect_delay * 1.5, 60.0)
+                sleep_duration = reconnect_delay * jitter
+                logger.info(f"Reconnecting Pyth WebSocket in {sleep_duration:.1f}s...")
+                await asyncio.sleep(sleep_duration)
+
+        if fallback_task and not fallback_task.done():
+            fallback_task.cancel()
 
     async def _process_message(self, data: dict):
         """Process incoming price update message."""
@@ -143,10 +160,10 @@ class PythHermesClient:
                     conf_val = float(confidence) if confidence else 0.0
                     conf_usd = conf_val * (10 ** expo) if expo < 0 else conf_val
 
-                    if price_val > 0 and (conf_usd / price_val) > 0.02:
+                    if price_val > 0 and (conf_usd / price_val) > 0.0015:
                         logger.warning(
                             f"🚫 Pyth feed {ticker} has unsafe confidence interval: "
-                            f"conf={conf_usd:.4f}, price={price_val:.4f}, ratio={conf_usd/price_val:.2%} (> 2.0%). Skipping."
+                            f"conf={conf_usd:.4f}, price={price_val:.4f}, ratio={conf_usd/price_val:.2%} (> 0.15%). Skipping."
                         )
                         return
 
@@ -179,86 +196,83 @@ class PythHermesClient:
         except Exception as e:
             logger.error(f"Error processing Pyth message: {e}")
 
-    async def _run_onchain_fallback(self):
-        """Fallback: poll Pyth prices via Hermes REST API.
+    async def _run_onchain_fallback_loop(self):
+        """Temporary REST polling fallback — runs as a separate task."""
+        while self.running:
+            try:
+                await self._execute_onchain_fallback_tick()
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.debug(f"REST Fallback tick failed: {e}")
+            await asyncio.sleep(2.0)
 
-        Activated when the Hermes WebSocket connection fails.
-        Uses the Hermes REST endpoint (same feed IDs) instead of
-        on-chain Solana account reads, because feed IDs are hex strings
-        (not Solana base58 addresses) and cannot be used as account pubkeys.
-
-        Hermes REST API: GET /v2/updates/price/latest?ids[]=<feed_id>&ids[]=...
-        """
+    async def _execute_onchain_fallback_tick(self):
+        """Single REST fetch tick for Pyth Hermes fallback."""
         if not self.rpc_url:
-            logger.error("REST fallback unavailable: no rpc_url configured")
             return
 
         rest_url = "https://hermes.pyth.network/v2/updates/price/latest"
-        logger.info("📡 Starting Pyth Hermes REST fallback polling (interval=2s)")
+        try:
+            from src.config.addresses import PYTH_FEEDS, PYTH_CORE_FEEDS
+            all_feeds = {**PYTH_FEEDS, **PYTH_CORE_FEEDS}
+            feed_ids = [
+                v["feed_id"]
+                for k, v in all_feeds.items()
+                if isinstance(v, dict) and v.get("feed_id")
+            ]
 
-        while self.running:
-            try:
-                from src.config.addresses import PYTH_FEEDS, PYTH_CORE_FEEDS
-                all_feeds = {**PYTH_FEEDS, **PYTH_CORE_FEEDS}
-                feed_ids = [
-                    v["feed_id"]
-                    for k, v in all_feeds.items()
-                    if isinstance(v, dict) and v.get("feed_id")
-                ]
+            params = {"ids[]": feed_ids}
+            async with self.session.get(
+                rest_url, params=params,
+                timeout=aiohttp.ClientTimeout(total=5.0)
+            ) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    for item in data.get("parsed", []):
+                        raw_id = item.get("id", "").replace("0x", "")
+                        ticker = self.feed_to_ticker.get(raw_id)
+                        if not ticker:
+                            continue
+                        price_data = item.get("price", {})
+                        price_str = price_data.get("price")
+                        conf_str = price_data.get("conf")
+                        expo = price_data.get("expo", -8)
+                        publish_time = price_data.get("publish_time")
+                        status = price_data.get("status", "trading")
 
-                params = {"ids[]": feed_ids}
-                async with self.session.get(
-                    rest_url, params=params,
-                    timeout=aiohttp.ClientTimeout(total=5.0)
-                ) as resp:
-                    if resp.status == 200:
-                        data = await resp.json()
-                        for item in data.get("parsed", []):
-                            raw_id = item.get("id", "").replace("0x", "")
-                            ticker = self.feed_to_ticker.get(raw_id)
-                            if not ticker:
-                                continue
-                            price_data = item.get("price", {})
-                            price_str = price_data.get("price")
-                            conf_str = price_data.get("conf")
-                            expo = price_data.get("expo", -8)
-                            publish_time = price_data.get("publish_time")
-                            status = price_data.get("status", "trading")
+                        if price_str is None or publish_time is None:
+                            continue
 
-                            if price_str is None or publish_time is None:
-                                continue
+                        if status and status != "trading":
+                            continue
 
-                            if status and status != "trading":
-                                continue
+                        scale = 10 ** abs(expo)
+                        price = float(price_str) / scale if expo < 0 else float(price_str)
+                        confidence = float(conf_str) / scale if conf_str and expo < 0 else float(conf_str or 0)
 
-                            scale = 10 ** abs(expo)
-                            price = float(price_str) / scale if expo < 0 else float(price_str)
-                            confidence = float(conf_str) / scale if conf_str and expo < 0 else float(conf_str or 0)
+                        if price > 0 and (confidence / price) > 0.0015:
+                            logger.warning(
+                                f"🚫 Pyth REST feed {ticker} has unsafe confidence: "
+                                f"conf={confidence:.4f}, price={price:.4f}, ratio={confidence/price:.2%} (> 0.15%). Skipping."
+                            )
+                            continue
 
-                            if price > 0 and (confidence / price) > 0.02:
-                                logger.warning(
-                                    f"🚫 Pyth REST feed {ticker} has unsafe confidence: "
-                                    f"conf={confidence:.4f}, price={price:.4f}, ratio={confidence/price:.2%} (> 2.0%). Skipping."
-                                )
-                                continue
+                        self.price_cache[ticker] = {
+                            "price": price,
+                            "timestamp": datetime.fromtimestamp(publish_time),
+                            "confidence": confidence,
+                            "status": status,
+                        }
 
-                            self.price_cache[ticker] = {
-                                "price": price,
-                                "timestamp": datetime.fromtimestamp(publish_time),
-                                "confidence": confidence,
-                                "status": status,
-                            }
+                        logger.debug(f"⚡ REST Pyth {ticker}: price={price}")
+                else:
+                    logger.warning(f"Pyth REST API returned status {resp.status}")
 
-                            logger.debug(f"⚡ REST Pyth {ticker}: price={price}")
-                    else:
-                        logger.warning(f"Pyth REST API returned status {resp.status}")
-
-            except asyncio.TimeoutError:
-                logger.debug("Pyth REST fallback timeout")
-            except Exception as e:
-                logger.debug(f"Pyth REST fallback error: {e}")
-
-            await asyncio.sleep(2.0)  # Poll every 2 seconds
+        except asyncio.TimeoutError:
+            logger.debug("Pyth REST fallback timeout")
+        except Exception as e:
+            logger.debug(f"Pyth REST fallback error: {e}")
 
     def get_current_price(self, ticker: str) -> Optional[float]:
         """Get the latest price for a ticker."""

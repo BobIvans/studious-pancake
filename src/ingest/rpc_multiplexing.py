@@ -8,6 +8,7 @@ import aiohttp
 import orjson
 import requests
 from typing import List, Dict, Any, Optional, Set, TYPE_CHECKING
+import random
 from contextlib import asynccontextmanager
 import hashlib
 from decimal import Decimal
@@ -307,20 +308,32 @@ class RPCMultiplexingEngine:
             return None
 
     async def _manage_connection(self, conn: WSSConnection, addresses: List[str]):
-        """Manage connection lifecycle with auto-reconnect."""
+        """Manage connection lifecycle with auto-reconnect and exponential backoff with jitter."""
+        reconnect_delay = float(conn.reconnect_delay)
         while self.running:
             try:
                 # Connect
                 if not await conn.connect():
-                    await asyncio.sleep(conn.reconnect_delay)
+                    jitter = random.uniform(0.8, 1.2)
+                    reconnect_delay = min(reconnect_delay * 1.5, 60.0)
+                    sleep_duration = reconnect_delay * jitter
+                    logger.warning(f"Connection failed for {conn.name}. Retrying in {sleep_duration:.1f}s...")
+                    await asyncio.sleep(sleep_duration)
                     continue
 
                 # Subscribe to logs
                 subscription_ids = await conn.subscribe_logs(addresses)
                 if subscription_ids is None or len(subscription_ids) == 0:
                     await conn.disconnect()
-                    await asyncio.sleep(conn.reconnect_delay)
+                    jitter = random.uniform(0.8, 1.2)
+                    reconnect_delay = min(reconnect_delay * 1.5, 60.0)
+                    sleep_duration = reconnect_delay * jitter
+                    logger.warning(f"Subscription failed for {conn.name}. Retrying in {sleep_duration:.1f}s...")
+                    await asyncio.sleep(sleep_duration)
                     continue
+
+                # Reset backoff on success
+                reconnect_delay = float(conn.reconnect_delay)
 
                 # Listen for messages
                 while self.running and conn.connected:
@@ -337,7 +350,11 @@ class RPCMultiplexingEngine:
             # Cleanup and wait before reconnect
             await conn.disconnect()
             if self.running:
-                await asyncio.sleep(conn.reconnect_delay)
+                jitter = random.uniform(0.8, 1.2)
+                reconnect_delay = min(reconnect_delay * 1.5, 60.0)
+                sleep_duration = reconnect_delay * jitter
+                logger.warning(f"Reconnecting {conn.name} in {sleep_duration:.1f}s...")
+                await asyncio.sleep(sleep_duration)
 
     async def _handle_message(self, msg: Dict[str, Any], source: str):
         """Handle incoming WebSocket message."""

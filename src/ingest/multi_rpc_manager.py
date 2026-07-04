@@ -10,6 +10,7 @@ import asyncio
 import orjson
 import logging
 import socket
+import time
 from typing import Dict, List, Optional, Set, Callable, Any
 import aiohttp
 from aiohttp.resolver import AbstractResolver
@@ -193,6 +194,10 @@ class MultiRpcManager:
         # Start cleanup task for old deduplication data
         cleanup_task = asyncio.create_task(self._cleanup_old_events())
         self.connection_tasks.append(cleanup_task)
+
+        # Start background latency pinger
+        pinger_task = asyncio.create_task(self._latency_pinger())
+        self.connection_tasks.append(pinger_task)
 
     async def stop(self):
         """Stop all connections and cleanup."""
@@ -412,6 +417,37 @@ class MultiRpcManager:
             "deduplication_ratio": (self.duplicate_events / max(1, self.total_events)) * 100,
             "endpoint_stats": endpoint_stats
         }
+
+    async def _latency_pinger(self):
+        """Background task that measures RPC HTTP latencies and slots."""
+        while self.running:
+            for ep in self.endpoints:
+                if ep.is_connected and ep.session:
+                    try:
+                        t0 = time.time()
+                        payload = {"jsonrpc": "2.0", "id": 1, "method": "getSlot"}
+                        async with ep.session.post(ep.http_url, json=payload, timeout=2.0) as resp:
+                            if resp.status == 200:
+                                d = await resp.json()
+                                slot = int(d.get("result", 0))
+                                latency_ms = (time.time() - t0) * 1000
+                                ep.record_latency(latency_ms, slot)
+
+                                if slot > self.latest_slot:
+                                    self.latest_slot = slot
+
+                                if (self.latest_slot - slot) > 2 or latency_ms > 1500.0:
+                                    self.degraded_nodes.add(ep.name)
+                                    logger.warning(f"🐌 Degraded Node: {ep.name} lagged by {self.latest_slot - slot} slots / {latency_ms:.1f}ms")
+                                else:
+                                    self.degraded_nodes.discard(ep.name)
+                            else:
+                                ep.record_latency(999.0)
+                                self.degraded_nodes.add(ep.name)
+                    except Exception:
+                        ep.record_latency(999.0)
+                        self.degraded_nodes.add(ep.name)
+            await asyncio.sleep(15.0)  # Check every 15 seconds
 
     def set_event_callback(self, callback: Callable[[str, Dict], None]):
         """Set the event callback function."""

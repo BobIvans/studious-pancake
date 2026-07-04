@@ -1,4 +1,5 @@
 import aiohttp
+import aiolimiter
 import asyncio
 import logging
 import os
@@ -8,6 +9,9 @@ from solders.pubkey import Pubkey
 from src.ingest.circuit_breaker import CapitalProtection
 
 logger = logging.getLogger("SharedState")
+
+# FIXED: Глобальный лимитер для защиты RPC-нод от превышения бесплатного лимита Helius (10 RPS)
+rpc_limiter = aiolimiter.AsyncLimiter(9, 1.0)
 
 # Global locks
 execution_lock: Optional[asyncio.Lock] = None

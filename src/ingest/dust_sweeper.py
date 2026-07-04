@@ -591,22 +591,12 @@ class DustSweeper:
         return Hash.from_string("11111111111111111111111111111111")
 
     def _is_transfer_hook_token(self, mint: str) -> bool:
-        """Task 27: Check if mint has TransferHook extension.
-        Token-2022 Transfer Hooks require extra metadata accounts that static
-        burn instructions do not provide, causing MissingRequiredSignature errors.
-        Includes all known xStocks and Token-2022 LSTs with transfer hooks.
         """
-        known_hook_mints = {
-            "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL
-            "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  # mSOL
-            "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",  # INF
-            "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6",  # USDY
-            "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT",  # USDe
-            "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN",  # sUSDe
-            "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW",  # sUSDS
-            "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD",  # JupUSD
-        }
-        return mint in known_hook_mints
+        Check if mint has TransferHook extension using unified central registry.
+        """
+        # FIXED: Использование единого источника правды из shared_state
+        from src.ingest.shared_state import TOKEN_2022_MINTS
+        return str(mint) in TOKEN_2022_MINTS
 
     def get_dust_stats(self) -> Dict[str, Any]:
         """Get statistics about dust sweeping."""

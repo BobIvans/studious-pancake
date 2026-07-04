@@ -16,7 +16,7 @@ import os
 logger = logging.getLogger(__name__)
 
 class JitoShotgun:
-    """Jito bundle shotgun executor for maximum MEV capture."""
+    """Jito bundle shotgun executor with real-time statistics tracking."""
 
     def __init__(self, session: aiohttp.ClientSession):
         self.session = session
@@ -25,12 +25,16 @@ class JitoShotgun:
             "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
             "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
             "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
-            "https://solana.api.blxrbdn.com/api/v1/bundles"  # bloXroute
+            "https://solana.api.blxrbdn.com/api/v1/bundles"
         ]
         self.bundle_url_template = "https://{region}.block-engine.jito.wtf/api/v1/bundles"
         self.auth_key = None
-        # Dynamic tip calibration
-        self.acceptance_rate = 0.5  # Start at 50%
+        self.acceptance_rate = 0.5
+
+        # FIXED: Реальные счетчики статистики вместо заглушек
+        self.total_tips_paid_lamports = 0
+        self.success_count = 0
+        self.total_bundles_sent = 0
 
     def set_auth_key(self, auth_key: str):
         """Set Jito authentication key."""
@@ -113,6 +117,12 @@ class JitoShotgun:
 
         # Update acceptance rate based on success
         self.update_acceptance_rate(len(successful_sends) > 0)
+
+        # FIXED: Обновление реальных счетчиков статистики
+        self.total_bundles_sent += 1
+        self.total_tips_paid_lamports += tip_lamports
+        if len(successful_sends) > 0:
+            self.success_count += 1
 
         # Return summary
         return {
@@ -261,10 +271,19 @@ class JitoShotgun:
             return {"error": str(e)}
 
     def get_tip_statistics(self) -> Dict[str, Any]:
-        """Get statistics on tip usage and effectiveness."""
-        # Track tip performance over time
+        """Get dynamically calculated statistics on Jito tip usage and effectiveness."""
+        avg_tip = (
+            self.total_tips_paid_lamports / self.total_bundles_sent
+            if self.total_bundles_sent > 0 else 0
+        )
+        success_rate = (
+            self.success_count / self.total_bundles_sent
+            if self.total_bundles_sent > 0 else 0.0
+        )
+
         return {
-            "average_tip_lamports": 50000,
-            "success_rate": 0.95,
-            "total_tips_paid": 1000000
+            "average_tip_lamports": int(avg_tip),
+            "success_rate": success_rate,
+            "total_tips_paid": self.total_tips_paid_lamports,
+            "total_bundles_sent": self.total_bundles_sent
         }

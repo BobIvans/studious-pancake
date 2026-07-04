@@ -187,6 +187,21 @@ class DataAggregator:
         )
         cursor.execute("CREATE INDEX IF NOT EXISTS idx_inflight_status ON inflight_bundles(status)")
 
+        # FIXED: Таблица отслеживания активных сделок для аудита сбоев (Issue 97)
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS pending_trades (
+                trade_id TEXT PRIMARY KEY,
+                created_at REAL NOT NULL,
+                route TEXT NOT NULL,
+                amount_lamports BIGINT NOT NULL,
+                expected_profit_sol REAL NOT NULL,
+                status TEXT NOT NULL
+            )
+        """
+        )
+        cursor.execute("CREATE INDEX IF NOT EXISTS idx_pending_trades_status ON pending_trades(status)")
+
         conn.commit()
         conn.close()
 
@@ -219,16 +234,28 @@ class DataAggregator:
         except Exception as e:
             logger.error(f"Failed to update inflight status: {e}")
 
-    async def backup_database(self):
-        """Create a backup of the database to prevent corruption.
-
-        Uses asyncio.to_thread to offload blocking sqlite3 VACUUM INTO
-        to a thread pool, preventing event loop blocking (PERF-002).
-        """
+    async def log_pending_trade(self, trade_id: str, route: str, amount_lamports: int, expected_profit_sol: float):
+        """Persist a pending trade attempt before simulation/submission to prevent audit loss."""
         try:
-            os.makedirs("backups", exist_ok=True)
+            async with aiosqlite.connect(self.db_path, timeout=30) as db:
+                await db.execute(
+                    """
+                    INSERT OR REPLACE INTO pending_trades (trade_id, created_at, route, amount_lamports, expected_profit_sol, status)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                    (trade_id, time.time(), route, amount_lamports, expected_profit_sol, 'pending'),
+                )
+                await db.commit()
+        except Exception as e:
+            logger.error(f"Failed to log pending trade: {e}")
+
+    async def backup_database(self):
+        """Create a backup of the database to prevent corruption and rotate old files."""
+        try:
+            backup_dir = "backups"
+            os.makedirs(backup_dir, exist_ok=True)
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_path = f"backups/bot_history_{timestamp}.db"
+            backup_path = f"{backup_dir}/bot_history_{timestamp}.db"
 
             def _do_backup():
                 import sqlite3
@@ -238,6 +265,19 @@ class DataAggregator:
 
             await asyncio.to_thread(_do_backup)
             logger.info(f"Database backup created: {backup_path}")
+
+            # FIXED: Ротация резервных копий (храним только последние 5 файлов для экономии места)
+            import glob
+            backups = sorted(glob.glob(f"{backup_dir}/bot_history_*.db"), key=os.path.getmtime)
+            if len(backups) > 5:
+                excess_files = backups[:-5]
+                for old_backup in excess_files:
+                    try:
+                        os.remove(old_backup)
+                        logger.info(f"Rotated old database backup: {os.path.basename(old_backup)}")
+                    except Exception as e:
+                        logger.debug(f"Failed to remove old backup {old_backup}: {e}")
+
         except Exception as e:
             logger.warning(f"Failed to backup database: {e}")
 

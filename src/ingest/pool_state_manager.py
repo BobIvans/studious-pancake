@@ -102,6 +102,40 @@ class PoolStateManager:
         # gRPC one-shot callable for _handle_account_notification
         self._grpc_update_handler: Optional[Callable] = None
 
+        # Shared aiohttp session for RPC requests (lazy init in get_token_account_balance)
+        self._rpc_session: Optional[aiohttp.ClientSession] = None
+
+    # ── Saber RPC helper ───────────────────────────────────────────────────────
+
+    async def get_token_account_balance(self, account_address: str) -> Optional[Dict[str, Any]]:
+        """Fetch SPL token account balance via RPC for Saber pool reserve decoding."""
+        try:
+            http_url = (
+                self.websocket_url
+                .replace("wss://", "https://")
+                .replace("ws://", "http://")
+            )
+            if not http_url:
+                logger.debug("get_token_account_balance: no HTTP URL available")
+                return None
+
+            payload = {
+                "jsonrpc": "2.0", "id": 1,
+                "method": "getTokenAccountBalance",
+                "params": [account_address],
+            }
+            if self._rpc_session is None:
+                self._rpc_session = aiohttp.ClientSession(
+                    connector=aiohttp.TCPConnector(ttl_dns_cache=300, family=socket.AF_INET)
+                )
+            async with self._rpc_session.post(http_url, json=payload, timeout=5.0) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    return data.get("result", {}).get("value")
+        except Exception as e:
+            logger.debug(f"get_token_account_balance failed for {account_address[:8]}: {e}")
+        return None
+
     # ── Callback registration ──────────────────────────────────────────────────
 
     def register_arbitrage_callback(self, callback: Callable) -> None:
@@ -374,6 +408,8 @@ class PoolStateManager:
             await self.websocket.close()
         if getattr(self, '_ws_session', None) and not self._ws_session.closed:
             await self._ws_session.close()
+        if self._rpc_session and not self._rpc_session.closed:
+            await self._rpc_session.close()
 
     # ── WebSocket internals (only active in WebSocket fallback path) ─────────────
 
@@ -475,39 +511,47 @@ class PoolStateManager:
             pass
         return None
 
-    def _decode_saber_stableswap(self, raw_b64: str, pool_address: str) -> Optional[PoolReserve]:
+    async def _decode_saber_stableswap(self, raw_b64: str, pool_address: str) -> Optional[PoolReserve]:
         """Decode Saber Stableswap pool from base64 raw bytes.
 
-        Saber pool account layout:
-          - Bytes 0-8:    discriminator
-          - Bytes 8-40:   pool_mint (Pubkey)
-          - Next 32:      token_a_mint
-          - Next 32:      token_b_mint
-          - Next 8:       token_a_reserve (u64 LE)
-          - Next 8:       token_b_reserve (u64 LE)
-          - Next 2:       amp_factor (u16 LE)
+        Parses the official on-chain SwapInfo layout:
+          - reserve_a: Pubkey (32 bytes) at offset 43
+          - reserve_b: Pubkey (32 bytes) at offset 75
         """
         try:
             raw = base64.b64decode(raw_b64)
-            if len(raw) < 160:
+            if len(raw) < 107:
                 return None
-            # Saber uses standard SPL Token account for reserves with metadata
-            # Try to extract mints and reserves from known Saber pool layout
-            token_a_mint_bytes = raw[40:72]
-            token_b_mint_bytes = raw[72:104]
-            res_a = int.from_bytes(raw[104:112], 'little')
-            res_b = int.from_bytes(raw[112:120], 'little')
-            if res_a > 0 and res_b > 0:
+
+            # 1. Извлекаем адреса сейфов (Token Accounts)
+            reserve_a_addr = str(Pubkey.from_bytes(raw[43:75]))
+            reserve_b_addr = str(Pubkey.from_bytes(raw[75:107]))
+
+            # 2. Асинхронно запрашиваем балансы сейфов из RPC
+            x_res_data = await self.get_token_account_balance(reserve_a_addr)
+            y_res_data = await self.get_token_account_balance(reserve_b_addr)
+
+            if not x_res_data or not y_res_data:
+                return None
+
+            res_a = int(x_res_data.get("amount", "0"))
+            res_b = int(y_res_data.get("amount", "0"))
+
+            # В Saber пулах адреса токенов можно получить из структуры баланса
+            token_a_mint = x_res_data.get("mint")
+            token_b_mint = y_res_data.get("mint")
+
+            if res_a > 0 and res_b > 0 and token_a_mint and token_b_mint:
                 return PoolReserve(
                     token_a_reserve=Decimal(str(res_a)),
                     token_b_reserve=Decimal(str(res_b)),
-                    token_a_mint=str(Pubkey.from_bytes(token_a_mint_bytes)),
-                    token_b_mint=str(Pubkey.from_bytes(token_b_mint_bytes)),
+                    token_a_mint=str(token_a_mint),
+                    token_b_mint=str(token_b_mint),
                     pool_address=pool_address,
                     pool_type="stableswap",
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Saber Stableswap binary decoding failed: {e}")
         return None
 
     async def _decode_pool_reserves(
@@ -530,7 +574,9 @@ class PoolStateManager:
                 raw_list = account_data["data"]
                 raw_b64 = raw_list[0] if isinstance(raw_list, list) else raw_list
                 # Fix 44: Try binary parsing for Meteora DLMM and Saber
-                result = self._decode_meteora_bin(raw_b64) or self._decode_saber_stableswap(raw_b64, pool_address)
+                result = self._decode_meteora_bin(raw_b64)
+                if not result:
+                    result = await self._decode_saber_stableswap(raw_b64, pool_address)
                 if result:
                     result.pool_address = pool_address
                     return result

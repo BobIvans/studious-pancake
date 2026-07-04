@@ -575,9 +575,12 @@ async def check_time_sync(session, rpc_url):
     start = time.time()
     try:
         # Use getHealth or a simple getSlot to check server time in headers
-        async with session.post(
-            rpc_url, json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"}, timeout=2.0
-        ) as resp:
+        import src.ingest.shared_state as shared_state
+        async with shared_state.rpc_limiter:
+            async with session.post(
+                rpc_url, json={"jsonrpc": "2.0", "id": 1, "method": "getSlot"}, timeout=2.0
+            ) as resp:
+                pass
             latency = (time.time() - start) / 2
             server_date_str = resp.headers.get("Date")
             if server_date_str:
@@ -678,9 +681,12 @@ async def warmup_golden_atas(
                     "method": "getLatestBlockhash",
                     "params": [{"commitment": "confirmed"}],
                 }
-                async with session.post(
-                    rpc_url, json=_bh_payload, timeout=aiohttp.ClientTimeout(total=3.0)
-                ) as bh_resp:
+                import src.ingest.shared_state as shared_state
+                async with shared_state.rpc_limiter:
+                    async with session.post(
+                        rpc_url, json=_bh_payload, timeout=aiohttp.ClientTimeout(total=3.0)
+                    ) as bh_resp:
+                        pass
                     bh_data = await bh_resp.json()
                     recent_bh = Hash.from_string(
                         bh_data["result"]["value"]["blockhash"]
@@ -697,16 +703,19 @@ async def warmup_golden_atas(
                 )
                 warmup_tx = VersionedTransaction(msg, [KEYPAIR])
                 warmup_b64 = base64.b64encode(bytes(warmup_tx)).decode("ascii")
-                async with session.post(
-                    rpc_url,
-                    json={
-                        "jsonrpc": "2.0",
-                        "id": 3,
-                        "method": "sendTransaction",
-                        "params": [warmup_b64, {"encoding": "base64"}],
-                    },
-                    timeout=aiohttp.ClientTimeout(total=10.0),
-                ) as send_resp:
+                import src.ingest.shared_state as shared_state
+                async with shared_state.rpc_limiter:
+                    async with session.post(
+                        rpc_url,
+                        json={
+                            "jsonrpc": "2.0",
+                            "id": 3,
+                            "method": "sendTransaction",
+                            "params": [warmup_b64, {"encoding": "base64"}],
+                        },
+                        timeout=aiohttp.ClientTimeout(total=10.0),
+                    ) as send_resp:
+                        pass
                     if send_resp.status == 200:
                         sig = (await send_resp.json()).get("result", "?")
                         logger.info(
@@ -772,9 +781,12 @@ async def check_marginfi_health_factor(
             "method": "getAccountInfo",
             "params": [marginfi_account_pubkey, {"encoding": "base64"}],
         }
-        async with session.post(
-            rpc_url, json=health_check_payload, timeout=aiohttp.ClientTimeout(total=5.0)
-        ) as resp:
+        import src.ingest.shared_state as shared_state
+        async with shared_state.rpc_limiter:
+            async with session.post(
+                rpc_url, json=health_check_payload, timeout=aiohttp.ClientTimeout(total=5.0)
+            ) as resp:
+                pass
             if resp.status != 200:
                 logger.warning(f"Health-factor RPC error: HTTP {resp.status}")
                 return None
@@ -1678,9 +1690,12 @@ async def balance_reconciler(
                 "method": "getBalance",
                 "params": [wallet_pk],
             }
-            async with http_session.post(
-                rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=5.0)
-            ) as resp:
+            import src.ingest.shared_state as shared_state
+            async with shared_state.rpc_limiter:
+                async with http_session.post(
+                    rpc_url, json=payload, timeout=aiohttp.ClientTimeout(total=5.0)
+                ) as resp:
+                    pass
                 if resp.status != 200:
                     continue
                 result_data = orjson.loads(await resp.read())
@@ -1949,9 +1964,12 @@ class RPCManager:
                 rpc_url = self.get_rpc()
                 session = await self._get_session()
                 # P0-4.2b: Removed ssl=False — using default TLS verification
-                async with session.post(
-                    rpc_url, json=payload, timeout=3.0
-                ) as resp:
+                import src.ingest.shared_state as shared_state
+                async with shared_state.rpc_limiter:
+                    async with session.post(
+                        rpc_url, json=payload, timeout=3.0
+                    ) as resp:
+                        pass
                     if resp.status == 200:
                         data = await resp.json()
                         return data.get("result", {}).get("value")
@@ -2414,7 +2432,9 @@ async def get_token_decimals_dynamic(session: aiohttp.ClientSession, rpc_url: st
         "params": [mint_str, {"encoding": "jsonParsed", "commitment": "confirmed"}],
     }
     try:
-        async with session.post(rpc_url, json=payload, timeout=3.0) as resp:
+        import src.ingest.shared_state as shared_state
+        async with shared_state.rpc_limiter:
+            async with session.post(rpc_url, json=payload, timeout=3.0) as resp:
             if resp.status == 200:
                 data = await resp.json()
                 value = data.get("result", {}).get("value")
@@ -3142,15 +3162,40 @@ async def reconcile_inflight_bundles(session: aiohttp.ClientSession, rpc_url: st
                     "method": "getSignatureStatuses",
                     "params": [sigs],
                 }
-                async with session.post(rpc_url, json=payload, timeout=5.0) as resp:
+                import src.ingest.shared_state as shared_state
+                async with shared_state.rpc_limiter:
+                    async with session.post(rpc_url, json=payload, timeout=5.0) as resp:
                     if resp.status == 200:
                         data = orjson.loads(await resp.read())
                         statuses = data.get("result", {}).get("value", [])
 
                         for sig_status in statuses:
                             if sig_status is None:
-                                # Transaction not found by RPC — check if older than 60 seconds
+                                # Transaction not found by immediate status check — check if older than 60 seconds
                                 if time.time() - sent_at > 60:
+                                    # FIXED: Защита от фантомного баланса. Перед возвратом проверяем историю транзакций
+                                    # на случай, если бандл подтвердился с опозданием.
+                                    try:
+                                        payload_history = {
+                                            "jsonrpc": "2.0",
+                                            "id": 1,
+                                            "method": "getSignatureStatuses",
+                                            "params": [sigs, {"searchTransactionHistory": True}]
+                                        }
+                                        async with session.post(rpc_url, json=payload_history, timeout=5.0) as hist_resp:
+                                            if hist_resp.status == 200:
+                                                hist_data = orjson.loads(await hist_resp.read())
+                                                hist_statuses = hist_data.get("result", {}).get("value", [])
+                                                
+                                                # Если в истории транзакция найдена и подтверждена, отменяем возврат
+                                                if hist_statuses and hist_statuses[0] is not None:
+                                                    h_status = hist_statuses[0].get("confirmation_status")
+                                                    if h_status in ("confirmed", "finalized") and hist_statuses[0].get("err") is None:
+                                                        logger.info(f"Double-Credit Prevented: bundle {bundle_id[:12]} confirmed late. No refund applied.")
+                                                        continue
+                                    except Exception as history_err:
+                                        logger.debug(f"History cross-validation failed: {history_err}")
+
                                     async with shared_state.stats_lock:
                                         shared_state.stats["virtual_balance"] += deducted_sol
                                     async with aiosqlite.connect(db_path, timeout=10) as db:
@@ -3552,9 +3597,11 @@ async def lst_depeg_scanner(
                             ],
                         }
                         timeout = aiohttp.ClientTimeout(total=2.0)
-                        async with session.post(
-                            rpc_manager.get_rpc(), json=alt_payload, timeout=timeout
-                        ) as resp:
+                        import src.ingest.shared_state as shared_state
+                        async with shared_state.rpc_limiter:
+                            async with session.post(
+                                rpc_manager.get_rpc(), json=alt_payload, timeout=timeout
+                            ) as resp:
                             if resp.status == 200:
                                 alt_data = orjson.loads(await resp.read())
                                 if (
@@ -4058,7 +4105,9 @@ async def create_simple_dummy_tx(session, keypair, rpc_getter):
         # Get recent blockhash
         payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"}
         timeout = aiohttp.ClientTimeout(total=1.0)
-        async with session.post(rpc_getter(), json=payload, timeout=timeout) as resp:
+        import src.ingest.shared_state as shared_state
+        async with shared_state.rpc_limiter:
+            async with session.post(rpc_getter(), json=payload, timeout=timeout) as resp:
             if resp.status == 200:
                 data = orjson.loads(await resp.read())
                 if "result" in data:
@@ -4096,7 +4145,9 @@ async def get_dynamic_priority_fee(
             ],
         }
         timeout = aiohttp.ClientTimeout(total=1.0)
-        async with session.post(rpc_getter(), json=payload, timeout=timeout) as resp:
+        import src.ingest.shared_state as shared_state
+        async with shared_state.rpc_limiter:
+            async with session.post(rpc_getter(), json=payload, timeout=timeout) as resp:
             if resp.status == 200:
                 data = orjson.loads(await resp.read())
                 if "result" in data and "priorityFeeEstimate" in data["result"]:
@@ -6157,16 +6208,38 @@ async def run():
 
     # Fix 70: Log rotation + DB vacuum background task
     async def _maintenance():
+        last_backup_time = time.time()
         while True:
             await asyncio.sleep(6 * 3600)
             # delete old .jsonl
             for f in glob.glob("*.jsonl"):
                 if os.path.getmtime(f) < time.time() - 48 * 3600:
                     os.remove(f)
+            
+            # FIXED: Создание резервной копии базы данных каждые 12 часов + Генерация ИИ-отчета
+            if time.time() - last_backup_time >= 12 * 3600:
+                if shared_state.data_aggregator:
+                    try:
+                        await shared_state.data_aggregator.backup_database()
+
+                        # Автоматическая генерация аналитического отчета на диске
+                        from src.ingest.offline_stats_reporter import OfflineStatsReporter
+                        from src.ingest.data_collector import DataCollector
+                        collector = DataCollector(use_sqlite=True, db_path="bot_history.db")
+                        await collector.start()
+                        reporter = OfflineStatsReporter(collector)
+                        await reporter.run_full_analysis(days_back=1)
+                        reporter.generate_report(save_path="analysis_report.md")
+                        await collector.stop()
+                        logger.info("📝 OfflineStatsReporter: analysis_report.md refreshed successfully")
+
+                        last_backup_time = time.time()
+                    except Exception as backup_err:
+                        logger.debug(f"Periodic maintenance analysis failed: {backup_err}")
+
             # vacuum DB
             try:
                 import sqlite3
-
                 conn = sqlite3.connect("bot_history.db")
                 conn.execute("VACUUM;")
                 conn.close()
@@ -6174,7 +6247,7 @@ async def run():
                 logger.debug(f"DB vacuum failed: {e}")
             # disk check
             if shutil.disk_usage(".").free < 500 * 1024 * 1024:
-                logger.critical("🚨 CRITICAL: Low disk space (<500MB)! Muting non-critical logs to prevent DB corruption.")
+                logger.critical("CRITICAL: Low disk space (<500MB)! Muting non-critical logs to prevent DB corruption.")
                 logging.getLogger().setLevel(logging.ERROR)
 
     task = asyncio.create_task(_maintenance())
@@ -7044,9 +7117,11 @@ class StateManager:
             )
 
             try:
-                async with session.post(
-                    rpc_url, json=payload, headers=headers, timeout=timeout
-                ) as resp:
+                import src.ingest.shared_state as shared_state
+                async with shared_state.rpc_limiter:
+                    async with session.post(
+                        rpc_url, json=payload, headers=headers, timeout=timeout
+                    ) as resp:
                     if resp.status == 200:
                         data = orjson.loads(await resp.read())
                         if "result" in data:
@@ -7277,9 +7352,11 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
             "params": [ata_address],
         }
         timeout = aiohttp.ClientTimeout(total=2.0)
-        async with session.post(
-            rpc_getter(), json=balance_payload, timeout=timeout
-        ) as resp:
+        import src.ingest.shared_state as shared_state
+        async with shared_state.rpc_limiter:
+            async with session.post(
+                rpc_getter(), json=balance_payload, timeout=timeout
+            ) as resp:
             if resp.status != 200:
                 logger.debug(f"Failed to check ATA balance: {resp.status}")
                 return
@@ -7377,9 +7454,11 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                 "id": 1,
                 "method": "getLatestBlockhash",
             }
-            async with session.post(
-                rpc_getter(), json=blockhash_payload, timeout=timeout
-            ) as resp:
+            import src.ingest.shared_state as shared_state
+            async with shared_state.rpc_limiter:
+                async with session.post(
+                    rpc_getter(), json=blockhash_payload, timeout=timeout
+                ) as resp:
                 if resp.status != 200:
                     logger.debug("Failed to get blockhash for ATA close")
                     return
@@ -7402,9 +7481,11 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                 "method": "sendTransaction",
                 "params": [tx_b64, {"encoding": "base64"}],
             }
-            async with session.post(
-                rpc_getter(), json=send_payload, timeout=timeout
-            ) as resp:
+            import src.ingest.shared_state as shared_state
+            async with shared_state.rpc_limiter:
+                async with session.post(
+                    rpc_getter(), json=send_payload, timeout=timeout
+                ) as resp:
                 if resp.status == 200:
                     send_data = orjson.loads(await resp.read())
                     if "result" in send_data:

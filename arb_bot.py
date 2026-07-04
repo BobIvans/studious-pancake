@@ -485,6 +485,21 @@ def get_env_int(key: str, default: int) -> int:
         return default
 
 
+# FIX 175: Jito Bundle Error classifier for adaptive retries/pauses
+
+def classify_jito_error(error_str: str) -> str:
+    err_lower = str(error_str).lower()
+    if "blockhash" in err_lower or "expired" in err_lower:
+        return "BLOCKHASH_EXPIRED"
+    if "account in use" in err_lower or "lock" in err_lower:
+        return "ACCOUNT_IN_USE"
+    if "simulation failed" in err_lower:
+        return "SIMULATION_FAILED"
+    if "too large" in err_lower:
+        return "BUNDLE_TOO_LARGE"
+    return "UNKNOWN"
+
+
 class JsonFormatter(logging.Formatter):
     """Сериализатор логов в структурированный JSON для Grafana Loki/ELK."""
     def format(self, record):
@@ -870,8 +885,6 @@ async def check_marginfi_health_factor(
                 logger.debug("✅ БЛОК 14: Account discriminator matches MarginfiAccount")
 
             # ── Check 5: is_initialized flag ────────────────────────────────────────
-            # Layout after 8-byte discriminator: group(32) + authority(32) + lending_authority(32)
-            # is_initialized is at offset 8 + 96 = 104
             is_initialized = raw[104]
             if is_initialized != 1:
                 logger.critical(
@@ -880,19 +893,15 @@ async def check_marginfi_health_factor(
                 )
                 return 0.0
 
-            # ── Check 6: Balance vector (optional) ─────────────────────────────────
-            # Balances vector length at offset 112 (4 bytes u32 LE)
+            # FIX 183: Financial safety check (Reject starting with active MarginFi debts)
             if len(raw) >= 116:
                 balance_count = struct.unpack("<I", raw[112:116])[0]
                 if balance_count > 0:
-                    logger.info(
-                        f"🧾 БЛОК 14: MarginFi account has {balance_count} active balance(s). "
-                        "Active MarginFi position detected."
+                    logger.critical(
+                        f"🛑 БЛОК 14 (КРИТИЧЕСКИЙ ФИНАНСОВЫЙ РИСК): MarginFi account has {balance_count} active debts! "
+                        "Trading blocked to prevent forced account liquidation during flashloans."
                     )
-                else:
-                    logger.info(
-                        "🧾 БЛОК 14: MarginFi account is empty (no deposits/loans). Ready for flash loans."
-                    )
+                    return 0.0
 
             logger.info(
                 f"✅ БЛОК 14: MarginFi account validated — initialized, correct owner, valid structure. "
@@ -1147,10 +1156,15 @@ class Config:
 
     # CFG-006: Range validation for critical numeric parameters
     def __post_init__(self):
-        assert 0.0 <= self.JITO_TIP_PERCENTILE <= 100.0, f"JITO_TIP_PERCENTILE must be between 0 and 100, got {self.JITO_TIP_PERCENTILE}"
+        assert 0.0 < self.JITO_TIP_PERCENTILE <= 100.0, f"JITO_TIP_PERCENTILE must be strictly greater than 0, got {self.JITO_TIP_PERCENTILE}"
         assert 0.0 < self.TIP_MULTIPLIER <= 5.0, f"TIP_MULTIPLIER must be between 0 and 5, got {self.TIP_MULTIPLIER}"
         assert 0.0 < self.TRADE_SIZE_PCT <= 1.0, f"TRADE_SIZE_PCT must be between 0 and 1, got {self.TRADE_SIZE_PCT}"
         assert 0.0 < self.MAX_PRIORITY_FEE_SOL <= 0.1, f"MAX_PRIORITY_FEE_SOL must be reasonable (< 0.1 SOL), got {self.MAX_PRIORITY_FEE_SOL}"
+        assert self.MIN_PROFIT_SOL >= 0.0, f"MIN_PROFIT_SOL must be non-negative, got {self.MIN_PROFIT_SOL}"
+        assert self.MAX_TIP_SOL >= 0.0, f"MAX_TIP_SOL must be non-negative, got {self.MAX_TIP_SOL}"
+        assert self.SLIPPAGE_BPS > 0, f"SLIPPAGE_BPS must be strictly positive, got {self.SLIPPAGE_BPS}"
+        assert self.BASE_TIP_LAMPORTS > 0, f"BASE_TIP_LAMPORTS must be strictly positive, got {self.BASE_TIP_LAMPORTS}"
+        assert self.JITO_MIN_TIP_LAMPORTS > 0, f"JITO_MIN_TIP_LAMPORTS must be strictly positive, got {self.JITO_MIN_TIP_LAMPORTS}"
 
 
 TOKENS = {
@@ -1678,7 +1692,11 @@ def discover_ri_extra_account(error_text: str, strategy_key: str = "default") ->
     """Parse a Remaining Account / Missing signature error and cache the pubkey for future injections."""
     pk = _extract_pubkey_from_error(str(error_text) if error_text else "")
     if pk:
-        STRATEGY_EXTRA_ACCOUNTS.setdefault(strategy_key, set()).add(pk)
+        # FIX 179: Prune extra accounts cache if it grows past 200 entries to prevent memory bloat
+        existing_set = STRATEGY_EXTRA_ACCOUNTS.setdefault(strategy_key, set())
+        if len(existing_set) > 200:
+            existing_set.pop()
+        existing_set.add(pk)
         # Persist to JSON file for bot restart recovery
         try:
             disk = _load_extra_accounts()
@@ -1742,6 +1760,15 @@ async def balance_reconciler(
                 prev = shared_state.stats.get("virtual_balance", 0.0)
                 shared_state.stats["virtual_balance"] = reconciled_sol
                 drift = abs(reconciled_sol - prev)
+
+                # FIX 172: Explicit warning for network reorg or pool slippage drift
+                if drift > 0.003:
+                    shared_state.set_balance_lock_paused(True, 0.4)
+                    logger.critical(
+                        f"🚨 NETWORK REORG / SLIPPAGE DRIFT DETECTED! "
+                        f"virtual={prev:.6f} vs actual={reconciled_sol:.6f} | "
+                        f"drift={drift:.6f} > 0.003 SOL. Force-adjusting virtual_balance to match real state."
+                    )
                 # Fix 6 + 67: Balance Lock Guard — if virtual vs actual diff > 0.003 SOL
                 # pause all trading for 400 ms (1 slot) to prevent cascade failures.
                 # Uses shared_state to avoid circular imports with wsol_manager.py.
@@ -2638,8 +2665,10 @@ async def create_flashloan_arbitrage_tx(
     if is_sol_base:
         fee_in_base_token_lamports = int(base_fee_sol * 1e9)
     else:
-        # Assuming base_mint is a stablecoin (6 decimals)
-        fee_in_base_token_lamports = int(base_fee_sol * sol_price_in_usd * 1e6)
+        # Assuming base_mint is a stablecoin
+        # FIX 195: Dynamically resolve decimals instead of hardcoded 1e6 (6 decimals)
+        decimals = get_token_decimals(base_mint_str) or 6
+        fee_in_base_token_lamports = int(base_fee_sol * sol_price_in_usd * (10 ** decimals))
 
     # DEX-003: Subtract Jupiter platform fee (totalFee from final quote)
     jupiter_fee_lamports = int(
@@ -3251,6 +3280,14 @@ async def reconcile_inflight_bundles(session: aiohttp.ClientSession, rpc_url: st
                                     f"Recovery: refunded {deducted_sol:.6f} SOL for failed bundle {bundle_id[:12]}"
                                 )
                             elif sig_status.get("confirmation_status") in ("confirmed", "finalized"):
+                                # FIX 173: Detect Late Landing anomalies
+                                landed_slot = sig_status.get("slot", 0)
+                                sent_slot = shared_state.stats.get("current_slot", 0)
+                                if landed_slot > 0 and sent_slot > 0 and (landed_slot - sent_slot) > 2:
+                                    logger.warning(
+                                        f"⚠️ LATE LANDING DETECTED: Bundle {bundle_id[:12]} landed {landed_slot - sent_slot} slots late! "
+                                        f"Sent: {sent_slot}, Landed: {landed_slot}. Actual profit may have degraded due to pool state shift."
+                                    )
                                 async with aiosqlite.connect(db_path, timeout=10) as db:
                                     await db.execute(
                                         "UPDATE inflight_bundles SET status = 'confirmed', finalized_at = ? WHERE bundle_id = ?",
@@ -3677,22 +3714,16 @@ async def lst_depeg_scanner(
                     )
                     continue  # Пропускаем эту попытку до следующего слота
 
-                # Get fresh blockhash
+                # FIX 187: Deduplicate blockhash fetch and correctly update global cache variables
+                global cached_blockhash, cache_time
                 blockhash = cached_blockhash
                 if not blockhash or time.time() - cache_time > 2:
                     blockhash = await get_current_blockhash(
                         session, rpc_manager.get_rpc()
                     )
-                if not blockhash:
-                    logger.warning("Cannot get blockhash — skipping")
-                    continue
-
-                # Get fresh blockhash
-                blockhash = cached_blockhash
-                if not blockhash or time.time() - cache_time > 2:
-                    blockhash = await get_current_blockhash(
-                        session, rpc_manager.get_rpc()
-                    )
+                    if blockhash:
+                        cached_blockhash = blockhash
+                        cache_time = time.time()
                 if not blockhash:
                     logger.warning("Cannot get blockhash — skipping")
                     continue
@@ -4289,14 +4320,20 @@ async def check_bundle_confirmation(
             PROMETHEUS_SIM_FAILS.inc()
 
             error_msg = str(confirmation.get("error", "")).lower()
+            err_class = classify_jito_error(error_msg)
 
             # ВЕТВЛЕНИЕ 1: Сбой из-за устаревшего блокхеша -> принудительный апдейт racing-менеджера
-            if "blockhash" in error_msg or "expired" in error_msg:
+            if err_class == "BLOCKHASH_EXPIRED":
                 logger.warning("⏰ Jito reported BlockhashNotFound/Expired! Force-refreshing blockhash immediately.")
                 from src.ingest.blockhash_racing import get_blockhash_manager
                 bh_mgr = get_blockhash_manager()
                 if bh_mgr:
                     asyncio.create_task(bh_mgr.fetch_fresh_blockhash())
+
+            # ВЕТВЛЕНИЕ 1.2: Account in use (Lock) -> Sleep 400ms (1 slot)
+            elif err_class == "ACCOUNT_IN_USE":
+                logger.warning("🔒 MarginFi Account locked/in use! Sleeping 1 slot (400ms) to allow lock release.")
+                await asyncio.sleep(0.4)
 
             # ВЕТВЛЕНИЕ 2: Проскальзывание в пуле -> отправляем конкретную пару на 10-минутный cooldown
             elif "slippage" in error_msg or "custom program error: 0x1" in error_msg:
@@ -4792,7 +4829,9 @@ async def execute_priority_opportunity(
         flash_sim = FlashSimulator(session, rpc_manager.get_rpc())
 
         # Local Simulation Integrity: Use region-matching RPC
-        jito_endpoint = cfg.JITO_ENDPOINTS[0] if cfg.JITO_ENDPOINTS else None
+        # FIX 186: Select a random Jito endpoint for simulation to prevent single region point of failure
+        import random
+        jito_endpoint = random.choice(cfg.JITO_ENDPOINTS) if cfg.JITO_ENDPOINTS else "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles"
         is_profitable, reason, sim_result = await flash_sim.validate_profitability(
             tx_b64=tx_b64,
             tx_signer_pubkey=str(keypair.pubkey()),
@@ -4986,6 +5025,25 @@ async def execute_priority_opportunity(
         result = await execution_router.execute_opportunity(
             session, cfg, rpc_manager.get_rpc(), arbitrage_tx, tip_amount_lamports
         )
+
+        # FIX 184: Hot path blockhash-expiry retry (prevent useless dropping of verified profitable opportunities)
+        if result.get("error") and ("blockhash" in str(result.get("error")).lower() or "expired" in str(result.get("error")).lower()):
+            logger.warning("⏰ [HOT PATH RETRY] Jito rejected bundle due to stale blockhash. Fetching fresh blockhash and rebuilding transaction...")
+            if blockhash_mgr:
+                await blockhash_mgr.fetch_fresh_blockhash()
+                # Rebuild with fresh blockhash and retry
+                tx_b64 = await create_flashloan_arbitrage_tx(
+                    session, in_mint, out_mint, amount_lamports, chosen_route, cfg, keypair,
+                    lambda: rpc_manager.get_rpc(), use_jito=True, tip_lamports=tip_amount_lamports,
+                    alt_manager=alt_manager, strategy_type=strat_type,
+                    tip_accounts=(jito_executor.tip_accounts if jito_executor else None),
+                    blockhash_mgr=blockhash_mgr, opportunity=opportunity, expected_profit_sol=est_net_profit_sol
+                )
+                if tx_b64:
+                    arbitrage_tx = VersionedTransaction.from_bytes(base64.b64decode(tx_b64))
+                    result = await execution_router.execute_opportunity(
+                        session, cfg, rpc_manager.get_rpc(), arbitrage_tx, tip_amount_lamports
+                    )
 
         # Virtual Balance Guard — deduct cost as soon as the bundle is sent
         tip_lamports = int(
@@ -5566,8 +5624,10 @@ async def worker(
             if is_sol_base:
                 fee_in_base_token_lamports = int(base_fee_sol * 1e9)
             else:
-                # Assuming in_mint is a stablecoin (6 decimals)
-                fee_in_base_token_lamports = int(base_fee_sol * sol_price_in_usd * 1e6)
+                # Assuming in_mint is a stablecoin
+                # FIX 195: Dynamically resolve decimals instead of hardcoded 1e6 (6 decimals)
+                decimals = get_token_decimals(in_mint_str) or 6
+                fee_in_base_token_lamports = int(base_fee_sol * sol_price_in_usd * (10 ** decimals))
 
             # DEX-003: Jupiter platform fee from final quote
             jupiter_fee_lamports = int(
@@ -5836,41 +5896,6 @@ async def blockhash_updater(session, rpc_getter):
         await asyncio.sleep(
             4.0
         )  # 4s cache — confirmed blockhash for Jito geo-propagation
-
-
-async def tcp_heartbeat(session: aiohttp.ClientSession):
-    """
-    Phase 49: TCP Congestion Window Warm-up.
-    Keeps the TCP window open (hot) to avoid slow-start lag on profit signals.
-    Every 400ms, sends a lightweight getVersion to Jito and Jupiter.
-    """
-    # Fix 89 endpoints from jito_executor
-    ENDPOINTS = [
-        "https://frankfurt.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://amsterdam.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://ny.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        "https://tokyo.mainnet.block-engine.jito.wtf/api/v1/bundles",
-        os.getenv("JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"),
-    ]
-
-    payload = {"jsonrpc": "2.0", "id": 1, "method": "getVersion"}
-
-    while True:
-        try:
-            tasks = []
-            for ep in ENDPOINTS:
-                tasks.append(session.post(ep, json=payload, timeout=0.3))
-
-            # Fire and forget - use gather to fire concurrently
-            # But don't wait for body to keep it ultra-fast
-            responses = await asyncio.gather(*tasks, return_exceptions=True)
-            for r in responses:
-                if isinstance(r, aiohttp.ClientResponse):
-                    await r.release()
-
-        except Exception:
-            pass
-        await asyncio.sleep(3.0)  # 3.0s heartbeat — достаточно для удержания TCP keep-alive без спама
 
 
 async def hard_floor_guard():

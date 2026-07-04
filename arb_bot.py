@@ -1,7 +1,7 @@
 from __future__ import annotations
 from dotenv import load_dotenv
 
-load_dotenv(override=True)
+load_dotenv(override=False)  # FIX 128: Allow Docker env overrides
 import orjson
 import asyncio
 import aiohttp
@@ -167,9 +167,17 @@ try:
     from src.ingest.jito_bundle_handler import _set_global_price_matrix
     from src.ingest.jito_manager import JitoBiddingManager
     from src.ingest.jito_executor import JitoExecutor
+    from src.ingest.jito_shotgun import JitoShotgun  # FIX 131
 
     JITO_AVAILABLE = True
 except ImportError:
+    class JitoShotgun:
+        def __init__(self, session):
+            pass
+
+        async def send_to_all_engines(self, *args, **kwargs):
+            return {"error": "JitoShotgun unavailable"}
+
     JITO_AVAILABLE = False
     logger.warning("Jito client not available, falling back to RPC execution")
 
@@ -2436,14 +2444,14 @@ async def get_token_decimals_dynamic(session: aiohttp.ClientSession, rpc_url: st
         import src.ingest.shared_state as shared_state
         async with shared_state.rpc_limiter:
             async with session.post(rpc_url, json=payload, timeout=3.0) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                value = data.get("result", {}).get("value")
-                if value and "data" in value:
-                    parsed_info = value["data"].get("parsed", {}).get("info", {})
-                    decimals = parsed_info.get("decimals")
-                    if decimals is not None:
-                        decimals_val = int(decimals)
+                if resp.status == 200:
+                    data = await resp.json()
+                    value = data.get("result", {}).get("value")
+                    if value and "data" in value:
+                        parsed_info = value["data"].get("parsed", {}).get("info", {})
+                        decimals = parsed_info.get("decimals")
+                        if decimals is not None:
+                            decimals_val = int(decimals)
                         _ss.DYNAMIC_DECIMALS_CACHE[mint_str] = decimals_val
                         logger.info(f"✨ Dynamically resolved decimals for {mint_str[:8]}...: {decimals_val}")
                         return decimals_val
@@ -3165,10 +3173,10 @@ async def reconcile_inflight_bundles(session: aiohttp.ClientSession, rpc_url: st
                 }
                 import src.ingest.shared_state as shared_state
                 async with shared_state.rpc_limiter:
-                    async with session.post(rpc_url, json=payload, timeout=5.0) as resp:
-                    if resp.status == 200:
-                        data = orjson.loads(await resp.read())
-                        statuses = data.get("result", {}).get("value", [])
+                    async with session.post(rpc_getter(), json=payload, timeout=timeout) as resp:
+                        if resp.status == 200:
+                            data = orjson.loads(await resp.read())
+                            statuses = data.get("result", {}).get("value", [])
 
                         for sig_status in statuses:
                             if sig_status is None:
@@ -3603,8 +3611,8 @@ async def lst_depeg_scanner(
                             async with session.post(
                                 rpc_manager.get_rpc(), json=alt_payload, timeout=timeout
                             ) as resp:
-                            if resp.status == 200:
-                                alt_data = orjson.loads(await resp.read())
+                                if resp.status == 200:
+                                    alt_data = orjson.loads(await resp.read())
                                 if (
                                     "result" in alt_data
                                     and "value" in alt_data["result"]
@@ -4110,8 +4118,8 @@ async def create_simple_dummy_tx(session, keypair, rpc_getter):
         import src.ingest.shared_state as shared_state
         async with shared_state.rpc_limiter:
             async with session.post(rpc_getter(), json=payload, timeout=timeout) as resp:
-            if resp.status == 200:
-                data = orjson.loads(await resp.read())
+                if resp.status == 200:
+                    data = orjson.loads(await resp.read())
                 if "result" in data:
                     recent_blockhash = Hash.from_string(
                         data["result"]["value"]["blockhash"]
@@ -4150,8 +4158,8 @@ async def get_dynamic_priority_fee(
         import src.ingest.shared_state as shared_state
         async with shared_state.rpc_limiter:
             async with session.post(rpc_getter(), json=payload, timeout=timeout) as resp:
-            if resp.status == 200:
-                data = orjson.loads(await resp.read())
+                if resp.status == 200:
+                    data = orjson.loads(await resp.read())
                 if "result" in data and "priorityFeeEstimate" in data["result"]:
                     # Return as microlamports (int)
                     fee_microlamports = int(data["result"]["priorityFeeEstimate"])
@@ -4546,6 +4554,17 @@ async def execute_priority_opportunity(
         f"🚀 Executing priority opportunity: {opportunity.pair} (score: {opportunity.score:.1f})"
     )
 
+    # FIX 132: Run Stale Quote Guard BEFORE early return for webhooks
+    q1 = opportunity.metadata.get("quote1") or opportunity.metadata.get("raw_data", {}).get("leg1_quote")
+    if q1 and "fetched_at" in q1:
+        quote_age = time.time() - q1["fetched_at"]
+        if quote_age > 1.5:
+            logger.warning(
+                f"⏭️ Stale Quote Guard: Quote for {opportunity.pair} is too old "
+                f"({quote_age:.2f}s > 1.5s TTL limit) — ABORTING execution to prevent slippage revert"
+            )
+            return
+
     # ── ИСПРАВЛЕНИЕ: Сквозная маршрутизация для Webhook ──
     if opportunity.metadata.get("is_webhook"):
         logger.info(
@@ -4561,16 +4580,6 @@ async def execute_priority_opportunity(
     quote1 = opportunity.metadata.get("quote1")
     quote2 = opportunity.metadata.get("quote2")
     chosen_route = opportunity.metadata.get("chosen_route")
-
-    # ── ИСПРАВЛЕНИЕ: Stale Quote Guard (Task 13 — TTL 1.5s) ──
-    if quote1 and "fetched_at" in quote1:
-        quote_age = time.time() - quote1["fetched_at"]
-        if quote_age > 1.5:
-            logger.warning(
-                f"⏭️ Stale Quote Guard: Quote for {opportunity.pair} is too old "
-                f"({quote_age:.2f}s > 1.5s TTL limit) — ABORTING execution to prevent slippage revert"
-            )
-            return
 
     if not chosen_route and quote1 and quote2:
         chosen_route = [quote1, quote2]
@@ -6431,12 +6440,14 @@ async def run():
         shared_state.stats["last_opportunity_ts"] = time.time()
 
     # Strat 3: Helius webhook handler
+    jito_shotgun = JitoShotgun(session)  # FIX 131
     helius_webhook_handler = HeliusWebhookHandler(
         data_aggregator,
         cfg.WEBHOOK_PORT,
         opportunity_callback=handle_webhook_opportunity,
         webhook_queue=events_config.lst_webhook_trigger,
-        on_token_discovery=lambda x: None,
+        on_token_discovery=register_temporary_token,  # FIX 130
+        jito_shotgun=jito_shotgun,  # FIX 131
     )
 
     if cfg.HELIUS_WEBHOOK_ENABLED:
@@ -7158,13 +7169,13 @@ class StateManager:
                     async with session.post(
                         rpc_url, json=payload, headers=headers, timeout=timeout
                     ) as resp:
-                    if resp.status == 200:
-                        data = orjson.loads(await resp.read())
+                        if resp.status == 200:
+                            data = orjson.loads(await resp.read())
                         if "result" in data:
                             logger.debug("✅ Баланс успешно получен")
                             return data["result"]["value"]
-                    else:
-                        error_text = await resp.text()
+                        else:
+                            error_text = await resp.text()
                         logger.warning(
                             f"Ошибка {resp.status} на RPC. Ответ: {error_text}"
                         )
@@ -7349,15 +7360,15 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
             async with session.post(
                 rpc_getter(), json=balance_payload, timeout=timeout
             ) as resp:
-            if resp.status != 200:
-                logger.debug(f"Failed to check ATA balance: {resp.status}")
-                return
-            data = orjson.loads(await resp.read())
-            if "result" not in data or "value" not in data["result"]:
-                logger.debug(f"No balance data for ATA {str(ata_address)[:8]}")
-                return
-
-            value = data["result"]["value"]
+                if resp.status != 200:
+                    logger.debug(f"Failed to check ATA balance: {resp.status}")
+                    return
+                data = orjson.loads(await resp.read())
+                if "result" not in data or "value" not in data["result"]:
+                    logger.debug(f"No balance data for ATA {str(ata_address)[:8]}")
+                    return
+    
+                value = data["result"]["value"]
             raw_amount_str = value.get("amount", "0")  # integer lamports (base units)
             ui_amount = float(value.get("uiAmountString") or "0")
             decimals = int(value.get("decimals", 6))
@@ -7451,11 +7462,11 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                 async with session.post(
                     rpc_getter(), json=blockhash_payload, timeout=timeout
                 ) as resp:
-                if resp.status != 200:
-                    logger.debug("Failed to get blockhash for ATA close")
-                    return
-                bh_data = orjson.loads(await resp.read())
-                blockhash = bh_data["result"]["value"]["blockhash"]
+                    if resp.status != 200:
+                        logger.debug("Failed to get blockhash for ATA close")
+                        return
+                    bh_data = orjson.loads(await resp.read())
+                    blockhash = bh_data["result"]["value"]["blockhash"]
 
             message = MessageV0.try_compile(
                 payer=keypair.pubkey(),
@@ -7478,21 +7489,21 @@ async def close_ata_after_arbitrage(session, keypair, rpc_getter, ata_address: s
                 async with session.post(
                     rpc_getter(), json=send_payload, timeout=timeout
                 ) as resp:
-                if resp.status == 200:
-                    send_data = orjson.loads(await resp.read())
-                    if "result" in send_data:
-                        logger.debug(
-                            f"✅ ATA burn+close done, rent recovered: {str(send_data['result'])[:8]}"
-                        )
-                        await shared_state.discard_from_ata_cache(ata_address)
+                    if resp.status == 200:
+                        send_data = orjson.loads(await resp.read())
+                        if "result" in send_data:
+                            logger.debug(
+                                f"✅ ATA burn+close done, rent recovered: {str(send_data['result'])[:8]}"
+                            )
+                            await shared_state.discard_from_ata_cache(ata_address)
+                        else:
+                            logger.debug(f"ATA burn+close failed: {send_data}")
                     else:
-                        logger.debug(f"ATA burn+close failed: {send_data}")
-                else:
-                    logger.debug(f"ATA burn+close send failed: {resp.status}")
-
+                        logger.debug(f"ATA burn+close send failed: {resp.status}")
+    
     except Exception as e:
-        logger.debug(f"ATA burn+close error: {e}")
-
+            logger.debug(f"ATA burn+close error: {e}")
+    
 
 if __name__ == "__main__":
     _convert_tokens_to_pubkeys()

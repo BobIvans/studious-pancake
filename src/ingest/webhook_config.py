@@ -42,8 +42,8 @@ class WebhookConfig:
     ORCA_POOL_ADDRESSES = [
         "Hp53XEtt4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp",  # JitoSOL/SOL pool
         "996779v88TxhK6C7H7F5z3u3rL5FvP9SwBeCfFFmCd29",  # mSOL/SOL pool
-        "6v6t7p4S8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp",  # bSOL/SOL pool
-        "5p8yY7uDSwR8jQ9SjSwH7SwSwH7SwSwH7SwSwH7SwSw",  # INF/SOL pool
+        "861yXg9vS8SvPCXarsLSdGfZBuUr5mMmZmX2DRNXQKp",  # bSOL/SOL pool (FIX 133)
+        "HJPjoWUrhoZzkNfRpHuieeFk9AnbVjTk9Gc5SJRqsQTK",  # INF/SOL pool (FIX 133)
     ]
 
     # Active Webhook IDs and the Helius event classes they monitor.

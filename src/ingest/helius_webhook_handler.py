@@ -489,8 +489,9 @@ class HeliusWebhookHandler:
                              "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
                              "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
                              "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm"]:
-                estimated_value = amount * 100
-                if estimated_value > 10000:
+                # FIX 134: Account for LST native decimals (9) to prevent false-positives
+                normalized_amount = amount / 1e9
+                if normalized_amount >= 50.0:  # Threshold set to 50 LST
                     analysis['large_transaction'] = True
                     analysis['recommended_scan_tokens'].append(token_mint)
         if 'account_changes' in opportunity:

@@ -8,7 +8,11 @@ from typing import Dict, Set, Any, Optional, List
 from solders.pubkey import Pubkey
 from src.ingest.circuit_breaker import CapitalProtection
 
+# FIX 164: Global reference to macOS insomnia guard process
+caffeinate_proc = None
+
 logger = logging.getLogger("SharedState")
+
 
 # FIXED: Глобальный лимитер для защиты RPC-нод от превышения бесплатного лимита Helius (10 RPS)
 rpc_limiter = aiolimiter.AsyncLimiter(9, 1.0)

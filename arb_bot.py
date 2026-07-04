@@ -50,6 +50,9 @@ except Exception as e:
 import glob
 import gc
 import shutil
+import psutil  # FIX 161: Make dead dependency useful
+import tracemalloc  # FIX 161: Enable built-in memory tracker
+tracemalloc.start(25)  # Stack depth for allocation tracking — 25 frames
 
 gc.set_threshold(7000, 10, 10)  # Less frequent GC to avoid freezing hot loops
 
@@ -469,6 +472,18 @@ from solders.system_program import transfer, TransferParams
 import logging
 from logging.handlers import RotatingFileHandler
 import orjson
+
+# FIX 163: Safe integer parsing for environment configuration
+def get_env_int(key: str, default: int) -> int:
+    val = os.getenv(key)
+    if not val:
+        return default
+    try:
+        return int(val.strip().strip("'\""))
+    except ValueError:
+        logger.critical(f"❌ CONFIG ERROR: Env variable {key} must be an integer, but got '{val}'. Falling back to default {default}.")
+        return default
+
 
 class JsonFormatter(logging.Formatter):
     """Сериализатор логов в структурированный JSON для Grafana Loki/ELK."""
@@ -896,7 +911,7 @@ class Config:
 
     HELIUS_GATEKEEPER_URL: str = os.getenv("HELIUS_GATEKEEPER_URL", "")
     HELIUS_API_KEY: str = os.getenv("HELIUS_API_KEY", "")
-    WEBHOOK_PORT: int = int(os.getenv("WEBHOOK_PORT", "3000"))
+    WEBHOOK_PORT: int = get_env_int("WEBHOOK_PORT", 3000)
     HELIUS_WEBHOOK_ENABLED: bool = (
         str(os.getenv("HELIUS_WEBHOOK_ENABLED", "true")).lower() == "true"
     )
@@ -936,10 +951,10 @@ class Config:
         str(os.getenv("JITO_SNIPER_ENABLED", "false")).lower() == "true"
     )
     JITO_TIP_PERCENTILE: float = float(os.getenv("JITO_TIP_PERCENTILE", "75.0"))
-    JITO_MIN_TIP_LAMPORTS: int = int(os.getenv("JITO_MIN_TIP_LAMPORTS", "10000"))
+    JITO_MIN_TIP_LAMPORTS: int = get_env_int("JITO_MIN_TIP_LAMPORTS", 10000)
     TIP_MULTIPLIER: float = float(os.getenv("TIP_MULTIPLIER", "1.1"))
     MAX_PRIORITY_FEE_SOL: float = float(os.getenv("MAX_PRIORITY_FEE_SOL", "0.00005"))
-    LEADER_FETCH_INTERVAL: int = int(os.getenv("LEADER_FETCH_INTERVAL", "600000"))
+    LEADER_FETCH_INTERVAL: int = get_env_int("LEADER_FETCH_INTERVAL", 600000)
     STRICT_JITO_MODE: bool = (
         str(os.getenv("STRICT_JITO_MODE", "true")).lower() == "true"
     )  # Enforce Jito execution for capital protection
@@ -1017,8 +1032,8 @@ class Config:
 
     JUPITER_API_KEY: str = os.getenv("JUPITER_API_KEY", "")
 
-    WORKER_COUNT: int = 1  # Fixed to 1 for sequential flash loan execution
-    BATCH_SIZE: int = int(os.getenv("BATCH_SIZE", 20))
+    WORKER_COUNT: int = get_env_int("WEBHOOK_WORKER_COUNT", 1)  # FIX 163: Use safe env parser
+    BATCH_SIZE: int = get_env_int("BATCH_SIZE", 20)
     BG_FETCH_INTERVAL: float = float(os.getenv("BG_FETCH_INTERVAL", "2.0"))
     SIMULATE_BEFORE_EXECUTE: bool = (
         str(os.getenv("SIMULATE_BEFORE_EXECUTE", "True")).lower() == "true"
@@ -1026,7 +1041,7 @@ class Config:
     DEXSCREENER_URL: str = os.getenv(
         "DEXSCREENER_URL", "https://api.dexscreener.com/token-profiles/latest/v1"
     )
-    DEXSCREENER_RPS: int = int(os.getenv("DEXSCREENER_RPS", 1))
+    DEXSCREENER_RPS: int = get_env_int("DEXSCREENER_RPS", 1)
     VELORA_QUOTE_URL: str = os.getenv(
         "VELORA_QUOTE_URL", "https://api.paraswap.io/prices"
     )
@@ -1037,7 +1052,7 @@ class Config:
     MIN_NET_PROFIT_PCT: float = float(os.getenv("MIN_NET_PROFIT_PCT", 0.005))
     MAX_DRAWDOWN_SOL: float = float(os.getenv("MAX_DRAWDOWN_SOL", 0.005))  # Phase 10: 33% of 0.015 SOL survival balance
 
-    JUP_RPS: int = int(os.getenv("JUPITER_QUOTE_RPS", 1))
+    JUP_RPS: int = get_env_int("JUPITER_QUOTE_RPS", 1)
 
     JUPITER_PRICE_URL: str = os.getenv(
         "JUPITER_PRICE_URL", "https://api.jup.ag/price/v2"
@@ -1045,7 +1060,7 @@ class Config:
     JUPITER_QUOTE_URL: str = os.getenv(
         "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v1/quote"
     )
-    BASE_TIP_LAMPORTS: int = int(os.getenv("BASE_TIP_LAMPORTS", "10000"))
+    BASE_TIP_LAMPORTS: int = get_env_int("BASE_TIP_LAMPORTS", 10000)
     FLASH_FEE_PCT: float = float(os.getenv("FLASH_FEE_PCT", "0.0"))
 
     MARGINFI_ACCOUNT_PUBKEY: str = os.getenv("MARGINFI_ACCOUNT", "")
@@ -1057,10 +1072,10 @@ class Config:
     MIN_PROFIT_THRESHOLD_USDC: float = float(
         os.getenv("MIN_PROFIT_THRESHOLD_USDC", "0.01")
     )
-    ARBITRAGE_TIMEOUT_SECONDS: int = int(os.getenv("ARBITRAGE_TIMEOUT_SECONDS", "30"))
-    MAX_CONCURRENT_ARBITRAGES: int = int(os.getenv("MAX_CONCURRENT_ARBITRAGES", "3"))
+    ARBITRAGE_TIMEOUT_SECONDS: int = get_env_int("ARBITRAGE_TIMEOUT_SECONDS", 30)
+    MAX_CONCURRENT_ARBITRAGES: int = get_env_int("MAX_CONCURRENT_ARBITRAGES", 3)
 
-    SLIPPAGE_BPS: int = int(os.getenv("SLIPPAGE_BPS", os.getenv("STARTING_SLIPPAGE_BPS", "15")))
+    SLIPPAGE_BPS: int = get_env_int("SLIPPAGE_BPS", 15)
     BASE_FEE: float = 0.000005
     PRIORITY_FEE: float = 0.00005
     # ATA_FEE removed: rent_fee_sol is already computed dynamically from ATA_CACHE
@@ -1084,7 +1099,7 @@ class Config:
         str(os.getenv("LST_DEPEG_ENABLED", "true")).lower() == "true"
     )  # BLUE OCEAN: LST depeg (0.017 SOL start)
 
-    LST_DEPEG_THRESHOLD_BPS: int = int(os.getenv("LST_DEPEG_THRESHOLD_BPS", "15"))
+    LST_DEPEG_THRESHOLD_BPS: int = get_env_int("LST_DEPEG_THRESHOLD_BPS", 15)
     FLASH_LOAN_SIZE_SOL: float = float(
         os.getenv("FLASH_LOAN_SIZE_SOL", "0.05")
     )  # Initial: 0.05 SOL (5x leverage is max safe for 0.015 SOL)
@@ -2452,6 +2467,9 @@ async def get_token_decimals_dynamic(session: aiohttp.ClientSession, rpc_url: st
                         decimals = parsed_info.get("decimals")
                         if decimals is not None:
                             decimals_val = int(decimals)
+                        # FIX 159: Limit dynamic decimals cache to 2000 items to avoid slow memory leak
+                        if len(_ss.DYNAMIC_DECIMALS_CACHE) > 2000:
+                            _ss.DYNAMIC_DECIMALS_CACHE.clear()
                         _ss.DYNAMIC_DECIMALS_CACHE[mint_str] = decimals_val
                         logger.info(f"✨ Dynamically resolved decimals for {mint_str[:8]}...: {decimals_val}")
                         return decimals_val
@@ -5964,10 +5982,34 @@ async def run():
         logger.critical(f"🚫 .capital_protection_triggered file found — previous run hit Capital Protection: {cp_reason}. Refusing to start.")
         sys.exit(1)
 
-    # P0-3.2a: Register SIGTERM/SIGINT handlers for graceful shutdown
+    # FIX 162: SIGUSR1 diagnostic dump handler (Unix only)
+    def dump_diagnostics(sig, frame):
+        logger.critical(f"🚨 DIAGNOSTIC SIGNAL RECEIVED (SIG={sig})")
+        import traceback, sys, threading
+        for thread_id, stack in sys._current_frames().items():
+            logger.critical(f"Thread {thread_id} ({threading.current_thread().name}):")
+            logger.critical("".join(traceback.format_stack(stack)))
+        if tracemalloc.is_tracing():
+            snapshot = tracemalloc.take_snapshot()
+            top_stats = snapshot.statistics('lineno')
+            logger.critical("Top 10 memory allocations:")
+            for index, stat in enumerate(top_stats[:10], 1):
+                logger.critical(f" #{index}: {stat}")
+
+    try:
+        import signal
+        _loop.add_signal_handler(signal.SIGUSR1, lambda: dump_diagnostics(signal.SIGUSR1, None))
+        logger.info("📡 Diagnostic SIGUSR1 handler registered (kill -USR1 <pid> to dump traces/memory)")
+    except (NotImplementedError, AttributeError):
+        pass
+
+    # FIX 155: Wrap signal handlers in try/except for Windows platform support
     _loop = asyncio.get_running_loop()
     for _sig in (signal.SIGTERM, signal.SIGINT):
-        _loop.add_signal_handler(_sig, shared_state.GLOBAL_STOP_EVENT.set)
+        try:
+            _loop.add_signal_handler(_sig, shared_state.GLOBAL_STOP_EVENT.set)
+        except NotImplementedError:
+            logger.warning(f"⚠️ Signal {_sig} handler not supported on this platform")
     logger.info("🔔 SIGTERM/SIGINT handlers registered for graceful shutdown")
 
     # OPS-001: SIGHUP/SIGPIPE shield — prevent SSH disconnects and broken pipes from killing the bot
@@ -5995,11 +6037,13 @@ async def run():
 
     if platform.system() == "Darwin":
         try:
-            subprocess.Popen(
+            # FIX 164: Save process handle to prevent zombie/orphan on exit
+            proc = subprocess.Popen(
                 ["caffeinate", "-i", "-p", str(os.getpid())],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
             )
+            shared_state.caffeinate_proc = proc
             logger.info(
                 "🛡️ Insomnia guard active: caffeinate preventing macOS sleep (PID %s)"
                 % os.getpid()
@@ -6262,18 +6306,27 @@ async def run():
                     except Exception as backup_err:
                         logger.debug(f"Periodic maintenance analysis failed: {backup_err}")
 
-            # vacuum DB
+            # FIX 154: Run DB vacuum in background thread pool to prevent Event Loop freeze
             try:
-                import sqlite3
-                conn = sqlite3.connect("bot_history.db")
-                conn.execute("VACUUM;")
-                conn.close()
+                def _db_vacuum():
+                    import sqlite3
+                    conn = sqlite3.connect("bot_history.db")
+                    conn.execute("VACUUM;")
+                    conn.close()
+                await asyncio.get_running_loop().run_in_executor(None, _db_vacuum)
+                logger.info("🧹 Database VACUUM completed in background thread")
             except Exception as e:
                 logger.debug(f"DB vacuum failed: {e}")
             # disk check
             if shutil.disk_usage(".").free < 500 * 1024 * 1024:
                 logger.critical("CRITICAL: Low disk space (<500MB)! Muting non-critical logs to prevent DB corruption.")
                 logging.getLogger().setLevel(logging.ERROR)
+
+            # FIX 160: Periodically check time sync to prevent Jito timestamp drift (every ~6h)
+            try:
+                await check_time_sync(session, rpc.get_rpc())
+            except Exception as ntp_err:
+                logger.debug(f"NTP periodic drift check failed: {ntp_err}")
 
     task = asyncio.create_task(_maintenance())
     shared_state.retain_background_task(task)
@@ -6424,9 +6477,40 @@ async def run():
     # 4. Webhook & Strategy Routing
     async def handle_webhook_opportunity(opportunity, webhook_id):
         logger.debug(f"🚨 Webhook Triggered: {opportunity.get('strategy', 'unknown')}")
+        # FIX 135: On-chain enrichment instead of fake 0.01 SOL constants
+        expected_profit_sol = 0.0001
+        if opportunity.get('type') == 'sanctum_lst_arbitrage' and opportunity.get('tokens_involved'):
+            try:
+                from src.ingest.lst_route_aggregator import LstRouteAggregator
+                route_aggregator = LstRouteAggregator(
+                    session=session,
+                    jupiter_api_key=cfg.JUPITER_API_KEY,
+                    slippage_bps=cfg.SLIPPAGE_BPS,
+                    sanctum_enabled=cfg.SANCTUM_ROUTER_ENABLED,
+                )
+                lst_mints = [t for t in opportunity['tokens_involved'] if t != "So11111111111111111111111111111111111111112"]
+                if lst_mints:
+                    lst_mint = lst_mints[0]
+                    route = await route_aggregator.find_best_route(
+                        borrow_amount_lamports=int(cfg.FLASH_LOAN_SIZE_SOL * 1e9),
+                        lst_mint=lst_mint,
+                        direction="BUY_LST",
+                        base_fee_sol=cfg.BASE_FEE,
+                        priority_fee_sol=cfg.PRIORITY_FEE,
+                        jito_tip_sol=0.0001
+                    )
+                    if route and route.is_profitable:
+                        expected_profit_sol = route.profit_sol
+                        opportunity['expected_profit_sol'] = expected_profit_sol
+                        opportunity['leg1_quote'] = route.buy_quote.full_quote_response
+                        opportunity['leg2_quote'] = route.sell_quote.full_quote_response
+                        logger.info(f"Webhook Enriched: Real on-chain profit for {lst_mint[:8]} is {expected_profit_sol:.6f} SOL")
+            except Exception as e:
+                logger.warning(f"Failed to enrich webhook opportunity: {e}")
+
         arb_opp = ArbitrageOpportunity(
             pair=opportunity.get("description", "Webhook/Arb"),
-            expected_profit_sol=opportunity.get("expected_profit_sol", 0.01),
+            expected_profit_sol=opportunity.get("expected_profit_sol", expected_profit_sol),
             slippage_pct=0.01,
             liquidity_depth_usd=50000,
             network_congestion=50.0,
@@ -6486,7 +6570,8 @@ async def run():
         wsol_mint = Pubkey.from_string("So11111111111111111111111111111111111111112")
         wsol_ata = get_associated_token_address(keypair.pubkey(), wsol_mint)
 
-        while True:
+        # FIX 157: Check GLOBAL_STOP_EVENT to terminate instantly on emergency stop
+        while not shared_state.GLOBAL_STOP_EVENT.is_set():
             try:
                 # 1. Проверяем нативный баланс
                 # PAPER TRADING GUARD: skip real wallet maintenance in paper mode
@@ -6716,7 +6801,12 @@ async def run():
             except Exception as e:
                 logger.debug(f"Balance listener/unwrap error: {e}")
 
-            await asyncio.sleep(120)
+            # FIX 157: Wait on GLOBAL_STOP_EVENT to terminate instantly on stop
+            try:
+                await asyncio.wait_for(shared_state.GLOBAL_STOP_EVENT.wait(), timeout=120.0)
+                break
+            except asyncio.TimeoutError:
+                pass
 
     _wallet_task = asyncio.create_task(wallet_balance_listener())
     shared_state.active_tasks.add(_wallet_task)
@@ -7032,6 +7122,13 @@ async def run():
                 else 0
             )
 
+            # FIX 161: Log actual process memory utilization via psutil
+            try:
+                p_mem = psutil.Process(os.getpid()).memory_info()
+                rss_mb = p_mem.rss / (1024 * 1024)
+                logger.info(f"📊 [RESOURCE ENGINE] Memory allocation: RSS={rss_mb:.2f}MB")
+            except Exception:
+                pass
             logger.debug(
                 f"📊 [STATS] Balance: {current_balance:.8f} | WC: {working_cap:.8f} | Trades: {shared_state.stats['trades']} | BIR: {bir:.1f}% | SEL: {avg_sel:.1f}ms"
             )
@@ -7113,6 +7210,14 @@ async def run():
             except Exception as _rpc_close_err:
                 logger.warning(f"RPCManager close failed: {_rpc_close_err}")
 
+        # FIX 164: Terminate macOS insomnia guard child process
+        if getattr(shared_state, "caffeinate_proc", None):
+            try:
+                shared_state.caffeinate_proc.terminate()
+                shared_state.caffeinate_proc.wait(timeout=2.0)
+                logger.info("🔌 Insomnia guard (caffeinate) successfully closed.")
+            except Exception:
+                pass
         # FIX 123: Stop Pyth Feeder to prevent WSS leak
         try:
             if "pyth_feeder" in locals() and pyth_feeder:

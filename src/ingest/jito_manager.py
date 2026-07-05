@@ -37,9 +37,16 @@ class JitoManager:
         self.tip_percentage_range = tip_percentage_range
         self.default_tip_lamports = default_tip_lamports
         # Phase 35: Dynamic Jito Tip Accounts
+        # FIX 167: Fully expand Jito tip accounts failover default array
         self.tip_accounts = [
-            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",  # Fallback 1
-            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",  # Fallback 2
+            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",
+            "Cw8CFN97mo99uH2LL69Yp6Cgv7S8Z8B7A49K8a4CgC5B",
+            "ADa6g7u6g6TZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "Df6Z8LMo6uH7T6C9G6fM5sU8g6G6CwcE9a4CgC5B",
+            "ADuUk8g6g6TZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "3AVi9TgZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "DttWaJVXiusFBgTY8B6mLDE2YvA6uh24QQj1mVR6iprs"
         ]
         logger.warning("JitoManager: tip_accounts initialized with fallback defaults. Call update_tip_accounts() to fetch dynamic accounts from Jito API.")
         self.bundle_client = JitoBundleClient(session=session, rpc_url=rpc_url)
@@ -175,16 +182,33 @@ class JitoManager:
                 "params": [[tx_base58]]
             }
 
-            result = await self.bundle_client._send_http_request(
-                self.bundle_client.endpoints[0], payload
-            )
+            # FIX 166: Parallel HTTP Shotgun across all Block Engine endpoints
+            tasks = []
+            for url in self.bundle_client.endpoints:
+                tasks.append(asyncio.create_task(self.bundle_client._send_http_request(url, payload)))
+
+            done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED, timeout=1.5)
+            for t in pending:
+                t.cancel()
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
+
+            result = {"success": False, "error": "All shotgun endpoints failed"}
+            for t in done:
+                try:
+                    res = t.result()
+                    if res and res.get("success"):
+                        result = res
+                        break
+                except Exception:
+                    pass
             result["bundle_id"] = result.get("bundle_id")
 
             if result.get("success"):
                 bundle_id = result.get("bundle_id")
                 logger.info(f"✅ Bundle sent successfully: {bundle_id}")
 
-                task = asyncio.create_task(self._poll_bundle_status(bundle_id))
+                task = shared_state.retain_background_task(asyncio.create_task(self._poll_bundle_status(bundle_id)))
                 self.background_tasks.add(task)
                 task.add_done_callback(lambda t: self.background_tasks.discard(t))
 
@@ -236,9 +260,16 @@ class JitoBiddingManager:
 
     def __init__(self):
         self.tip_floor_data = {}
+        # FIX 167: Fully expand Jito tip accounts failover default array
         self.tip_accounts = [
-            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",  # Fallback 1
-            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",  # Fallback 2
+            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",
+            "Cw8CFN97mo99uH2LL69Yp6Cgv7S8Z8B7A49K8a4CgC5B",
+            "ADa6g7u6g6TZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "Df6Z8LMo6uH7T6C9G6fM5sU8g6G6CwcE9a4CgC5B",
+            "ADuUk8g6g6TZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "3AVi9TgZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "DttWaJVXiusFBgTY8B6mLDE2YvA6uh24QQj1mVR6iprs"
         ]
         self.strategy_success: Dict[str, list] = {}  # strategy -> [ (timestamp, success_bool) ]
         self.consecutive_success = 0
@@ -475,7 +506,13 @@ class JitoBiddingManager:
 
         # ── Dynamic Jito Tip Floor Filtering (P1) ──────────────────
         p50 = self.get_50th_percentile_lamports() / 1e9
-        forty_pct_tip = net_profit_sol * 0.40
+
+        # FIX 296: Aggressive tip boost for micro-arbitrage (<0.001 SOL net profit)
+        if net_profit_sol < 0.001:
+            forty_pct_tip = net_profit_sol * 0.80
+            logger.debug(f"🚀 Micro-Arb Tip Boost (80%): {forty_pct_tip:.6f} SOL for {strategy}")
+        else:
+            forty_pct_tip = net_profit_sol * 0.40
 
         # P1: Compare 40% tip against 50th percentile floor
         if forty_pct_tip < p50:
@@ -490,7 +527,9 @@ class JitoBiddingManager:
             # Otherwise, bump to p50 + random jitter
             import random
             bump_jitter = random.randint(100, 500)
-            tip_lamports = int((p50 + bump_jitter / 1e9) * 1e9)
+            # FIX 115: Define base for floor-bump path to prevent UnboundLocalError
+            base = p50 + bump_jitter / 1e9
+            tip_lamports = int(base * 1e9)
             logger.debug(
                 f"🚀 Tip Bump (Task 7): {tip_lamports} lamports "
                 f"(floor={p50 * 1e9:.0f}, jitter={bump_jitter}) "
@@ -547,11 +586,12 @@ class JitoBiddingManager:
 
         return tip_lamports
 
-    def record_trade_result(self, strategy: str, success: bool):
+    def record_trade_result(self, strategy: str, success: bool, tip_paid_lamports: int = 0):
         import time
         if strategy not in self.strategy_success:
             self.strategy_success[strategy] = []
-        self.strategy_success[strategy].append((time.time(), success))
+        # FIX 205: Record actual tip paid to calculate overpayments on lost auctions
+        self.strategy_success[strategy].append((time.time(), success, tip_paid_lamports))
         # Prune entries older than 10 minutes to prevent memory leak
         now = time.time()
         self.strategy_success[strategy] = [
@@ -562,7 +602,7 @@ class JitoBiddingManager:
         else:
             self.consecutive_success = 0
 
-    def record_bundle_result(self, strategy: str, landed: bool):
+    def record_bundle_result(self, strategy: str, landed: bool, tip_paid_lamports: int = 0):
         """Phase 49 + Phase 21: Track consecutive bundle failures per strategy for dynamic step-up."""
         import time
         import asyncio
@@ -572,7 +612,7 @@ class JitoBiddingManager:
             # Success — reset per-strategy counter and collapse step-up window
             self._consecutive_failures[strategy] = 0
             self._step_up_until = 0.0
-            self.record_trade_result(strategy, True)
+            self.record_trade_result(strategy, True, tip_paid_lamports)
             asyncio.create_task(send_telegram_alert(f"✅ <b>BUNDLE LANDED!</b>\nStrategy: <code>{strategy}</code> executed successfully."))
         else:
             # Accumulate per-strategy failure — trigger step-up window once threshold is hit
@@ -584,4 +624,4 @@ class JitoBiddingManager:
                     f"step-up window activated for {self.STEP_UP_DURATION_S}s"
                 )
                 asyncio.create_task(send_telegram_alert(f"⚠️ <b>JITO STEP-UP ACTIVATED</b>\n{self.STEP_UP_THRESHOLD} consecutive rejected bundles for <code>{strategy}</code>. Raising tip percentage!"))
-            self.record_trade_result(strategy, False)
+            self.record_trade_result(strategy, False, tip_paid_lamports)

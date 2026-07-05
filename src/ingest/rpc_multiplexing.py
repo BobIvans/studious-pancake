@@ -22,45 +22,32 @@ logger = logging.getLogger(__name__)
 
 _DNS_CACHE = {}
 
-def _sync_doh_query(hostname: str) -> list[str]:
-    """Synchronous DoH query using direct IPs to beat asyncio limits and ISP DPI."""
-    import requests, time
-    import urllib3
-    urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
-    
+async def _async_doh_query(session: aiohttp.ClientSession, hostname: str) -> list[str]:
+    """Non-blocking async DoH resolver using aiohttp with local IP pinning."""
+    now = time.time()
     cache_entry = _DNS_CACHE.get(hostname)
-    if cache_entry and time.time() - cache_entry['time'] < 300:
+    if cache_entry and now - cache_entry['time'] < 300:
         return cache_entry['ips']
 
-    # Идем напрямую по IP, передавая Host заголовок (провайдер не может подменить DNS)
     providers = [
         ("https://8.8.8.8/resolve", "application/json", {"Host": "dns.google"}),
         ("https://1.1.1.1/dns-query", "application/dns-json", {"Host": "cloudflare-dns.com"}),
     ]
-    
+
     for url_base, accept, extra_headers in providers:
         try:
             headers = {"Accept": accept, "User-Agent": "Mozilla/5.0"}
             headers.update(extra_headers)
-            resp = requests.get(f"{url_base}?name={hostname}&type=A", headers=headers, timeout=0.8, verify=True)
-            if resp.status_code == 200:
-                ips = [ans["data"] for ans in resp.json().get("Answer", []) if ans.get("type") == 1]
-                if ips:
-                    _DNS_CACHE[hostname] = {'ips': ips, 'time': time.time()}
-                    return ips
+            timeout = aiohttp.ClientTimeout(total=0.5)
+            async with session.get(f"{url_base}?name={hostname}&type=A", headers=headers, timeout=timeout) as resp:
+                if resp.status == 200:
+                    data = await resp.json()
+                    ips = [ans["data"] for ans in data.get("Answer", []) if ans.get("type") == 1]
+                    if ips:
+                        _DNS_CACHE[hostname] = {'ips': ips, 'time': now}
+                        return ips
         except Exception:
             continue
-
-    # Резервный публичный API (тоже по IP)
-    try:
-        resp = requests.get(f"https://104.21.25.96/api/dns/lookup/{hostname}", headers={"Host": "networkcalc.com", "User-Agent": "Mozilla/5.0"}, timeout=1.0, verify=True)
-        if resp.status_code == 200:
-            ips = [rec["address"] for rec in resp.json().get("records", {}).get("A", [])]
-            if ips:
-                _DNS_CACHE[hostname] = {'ips': ips, 'time': time.time()}
-                return ips
-    except Exception:
-        pass
     return []
 
 from .jito_bundle_handler import JitoBundleHandler, BackrunTrigger, _set_global_price_matrix
@@ -112,6 +99,30 @@ class WSSConnection:
         self.connected = False
         logger.info(f"🔌 Disconnected from {self.name}")
 
+    # FIX 291: Lightweight pool balance change detection via accountSubscribe
+    async def subscribe_pool_accounts(self, pool_addresses: List[str]):
+        """Subscribe to account balance changes for pool detection (lighter than logsSubscribe)."""
+        if not self.connected or not self.websocket:
+            return
+        for addr in pool_addresses:
+            sub_id = len(self.subscriptions) + 1
+            payload = {
+                "jsonrpc": "2.0",
+                "id": sub_id,
+                "method": "accountSubscribe",
+                "params": [
+                    addr,
+                    {"encoding": "jsonParsed", "commitment": "processed"}
+                ]
+            }
+            await self.websocket.send_str(orjson.dumps(payload).decode())
+            self.subscriptions[sub_id] = {
+                "type": "account_update",
+                "pool_address": addr,
+                "active": True
+            }
+        logger.debug(f"📡 Subscribed to processed account updates for {len(pool_addresses)} pools")
+
     async def subscribe_logs(self, addresses: List[str]) -> Optional[List[int]]:
         """Subscribe to logs for specific addresses (one subscription per address)."""
         if not self.connected or not self.websocket:
@@ -127,7 +138,7 @@ class WSSConnection:
                     "method": "logsSubscribe",
                     "params": [
                         {"mentions": [address]},  # Only one address per subscription
-                        {"commitment": "confirmed"}
+                        {"commitment": "processed"},  # FIX 289
                     ]
                 }
 
@@ -203,12 +214,12 @@ class BlockhashManager:
 
     async def _fetch_blockhash(self, session: aiohttp.ClientSession, url: str) -> Optional[str]:
         try:
-            payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash", "params": [{"commitment": "confirmed"}]}
+            payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash", "params": [{"commitment": "processed"}]}  # FIX 289
             async with session.post(url, json=payload, timeout=0.5) as resp:
                 if resp.status == 200:
                     data = await resp.json()
                     return data["result"]["value"]["blockhash"]
-        except:
+        except Exception:
             pass
         return None
 

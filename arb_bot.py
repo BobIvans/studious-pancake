@@ -3455,64 +3455,66 @@ async def lst_depeg_scanner(
                 max(0, shared_state._balance_lock_pause_until - time.time())
             )
 
-        try:
-            # --- TASK 3 — Dynamic Max Borrow with Slippage-Pegged Sizing (FIX 4) ---
-            # Uses OptimalTradeSizer.calculate_dynamic_flash_size to calculate the optimal
-            # flash loan size based on wallet balance and pool slippage.
-            # Formula: Max_Flash = Max_Loss_Budget / Expected_Slippage_Pct
-            # This mathematically guarantees that slippage can never zero out the wallet.
-            try:
-                borrow_lamports = await tx_builder.get_max_marginfi_borrow(
-                    str(bank_cfg["liquidity_vault"])
-                )
-                if borrow_lamports is None:
-                    borrow_lamports = 1_000_000_000
-                # DYNAMIC SIZING: Feed 95% vault into OptimalTradeSizer to find peak of AMM curve
-                optimal = trade_sizer.find_optimal_trade_size(
-                    routes=[],
-                    amount_in=borrow_lamports,
-                    decimals_in=9,
-                    decimals_out=9,
-                    jito_tip_sol=0.0001,
-                )
-                if (
-                    optimal and int(optimal) > 1_000_000
-                ):  # Min 0.001 SOL (survival phase)
-                    borrow_lamports = int(optimal)
-                    logger.debug(
-                        f"📈 LST optimal size: {borrow_lamports/1e9:.4f} SOL (AMM curve peak)"
-                    )
+            # ── Step 1: Update prices and detect depeg ────────────────────
+            # FIX 294: Parallelize MarginFi liquidity + price updates to save ~150-200ms
+            liq_task = asyncio.create_task(
+                tx_builder.get_max_marginfi_borrow(str(bank_cfg["liquidity_vault"]))
+            )
+            fair_task = asyncio.create_task(fair_price_monitor.update_fair_prices())
+            market_task = asyncio.create_task(
+                fair_price_monitor.update_market_prices(price_matrix)
+            )
 
-                # FIX 4 (MarginFi Slippage-Pegged Sizing): Cap borrow using dynamic formula
-                # that considers wallet balance, expected pool slippage, and 50% of the vault liquidity.
-                current_native_balance = shared_state.stats.get(
-                    "last_balance", shared_state.stats.get("virtual_balance", 0.017)
-                )
-                # Estimate pool slippage from the route's price impact
-                _estimated_slippage_pct = max(0.001, cfg.SLIPPAGE_BPS / 10000.0)
-                slippage_pegged_lamports = (
-                    trade_sizer.get_slippage_pegged_borrow_lamports(
-                        wallet_native_balance_sol=current_native_balance,
-                        pool_slippage_pct=_estimated_slippage_pct,
-                        bank_liquidity_lamports=borrow_lamports,
-                    )
-                )
-                if borrow_lamports > slippage_pegged_lamports:
-                    logger.debug(
-                        f"📉 Slippage-Pegged cap: {borrow_lamports/1e9:.4f} -> {slippage_pegged_lamports/1e9:.4f} SOL"
-                    )
-                    borrow_lamports = slippage_pegged_lamports
-            except Exception as e:
-                logger.warning(
-                    f"Could not check MarginFi SOL liquidity, fallback to default: {e}"
-                )
+            price_results = await asyncio.gather(liq_task, fair_task, market_task, return_exceptions=True)
+
+            if isinstance(price_results[0], Exception):
+                logger.debug(f"⚠️ MarginFi liquidity fetch failed: {price_results[0]}")
                 borrow_lamports = int(cfg.FLASH_LOAN_SIZE_SOL * 1_000_000_000)
+            else:
+                borrow_lamports = price_results[0] or 1_000_000_000
 
-            if borrow_lamports < 1_000_000:  # Если меньше 0.001 SOL
+            if isinstance(price_results[1], Exception) or isinstance(price_results[2], Exception):
+                logger.debug("⚠️ Fair/Market price update failed during parallel gather. Skipping tick.")
+                await asyncio.sleep(cfg.LST_SCAN_INTERVAL)
+                continue
+
+            # DYNAMIC SIZING: Feed 95% vault into OptimalTradeSizer to find peak of AMM curve
+            optimal = trade_sizer.find_optimal_trade_size(
+                routes=[],
+                amount_in=borrow_lamports,
+                decimals_in=9,
+                decimals_out=9,
+                jito_tip_sol=0.0001,
+            )
+            if (
+                optimal and int(optimal) > 1_000_000
+            ):
+                borrow_lamports = int(optimal)
+                logger.debug(
+                    f"📈 LST optimal size: {borrow_lamports/1e9:.4f} SOL (AMM curve peak)"
+                )
+
+            current_native_balance = shared_state.stats.get(
+                "last_balance", shared_state.stats.get("virtual_balance", 0.017)
+            )
+            _estimated_slippage_pct = max(0.001, cfg.SLIPPAGE_BPS / 10000.0)
+            slippage_pegged_lamports = (
+                trade_sizer.get_slippage_pegged_borrow_lamports(
+                    wallet_native_balance_sol=current_native_balance,
+                    pool_slippage_pct=_estimated_slippage_pct,
+                    bank_liquidity_lamports=borrow_lamports,
+                )
+            )
+            if borrow_lamports > slippage_pegged_lamports:
+                logger.debug(
+                    f"📉 Slippage-Pegged cap: {borrow_lamports/1e9:.4f} -> {slippage_pegged_lamports/1e9:.4f} SOL"
+                )
+                borrow_lamports = slippage_pegged_lamports
+
+            if borrow_lamports < 1_000_000:
                 logger.warning(f"📉 MarginFi SOL Bank is low ({borrow_lamports/1e9:.4f} SOL). Waiting...")
                 await asyncio.sleep(10)
                 continue
-            # -------------------------------------------------------------------
 
             # Check for webhook trigger
             force_scan = False
@@ -3526,9 +3528,6 @@ async def lst_depeg_scanner(
             except asyncio.QueueEmpty:
                 pass
 
-            # ── Step 1: Update prices and detect depeg ────────────────────
-            await fair_price_monitor.update_fair_prices()
-            await fair_price_monitor.update_market_prices()
             signals = fair_price_monitor.get_depeg_signals(
                 threshold_bps=cfg.LST_DEPEG_THRESHOLD_BPS
             )

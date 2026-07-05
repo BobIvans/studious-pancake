@@ -204,8 +204,20 @@ class TokenSecurityChecker:
             import base64
 
             # FIX 201: Исключаем безопасные расширения (3 - MintCloseAuthority, 7 - ImmutableOwner) из черного списка.
-            # Оставляем только критически опасные (12 - PermanentDelegate, 15 - TransferHookAccount)
-            DANGEROUS_EXTENSIONS = {12, 15}
+            # FIX 250: Official spl-token-2022 Extension Type IDs per Task 250 spec
+            EXT_PERMANENT_DELEGATE = 12
+            EXT_TRANSFER_HOOK = 14
+            EXT_TRANSFER_HOOK_ACCOUNT = 15
+
+            # Критически опасные расширения, представляющие Honeypot-угрозу:
+            # 12 (PermanentDelegate) — даёт создателю право конфисковать/сжечь токены в любой момент.
+            # 14/15 (TransferHook) — кастомная программа может заблокировать своп на выходе.
+            EXT_NAMES = {
+                12: "PermanentDelegate (Type 12)",
+                14: "TransferHook (Type 14)",
+                15: "TransferHookAccount (Type 15)",
+            }
+            DANGEROUS_EXTENSIONS = {EXT_PERMANENT_DELEGATE, EXT_TRANSFER_HOOK, EXT_TRANSFER_HOOK_ACCOUNT}
 
             data_b64 = account_info.get("data", [""])[0]
             if not data_b64:
@@ -223,30 +235,17 @@ class TokenSecurityChecker:
                     ext_len = struct.unpack("<H", data[offset + 2 : offset + 4])[0]
 
                     if ext_type in DANGEROUS_EXTENSIONS:
-                        logger.critical(
-                            f"🚨 HONEYPOT DETECTED: Token-2022 has dangerous extension {ext_type} on {mint_address}"
-                        )
-                        return False, f"Dangerous Token-2022 extension {ext_type} (Potential Honeypot)"
-
-                    # ─── БЛОК 13: PermanentDelegate Honeypot Detection ─────────────────────
-                    if ext_type == 13:  # PermanentDelegate
-                        logger.critical(
-                            f"🚨 HONEYPOT DETECTED: Token-2022 has PermanentDelegate (type 13) on {mint_address}"
-                        )
-                        return False, "Honeypot: PermanentDelegate active (creator can seize tokens at any time)"
-
-                    # ─── БЛОК 13: TransferHook Honeypot Detection ──────────────────────────
-                    if ext_type == 14:  # TransferHook
-                        allow_unknown_hooks = os.getenv("ALLOW_UNKNOWN_TRANSFER_HOOKS", "false").lower() == "true"
-                        if not allow_unknown_hooks:
-                            logger.critical(
-                                f"🚨 HONEYPOT DETECTED: Token-2022 has TransferHook (type 14) on {mint_address}"
-                            )
-                            return False, "Honeypot: Unknown TransferHook (can freeze/fail transfers)"
-                        else:
+                        # TransferHook (14) может быть разрешён через env override
+                        if ext_type == EXT_TRANSFER_HOOK and os.getenv("ALLOW_UNKNOWN_TRANSFER_HOOKS", "false").lower() == "true":
                             logger.info(
                                 f"✅ Token-2022 has TransferHook on {mint_address} — allowed via ALLOW_UNKNOWN_TRANSFER_HOOKS override"
                             )
+                        else:
+                            ext_name = EXT_NAMES.get(ext_type, f"Unknown Dangerous Extension {ext_type}")
+                            logger.critical(
+                                f"🚨 HONEYPOT DETECTED: Token-2022 has dangerous extension {ext_name} on {mint_address}"
+                            )
+                            return False, f"Honeypot: Dangerous extension {ext_name} is active"
 
                     if ext_type == 11:
                         if ext_len >= 108:
@@ -529,7 +528,16 @@ class PreTradeGuard:
 
     async def check_token_2022_transfer_fee(
         self, mint_address: Pubkey, rpc_url: Optional[str] = None
-    ) -> Tuple[bool, float, str]:
+    ) -> Tuple[bool, float, str, Optional[int]]:
+        """
+        Check Token-2022 TransferFeeConfig for hidden transfer taxes.
+
+        Args:
+            mint_address: Token mint Pubkey object
+            rpc_url: Optional RPC URL override
+
+        Returns:
+            Tuple of (has_fee: bool, fee_bps: float, reason: str, maximum_fee: Optional[int])
         """
         Check Token-2022 TransferFeeConfig for hidden transfer taxes.
 
@@ -622,29 +630,36 @@ class PreTradeGuard:
                                 "<H", raw_data[bps_offset : bps_offset + 2]
                             )[0]
 
+                            # Extract maximum_fee (u64) located 8 bytes before bps in newer_transfer_fee
+                            max_fee_raw = None
+                            if bps_offset >= 8:
+                                max_fee_raw = struct.unpack(
+                                    "<Q", raw_data[bps_offset - 8 : bps_offset]
+                                )[0]
+
                             if fee_bps > 100:
                                 fee_pct = fee_bps / 100.0
                                 logger.info(
                                     f"🛡️ Token-2022 Transfer Fee detected: {fee_pct}% ({fee_bps} bps) — exceeds 100 bps threshold"
                                 )
-                                return True, fee_pct, f"Transfer fee: {fee_pct}%"
+                                return True, fee_pct, f"Transfer fee: {fee_pct}%", max_fee_raw
                             elif fee_bps > 0:
                                 fee_pct = fee_bps / 100.0
                                 logger.info(
                                     f"✅ Token-2022 Transfer Fee {fee_pct}% ({fee_bps} bps) within 100 bps limit — allowed (fee accounted in profit threshold)"
                                 )
-                                return True, fee_pct, f"Transfer fee: {fee_pct}% (within 100 bps)"
+                                return True, fee_pct, f"Transfer fee: {fee_pct}% (within 100 bps)", max_fee_raw
 
                     # Смещаемся к следующему расширению с учетом обязательного 8-байтового выравнивания
                     offset += (4 + ext_len + 7) & ~7
 
-                return False, 0.0, "No transfer fee extension found"
+                return False, 0.0, "No transfer fee extension found", None
 
         except Exception as e:
             logger.error(
                 f"Error checking Token-2022 transfer fee for {mint_address}: {e}"
             )
-            return False, 0.0, f"Check failed: {str(e)}"
+            return False, 0.0, f"Check failed: {str(e)}", None
         finally:
             if _session_owned:
                 await _session.close()
@@ -668,17 +683,19 @@ class PreTradeGuard:
         Returns:
             Adjusted profit threshold accounting for transfer fees on volume
         """
-        has_fee, fee_pct, reason = await self.check_token_2022_transfer_fee(
+        has_fee, fee_pct, reason, max_fee_raw = await self.check_token_2022_transfer_fee(
             mint_address, rpc_url
         )
 
         if has_fee and fee_pct > 0:
-            fee_loss_sol = trade_volume_sol * (fee_pct / 100.0) * 2
-            adjusted_threshold = base_profit_threshold + fee_loss_sol
+            pct_loss_sol = trade_volume_sol * (fee_pct / 100.0)
+            max_fee_sol = (max_fee_raw / 1e9) if max_fee_raw is not None else float("inf")
+            real_fee_loss_sol = min(pct_loss_sol, max_fee_sol) * 2
+            adjusted_threshold = base_profit_threshold + real_fee_loss_sol
 
             logger.info(
                 f"💰 Transfer fee volume adjustment for {mint_address}: {fee_pct:.2f}% "
-                f"on volume {trade_volume_sol:.4f} SOL -> added {fee_loss_sol:.6f} SOL to required threshold "
+                f"on volume {trade_volume_sol:.4f} SOL -> added {real_fee_loss_sol:.6f} SOL to required threshold "
                 f"({base_profit_threshold:.6f} -> {adjusted_threshold:.6f} SOL)"
             )
             return adjusted_threshold

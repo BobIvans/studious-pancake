@@ -150,7 +150,8 @@ MARGINFI_REPAY = get_anchor_discriminator("lending_account_repay")
 # CU Profiles — single source of truth for all compute unit limits (P0 Priority)
 # Replace every hardcoded set_compute_unit_limit(600000) / (300000) / etc.
 # with a lookup from this dict so the bot only pays for units it actually uses.
-CU_PROFILES: Dict[str, int] = {
+from typing import Union  # FIX 189
+CU_PROFILES: Dict[str, Union[int, str]] = {  # FIX 189
     "stables_swap": 80_000,  # USDC/USDT 2-leg Jupiter swap
     "lst_depeg_arbitrage": 450_000,  # LST ↔ SOL via Sanctum multi-hop
     "flash_loan_pivot": 600_000,  # Flashloan + Jupiter swaps + SOL/USDC pivot
@@ -1598,11 +1599,7 @@ class JupiterTxBuilder:
         # SystemProgram transfers (e.g. Jupiter entry pivot swaps).
         # ═══════════════════════════════════════════════════════════════════════
         try:
-            from spl.token.instructions import (
-                create_idempotent_associated_token_account,
-                sync_native,
-                SyncNativeParams,
-            )
+            from spl.token.instructions import create_idempotent_associated_token_account
 
             wsol_mint_pk = Pubkey.from_string(
                 "So11111111111111111111111111111111111111112"
@@ -1632,9 +1629,11 @@ class JupiterTxBuilder:
                 ))
                 all_instructions.append(transfer_ix)
 
-                # SyncNative — ensures token program recognises native SOL in the ATA
-                sync_native_ix = sync_native(
-                    SyncNativeParams(program_id=TOKEN_PROGRAM_ID, account=wsol_ata_pk)
+                # SyncNative — low-level independent compilation (IDL-agnostic)
+                sync_native_ix = Instruction(
+                    program_id=TOKEN_PROGRAM_ID,
+                    accounts=[AccountMeta(pubkey=wsol_ata_pk, is_signer=False, is_writable=True)],
+                    data=bytes([17]),
                 )
                 all_instructions.append(sync_native_ix)
                 logger.debug(
@@ -1839,7 +1838,7 @@ class JupiterTxBuilder:
             actual_repay_index = None
             for i in range(len(sanitized) - 1, -1, -1):
                 ix = sanitized[i]
-                if ix.program_id == repay_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END:
+                if ix.program_id == repay_ix.program_id and ix.data[:8] == MARGINFI_REPAY:
                     actual_repay_index = i
                     break
 
@@ -1926,8 +1925,13 @@ class JupiterTxBuilder:
         # and refunded to the wallet to pay Jito tips. The ATA will be
         # re-created idempotently on the next trade.
         # USDC remains protected as a Golden ATA.
+        # FIX 151: Protect LST accounts from closeAccount cycle rent drain
         _golden_mints = {
-            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC — keep protected
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",  # USDC
+            "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL
+            "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",   # mSOL
+            "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",   # bSOL
+            "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm",   # INF
         }
         # Pre-compute golden ATA addresses if payer is known
         _golden_atas = set()
@@ -2305,7 +2309,7 @@ class JupiterTxBuilder:
             actual_repay_index = None
             for i in range(len(sanitized_instructions) - 1, -1, -1):
                 ix = sanitized_instructions[i]
-                if ix.program_id == repay_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END:
+                if ix.program_id == repay_ix.program_id and ix.data[:8] == MARGINFI_REPAY:
                     actual_repay_index = i
                     break
 
@@ -2704,6 +2708,8 @@ class JupiterTxBuilder:
             Dict with out_amount, expected_profit_lamports, price_impact_bps, and jupiter instructions,
             or None on failure.
         """
+        # FIX 149: Respect global slippage configuration
+        cfg_slip = self.cfg.SLIPPAGE_BPS if (hasattr(self, "cfg") and self.cfg) else 15
         jup_quote_url = os.getenv(
             "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote"
         )
@@ -2716,7 +2722,7 @@ class JupiterTxBuilder:
             f"inputMint={input_mint}&"
             f"outputMint={middle_mint}&"
             f"amount={str(int(amount_lamports))}&"
-            f"slippageBps=5&"
+            f"slippageBps={cfg_slip}&"
             f"onlyDirectRoutes=false&"
             f"restrictIntermediateTokens=false"
         )
@@ -2755,7 +2761,7 @@ class JupiterTxBuilder:
             f"inputMint={middle_mint}&"
             f"outputMint={input_mint}&"
             f"amount={out_amount_leg1}&"
-            f"slippageBps=10&"
+            f"slippageBps={cfg_slip}&"
             f"onlyDirectRoutes=false&"
             f"restrictIntermediateTokens=false"
         )
@@ -2822,6 +2828,8 @@ class JupiterTxBuilder:
 
         Returns profit in lamports (converted to SOL by caller).
         """
+        # FIX 149: Respect global slippage configuration
+        cfg_slip = self.cfg.SLIPPAGE_BPS if (hasattr(self, "cfg") and self.cfg) else 15
         jup_quote_url = os.getenv(
             "JUPITER_QUOTE_API", "https://api.jup.ag/swap/v2/quote"
         )
@@ -2833,7 +2841,7 @@ class JupiterTxBuilder:
         try:
             timeout = aiohttp.ClientTimeout(total=5.0)
             async with self.session.get(
-                f"{jup_quote_url}?inputMint={input_mint}&outputMint={middle_mint_1}&amount={amount_lamports}&slippageBps=5",
+                f"{jup_quote_url}?inputMint={input_mint}&outputMint={middle_mint_1}&amount={amount_lamports}&slippageBps={cfg_slip}",
                 headers=jup_headers,
                 timeout=timeout,
             ) as resp:
@@ -2846,7 +2854,7 @@ class JupiterTxBuilder:
                 return None
 
             async with self.session.get(
-                f"{jup_quote_url}?inputMint={middle_mint_1}&outputMint={middle_mint_2}&amount={out1}&slippageBps=5",
+                f"{jup_quote_url}?inputMint={middle_mint_1}&outputMint={middle_mint_2}&amount={out1}&slippageBps={cfg_slip}",
                 headers=jup_headers,
                 timeout=timeout,
             ) as resp:
@@ -2859,7 +2867,7 @@ class JupiterTxBuilder:
                 return None
 
             async with self.session.get(
-                f"{jup_quote_url}?inputMint={middle_mint_2}&outputMint={input_mint}&amount={out2}&slippageBps=10",
+                f"{jup_quote_url}?inputMint={middle_mint_2}&outputMint={input_mint}&amount={out2}&slippageBps={cfg_slip}",
                 headers=jup_headers,
                 timeout=timeout,
             ) as resp:
@@ -2894,6 +2902,26 @@ class JupiterTxBuilder:
     # This dead code is kept for reference but must never be called — it would add a second tip
     # and consume >=0.001 SOL from the capital reserve on every bundle send.
     #
+    # FIX 270: Local swap instruction compilation (bypasses Jupiter /swap-instructions API)
+    def compile_local_swap_instruction(
+        self, quote_response: Dict[str, Any], wallet: Pubkey
+    ) -> Instruction:
+        """Minimal local swap instruction assembly for Raydium AMM v4 - no Jupiter API call."""
+        program_id = RAYDIUM_AMM_V4_PROGRAM_ID
+        in_amount = int(quote_response.get("inAmount", 0))
+        if in_amount <= 0:
+            raise ValueError(f"Invalid inAmount in quote: {in_amount}")
+        accounts = [
+            AccountMeta(pubkey=wallet, is_signer=True, is_writable=True),
+        ]
+        discriminator = b"\x09"
+        data = discriminator + struct.pack("<Q", in_amount)
+        return Instruction(
+            program_id=program_id,
+            accounts=accounts,
+            data=data,
+        )
+
     # def create_secure_jito_bundle(self, arbitrage_tx: VersionedTransaction,
     #                               jito_tip_lamports: int, wallet_keypair: Keypair) -> List[VersionedTransaction]:
     #     [ENTIRE METHOD DISABLED — see build_native_flashloan_tx for active tip injection]

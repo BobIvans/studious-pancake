@@ -70,7 +70,13 @@ class JitoShotgun:
                 sol_price_usd = sol_price_entry[0] if sol_price_entry else 150.0
                 token_entry = price_matrix.get(target_mint_str)
                 if token_entry and token_entry[0] > 0:
-                    profit_usd = (expected_profit_lamports / 1e9) * token_entry[0]
+                    # FIX 116: Normalise decimals based on token type
+                    _KNOWN_6DP = {
+                        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+                        "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB",
+                    }
+                    decimals = 6 if target_mint_str in _KNOWN_6DP else 9
+                    profit_usd = (expected_profit_lamports / (10 ** decimals)) * token_entry[0]
                     profit_sol = int(profit_usd / sol_price_usd * 1e9)
                     logger.debug(f"🔄 Cross-currency tip normalization: {expected_profit_lamports} lamports of {target_mint_str[:8]} → {profit_sol} SOL lamports")
             except Exception:
@@ -228,9 +234,11 @@ class JitoShotgun:
                 blx_token = os.getenv("BLOXROUTE_TOKEN")
                 if blx_token:
                     headers["Authorization"] = blx_token
-            elif self.auth_key:
-                # Jito authorization: Bearer <token> format
-                headers["Authorization"] = f"Bearer {self.auth_key}"
+            else:
+                # FIX 286: Inject x-jito-auth UUID header for authenticated Jito REST API
+                auth_key = os.getenv("JITO_AUTH_KEY") or self.auth_key
+                if auth_key:
+                    headers["x-jito-auth"] = str(auth_key)
 
             # Increased timeout for global Jito Block Engine coverage (Frankfurt/Tokyo need up to 1.5s)
             async with self.session.post(url, data=raw_body, headers=headers, timeout=1.5) as resp:

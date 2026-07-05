@@ -31,7 +31,7 @@ async def main():
             print("🏆 Top Profitable Routes:")
             for i, route in enumerate(stats['top_routes'][:5], 1):
                 print(f"  {i}. {route['route']}")
-                print(f"     Avg Profit: {route['avg_profit']:.6f} SOL")
+                print(f"     Avg Profit: {route['avg_profit_sol']:.6f} SOL")
                 print(f"     Trades: {route['count']}")
         else:
             print("📝 No paper trades found yet")

@@ -537,20 +537,26 @@ class DataAggregator:
             await self._update_daily_stats(db)
             
             # 2. Then safely delete old raw event logs
-            cursor = await db.execute(
-                "DELETE FROM events WHERE timestamp < ?", (cutoff_timestamp,)
-            )
-            # Fix 63: Use cursor.rowcount instead of db.total_changes
-            # total_changes is cumulative across all connections, rowcount is per-statement
+            cursor = await db.execute("DELETE FROM events WHERE timestamp < ?", (cutoff_timestamp,))
             deleted_count = cursor.rowcount
-            logger.info(f"Cleaned up {deleted_count} old events")
+
+            # FIX 228: Delete unbounded growth in ALL tables to prevent disk exhaustion
+            # FIX #15: Keep paper_trades for 30 days even if raw events are purged after 24h
+            paper_cutoff = time.time() - (30 * 24 * 60 * 60)
+            cursor_paper = await db.execute("DELETE FROM paper_trades WHERE ts < datetime(?, 'unixepoch')", (paper_cutoff,))
+            del_paper = cursor_paper.rowcount
+
+            cursor_inflight = await db.execute("DELETE FROM inflight_bundles WHERE sent_at < ?", (cutoff_timestamp,))
+            del_inflight = cursor_inflight.rowcount
+
+            logger.info(f"Cleaned up {deleted_count} events, {del_paper} paper trades, {del_inflight} inflight bundles")
             await db.commit()
 
     async def _update_daily_stats(self, db):
         """Update daily aggregated statistics."""
         # This is a simplified version - in practice you'd aggregate by day
         # For now, just update today's stats
-        today = datetime.now().strftime("%Y-%m-%d")
+        today = datetime.utcnow().strftime("%Y-%m-%d")  # FIX 227: Sync with SQLite UTC dates
 
         # Count events today
         cursor = await db.execute(
@@ -670,7 +676,7 @@ class DataAggregator:
                 """
                 SELECT
                     json_extract(parsed_opportunity, '$.pair') as pair,
-                    COUNT(*) as total_found,
+                    SUM(CASE WHEN event_type = "OpportunityFound" THEN 1 ELSE 0 END) as total_found,  -- FIX 226
                     SUM(CASE WHEN event_type = 'TxConfirmed' THEN 1 ELSE 0 END) as successful,
                     AVG(json_extract(execution_result, '$.real_profit_sol')) as avg_profit
                 FROM events

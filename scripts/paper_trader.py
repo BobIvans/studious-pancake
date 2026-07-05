@@ -75,6 +75,7 @@ class PaperTrader:
         self.session = aiohttp.ClientSession(connector=connector)
 
         self.aggregator = DataAggregator(os.getenv("PAPER_TRADING_DB", "paper_trading.db"))
+        await self.aggregator.start_batch_writer()  # FIX: Agent forgot to start DB writer
         self.simulator = None  # Simulator implemented elsewhere
         self.oracle = None
         self.pyth_feeder = get_pyth_core_feeder()
@@ -140,7 +141,8 @@ class PaperTrader:
         if not sell:
             return
 
-        final_amount = int(sell["out"] * (1 - 15 / 10000))
+        # FIX 304: Remove double slippage haircut — Jupiter already returns slippage-adjusted outAmount
+        final_amount = int(sell["out"])
 
         buy_price_impact = buy.get("priceImpactPct", 0.0) if buy else 0.0
         sell_price_impact = sell.get("priceImpactPct", 0.0) if sell else 0.0
@@ -155,12 +157,15 @@ class PaperTrader:
         amount_ui = amount / (10 ** _base_dec)
         raw_fee_base_token = amount_ui * dex_fee_pct  # Комиссия в единицах базового токена (например, USDC)
 
+        # FIX 303: Declare sol_price BEFORE first usage to prevent NameError
+        sol_price = 150.0  # fallback conservative default
+        if self.pyth_feeder:
+            live_price = self.pyth_feeder.get_price("So11111111111111111111111111111111111111112")
+            if live_price and live_price > 0:
+                sol_price = live_price
+
         if _base_dec == 6:  # Если базовый токен USDC/USDT (6 децималов)
-            # Конвертируем доллары в SOL-номинал
-            if sol_price and sol_price > 0:
-                dex_fee_sol = raw_fee_base_token / sol_price
-            else:
-                dex_fee_sol = raw_fee_base_token / 150.0  # резервный консервативный курс
+            dex_fee_sol = raw_fee_base_token / sol_price
         else:
             # Базовый актив — SOL, конвертация не требуется
             dex_fee_sol = raw_fee_base_token
@@ -184,7 +189,8 @@ class PaperTrader:
             slippage_bps = 15
             network_fee_sol = 5000 / 1e9
             priority_fee_sol = 10000 / 1e9
-            jito_tip_sol = max(10_000 / 1e9, gross_profit_sol * 0.4)
+            # FIX 304: Realistic Jito tip — 0.001 SOL floor (real Mainnet minimum)
+            jito_tip_sol = max(0.001, gross_profit_sol * 0.4)
             ata_rent_sol = (
                 2_039_280 / 1e9 if target_mint not in self.existing_atas else 0.0
             )
@@ -235,8 +241,9 @@ class PaperTrader:
 
     async def _monitor_loop(self):
         """Непрерывный цикл сканирования всех очередей"""
-        sol_amount = int(self.starting_balance * 1e9)
-        usdc_amount = int(150 * 1e6) # 150 USDC
+        # FIX 304: Scale trade volume to 95% of real wallet balance
+        sol_amount = int(self.current_balance * 0.95 * 1e9)
+        usdc_amount = int(self.current_balance * sol_price * 0.95 * 1_000_000)
 
         while True:
             tasks = []

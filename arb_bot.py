@@ -3418,28 +3418,6 @@ async def lst_depeg_scanner(
     while not shared_state.GLOBAL_STOP_EVENT.is_set():
         cycle_count += 1
 
-        # Fix 5: Strict Gas Tank — stop if balance < 0.005 SOL
-        try:
-            from src.ingest.shared_state import get_ata_rent_for_mint
-            estimated_rent = 0.0
-            if str(signal.token_mint) not in shared_state.ATA_CACHE:
-                estimated_rent = get_ata_rent_for_mint(str(signal.token_mint))
-
-            _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
-                shared_state.stats.get(
-                    "virtual_balance", shared_state.stats.get("last_balance", 0.0)
-                ),
-                estimated_rent,
-            )
-            if not _gas_ok:
-                logger.critical(
-                    f"🚨 STRICT GAS TANK: LST scanner halted — balance below 0.005 SOL"
-                )
-                await asyncio.sleep(30)
-                continue
-        except Exception as _ge:
-            logger.debug(f"LST scanner gas tank check skipped: {_ge}")
-
         # Fix 6 + 67: Balance Lock Guard — pause if lock is active
         if (
             shared_state._balance_lock_paused
@@ -3554,6 +3532,18 @@ async def lst_depeg_scanner(
                     f"dev={signal.deviation_bps:+.1f} BPS → {signal.direction}"
                 )
 
+                # FIX #1: Gas Tank Check moved INSIDE signal loop (signal.token_mint must exist)
+                try:
+                    from src.ingest.shared_state import get_ata_rent_for_mint
+                    estimated_rent = get_ata_rent_for_mint(str(signal.token_mint)) if str(signal.token_mint) not in shared_state.ATA_CACHE else 0.0
+                    _gas_ok, _gas_avail = await PreTradeGuard.check_gas_tank(
+                        shared_state.stats.get("virtual_balance", 0.0), estimated_rent
+                    )
+                    if not _gas_ok:
+                        continue
+                except Exception:
+                    pass
+
                 # ── Step 3: Find best route ───────────────────────────────
                 if borrow_lamports <= 0:  # Микро-баланс: убран жёсткий порог 1 SOL
                     logger.warning("MarginFi SOL bank is dry. Waiting...")
@@ -3658,14 +3648,15 @@ async def lst_depeg_scanner(
                     bank_liquidity_vault_authority=str(
                         bank_cfg["liquidity_vault_authority"]
                     ),
-                    use_jito=True,
-                    strategy_type=2,
-                    tip_accounts=(
-                        jito_executor.tip_accounts if jito_executor else None
-                    ),  # Fix 2: dynamic tip accounts
-                    expected_profit_sol=route.profit_sol,  # Dynamic Rent Guard
-                    borrow_mint=_pivot_borrow_mint,  # FIX: Использование разворота (Pivot) при старом оракуле
-                )
+                     use_jito=True,
+                     strategy_type=2,
+                     tip_accounts=(
+                         jito_executor.tip_accounts if jito_executor else None
+                     ),  # Fix 2: dynamic tip accounts
+                     expected_profit_sol=route.profit_sol,  # Dynamic Rent Guard
+                     jito_tip_lamports=jito_tip_lamports,  # FIX #2: pass calculated tip
+                     borrow_mint=_pivot_borrow_mint,  # FIX: Использование разворота (Pivot) при старом оракуле
+                 )
 
                 if not fl_result:
                     logger.warning(
@@ -3936,7 +3927,9 @@ async def lst_depeg_scanner(
 
                             tx_with_tip = tx  # Placeholder — tip will be added by JitoBundleHandler/JitoExecutor
                             bundle_result = await jito_executor.send_bundle(
-                                [tx_with_tip]
+                                [tx_with_tip],
+                                tip_amount_lamports=jito_tip_lamports,
+                                deducted_amount=jito_tip_lamports / 1e9,
                             )
                             # Сохраняем сильную ссылку в глобальный набор shared_state.active_tasks (Fix GC Trap)
                             task = asyncio.create_task(
@@ -5050,17 +5043,17 @@ async def execute_priority_opportunity(
                     restrict_intermediate=not only_direct_routes
                 )
             
-            # Рекурсивный запуск через Smart Retry Engine
+            # FIX 301: Fix lambda closure (use local 'opp' param) and profit variable (est_net_profit_sol)
             retry_result = await SmartRetryEngine.execute_retry(
                 opportunity=opportunity.metadata,
                 refetch_func=refetch_quotes,
                 execute_func=lambda opp: execute_priority_opportunity(
-                    opportunity, session, cfg, rpc_manager, keypair, jito_executor,
+                    opp, session, cfg, rpc_manager, keypair, jito_executor,
                     data_collector, flywheel_scaler, data_aggregator, alt_manager, execution_router
                 ),
                 jito_bidding_manager=jito_bidding_manager,
                 original_amount=amount_lamports,
-                original_profit=net_profit_sol,
+                original_profit=est_net_profit_sol,
                 reason=reason
             )
             logger.info(f"🔄 Smart Retry execution status: {retry_result.get('status')}")
@@ -5535,7 +5528,15 @@ async def worker(
             available_liquidity_lamports = max(
                 0, int(balance * 1e9) - required_fee_reserve_lamports
             )
-            borrow_cap_lamports = int(borrow_env_sol * 1e9)
+            # FIX 300: Dynamic borrow cap from flywheel_scaler (fixes NameError: borrow_env_sol undefined in worker())
+            current_native_sol = shared_state.stats.get("last_balance", 0.015)
+            _fs = flywheel_scaler
+            if _fs is not None:
+                scaler_params = _fs.get_trading_params(current_native_sol)
+                dynamic_borrow_cap_sol = scaler_params.get("flash_loan_size", 0.01)
+            else:
+                dynamic_borrow_cap_sol = 0.01
+            borrow_cap_lamports = int(dynamic_borrow_cap_sol * 1e9)
             capped_amount = min(int(optimal_amount), borrow_cap_lamports)
             if capped_amount < 1_000_000:
                 logger.debug(
@@ -5964,7 +5965,8 @@ async def hard_floor_guard():
     while True:
         try:
             async with shared_state.stats_lock:
-                balance = shared_state.stats.get("virtual_balance", 1.0)  # default high
+                # FIX 307: Default to 0.0 (block trading on state loss), not 1.0 (skip guard)
+                balance = shared_state.stats.get("virtual_balance", 0.0)
 
             if balance < 0.003:
                 logger.critical(
@@ -7274,6 +7276,9 @@ async def run():
                     f"🚨 BALANCE GUARD ACTIVATED: Balance {current_balance:.8f} SOL dropped below 30%"
                 )
                 await send_telegram_alert(f"<b>BALANCE GUARD ACTIVATED</b>\nBalance dropped to {current_balance:.6f} SOL")
+                # FIX #25: Trigger global stop to halt ALL background tasks
+                if shared_state.GLOBAL_STOP_EVENT is not None:
+                    shared_state.GLOBAL_STOP_EVENT.set()
                 break
     finally:
         logger.debug("🛑 Shutting down arbitrage engine components...")

@@ -42,24 +42,37 @@ def discover_columns(cursor: sqlite3.Cursor, table: str) -> List[str]:
 
 
 def load_trades(db_path: str) -> List[Dict]:
-    """Load all rows from the paper_trades table."""
+    """Load all rows from the paper_trades table (strict — no cross-DB confusion)."""
+    import os
+    # FIX 305: Auto-correct path to paper_trading.db if bot_history.db is missing
+    if not os.path.exists(db_path) and os.path.exists("paper_trading.db"):
+        db_path = "paper_trading.db"
+        logger.warning(f"FIX 305: Auto-corrected db_path to {db_path}")
+
     conn = sqlite3.connect(db_path, timeout=10)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    tables = cursor.execute(
-        "SELECT name FROM sqlite_master WHERE type='table'"
-    ).fetchall()
-    table_names = [t[0] for t in tables]
+    # FIX 305: Read strictly from paper_trades table — avoid schema incompatibility
+    try:
+        rows = cursor.execute("SELECT * FROM paper_trades").fetchall()
+    except sqlite3.OperationalError:
+        logger.warning("FIX 305: paper_trades table not found, trying fallback...")
+        # Fallback: list tables and try each one
+        tables = cursor.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()
+        table_names = [t[0] for t in tables]
+        rows = []
+        for tbl in table_names:
+            try:
+                cols = discover_columns(cursor, tbl)
+                pk_str = ", ".join(cols)
+                tbl_rows = cursor.execute(f"SELECT {pk_str} FROM {tbl}").fetchall()
+                for row in tbl_rows:
+                    rows.append(row)
+            except Exception:
+                continue
 
-    trades = []
-    for tbl in table_names:
-        cols = discover_columns(cursor, tbl)
-        pk_str = ", ".join(cols)
-        rows = cursor.execute(f"SELECT {pk_str} FROM {tbl}").fetchall()
-        for row in rows:
-            trades.append(dict(row))
-
+    trades = [dict(row) for row in rows]
     conn.close()
     return trades
 
@@ -74,9 +87,14 @@ def backtest_trade(
     slippage_bps: int,
 ) -> Dict:
     """Полная математическая модель переоценки исторической сделки."""
+    # FIX 305: Apply slippage_bps as worst-case stress test
+    slippage_fraction = slippage_bps / 10000.0
     gross = trade.get("gross_revenue_lamports", 0) or 0
     amount = trade.get("amount_lamports", 0) or 0
     num_new_atas = trade.get("num_new_atas", 0) or 0
+
+    # FIX 305: Simulate worst-case gross with slippage
+    worst_case_gross = int(gross * (1.0 - slippage_fraction))
 
     flashloan_fee = trade.get("flashloan_fee_lamports", 0) or 0
     dex_fee = trade.get("dex_fee_lamports", 0) or 0
@@ -88,7 +106,7 @@ def backtest_trade(
     rent_per_ata = 0.0035 if token_out in TOKEN_2022_MINTS else 0.00203928
     ata_rent = int(num_new_atas * rent_per_ata * 1e9)
 
-    backtested_jito_tip_lamports = int(max(gross * tip_pct, 10_000))
+    backtested_jito_tip_lamports = int(max(worst_case_gross * tip_pct, 10_000))
 
     backtested_total_cost = (
         flashloan_fee
@@ -99,7 +117,7 @@ def backtest_trade(
         + backtested_jito_tip_lamports
     )
 
-    backtested_net = gross - backtested_total_cost
+    backtested_net = worst_case_gross - backtested_total_cost
     backtested_net_sol = backtested_net / 1e9
     original_total_cost = flashloan_fee + dex_fee + network_fee + priority_fee + ata_rent
     original_net_sol = ((gross - original_total_cost) / 1e9) if gross else 0.0

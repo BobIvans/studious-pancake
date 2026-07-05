@@ -281,13 +281,13 @@ class FlashSimulator:
                 self.record_bank_cooldown(bank_vault_pubkey)
             return False, f"Simulation failed: {sim.error}", sim
 
-        # 2. СТРОГИЙ РАСЧЕТ ЧИСТОЙ ПРИБЫЛИ (Net Profit)
-        # Вычитаем flashloan_fee (например, для Kamino 0.05% = 5bps)
-        flashloan_fee_lamports = 0
-        if min_profit_lamports > 0:
-            # Kamino flashloan fee: 0.05% = 5 bps = 5/10000
-            flashloan_fee_lamports = min_profit_lamports * 5 // 10000
-        net_profit_lamports = sim.balance_delta_lamports - tip_lamports - priority_fee_lamports - flashloan_fee_lamports
+        # FIX 302: Kamino fee = 0.05% of borrow volume, not min_profit threshold
+        borrow_volume = min_profit_lamports if min_profit_lamports > 0 else 10_000_000
+        flashloan_fee_lamports = int(borrow_volume * 0.0005)  # 0.05% of borrow volume
+
+        # FIX 302: Jito tip + priority fee must be deducted from balance delta
+        total_costs_lamports = flashloan_fee_lamports + tip_lamports + priority_fee_lamports
+        net_profit_lamports = sim.balance_delta_lamports - total_costs_lamports
 
         # SEC-007: Cross-RPC Validation Guard — double-check simulation on backup RPC
         if backup_rpc_url and backup_rpc_url != self.rpc_url and net_profit_lamports >= min_profit_lamports:

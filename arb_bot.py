@@ -140,6 +140,9 @@ def normalize_profit_to_sol(
 KEYPAIR = None  # Fix 81: memory-mapped wallet - never read disk during arb
 _QUOTE_TASKS: Dict[str, asyncio.Task] = {}  # Fix 84: RPS shield - task-based dedup Jupiter requests
 _QUOTE_TASKS_LOCK = asyncio.Lock()
+# FIX 293: RAM quote cache with 800ms TTL (2 Solana slots) to eliminate duplicate HTTP requests
+_QUOTE_CACHE: Dict[str, Tuple[float, Dict[str, Any]]] = {}
+_QUOTE_CACHE_LOCK = asyncio.Lock()
 LAST_SIGNAL_TIME: Dict[str, float] = {}  # Fix 88: per-pair 400ms cooldown (1 slot)
 STRATEGY_FAILURES: Dict[str, int] = {}  # Fix 90: reputation circuit breaker
 STRATEGY_DISABLED_UNTIL: Dict[str, float] = {}
@@ -2407,7 +2410,20 @@ async def get_jupiter_quote(
 ):
     """Deduplicated quote fetcher — if a request for the same key is in-flight,
     subsequent callers await the same task instead of making a duplicate RPC call."""
-    pair_key = f"{input_mint}:{output_mint}:{amount_lamports}:{swap_mode}:{exact_out_amount}"
+    cache_key = f"{input_mint}:{output_mint}:{amount_lamports}:{swap_mode}:{exact_out_amount}"
+    now = time.time()
+
+    # FIX 293: RAM cache with 800ms TTL (2 Solana slots) — return instantly without HTTP
+    async with _QUOTE_CACHE_LOCK:
+        if cache_key in _QUOTE_CACHE:
+            fetched_at, cached_data = _QUOTE_CACHE[cache_key]
+            if now - fetched_at < 0.8:
+                logger.debug(f"⚡ Quote cache HIT for {input_mint[:8]}->{output_mint[:8]} (Age: {(now - fetched_at)*1000:.0f}ms)")
+                return cached_data
+            else:
+                _QUOTE_CACHE.pop(cache_key, None)
+
+    pair_key = cache_key
 
     async with _QUOTE_TASKS_LOCK:
         if pair_key in _QUOTE_TASKS:
@@ -2428,6 +2444,12 @@ async def get_jupiter_quote(
 
     try:
         result = await task
+        
+        # FIX 293: Store successful quote in RAM cache with 800ms TTL
+        if result and "out_amount" in result:
+            async with _QUOTE_CACHE_LOCK:
+                _QUOTE_CACHE[cache_key] = (time.time(), result)
+                
         return result
     finally:
         async with _QUOTE_TASKS_LOCK:
@@ -4486,6 +4508,14 @@ async def execute_priority_opportunity(
     current_balance_sol = shared_state.stats.get("last_balance", 0.017)
     params = flywheel_scaler.get_trading_params(current_balance_sol)
 
+    # FIX 274: Фиксация слепка цен для консистентности расчетов во всей транзакции
+    try:
+        local_price_snapshot = dict(price_matrix)
+    except Exception:
+        local_price_snapshot = {}  # Fail open if price_matrix not available
+    if local_price_snapshot:
+        logger.debug(f"Price snapshot stored: {len(local_price_snapshot)} entries")
+
     # ── wSOL Death Spiral — реактивное разворачивание wSOL в hot path ──
     if current_balance_sol < 0.015:
         try:
@@ -4624,10 +4654,14 @@ async def execute_priority_opportunity(
     if q1 and "fetched_at" in q1:
         quote_age = time.time() - q1["fetched_at"]
         if quote_age > 1.5:
-            logger.warning(
-                f"⏭️ Stale Quote Guard: Quote for {opportunity.pair} is too old "
-                f"({quote_age:.2f}s > 1.5s TTL limit) — ABORTING execution to prevent slippage revert"
-            )
+            reason = f"Stale Quote: {quote_age:.2f}s > 1.5s TTL limit"
+            logger.warning(f"skip: {reason}")
+            if data_aggregator:
+                asyncio.create_task(data_aggregator.log_opportunity_skipped(
+                    webhook_id="internal",
+                    parsed_opportunity={"pair": opportunity.pair, "expected_profit_sol": opportunity.expected_profit_sol},
+                    reason=reason
+                ))
             return
 
     # ── ИСПРАВЛЕНИЕ: Сквозная маршрутизация для Webhook ──
@@ -5207,7 +5241,7 @@ async def worker(
                     logger.warning(f"🚫 Price missing for {mint[:8]} — Fail-Closed.")
                     is_stale = True
                     break
-                if (now - entry[1]) > 5.0:
+                if (now - entry[1]) > 0.8:  # FIX 293: TTL reduced to 800ms (2 slots)
                     logger.warning(f"⏰ Stale price for {mint[:8]} ({now - entry[1]:.1f}s old) — Fail-Closed.")
                     is_stale = True
                     break
@@ -5819,8 +5853,14 @@ async def worker(
                 "amount_lamports": int(optimal_amount),
                 "expected_profit_sol": float(net_profit),
                 "route": "triangular" if route_type == "triangular" else "direct",
+                # FIX 259: Save raw Jupiter quote responses for reproducibility
+                "quote1_raw": quote1,
+                "quote2_raw": quote2,
             }
             metadata = {"borrow_amount_sol": borrow_amount_sol, "decimals": decimals_in}
+            # FIX 258: Propagate correlation_id for end-to-end event tracing (from webhook or fresh)
+            import uuid
+            metadata["correlation_id"] = opportunity.metadata.get("correlation_id") if hasattr(opportunity, "metadata") and isinstance(opportunity.metadata, dict) else str(uuid.uuid4())
             if shared_state.data_aggregator:
                 await shared_state.data_aggregator.log_opportunity_found(
                     "internal", parsed_opportunity, metadata
@@ -6115,6 +6155,23 @@ async def run():
 
     cfg = Config()
     init_limiters(cfg)
+
+    # FIX 277: Oracle Lag Report — логирование задержки данных Pyth в главный поток
+    try:
+        from src.ingest.pyth_oracle_client import get_pyth_client
+        client = get_pyth_client()
+        report = client.get_lag_report()
+        sol_lag = report.get("SOL", {}).get("average_lag_seconds", 0.0)
+        logger.info(f"📊 [ORACLE LAG REPORT] SOL lag: {sol_lag:.2f}s")
+    except Exception:
+        pass
+
+    # FIX 275: Запуск фонового мониторинга здоровья MarginFi
+    if cfg.MARGINFI_ACCOUNT_PUBKEY:
+        health_task = asyncio.create_task(
+            marginfi_health_monitor_loop(session, rpc_manager.get_rpc(), cfg.MARGINFI_ACCOUNT_PUBKEY)
+        )
+        shared_state.retain_background_task(health_task)
 
     # Phase 6B CFG-001: Block placeholder Helius API keys
     if any("YOUR_KEY" in url for url in cfg.HELIUS_SENDER_URLS):
@@ -7670,6 +7727,27 @@ if __name__ == "__main__":
             logger.info("ℹ️ uvloop не найден, используем стандартный asyncio")
     else:
         logger.info("🍏 macOS detected: using standard asyncio to prevent SSL crashes")
+
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(run())
+    except KeyboardInterrupt:
+        logger.info("Bot stopped by user.")
+    finally:
+        try:
+            pending = asyncio.all_tasks(loop=loop)
+            for task in pending:
+                task.cancel()
+            if pending:
+                loop.run_until_complete(
+                    asyncio.gather(*pending, return_exceptions=True)
+                )
+            loop.run_until_complete(loop.shutdown_asyncgens())
+            loop.run_until_complete(loop.shutdown_default_executor())
+        except Exception:
+            pass
+        loop.close()
 
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)

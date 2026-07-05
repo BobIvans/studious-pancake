@@ -252,6 +252,50 @@ class OptimalTradeSizer:
         self.last_calculation = 0.0
         self.epsilon = max(1, epsilon_lamports)  # Fix 65: guard against zero/negative epsilon
         self.profit_calculator = ProfitCalculator()
+        
+        # FIX 292: Реестр статических метаданных топ-50 роутов (ускоряет списание и проверку до 0 мс)
+        self._precomputed_route_metadata: Dict[str, Dict[str, Any]] = {}
+        self._initialize_route_metadata()
+
+    def _initialize_route_metadata(self):
+        """Пре-вычисление статических параметров для топ-50 арбитражных пар."""
+        from src.config.addresses import XSTOCK_MINTS, PYTH_FEEDS
+
+        target_mints = {
+            "So11111111111111111111111111111111111111112": {"decimals": 9, "symbol": "SOL"},
+            "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": {"decimals": 6, "symbol": "USDC"},
+            "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": {"decimals": 6, "symbol": "USDT"},
+            "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": {"decimals": 9, "symbol": "jitoSOL"},
+            "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": {"decimals": 9, "symbol": "mSOL"},
+            "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": {"decimals": 9, "symbol": "bSOL"},
+            "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": {"decimals": 9, "symbol": "INF"},
+            "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v": {"decimals": 9, "symbol": "JupSOL"}
+        }
+
+        for ticker, mint in XSTOCK_MINTS.items():
+            target_mints[mint] = {"decimals": 6 if "USD" in ticker else 9, "symbol": ticker}
+
+        for ticker, info in PYTH_FEEDS.items():
+            if info.get("mint"):
+                target_mints[info["mint"]] = {"decimals": 9 if ticker not in ("USDC", "USDT") else 6, "symbol": ticker}
+
+        for in_mint, in_meta in target_mints.items():
+            for out_mint, out_meta in target_mints.items():
+                if in_mint == out_mint:
+                    continue
+                pair_key = f"{in_mint}:{out_mint}"
+                self._precomputed_route_metadata[pair_key] = {
+                    "decimals_in": in_meta["decimals"],
+                    "decimals_out": out_meta["decimals"],
+                    "symbol_in": in_meta["symbol"],
+                    "symbol_out": out_meta["symbol"],
+                    "is_stable_pair": in_meta["symbol"] in ["USDC", "USDT"] and out_meta["symbol"] in ["USDC", "USDT"],
+                }
+        logger.info(f"💾 Precomputed metadata cache populated with {len(self._precomputed_route_metadata)} O(1) route paths")
+
+    def get_route_static_metadata(self, in_mint: str, out_mint: str) -> Optional[Dict[str, Any]]:
+        """Возвращает предварительно рассчитанные параметры для пары за O(1) без дискового/сетевого ввода-вывода."""
+        return self._precomputed_route_metadata.get(f"{in_mint}:{out_mint}")
 
     def calculate_analytical_optimal_size(self, reserves_path: List[Decimal], fees: List[float]) -> Optional[Decimal]:
         """

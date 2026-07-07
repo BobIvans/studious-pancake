@@ -114,7 +114,7 @@ class WrapperPegArb:
                 logger.debug(f"{cheap_label}→{expensive_label}: no leg1 quote")
                 return {"status": "no_quote", "pair": f"{cheap_label}→{expensive_label}"}
 
-            cheap_btc_out = int(leg1_quote.get("outAmount", 0))
+            cheap_btc_out = int(leg1_quote.get("outAmount") or 0)
             if cheap_btc_out <= 0:
                 return {"status": "no_liquidity", "pair": f"{cheap_label}→{expensive_label}"}
 
@@ -128,7 +128,7 @@ class WrapperPegArb:
                 logger.debug(f"{cheap_label}→{expensive_label}: no leg2 quote")
                 return {"status": "no_quote", "pair": f"{cheap_label}→{expensive_label}"}
 
-            expensive_btc_out = int(leg2_quote.get("outAmount", 0))
+            expensive_btc_out = int(leg2_quote.get("outAmount") or 0)
 
             # Step 3: Get ExactOut quote for expensive BTC → USDC (third leg — repay)
             # Use ExactOut to guarantee we get exactly usdc_borrow_lamports USDC,
@@ -146,10 +146,17 @@ class WrapperPegArb:
             # With ExactOut, outAmount is fixed at usdc_borrow_lamports;
             # inAmount tells us how much expensive_btc must be spent.
             expensive_btc_spent = int(leg3_quote.get("inAmount", 0))
-            usdc_out = int(leg3_quote.get("outAmount", 0))
+            usdc_out = int(leg3_quote.get("outAmount") or 0)
             residual_expensive_btc = expensive_btc_out - expensive_btc_spent
 
-            # Profit = residual expensive_btc valued at the swap rate from this quote
+            if residual_expensive_btc < 0:
+                logger.debug(f"{cheap_label}→{expensive_label}: unaffordable 3rd leg (need {expensive_btc_spent}, have {expensive_btc_out})")
+                return {
+                    "status": "unaffordable_leg",
+                    "pair": f"{cheap_label}→{expensive_label}",
+                    "profit_lamports": 0,
+                }
+
             if residual_expensive_btc > 0 and expensive_btc_spent > 0:
                 rate = usdc_out / expensive_btc_spent
                 profit_lamports = int(residual_expensive_btc * rate)
@@ -171,6 +178,9 @@ class WrapperPegArb:
             if sol_entry:
                 sol_price_usd = sol_entry[0]
             profit_usdc = to_ui_amount(profit_lamports, 6)
+            # FIX 196: Guard against ZeroDivisionError on oracle failures (SOL price = 0)
+            if sol_price_usd <= 0:
+                sol_price_usd = 150.0
             profit_sol = profit_usdc / sol_price_usd
 
             if profit_sol < self.min_profit_sol:

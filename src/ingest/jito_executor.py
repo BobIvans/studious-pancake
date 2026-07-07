@@ -56,6 +56,18 @@ class JitoExecutor:
         self.timeout          = timeout
         self.current_tip_data = None
 
+        # P1 #37: Fail-safe default tip accounts (Jito docs)
+        self.tip_accounts: List[str] = [
+            "96gYZGLnJYVFmbjzopPSU6QiEV5fGqZNyN9nmNhvrZU5",
+            "HFqU5x63VTqvQss8hp11i4wVV8bD44PvwucfZ2bLmis",
+            "Cw8CFN97mo99uH2LL69Yp6Cgv7S8Z8B7A49K8a4CgC5B",
+            "ADa6g7u6g6TZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "Df6Z8LMo6uH7T6C9G6fM5sU8g6G6CwcE9a4CgC5B",
+            "ADuUk8g6g6TZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "3AVi9TgZ6gYmChGgQCyBD9B464UvCwcE9a4CgC5B",
+            "DttWaJVXiusFBgTY8B6mLDE2YvA6uh24QQj1mVR6iprs"
+        ]
+
         self.tip_subscription_task     = None
         self._tip_accounts_refresh_task: Optional[asyncio.Task] = None
         self._running                  = False

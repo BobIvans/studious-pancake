@@ -31,7 +31,7 @@ class PoolReserve:
 
     def __init__(
         self,
-        token_a_reserve: Decimal, token_b_reserve: Decimal,
+        token_a_reserve: int, token_b_reserve: int,  # Changed from Decimal to int
         token_a_mint: str,   token_b_mint: str,
         pool_address: str,
         pool_type: str = "cpmm",
@@ -468,7 +468,7 @@ class PoolStateManager:
 
     # ── Pool reserve decoding ─────────────────────────────────────────────────────
 
-    def _decode_meteora_bin(self, raw_b64: str) -> Optional[PoolReserve]:
+    def _decode_meteora_bin(self, raw_b64: str, pool_address: str) -> Optional[PoolReserve]:
         """Decode Meteora DLMM bin data from base64 raw bytes.
 
         Meteora DLMM account layout (approx):
@@ -560,8 +560,8 @@ class PoolStateManager:
         try:
             if "parsed" in account_data and "info" in account_data["parsed"]:
                 info               = account_data["parsed"]["info"]
-                token_a_reserve    = Decimal(str(info.get("tokenAAmount", 0)))
-                token_b_reserve    = Decimal(str(info.get("tokenBAmount", 0)))
+                token_a_reserve    = int(info.get("tokenAAmount", 0))
+                token_b_reserve    = int(info.get("tokenBAmount", 0))
                 token_a_mint       = info.get("mintA", "")
                 token_b_mint       = info.get("mintB", "")
                 if token_a_reserve > 0 and token_b_reserve > 0:
@@ -574,7 +574,7 @@ class PoolStateManager:
                 raw_list = account_data["data"]
                 raw_b64 = raw_list[0] if isinstance(raw_list, list) else raw_list
                 # Fix 44: Try binary parsing for Meteora DLMM and Saber
-                result = self._decode_meteora_bin(raw_b64)
+                result = self._decode_meteora_bin(raw_b64, pool_address)
                 if not result:
                     result = await self._decode_saber_stableswap(raw_b64, pool_address)
                 if result:

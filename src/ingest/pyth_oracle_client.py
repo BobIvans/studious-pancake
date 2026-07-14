@@ -209,9 +209,7 @@ class PythHermesClient:
 
     async def _execute_onchain_fallback_tick(self):
         """Single REST fetch tick for Pyth Hermes fallback."""
-        if not self.rpc_url:
-            return
-
+        # FIX 153: Remove self.rpc_url block since fallback queries public Hermes REST API directly
         rest_url = "https://hermes.pyth.network/v2/updates/price/latest"
         try:
             from src.config.addresses import PYTH_FEEDS, PYTH_CORE_FEEDS

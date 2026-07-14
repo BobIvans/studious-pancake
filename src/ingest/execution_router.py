@@ -255,7 +255,7 @@ class ExecutionRouter:
         self.alt_manager = alt_manager
 
         # Circuit Breaker: Anti-Dust protection
-        self.critical_balance_threshold = 0.017  # SOL - panic if rent recovery fails
+        self.critical_balance_threshold = 0.005  # FIX #23: Realistic panic threshold (was 0.017 — triggered on every trade with 0.015 SOL balance)
         self.dust_alert_triggered = False
         self.consecutive_failures = 0
         self.last_slot_executed = 0  # Fix 78: Slot mutex for single MARGINFI_ACCOUNT
@@ -1106,8 +1106,14 @@ class ExecutionRouter:
                         try:
                             from src.ingest.pre_trade_guard import PreTradeGuard
                             PreTradeGuard.enforce_hard_floor(balance_sol, keypair=self.keypair, rpc_url=self.rpc_url, session=self.session)
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            # FIX 307/324: Log critical failures instead of silent pass
+                            logger.critical(f"🚨 HARD FLOOR CRITICAL ERROR: Failed to enforce hard floor: {e}")
+                            # FIX #24: Trigger global stop when hard floor enforcement fails
+                            try:
+                                shared_state.GLOBAL_STOP_EVENT.set()
+                            except Exception:
+                                pass
                         # ──────────────────────────────────────────────────────────────
 
                         # Warn if balance is critically low

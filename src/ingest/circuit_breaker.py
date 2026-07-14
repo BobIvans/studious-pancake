@@ -40,24 +40,45 @@ class CapitalProtection:
             logger.error(f"Failed to save circuit breaker state: {exc}")
 
     def load_state(self):
-        """Restore persisted loss counters and timestamps if available."""
+        """Restore persisted loss counters and timestamps if available.
+
+        FIX 262: Reconcile persisted state against current UTC date to prevent
+        stale counters from previous days/weeks after bot restart.
+        """
         if not os.path.exists(self.state_path):
             return
         try:
             with open(self.state_path, "r", encoding="utf-8") as f:
                 payload = json.load(f)
-            self.realized_pnl_sol = float(payload.get("realized_pnl_sol", 0.0))
-            self.weekly_realized_pnl_sol = float(payload.get("weekly_realized_pnl_sol", 0.0))
-            self.failed_attempt_costs_sol = float(payload.get("failed_attempt_costs_sol", 0.0))
+
+            now = datetime.utcnow()
+            last_daily = datetime.fromisoformat(
+                payload.get("last_daily_reset", now.isoformat())
+            )
+            last_weekly = datetime.fromisoformat(
+                payload.get("last_weekly_reset", now.isoformat())
+            )
+
+            if (now - last_daily).total_seconds() > 86400:
+                self.realized_pnl_sol = 0.0
+                self.failed_attempt_costs_sol = 0.0
+                self.last_daily_reset = now
+            else:
+                self.realized_pnl_sol = float(payload.get("realized_pnl_sol", 0.0))
+                self.failed_attempt_costs_sol = float(payload.get("failed_attempt_costs_sol", 0.0))
+                self.last_daily_reset = last_daily
+
+            if (now - last_weekly).total_seconds() > 604800:
+                self.weekly_realized_pnl_sol = 0.0
+                self.last_weekly_reset = now
+            else:
+                self.weekly_realized_pnl_sol = float(payload.get("weekly_realized_pnl_sol", 0.0))
+                self.last_weekly_reset = last_weekly
+
             self.consecutive_losses = int(payload.get("consecutive_losses", 0))
             self.consecutive_failed_attempts = int(payload.get("consecutive_failed_attempts", 0))
-            self.last_daily_reset = datetime.fromisoformat(
-                payload.get("last_daily_reset", datetime.utcnow().isoformat())
-            )
-            self.last_weekly_reset = datetime.fromisoformat(
-                payload.get("last_weekly_reset", datetime.utcnow().isoformat())
-            )
-            logger.info("Loaded persisted circuit breaker state successfully.")
+
+            logger.info("FIX 262: CapitalProtection state loaded and reconciled successfully.")
         except Exception as exc:
             logger.error(f"Failed to load circuit breaker state: {exc}")
 

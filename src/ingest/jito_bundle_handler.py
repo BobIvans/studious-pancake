@@ -90,9 +90,10 @@ class JitoLeaderChecker:
 
         current_time = time.time()
         # Check cache
+        ttl = self.leader_cache.get("ttl_override", self.cache_ttl) if self.leader_cache else self.cache_ttl
         if (
             self.leader_cache
-            and current_time - self.leader_cache.get("timestamp", 0) < self.cache_ttl
+            and current_time - self.leader_cache.get("timestamp", 0) < ttl
         ):
             leaders = self.leader_cache.get("leaders", self.jito_endpoints)
             if _session_owned:
@@ -124,10 +125,11 @@ class JitoLeaderChecker:
             except Exception as e:
                 logger.debug(f"Leader check failed for {endpoint}: {e}")
 
-        # Cache results
+        # Cache results (FIX 169: Use short TTL on failure to recover instantly)
         self.leader_cache = {
             "leaders": active_endpoints if active_endpoints else self.jito_endpoints,
             "timestamp": current_time,
+            "ttl_override": 0.1 if not active_endpoints else self.cache_ttl
         }
 
         if _session_owned:

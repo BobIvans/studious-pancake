@@ -683,7 +683,7 @@ async def warmup_golden_atas(
     for mint_str, program_id_str in _GOLDEN_ATA_MINTS.items():
         mint_pk = Pubkey.from_string(mint_str)
         program_id = Pubkey.from_string(program_id_str)
-        ata = get_associated_token_address(wallet_pubkey, mint_pk, program_id)
+        ata = get_associated_token_address(wallet_pubkey, mint_pk, token_program_id=program_id)
         ata_str = str(ata)
 
         # Check on-chain existence via getAccountInfo
@@ -2993,8 +2993,10 @@ async def create_flashloan_arbitrage_tx(
             )
             from src.ingest.tx_builder import MARGINFI_FLASHLOAN_START
 
+            bank_index_val = struct.unpack("<H", borrow_ix.data[8:10])[0] if len(borrow_ix.data) >= 10 else 0
             _safe_data = (
                 MARGINFI_FLASHLOAN_START
+                + struct.pack("<H", bank_index_val)
                 + int(effective_base_amount).to_bytes(8, "little")
                 + struct.pack("<H", actual_repay_index)
             )
@@ -4604,7 +4606,7 @@ async def execute_priority_opportunity(
         program_id = TOKEN_2022_PROGRAM_ID if mint_str in TOKEN_2022_MINTS else TOKEN_PROGRAM_ID
         
         ata_addr = str(
-            get_associated_token_address(keypair.pubkey(), mint_pubkey, program_id)
+            get_associated_token_address(keypair.pubkey(), mint_pubkey, token_program_id=program_id)
         )
 
         async with shared_state.ata_cache_lock:
@@ -4706,13 +4708,17 @@ async def execute_priority_opportunity(
     params = flywheel_scaler.get_trading_params(current_balance_sol)
     cfg.ARBITRAGE_FILTER_MIN_PROFIT_SOL = params["min_net_profit_sol"]
 
-    # ┌─ KERNEL TASK 1: MarginFi Account Lock (Optimistic Lock Release) ───────────────────
-    # HFT Pattern: Lock is held ONLY during transaction BUILDING (including simulation),
-    # then RELEASED immediately after successful bundle SEND. This allows the next slot's
-    # opportunity to start building its transaction while the current bundle awaits confirmation.
+    # ┌─ KERNEL TASK 1: MarginFi Account Lock (Per-Account Locks for Parallel Trades) ──
+    # BUG #36: Use per-account locks so different MarginFi accounts can trade concurrently.
+    # Lock is held ONLY during transaction BUILDING (including simulation),
+    # then RELEASED immediately after successful bundle SEND.
     # Jito auctions operate on slot-level millisecond intervals — MarginFi account is free
     # for the next slot regardless of this bundle's confirmation outcome.
-    async with shared_state.marginfi_account_lock:
+    pool_acct_str = cfg.MARGINFI_ACCOUNT_PUBKEY
+    if execution_router and hasattr(execution_router, "marginfi_pool"):
+        current_slot = shared_state.stats.get("current_slot", 0)
+        pool_acct_str, _ = await execution_router.marginfi_pool.checkout(current_slot)
+    async with shared_state.marginfi_account_locks[pool_acct_str]:
         # ───────────────────────────────────────────────────────────────────────────────────────
 
         # --- ATA RENT GUARD (per-trade profit check) ---
@@ -6936,6 +6942,8 @@ async def run():
     except Exception:
         shared_state.stats["virtual_balance"] = initial_balance
     shared_state.stats["initial_balance"] = initial_balance
+    import src.ingest.shared_state as _ss
+    _ss.init_global_scaler(initial_balance)
 
     # Seed Hard Floor Guard (Task 47)
     task = asyncio.create_task(hard_floor_guard())

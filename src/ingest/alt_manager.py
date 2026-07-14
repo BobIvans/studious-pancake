@@ -277,9 +277,10 @@ class ALTCacheManager:
             # - last_extended_slot_index_padding: u8 (1)
             # - authority: Option<Pubkey> (1 byte flag + 32 bytes) = always 33 bytes, padded to 56
             
-            if len(data) < 56:
+            if len(data) < 24:
                 return None
-            header_len = 56  # Fixed header for authoritized ALTs
+            # FIX 219: Handle variable header lengths for frozen (24) vs active (56) ALTs
+            header_len = 56 if data[21] == 1 else 24
 
             if len(data) < header_len:
                 return None
@@ -313,7 +314,7 @@ class ALTCacheManager:
         values_snapshot = list(self.alt_metadata.values())
         if not values_snapshot:
             return 0.0
-        oldest_age = min(current_time - last_updated for last_updated, _ in values_snapshot)
+        oldest_age = max(current_time - last_updated for last_updated, _ in values_snapshot)  # FIX 218
         return oldest_age
 
     def _get_known_alt_pubkeys(self) -> Set[Pubkey]:

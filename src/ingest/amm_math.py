@@ -150,10 +150,11 @@ class AmmMath:
 
         amount_in_no_fee = numerator // denominator
 
-        # Add fee back: since fee is deducted from input, we need to solve for pre-fee amount
-        # This is approximate - for precision, would need iterative approach
-        fee_multiplier = 10000 / (10000 - fee_bps)
-        amount_in_with_fee = int(amount_in_no_fee * fee_multiplier)
+        # FIX 190: Prevent ZeroDivisionError for 100% fee pools and fix float-math precision loss
+        net_bps = 10000 - fee_bps
+        if net_bps <= 0:
+            return 0
+        amount_in_with_fee = (amount_in_no_fee * 10000 + net_bps - 1) // net_bps
 
         return amount_in_with_fee
 
@@ -471,7 +472,7 @@ class AmmMath:
         """
         # sqrt(1.0001^tick) = 1.0001^(tick/2). Use Q64 fixed-point exp/log.
         # log2(1.0001) ~= 0.00014384; * tick / 2 -> exponent in base 2.
-        log2_ratio = 144269  # floor(log2(1.0001) * 2^32) ~= 144269
+        log2_ratio = 619169  # FIX 192: Correct Orca Whirlpool log2 constant (was 144269, undercounted 4.3x)
         # exponent (Q32): tick/2 * log2_ratio
         exp_q32 = (tick * log2_ratio) // 2
         # 2^(exp_q32 / 2^32) * 2^64  =  2^((exp_q32 >> 0)/2^32 + 64)
@@ -548,12 +549,20 @@ class AmmMath:
         base_den = 10000
         scale = 10 ** 18
         if k > 0:
+            # FIX 193: Speed up pow exponentiation to prevent event loop blocking with 4000-digit integers
+            if k > 100:
+                price_float = ((base_num / base_den) ** k) * float(scale)
+                return int(price_float)
             num = pow(base_num, k) * scale
             den = pow(base_den, k)
             return num // den
         else:
-            num = pow(base_den, -k) * scale
-            den = pow(base_num, -k)
+            abs_k = -k
+            if abs_k > 100:
+                price_float = ((base_den / base_num) ** abs_k) * float(scale)
+                return int(price_float)
+            num = pow(base_den, abs_k) * scale
+            den = pow(base_num, abs_k)
             return num // den
 
     @staticmethod

@@ -125,7 +125,9 @@ class ProfitCalculator:
 
         # Phase 8: flash loan fee applies to the BORROWED amount, not the output
         flashloan_fee = int(amount_in * (path.flash_loan_fee_bps / 10000.0))
-        profit = current_amount - amount_in - flashloan_fee
+        # BUG #28 FIX: Account for network costs (Base Fee 5k + Priority 10k + Tip 10k + ATA Rent 0)
+        network_costs_lamports = 25_000
+        profit = current_amount - amount_in - flashloan_fee - network_costs_lamports
         return profit
     
     def get_max_feasible_input(self, path: ArbitragePath) -> int:
@@ -384,7 +386,21 @@ class OptimalTradeSizer:
             quote1_out = Decimal(str(quote1.get("outAmount", 0)))
             quote2_out = Decimal(str(quote2.get("outAmount", 0)))
             if quote2_out > quote1_out:
-                return Decimal(str(working_cap_sol or 0))
+                # BUG #29 FIX: Slippage-pegged sizing instead of all-in return
+                pip = quote2.get("priceImpactPct", 0.005)
+                try:
+                    pool_slippage = float(pip) if float(pip) > 0 else 0.005
+                except (ValueError, TypeError):
+                    pool_slippage = 0.005
+
+                # Calculate safe borrow amount without all-in
+                safe_lamports = self.get_slippage_pegged_borrow_lamports(
+                    wallet_native_balance_sol=working_cap_sol or 0.015,
+                    pool_slippage_pct=pool_slippage,
+                    bank_liquidity_lamports=int(100_000_000 * 1e9),  # Assume deep bank
+                    virtual_balance=working_cap_sol
+                )
+                return Decimal(str(safe_lamports))
             return Decimal('0')
 
         # Router: Detect if first arg is an ArbitragePath (test convention) or use arbitrage_path kwarg

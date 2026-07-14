@@ -1,6 +1,8 @@
 import asyncio
 import logging
 import base64
+import time
+import os
 import aiohttp
 import orjson
 from typing import Optional
@@ -59,27 +61,38 @@ class StateManager:
         return None
 
 
+# FIX 306: Cooldown guard — prevent USDC drain from rapid refill loops
+_LAST_REFILL_TIME = 0.0
+
 async def check_and_refill_gas(session, rpc, keypair):
     """
     🔴 THREAT #1 FIX: Auto-swap USDC → Native SOL when gas runs low.
-    Ensures bot has enough Native SOL for Jito tips.
-    Uses dynamic deficit calculation instead of hardcoded 2 USDC.
+    P0 #20: Realistic target 0.008 SOL (was 0.020 — exceeding entire 0.015 SOL capital).
+    P0 #21: 30s hard cooldown between refill attempts, timer updated only on real attempt.
     """
-    import os
+    global _LAST_REFILL_TIME
 
-    if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
+    # P0 #40: Paper mode — skip gas refill entirely
+    if os.getenv("PAPER_TRADING_ONLY", "false").lower() == "true":
         return
+
+    now = time.time()
+    # P0 #21: Hard 30-second cooldown between refill attempts
+    if now - _LAST_REFILL_TIME < 30.0:
+        return
+
     try:
         # Check native balance
         native_bal = await StateManager.get_balance(session, rpc, keypair.pubkey())
         import src.ingest.shared_state as _ss
         min_reserve = _ss.MIN_RESERVE_SOL
-        target_balance = float(os.getenv("TARGET_GAS_SOL", "0.020"))
+        # P0 #20: Realistic target — 0.008 SOL (was 0.020)
+        target_balance = float(os.getenv("TARGET_GAS_SOL", "0.008"))
 
         if native_bal is None:
             return
-        # Don't refill if balance is above reserve + small buffer
-        if native_bal > (min_reserve + 0.003):
+        # Don't refill if balance is above min reserve + small buffer
+        if native_bal > (min_reserve + 0.001):
             return
 
         USDC_MINT = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
@@ -114,7 +127,15 @@ async def check_and_refill_gas(session, rpc, keypair):
                 )  # Dynamic SOL price via Pyth
                 # Cap at 50% of available USDC balance to protect trading capital (BL-013)
                 max_allowed_usdc = int(usdc_amount * 0.5)
-                swap_amount = max(min(deficit_usdc_lamports, max_allowed_usdc), 500_000)
+                # FIX 216: Protect USDC capital by applying max_allowed_usdc cap LAST
+                swap_amount = max(deficit_usdc_lamports, 500_000)
+                swap_amount = min(swap_amount, max_allowed_usdc)
+                if swap_amount < 500_000:
+                    logger.warning("USDC balance too low for minimum gas swap (requires at least $0.50)")
+                    return
+
+                # P0 #21: Update cooldown timer — only on real attempt
+                _LAST_REFILL_TIME = time.time()
 
                 if usdc_amount > 500_000:  # At least $0.50 USDC
                     logger.info(
@@ -184,10 +205,11 @@ async def check_and_refill_gas(session, rpc, keypair):
                             )
                             if send_response.status == 200:
                                 swap_result = await send_response.json()
-                                logger.info(
-                                    f"✅ GAS REFILL: USDC→SOL swap relayed: "
-                                    f"{swap_result}"
-                                )
+                                # FIX 217: Check for internal RPC errors masked as HTTP 200
+                                if "error" in swap_result:
+                                    logger.error(f"❌ Swap broadcast RPC error: {swap_result['error']}")
+                                else:
+                                    logger.info(f"✅ GAS REFILL: USDC→SOL swap relayed: {swap_result.get('result', 'OK')}")
                             else:
                                 logger.error(
                                     f"❌ Swap broadcast returned "

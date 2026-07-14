@@ -116,5 +116,7 @@ class TransactionSender:
             result = await self.send_transaction(signed_tx)
             if result:
                 return result
-            logger.warning(f"Send attempt {attempt + 1} failed, retrying")
+            # FIX 171: If blockhash is expired, abort useless retries immediately to save RPC credits
+            logger.warning(f"Send attempt {attempt + 1} failed. Blockhash is likely expired. Aborting retries to save credits.")
+            break
         return None

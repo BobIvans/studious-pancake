@@ -49,6 +49,7 @@ class LstInstantUnstakeArbitrage:
         stats=None,
         stats_lock=None,
         min_deviation_pct: Optional[float] = None,
+        jito_bidding_manager: Optional[Any] = None,
     ):
         self.session = session
         self._static_rpc_url = rpc_url
@@ -57,9 +58,6 @@ class LstInstantUnstakeArbitrage:
         self.lst_mints = lst_mints if lst_mints is not None else []
         self.tx_builder = tx_builder
         self.optimal_trade_sizer = optimal_trade_sizer
-        # Phase 8: min_profit_lamports is now a dynamic property fetched from
-        # flywheel_scaler tier thresholds.  The constructor arg is kept as an
-        # absolute minimum floor for safety.
         self._min_profit_lamports_floor = min_profit_lamports
         self.ata_cache = ata_cache if ata_cache is not None else set()
         self.keypair = keypair
@@ -70,6 +68,7 @@ class LstInstantUnstakeArbitrage:
         self.stats_lock = stats_lock
         self.min_deviation_pct = min_deviation_pct
         self.flywheel_scaler = shared_state.flywheel_scaler
+        self.jito_bidding_manager = jito_bidding_manager
 
     async def scan_unstake_opportunities(self) -> List[Dict[str, Any]]:
         """

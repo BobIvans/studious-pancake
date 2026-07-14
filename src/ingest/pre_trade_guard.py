@@ -873,8 +873,12 @@ class PreTradeGuard:
         if native_sol_balance < min_reserve + estimated_rent_sol:
             # В режиме симуляции проверка газа проводится на виртуальном балансе
             is_paper = str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true"
+            # FIX #41: Honest gas tank rejection in paper mode — no trades on empty tank even in sim
             if is_paper:
-                logger.debug(f"🧪 [PAPER MODE] Проверка газа пройдена виртуально (Баланс: {native_sol_balance:.6f} SOL)")
+                if native_sol_balance < min_reserve + estimated_rent_sol:
+                    logger.warning(f"🧪 [PAPER MODE] REJECTED: Virtual balance {native_sol_balance:.6f} < required {min_reserve + estimated_rent_sol:.6f}")
+                    return False, 0.0
+                logger.debug(f"🧪 [PAPER MODE] Gas check passed (Баланс: {native_sol_balance:.6f} SOL)")
                 return True, native_sol_balance
 
             logger.critical(

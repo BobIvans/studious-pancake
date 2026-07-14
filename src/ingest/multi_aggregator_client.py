@@ -158,9 +158,9 @@ class MultiAggregatorClient:
         )
 
         # Phase 26: Use proper time-based rate limiters instead of Semaphores
-        self.jupiter_limiter = self._create_limiter(
-            int(os.getenv("JUPITER_QUOTE_RPS", 5))
-        )
+        # FIX 232: Use global Jupiter limiter to prevent 2x RPS rate limiting
+        from src.ingest.jupiter_api_client import get_quote_limiter
+        self.jupiter_limiter = get_quote_limiter()
         self.openocean_limiter = self._create_limiter(
             int(os.getenv("OPENOCEAN_RPS", 2))
         )
@@ -170,6 +170,7 @@ class MultiAggregatorClient:
         )  # Strict 1 RPS
 
         self.aggregators = [self.jupiter, self.openocean, self.okx, self.odos]
+        self._cooldowns = {}  # FIX 168: Track cooled-down aggregators
         self.current_index = 0
         self.session = None
 
@@ -209,11 +210,24 @@ class MultiAggregatorClient:
         if self.session:
             await self.session.close()
 
+    # FIX 168: Health-based failover cooldowns for rate-limited/offline aggregators
+    def record_failure(self, name: str):
+        if not hasattr(self, "_cooldowns"):
+            self._cooldowns = {}
+        self._cooldowns[name] = time.time() + 30.0  # 30-sec cooldown
+        logger.warning(f"⚠️ Aggregator {name} failed or rate-limited — putting on 30s cooldown")
+
     def _get_next_aggregator(self) -> AggregatorClient:
-        """Round-robin aggregator selection."""
-        aggregator = self.aggregators[self.current_index]
-        self.current_index = (self.current_index + 1) % len(self.aggregators)
-        return aggregator
+        """Round-robin aggregator selection filtering out cooled-down instances."""
+        if not hasattr(self, "_cooldowns"):
+            self._cooldowns = {}
+        now = time.time()
+        healthy = [a for a in self.aggregators if self._cooldowns.get(a.name, 0) < now]
+        if not healthy:
+            healthy = self.aggregators  # Fallback to all if everyone is down
+
+        self.current_index = (self.current_index + 1) % len(healthy)
+        return healthy[self.current_index]
 
     async def _race_single_aggregator(
         self,
@@ -248,6 +262,7 @@ class MultiAggregatorClient:
                     "outTokenAddress": str(output_mint),
                     "amount": str(amount),
                     "gasPrice": "5",
+                    "slippage": str(slippage_bps / 100),  # FIX 221
                 }
             elif aggregator.name == "okx":
                 params = {
@@ -267,7 +282,7 @@ class MultiAggregatorClient:
                         {"tokenAddress": str(output_mint), "proportion": 1}
                     ],
                     "slippageLimitPercent": slippage_bps / 100,
-                    "userAddr": "11111111111111111111111111111112",
+                    "userAddr": "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2",  # FIX 222: Valid Ed25519 Pubkey
                 }
             else:
                 params = {
@@ -277,7 +292,12 @@ class MultiAggregatorClient:
                     "slippageBps": str(anti_sandwich_bps),
                 }
 
-            return await aggregator.get_quote(self.session, params)
+            res = await aggregator.get_quote(self.session, params)
+            if res is None:
+                self.record_failure(aggregator.name)  # FIX 168
+            else:
+                res["slippage_bps"] = slippage_bps  # FIX 220: Propagate slippage
+            return res
 
     async def get_quote(
         self, input_mint: str, output_mint: str, amount: int, slippage_bps: int = 50
@@ -323,59 +343,50 @@ class MultiAggregatorClient:
             tasks.append(task)
             aggregator_map[id(task)] = aggregator.name
 
-        # ── Race: wait for FIRST_COMPLETED ───────────────────────────────────
+        # ── Race: wait for all within timeout and pick BEST price ─────────────────
         pending = set(tasks)
         start_race = time.time()
-        timeout = 4.0  # Hard timeout — if no aggregator responds in 4s, fail
+        # FIX 214: Wait for up to 0.8s for responses, then pick the highest outAmount, not just the fastest
+        timeout = 0.8
 
         try:
-            while pending:
-                done, pending = await asyncio.wait(
-                    pending,
-                    return_when=asyncio.FIRST_COMPLETED,
-                    timeout=timeout,
+            done, pending = await asyncio.wait(
+                pending,
+                return_when=asyncio.ALL_COMPLETED,
+                timeout=timeout,
+            )
+
+            best_quote = None
+            max_out_amount = -1
+            winner_name = "none"
+
+            for task in done:
+                try:
+                    result = task.result()
+                    if result is not None and result.get("data") is not None:
+                        out_val = int(result["data"].get("outAmount", 0) or 0)
+                        if out_val > max_out_amount:
+                            max_out_amount = out_val
+                            best_quote = result
+                            winner_name = aggregator_map.get(id(task), "unknown")
+                except Exception as task_err:
+                    logger.debug(f"Aggregator task failed: {task_err}")
+
+            if best_quote:
+                race_ms = (time.time() - start_race) * 1000
+                logger.debug(
+                    f"🏁 Aggregator race won by {winner_name} "
+                    f"in {race_ms:.0f}ms (Best outAmount: {max_out_amount}) for {input_mint[:8]}->{output_mint[:8]}"
                 )
-
-                for task in done:
-                    try:
-                        result = task.result()
-                        if result is not None and result.get("data") is not None:
-                            # First profitable/valid quote received!
-                            race_ms = (time.time() - start_race) * 1000
-                            winner = aggregator_map.get(id(task), "unknown")
-                            logger.debug(
-                                f"🏁 Aggregator race won by {winner} "
-                                f"in {race_ms:.0f}ms for {input_mint[:8]}->{output_mint[:8]}"
-                            )
-
-                            # Cancel all pending tasks immediately
-                            for t in pending:
-                                t.cancel()
-
-                            return result
-                    except Exception as task_err:
-                        logger.debug(f"Aggregator race task failed: {task_err}")
-
-                # All completed tasks failed — continue waiting on the rest
-                if not pending:
-                    break
-
-                # Shrink timeout to remaining time
-                elapsed = time.time() - start_race
-                if elapsed >= 4.0:
-                    break
-                timeout = max(0.1, 4.0 - elapsed)
+                return best_quote
 
         finally:
             # Ensure all tasks are properly cleaned up
-            # Note: asyncio.wait() with timeout does NOT raise TimeoutError —
-            # it simply returns whatever tasks completed. The while-loop above
-            # handles the timeout naturally by reducing the remaining timeout.
             for t in pending:
                 t.cancel()
-            # Fire-and-forget: do NOT await cancelled tasks in the hot path.
-            # A stuck task (bad socket / library swallowing CancelledError) would
-            # deadlock get_quote forever. Let them die in the background.
+            # FIX 223: Await cancelled tasks to prevent aiohttp response object / socket leak
+            if pending:
+                await asyncio.gather(*pending, return_exceptions=True)
 
         logger.warning(f"All aggregators failed for {input_mint} -> {output_mint}")
         return None
@@ -420,7 +431,7 @@ class MultiAggregatorClient:
                 "fromTokenAddress": quote_response["data"].get("fromTokenAddress"),
                 "toTokenAddress": quote_response["data"].get("toTokenAddress"),
                 "amount": quote_response["data"].get("fromTokenAmount"),
-                "slippage": str(50 / 100),  # 0.5%
+                "slippage": str(quote_response.get("slippage_bps", 50) / 100),  # FIX 220: Dynamic slippage
                 "userWalletAddress": user_public_key,
             }
         elif aggregator.name == "odos":

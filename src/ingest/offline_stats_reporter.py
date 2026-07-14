@@ -34,6 +34,10 @@ class OfflineStatsReporter:
         logger.info(f"Starting stats analysis for last {days_back} days...")
 
         trades = await self.data_collector.get_recent_trades(50000)
+        
+        # FIX 231: Warn if fetch cap hit
+        if len(trades) >= 50000:
+            logger.warning("WARNING: Trade fetch cap reached (50,000). Analysis may be truncated.")
 
         if not trades:
             return {"error": "No trade data available for analysis"}
@@ -41,8 +45,12 @@ class OfflineStatsReporter:
         cutoff_time = datetime.now() - timedelta(days=days_back)
         recent_trades = [
             t for t in trades
-            if datetime.fromisoformat(t["datetime"]) > cutoff_time
+            if datetime.fromisoformat(t.get("datetime", datetime.now().isoformat())) > cutoff_time
         ]
+        
+        # FIX 229: Short-circuit if recent_trades is empty after date filter
+        if not recent_trades:
+            return {"error": f"No trade data available for last {days_back} days"}
 
         logger.info(f"Analyzing {len(recent_trades)} trades from last {days_back} days")
 
@@ -63,26 +71,26 @@ class OfflineStatsReporter:
         if not trades:
             return {}
 
-        successful_trades = [t for t in trades if t["result"] == "success"]
-        failed_trades = [t for t in trades if t["result"] != "success"]
+        successful_trades = [t for t in trades if t.get("result") == "success"]
+        failed_trades = [t for t in trades if t.get("result") != "success"]
 
         return {
             "total_trades": len(trades),
             "successful_trades": len(successful_trades),
             "failed_trades": len(failed_trades),
             "success_rate": len(successful_trades) / len(trades),
-            "average_score": statistics.mean(t["initial_score"] for t in trades),
-            "average_profit": statistics.mean(t["actual_profit_sol"] for t in trades),
-            "average_execution_time": statistics.mean(t["execution_time_ms"] for t in trades),
-            "total_profit_sol": sum(t["actual_profit_sol"] for t in trades),
+            "average_score": statistics.mean(float(t.get("initial_score", 0.0)) for t in trades),
+            "average_profit": statistics.mean(float(t.get("actual_profit_sol", 0.0)) for t in trades),
+            "average_execution_time": statistics.mean(float(t.get("execution_time_ms", 0.0)) for t in trades),
+            "total_profit_sol": sum(float(t.get("actual_profit_sol", 0.0)) for t in trades),
             "best_performing_pair": self._find_best_pair(trades),
             "worst_performing_pair": self._find_worst_pair(trades)
         }
 
     def _analyze_score_effectiveness(self, trades: List[Dict]) -> Dict[str, Any]:
         """Analyze how well scoring predicts success."""
-        successful_scores = [t["initial_score"] for t in trades if t["result"] == "success"]
-        failed_scores = [t["initial_score"] for t in trades if t["result"] != "success"]
+        successful_scores = [float(t.get("initial_score", 0.0)) for t in trades if t.get("result") == "success"]
+        failed_scores = [float(t.get("initial_score", 0.0)) for t in trades if t.get("result") != "success"]
 
         analysis = {
             "avg_success_score": statistics.mean(successful_scores) if successful_scores else 0,
@@ -96,13 +104,13 @@ class OfflineStatsReporter:
         threshold_analysis = {}
 
         for threshold in thresholds:
-            high_score_trades = [t for t in trades if t["initial_score"] >= threshold]
+            high_score_trades = [t for t in trades if float(t.get("initial_score", 0.0)) >= threshold]
             if high_score_trades:
-                success_rate = len([t for t in high_score_trades if t["result"] == "success"]) / len(high_score_trades)
+                success_rate = len([t for t in high_score_trades if t.get("result") == "success"]) / len(high_score_trades)
                 threshold_analysis[f"score_{threshold}_plus"] = {
                     "count": len(high_score_trades),
                     "success_rate": success_rate,
-                    "avg_profit": statistics.mean(t["actual_profit_sol"] for t in high_score_trades)
+                    "avg_profit": statistics.mean(float(t.get("actual_profit_sol", 0.0)) for t in high_score_trades)
                 }
 
         analysis["threshold_analysis"] = threshold_analysis
@@ -117,13 +125,13 @@ class OfflineStatsReporter:
 
         pair_analysis = {}
         for pair, pair_trades in pair_stats.items():
-            successful = [t for t in pair_trades if t["result"] == "success"]
+            successful = [t for t in pair_trades if t.get("result") == "success"]
             pair_analysis[pair] = {
                 "total_trades": len(pair_trades),
                 "success_rate": len(successful) / len(pair_trades),
-                "avg_profit": statistics.mean(t["actual_profit_sol"] for t in pair_trades),
-                "avg_score": statistics.mean(t["initial_score"] for t in pair_trades),
-                "total_volume": sum(t["expected_profit_sol"] for t in pair_trades)
+                "avg_profit": statistics.mean(float(t.get("actual_profit_sol", 0.0)) for t in pair_trades),
+                "avg_score": statistics.mean(float(t.get("initial_score", 0.0)) for t in pair_trades),
+                "total_volume": sum(float(t.get("expected_profit_sol", 0.0)) for t in pair_trades)
             }
 
         sorted_pairs = sorted(pair_analysis.items(),
@@ -145,14 +153,22 @@ class OfflineStatsReporter:
 
         timing_analysis = {}
         for hour, hour_trades in hourly_stats.items():
-            successful = [t for t in hour_trades if t["result"] == "success"]
+            successful = [t for t in hour_trades if t.get("result") == "success"]
             timing_analysis[hour] = {
                 "total_trades": len(hour_trades),
                 "success_rate": len(successful) / len(hour_trades),
-                "avg_profit": statistics.mean(t["actual_profit_sol"] for t in hour_trades),
+                "avg_profit": statistics.mean(float(t.get("actual_profit_sol", 0.0)) for t in hour_trades),
                 "peak_hour": len(hour_trades) > statistics.mean(len(h) for h in hourly_stats.values())
             }
 
+        if not timing_analysis:
+            return {
+                "hourly_performance": {},
+                "best_trading_hour": None,
+                "worst_trading_hour": None,
+                "best_hour_success_rate": 0,
+                "time_based_insights": []
+            }
         best_hour = max(timing_analysis.items(), key=lambda x: x[1]["success_rate"])
         worst_hour = min(timing_analysis.items(), key=lambda x: x[1]["success_rate"])
 
@@ -180,27 +196,27 @@ class OfflineStatsReporter:
 
         network_analysis = {}
         for level, level_trades in congestion_buckets.items():
-            successful = [t for t in level_trades if t["result"] == "success"]
+            successful = [t for t in level_trades if t.get("result") == "success"]
             network_analysis[level] = {
                 "total_trades": len(level_trades),
                 "success_rate": len(successful) / len(level_trades) if level_trades else 0,
-                "avg_profit": statistics.mean(t["actual_profit_sol"] for t in level_trades) if level_trades else 0,
-                "avg_execution_time": statistics.mean(t["execution_time_ms"] for t in level_trades) if level_trades else 0
+                "avg_profit": statistics.mean(float(t.get("actual_profit_sol", 0.0)) for t in level_trades) if level_trades else 0,
+                "avg_execution_time": statistics.mean(float(t.get("execution_time_ms", 0.0)) for t in level_trades) if level_trades else 0
             }
 
         return network_analysis
 
     def _calculate_score_correlation(self, trades: List[Dict]) -> float:
         """Calculate correlation between initial score and actual success."""
-        scores = [t["initial_score"] for t in trades]
-        successes = [1 if t["result"] == "success" else 0 for t in trades]
+        scores = [float(t.get("initial_score", 0.0)) for t in trades]
+        successes = [1 if t.get("result") == "success" else 0 for t in trades]
 
         if len(scores) < 2:
             return 0.0
 
         try:
             return statistics.correlation(scores, successes)
-        except:
+        except Exception:  # FIX 127
             return 0.0
 
     def _find_best_pair(self, trades: List[Dict]) -> str:

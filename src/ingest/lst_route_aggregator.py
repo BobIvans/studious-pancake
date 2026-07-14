@@ -318,8 +318,7 @@ class LstRouteAggregator:
                 swap_mode=swap_mode,
             )
             if sanctum_quote:
-                # Check Sanctum fees (placeholder: assume low fee)
-                sanctum_fee_pct = 0.001  # 0.1%
+                # FIX 200: Removed dead sanctum_fee_pct variable
                 # Убеждаемся, что Sanctum дает лучший рейт, чем AMM
                 # Добавляем только если рейт лучше, чем лучший альтернативный
                 if sanctum_quote.price_impact_pct < 0.5:  # Low impact preferred
@@ -430,7 +429,7 @@ class LstRouteAggregator:
                 return None
 
             in_amount = int(data.get("inAmount", 0))
-            out_amount = int(data.get("outAmount", 0))
+            out_amount = int(data.get("outAmount") or 0)
             if out_amount == 0 or in_amount == 0:
                 return None
 

@@ -32,7 +32,7 @@ class DexScreenerClient:
         """Fetch latest trending tokens on Solana."""
         # Fix 5.3: Use aiolimiter instead of manual sleep + semaphore
         async with self._limiter:
-            url = f"{self.base_url}/tokens/v1/solana"
+            url = f"{self.base_url}/token-profiles/latest/v1"  # FIX 215: Correct DexScreener endpoint
             try:
                 async with self.session.get(url, timeout=10) as resp:
                     if resp.status == 200:

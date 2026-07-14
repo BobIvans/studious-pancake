@@ -176,11 +176,19 @@ class LiquidationEngine:
             total_collateral_value = Decimal('0')
             total_debt_value = Decimal('0')
 
+            # FIX 174: Pull live Pyth oracle prices instead of hardcoded $1 flat rate
+            from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
+            feeder = get_pyth_core_feeder()
+
             for position in positions:
+                mint = position.get("mint")
+                price_val = 1.0
+                if feeder and mint:
+                    price_val = feeder.get_price(mint) or 1.0
+                price = Decimal(str(price_val))
+
                 if position.get("position_type") == "collateral":
                     amount = Decimal(str(position.get("amount", 0)))
-                    # Would look up price from oracle streams
-                    price = Decimal('1')  # Placeholder
                     total_collateral_value += amount * price
                 elif position.get("position_type") == "debt":
                     amount = Decimal(str(position.get("amount", 0)))

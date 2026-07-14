@@ -8,6 +8,7 @@ Phase 30: Ensures blockhashes are NOT cached and TTL is strictly limited to 30s.
 
 import logging
 import time
+import copy
 from typing import Dict, List, Optional, Any, Tuple
 from spl.token.constants import ASSOCIATED_TOKEN_PROGRAM_ID
 
@@ -32,8 +33,13 @@ class TransactionPrebuilder:
         stale repay-index references from cached templates.
         """
         ATA_PROGRAM = str(ASSOCIATED_TOKEN_PROGRAM_ID)
+        from spl.token.constants import TOKEN_PROGRAM_ID
+        from solders.system_program import ID as SYSTEM_PROGRAM_ID
+        # FIX 212: Prevent caching of dynamic instructions (System transfers, SyncNative)
         ATTACHED_PROGRAM_IDS = {
-            ATA_PROGRAM,  # Associated Token Account
+            ATA_PROGRAM,
+            str(TOKEN_PROGRAM_ID),
+            str(SYSTEM_PROGRAM_ID)
         }
         has_dynamic = any(
             str(ix.program_id) in ATTACHED_PROGRAM_IDS
@@ -57,7 +63,7 @@ class TransactionPrebuilder:
         template = self.templates.get((in_mint, out_mint))
         if template:
             if time.time() - template["timestamp"] < self.template_expiry_seconds:
-                return template
+                return copy.deepcopy(template)  # FIX 213: Prevent cache poisoning by returning a deep copy
             else:
                 # Cleanup expired template
                 del self.templates[(in_mint, out_mint)]

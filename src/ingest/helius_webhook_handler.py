@@ -261,13 +261,15 @@ class HeliusWebhookHandler:
         logger.info(f"📡 Authorized Helius webhook accepted: {webhook_id} from {client_ip} ({len(events)} events)")
 
         # FIX 178: Removed useless semaphore to prevent Helius delivery timeout on bursts
+        # FIX #43: Atomic buffer — pre-check free space BEFORE enqueuing any event
         try:
+            free_space = self._signal_queue.maxsize - self._signal_queue.qsize()
+            if free_space < len(events):
+                logger.warning(f"Webhook queue near full ({free_space} slots left), rejecting batch of {len(events)} for Helius retry.")
+                return web.Response(status=503, text='Queue Full')
+
             for event in events:
-                try:
-                    self._signal_queue.put_nowait((time.time(), event, webhook_id))
-                except asyncio.QueueFull:
-                    logger.warning(f"Webhook queue full, returning 503 to Helius: {webhook_id}")
-                    return web.Response(status=503, text='Queue Full')  # FIX 136
+                self._signal_queue.put_nowait((time.time(), event, webhook_id))
             return web.Response(text='OK')
         except Exception as e:
             logger.error(f"Webhook processing error: {e}")
@@ -428,11 +430,13 @@ class HeliusWebhookHandler:
             for account_info in account_data:
                 account_address = account_info.get('account')
                 if account_address in WebhookConfig.ORCA_POOL_ADDRESSES:
-                    now = time.time()
-                    last_trigger = self._last_scan_trigger.get(account_address, 0)
-                    if now - last_trigger < 2.0:
-                        continue
-                    self._last_scan_trigger[account_address] = now
+                    # FIX 247: Atomic check-and-set to prevent TOCTOU duplicate trades
+                    async with self._dedup_lock:
+                        now = time.time()
+                        last_trigger = self._last_scan_trigger.get(account_address, 0)
+                        if now - last_trigger < 2.0:
+                            continue
+                        self._last_scan_trigger[account_address] = now
                     native_balance_change = account_info.get('nativeBalanceChange', 0)
                     token_balance_changes = event.get('tokenBalanceChanges', [])
                     if abs(native_balance_change) > 10_000_000:
@@ -490,8 +494,12 @@ class HeliusWebhookHandler:
     def _parse_sanctum_opportunity(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Parse Sanctum Router transaction for arbitrage opportunity."""
         try:
+            import uuid
+            correlation_id = str(uuid.uuid4())
+            logger.debug(f"🆔 Generated correlation_id={correlation_id[:12]} for webhook event")
             opportunity = {
                 'type': 'sanctum_lst_arbitrage',
+                'correlation_id': correlation_id,
                 'description': '',
                 'tokens_involved': [],
                 'amounts': {},

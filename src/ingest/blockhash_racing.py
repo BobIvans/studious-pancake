@@ -29,7 +29,7 @@ class BlockhashRacingManager:
     reduces RPC load by 90% while keeping the blockhash fully valid for Jito bundles.
     """
 
-    def __init__(self, rpc_endpoints: List[str], race_interval_ms: int = 15000):
+    def __init__(self, rpc_endpoints: List[str], race_interval_ms: int = 400) -> None:  # FIX 287: Dynamic poll every 400ms (~1 slot)
         self.rpc_endpoints = list(set(rpc_endpoints))
         self.race_interval_ms = race_interval_ms
         self.current_blockhash: Optional[Hash] = None
@@ -103,14 +103,27 @@ class BlockhashRacingManager:
         return self.current_blockhash
 
     async def _racing_loop(self):
-        """Background loop that continuously races for fresh blockhashes."""
+        """High-speed blockhash polling, synchronised with Solana slot updates.
+        
+        Uses slot-change detection from shared_state to trigger fresh blockhash fetches.
+        Cooldown prevents RPC flood — min 200ms between subsequent fetches even if
+        the slot counter advances from our own getSlot call.
+        """
+        last_processed_slot = 0
+        _last_fetch_time = 0.0
         while self.running:
             try:
-                await asyncio.sleep(self.race_interval_ms / 1000)  # Convert ms to seconds
-                await self._race_blockhash_once()
+                current_slot = shared_state.stats.get("current_slot", 0)
+                now = time.time()
+                # Only fetch if slot changed AND cooldown elapsed (prevents self-feeding loop)
+                if current_slot > last_processed_slot and (now - _last_fetch_time) > 0.20:
+                    last_processed_slot = current_slot
+                    _last_fetch_time = now
+                    await self._race_blockhash_once()
+                await asyncio.sleep(0.05)
             except Exception as e:
-                logger.error(f"Blockhash racing loop error: {e}")
-                await asyncio.sleep(1)  # Brief pause on error
+                logger.debug(f"Blockhash slot-race error: {e}")
+                await asyncio.sleep(0.5)
 
     async def get_slot_drift_ms(self) -> Optional[float]:
         """
@@ -179,9 +192,9 @@ class BlockhashRacingManager:
         Returns True if drift was detected and the blockhash was refreshed.
         """
         drift_ms = await self.get_slot_drift_ms()
-        if drift_ms is not None and drift_ms > 1500:
+        if drift_ms is not None and drift_ms > 400:  # FIX 170: Stay below Jito's 500ms ceiling
             logger.critical(
-                f"🚨 SLOT DRIFT CRITICAL: {drift_ms:.0f} ms > 1500 ms — "
+                f"🚨 SLOT DRIFT CRITICAL: {drift_ms:.0f} ms > 400 ms — "
                 f"force-refreshing blockhash to prevent Jito rejection"
             )
             await self._race_blockhash_once()

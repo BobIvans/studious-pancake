@@ -311,7 +311,10 @@ class WSOLManager:
                 if resp.status == 200:
                     data = await resp.json()
                     if "result" in data and "value" in data["result"]:
-                        wsol_balance_lamports = int(data["result"]["value"]["amount"])
+                        # FIX 233: Guard against value being null for non-existent accounts
+                        val = data["result"]["value"]
+                        if val is not None and "amount" in val:
+                            wsol_balance_lamports = int(val["amount"])
         except Exception as e:
             logger.debug(f"wSOL balance query failed: {e}")
             if _session_owned:
@@ -387,6 +390,12 @@ class WSOLManager:
                     if "result" in result:
                         # Fix 67: Use shared_state instead of import arb_bot
                         _shared_state_lock.set_balance_lock_paused(True, 0.4)
+                        # FIX #22: Remove closed wSOL ATA from global ATA cache
+                        try:
+                            await _shared_state_lock.discard_from_ata_cache(wsol_ata_str)
+                            logger.debug(f"🧹 Removed {wsol_ata_str[:8]} from ATA_CACHE after unwrap")
+                        except Exception:
+                            pass
                         logger.info(
                             f"✅ wSOL unwrap sent: {wsol_balance_sol:.4f} wSOL → Native SOL. "
                             f"Paused next trade for 400ms to allow account state convergence."

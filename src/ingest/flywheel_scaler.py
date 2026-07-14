@@ -109,7 +109,7 @@ class PairReputationCircuitBreaker:
         self,
         limit: int = 3,
         cooldown_seconds: int = 600,
-        error_keywords: tuple = ("slippage", "insufficient", "liquidity", "simulation failed", "blockhash"),
+        error_keywords: tuple = ("slippage", "insufficient", "liquidity", "simulation failed", "blockhash", "blockhashnotfound", "expired", "dropped", "accountinuse", "lock"),  # FIX 176
     ):
         self.limit = limit
         self.cooldown_seconds = cooldown_seconds

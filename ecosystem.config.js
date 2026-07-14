@@ -24,7 +24,7 @@ module.exports = {
     min_uptime: "120s", // Боту нужно время на warm-up ATA и ALTs
     restart_delay: 5000,
     exp_backoff_restart_delay: 200, // Экспоненциальный бек-офф при падениях
-    kill_timeout: 30000, // 30s — время для graceful shutdown & flush DB
+    kill_timeout: 60000, // FIX 211: 60s for DB safe flush — время для graceful shutdown & flush DB
     watch: false,
     env: {
       PYTHONUNBUFFERED: "1",

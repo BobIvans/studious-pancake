@@ -126,6 +126,8 @@ class LstFairPriceMonitor:
             if fair and fair > 0:
                 self._fair_prices[mint] = fair
                 logger.debug(f"Fair price {symbol}: {fair:.6f} SOL/LST (via Sanctum)")
+            
+            await asyncio.sleep(0.5)
 
         self._last_fair_update = time.time()
         return dict(self._fair_prices)
@@ -335,6 +337,34 @@ class LstFairPriceMonitor:
             return None
 
     # ── RPC helpers ───────────────────────────────────────────────────────
+
+    # FIX 271: Anti-Manipulation Oracle Cross-Check — проверяет депег через Pyth
+    async def verify_depeg_safety(self, mint: str, amm_price: float) -> Tuple[bool, str]:
+        """
+        Проверяет, соответствует ли рыночный депег реальным котировкам оракула Pyth.
+        Предотвращает слив баланса в искусственно высушенные пулы (манипуляция курсом).
+        """
+        from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
+        feeder = get_pyth_core_feeder()
+        if not feeder:
+            return True, "Oracle unavailable, skipping check"
+
+        pyth_prices = feeder.as_price_matrix()
+        sol_entry = pyth_prices.get(SOL_MINT)
+        lst_entry = pyth_prices.get(mint)
+
+        if not sol_entry or not lst_entry:
+            return True, "No Pyth feeds for verification"
+
+        sol_usd = sol_entry[0]
+        lst_usd = lst_entry[0]
+        pyth_fair_rate = lst_usd / sol_usd
+
+        divergence = abs(amm_price - pyth_fair_rate) / pyth_fair_rate
+        if divergence > 0.03:
+            return False, f"Price manipulation suspected! AMM={amm_price:.6f} vs Pyth={pyth_fair_rate:.6f} (Divergence: {divergence:.2%})"
+
+        return True, "Verified safe"
 
     async def _get_multiple_accounts(self, addresses: List[str]) -> Dict[str, Optional[bytes]]:
         """Fetch multiple accounts in a single RPC call."""

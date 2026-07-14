@@ -1413,7 +1413,7 @@ class JupiterTxBuilder:
             # not the EndFlashloan instruction.  Pointing to end_ix causes the program to parse
             # the end-flashloan discriminator as a repay discriminator, failing with
             # FlashloanIntrospectionFailed (Error 6000+).
-            repay_index = 1 + 2 + len(arbitrage_instructions) + 1  # end_ix is last (repay_index points to repay_ix = end_ix - 1)
+            repay_index = 1 + 2 + len(arbitrage_instructions)  # FIX 283: corrected, now points to repay_ix (3+N)
 
             # Borrow instruction (Flashloan Start) - 9 accounts per MarginFi v2 IDL
             borrow_ix = self.build_marginfi_start_flashloan_ix(
@@ -1890,6 +1890,23 @@ class JupiterTxBuilder:
             logger.debug(
                 f"🛠️ FIX 7: Safe Dynamic Repay Index calculated on sanitized array: {actual_repay_index}"
             )
+
+            # FIX 284: Dynamic repack of end_ix with updated repay_index after sanitization
+            new_end_idx = None
+            for i in range(len(sanitized) - 1, -1, -1):
+                ix = sanitized[i]
+                if ix.program_id == end_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END:
+                    new_end_idx = i
+                    break
+
+            if new_end_idx is not None:
+                new_end_data = MARGINFI_FLASHLOAN_END + struct.pack("<H", actual_repay_index)
+                sanitized[new_end_idx] = Instruction(
+                    program_id=end_ix.program_id,
+                    accounts=end_ix.accounts,
+                    data=new_end_data,
+                )
+                logger.debug(f"🛠️ FIX 284: end_ix repacked with index {actual_repay_index} at position {new_end_idx}")
         except (ValueError, StopIteration):
             logger.error("CRITICAL: repay_ix not found in sanitized instruction list")
             return None
@@ -2357,7 +2374,7 @@ class JupiterTxBuilder:
             new_end_idx = None
             for i in range(len(sanitized_instructions) - 1, -1, -1):
                 ix = sanitized_instructions[i]
-                if ix.program_id == end_ix.program_id and ix.data[:8] == MARGINFI_FLASHLOAN_END:
+                if ix.program_id == end_ix.program_id and ix.data[:8] == MARGINFI_REPAY:
                     new_end_idx = i
                     break
 
@@ -2499,6 +2516,7 @@ class JupiterTxBuilder:
         vault_auth: Pubkey,
         token_program: Pubkey,
         amount: int,
+        bank_index: int = 0,
     ) -> Instruction:
         """Build MarginFi lending_account_withdraw instruction.
 
@@ -2507,7 +2525,7 @@ class JupiterTxBuilder:
         """
         import struct
 
-        data = MARGINFI_WITHDRAW + amount.to_bytes(8, "little")
+        data = MARGINFI_WITHDRAW + struct.pack("<H", bank_index) + struct.pack("<Q", amount)  # FIX 285
 
         account_metas = [
             AccountMeta(
@@ -2540,6 +2558,7 @@ class JupiterTxBuilder:
         vault_auth: Pubkey,
         token_program: Pubkey,
         amount: int,
+        bank_index: int = 0,
     ) -> Instruction:
         """Build MarginFi lending_account_repay instruction.
 
@@ -2548,7 +2567,7 @@ class JupiterTxBuilder:
         """
         import struct
 
-        data = MARGINFI_REPAY + amount.to_bytes(8, "little")
+        data = MARGINFI_REPAY + struct.pack("<H", bank_index) + struct.pack("<Q", amount)  # FIX 285
 
         account_metas = [
             AccountMeta(

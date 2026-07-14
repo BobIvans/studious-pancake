@@ -27,7 +27,7 @@ ENV PYTHONUNBUFFERED=1 \
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:9100/metrics || exit 1
+    CMD curl -f http://localhost:3000/health || exit 1
 
 # Default command: run the arb bot (override with paper_trader.py for simulation)
 CMD ["python", "arb_bot.py"]

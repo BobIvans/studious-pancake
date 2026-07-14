@@ -21,14 +21,14 @@ _SWAP_LIMITER = None
 def get_quote_limiter():
     global _QUOTE_LIMITER
     if _QUOTE_LIMITER is None:
-        rps = int(os.getenv("JUPITER_QUOTE_RPS", "5"))
+        rps = int(os.getenv("JUPITER_QUOTE_RPS", "50"))  # FIX 290
         _QUOTE_LIMITER = AsyncLimiter(max(1, rps), 1.0)
     return _QUOTE_LIMITER
 
 def get_swap_limiter():
     global _SWAP_LIMITER
     if _SWAP_LIMITER is None:
-        jup_rps = int(os.getenv("JUPITER_SWAP_RPS", "45"))
+        jup_rps = int(os.getenv("JUPITER_SWAP_RPS", "100"))  # FIX 290: Increase swap RPS
         _SWAP_LIMITER = AsyncLimiter(max(1, jup_rps), 1.0)
     return _SWAP_LIMITER
 
@@ -54,19 +54,23 @@ class JupiterClient:
     async def __aenter__(self):
         if self._session_owned and self.session is None:
             connector = aiohttp.TCPConnector(
-                limit=150,
-                limit_per_host=30,
-                ttl_dns_cache=300,
+                limit=200,               # FIX 288: Max 200 concurrent connections
+                limit_per_host=50,       # FIX 288: Per-host limit to Jupiter
+                ttl_dns_cache=600,       # FIX 288: DNS cache 10 minutes
                 use_dns_cache=True,
-                keepalive_timeout=60,
+                keepalive_timeout=120,   # FIX 288: Keep sockets open 120s
                 family=socket.AF_INET,
-                force_close=False,
+                force_close=False,       # FIX 288: NEVER close TCP sockets after request
                 enable_cleanup_closed=True,
             )
             self.session = aiohttp.ClientSession(
                 connector=connector,
-                timeout=aiohttp.ClientTimeout(total=12, sock_connect=8, sock_read=10),
-                headers={"User-Agent": "Mozilla/5.0"}
+                timeout=aiohttp.ClientTimeout(total=4.0, sock_connect=1.5, sock_read=2.5),  # FIX 288
+                headers={
+                "User-Agent": "Mozilla/5.0",
+                "Accept-Encoding": "br, gzip, deflate",  # FIX 288: Brotli reduces quote payload
+                "Connection": "keep-alive"
+            }
             )
         return self
 
@@ -143,10 +147,14 @@ class JupiterClient:
                         ) as response:
                             if response.status == 200:
                                 result = orjson.loads(await response.read())
+                                # FIX 225: Validate Jupiter JSON shape to prevent crash in execution pipeline
+                                if "error" in result or "outAmount" not in result:
+                                    logger.warning(f"Jupiter returned HTTP 200 but malformed/empty quote: {result.get('error', 'Missing outAmount')}")
+                                    continue
                                 result["fetched_at"] = time.time()  # Task 13: Stale Quote Guard
                                 logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
                                 return result
-                            elif response.status == 429:
+                            elif response.status == 429 or response.status >= 500:  # FIX 224: Exponential backoff on 5xx errors
                                 backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                                 logger.warning(f"Jupiter 429 on {QUOTE_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
                                 await asyncio.sleep(backoff)
@@ -171,10 +179,14 @@ class JupiterClient:
                     ) as response:
                         if response.status == 200:
                             result = orjson.loads(await response.read())
+                            # FIX 225: Validate Jupiter JSON shape to prevent crash in execution pipeline
+                            if "error" in result or "outAmount" not in result:
+                                logger.warning(f"Jupiter returned HTTP 200 but malformed/empty quote: {result.get('error', 'Missing outAmount')}")
+                                continue
                             result["fetched_at"] = time.time()  # Task 13: Stale Quote Guard
                             logger.debug(f"Successfully got quote for {input_mint} -> {output_mint}")
                             return result
-                        elif response.status == 429:
+                        elif response.status == 429 or response.status >= 500:  # FIX 224: Exponential backoff on 5xx errors
                             backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                             logger.warning(f"Jupiter 429 on {QUOTE_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
                             await asyncio.sleep(backoff)
@@ -287,7 +299,7 @@ class JupiterClient:
                                 result = orjson.loads(await response.read())
                                 logger.debug(f"Successfully got swap transaction for user {user_public_key}")
                                 return result
-                            elif response.status == 429:
+                            elif response.status == 429 or response.status >= 500:  # FIX 224: Exponential backoff on 5xx errors
                                 backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                                 logger.warning(f"Jupiter swap 429 on {SWAP_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
                                 await asyncio.sleep(backoff)
@@ -312,7 +324,7 @@ class JupiterClient:
                             result = orjson.loads(await response.read())
                             logger.debug(f"Successfully got swap transaction for user {user_public_key}")
                             return result
-                        elif response.status == 429:
+                        elif response.status == 429 or response.status >= 500:  # FIX 224: Exponential backoff on 5xx errors
                             backoff = min(10.0, (2 ** attempt) + random.uniform(0, 0.5))
                             logger.warning(f"Jupiter swap 429 on {SWAP_API_URL} — backoff {backoff}s (attempt {attempt + 1})")
                             await asyncio.sleep(backoff)
@@ -383,6 +395,10 @@ class JupiterClient:
                 logger.error(f"Unexpected swapTransaction format: {type(swap_transaction_data)}")
                 return None
 
+            # FIX 199: Rust panic guard (SIGSEGV prevention) when reading truncated/corrupted transactions
+            if len(transaction_bytes) < 99:
+                logger.error(f"🚨 [SIGSEGV GUARD] Blocked parsing of corrupted transaction ({len(transaction_bytes)} bytes too short)")
+                return None
             # Parse bytes into VersionedTransaction
             transaction = VersionedTransaction.from_bytes(transaction_bytes)
             logger.debug("Successfully decoded swap transaction")

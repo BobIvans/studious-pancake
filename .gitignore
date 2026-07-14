@@ -63,3 +63,9 @@ extra_accounts.json
 
 # ── AI training data (large generated files) ───────────────────────────────────
 ai_training_data.csv
+wallet.json
+mac_bridge.py
+wallet*.json*
+*keypair*.json*
+wallet*.json*
+*keypair*.json*

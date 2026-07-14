@@ -1,0 +1,103 @@
+model_list:
+  # --- GEMINI POOL (19 моделей) ---
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-3.5-flash
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-3.1-pro-preview
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-3.1-pro-preview-customtools
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-3-pro-preview
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-3-flash-preview
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-3.1-flash-lite-preview
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-2.5-flash-lite
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-2.0-flash
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-2.0-flash-001
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-2.0-flash-lite
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-2.0-flash-lite-001
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-flash-latest
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-flash-lite-latest
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemini-pro-latest
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemma-4-31b-it
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+  - model_name: gemini-pool
+    litellm_params:
+      model: gemini/gemma-4-26b-a4b-it
+      api_key: "AQ.Ab8RN6J75sy6V38HpJZA3EKe5NgENcyLCOndSM1tR3owT-bTzA"
+
+  # --- MISTRAL POOL (4 ключа) ---
+  - model_name: mistral-pool
+    litellm_params:
+      model: mistral/mistral-large-latest
+      api_key: "KxEqd1Ld7yG0PxUud0jbRNNw5S2h4cdd"
+  - model_name: mistral-pool
+    litellm_params:
+      model: mistral/mistral-large-latest
+      api_key: "VpVmNPYi3ilE8yCEwy3wapEVzuINMRlB"
+  - model_name: mistral-pool
+    litellm_params:
+      model: mistral/mistral-large-latest
+      api_key: "n1S9DPTCeZJx980ECl4t8MLNsOD2iXCk"
+  - model_name: mistral-pool
+    litellm_params:
+      model: mistral/mistral-large-latest
+      api_key: "Tb4b5vzRKr3YWU0yxTVhd26F2bl9KtVo"
+
+router_settings:
+  routing_strategy: least-busy
+  num_retries: 25
+  allowed_fails: 2
+  cooldown_time: 25
+  retry_after: 3

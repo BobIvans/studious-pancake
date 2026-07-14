@@ -4,12 +4,25 @@ import asyncio
 import logging
 import os
 import time
+from collections import defaultdict
 from typing import Dict, Set, Any, Optional, List
 from solders.pubkey import Pubkey
 from src.ingest.circuit_breaker import CapitalProtection
 
 # FIX 164: Global reference to macOS insomnia guard process
 caffeinate_proc = None
+
+# FIX 295: Static IP resolver for bypassing DNS lookups (saves ~300ms on cold connections)
+STATIC_IP_MAPPING = {
+    "frankfurt.mainnet.block-engine.jito.wtf": "145.40.94.12",
+    "mainnet.helius-rpc.com": "104.21.25.96",
+}
+
+def resolve_static_ip(url: str) -> str:
+    for domain, ip in STATIC_IP_MAPPING.items():
+        if domain in url:
+            return url.replace(domain, ip)
+    return url
 
 logger = logging.getLogger("SharedState")
 
@@ -19,7 +32,8 @@ rpc_limiter = aiolimiter.AsyncLimiter(9, 1.0)
 
 # Global locks
 execution_lock: Optional[asyncio.Lock] = None
-marginfi_account_lock: Optional[asyncio.Lock] = None
+# BUG #36: Per-account locks dict for parallel trade execution across MarginFi accounts
+marginfi_account_locks: Dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 stats_lock: Optional[asyncio.Lock] = None
 GLOBAL_STOP_EVENT: Optional[asyncio.Event] = None
 jito_bidding_manager: Optional[Any] = None
@@ -110,7 +124,22 @@ def init_marginfi_banks() -> Dict[str, Any]:
     return MARGINFI_BANKS
 
 # Fix 67: Balance lock flags
-stats: Dict[str, Any] = {
+# FIX 261: ObservableStats — автоматически логирует все мутации virtual_balance и last_balance
+import traceback
+
+class ObservableStats(dict):
+    def __setitem__(self, key, value):
+        if key in ("virtual_balance", "last_balance"):
+            stack = traceback.extract_stack()
+            caller = "unknown"
+            if len(stack) >= 2:
+                caller = f"{os.path.basename(stack[-2].filename)}:{stack[-2].lineno} in {stack[-2].name}"
+            logger.info(
+                f"⚖️ [BALANCE MONITOR] {key} mutated: {self.get(key, 0.0):.6f} ➔ {value:.6f} SOL | Caller: {caller}"
+            )
+        super().__setitem__(key, value)
+
+stats = ObservableStats({
     "trades": 0,
     "last_balance": 0.0,
     "virtual_balance": 0.0,
@@ -124,7 +153,7 @@ stats: Dict[str, Any] = {
     "errors": {},
     "last_opportunity_ts": 0.0,
     "consecutive_failures": 0,
-}
+})
 
 active_tasks: Set[asyncio.Task] = set()
 
@@ -163,6 +192,21 @@ pair_reputation: Optional["PairReputationCircuitBreaker"] = None
 
 ATA_CACHE: set = set()
 
+# FIX #42: Background disk-save helper for ATA_CACHE persistence across restarts
+async def _save_ata_cache_bg():
+    """Save ATA_CACHE to disk asynchronously to prevent phantom rent deductions after restarts."""
+    import json
+    try:
+        async with ata_cache_lock:
+            data = list(ATA_CACHE)
+        def _write():
+            with open("ata_cache.json", "w") as f:
+                json.dump(data, f)
+        loop = asyncio.get_running_loop()
+        await loop.run_in_executor(None, _write)
+    except Exception:
+        pass
+
 # Task 28: Thread-safe ATA_CACHE helpers — use these instead of raw ATA_CACHE.add/discard
 # to prevent TOCTOU race conditions in concurrent async loops.
 # The ata_cache_lock is initialized in initialize_shared_state().
@@ -171,6 +215,7 @@ async def add_to_ata_cache(ata_str: str) -> None:
     global ATA_CACHE
     async with ata_cache_lock:
         ATA_CACHE.add(ata_str)
+        asyncio.create_task(_save_ata_cache_bg())
 
 
 async def discard_from_ata_cache(ata_str: str) -> None:
@@ -178,6 +223,7 @@ async def discard_from_ata_cache(ata_str: str) -> None:
     global ATA_CACHE
     async with ata_cache_lock:
         ATA_CACHE.discard(ata_str)
+        asyncio.create_task(_save_ata_cache_bg())
 
 # Task 30: Unified system-wide survival floor for gas/trade safety.
 # Modules including gas_refiller, wsol_manager, and arb_bot were using
@@ -191,7 +237,7 @@ MIN_RESERVE_SOL: float = 0.0050
 DEFAULT_SLIPPAGE_BPS: int = int(os.getenv("SLIPPAGE_BPS", "15"))
 
 def initialize_shared_state():
-    global execution_lock, marginfi_account_lock, stats_lock, GLOBAL_STOP_EVENT
+    global execution_lock, marginfi_account_locks, stats_lock, GLOBAL_STOP_EVENT
     global ata_cache_lock, wsol_state_lock, marginfi_init_lock, pair_reputation
     # Phase 19: Safety check — asyncio.Lock()/Event() must be created inside a running event loop
     # to avoid binding to a dummy loop (Python 3.10+), which causes future await calls to hang.
@@ -203,7 +249,7 @@ def initialize_shared_state():
             "Call this function inside async def run() after the event loop is active."
         ) from e
     execution_lock = asyncio.Lock()
-    marginfi_account_lock = asyncio.Lock()
+    # BUG #36: marginfi_account_locks is a defaultdict — no need to init here
     stats_lock = asyncio.Lock()
     ata_cache_lock = asyncio.Lock()
     wsol_state_lock = asyncio.Lock()
@@ -214,6 +260,15 @@ def initialize_shared_state():
         limit=3, cooldown_seconds=600,
         error_keywords=("slippage", "insufficient", "liquidity", "simulation failed", "blockhash"),
     )
+    # FIX #42: Load persistent ATA_CACHE from disk to prevent phantom rent deductions after restarts
+    import json
+    if os.path.exists("ata_cache.json"):
+        try:
+            with open("ata_cache.json", "r") as f:
+                ATA_CACHE.update(json.load(f))
+            logger.info(f"💾 Loaded {len(ATA_CACHE)} ATAs from disk cache")
+        except Exception:
+            pass
     logger.info("✅ Shared state initialized with asyncio locks and unified pair reputation")
 
 # Fix 67: Balance lock flags — moved here from wsol_manager.py and arb_bot.py
@@ -228,38 +283,21 @@ ATA_RENT_SOL_SPL = 0.00203928
 ATA_RENT_SOL_TOKEN2022 = 0.0035
 
 # Task 29: Shared singleton for FlywheelScaler.
-# Initialized once at bot startup via init_global_scaler() below to prevent
-# per-scan/reset tier-flapping when scanners create local scaler instances.
 flywheel_scaler: Optional[Any] = None
 
 
 def init_global_scaler(initial_balance: float):
-    """Initialize the global FlywheelScaler singleton with current wallet balance."""
     global flywheel_scaler
     from src.ingest.flywheel_scaler import FlywheelScaler
-
     flywheel_scaler = FlywheelScaler(initial_balance=initial_balance)
-    logger.info(
-        f"📈 Global FlywheelScaler initialized with balance {initial_balance:.6f} SOL"
-    )
+    logger.info(f"📈 Global FlywheelScaler initialized with balance {initial_balance:.6f} SOL")
 
 
 # TASK 10: Dynamic CU Profiling Cache
 DYNAMIC_CU_CACHE: Dict[str, int] = {}
 
-# Phase 9: Централизованные константы аренды
-ATA_RENT_SOL_SPL = 0.00203928
-ATA_RENT_SOL_TOKEN2022 = 0.0035
-
-def get_ata_rent_for_mint(mint_str: str) -> float:
-    """Определяет стоимость аренды в SOL на основе типа токена (SPL vs Token-2022)."""
-    return ATA_RENT_SOL_TOKEN2022 if str(mint_str) in TOKEN_2022_MINTS else ATA_RENT_SOL_SPL
-
-def get_ata_rent_lamports_for_mint(mint_str: str) -> int:
-    """Возвращает стоимость аренды в лампортах."""
-    return int(get_ata_rent_for_mint(mint_str) * 1e9)
-
-# TASK 1: Whitelist-Aware Rent Resolver Helper
+# FIX 265: Centralized ATA rent — единый источник для всех модулей
+# Реестр токенов программы Token-2022 (требуют повышенную аренду)
 TOKEN_2022_MINTS = {
     "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  # jitoSOL
     "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",   # mSOL
@@ -272,8 +310,12 @@ TOKEN_2022_MINTS = {
 }
 
 def get_ata_rent_for_mint(mint_str: str) -> float:
-    """Return rent in SOL based on token program (Standard SPL vs Token-2022)."""
-    return 0.0035 if str(mint_str) in TOKEN_2022_MINTS else 0.00203928
+    """Возвращает стоимость аренды ATA в SOL на основе типа токена (SPL vs Token-2022)."""
+    return ATA_RENT_SOL_TOKEN2022 if str(mint_str) in TOKEN_2022_MINTS else ATA_RENT_SOL_SPL
+
+def get_ata_rent_lamports_for_mint(mint_str: str) -> int:
+    """Возвращает стоимость аренды ATA в лампортах."""
+    return int(get_ata_rent_for_mint(mint_str) * 1e9)
 
 # Phase 5C (P2-024): Dynamic decimals cache for on-chain token decimal resolution
 # Populated by get_token_decimals_dynamic() in arb_bot.py when a mint is not
@@ -322,6 +364,22 @@ def to_lamports(amount_ui: float, decimals: int) -> int:
 def to_ui_amount(amount_lamports: int, decimals: int) -> float:
     """Convert raw lamports/base units to UI token amount."""
     return float(amount_lamports) / (10 ** decimals)
+
+from typing import Callable, Any
+
+async def safe_execute(coro: Callable, *args, fallback: Any = None, **kwargs) -> Any:
+    """
+    FIX 280: Безопасно выполняет корутину, перехватывая ошибки и логируя их.
+    Исключает скрытые падения через silent pass.
+    """
+    try:
+        return await coro(*args, **kwargs)
+    except asyncio.CancelledError:
+        raise
+    except Exception as e:
+        logger.error(f"💥 Exception swallowed in safe_execute ({coro.__name__}): {e}", exc_info=True)
+        return fallback
+
 
 async def send_telegram_alert(message: str):
     """Send an emergency alert via Telegram."""

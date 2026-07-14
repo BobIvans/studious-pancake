@@ -87,6 +87,15 @@ class DustSweeper:
         Returns lamports recovered (tokens + rent-exempt).
         This is called OUTSIDE the atomic flashloan tx to avoid 1-lamport dust revert.
         """
+        # P0 #27: Gas reserve check — don't drain wSOL if we don't have enough SOL for tx fees
+        try:
+            import src.ingest.shared_state as _ss
+            if _ss.stats.get("last_balance", 0.0) < _ss.MIN_RESERVE_SOL + 0.0005:
+                logger.debug("🚫 Skipping wSOL dust drain: not enough native SOL for gas")
+                return 0
+        except Exception:
+            pass
+
         try:
             wsol_ata_str = str(self.wsol_ata)
             payload = {
@@ -199,6 +208,15 @@ class DustSweeper:
         """Core dust sweeping logic."""
         async with self._sweep_lock:
             try:
+                # FIX #27: Gas reserve check — don't sweep if we don't have enough SOL for tx fees
+                try:
+                    import src.ingest.shared_state as _ss
+                    if _ss.stats.get("last_balance", 0.0) < _ss.MIN_RESERVE_SOL + 0.0005:
+                        logger.warning("🚫 Not enough native SOL to pay gas for dust sweep. Skipping.")
+                        return 0
+                except Exception:
+                    pass
+
                 # Find all Token Accounts owned by our wallet
                 token_accounts = await self._get_wallet_token_accounts()
 

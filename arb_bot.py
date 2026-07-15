@@ -3950,8 +3950,6 @@ async def lst_depeg_scanner(
                         logger.warning(
                             "❌ Simulation failed or Jito unavailable. Skipping trade for capital protection."
                         )
-        if False:
-            pass  # Unreachable placeholder replacing orphaned exception handler.
 
         await asyncio.sleep(cfg.LST_SCAN_INTERVAL)
 

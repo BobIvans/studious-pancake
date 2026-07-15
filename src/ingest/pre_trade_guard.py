@@ -87,12 +87,12 @@ class TokenSecurityChecker:
 
         # Phase 20: Whitelist bypass
         mint_str = (
-            str(mint_address) if isinstance(mint_address, Pubkey) else str(mint_address)
-        )
+            str(mint_address) if isinstance(
+                mint_address,
+                Pubkey) else str(mint_address))
         if mint_str in SAFE_MINTS and rpc_url is None:
             logger.debug(
-                f" Token {mint_address} is in SAFE_MINTS whitelist. Bypassing security checks."
-            )
+                f" Token {mint_address} is in SAFE_MINTS whitelist. Bypassing security checks.")
             if _session_owned:
                 await _session.close()
             return True, "Whitelisted safe token"
@@ -110,7 +110,9 @@ class TokenSecurityChecker:
                 "id": 1,
                 "method": "getAccountInfo",
                 "params": [
-                    str(mint_address),  # Phase 18: str() cast prevents JSON serialization crash for Pubkey objects
+                    # Phase 18: str() cast prevents JSON serialization crash
+                    # for Pubkey objects
+                    str(mint_address),
                     {"encoding": "base64", "commitment": "confirmed"},
                 ],
             }
@@ -164,7 +166,8 @@ class TokenSecurityChecker:
             owner_pubkey = Pubkey.from_string(owner)
 
             if owner_pubkey == TOKEN_PROGRAM_ID:
-                return self._check_token_program_mint(account_info, mint_address)
+                return self._check_token_program_mint(
+                    account_info, mint_address)
             elif owner_pubkey == TOKEN_2022_PROGRAM_ID:
                 return self._check_token_2022_mint(account_info, mint_address)
             else:
@@ -197,18 +200,23 @@ class TokenSecurityChecker:
             if len(data) < 82:  # Minimum size for mint account
                 return False, "Invalid mint account data size"
 
-            # Check mintAuthority (first 36 bytes: 1 byte option + 32 byte pubkey)
+            # Check mintAuthority (first 36 bytes: 1 byte option + 32 byte
+            # pubkey)
             mint_auth_option = data[0]
             if mint_auth_option != 0:  # 0 = None, 1 = Some
                 return False, "Mint authority is set (token can be minted)"
 
-            # Check freezeAuthority (starts at byte 46: 1 byte option + 32 byte pubkey)
+            # Check freezeAuthority (starts at byte 46: 1 byte option + 32 byte
+            # pubkey)
             freeze_auth_option = data[46]
             if freeze_auth_option != 0:  # 0 = None, 1 = Some
-                allow_freeze = os.getenv("ALLOW_FREEZE_AUTHORITY", "false").lower() == "true"
+                allow_freeze = os.getenv(
+                    "ALLOW_FREEZE_AUTHORITY",
+                    "false").lower() == "true"
                 if not allow_freeze:
                     return False, "Freeze authority is set (Tokens can be frozen by authority)"
-                logger.info(f" Token has freeze authority on {mint_address}  allowed via ALLOW_FREEZE_AUTHORITY override")
+                logger.info(
+                    f" Token has freeze authority on {mint_address}  allowed via ALLOW_FREEZE_AUTHORITY override")
 
             return True, "Token appears safe"
 
@@ -223,7 +231,8 @@ class TokenSecurityChecker:
             import base64
 
             # FIX 201:    (3 - MintCloseAuthority, 7 - ImmutableOwner)   .
-            # FIX 250: Official spl-token-2022 Extension Type IDs per Task 250 spec
+            # FIX 250: Official spl-token-2022 Extension Type IDs per Task 250
+            # spec
             EXT_PERMANENT_DELEGATE = 13
             EXT_TRANSFER_HOOK = 14
             EXT_TRANSFER_HOOK_ACCOUNT = 15
@@ -236,7 +245,10 @@ class TokenSecurityChecker:
                 14: "TransferHook (Type 14)",
                 15: "TransferHookAccount (Type 15)",
             }
-            DANGEROUS_EXTENSIONS = {EXT_PERMANENT_DELEGATE, EXT_TRANSFER_HOOK, EXT_TRANSFER_HOOK_ACCOUNT}
+            DANGEROUS_EXTENSIONS = {
+                EXT_PERMANENT_DELEGATE,
+                EXT_TRANSFER_HOOK,
+                EXT_TRANSFER_HOOK_ACCOUNT}
 
             data_b64 = account_info.get("data", [""])[0]
             if not data_b64:
@@ -250,20 +262,21 @@ class TokenSecurityChecker:
             if len(data) >= 166:
                 offset = 166
                 while offset + 4 <= len(data):
-                    ext_type = struct.unpack("<H", data[offset : offset + 2])[0]
-                    ext_len = struct.unpack("<H", data[offset + 2 : offset + 4])[0]
+                    ext_type = struct.unpack("<H", data[offset: offset + 2])[0]
+                    ext_len = struct.unpack(
+                        "<H", data[offset + 2: offset + 4])[0]
 
                     if ext_type in DANGEROUS_EXTENSIONS:
                         # TransferHook (14)     env override
-                        if ext_type == EXT_TRANSFER_HOOK and os.getenv("ALLOW_UNKNOWN_TRANSFER_HOOKS", "false").lower() == "true":
+                        if ext_type == EXT_TRANSFER_HOOK and os.getenv(
+                                "ALLOW_UNKNOWN_TRANSFER_HOOKS", "false").lower() == "true":
                             logger.info(
-                                f" Token-2022 has TransferHook on {mint_address}  allowed via ALLOW_UNKNOWN_TRANSFER_HOOKS override"
-                            )
+                                f" Token-2022 has TransferHook on {mint_address}  allowed via ALLOW_UNKNOWN_TRANSFER_HOOKS override")
                         else:
-                            ext_name = EXT_NAMES.get(ext_type, f"Unknown Dangerous Extension {ext_type}")
+                            ext_name = EXT_NAMES.get(
+                                ext_type, f"Unknown Dangerous Extension {ext_type}")
                             logger.critical(
-                                f" HONEYPOT DETECTED: Token-2022 has dangerous extension {ext_name} on {mint_address}"
-                            )
+                                f" HONEYPOT DETECTED: Token-2022 has dangerous extension {ext_name} on {mint_address}")
                             return False, f"Honeypot: Dangerous extension {ext_name} is active"
 
                     if ext_type == 11:
@@ -271,29 +284,24 @@ class TokenSecurityChecker:
                             bps_offset = offset + 4 + 106
                             if bps_offset + 2 <= len(data):
                                 fee_bps = struct.unpack(
-                                    "<H", data[bps_offset : bps_offset + 2]
+                                    "<H", data[bps_offset: bps_offset + 2]
                                 )[0]
                                 if fee_bps > 500:
                                     fee_pct = fee_bps / 100.0
                                     logger.critical(
-                                        f" HONEYPOT DETECTED: Token-2022 transfer fee {fee_pct}% > 5% on {mint_address}"
-                                    )
+                                        f" HONEYPOT DETECTED: Token-2022 transfer fee {fee_pct}% > 5% on {mint_address}")
                                     return (
-                                        False,
-                                        f"Token-2022 transfer fee {fee_pct}% exceeds 5% (Potential Honeypot)",
-                                    )
+                                        False, f"Token-2022 transfer fee {fee_pct}% exceeds 5% (Potential Honeypot)", )
                                 elif fee_bps > 100:
                                     fee_pct = fee_bps / 100.0
                                     return (
-                                        False,
-                                        f"Token-2022 transfer fee {fee_pct}% > 1%  exceeds safe threshold",
-                                    )
+                                        False, f"Token-2022 transfer fee {fee_pct}% > 1%  exceeds safe threshold", )
                                 elif fee_bps > 0:
                                     fee_pct = fee_bps / 100.0
-                                    # Fee within 1%  allowed; accounted for via get_adjusted_profit_threshold
+                                    # Fee within 1%  allowed; accounted for via
+                                    # get_adjusted_profit_threshold
                                     logger.info(
-                                        f" Token-2022 transfer fee {fee_pct}% ({fee_bps} bps) within 1%  allowed"
-                                    )                    #        8- 
+                                        f" Token-2022 transfer fee {fee_pct}% ({fee_bps} bps) within 1%  allowed")  # 8-
                     offset += (4 + ext_len + 7) & ~7
 
             return True, "Token-2022 appears safe (fee check passed)"
@@ -350,21 +358,6 @@ class LiquidityValidator:
             }
 
             async with _session.post(rpc_url, json=payload) as resp:
-                if not isinstance(resp.status, int):
-                    if _session is self.session and self.session is not None:
-                        _session = aiohttp.ClientSession()
-                        _session_owned = True
-                        async with _session.post(rpc_url, json=payload) as resp:
-                            if resp.status != 200:
-                                return False, f"RPC error: HTTP {resp.status}"
-                            data = await resp.json()
-                            if "error" in data:
-                                return False, f"RPC error: {data['error']}"
-                            account_info = data.get("result", {}).get("value")
-                            if not account_info:
-                                return False, "Mint account not found"
-                            return await self._analyze_mint_account(account_info, mint_address)
-                    return False, f"RPC error: HTTP {resp.status}"
                 if resp.status != 200:
                     return False, f"RPC error: HTTP {resp.status}"
 
@@ -494,7 +487,8 @@ class LiquidityValidator:
                     vault_data = base64.b64decode(
                         vault_data_b64 + "=" * (-len(vault_data_b64) % 4)
                     )
-                    # Token account balance is at offset 64-72 (8 bytes, little endian)
+                    # Token account balance is at offset 64-72 (8 bytes, little
+                    # endian)
                     if len(vault_data) >= 72:
                         balance_bytes = vault_data[64:72]
                         balance = struct.unpack("<Q", balance_bytes)[
@@ -505,9 +499,8 @@ class LiquidityValidator:
                         decimals = _hardcoded_decimals.get(mint_address, 6)
                         if balance < get_vault_threshold(decimals):
                             return (
-                                False,
-                                f"Insufficient vault balance: {balance} (min: {get_vault_threshold(decimals)})",
-                            )
+                                False, f"Insufficient vault balance: {balance} (min: {
+                                    get_vault_threshold(decimals)})", )
 
                         return True, f"Token is secure and vault has balance: {balance}"
                     else:
@@ -517,8 +510,7 @@ class LiquidityValidator:
 
         except Exception as e:
             logger.warning(
-                f"Batch validation failed for mint={mint_address}, vault={vault_address}: {e}"
-            )
+                f"Batch validation failed for mint={mint_address}, vault={vault_address}: {e}")
             return False, f"Batch validation failed: {str(e)}"
         finally:
             if _session_owned:
@@ -556,7 +548,8 @@ class PreTradeGuard:
 
     def record_failure(self, pool_id: str):
         """Record a trade failure for a pool."""
-        self.pool_fail_counter[pool_id] = self.pool_fail_counter.get(pool_id, 0) + 1
+        self.pool_fail_counter[pool_id] = self.pool_fail_counter.get(
+            pool_id, 0) + 1
         if self.pool_fail_counter[pool_id] >= 3:
             self.blacklisted_pools[pool_id] = time.time()
             logger.warning(
@@ -568,7 +561,8 @@ class PreTradeGuard:
         if pool_id not in self.blacklisted_pools:
             return False
 
-        if time.time() - self.blacklisted_pools[pool_id] > self.blacklist_duration:
+        if time.time() - \
+                self.blacklisted_pools[pool_id] > self.blacklist_duration:
             del self.blacklisted_pools[pool_id]
             self.pool_fail_counter[pool_id] = 0
             return False
@@ -637,18 +631,22 @@ class PreTradeGuard:
                 import base64
 
                 data_b64 = account_data["data"][0]
-                raw_data = base64.b64decode(data_b64 + "=" * (-len(data_b64) % 4))
+                raw_data = base64.b64decode(
+                    data_b64 + "=" * (-len(data_b64) % 4))
 
                 # Token-2022 TLV (Type-Length-Value) Parsing
-                # Base Mint: 0-82 | Padding: 82-165 | AccountType: 165 | Extensions: 166+
+                # Base Mint: 0-82 | Padding: 82-165 | AccountType: 165 |
+                # Extensions: 166+
                 if len(raw_data) < 166:
                     return False, 0.0, "No extensions found in Token-2022 mint"
 
                 # Iterate through extensions
                 offset = 166
                 while offset + 4 <= len(raw_data):
-                    ext_type = struct.unpack("<H", raw_data[offset : offset + 2])[0]
-                    ext_len = struct.unpack("<H", raw_data[offset + 2 : offset + 4])[0]
+                    ext_type = struct.unpack(
+                        "<H", raw_data[offset: offset + 2])[0]
+                    ext_len = struct.unpack(
+                        "<H", raw_data[offset + 2: offset + 4])[0]
 
                     if ext_type == 11:  # TransferFeeConfig
                         # TransferFeeConfig layout (simplified):
@@ -659,46 +657,47 @@ class PreTradeGuard:
                         # Total extension length is typically 108 bytes.
 
                         # We care about the 'newer_transfer_fee' basis points.
-                        # Offset within extension value: 32 + 32 + 8 + 18 + 16 = 106
+                        # Offset within extension value: 32 + 32 + 8 + 18 + 16
+                        # = 106
                         if ext_len >= 108:
                             bps_offset = offset + 4 + 106
-                            # Phase 22: Bounds check  prevent IndexError on truncated RPC response
+                            # Phase 22: Bounds check  prevent IndexError on
+                            # truncated RPC response
                             if bps_offset + 2 > len(raw_data):
-                                logger.warning(f"Phase 22: Truncated Token-2022 account data for {mint_address}  skipping fee check")
+                                logger.warning(
+                                    f"Phase 22: Truncated Token-2022 account data for {mint_address}  skipping fee check")
                                 break
                             fee_bps = struct.unpack(
-                                "<H", raw_data[bps_offset : bps_offset + 2]
+                                "<H", raw_data[bps_offset: bps_offset + 2]
                             )[0]
 
-                            # Extract maximum_fee (u64) located 8 bytes before bps in newer_transfer_fee
+                            # Extract maximum_fee (u64) located 8 bytes before
+                            # bps in newer_transfer_fee
                             max_fee_raw = None
                             if bps_offset >= 8:
                                 max_fee_raw = struct.unpack(
-                                    "<Q", raw_data[bps_offset - 8 : bps_offset]
+                                    "<Q", raw_data[bps_offset - 8: bps_offset]
                                 )[0]
 
                             if fee_bps > 100:
                                 fee_pct = fee_bps / 100.0
                                 logger.info(
-                                    f" Token-2022 Transfer Fee detected: {fee_pct}% ({fee_bps} bps)  exceeds 100 bps threshold"
-                                )
+                                    f" Token-2022 Transfer Fee detected: {fee_pct}% ({fee_bps} bps)  exceeds 100 bps threshold")
                                 return True, fee_pct, f"Transfer fee: {fee_pct}%", max_fee_raw
                             elif fee_bps > 0:
                                 fee_pct = fee_bps / 100.0
                                 logger.info(
-                                    f" Token-2022 Transfer Fee {fee_pct}% ({fee_bps} bps) within 100 bps limit  allowed (fee accounted in profit threshold)"
-                                )
+                                    f" Token-2022 Transfer Fee {fee_pct}% ({fee_bps} bps) within 100 bps limit  allowed (fee accounted in profit threshold)")
                                 return True, fee_pct, f"Transfer fee: {fee_pct}% (within 100 bps)", max_fee_raw
 
-                    #        8- 
+                    #        8-
                     offset += (4 + ext_len + 7) & ~7
 
                 return False, 0.0, "No transfer fee extension found", None
 
         except Exception as e:
             logger.error(
-                f"Error checking Token-2022 transfer fee for {mint_address}: {e}"
-            )
+                f"Error checking Token-2022 transfer fee for {mint_address}: {e}")
             return False, 0.0, f"Check failed: {str(e)}", None
         finally:
             if _session_owned:
@@ -729,7 +728,9 @@ class PreTradeGuard:
 
         if has_fee and fee_pct > 0:
             pct_loss_sol = trade_volume_sol * (fee_pct / 100.0)
-            max_fee_sol = (max_fee_raw / 1e9) if max_fee_raw is not None else float("inf")
+            max_fee_sol = (
+                max_fee_raw /
+                1e9) if max_fee_raw is not None else float("inf")
             real_fee_loss_sol = min(pct_loss_sol, max_fee_sol) * 2
             adjusted_threshold = base_profit_threshold + real_fee_loss_sol
 
@@ -764,8 +765,7 @@ class PreTradeGuard:
             return False, f"Pool {pool_id} is blacklisted"
 
         logger.debug(
-            f"Running pre-trade validation for mint={mint_address}, vault={vault_address}"
-        )
+            f"Running pre-trade validation for mint={mint_address}, vault={vault_address}")
 
         # Step 1: Security check (fastest - analyze local data)
         logger.debug("Step 1: Security Shield check")
@@ -773,10 +773,12 @@ class PreTradeGuard:
             mint_address, rpc_url
         )
         if not is_secure:
-            logger.info(f" Trade aborted - Security check failed: {security_reason}")
+            logger.info(
+                f" Trade aborted - Security check failed: {security_reason}")
             return False, security_reason
 
-        # Step 2: Liquidity check (requires RPC call) - skip if no vault address
+        # Step 2: Liquidity check (requires RPC call) - skip if no vault
+        # address
         if vault_address:
             logger.debug("Step 2: Ghost Liquidity Filter check")
             has_liquidity, liquidity_reason = (
@@ -786,8 +788,7 @@ class PreTradeGuard:
             )
             if not has_liquidity:
                 logger.info(
-                    f" Trade aborted - Liquidity check failed: {liquidity_reason}"
-                )
+                    f" Trade aborted - Liquidity check failed: {liquidity_reason}")
                 return False, liquidity_reason
         else:
             logger.debug(
@@ -813,9 +814,10 @@ class PreTradeGuard:
         logger.debug(f" Token security check passed for {mint_address}")
         return True, "Security check passed"
 
-    #  Strict Gas Tank (Survival Floor) 
+    #  Strict Gas Tank (Survival Floor)
     # Never let the wallet drop below Config.MIN_RESERVE_SOL. If we hit this level,
-    # stop ALL trading immediately. At 0 SOL we can't even close ATAs to recover rent.
+    # stop ALL trading immediately. At 0 SOL we can't even close ATAs to
+    # recover rent.
     @staticmethod
     def get_min_reserve_sol() -> float:
         """Get minimum reserve SOL from shared state (single source of truth)."""
@@ -823,11 +825,12 @@ class PreTradeGuard:
 
         return _ss.MIN_RESERVE_SOL
 
-    #  Hard Floor Guard (Rent-Exemption Killswitch) 
+    #  Hard Floor Guard (Rent-Exemption Killswitch)
     # If native SOL balance drops below dynamic floor, we trigger emergency shutdown:
     # 1. Set GLOBAL_STOP_EVENT to stop all trading
     # 2. DustSweeper runs to close ATAs and recover rent
-    # At 0.002 SOL the Solana network garbage-collector will DELETE the wallet account.
+    # At 0.002 SOL the Solana network garbage-collector will DELETE the wallet
+    # account.
 
     @staticmethod
     def enforce_hard_floor(
@@ -851,9 +854,9 @@ class PreTradeGuard:
         floor = DynamicThresholds(native_sol_balance).hard_floor_sol
         if native_sol_balance < floor:
             logger.critical(
-                f" RENT DEATH KILLSWITCH: Balance {native_sol_balance:.6f} SOL < "
-                f"{floor:.6f} SOL  triggering emergency shutdown via GLOBAL_STOP_EVENT"
-            )
+                f" RENT DEATH KILLSWITCH: Balance {
+                    native_sol_balance:.6f} SOL < " f"{
+                    floor:.6f} SOL  triggering emergency shutdown via GLOBAL_STOP_EVENT")
             try:
                 import src.ingest.shared_state as _ss
 
@@ -869,7 +872,7 @@ class PreTradeGuard:
                 except Exception as sweep_err:
                     logger.warning(f"Emergency dust sweep failed: {sweep_err}")
 
-    #  Main Wallet Rent-Exemption Killswitch 
+    #  Main Wallet Rent-Exemption Killswitch
     # Urgent RPC-balance check: call this after every successful Jito bundle
     # confirmation and before any balance-tracking logic. Triggers killed process
     # on native_sol_balance < 0.0015 SOL to guarantee wallet is never garbage-
@@ -894,7 +897,7 @@ class PreTradeGuard:
 
         Args:
             native_sol_balance:    SOL,  None  .
-            estimated_rent_sol:    ATA  SOL,  
+            estimated_rent_sol:    ATA  SOL,
                whitelist-aware get_ata_rent_for_mint().
 
         Returns:
@@ -907,18 +910,27 @@ class PreTradeGuard:
             logger.warning(
                 " check_gas_tank: native_sol_balance is None  fail-closed, blocking trade"
             )
-            return False, 0.0  #    fail-closed
+            return False, 0.0  # fail-closed
 
         min_reserve = PreTradeGuard.get_min_reserve_sol()
         if native_sol_balance < min_reserve + estimated_rent_sol:
-            #         
-            is_paper = str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true"
-            # FIX #41: Honest gas tank rejection in paper mode  no trades on empty tank even in sim
+            #
+            is_paper = str(
+                os.getenv(
+                    "PAPER_TRADING_ONLY",
+                    "false")).lower() == "true"
+            # FIX #41: Honest gas tank rejection in paper mode  no trades on
+            # empty tank even in sim
             if is_paper:
                 if native_sol_balance < min_reserve + estimated_rent_sol:
-                    logger.warning(f" [PAPER MODE] REJECTED: Virtual balance {native_sol_balance:.6f} < required {min_reserve + estimated_rent_sol:.6f}")
+                    logger.warning(
+                        f" [PAPER MODE] REJECTED: Virtual balance {
+                            native_sol_balance:.6f} < required {
+                            min_reserve + estimated_rent_sol:.6f}")
                     return False, 0.0
-                logger.debug(f" [PAPER MODE] Gas check passed (: {native_sol_balance:.6f} SOL)")
+                logger.debug(
+                    f" [PAPER MODE] Gas check passed (: {
+                        native_sol_balance:.6f} SOL)")
                 return True, native_sol_balance
 
             logger.critical(
@@ -931,12 +943,13 @@ class PreTradeGuard:
 
         available = native_sol_balance - min_reserve - estimated_rent_sol
         logger.debug(
-            f" Gas Tank: {native_sol_balance:.6f} SOL  {available:.6f} SOL available "
-            f"(reserve={min_reserve}, estimated_rent={estimated_rent_sol:.6f})"
-        )
+            f" Gas Tank: {
+                native_sol_balance:.6f} SOL  {
+                available:.6f} SOL available " f"(reserve={min_reserve}, estimated_rent={
+                estimated_rent_sol:.6f})")
         return True, available
 
-    #  Pre-Trade Profit Re-Check 
+    #  Pre-Trade Profit Re-Check
 
     async def check_profit_before_execution(
         self,
@@ -997,11 +1010,13 @@ class PreTradeGuard:
               Third element: actual_profit_lamports (for caller audit/logging).
         """
         # Fix 70: Lazy session creation  if no session was provided at init,
-        # create one on-the-fly to prevent AttributeError during pre-trade checks.
+        # create one on-the-fly to prevent AttributeError during pre-trade
+        # checks.
         if not self.session:
             try:
                 self.session = aiohttp.ClientSession()
-                logger.debug("Fix 70: Created ad-hoc aiohttp session for PreTradeGuard")
+                logger.debug(
+                    "Fix 70: Created ad-hoc aiohttp session for PreTradeGuard")
             except Exception as session_err:
                 return False, f"No session available: {session_err}", 0
 
@@ -1014,7 +1029,8 @@ class PreTradeGuard:
             "slippageBps": str(slippage_bps),
             "maxAccounts": "28",
             "onlyDirectRoutes": "false",  # Fix B: allow multi-hop routes for triangular arbitrage
-            "restrictIntermediateTokens": "false",  # Fix B: allow intermediate tokens for complex routes
+            # Fix B: allow intermediate tokens for complex routes
+            "restrictIntermediateTokens": "false",
         }
 
         try:
@@ -1040,10 +1056,11 @@ class PreTradeGuard:
                     quote_url, params=params, timeout=2.0
                 ) as resp:
                     if resp.status != 200:
-                        return False, f"Pre-trade quote failed: HTTP {resp.status}", 0
+                        return False, f"Pre-trade quote failed: HTTP {
+                            resp.status}", 0
                     fresh_quote = await resp.json()
 
-            #  DEX-002: Strict Price Impact Guard 
+            #  DEX-002: Strict Price Impact Guard
             try:
                 raw_impact = fresh_quote.get("priceImpactPct", "0")
                 if isinstance(raw_impact, str):
@@ -1052,12 +1069,16 @@ class PreTradeGuard:
             except (ValueError, TypeError):
                 price_impact = 0.0
             if price_impact > 5.0:  # 5% max
-                logger.warning(f" Pre-trade BLOCKED: Price impact too high ({price_impact}%)")
+                logger.warning(
+                    f" Pre-trade BLOCKED: Price impact too high ({price_impact}%)")
                 return False, f"Price impact {price_impact}% exceeds 5% maximum", 0
 
             actual_out = int(
-                fresh_quote.get("otherAmountThreshold", fresh_quote.get("outAmount", 0))
-            )
+                fresh_quote.get(
+                    "otherAmountThreshold",
+                    fresh_quote.get(
+                        "outAmount",
+                        0)))
             if actual_out == 0:
                 return False, "Pre-trade quote: outAmount == 0", 0
 
@@ -1078,12 +1099,14 @@ class PreTradeGuard:
                     feeder = get_pyth_core_feeder()
                     if feeder is not None:
                         _output_price_usd = feeder.get_price(output_mint)
-                        _sol_price_usd = feeder.get_price("So11111111111111111111111111111111111111112")
+                        _sol_price_usd = feeder.get_price(
+                            "So11111111111111111111111111111111111111112")
                 except Exception:
                     pass
-                
+
                 if _sol_price_usd is None or _output_price_usd is None:
-                    logger.warning("Phase 12: Price feed unavailable for non-SOL route  Fail-Closed: aborting trade")
+                    logger.warning(
+                        "Phase 12: Price feed unavailable for non-SOL route  Fail-Closed: aborting trade")
                     return False, "Price unavailable  cannot verify profitability", 0
 
             # Convert actual_out from output_mint units to SOL lamports
@@ -1091,12 +1114,14 @@ class PreTradeGuard:
                 gross_profit_sol_lamports = actual_out - amount_lamports
             else:
                 # Phase 5C (P2-024): Dynamic on-chain decimal resolution via jsonParsed RPC
-                # Falls back through: hardcoded TOKEN_DECIMALS -> dynamic cache -> RPC call -> 6
+                # Falls back through: hardcoded TOKEN_DECIMALS -> dynamic cache
+                # -> RPC call -> 6
                 import src.ingest.shared_state as _shared_state
-                
+
                 # 1. Check the hardcoded dict first (would normally be from arb_bot.TOKEN_DECIMALS
                 #    but avoid circular import  inline the known values)
-                # FIX 147: Full copy-on-read decimals registry to prevent synchronous RPC latency on Hot Path
+                # FIX 147: Full copy-on-read decimals registry to prevent
+                # synchronous RPC latency on Hot Path
                 _hardcoded_decimals = {
                     "So11111111111111111111111111111111111111112": 9,  # SOL
                     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6,  # USDC
@@ -1105,7 +1130,7 @@ class PreTradeGuard:
                     "USDSwr9ApdHk5bvJKMjzff41FfhJbZkp9bHqzZdduoP": 6,  # USDS
                     "A1KLoBrKBde8Ty9qtNQUtq3C2ortoC3u7twggz7sEto6": 6,  # USDY
                     "DEkqHyPN7GMRJ5cArtQFAWefqbZb33Hyf6s5iCwjEonT": 6,  # USDe
-                    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN": 18, # sUSDe
+                    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN": 18,  # sUSDe
                     "SKYTAiJRkgexqQqFoqhXdCANyfziwrVrzjhBaCzdbKW": 6,  # sUSDS
                     "JuprjznTrTSp2UFa3ZBUFgwdAmtZCq4MQCwysN55USD": 6,  # JupUSD
                     "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": 9,  # INF
@@ -1132,46 +1157,49 @@ class PreTradeGuard:
                     "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr": 9,  # POPCAT
                 }
                 _decimals = _hardcoded_decimals.get(output_mint)
-                
+
                 # 2. Check dynamic cache if not in hardcoded dict
                 if _decimals is None:
-                    _decimals = _shared_state.DYNAMIC_DECIMALS_CACHE.get(output_mint)
-                
+                    _decimals = _shared_state.DYNAMIC_DECIMALS_CACHE.get(
+                        output_mint)
+
                 # 3. Query RPC with jsonParsed on cache miss
                 if _decimals is None and self.session and self.rpc_url:
                     try:
-                        _payload = {
-                            "jsonrpc": "2.0",
-                            "id": 1,
-                            "method": "getAccountInfo",
-                            "params": [output_mint, {"encoding": "jsonParsed", "commitment": "confirmed"}],
-                        }
+                        _payload = {"jsonrpc": "2.0", "id": 1, "method": "getAccountInfo", "params": [
+                            output_mint, {"encoding": "jsonParsed", "commitment": "confirmed"}], }
                         async with self.session.post(self.rpc_url, json=_payload, timeout=3.0) as _resp:
                             if _resp.status == 200:
                                 _data = await _resp.json()
                                 _value = _data.get("result", {}).get("value")
                                 if _value and "data" in _value:
-                                    _parsed_info = _value["data"].get("parsed", {}).get("info", {})
-                                    _decimals_val = _parsed_info.get("decimals")
+                                    _parsed_info = _value["data"].get(
+                                        "parsed", {}).get("info", {})
+                                    _decimals_val = _parsed_info.get(
+                                        "decimals")
                                     if _decimals_val is not None:
                                         _decimals = int(_decimals_val)
                                         _shared_state.DYNAMIC_DECIMALS_CACHE[output_mint] = _decimals
-                                        logger.info(f" Dynamically resolved decimals for {output_mint[:8]}...: {_decimals}")
+                                        logger.info(
+                                            f" Dynamically resolved decimals for {output_mint[:8]}...: {_decimals}")
                     except Exception as _e:
-                        logger.debug(f"Dynamic decimals fetch failed for {output_mint[:8]}: {_e}")
-                
+                        logger.debug(
+                            f"Dynamic decimals fetch failed for {output_mint[:8]}: {_e}")
+
                 # 4. Safe fallback
                 if _decimals is None:
                     _decimals = 6
-                # FIX 148: Safe cross-currency division (using correct input decimals)
+                # FIX 148: Safe cross-currency division (using correct input
+                # decimals)
                 in_decimals = _hardcoded_decimals.get(input_mint, 9)
                 amount_ui = amount_lamports / (10 ** in_decimals)
                 actual_out_ui = actual_out / (10 ** _decimals)
                 # Step 2: convert gross profit to SOL via price bridge
                 gross_profit_ui = actual_out_ui - amount_ui
-                gross_profit_sol_lamports = int((gross_profit_ui * _output_price_usd / _sol_price_usd) * 1e9)
+                gross_profit_sol_lamports = int(
+                    (gross_profit_ui * _output_price_usd / _sol_price_usd) * 1e9)
 
-            #  Define threshold BEFORE is_circular branch 
+            #  Define threshold BEFORE is_circular branch
             threshold = min_profit_lamports if min_profit_lamports > 0 else 0
 
             # FIX is_circular: for cross-asset routes (USDCxStock), single-leg
@@ -1187,14 +1215,14 @@ class PreTradeGuard:
                     + flashloan_fee_lamports
                     + ata_rent_lamports
                 )
-                
+
                 #          ( )
-                # actual_out     ,     
+                # actual_out     ,
                 if input_mint == output_mint:
                     #    (, SOL -> LST -> SOL)
                     gross_profit_sol_lamports = actual_out - amount_lamports
                 else:
-                    #     ,    
+                    #     ,
                     params_back = {
                         "inputMint": output_mint,
                         "outputMint": input_mint,
@@ -1205,22 +1233,32 @@ class PreTradeGuard:
                     async with self.session.get(quote_url, params=params_back, timeout=2.0) as resp_back:
                         if resp_back.status == 200:
                             quote_back = await resp_back.json()
-                            final_out = int(quote_back.get("otherAmountThreshold", quote_back.get("outAmount", 0)))
+                            final_out = int(
+                                quote_back.get(
+                                    "otherAmountThreshold",
+                                    quote_back.get(
+                                        "outAmount",
+                                        0)))
                             gross_profit_sol_lamports = final_out - amount_lamports
                         else:
                             return False, "Failed to fetch circular route exit leg quote", 0
 
                 actual_net_profit = gross_profit_sol_lamports - total_cost_lamports
-                
+
                 if actual_net_profit < min_profit_lamports:
                     return False, f"Circular profit {actual_net_profit} < min {min_profit_lamports}", actual_net_profit
-                    
-                return True, f"Circular profit verified: {actual_net_profit/1e9:.6f} SOL", actual_net_profit
+
+                return True, f"Circular profit verified: {
+                    actual_net_profit / 1e9:.6f} SOL", actual_net_profit
 
             # Non-circular: gross_profit_sol_lamports already in SOL denomination
             # FIX 150: Support dynamic MarginFi flash loan fee from .env
-            marginfi_fee_pct = float(os.getenv("MARGINFI_FLASH_LOAN_FEE_PCT", "0.0"))
-            env_flashloan_fee_lamports = int(amount_lamports * (marginfi_fee_pct / 100.0))
+            marginfi_fee_pct = float(
+                os.getenv(
+                    "MARGINFI_FLASH_LOAN_FEE_PCT",
+                    "0.0"))
+            env_flashloan_fee_lamports = int(
+                amount_lamports * (marginfi_fee_pct / 100.0))
             total_cost_lamports = (
                 jito_tip_lamports
                 + base_fee_lamports
@@ -1234,20 +1272,24 @@ class PreTradeGuard:
             latency_ms = (time.time() - now) * 1000
             logger.debug(
                 f" Pre-trade re-check ({latency_ms:.0f}ms): "
-                f"gross={gross_profit_sol_lamports/1e9:.6f} SOL | "
-                f"cost={total_cost_lamports/1e9:.6f} SOL | "
-                f"net={actual_net_profit/1e9:.6f} SOL"
+                f"gross={gross_profit_sol_lamports / 1e9:.6f} SOL | "
+                f"cost={total_cost_lamports / 1e9:.6f} SOL | "
+                f"net={actual_net_profit / 1e9:.6f} SOL"
             )
 
             if actual_net_profit < threshold:
                 logger.warning(
-                    f" Pre-trade BLOCKED: profit eroded to {actual_net_profit/1e9:.6f} SOL "
-                    f"(tip={jito_tip_lamports/1e9:.6f} + fee={base_fee_lamports/1e9:.6f} = "
-                    f"{total_cost_lamports/1e9:.6f} SOL, threshold={threshold/1e9:.6f} SOL)"
+                    f" Pre-trade BLOCKED: profit eroded to {actual_net_profit / 1e9:.6f} SOL "
+                    f"(tip={jito_tip_lamports / 1e9:.6f} + fee={base_fee_lamports / 1e9:.6f} = "
+                    f"{total_cost_lamports / 1e9:.6f} SOL, threshold={threshold / 1e9:.6f} SOL)"
                 )
                 return (
                     False,
-                    f"Profit eroded to {actual_net_profit/1e9:.6f} SOL (cost = {total_cost_lamports/1e9:.6f} SOL)",
+                    f"Profit eroded to {
+                        actual_net_profit /
+                        1e9:.6f} SOL (cost = {
+                        total_cost_lamports /
+                        1e9:.6f} SOL)",
                     actual_net_profit,
                 )
 
@@ -1261,12 +1303,12 @@ class PreTradeGuard:
             if profit_slipped_pct > 0.30:
                 logger.warning(
                     f" Pre-trade: profit slipped {profit_slipped_pct:.0%} "
-                    f"({expected_profit_lamports/1e9:.6f}  {actual_net_profit/1e9:.6f} SOL)"
+                    f"({expected_profit_lamports / 1e9:.6f}  {actual_net_profit / 1e9:.6f} SOL)"
                 )
 
             return (
                 True,
-                f"Pre-trade OK (net={actual_net_profit/1e9:.6f} SOL)",
+                f"Pre-trade OK (net={actual_net_profit / 1e9:.6f} SOL)",
                 actual_net_profit,
             )
 

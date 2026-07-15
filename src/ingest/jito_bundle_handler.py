@@ -1,5 +1,14 @@
 """Jito Bundle Handler for Atomic Backrunning & MEV Execution."""
 
+import src.ingest.shared_state as shared_state
+from solders.instruction import AccountMeta
+from solders.address_lookup_table_account import AddressLookupTableAccount
+from solders.system_program import transfer, TransferParams
+from solders.pubkey import Pubkey
+from solders.keypair import Keypair
+from solders.hash import Hash
+from solders.message import MessageV0
+from solders.transaction import VersionedTransaction
 import asyncio
 import orjson
 import base58
@@ -25,7 +34,9 @@ def _set_global_price_matrix(matrix: Dict[str, tuple]):
         _GLOBAL_SOL_PRICE = sol_entry[0]
 
 
-def _normalize_tip_sol(expected_profit_sol: float, target_mint_str: str) -> float:
+def _normalize_tip_sol(
+        expected_profit_sol: float,
+        target_mint_str: str) -> float:
     """Convert expected_profit_sol (which may be denominated in a non-SOL token)
     to true SOL value using the global price matrix."""
     if target_mint_str == "So11111111111111111111111111111111111111112":
@@ -41,17 +52,6 @@ def _normalize_tip_sol(expected_profit_sol: float, target_mint_str: str) -> floa
         return (expected_profit_sol * token_entry[0]) / _GLOBAL_SOL_PRICE
     return expected_profit_sol
 
-
-from solders.transaction import VersionedTransaction
-from solders.message import MessageV0
-from solders.hash import Hash
-from solders.keypair import Keypair
-from solders.pubkey import Pubkey
-from solders.system_program import transfer, TransferParams
-from solders.address_lookup_table_account import AddressLookupTableAccount
-from solders.instruction import AccountMeta
-
-import src.ingest.shared_state as shared_state
 
 logger = logging.getLogger(__name__)
 
@@ -90,7 +90,9 @@ class JitoLeaderChecker:
 
         current_time = time.time()
         # Check cache
-        ttl = self.leader_cache.get("ttl_override", self.cache_ttl) if self.leader_cache else self.cache_ttl
+        ttl = self.leader_cache.get(
+            "ttl_override",
+            self.cache_ttl) if self.leader_cache else self.cache_ttl
         if (
             self.leader_cache
             and current_time - self.leader_cache.get("timestamp", 0) < ttl
@@ -111,7 +113,8 @@ class JitoLeaderChecker:
                     "method": "getSlotLeaders",
                     "params": [current_slot, 100]
                 }
-                # Запрос отправляется на self.rpc_url основной ноды, а не на Jito Block Engine URL
+                # Запрос отправляется на self.rpc_url основной ноды, а не на
+                # Jito Block Engine URL
 
                 timeout = aiohttp.ClientTimeout(total=0.5)
                 async with _session.post(
@@ -125,12 +128,12 @@ class JitoLeaderChecker:
             except Exception as e:
                 logger.debug(f"Leader check failed for {endpoint}: {e}")
 
-        # Cache results (FIX 169: Use short TTL on failure to recover instantly)
+        # Cache results (FIX 169: Use short TTL on failure to recover
+        # instantly)
         self.leader_cache = {
             "leaders": active_endpoints if active_endpoints else self.jito_endpoints,
             "timestamp": current_time,
-            "ttl_override": 0.1 if not active_endpoints else self.cache_ttl
-        }
+            "ttl_override": 0.1 if not active_endpoints else self.cache_ttl}
 
         if _session_owned:
             await _session.close()
@@ -140,7 +143,10 @@ class JitoLeaderChecker:
 class BundleTemplate:
     """Pre-signed transaction template for instant bundle creation."""
 
-    def __init__(self, keypair: Keypair, jito_tip_accounts: Optional[List[str]] = None, tx_builder: Optional[Any] = None):
+    def __init__(self,
+                 keypair: Keypair,
+                 jito_tip_accounts: Optional[List[str]] = None,
+                 tx_builder: Optional[Any] = None):
         self.keypair = keypair
         self.templates: Dict[str, Dict] = {}
         self.jito_tip_accounts = jito_tip_accounts or []
@@ -194,7 +200,8 @@ class BundleTemplate:
         if accounts_snapshot:
             index = int(time.time() * 1000) % len(accounts_snapshot)
             return accounts_snapshot[index]
-        logger.warning("JITO TIP ACCOUNTS: using local test fallback account after dynamic fetch failed.")
+        logger.warning(
+            "JITO TIP ACCOUNTS: using local test fallback account after dynamic fetch failed.")
         return str(self.keypair.pubkey())
 
     async def instantiate_template(
@@ -236,7 +243,10 @@ class BundleTemplate:
                 for alt_str in alt_keys:
                     resolved = await shared_state.alt_manager.resolve_alt(Pubkey.from_string(alt_str))
                     if resolved:
-                        alts.append(AddressLookupTableAccount(key=Pubkey.from_string(alt_str), addresses=resolved))
+                        alts.append(
+                            AddressLookupTableAccount(
+                                key=Pubkey.from_string(alt_str),
+                                addresses=resolved))
 
             msg = MessageV0.try_compile(
                 payer=self.keypair.pubkey(),
@@ -249,9 +259,6 @@ class BundleTemplate:
         except Exception as e:
             logger.error(f"Template instantiation failed: {e}")
             return None
-
-
-from solders.instruction import AccountMeta
 
 
 class JitoBundleHandler:
@@ -273,8 +280,9 @@ class JitoBundleHandler:
         self.tx_builder = tx_builder
         self.jito_tip_accounts = []
         self.bundle_template = BundleTemplate(
-            keypair, jito_tip_accounts=self.jito_tip_accounts, tx_builder=tx_builder
-        )
+            keypair,
+            jito_tip_accounts=self.jito_tip_accounts,
+            tx_builder=tx_builder)
         self.leader_checker = JitoLeaderChecker(session)
 
         # Default Jito endpoints if not provided
@@ -328,7 +336,8 @@ class JitoBundleHandler:
         amount_sol: float,
         expected_profit_sol: float,
         recent_blockhash: str,
-        profit_mint_str: Optional[str] = None,  # Fix: Cross-currency tip normalization
+        # Fix: Cross-currency tip normalization
+        profit_mint_str: Optional[str] = None,
     ) -> Dict[str, Any]:
         """Execute atomic backrun bundle triggered by signature."""
 
@@ -338,13 +347,13 @@ class JitoBundleHandler:
         )
 
         try:
-            # ── Fix: Cross-Currency Tip Translation ─────────────────────────────────
+            # ── Fix: Cross-Currency Tip Translation ──────────────────────────
             # Normalize expected_profit_sol to true SOL value before calculating tip.
             # If profit_mint_str is not given, default to assuming SOL.
             tip_target_mint = (
-                profit_mint_str or "So11111111111111111111111111111111111111112"
-            )
-            true_profit_sol = _normalize_tip_sol(expected_profit_sol, tip_target_mint)
+                profit_mint_str or "So11111111111111111111111111111111111111112")
+            true_profit_sol = _normalize_tip_sol(
+                expected_profit_sol, tip_target_mint)
 
             # Calculate dynamic tip based on expected profit (now in true SOL)
             tip_lamports = int(
@@ -352,19 +361,25 @@ class JitoBundleHandler:
             )  # Convert SOL to lamports
             tip_lamports = max(tip_lamports, 10000)  # Minimum 0.00001 SOL
 
-            # ── Task 15: Micro-Jitter (The Tie-Breaker) ────────────────────────────────
-            # FIXED: Расширен диапазон до +500..1500 для защиты от перебивания ботами-конкурентами
+            # ── Task 15: Micro-Jitter (The Tie-Breaker) ──────────────────────
+            # FIXED: Расширен диапазон до +500..1500 для защиты от перебивания
+            # ботами-конкурентами
             tip_lamports += random.randint(500, 1500)
 
             logger.info(
-                f"💰 Using dynamic tip: {tip_lamports / 1e9:.6f} SOL ({self.tip_percent:.1%} of expected profit, normalized from {expected_profit_sol:.6f} {tip_target_mint[:8]} SOL-equiv)"
-            )
+                f"💰 Using dynamic tip: {
+                    tip_lamports /
+                    1e9:.6f} SOL ({
+                    self.tip_percent:.1%} of expected profit, normalized from {
+                    expected_profit_sol:.6f} {
+                    tip_target_mint[
+                        :8]} SOL-equiv)")
 
             # Get active Jito leaders for optimal Block Engine targeting
             active_endpoints = await self.leader_checker.get_next_scheduled_leaders()
             logger.info(
-                f"🎯 Targeting {len(active_endpoints)} active Jito Block Engines for shotgun execution"
-            )
+                f"🎯 Targeting {
+                    len(active_endpoints)} active Jito Block Engines for shotgun execution")
 
             # Build Jupiter swap instructions for the arbitrage path
             swap_ixs = []
@@ -397,19 +412,28 @@ class JitoBundleHandler:
             try:
                 if base_mint in shared_state.MARGINFI_BANKS:
                     _raw_bank_cfg = shared_state.MARGINFI_BANKS[base_mint]
-                    if isinstance(_raw_bank_cfg, dict) and _raw_bank_cfg.get("liquidity_vault_authority"):
+                    if isinstance(_raw_bank_cfg, dict) and _raw_bank_cfg.get(
+                            "liquidity_vault_authority"):
                         _marginfi_bank_cfg = _raw_bank_cfg
             except Exception as _bank_err:
-                logger.debug(f"Marginfi bank account lookup failed (non-fatal): {_bank_err}")
+                logger.debug(
+                    f"Marginfi bank account lookup failed (non-fatal): {_bank_err}")
 
             if _marginfi_bank_cfg:
                 _mfi_program_id = "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
                 _mfi_account = os.getenv("MARGINFI_ACCOUNT")
                 if not _mfi_account:
-                    logger.error("MARGINFI_ACCOUNT env var missing, cannot build backrun bundle.")
-                    return {"success": False, "error": "Missing MarginFi Account"}
-                _mfi_vault = str(_marginfi_bank_cfg.get("liquidity_vault", Pubkey.from_string("CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj")))
-                _mfi_vault_auth = str(_marginfi_bank_cfg["liquidity_vault_authority"])
+                    logger.error(
+                        "MARGINFI_ACCOUNT env var missing, cannot build backrun bundle.")
+                    return {
+                        "success": False,
+                        "error": "Missing MarginFi Account"}
+                _mfi_vault = str(
+                    _marginfi_bank_cfg.get(
+                        "liquidity_vault",
+                        Pubkey.from_string("CCwqExrqLGHtq12X182rFvA4KEDtK13q2E7B3Jp2Cxyj")))
+                _mfi_vault_auth = str(
+                    _marginfi_bank_cfg["liquidity_vault_authority"])
                 _marginfi_config = {
                     "program_id": _mfi_program_id,
                     "marginfi_account": _mfi_account,
@@ -440,7 +464,7 @@ class JitoBundleHandler:
                     "error": "Failed to create arbitrage transaction",
                 }
 
-            # ── Uncle Bandit Protection: Merge tip INTO arbitrage tx ──────────────
+            # ── Uncle Bandit Protection: Merge tip INTO arbitrage tx ─────────
             # Never use separate tip_tx — in 2026, uncled blocks allow malicious
             # searchers to extract and broadcast the tip_tx alone, draining our wallet
             # without executing the arbitrage. By inlining the tip as the last instruction
@@ -479,7 +503,8 @@ class JitoBundleHandler:
 
             # Fix 69: Safe ALT extraction — MessageV0 may not expose
             # address_lookup_table_accounts as a top-level attribute on all solders versions.
-            # Use getattr with empty fallback to prevent AttributeError crashes.
+            # Use getattr with empty fallback to prevent AttributeError
+            # crashes.
             _alts = getattr(msg, "address_lookup_table_accounts", [])
             if _alts is None:
                 _alts = []
@@ -496,7 +521,8 @@ class JitoBundleHandler:
                 recent_blockhash=msg.recent_blockhash,
             )
 
-            # Single atomic transaction — tip cannot be extracted without the arb
+            # Single atomic transaction — tip cannot be extracted without the
+            # arb
             merged_tx = VersionedTransaction(new_msg, [self.keypair])
             bundle = [merged_tx]
 
@@ -523,16 +549,18 @@ class JitoBundleHandler:
         """Send bundle to all 4 regional Block Engines simultaneously with Jito Shotgun strategy."""
         results = []
 
-        # Get active endpoints with upcoming Jito leaders (optimization for success rate)
+        # Get active endpoints with upcoming Jito leaders (optimization for
+        # success rate)
         active_endpoints = await self.leader_checker.get_next_scheduled_leaders()
         if not active_endpoints:
             active_endpoints = endpoints  # Fallback to all if leader check fails
 
         logger.debug(
-            f"🎯 Jito Shotgun: targeting {len(active_endpoints)} active Block Engines"
-        )
+            f"🎯 Jito Shotgun: targeting {
+                len(active_endpoints)} active Block Engines")
 
-        # Phase 1: Aggressive initial burst - send to ALL 4 endpoints simultaneously (max parallelism)
+        # Phase 1: Aggressive initial burst - send to ALL 4 endpoints
+        # simultaneously (max parallelism)
         logger.debug("🚀 Phase 1: Initial shotgun burst to all Block Engines")
         burst_results = await self._send_bundle_to_endpoints(bundle, active_endpoints)
         results.extend(burst_results)
@@ -543,7 +571,8 @@ class JitoBundleHandler:
         spam_count = 1
 
         while time.time() < end_time:
-            await asyncio.sleep(0.1)  # Faster 100ms intervals for better coverage
+            # Faster 100ms intervals for better coverage
+            await asyncio.sleep(0.1)
             spam_results = await self._send_bundle_to_endpoints(
                 bundle, active_endpoints
             )
@@ -555,8 +584,7 @@ class JitoBundleHandler:
                 success_count = sum(1 for r in results if r.get("success"))
                 total_sends = len(results)
                 success_rate = (
-                    (success_count / total_sends * 100) if total_sends > 0 else 0
-                )
+                    (success_count / total_sends * 100) if total_sends > 0 else 0)
                 logger.debug(
                     f"📡 Shotgun spam {spam_count}: {success_count}/{total_sends} successful ({success_rate:.1f}%)"
                 )
@@ -568,8 +596,8 @@ class JitoBundleHandler:
             (final_success_count / final_total * 100) if final_total > 0 else 0
         )
         logger.info(
-            f"🎯 Jito Shotgun complete: {final_success_count}/{final_total} bundles accepted ({final_success_rate:.1f}% success rate)"
-        )
+            f"🎯 Jito Shotgun complete: {final_success_count}/{final_total} bundles accepted ({
+                final_success_rate:.1f}% success rate)")
 
         return results
 
@@ -629,9 +657,15 @@ class JitoBundleHandler:
                         }
 
             except asyncio.TimeoutError:
-                return {"success": False, "error": "Timeout", "endpoint": endpoint}
+                return {
+                    "success": False,
+                    "error": "Timeout",
+                    "endpoint": endpoint}
             except Exception as e:
-                return {"success": False, "error": str(e), "endpoint": endpoint}
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "endpoint": endpoint}
 
         # Send to all endpoints in parallel
         tasks = [send_to_endpoint(endpoint) for endpoint in endpoints]
@@ -639,7 +673,8 @@ class JitoBundleHandler:
 
     async def _select_tip_account(self) -> str:
         """Select optimal Jito tip account (rotate for distribution) with live fetch and thread-safe copy-on-read."""
-        # Сначала проверяем кэш; если пуст — запрашиваем актуальные адреса у Block Engine
+        # Сначала проверяем кэш; если пуст — запрашиваем актуальные адреса у
+        # Block Engine
         if not self.jito_tip_accounts:
             try:
                 import aiohttp
@@ -657,14 +692,16 @@ class JitoBundleHandler:
                                     accounts = accounts_data["value"]
                                 elif "result" in accounts_data:
                                     accounts = accounts_data["result"]
-                                    if isinstance(accounts, dict) and "value" in accounts:
+                                    if isinstance(
+                                            accounts, dict) and "value" in accounts:
                                         accounts = accounts["value"]
 
                             if accounts and isinstance(accounts, list):
                                 self.jito_tip_accounts = accounts
                                 logger.info(
-                                    f"🔄 {self.__class__.__name__}: Fetched {len(accounts)} live tip accounts"
-                                )
+                                    f"🔄 {
+                                        self.__class__.__name__}: Fetched {
+                                        len(accounts)} live tip accounts")
             except Exception as e:
                 logger.warning(f"Live tip account fetch failed: {e}")
 
@@ -674,11 +711,14 @@ class JitoBundleHandler:
             index = int(time.time() * 1000) % len(accounts_snapshot)
             return accounts_snapshot[index]
 
-        logger.warning("JITO TIP ACCOUNTS: using local test fallback account after dynamic fetch failed.")
+        logger.warning(
+            "JITO TIP ACCOUNTS: using local test fallback account after dynamic fetch failed.")
         return str(self.keypair.pubkey())
 
     # simulate_bundle_locally REMOVED: was a stub returning {"simulated": True} after asyncio.sleep(0.1).
-    # Real simulation requires full SVM execution which is not implemented here.
+    # Real simulation requires full SVM execution which is not implemented
+    # here.
+
 
 class BackrunTrigger:
     """Signature-based trigger for backrunning opportunities."""
@@ -698,7 +738,8 @@ class BackrunTrigger:
         """Handle migration/pool creation event for backrunning."""
         # Avoid duplicate processing
         if signature in self.active_backruns:
-            if time.time() - self.active_backruns[signature] < 5.0:  # 5 second cooldown
+            if time.time() - \
+                    self.active_backruns[signature] < 5.0:  # 5 second cooldown
                 return
         self.active_backruns[signature] = time.time()
 
@@ -741,4 +782,4 @@ class BackrunTrigger:
     #
     # def create_secure_jito_bundle(self, arbitrage_tx: VersionedTransaction,
     #                               jito_tip_lamports: int,
-    #                               address_lookup_table_accounts=None) -> List[VersionedTransaction]:
+    # address_lookup_table_accounts=None) -> List[VersionedTransaction]:

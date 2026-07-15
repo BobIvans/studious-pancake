@@ -28,6 +28,7 @@ SOL_MINT = "So11111111111111111111111111111111111111112"
 RENT_SPL_ATA_SOL = 0.00204
 RENT_TOKEN2022_SOL = 0.0035
 
+
 class LstInstantUnstakeArbitrage:
     """Executes LST unstake arbitrage using MarginFi flash loans and Jupiter circular routing."""
 
@@ -88,7 +89,9 @@ class LstInstantUnstakeArbitrage:
             _jup = self.tx_builder
         else:
             from src.ingest.tx_builder import JupiterTxBuilder
-            _jup = JupiterTxBuilder(session=self.session, rpc_getter=self.rpc_getter)
+            _jup = JupiterTxBuilder(
+                session=self.session,
+                rpc_getter=self.rpc_getter)
 
         # Dynamic liquidity from MarginFi SOL bank
         bank_info = MARGINFI_BANKS.get(SOL_MINT)
@@ -97,20 +100,30 @@ class LstInstantUnstakeArbitrage:
 
         max_borrow_lamports = await _jup.get_max_marginfi_borrow(str(bank_info["liquidity_vault"]))
         # Fix 3 (MarginFi Slippage Margin): cap borrow to FLASH_LOAN_SIZE_SOL
-        env_max_borrow = int(float(os.getenv("FLASH_LOAN_SIZE_SOL", "0.05")) * 1_000_000_000)
+        env_max_borrow = int(
+            float(
+                os.getenv(
+                    "FLASH_LOAN_SIZE_SOL",
+                    "0.05")) *
+            1_000_000_000)
         max_borrow_lamports = min(max_borrow_lamports, env_max_borrow)
-        if max_borrow_lamports < 100_000_000:  # Fix 40: Min 0.1 SOL (was 1 SOL, blocked 0.015 SOL balance)
+        # Fix 40: Min 0.1 SOL (was 1 SOL, blocked 0.015 SOL balance)
+        if max_borrow_lamports < 100_000_000:
             return []
 
-        # ── Шаг А — OptimalTradeSizer: динамический сайзинг без итераций ──────────
+        # ── Шаг А — OptimalTradeSizer: динамический сайзинг без итераций ─────
         # Передаем 95% ликвидности банка в OptimalTradeSizer.
         # Если на выходе есть данные по резервам AMM — формула находит ИДЕАЛЬНУЮ сумму.
-        # Если резервов нет (пустой routes) — возвращается полный 95% банк (без искажений).
-        
+        # Если резервов нет (пустой routes) — возвращается полный 95% банк (без
+        # искажений).
+
         # Check current balance for capital-aware sizing
         import src.ingest.shared_state as shared_state
-        current_balance = shared_state.stats.get("last_balance", shared_state.stats.get("virtual_balance", 0.015))
-        current_virtual_balance = shared_state.stats.get("virtual_balance", current_balance)
+        current_balance = shared_state.stats.get(
+            "last_balance", shared_state.stats.get(
+                "virtual_balance", 0.015))
+        current_virtual_balance = shared_state.stats.get(
+            "virtual_balance", current_balance)
 
         for lst_mint in self.lst_mints:
             try:
@@ -122,62 +135,78 @@ class LstInstantUnstakeArbitrage:
                     # Check LST ATA
                     from spl.token.constants import TOKEN_PROGRAM_ID
                     if self.keypair:
-                        ata_addr = str(get_associated_token_address(self.keypair.pubkey(), Pubkey.from_string(lst_mint), TOKEN_PROGRAM_ID))
+                        ata_addr = str(
+                            get_associated_token_address(
+                                self.keypair.pubkey(),
+                                Pubkey.from_string(lst_mint),
+                                TOKEN_PROGRAM_ID))
                         if ata_addr not in self.ata_cache:
                             num_new_atas += 1
                 except Exception:
                     pass
 
                 test_amount_lamports = max_borrow_lamports
-                
+
                 if self.optimal_trade_sizer:
                     try:
                         optimal_size = int(
                             self.optimal_trade_sizer.get_slippage_pegged_borrow_lamports(
                                 wallet_native_balance_sol=current_balance,
-                                pool_slippage_pct=0.005, # Conservative estimate for scan
+                                pool_slippage_pct=0.005,  # Conservative estimate for scan
                                 bank_liquidity_lamports=max_borrow_lamports,
                                 virtual_balance=current_virtual_balance,
                                 num_new_atas=num_new_atas,
                                 expected_profit_sol=self.min_profit_lamports / 1e9,
                             )
                         )
-                        if optimal_size and optimal_size > 100_000_000:  # Fix 40: Min 0.1 SOL (was 1 SOL)
+                        # Fix 40: Min 0.1 SOL (was 1 SOL)
+                        if optimal_size and optimal_size > 100_000_000:
                             test_amount_lamports = optimal_size
-                            logger.debug(f"📈 LST unstake optimal borrow: {test_amount_lamports/1e9:.4f} SOL (AMM curve peak)")
+                            logger.debug(
+                                f"📈 LST unstake optimal borrow: {
+                                    test_amount_lamports /
+                                    1e9:.4f} SOL (AMM curve peak)")
                     except Exception as e:
-                        logger.debug(f"OptimalTradeSizer failed, using raw vault: {test_amount_lamports/1e9:.4f} SOL ({e})")
+                        logger.debug(
+                            f"OptimalTradeSizer failed, using raw vault: {
+                                test_amount_lamports / 1e9:.4f} SOL ({e})")
 
                 quote = await _jup.get_circular_quote(
                     input_mint=SOL_MINT,
                     middle_mint=lst_mint,
                     amount_lamports=test_amount_lamports,
-                    # Принудительно используем Sanctum Router для второго лега (LST → SOL по справедливому курсу)
+                    # Принудительно используем Sanctum Router для второго лега
+                    # (LST → SOL по справедливому курсу)
                     dex_filter_leg2=["Sanctum", "Sanctum Infinity"],
                 )
 
                 if not quote:
-                    logger.debug(f"❌ No circular quote for {lst_mint[:8]} via Sanctum")
+                    logger.debug(
+                        f"❌ No circular quote for {lst_mint[:8]} via Sanctum")
                     continue
 
                 expected_profit = quote.get("expected_profit_lamports", 0)
 
-                # FIX 121: Expected profit is already net profit (tip already subtracted in get_circular_quote)
+                # FIX 121: Expected profit is already net profit (tip already
+                # subtracted in get_circular_quote)
                 net_profit = expected_profit
 
-                # Phase 8: dynamically fetch min_profit from flywheel_scaler tier
+                # Phase 8: dynamically fetch min_profit from flywheel_scaler
+                # tier
                 from src.ingest.shared_state import stats
-                current_balance = stats.get("last_balance", stats.get("virtual_balance", 0.015))
-                dynamic_min = int(
-                    self.flywheel_scaler.get_tier(current_balance).min_profit_sol * 1e9
-                )
-                effective_min = max(dynamic_min, self._min_profit_lamports_floor)
+                current_balance = stats.get(
+                    "last_balance", stats.get(
+                        "virtual_balance", 0.015))
+                dynamic_min = int(self.flywheel_scaler.get_tier(
+                    current_balance).min_profit_sol * 1e9)
+                effective_min = max(
+                    dynamic_min, self._min_profit_lamports_floor)
 
                 if net_profit > effective_min:
                     logger.info(
                         f"✅ LST unstake opp: {lst_mint[:8]} | "
-                        f"borrow={test_amount_lamports/1e9:.2f} SOL | "
-                        f"profit={net_profit/1e9:.6f} SOL"
+                        f"borrow={test_amount_lamports / 1e9:.2f} SOL | "
+                        f"profit={net_profit / 1e9:.6f} SOL"
                     )
                     opportunities.append({
                         "strategy": "lst_unstake",
@@ -214,8 +243,10 @@ class LstInstantUnstakeArbitrage:
             )
             if not circular:
                 return None
-            circular["dex_leg1"] = circular.get("dex_leg1") or circular.get("step1")
-            circular["dex_leg2"] = circular.get("dex_leg2") or circular.get("step2")
+            circular["dex_leg1"] = circular.get(
+                "dex_leg1") or circular.get("step1")
+            circular["dex_leg2"] = circular.get(
+                "dex_leg2") or circular.get("step2")
             return circular
         except Exception as e:
             logger.debug(f"LST circular quote retry failed: {e}")
@@ -262,12 +293,15 @@ class LstInstantUnstakeArbitrage:
             return False
 
         retry_opportunity = dict(opportunity)
-        retry_opportunity["_smart_retry"] = {"used": True, "mode": "slippage" if ("slippage" in reason.lower() or "liquidity" in reason.lower() or "depth" in reason.lower()) else "route"}
+        retry_opportunity["_smart_retry"] = {"used": True, "mode": "slippage" if (
+            "slippage" in reason.lower() or "liquidity" in reason.lower() or "depth" in reason.lower()) else "route"}
 
-        if "slippage" in reason.lower() or "liquidity" in reason.lower() or "depth" in reason.lower():
+        if "slippage" in reason.lower() or "liquidity" in reason.lower(
+        ) or "depth" in reason.lower():
             new_borrow = max(int(current_borrow_amount * 0.5), 1)
             retry_opportunity["borrow_amount"] = new_borrow
-            retry_opportunity["expected_profit_lamports"] = max(int(current_expected_profit * 0.5), 1)
+            retry_opportunity["expected_profit_lamports"] = max(
+                int(current_expected_profit * 0.5), 1)
             retry_quote = await self._refetch_circular_quote(
                 opportunity.get("quote", {}),
                 opportunity["lst_mint"],
@@ -275,10 +309,12 @@ class LstInstantUnstakeArbitrage:
                 only_direct_routes=True,
             )
             if not retry_quote:
-                logger.warning(f"LST Smart Retry failed: quote rebuild for slippage failed: {reason}")
+                logger.warning(
+                    f"LST Smart Retry failed: quote rebuild for slippage failed: {reason}")
                 return False
             retry_opportunity["quote"] = retry_quote
-            logger.warning(f"LST Smart Retry: cut borrow to {new_borrow} lamports")
+            logger.warning(
+                f"LST Smart Retry: cut borrow to {new_borrow} lamports")
             return await self.execute_unstake_arbitrage(
                 retry_opportunity,
                 tx_builder,
@@ -287,7 +323,8 @@ class LstInstantUnstakeArbitrage:
                 jito_bidding_manager
             )
 
-        if "accountnotfound" in reason.lower() or "rent" in reason.lower() or "insufficient" in reason.lower():
+        if "accountnotfound" in reason.lower() or "rent" in reason.lower(
+        ) or "insufficient" in reason.lower():
             retry_quote = await self._refetch_circular_quote(
                 opportunity.get("quote", {}),
                 opportunity["lst_mint"],
@@ -295,10 +332,12 @@ class LstInstantUnstakeArbitrage:
                 only_direct_routes=True,
             )
             if not retry_quote:
-                logger.warning(f"LST Smart Retry failed: route rebuild failed: {reason}")
+                logger.warning(
+                    f"LST Smart Retry failed: route rebuild failed: {reason}")
                 return False
             retry_opportunity["quote"] = retry_quote
-            logger.warning("LST Smart Retry: rebuilt route with onlyDirectRoutes=true and restrictIntermediateTokens=true")
+            logger.warning(
+                "LST Smart Retry: rebuilt route with onlyDirectRoutes=true and restrictIntermediateTokens=true")
             return await self.execute_unstake_arbitrage(
                 retry_opportunity,
                 tx_builder,
@@ -319,7 +358,7 @@ class LstInstantUnstakeArbitrage:
         jito_bidding_manager: Optional[Any] = None
     ) -> bool:
         """Execute the unstake arbitrage using native flashloan builder.
-        
+
         Порядок инструкций в транзакции:
           1. ComputeBudget (CU лимит)
           2. MarginFi Borrow SOL
@@ -337,7 +376,8 @@ class LstInstantUnstakeArbitrage:
             if not bank_info:
                 return False
 
-            # Clone bank_info and inject marginfi_account to prevent compile KeyError
+            # Clone bank_info and inject marginfi_account to prevent compile
+            # KeyError
             active_bank_info = dict(bank_info)
             _acct_to_use = os.getenv("MARGINFI_ACCOUNT")
             if not _acct_to_use:
@@ -345,7 +385,8 @@ class LstInstantUnstakeArbitrage:
                     "MARGINFI_ACCOUNT env var is required. "
                     "Refusing to start with hardcoded fallback (P0-15)."
                 )
-            active_bank_info["marginfi_account"] = Pubkey.from_string(_acct_to_use)
+            active_bank_info["marginfi_account"] = Pubkey.from_string(
+                _acct_to_use)
 
             dex_leg1 = quote.get("dex_leg1", {})
             dex_leg2 = quote.get("dex_leg2", {})
@@ -355,16 +396,26 @@ class LstInstantUnstakeArbitrage:
 
             expected_profit_sol = opportunity["expected_profit_lamports"] / 1e9
 
-            # FIX 254: Parallel swap-instructions fetch for 2-leg unstake arbitrage
+            # FIX 254: Parallel swap-instructions fetch for 2-leg unstake
+            # arbitrage
             tasks = [
-                tx_builder.get_swap_instructions(dex_leg1, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol),
-                tx_builder.get_swap_instructions(dex_leg2, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol),
+                tx_builder.get_swap_instructions(
+                    dex_leg1,
+                    wallet_pubkey,
+                    use_custom_cu=True,
+                    expected_profit_sol=expected_profit_sol),
+                tx_builder.get_swap_instructions(
+                    dex_leg2,
+                    wallet_pubkey,
+                    use_custom_cu=True,
+                    expected_profit_sol=expected_profit_sol),
             ]
             results = await asyncio.gather(*tasks, return_exceptions=True)
 
             for i, res in enumerate(results):
                 if isinstance(res, Exception) or not res or not res[0]:
-                    logger.error(f"❌ [LST UNSTAKE] Parallel swap-instructions failed for Leg {i+1}: {res}")
+                    logger.error(
+                        f"❌ [LST UNSTAKE] Parallel swap-instructions failed for Leg {i + 1}: {res}")
                     return False
 
             leg1_ixs, _ = results[0]
@@ -372,14 +423,18 @@ class LstInstantUnstakeArbitrage:
             all_swap_ixs.extend(leg1_ixs)
             all_swap_ixs.extend(leg2_ixs)
 
-            # Calculate dynamic Jito tip using JitoBiddingManager (Fix: replace hardcoded 100000)
+            # Calculate dynamic Jito tip using JitoBiddingManager (Fix: replace
+            # hardcoded 100000)
             jito_tip_lamports = 0
             if jito_bidding_manager:
-                # Fetch current native SOL balance for tip cap (prevents over-tipping)
+                # Fetch current native SOL balance for tip cap (prevents
+                # over-tipping)
                 _current_native_sol_balance = None
                 try:
                     import src.ingest.shared_state as shared_state
-                    _bal = shared_state.stats.get("last_balance", shared_state.stats.get("virtual_balance", None))
+                    _bal = shared_state.stats.get(
+                        "last_balance", shared_state.stats.get(
+                            "virtual_balance", None))
                     if _bal is not None:
                         _current_native_sol_balance = float(_bal)
                 except Exception:
@@ -394,7 +449,8 @@ class LstInstantUnstakeArbitrage:
                 jito_tip_lamports = quote.get("jito_tip_lamports", 10000)
 
             if jito_tip_lamports <= 0:
-                logger.warning(f"LST Unstake tip calculation returned 0 or negative ({jito_tip_lamports}), using fallback 10000")
+                logger.warning(
+                    f"LST Unstake tip calculation returned 0 or negative ({jito_tip_lamports}), using fallback 10000")
                 jito_tip_lamports = 10000
 
             fl_result = await tx_builder.build_native_flashloan_tx(
@@ -407,7 +463,8 @@ class LstInstantUnstakeArbitrage:
                 jito_tip_lamports=jito_tip_lamports,
                 borrow_mint=SOL_MINT,
                 use_jito=True,
-                tip_accounts=jito_executor.tip_accounts if jito_executor else None,  # Fix 2: dynamic Jito tip accounts
+                # Fix 2: dynamic Jito tip accounts
+                tip_accounts=jito_executor.tip_accounts if jito_executor else None,
             )
 
             if not fl_result:
@@ -425,10 +482,15 @@ class LstInstantUnstakeArbitrage:
             if not recent_blockhash:
                 if self.rpc_getter:
                     rpc_url = self.rpc_getter()
-                    payload = {"jsonrpc": "2.0", "id": 1, "method": "getLatestBlockhash"}
+                    payload = {
+                        "jsonrpc": "2.0",
+                        "id": 1,
+                        "method": "getLatestBlockhash"}
                     async with self.session.post(rpc_url, json=payload) as resp:
                         bh_data = await resp.json()
-                        recent_blockhash = bh_data.get("result", {}).get("value", {}).get("blockhash")
+                        recent_blockhash = bh_data.get(
+                            "result", {}).get(
+                            "value", {}).get("blockhash")
 
             if not recent_blockhash:
                 return False
@@ -442,7 +504,10 @@ class LstInstantUnstakeArbitrage:
                 for alt_str in alt_pubkey_strs:
                     _res = await shared_state.alt_manager.resolve_alt(Pubkey.from_string(alt_str))
                     if _res:
-                        resolved_alts.append(AddressLookupTableAccount(key=Pubkey.from_string(alt_str), addresses=_res))
+                        resolved_alts.append(
+                            AddressLookupTableAccount(
+                                key=Pubkey.from_string(alt_str),
+                                addresses=_res))
 
             message = MessageV0.try_compile(
                 payer=keypair.pubkey(),
@@ -476,9 +541,12 @@ class LstInstantUnstakeArbitrage:
             # P0-9: Pre-trade guard — gas tank check before sending
             try:
                 import src.ingest.shared_state as _ss
-                _bal = _ss.stats.get("last_balance", _ss.stats.get("virtual_balance", 0.0))
+                _bal = _ss.stats.get(
+                    "last_balance", _ss.stats.get(
+                        "virtual_balance", 0.0))
                 from src.ingest.pre_trade_guard import PreTradeGuard
-                # Task 24/25: Expand rent check to include borrow_mint (SOL_MINT) and LST mint ATAs
+                # Task 24/25: Expand rent check to include borrow_mint
+                # (SOL_MINT) and LST mint ATAs
                 _SOL_MINT_STR = "So11111111111111111111111111111111111111112"
                 from src.ingest.shared_state import get_ata_rent_for_mint
                 _estimated_rent = 0.0
@@ -487,16 +555,19 @@ class LstInstantUnstakeArbitrage:
                         _estimated_rent += get_ata_rent_for_mint(_check_mint)
                 gas_ok, _ = PreTradeGuard.check_gas_tank(_bal, _estimated_rent)
                 if not gas_ok:
-                    logger.warning("🚫 Pre-trade guard (LST): gas tank empty — skipping bundle")
+                    logger.warning(
+                        "🚫 Pre-trade guard (LST): gas tank empty — skipping bundle")
                     jito_result = {"success": False, "error": "Gas tank empty"}
                     return False
             except Exception as _gas_err:
-                logger.debug(f"Pre-trade gas check error (non-fatal): {_gas_err}")
+                logger.debug(
+                    f"Pre-trade gas check error (non-fatal): {_gas_err}")
 
             # P0-9: Final simulation check before send_bundle
             try:
                 from .pre_trade_guard import PreTradeGuard
-                _ptg_check = PreTradeGuard(session=self.session, rpc_url=self._static_rpc_url)
+                _ptg_check = PreTradeGuard(
+                    session=self.session, rpc_url=self._static_rpc_url)
                 _prof_ok, _reason, _net = await _ptg_check.check_profit_before_execution(
                     input_mint=SOL_MINT,
                     output_mint=lst_mint,
@@ -517,12 +588,16 @@ class LstInstantUnstakeArbitrage:
 
             # Send via Jito
             jito_result = await jito_executor.send_bundle([transaction])
-            
+
             if jito_result.get("success"):
-                logger.info(f"🚀 LST unstake bundle sent: {jito_result.get('bundle_id')}")
+                logger.info(
+                    f"🚀 LST unstake bundle sent: {
+                        jito_result.get('bundle_id')}")
                 return True
             else:
-                logger.error(f"LST Jito bundle failed: {jito_result.get('error')}")
+                logger.error(
+                    f"LST Jito bundle failed: {
+                        jito_result.get('error')}")
                 return False
 
         except Exception as e:

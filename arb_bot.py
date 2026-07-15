@@ -3950,8 +3950,6 @@ async def lst_depeg_scanner(
                         logger.warning(
                             "❌ Simulation failed or Jito unavailable. Skipping trade for capital protection."
                         )
-        except Exception as e:
-            logger.error(f"LST scanner error: {e}")
 
         await asyncio.sleep(cfg.LST_SCAN_INTERVAL)
 

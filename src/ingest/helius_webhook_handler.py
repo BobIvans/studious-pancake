@@ -37,7 +37,7 @@ class HeliusWebhookHandler:
         self.runner = None
         # Rate limiter for DoS protection
         self.ip_limits = defaultdict(list)
-        self.MAX_REQ_PER_SEC = 50  # FIX 139: Raised to 50 for Helius bursts
+        self.MAX_REQ_PER_SEC = 5
         # ── ИСПРАВЛЕНИЕ: asyncio.Queue вместо deque — без потери событий ────────
         self._signal_queue: asyncio.Queue = asyncio.Queue(maxsize=500)
         self.WORKER_COUNT = int(os.getenv("WEBHOOK_WORKERS", "10"))  # FIX 142

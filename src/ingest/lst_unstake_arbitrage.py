@@ -353,25 +353,24 @@ class LstInstantUnstakeArbitrage:
 
             all_swap_ixs = []
 
-            try:
-                expected_profit_sol = opportunity["expected_profit_lamports"] / 1e9
+            expected_profit_sol = opportunity["expected_profit_lamports"] / 1e9
 
-                # FIX 254: Parallel swap-instructions fetch for 2-leg unstake arbitrage
-                tasks = [
-                    tx_builder.get_swap_instructions(dex_leg1, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol),
-                    tx_builder.get_swap_instructions(dex_leg2, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol),
-                ]
-                results = await asyncio.gather(*tasks, return_exceptions=True)
+            # FIX 254: Parallel swap-instructions fetch for 2-leg unstake arbitrage
+            tasks = [
+                tx_builder.get_swap_instructions(dex_leg1, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol),
+                tx_builder.get_swap_instructions(dex_leg2, wallet_pubkey, use_custom_cu=True, expected_profit_sol=expected_profit_sol),
+            ]
+            results = await asyncio.gather(*tasks, return_exceptions=True)
 
-                for i, res in enumerate(results):
-                    if isinstance(res, Exception) or not res or not res[0]:
-                        logger.error(f"❌ [LST UNSTAKE] Parallel swap-instructions failed for Leg {i+1}: {res}")
-                        return False
+            for i, res in enumerate(results):
+                if isinstance(res, Exception) or not res or not res[0]:
+                    logger.error(f"❌ [LST UNSTAKE] Parallel swap-instructions failed for Leg {i+1}: {res}")
+                    return False
 
-                leg1_ixs, _ = results[0]
-                leg2_ixs, _ = results[1]
-                all_swap_ixs.extend(leg1_ixs)
-                all_swap_ixs.extend(leg2_ixs)
+            leg1_ixs, _ = results[0]
+            leg2_ixs, _ = results[1]
+            all_swap_ixs.extend(leg1_ixs)
+            all_swap_ixs.extend(leg2_ixs)
 
             # Calculate dynamic Jito tip using JitoBiddingManager (Fix: replace hardcoded 100000)
             jito_tip_lamports = 0

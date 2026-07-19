@@ -4,8 +4,14 @@ from src.domain.money import *
 from src.domain.feasibility import *
 
 NOW = datetime(2026, 7, 19, tzinfo=timezone.utc)
-USDC = lambda v: TokenAmount(USDC_MINT, v, 6)
-SOLC = lambda lamports: TokenAmount(NATIVE_SOL_MINT, lamports, 9)
+
+
+def USDC(v):
+    return TokenAmount(USDC_MINT, v, 6)
+
+
+def SOLC(lamports):
+    return TokenAmount(NATIVE_SOL_MINT, lamports, 9)
 
 def base_inputs(balance=15_000_000, protected=5_000_000, outstanding=1_000_000, rent=0, tip=1_000, priority_cap=2_000, principal=1_000_000_000, min_out=1_003_500_000, repayment=1_000_500_000, stage="compiled"):
     policy = FeasibilityPolicy(USDC(100_000), 1, USDC(10_000), tip_absolute_cap=Lamports(5_000), priority_fee_absolute_cap=Lamports(priority_cap), config_version="test")

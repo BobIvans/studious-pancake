@@ -172,7 +172,7 @@ class JupiterSwapV2Adapter(BaseAdapter):
             if isinstance(val, list): raw_swap.extend(val)
             elif isinstance(val, Mapping): raw_swap.append(val)
         swap,cb,tip=_split_ix(raw_swap)
-        return InstructionBundle(self.name, swap, compute_budget_instructions=cb, tip_instructions=tip, address_lookup_table_addresses=tuple(data.get("addressLookupTableAddresses") or data.get("addressLookupTableAddresses" ) or ()), raw=data)
+        return InstructionBundle(self.name, swap, compute_budget_instructions=cb, tip_instructions=tip, address_lookup_table_addresses=tuple(data.get("addressLookupTableAddresses") or data.get("addressLookupTableAddresses") or ()), raw=data)
 
 class OKXSolanaAdapter(BaseAdapter):
     name="okx_solana"; endpoint_path="/api/v6/dex/aggregator/swap-instruction"; base_url="https://web3.okx.com"; capabilities=SwapCapability.FIRM_QUOTES|SwapCapability.RAW_INSTRUCTIONS|SwapCapability.EXACT_IN|SwapCapability.LEGACY_SPL_TOKEN|SwapCapability.NATIVE_SOL|SwapCapability.WSOL|SwapCapability.ADDRESS_LOOKUP_TABLES|SwapCapability.JITO_COMPATIBLE_ROUTING

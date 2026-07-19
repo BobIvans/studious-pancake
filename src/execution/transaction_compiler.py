@@ -1,117 +1,151 @@
-"""Canonical two-pass transaction compiler and structural validator."""
+"""Protocol-agnostic Solana v0 transaction compiler and signer."""
 from __future__ import annotations
-import base64
-from dataclasses import replace
-from typing import Iterable
-from .models import *
+
+from collections import Counter
+from typing import Iterable, Sequence
+
+from solders.address_lookup_table_account import AddressLookupTable, AddressLookupTableAccount, LOOKUP_TABLE_MAX_ADDRESSES
+from solders.compute_budget import set_compute_unit_limit, set_compute_unit_price
+from solders.instruction import AccountMeta, Instruction
+from solders.keypair import Keypair
+from solders.message import MessageV0, to_bytes_versioned, from_bytes_versioned
+from solders.pubkey import Pubkey
+from solders.signature import Signature
+from solders.system_program import transfer, TransferParams, ID as SYSTEM_PROGRAM_ID
+from solders.transaction import VersionedTransaction
+
+from .models import (
+    ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
+    COMPUTE_BUDGET_PROGRAM_ID,
+    SOLANA_WIRE_TRANSACTION_LIMIT_BYTES,
+    BlockhashContext,
+    CompiledTransaction,
+    ExecutionErrorCode,
+    PlannedInstruction,
+    ResolvedAddressLookupTable,
+    SignedTransaction,
+    TransactionDiagnostics,
+    TransactionPlan,
+    compute_message_hash,
+)
 
 class TransactionCompileError(ValueError):
-    def __init__(self, code: ExecutionErrorCode, message: str):
-        super().__init__(message)
-        self.code = code
+    def __init__(self, code: ExecutionErrorCode, message: str, diagnostics: dict[str, object] | None = None):
+        super().__init__(message); self.code = code; self.diagnostics = diagnostics or {}
 
 class AltValidator:
-    def deserialize(self, address: str, raw_data: bytes, owner: str, source_slot: int, required_addresses: Iterable[str], deactivation_slot: int | None = None) -> ResolvedAddressLookupTable:
-        # Official-library deserialization is represented by the solders import path;
-        # fallback byte-offset parsing is deliberately not implemented here.
+    def deserialize(self, address: Pubkey, raw_data: bytes, owner: Pubkey, source_slot: int, required_addresses: Iterable[Pubkey] = (), deactivation_slot: int | None = None) -> ResolvedAddressLookupTable:
+        if not isinstance(address, Pubkey) or not isinstance(owner, Pubkey):
+            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT address/owner must be Pubkey")
         if owner != ADDRESS_LOOKUP_TABLE_PROGRAM_ID:
             raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT owner mismatch")
-        if deactivation_slot not in (None, 2**64 - 1):
-            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT is deactivated")
-        addresses = self._library_deserialize_addresses(raw_data)
-        if not addresses:
-            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT has no addresses")
+        try:
+            parsed = AddressLookupTable.deserialize(raw_data)
+        except Exception:
+            try:
+                parsed = AddressLookupTable.from_bytes(raw_data)
+            except Exception as exc:
+                raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT official parser failed") from exc
+        addresses = tuple(parsed.addresses)
+        meta = parsed.meta
+        if not addresses or len(addresses) > LOOKUP_TABLE_MAX_ADDRESSES:
+            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT address count invalid")
+        if len(set(addresses)) != len(addresses):
+            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT duplicate addresses")
+        parsed_deactivation = deactivation_slot if deactivation_slot is not None else int(meta.deactivation_slot)
+        if parsed_deactivation != 2**64 - 1:
+            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT is deactivated or deactivating")
+        if int(meta.last_extended_slot) >= source_slot:
+            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT extension slot is not older than source slot")
         missing = set(required_addresses) - set(addresses)
         if missing:
-            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, f"ALT missing addresses: {sorted(missing)}")
-        return ResolvedAddressLookupTable(address, owner, tuple(addresses), deactivation_slot, source_slot, compute_message_hash(raw_data))
-
-    def _library_deserialize_addresses(self, raw_data: bytes) -> tuple[str, ...]:
-        try:
-            from solders.address_lookup_table_account import AddressLookupTableAccount  # official solders type
-            alt = AddressLookupTableAccount.from_bytes(raw_data)  # type: ignore[attr-defined]
-            return tuple(str(a) for a in alt.addresses)
-        except Exception:
-            # Tests may provide a newline-separated deterministic fixture. This is
-            # not a Solana parser and never guesses account layout offsets.
-            text = raw_data.decode("utf-8", errors="ignore")
-            return tuple(x for x in text.splitlines() if x)
+            raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT missing required addresses", {"missing": [str(m) for m in missing]})
+        return ResolvedAddressLookupTable(address, owner, addresses, parsed_deactivation, int(meta.last_extended_slot), int(meta.last_extended_slot_start_index), source_slot, compute_message_hash(raw_data), AddressLookupTableAccount(address, addresses))
 
 class TransactionCompiler:
-    def __init__(self, *, max_size: int = SOLANA_WIRE_TRANSACTION_LIMIT_BYTES):
-        self.max_size = max_size
+    def __init__(self, *, max_size: int = SOLANA_WIRE_TRANSACTION_LIMIT_BYTES): self.max_size = max_size
 
     def compile(self, plan: TransactionPlan, blockhash: BlockhashContext, lookup_tables: tuple[ResolvedAddressLookupTable, ...] = ()) -> CompiledTransaction:
-        blockhash.validate()
-        self._validate_plan(plan)
-        self._validate_alts(plan, lookup_tables)
-        descriptors = self._pass1(plan)
-        instructions, end_index = self._pass2(plan, descriptors)
-        message = self._serialize_message(plan.payer, blockhash.blockhash, instructions, lookup_tables)
-        tx = b"unsigned:" + message
-        if len(tx) > self.max_size:
-            raise TransactionCompileError(ExecutionErrorCode.TRANSACTION_TOO_LARGE, "serialized transaction exceeds 1232 bytes")
-        return CompiledTransaction(plan.opportunity_id, plan.payer, instructions, blockhash, lookup_tables, message, tx, compute_message_hash(message), end_index, plan.min_context_slot, plan.required_signers)
+        try: blockhash.validate()
+        except ValueError as exc: raise TransactionCompileError(ExecutionErrorCode.INVALID_BLOCKHASH, "invalid recent blockhash") from exc
+        self._validate_plan(plan); self._validate_alts(plan, lookup_tables)
+        instructions = self._compose_instructions(plan)
+        alt_accounts = [a.account for a in lookup_tables]
+        try: message = MessageV0.try_compile(plan.payer, list(instructions), alt_accounts, blockhash.blockhash)
+        except Exception as exc: raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "MessageV0.try_compile failed") from exc
+        signer_count = message.header.num_required_signatures
+        signer_keys = tuple(message.account_keys[:signer_count])
+        if not signer_keys or signer_keys[0] != plan.payer:
+            raise TransactionCompileError(ExecutionErrorCode.MISSING_SIGNER, "payer must be first signer")
+        if set(signer_keys) != set(plan.required_signers) or len(signer_keys) != len(plan.required_signers):
+            raise TransactionCompileError(ExecutionErrorCode.MISSING_SIGNER, "declared signers do not match compiled message", {"compiled": [str(s) for s in signer_keys], "declared": [str(s) for s in plan.required_signers]})
+        serialized_message = bytes(to_bytes_versioned(message))
+        unsigned = VersionedTransaction.populate(message, [Signature.default()] * signer_count)
+        self._round_trip(unsigned, serialized_message)
+        diagnostics = self._diagnostics(unsigned, message, lookup_tables)
+        if diagnostics.wire_size > self.max_size:
+            raise TransactionCompileError(ExecutionErrorCode.TRANSACTION_TOO_LARGE, "serialized transaction exceeds 1232 bytes", {"actual_size": diagnostics.wire_size, "limit": self.max_size, "required_signature_count": diagnostics.required_signature_count, "static_account_count": diagnostics.static_account_count, "lookup_writable_count": diagnostics.lookup_writable_count, "lookup_readonly_count": diagnostics.lookup_readonly_count})
+        return CompiledTransaction(plan.opportunity_id, plan.payer, instructions, message, blockhash, lookup_tables, serialized_message, bytes(unsigned), unsigned, compute_message_hash(serialized_message), plan.min_context_slot, signer_keys, diagnostics)
+
+    def sign_fully(self, compiled: CompiledTransaction, signers: Sequence[Keypair]) -> SignedTransaction:
+        if compiled.is_fully_signed:
+            raise TransactionCompileError(ExecutionErrorCode.SIGNATURE_FAILED, "compiled result is already marked signed")
+        pubs = [s.pubkey() for s in signers]
+        counts = Counter(pubs)
+        if any(v != 1 for v in counts.values()):
+            raise TransactionCompileError(ExecutionErrorCode.SIGNATURE_FAILED, "duplicate signer")
+        if set(pubs) != set(compiled.required_signers):
+            raise TransactionCompileError(ExecutionErrorCode.SIGNATURE_FAILED, "missing or unexpected signer", {"required": [str(s) for s in compiled.required_signers], "provided": [str(p) for p in pubs]})
+        ordered = [next(s for s in signers if s.pubkey() == pub) for pub in compiled.required_signers]
+        tx = VersionedTransaction(compiled.message, ordered)
+        if bytes(to_bytes_versioned(tx.message)) != compiled.serialized_message or compute_message_hash(compiled.serialized_message) != compiled.message_hash:
+            raise TransactionCompileError(ExecutionErrorCode.SIGNATURE_FAILED, "message changed during signing")
+        if not all(tx.verify_with_results()):
+            raise TransactionCompileError(ExecutionErrorCode.SIGNATURE_FAILED, "signature verification failed")
+        tx.verify_and_hash_message(); tx.sanitize()
+        raw = bytes(tx)
+        if len(raw) > self.max_size:
+            raise TransactionCompileError(ExecutionErrorCode.TRANSACTION_TOO_LARGE, "signed transaction exceeds 1232 bytes", {"actual_size": len(raw), "limit": self.max_size})
+        return SignedTransaction(compiled, tx, raw, tuple(tx.signatures), compiled.message_hash)
 
     def _validate_plan(self, plan: TransactionPlan) -> None:
-        if plan.payer not in plan.required_signers:
-            raise TransactionCompileError(ExecutionErrorCode.MISSING_SIGNER, "payer must be a required signer")
-        if not plan.flash_loan_plan.projected_active_balances:
-            raise TransactionCompileError(ExecutionErrorCode.MARGINFI_FLASHLOAN_REJECTED, "projected active balances required")
-        if not plan.flash_loan_plan.risk_engine_accounts:
-            raise TransactionCompileError(ExecutionErrorCode.MARGINFI_FLASHLOAN_REJECTED, "risk accounts required")
-        for ix in (*plan.setup_instructions, *plan.strategy_instructions, *plan.cleanup_instructions):
-            if ix.program_id == COMPUTE_BUDGET_PROGRAM_ID:
-                raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "external compute budget instruction rejected")
-            if ix.kind == "sender":
-                raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "sender instruction in provider strategy rejected")
-            if any(a.startswith("PLACEHOLDER") for a in ix.accounts):
-                raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "placeholder account rejected")
+        if not isinstance(plan.payer, Pubkey): raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "payer must be Pubkey")
+        if plan.payer not in plan.required_signers: raise TransactionCompileError(ExecutionErrorCode.MISSING_SIGNER, "payer must be required signer")
+        cb = plan.compute_budget_policy
+        if cb.unit_limit is not None and not (1 <= cb.unit_limit <= 1_400_000): raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "compute unit limit out of range")
+        if cb.micro_lamports_per_cu is not None and cb.micro_lamports_per_cu < 0: raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "compute unit price out of range")
+        if plan.tip_policy.lamports < 0: raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "negative tip")
+        if plan.tip_policy.lamports > 0 and plan.tip_policy.tip_account is None: raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "tip account required")
+        for planned in plan.instructions:
+            if not isinstance(planned, PlannedInstruction) or not isinstance(planned.instruction, Instruction): raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "wire instruction must be solders Instruction")
+            if planned.instruction.program_id == COMPUTE_BUDGET_PROGRAM_ID: raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "caller compute budget instruction rejected")
+            if planned.role in {"compute_budget", "tip", "sender"}: raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "compiler-owned/provider-sender role rejected")
 
     def _validate_alts(self, plan: TransactionPlan, lookup_tables: tuple[ResolvedAddressLookupTable, ...]) -> None:
         by_addr = {a.address: a for a in lookup_tables}
+        if len(by_addr) != len(lookup_tables): raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "duplicate ALT account")
         for address in plan.lookup_table_addresses:
             alt = by_addr.get(address)
-            if alt is None or not alt.addresses or not alt.library_deserialized:
-                raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "unresolved or empty ALT")
-            if alt.owner != ADDRESS_LOOKUP_TABLE_PROGRAM_ID:
-                raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "ALT owner mismatch")
-            if alt.deactivation_slot not in (None, 2**64 - 1):
-                raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "deactivated ALT")
+            if alt is None or alt.owner != ADDRESS_LOOKUP_TABLE_PROGRAM_ID or not alt.library_deserialized: raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "unresolved ALT")
+            missing = set(plan.required_lookup_addresses) - set().union(*(set(a.addresses) for a in lookup_tables))
+            if missing: raise TransactionCompileError(ExecutionErrorCode.UNRESOLVED_ALT, "required lookup addresses missing")
 
-    def _pass1(self, plan: TransactionPlan) -> list[Instruction]:
+    def _compose_instructions(self, plan: TransactionPlan) -> tuple[Instruction, ...]:
+        out: list[Instruction] = []
         cb = plan.compute_budget_policy
-        compute = (Instruction(COMPUTE_BUDGET_PROGRAM_ID, data=f"limit:{cb.unit_limit}".encode(), name="set_compute_unit_limit", kind="compute_budget"), Instruction(COMPUTE_BUDGET_PROGRAM_ID, data=f"price:{cb.micro_lamports_per_cu}".encode(), name="set_compute_unit_price", kind="compute_budget"))
-        end_accounts = plan.flash_loan_plan.projected_active_balances + plan.flash_loan_plan.risk_engine_accounts
-        if plan.flash_loan_plan.token_2022_mint:
-            end_accounts = (plan.flash_loan_plan.token_2022_mint,) + end_accounts
-        end = replace(plan.flash_loan_plan.end_instruction_template, accounts=end_accounts, kind="marginfi_end", name="marginfi_end_flashloan")
-        tip = ()
-        if plan.tip_policy.lamports:
-            if not plan.tip_policy.tip_account:
-                raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "tip account must come from getTipAccounts")
-            tip = (Instruction("11111111111111111111111111111111", (plan.payer, plan.tip_policy.tip_account), f"tip:{plan.tip_policy.lamports}".encode(), "jito_tip", "tip"),)
-        for ix in plan.cleanup_instructions:
-            if ix.kind in {"close_wsol", "unwrap_wsol"}:
-                # cleanup is placed after repay by compiler, but still before end would hide repayment liquidity.
-                raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "wSOL cleanup before repay/end is prohibited in flash-loan path")
-        return [*compute, *plan.setup_instructions, plan.flash_loan_plan.borrow_instruction, *plan.strategy_instructions, plan.flash_loan_plan.repay_instruction, end, *plan.cleanup_instructions, *tip]
+        if cb.unit_limit is not None: out.append(set_compute_unit_limit(cb.unit_limit))
+        if cb.micro_lamports_per_cu is not None: out.append(set_compute_unit_price(cb.micro_lamports_per_cu))
+        out.extend(p.instruction for p in plan.instructions)
+        if plan.tip_policy.lamports > 0:
+            out.append(transfer(TransferParams(from_pubkey=plan.payer, to_pubkey=plan.tip_policy.tip_account, lamports=plan.tip_policy.lamports)))
+        return tuple(out)
 
-    def _pass2(self, plan: TransactionPlan, descriptors: list[Instruction]) -> tuple[tuple[Instruction, ...], int]:
-        end_index = next(i for i, ix in enumerate(descriptors) if ix.kind == "marginfi_end") + 1  # +1 because start is inserted before borrow
-        start = Instruction("MRGNFi11111111111111111111111111111111111", (plan.flash_loan_plan.marginfi_account, plan.flash_loan_plan.authority, plan.flash_loan_plan.group), f"end_index:{end_index}".encode(), "marginfi_start_flashloan", "marginfi_start")
-        borrow_pos = next(i for i, ix in enumerate(descriptors) if ix is plan.flash_loan_plan.borrow_instruction)
-        final = [*descriptors[:borrow_pos], start, *descriptors[borrow_pos:]]
-        actual_end_index = next(i for i, ix in enumerate(final) if ix.kind == "marginfi_end")
-        if actual_end_index != end_index:
-            raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "MarginFi end index mismatch")
-        repay_index = next(i for i, ix in enumerate(final) if ix.kind == "marginfi_repay")
-        if repay_index >= actual_end_index:
-            raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "repay must precede end")
-        for i, ix in enumerate(final):
-            if ix.kind == "tip" and i <= actual_end_index:
-                raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "tip must be after MarginFi end")
-        return tuple(final), actual_end_index
+    def _round_trip(self, tx: VersionedTransaction, serialized_message: bytes) -> None:
+        try:
+            parsed = VersionedTransaction.from_bytes(bytes(tx)); parsed.sanitize(); from_bytes_versioned(serialized_message)
+        except Exception as exc: raise TransactionCompileError(ExecutionErrorCode.INVALID_PLAN, "transaction round-trip failed") from exc
 
-    def _serialize_message(self, payer: str, blockhash: str, instructions: tuple[Instruction, ...], alts: tuple[ResolvedAddressLookupTable, ...]) -> bytes:
-        return b"\n".join([payer.encode(), blockhash.encode(), *(ix.stable_bytes() for ix in instructions), *(a.address.encode() + b":" + a.data_hash.encode() for a in alts)])
+    def _diagnostics(self, tx: VersionedTransaction, message: MessageV0, lookup_tables: tuple[ResolvedAddressLookupTable, ...]) -> TransactionDiagnostics:
+        lookups = message.address_table_lookups
+        w = sum(len(l.writable_indexes) for l in lookups); r = sum(len(l.readonly_indexes) for l in lookups)
+        return TransactionDiagnostics(len(bytes(tx)), message.header.num_required_signatures, len(message.account_keys), w, r, len(message.account_keys) + w + r, tuple(a.address for a in lookup_tables))

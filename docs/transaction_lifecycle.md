@@ -1,17 +1,34 @@
-# PR-005 transaction lifecycle
+# PR-008 transaction lifecycle: generic Solana v0 compiler
 
-Checked on 2026-07-19 against the official contracts recorded in `docs/external_contracts.yaml`.
+Checked on 2026-07-19 against official Solana transaction/versioned-transaction/ALT documentation, solders API docs, and PyPI release metadata. The PR-008 dependency pair is Python 3.13 in CI, `solana==0.40.1`, and `solders==0.28.0`.
 
-The only live execution path is:
+The safe runtime boundary from PR-007 remains shadow-only: live submission is disabled by CI/default environment and the execution compiler does not submit transactions, load wallets, fetch blockhashes, or call RPC/Jito send APIs.
 
-`TradePlan -> TransactionCompiler -> Structural Validation -> RPC Simulation -> Cost Reconciliation -> ExecutionDecision -> Signing -> Submission -> Confirmation -> Balance Reconciliation`.
+## Compiler input/output contract
 
-Providers provide normalized instruction bundles and metadata. They do not choose blockhashes, compile full transactions, sign, simulate, submit, retry, mark landing, or fabricate paper-mode success.
+`TransactionPlan` is provider-agnostic. Provider/application layers pass ordered `PlannedInstruction` wrappers around real `solders.instruction.Instruction` values with `AccountMeta` and opaque `bytes` data. Metadata such as `role`/`name` is diagnostic only and is never encoded into wire data.
 
-## MarginFi flash loans
+The compiler requires typed `Pubkey` payer/signers/ALT keys and a typed non-default `Hash` inside `BlockhashContext`. It owns only generic composition: official Compute Budget instructions at the front and, when `TipPolicy.lamports > 0`, exactly one official System Program transfer at the end.
 
-MarginFi flash loans are modeled as `start_flashloan(end_index)` and `end_flashloan(projected_active_balances)` around ordinary lending borrow and repay instructions. The compiler computes the final end instruction position in pass 1 and only builds the start instruction in pass 2.
+`CompiledTransaction` contains a real `MessageV0`, canonical versioned message bytes from `to_bytes_versioned(message)`, an unsigned `VersionedTransaction.populate(...)` simulation envelope with default signatures, signer ordering, message hash, actual wire size, and account/ALT diagnostics. `SignedTransaction` is produced only by `TransactionCompiler.sign_fully(...)` from explicit `Keypair` signers and verifies signatures without mutating the compiled result.
 
-## Shadow mode
+## Message bytes vs transaction bytes
 
-Shadow/paper mode can build, sign locally when safe, simulate, and record `WOULD_EXECUTE` or `WOULD_REJECT`. It must not create fake bundle IDs, call confirmation trackers, or record a landed trade.
+Canonical versioned message bytes are used for message hashing and `getFeeForMessage`. Transaction bytes are used for `simulateTransaction` and size checks. The unsigned envelope is valid only for `simulateTransaction(sigVerify=false)`; `sigVerify=true` requires a fully signed result.
+
+## ALT policy
+
+ALT account data is parsed with solders lookup-table state parsers (`AddressLookupTable.deserialize`, with solders `from_bytes` accepted for deterministic solders-generated state fixtures), then converted to `AddressLookupTableAccount(key, parsed.addresses)` for `MessageV0.try_compile`. Validation rejects wrong owner, corrupt bytes, empty/oversized tables, duplicate addresses, deactivated/deactivating tables, same-slot extensions, missing required lookup addresses, duplicate ALT accounts, and unresolved requested tables. The ALT source slot and data hash are retained for diagnostics.
+
+## Size and non-goals
+
+The 1232-byte limit is enforced fail-closed on `len(bytes(VersionedTransaction))`, including all 64-byte signature slots. Oversized plans return typed `TRANSACTION_TOO_LARGE` diagnostics; PR-008 does not requote routes, implement MarginFi/Jupiter instruction bytes, add capital feasibility, add token-aware PnL, enable live submission, or load secrets.
+
+## Reproducible dependencies
+
+Runtime dependencies are maintained in `requirements.in` and locked in `requirements.txt`; dev/test/lint dependencies are maintained in `requirements-dev.in` and locked in `requirements-dev.txt`. Regenerate deterministically with:
+
+```bash
+python -m piptools compile --resolver=backtracking --strip-extras -q -o requirements.txt requirements.in
+python -m piptools compile --resolver=backtracking --strip-extras -q -o requirements-dev.txt requirements-dev.in
+```

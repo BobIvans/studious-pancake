@@ -91,3 +91,27 @@ providers:
       - contract test
   odos_solana:
     status: disabled_until_official_solana_instruction_contract_verified
+
+execution_compiler_pr008:
+  verified_at: "2026-07-19"
+  python: "3.13 (CI)"
+  solana: "0.40.1"
+  solders: "0.28.0"
+  official_sources:
+    - https://solana.com/docs/core/transactions/versioned-transactions
+    - https://solana.com/docs/core/transactions
+    - https://solana.com/developers/guides/advanced/lookup-tables
+    - https://kevinheavey.github.io/solders/api_reference/index.html
+    - https://kevinheavey.github.io/solders/tutorials/transactions.html
+    - https://kevinheavey.github.io/solders/api_reference/message.html
+    - https://pypi.org/project/solana/
+    - https://pypi.org/project/solders/
+  inputs: "solders Instruction/AccountMeta, Pubkey signer/payer/ALT keys, non-default Hash blockhash context"
+  outputs: "MessageV0, canonical versioned message bytes, unsigned simulation VersionedTransaction envelope, strict fully signed SignedTransaction"
+  alt_policy: "official solders lookup-table state parser, owner/freshness/duplicate/deactivation/missing-address checks, AddressLookupTableAccount for MessageV0.try_compile"
+  size_policy: "fail closed over 1232 bytes using actual VersionedTransaction bytes including signatures"
+  non_goals:
+    - MarginFi instruction encoding
+    - Jupiter/provider API calls
+    - live submission
+    - key or secret loading

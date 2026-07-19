@@ -11,6 +11,8 @@ from src.ingest.pre_trade_guard import PreTradeGuard
 from src.ingest.jito_bundle_handler import JitoBundleHandler
 from src.ingest.rpc_multiplexing import ExecutionPipeline
 from solders.keypair import Keypair
+import pytest
+pytestmark = pytest.mark.integration
 
 load_dotenv()
 
@@ -19,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 async def test_complete_mev_pipeline():
     """Test the complete MEV execution pipeline."""
+
     logger.info("🚀 Testing Complete MEV Executor Pipeline...")
 
     # Initialize components

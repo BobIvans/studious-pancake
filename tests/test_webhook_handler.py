@@ -8,6 +8,7 @@ import os
 import glob
 from aiohttp import web
 import pytest
+pytestmark = pytest.mark.unit
 
 from src.ingest.helius_webhook_handler import HeliusWebhookHandler
 from src.ingest.data_aggregator import DataAggregator

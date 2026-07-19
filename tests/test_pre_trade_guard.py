@@ -6,6 +6,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import asyncio
 from solders.pubkey import Pubkey
 from src.ingest.pre_trade_guard import TokenSecurityChecker, LiquidityValidator, PreTradeGuard
+import pytest
+pytestmark = pytest.mark.unit
 
 
 class TestPreTradeGuard(unittest.TestCase):
@@ -16,6 +18,7 @@ class TestPreTradeGuard(unittest.TestCase):
     @patch('aiohttp.ClientSession.post')
     def test_token_security_whitelist(self, mock_post):
         """Проверка, что токены из белого списка (например, SOL) проходят проверку мгновенно."""
+
         checker = TokenSecurityChecker(session=None, rpc_url="http://dummy")
 
         is_safe, reason = self.loop.run_until_complete(

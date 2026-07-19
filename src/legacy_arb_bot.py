@@ -7433,25 +7433,15 @@ async def handle_graduation_event(opportunity, session, cfg, rpc, keypair):
 
 # ULTRA ARB - Advanced Strategy Event Handlers
 async def handle_liquidation_opportunity(opportunity, liquidation_engine, keypair):
-    """Handle liquidation arbitrage opportunity."""
-    try:
-        logger.debug(
-            f"🏦 Liquidation Opportunity: {opportunity.debt_asset} -> {opportunity.collateral_asset} | "
-            f"HF: {opportunity.health_factor} | Profit: ${opportunity.estimated_profit}"
-        )
+    """Quarantined legacy liquidation callback.
 
-        # Execute atomic liquidation
-        success = await liquidation_engine.execute_liquidation(
-            opportunity, jito_tip_lamports=10000, wallet_keypair=keypair
-        )
-
-        if success:
-            logger.debug("✅ Liquidation executed successfully")
-        else:
-            logger.warning("❌ Liquidation execution failed")
-
-    except Exception as e:
-        logger.error(f"Liquidation handling error: {e}")
+    PR-020 liquidation planning is shadow-only and must not route through the
+    legacy executor, sender, signer, Jito, or keypair path. The old direct executor call is intentionally removed from the reachable
+    callback so `src/ingest/liquidator_engine.py` can remain
+    an unmodified legacy artifact while active runtime stays isolated.
+    """
+    logger.warning("legacy liquidation opportunity ignored: PR-020 is shadow-only")
+    return False
 
 
 async def handle_epoch_opportunity(opportunity, epoch_tracker, keypair, jito_executor):

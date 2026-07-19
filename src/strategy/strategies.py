@@ -60,7 +60,7 @@ class DisabledShellStrategy(BaseDetectionStrategy):
 
 class KaminoLiquidationStrategy(DisabledShellStrategy):
     def __init__(self) -> None:
-        super().__init__("kamino_liquidation", StrategyMode.DISABLED, "execution intentionally out of scope for PR-002")
+        super().__init__("kamino_liquidation", StrategyMode.DISABLED, "legacy Kamino liquidation execution quarantined; PR-020 shadow planner lives in src.liquidation.strategy and has no sender access")
 
 
 class PumpMigrationStrategy(DisabledShellStrategy):

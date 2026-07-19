@@ -1,0 +1,131 @@
+{
+  "inputMint": "So11111111111111111111111111111111111111112",
+  "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+  "inAmount": "1000000",
+  "outAmount": "25000000",
+  "otherAmountThreshold": "24750000",
+  "swapMode": "ExactIn",
+  "slippageBps": 100,
+  "routePlan": [
+    {
+      "percent": 100,
+      "bps": 10000,
+      "swapInfo": {
+        "ammKey": "AMM111111111111111111111111111111111111111",
+        "label": "TestDex",
+        "inputMint": "So11111111111111111111111111111111111111112",
+        "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "inAmount": "1000000",
+        "outAmount": "25000000"
+      }
+    }
+  ],
+  "computeBudgetInstructions": [
+    {
+      "programId": "ComputeBudget111111111111111111111111111111",
+      "accounts": [],
+      "data": "cHJpY2U="
+    }
+  ],
+  "setupInstructions": [
+    {
+      "programId": "11111111111111111111111111111111",
+      "accounts": [
+        {
+          "pubkey": "Takr111111111111111111111111111111111111111",
+          "isSigner": true,
+          "isWritable": true
+        },
+        {
+          "pubkey": "ATA1111111111111111111111111111111111111111",
+          "isSigner": false,
+          "isWritable": true
+        }
+      ],
+      "data": "c2V0dXA="
+    }
+  ],
+  "swapInstruction": {
+    "programId": "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4",
+    "accounts": [
+      {
+        "pubkey": "Takr111111111111111111111111111111111111111",
+        "isSigner": true,
+        "isWritable": false
+      },
+      {
+        "pubkey": "Pool111111111111111111111111111111111111111",
+        "isSigner": false,
+        "isWritable": true
+      }
+    ],
+    "data": "c3dhcA=="
+  },
+  "cleanupInstruction": null,
+  "otherInstructions": [
+    {
+      "programId": "11111111111111111111111111111111",
+      "accounts": [
+        {
+          "pubkey": "Other11111111111111111111111111111111111111",
+          "isSigner": false,
+          "isWritable": false
+        }
+      ],
+      "data": "b3RoZXI="
+    }
+  ],
+  "tipInstruction": {
+    "programId": "11111111111111111111111111111111",
+    "accounts": [
+      {
+        "pubkey": "Tip1111111111111111111111111111111111111111",
+        "isSigner": false,
+        "isWritable": true
+      }
+    ],
+    "data": "dGlw"
+  },
+  "addressesByLookupTableAddress": {
+    "ALT1111111111111111111111111111111111111111": [
+      "Pool111111111111111111111111111111111111111"
+    ]
+  },
+  "blockhashWithMetadata": {
+    "blockhash": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "lastValidBlockHeight": 123456
+  }
+}

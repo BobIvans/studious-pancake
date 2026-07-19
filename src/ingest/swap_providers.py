@@ -213,7 +213,9 @@ class OpenOceanSolanaAdapter(BaseAdapter):
     def status(self): return SwapProviderStatus(self.name, ProviderHealth.UNAVAILABLE, self.capabilities)
 
 def active_solana_providers() -> tuple[SwapProvider,...]:
-    return (JupiterSwapV2Adapter(), OKXSolanaAdapter(), ZeroXSolanaAdapter(enabled=False), OpenOceanSolanaAdapter())
+    # PR-011: Jupiter is provided only by src.providers.jupiter.router.JupiterRouterAdapter.
+    # The legacy JupiterSwapV2Adapter above remains importable for old tests but is not on the active execution path.
+    return (OKXSolanaAdapter(), ZeroXSolanaAdapter(enabled=False), OpenOceanSolanaAdapter())
 
 def execution_shortlist(quotes: Sequence[NormalizedQuote], providers: Mapping[str, SwapProvider]) -> tuple[NormalizedQuote,...]:
     return tuple(q for q in quotes if q.is_fresh(providers[q.provider].freshness) and providers[q.provider].capabilities & SwapCapability.RAW_INSTRUCTIONS)

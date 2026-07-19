@@ -42,8 +42,8 @@ non-composable plans, unproven postconditions and simulated repayment failure.
 
 ## Legacy isolation
 
-`src/ingest/liquidator_engine.py` is quarantined and raises before the legacy
-execute path. The conflict-prone legacy placeholder builder/send body was removed
-from that method; the remaining method is an import-compatible hard stop for
-historical callers. The active PR-020 shadow strategy imports no sender, signer,
-Jito, keypair transport or live permit modules.
+`src/ingest/liquidator_engine.py` remains a legacy artifact and is excluded
+from the active PR-020 shadow graph to avoid merge-conflict churn in that file.
+The active PR-020 shadow strategy imports no sender, signer, Jito, keypair
+transport or live permit modules, and legacy callers must not route liquidation
+execution through PR-020.

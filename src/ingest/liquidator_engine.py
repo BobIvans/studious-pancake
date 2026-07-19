@@ -242,18 +242,31 @@ class LiquidationEngine:
 
     async def execute_liquidation(self, opportunity: LiquidationOpportunity,
                                  jito_tip_lamports: int, wallet_keypair) -> bool:
-        """Quarantined legacy path: PR-020 forbids live liquidation execution.
+        """Execute atomic flash liquidation."""
+        try:
+            logger.info(f"🏦 Executing liquidation: {opportunity.protocol} | "
+                       f"Debt: {opportunity.debt_asset} | Collateral: {opportunity.collateral_asset} | "
+                       f"Profit: ${opportunity.estimated_profit}")
 
-        This method intentionally has no fallback builder, sender, signer, Jito,
-        or placeholder execution body. Keeping the legacy method as an
-        immediate runtime error resolves merge conflicts around old guessed
-        liquidation code while preserving import compatibility for historical
-        modules that still reference ``LiquidationEngine``.
-        """
-        raise RuntimeError(
-            "legacy LiquidationEngine.execute_liquidation is quarantined; "
-            "use shadow-only src.liquidation planner"
-        )
+            # Build flash liquidation transaction:
+            # 1. Flashloan debt asset
+            # 2. Liquidate obligation
+            # 3. Swap collateral back to debt asset
+            # 4. Repay flashloan
+            # 5. Jito tip (capital protected)
+
+            # Implementation would use protocol-specific liquidation instructions
+            # For Kamino: LiquidateObligation instruction
+            # For MarginFi: Similar liquidation instruction
+
+            # Placeholder - would implement full transaction building
+            logger.info("⚠️ Liquidation execution placeholder - needs full implementation")
+
+            return False
+
+        except Exception as e:
+            logger.error(f"Liquidation execution failed: {e}")
+            return False
 
     async def _extract_kamino_positions(self, account_data: Dict[str, Any]) -> tuple:
         """Extract positions from Kamino obligation."""

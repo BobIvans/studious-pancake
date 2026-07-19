@@ -242,7 +242,8 @@ class LiquidationEngine:
 
     async def execute_liquidation(self, opportunity: LiquidationOpportunity,
                                  jito_tip_lamports: int, wallet_keypair) -> bool:
-        """Execute atomic flash liquidation."""
+        """Quarantined legacy path: PR-020 forbids live liquidation execution."""
+        raise RuntimeError("legacy LiquidationEngine.execute_liquidation is quarantined; use shadow-only src.liquidation planner")
         try:
             logger.info(f"🏦 Executing liquidation: {opportunity.protocol} | "
                        f"Debt: {opportunity.debt_asset} | Collateral: {opportunity.collateral_asset} | "

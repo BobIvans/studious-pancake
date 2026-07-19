@@ -1,0 +1,17 @@
+{
+  "verified_on": "2026-07-19",
+  "sources": [
+    {"protocol":"marginfi_v2","source":"https://github.com/0dotxyz/marginfi-v2","commit":"unverified-in-this-offline-fixture","idl_sha256":"fixture-disabled-until-rpc-and-idl-owner-verification","status":"disabled","reason":"liquidation_deployment_mismatch"},
+    {"protocol":"marginfi_v2_docs","source":"https://docs.marginfi.com/mfi-v2","conclusion":"liquidation buys discounted collateral, repays debt, charges fees, verifies health improvement"},
+    {"protocol":"marginfi_intro","source":"https://docs.marginfi.com/introduction","conclusion":"health <= 0% exposes account to liquidation; weighted assets/liabilities are used"},
+    {"protocol":"kamino_lend_docs","source":"https://kamino.com/docs/curators/markets/liquidations","conclusion":"market liquidations are protocol/config/version dependent"},
+    {"protocol":"kamino_borrow_concepts","source":"https://kamino.com/docs/products/borrow/concepts","conclusion":"Current LTV above Liquidation LTV is eligible; close factor is documented as configurable/versioned and must come from snapshot"},
+    {"protocol":"solana_rpc","source":"https://solana.com/docs/rpc","conclusion":"simulation and account reads must use official simulateTransaction/getMultipleAccounts semantics"},
+    {"protocol":"token_2022_transfer_fee","source":"https://solana.com/docs/tokens/extensions/transfer-fees","conclusion":"Token-2022 transfer fees are accounted in sizing when present"}
+  ],
+  "supported_combinations": [],
+  "default_manifest": [
+    {"target":"kamino_lend","financing":"marginfi_flashloan_provider_pr009","status":"disabled","reason":"liquidation_deployment_mismatch"},
+    {"target":"marginfi_v2","financing":"marginfi_flashloan_provider_pr009","status":"disabled","reason":"liquidation_deployment_mismatch"}
+  ]
+}

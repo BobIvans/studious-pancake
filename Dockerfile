@@ -23,7 +23,10 @@ RUN mkdir -p /app/data
 # Default environment variables (overridden at runtime)
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    PAPER_TRADING_ONLY=true
+    PAPER_TRADING_ONLY=true \
+    LIVE_TRADING_ENABLED=false \
+    JITO_ENABLED=false \
+    KAMINO_LIQUIDATION_ENABLED=false
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \

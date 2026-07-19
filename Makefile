@@ -1,24 +1,22 @@
-.PHONY: run paper test clean recovery help
+.PHONY: install syntax test test-live verify paper
 
-run:
-	python arb_bot.py
+install:
+	python -m pip install --upgrade pip setuptools wheel
+	python -m pip install -r requirements.txt
 
-paper:
-	python scripts/paper_trader.py
+syntax:
+	python -m compileall -q arb_bot.py src scripts tests
 
 test:
-	python tests/test_runner.py
+	PAPER_TRADING_ONLY=true LIVE_TRADING_ENABLED=false JITO_ENABLED=false KAMINO_LIQUIDATION_ENABLED=false \
+	python -m pytest -m "not live and not manual" --disable-socket -q
 
-clean:
-	python scripts/clean_state.py
+test-live:
+	python -m pytest -m "live and not manual" -q
 
-recovery:
-	python scripts/emergency_recover.py
+verify:
+	python scripts/verify_repo.py
 
-help:
-	@echo "Available targets:"
-	@echo "  make run      - Start the main arbitrage bot"
-	@echo "  make paper    - Start the paper trading simulator"
-	@echo "  make test     - Run pytest and code syntax checks"
-	@echo "  make clean    - Wipe database and log states"
-	@echo "  make recovery - Run emergency rent and wSOL recovery"
+paper:
+	PAPER_TRADING_ONLY=true LIVE_TRADING_ENABLED=false JITO_ENABLED=false KAMINO_LIQUIDATION_ENABLED=false \
+	python scripts/paper_trader.py

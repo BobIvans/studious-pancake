@@ -1,3 +1,5 @@
+import pytest
+pytestmark = pytest.mark.unit
 #!/usr/bin/env python3
 """
 Unit Tests for AMM Math Dispatcher (БЛОК 2)
@@ -10,6 +12,7 @@ Covers:
   - DLMM: bin traversal with bin_reserves; pessimistic fallback (≤ CPMM) without
   - backward-compat: constant_product dispatch == legacy AmmMath
 """
+
 
 import os
 import sys

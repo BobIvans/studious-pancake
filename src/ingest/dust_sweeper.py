@@ -17,7 +17,11 @@ from solders.message import MessageV0
 from solders.keypair import Keypair
 from solders.rpc.requests import GetProgramAccounts, GetAccountInfo
 from solders.rpc.config import RpcAccountInfoConfig
-from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID
+from spl.token.constants import TOKEN_PROGRAM_ID
+try:
+    from spl.token.constants import TOKEN_2022_PROGRAM_ID
+except ImportError:
+    TOKEN_2022_PROGRAM_ID = Pubkey.default()
 
 logger = logging.getLogger(__name__)
 

@@ -1,9 +1,12 @@
+import pytest
+pytestmark = pytest.mark.unit
 #!/usr/bin/env python3
 """
 Unit Tests for Optimal Trade Sizing
 
 Tests the ternary search optimization for finding optimal arbitrage trade sizes.
 """
+
 
 import unittest
 import sys

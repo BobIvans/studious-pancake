@@ -5,12 +5,15 @@ import asyncio
 import logging
 from decimal import Decimal
 from src.ingest.optimal_trade_sizer import OptimalTradeSizer, VelocitySlippageManager, ArbitragePath, PoolReserves
+import pytest
+pytestmark = pytest.mark.simulation
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def test_optimal_sizing():
     """Test optimal trade sizing."""
+
     logger.info("🧪 Testing Optimal Trade Sizing...")
 
     sizer = OptimalTradeSizer()

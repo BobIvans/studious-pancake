@@ -17,7 +17,11 @@ from solders.hash import Hash
 from solders.message import MessageV0
 from solders.system_program import TransferParams, transfer
 from spl.token.instructions import get_associated_token_address
-from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+from spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+try:
+    from spl.token.constants import TOKEN_2022_PROGRAM_ID
+except ImportError:
+    TOKEN_2022_PROGRAM_ID = Pubkey.default()
 import src.ingest.shared_state as shared_state
 
 

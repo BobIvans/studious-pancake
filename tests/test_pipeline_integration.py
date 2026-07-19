@@ -1,9 +1,12 @@
+import pytest
+pytestmark = pytest.mark.integration
 #!/usr/bin/env python3
 """
 Integration Test for Optimal Trade Sizing in Sniper Engine Pipeline
 
 Tests the complete pipeline integration with optimal trade sizing.
 """
+
 
 import asyncio
 import sys

@@ -2,6 +2,8 @@
 
 import asyncio
 
+import pytest
+
 
 class CompatibilityEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
     """Restore pre-3.14 get_event_loop behavior expected by legacy tests."""
@@ -16,3 +18,9 @@ class CompatibilityEventLoopPolicy(asyncio.DefaultEventLoopPolicy):
 
 
 asyncio.set_event_loop_policy(CompatibilityEventLoopPolicy())
+
+
+@pytest.hookimpl(trylast=True)
+def pytest_configure(config):
+    """Allow AF_UNIX loop self-pipes while pytest-socket blocks network sockets."""
+    setattr(config, "__socket_allow_unix_socket", True)

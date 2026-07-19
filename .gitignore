@@ -69,3 +69,27 @@ wallet*.json*
 *keypair*.json*
 wallet*.json*
 *keypair*.json*
+
+# ── Test/runtime byproducts ───────────────────────────────────────────────────
+logs/
+*.log
+*.jsonl
+*.sqlite
+*.sqlite3
+*.duckdb
+*.parquet
+*.feather
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+health-state*.json
+health_state*.json
+*health*.state
+.tmp/
+tmp/
+temp/
+.wallet/
+test_wallet*.json
+paper_wallet*.json

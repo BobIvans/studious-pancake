@@ -34,8 +34,11 @@ try:
     CREATE_ATA_FUNCTION = create_idempotent_associated_token_account
 except ImportError:
     CREATE_ATA_FUNCTION = create_associated_token_account
-    logger.warning("create_idempotent_associated_token_account not available")
-from spl.token.constants import TOKEN_PROGRAM_ID, TOKEN_2022_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+from spl.token.constants import TOKEN_PROGRAM_ID, ASSOCIATED_TOKEN_PROGRAM_ID
+try:
+    from spl.token.constants import TOKEN_2022_PROGRAM_ID
+except ImportError:
+    TOKEN_2022_PROGRAM_ID = Pubkey.default()
 from solders.system_program import ID as SYSTEM_PROGRAM_ID
 
 # AToken Program ID constant for ATA detection

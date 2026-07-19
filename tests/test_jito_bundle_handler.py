@@ -5,12 +5,15 @@ import asyncio
 import logging
 from src.ingest.jito_bundle_handler import JitoBundleHandler, BackrunTrigger, _set_global_price_matrix, _normalize_tip_sol
 from solders.keypair import Keypair
+import pytest
+pytestmark = pytest.mark.simulation
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 async def test_cross_currency_normalization():
     """Test cross-currency tip normalization prevents the USDC-as-SOL bug."""
+
     logger.info("🧪 Testing Cross-Currency Tip Normalization...")
 
     # Set up price matrix with SOL at $150 and USDC at $1

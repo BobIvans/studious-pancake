@@ -2,6 +2,29 @@
 
 Автоматический arbitrage бот для Solana с использованием MarginFi flash loans и Jupiter DEX агрегации. Бот выполняет высокопроизводительные arbitrage сделки в реальном времени.
 
+## Reproducible offline baseline
+
+The supported runtime for CI, Docker, and local verification is Python 3.13. A clean checkout can be validated without Solana mainnet, external APIs, private keys, Jito, or live transaction submission.
+
+```bash
+python3.13 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip setuptools wheel
+python -m pip install -r requirements.txt
+make verify
+```
+
+`make verify` runs dependency validation, syntax compilation, import smoke tests, and offline pytest with sockets disabled. It intentionally does not run paper trading, live simulation, or live trading readiness checks. Use `make test-live` only when deliberately running tests marked `live` with real external services.
+
+Safe verification defaults are:
+
+```bash
+PAPER_TRADING_ONLY=true
+LIVE_TRADING_ENABLED=false
+JITO_ENABLED=false
+KAMINO_LIQUIDATION_ENABLED=false
+```
+
 ## Основные возможности
 
 - 🚀 **MarginFi Flash Loans** - Бесплатные flash loans для arbitrage
@@ -44,12 +67,12 @@
 
  4. **Симуляция сделок (тестирование):**
     ```bash
-    python paper_trader.py
+    make paper
     ```
 
  5. **Запуск тестов:**
     ```bash
-    python test_runner.py
+    make verify
     ```
 
 ## Архитектура
@@ -163,11 +186,11 @@ opportunities = await data_aggregator.get_lst_arbitrage_opportunities()
 1. **Встроенная симуляция** - `arb_bot.py` по умолчанию симулирует транзакции перед выполнением
 2. **Paper Trading** - Полная симуляция arbitrage без реальных транзакций:
    ```bash
-   python paper_trader.py
+   make paper
    ```
 3. **Тестирование компонентов**:
    ```bash
-   python test_runner.py
+   make verify
    ```
 
 ### Переменные окружения для симуляции:

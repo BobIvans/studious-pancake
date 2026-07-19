@@ -1,147 +1,139 @@
-pr022_decision_intelligence:
-  docs:
-  - https://scikit-learn.org/stable/modules/calibration.html
-  - https://scikit-learn.org/stable/modules/generated/sklearn.calibration.CalibratedClassifierCV.html
-  - https://scikit-learn.org/stable/auto_examples/calibration/plot_calibration_curve.html
-  - https://scikit-learn.org/stable/modules/generated/sklearn.inspection.permutation_importance.html
-  safety_note: Mechanics only; PR-022 uses explicit grouped temporal split and safe
-    JSON artifacts.
-  scikit_learn_version: 1.8.0
+verified_at: "2026-07-19"
 providers:
   jupiter_router:
+    status: active
+    observed_schema_date: "2026-07-19"
+    official_docs:
+      - https://developers.jup.ag/docs/swap
+      - https://developers.jup.ag/docs/swap/build
+      - https://dev.jup.ag/portal/rate-limit
     base_url: https://api.jup.ag
-    composability: returns raw Router instructions only; /order is non-composable
-      and /execute is not used for /build output.
-    compute_budget_policy:
-      compiler_supplies: one compute unit limit
-      jupiter_supplies: compute unit price instruction
-      simulation_flow: first simulate at 1400000 CU, final limit min(ceil(unitsConsumed
-        * 1.2), 1400000), then simulate final transaction
-    corrected_legacy_deviations:
-    - endpoint is authenticated GET /swap/v2/build, not POST /build and not old quote/swap
-      endpoints
-    - account meta is parsed from pubkey/isSigner/isWritable without dropping flags
-    - top-level computeBudgetInstructions and tipInstruction are parsed as separate
-      buckets
-    - addressesByLookupTableAddress is treated as untrusted candidate mapping for
-      PR-008 ALT validation
-    - quota is account-wide sliding window, not per-client RPS
-    defaults:
-      forJitoBundle_when_non_live_jito_compatible: true
-      jupiter_tipAmount: omitted
-      maxAccounts: 64
-      platformFeeBps: 0
-      tip_owner: COMPILER_OR_JITO
-      wrapAndUnwrapSol_for_marginfi_wsol_policy: false
     instruction_endpoint:
-      auth_header: x-api-key
       method: GET
       path: /swap/v2/build
-    observed_schema_date: '2026-07-19'
-    official_docs:
-    - https://developers.jup.ag/docs/swap
-    - https://developers.jup.ag/docs/swap/build
-    - https://dev.jup.ag/portal/rate-limit
-    rate_limits:
-      account_scope: per Jupiter account; extra API keys do not increase quota
-      default_fixed_free_quota: 60 requests per 60 second sliding window
-      on_429: bounded backoff/circuit; no retry burst
-      protected_finalization_reserve_requests: 4
+      auth_header: x-api-key
+    sole_active_entry_point: src.providers.jupiter.router.JupiterRouterAdapter
+    composability: returns raw Router instructions only; /order is non-composable and /execute is not used for /build output.
     request_parameters:
-    - inputMint
-    - outputMint
-    - amount
-    - taker
-    - payer
-    - slippageBps
-    - maxAccounts
-    - wrapAndUnwrapSol
-    - forJitoBundle
-    - dexes
-    - excludeDexes
+      - inputMint
+      - outputMint
+      - amount
+      - taker
+      - payer
+      - slippageBps
+      - maxAccounts
+      - wrapAndUnwrapSol
+      - forJitoBundle
+      - dexes
+      - excludeDexes
     response_fields:
-    - inputMint
-    - outputMint
-    - inAmount
-    - outAmount
-    - otherAmountThreshold
-    - swapMode
-    - slippageBps
-    - routePlan
-    - computeBudgetInstructions
-    - setupInstructions
-    - swapInstruction
-    - cleanupInstruction
-    - otherInstructions
-    - tipInstruction
-    - addressesByLookupTableAddress
-    - blockhashWithMetadata
+      - inputMint
+      - outputMint
+      - inAmount
+      - outAmount
+      - otherAmountThreshold
+      - swapMode
+      - slippageBps
+      - routePlan
+      - computeBudgetInstructions
+      - setupInstructions
+      - swapInstruction
+      - cleanupInstruction
+      - otherInstructions
+      - tipInstruction
+      - addressesByLookupTableAddress
+      - blockhashWithMetadata
     sanitized_fixtures:
       success: tests/fixtures/providers/jupiter/router_build_success_2026-07-19.json
       unexpected_tip: tests/fixtures/providers/jupiter/router_build_unexpected_tip_2026-07-19.json
       unknown_schema: tests/fixtures/providers/jupiter/router_build_unknown_field_2026-07-19.json
-    sole_active_entry_point: src.providers.jupiter.router.JupiterRouterAdapter
-    status: active
+    corrected_legacy_deviations:
+      - endpoint is authenticated GET /swap/v2/build, not POST /build and not old quote/swap endpoints
+      - account meta is parsed from pubkey/isSigner/isWritable without dropping flags
+      - top-level computeBudgetInstructions and tipInstruction are parsed as separate buckets
+      - addressesByLookupTableAddress is treated as untrusted candidate mapping for PR-008 ALT validation
+      - quota is account-wide sliding window, not per-client RPS
+    defaults:
+      maxAccounts: 64
+      wrapAndUnwrapSol_for_marginfi_wsol_policy: false
+      forJitoBundle_when_non_live_jito_compatible: true
+      platformFeeBps: 0
+      tip_owner: COMPILER_OR_JITO
+      jupiter_tipAmount: omitted
+    compute_budget_policy:
+      jupiter_supplies: compute unit price instruction
+      compiler_supplies: one compute unit limit
+      simulation_flow: first simulate at 1400000 CU, final limit min(ceil(unitsConsumed * 1.2), 1400000), then simulate final transaction
+    rate_limits:
+      default_fixed_free_quota: 60 requests per 60 second sliding window
+      account_scope: per Jupiter account; extra API keys do not increase quota
+      protected_finalization_reserve_requests: 4
+      on_429: bounded backoff/circuit; no retry burst
   jupiter_swap_v2:
-    replacement: src.providers.jupiter.router.JupiterRouterAdapter
     status: legacy_isolated_not_active
-  odos_solana:
-    status: disabled_until_official_solana_instruction_contract_verified
+    replacement: src.providers.jupiter.router.JupiterRouterAdapter
   okx_solana:
-    authentication_headers:
-    - OK-ACCESS-KEY
-    - OK-ACCESS-TIMESTAMP
-    - OK-ACCESS-PASSPHRASE
-    - OK-ACCESS-SIGN
+    status: active
+    official_docs:
+      - https://web3.okx.com/onchainos/dev-docs/trade/dex-solana-swap-instruction
+      - https://web3.okx.com/onchainos/dev-docs/trade/dex-use-swap-solana-quick-start
     base_url: https://web3.okx.com
-    chainIndex: '501'
-    fee_defaults: partner/referral/positive-slippage fees disabled
     instruction_endpoint:
       method: GET
       path: /api/v6/dex/aggregator/swap-instruction
-    official_docs:
-    - https://web3.okx.com/onchainos/dev-docs/trade/dex-solana-swap-instruction
-    - https://web3.okx.com/onchainos/dev-docs/trade/dex-use-swap-solana-quick-start
+    chainIndex: "501"
+    authentication_headers:
+      - OK-ACCESS-KEY
+      - OK-ACCESS-TIMESTAMP
+      - OK-ACCESS-PASSPHRASE
+      - OK-ACCESS-SIGN
+    signature: Base64(HMAC_SHA256(signing_material, timestamp + method + requestPath + body))
+    response_contract: instructionLists, routerResult, and addressLookupTableAddresses are normalized; ComputeBudget instructions are separated.
+    fee_defaults: partner/referral/positive-slippage fees disabled
     rate_limits: configured from approved account tier; no assumed trial maximum
-    response_contract: instructionLists, routerResult, and addressLookupTableAddresses
-      are normalized; ComputeBudget instructions are separated.
-    signature: Base64(HMAC_SHA256(signing_material, timestamp + method + requestPath
-      + body))
-    status: active
-  openocean_solana:
-    official_docs:
-    - https://docs.openocean.finance/docs/swap-api/guide
-    - https://docs.openocean.finance/docs/swap-api/enterprise
-    quote_endpoint:
-      method: GET
-      url: https://open-api.openocean.finance/v4/solana/quote
-    raw_instructions_activation_requirements:
-    - authorized official Solana response fixture
-    - sanitized fixture
-    - validated instruction semantics
-    - validated ALT handling
-    - contract test
-    raw_instructions_enabled: false
-    status: quote_only_unavailable_without_whitelist
-    v4_quote_parameters:
-    - inTokenAddress
-    - outTokenAddress
-    - amountDecimals
-    - slippage
-    - account
   zero_x_solana:
-    current_alpha_capabilities:
-      address_lookup_tables: true
-      legacy_spl_token: true
-      native_sol: false
-      preserve_flat_instruction_order: true
-      token_2022: false
-      wsol: true
+    status: feature_gated_priority_access
+    official_docs:
+      - https://docs.0x.org/
+      - https://0x.org/products/solana
     endpoint:
       method: POST
       url: https://api.0x.org/solana/swap-instructions
+    current_alpha_capabilities:
+      legacy_spl_token: true
+      token_2022: false
+      native_sol: false
+      wsol: true
+      preserve_flat_instruction_order: true
+      address_lookup_tables: true
+  openocean_solana:
+    status: quote_only_unavailable_without_whitelist
     official_docs:
-    - https://docs.0x.org/
-    - https://0x.org/products/solana
-    status: feature_gated_priority_access
-verified_at: '2026-07-19'
+      - https://docs.openocean.finance/docs/swap-api/guide
+      - https://docs.openocean.finance/docs/swap-api/enterprise
+    quote_endpoint:
+      method: GET
+      url: https://open-api.openocean.finance/v4/solana/quote
+    v4_quote_parameters:
+      - inTokenAddress
+      - outTokenAddress
+      - amountDecimals
+      - slippage
+      - account
+    raw_instructions_enabled: false
+    raw_instructions_activation_requirements:
+      - authorized official Solana response fixture
+      - sanitized fixture
+      - validated instruction semantics
+      - validated ALT handling
+      - contract test
+  odos_solana:
+    status: disabled_until_official_solana_instruction_contract_verified
+pr022_decision_intelligence:
+  scikit_learn_version: "1.8.0"
+  docs:
+    - https://scikit-learn.org/stable/modules/calibration.html
+    - https://scikit-learn.org/stable/modules/generated/sklearn.calibration.CalibratedClassifierCV.html
+    - https://scikit-learn.org/stable/auto_examples/calibration/plot_calibration_curve.html
+    - https://scikit-learn.org/stable/modules/generated/sklearn.inspection.permutation_importance.html
+  safety_note: Mechanics only; PR-022 uses explicit grouped temporal split and safe JSON artifacts.

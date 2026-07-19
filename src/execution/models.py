@@ -27,9 +27,20 @@ class ExecutionState(str, Enum):
     REJECTED = "rejected"
     APPROVED = "approved"
     SIGNED = "signed"
-    SUBMITTED = "submitted"
+    SUBMISSION_INTENT_RECORDED = "submission_intent_recorded"
+    SUBMISSION_UNCERTAIN = "submission_uncertain"
+    ACCEPTED = "accepted"
+    REJECTED_PRE_SEND = "rejected_pre_send"
     PENDING = "pending"
     LANDED = "landed"
+    RECONCILING = "reconciling"
+    RECONCILED_SUCCESS = "reconciled_success"
+    RECONCILED_FAILURE = "reconciled_failure"
+    AMBIGUOUS_MANUAL_REVIEW = "ambiguous_manual_review"
+    PROVEN_EXPIRED = "proven_expired"
+    REBUILD_ELIGIBLE = "rebuild_eligible"
+    # Backward-compatible aliases for pre-PR-014 tests/imports.
+    SUBMITTED = "submitted"
     FAILED = "failed"
     EXPIRED = "expired"
     RECONCILED = "reconciled"
@@ -56,6 +67,9 @@ class ExecutionErrorCode(str, Enum):
     BUNDLE_INVALID = "bundle_invalid"
     SIGNATURE_FAILED = "signature_failed"
     RECONCILIATION_FAILED = "reconciliation_failed"
+    LIVE_GATE_NOT_OPEN = "live_gate_not_open"
+    AMBIGUOUS_SUBMISSION = "ambiguous_submission"
+    TIP_POLICY_REJECTED = "tip_policy_rejected"
 
 
 @dataclass(frozen=True, slots=True)
@@ -220,6 +234,8 @@ class SubmissionResult:
     transaction_signatures: tuple[str, ...] = ()
     accepted: bool = False
     landed: bool = False
+    headers: dict[str, str] = field(default_factory=dict)
+    trace_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -236,6 +252,34 @@ class ExecutionJournalEntry:
     transaction_signatures: tuple[str, ...] = ()
     landed_slot: int | None = None
     reconciled: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class AttemptIdentity:
+    logical_opportunity_id: str
+    plan_hash: str
+    attempt_generation: int
+
+
+@dataclass(frozen=True, slots=True)
+class JournalAttemptRecord:
+    logical_opportunity_id: str
+    plan_hash: str
+    attempt_generation: int
+    state: ExecutionState
+    revision: int
+    message_digest: str | None = None
+    signed_transaction_digest: str | None = None
+    transaction_signatures: tuple[str, ...] = ()
+    blockhash: str | None = None
+    last_valid_block_height: int | None = None
+    source_slot: int | None = None
+    min_context_slot: int | None = None
+    commitment: str | None = None
+    transport: str | None = None
+    bundle_id: str | None = None
+    claim_owner: str | None = None
+    lease_expires_at: float | None = None
 
 
 class RpcClient(Protocol):

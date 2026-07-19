@@ -178,12 +178,15 @@ class PaperTrader:
         amount_ui = amount / (10 ** _base_dec)
         raw_fee_base_token = amount_ui * dex_fee_pct  # Комиссия в единицах базового токена (например, USDC)
 
-        # FIX 303: Declare sol_price BEFORE first usage to prevent NameError
-        sol_price = 150.0  # fallback conservative default
+        # PR-010: no hardcoded SOL price fallback; price must come from an adapter snapshot.
+        sol_price = None
         if self.pyth_feeder:
             live_price = self.pyth_feeder.get_price("So11111111111111111111111111111111111111112")
             if live_price and live_price > 0:
                 sol_price = live_price
+        if sol_price is None:
+            logger.warning("🚫 SOL price unavailable from adapter snapshot — quote-only paper trade skipped fail-closed")
+            return
 
         if _base_dec == 6:  # Если базовый токен USDC/USDT (6 децималов)
             dex_fee_sol = raw_fee_base_token / sol_price
@@ -215,14 +218,14 @@ class PaperTrader:
                 dex_fee_units = int(raw_fee_base_token * (10 ** _base_dec))
                 network_fee_units = int(5000 / sol_price * (10 ** _base_dec))
                 priority_fee_units = int(ComputeBudget(200_000, ComputeUnitPrice(50_000)).priority_fee().value / sol_price * (10 ** _base_dec))
-                jito_tip_units = int(max(0.001, gross_profit_sol * 0.4) * sol_price * (10 ** _base_dec))
-                ata_rent_units = 0 if target_mint in self.existing_atas else int(2_039_280 / sol_price * (10 ** _base_dec))
+                jito_tip_units = 0  # PR-010: quote-only paper path has no fresh Jito tip snapshot.
+                ata_rent_units = 0 if target_mint in self.existing_atas else 0  # PR-010: rent unknown; do not fake lamports as token units.
             else:
                 dex_fee_units = int(raw_fee_base_token * (10 ** _base_dec))
                 network_fee_units = Lamports(5000).value
                 priority_fee_units = ComputeBudget(200_000, ComputeUnitPrice(50_000)).priority_fee().value
-                jito_tip_units = Lamports.from_sol(max(0.001, gross_profit_sol * 0.4)).value
-                ata_rent_units = 0 if target_mint in self.existing_atas else Lamports(2_039_280).value
+                jito_tip_units = 0  # PR-010: quote-only paper path has no fresh Jito tip snapshot.
+                ata_rent_units = 0 if target_mint in self.existing_atas else 0  # PR-010: rent unknown; canonical engine requires RPC snapshot.
             fees = [
                 FeeComponent(FeeComponentKind.FLASH_LOAN, TokenAmount.from_base_units(settlement_mint, 0, _base_dec), False, "MarginFi paper terms"),
                 FeeComponent(FeeComponentKind.DEX, TokenAmount.from_base_units(settlement_mint, dex_fee_units, _base_dec), True, "Jupiter quote fee embedded"),
@@ -243,7 +246,7 @@ class PaperTrader:
             net_profit_sol = float(net_profit_lamports) / LAMPORTS_PER_SOL
             total_fees_sol = float(breakdown["total_cost_base_units"]) / (10 ** _base_dec) / (1 if _base_dec == 9 else sol_price)
             roi_pct = float(breakdown["roi"]) * 100
-            decision = "EXECUTE" if cost_decision.should_execute else cost_decision.reason.value.upper()
+            decision = "FEASIBLE_PRE_SIMULATION" if cost_decision.should_execute else cost_decision.reason.value.upper()
             sim_success = 0
             sim_error = "transaction not built or simulated in paper mode" if cost_decision.should_execute else cost_decision.reason.value
 
@@ -265,7 +268,7 @@ class PaperTrader:
                 "net_profit_lamports": net_profit_lamports,
                 "roi_pct": roi_pct,
                 "decision": decision,
-                "executed": 1 if decision == "EXECUTE" else 0,
+                "executed": 0,
                 "sim_success": sim_success,
                 "sim_error": sim_error,
                 "price_impact_pct": combined_impact_pct,
@@ -278,12 +281,12 @@ class PaperTrader:
             await self.aggregator.log_paper_trade(trade_data)
 
             # FIX #45: Record trade/failure in circuit breaker for P&L tracking
-            if decision == "EXECUTE":
-                self.circuit_breaker.record_trade(net_profit_sol)
+            if decision == "FEASIBLE_PRE_SIMULATION":
+                pass  # PR-010: no realized PnL before full simulation/reconciliation.
             elif decision == "SKIP_LOW_MARGIN" and total_fees_sol > 0:
                 self.circuit_breaker.record_failed_attempt(Lamports(5000).to_sol_decimal())
 
-            if net_profit_sol > 0.0005:
+            if False and net_profit_sol > 0.0005:
                 self.trades += 1
                 self.total_profit += net_profit_sol
                 self.current_balance += net_profit_sol

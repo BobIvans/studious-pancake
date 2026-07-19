@@ -1,0 +1,1 @@
+EVENT_TYPES=("lending_snapshot_loaded","lending_account_decoded","risk_assessed","liquidation_candidate_detected","liquidation_candidate_excluded","oracle_rejected","lending_subscription_gap","lending_contract_disabled","lending_indexer_degraded")

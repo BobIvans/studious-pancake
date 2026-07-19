@@ -1,0 +1,46 @@
+{
+  "verified_at": "2026-07-19",
+  "policy": "PR-019 fail-closed read-only lending indexer manifest. Deployments stay disabled until official IDL/SDK metadata, fixture bytes, and conformance vectors are pinned.",
+  "deployments": [
+    {
+      "deployment_id": "kamino-mainnet-klend-unverified-2026-07-19",
+      "protocol": "kamino",
+      "cluster": "mainnet-beta",
+      "enabled": false,
+      "disabled_reason": "DISABLED_UNVERIFIED_CONTRACT: official KLend IDL/SDK fixture checksum and conformance vectors not vendored in this repository yet",
+      "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+      "program_executable": true,
+      "version": "UNVERIFIED-2026-07-19",
+      "source_url": "https://github.com/Kamino-Finance/klend",
+      "source_ref": "upstream discovery required before enabling; docs identify KLend mainnet program id",
+      "license": "official repository license must be pinned before enablement",
+      "metadata_sha256": "4f32e3b91f6eb5fb4ee603e9a6201d6e8c940a0def3883b4418be453748aa2e5",
+      "account_types": {
+        "lending_market": {"name":"lending_market","discriminator_hex":"4b4c4d41524b4554","min_size":16,"max_size":null,"expected_owner":"KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"},
+        "reserve": {"name":"reserve","discriminator_hex":"4b52455345525645","min_size":16,"max_size":null,"expected_owner":"KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"},
+        "lending_obligation": {"name":"lending_obligation","discriminator_hex":"4b4f424c49474154","min_size":16,"max_size":null,"expected_owner":"KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"}
+      },
+      "discovery_filters": []
+    },
+    {
+      "deployment_id": "marginfi-mainnet-v2-unverified-2026-07-19",
+      "protocol": "marginfi",
+      "cluster": "mainnet-beta",
+      "enabled": false,
+      "disabled_reason": "DISABLED_UNVERIFIED_CONTRACT: official MarginFi/P0 IDL/SDK fixture checksum and pulse-health conformance vectors not vendored in this repository yet",
+      "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+      "program_executable": true,
+      "version": "UNVERIFIED-2026-07-19",
+      "source_url": "https://github.com/0dotxyz/marginfi-v2",
+      "source_ref": "upstream discovery required before enabling; docs identify marginfi v2 mainnet program id",
+      "license": "official repository license must be pinned before enablement",
+      "metadata_sha256": "53f72966df28312ddc9c7dc8b136411c4d3e14ee2b9e3c8425d08572220ad272",
+      "account_types": {
+        "marginfi_group": {"name":"marginfi_group","discriminator_hex":"4d4647524f555031","min_size":16,"max_size":null,"expected_owner":"MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"},
+        "bank": {"name":"bank","discriminator_hex":"4d4642414e4b3031","min_size":16,"max_size":null,"expected_owner":"MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"},
+        "marginfi_account": {"name":"marginfi_account","discriminator_hex":"4d46414343543031","min_size":16,"max_size":null,"expected_owner":"MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"}
+      },
+      "discovery_filters": []
+    }
+  ]
+}

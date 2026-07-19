@@ -1,8 +1,8 @@
 {
   "data": [{
     "routerResult": {
-      "fromTokenAddress": "USDC_MINT_FIXTURE",
-      "toTokenAddress": "WSOL_MINT_FIXTURE",
+      "fromTokenAddress": "a",
+      "toTokenAddress": "b",
       "fromTokenAmount": "1000",
       "toTokenAmount": "123456",
       "minReceiveAmount": "122000"

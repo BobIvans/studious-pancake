@@ -1,7 +1,7 @@
 {
   "quote": {
-    "inputMint": "USDC_MINT_FIXTURE",
-    "outputMint": "WSOL_MINT_FIXTURE",
+    "inputMint": "a",
+    "outputMint": "b",
     "inAmount": "1000",
     "outAmount": "123456",
     "otherAmountThreshold": "122000",
@@ -9,6 +9,6 @@
     "contextSlot": 1,
     "routePlan": [{"swapInfo": {"label": "SanitizedDEX"}}]
   },
-  "swapInstruction": {"programId":"JUPITER_PROGRAM_FIXTURE","accounts":[],"data":""},
+  "swapInstruction": {"programId":"c","accounts":[],"data":""},
   "addressLookupTableAddresses": []
 }

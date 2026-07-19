@@ -37,10 +37,11 @@ class TestClassifyPoolType(unittest.TestCase):
         self.assertEqual(classify_pool_type("SSwpkEEcbUqx4uweEw4KsK9cZ4cwvJj2w2mYbFXM7Yr"), "stableswap")
 
     def test_unknown_and_empty(self):
-        # Unknown / None / empty default to the safe constant_product curve.
+        # None / empty remain explicit CPMM aliases for legacy callers; unknown program ids fail closed.
         self.assertEqual(classify_pool_type(None), "constant_product")
         self.assertEqual(classify_pool_type(""), "constant_product")
-        self.assertEqual(classify_pool_type("SomeUnknownProgram123"), "constant_product")
+        with self.assertRaisesRegex(ValueError, "UNKNOWN_VENUE_OR_POOL"):
+            classify_pool_type("SomeUnknownProgram123")
 
     def test_method_on_dispatcher_class(self):
         self.assertEqual(

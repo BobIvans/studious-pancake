@@ -73,14 +73,14 @@ logger = logging.getLogger("MultiTrader")
 
 class PaperTrader:
     def __init__(self):
-        self.starting_balance_lamports = int(float(os.getenv("PAPER_TRADE_SIZE_SOL", "0.015")) * LAMPORTS_PER_SOL)
-        self.shadow_balance_lamports = self.starting_balance_lamports
-        self.total_profit_lamports = 0
+        self.starting_balance = float(os.getenv("PAPER_TRADE_SIZE_SOL", "0.015"))
+        self.current_balance = self.starting_balance
+        self.total_profit = 0.0
         self.trades = 0
         self.session = None
         self.existing_atas = set()
         # FIX #45: Integrate CapitalProtection circuit breaker for paper mode
-        self.circuit_breaker = CapitalProtection(self.starting_balance_lamports / LAMPORTS_PER_SOL, state_path="paper_circuit_breaker.json")
+        self.circuit_breaker = CapitalProtection(self.starting_balance, state_path="paper_circuit_breaker.json")
 
         # RPS limits
         self.jup_rps = int(os.getenv("JUPITER_QUOTE_RPS", 5))
@@ -240,12 +240,12 @@ class PaperTrader:
             )
             breakdown = cost_decision.to_dict()
             net_profit_lamports = int(breakdown["net_profit_base_units"] if _base_dec == 9 else breakdown["net_profit_base_units"] / sol_price * 1000)
-            net_profit_sol = net_profit_lamports / LAMPORTS_PER_SOL
-            total_fees_sol = int(breakdown["total_cost_base_units"]) / (10 ** _base_dec) / (1 if _base_dec == 9 else sol_price)
-            roi_pct = str(breakdown["roi"])
+            net_profit_sol = float(net_profit_lamports) / LAMPORTS_PER_SOL
+            total_fees_sol = float(breakdown["total_cost_base_units"]) / (10 ** _base_dec) / (1 if _base_dec == 9 else sol_price)
+            roi_pct = float(breakdown["roi"]) * 100
             decision = "EXECUTE" if cost_decision.should_execute else cost_decision.reason.value.upper()
             sim_success = 0
-            sim_error = "transaction not built or simulated in paper mode" if cost_decision.should_execute else cost_decision.reason.value
+            sim_error = "shadow requires compiled transaction simulation; quote-only paper record is not executed" if cost_decision.should_execute else cost_decision.reason.value
 
             trade_data = {
                 "route": f"{base_name}->{target_name}->{base_name}",
@@ -265,7 +265,7 @@ class PaperTrader:
                 "net_profit_lamports": net_profit_lamports,
                 "roi_pct": roi_pct,
                 "decision": decision,
-                "executed": 0 if decision == "EXECUTE" else 0,
+                "executed": 0,
                 "sim_success": sim_success,
                 "sim_error": sim_error,
                 "price_impact_pct": combined_impact_pct,
@@ -283,14 +283,17 @@ class PaperTrader:
             elif decision == "SKIP_LOW_MARGIN" and total_fees_sol > 0:
                 self.circuit_breaker.record_failed_attempt(Lamports(5000).to_sol_decimal())
 
-            if False:
-                pass
+            if net_profit_sol > 0.0005:
+                logger.info(
+                    "Quote-only paper opportunity recorded without simulated execution; "
+                    "shadow ledger is updated only by reconciled final-message simulation."
+                )
 
     async def _monitor_loop(self):
         """Непрерывный цикл сканирования всех очередей"""
         # FIX 304: Scale trade volume to 95% of real wallet balance
-        sol_amount = int(self.shadow_balance_lamports * 95 // 100)
-        usdc_amount = int((self.shadow_balance_lamports / LAMPORTS_PER_SOL) * sol_price * 0.95 * 1_000_000)
+        sol_amount = Lamports.from_sol(self.current_balance * 0.95).value
+        usdc_amount = int(self.current_balance * sol_price * 0.95 * 1_000_000)
 
         while True:
             # FIX #45: Check circuit breaker before any trade execution
@@ -317,7 +320,7 @@ class PaperTrader:
 
             # Печать статистики после каждого круга
             logger.info("=" * 50)
-            logger.info(f"💰 Баланс: {self.shadow_balance_lamports:.5f} SOL | 📈 P&L: +{self.total_profit_lamports:.5f} SOL | Сделок: {self.trades}")
+            logger.info(f"💰 Баланс: {self.current_balance:.5f} SOL | 📈 P&L: +{self.total_profit:.5f} SOL | Сделок: {self.trades}")
             logger.info("=" * 50)
 
             await asyncio.sleep(1) # Короткая пауза между кругами

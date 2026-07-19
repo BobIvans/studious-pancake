@@ -1,0 +1,43 @@
+schema_version: pr018.live-risk.v1
+live_enabled: false
+cluster:
+  name: mainnet-beta
+  genesis_hash: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
+  commitment: confirmed
+  rpc_endpoint_identities: [mainnet-beta-public]
+wallet:
+  public_key: Readiness111111111111111111111111111111111
+  signer_reference: env:SOLANA_SIGNER_REF
+  observed_lamports: 20000000
+protected_reserve_lamports: 10000000
+per_attempt:
+  max_net_native_debit_lamports: 6000000
+  rent_policy_ref: pr010-wallet-cost-state
+  tip_policy_ref: pr014-exactly-one-tip
+max_outstanding_attempts: 1
+canary:
+  max_principal_by_asset: {USDC: 1000000}
+  max_landed_count_per_window: 1
+  window_seconds: 86400
+  route_profile: jupiter-marginfi-usdc-sol-canary
+loss_limits:
+  settlement_asset: SOL
+  per_trade_lamports: 2000000
+  daily_lamports: 2000000
+allowlists:
+  program_ids: [ComputeBudget111111111111111111111111111111, TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA, TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb, 11111111111111111111111111111111]
+  markets: [SOL/USDC]
+  mints: [So11111111111111111111111111111111111111112, EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v]
+providers:
+  jupiter: {role: execution, capability: composable_instructions, required_for_live: true, registry_hash: pr012-jupiter-v1}
+  okx: {role: discovery, capability: quote_only, required_for_live: false, registry_hash: pr012-okx-v1}
+  openocean: {role: discovery, capability: quote_only, required_for_live: false, registry_hash: pr012-openocean-v1}
+  odos: {role: discovery, capability: quote_only, required_for_live: false, registry_hash: pr012-odos-v1}
+submission_modes: [rpc, jito]
+tip_policy: {exactly_one_tip: true}
+freshness: {max_evidence_age_seconds: 30, max_slot_skew: 20}
+shadow_evidence: {required_versions: [pr013, pr016, pr017]}
+divergence_policy: {asset: SOL, tolerance_lamports: 1000, window_seconds: 86400}
+automatic_latches: [SIMULATION_LIVE_DIVERGENCE, RPC_STALE_OR_CLUSTER_MISMATCH, PROVIDER_QUOTA_EXHAUSTED, PROVIDER_OR_ROUTE_UNHEALTHY, CONFIG_HASH_DRIFT, WALLET_RESERVE_BREACH, DAILY_LOSS_CAP_REACHED, PER_TRADE_CAP_BREACH, AMBIGUOUS_SUBMISSION, UNRECONCILED_LANDED_ATTEMPT, JOURNAL_INVARIANT_VIOLATION, UNEXPECTED_PROGRAM_OR_ACCOUNT, EXACTLY_ONE_TIP_VIOLATION]
+control_plane: {sqlite_path: .live_control.sqlite, kill_switch_path: .live_stop, report_retention_days: 30, redact_secrets: true}
+permit_ttl_seconds: 30

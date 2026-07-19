@@ -19,5 +19,8 @@ class StrategyRegistry:
     def all(self) -> tuple[Strategy, ...]:
         return tuple(self._strategies.values())
 
+    def get(self, name: str) -> Strategy | None:
+        return self._strategies.get(name)
+
     def enabled(self) -> Iterable[Strategy]:
         return (s for s in self._strategies.values() if s.mode.value != "disabled")

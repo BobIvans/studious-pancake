@@ -1198,12 +1198,13 @@ class ExecutionRouter:
                 import src.ingest.shared_state as _ss
                 _bal = _ss.stats.get("last_balance", _ss.stats.get("virtual_balance", 0.0))
                 from src.ingest.pre_trade_guard import PreTradeGuard
-                gas_ok, _ = PreTradeGuard.check_gas_tank(_bal)
+                gas_ok, _ = await PreTradeGuard.check_gas_tank(_bal)
                 if not gas_ok:
                     logger.warning("🚫 Pre-trade guard: gas tank empty — skipping bundle")
                     return {"success": False, "error": "Gas tank empty"}
             except Exception as _gas_err:
-                logger.debug(f"Pre-trade gas check error (non-fatal): {_gas_err}")
+                logger.warning(f"Pre-trade gas check failed closed: {_gas_err}")
+                return {"success": False, "error": "pre_trade_gas_check_failed"}
 
             logger.info(f"🎯 Sending bundle to Jito Block Engine unconditionally (slot={current_slot})...")
             jito_result = await self.jito_executor.send_bundle(

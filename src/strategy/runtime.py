@@ -46,6 +46,8 @@ class StrategyRuntime:
         self.context = context or StrategyContext()
         self.supervisor = TaskSupervisor()
         self._started = False
+        self.states: dict[str, str] = {}
+        self.reasons: dict[str, str | None] = {}
 
     async def start(self) -> None:
         if self._started:
@@ -54,14 +56,20 @@ class StrategyRuntime:
         for strategy in self.registry.all():
             if strategy.mode is StrategyMode.DISABLED:
                 self.queue.metrics[strategy.name].last_event = f"disabled: {strategy.disabled_reason or 'no reason'}"
+                self.states[strategy.name] = "disabled"
+                self.reasons[strategy.name] = strategy.disabled_reason or "strategy_disabled"
                 continue
             logger.info("strategy_start", extra={"strategy": strategy.name, "mode": strategy.mode.value})
             try:
                 await strategy.start(self.context)
             except Exception as exc:
                 self.queue.metrics[strategy.name].last_error = str(exc)
+                self.states[strategy.name] = "start_failed"
+                self.reasons[strategy.name] = str(exc)
                 logger.exception("strategy_start_failed", extra={"strategy": strategy.name})
                 continue
+            self.states[strategy.name] = "running"
+            self.reasons[strategy.name] = None
             self.supervisor.create(self._consume(strategy), name=f"strategy:{strategy.name}")
 
     async def _consume(self, strategy) -> None:
@@ -80,5 +88,7 @@ class StrategyRuntime:
         for strategy in self.registry.all():
             with suppress(Exception):
                 await strategy.stop()
+                if self.states.get(strategy.name) == "running":
+                    self.states[strategy.name] = "stopped"
                 logger.info("strategy_stop", extra={"strategy": strategy.name})
         self._started = False

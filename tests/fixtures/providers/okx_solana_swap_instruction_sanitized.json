@@ -1,0 +1,13 @@
+{
+  "data": [{
+    "routerResult": {
+      "fromTokenAddress": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "toTokenAddress": "So11111111111111111111111111111111111111112",
+      "fromTokenAmount": "1000",
+      "toTokenAmount": "123456",
+      "minReceiveAmount": "122000"
+    },
+    "instructionLists": [[{"programId":"11111111111111111111111111111111","accounts":["11111111111111111111111111111111","11111111111111111111111111111111"],"data":""}]],
+    "addressLookupTableAddresses": []
+  }]
+}

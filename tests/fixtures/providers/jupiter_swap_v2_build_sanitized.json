@@ -1,0 +1,14 @@
+{
+  "quote": {
+    "inputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "outputMint": "So11111111111111111111111111111111111111112",
+    "inAmount": "1000",
+    "outAmount": "123456",
+    "otherAmountThreshold": "122000",
+    "swapMode": "ExactIn",
+    "contextSlot": 1,
+    "routePlan": [{"swapInfo": {"label": "SanitizedDEX"}}]
+  },
+  "swapInstruction": {"programId":"JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4","accounts":[],"data":""},
+  "addressLookupTableAddresses": []
+}

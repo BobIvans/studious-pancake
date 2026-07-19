@@ -6,11 +6,12 @@ from decimal import Decimal
 from enum import Enum
 from typing import Iterable, Optional
 
-from .money import TokenAmount, Lamports, BasisPoints, FeeComponentKind, MonetaryUnitError
+from .money import TokenAmount, Lamports, BasisPoints, FeeComponentKind, MonetaryUnitError, NATIVE_SOL_MINT
 
 
 class DecisionReason(str, Enum):
-    EXECUTE = "execute"
+    FEASIBLE_PRE_SIMULATION = "feasible_pre_simulation"
+    EXECUTE = "execute"  # legacy facade only; canonical PR-010 decisions never submit
     NOT_PROFITABLE = "not_profitable"
     BELOW_SAFETY_BUFFER = "below_safety_buffer"
     STALE_QUOTE = "stale_quote"
@@ -74,7 +75,7 @@ class ATARequirement:
     rent: Lamports
     def cost(self, settlement_mint: str, decimals: int) -> FeeComponent:
         lamports = 0 if self.exists else self.rent.value
-        return FeeComponent(FeeComponentKind.ATA_CREATION, TokenAmount(settlement_mint, lamports, decimals), False, self.mint)
+        return FeeComponent(FeeComponentKind.ATA_CREATION, TokenAmount(NATIVE_SOL_MINT, lamports, 9), False, self.mint)
 
 
 @dataclass(frozen=True)
@@ -97,7 +98,7 @@ class FlashLoanTerms:
     def required_repayment(self, principal: TokenAmount) -> TokenAmount:
         if principal.mint != self.borrowed_asset:
             raise MonetaryUnitError("flash-loan principal mint does not match terms")
-        fee = self.fee_bps.apply_floor(principal)
+        fee = self.fee_bps.apply_ceil(principal)
         total = principal + fee
         if self.fixed_fee:
             total = total + self.fixed_fee
@@ -127,19 +128,22 @@ class TradeCostModel:
             fee_rows = []
             for fee in fees:
                 if fee.amount.mint != settlement_mint or fee.amount.decimals != amounts.input_amount.decimals:
-                    conversions.get(fee.amount.mint, settlement_mint, now)  # explicit immutable price required; conversion math intentionally not guessed
-                    raise MonetaryUnitError("fee conversion must be pre-normalized to settlement asset")
-                deducted = 0 if fee.embedded_in_quote else fee.amount.base_units
+                    rate = conversions.get(fee.amount.mint, settlement_mint, now)
+                    converted = int((Decimal(fee.amount.base_units) * rate.rate).to_integral_value(rounding="ROUND_CEILING"))
+                    fee_amount = TokenAmount(settlement_mint, converted, amounts.input_amount.decimals)
+                else:
+                    fee_amount = fee.amount
+                deducted = 0 if fee.embedded_in_quote else fee_amount.base_units
                 external_cost += deducted
-                fee_rows.append({"kind": fee.kind.value, "amount_base_units": fee.amount.base_units, "embedded_in_quote": fee.embedded_in_quote, "deducted_base_units": deducted, "description": fee.description})
+                fee_rows.append({"kind": fee.kind.value, "amount_base_units": fee_amount.base_units, "embedded_in_quote": fee.embedded_in_quote, "deducted_base_units": deducted, "description": fee.description})
             total_cost = external_cost + safety_buffer.base_units
             net_units = conservative_gross.base_units - total_cost
             min_final = repayment.base_units + total_cost + min_net_profit.base_units
             roi = str(Decimal(net_units) / Decimal(amounts.input_amount.base_units)) if amounts.input_amount.base_units else "0"
-            reason = DecisionReason.EXECUTE if net_units >= min_net_profit.base_units else DecisionReason.NOT_PROFITABLE
+            reason = DecisionReason.FEASIBLE_PRE_SIMULATION if net_units >= min_net_profit.base_units else DecisionReason.NOT_PROFITABLE
             if net_units < safety_buffer.base_units:
                 reason = DecisionReason.BELOW_SAFETY_BUFFER
-            return ExecutionDecision(reason == DecisionReason.EXECUTE, reason, {"settlement_mint": settlement_mint, "gross_profit_base_units": gross.base_units, "required_repayment_base_units": repayment.base_units, "external_cost_base_units": external_cost, "safety_buffer_base_units": safety_buffer.base_units, "total_cost_base_units": total_cost, "net_profit_base_units": net_units, "roi": roi, "minimum_acceptable_final_amount_base_units": min_final, "expected_output_base_units": amounts.expected_output.base_units, "guaranteed_minimum_output_base_units": amounts.guaranteed_minimum_output.base_units, "simulated_output_base_units": None if amounts.simulated_output is None else amounts.simulated_output.base_units, "realized_output_base_units": None if amounts.realized_output is None else amounts.realized_output.base_units, "fees": fee_rows})
+            return ExecutionDecision(reason == DecisionReason.FEASIBLE_PRE_SIMULATION, reason, {"settlement_mint": settlement_mint, "gross_profit_base_units": gross.base_units, "required_repayment_base_units": repayment.base_units, "external_cost_base_units": external_cost, "safety_buffer_base_units": safety_buffer.base_units, "total_cost_base_units": total_cost, "net_profit_base_units": net_units, "roi": roi, "minimum_acceptable_final_amount_base_units": min_final, "expected_output_base_units": amounts.expected_output.base_units, "guaranteed_minimum_output_base_units": amounts.guaranteed_minimum_output.base_units, "simulated_output_base_units": None if amounts.simulated_output is None else amounts.simulated_output.base_units, "realized_output_base_units": None if amounts.realized_output is None else amounts.realized_output.base_units, "fees": fee_rows})
         except KeyError as exc:
             return ExecutionDecision(False, DecisionReason.MISSING_CONVERSION_PRICE, {"error": str(exc)})
         except TimeoutError as exc:

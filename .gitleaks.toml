@@ -1,0 +1,10 @@
+[allowlist]
+description = "Allow documented low-risk placeholders in sanitized offline provider fixtures."
+paths = [
+  '''tests/fixtures/providers/.*_sanitized\.json''',
+]
+regexes = [
+  '''USDC_MINT_FIXTURE''',
+  '''WSOL_MINT_FIXTURE''',
+  '''JUPITER_PROGRAM_FIXTURE''',
+]

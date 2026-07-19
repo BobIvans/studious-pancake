@@ -18,7 +18,9 @@ from solders.pubkey import Pubkey
 from solders.keypair import Keypair
 from solders.instruction import Instruction, AccountMeta
 from solders.system_program import TransferParams, transfer
-from spl.token.instructions import get_associated_token_address, sync_native, close_account, CloseAccountParams, create_associated_token_account
+from spl.token.instructions import get_associated_token_address, sync_native, close_account, create_associated_token_account
+from spl.token.instructions import models as spl_token_models
+CloseAccountParams = spl_token_models.CloseAccountParams
 
 try:
     from spl.token.instructions import SyncNativeParams

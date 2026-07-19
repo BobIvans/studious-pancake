@@ -25,9 +25,10 @@ from solders.signature import Signature
 from spl.token.instructions import (
     get_associated_token_address,
     create_associated_token_account,
-    TransferParams,
     transfer as spl_transfer,
 )
+from spl.token.instructions import models as spl_token_models
+TransferParams = spl_token_models.TransferParams
 try:
     from spl.token.instructions import create_idempotent_associated_token_account
 

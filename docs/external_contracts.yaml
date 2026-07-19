@@ -1,0 +1,81 @@
+verified_at: "2026-07-19"
+verification_policy:
+  rule: "Adapters must be disabled or fail closed when an endpoint, field, decoder, or instruction semantic is not present in the verified official source."
+  live_trading: disabled
+solana_rpc:
+  official_source: "https://solana.com/docs/rpc"
+  checked_at: "2026-07-19"
+  methods:
+    getLatestBlockhash:
+      response_fields: [context.slot, value.blockhash, value.lastValidBlockHeight]
+      request_fields: [commitment, minContextSlot]
+    isBlockhashValid:
+      response_fields: [context.slot, value]
+      request_fields: [commitment, minContextSlot]
+    getFeeForMessage:
+      response_fields: [context.slot, value]
+      request_fields: [commitment, minContextSlot]
+    simulateTransaction:
+      request_fields: [encoding, commitment, sigVerify, replaceRecentBlockhash, innerInstructions, minContextSlot, accounts]
+      response_fields: [err, logs, accounts, innerInstructions, unitsConsumed, loadedAccountsDataSize, returnData, replacementBlockhash]
+      prohibited_assumptions: [preBalances, postBalances]
+    getSignatureStatuses:
+      response_fields: [context.slot, value]
+    getTransaction:
+      request_fields: [encoding, commitment, maxSupportedTransactionVersion]
+      response_fields: [slot, transaction, meta.err]
+  transaction_constraints:
+    wire_size_limit_bytes: 1232
+    default_blockhash: "11111111111111111111111111111111"
+    versioned_transactions: "V0 messages separate static account keys from loaded ALT addresses."
+address_lookup_tables:
+  official_source: "Solana solders AddressLookupTableAccount / address lookup table program"
+  checked_at: "2026-07-19"
+  owner_program: "AddressLookupTab1e1111111111111111111111111"
+  required_validation: [library_deserialization, owner_program, deactivation_slot, non_empty_addresses, required_addresses_present, source_slot, data_hash_cache_invalidation]
+jito:
+  official_source: "https://docs.jito.wtf/lowlatencytxnsend/"
+  checked_at: "2026-07-19"
+  endpoints:
+    transaction: /api/v1/transactions
+    bundles: /api/v1/bundles
+  authentication: [x-jito-auth, query_parameter]
+  encoding: base64
+  deprecated_encoding: base58
+  methods:
+    sendTransaction:
+      endpoint: /api/v1/transactions
+      required_semantics: [skip_preflight_by_endpoint, bundleOnly_for_revert_protection, acceptance_is_not_landing]
+    sendBundle:
+      endpoint: /api/v1/bundles
+      max_transactions: 5
+      required_semantics: [sequential, atomic, same_slot, acceptance_is_not_landing]
+    getInflightBundleStatuses:
+      statuses: [Pending, Failed, Landed, Invalid]
+      response_fields: [status, landed_slot]
+    getBundleStatuses:
+      purpose: historical_status_check
+    getTipAccounts:
+      purpose: current_tip_account_selection
+  prohibited_methods: [getInclusionSummary]
+marginfi:
+  official_source: "https://docs.marginfi.com/ts-sdk and https://docs.marginfi.com/mfi-v2 and https://github.com/mrgnlabs/marginfi-v2"
+  checked_at: "2026-07-19"
+  required_semantics:
+    - start_flashloan_end_index
+    - projected_active_balances
+    - ordinary_borrow_and_repay_instructions
+    - real_marginfi_account_authority_group_validation
+    - risk_engine_remaining_accounts
+    - no_unverified_standalone_flashloan_fee
+    - bank_operational_mode_and_capacity_validation
+    - token_2022_mint_first_remaining_account
+jupiter:
+  official_source: "https://dev.jup.ag/docs/api-reference/swap/v1/swap-instructions"
+  checked_at: "2026-07-19"
+  endpoints:
+    swap: /swap
+    swap_instructions: /swap-instructions
+  swap_response_contract: [swapTransaction]
+  swap_instructions_response_contract: [computeBudgetInstructions, setupInstructions, swapInstruction, cleanupInstruction, addressLookupTableAddresses]
+  execution_boundary: "Execution accepts normalized InstructionBundle only; it never extracts instructions from swapTransaction."

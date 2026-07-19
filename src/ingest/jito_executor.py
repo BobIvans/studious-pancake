@@ -400,12 +400,15 @@ class JitoExecutor:
 
         # ── ИСПРАВЛЕНИЕ: Абсолютный блокиратор реальных транзакций в Paper Mode ──
         if str(os.getenv("PAPER_TRADING_ONLY", "false")).lower() == "true":
-            logger.info("🧪 [PAPER MODE JITO] Блокировка отправки бандла на Mainnet.")
-            fake_id = "paper_bundle_" + str(int(time.time() * 1000))
-            if deducted_amount > 0:
-                self._record_pending(fake_id, deducted_amount)
-                # confirmer_task will handle reconciliation
-            return {"success": True, "bundle_id": fake_id, "region": "paper_simulator"}
+            logger.info("🧪 [PAPER MODE JITO] shadow mode: submission blocked; no bundle id created.")
+            return {
+                "success": False,
+                "submitted": False,
+                "mode": "shadow",
+                "reason": "submission_blocked_by_shadow_mode",
+                "decision": "WOULD_EXECUTE",
+                "bundle_id": None,
+            }
 
         # FIX 286: gRPC Jito fallback — use gRPC if JITO_AUTH_KEY is set
         if self.keypair and os.getenv("JITO_AUTH_KEY"):
@@ -571,15 +574,18 @@ class JitoExecutor:
                                 for item in result["result"]["value"]:
                                     if item and item.get("bundle_id") == bundle_id:
                                         info = item
-                                        confirmation = info.get("confirmation_status", "")
-                                        if confirmation in {"confirmed", "finalized"}:
-                                            logger.info(f"Bundle {bundle_id} status: {confirmation}")
+                                        status = info.get("status", "")
+                                        if status == "Landed":
+                                            logger.info(f"Bundle {bundle_id} landed at slot {info.get('landed_slot')}")
                                             self._confirm_pending(bundle_id)
                                             return {
                                                 "bundle_id": bundle_id,
-                                                "status":    confirmation,
+                                                "status":    "landed",
+                                                "landed_slot": info.get("landed_slot"),
                                                 "details":   info,
                                             }
+                                        if status in {"Failed", "Invalid"}:
+                                            return {"bundle_id": bundle_id, "status": status.lower(), "details": info}
                                         elif confirmation == "failed":
                                             return {
                                                 "bundle_id": bundle_id,

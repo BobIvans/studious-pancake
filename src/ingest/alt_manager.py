@@ -268,31 +268,9 @@ class ALTCacheManager:
             # Fix #5: Add padding before decoding to handle base64 strings
             padded = base64_data + "=" * (-len(base64_data) % 4)
             data = base64.b64decode(padded)
-
-            # Phase 32: Fixed ALT header parsing (authoritized ALTs only)
-            # ALT header layout:
-            # - type: u64 (8)
-            # - deactivation_slot: u64 (8)
-            # - last_extended_slot: u64 (8)
-            # - last_extended_slot_index_padding: u8 (1)
-            # - authority: Option<Pubkey> (1 byte flag + 32 bytes) = always 33 bytes, padded to 56
-            
-            if len(data) < 24:
-                return None
-            # FIX 219: Handle variable header lengths for frozen (24) vs active (56) ALTs
-            header_len = 56 if data[21] == 1 else 24
-
-            if len(data) < header_len:
-                return None
-
-            pubkeys = []
-            pubkey_data = data[header_len:]
-
-            for i in range(0, len(pubkey_data), 32):
-                if i + 32 <= len(pubkey_data):
-                    pubkey_bytes = pubkey_data[i:i + 32]
-                    pubkeys.append(Pubkey.from_bytes(pubkey_bytes))
-
+            from solders.address_lookup_table_account import AddressLookupTableAccount
+            alt_account = AddressLookupTableAccount.from_bytes(data)
+            pubkeys = [Pubkey.from_string(str(pubkey)) for pubkey in alt_account.addresses]
             return pubkeys
 
         except Exception as e:

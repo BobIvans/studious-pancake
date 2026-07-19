@@ -1,0 +1,2 @@
+# PR-017 analytics export optional dependency lock. Runtime does not import this file.
+pyarrow==17.0.0

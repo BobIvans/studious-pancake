@@ -19,8 +19,8 @@ SAFE_ENV = {
 COMMANDS = [
     [sys.executable, "-m", "pip", "check"],
     [sys.executable, "-m", "compileall", "-q", "arb_bot.py", "src", "scripts", "tests"],
-    [sys.executable, "-m", "pytest", "tests/test_import_smoke.py", "-q", "--disable-socket"],
-    [sys.executable, "-m", "pytest", "-m", "not live and not manual", "--disable-socket", "-q"],
+    [sys.executable, "-m", "pytest", "tests/test_import_smoke.py", "-q", "--disable-socket", "--allow-unix-socket"],
+    [sys.executable, "-m", "pytest", "-m", "not live and not manual", "--disable-socket", "--allow-unix-socket", "-q"],
 ]
 
 

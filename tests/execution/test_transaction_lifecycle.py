@@ -340,12 +340,15 @@ def test_default_blockhash_and_string_boundary_rejected():
         TransactionCompiler().compile(bad, bh())
 
 
+REPORTED_CONFLICT_FILES = (
+    "src/execution/__init__.py",
+    "src/execution/transaction_compiler.py",
+    "tests/execution/test_transaction_lifecycle.py",
+)
+
+
 def test_execution_conflict_files_have_no_markers():
-    conflict_files = (
-        "src/execution/__init__.py",
-        "src/execution/transaction_compiler.py",
-        "tests/execution/test_transaction_lifecycle.py",
-    )
+    conflict_files = REPORTED_CONFLICT_FILES
     for filename in conflict_files:
         src = open(filename, encoding="utf-8").read()
         assert ("<" * 7) not in src

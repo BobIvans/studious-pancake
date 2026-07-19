@@ -129,3 +129,103 @@ providers:
       - contract test
   odos_solana:
     status: disabled_until_official_solana_instruction_contract_verified
+
+# PR-012 authoritative capability overlay. The legacy provider keys above are
+# intentionally retained for merge compatibility; these pins override stale
+# constants for capability-based routing and execution admission.
+pr012_capability_overlay:
+  verified_at: "2026-07-19"
+  verification_method: "Primary vendor documentation opened on 2026-07-19 UTC; ordinary CI remains offline and fixtures are sanitized."
+  providers:
+    jupiter_router:
+      legacy_alias: jupiter_swap_v2
+      role: executable
+      capability_pin: jupiter-router-build-2026-07-19
+      official_docs:
+        - https://developers.jup.ag/docs/swap/build
+      base_url: https://api.jup.ag
+      instruction_endpoint:
+        method: GET
+        path: /swap/v2/build
+      auth: x-api-key
+      artifact_kind: raw_instructions
+      contract_corrections:
+        - Router /build is the only composable Jupiter path in this repo.
+        - Meta /order assembled transactions are benchmark/discovery data only.
+        - Do not create a second Jupiter limiter/client; reuse PR-011 account-wide 60 requests / 60 seconds.
+        - Older /swap/v2/quote and /swap/v2/swap paths are not the PR-012 execution contract.
+    okx_dex:
+      legacy_alias: okx_solana
+      role: discovery_only
+      admission_reason: discovery_only_pending_contract_validation
+      capability_pin: okx-solana-swap-instruction-2026-07-19
+      official_docs:
+        - https://web3.okx.com/onchainos/dev-docs/trade/dex-solana-swap-instruction
+      base_url: https://web3.okx.com
+      instruction_endpoint:
+        method: GET
+        path: /api/v6/dex/aggregator/swap-instruction
+      chainIndex: "501"
+      auth_headers:
+        - OK-ACCESS-KEY
+        - OK-ACCESS-TIMESTAMP
+        - OK-ACCESS-PASSPHRASE
+        - OK-ACCESS-SIGN
+      signature: "Base64(HMAC_SHA256(secret, timestamp + METHOD + requestPathWithCanonicalQuery + body))"
+      artifact_kind: raw_instructions
+      executable_promotion_gate:
+        - sanitized success/error/rate-limit fixtures
+        - exact auth-vector tests
+        - lossless instruction/account-meta/ALT decoding
+        - opt-in read-only contract test
+        - PR-008 compilation and PR-009 composed simulation evidence
+      defaults:
+        chainIndex: "501"
+        exactOut: false
+        forJitoBundle: false
+        useTokenLedger: false
+        maxAccounts: provider-specific only; no global default
+      rate_limits: explicit approved account policy only; no guessed quota
+    openocean:
+      legacy_alias: openocean_solana
+      role: disabled_missing_credentials_without_key_else_discovery_only
+      capability_pin: openocean-solana-meta-aggregator-2026-07-19
+      official_docs:
+        - https://docs.openocean.finance/docs/solana-swap-api
+      artifact_kind: none
+      auth: api_key_requested_from_openocean_devrel_bd
+      rate_limits: 2 RPS default
+      provenance: meta-aggregator over Jupiter and Titan; not independent executable liquidity proof
+      fee_policy: document/return fees when present; unknown fees remain unknown
+      raw_instructions_enabled: false
+    odos:
+      legacy_alias: odos_solana
+      role: discovery_only
+      capability_pin: odos-solana-sor-v3-2026-07-19
+      official_docs:
+        - https://docs.odos.xyz/api/solana
+      base_url: https://solana-beta-api.odos.xyz
+      quote_endpoint:
+        method: POST
+        path: /sor/quote/v3
+      assemble_endpoint:
+        method: POST
+        path: /sor/assemble
+      chainId: 101
+      auth: none
+      pathId_ttl_seconds: 60
+      quote_fields:
+        - pathId
+        - outAmounts
+      artifact_kind: assembled_transaction
+      contract_corrections:
+        - Assemble returns base64 assembled transaction data and is never composable raw instructions here.
+        - Quote simulation/assemble metadata is informational and not this bot's execution guarantee.
+  not_activated:
+    - zero_x_solana
+    - kamino
+    - phoenix
+    - openbook
+    - pump_fun
+    - legacy_multi_aggregator_client
+    - legacy_swap_providers

@@ -1,4 +1,6 @@
-"""Shadow-only liquidation strategy orchestration.
+"""PR-023 QUARANTINE: fixture-only liquidation orchestration.
+
+Shadow-only liquidation strategy orchestration.
 
 No sender, signer, Jito, keypair, or live permit modules are imported here.
 """

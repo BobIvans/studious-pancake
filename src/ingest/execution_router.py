@@ -1,4 +1,7 @@
-"""Execution Router for Hybrid Jito/Standard Transaction Switching."""
+"""PR-023 QUARANTINE: legacy RPC/Jito execution router; unsupported runtime path."""
+
+__runtime_capability__ = "fixture-only"
+__quarantined__ = True
 
 import asyncio
 import base58

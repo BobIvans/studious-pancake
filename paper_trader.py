@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""PR-023 QUARANTINE: legacy wrapper; use `python arb_bot.py status`."""
 import sys
 import os
 

@@ -20,6 +20,8 @@ COMMANDS = [
     [sys.executable, "-m", "pip", "check"],
     [sys.executable, "-m", "compileall", "-q", "arb_bot.py", "src", "scripts", "tests"],
     [sys.executable, "-m", "pytest", "tests/test_import_smoke.py", "-q", "--disable-socket", "--allow-unix-socket"],
+    [sys.executable, "arb_bot.py", "status", "--json"],
+    [sys.executable, "arb_bot.py", "capabilities", "--json"],
     [sys.executable, "-m", "pytest", "-m", "not live and not manual", "--disable-socket", "--allow-unix-socket", "-q"],
 ]
 

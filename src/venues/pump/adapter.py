@@ -1,4 +1,4 @@
-"""Shadow-only Pump V2 adapter with pinned manifest validation."""
+"""PR-023 QUARANTINE: fixture-only Pump adapter pending protocol conformance."""
 from __future__ import annotations
 import hashlib
 import json

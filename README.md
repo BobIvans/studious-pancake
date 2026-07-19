@@ -1,10 +1,62 @@
-# FlashLoan Arbitrage Bot
+# Flash-loan Arbitrage Bot — runtime truth (PR-023)
 
-Автоматический arbitrage бот для Solana с использованием MarginFi flash loans и Jupiter DEX агрегации. Бот выполняет высокопроизводительные arbitrage сделки в реальном времени.
+Этот репозиторий содержит заготовки Solana arbitrage-системы: доменные модели,
+strategy registry, часть Jupiter/MarginFi/routing/execution-кода, тесты и legacy
+модули. **Текущий снимок не является production-ready ботом и не выполняет
+реальные арбитражные сделки end-to-end.**
 
-## Reproducible offline baseline
+## Текущий честный статус
 
-The supported runtime for CI, Docker, and local verification is Python 3.13. A clean checkout can be validated without Solana mainnet, external APIs, private keys, Jito, or live transaction submission.
+| Возможность | Статус | Что это означает |
+|---|---|---|
+| Supported launcher | `implemented` | `python arb_bot.py` показывает status/capabilities и fail-closed запускает runtime |
+| LST/circular detectors | `disabled` | Активные detector shells не создают реальные opportunities |
+| MarginFi flash-loan integration | `fixture-only` | Binary account/instruction conformance с deployed mainnet ещё не доказана |
+| Jupiter router library | `implemented`, inactive | Код существует, но не подключён к поддерживаемому execution pipeline |
+| Paper trading | `disabled` | Legacy paper script quarantined; canonical paper runner ещё не реализован |
+| Shadow execution | unavailable | Нет единой вертикали planner → compiler → exact simulation → reconciliation |
+| Live execution / Jito | unavailable | Live hard-denied; sender modules не входят в supported entrypoint |
+| Pump/Kamino/orderbook extensions | `fixture-only`, quarantined | Нельзя включить env-флагом; требуется отдельный protocol promotion PR |
+
+Полная machine-readable матрица находится в
+[`config/capabilities.json`](config/capabilities.json). Runtime проверяет её
+против зарегистрированных стратегий до запуска.
+
+## Единственный поддерживаемый entrypoint
+
+```bash
+python arb_bot.py status
+python arb_bot.py status --json
+python arb_bot.py capabilities
+python arb_bot.py capabilities --json
+```
+
+Запуск без аргументов эквивалентен:
+
+```bash
+python arb_bot.py run --mode shadow
+```
+
+Пока нет ни одной стратегии, одновременно включённой и отмеченной
+`shadow-ready`/`live-ready`, команда завершается с кодом `3` и диагностикой
+`NO_EXECUTABLE_STRATEGIES`. Это ожидаемое безопасное поведение, а не ошибка
+рынка или RPC.
+
+### Режимы продукта
+
+- `disabled` — inspection-only, доступен.
+- `paper` — недоступен до canonical paper runner (roadmap PR-038).
+- `shadow` — запрашиваемый default, но сейчас завершается безопасно, потому что
+  исполнимая стратегия отсутствует.
+- `live` — hard-denied и не может быть включён переменной окружения.
+
+Legacy env-флаги (`PAPER_TRADING_ONLY`, `LIVE_TRADING_ENABLED`, `JITO_ENABLED`,
+`KAMINO_LIQUIDATION_ENABLED`) сохранены только для старых скриптов и тестовых
+fixtures. Поддерживаемый `arb_bot.py` намеренно не использует их для promotion.
+
+## Проверка репозитория
+
+Ожидаемая версия для текущего baseline — Python 3.13.
 
 ```bash
 python3.13 -m venv .venv
@@ -14,223 +66,51 @@ python -m pip install -r requirements.txt
 make verify
 ```
 
-`make verify` runs dependency validation, syntax compilation, import smoke tests, and offline pytest with sockets disabled. It intentionally does not run paper trading, live simulation, or live trading readiness checks. Use `make test-live` only when deliberately running tests marked `live` with real external services.
-
-Safe verification defaults are:
+Также можно отдельно проверить PR-023 контракт:
 
 ```bash
-PAPER_TRADING_ONLY=true
-LIVE_TRADING_ENABLED=false
-JITO_ENABLED=false
-KAMINO_LIQUIDATION_ENABLED=false
+make status
+make capabilities
+python -m pytest tests/test_pr023_runtime_truth.py -q
 ```
 
-## Основные возможности
+`make verify` проверяет зависимости, syntax/import smoke и offline tests. Он не
+доказывает mainnet, paper, shadow или live readiness.
 
-- 🚀 **MarginFi Flash Loans** - Бесплатные flash loans для arbitrage
-- ⚡ **Jupiter DEX Aggregation** - Лучшие цены через все DEX
-- 📦 **Jito Bundle Execution** - Высокоскоростное выполнение транзакций
-- 🛡️ **Risk Management** - Защита от убытков и rate limiting
+## Quarantine
 
-## Системные требования
+Quarantine означает, что код остаётся в дереве для миграции, fixtures и
+исследований, но не считается production capability и не импортируется
+поддерживаемым composition root. Список и правила:
 
-### MacOS (M1/M2/M3 чипы)
-- **Python 3.13+** с исправлениями для aiohttp дескрипторов
-- **Синхронизация времени**: Обязательно включите автоматическую синхронизацию времени для предотвращения slot drift:
-  ```
-  Системные настройки → Дата и время → Выключить/включить "Выставлять время автоматически"
-  ```
-  Это предотвратит ошибки Jito BlockhashNotFound из-за дрейфа системных часов.
+- [`docs/quarantine_pr023.md`](docs/quarantine_pr023.md)
+- [`config/capabilities.json`](config/capabilities.json)
 
-## Быстрый старт
+В частности, `src/legacy_arb_bot.py`, legacy transaction/Jito routers,
+`scripts/paper_trader.py`, Pump, Kamino/liquidation и Phoenix/OpenBook paths не
+могут быть promoted одним env-флагом.
 
-1. **Настройка:**
-    ```bash
-    ./setup_flashloan.sh
-    ```
+## Что должно появиться дальше
 
-2. **Заполните .env:**
-    ```bash
-    MARGINFI_ACCOUNT=ваш_marginfi_аккаунт
-    HELIUS_API_KEY=ваш_helius_api_key
-    ```
+Ближайшая production-safe цель — одна доказуемая vertical:
 
-3. **Настройка Helius Webhook (для LST arbitrage):**
-    ```bash
-    python setup_helius_webhook.py
-    ```
-
-4. **Запуск:**
-     ```bash
-     python arb_bot.py
-     ```
-
- 4. **Симуляция сделок (тестирование):**
-    ```bash
-    make paper
-    ```
-
- 5. **Запуск тестов:**
-    ```bash
-    make verify
-    ```
-
-## Архитектура
-
-### Компоненты:
-- **Matrix Scanner** - Бесконечный цикл поиска circular arbitrage routes
-- **MarginFi Integration** - Flash loan provider
-- **Jupiter DEX** - Swap execution
-- **Jito Bundles** - High-speed execution
-- **Transaction Prebuilder** - Оптимизация Compute Units и Priority Fees
-- **Helius Webhook Handler** - Real-time LST arbitrage detection
-- **Data Aggregator** - Comprehensive event logging and analytics
-
-## Helius Webhook Integration
-
-Бот поддерживает real-time webhook от Helius для обнаружения LST arbitrage возможностей через Sanctum Router.
-
-### Настройка Webhook:
-
-#### Вариант 1: Автоматическая настройка (Рекомендуется)
-```bash
-# Установите ваш Helius API key в .env
-echo "HELIUS_API_KEY=your_helius_api_key_here" >> .env
-
-# Опционально установите ваш webhook URL
-echo "WEBHOOK_URL=https://your-domain.com/webhook" >> .env
-
-# Запустите скрипт настройки
-python setup_helius_webhook.py
+```text
+quotes → opportunity → capital-aware sizing → atomic MarginFi/Jupiter plan
+→ canonical v0 message → exact simulation → economic reconciliation
+→ durable paper outcome
 ```
 
-Скрипт автоматически:
-- Создаст webhook через Helius API
-- Сохранит webhook ID в `helius_webhook_id.txt`
-- Сохранит конфигурацию в `helius_webhook_config.json`
-
-#### Вариант 2: Ручная настройка через Dashboard
-1. **Создайте webhook в Helius Dashboard:**
-   ```json
-   {
-     "webhookURL": "https://your-domain.com/webhook",
-     "webhookType": "enhanced",
-     "transactionTypes": ["SWAP", "TRANSFER"],
-     "accountAddresses": [
-       "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq",  // Sanctum Router
-       "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",  // JitoSOL
-       "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",  // mSOL
-       "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",  // bSOL
-       "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm"   // Sanctum Infinity (INF)
-     ],
-     "txnStatus": "all"
-   }
-   ```
-
-2. **Настройте .env:**
-   ```bash
-   HELIUS_WEBHOOK_ENABLED=true
-   WEBHOOK_PORT=3000
-   ```
-
-3. **Webhook Endpoint:**
-   - URL: `http://your-server:3000/webhook`
-   - Method: POST
-   - Бот автоматически обрабатывает входящие события
-
-### Что отслеживает webhook:
-- SWAP транзакции через Sanctum Router
-- TRANSFER токенов между LST и SOL
-- Балансовые изменения в аккаунтах
-- Price impact сигналы от крупных транзакций
-
-### Управление webhook:
-```bash
-# Проверить статус всех webhook
-python manage_webhooks.py
-
-# Создать/проверить webhook
-python setup_helius_webhook.py
-
-# Протестировать конфигурацию
-python test_webhook_config.py
-```
-
-### Аналитика webhook данных:
-```python
-# Получить статистику webhook событий
-stats = await data_aggregator.get_webhook_opportunity_stats()
-
-# Получить LST arbitrage возможности
-opportunities = await data_aggregator.get_lst_arbitrage_opportunities()
-```
-
-### Webhook IDs и управление:
-- **Webhook IDs**: <YOUR_HELIUS_WEBHOOK_ID_1>, <YOUR_HELIUS_WEBHOOK_ID_2>
-- **Management IDs**: <YOUR_HELIUS_MANAGEMENT_ID_1>, <YOUR_HELIUS_MANAGEMENT_ID_2>
-- **Мониторятся адреса**: JitoSOL, mSOL, bSOL, INF, Sanctum Router
+Порядок работ и acceptance criteria находятся в сохранённом аудите:
+[`docs/audits/FLASHLOAN_BOT_PRODUCTION_AUDIT_AND_PR_ROADMAP_2026-07-19.md`](docs/audits/FLASHLOAN_BOT_PRODUCTION_AUDIT_AND_PR_ROADMAP_2026-07-19.md).
 
 ## Безопасность
 
-- **Rate Limiting** - Ограничение по стратегиям и токенам
-- **Profit Thresholds** - Минимальные требования к прибыли
-- **Token Blacklist** - Исключение подозрительных токенов
-- **Simulation Mode** - Тестирование перед реальным выполнением
-- **Paper Trading** - Полная симуляция сделок без риска
-- **Max Drawdown** - Защита от больших потерь
+- Не помещайте seed phrase/private key в `.env`, логи, issue или prompt.
+- Не считайте RPC/Jito acknowledgement доказательством landed/settled сделки.
+- Не включайте legacy scripts для реальных средств.
+- До PR-038/PR-039 используйте репозиторий только для разработки и offline
+  проверки.
 
-## Симуляция и тестирование
+## License
 
-### Режимы симуляции:
-
-1. **Встроенная симуляция** - `arb_bot.py` по умолчанию симулирует транзакции перед выполнением
-2. **Paper Trading** - Полная симуляция arbitrage без реальных транзакций:
-   ```bash
-   make paper
-   ```
-3. **Тестирование компонентов**:
-   ```bash
-   make verify
-   ```
-
-### Переменные окружения для симуляции:
-- `SIMULATE_BEFORE_EXECUTE=true` - Симуляция перед выполнением (по умолчанию)
-- `PAPER_STARTING_BALANCE_SOL=1.0` - Начальный баланс для paper trading
-- `PAPER_MAX_ARBITRAGES=5` - Максимум одновременных arbitrage
-
-## Разработка
-
-### Структура проекта:
-```
-├── arb_bot.py                     # Основной бот
-├── paper_trader.py                 # Симуляция сделок
-├── test_runner.py                  # Тестовый runner
-├── setup_helius_webhook.py         # Автоматическая настройка webhook
-├── manage_webhooks.py              # Управление webhook через API
-├── helius-sanctum-lst-webhook.json # Шаблон конфигурации webhook
-├── test_webhook_config.py          # Тест конфигурации webhook
-├── src/
-│   ├── ingest/
-│   │   ├── tx_builder.py           # Jupiter интеграция
-│   │   ├── jito_bundle_client.py   # Jito execution
-│   │   ├── data_aggregator.py      # Логирование и аналитика
-│   │   ├── helius_webhook_handler.py # Обработчик webhook
-│   │   ├── leader_tracker.py       # Отслеживание лидеров слотов
-│   │   ├── execution_router.py     # Гибридное выполнение
-│   │   └── webhook_config.py       # Конфигурация webhook IDs
-├── trading/                        # Система paper trading
-│   ├── position_book.py            # Управление позициями
-│   ├── flash_loan_executor.py      # Executor flash loans
-│   └── trade_logger_v2.py          # Логирование сделок
-├── programs/                       # Anchor контракты
-├── docs/                           # Документация
-└── scripts/                        # Скрипты настройки
-```
-
-## Лицензия
-
-MIT License
-
-## PR-013 honest shadow pipeline
-
-The active paper/shadow path is now documented in `docs/shadow_pipeline_pr013.md`. It uses exact final-message `simulateTransaction` and same-context balance reconciliation, persists terminal shadow outcomes with `executed=0`/`submitted=0`, and keeps live submission disabled until PR-014.
+MIT License.

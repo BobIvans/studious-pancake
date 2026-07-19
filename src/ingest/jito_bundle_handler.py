@@ -723,59 +723,15 @@ class JitoBundleHandler:
 
 
 class BackrunTrigger:
-    """Signature-based trigger for backrunning opportunities."""
+    """Disabled compatibility shell for removed Pump migration backruns."""
 
     def __init__(self, bundle_handler: JitoBundleHandler):
         self.bundle_handler = bundle_handler
-        self.active_backruns: Dict[str, float] = {}  # signature -> timestamp
+        self.active_backruns: Dict[str, float] = {}
 
-    async def on_migration_event(
-        self,
-        signature: str,
-        base_mint: str,
-        quote_mint: str,
-        recent_blockhash: str,
-        expected_profit_sol: float = 0.001,
-    ):
-        """Handle migration/pool creation event for backrunning."""
-        # Avoid duplicate processing
-        if signature in self.active_backruns:
-            if time.time() - \
-                    self.active_backruns[signature] < 5.0:  # 5 second cooldown
-                return
-        self.active_backruns[signature] = time.time()
-
-        logger.info(
-            f"🎯 Migration detected: {signature[:8]}... ({base_mint[:8]} -> {quote_mint[:8]})"
-        )
-
-        # Execute backrun bundle
-        result = await self.bundle_handler.execute_backrun_bundle(
-            trigger_signature=signature,
-            base_mint=base_mint,
-            quote_mint=quote_mint,
-            amount_sol=1.0,  # Default amount, would be calculated optimally
-            expected_profit_sol=expected_profit_sol,
-            recent_blockhash=recent_blockhash,
-        )
-
-        if result["success"]:
-            logger.info("🎉 Backrun bundle executed successfully!")
-            bundle_id = (
-                result["results"][0].get("bundle_id", "unknown")
-                if result["results"]
-                else "unknown"
-            )
-            logger.info(f"Bundle ID: {bundle_id}")
-        else:
-            logger.warning("❌ Backrun bundle failed")
-        # Cleanup old entries
-        current_time = time.time()
-        self.active_backruns = {
-            sig: ts
-            for sig, ts in self.active_backruns.items()
-            if current_time - ts < 30.0  # Keep for 30 seconds
-        }
+    async def on_migration_event(self, *args, **kwargs):
+        logger.warning("PUMP_LEGACY_HEURISTIC_DISABLED")
+        return {"success": False, "reason": "PUMP_LEGACY_HEURISTIC_DISABLED"}
 
     # === DISABLED: create_secure_jito_bundle ===
     # Jito tip is inlined in tx_builder.build_native_flashloan_tx. Calling this would add a

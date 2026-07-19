@@ -123,6 +123,10 @@ class EventTriggerEngine:
         if not all([platform, token_symbol, raydium_pool]):
             return
 
+        if str(platform).replace("_", ".").lower() in {"pump.fun", "pumpfun"}:
+            logger.warning("PUMP_LEGACY_HEURISTIC_DISABLED")
+            return
+
         # Calculate expected profit (conservative estimate)
         expected_profit_bps = 500  # 5% expected profit
 

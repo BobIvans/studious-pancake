@@ -1,0 +1,48 @@
+{
+  "manifest_version": "2026-07-19.pr021.shadow",
+  "default_capabilities": ["DISCOVERY"],
+  "live_capability": "DENIED_SHADOW_ONLY",
+  "families": [
+    {
+      "family": "bonding_curve",
+      "status": "ENABLED_SHADOW",
+      "contract_version": "pump-public-docs-main-2026-07-19-buy-v2",
+      "official_docs_url": "https://github.com/pump-fun/pump-public-docs",
+      "idl_url": "https://github.com/pump-fun/pump-public-docs/blob/main/idl/pump.json",
+      "sdk_url": "https://www.npmjs.com/package/@pump-fun/pump-sdk",
+      "upstream_ref": "main@implementation-time-2026-07-19",
+      "idl_sha256": "fixture-pinned-pump-idl-sha256-update-before-live",
+      "cluster": "mainnet-beta",
+      "program_id": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+      "discriminator_hex": "17b7f83760d8ac60",
+      "account_size": 137,
+      "expected_owner": "6EF8rrecthR5Dkzon8Nwu78hRvfCKubJ14M5uBEwF6P",
+      "expected_executable": false,
+      "pda_seeds": [["bonding-curve", "mint"]],
+      "fields": ["virtual_base_reserves", "virtual_quote_reserves", "real_base_reserves", "real_quote_reserves", "token_total_supply", "complete", "base_mint", "quote_mint"],
+      "instructions": {
+        "buy_v2": {"args": ["amount", "max_quote_amount"], "ordered_metas": ["global", "fee_recipient", "mint", "bonding_curve", "associated_bonding_curve", "associated_user", "user", "system_program", "token_program", "creator_vault", "event_authority", "program", "global_volume_accumulator", "user_volume_accumulator", "fee_config", "fee_program", "quote_mint", "quote_vault", "user_quote_ata", "sharing_config"]},
+        "sell_v2": {"args": ["amount", "min_quote_amount"], "ordered_metas": ["global", "fee_recipient", "mint", "bonding_curve", "associated_bonding_curve", "associated_user", "user", "system_program", "creator_vault", "token_program", "event_authority", "program", "fee_config", "fee_program", "quote_mint", "quote_vault", "user_quote_ata", "sharing_config", "user_volume_accumulator"]}
+      }
+    },
+    {
+      "family": "pumpswap",
+      "status": "ENABLED_SHADOW",
+      "contract_version": "pump-public-docs-main-2026-07-19-pumpswap-virtual-quote",
+      "official_docs_url": "https://github.com/pump-fun/pump-public-docs",
+      "idl_url": "https://github.com/pump-fun/pump-public-docs/blob/main/idl/pump_amm.json",
+      "sdk_url": "https://www.npmjs.com/package/@pump-fun/pump-swap-sdk",
+      "upstream_ref": "main@implementation-time-2026-07-19",
+      "idl_sha256": "fixture-pinned-pumpswap-idl-sha256-update-before-live",
+      "cluster": "mainnet-beta",
+      "program_id": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+      "discriminator_hex": "f19a6d0411b16dbc",
+      "account_size": 241,
+      "expected_owner": "pAMMBay6oceH9fJKBRHGP5D4bD4sWpmSwMn52FMfXEA",
+      "expected_executable": false,
+      "fields": ["base_mint", "quote_mint", "pool_base_token_account", "pool_quote_token_account", "lp_mint", "virtual_quote_reserves"],
+      "instructions": {"buy": {"args": ["base_amount_out", "max_quote_amount_in"], "ordered_metas": ["pool", "user", "global_config", "base_mint", "quote_mint", "user_base_ata", "user_quote_ata", "pool_base_token_account", "pool_quote_token_account", "protocol_fee_recipient", "protocol_fee_recipient_ata", "base_token_program", "quote_token_program", "system_program", "associated_token_program", "event_authority", "program", "pool_v2", "fee_recipient", "fee_recipient_quote_ata"]}}
+    }
+  ],
+  "disabled_versions": [{"family":"legacy","reason":"DISABLED_UNVERIFIED_CONTRACT: 49-byte/SOL-threshold/Raydium heuristics are stale hypotheses"}]
+}

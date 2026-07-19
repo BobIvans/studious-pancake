@@ -1,81 +1,93 @@
 verified_at: "2026-07-19"
-verification_policy:
-  rule: "Adapters must be disabled or fail closed when an endpoint, field, decoder, or instruction semantic is not present in the verified official source."
-  live_trading: disabled
-solana_rpc:
-  official_source: "https://solana.com/docs/rpc"
-  checked_at: "2026-07-19"
-  methods:
-    getLatestBlockhash:
-      response_fields: [context.slot, value.blockhash, value.lastValidBlockHeight]
-      request_fields: [commitment, minContextSlot]
-    isBlockhashValid:
-      response_fields: [context.slot, value]
-      request_fields: [commitment, minContextSlot]
-    getFeeForMessage:
-      response_fields: [context.slot, value]
-      request_fields: [commitment, minContextSlot]
-    simulateTransaction:
-      request_fields: [encoding, commitment, sigVerify, replaceRecentBlockhash, innerInstructions, minContextSlot, accounts]
-      response_fields: [err, logs, accounts, innerInstructions, unitsConsumed, loadedAccountsDataSize, returnData, replacementBlockhash]
-      prohibited_assumptions: [preBalances, postBalances]
-    getSignatureStatuses:
-      response_fields: [context.slot, value]
-    getTransaction:
-      request_fields: [encoding, commitment, maxSupportedTransactionVersion]
-      response_fields: [slot, transaction, meta.err]
-  transaction_constraints:
-    wire_size_limit_bytes: 1232
-    default_blockhash: "11111111111111111111111111111111"
-    versioned_transactions: "V0 messages separate static account keys from loaded ALT addresses."
-address_lookup_tables:
-  official_source: "Solana solders AddressLookupTableAccount / address lookup table program"
-  checked_at: "2026-07-19"
-  owner_program: "AddressLookupTab1e1111111111111111111111111"
-  required_validation: [library_deserialization, owner_program, deactivation_slot, non_empty_addresses, required_addresses_present, source_slot, data_hash_cache_invalidation]
-jito:
-  official_source: "https://docs.jito.wtf/lowlatencytxnsend/"
-  checked_at: "2026-07-19"
-  endpoints:
-    transaction: /api/v1/transactions
-    bundles: /api/v1/bundles
-  authentication: [x-jito-auth, query_parameter]
-  encoding: base64
-  deprecated_encoding: base58
-  methods:
-    sendTransaction:
-      endpoint: /api/v1/transactions
-      required_semantics: [skip_preflight_by_endpoint, bundleOnly_for_revert_protection, acceptance_is_not_landing]
-    sendBundle:
-      endpoint: /api/v1/bundles
-      max_transactions: 5
-      required_semantics: [sequential, atomic, same_slot, acceptance_is_not_landing]
-    getInflightBundleStatuses:
-      statuses: [Pending, Failed, Landed, Invalid]
-      response_fields: [status, landed_slot]
-    getBundleStatuses:
-      purpose: historical_status_check
-    getTipAccounts:
-      purpose: current_tip_account_selection
-  prohibited_methods: [getInclusionSummary]
-marginfi:
-  official_source: "https://docs.marginfi.com/ts-sdk and https://docs.marginfi.com/mfi-v2 and https://github.com/mrgnlabs/marginfi-v2"
-  checked_at: "2026-07-19"
-  required_semantics:
-    - start_flashloan_end_index
-    - projected_active_balances
-    - ordinary_borrow_and_repay_instructions
-    - real_marginfi_account_authority_group_validation
-    - risk_engine_remaining_accounts
-    - no_unverified_standalone_flashloan_fee
-    - bank_operational_mode_and_capacity_validation
-    - token_2022_mint_first_remaining_account
-jupiter:
-  official_source: "https://dev.jup.ag/docs/api-reference/swap/v1/swap-instructions"
-  checked_at: "2026-07-19"
-  endpoints:
-    swap: /swap
-    swap_instructions: /swap-instructions
-  swap_response_contract: [swapTransaction]
-  swap_instructions_response_contract: [computeBudgetInstructions, setupInstructions, swapInstruction, cleanupInstruction, addressLookupTableAddresses]
-  execution_boundary: "Execution accepts normalized InstructionBundle only; it never extracts instructions from swapTransaction."
+providers:
+  jupiter_swap_v2:
+    status: active
+    official_docs:
+      - https://dev.jup.ag/docs/swap
+      - https://dev.jup.ag/docs/guides
+    base_url: https://api.jup.ag/swap/v2
+    instruction_endpoint:
+      method: GET
+      path: /build
+    removed_endpoints:
+      - /swap/v2/quote
+      - /swap/v2/swap
+    custom_composition: /build is the raw-instruction path for transactions that include MarginFi flash-loan instructions; /order and /execute are not used.
+    request_parameters:
+      - inputMint
+      - outputMint
+      - amount
+      - taker
+      - payer
+      - slippageBps
+      - maxAccounts
+      - wrapAndUnwrapSol
+      - forJitoBundle
+      - includedDexes
+      - excludedDexes
+    defaults:
+      maxAccounts: 64
+      wrapAndUnwrapSol_for_marginfi: false
+      forJitoBundle_when_jito_execution: true
+    response_contract: setup/swap/cleanup/other instructions, compute budget and tip instructions, ALT address mappings, quote fields, fees, route steps, and blockhash metadata must be schema-validated before use.
+    rate_limits:
+      keyless_rps: 0.5
+      free_api_key_rps: 1.0
+      paid_tiers: explicitly configured only
+  okx_solana:
+    status: active
+    official_docs:
+      - https://web3.okx.com/onchainos/dev-docs/trade/dex-solana-swap-instruction
+      - https://web3.okx.com/onchainos/dev-docs/trade/dex-use-swap-solana-quick-start
+    base_url: https://web3.okx.com
+    instruction_endpoint:
+      method: GET
+      path: /api/v6/dex/aggregator/swap-instruction
+    chainIndex: "501"
+    authentication_headers:
+      - OK-ACCESS-KEY
+      - OK-ACCESS-TIMESTAMP
+      - OK-ACCESS-PASSPHRASE
+      - OK-ACCESS-SIGN
+    signature: Base64(HMAC_SHA256(signing_material, timestamp + method + requestPath + body))
+    response_contract: instructionLists, routerResult, and addressLookupTableAddresses are normalized; ComputeBudget instructions are separated.
+    fee_defaults: partner/referral/positive-slippage fees disabled
+    rate_limits: configured from approved account tier; no assumed trial maximum
+  zero_x_solana:
+    status: feature_gated_priority_access
+    official_docs:
+      - https://docs.0x.org/
+      - https://0x.org/products/solana
+    endpoint:
+      method: POST
+      url: https://api.0x.org/solana/swap-instructions
+    current_alpha_capabilities:
+      legacy_spl_token: true
+      token_2022: false
+      native_sol: false
+      wsol: true
+      preserve_flat_instruction_order: true
+      address_lookup_tables: true
+  openocean_solana:
+    status: quote_only_unavailable_without_whitelist
+    official_docs:
+      - https://docs.openocean.finance/docs/swap-api/guide
+      - https://docs.openocean.finance/docs/swap-api/enterprise
+    quote_endpoint:
+      method: GET
+      url: https://open-api.openocean.finance/v4/solana/quote
+    v4_quote_parameters:
+      - inTokenAddress
+      - outTokenAddress
+      - amountDecimals
+      - slippage
+      - account
+    raw_instructions_enabled: false
+    raw_instructions_activation_requirements:
+      - authorized official Solana response fixture
+      - sanitized fixture
+      - validated instruction semantics
+      - validated ALT handling
+      - contract test
+  odos_solana:
+    status: disabled_until_official_solana_instruction_contract_verified

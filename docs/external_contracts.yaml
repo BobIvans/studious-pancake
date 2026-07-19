@@ -49,7 +49,7 @@ providers:
       - OK-ACCESS-TIMESTAMP
       - OK-ACCESS-PASSPHRASE
       - OK-ACCESS-SIGN
-    signature: Base64(HMAC_SHA256(secret, timestamp + method + requestPath + body))
+    signature: Base64(HMAC_SHA256(signing_material, timestamp + method + requestPath + body))
     response_contract: instructionLists, routerResult, and addressLookupTableAddresses are normalized; ComputeBudget instructions are separated.
     fee_defaults: partner/referral/positive-slippage fees disabled
     rate_limits: configured from approved account tier; no assumed trial maximum

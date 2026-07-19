@@ -41,12 +41,12 @@ def test_0x_rejects_token_2022_and_native_sol():
         zx._validate_request_capabilities(req(input_mint=NATIVE_SOL_MINT))
 
 def test_okx_auth_signature():
-    okx=OKXSolanaAdapter("key","secret","pass")
+    okx=OKXSolanaAdapter("okx-access-id-fixture","okx-signing-material-fixture","okx-passphrase-fixture")
     ts="2026-07-19T00:00:00.000Z"; path="/api/v6/dex/aggregator/swap-instruction"
     headers=okx.auth_headers("GET", path, "", ts)
-    expected=base64.b64encode(hmac.new(b"secret", f"{ts}GET{path}".encode(), hashlib.sha256).digest()).decode()
-    assert headers["OK-ACCESS-KEY"] == "key"
-    assert headers["OK-ACCESS-PASSPHRASE"] == "pass"
+    expected=base64.b64encode(hmac.new(b"okx-signing-material-fixture", f"{ts}GET{path}".encode(), hashlib.sha256).digest()).decode()
+    assert headers["OK-ACCESS-KEY"] == "okx-access-id-fixture"
+    assert headers["OK-ACCESS-PASSPHRASE"] == "okx-passphrase-fixture"
     assert headers["OK-ACCESS-SIGN"] == expected
 
 def test_odos_not_active_and_no_hardcoded_provider_wallet():

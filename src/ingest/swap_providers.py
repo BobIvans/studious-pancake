@@ -176,9 +176,9 @@ class JupiterSwapV2Adapter(BaseAdapter):
 
 class OKXSolanaAdapter(BaseAdapter):
     name="okx_solana"; endpoint_path="/api/v6/dex/aggregator/swap-instruction"; base_url="https://web3.okx.com"; capabilities=SwapCapability.FIRM_QUOTES|SwapCapability.RAW_INSTRUCTIONS|SwapCapability.EXACT_IN|SwapCapability.LEGACY_SPL_TOKEN|SwapCapability.NATIVE_SOL|SwapCapability.WSOL|SwapCapability.ADDRESS_LOOKUP_TABLES|SwapCapability.JITO_COMPATIBLE_ROUTING
-    def __init__(self,key="",secret="",passphrase="",approved_rps:float|None=None): self.key=key; self.secret=secret; self.passphrase=passphrase; self.rps=approved_rps
+    def __init__(self,key="",signing_material="",passphrase="",approved_rps:float|None=None): self.key=key; self.signing_material=signing_material; self.passphrase=passphrase; self.rps=approved_rps
     def auth_headers(self, method, path, body="", timestamp="2026-07-19T00:00:00.000Z"):
-        sign=base64.b64encode(hmac.new(self.secret.encode(), f"{timestamp}{method.upper()}{path}{body}".encode(), hashlib.sha256).digest()).decode()
+        sign=base64.b64encode(hmac.new(self.signing_material.encode(), f"{timestamp}{method.upper()}{path}{body}".encode(), hashlib.sha256).digest()).decode()
         return {"OK-ACCESS-KEY":self.key,"OK-ACCESS-TIMESTAMP":timestamp,"OK-ACCESS-PASSPHRASE":self.passphrase,"OK-ACCESS-SIGN":sign}
     async def quote(self, session, request):
         self._validate_request_capabilities(request); params={"chainIndex":"501","fromTokenAddress":request.input_mint,"toTokenAddress":request.output_mint,"amount":str(request.amount.base_units),"userWalletAddress":request.taker,"slippagePercent":str(request.slippage_bps.value/100),"forJitoBundle":str(request.for_jito_bundle).lower()}

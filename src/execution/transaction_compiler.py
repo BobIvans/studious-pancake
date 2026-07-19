@@ -1,4 +1,5 @@
 """Protocol-agnostic Solana v0 transaction compiler and signer."""
+
 from __future__ import annotations
 
 from collections import Counter
@@ -95,7 +96,9 @@ class AltValidator:
             )
 
         parsed_deactivation = (
-            deactivation_slot if deactivation_slot is not None else int(meta.deactivation_slot)
+            deactivation_slot
+            if deactivation_slot is not None
+            else int(meta.deactivation_slot)
         )
         if parsed_deactivation != 2**64 - 1:
             raise TransactionCompileError(
@@ -444,7 +447,9 @@ class TransactionCompiler:
             lookup_writable_count=lookup_writable_count,
             lookup_readonly_count=lookup_readonly_count,
             total_resolved_account_count=(
-                len(message.account_keys) + lookup_writable_count + lookup_readonly_count
+                len(message.account_keys)
+                + lookup_writable_count
+                + lookup_readonly_count
             ),
             used_alt_pubkeys=tuple(alt.address for alt in lookup_tables),
         )

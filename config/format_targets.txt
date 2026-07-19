@@ -1,0 +1,6 @@
+# Incremental Black baseline. Every file added here is checked in CI.
+scripts/quality_gate.py
+scripts/verify_repo.py
+tests/test_launcher_startup_smoke.py
+tests/test_quality_quarantine.py
+tests/providers/test_marginfi_readonly_optin.py

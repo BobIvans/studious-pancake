@@ -1,0 +1,17 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "path": "src/legacy_arb_bot.py",
+      "status": "non-importable-quarantine",
+      "allowed_static_debt": [
+        "F821"
+      ],
+      "owner_prs": [
+        "PR-023",
+        "PR-029"
+      ],
+      "reason": "Legacy monolith is excluded from the active runtime and must not be imported by maintained packages."
+    }
+  ]
+}

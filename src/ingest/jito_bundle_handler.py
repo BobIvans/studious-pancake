@@ -103,6 +103,14 @@ class JitoLeaderChecker:
             return leaders
 
         active_endpoints = []
+        current_slot = int(shared_state.stats.get("current_slot", 0) or 0)
+        if current_slot <= 0:
+            logger.debug(
+                "Current slot is unavailable; skipping speculative Jito leader filtering"
+            )
+            if _session_owned:
+                await _session.close()
+            return self.jito_endpoints
 
         # Check each endpoint for leader status
         for endpoint in self.jito_endpoints:

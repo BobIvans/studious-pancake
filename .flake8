@@ -37,7 +37,6 @@ extend-ignore =
     F405,
     F541,
     F811,
-    F821,
     F824,
     F841,
     E252,
@@ -50,3 +49,9 @@ extend-ignore =
     W391,
     W503,
     W504
+
+
+# PR-024: only the non-importable legacy monolith may retain its existing
+# undefined-name debt. Active code is not allowed to suppress F821 globally.
+per-file-ignores =
+    src/legacy_arb_bot.py:F821

@@ -284,3 +284,8 @@ yarl==1.22.0
 # The following packages are considered to be unsafe in a requirements file:
 # pip
 # setuptools
+
+# PR-024 quality gates (transitive dependencies are resolved by pip; PR-025
+# introduces the canonical lock/update procedure).
+mypy==1.18.2
+pip-audit==2.9.0

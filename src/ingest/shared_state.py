@@ -5,9 +5,12 @@ import logging
 import os
 import time
 from collections import defaultdict
-from typing import Dict, Set, Any, Optional, List
+from typing import TYPE_CHECKING, Dict, Set, Any, Optional, List
 from solders.pubkey import Pubkey
 from src.ingest.circuit_breaker import CapitalProtection
+
+if TYPE_CHECKING:
+    from src.ingest.flywheel_scaler import PairReputationCircuitBreaker
 
 # FIX 164: Global reference to macOS insomnia guard process
 caffeinate_proc = None

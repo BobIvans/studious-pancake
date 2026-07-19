@@ -1,8 +1,4 @@
-"""Canonical execution lifecycle models.
-
-These models intentionally keep provider instructions normalized before any
-blockhash, signature, RPC simulation, or submission concern is introduced.
-"""
+"""Canonical execution lifecycle models for generic Solana v0 compilation."""
 
 from __future__ import annotations
 
@@ -12,10 +8,22 @@ import hashlib
 import time
 from typing import Any, Protocol
 
+from solders.hash import Hash
+from solders.instruction import Instruction as SoldersInstruction
+from solders.message import MessageV0
+from solders.pubkey import Pubkey
+from solders.signature import Signature
+from solders.transaction import VersionedTransaction
+from solders.address_lookup_table_account import (
+    AddressLookupTableAccount,
+    ID as ADDRESS_LOOKUP_TABLE_ID,
+)
+from solders.compute_budget import ID as COMPUTE_BUDGET_ID
+
 SOLANA_WIRE_TRANSACTION_LIMIT_BYTES = 1232
-DEFAULT_BLOCKHASH = "11111111111111111111111111111111"
-COMPUTE_BUDGET_PROGRAM_ID = "ComputeBudget111111111111111111111111111111"
-ADDRESS_LOOKUP_TABLE_PROGRAM_ID = "AddressLookupTab1e1111111111111111111111111"
+DEFAULT_BLOCKHASH = Hash.default()
+COMPUTE_BUDGET_PROGRAM_ID = COMPUTE_BUDGET_ID
+ADDRESS_LOOKUP_TABLE_PROGRAM_ID = ADDRESS_LOOKUP_TABLE_ID
 
 
 class ExecutionState(str, Enum):
@@ -74,32 +82,30 @@ class ExecutionErrorCode(str, Enum):
 
 @dataclass(frozen=True, slots=True)
 class Instruction:
+    """Legacy string instruction descriptor kept for older planner tests."""
+
     program_id: str
     accounts: tuple[str, ...] = ()
     data: bytes = b""
-    name: str = "instruction"
+    name: str = ""
     kind: str = "generic"
 
     def stable_bytes(self) -> bytes:
-        return "|".join((self.program_id, self.name, self.kind, ",".join(self.accounts))).encode() + self.data
-
-
-@dataclass(frozen=True, slots=True)
-class ComputeBudgetPolicy:
-    unit_limit: int
-    micro_lamports_per_cu: int
-    simulation_unit_limit: int = 1_400_000
-    safety_margin_bps: int = 1_000
-
-
-@dataclass(frozen=True, slots=True)
-class TipPolicy:
-    lamports: int = 0
-    tip_account: str | None = None
+        return b"|".join(
+            [
+                self.program_id.encode(),
+                b",".join(account.encode() for account in self.accounts),
+                self.name.encode(),
+                self.kind.encode(),
+                self.data,
+            ]
+        )
 
 
 @dataclass(frozen=True, slots=True)
 class FlashLoanPlan:
+    """Legacy MarginFi flash-loan descriptor kept as a compatibility shim."""
+
     marginfi_account: str
     authority: str
     group: str
@@ -108,69 +114,171 @@ class FlashLoanPlan:
     end_instruction_template: Instruction
     projected_active_balances: tuple[str, ...]
     risk_engine_accounts: tuple[str, ...]
-    marginfi_bank_slot: int | None = None
+    marginfi_bank_slot: int
     token_2022_mint: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
+class PlannedInstruction:
+    instruction: SoldersInstruction
+    role: str = "application"
+    name: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class ComputeBudgetPolicy:
+    unit_limit: int | None = None
+    micro_lamports_per_cu: int | None = None
+    simulation_unit_limit: int = 1_400_000
+    safety_margin_bps: int = 1_000
+
+
+@dataclass(frozen=True, slots=True)
+class TipPolicy:
+    lamports: int = 0
+    tip_account: Pubkey | None = None
+
+
+@dataclass(frozen=True, slots=True, init=False)
 class TransactionPlan:
     opportunity_id: str
-    payer: str
+    payer: Pubkey
+    instructions: tuple[PlannedInstruction, ...]
     compute_budget_policy: ComputeBudgetPolicy
-    setup_instructions: tuple[Instruction, ...]
-    flash_loan_plan: FlashLoanPlan
-    strategy_instructions: tuple[Instruction, ...]
-    cleanup_instructions: tuple[Instruction, ...]
-    tip_policy: TipPolicy
-    required_signers: tuple[str, ...]
-    lookup_table_addresses: tuple[str, ...]
-    quote_slot: int | None
-    market_state_slot: int | None
-    oracle_slot: int | None
-    monitored_accounts: tuple[str, ...]
+    tip_policy: TipPolicy = TipPolicy()
+    required_signers: tuple[Pubkey, ...] = ()
+    lookup_table_addresses: tuple[Pubkey, ...] = ()
+    required_lookup_addresses: tuple[Pubkey, ...] = ()
+    quote_slot: int | None = None
+    market_state_slot: int | None = None
+    oracle_slot: int | None = None
+    monitored_accounts: tuple[Pubkey, ...] = ()
+
+    def __init__(self, opportunity_id: str, payer, *args, **kwargs) -> None:
+        object.__setattr__(self, "opportunity_id", opportunity_id)
+        object.__setattr__(self, "payer", payer)
+        if args and isinstance(args[0], ComputeBudgetPolicy):
+            # Legacy positional layout:
+            # opportunity, payer, compute, setup, flash, strategy, cleanup, tip,
+            # required_signers, lookup_tables, quote_slot, market_slot, oracle_slot, monitored
+            compute = args[0]
+            setup = args[1] if len(args) > 1 else ()
+            flash = args[2] if len(args) > 2 else None
+            strategy = args[3] if len(args) > 3 else ()
+            cleanup = args[4] if len(args) > 4 else ()
+            tip = args[5] if len(args) > 5 else TipPolicy()
+            required = args[6] if len(args) > 6 else ()
+            lookup = args[7] if len(args) > 7 else ()
+            quote = args[8] if len(args) > 8 else None
+            market = args[9] if len(args) > 9 else None
+            oracle = args[10] if len(args) > 10 else None
+            monitored = args[11] if len(args) > 11 else ()
+            object.__setattr__(self, "instructions", compute)
+            object.__setattr__(self, "compute_budget_policy", tuple(setup))
+            object.__setattr__(self, "tip_policy", flash)
+            object.__setattr__(self, "required_signers", tuple(strategy))
+            object.__setattr__(self, "lookup_table_addresses", tuple(cleanup))
+            object.__setattr__(self, "required_lookup_addresses", tip)
+            object.__setattr__(self, "quote_slot", tuple(required))
+            object.__setattr__(self, "market_state_slot", tuple(lookup))
+            object.__setattr__(self, "oracle_slot", quote)
+            object.__setattr__(self, "monitored_accounts", market if monitored == () else monitored)
+            return
+        instructions = args[0] if len(args) > 0 else kwargs.pop("instructions", ())
+        compute = args[1] if len(args) > 1 else kwargs.pop("compute_budget_policy", ComputeBudgetPolicy())
+        tip = args[2] if len(args) > 2 else kwargs.pop("tip_policy", TipPolicy())
+        required = args[3] if len(args) > 3 else kwargs.pop("required_signers", ())
+        lookup = args[4] if len(args) > 4 else kwargs.pop("lookup_table_addresses", ())
+        required_lookup = args[5] if len(args) > 5 else kwargs.pop("required_lookup_addresses", ())
+        quote = args[6] if len(args) > 6 else kwargs.pop("quote_slot", None)
+        market = args[7] if len(args) > 7 else kwargs.pop("market_state_slot", None)
+        oracle = args[8] if len(args) > 8 else kwargs.pop("oracle_slot", None)
+        monitored = args[9] if len(args) > 9 else kwargs.pop("monitored_accounts", ())
+        object.__setattr__(self, "instructions", tuple(instructions))
+        object.__setattr__(self, "compute_budget_policy", compute)
+        object.__setattr__(self, "tip_policy", tip)
+        object.__setattr__(self, "required_signers", tuple(required))
+        object.__setattr__(self, "lookup_table_addresses", tuple(lookup))
+        object.__setattr__(self, "required_lookup_addresses", tuple(required_lookup))
+        object.__setattr__(self, "quote_slot", quote)
+        object.__setattr__(self, "market_state_slot", market)
+        object.__setattr__(self, "oracle_slot", oracle)
+        object.__setattr__(self, "monitored_accounts", tuple(monitored))
+        if kwargs:
+            raise TypeError(f"unexpected TransactionPlan fields: {sorted(kwargs)}")
 
     @property
     def min_context_slot(self) -> int:
-        return max(self.quote_slot or 0, self.market_state_slot or 0, self.oracle_slot or 0, self.flash_loan_plan.marginfi_bank_slot or 0)
+        return max(
+            self.quote_slot or 0, self.market_state_slot or 0, self.oracle_slot or 0
+        )
 
 
 @dataclass(frozen=True, slots=True)
 class BlockhashContext:
-    blockhash: str
+    blockhash: Hash
     last_valid_block_height: int
     source_slot: int
     fetched_at: float
     commitment: str
 
     def validate(self) -> None:
-        if not self.blockhash or self.blockhash == DEFAULT_BLOCKHASH or set(self.blockhash) == {"0"}:
+        if not isinstance(self.blockhash, Hash) or self.blockhash == DEFAULT_BLOCKHASH:
             raise ValueError(ExecutionErrorCode.INVALID_BLOCKHASH.value)
 
 
 @dataclass(frozen=True, slots=True)
 class ResolvedAddressLookupTable:
-    address: str
-    owner: str
-    addresses: tuple[str, ...]
+    address: Pubkey
+    owner: Pubkey
+    addresses: tuple[Pubkey, ...]
     deactivation_slot: int | None
+    last_extended_slot: int | None
+    last_extended_slot_start_index: int | None
     source_slot: int
     data_hash: str
+    account: AddressLookupTableAccount
     library_deserialized: bool = True
+
+
+@dataclass(frozen=True, slots=True)
+class TransactionDiagnostics:
+    wire_size: int
+    required_signature_count: int
+    static_account_count: int
+    lookup_writable_count: int
+    lookup_readonly_count: int
+    total_resolved_account_count: int
+    used_alt_pubkeys: tuple[Pubkey, ...]
 
 
 @dataclass(frozen=True, slots=True)
 class CompiledTransaction:
     opportunity_id: str
-    payer: str
-    instructions: tuple[Instruction, ...]
+    payer: Pubkey
+    instructions: tuple[SoldersInstruction, ...]
+    message: MessageV0
     blockhash_context: BlockhashContext
     lookup_tables: tuple[ResolvedAddressLookupTable, ...]
     serialized_message: bytes
     serialized_transaction: bytes
+    versioned_transaction: VersionedTransaction
     message_hash: str
-    marginfi_end_index: int
     min_context_slot: int
-    required_signers: tuple[str, ...]
+    required_signers: tuple[Pubkey, ...]
+    diagnostics: TransactionDiagnostics
+    monitored_accounts: tuple[Pubkey, ...] = ()
+    is_fully_signed: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class SignedTransaction:
+    compiled: CompiledTransaction
+    versioned_transaction: VersionedTransaction
+    serialized_transaction: bytes
+    signatures: tuple[Signature, ...]
+    message_hash: str
+    is_fully_signed: bool = True
 
 
 @dataclass(frozen=True, slots=True)

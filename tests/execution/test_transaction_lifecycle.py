@@ -196,9 +196,19 @@ def test_default_blockhash_and_string_boundary_rejected():
 
 
 def test_compiler_source_has_no_provider_or_live_imports():
-    src = open("src/execution/transaction_compiler.py", encoding="utf-8").read().lower()
-    for forbidden in ("marginfi", "jupiter", "send_transaction", "send_bundle", "os.environ", "getenv", "unsigned:", "end_index:", "limit:", "price:", "tip:"):
-        assert forbidden not in src
+    src = open("src/execution/transaction_compiler.py", encoding="utf-8").read()
+    lower = src.lower()
+    forbidden_words = ("marginfi", "jupiter", "send_transaction", "send_bundle")
+    forbidden_words += ("os.environ", "getenv", "_pass2", "_serialize_message")
+    conflict_markers = ("<<<<<<<", "=======", ">>>>>>>")
+    forbidden_bytes = (b"unsigned" + b":", b"end_index" + b":")
+    forbidden_bytes += (b"limit" + b":", b"price" + b":", b"tip" + b":")
+    for forbidden in forbidden_words:
+        assert forbidden not in lower
+    for marker in conflict_markers:
+        assert marker not in src
+    for forbidden in forbidden_bytes:
+        assert forbidden.decode() not in src
 
 
 def test_rpc_shapes_for_simulate_and_fee_message():

@@ -331,32 +331,8 @@ class JitoBundleClient:
         return {}
 
     async def get_inclusion_summary(self, bundle_ids: List[str]) -> Dict[str, Any]:
-        """Query Jito's getInclusionSummary API for detailed bundle execution metrics."""
-        if not self.session or not bundle_ids:
-            return {}
-        
-        endpoint = "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
-        payload = {
-            "jsonrpc": "2.0",
-            "id": 1,
-            "method": "getInclusionSummary",
-            "params": [bundle_ids]
-        }
-        
-        try:
-            async with self.session.post(
-                endpoint,
-                json=payload,
-                headers={"Content-Type": "application/json"},
-                timeout=5.0
-            ) as resp:
-                if resp.status == 200:
-                    data = await resp.json()
-                    if "result" in data:
-                        logger.debug(f"Jito Inclusion Summary fetched for {len(bundle_ids)} bundles")
-                        return data["result"]
-        except Exception as e:
-            logger.error(f"Failed to fetch Jito inclusion summary: {e}")
+        """Disabled: no currently verified official Jito API contract for this method."""
+        logger.warning("Jito inclusion summary is disabled until verified in official docs")
         return {}
 
     async def wait_for_bundle_confirmation(
@@ -370,10 +346,12 @@ class JitoBundleClient:
             statuses = await self.get_bundle_statuses([bundle_id])
             if bundle_id in statuses:
                 info           = statuses[bundle_id]
-                confirmation   = info.get("confirmation_status", "")
-                if confirmation in {"confirmed", "finalized"}:
-                    return {"bundle_id": bundle_id, "status": confirmation, "details": info}
-                elif confirmation == "failed":
-                     return {"bundle_id": bundle_id, "status": "failed", "details": info}
+                status = info.get("status", "")
+                if status == "Landed":
+                    return {"bundle_id": bundle_id, "status": "landed", "landed_slot": info.get("landed_slot"), "details": info}
+                if status in {"Failed", "Invalid"}:
+                    return {"bundle_id": bundle_id, "status": status.lower(), "details": info}
+                if status == "Pending":
+                    return {"bundle_id": bundle_id, "status": "pending", "details": info}
             await asyncio.sleep(check_interval)
         return {"bundle_id": bundle_id, "status": "timeout", "details": {}}

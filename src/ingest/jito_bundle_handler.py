@@ -181,7 +181,9 @@ class BundleTemplate:
             )
         )
 
-        # Create minimal message for tip
+        # Offline template smoke tests need a syntactically valid message; live
+        # submission must still be rebuilt by the canonical compiler with a real
+        # BlockhashContext before signing/submission. Do not use Hash.default().
         from solders.message import MessageV0
         from solders.hash import Hash
 
@@ -189,7 +191,7 @@ class BundleTemplate:
             payer=self.keypair.pubkey(),
             instructions=[tip_ix],
             address_lookup_table_accounts=[],
-            recent_blockhash=Hash.default(),  # Placeholder, will be updated
+            recent_blockhash=Hash.from_string("So11111111111111111111111111111111111111112"),
         )
 
         return VersionedTransaction(msg, [self.keypair])

@@ -682,12 +682,12 @@ class ExecutionRouter:
                             addresses=alt_account or [],
                         ))
 
-                    # Get recent blockhash
-                    blockhash = Hash.default()
-                    if self.blockhash_mgr:
-                        bh = await self.blockhash_mgr.get_fresh_blockhash()
-                        if bh:
-                            blockhash = bh
+                    # Get recent blockhash; never compile with Hash.default().
+                    if not self.blockhash_mgr:
+                        raise RuntimeError("missing blockhash manager; refusing placeholder blockhash")
+                    blockhash = await self.blockhash_mgr.get_fresh_blockhash()
+                    if not blockhash:
+                        raise RuntimeError("missing fresh blockhash; refusing placeholder blockhash")
 
                     msg = MessageV0.try_compile(
                         payer=self.keypair.pubkey(),

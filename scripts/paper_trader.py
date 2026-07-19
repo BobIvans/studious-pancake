@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 """
+PR-023 QUARANTINE: this is not the supported canonical paper runner.
+
 Paper Trading Simulator — SINGLE-AGGREGATOR (Jupiter)
 Mirrors arb_bot atomic execution: one aggregator per leg, no cross-exchange hybrids.
 Cross-aggregator mixing (buy Jupiter / sell OKX) is impossible in a single atomic

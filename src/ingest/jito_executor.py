@@ -1,4 +1,6 @@
-"""JitoExecutor — HTTP REST bundle submission to regional endpoints.
+"""PR-023 QUARANTINE: legacy Jito sender; not live-ready.
+
+JitoExecutor — HTTP REST bundle submission to regional endpoints.
 
 Replaces gRPC with HTTP POST shotgun (aiohttp).
 The "first-accepted-wins" regional shotgun semantics are preserved.

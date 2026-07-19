@@ -1,4 +1,7 @@
-"""Canonical fail-closed MarginFi / Project Zero flash-loan provider."""
+"""PR-023 QUARANTINE: fixture-only MarginFi provider pending binary conformance."""
+
+__runtime_capability__ = "fixture-only"
+__quarantined__ = True
 from .provider import MarginfiFlashLoanProvider
 from .pin import MarginfiContractPin, load_marginfi_contract_pin
 from .errors import MarginfiRejection, MarginfiRejectionCode

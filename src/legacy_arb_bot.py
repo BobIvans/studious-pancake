@@ -1,4 +1,8 @@
+"""PR-023 QUARANTINE: historical monolithic runtime; unsupported entrypoint."""
 from __future__ import annotations
+
+__runtime_capability__ = "fixture-only"
+__quarantined__ = True
 from dotenv import load_dotenv
 
 load_dotenv(override=False)  # FIX 128: Allow Docker env overrides

@@ -1,4 +1,7 @@
-"""Jupiter transaction builder for Solana swap transactions."""
+"""PR-023 QUARANTINE: legacy Jupiter transaction builder; unsupported runtime path."""
+
+__runtime_capability__ = "fixture-only"
+__quarantined__ = True
 
 import asyncio
 import logging

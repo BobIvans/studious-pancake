@@ -121,16 +121,23 @@ class DataAggregator:
                 ata_rent_lamports BIGINT,
                 total_cost_lamports BIGINT,
                 net_profit_lamports BIGINT,
-                roi_pct REAL,
+                roi_pct TEXT,
                 decision TEXT,
                 sim_success INTEGER DEFAULT 0,
                 sim_error TEXT,
                 quote_age_ms BIGINT,
                 num_new_atas INTEGER DEFAULT 0,
-                signature TEXT,
-                price_impact_pct REAL DEFAULT 0.0,
-                executed INTEGER DEFAULT 1,
-                sol_usd_price REAL DEFAULT 0.0
+                signature TEXT DEFAULT NULL,
+                price_impact_pct TEXT DEFAULT '0',
+                executed INTEGER NOT NULL DEFAULT 0,
+                submitted INTEGER NOT NULL DEFAULT 0,
+                plan_hash TEXT,
+                message_hash TEXT,
+                reconciliation_hash TEXT,
+                terminal_reason TEXT,
+                simulated_executable_pnl TEXT,
+                bundle_id TEXT DEFAULT NULL,
+                sol_usd_price TEXT DEFAULT '0'
             )
         """
         )
@@ -142,9 +149,16 @@ class DataAggregator:
             ("quote_age_ms", "BIGINT"),
             ("num_new_atas", "INTEGER DEFAULT 0"),
             ("signature", "TEXT"),
-            ("price_impact_pct", "REAL DEFAULT 0.0"),
-            ("executed", "INTEGER DEFAULT 1"),
-            ("sol_usd_price", "REAL DEFAULT 0.0"),
+            ("price_impact_pct", "TEXT DEFAULT '0'"),
+            ("executed", "INTEGER NOT NULL DEFAULT 0"),
+            ("submitted", "INTEGER NOT NULL DEFAULT 0"),
+            ("plan_hash", "TEXT"),
+            ("message_hash", "TEXT"),
+            ("reconciliation_hash", "TEXT"),
+            ("terminal_reason", "TEXT"),
+            ("simulated_executable_pnl", "TEXT"),
+            ("bundle_id", "TEXT DEFAULT NULL"),
+            ("sol_usd_price", "TEXT DEFAULT '0'"),
         ]
 
         # FIXED: Полноценный, безопасный механизм сверки схемы БД без дублирования ошибок
@@ -829,8 +843,26 @@ class DataAggregator:
 
             return results
 
+    def _sanitize_shadow_paper_trade(self, trade_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Fail closed for quote-only paper records before persistence.
+
+        PR-013 shadow outcomes may only become executable ledger entries through
+        the canonical final-message simulator/reconciler.  The legacy paper
+        trader is quote-only, so the active writer forces non-executed evidence
+        even if an older caller still passes executed=1.
+        """
+        sanitized = dict(trade_data)
+        sanitized["executed"] = 0
+        sanitized.setdefault("submitted", 0)
+        if sanitized.get("sim_success") != 1:
+            sanitized["sim_success"] = 0
+        if not sanitized.get("sim_error") and sanitized.get("decision") == "EXECUTE":
+            sanitized["sim_error"] = "shadow requires compiled transaction simulation; quote-only paper record is not executed"
+        return sanitized
+
     async def log_paper_trade(self, trade_data: Dict[str, Any]):
         """Log a paper trading transaction directly into the paper_trades table."""
+        trade_data = self._sanitize_shadow_paper_trade(trade_data)
         try:
             async with aiosqlite.connect(self.db_path, timeout=30) as db:
                 await db.execute(
@@ -875,7 +907,7 @@ class DataAggregator:
                         trade_data.get("num_new_atas"),
                         trade_data.get("signature"),
                         trade_data.get("price_impact_pct"),
-                        trade_data.get("executed", 1),
+                        trade_data.get("executed", 0),
                         trade_data.get("sol_usd_price", 0.0),
                     ),
                 )

@@ -230,3 +230,7 @@ opportunities = await data_aggregator.get_lst_arbitrage_opportunities()
 ## Лицензия
 
 MIT License
+
+## PR-013 honest shadow pipeline
+
+The active paper/shadow path is now documented in `docs/shadow_pipeline_pr013.md`. It uses exact final-message `simulateTransaction` and same-context balance reconciliation, persists terminal shadow outcomes with `executed=0`/`submitted=0`, and keeps live submission disabled until PR-014.

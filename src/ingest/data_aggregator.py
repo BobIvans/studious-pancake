@@ -121,16 +121,23 @@ class DataAggregator:
                 ata_rent_lamports BIGINT,
                 total_cost_lamports BIGINT,
                 net_profit_lamports BIGINT,
-                roi_pct REAL,
+                roi_pct TEXT,
                 decision TEXT,
                 sim_success INTEGER DEFAULT 0,
                 sim_error TEXT,
                 quote_age_ms BIGINT,
                 num_new_atas INTEGER DEFAULT 0,
-                signature TEXT,
-                price_impact_pct REAL DEFAULT 0.0,
-                executed INTEGER DEFAULT 1,
-                sol_usd_price REAL DEFAULT 0.0
+                signature TEXT DEFAULT NULL,
+                price_impact_pct TEXT DEFAULT '0',
+                executed INTEGER NOT NULL DEFAULT 0,
+                submitted INTEGER NOT NULL DEFAULT 0,
+                plan_hash TEXT,
+                message_hash TEXT,
+                reconciliation_hash TEXT,
+                terminal_reason TEXT,
+                simulated_executable_pnl TEXT,
+                bundle_id TEXT DEFAULT NULL,
+                sol_usd_price TEXT DEFAULT '0'
             )
         """
         )
@@ -142,9 +149,16 @@ class DataAggregator:
             ("quote_age_ms", "BIGINT"),
             ("num_new_atas", "INTEGER DEFAULT 0"),
             ("signature", "TEXT"),
-            ("price_impact_pct", "REAL DEFAULT 0.0"),
-            ("executed", "INTEGER DEFAULT 1"),
-            ("sol_usd_price", "REAL DEFAULT 0.0"),
+            ("price_impact_pct", "TEXT DEFAULT '0'"),
+            ("executed", "INTEGER NOT NULL DEFAULT 0"),
+            ("submitted", "INTEGER NOT NULL DEFAULT 0"),
+            ("plan_hash", "TEXT"),
+            ("message_hash", "TEXT"),
+            ("reconciliation_hash", "TEXT"),
+            ("terminal_reason", "TEXT"),
+            ("simulated_executable_pnl", "TEXT"),
+            ("bundle_id", "TEXT DEFAULT NULL"),
+            ("sol_usd_price", "TEXT DEFAULT '0'"),
         ]
 
         # FIXED: Полноценный, безопасный механизм сверки схемы БД без дублирования ошибок

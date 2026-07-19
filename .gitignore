@@ -93,3 +93,9 @@ temp/
 .wallet/
 test_wallet*.json
 paper_wallet*.json
+
+# PR-007 hygiene: generated/backup artifacts are not runtime source.
+*.bak
+*.new
+cloudflared.tgz
+patch_bot*.py

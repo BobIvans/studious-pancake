@@ -7,7 +7,7 @@ from .domain import Opportunity
 
 
 class LegacyExecutionEngine:
-    """Temporary adapter: all transaction execution must pass through this boundary."""
+    """Deprecated quarantine adapter; not imported by the PR-007 application runtime."""
 
     def __init__(self, executor: Any) -> None:
         self.executor = executor

@@ -36,18 +36,21 @@ class BaseDetectionStrategy:
 
 
 class LSTDepegStrategy(BaseDetectionStrategy):
-    def __init__(self, *, mode: StrategyMode = StrategyMode.SHADOW) -> None:
-        super().__init__("lst_depeg", mode)
+    def __init__(self, *, mode: StrategyMode = StrategyMode.DISABLED) -> None:
+        reason = "detector_not_implemented" if mode is StrategyMode.DISABLED else None
+        super().__init__("lst_depeg", mode, reason)
 
 
 class LSTUnstakeStrategy(BaseDetectionStrategy):
-    def __init__(self, *, mode: StrategyMode = StrategyMode.SHADOW) -> None:
-        super().__init__("lst_unstake", mode)
+    def __init__(self, *, mode: StrategyMode = StrategyMode.DISABLED) -> None:
+        reason = "detector_not_implemented" if mode is StrategyMode.DISABLED else None
+        super().__init__("lst_unstake", mode, reason)
 
 
 class CircularArbitrageStrategy(BaseDetectionStrategy):
-    def __init__(self, *, mode: StrategyMode = StrategyMode.SHADOW) -> None:
-        super().__init__("circular_arbitrage", mode)
+    def __init__(self, *, mode: StrategyMode = StrategyMode.DISABLED) -> None:
+        reason = "detector_not_implemented" if mode is StrategyMode.DISABLED else None
+        super().__init__("circular_arbitrage", mode, reason)
 
 
 class DisabledShellStrategy(BaseDetectionStrategy):

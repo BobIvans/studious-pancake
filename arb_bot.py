@@ -17,11 +17,12 @@ class LauncherConfig:
     """Runtime configuration normalized for PR-002 strategy modes."""
 
     strategy_modes: dict[str, str] = field(default_factory=lambda: {
-        "lst_depeg": StrategyMode.SHADOW.value,
-        "lst_unstake": StrategyMode.SHADOW.value,
-        "circular_arbitrage": StrategyMode.SHADOW.value,
+        "lst_depeg": StrategyMode.DISABLED.value,
+        "lst_unstake": StrategyMode.DISABLED.value,
+        "circular_arbitrage": StrategyMode.DISABLED.value,
     })
     opportunity_queue_size: int = 1024
+    shutdown_drain_timeout_seconds: float = 0.25
 
 
 def load_configuration() -> LauncherConfig:

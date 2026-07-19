@@ -553,15 +553,16 @@ class LstInstantUnstakeArbitrage:
                 for _check_mint in {str(lst_mint), _SOL_MINT_STR}:
                     if _check_mint not in shared_state.ATA_CACHE:
                         _estimated_rent += get_ata_rent_for_mint(_check_mint)
-                gas_ok, _ = PreTradeGuard.check_gas_tank(_bal, _estimated_rent)
+                gas_ok, _ = await PreTradeGuard.check_gas_tank(_bal, _estimated_rent)
                 if not gas_ok:
                     logger.warning(
                         "🚫 Pre-trade guard (LST): gas tank empty — skipping bundle")
                     jito_result = {"success": False, "error": "Gas tank empty"}
                     return False
             except Exception as _gas_err:
-                logger.debug(
-                    f"Pre-trade gas check error (non-fatal): {_gas_err}")
+                logger.warning(
+                    f"Pre-trade gas check failed closed: {_gas_err}")
+                return False
 
             # P0-9: Final simulation check before send_bundle
             try:
@@ -575,7 +576,7 @@ class LstInstantUnstakeArbitrage:
                     jito_tip_lamports=jito_tip_lamports,
                     base_fee_lamports=0,
                     expected_profit_lamports=opportunity["expected_profit_lamports"],
-                    priority_fee_lamports=int(5_000 * 1e9),
+                    priority_fee_lamports=None,  # PR-007 quarantine: unknown priority fee blocks send in guard.
                     ata_rent_lamports=int(_estimated_rent * 1e9),
                     is_circular=True,
                 )
@@ -584,7 +585,8 @@ class LstInstantUnstakeArbitrage:
                     jito_result = {"success": False, "error": _reason}
                     return False
             except Exception as _ptg_err:
-                logger.debug(f"Pre-trade check error (non-fatal): {_ptg_err}")
+                logger.warning(f"Pre-trade check failed closed: {_ptg_err}")
+                return False
 
             # Send via Jito
             jito_result = await jito_executor.send_bundle([transaction])

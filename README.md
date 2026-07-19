@@ -230,3 +230,22 @@ opportunities = await data_aggregator.get_lst_arbitrage_opportunities()
 ## Лицензия
 
 MIT License
+
+
+## PR-018 limited-live gate
+
+This repository is shadow-only by default. PR-018 adds an operator-controlled limited-live readiness gate, not autonomous unrestricted trading. The checked-in `config/live_risk.yaml` has `live_enabled: false`; missing, malformed or conflicting config denies live.
+
+Safe operator commands:
+
+```bash
+bot readiness --mode shadow --config config/live_risk.yaml --json
+bot readiness --mode live --config config/live_risk.yaml --json
+bot live dry-run --opportunity <id> --config config/live_risk.yaml --json
+bot live arm --confirm-config-hash <full-hash> --expires-in 300 --config config/live_risk.yaml
+bot live status --json --config config/live_risk.yaml
+bot live stop --reason "operator incident" --config config/live_risk.yaml
+bot live clear-stop --confirm-config-hash <full-hash> --config config/live_risk.yaml
+```
+
+Limited live requires the exact config hash, a fresh all-pass readiness report, a non-expired operator confirmation, zero outstanding PR-014 attempts and a single-use `LiveSubmissionPermit` bound to the exact attempt generation, plan hash, message hash, wallet, route provider, market and process/session. Readiness and dry-run never sign, submit or mutate live budget. Latches are durable and sticky; ambiguous submissions must be reconciled before clearing and re-arming. See `docs/pr018_limited_live.md` and `docs/runbooks/pr018_incident_runbook.md`.

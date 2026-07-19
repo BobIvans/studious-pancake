@@ -1,8 +1,11 @@
 verified_at: "2026-07-19"
 verification_method: "Primary vendor documentation opened on 2026-07-19 UTC; ordinary CI remains offline and fixtures are sanitized."
+conflict_resolution_note: "Resolved PR-012 contract-record conflict by preserving the previous repository provider keys as legacy aliases while making the PR-012 capability records authoritative."
 providers:
   jupiter_router:
+    legacy_alias: jupiter_swap_v2
     role: executable
+    status: active
     capability_pin: jupiter-router-build-2026-07-19
     official_docs:
       - https://developers.jup.ag/docs/swap/build
@@ -12,12 +15,35 @@ providers:
       path: /swap/v2/build
     auth: x-api-key
     artifact_kind: raw_instructions
+    request_parameters:
+      - inputMint
+      - outputMint
+      - amount
+      - taker
+      - payer
+      - slippageBps
+      - maxAccounts
+      - wrapAndUnwrapSol
+      - forJitoBundle
+      - includedDexes
+      - excludedDexes
+    defaults:
+      maxAccounts: 64
+      wrapAndUnwrapSol_for_marginfi: false
+      forJitoBundle_when_jito_execution: true
+    response_contract: setup/swap/cleanup/other raw instructions, compute budget and tip instructions, ALT address mappings, quote fields, fees, route steps, and blockhash metadata must be schema-validated before use.
+    rate_limits:
+      account_wide_window: 60 requests / 60 seconds
+      paid_tiers: explicitly configured only
     contract_corrections:
       - Router /build is the only composable Jupiter path in this repo.
       - Meta /order assembled transactions are benchmark/discovery data only.
       - Do not create a second Jupiter limiter/client; reuse PR-011 account-wide 60 requests / 60 seconds.
+      - Older /swap/v2/quote and /swap/v2/swap paths are not the PR-012 execution contract.
   okx_dex:
+    legacy_alias: okx_solana
     role: discovery_only
+    status: discovery_only_pending_contract_validation
     admission_reason: discovery_only_pending_contract_validation
     capability_pin: okx-solana-swap-instruction-2026-07-19
     official_docs:
@@ -34,6 +60,7 @@ providers:
       - OK-ACCESS-SIGN
     signature: "Base64(HMAC_SHA256(secret, timestamp + METHOD + requestPathWithCanonicalQuery + body))"
     artifact_kind: raw_instructions
+    response_contract: instructionLists, routerResult, and addressLookupTableAccount/addressLookupTableAddresses are validated losslessly before any future promotion.
     executable_promotion_gate:
       - sanitized success/error/rate-limit fixtures
       - exact auth-vector tests
@@ -48,7 +75,9 @@ providers:
       maxAccounts: provider-specific only; no global default
     rate_limits: explicit approved account policy only; no guessed quota
   openocean:
+    legacy_alias: openocean_solana
     role: disabled_missing_credentials_without_key_else_discovery_only
+    status: quote_discovery_only
     capability_pin: openocean-solana-meta-aggregator-2026-07-19
     official_docs:
       - https://docs.openocean.finance/docs/solana-swap-api
@@ -57,8 +86,17 @@ providers:
     rate_limits: 2 RPS default
     provenance: meta-aggregator over Jupiter and Titan; not independent executable liquidity proof
     fee_policy: document/return fees when present; unknown fees remain unknown
+    raw_instructions_enabled: false
+    raw_instructions_activation_requirements:
+      - authorized official Solana response fixture
+      - sanitized fixture
+      - validated instruction semantics
+      - validated ALT handling
+      - contract test
   odos:
+    legacy_alias: odos_solana
     role: discovery_only
+    status: assembled_transaction_discovery_only
     capability_pin: odos-solana-sor-v3-2026-07-19
     official_docs:
       - https://docs.odos.xyz/api/solana
@@ -79,11 +117,22 @@ providers:
     contract_corrections:
       - Assemble returns base64 assembled transaction data and is never composable raw instructions here.
       - Quote simulation/assemble metadata is informational and not this bot's execution guarantee.
+legacy_aliases_retained_for_merge_compatibility:
+  jupiter_swap_v2: providers.jupiter_router
+  okx_solana: providers.okx_dex
+  openocean_solana: providers.openocean
+  odos_solana: providers.odos
 removed_or_not_activated_in_pr012:
-  - zero_x_solana
-  - kamino
-  - phoenix
-  - openbook
-  - pump_fun
-  - legacy_multi_aggregator_client
-  - legacy_swap_providers
+  zero_x_solana:
+    status: not_activated_in_pr012
+    previous_status: feature_gated_priority_access
+    official_docs:
+      - https://docs.0x.org/
+      - https://0x.org/products/solana
+    reason: PR-012 scope is limited to Jupiter, OKX, OpenOcean and Odos.
+  kamino: not_activated_in_pr012
+  phoenix: not_activated_in_pr012
+  openbook: not_activated_in_pr012
+  pump_fun: not_activated_in_pr012
+  legacy_multi_aggregator_client: not_activated_in_pr012
+  legacy_swap_providers: not_activated_in_pr012

@@ -341,8 +341,10 @@ def test_default_blockhash_and_string_boundary_rejected():
 
 
 REPORTED_CONFLICT_FILES = (
+    "docs/external_contracts.yaml",
     "src/execution/__init__.py",
     "src/execution/transaction_compiler.py",
+    "src/execution/transaction_simulator.py",
     "tests/execution/test_transaction_lifecycle.py",
 )
 

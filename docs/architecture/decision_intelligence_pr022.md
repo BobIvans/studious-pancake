@@ -24,10 +24,17 @@ PnL, sends/landings, secrets, `uiAmount`, float SOL money, and legacy score.
 partitions. All rows sharing a lineage/root group remain on exactly one side, and
 an embargo prevents label-horizon freshness/replay leakage. Imputation/category
 vocabulary/scaling are fitted from training rows only by the JSON linear trainer.
-The scikit-learn dependency is pinned at `scikit-learn==1.8.0`; its calibration,
-`CalibratedClassifierCV`, reliability curve, and permutation-importance docs are
-referenced in `docs/external_contracts.yaml`, but PR-022 uses explicit temporal
-splits and a safe JSON model artifact rather than executable pickle/joblib.
+The scikit-learn dependency is pinned at `scikit-learn==1.8.0`. Implementation
+time contract references are the official scikit-learn calibration guide
+(<https://scikit-learn.org/stable/modules/calibration.html>),
+`CalibratedClassifierCV` API contract
+(<https://scikit-learn.org/stable/modules/generated/sklearn.calibration.CalibratedClassifierCV.html>),
+reliability/calibration curve example
+(<https://scikit-learn.org/stable/auto_examples/calibration/plot_calibration_curve.html>),
+and permutation-importance API
+(<https://scikit-learn.org/stable/modules/generated/sklearn.inspection.permutation_importance.html>).
+The library supplies mechanics only; PR-022 uses explicit temporal splits and a
+safe JSON model artifact rather than executable pickle/joblib.
 
 ## Baseline, model, artifacts, and quality gates
 

@@ -129,11 +129,3 @@ providers:
       - contract test
   odos_solana:
     status: disabled_until_official_solana_instruction_contract_verified
-pr022_decision_intelligence:
-  scikit_learn_version: "1.8.0"
-  docs:
-    - https://scikit-learn.org/stable/modules/calibration.html
-    - https://scikit-learn.org/stable/modules/generated/sklearn.calibration.CalibratedClassifierCV.html
-    - https://scikit-learn.org/stable/auto_examples/calibration/plot_calibration_curve.html
-    - https://scikit-learn.org/stable/modules/generated/sklearn.inspection.permutation_importance.html
-  safety_note: Mechanics only; PR-022 uses explicit grouped temporal split and safe JSON artifacts.

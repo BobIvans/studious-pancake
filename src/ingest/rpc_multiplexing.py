@@ -483,10 +483,11 @@ class ExecutionPipeline:
         try:
             logger.info(f"🔥 Processing event: {event['signature'][:8]}...")
 
-            # Check if this is a migration/backrun opportunity
+            # PR-021: Pump/log-string migration backruns are disabled. Verified
+            # Pump migration state must come from src.venues.pump snapshots only.
             if self._is_migration_event(event):
-                await self._trigger_backrun(event)
-                return  # Backrun triggered, skip normal flow
+                logger.warning("PUMP_LEGACY_HEURISTIC_DISABLED")
+                return
 
             # Step 1: Parse event for pool/token info
             pool_info = self._parse_pool_event(event)
@@ -513,46 +514,13 @@ class ExecutionPipeline:
             logger.error(f"Event handling error: {e}")
 
     def _is_migration_event(self, event: Dict[str, Any]) -> bool:
-        """Check if event indicates pool creation/migration."""
-        logs = event.get("logs", [])
-        signature = event.get("signature", "")
-
-        # Check for known migration indicators
-        migration_indicators = [
-            "InitializePool",  # Raydium
-            "Migration",       # Pump.fun
-            "CreatePool",      # Other AMMs
-            "InitializeInstruction"  # General pool init
-        ]
-
-        for log in logs:
-            if any(indicator in log for indicator in migration_indicators):
-                return True
-
+        """Legacy log-string migration detection is disabled for Pump V2."""
         return False
 
     async def _trigger_backrun(self, event: Dict[str, Any]):
-        """Trigger atomic backrun for migration event."""
-        try:
-            signature = event["signature"]
-
-            # Extract pool info from event (simplified)
-            # In production, would parse actual logs for mint addresses
-            base_mint = "So11111111111111111111111111111111111111112"  # SOL as default
-            quote_mint = "placeholder_mint"  # Would be extracted from logs
-
-            # Get recent blockhash (would be cached)
-            recent_blockhash = "11111111111111111111111111111111"  # Placeholder
-
-            await self.backrun_trigger.on_migration_event(
-                signature=signature,
-                base_mint=base_mint,
-                quote_mint=quote_mint,
-                recent_blockhash=recent_blockhash
-            )
-
-        except Exception as e:
-            logger.error(f"Backrun trigger failed: {e}")
+        """Disabled compatibility shell; no Pump observation may create a bundle."""
+        logger.warning("PUMP_LEGACY_HEURISTIC_DISABLED")
+        return None
 
     def _parse_pool_event(self, event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Parse pool creation/migration event."""

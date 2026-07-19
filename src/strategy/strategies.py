@@ -64,8 +64,17 @@ class KaminoLiquidationStrategy(DisabledShellStrategy):
 
 
 class PumpMigrationStrategy(DisabledShellStrategy):
-    def __init__(self) -> None:
-        super().__init__("pump_fun_migration", StrategyMode.DISABLED, "Pump.fun V2 implementation is a non-goal")
+    def __init__(self, *, adapter_configured: bool = False) -> None:
+        if adapter_configured:
+            super().__init__("pump_fun_migration", StrategyMode.SHADOW, None)
+        else:
+            super().__init__("pump_fun_migration", StrategyMode.DISABLED, "PUMP_ADAPTER_NOT_CONFIGURED_SHADOW_ONLY")
+
+    async def detect_once(self) -> Iterable[Opportunity]:
+        # PR-021: only normalized shadow candidates from the verified Pump adapter
+        # may be yielded here. Heuristic graduation/backrun ArbitrageSignal values
+        # are intentionally not adapted into strategy opportunities.
+        return ()
 
 
 class OrderbookAmmStrategy(DisabledShellStrategy):

@@ -22,6 +22,24 @@ from src.ingest.data_aggregator import DataAggregator
 from src.ingest.pyth_core_price_feeder import get_pyth_core_feeder
 from src.ingest.circuit_breaker import CapitalProtection  # FIX #45
 from src.config.addresses import XSTOCK_MINTS
+from src.domain.money import (
+    BasisPoints,
+    ComputeBudget,
+    ComputeUnitPrice,
+    FeeComponentKind,
+    LAMPORTS_PER_SOL,
+    Lamports,
+    TokenAmount,
+    USDC_MINT,
+    WSOL_MINT,
+)
+from src.domain.cost_model import (
+    ConversionSnapshot,
+    FeeComponent,
+    FlashLoanTerms,
+    TradeAmounts,
+    TradeCostModel,
+)
 
 # ============================================================================
 # ДИНАМИЧЕСКАЯ ЗАГРУЗКА ПАР ИЗ ТВОИХ РЕЕСТРОВ
@@ -187,57 +205,63 @@ class PaperTrader:
             else:
                 gross_profit_sol = gross_profit_ui  # already in SOL
 
-            # Step 2: all fees strictly in SOL
-            flashloan_fee_sol = 0.0  # MarginFi flashloan fee is 0%
+            # Step 2: all fees strictly in the declared settlement asset via TradeCostModel.
             slippage_bps = 15
-            network_fee_sol = 5000 / 1e9
-            priority_fee_sol = 10000 / 1e9
-            # FIX 304: Realistic Jito tip — 0.001 SOL floor (real Mainnet minimum)
-            jito_tip_sol = max(0.001, gross_profit_sol * 0.4)
-            ata_rent_sol = (
-                2_039_280 / 1e9 if target_mint not in self.existing_atas else 0.0
+            settlement_mint = WSOL_MINT if _base_dec == 9 else USDC_MINT
+            input_amount = TokenAmount.from_base_units(settlement_mint, amount, _base_dec)
+            expected_output = TokenAmount.from_base_units(settlement_mint, final_amount, _base_dec)
+            minimum_output = TokenAmount.from_base_units(settlement_mint, int(sell.get("otherAmountThreshold", final_amount)), _base_dec)
+            if _base_dec == 6:
+                dex_fee_units = int(raw_fee_base_token * (10 ** _base_dec))
+                network_fee_units = int(5000 / sol_price * (10 ** _base_dec))
+                priority_fee_units = int(ComputeBudget(200_000, ComputeUnitPrice(50_000)).priority_fee().value / sol_price * (10 ** _base_dec))
+                jito_tip_units = int(max(0.001, gross_profit_sol * 0.4) * sol_price * (10 ** _base_dec))
+                ata_rent_units = 0 if target_mint in self.existing_atas else int(2_039_280 / sol_price * (10 ** _base_dec))
+            else:
+                dex_fee_units = int(raw_fee_base_token * (10 ** _base_dec))
+                network_fee_units = Lamports(5000).value
+                priority_fee_units = ComputeBudget(200_000, ComputeUnitPrice(50_000)).priority_fee().value
+                jito_tip_units = Lamports.from_sol(max(0.001, gross_profit_sol * 0.4)).value
+                ata_rent_units = 0 if target_mint in self.existing_atas else Lamports(2_039_280).value
+            fees = [
+                FeeComponent(FeeComponentKind.FLASH_LOAN, TokenAmount.from_base_units(settlement_mint, 0, _base_dec), False, "MarginFi paper terms"),
+                FeeComponent(FeeComponentKind.DEX, TokenAmount.from_base_units(settlement_mint, dex_fee_units, _base_dec), True, "Jupiter quote fee embedded"),
+                FeeComponent(FeeComponentKind.NETWORK_BASE, TokenAmount.from_base_units(settlement_mint, network_fee_units, _base_dec), False),
+                FeeComponent(FeeComponentKind.PRIORITY, TokenAmount.from_base_units(settlement_mint, priority_fee_units, _base_dec), False),
+                FeeComponent(FeeComponentKind.JITO_TIP, TokenAmount.from_base_units(settlement_mint, jito_tip_units, _base_dec), False),
+                FeeComponent(FeeComponentKind.ATA_CREATION, TokenAmount.from_base_units(settlement_mint, ata_rent_units, _base_dec), False),
+                FeeComponent(FeeComponentKind.SLIPPAGE_BUFFER, TokenAmount.from_base_units(settlement_mint, 0, _base_dec), True),
+            ]
+            cost_decision = TradeCostModel().evaluate(
+                settlement_mint=settlement_mint, amounts=TradeAmounts(input_amount, expected_output, minimum_output),
+                flash_loan_terms=FlashLoanTerms("MarginFi", settlement_mint, BasisPoints(0)), fees=fees,
+                conversions=ConversionSnapshot(tuple()), min_net_profit=TokenAmount.from_base_units(settlement_mint, int(0.0001 * (10 ** _base_dec)), _base_dec),
+                safety_buffer=TokenAmount.from_base_units(settlement_mint, 0, _base_dec),
             )
-            total_fees_sol = (
-                flashloan_fee_sol + dex_fee_sol +
-                network_fee_sol + priority_fee_sol + jito_tip_sol +
-                ata_rent_sol
-            )
-            net_profit_sol = gross_profit_sol - total_fees_sol
-            net_profit_lamports = int(net_profit_sol * 1e9)
-            roi_pct = (net_profit_sol / (gross_profit_sol + 1e-12)) * 100 if amount > 0 else 0.0
-            decision = "SKIP_LOW_MARGIN"
+            breakdown = cost_decision.to_dict()
+            net_profit_lamports = int(breakdown["net_profit_base_units"] if _base_dec == 9 else breakdown["net_profit_base_units"] / sol_price * 1000)
+            net_profit_sol = float(net_profit_lamports) / LAMPORTS_PER_SOL
+            total_fees_sol = float(breakdown["total_cost_base_units"]) / (10 ** _base_dec) / (1 if _base_dec == 9 else sol_price)
+            roi_pct = float(breakdown["roi"]) * 100
+            decision = "EXECUTE" if cost_decision.should_execute else cost_decision.reason.value.upper()
             sim_success = 0
-            sim_error = None
-
-            if net_profit_sol > 0.0001:  # Смягченный порог для симуляции
-                from src.ingest.flash_simulator import FlashSimulator
-                # Подключаем реальный симулятор для валидации математики
-                sim = FlashSimulator(self.session, os.getenv("RPC_URL_1"))
-                # В paper mode проверяем только математическую модель (транзакция не строится)
-                is_profitable = True  # TODO: Заменить на вызов build_native_flashloan_tx
-
-                if is_profitable:
-                    decision = "EXECUTE"
-                    sim_success = 1
-                else:
-                    decision = "SIM_FAILED"
-                    sim_error = "Simulation rejected by FlashSimulator limits"
+            sim_error = "transaction not built or simulated in paper mode" if cost_decision.should_execute else cost_decision.reason.value
 
             trade_data = {
                 "route": f"{base_name}->{target_name}->{base_name}",
                 "token_in": base_mint,
                 "token_out": target_mint,
                 "amount_lamports": amount,
-                "expected_profit_lamports": int((net_profit_sol + total_fees_sol) * 1e9),
+                "expected_profit_lamports": int(breakdown["gross_profit_base_units"]),
                 "gross_revenue_lamports": final_amount,
-                "flashloan_fee_lamports": int(flashloan_fee_sol * 1e9),
-                "dex_fee_lamports": int(dex_fee_sol * 1e9),
+                "flashloan_fee_lamports": 0,
+                "dex_fee_lamports": dex_fee_units,
                 "slippage_bps": slippage_bps,
-                "network_fee_lamports": int(network_fee_sol * 1e9),
-                "priority_fee_lamports": int(priority_fee_sol * 1e9),
-                "jito_tip_lamports": int(jito_tip_sol * 1e9),
-                "ata_rent_lamports": int(ata_rent_sol * 1e9),
-                "total_cost_lamports": int(total_fees_sol * 1e9),
+                "network_fee_lamports": network_fee_units,
+                "priority_fee_lamports": priority_fee_units,
+                "jito_tip_lamports": jito_tip_units,
+                "ata_rent_lamports": ata_rent_units,
+                "total_cost_lamports": int(breakdown["total_cost_base_units"]),
                 "net_profit_lamports": net_profit_lamports,
                 "roi_pct": roi_pct,
                 "decision": decision,
@@ -246,6 +270,10 @@ class PaperTrader:
                 "sim_error": sim_error,
                 "price_impact_pct": combined_impact_pct,
                 "sol_usd_price": sol_price,
+                "cost_breakdown": breakdown,
+                "decision_reason": cost_decision.reason.value,
+                "minimum_output_base_units": breakdown["guaranteed_minimum_output_base_units"],
+                "required_repayment_base_units": breakdown["required_repayment_base_units"],
             }
             await self.aggregator.log_paper_trade(trade_data)
 
@@ -253,7 +281,7 @@ class PaperTrader:
             if decision == "EXECUTE":
                 self.circuit_breaker.record_trade(net_profit_sol)
             elif decision == "SKIP_LOW_MARGIN" and total_fees_sol > 0:
-                self.circuit_breaker.record_failed_attempt(5000 / 1e9)
+                self.circuit_breaker.record_failed_attempt(Lamports(5000).to_sol_decimal())
 
             if net_profit_sol > 0.0005:
                 self.trades += 1
@@ -268,7 +296,7 @@ class PaperTrader:
     async def _monitor_loop(self):
         """Непрерывный цикл сканирования всех очередей"""
         # FIX 304: Scale trade volume to 95% of real wallet balance
-        sol_amount = int(self.current_balance * 0.95 * 1e9)
+        sol_amount = Lamports.from_sol(self.current_balance * 0.95).value
         usdc_amount = int(self.current_balance * sol_price * 0.95 * 1_000_000)
 
         while True:

@@ -408,8 +408,10 @@ class JupiterTxBuilder:
                             # rather than paying a fee that eats all profit.
                             # Strict floor: 5000 micro-lamports for Jito/Helius reliability.
                             dynamic_cap_sol = max(expected_profit_sol * 0.05, 0.00001)
+                            from src.domain.money import Lamports, MICRO_LAMPORTS_PER_LAMPORT
+                            max_lamports = Lamports.from_sol(dynamic_cap_sol).value
                             max_micro_lamports = int(
-                                (dynamic_cap_sol * 1e9) / cu_limit * 1e6
+                                max_lamports * MICRO_LAMPORTS_PER_LAMPORT / cu_limit
                             )
                             min_viable_micro_lamports = 5000  # Phase 8: Jito/Helius reliability minimum
 

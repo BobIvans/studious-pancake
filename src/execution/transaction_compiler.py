@@ -99,7 +99,7 @@ class TransactionCompiler:
 
     def _pass2(self, plan: TransactionPlan, descriptors: list[Instruction]) -> tuple[tuple[Instruction, ...], int]:
         end_index = next(i for i, ix in enumerate(descriptors) if ix.kind == "marginfi_end") + 1  # +1 because start is inserted before borrow
-        start = Instruction("MRGNFi11111111111111111111111111111111111", (plan.flash_loan_plan.marginfi_account, plan.flash_loan_plan.authority, plan.flash_loan_plan.group), f"end_index:{end_index}".encode(), "marginfi_start_flashloan", "marginfi_start")
+        start = Instruction(plan.flash_loan_plan.borrow_instruction.program_id, (plan.flash_loan_plan.marginfi_account, plan.flash_loan_plan.authority, plan.flash_loan_plan.group), f"end_index:{end_index}".encode(), "marginfi_start_flashloan", "marginfi_start")
         borrow_pos = next(i for i, ix in enumerate(descriptors) if ix is plan.flash_loan_plan.borrow_instruction)
         final = [*descriptors[:borrow_pos], start, *descriptors[borrow_pos:]]
         actual_end_index = next(i for i, ix in enumerate(final) if ix.kind == "marginfi_end")

@@ -70,4 +70,4 @@ class PumpMigrationStrategy(DisabledShellStrategy):
 
 class OrderbookAmmStrategy(DisabledShellStrategy):
     def __init__(self) -> None:
-        super().__init__("orderbook_amm_arbitrage", StrategyMode.DISABLED, "Phoenix/OpenBook implementation is a non-goal")
+        super().__init__("orderbook_amm_arbitrage", StrategyMode.DISABLED, "canonical Phoenix Legacy/OpenBook V2 orderbook path is shadow-only; detector wiring awaits verified market subscriptions")

@@ -58,13 +58,14 @@ def classify_pool_type(program_id: Optional[str]) -> str:
     Map a Solana DEX ``program_id`` to a pool-type tag.
 
     Returns one of ``"constant_product"``, ``"stableswap"``, ``"clmm"``,
-    ``"dlmm"``. Unknown / ``None`` ids default to ``"constant_product"``
-    (the safest assumption: CPMM over-counts slippage, never under-counts).
+    ``"dlmm"``. Unknown ids now fail closed with ``UNKNOWN_VENUE_OR_POOL``; callers that intentionally mean CPMM must pass an explicit CPMM alias.
     """
     if not program_id:
         return "constant_product"
     pid = str(program_id).strip()
-    return _POOL_TYPE_BY_PROGRAM_ID.get(pid, "constant_product")
+    if pid in _POOL_TYPE_BY_PROGRAM_ID:
+        return _POOL_TYPE_BY_PROGRAM_ID[pid]
+    raise ValueError("UNKNOWN_VENUE_OR_POOL")
 
 
 def _normalize_pool_type(pool_type: Optional[str]) -> str:
@@ -155,8 +156,7 @@ class AmmMathDispatcher:
                 amount_in, reserve_in, reserve_out, fee_bps=fee_bps, **kw,
             )
 
-        logger.warning("Unknown pool_type '%s', falling back to constant_product", pool_type)
-        return AmmMath.get_amount_out(amount_in, reserve_in, reserve_out, fee_bps=fee_bps)
+        raise ValueError("UNKNOWN_VENUE_OR_POOL")
 
     @staticmethod
     def get_amount_in(
@@ -204,8 +204,7 @@ class AmmMathDispatcher:
                 amount_out, reserve_in, reserve_out, fee_bps=fee_bps, **kw,
             )
 
-        logger.warning("Unknown pool_type '%s', falling back to constant_product", pool_type)
-        return AmmMath.get_amount_in(amount_out, reserve_in, reserve_out, fee_bps=fee_bps)
+        raise ValueError("UNKNOWN_VENUE_OR_POOL")
 
     @staticmethod
     def calculate_price_impact(
@@ -254,8 +253,7 @@ class AmmMathDispatcher:
             impact = abs(price_after - price_before) / price_before * 100.0
             return min(impact, 100.0)
 
-        logger.warning("Unknown pool_type '%s', falling back to constant_product", pool_type)
-        return AmmMath.calculate_price_impact(amount_in, reserve_in, reserve_out)
+        raise ValueError("UNKNOWN_VENUE_OR_POOL")
 
     # ------------------------------------------------------------------
     # Hop-driven convenience entry point

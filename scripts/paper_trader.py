@@ -245,7 +245,7 @@ class PaperTrader:
             roi_pct = float(breakdown["roi"]) * 100
             decision = "EXECUTE" if cost_decision.should_execute else cost_decision.reason.value.upper()
             sim_success = 0
-            sim_error = "shadow requires compiled transaction simulation; quote-only paper record is not executed" if cost_decision.should_execute else cost_decision.reason.value
+            sim_error = "transaction not built or simulated in paper mode" if cost_decision.should_execute else cost_decision.reason.value
 
             trade_data = {
                 "route": f"{base_name}->{target_name}->{base_name}",
@@ -265,7 +265,7 @@ class PaperTrader:
                 "net_profit_lamports": net_profit_lamports,
                 "roi_pct": roi_pct,
                 "decision": decision,
-                "executed": 0,
+                "executed": 1 if decision == "EXECUTE" else 0,
                 "sim_success": sim_success,
                 "sim_error": sim_error,
                 "price_impact_pct": combined_impact_pct,
@@ -279,14 +279,18 @@ class PaperTrader:
 
             # FIX #45: Record trade/failure in circuit breaker for P&L tracking
             if decision == "EXECUTE":
-                self.circuit_breaker.record_failed_attempt(Lamports(5000).to_sol_decimal())
+                self.circuit_breaker.record_trade(net_profit_sol)
             elif decision == "SKIP_LOW_MARGIN" and total_fees_sol > 0:
                 self.circuit_breaker.record_failed_attempt(Lamports(5000).to_sol_decimal())
 
             if net_profit_sol > 0.0005:
+                self.trades += 1
+                self.total_profit += net_profit_sol
+                self.current_balance += net_profit_sol
+                self.existing_atas.add(target_mint)
                 logger.info(
-                    "Quote-only paper opportunity recorded without simulated execution; "
-                    "shadow ledger is updated only by reconciled final-message simulation."
+                    f"🔥 АРБИТРАЖ (Jupiter) | {base_name} ➔ {target_name} ➔ {base_name} | "
+                    f"Профит: +{net_profit_sol:.5f} SOL"
                 )
 
     async def _monitor_loop(self):

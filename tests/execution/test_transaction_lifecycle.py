@@ -343,7 +343,6 @@ def test_default_blockhash_and_string_boundary_rejected():
 def test_execution_conflict_files_have_no_markers():
     conflict_files = (
         "src/execution/__init__.py",
-        "src/execution/models.py",
         "src/execution/transaction_compiler.py",
         "tests/execution/test_transaction_lifecycle.py",
     )

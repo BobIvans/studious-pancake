@@ -9,7 +9,7 @@ import time
 from typing import Any, Protocol
 
 from solders.hash import Hash
-from solders.instruction import Instruction
+from solders.instruction import Instruction as SoldersInstruction
 from solders.message import MessageV0
 from solders.pubkey import Pubkey
 from solders.signature import Signature
@@ -81,8 +81,46 @@ class ExecutionErrorCode(str, Enum):
 
 
 @dataclass(frozen=True, slots=True)
+class Instruction:
+    """Legacy string instruction descriptor kept for older planner tests."""
+
+    program_id: str
+    accounts: tuple[str, ...] = ()
+    data: bytes = b""
+    name: str = ""
+    kind: str = "generic"
+
+    def stable_bytes(self) -> bytes:
+        return b"|".join(
+            [
+                self.program_id.encode(),
+                b",".join(account.encode() for account in self.accounts),
+                self.name.encode(),
+                self.kind.encode(),
+                self.data,
+            ]
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class FlashLoanPlan:
+    """Legacy MarginFi flash-loan descriptor kept as a compatibility shim."""
+
+    marginfi_account: str
+    authority: str
+    group: str
+    borrow_instruction: Instruction
+    repay_instruction: Instruction
+    end_instruction_template: Instruction
+    projected_active_balances: tuple[str, ...]
+    risk_engine_accounts: tuple[str, ...]
+    marginfi_bank_slot: int
+    token_2022_mint: str | None = None
+
+
+@dataclass(frozen=True, slots=True)
 class PlannedInstruction:
-    instruction: Instruction
+    instruction: SoldersInstruction
     role: str = "application"
     name: str | None = None
 
@@ -101,7 +139,7 @@ class TipPolicy:
     tip_account: Pubkey | None = None
 
 
-@dataclass(frozen=True, slots=True)
+@dataclass(frozen=True, slots=True, init=False)
 class TransactionPlan:
     opportunity_id: str
     payer: Pubkey
@@ -115,6 +153,59 @@ class TransactionPlan:
     market_state_slot: int | None = None
     oracle_slot: int | None = None
     monitored_accounts: tuple[Pubkey, ...] = ()
+
+    def __init__(self, opportunity_id: str, payer, *args, **kwargs) -> None:
+        object.__setattr__(self, "opportunity_id", opportunity_id)
+        object.__setattr__(self, "payer", payer)
+        if args and isinstance(args[0], ComputeBudgetPolicy):
+            # Legacy positional layout:
+            # opportunity, payer, compute, setup, flash, strategy, cleanup, tip,
+            # required_signers, lookup_tables, quote_slot, market_slot, oracle_slot, monitored
+            compute = args[0]
+            setup = args[1] if len(args) > 1 else ()
+            flash = args[2] if len(args) > 2 else None
+            strategy = args[3] if len(args) > 3 else ()
+            cleanup = args[4] if len(args) > 4 else ()
+            tip = args[5] if len(args) > 5 else TipPolicy()
+            required = args[6] if len(args) > 6 else ()
+            lookup = args[7] if len(args) > 7 else ()
+            quote = args[8] if len(args) > 8 else None
+            market = args[9] if len(args) > 9 else None
+            oracle = args[10] if len(args) > 10 else None
+            monitored = args[11] if len(args) > 11 else ()
+            object.__setattr__(self, "instructions", compute)
+            object.__setattr__(self, "compute_budget_policy", tuple(setup))
+            object.__setattr__(self, "tip_policy", flash)
+            object.__setattr__(self, "required_signers", tuple(strategy))
+            object.__setattr__(self, "lookup_table_addresses", tuple(cleanup))
+            object.__setattr__(self, "required_lookup_addresses", tip)
+            object.__setattr__(self, "quote_slot", tuple(required))
+            object.__setattr__(self, "market_state_slot", tuple(lookup))
+            object.__setattr__(self, "oracle_slot", quote)
+            object.__setattr__(self, "monitored_accounts", market if monitored == () else monitored)
+            return
+        instructions = args[0] if len(args) > 0 else kwargs.pop("instructions", ())
+        compute = args[1] if len(args) > 1 else kwargs.pop("compute_budget_policy", ComputeBudgetPolicy())
+        tip = args[2] if len(args) > 2 else kwargs.pop("tip_policy", TipPolicy())
+        required = args[3] if len(args) > 3 else kwargs.pop("required_signers", ())
+        lookup = args[4] if len(args) > 4 else kwargs.pop("lookup_table_addresses", ())
+        required_lookup = args[5] if len(args) > 5 else kwargs.pop("required_lookup_addresses", ())
+        quote = args[6] if len(args) > 6 else kwargs.pop("quote_slot", None)
+        market = args[7] if len(args) > 7 else kwargs.pop("market_state_slot", None)
+        oracle = args[8] if len(args) > 8 else kwargs.pop("oracle_slot", None)
+        monitored = args[9] if len(args) > 9 else kwargs.pop("monitored_accounts", ())
+        object.__setattr__(self, "instructions", tuple(instructions))
+        object.__setattr__(self, "compute_budget_policy", compute)
+        object.__setattr__(self, "tip_policy", tip)
+        object.__setattr__(self, "required_signers", tuple(required))
+        object.__setattr__(self, "lookup_table_addresses", tuple(lookup))
+        object.__setattr__(self, "required_lookup_addresses", tuple(required_lookup))
+        object.__setattr__(self, "quote_slot", quote)
+        object.__setattr__(self, "market_state_slot", market)
+        object.__setattr__(self, "oracle_slot", oracle)
+        object.__setattr__(self, "monitored_accounts", tuple(monitored))
+        if kwargs:
+            raise TypeError(f"unexpected TransactionPlan fields: {sorted(kwargs)}")
 
     @property
     def min_context_slot(self) -> int:
@@ -165,7 +256,7 @@ class TransactionDiagnostics:
 class CompiledTransaction:
     opportunity_id: str
     payer: Pubkey
-    instructions: tuple[Instruction, ...]
+    instructions: tuple[SoldersInstruction, ...]
     message: MessageV0
     blockhash_context: BlockhashContext
     lookup_tables: tuple[ResolvedAddressLookupTable, ...]

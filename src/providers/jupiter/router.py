@@ -198,7 +198,10 @@ def _ix(raw: Mapping[str,Any], name: str) -> JupiterRawInstruction:
     for a in accts:
         if not isinstance(a,Mapping) or not isinstance(a.get("isSigner"),bool) or not isinstance(a.get("isWritable"),bool): raise JupiterRouterError(JupiterRejectionReason.SCHEMA_FAILURE, "account meta flags required")
         metas.append(RawAccountMeta(_str(a,"pubkey"), a["isSigner"], a["isWritable"]))
-    ix=JupiterRawInstruction(_str(raw,"programId"), tuple(metas), _str(raw,"data"), name); ix.data
+    program_id = _str(raw,"programId")
+    if program_id == str(COMPUTE_BUDGET_PROGRAM_ID):
+        program_id = COMPUTE_BUDGET_PROGRAM_ID
+    ix=JupiterRawInstruction(program_id, tuple(metas), _str(raw,"data"), name); ix.data
     return ix
 
 def _ix_list(data,key):
@@ -226,7 +229,7 @@ def parse_build_response(data: Mapping[str,Any], request: JupiterBuildRequest, n
     bh=data.get("blockhashWithMetadata")
     if not isinstance(bh,Mapping) or not isinstance(bh.get("blockhash"),list) or not isinstance(bh.get("lastValidBlockHeight"),int): raise JupiterRouterError(JupiterRejectionReason.SCHEMA_FAILURE,"blockhashWithMetadata invalid")
     cb=_ix_list(data,"computeBudgetInstructions")
-    if len(cb)!=1 or cb[0].program_id != COMPUTE_BUDGET_PROGRAM_ID: raise JupiterRouterError(JupiterRejectionReason.SCHEMA_FAILURE,"exactly one compute unit price instruction required")
+    if len(cb)!=1 or str(cb[0].program_id) != str(COMPUTE_BUDGET_PROGRAM_ID): raise JupiterRouterError(JupiterRejectionReason.SCHEMA_FAILURE,"exactly one compute unit price instruction required")
     return JupiterInstructionBundle(_str(data,"inputMint"),_str(data,"outputMint"),_int_string(data,"inAmount"),_int_string(data,"outAmount"),_int_string(data,"otherAmountThreshold"),_str(data,"swapMode"),data["slippageBps"],tuple(data.get("routePlan") or ()),cb,_ix_list(data,"setupInstructions"),_ix(swap_raw,"swapInstruction"),None if cleanup_raw is None else _ix(cleanup_raw,"cleanupInstruction"),_ix_list(data,"otherInstructions"),None if tip_raw is None else _ix(tip_raw,"tipInstruction"),altmap,bh,now or time.time())
 
 def calculate_final_cu_limit(report: SimulationReport) -> int:

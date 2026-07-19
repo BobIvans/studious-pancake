@@ -19,17 +19,19 @@ from .shadow import (
 )
 
 
-class TransactionSimulator:
+class TransactionSimulator(CanonicalSimulator):
     def __init__(self, rpc: RpcClient):
         self.rpc = rpc
 
     async def simulate(
         self,
-        compiled: CompiledTransaction | SignedTransaction,
+        compiled: CompiledTransaction | SignedTransaction | SimulationRequest,
         *,
         final_signed: bool,
         estimated_network_fee: int = 0,
     ) -> SimulationReport:
+        if isinstance(compiled, SimulationRequest):
+            return await super().simulate(compiled)
         if final_signed and not getattr(compiled, "is_fully_signed", False):
             raise ValueError("sigVerify=true requires a fully signed transaction")
         base = compiled.compiled if isinstance(compiled, SignedTransaction) else compiled
@@ -77,7 +79,7 @@ class TransactionSimulator:
         accounts = [str(compiled.payer), *(str(a) for a in compiled.monitored_accounts)]
         accounts.extend(str(key) for key in compiled.message.account_keys)
         for ix in compiled.instructions:
-            accounts.extend(str(meta.pubkey) for meta in ix.accounts)
+            accounts.extend(str(getattr(meta, "pubkey", meta)) for meta in ix.accounts)
         return tuple(dict.fromkeys(accounts))
 
     async def _get_multiple_accounts(self, addresses: tuple[str, ...]) -> tuple[AccountSnapshot, ...]:

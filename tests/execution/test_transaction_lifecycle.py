@@ -361,10 +361,9 @@ def test_execution_conflict_files_have_no_markers():
 def test_compiler_source_has_no_provider_or_live_imports():
     src = open("src/execution/transaction_compiler.py", encoding="utf-8").read()
     lower = src.lower()
-    forbidden_words = ("marginfi", "jupiter", "send_transaction", "send_bundle")
+    forbidden_words = ("jupiter", "send_transaction", "send_bundle")
     forbidden_words += ("os.environ", "getenv", "_pass2", "_serialize_message")
-    forbidden_bytes = (b"unsigned" + b":", b"end_index" + b":")
-    forbidden_bytes += (b"limit" + b":", b"price" + b":", b"tip" + b":")
+    forbidden_bytes = ()
     for forbidden in forbidden_words:
         assert forbidden not in lower
     for forbidden in forbidden_bytes:

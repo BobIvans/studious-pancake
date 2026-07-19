@@ -110,7 +110,7 @@ async def test_jito_uses_base64_bundle_only_and_bundle_limit():
             calls.append((url,payload,headers)); return {"result":"bundleid"}
     attempt = ExecutionAttempt("opp",1,"hash",ExecutionState.SIGNED,BH)
     res = await JitoSingleTransactionSender(Http(), "https://block").submit((b"abc",), attempt)
-    assert res.accepted and not res.landed and calls[-1][1]["params"][1]["encoding"] == "base64" and calls[-1][1]["params"][1]["bundleOnly"]
+    assert res.accepted and not res.landed and calls[-1][1]["params"][1]["encoding"] == "base64" and calls[-1][0].endswith("?bundleOnly=true") and "bundleOnly" not in calls[-1][1]["params"][1]
     with pytest.raises(ValueError):
         await JitoBundleSender(Http(), "https://block").submit((b"1", b"2", b"3", b"4", b"5", b"6"), attempt)
 

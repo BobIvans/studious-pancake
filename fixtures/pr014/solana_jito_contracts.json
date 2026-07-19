@@ -1,0 +1,18 @@
+{
+  "migration_version": 14,
+  "solana": {
+    "sendTransaction": "result is the first transaction signature; acknowledgement is not landing",
+    "getSignatureStatuses": "null is not failure proof; use searchTransactionHistory for late reconciliation",
+    "getBlockHeight": "expiry uses current block height greater than last_valid_block_height",
+    "simulateTransaction": "fresh full simulation gates Jito forced skip-preflight"
+  },
+  "jito": {
+    "single_result": "transaction signature",
+    "single_bundle_header": "x-bundle-id",
+    "bundleOnly_location": "query parameter",
+    "sendBundle_limit": [1, 5],
+    "inflight_status_limit": 5,
+    "inflight_status_window_seconds": 300,
+    "ambiguous_statuses": ["Invalid", null, "timeout", "malformed"]
+  }
+}

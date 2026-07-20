@@ -65,3 +65,5 @@ src/runtime_discovery_builder.py
 src/market/snapshots.py
 src/strategy/detectors.py
 tests/test_pr056_runtime_discovery.py
+src/paper_shadow/atomic_runtime_stages.py
+tests/test_pr075_atomic_runtime_stages.py

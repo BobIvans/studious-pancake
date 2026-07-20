@@ -15,6 +15,14 @@ from .models import (
     ReasonCode,
     SwapDirection,
 )
+from .promotion import (
+    DEFAULT_MIN_SHADOW_SOAK_MINUTES,
+    PumpPromotionEvidence,
+    PumpPromotionPolicy,
+    PumpPromotionReport,
+    PumpPromotionStatus,
+    evaluate_pump_promotion,
+)
 from .provenance import (
     PumpManifestStatus,
     PumpOfficialSource,
@@ -24,6 +32,7 @@ from .provenance import (
 )
 
 __all__ = [
+    "DEFAULT_MIN_SHADOW_SOAK_MINUTES",
     "FeeBreakdown",
     "PumpAdapter",
     "PumpContractManifest",
@@ -31,6 +40,10 @@ __all__ = [
     "PumpLifecycle",
     "PumpManifestStatus",
     "PumpOfficialSource",
+    "PumpPromotionEvidence",
+    "PumpPromotionPolicy",
+    "PumpPromotionReport",
+    "PumpPromotionStatus",
     "PumpProvenanceError",
     "PumpQuote",
     "PumpSnapshot",
@@ -40,6 +53,7 @@ __all__ = [
     "SwapDirection",
     "TOKEN_2022_PROGRAM",
     "TOKEN_PROGRAM",
+    "evaluate_pump_promotion",
     "manifest_shadow_errors",
     "provenance_from_family",
 ]

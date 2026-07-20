@@ -1,4 +1,4 @@
-.PHONY: install install-dev install-analytics lock syntax lint format-check type-check security test test-live verify verify-offline package-smoke image-smoke status capabilities run container paper
+.PHONY: install install-dev install-analytics lock syntax lint format-check type-check security test test-live verify verify-offline package-smoke image-smoke contracts-validate contracts-status contracts-drift status capabilities run container paper
 
 install:
 	python -m pip install --requirement requirements.txt
@@ -48,6 +48,15 @@ package-smoke:
 
 image-smoke:
 	bash scripts/image_smoke.sh
+
+contracts-validate:
+	flashloan-contracts validate
+
+contracts-status:
+	flashloan-contracts status
+
+contracts-drift:
+	flashloan-contracts drift
 
 status:
 	flashloan-bot status

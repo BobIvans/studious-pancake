@@ -54,6 +54,13 @@ def _write_state(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def _unlink_state(path: Path) -> None:
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+
+
 def _install_stop_handlers(stop_event: asyncio.Event) -> None:
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -146,29 +153,40 @@ async def run_safe_idle(
             ),
         ],
     }
-    _write_state(path, {**base, "heartbeat_unix_ns": time.time_ns()})
-    server = RuntimeStatusHttpServer(
-        lambda: json.loads(path.read_text(encoding="utf-8")),
-        host=host,
-        port=port,
-        max_heartbeat_age_seconds=MAX_HEARTBEAT_AGE_SECONDS,
-    ).start()
-    print(
-        json.dumps(
-            {
-                "event": "container_safe_idle_started",
-                "health_url": f"{server.base_url}/health",
-                "ready_url": f"{server.base_url}/ready",
-                "status_url": f"{server.base_url}/status",
-                "mode": "disabled",
-                "live_enabled": False,
-                "submitted": False,
-            },
-            sort_keys=True,
-        ),
-        flush=True,
-    )
+
+    # PR-069 startup transaction:
+    #
+    # 1. invalidate stale health state before attempting startup;
+    # 2. bind the HTTP surface before publishing a live heartbeat;
+    # 3. always remove the state file on any startup/runtime/shutdown path.
+    #
+    # This prevents a failed bind on the default Docker port from leaving a
+    # process-looking heartbeat that can be misread as a healthy supervisor.
+    _unlink_state(path)
+    server: RuntimeStatusHttpServer | None = None
     try:
+        server = RuntimeStatusHttpServer(
+            lambda: json.loads(path.read_text(encoding="utf-8")),
+            host=host,
+            port=port,
+            max_heartbeat_age_seconds=MAX_HEARTBEAT_AGE_SECONDS,
+        ).start()
+        _write_state(path, {**base, "heartbeat_unix_ns": time.time_ns()})
+        print(
+            json.dumps(
+                {
+                    "event": "container_safe_idle_started",
+                    "health_url": f"{server.base_url}/health",
+                    "ready_url": f"{server.base_url}/ready",
+                    "status_url": f"{server.base_url}/status",
+                    "mode": "disabled",
+                    "live_enabled": False,
+                    "submitted": False,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
         while not stop_event.is_set():
             payload = dict(base)
             payload["heartbeat_unix_ns"] = time.time_ns()
@@ -180,11 +198,9 @@ async def run_safe_idle(
             except asyncio.TimeoutError:
                 continue
     finally:
-        server.stop()
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
+        if server is not None:
+            server.stop()
+        _unlink_state(path)
     return 0
 
 

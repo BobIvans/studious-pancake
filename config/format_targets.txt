@@ -16,3 +16,10 @@ src/decision/dataset.py
 src/decision/model.py
 src/decision/split.py
 src/strategy/ranker.py
+src/config/__init__.py
+src/config/chain_registry.py
+src/config/doctor.py
+src/config/runtime.py
+tests/test_pr026_chain_registry.py
+tests/test_pr026_config_doctor.py
+tests/test_pr026_typed_config.py

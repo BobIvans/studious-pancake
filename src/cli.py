@@ -6,15 +6,21 @@ import argparse
 import asyncio
 import json
 import logging
+import os
 import signal
 import sys
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict
 from typing import Any, Sequence
 
 from src.application import ConfigurationError, build_application
 from src.capabilities import CapabilityContractError, CapabilityMatrix
+from src.config.doctor import run_config_doctor
+from src.config.runtime import (
+    ConfigurationLoadError,
+    RuntimeConfig,
+    load_runtime_config,
+)
 from src.container_runtime import run_safe_idle
-from src.strategy.interfaces import StrategyMode
 
 logger = logging.getLogger(__name__)
 
@@ -23,28 +29,16 @@ EXIT_NO_EXECUTABLE_STRATEGIES = 3
 EXIT_MODE_UNAVAILABLE = 4
 
 
-@dataclass(slots=True)
-class LauncherConfig:
-    """Temporary launcher defaults pending the unified configuration PR."""
-
-    strategy_modes: dict[str, str] = field(
-        default_factory=lambda: {
-            "lst_depeg": StrategyMode.DISABLED.value,
-            "lst_unstake": StrategyMode.DISABLED.value,
-            "circular_arbitrage": StrategyMode.DISABLED.value,
-        }
-    )
-    opportunity_queue_size: int = 1024
-    shutdown_drain_timeout_seconds: float = 0.25
+LauncherConfig = RuntimeConfig
 
 
-def load_configuration() -> LauncherConfig:
-    """Return fail-closed defaults for the only supported entrypoint.
-
-    PR-023 intentionally does not activate strategies from legacy environment
-    flags. A typed file/env/CLI configuration model belongs to PR-026.
-    """
-    return LauncherConfig()
+def load_configuration(
+    path: str | None = None,
+    *,
+    cli_overrides: dict[str, Any] | None = None,
+) -> RuntimeConfig:
+    """Load the canonical immutable PR-026 configuration."""
+    return load_runtime_config(path, cli_overrides=cli_overrides)
 
 
 def install_signal_handlers(stop_event: asyncio.Event) -> None:
@@ -60,6 +54,11 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="flashloan-bot",
         description="Inspect or run the supported fail-closed arbitrage runtime.",
+    )
+    parser.add_argument(
+        "--config-file",
+        default=None,
+        help="optional typed YAML override; environment and CLI values take precedence",
     )
     subparsers = parser.add_subparsers(dest="command")
 
@@ -90,10 +89,27 @@ def _parser() -> argparse.ArgumentParser:
         default=None,
         help="override the liveness state path used by the temporary PR-025 healthcheck",
     )
+
+    config_parser = subparsers.add_parser(
+        "config", help="inspect or validate the immutable PR-026 configuration"
+    )
+    config_commands = config_parser.add_subparsers(dest="config_command", required=True)
+    dump_parser = config_commands.add_parser(
+        "dump", help="print a redacted normalized configuration"
+    )
+    dump_parser.add_argument("--json", action="store_true", dest="as_json")
+    doctor_parser = config_commands.add_parser(
+        "doctor", help="validate config, registry, secrets and optional RPC identity"
+    )
+    doctor_parser.add_argument("--online", action="store_true")
+    doctor_parser.add_argument("--check-secrets", action="store_true")
+    doctor_parser.add_argument("--json", action="store_true", dest="as_json")
     return parser
 
 
-def _status_payload(matrix: CapabilityMatrix, app: Any) -> dict[str, Any]:
+def _status_payload(
+    matrix: CapabilityMatrix, app: Any, config: RuntimeConfig
+) -> dict[str, Any]:
     errors = list(app.capability_errors())
     executable = [entry.name for entry in app.executable_strategies()]
     return {
@@ -109,6 +125,16 @@ def _status_payload(matrix: CapabilityMatrix, app: Any) -> dict[str, Any]:
         ),
         "strategies": [asdict(entry) for entry in app.manifest()],
         "runtime_modes": matrix.runtime_modes,
+        "configuration": {
+            "schema_version": config.schema_version,
+            "fingerprint": config.fingerprint(),
+            "mode": config.runtime.mode.value,
+            "cluster": config.cluster.name,
+            "rpc_configured": config.cluster.rpc_http_url is not None,
+            "jupiter_enabled": config.providers.jupiter.enabled,
+            "jito_enabled": config.providers.jito.enabled,
+            "marginfi_enabled": config.providers.marginfi.enabled,
+        },
     }
 
 
@@ -162,8 +188,10 @@ async def _run_application(app: Any) -> int:
     return 0
 
 
-def _run_requested_mode(mode: str, matrix: CapabilityMatrix, app: Any) -> int:
-    status = _status_payload(matrix, app)
+def _run_requested_mode(
+    mode: str, matrix: CapabilityMatrix, app: Any, config: RuntimeConfig
+) -> int:
+    status = _status_payload(matrix, app, config)
     if mode == "live":
         print(
             "LIVE_MODE_UNAVAILABLE: live submission is hard-denied by the PR-023 "
@@ -202,10 +230,29 @@ def main(argv: Sequence[str] | None = None) -> int:
         args_list = ["run", "--mode", "shadow"]
     args = _parser().parse_args(args_list)
     try:
+        cli_overrides: dict[str, Any] = {}
+        if args.command == "run" and args.mode != "live":
+            cli_overrides["runtime.mode"] = args.mode
+        config = load_configuration(
+            args.config_file, cli_overrides=cli_overrides or None
+        )
+        if config.validation.verify_rpc_at_startup:
+            startup_report = run_config_doctor(
+                config, online=True, check_secrets=True, environ=os.environ
+            )
+            if not startup_report.ok:
+                errors = "; ".join(
+                    item.message
+                    for item in startup_report.diagnostics
+                    if item.severity == "error"
+                )
+                raise ConfigurationLoadError(
+                    f"startup configuration attestation failed: {errors}"
+                )
         matrix = CapabilityMatrix.load_default()
-        app = build_application(load_configuration(), matrix)
+        app = build_application(config, matrix)
         if args.command == "status":
-            payload = _status_payload(matrix, app)
+            payload = _status_payload(matrix, app, config)
             _print_status(payload, as_json=args.as_json)
             return (
                 0 if payload["capability_contract_valid"] else EXIT_CONFIGURATION_ERROR
@@ -214,12 +261,40 @@ def main(argv: Sequence[str] | None = None) -> int:
             _print_capabilities(matrix, as_json=args.as_json)
             return 0
         if args.command == "run":
-            return _run_requested_mode(args.mode, matrix, app)
+            return _run_requested_mode(args.mode, matrix, app, config)
         if args.command == "container":
             return asyncio.run(run_safe_idle(matrix, app, state_file=args.state_file))
+        if args.command == "config" and args.config_command == "dump":
+            payload = config.redacted_dict()
+            if args.as_json:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            else:
+                print(json.dumps(payload, indent=2, sort_keys=True))
+            return 0
+        if args.command == "config" and args.config_command == "doctor":
+            report = run_config_doctor(
+                config,
+                online=args.online,
+                check_secrets=args.check_secrets,
+                environ=os.environ,
+            )
+            if args.as_json:
+                print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+            else:
+                print(f"Configuration fingerprint: {report.config_fingerprint}")
+                for diagnostic in report.diagnostics:
+                    print(
+                        f"[{diagnostic.severity.upper()}] "
+                        f"{diagnostic.code}: {diagnostic.message}"
+                    )
+            return 0 if report.ok else EXIT_CONFIGURATION_ERROR
         _parser().print_help()
         return EXIT_CONFIGURATION_ERROR
-    except (CapabilityContractError, ConfigurationError) as exc:
+    except (
+        CapabilityContractError,
+        ConfigurationError,
+        ConfigurationLoadError,
+    ) as exc:
         print(f"CONFIGURATION_ERROR: {exc}", file=sys.stderr)
         return EXIT_CONFIGURATION_ERROR
 

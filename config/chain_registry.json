@@ -1,0 +1,72 @@
+{
+  "schema_version": "pr026.chain-registry.v1",
+  "canonical_genesis_hashes": {
+    "mainnet-beta": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+  },
+  "entries": [
+    {
+      "id": "system_program",
+      "kind": "program",
+      "address": "11111111111111111111111111111111",
+      "clusters": ["mainnet-beta", "devnet", "testnet", "localnet"],
+      "owner": "NativeLoader1111111111111111111111111111111",
+      "source": "https://solana.com/docs/core/programs",
+      "immutable": true
+    },
+    {
+      "id": "token_program",
+      "kind": "program",
+      "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "clusters": ["mainnet-beta", "devnet", "testnet", "localnet"],
+      "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "source": "https://github.com/solana-program/token",
+      "immutable": true
+    },
+    {
+      "id": "token_2022_program",
+      "kind": "program",
+      "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "clusters": ["mainnet-beta", "devnet", "testnet", "localnet"],
+      "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "source": "https://github.com/solana-program/token-2022",
+      "immutable": true
+    },
+    {
+      "id": "associated_token_program",
+      "kind": "program",
+      "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
+      "clusters": ["mainnet-beta", "devnet", "testnet", "localnet"],
+      "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "source": "https://github.com/solana-program/associated-token-account",
+      "immutable": true
+    },
+    {
+      "id": "compute_budget_program",
+      "kind": "program",
+      "address": "ComputeBudget111111111111111111111111111111",
+      "clusters": ["mainnet-beta", "devnet", "testnet", "localnet"],
+      "owner": "NativeLoader1111111111111111111111111111111",
+      "source": "https://solana.com/docs/core/fees",
+      "immutable": true
+    },
+    {
+      "id": "native_sol_mint",
+      "kind": "mint",
+      "address": "So11111111111111111111111111111111111111112",
+      "clusters": ["mainnet-beta", "devnet", "testnet", "localnet"],
+      "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "source": "https://solana.com/docs/tokens/basics/sync-native",
+      "immutable": true
+    }
+  ],
+  "dynamic_entries": [
+    {
+      "id": "marginfi_program",
+      "kind": "program",
+      "config_path": "providers.marginfi.program_id",
+      "clusters": ["mainnet-beta"],
+      "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "source": "PR-027 must pin the current 0dotxyz/marginfi-v2 deployment"
+    }
+  ]
+}

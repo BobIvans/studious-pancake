@@ -1,0 +1,51 @@
+schema_version: pr026.runtime-config.v1
+runtime:
+  mode: disabled
+  opportunity_queue_size: 1024
+  shutdown_drain_timeout_ms: 250
+cluster:
+  name: mainnet-beta
+  genesis_hash: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
+  commitment: confirmed
+  rpc_http_url: null
+  rpc_ws_url: null
+strategies:
+  lst_depeg: disabled
+  lst_unstake: disabled
+  circular_arbitrage: disabled
+wallet:
+  public_key: null
+  signer_reference: null
+providers:
+  jupiter:
+    enabled: false
+    base_url: https://api.jup.ag
+    api_key_reference: null
+  jito:
+    enabled: false
+    base_url: https://mainnet.block-engine.jito.wtf
+    auth_reference: null
+    min_tip_lamports: 1000
+  marginfi:
+    enabled: false
+    program_id: null
+    group: null
+    margin_account: null
+    banks: []
+monetary:
+  protected_reserve_lamports: 10000000
+  minimum_net_profit_lamports: 100000
+  maximum_priority_fee_lamports: 1000000
+  contingency_lamports: 500000
+allowlist:
+  program_ids:
+    - "11111111111111111111111111111111"
+    - TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA
+    - TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb
+    - ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL
+    - ComputeBudget111111111111111111111111111111
+  mint_ids:
+    - So11111111111111111111111111111111111111112
+validation:
+  verify_rpc_at_startup: false
+  owner_expectations: []

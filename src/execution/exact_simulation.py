@@ -393,7 +393,7 @@ class ExactSimulationFinalizer:
         value = self._unwrap_rpc_result(raw)
         if isinstance(value, dict) and "value" in value:
             value = value["value"]
-        if not _is_int(value) or value < 0:
+        if not isinstance(value, int) or isinstance(value, bool) or value < 0:
             raise ExactSimulationError(
                 ExactSimulationErrorCode.MALFORMED_RPC_RESPONSE,
                 FailureDisposition.RETRYABLE,
@@ -441,17 +441,22 @@ class ExactSimulationFinalizer:
             result_dict.get("value"),
             "simulateTransaction value",
         )
-        slot = context.get("slot")
-        if not _is_int(slot) or slot < compiled.min_context_slot:
+        slot_value = context.get("slot")
+        if (
+            not isinstance(slot_value, int)
+            or isinstance(slot_value, bool)
+            or slot_value < compiled.min_context_slot
+        ):
             raise ExactSimulationError(
                 ExactSimulationErrorCode.CONTEXT_SLOT_VIOLATION,
                 FailureDisposition.RETRYABLE,
                 "simulation context slot is below minContextSlot",
                 {
-                    "slot": slot if _is_int(slot) else None,
+                    "slot": slot_value if _is_int(slot_value) else None,
                     "min_context_slot": compiled.min_context_slot,
                 },
             )
+        slot = slot_value
         if value.get("replacementBlockhash") is not None:
             raise ExactSimulationError(
                 ExactSimulationErrorCode.MESSAGE_IDENTITY_MISMATCH,
@@ -468,13 +473,18 @@ class ExactSimulationFinalizer:
                 "simulation rejected the exact message",
             )
 
-        units = value.get("unitsConsumed")
-        if not _is_int(units) or units <= 0:
+        units_value = value.get("unitsConsumed")
+        if (
+            not isinstance(units_value, int)
+            or isinstance(units_value, bool)
+            or units_value <= 0
+        ):
             raise ExactSimulationError(
                 ExactSimulationErrorCode.MALFORMED_RPC_RESPONSE,
                 FailureDisposition.RETRYABLE,
                 "successful simulation omitted unitsConsumed",
             )
+        units = units_value
         if units > compute_limit:
             raise ExactSimulationError(
                 ExactSimulationErrorCode.COMPUTE_LIMIT_EXCEEDED,
@@ -483,15 +493,23 @@ class ExactSimulationFinalizer:
                 {"consumed": units, "limit": compute_limit},
             )
 
-        loaded_size = value.get("loadedAccountsDataSize")
-        if loaded_size is not None and (not _is_int(loaded_size) or loaded_size < 0):
+        loaded_value = value.get("loadedAccountsDataSize")
+        if loaded_value is None:
+            loaded_size: int | None = None
+        elif (
+            isinstance(loaded_value, int)
+            and not isinstance(loaded_value, bool)
+            and loaded_value >= 0
+        ):
+            loaded_size = loaded_value
+        else:
             raise ExactSimulationError(
                 ExactSimulationErrorCode.MALFORMED_RPC_RESPONSE,
                 FailureDisposition.RETRYABLE,
                 "loadedAccountsDataSize is invalid",
             )
         if (
-            _is_int(loaded_size)
+            loaded_size is not None
             and loaded_size > self.policy.max_loaded_accounts_data_size
         ):
             raise ExactSimulationError(
@@ -546,7 +564,7 @@ class ExactSimulationFinalizer:
             logs_hash=_hash_json(logs),
             slot=slot,
             units_consumed=units,
-            loaded_accounts_data_size=(loaded_size if _is_int(loaded_size) else None),
+            loaded_accounts_data_size=loaded_size,
             returned_account_hashes=tuple(
                 _hash_json(account) for account in accounts_value
             ),
@@ -570,13 +588,18 @@ class ExactSimulationFinalizer:
             result_dict.get("context"),
             "getFeeForMessage context",
         )
-        slot = context.get("slot")
-        if not _is_int(slot) or slot < compiled.min_context_slot:
+        slot_value = context.get("slot")
+        if (
+            not isinstance(slot_value, int)
+            or isinstance(slot_value, bool)
+            or slot_value < compiled.min_context_slot
+        ):
             raise ExactSimulationError(
                 ExactSimulationErrorCode.CONTEXT_SLOT_VIOLATION,
                 FailureDisposition.RETRYABLE,
                 "fee context slot is below minContextSlot",
             )
+        fee_slot = slot_value
         value = result_dict.get("value")
         if value is None:
             raise ExactSimulationError(
@@ -590,7 +613,8 @@ class ExactSimulationFinalizer:
                 FailureDisposition.RETRYABLE,
                 "getFeeForMessage returned an invalid fee",
             )
-        return value, slot
+        fee_lamports = value
+        return fee_lamports, fee_slot
 
     async def _rpc_call(self, method: str, params: list[Any]) -> Any:
         try:

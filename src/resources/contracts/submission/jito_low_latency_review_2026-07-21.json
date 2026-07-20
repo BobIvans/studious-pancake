@@ -1,0 +1,27 @@
+{
+  "contract_id": "jito.low-latency-json-rpc",
+  "credential_modes": [
+    "none/default-rate-limit",
+    "optional-uuid/custom-rate-limit"
+  ],
+  "endpoint_families": [
+    "https://mainnet.block-engine.jito.wtf/api/v1/transactions",
+    "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
+  ],
+  "execution_allowed": false,
+  "expected_capabilities": [
+    "bundle-status",
+    "read-only-rpc"
+  ],
+  "official_sources": [
+    "https://docs.jito.wtf/lowlatencytxnsend/"
+  ],
+  "promotion_notes": [
+    "ACK or bundle id is not landing proof.",
+    "Jito remains disabled until permit-bound sender integration and durable ambiguity handling are complete."
+  ],
+  "provider": "jito",
+  "remote_schema_freshness": "pending-online-probe",
+  "reviewed_at": "2026-07-21T00:00:00Z",
+  "schema_version": "pr054.provider-review-snapshot.v1"
+}

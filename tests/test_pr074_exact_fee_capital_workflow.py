@@ -26,6 +26,7 @@ from src.economics.exact_fee_workflow import (
 
 
 FINAL_HASH = "a" * 64
+OTHER_HASH = "c" * 64
 
 
 def _policy(*, protected: int = 10_000_000) -> CapitalPolicy:
@@ -64,6 +65,7 @@ def _candidate(
     guaranteed_min_out_lamports: int = 30_000_000,
     flash_repayment_lamports: int = 20_000_000,
     requested_flash_loan_lamports: int = 20_000_000,
+    message_hash: str | None = None,
 ) -> CapitalCandidate:
     return CapitalCandidate(
         candidate_id=candidate_id,
@@ -75,7 +77,7 @@ def _candidate(
         ),
         slippage_buffer_lamports=0,
         uncertainty_buffer_lamports=0,
-        message_hash=None,
+        message_hash=message_hash,
     )
 
 
@@ -226,4 +228,12 @@ def test_null_get_fee_for_message_response_is_not_convertible() -> None:
         MessageFeeQuote.from_rpc_payload(
             message_hash=FINAL_HASH,
             payload={"result": {"context": {"slot": 1}, "value": None}},
+        )
+
+
+def test_final_fee_quote_must_match_existing_message_hash() -> None:
+    with pytest.raises(CapitalEngineError, match="message hash"):
+        candidate_with_exact_message_fee(
+            _candidate("hash-mismatch", message_hash=FINAL_HASH),
+            MessageFeeQuote(message_hash=OTHER_HASH, base_fee_lamports=4_000_000),
         )

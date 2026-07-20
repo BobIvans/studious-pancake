@@ -16,7 +16,6 @@ from src.providers.marginfi import (
 )
 from src.providers.marginfi.layouts import ceil_i80f48_product
 
-
 PROGRAM = "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
 GROUP = "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8"
 MARGIN_ACCOUNT = "Fk4G5NB5e1NyULQCCpTNLWCmChCW2UbDwpkEofqAiHk2"
@@ -68,9 +67,10 @@ def _bank_data(pin, *, fee_raw: int = 1 << 45, state: int = 1) -> bytes:
     _write_pubkey(body, 104, VAULT)
     body[472:488] = int(fee_raw).to_bytes(16, "little", signed=True)
     body[600] = state
-    body[601] = 1
+    body[601] = 3
     _write_pubkey(body, 602, ORACLE)
     struct.pack_into("<Q", body, 768, 10_000_000)
+    body[777] = 0
     struct.pack_into("<Q", body, 832, 0)
     return _account_data(pin, "bank", body)
 
@@ -78,7 +78,11 @@ def _bank_data(pin, *, fee_raw: int = 1 << 45, state: int = 1) -> bytes:
 def _vault_data(*, amount: int = 2_000_000) -> bytes:
     body = bytearray(165)
     _write_pubkey(body, 0, USDC)
-    _write_pubkey(body, 32, AUTHORITY)
+    vault_authority = Pubkey.find_program_address(
+        [b"liquidity_vault_auth", bytes(Pubkey.from_string(BANK))],
+        Pubkey.from_string(PROGRAM),
+    )[0]
+    body[32:64] = bytes(vault_authority)
     struct.pack_into("<Q", body, 64, amount)
     return bytes(body)
 
@@ -98,8 +102,17 @@ class Rpc:
         self.first_slot = 123
         self.followup_slot = followup_slot
         self.map = {
-            PROGRAM: RpcAccount(PROGRAM, LOADER, b"", executable=True),
-            GROUP: RpcAccount(GROUP, PROGRAM, _group_data(pin, paused=paused)),
+            PROGRAM: RpcAccount(
+                PROGRAM,
+                LOADER,
+                b"",
+                executable=True,
+            ),
+            GROUP: RpcAccount(
+                GROUP,
+                PROGRAM,
+                _group_data(pin, paused=paused),
+            ),
             MARGIN_ACCOUNT: RpcAccount(
                 MARGIN_ACCOUNT,
                 PROGRAM,
@@ -177,19 +190,18 @@ def test_provider_builds_current_account_metas_and_option_bool_repay() -> None:
     assert prepared.risk_accounts == (BANK, ORACLE)
 
     borrow = prepared.borrow_instruction
-    expected_authority = str(
-        Pubkey.find_program_address(
-            [b"liquidity_vault_auth", bytes(Pubkey.from_string(BANK))],
-            Pubkey.from_string(PROGRAM),
-        )[0]
-    )
     assert [str(meta.pubkey) for meta in borrow.accounts[:8]] == [
         GROUP,
         MARGIN_ACCOUNT,
         AUTHORITY,
         BANK,
         DESTINATION,
-        expected_authority,
+        str(
+            Pubkey.find_program_address(
+                [b"liquidity_vault_auth", bytes(Pubkey.from_string(BANK))],
+                Pubkey.from_string(PROGRAM),
+            )[0]
+        ),
         VAULT,
         TOKEN,
     ]
@@ -229,7 +241,9 @@ def test_provider_builds_current_account_metas_and_option_bool_repay() -> None:
     assert final.instructions[final.end_index] == prepared.end_template
 
 
-def test_reader_rejects_unsafe_or_inconsistent_state() -> None:
+def test_reader_rejects_pause_non_operational_bank_stale_slot_and_low_liquidity() -> (
+    None
+):
     pin = load_marginfi_contract_pin()
     cases = [
         ({"paused": True}, MarginfiRejectionCode.PROTOCOL_PAUSED),
@@ -243,7 +257,7 @@ def test_reader_rejects_unsafe_or_inconsistent_state() -> None:
         assert error.value.code == expected
 
 
-def test_old_synthetic_json_fixture_fails_closed() -> None:
+def test_old_synthetic_discriminator_and_json_fixture_fail_closed() -> None:
     pin = load_marginfi_contract_pin()
     rpc = Rpc(pin)
     old_json_fixture = bytes.fromhex("43b774c54f1500e6") + b'{"group":"fake"}'

@@ -1,0 +1,34 @@
+{
+  "schema": "pr063.canonical-status-hardening.v1",
+  "solana": {
+    "submit_method": "sendTransaction",
+    "status_method": "getSignatureStatuses",
+    "successful_submit_is_landing_proof": false,
+    "authoritative_for_landing": true,
+    "authoritative_for_onchain_failure": true
+  },
+  "jito": {
+    "base_url": "https://mainnet.block-engine.jito.wtf",
+    "single_path": "/api/v1/transactions",
+    "bundle_path": "/api/v1/bundles",
+    "inflight_path": "/api/v1/getInflightBundleStatuses",
+    "bundle_status_path": "/api/v1/getBundleStatuses",
+    "tip_accounts_path": "/api/v1/getTipAccounts",
+    "default_send_requires_auth": false,
+    "uuid_header": "x-jito-auth",
+    "bundle_transaction_min": 1,
+    "bundle_transaction_max": 5,
+    "status_id_max": 5,
+    "minimum_tip_lamports": 1000,
+    "status_is_supplementary": true
+  },
+  "safety": {
+    "permit_bound_only": true,
+    "exactly_one_tip": true,
+    "transport_fallback": false,
+    "automatic_duplicate_submission": false,
+    "jito_landed_without_solana_proof": "unknown",
+    "ambiguous_followup": "reconcile_without_resend",
+    "proven_failure_or_expiry": "reviewed_rebuild_new_permit"
+  }
+}

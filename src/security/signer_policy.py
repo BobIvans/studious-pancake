@@ -12,7 +12,7 @@ from hashlib import sha256
 from typing import Iterable
 import time
 
-from .secret_scan import assert_no_plaintext_key_material
+from .secret_scan import PlaintextKeyMaterialError, assert_no_plaintext_key_material
 
 
 class SignerPolicyError(ValueError):
@@ -76,10 +76,13 @@ class SignerPolicy:
         )
 
     def _validate_signer_reference(self, signer_reference: str) -> None:
-        assert_no_plaintext_key_material(
-            {"signer_reference": signer_reference},
-            source="signer-policy",
-        )
+        try:
+            assert_no_plaintext_key_material(
+                {"signer_reference": signer_reference},
+                source="signer-policy",
+            )
+        except PlaintextKeyMaterialError as exc:
+            raise SignerPolicyError(str(exc)) from exc
         if ":" not in signer_reference:
             raise SignerPolicyError("signer reference must be structural, not inline")
         scheme, locator = signer_reference.split(":", 1)
@@ -100,7 +103,9 @@ class SignerPolicy:
         if expected_message_sha256 is not None:
             actual_hash = unsigned_message.message_sha256
             if actual_hash != expected_message_sha256:
-                raise SignerPolicyError("unsigned message hash does not match permit input")
+                raise SignerPolicyError(
+                    "unsigned message hash does not match permit input"
+                )
         unknown_programs = sorted(
             set(unsigned_message.program_ids).difference(self.allowed_program_ids)
         )

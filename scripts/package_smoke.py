@@ -108,7 +108,14 @@ def main() -> int:
         )
         bin_dir = python.parent
         _run(
-            [str(python), "-m", "pip", "install", "-r", str(source / "requirements.txt")],
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                str(source / "requirements.txt"),
+            ],
             cwd=temporary,
         )
         _run(

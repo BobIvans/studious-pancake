@@ -55,6 +55,8 @@ class BankSnapshot:
     borrow_limit: int = 0
     origination_fee_raw_i80f48: int = 0
     flags: int = 0
+    oracle_setup: int = 0
+    asset_tag: int = 0
 
     @property
     def requires_mint_account(self) -> bool:
@@ -239,7 +241,11 @@ class MarginfiAccountReader:
                     f"active bank {key} belongs to another group",
                 )
             additional_snapshots.append(
-                self._bank_snapshot(key, decoded, available_liquidity=None)
+                self._bank_snapshot(
+                    key,
+                    decoded,
+                    available_liquidity=None,
+                )
             )
 
         vault_account = second_accounts[-1]
@@ -248,6 +254,11 @@ class MarginfiAccountReader:
             token_program=decoded_target.token_program,
             expected_mint=decoded_target.mint,
         )
+        if decoded_vault.authority != decoded_target.liquidity_vault_authority:
+            raise MarginfiRejection(
+                MarginfiRejectionCode.LIQUIDITY_VAULT_MISMATCH,
+                "liquidity vault authority does not match the bank PDA",
+            )
         if decoded_vault.amount < amount:
             raise MarginfiRejection(
                 MarginfiRejectionCode.INSUFFICIENT_LIQUIDITY,
@@ -263,7 +274,11 @@ class MarginfiAccountReader:
         target_was_active = bank in projected
         projected.add(bank)
         projected_balances = tuple(
-            sorted(projected, key=lambda value: bytes(Pubkey.from_string(value)))
+            sorted(
+                projected,
+                key=lambda value: bytes(Pubkey.from_string(value)),
+                reverse=True,
+            )
         )
         margin_snapshot = MarginAccountSnapshot(
             address=margin_account,
@@ -299,8 +314,8 @@ class MarginfiAccountReader:
             group=group,
             margin_account=margin_snapshot,
             bank=target_snapshot,
-            state_fingerprint=fingerprint,
             banks=banks,
+            state_fingerprint=fingerprint,
         )
 
     @staticmethod
@@ -314,6 +329,7 @@ class MarginfiAccountReader:
             address=address,
             group=decoded.group,
             mint=decoded.mint,
+            mint_decimals=decoded.mint_decimals,
             token_program=decoded.token_program,
             liquidity_vault=decoded.liquidity_vault,
             liquidity_vault_authority=decoded.liquidity_vault_authority,
@@ -322,8 +338,9 @@ class MarginfiAccountReader:
                 "operational" if decoded.operational_state == 1 else "non-operational"
             ),
             available_liquidity=available_liquidity,
-            mint_decimals=decoded.mint_decimals,
             borrow_limit=decoded.borrow_limit,
             origination_fee_raw_i80f48=decoded.origination_fee_raw_i80f48,
             flags=decoded.flags,
+            oracle_setup=decoded.oracle_setup,
+            asset_tag=decoded.asset_tag,
         )

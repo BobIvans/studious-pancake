@@ -13,5 +13,12 @@ from .conformance import (
 from .lifecycle import VenueAccountLifecycleService
 from .models import *
 from .planner import OrderbookAmmCandidate, OrderbookAmmPlanner, PlannedOrderbookAmm
+from .pr066_phoenix import (
+    PhoenixPromotionDecision,
+    PhoenixPromotionEvidence,
+    PhoenixPromotionGate,
+    evaluate_phoenix_shadow_promotion,
+    require_phoenix_shadow_promotion,
+)
 from .quote import OrderbookQuoteEngine
 from .registry import VenueRegistry

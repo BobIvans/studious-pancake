@@ -1,36 +1,49 @@
-FROM python:3.13-slim
+# syntax=docker/dockerfile:1.7
+ARG PYTHON_IMAGE=python:3.13.13-slim-bookworm
 
-WORKDIR /app
+FROM ${PYTHON_IMAGE} AS builder
 
-# Install system dependencies for solders / solana-py
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    libffi-dev \
-    libssl-dev \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+ENV VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-# Copy requirements and install Python dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+WORKDIR /build
+RUN python -m venv "$VIRTUAL_ENV"
 
-# Copy application code
-COPY . .
+COPY requirements.txt pyproject.toml README.md arb_bot.py ./
+COPY src ./src
 
-# Create data directories
-RUN mkdir -p /app/data
+RUN python -m pip install --requirement requirements.txt \
+    && python -m pip install --no-deps --no-build-isolation . \
+    && python -m pip check \
+    && flashloan-bot status --json >/tmp/runtime-status.json \
+    && flashloan-bot capabilities --json >/tmp/runtime-capabilities.json
 
-# Default environment variables (overridden at runtime)
-ENV PYTHONUNBUFFERED=1 \
+FROM ${PYTHON_IMAGE} AS runtime
+
+ENV VIRTUAL_ENV=/opt/venv \
+    PATH=/opt/venv/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
+    FLASHLOAN_RUNTIME_STATE_PATH=/run/flashloan-bot/runtime.json \
     PAPER_TRADING_ONLY=true \
     LIVE_TRADING_ENABLED=false \
     JITO_ENABLED=false \
     KAMINO_LIQUIDATION_ENABLED=false
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
-    CMD curl -f http://localhost:3000/health || exit 1
+RUN groupadd --gid 10001 flashloan \
+    && useradd --uid 10001 --gid 10001 --no-create-home --shell /usr/sbin/nologin flashloan \
+    && install --directory --owner=10001 --group=10001 --mode=0750 /run/flashloan-bot
 
-# Default command: run the arb bot (override with paper_trader.py for simulation)
-CMD ["python", "arb_bot.py"]
+COPY --from=builder /opt/venv /opt/venv
+
+WORKDIR /app
+USER 10001:10001
+
+HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
+    CMD ["flashloan-bot-healthcheck"]
+
+ENTRYPOINT ["flashloan-bot"]
+CMD ["container"]

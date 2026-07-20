@@ -1,0 +1,95 @@
+[build-system]
+requires = ["setuptools==82.0.1", "wheel==0.47.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "studious-pancake-flashloan-bot"
+version = "0.25.0.dev1"
+description = "Fail-closed Solana flash-loan arbitrage runtime under active production hardening"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Private :: Do Not Upload",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = [
+  "aiohttp==3.14.1",
+  "aiohttp-socks==0.11.0",
+  "aiolimiter==1.1.0",
+  "aiosqlite==0.20.0",
+  "base58==2.1.1",
+  "brotli==1.2.0",
+  "cachetools==7.0.5",
+  "construct==2.10.68",
+  "construct-typing==0.6.2",
+  "httpx==0.28.1",
+  "jsonschema==4.26.0",
+  "orjson==3.11.6",
+  "pydantic==2.13.4",
+  "python-dateutil==2.9.0.post0",
+  "python-dotenv==1.2.2",
+  "pytz==2025.2",
+  "PyYAML==6.0.3",
+  "requests==2.33.0",
+  "solana==0.40.1",
+  "solders==0.28.0",
+  "uvloop==0.22.1; platform_system != 'Windows'",
+]
+
+[project.optional-dependencies]
+analytics = [
+  "duckdb==1.4.4",
+  "joblib==1.5.3",
+  "matplotlib==3.11.1",
+  "numpy==2.4.2",
+  "pandas==3.0.0",
+  "pyarrow==23.0.1",
+  "scikit-learn==1.8.0",
+  "scipy==1.17.0",
+  "seaborn==0.13.2",
+]
+service = [
+  "fastapi==0.139.2",
+  "prometheus-client==0.20.0",
+  "psutil==6.0.0",
+  "uvicorn[standard]==0.38.0",
+]
+dev = [
+  "bandit==1.9.2",
+  "black==26.3.1",
+  "build==1.5.0",
+  "flake8==7.3.0",
+  "mypy==1.18.2",
+  "pip-audit==2.9.0",
+  "pytest==9.0.2",
+  "pytest-asyncio==1.3.0",
+  "pytest-socket==0.7.0",
+  "pytest-xprocess==1.0.2",
+  "setuptools==82.0.1",
+  "uv==0.10.0",
+  "wheel==0.47.0",
+]
+
+[project.scripts]
+flashloan-bot = "src.cli:main"
+flashloan-bot-healthcheck = "src.container_runtime:healthcheck_main"
+
+[tool.setuptools]
+include-package-data = true
+py-modules = ["arb_bot"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"src.resources" = ["*.json"]
+
+
+[tool.black]
+target-version = ["py313"]
+line-length = 88

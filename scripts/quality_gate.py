@@ -111,7 +111,7 @@ def main() -> int:
             ]
         )
 
-    print("\nPR-024 quality gates passed.")
+    print("\nPR-024/PR-025 quality gates passed.")
     return 0
 
 

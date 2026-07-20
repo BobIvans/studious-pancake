@@ -1,16 +1,44 @@
-# FIX 238: Strictly ignore wallet and secrets from Docker image builds
-wallet.json
+# Source-control and local tooling
+.git/
+.github/
+.worktrees/
+.venv/
+venv/
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+*.swp
+*.swo
+
+# Secrets and wallet material
 .env
+.env.*
+!.env.example
+wallet.json
+*.key
+*.pem
+*.p12
+
+# Runtime state and generated data
 *.db
 *.db-shm
 *.db-wal
 backups/
 logs/
+data/
 trades.jsonl
-__pycache__/
-*.pyc
-.git/
-.github/
-.worktrees/
-*.swp
-*.swo
+bot_health.json
+
+# Development/analytics-only material excluded from the runtime build context
+requirements-analytics.txt
+requirements-dev.txt
+requirements-data.txt
+ai_training_data.csv
+trade_history.csv
+fixtures/
+tests/
+docs/
+scripts/
+PR-*_IMPLEMENTATION_SUMMARY.md

@@ -1,0 +1,33 @@
+{
+  "locks": {
+    "requirements-analytics.txt": {
+      "extras": [
+        "analytics"
+      ],
+      "sha256": "2a5c4cce090c24c1437e46274559a8e47ee6c4f4e72cb074ac7d1edacd8b14fd"
+    },
+    "requirements-dev.txt": {
+      "extras": [
+        "analytics",
+        "service",
+        "dev"
+      ],
+      "sha256": "87a9e67584e79a699b0939e6b65f7eaf0b2745d1c8dde0fb4dd0c69fe0155630"
+    },
+    "requirements.txt": {
+      "extras": [],
+      "sha256": "7d620bad58bfaeb39a5cbc7ec36daba56297a51ad7cedc3cda1b04e3df2f3c59"
+    }
+  },
+  "platforms": [
+    "linux",
+    "macos"
+  ],
+  "python": "3.13",
+  "resolver": {
+    "name": "uv",
+    "version": "0.10.0"
+  },
+  "schema_version": "pr025.requirements-lock.v1",
+  "source": "pyproject.toml"
+}

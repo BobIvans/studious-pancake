@@ -1,12 +1,19 @@
-.PHONY: install install-dev syntax lint format-check type-check security test test-live verify verify-offline status capabilities run paper
+.PHONY: install install-dev install-analytics lock syntax lint format-check type-check security test test-live verify verify-offline package-smoke image-smoke status capabilities run container paper
 
 install:
-	python -m pip install --upgrade pip setuptools wheel
-	python -m pip install -r requirements.txt
+	python -m pip install --requirement requirements.txt
+	python -m pip install --no-deps .
+
+install-analytics:
+	python -m pip install --requirement requirements-analytics.txt
+	python -m pip install --no-deps .
 
 install-dev:
-	python -m pip install --upgrade pip setuptools wheel
-	python -m pip install -r requirements-dev.txt
+	python -m pip install --requirement requirements-dev.txt
+	python -m pip install --no-deps .
+
+lock:
+	python scripts/lock_requirements.py
 
 syntax:
 	python -m compileall -q arb_bot.py src scripts tests
@@ -25,7 +32,7 @@ security:
 
 test:
 	PAPER_TRADING_ONLY=true LIVE_TRADING_ENABLED=false JITO_ENABLED=false KAMINO_LIQUIDATION_ENABLED=false \
-	python -m pytest -m "not live and not manual" --disable-socket -q
+	python -m pytest -m "not live and not manual" --disable-socket --allow-unix-socket -q
 
 test-live:
 	python -m pytest -m "live and not manual" -q
@@ -36,14 +43,23 @@ verify:
 verify-offline:
 	python scripts/verify_repo.py --skip-dependency-audit
 
+package-smoke:
+	python scripts/package_smoke.py
+
+image-smoke:
+	bash scripts/image_smoke.sh
+
 status:
-	python arb_bot.py status
+	flashloan-bot status
 
 capabilities:
-	python arb_bot.py capabilities
+	flashloan-bot capabilities
 
 run:
-	python arb_bot.py run --mode shadow
+	flashloan-bot run --mode shadow
+
+container:
+	flashloan-bot container
 
 paper:
 	@echo "PAPER_MODE_UNAVAILABLE: scripts/paper_trader.py is quarantined; canonical paper mode is planned for PR-038." >&2

@@ -125,7 +125,7 @@ class CapitalPolicy:
                 config.monetary.maximum_priority_fee_lamports
             ),
             maximum_jito_tip_lamports=(
-                config.providers.jito.min_tip_lamports
+                cls().maximum_jito_tip_lamports
                 if maximum_jito_tip_lamports is None
                 else maximum_jito_tip_lamports
             ),

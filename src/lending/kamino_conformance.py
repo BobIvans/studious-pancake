@@ -50,49 +50,54 @@ class KaminoAccountVectorKind(StrEnum):
 
 def _require_non_empty(value: str, *, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
-        raise KaminoConformanceError(f"{field} must be a non-empty string")
+        message = f"{field} must be a non-empty string"
+        raise KaminoConformanceError(message)
     return value.strip()
 
 
 def _require_bool(value: bool, *, field: str) -> bool:
     if not isinstance(value, bool):
-        raise KaminoConformanceError(f"{field} must be boolean")
+        message = f"{field} must be boolean"
+        raise KaminoConformanceError(message)
     return value
 
 
 def _require_non_negative_int(value: int, *, field: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise KaminoConformanceError(f"{field} must be a non-negative integer")
+        message = f"{field} must be a non-negative integer"
+        raise KaminoConformanceError(message)
     return value
 
 
 def _require_positive_int(value: int, *, field: str) -> int:
     checked = _require_non_negative_int(value, field=field)
     if checked == 0:
-        raise KaminoConformanceError(f"{field} must be positive")
+        message = f"{field} must be positive"
+        raise KaminoConformanceError(message)
     return checked
 
 
 def _require_bps(value: int, *, field: str) -> int:
     checked = _require_non_negative_int(value, field=field)
     if checked > 10_000:
-        raise KaminoConformanceError(f"{field} must be <= 10000 bps")
+        message = f"{field} must be <= 10000 bps"
+        raise KaminoConformanceError(message)
     return checked
 
 
 def _require_sha256(value: str, *, field: str) -> str:
     lowered = str(value).lower()
     if not _SHA256_RE.fullmatch(lowered) or lowered == "0" * 64:
-        raise KaminoConformanceError(
-            f"{field} must be a non-placeholder sha256 digest"
-        )
+        message = f"{field} must be a non-placeholder sha256 digest"
+        raise KaminoConformanceError(message)
     return lowered
 
 
 def _require_git_sha(value: str, *, field: str) -> str:
     lowered = str(value).lower()
     if not _GIT_SHA_RE.fullmatch(lowered) or lowered == "0" * 40:
-        raise KaminoConformanceError(f"{field} must be a non-placeholder git SHA")
+        message = f"{field} must be a non-placeholder git SHA"
+        raise KaminoConformanceError(message)
     return lowered
 
 
@@ -106,20 +111,17 @@ def _require_pubkey(value: str, *, field: str) -> str:
 def _require_relative_path(value: str, *, field: str) -> str:
     normalized = value.replace("\\", "/")
     parts = normalized.split("/")
-    if (
-        not value
-        or normalized.startswith(("/", "~"))
-        or any(part in {"", ".", ".."} for part in parts)
-    ):
-        raise KaminoConformanceError(
-            f"{field} must be a normalized repository-relative path"
-        )
+    has_bad_part = any(part in {"", ".", ".."} for part in parts)
+    if not value or normalized.startswith(("/", "~")) or has_bad_part:
+        message = f"{field} must be a normalized repository-relative path"
+        raise KaminoConformanceError(message)
     return normalized
 
 
 def _require_timezone(value: datetime, *, field: str) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
-        raise KaminoConformanceError(f"{field} must be timezone-aware")
+        message = f"{field} must be timezone-aware"
+        raise KaminoConformanceError(message)
     return value
 
 
@@ -145,7 +147,8 @@ def stable_json(payload: Any) -> str:
 
 
 def sha256_payload(payload: Any) -> str:
-    return hashlib.sha256(stable_json(payload).encode("utf-8")).hexdigest()
+    payload_bytes = stable_json(payload).encode("utf-8")
+    return hashlib.sha256(payload_bytes).hexdigest()
 
 
 @dataclass(frozen=True, slots=True)
@@ -155,16 +158,10 @@ class KaminoConformanceArtifact:
     kind: KaminoConformanceArtifactKind
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "path",
-            _require_relative_path(self.path, field="artifact.path"),
-        )
-        object.__setattr__(
-            self,
-            "sha256",
-            _require_sha256(self.sha256, field="artifact.sha256"),
-        )
+        path = _require_relative_path(self.path, field="artifact.path")
+        sha256 = _require_sha256(self.sha256, field="artifact.sha256")
+        object.__setattr__(self, "path", path)
+        object.__setattr__(self, "sha256", sha256)
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,30 +174,18 @@ class KaminoRpcAccountVector:
     slot: int
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "account_address",
-            _require_pubkey(self.account_address, field="account_address"),
-        )
-        object.__setattr__(
-            self,
-            "owner_program_id",
-            _require_pubkey(self.owner_program_id, field="owner_program_id"),
-        )
-        object.__setattr__(
-            self,
-            "data_sha256",
-            _require_sha256(self.data_sha256, field="data_sha256"),
-        )
-        object.__setattr__(
-            self,
-            "decoded_fields_sha256",
-            _require_sha256(
-                self.decoded_fields_sha256,
-                field="decoded_fields_sha256",
-            ),
+        account = _require_pubkey(self.account_address, field="account_address")
+        owner = _require_pubkey(self.owner_program_id, field="owner_program_id")
+        data_sha = _require_sha256(self.data_sha256, field="data_sha256")
+        decoded_sha = _require_sha256(
+            self.decoded_fields_sha256,
+            field="decoded_fields_sha256",
         )
         _require_positive_int(self.slot, field="slot")
+        object.__setattr__(self, "account_address", account)
+        object.__setattr__(self, "owner_program_id", owner)
+        object.__setattr__(self, "data_sha256", data_sha)
+        object.__setattr__(self, "decoded_fields_sha256", decoded_sha)
 
 
 @dataclass(frozen=True, slots=True)
@@ -215,22 +200,16 @@ class KaminoInstructionGoldenVector:
     sdk_fixture_sha256: str
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "instruction_name",
-            _require_non_empty(self.instruction_name, field="instruction_name"),
+        instruction = _require_non_empty(
+            self.instruction_name,
+            field="instruction_name",
         )
-        object.__setattr__(
-            self,
-            "program_id",
-            _require_pubkey(self.program_id, field="program_id"),
-        )
+        program_id = _require_pubkey(self.program_id, field="program_id")
+        object.__setattr__(self, "instruction_name", instruction)
+        object.__setattr__(self, "program_id", program_id)
         for name in ("account_metas_sha256", "data_sha256", "sdk_fixture_sha256"):
-            object.__setattr__(
-                self,
-                name,
-                _require_sha256(getattr(self, name), field=name),
-            )
+            digest = _require_sha256(getattr(self, name), field=name)
+            object.__setattr__(self, name, digest)
         _require_positive_int(self.account_count, field="account_count")
         _require_non_negative_int(self.writable_count, field="writable_count")
         _require_non_negative_int(self.signer_count, field="signer_count")
@@ -260,9 +239,8 @@ class KaminoHealthOracleMathEvidence:
             field="max_price_staleness_slots",
         )
         _require_bps(self.liquidation_threshold_bps, field="liquidation_threshold_bps")
-        if not self.oracle_sources or any(
-            not item.strip() for item in self.oracle_sources
-        ):
+        empty_source = any(not source.strip() for source in self.oracle_sources)
+        if not self.oracle_sources or empty_source:
             raise KaminoConformanceError("oracle_sources cannot be empty")
         if len(self.oracle_sources) != len(set(self.oracle_sources)):
             raise KaminoConformanceError("oracle_sources must be unique")
@@ -279,28 +257,25 @@ class KaminoPlannerReplayEvidence:
     corpus_sha256: str
 
     def __post_init__(self) -> None:
-        for name in (
+        count_fields = (
             "replay_cases",
             "accepted_cases",
             "rejected_cases",
             "mismatch_count",
-        ):
+        )
+        for name in count_fields:
             _require_non_negative_int(getattr(self, name), field=name)
         if self.replay_cases == 0:
             raise KaminoConformanceError("replay_cases must be positive")
         if self.accepted_cases + self.rejected_cases != self.replay_cases:
-            raise KaminoConformanceError(
-                "accepted and rejected cases must sum to replay_cases"
-            )
+            message = "accepted and rejected cases must sum to replay_cases"
+            raise KaminoConformanceError(message)
         _require_bool(
             self.deterministic_replay_passed,
             field="deterministic_replay_passed",
         )
-        object.__setattr__(
-            self,
-            "corpus_sha256",
-            _require_sha256(self.corpus_sha256, field="corpus_sha256"),
-        )
+        corpus_sha = _require_sha256(self.corpus_sha256, field="corpus_sha256")
+        object.__setattr__(self, "corpus_sha256", corpus_sha)
 
 
 @dataclass(frozen=True, slots=True)
@@ -312,19 +287,16 @@ class KaminoShadowSoakReference:
     human_reviewed: bool
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "run_id",
-            _require_non_empty(self.run_id, field="run_id"),
+        run_id = _require_non_empty(self.run_id, field="run_id")
+        evidence_sha = _require_sha256(
+            self.evidence_sha256,
+            field="evidence_sha256",
         )
         _require_positive_int(self.duration_seconds, field="duration_seconds")
-        object.__setattr__(
-            self,
-            "evidence_sha256",
-            _require_sha256(self.evidence_sha256, field="evidence_sha256"),
-        )
         _require_bool(self.passed, field="passed")
         _require_bool(self.human_reviewed, field="human_reviewed")
+        object.__setattr__(self, "run_id", run_id)
+        object.__setattr__(self, "evidence_sha256", evidence_sha)
 
 
 @dataclass(frozen=True, slots=True)
@@ -356,13 +328,14 @@ class KaminoConformanceThresholds:
     )
 
     def __post_init__(self) -> None:
-        for name in (
+        positive_fields = (
             "min_rpc_vectors",
             "min_instruction_vectors",
             "min_health_oracle_samples",
             "min_planner_replay_cases",
             "min_shadow_soak_seconds",
-        ):
+        )
+        for name in positive_fields:
             _require_positive_int(getattr(self, name), field=name)
         _require_bps(
             self.max_health_factor_error_bps,
@@ -406,24 +379,20 @@ class KaminoConformanceEvidence:
         if self.schema_version != SCHEMA_VERSION:
             raise KaminoConformanceError("unsupported PR-067 evidence schema")
         if not isinstance(self.combination, KaminoSupportedCombination):
-            raise KaminoConformanceError(
-                "combination must be KaminoSupportedCombination"
-            )
+            message = "combination must be KaminoSupportedCombination"
+            raise KaminoConformanceError(message)
         try:
             self.combination.validated()
         except KaminoRegistryError as exc:
             raise KaminoConformanceError(str(exc)) from exc
-        object.__setattr__(
-            self,
-            "code_commit",
-            _require_git_sha(self.code_commit, field="code_commit"),
-        )
+        code_commit = _require_git_sha(self.code_commit, field="code_commit")
+        object.__setattr__(self, "code_commit", code_commit)
         if not self.artifacts:
             raise KaminoConformanceError("at least one artifact is required")
-        artifact_paths = [item.path for item in self.artifacts]
+        artifact_paths = [artifact.path for artifact in self.artifacts]
         if len(artifact_paths) != len(set(artifact_paths)):
             raise KaminoConformanceError("artifact paths must be unique")
-        artifact_kinds = [item.kind for item in self.artifacts]
+        artifact_kinds = [artifact.kind for artifact in self.artifacts]
         if len(artifact_kinds) != len(set(artifact_kinds)):
             raise KaminoConformanceError("artifact kinds must be unique")
         if not self.rpc_account_vectors:
@@ -479,9 +448,9 @@ def evaluate_kamino_conformance(
             blockers.append(reason)
 
     combination = evidence.combination
+    program_id = combination.lending_program_id
     artifact_kinds = {artifact.kind for artifact in evidence.artifacts}
     rpc_kinds = {vector.account_kind for vector in evidence.rpc_account_vectors}
-    program_id = combination.lending_program_id
 
     check(combination.verified, "KAMINO_COMBINATION_NOT_VERIFIED")
     check(
@@ -496,22 +465,24 @@ def evaluate_kamino_conformance(
         set(policy.required_account_kinds).issubset(rpc_kinds),
         "REQUIRED_ACCOUNT_VECTOR_KINDS_MISSING",
     )
-    check(
-        all(
-            vector.owner_program_id == program_id
-            for vector in evidence.rpc_account_vectors
-            if vector.account_kind is not KaminoAccountVectorKind.ORACLE
-        ),
-        "KAMINO_ACCOUNT_OWNER_MISMATCH",
+
+    non_oracle_vectors = (
+        vector
+        for vector in evidence.rpc_account_vectors
+        if vector.account_kind is not KaminoAccountVectorKind.ORACLE
     )
+    owners_match = all(
+        vector.owner_program_id == program_id for vector in non_oracle_vectors
+    )
+    check(owners_match, "KAMINO_ACCOUNT_OWNER_MISMATCH")
     check(
         len(evidence.instruction_vectors) >= policy.min_instruction_vectors,
         "INSUFFICIENT_INSTRUCTION_GOLDEN_VECTORS",
     )
-    check(
-        all(vector.program_id == program_id for vector in evidence.instruction_vectors),
-        "INSTRUCTION_PROGRAM_MISMATCH",
+    instruction_programs_match = all(
+        vector.program_id == program_id for vector in evidence.instruction_vectors
     )
+    check(instruction_programs_match, "INSTRUCTION_PROGRAM_MISMATCH")
 
     health = evidence.health_oracle_math
     check(health.passed, "HEALTH_ORACLE_MATH_NOT_PASSED")
@@ -575,7 +546,6 @@ def evaluate_kamino_conformance(
 
     if combination.provenance.sdk_package != "@kamino-finance/klend-sdk":
         blockers.append("KAMINO_SDK_PROVENANCE_MISMATCH")
-
     if combination.provenance.source_url.startswith("https://github.com/"):
         warnings.append("GITHUB_SOURCE_PIN_REQUIRES_RELEASE_TAG_OR_COMMIT_REVIEW")
 

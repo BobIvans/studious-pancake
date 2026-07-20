@@ -1,14 +1,12 @@
-import asyncio
 import json
 from pathlib import Path
 
 import pytest
 
 from src.execution.models import SimulationReport
-from src.providers.jupiter.router import *
 from src.providers.jupiter.quota import JupiterQuotaError
+from src.providers.jupiter.router import *
 
-FIX = Path("tests/fixtures/providers/jupiter/router_build_success_2026-07-19.json")
 REQ = JupiterBuildRequest(
     input_mint="So11111111111111111111111111111111111111112",
     output_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",

@@ -1,20 +1,25 @@
 """Safe JSON linear ranker, baseline, evaluation and quota replay."""
 
 from __future__ import annotations
-import json, math, os, hashlib
+
+import hashlib
+import json
+import math
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
 from .contracts import (
     ALLOWED_PRE_QUOTE_FEATURES,
     FEATURE_SPEC_VERSION,
     MODEL_ARTIFACT_VERSION,
+    DecisionStage,
     ModelStatus,
     RankingRecommendation,
-    DecisionStage,
     RecommendedBand,
 )
-from .dataset import load_rows, sha256_text, _canon
+from .dataset import _canon, load_rows, sha256_text
 from .split import PurgedGroupedTimeSplit
 
 MIN_TOTAL = 12
@@ -44,6 +49,18 @@ def baseline_priority(features: dict[str, Any]) -> int:
 
 def _sig(x: float) -> float:
     return 1 / (1 + math.exp(-max(-40, min(40, x))))
+
+
+def _dataset_provenance(dataset_dir: str | Path) -> dict[str, Any]:
+    manifest_path = Path(dataset_dir) / "manifest.json"
+    if not manifest_path.exists():
+        return {}
+    raw_manifest = manifest_path.read_text(encoding="utf-8")
+    manifest = json.loads(raw_manifest)
+    return {
+        "source_dataset_hash": manifest.get("dataset_hash"),
+        "source_dataset_manifest_hash": sha256_text(raw_manifest),
+    }
 
 
 def _prepare(rows):
@@ -94,9 +111,13 @@ def train_model(
         "model_status": status,
         "reason": None,
         "split_manifest": split.manifest,
+        "advisory_only": True,
+        "live_policy_schema_changed": False,
+        "runtime_promotion_allowed": False,
         "dependency_versions": {
             "scikit-learn": "1.8.0 documented; not loaded for safe JSON inference"
         },
+        **_dataset_provenance(dataset_dir),
     }
     if (
         len(labeled) < MIN_TOTAL
@@ -261,6 +282,8 @@ def evaluate_model(dataset_dir, artifact_path, report_dir, as_of):
     report = {
         "as_of": as_of,
         "artifact_checksum": art.get("checksum"),
+        "source_dataset_hash": art.get("source_dataset_hash"),
+        "source_dataset_manifest_hash": art.get("source_dataset_manifest_hash"),
         "model_status": art.get("model_status"),
         "test_count": len(test),
         "metrics": {
@@ -286,7 +309,11 @@ def evaluate_model(dataset_dir, artifact_path, report_dir, as_of):
             "prediction_distribution": [p["p"] for p in preds],
         },
         "split_manifest": split.manifest,
+        "live_policy_schema_changed": False,
+        "runtime_promotion_allowed": False,
     }
+    body = {k: v for k, v in report.items() if k != "report_hash"}
+    report["report_hash"] = sha256_text(_canon(body))
     out = Path(report_dir)
     out.mkdir(parents=True, exist_ok=True)
     (out / "report.json").write_text(_canon(report) + "\n")

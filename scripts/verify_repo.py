@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Single local equivalent of the mandatory GitHub Actions verification."""
+"""Single local equivalent of mandatory repository verification."""
 
 from __future__ import annotations
 
@@ -8,19 +8,79 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from typing import Final
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT: Final = Path(__file__).resolve().parents[1]
 
-SAFE_ENV = {
+SAFE_ENV: Final = {
     "PAPER_TRADING_ONLY": "true",
     "LIVE_TRADING_ENABLED": "false",
     "JITO_ENABLED": "false",
     "KAMINO_LIQUIDATION_ENABLED": "false",
 }
 
+QUALITY_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/quality_gate.py",
+]
+
+# Public by design: tests inspect the final offline pytest command.
+COMMANDS: Final[list[list[str]]] = [
+    [
+        sys.executable,
+        "-m",
+        "pip",
+        "check",
+    ],
+    [
+        sys.executable,
+        "-m",
+        "compileall",
+        "-q",
+        "arb_bot.py",
+        "src",
+        "scripts",
+        "tests",
+    ],
+    [
+        sys.executable,
+        "arb_bot.py",
+        "status",
+        "--json",
+    ],
+    [
+        sys.executable,
+        "arb_bot.py",
+        "capabilities",
+        "--json",
+    ],
+    [
+        sys.executable,
+        "-m",
+        "pytest",
+        "tests/test_pr023_runtime_truth.py",
+        "tests/test_launcher_startup_smoke.py",
+        "tests/test_import_smoke.py",
+        "tests/test_quality_quarantine.py",
+        "-q",
+        "--disable-socket",
+        "--allow-unix-socket",
+    ],
+    [
+        sys.executable,
+        "-m",
+        "pytest",
+        "-m",
+        "not live and not manual",
+        "--disable-socket",
+        "--allow-unix-socket",
+        "-q",
+    ],
+]
+
 
 def run(command: list[str]) -> None:
-    """Run one mandatory verification command and fail immediately on error."""
+    """Run a mandatory verification command and fail immediately on error."""
     print(f"\n$ {' '.join(command)}", flush=True)
 
     env = os.environ.copy()
@@ -42,63 +102,19 @@ def main() -> int:
     parser.add_argument(
         "--skip-dependency-audit",
         action="store_true",
-        help="Skip only the network-backed pip-audit step for offline development.",
+        help="Skip the network-backed dependency vulnerability audit.",
     )
     args = parser.parse_args()
 
-    run([sys.executable, "-m", "pip", "check"])
+    run(COMMANDS[0])
 
-    quality_command = [sys.executable, "scripts/quality_gate.py"]
+    quality_command = list(QUALITY_COMMAND)
     if not args.skip_dependency_audit:
         quality_command.append("--with-dependency-audit")
     run(quality_command)
 
-    run(
-        [
-            sys.executable,
-            "-m",
-            "compileall",
-            "-q",
-            "arb_bot.py",
-            "src",
-            "scripts",
-            "tests",
-        ]
-    )
-
-    # PR-023 runtime-truth contract.
-    run([sys.executable, "arb_bot.py", "status", "--json"])
-    run([sys.executable, "arb_bot.py", "capabilities", "--json"])
-
-    # Focused PR-023/PR-024 smoke and architectural checks.
-    run(
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "tests/test_pr023_runtime_truth.py",
-            "tests/test_launcher_startup_smoke.py",
-            "tests/test_import_smoke.py",
-            "tests/test_quality_quarantine.py",
-            "-q",
-            "--disable-socket",
-            "--allow-unix-socket",
-        ]
-    )
-
-    # Complete offline non-live suite.
-    run(
-        [
-            sys.executable,
-            "-m",
-            "pytest",
-            "-m",
-            "not live and not manual",
-            "--disable-socket",
-            "--allow-unix-socket",
-            "-q",
-        ]
-    )
+    for command in COMMANDS[1:]:
+        run(command)
 
     print(
         "\nRepository verification passed. "

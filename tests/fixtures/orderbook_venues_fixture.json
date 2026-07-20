@@ -1,0 +1,50 @@
+{
+  "schema_version": "pr049.orderbook_venue_registry.fixture.v1",
+  "registry_digest": null,
+  "venues": [
+    {
+      "venue_kind": "phoenix_legacy_spot",
+      "cluster": "test-fixture",
+      "program_id": "PhoenixLegacyProgramFromPinnedRegistry111111",
+      "source": "test:synthetic-orderbook-fixture",
+      "pinned_version": "fixture-only",
+      "artifact_sha256": "sha256:fixture-only",
+      "expected_owner": "PhoenixLegacyProgramFromPinnedRegistry111111",
+      "layout_discriminator_hex": "5048584c45473136",
+      "min_data_len": 48,
+      "max_data_len": 4096,
+      "supported_token_programs": [
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      ],
+      "enabled_shadow": true,
+      "enabled_live": false,
+      "status": "test_fixture_only_not_default_registry",
+      "checked_at": "2026-07-20T00:00:00Z",
+      "markets": [
+        "PHX_FIXTURE_SOL_USDC"
+      ]
+    },
+    {
+      "venue_kind": "openbook_v2",
+      "cluster": "test-fixture",
+      "program_id": "OpenBookV2ProgramFromPinnedIDL1111111111111",
+      "source": "test:synthetic-orderbook-fixture",
+      "pinned_version": "fixture-only",
+      "artifact_sha256": "sha256:fixture-only",
+      "expected_owner": "OpenBookV2ProgramFromPinnedIDL1111111111111",
+      "layout_discriminator_hex": "4f4256324c454721",
+      "min_data_len": 48,
+      "max_data_len": 8192,
+      "supported_token_programs": [
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      ],
+      "enabled_shadow": true,
+      "enabled_live": false,
+      "status": "test_fixture_only_not_default_registry",
+      "checked_at": "2026-07-20T00:00:00Z",
+      "markets": [
+        "OBV2_FIXTURE_SOL_USDC"
+      ]
+    }
+  ]
+}

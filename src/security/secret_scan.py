@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from typing import Mapping
 import re
 
-
 _REFERENCE_RE = re.compile(r"^(env|file|keychain):.+$")
 _PEM_PRIVATE_KEY_RE = re.compile(
     r"-----BEGIN (?:OPENSSH |EC |RSA |DSA |ED25519 )?PRIVATE KEY-----"
@@ -25,8 +24,7 @@ _JSON_KEYPAIR_ARRAY_RE = re.compile(
     r"{31,}\s*(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\s*\]"
 )
 _BASE58_SECRET_RE = re.compile(
-    r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{80,120}"
-    r"(?![1-9A-HJ-NP-Za-km-z])"
+    r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{80,120}" r"(?![1-9A-HJ-NP-Za-km-z])"
 )
 _SECRET_NAME_HINTS = (
     "PRIVATE_KEY",

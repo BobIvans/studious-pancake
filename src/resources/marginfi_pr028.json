@@ -1,0 +1,133 @@
+{
+  "schema_version": "pr028.marginfi-binary-conformance.v1",
+  "cluster": "mainnet-beta",
+  "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+  "program_owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+  "source_repository_url": "https://github.com/0dotxyz/marginfi-v2",
+  "source_commit": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
+  "conformance": {
+    "level": "source-derived-offline",
+    "execution_mode": "shadow-only",
+    "online_rpc_required_for_promotion": true,
+    "pr027_registry_required": true
+  },
+  "account_layouts": {
+    "marginfi_group": {
+      "discriminator_hex": "b617adf097ceb643",
+      "struct_size": 1056,
+      "offsets": {
+        "admin": 0,
+        "group_flags": 32,
+        "panic_pause_flags": 248,
+        "panic_pause_start_timestamp": 256,
+        "panic_last_cache_update": 264
+      }
+    },
+    "marginfi_account": {
+      "discriminator_hex": "43b2826d7e721c2a",
+      "struct_size": 2304,
+      "offsets": {
+        "group": 0,
+        "authority": 32,
+        "lending_account": 64,
+        "balance_size": 104,
+        "balance_count": 16,
+        "balance_active": 0,
+        "balance_bank": 1,
+        "account_flags": 1792
+      }
+    },
+    "bank": {
+      "discriminator_hex": "8e31a6f2324261bc",
+      "struct_size": 1856,
+      "offsets": {
+        "mint": 0,
+        "mint_decimals": 32,
+        "group": 33,
+        "liquidity_vault": 104,
+        "protocol_origination_fee": 472,
+        "operational_state": 600,
+        "oracle_setup": 601,
+        "oracle_keys": 602,
+        "oracle_key_count": 5,
+        "borrow_limit": 768,
+        "flags": 832
+      }
+    }
+  },
+  "instructions": {
+    "lending_account_start_flashloan": {
+      "discriminator_hex": "0e8321dc51bab46b",
+      "args_encoding": "u64-le",
+      "accounts": [
+        "marginfi_account:writable",
+        "authority:signer",
+        "instructions_sysvar:readonly"
+      ]
+    },
+    "lending_account_borrow": {
+      "discriminator_hex": "047e74353005d41f",
+      "args_encoding": "u64-le",
+      "accounts": [
+        "group:readonly",
+        "marginfi_account:writable",
+        "authority:signer",
+        "bank:writable",
+        "destination_token_account:writable",
+        "bank_liquidity_vault_authority:readonly",
+        "liquidity_vault:writable",
+        "token_program:readonly"
+      ]
+    },
+    "lending_account_repay": {
+      "discriminator_hex": "4fd1acb1de33ad97",
+      "args_encoding": "u64-le+option-bool-borsh",
+      "accounts": [
+        "group:readonly",
+        "marginfi_account:writable",
+        "authority:signer",
+        "bank:writable",
+        "signer_token_account:writable",
+        "liquidity_vault:writable",
+        "token_program:readonly"
+      ]
+    },
+    "lending_account_end_flashloan": {
+      "discriminator_hex": "697cc96a9902089c",
+      "args_encoding": "none",
+      "accounts": [
+        "marginfi_account:writable",
+        "authority:signer"
+      ]
+    }
+  },
+  "programs": {
+    "token": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "token_2022": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    "instructions_sysvar": "Sysvar1nstructions1111111111111111111111111"
+  },
+  "flags": {
+    "bank_is_token_2022": 128,
+    "account_disabled": 1,
+    "account_in_flashloan": 2,
+    "account_in_receivership": 16,
+    "account_in_deleverage": 32,
+    "account_frozen": 64,
+    "account_in_order_execution": 128
+  },
+  "constants": {
+    "panic_pause_duration_seconds": 21600,
+    "i80f48_fractional_bits": 48,
+    "liquidity_vault_authority_seed": "liquidity_vault_auth"
+  },
+  "approved_assets": {
+    "USDC": {
+      "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    },
+    "WSOL": {
+      "mint": "So11111111111111111111111111111111111111112",
+      "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    }
+  }
+}

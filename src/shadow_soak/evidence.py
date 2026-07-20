@@ -248,7 +248,7 @@ class ShadowSoakThresholds:
             if item.name == "required_vertical_stages":
                 if not value or any(not stage.strip() for stage in value):
                     raise ShadowSoakError("required stages cannot be empty")
-            elif item.type is bool:
+            elif item.name in {"require_human_review", "require_signed_bundle"}:
                 if not isinstance(value, bool):
                     raise ShadowSoakError(f"{item.name} must be boolean")
             else:

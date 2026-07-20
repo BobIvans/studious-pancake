@@ -5,6 +5,14 @@ for the same high-level stages that live will later use, while fail-closing when
 an upstream stage from PR-033..PR-037 is not present on the current branch.
 """
 
+from src.paper_shadow.atomic_runtime_stages import (
+    AtomicRuntimeStageError,
+    AtomicRuntimeStageErrorCode,
+    AtomicVerticalCandidateAdapter,
+    AtomicVerticalRuntimeInputs,
+    AtomicVerticalRuntimeStageSuite,
+    AtomicVerticalStageRecord,
+)
 from src.paper_shadow.atomic_vertical import (
     AtomicPlannerSimulationReconciliationVertical,
     AtomicVerticalCandidate,
@@ -25,10 +33,16 @@ from src.paper_shadow.runner import (
 
 __all__ = [
     "AtomicPlannerSimulationReconciliationVertical",
+    "AtomicRuntimeStageError",
+    "AtomicRuntimeStageErrorCode",
     "AtomicVerticalCandidate",
+    "AtomicVerticalCandidateAdapter",
     "AtomicVerticalError",
     "AtomicVerticalRejectionCode",
     "AtomicVerticalResult",
+    "AtomicVerticalRuntimeInputs",
+    "AtomicVerticalRuntimeStageSuite",
+    "AtomicVerticalStageRecord",
     "AtomicVerticalTrace",
     "JsonlPaperShadowJournal",
     "PAPER_SHADOW_REQUIRED_STAGES",

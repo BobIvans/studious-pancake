@@ -2,8 +2,9 @@
 
 ## Status
 
-This PR is intentionally opened as a **draft** from the current `main` baseline
-`c4cebde72bae2ec54549eced8111116d3a42e7ff`.
+This PR is intentionally opened as a **draft** and synchronized directly to the
+current `main` baseline
+`d2a387e114726befcfe02393dac9c39da58fe576`.
 
 It creates the isolated planning boundary for the first supported atomic route:
 
@@ -23,19 +24,19 @@ path is added.
 
 ## Why this is isolated from parallel PRs
 
-PR-028, PR-029, PR-032 and the future PR-033 are being developed in parallel.
+PR-028, PR-031, PR-032, PR-033 and PR-035 are being developed in parallel.
 This branch therefore adds a new `src.planning` package and does not edit files
-owned by those PRs. The planner consumes structural ports/evidence that those
-PRs must satisfy after they are merged:
+owned by those PRs. PR-027 and PR-029 are already merged into the base. The
+planner consumes structural ports/evidence that the remaining PRs must satisfy
+after they are merged:
 
 - PR-028: a MarginFi provider with `execution_conformance_verified is True`,
   pinned SHA-256 provenance, integer repayment, and deterministic
   `prepare`/`finalize` instructions;
-- PR-029: the canonical `TransactionPlan`, `PlannedInstruction`, Solders
-  instruction and compiler boundary;
+- PR-031: canonical account-wide Jupiter quota/finalization scheduling;
 - PR-032: capital approval/reservation evidence for the exact borrow amount;
 - PR-033: an immutable candidate ID plus slot-consistent discovery evidence;
-- PR-030/031: canonical Jupiter bundles and a reviewed external-contract pin.
+- PR-035: hardened v0 compilation/ALT/blockhash proof downstream of this plan.
 
 The current quarantined MarginFi implementation on `main` does not expose the
 required conformance bit. Consequently, production use fails closed until the
@@ -57,7 +58,7 @@ verified PR-028 implementation is synchronized into this branch.
 
 It returns:
 
-- one typed `TransactionPlan` for the v0 compiler;
+- one typed `TransactionPlan` for the canonical PR-029/v0 compiler boundary;
 - exact start/end positions and cleanup count;
 - required repayment and guaranteed second-leg output;
 - deterministic route, sequence, capital, contract, slot and ALT provenance.
@@ -151,13 +152,13 @@ python scripts/verify_repo.py
 
 ## Merge blockers
 
-- [ ] PR-027 external-contract registry is merged and supplies the reviewed
-      Jupiter/MarginFi pins.
+- [x] PR-027 external-contract registry is merged into this branch's base.
+- [x] PR-029 canonical execution-domain boundary is merged into this branch's
+      base; the planner emits its typed `TransactionPlan`/Solders instructions.
 - [ ] PR-028 is merged, synchronized, and exposes an explicit verified
       conformance admission only after offline and read-only mainnet assertions.
-- [ ] PR-029 is merged and this planner is adapted to its final canonical model
-      without compatibility shims.
-- [ ] PR-030/031 canonical Jupiter discovery/quota outputs are synchronized.
+- [ ] PR-031 canonical Jupiter quota/finalization output is synchronized without
+      weakening the planner's freshness or provider-ownership rules.
 - [ ] PR-032 is merged and an adapter binds its actual atomic reservation to
       `CapitalReservationEvidence`.
 - [ ] PR-033 candidate/snapshot output is connected without weakening slot or
@@ -165,6 +166,10 @@ python scripts/verify_repo.py
 - [ ] Focused tests and full repository verification pass after synchronization.
 - [ ] Human review confirms MarginFi start/end index semantics and Jupiter
       setup/other/swap/cleanup ordering against the final pinned contracts.
+
+PR-035 can proceed independently and later consume this PR's typed plan; it is
+not a prerequisite for reviewing PR-034, but both must be synchronized before
+the PR-036 exact-simulation stage.
 
 ## Non-goals
 

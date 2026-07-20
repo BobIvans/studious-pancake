@@ -95,12 +95,14 @@ def test_repository_and_packaged_capability_registries_match():
     assert repository["components"][0]["path"] == "src/cli.py"
 
 
-def test_dockerfile_is_multistage_non_root_and_uses_process_probe():
+def test_dockerfile_is_multistage_non_root_and_uses_health_probe():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
     assert dockerfile.count("FROM ${PYTHON_IMAGE}") == 2
     assert "python:3.13.13-slim-bookworm" in dockerfile
     assert "USER 10001:10001" in dockerfile
-    assert 'CMD ["flashloan-bot-healthcheck"]' in dockerfile
+    assert 'CMD ["flashloan-bot-healthcheck", "--url", ' in dockerfile
+    assert '"http://127.0.0.1:8080/health"]' in dockerfile
+    assert "FLASHLOAN_HEALTH_URL=http://127.0.0.1:8080/health" in dockerfile
     assert 'ENTRYPOINT ["flashloan-bot"]' in dockerfile
     assert 'CMD ["container"]' in dockerfile
     assert "localhost:3000/health" not in dockerfile

@@ -91,10 +91,10 @@ def _relative_path(value: str, field: str) -> str:
 
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
-        return {
-            item.name: _jsonable(getattr(value, item.name))
-            for item in fields(value)
-        }
+        result: dict[str, Any] = {}
+        for item in fields(value):
+            result[item.name] = _jsonable(getattr(value, item.name))
+        return result
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     if isinstance(value, Enum):
@@ -182,7 +182,11 @@ class ReplayEvidence:
             "deterministic_failed_events",
         ):
             _non_negative(getattr(self, name), name)
-        object.__setattr__(self, "corpus_sha256", _sha256(self.corpus_sha256, "corpus_sha256"))
+        object.__setattr__(
+            self,
+            "corpus_sha256",
+            _sha256(self.corpus_sha256, "corpus_sha256"),
+        )
         if self.replayed_events > self.corpus_events:
             raise ShadowSoakError("replayed events cannot exceed corpus events")
         if (
@@ -195,7 +199,11 @@ class ReplayEvidence:
     def pass_rate_bps(self) -> int:
         if self.replayed_events == 0:
             return 0
-        return self.deterministic_passed_events * _BPS_DENOMINATOR // self.replayed_events
+        return (
+            self.deterministic_passed_events
+            * _BPS_DENOMINATOR
+            // self.replayed_events
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -263,7 +271,9 @@ class ShadowSoakEvidence:
             raise ShadowSoakError("unsupported PR-060 evidence schema")
         if not self.run_id.strip():
             raise ShadowSoakError("run_id is required")
-        object.__setattr__(self, "code_commit", _git_sha(self.code_commit, "code_commit"))
+        object.__setattr__(
+            self, "code_commit", _git_sha(self.code_commit, "code_commit")
+        )
         _aware(self.started_at, "started_at")
         _aware(self.ended_at, "ended_at")
         _aware(self.reviewed_at, "reviewed_at")
@@ -271,7 +281,9 @@ class ShadowSoakEvidence:
             raise ShadowSoakError("ended_at must be after started_at")
         if self.reviewed_at < self.ended_at:
             raise ShadowSoakError("reviewed_at cannot be before soak ended")
-        if not self.vertical_stages or any(not stage.strip() for stage in self.vertical_stages):
+        if not self.vertical_stages or any(
+            not stage.strip() for stage in self.vertical_stages
+        ):
             raise ShadowSoakError("vertical stages are required")
         if len(self.vertical_stages) != len(set(self.vertical_stages)):
             raise ShadowSoakError("vertical stages must be unique")
@@ -336,28 +348,70 @@ def evaluate_shadow_soak(
     stages = set(evidence.vertical_stages)
     artifacts = {artifact.kind for artifact in evidence.artifacts}
 
-    check(evidence.duration_seconds >= policy.min_duration_seconds, "SHADOW_SOAK_DURATION_BELOW_THRESHOLD")
+    check(
+        evidence.duration_seconds >= policy.min_duration_seconds,
+        "SHADOW_SOAK_DURATION_BELOW_THRESHOLD",
+    )
     for stage in policy.required_vertical_stages:
         check(stage in stages, f"REQUIRED_STAGE_MISSING:{stage}")
-    check(metrics.candidates_seen >= policy.min_candidates_seen, "CANDIDATES_SEEN_BELOW_THRESHOLD")
-    check(metrics.outcomes_reconciled >= policy.min_reconciled_outcomes, "RECONCILED_OUTCOMES_BELOW_THRESHOLD")
-    check(metrics.reconciliation_mismatches <= policy.max_reconciliation_mismatches, "RECONCILIATION_MISMATCHES_PRESENT")
-    check(metrics.message_hash_mismatches <= policy.max_message_hash_mismatches, "MESSAGE_HASH_MISMATCHES_PRESENT")
-    check(metrics.repayment_mismatches <= policy.max_repayment_mismatches, "REPAYMENT_MISMATCHES_PRESENT")
-    check(metrics.ambiguous_outcomes <= policy.max_ambiguous_outcomes, "AMBIGUOUS_OUTCOMES_PRESENT")
-    check(metrics.quota_exhaustions <= policy.max_quota_exhaustions, "QUOTA_EXHAUSTIONS_PRESENT")
+    check(
+        metrics.candidates_seen >= policy.min_candidates_seen,
+        "CANDIDATES_SEEN_BELOW_THRESHOLD",
+    )
+    check(
+        metrics.outcomes_reconciled >= policy.min_reconciled_outcomes,
+        "RECONCILED_OUTCOMES_BELOW_THRESHOLD",
+    )
+    check(
+        metrics.reconciliation_mismatches <= policy.max_reconciliation_mismatches,
+        "RECONCILIATION_MISMATCHES_PRESENT",
+    )
+    check(
+        metrics.message_hash_mismatches <= policy.max_message_hash_mismatches,
+        "MESSAGE_HASH_MISMATCHES_PRESENT",
+    )
+    check(
+        metrics.repayment_mismatches <= policy.max_repayment_mismatches,
+        "REPAYMENT_MISMATCHES_PRESENT",
+    )
+    check(
+        metrics.ambiguous_outcomes <= policy.max_ambiguous_outcomes,
+        "AMBIGUOUS_OUTCOMES_PRESENT",
+    )
+    check(
+        metrics.quota_exhaustions <= policy.max_quota_exhaustions,
+        "QUOTA_EXHAUSTIONS_PRESENT",
+    )
     check(metrics.rpc_errors <= policy.max_rpc_errors, "RPC_ERRORS_PRESENT")
-    check(metrics.stale_data_accepted <= policy.max_stale_data_accepted, "STALE_DATA_ACCEPTED")
+    check(
+        metrics.stale_data_accepted <= policy.max_stale_data_accepted,
+        "STALE_DATA_ACCEPTED",
+    )
     check(replay.replayed_events > 0, "REPLAY_CORPUS_EMPTY")
-    check(replay.pass_rate_bps >= policy.min_replay_pass_rate_bps, "DETERMINISTIC_REPLAY_PASS_RATE_TOO_LOW")
-    check(replay.deterministic_failed_events == 0, "DETERMINISTIC_REPLAY_FAILURES_PRESENT")
+    check(
+        replay.pass_rate_bps >= policy.min_replay_pass_rate_bps,
+        "DETERMINISTIC_REPLAY_PASS_RATE_TOO_LOW",
+    )
+    check(
+        replay.deterministic_failed_events == 0,
+        "DETERMINISTIC_REPLAY_FAILURES_PRESENT",
+    )
     check(SoakArtifactKind.RAW_EVENTS in artifacts, "RAW_EVENT_ARTIFACT_MISSING")
-    check(SoakArtifactKind.REPLAY_CORPUS in artifacts, "REPLAY_CORPUS_ARTIFACT_MISSING")
-    check(SoakArtifactKind.METRICS_REPORT in artifacts, "METRICS_REPORT_ARTIFACT_MISSING")
+    check(
+        SoakArtifactKind.REPLAY_CORPUS in artifacts,
+        "REPLAY_CORPUS_ARTIFACT_MISSING",
+    )
+    check(
+        SoakArtifactKind.METRICS_REPORT in artifacts,
+        "METRICS_REPORT_ARTIFACT_MISSING",
+    )
     if policy.require_human_review:
         check(evidence.human_reviewed, "HUMAN_REVIEW_MISSING")
         check(bool(evidence.reviewer.strip()), "REVIEWER_MISSING")
-        check(SoakArtifactKind.OPERATOR_REVIEW in artifacts, "OPERATOR_REVIEW_ARTIFACT_MISSING")
+        check(
+            SoakArtifactKind.OPERATOR_REVIEW in artifacts,
+            "OPERATOR_REVIEW_ARTIFACT_MISSING",
+        )
     if policy.require_signed_bundle:
         check(bool(evidence.signed_by.strip()), "SIGNED_EVIDENCE_MISSING")
         check(bool(evidence.signature_reference.strip()), "SIGNATURE_REFERENCE_MISSING")

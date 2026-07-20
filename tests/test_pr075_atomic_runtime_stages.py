@@ -48,7 +48,9 @@ class _Adapter:
 
 
 class _Vertical:
-    def __init__(self, *, mutate_compiled_hash: bool = False, fail: bool = False) -> None:
+    def __init__(
+        self, *, mutate_compiled_hash: bool = False, fail: bool = False
+    ) -> None:
         self.calls: list[object] = []
         self.mutate_compiled_hash = mutate_compiled_hash
         self.fail = fail
@@ -114,11 +116,16 @@ def _opportunity() -> Opportunity:
 
 
 @pytest.mark.asyncio
-async def test_pr075_runner_uses_atomic_vertical_once_for_runtime_stages(tmp_path) -> None:
+async def test_pr075_runner_uses_atomic_vertical_once_for_runtime_stages(
+    tmp_path,
+) -> None:
     adapter_calls: list[str] = []
     adapter = _Adapter(calls=adapter_calls)
     vertical = _Vertical()
-    suite = AtomicVerticalRuntimeStageSuite(adapter=adapter, vertical=vertical)  # type: ignore[arg-type]
+    suite = AtomicVerticalRuntimeStageSuite(
+        adapter=adapter,
+        vertical=vertical,  # type: ignore[arg-type]
+    )
     journal_path = tmp_path / "paper-shadow.jsonl"
     runner = PaperShadowRunner(
         PaperShadowRunnerConfig(journal_path=journal_path),
@@ -171,7 +178,9 @@ async def test_pr075_stage_outputs_never_mark_sender_or_live_enabled(tmp_path) -
 
 
 @pytest.mark.asyncio
-async def test_pr075_message_hash_drift_fails_closed_before_journal_outcome(tmp_path) -> None:
+async def test_pr075_message_hash_drift_fails_closed_before_journal_outcome(
+    tmp_path,
+) -> None:
     suite = AtomicVerticalRuntimeStageSuite(
         adapter=_Adapter(),
         vertical=_Vertical(mutate_compiled_hash=True),  # type: ignore[arg-type]

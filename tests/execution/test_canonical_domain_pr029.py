@@ -36,7 +36,7 @@ def _plan(payer: Pubkey) -> TransactionPlan:
 
 def _blockhash() -> BlockhashContext:
     return BlockhashContext(
-        blockhash=Hash.from_string("11111111111111111111111111111111"),
+        blockhash=Hash.from_bytes(bytes(range(32))),
         last_valid_block_height=10,
         source_slot=1,
         fetched_at=0.0,

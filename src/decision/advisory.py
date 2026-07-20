@@ -80,7 +80,9 @@ def assert_no_ai_control_surface(payload: Mapping[str, Any]) -> None:
 
     findings = sorted(set(_walk_forbidden_keys(payload)))
     if findings:
-        raise ValueError(f"AI advisory payload references forbidden controls: {findings}")
+        raise ValueError(
+            f"AI advisory payload references forbidden controls: {findings}"
+        )
 
 
 def apply_advisory_guard(

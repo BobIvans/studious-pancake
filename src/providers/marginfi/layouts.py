@@ -16,7 +16,6 @@ from solders.pubkey import Pubkey
 
 from .errors import MarginfiRejection, MarginfiRejectionCode
 
-
 ZERO_PUBKEY = bytes(32)
 
 
@@ -46,6 +45,8 @@ class DecodedBank:
     liquidity_vault_authority: str
     token_program: str
     oracle_keys: tuple[str, ...]
+    oracle_setup: int
+    asset_tag: int
     operational_state: int
     origination_fee_raw_i80f48: int
     borrow_limit: int
@@ -206,7 +207,11 @@ def decode_margin_account(account: Any, pin: Any) -> DecodedMarginAccount:
         seen.add(bank)
         balances.append(bank)
     canonical = tuple(
-        sorted(balances, key=lambda value: bytes(Pubkey.from_string(value)))
+        sorted(
+            balances,
+            key=lambda value: bytes(Pubkey.from_string(value)),
+            reverse=True,
+        )
     )
     if tuple(balances) != canonical:
         raise MarginfiRejection(
@@ -243,19 +248,27 @@ def decode_bank(account: Any, pin: Any, *, bank_address: str) -> DecodedBank:
         if flags & token_2022_flag
         else str(programs["token"])
     )
-    oracle_offset = int(offsets["oracle_keys"])
-    oracle_count = int(offsets["oracle_key_count"])
-    oracle_keys: list[str] = []
-    for index in range(oracle_count):
-        raw = _slice(body, oracle_offset + index * 32, 32, f"oracle[{index}]")
-        if raw == ZERO_PUBKEY:
-            continue
-        oracle_keys.append(str(Pubkey.from_bytes(raw)))
-    if not oracle_keys:
+    oracle_setup = _u8(body, int(offsets["oracle_setup"]), "oracle setup")
+    asset_tag = _u8(body, int(offsets["asset_tag"]), "asset tag")
+    supported_setups = {
+        int(value) for value in pin.raw["conformance"]["supported_oracle_setups"]
+    }
+    supported_tags = {
+        int(value) for value in pin.raw["conformance"]["supported_asset_tags"]
+    }
+    if oracle_setup not in supported_setups or asset_tag not in supported_tags:
         raise MarginfiRejection(
             MarginfiRejectionCode.ORACLE_INVALID,
-            "bank has no configured oracle keys",
+            "bank oracle setup or asset tag is outside the first supported vertical",
         )
+    oracle_offset = int(offsets["oracle_keys"])
+    raw_oracle = _slice(body, oracle_offset, 32, "oracle[0]")
+    if raw_oracle == ZERO_PUBKEY:
+        raise MarginfiRejection(
+            MarginfiRejectionCode.ORACLE_INVALID,
+            "bank has no primary oracle key",
+        )
+    oracle_keys = [str(Pubkey.from_bytes(raw_oracle))]
     program_id = Pubkey.from_string(pin.program_id)
     bank_key = Pubkey.from_string(bank_address)
     vault_authority, _ = Pubkey.find_program_address(
@@ -287,6 +300,8 @@ def decode_bank(account: Any, pin: Any, *, bank_address: str) -> DecodedBank:
         liquidity_vault_authority=str(vault_authority),
         token_program=token_program,
         oracle_keys=tuple(oracle_keys),
+        oracle_setup=oracle_setup,
+        asset_tag=asset_tag,
         operational_state=_u8(
             body,
             int(offsets["operational_state"]),
@@ -334,10 +349,7 @@ def decode_token_account(
 
 
 def ceil_i80f48_product(
-    amount: int,
-    raw_rate: int,
-    *,
-    fractional_bits: int = 48,
+    amount: int, raw_rate: int, *, fractional_bits: int = 48
 ) -> int:
     if amount < 0 or raw_rate < 0:
         raise MarginfiRejection(

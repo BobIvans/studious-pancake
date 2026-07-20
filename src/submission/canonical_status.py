@@ -109,9 +109,7 @@ def consolidate_canonical_observations(
         else:
             reason = "blockhash expiry is proven with no contradictory Jito evidence"
     elif signature.state is SubmissionState.ACCEPTED:
-        if jito_states.intersection(
-            {SubmissionState.FAILED, SubmissionState.EXPIRED}
-        ):
+        if jito_states.intersection({SubmissionState.FAILED, SubmissionState.EXPIRED}):
             state = SubmissionState.UNKNOWN
             ambiguous = True
             reason = "processed Solana signature conflicts with Jito failure evidence"
@@ -123,7 +121,9 @@ def consolidate_canonical_observations(
         if SubmissionState.LANDED in jito_states:
             reason = "Jito reports landing but Solana signature proof is unavailable"
         elif SubmissionState.FAILED in jito_states:
-            reason = "Jito reports failure while Solana signature state is indeterminate"
+            reason = (
+                "Jito reports failure while Solana signature state is indeterminate"
+            )
         else:
             reason = "Solana signature state is missing or indeterminate"
 

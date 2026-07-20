@@ -1,0 +1,36 @@
+{
+  "schema_version": "pr050.kamino-supported-combinations.v1",
+  "combinations": [
+    {
+      "combination_id": "example-mainnet-sol-usdc",
+      "cluster": "mainnet-beta",
+      "lending_program_id": "SLendK7ySfcEzyaFqy93gDnD3RtrpXJcnRwb6zFHJSh",
+      "market_address": "11111111111111111111111111111111",
+      "collateral_mint": "So11111111111111111111111111111111111111112",
+      "debt_mint": "EPjFWdd5AufqSSqeM2qP52kZmxdr4WjGmrrSSJbptN5",
+      "collateral_reserve": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "debt_reserve": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+      "collateral_oracle": "SysvarC1ock11111111111111111111111111111111",
+      "debt_oracle": "SysvarRent111111111111111111111111111111111",
+      "liquidation_bonus_bps": 500,
+      "protocol_fee_bps": 25,
+      "flash_loan_fee_bps": 9,
+      "min_net_profit_lamports": 100000,
+      "writable_accounts": [
+        "11111111111111111111111111111111",
+        "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+        "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+      ],
+      "provenance": {
+        "source_url": "https://github.com/Kamino-Finance/klend-sdk",
+        "sdk_package": "@kamino-finance/klend-sdk",
+        "lending_program_id": "SLendK7ySfcEzyaFqy93gDnD3RtrpXJcnRwb6zFHJSh",
+        "idl_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "rpc_fixture_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "deployment_slot": 1,
+        "reviewed_at": "replace-with-review-date"
+      },
+      "verified": false
+    }
+  ]
+}

@@ -1,19 +1,48 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 from pathlib import Path
-import socket
 import subprocess
 import sys
 import time
 
 import pytest
 
+import src.container_runtime as container_runtime
 from src.container_runtime import STATE_SCHEMA, check_process_health
 
 pytestmark = pytest.mark.unit
 ROOT = Path(__file__).resolve().parents[1]
+
+
+class _DummyMatrix:
+    product_state = "not-production-ready"
+
+    def to_dict(self) -> dict[str, object]:
+        return {"schema_version": "test.capabilities.v1"}
+
+
+class _DummyApp:
+    def validate(self) -> None:
+        return None
+
+    def capability_errors(self) -> tuple[str, ...]:
+        return ()
+
+
+class _FailingStatusServer:
+    base_url = "http://127.0.0.1:0"
+
+    def __init__(self, *_args: object, **_kwargs: object) -> None:
+        return None
+
+    def start(self) -> "_FailingStatusServer":
+        raise OSError("health server bind failed for test")
+
+    def stop(self) -> None:
+        raise AssertionError("server was never started")
 
 
 def _wait_for_file(path: Path, process: subprocess.Popen[str]) -> None:
@@ -93,39 +122,29 @@ def test_safe_idle_container_supervisor_has_live_process_heartbeat(tmp_path: Pat
     _wait_for_missing(state)
 
 
-def test_safe_idle_container_supervisor_cleans_state_when_http_bind_fails(
+def test_safe_idle_container_supervisor_cleans_state_when_http_start_fails(
     tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ):
     state = tmp_path / "runtime.json"
-    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reserved:
-        reserved.bind(("127.0.0.1", 0))
-        reserved.listen(1)
-        port = str(int(reserved.getsockname()[1]))
+    monkeypatch.setattr(
+        container_runtime,
+        "RuntimeStatusHttpServer",
+        _FailingStatusServer,
+    )
 
-        process = subprocess.Popen(
-            [
-                sys.executable,
-                "-m",
-                "src.cli",
-                "container",
-                "--state-file",
-                str(state),
-            ],
-            cwd=ROOT,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            env=_container_env(
-                FLASHLOAN_HEALTH_HOST="127.0.0.1",
-                FLASHLOAN_HEALTH_PORT=port,
-            ),
+    with pytest.raises(OSError, match="health server bind failed"):
+        asyncio.run(
+            container_runtime.run_safe_idle(
+                _DummyMatrix(),
+                _DummyApp(),
+                state_file=str(state),
+                health_port=0,
+            )
         )
-        stdout, stderr = process.communicate(timeout=5)
 
-    assert process.returncode != 0
-    assert "Address already in use" in stderr or "address already in use" in stderr
-    assert stdout == ""
     assert not state.exists()
+    assert not tuple(state.parent.glob(f".{state.name}.*.tmp"))
 
 
 def test_healthcheck_rejects_missing_stale_dead_and_wrong_mode(tmp_path: Path):

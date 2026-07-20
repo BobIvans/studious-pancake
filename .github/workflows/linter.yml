@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: write
 
 env:
   PAPER_TRADING_ONLY: "true"
@@ -55,6 +56,38 @@ jobs:
           name: pytest-full-suite
           path: pytest-full-suite.xml
           if-no-files-found: error
+      - name: Publish failing test names
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          report = Path("pytest-full-suite.xml")
+          lines = ["<!-- pr027-pytest-diagnostic -->", "### PR-027 full-suite diagnostic"]
+          if not report.exists():
+              lines.append("JUnit report was not produced.")
+          else:
+              root = ET.parse(report).getroot()
+              failed = []
+              for case in root.iter("testcase"):
+                  node = case.find("failure") or case.find("error")
+                  if node is None:
+                      continue
+                  test_id = f"{case.get('classname', '')}::{case.get('name', '')}".strip(":")
+                  message = (node.get("message") or "failure").replace("\n", " ")
+                  failed.append((test_id, message[:500]))
+              if failed:
+                  lines.append(f"Failing tests: **{len(failed)}**")
+                  for test_id, message in failed:
+                      lines.append(f"- `{test_id}` — {message}")
+              else:
+                  lines.append("No failing testcases were present in the JUnit report.")
+          Path("pytest-failures.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+          gh pr comment "${{ github.event.pull_request.number }}" --body-file pytest-failures.md
       - name: Enforce full-suite result
         if: steps.full_tests.outcome == 'failure'
         run: exit 1

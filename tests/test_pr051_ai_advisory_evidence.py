@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
 import pytest
@@ -46,7 +45,9 @@ def _features(**overrides: object) -> dict[str, object]:
 
 
 def _write_jsonl(path: Path, events: list[dict[str, object]]) -> None:
-    path.write_text("\n".join(_canon(event) for event in events) + "\n", encoding="utf-8")
+    path.write_text(
+        "\n".join(_canon(event) for event in events) + "\n", encoding="utf-8"
+    )
 
 
 def test_dataset_rejects_wallet_and_api_secrets_before_hashing(tmp_path: Path) -> None:

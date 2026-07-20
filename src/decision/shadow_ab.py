@@ -32,7 +32,9 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def _deterministic_allowed(features: dict[str, Any], priority: int, threshold: int) -> bool:
+def _deterministic_allowed(
+    features: dict[str, Any], priority: int, threshold: int
+) -> bool:
     if str(features.get("capacity_status", "unknown")) == "deny":
         return False
     if str(features.get("quota_band", "unknown")) == "exhausted":
@@ -81,7 +83,10 @@ def build_shadow_ab_report(
             and advisory.recommended_band is RecommendedBand.PRIORITIZE
         ):
             ignored_prioritize_on_reject += 1
-        if advisory.recommended_band is RecommendedBand.PRIORITIZE and not envelope.final_allowed:
+        if (
+            advisory.recommended_band is RecommendedBand.PRIORITIZE
+            and not envelope.final_allowed
+        ):
             disagreements += 1
         decisions.append(
             {
@@ -128,5 +133,7 @@ def build_shadow_ab_report(
     report = body | {"report_hash": report_hash}
     out = Path(report_dir)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "shadow_ab_report.json").write_text(_canon(report) + "\n", encoding="utf-8")
+    (out / "shadow_ab_report.json").write_text(
+        _canon(report) + "\n", encoding="utf-8"
+    )
     return report

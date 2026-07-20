@@ -1,15 +1,26 @@
 {
+  "schema_version": "pr027.marginfi-provenance.v1",
   "cluster": "mainnet-beta",
   "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
   "source_repository_url": "https://github.com/0dotxyz/marginfi-v2",
   "source_commit": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
-  "idl_source_url": "https://raw.githubusercontent.com/0dotxyz/marginfi-v2/d4c70c84f8a9692405a2c32cbd7095bb1fe3f428/target/idl/marginfi.json",
-  "idl_sha256": "fixture-pinned-offline-conformance-sha256-see-tests",
-  "generated_at": "2026-07-19T00:00:00Z",
-  "schema_version": "pr-009.offline-fixture.v1",
+  "official_source_pins": {
+    "programs/marginfi/src/instructions/marginfi_account/flashloan.rs": "48b25a28f1a6a02492cfa4dc88148e786e175c6459fcc4145705a140d797a120",
+    "id-crate/src/lib.rs": "4f37583542c1d2c0181c6071b55ad919ba68c8bea1b7bc4c10e3c775b96bf99a"
+  },
+  "idl": {
+    "status": "unverified-not-committed-at-pin",
+    "sha256": null,
+    "reason": "The pinned source tree does not provide a complete generated deployment IDL accepted as binary conformance evidence."
+  },
+  "binary_layouts": {
+    "status": "unverified",
+    "account_golden_bytes": false,
+    "instruction_golden_bytes": false
+  },
   "sdk_identity": {
     "name": "@mrgnlabs/marginfi-client-v2",
-    "usage": "development-time fixture/conformance oracle only; never imported at Python runtime"
+    "usage": "sanitized offline fixture oracle only; not deployed binary conformance and not imported at runtime"
   },
   "instructions": {
     "lending_account_start_flashloan": {"discriminator_hex": "0e8321dc51bab46b", "args": [{"name": "end_index", "type": "u64"}], "end_index_semantics": "absolute zero-based instruction index of lending_account_end_flashloan in the final transaction"},
@@ -26,5 +37,10 @@
     "USDC": {"mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"},
     "WSOL": {"mint": "So11111111111111111111111111111111111111112", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}
   },
-  "refresh_procedure": "Manually inspect the pinned deployed program, matching IDL/source at source_commit, regenerate sanitized SDK fixtures, update this file in review, and run: pytest tests/providers/test_marginfi_provider.py tests/providers/test_marginfi_readonly_optin.py"
+  "execution_admission": {
+    "allowed": false,
+    "reason": "PR-028 must prove deployed IDL, binary account decoding, instruction metas and read-only RPC conformance."
+  },
+  "refresh_procedure": "Review pinned source and sanitized fixtures, rotate hashes in a dedicated review, and keep execution disabled until PR-028 conformance.",
+  "generated_at": "2026-07-20T11:55:00Z"
 }

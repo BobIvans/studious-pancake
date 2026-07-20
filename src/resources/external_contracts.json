@@ -1,0 +1,113 @@
+{
+  "schema_version": "pr027.external-contracts.v1",
+  "contracts": [
+    {
+      "id": "jupiter.swap-v2-build",
+      "provider": "jupiter",
+      "status": "disabled-unverified",
+      "capabilities": [
+        "quote"
+      ],
+      "official_source_url": "https://dev.jup.ag/docs/swap/build-swap-transaction",
+      "source_ref": "documentation-reviewed-2026-07-20",
+      "artifacts": [],
+      "deployment_program_id": null,
+      "cluster": "mainnet-beta",
+      "conformance_probe": null,
+      "notes": "No sanitized versioned response fixture is pinned yet; execution remains denied."
+    },
+    {
+      "id": "okx.solana-swap-instruction-v6",
+      "provider": "okx",
+      "status": "disabled-unverified",
+      "capabilities": [
+        "quote"
+      ],
+      "official_source_url": "https://web3.okx.com/build/dev-docs/dex-api/dex-swap",
+      "source_ref": "documentation-reviewed-2026-07-20",
+      "artifacts": [],
+      "deployment_program_id": null,
+      "cluster": "mainnet-beta",
+      "conformance_probe": null,
+      "notes": "Authentication vectors and instruction fixtures require a separate reviewed promotion."
+    },
+    {
+      "id": "jito.low-latency-json-rpc",
+      "provider": "jito",
+      "status": "disabled-unverified",
+      "capabilities": [
+        "bundle-status",
+        "read-only-rpc"
+      ],
+      "official_source_url": "https://docs.jito.wtf/lowlatencytxnsend/",
+      "source_ref": "documentation-reviewed-2026-07-20",
+      "artifacts": [],
+      "deployment_program_id": null,
+      "cluster": "mainnet-beta",
+      "conformance_probe": null,
+      "notes": "A UUID-shaped credential never promotes an unverified sender contract."
+    },
+    {
+      "id": "openocean.solana-v4-quote",
+      "provider": "openocean",
+      "status": "disabled-unverified",
+      "capabilities": [
+        "quote"
+      ],
+      "official_source_url": "https://docs.openocean.finance/docs/solana-swap-api",
+      "source_ref": "documentation-reviewed-2026-07-20",
+      "artifacts": [],
+      "deployment_program_id": null,
+      "cluster": "mainnet-beta",
+      "conformance_probe": null,
+      "notes": "Discovery is denied until credentialed sanitized fixtures are reviewed."
+    },
+    {
+      "id": "odos.solana-api",
+      "provider": "odos",
+      "status": "disabled-unverified",
+      "capabilities": [
+        "quote",
+        "immutable-transaction"
+      ],
+      "official_source_url": "https://docs.odos.xyz/api/solana",
+      "source_ref": "documentation-reviewed-2026-07-20",
+      "artifacts": [],
+      "deployment_program_id": null,
+      "cluster": "mainnet-beta",
+      "conformance_probe": null,
+      "notes": "Assembled transactions are immutable and cannot be inserted into a flash-loan composition."
+    },
+    {
+      "id": "marginfi.project-zero-mainnet",
+      "provider": "marginfi",
+      "status": "disabled-unverified",
+      "capabilities": [
+        "protocol-source",
+        "read-only-rpc"
+      ],
+      "official_source_url": "https://github.com/0dotxyz/marginfi-v2/tree/d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
+      "source_ref": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
+      "artifacts": [
+        {
+          "path": "contracts/marginfi/flashloan.rs",
+          "sha256": "48b25a28f1a6a02492cfa4dc88148e786e175c6459fcc4145705a140d797a120",
+          "kind": "official-source",
+          "fetched_at": "2026-07-20T11:55:00Z",
+          "required": true
+        },
+        {
+          "path": "contracts/marginfi/id_crate_mainnet.rs",
+          "sha256": "4f37583542c1d2c0181c6071b55ad919ba68c8bea1b7bc4c10e3c775b96bf99a",
+          "kind": "official-source",
+          "fetched_at": "2026-07-20T11:55:00Z",
+          "required": true
+        }
+      ],
+      "deployment_program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+      "cluster": "mainnet-beta",
+      "conformance_probe": null,
+      "notes": "Official source and deployment id are pinned, but IDL, binary layouts, account fixtures and instruction conformance remain PR-028 work."
+    }
+  ]
+}

@@ -30,6 +30,7 @@ def test_pyproject_is_the_single_typed_package_contract():
     assert project["scripts"] == {
         "flashloan-bot": "src.cli:main",
         "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
+        "flashloan-contracts": "src.external_contracts.cli:main",
     }
     assert set(project["optional-dependencies"]) == {"analytics", "service", "dev"}
     assert not (ROOT / "requirements.in").exists()

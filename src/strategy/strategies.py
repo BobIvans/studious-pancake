@@ -59,7 +59,7 @@ class CircularArbitrageStrategy(BaseDetectionStrategy):
         mode: StrategyMode = StrategyMode.DISABLED,
         pairs: Iterable[DetectorPair] | None = None,
     ) -> None:
-        reason = "detector_not_enabled" if mode is StrategyMode.DISABLED else None
+        reason = "detector_not_implemented" if mode is StrategyMode.DISABLED else None
         super().__init__("circular_arbitrage", mode, reason)
         self._configured_pairs = tuple(pairs or ())
         self.detector = CircularArbitrageDetector(self._configured_pairs)

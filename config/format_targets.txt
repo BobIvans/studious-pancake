@@ -70,3 +70,5 @@ src/strategy/detectors.py
 tests/test_pr056_runtime_discovery.py
 src/paper_shadow/atomic_runtime_stages.py
 tests/test_pr075_atomic_runtime_stages.py
+src/shadow_soak/real_soak.py
+tests/test_pr079_real_shadow_soak.py

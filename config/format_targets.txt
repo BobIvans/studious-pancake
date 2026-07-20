@@ -53,3 +53,6 @@ tests/test_pr040_readiness_safety.py
 tests/test_pr040_rpc_ws.py
 src/economics/durable_reservations.py
 tests/test_pr057_durable_capital_reservations.py
+src/shadow_soak/__init__.py
+src/shadow_soak/evidence.py
+tests/test_pr060_shadow_soak_evidence.py

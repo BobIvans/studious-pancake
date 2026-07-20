@@ -16,11 +16,12 @@ class StrategyMode(str, Enum):
 
 @dataclass(slots=True)
 class StrategyContext:
-    """Read-only service bag for detectors; intentionally excludes transaction senders."""
+    """Read-only detector services; intentionally excludes transaction senders."""
 
     config: Any = None
     market_state: Any = None
     protocol_state: Any = None
+    capital_precheck: Any = None
     metrics: dict[str, Any] = field(default_factory=dict)
 
 

@@ -23,6 +23,7 @@ from src.config.runtime import (
 )
 from src.container_runtime import run_safe_idle
 from src.paper_shadow import PaperShadowRunner, PaperShadowRunnerConfig
+from src.runtime_discovery import build_runtime_discovery
 
 logger = logging.getLogger(__name__)
 
@@ -221,13 +222,28 @@ def _print_paper_shadow_summary(payload: dict[str, Any], *, as_json: bool) -> No
     )
 
 
+async def _run_paper_shadow_cycle(
+    config: RuntimeConfig,
+    runner: PaperShadowRunner,
+) -> Any:
+    discovery = build_runtime_discovery(config, environ=os.environ)
+    report = await discovery.run_cycle()
+    return await runner.run_once(
+        report.opportunities,
+        upstream_cycle_completed=report.evidence.cycle_succeeded,
+    )
+
+
 def _run_paper_shadow_once(
-    *, journal_path: str | None = None, as_json: bool = False
+    config: RuntimeConfig,
+    *,
+    journal_path: str | None = None,
+    as_json: bool = False,
 ) -> int:
     runner = PaperShadowRunner(
         PaperShadowRunnerConfig(journal_path=_paper_shadow_journal_path(journal_path))
     )
-    summary = asyncio.run(runner.run_once(()))
+    summary = asyncio.run(_run_paper_shadow_cycle(config, runner))
     _print_paper_shadow_summary(summary.to_dict(), as_json=as_json)
     return 0
 
@@ -244,7 +260,7 @@ def _run_requested_mode(
         )
         return EXIT_MODE_UNAVAILABLE
     if mode == "paper":
-        return _run_paper_shadow_once(as_json=False)
+        return _run_paper_shadow_once(config, as_json=False)
     if mode == "disabled":
         _print_status(status, as_json=False)
         return 0
@@ -301,6 +317,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "paper-shadow":
             return _run_paper_shadow_once(
+                config,
                 journal_path=args.journal_path,
                 as_json=args.as_json,
             )

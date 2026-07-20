@@ -34,22 +34,57 @@ def opportunity() -> Opportunity:
 
 
 @pytest.mark.asyncio
-async def test_runner_records_healthy_idle_without_synthetic_fill(tmp_path) -> None:
+async def test_runner_blocks_empty_candidates_without_discovery_proof(tmp_path) -> None:
+    journal = JsonlPaperShadowJournal(tmp_path / "paper-shadow.jsonl")
+    runner = PaperShadowRunner(
+        PaperShadowRunnerConfig(journal_path=journal.path, run_id="run-blocked-idle"),
+        journal=journal,
+    )
+
+    summary = await runner.run_once(())
+
+    assert summary.status is PaperShadowRunStatus.BLOCKED
+    assert summary.terminal_reason == "blocked_no_discovery_composition"
+    events = journal.read_events()
+    assert [event["event_type"] for event in events] == [
+        "runner_started",
+        "runner_blocked",
+    ]
+    assert events[-1]["stage"] == "discovery"
+    assert events[-1]["details"] == {
+        "executed": False,
+        "healthy_idle_proven": False,
+        "required_upstream_stages": ["discovery", "detector"],
+        "synthetic_fill": False,
+        "upstream_cycle_completed": False,
+    }
+    assert all(event["details"].get("executed") is not True for event in events)
+    assert all(event["details"].get("synthetic_fill") is False for event in events)
+
+
+@pytest.mark.asyncio
+async def test_runner_records_healthy_idle_only_after_discovery_proof(tmp_path) -> None:
     journal = JsonlPaperShadowJournal(tmp_path / "paper-shadow.jsonl")
     runner = PaperShadowRunner(
         PaperShadowRunnerConfig(journal_path=journal.path, run_id="run-idle"),
         journal=journal,
     )
 
-    summary = await runner.run_once(())
+    summary = await runner.run_once((), upstream_cycle_completed=True)
 
     assert summary.status is PaperShadowRunStatus.HEALTHY_IDLE
-    assert summary.terminal_reason == "healthy_idle_no_candidates"
+    assert summary.terminal_reason == "healthy_idle_no_candidates_after_discovery"
     events = journal.read_events()
     assert [event["event_type"] for event in events] == [
         "runner_started",
         "runner_idle",
     ]
+    assert events[-1]["details"] == {
+        "healthy_idle_proven": True,
+        "sender_enabled": False,
+        "synthetic_fill": False,
+        "upstream_cycle_completed": True,
+    }
     assert all(event["details"].get("executed") is not True for event in events)
     assert all(event["details"].get("synthetic_fill") is False for event in events)
 

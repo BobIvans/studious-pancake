@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
 import json
 import math
 import os
@@ -181,8 +180,10 @@ def train_model(
 
 def load_artifact(path: str | Path) -> dict[str, Any]:
     p = Path(path)
-    p = p / json.loads((p / "latest.json").read_text())["artifact"] if p.is_dir() else p
-    art = json.loads(p.read_text())
+    if p.is_dir():
+        pointer = json.loads((p / "latest.json").read_text(encoding="utf-8"))
+        p = p / pointer["artifact"]
+    art = json.loads(p.read_text(encoding="utf-8"))
     chk = art.get("checksum")
     body = {k: v for k, v in art.items() if k != "checksum"}
     if sha256_text(_canon(body)) != chk:
@@ -316,7 +317,7 @@ def evaluate_model(dataset_dir, artifact_path, report_dir, as_of):
     report["report_hash"] = sha256_text(_canon(body))
     out = Path(report_dir)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "report.json").write_text(_canon(report) + "\n")
+    (out / "report.json").write_text(_canon(report) + "\n", encoding="utf-8")
     return report
 
 

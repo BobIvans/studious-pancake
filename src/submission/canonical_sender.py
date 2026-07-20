@@ -83,7 +83,9 @@ class CanonicalEndpointRoute:
 
 
 CANONICAL_STATUS_ROUTES: tuple[CanonicalEndpointRoute, ...] = (
-    CanonicalEndpointRoute(None, "solana-signature-status", SOLANA_SIGNATURE_STATUS_METHOD),
+    CanonicalEndpointRoute(
+        None, "solana-signature-status", SOLANA_SIGNATURE_STATUS_METHOD
+    ),
     CanonicalEndpointRoute(
         TransportKind.JITO_SINGLE,
         "jito-inflight-status",
@@ -151,13 +153,19 @@ class CanonicalSenderSettings:
                     "RPC transport must not carry Jito UUID material",
                 )
         elif self.transport in {TransportKind.JITO_SINGLE, TransportKind.JITO_BUNDLE}:
-            if self.jito_credential_mode is JitoCredentialMode.UUID and not self.jito_uuid:
+            if (
+                self.jito_credential_mode is JitoCredentialMode.UUID
+                and not self.jito_uuid
+            ):
                 raise SubmissionError(
                     SubmissionErrorCode.AUTH_INVALID,
                     ErrorDisposition.FATAL,
                     "Jito UUID credential mode requires a UUID value",
                 )
-            if self.jito_credential_mode is JitoCredentialMode.NO_AUTH and self.jito_uuid:
+            if (
+                self.jito_credential_mode is JitoCredentialMode.NO_AUTH
+                and self.jito_uuid
+            ):
                 raise SubmissionError(
                     SubmissionErrorCode.AUTH_INVALID,
                     ErrorDisposition.FATAL,
@@ -192,7 +200,10 @@ class CanonicalSenderSettings:
         )
 
     def jito_auth(self) -> JitoUuidAuth | None:
-        if not self.uses_jito or self.jito_credential_mode is JitoCredentialMode.NO_AUTH:
+        if (
+            not self.uses_jito
+            or self.jito_credential_mode is JitoCredentialMode.NO_AUTH
+        ):
             return None
         if self.jito_uuid is None:
             raise SubmissionError(
@@ -332,7 +343,11 @@ def _durable_target(state: SubmissionState) -> ExecutionState:
         return ExecutionState.LANDED
     if state is SubmissionState.ACCEPTED:
         return ExecutionState.PENDING
-    if state in {SubmissionState.UNKNOWN, SubmissionState.EXPIRED, SubmissionState.FAILED}:
+    if state in {
+        SubmissionState.UNKNOWN,
+        SubmissionState.EXPIRED,
+        SubmissionState.FAILED,
+    }:
         return ExecutionState.RECONCILING
     raise AssertionError("unhandled submission state")
 

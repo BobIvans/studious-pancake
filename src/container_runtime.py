@@ -54,6 +54,20 @@ def _write_state(path: Path, payload: dict[str, Any]) -> None:
     os.replace(temporary, path)
 
 
+def _remove_state_file(path: Path) -> None:
+    """Best-effort cleanup for the supervisor heartbeat and temp state files."""
+
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        pass
+    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        temporary.unlink()
+    except FileNotFoundError:
+        pass
+
+
 def _install_stop_handlers(stop_event: asyncio.Event) -> None:
     loop = asyncio.get_running_loop()
     for sig in (signal.SIGINT, signal.SIGTERM):
@@ -78,6 +92,7 @@ def _dependency(
         "critical": critical,
         "reason": reason,
         "updated_at_unix_ns": time.time_ns(),
+        "latency_ms": None,
         "labels": {},
     }
 
@@ -146,29 +161,30 @@ async def run_safe_idle(
             ),
         ],
     }
-    _write_state(path, {**base, "heartbeat_unix_ns": time.time_ns()})
-    server = RuntimeStatusHttpServer(
-        lambda: json.loads(path.read_text(encoding="utf-8")),
-        host=host,
-        port=port,
-        max_heartbeat_age_seconds=MAX_HEARTBEAT_AGE_SECONDS,
-    ).start()
-    print(
-        json.dumps(
-            {
-                "event": "container_safe_idle_started",
-                "health_url": f"{server.base_url}/health",
-                "ready_url": f"{server.base_url}/ready",
-                "status_url": f"{server.base_url}/status",
-                "mode": "disabled",
-                "live_enabled": False,
-                "submitted": False,
-            },
-            sort_keys=True,
-        ),
-        flush=True,
-    )
+    server: RuntimeStatusHttpServer | None = None
     try:
+        _write_state(path, {**base, "heartbeat_unix_ns": time.time_ns()})
+        server = RuntimeStatusHttpServer(
+            lambda: json.loads(path.read_text(encoding="utf-8")),
+            host=host,
+            port=port,
+            max_heartbeat_age_seconds=MAX_HEARTBEAT_AGE_SECONDS,
+        ).start()
+        print(
+            json.dumps(
+                {
+                    "event": "container_safe_idle_started",
+                    "health_url": f"{server.base_url}/health",
+                    "ready_url": f"{server.base_url}/ready",
+                    "status_url": f"{server.base_url}/status",
+                    "mode": "disabled",
+                    "live_enabled": False,
+                    "submitted": False,
+                },
+                sort_keys=True,
+            ),
+            flush=True,
+        )
         while not stop_event.is_set():
             payload = dict(base)
             payload["heartbeat_unix_ns"] = time.time_ns()
@@ -180,11 +196,9 @@ async def run_safe_idle(
             except asyncio.TimeoutError:
                 continue
     finally:
-        server.stop()
-        try:
-            path.unlink()
-        except FileNotFoundError:
-            pass
+        if server is not None:
+            server.stop()
+        _remove_state_file(path)
     return 0
 
 

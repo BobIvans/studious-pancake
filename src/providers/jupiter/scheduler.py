@@ -30,6 +30,15 @@ class JupiterAttemptStopReason(str, Enum):
     ATTEMPT_LIMIT_REACHED = "attempt_limit_reached"
 
 
+def _required_snapshot_int(snapshot: Mapping[str, object], key: str) -> int:
+    """Return a required integer quota snapshot field with mypy-safe narrowing."""
+
+    value = snapshot.get(key)
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise TypeError(f"quota snapshot field {key!r} must be an integer")
+    return value
+
+
 @dataclass(frozen=True)
 class JupiterSafetyEnvelope:
     """Invariant policy that a fallback profile cannot relax."""
@@ -218,9 +227,9 @@ class JupiterRouteAttemptScheduler:
             return JupiterAttemptStopReason.ATTEMPT_LIMIT_REACHED
         if self.quota is not None:
             snap = self.quota.snapshot()
-            limit = int(snap["limit"])
-            reserve = int(snap["finalization_reserve"])
-            occupancy = int(snap["window_occupancy"])
+            limit = _required_snapshot_int(snap, "limit")
+            reserve = _required_snapshot_int(snap, "finalization_reserve")
+            occupancy = _required_snapshot_int(snap, "window_occupancy")
             if occupancy >= max(0, limit - reserve):
                 return JupiterAttemptStopReason.QUOTA_EXHAUSTED
         return JupiterAttemptStopReason.READY

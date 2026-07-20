@@ -90,9 +90,7 @@ class PaperShadowStageContext:
 
 
 class PaperShadowStage(Protocol):
-    async def __call__(
-        self, context: PaperShadowStageContext
-    ) -> Mapping[str, Any]: ...
+    async def __call__(self, context: PaperShadowStageContext) -> Mapping[str, Any]: ...
 
 
 @dataclass(frozen=True, slots=True)

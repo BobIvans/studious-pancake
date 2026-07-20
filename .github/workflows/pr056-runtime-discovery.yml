@@ -1,0 +1,75 @@
+name: PR-056 runtime discovery
+
+on:
+  pull_request:
+    paths:
+      - "src/runtime_discovery.py"
+      - "src/runtime_discovery_models.py"
+      - "src/runtime_discovery_coordinator.py"
+      - "src/runtime_discovery_builder.py"
+      - "src/market/snapshots.py"
+      - "src/strategy/detectors.py"
+      - "src/paper_shadow/runner.py"
+      - "src/cli.py"
+      - "src/resources/discovery_universe.json"
+      - "tests/test_pr056_runtime_discovery.py"
+      - "tests/test_pr038_paper_shadow_runner.py"
+      - "tests/test_pr023_runtime_truth.py"
+      - ".github/workflows/pr056-runtime-discovery.yml"
+  push:
+    branches:
+      - "pr-056-runtime-discovery-composition"
+
+permissions:
+  contents: write
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.13"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - run: python -m pip install --no-deps .
+      - name: Apply Black formatting to failing checked targets
+        if: github.event_name == 'push'
+        run: |
+          python -m black src/paper_shadow/runner.py tests/test_pr038_paper_shadow_runner.py
+          if git diff --quiet -- src/paper_shadow/runner.py tests/test_pr038_paper_shadow_runner.py; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/paper_shadow/runner.py tests/test_pr038_paper_shadow_runner.py
+          git commit -m "PR-056: apply Black formatting to checked targets"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+      - name: Black
+        run: >-
+          python -m black --check
+          src/runtime_discovery.py
+          src/runtime_discovery_models.py
+          src/runtime_discovery_coordinator.py
+          src/runtime_discovery_builder.py
+          src/market/snapshots.py
+          src/strategy/detectors.py
+          src/paper_shadow/runner.py
+          src/cli.py
+          tests/test_pr056_runtime_discovery.py
+          tests/test_pr038_paper_shadow_runner.py
+          tests/test_pr023_runtime_truth.py
+      - name: Focused tests
+        run: >-
+          python -m pytest
+          tests/test_pr056_runtime_discovery.py
+          tests/test_pr038_paper_shadow_runner.py
+          tests/test_pr023_runtime_truth.py
+          -q --disable-socket --allow-unix-socket
+      - name: Compile
+        run: python -m compileall -q src tests/test_pr056_runtime_discovery.py

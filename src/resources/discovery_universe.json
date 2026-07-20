@@ -1,0 +1,66 @@
+{
+  "schema_version": "pr056.discovery-universe.v1",
+  "slippage_bps": 50,
+  "cycle_timeout_seconds": 20.0,
+  "provider_timeout_seconds": 8.0,
+  "max_concurrent_pairs": 2,
+  "max_candidates": 64,
+  "pairs": [
+    {
+      "pair_id": "sol-usdc-loop",
+      "base_mint": "So11111111111111111111111111111111111111112",
+      "intermediate_mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "base_decimals": 9,
+      "intermediate_decimals": 6,
+      "probe_amount_base_units": 100000000,
+      "min_gross_profit_base_units": 100000,
+      "max_snapshot_age_seconds": 5.0,
+      "ttl_seconds": 2.0,
+      "cooldown_seconds": 1.0,
+      "max_slot_skew": 4,
+      "required": true
+    },
+    {
+      "pair_id": "sol-jitosol-loop",
+      "base_mint": "So11111111111111111111111111111111111111112",
+      "intermediate_mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+      "base_decimals": 9,
+      "intermediate_decimals": 9,
+      "probe_amount_base_units": 100000000,
+      "min_gross_profit_base_units": 100000,
+      "max_snapshot_age_seconds": 5.0,
+      "ttl_seconds": 2.0,
+      "cooldown_seconds": 1.0,
+      "max_slot_skew": 4,
+      "required": false
+    },
+    {
+      "pair_id": "sol-msol-loop",
+      "base_mint": "So11111111111111111111111111111111111111112",
+      "intermediate_mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+      "base_decimals": 9,
+      "intermediate_decimals": 9,
+      "probe_amount_base_units": 100000000,
+      "min_gross_profit_base_units": 100000,
+      "max_snapshot_age_seconds": 5.0,
+      "ttl_seconds": 2.0,
+      "cooldown_seconds": 1.0,
+      "max_slot_skew": 4,
+      "required": false
+    },
+    {
+      "pair_id": "sol-bsol-loop",
+      "base_mint": "So11111111111111111111111111111111111111112",
+      "intermediate_mint": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
+      "base_decimals": 9,
+      "intermediate_decimals": 9,
+      "probe_amount_base_units": 100000000,
+      "min_gross_profit_base_units": 100000,
+      "max_snapshot_age_seconds": 5.0,
+      "ttl_seconds": 2.0,
+      "cooldown_seconds": 1.0,
+      "max_slot_skew": 4,
+      "required": false
+    }
+  ]
+}

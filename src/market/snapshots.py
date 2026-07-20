@@ -4,6 +4,7 @@ The models in this module are intentionally transport-neutral. Provider clients
 or recorded fixtures may populate them, but they never build instructions,
 simulate transactions, sign payloads, or submit anything to Solana.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -30,6 +31,12 @@ class MarketQuoteSnapshot:
     source: str = "unknown"
     quote_id: str | None = None
     confidence: str = "recorded"
+    commitment: str = "unknown"
+    expires_at: float | None = None
+    request_fingerprint: str | None = None
+    response_hash: str | None = None
+    correlation_labels: tuple[str, ...] = ()
+    provider_timestamp: float | None = None
 
     def __post_init__(self) -> None:
         if not self.provider:
@@ -44,13 +51,22 @@ class MarketQuoteSnapshot:
             raise ValueError("snapshot slot must be non-negative")
         if self.observed_at <= 0:
             raise ValueError("snapshot observed_at must be a unix timestamp")
+        if not self.commitment:
+            raise ValueError("snapshot commitment is required")
+        if self.expires_at is not None and self.expires_at <= 0:
+            raise ValueError("snapshot expires_at must be a unix timestamp")
+        if self.provider_timestamp is not None and self.provider_timestamp <= 0:
+            raise ValueError("snapshot provider_timestamp must be a unix timestamp")
 
     def age_seconds(self, *, now: float | None = None) -> float:
         reference = time.time() if now is None else now
         return max(0.0, reference - self.observed_at)
 
     def is_fresh(self, *, now: float | None = None, max_age_seconds: float) -> bool:
-        return self.age_seconds(now=now) <= max_age_seconds
+        reference = time.time() if now is None else now
+        if self.expires_at is not None and reference >= self.expires_at:
+            return False
+        return self.age_seconds(now=reference) <= max_age_seconds
 
     def project_output(self, input_amount: int) -> int:
         """Project output for ``input_amount`` using integer floor math."""

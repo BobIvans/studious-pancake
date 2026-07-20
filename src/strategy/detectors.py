@@ -1,4 +1,5 @@
 """Snapshot-driven detector primitives for PR-033."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -178,22 +179,8 @@ class CircularArbitrageDetector:
             "projected_final_base_units": candidate.final_amount,
             "intermediate_amount_base_units": candidate.intermediate_amount,
             "route": [
-                {
-                    "provider": candidate.first.provider,
-                    "input_mint": candidate.first.input_mint,
-                    "output_mint": candidate.first.output_mint,
-                    "slot": candidate.first.slot,
-                    "source": candidate.first.source,
-                    "quote_id": candidate.first.quote_id,
-                },
-                {
-                    "provider": candidate.second.provider,
-                    "input_mint": candidate.second.input_mint,
-                    "output_mint": candidate.second.output_mint,
-                    "slot": candidate.second.slot,
-                    "source": candidate.second.source,
-                    "quote_id": candidate.second.quote_id,
-                },
+                self._route_leg_metadata(candidate.first),
+                self._route_leg_metadata(candidate.second),
             ],
             "features": {
                 "gross_profit_base_units": gross_profit,
@@ -214,3 +201,21 @@ class CircularArbitrageDetector:
             metadata=metadata,
             detected_at=now,
         )
+
+    @staticmethod
+    def _route_leg_metadata(snapshot: MarketQuoteSnapshot) -> dict[str, Any]:
+        return {
+            "provider": snapshot.provider,
+            "input_mint": snapshot.input_mint,
+            "output_mint": snapshot.output_mint,
+            "slot": snapshot.slot,
+            "commitment": snapshot.commitment,
+            "observed_at": snapshot.observed_at,
+            "expires_at": snapshot.expires_at,
+            "source": snapshot.source,
+            "quote_id": snapshot.quote_id,
+            "request_fingerprint": snapshot.request_fingerprint,
+            "response_hash": snapshot.response_hash,
+            "provider_timestamp": snapshot.provider_timestamp,
+            "correlation_labels": list(snapshot.correlation_labels),
+        }

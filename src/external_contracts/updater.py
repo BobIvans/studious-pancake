@@ -17,15 +17,19 @@ def propose_artifact_rotation(
     candidate_file: str | Path,
 ) -> dict[str, Any]:
     contract = registry.get(contract_id)
-    pin = next((item for item in contract.artifacts if item.path == artifact_path), None)
+    pin = next(
+        (item for item in contract.artifacts if item.path == artifact_path), None
+    )
     if pin is None:
-        raise ValueError(f"contract {contract_id} has no artifact pin for {artifact_path}")
+        raise ValueError(
+            f"contract {contract_id} has no artifact pin for {artifact_path}"
+        )
     candidate = Path(candidate_file)
     if not candidate.is_file():
         raise ValueError(f"candidate artifact does not exist: {candidate}")
     observed = hashlib.sha256(candidate.read_bytes()).hexdigest()
     return {
-        "schema_version": "pr027.contract-rotation-proposal.v1",
+        "schema_version": "pr054.contract-rotation-proposal.v2",
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "review_required": True,
         "canonical_registry_mutated": False,
@@ -37,11 +41,14 @@ def propose_artifact_rotation(
         "changed": observed != pin.sha256,
         "official_source_url": contract.official_source_url,
         "source_ref": contract.source_ref,
+        "promotion_state": contract.promotion_state.value,
+        "evidence": contract.evidence.model_dump(),
         "review_checklist": [
             "verify the candidate came from the official allowlisted source",
             "review schema/layout and semantic changes",
             "run offline drift and focused tests",
             "run opt-in read-only conformance when credentials are available",
+            "do not treat local hash integrity as execution readiness",
             "rotate the canonical pin only in a separately reviewed commit",
         ],
     }

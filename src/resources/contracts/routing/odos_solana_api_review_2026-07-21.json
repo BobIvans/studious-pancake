@@ -1,0 +1,22 @@
+{
+  "contract_id": "odos.solana-api",
+  "credential_modes": [
+    "api-key-if-required"
+  ],
+  "execution_allowed": false,
+  "expected_capabilities": [
+    "quote",
+    "immutable-transaction"
+  ],
+  "official_sources": [
+    "https://docs.odos.xyz/api/solana"
+  ],
+  "promotion_notes": [
+    "Assembled Odos transactions remain immutable and are not admitted into the first atomic flash-loan vertical.",
+    "Provider-native fixture refresh and schema probe are required before any promotion."
+  ],
+  "provider": "odos",
+  "remote_schema_freshness": "pending-online-probe",
+  "reviewed_at": "2026-07-21T00:00:00Z",
+  "schema_version": "pr054.provider-review-snapshot.v1"
+}

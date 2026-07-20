@@ -1,0 +1,22 @@
+{
+  "contract_id": "marginfi.v2-mainnet-source-identity",
+  "credential_modes": [
+    "read-only-rpc"
+  ],
+  "execution_allowed": false,
+  "main_group": "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8",
+  "mainnet_program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+  "official_sources": [
+    "https://docs.marginfi.com/rust-sdk",
+    "https://github.com/mrgnlabs/marginfi-v2",
+    "https://docs.marginfi.com/protocol-design"
+  ],
+  "promotion_notes": [
+    "This PR records the current source-of-truth uncertainty but intentionally does not resolve PR-055.",
+    "Execution conformance must remain false until authoritative source, deployed hash and official golden vectors are pinned."
+  ],
+  "provider": "marginfi",
+  "remote_schema_freshness": "pending-pr055",
+  "reviewed_at": "2026-07-21T00:00:00Z",
+  "schema_version": "pr054.provider-review-snapshot.v1"
+}

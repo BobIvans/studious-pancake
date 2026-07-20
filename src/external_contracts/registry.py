@@ -6,6 +6,7 @@ import hashlib
 from importlib import resources
 import json
 from pathlib import Path
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -21,7 +22,9 @@ class ExternalContractError(ValueError):
 
 
 class ExternalContractRegistry:
-    def __init__(self, model: ExternalContractRegistryModel, artifact_root: Path) -> None:
+    def __init__(
+        self, model: ExternalContractRegistryModel, artifact_root: Path
+    ) -> None:
         self.model = model
         self.artifact_root = artifact_root.resolve()
         self._by_id = {contract.id: contract for contract in model.contracts}
@@ -45,7 +48,9 @@ class ExternalContractRegistry:
             payload = json.loads(registry_path.read_text(encoding="utf-8"))
             model = ExternalContractRegistryModel.model_validate(payload)
         except (OSError, json.JSONDecodeError, ValidationError) as exc:
-            raise ExternalContractError(f"invalid external contract registry: {exc}") from exc
+            raise ExternalContractError(
+                f"invalid external contract registry: {exc}"
+            ) from exc
         registry = cls(model, root)
         if verify_artifacts:
             registry.verify_artifacts()
@@ -59,13 +64,20 @@ class ExternalContractRegistry:
         try:
             return self._by_id[contract_id]
         except KeyError as exc:
-            raise ExternalContractError(f"unknown external contract: {contract_id}") from exc
+            raise ExternalContractError(
+                f"unknown external contract: {contract_id}"
+            ) from exc
 
     def provider(self, provider: str) -> tuple[ExternalContract, ...]:
         return tuple(item for item in self.contracts if item.provider == provider)
 
     def active(self) -> tuple[ExternalContract, ...]:
-        return tuple(item for item in self.contracts if item.status is ContractStatus.ACTIVE)
+        return tuple(
+            item for item in self.contracts if item.status is ContractStatus.ACTIVE
+        )
+
+    def execution_allowed(self) -> tuple[ExternalContract, ...]:
+        return tuple(item for item in self.contracts if item.execution_allowed)
 
     def resolve_artifact(self, relative_path: str) -> Path:
         candidate = (self.artifact_root / relative_path).resolve()
@@ -84,7 +96,9 @@ class ExternalContractRegistry:
                 path = self.resolve_artifact(pin.path)
                 if not path.is_file():
                     if pin.required:
-                        errors.append(f"{contract.id}: missing required artifact {pin.path}")
+                        errors.append(
+                            f"{contract.id}: missing required artifact {pin.path}"
+                        )
                     continue
                 observed = hashlib.sha256(path.read_bytes()).hexdigest()
                 if observed != pin.sha256:
@@ -99,16 +113,26 @@ class ExternalContractRegistry:
         return {
             "schema_version": self.model.schema_version,
             "verified": True,
-            "execution_contracts": [item.id for item in self.active()],
-            "contracts": [
-                {
-                    "id": item.id,
-                    "provider": item.provider,
-                    "status": item.status.value,
-                    "capabilities": [capability.value for capability in item.capabilities],
-                    "source_ref": item.source_ref,
-                    "artifacts": len(item.artifacts),
-                }
-                for item in self.contracts
-            ],
+            "execution_allowed": bool(self.execution_allowed()),
+            "execution_contracts": [item.id for item in self.execution_allowed()],
+            "active_contracts": [item.id for item in self.active()],
+            "contracts": [self._contract_status(item) for item in self.contracts],
+        }
+
+    @staticmethod
+    def _contract_status(item: ExternalContract) -> dict[str, Any]:
+        probe = item.conformance_probe
+        return {
+            "id": item.id,
+            "provider": item.provider,
+            "status": item.status.value,
+            "capabilities": [capability.value for capability in item.capabilities],
+            "source_ref": item.source_ref,
+            "artifacts": len(item.artifacts),
+            "promotion_state": item.promotion_state.value,
+            "execution_allowed": item.execution_allowed,
+            "evidence": item.evidence.model_dump(),
+            "credential_mode": probe.credential_mode.value if probe else None,
+            "required_env": list(probe.required_env) if probe else [],
+            "optional_env": list(probe.optional_env) if probe else [],
         }

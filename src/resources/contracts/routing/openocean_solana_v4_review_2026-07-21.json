@@ -1,0 +1,24 @@
+{
+  "contract_id": "openocean.solana-v4-quote",
+  "credential_modes": [
+    "whitelist-api-key"
+  ],
+  "endpoint_family": "https://open-api.openocean.finance/v4/solana/quote",
+  "execution_allowed": false,
+  "expected_capabilities": [
+    "quote"
+  ],
+  "official_sources": [
+    "https://docs.openocean.finance/docs/overview/supported-chains",
+    "https://docs.openocean.finance/docs/swap-api/v4",
+    "https://docs.openocean.finance/docs/swap-api/api-pricing-and-access"
+  ],
+  "promotion_notes": [
+    "Solana access requires whitelisted authorization before conformance can pass.",
+    "Provider remains discovery-only and must not claim composable execution."
+  ],
+  "provider": "openocean",
+  "remote_schema_freshness": "pending-online-probe",
+  "reviewed_at": "2026-07-21T00:00:00Z",
+  "schema_version": "pr054.provider-review-snapshot.v1"
+}

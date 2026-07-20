@@ -9,7 +9,10 @@ from typing import Sequence
 
 from src.external_contracts.conformance import run_read_only_conformance
 from src.external_contracts.drift import detect_drift
-from src.external_contracts.registry import ExternalContractError, ExternalContractRegistry
+from src.external_contracts.registry import (
+    ExternalContractError,
+    ExternalContractRegistry,
+)
 from src.external_contracts.updater import propose_artifact_rotation
 
 
@@ -38,7 +41,13 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         registry = ExternalContractRegistry.load_default()
         if args.command == "validate":
-            print(json.dumps({"ok": True, **registry.status_payload()}, indent=2, sort_keys=True))
+            print(
+                json.dumps(
+                    {"ok": True, **registry.status_payload()},
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
             return 0
         if args.command == "status":
             print(json.dumps(registry.status_payload(), indent=2, sort_keys=True))
@@ -66,13 +75,17 @@ def main(argv: Sequence[str] | None = None) -> int:
                 for contract in contracts
             ]
             payload = {
-                "schema_version": "pr027.conformance-report.v1",
+                "schema_version": "pr054.conformance-report.v2",
                 "online_enabled": args.enable_online,
                 "verified": any(item["verified"] for item in results),
                 "results": results,
             }
             print(json.dumps(payload, indent=2, sort_keys=True))
-            return 0 if all(item["state"] != "failed-request" for item in results) else 2
+            return (
+                0
+                if all(item["state"] != "failed-request" for item in results)
+                else 2
+            )
     except (ExternalContractError, OSError, ValueError) as exc:
         print(f"EXTERNAL_CONTRACT_ERROR: {exc}", file=sys.stderr)
         return 2

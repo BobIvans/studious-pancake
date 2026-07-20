@@ -1,0 +1,24 @@
+{
+  "contract_id": "jupiter.swap-v2-build",
+  "credential_modes": [
+    "x-api-key"
+  ],
+  "endpoint_family": "https://api.jup.ag/swap/v2/build",
+  "execution_allowed": false,
+  "expected_capabilities": [
+    "quote",
+    "composable-instructions"
+  ],
+  "official_sources": [
+    "https://developers.jup.ag/docs/api-reference/swap/build",
+    "https://developers.jup.ag/docs/changelog"
+  ],
+  "promotion_notes": [
+    "Local artifact integrity is not remote schema freshness.",
+    "Composable execution remains blocked until provider-native build fixtures are tied to exact simulation and reconciliation evidence."
+  ],
+  "provider": "jupiter",
+  "remote_schema_freshness": "pending-online-probe",
+  "reviewed_at": "2026-07-21T00:00:00Z",
+  "schema_version": "pr054.provider-review-snapshot.v1"
+}

@@ -1,0 +1,23 @@
+{
+  "chain_index": "501",
+  "contract_id": "okx.solana-swap-instruction-v6",
+  "credential_modes": [
+    "okx-signed"
+  ],
+  "endpoint_family": "https://web3.okx.com/api/v6/dex/aggregator/swap-instruction",
+  "execution_allowed": false,
+  "expected_capabilities": [
+    "quote"
+  ],
+  "official_sources": [
+    "https://web3.okx.com/onchainos/dev-docs/trade/dex-solana-swap-instruction"
+  ],
+  "promotion_notes": [
+    "Provider remains discovery-only until credentialed schema conformance and composed flash-loan simulation evidence exist.",
+    "OKX signing requires API key, secret key, passphrase and optional project id headers."
+  ],
+  "provider": "okx",
+  "remote_schema_freshness": "pending-online-probe",
+  "reviewed_at": "2026-07-21T00:00:00Z",
+  "schema_version": "pr054.provider-review-snapshot.v1"
+}

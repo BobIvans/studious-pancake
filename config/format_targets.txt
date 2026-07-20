@@ -23,3 +23,9 @@ src/config/runtime.py
 tests/test_pr026_chain_registry.py
 tests/test_pr026_config_doctor.py
 tests/test_pr026_typed_config.py
+scripts/security_gate.py
+src/security/__init__.py
+src/security/secret_scan.py
+src/security/signer_policy.py
+src/security/supply_chain.py
+tests/test_pr043_wallet_supply_chain.py

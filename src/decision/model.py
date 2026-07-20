@@ -197,10 +197,8 @@ def recommend(
     baseline_rank: int | None = None,
 ) -> RankingRecommendation:
     bp = baseline_rank if baseline_rank is not None else baseline_priority(features)
-    if (
-        os.getenv("DECISION_MODEL_ENABLED", "false").lower() not in {"1", "true", "yes"}
-        or artifact_path is None
-    ):
+    model_enabled = os.getenv("DECISION_MODEL_ENABLED", "false").lower()
+    if model_enabled not in {"1", "true", "yes"} or artifact_path is None:
         return RankingRecommendation(
             None,
             DecisionStage.PRE_QUOTE,
@@ -237,7 +235,10 @@ def recommend(
     z = sum(a * b for a, b in zip(art["coefficients"], x)) + art["intercept"]
     p = _sig(z)
     contrib = sorted(
-        zip(art["feature_order"], [a * b for a, b in zip(art["coefficients"], x)]),
+        zip(
+            art["feature_order"],
+            [a * b for a, b in zip(art["coefficients"], x)],
+        ),
         key=lambda t: abs(t[1]),
         reverse=True,
     )[:3]
@@ -279,7 +280,11 @@ def evaluate_model(dataset_dir, artifact_path, report_dir, as_of):
                 "baseline_priority": baseline_priority(r["features_pre_quote"]),
             }
         )
-    brier = sum((p["p"] - p["y"]) ** 2 for p in preds) / len(preds) if preds else None
+    brier = (
+        sum((p["p"] - p["y"]) ** 2 for p in preds) / len(preds)
+        if preds
+        else None
+    )
     report = {
         "as_of": as_of,
         "artifact_checksum": art.get("checksum"),
@@ -323,7 +328,10 @@ def evaluate_model(dataset_dir, artifact_path, report_dir, as_of):
 
 def replay_quota(dataset_dir, artifact_path, quota_policy: dict[str, Any]):
     rows = [r for r in load_rows(dataset_dir) if r.get("label_status") == "LABELED"]
-    exploration = max(0, min(1, (quota_policy.get("exploration_share", 0.2) + 0.0)))
+    exploration = max(
+        0,
+        min(1, (quota_policy.get("exploration_share", 0.2) + 0.0)),
+    )
     budget = int(quota_policy.get("budget", len(rows)))
     ranked = sorted(
         rows,

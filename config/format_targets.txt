@@ -65,3 +65,7 @@ src/runtime_discovery_builder.py
 src/market/snapshots.py
 src/strategy/detectors.py
 tests/test_pr056_runtime_discovery.py
+src/external_contracts/models.py
+src/external_contracts/conformance.py
+src/external_contracts/cli.py
+tests/test_pr070_protocol_aware_conformance.py

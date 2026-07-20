@@ -1,5 +1,12 @@
-"""Permit-bound RPC/Jito submission boundary introduced by roadmap PR-045."""
+"""Canonical permit-bound RPC/Jito submission boundary."""
 
+from .canonical import (
+    CanonicalPermitBoundSender,
+    CanonicalSenderConfig,
+    CanonicalStatusReport,
+    JitoCredentialMode,
+    consolidate_submission_observations,
+)
 from .durable import DurableSubmissionResult, PermitBoundSubmissionService
 from .permit_bound import (
     AsyncJsonHttpTransport,
@@ -34,19 +41,25 @@ from .permit_bound import (
     validate_permit_payload,
 )
 
+# ``RpcSender`` and ``JitoSender`` remain bound for explicit compatibility
+# imports used by PR-045 tests and downstream code. New composition must use the
+# canonical facade, so the concrete implementations are intentionally omitted
+# from ``__all__``.
 __all__ = [
     "AsyncJsonHttpTransport",
+    "CanonicalPermitBoundSender",
+    "CanonicalSenderConfig",
+    "CanonicalStatusReport",
     "DurableSubmissionResult",
     "ErrorDisposition",
     "HttpResponse",
-    "JitoSender",
+    "JitoCredentialMode",
     "JitoUuidAuth",
     "LivePermitIssuer",
     "LiveSubmissionPolicy",
     "PermitBoundSubmissionService",
     "PermitRequest",
     "ResubmissionDecision",
-    "RpcSender",
     "Sender",
     "SignedPayload",
     "SubmissionAck",
@@ -62,6 +75,7 @@ __all__ = [
     "classify_jito_bundle_status",
     "classify_jito_inflight_status",
     "classify_signature_statuses",
+    "consolidate_submission_observations",
     "inspect_exactly_one_system_tip",
     "inspect_exactly_one_system_tip_across_transactions",
     "permit_request_from_payload",

@@ -1,8 +1,7 @@
 """Strict canonical execution boundary for production code.
 
-PR-029 deliberately keeps legacy compatibility objects quarantined in their
-original modules while making the public execution package fail closed unless
-all plans and compiled artifacts use Solders primitives and canonical v0 bytes.
+PR-053 makes the public execution package fail closed unless all plans and
+compiled artifacts use Solders primitives and canonical v0 bytes.
 """
 
 from __future__ import annotations
@@ -28,8 +27,10 @@ from .models import (
 )
 from .transaction_compiler import (
     TransactionCompileError,
-    TransactionCompiler as _LegacyAwareCompiler,
+    TransactionCompiler as _CanonicalV0Compiler,
 )
+
+_SYNTHETIC_UNSIGNED_PREFIX = bytes.fromhex("756e7369676e65643a")
 
 
 class CanonicalExecutionContractError(TransactionCompileError, TypeError):
@@ -67,7 +68,7 @@ class ExecutionReceipt:
 
 
 def validate_canonical_plan(plan: TransactionPlan) -> None:
-    """Reject every legacy positional/string plan before compilation."""
+    """Reject every string/compatibility plan before compilation."""
 
     if not isinstance(plan, TransactionPlan):
         raise CanonicalExecutionContractError("plan must be TransactionPlan")
@@ -117,17 +118,17 @@ def validate_compiled_identity(compiled: CompiledTransaction) -> None:
         )
     if compute_message_hash(message_bytes) != compiled.message_hash:
         raise CanonicalExecutionContractError("canonical message hash mismatch")
-    if compiled.serialized_transaction.startswith(b"unsigned:"):
+    if compiled.serialized_transaction.startswith(_SYNTHETIC_UNSIGNED_PREFIX):
         raise CanonicalExecutionContractError(
-            "synthetic unsigned transaction is forbidden"
+            "non-canonical unsigned transaction envelope is forbidden"
         )
 
 
 class CanonicalTransactionCompiler:
-    """Public compiler that cannot enter the legacy synthetic branch."""
+    """Public compiler that has no legacy synthetic branch."""
 
     def __init__(self, *args, **kwargs) -> None:
-        self._delegate = _LegacyAwareCompiler(*args, **kwargs)
+        self._delegate = _CanonicalV0Compiler(*args, **kwargs)
 
     @property
     def max_size(self) -> int:
@@ -153,15 +154,15 @@ class CanonicalTransactionCompiler:
         signed = self._delegate.sign_fully(compiled, signers)
         if signed.message_hash != compiled.message_hash:
             raise CanonicalExecutionContractError("signed message hash mismatch")
-        if signed.serialized_transaction.startswith(b"unsigned:"):
+        if signed.serialized_transaction.startswith(_SYNTHETIC_UNSIGNED_PREFIX):
             raise CanonicalExecutionContractError(
-                "synthetic signed payload is forbidden"
+                "non-canonical signed payload is forbidden"
             )
         return signed
 
 
 # Public package compatibility name. Callers importing TransactionCompiler from
-# src.execution receive the strict boundary, not the legacy-aware implementation.
+# src.execution receive the strict canonical boundary.
 TransactionCompiler = CanonicalTransactionCompiler
 
 

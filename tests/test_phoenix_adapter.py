@@ -1,7 +1,6 @@
 import pytest
 
-from src.execution.models import AccountSnapshot, BlockhashContext, Instruction, SimulationReport
-from src.execution.transaction_compiler import TransactionCompiler
+from src.execution.models import AccountSnapshot, Instruction, SimulationReport
 from src.providers.orderbook import *
 from tests.orderbook_fixture_helpers import (
     fixture_flash_loan_plan,
@@ -96,7 +95,7 @@ def test_lifecycle_seat_and_open_orders():
     assert e.value.code is OrderbookRejectCode.SEAT_INVALID
 
 
-def test_ioc_planner_compiler_and_postconditions():
+def test_ioc_planner_fails_closed_until_canonical_solders_builder():
     ad, s = snap(VenueKind.OPENBOOK_V2)
     q = OrderbookQuoteEngine().quote(s, TradeDirection.BUY_BASE, 2000)
     ixp = ad.build_ioc_instruction(s, q, "auth", "baseata", "quoteata")
@@ -115,16 +114,12 @@ def test_ioc_planner_compiler_and_postconditions():
         q.min_out,
         ("payer",),
     )
-    planned = OrderbookAmmPlanner().plan(cand)
-    compiled = TransactionCompiler(max_size=5000).compile(
-        planned.transaction_plan,
-        BlockhashContext("abc", 1, 10, 0, "processed"),
-    )
-    kinds = [i.kind for i in compiled.instructions]
-    assert kinds.index("marginfi_borrow") < kinds.index("openbook_v2_ioc")
-    assert kinds.index("openbook_v2_ioc") < kinds.index("amm_swap")
-    assert kinds.index("amm_swap") < kinds.index("marginfi_repay")
-    assert kinds.index("marginfi_repay") < kinds.index("marginfi_end")
+    with pytest.raises(OrderbookReject) as e:
+        OrderbookAmmPlanner().plan(cand)
+    assert e.value.code is OrderbookRejectCode.SETTLEMENT_PATH_UNPROVEN
+    assert e.value.diagnostics["legacy_plan_hash"]
+
+    message_hash = "0" * 64
     rep = SimulationReport(
         True,
         None,
@@ -141,7 +136,7 @@ def test_ioc_planner_compiler_and_postconditions():
         None,
         10,
         10,
-        compiled.message_hash,
+        message_hash,
     )
     ad.prove_postconditions(rep, s.market_pubkey)
     bad = SimulationReport(
@@ -160,7 +155,7 @@ def test_ioc_planner_compiler_and_postconditions():
         None,
         10,
         10,
-        compiled.message_hash,
+        message_hash,
     )
     with pytest.raises(OrderbookReject) as e:
         ad.prove_postconditions(bad, s.market_pubkey)

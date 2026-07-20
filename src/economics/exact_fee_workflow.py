@@ -33,9 +33,7 @@ class ExactFeeCapitalStatus(StrEnum):
 
     READY_FOR_ATOMIC_VERTICAL = "ready_for_atomic_vertical"
     BLOCKED_BY_CAPITAL_DECISION = "blocked_by_capital_decision"
-    FINAL_FEE_EXCEEDS_DURABLE_RESERVATION = (
-        "final_fee_exceeds_durable_reservation"
-    )
+    FINAL_FEE_EXCEEDS_DURABLE_RESERVATION = "final_fee_exceeds_durable_reservation"
     MISSING_ATTEMPT = "missing_attempt"
     MISSING_ACTIVE_RESERVATION = "missing_active_reservation"
     MISSING_FINAL_MESSAGE_HASH = "missing_final_message_hash"

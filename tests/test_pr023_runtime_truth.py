@@ -96,7 +96,8 @@ def test_paper_runner_is_available_but_live_mode_fails_closed(
     assert arb_bot.main(["run", "--mode", "paper"]) == 0
     captured = capsys.readouterr()
     assert "PAPER_SHADOW_RUNNER" in captured.out
-    assert "healthy_idle" in captured.out
+    assert "blocked" in captured.out
+    assert "blocked_no_discovery_composition" in captured.out
     assert journal_path.is_file()
 
     assert arb_bot.main(["run", "--mode", "live"]) == arb_bot.EXIT_MODE_UNAVAILABLE

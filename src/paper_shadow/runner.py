@@ -46,6 +46,11 @@ PAPER_SHADOW_REQUIRED_STAGES: tuple[PaperShadowStageName, ...] = (
     PaperShadowStageName.RECONCILIATION,
 )
 
+UPSTREAM_DISCOVERY_STAGES: tuple[PaperShadowStageName, ...] = (
+    PaperShadowStageName.DISCOVERY,
+    PaperShadowStageName.DETECTOR,
+)
+
 _FORBIDDEN_OUTPUT_KEYS = frozenset(
     {
         "executed",
@@ -163,6 +168,23 @@ class PaperShadowRunner:
                 f"{sorted(present)}"
             )
 
+    def _append_missing_upstream_block(self) -> None:
+        self._append(
+            event_type="runner_blocked",
+            status="blocked",
+            reason_code="blocked_no_discovery_composition",
+            stage=PaperShadowStageName.DISCOVERY,
+            details={
+                "required_upstream_stages": [
+                    stage.value for stage in UPSTREAM_DISCOVERY_STAGES
+                ],
+                "upstream_cycle_completed": False,
+                "healthy_idle_proven": False,
+                "executed": False,
+                "synthetic_fill": False,
+            },
+        )
+
     async def _run_stage(
         self,
         opportunity: Opportunity,
@@ -218,31 +240,52 @@ class PaperShadowRunner:
         return safe_output
 
     async def run_once(
-        self, opportunities: Sequence[Opportunity] = ()
+        self,
+        opportunities: Sequence[Opportunity] = (),
+        *,
+        upstream_cycle_completed: bool = False,
     ) -> PaperShadowRunSummary:
         """Run one bounded paper/shadow pass over already-detected candidates.
 
         On the current main branch detector/planner/compiler/simulation stages may
         not exist yet.  Missing stages are terminal blocked outcomes, not success.
+        An empty candidate set is healthy only after the composition root proves
+        that discovery and detector completed a bounded upstream cycle.
         """
 
         self._append(
             event_type="runner_started",
             status="started",
             reason_code="paper_shadow_once_started",
-            details={"sender_enabled": False, "synthetic_fill": False},
+            details={
+                "sender_enabled": False,
+                "synthetic_fill": False,
+                "upstream_cycle_completed": upstream_cycle_completed,
+            },
         )
         if not opportunities:
+            if not upstream_cycle_completed:
+                self._append_missing_upstream_block()
+                return self._summary(
+                    PaperShadowRunStatus.BLOCKED,
+                    candidates_seen=0,
+                    terminal_reason="blocked_no_discovery_composition",
+                )
             self._append(
                 event_type="runner_idle",
                 status="succeeded",
-                reason_code="healthy_idle_no_candidates",
-                details={"sender_enabled": False, "synthetic_fill": False},
+                reason_code="healthy_idle_no_candidates_after_discovery",
+                details={
+                    "sender_enabled": False,
+                    "synthetic_fill": False,
+                    "upstream_cycle_completed": True,
+                    "healthy_idle_proven": True,
+                },
             )
             return self._summary(
                 PaperShadowRunStatus.HEALTHY_IDLE,
                 candidates_seen=0,
-                terminal_reason="healthy_idle_no_candidates",
+                terminal_reason="healthy_idle_no_candidates_after_discovery",
             )
 
         candidates_seen = 0
@@ -319,8 +362,13 @@ class PaperShadowRunner:
         self,
         stop_event: asyncio.Event,
         opportunities: Sequence[Opportunity] = (),
+        *,
+        upstream_cycle_completed: bool = False,
     ) -> PaperShadowRunSummary:
-        summary = await self.run_once(opportunities)
+        summary = await self.run_once(
+            opportunities,
+            upstream_cycle_completed=upstream_cycle_completed,
+        )
         try:
             await asyncio.wait_for(
                 stop_event.wait(),

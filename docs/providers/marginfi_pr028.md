@@ -31,11 +31,15 @@ PR-027 cannot silently change the protocol interpreted by PR-028.
 
 - Group, MarginFi account, and Bank data must have the exact pinned byte length.
 - Owner and discriminator mismatches fail closed.
-- Margin account balances must be in the upstream-required bytewise order.
+- Margin account balances and risk groups use the upstream-required descending
+  bytewise bank order.
+- The first supported vertical accepts only ordinary/SOL asset tags with
+  Pyth Push or Switchboard Pull oracle layouts; integration, fixed-price, and
+  staked layouts remain rejected until separately proven.
 - Active protocol pause, protected account flags, and a non-operational target
   bank reject the candidate.
-- Target vault liquidity is read from the SPL/Token-2022 account, not invented
-  in a fixture.
+- Target vault liquidity and authority are verified from the SPL/Token-2022
+  account instead of being invented in a fixture.
 - Follow-up reads use `minContextSlot` and cannot predate the first snapshot.
 - The target bank may not already be active because `repay_all=Some(true)` must
   not alter a pre-existing position.

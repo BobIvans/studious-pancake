@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "module": "src.application",
+      "owner_prs": [
+        "PR-023",
+        "PR-033"
+      ],
+      "reason": "Strategy protocol/composition typing is repaired with the runtime vertical."
+    },
+    {
+      "module": "src.execution.transaction_compiler",
+      "owner_prs": [
+        "PR-029",
+        "PR-035"
+      ],
+      "reason": "Legacy/canonical execution model split."
+    },
+    {
+      "module": "src.execution.shadow",
+      "owner_prs": [
+        "PR-029",
+        "PR-036",
+        "PR-037"
+      ],
+      "reason": "Duplicate shadow report and legacy plan attributes."
+    },
+    {
+      "module": "src.execution.transaction_simulator",
+      "owner_prs": [
+        "PR-029",
+        "PR-036"
+      ],
+      "reason": "Simulator interface split."
+    },
+    {
+      "module": "src.providers.jupiter.router",
+      "owner_prs": [
+        "PR-030",
+        "PR-031"
+      ],
+      "reason": "Router event typing is completed with the canonical routing plane."
+    },
+    {
+      "module": "src.routing.adapters",
+      "owner_prs": [
+        "PR-030"
+      ],
+      "reason": "Provider response schemas require typed normalization."
+    }
+  ]
+}

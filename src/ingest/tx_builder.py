@@ -30,8 +30,7 @@ from spl.token.instructions import (
     create_associated_token_account,
     transfer as spl_transfer,
 )
-from spl.token.instructions import models as spl_token_models
-TransferParams = spl_token_models.TransferParams
+from spl.token.models import TransferParams
 try:
     from spl.token.instructions import create_idempotent_associated_token_account
 

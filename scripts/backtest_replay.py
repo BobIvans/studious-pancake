@@ -16,11 +16,14 @@ Usage:
 import argparse
 import asyncio
 import json
+import logging
 import os
 import sqlite3
 import sys
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 # ── Column schema for paper_trades table ─────────────────────────────────
@@ -43,7 +46,6 @@ def discover_columns(cursor: sqlite3.Cursor, table: str) -> List[str]:
 
 def load_trades(db_path: str) -> List[Dict]:
     """Load all rows from the paper_trades table (strict — no cross-DB confusion)."""
-    import os
     # FIX 305: Auto-correct path to paper_trading.db if bot_history.db is missing
     if not os.path.exists(db_path) and os.path.exists("paper_trading.db"):
         db_path = "paper_trading.db"

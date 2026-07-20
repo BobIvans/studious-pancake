@@ -14,6 +14,7 @@ import os
 import sys
 import time
 from datetime import datetime
+from decimal import Decimal, InvalidOperation, ROUND_FLOOR
 from pathlib import Path
 from typing import Dict, Optional, Any
 
@@ -299,10 +300,37 @@ class PaperTrader:
                 )
 
     async def _monitor_loop(self):
-        """Непрерывный цикл сканирования всех очередей"""
-        # FIX 304: Scale trade volume to 95% of real wallet balance
-        sol_amount = Lamports.from_sol(self.current_balance * 0.95).value
-        usdc_amount = int(self.current_balance * sol_price * 0.95 * 1_000_000)
+        """Непрерывный цикл сканирования всех очередей."""
+        # PR-024: the legacy paper runner remains quote-only until PR-038, but
+        # startup sizing must be deterministic, Decimal-safe, and fail closed
+        # when the SOL/USD snapshot is unavailable.
+        balance_sol = Decimal(str(self.current_balance))
+        allocation = Decimal("0.95")
+        sol_amount = Lamports.from_sol(balance_sol * allocation).value
+
+        sol_price_raw = (
+            self.pyth_feeder.get_price(WSOL_MINT) if self.pyth_feeder else None
+        )
+        try:
+            sol_price = Decimal(str(sol_price_raw))
+            if sol_price <= 0:
+                sol_price = None
+        except (InvalidOperation, TypeError, ValueError):
+            sol_price = None
+
+        usdc_amount = (
+            int(
+                (balance_sol * sol_price * allocation * Decimal(1_000_000))
+                .to_integral_value(rounding=ROUND_FLOOR)
+            )
+            if sol_price is not None
+            else 0
+        )
+        if usdc_amount == 0:
+            logger.warning(
+                "SOL/USD price unavailable at startup; USDC-denominated routes "
+                "are disabled for this paper session"
+            )
 
         while True:
             # FIX #45: Check circuit breaker before any trade execution
@@ -317,12 +345,21 @@ class PaperTrader:
             for lst in LST_TOKENS.values():
                 tasks.append(self._scan_route(BASE_TOKENS["SOL"], lst, sol_amount))
 
-            for stock in XSTOCK_MINTS.values():
-                tasks.append(self._scan_route(BASE_TOKENS["USDC"], str(stock), usdc_amount))
+            if usdc_amount > 0:
+                for stock in XSTOCK_MINTS.values():
+                    tasks.append(
+                        self._scan_route(
+                            BASE_TOKENS["USDC"], str(stock), usdc_amount
+                        )
+                    )
 
-            # 3. Генерируем задачи для DePIN/Meme (к USDC)
-            for depin in DEPIN_MEME_TOKENS.values():
-                tasks.append(self._scan_route(BASE_TOKENS["USDC"], depin, usdc_amount))
+                # 3. Генерируем задачи для DePIN/Meme (к USDC)
+                for depin in DEPIN_MEME_TOKENS.values():
+                    tasks.append(
+                        self._scan_route(
+                            BASE_TOKENS["USDC"], depin, usdc_amount
+                        )
+                    )
 
             # Выполняем пачку задач
             await asyncio.gather(*tasks)

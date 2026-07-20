@@ -1,9 +1,13 @@
 """Webhook Configuration for Helius LST Arbitrage Monitoring."""
 
+import logging
 import os
 from typing import Dict, List, Optional, Any
 
 from src.config.addresses import get_enabled_addresses
+
+logger = logging.getLogger(__name__)
+
 
 class WebhookConfig:
     """Configuration for Helius webhooks monitoring LST arbitrage."""

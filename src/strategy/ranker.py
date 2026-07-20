@@ -8,7 +8,7 @@ intelligence baseline/model recommendations and never imports sender/Jito/RPC.
 from __future__ import annotations
 
 from src.decision.model import baseline_priority, recommend
-from src.decision.contracts import ModelStatus
+from src.decision.contracts import ModelStatus, RankingRecommendation
 
 from .domain import Opportunity
 from .interfaces import OpportunityRanker
@@ -22,7 +22,7 @@ class DecisionIntelligenceRanker(OpportunityRanker):
     ) -> None:
         self.artifact_path = artifact_path
         self.shadow_only = shadow_only
-        self.last_recommendation = None
+        self.last_recommendation: RankingRecommendation | None = None
 
     async def priority(self, opportunity: Opportunity) -> float:
         features = dict(

@@ -16,6 +16,8 @@ import os
 import time
 from typing import Any, Dict, List, Optional, Callable
 import aiohttp
+
+import src.ingest.shared_state as shared_state
 from solders.keypair import Keypair
 from solders.transaction import VersionedTransaction
 
@@ -249,9 +251,7 @@ class JitoExecutor:
             
             # Fire-and-forget background task — never blocks hot path
             task = asyncio.create_task(_update_rtt())
-            if hasattr(shared_state, "active_tasks"):
-                shared_state.active_tasks.add(task)
-                task.add_done_callback(shared_state.active_tasks.discard)
+            shared_state.retain_background_task(task)
         
         return self._cached_rtt
 
@@ -484,10 +484,13 @@ class JitoExecutor:
                 t.cancel()
             if cancelled_tasks:
                 # FIX 255: Non-blocking background cancellation — never blocks hot path
-                task = asyncio.create_task(asyncio.gather(*cancelled_tasks, return_exceptions=True))
-                if hasattr(shared_state, "active_tasks"):
-                    shared_state.active_tasks.add(task)
-                    task.add_done_callback(shared_state.active_tasks.discard)
+                async def _await_cancelled_requests() -> None:
+                    await asyncio.gather(
+                        *cancelled_tasks, return_exceptions=True
+                    )
+
+                task = asyncio.create_task(_await_cancelled_requests())
+                shared_state.retain_background_task(task)
             if first_success:
                 break
 
@@ -588,12 +591,6 @@ class JitoExecutor:
                                             }
                                         if status in {"Failed", "Invalid"}:
                                             return {"bundle_id": bundle_id, "status": status.lower(), "details": info}
-                                        elif confirmation == "failed":
-                                            return {
-                                                "bundle_id": bundle_id,
-                                                "status":    "failed",
-                                                "details":   info,
-                                            }
                                         break
             except Exception as exc:
                 logger.error(f"Status check error: {exc}")

@@ -48,6 +48,21 @@ SAFE_MINTS = {
     "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo",  # PYUSD (FIX 146)
 }
 
+SAFE_MINT_DECIMALS = {
+    "So11111111111111111111111111111111111111112": 9,
+    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v": 6,
+    "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB": 6,
+    "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": 9,
+    "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": 9,
+    "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": 9,
+    "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": 9,
+    "jupSoLaHXQiZZTSfEWMTRRgpnyFm8f6sZdosWBjx93v": 9,
+    "HUBsveNpjo5pWqNkH57QzxjQASdTVXcSK7bVKTSZtcSX": 9,
+    "cPQPBN7WubB3zyQDpzTK2ormx1BMdAym9xkrYUJsctm": 9,
+    "2b1kV6DkPAnxd5ixfnxCpjxmKwqjjaYmCZfHsFu24GXo": 6,
+    "Eh6XEPhSwoLv5wFApukmnaVSHQ6sAnoD9BmgmwQoN2sN": 18,
+}
+
 
 class TokenSecurityChecker:
     """Analyzes token mint accounts for security flags and scam indicators."""
@@ -495,8 +510,12 @@ class LiquidityValidator:
                             0
                         ]  # little endian uint64
 
-                        # FIX 203:       6
-                        decimals = _hardcoded_decimals.get(mint_address, 6)
+                        decimals = SAFE_MINT_DECIMALS.get(mint_address)
+                        if decimals is None:
+                            return False, (
+                                "Token decimals are not pinned for batch liquidity "
+                                f"validation: {mint_address}"
+                            )
                         if balance < get_vault_threshold(decimals):
                             return (
                                 False, f"Insufficient vault balance: {balance} (min: {

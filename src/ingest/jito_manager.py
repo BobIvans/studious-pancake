@@ -17,6 +17,7 @@ from solders.transaction import VersionedTransaction
 from solders.instruction import Instruction, AccountMeta
 
 from .jito_bundle_client import JitoBundleClient
+import src.ingest.shared_state as shared_state
 from src.ingest.shared_state import send_telegram_alert
 
 logger = logging.getLogger("JitoManager")

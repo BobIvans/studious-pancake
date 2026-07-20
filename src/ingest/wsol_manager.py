@@ -19,13 +19,8 @@ from solders.keypair import Keypair
 from solders.instruction import Instruction, AccountMeta
 from solders.system_program import TransferParams, transfer
 from spl.token.instructions import get_associated_token_address, sync_native, close_account, create_associated_token_account
-from spl.token.instructions import models as spl_token_models
-CloseAccountParams = spl_token_models.CloseAccountParams
+from spl.token.models import CloseAccountParams, SyncNativeParams
 
-try:
-    from spl.token.instructions import SyncNativeParams
-except ImportError:
-    SyncNativeParams = None  # Safe fallback for older SDK versions
 try:
     from spl.token.instructions import create_idempotent_associated_token_account
     CREATE_ATA_FUNCTION = create_idempotent_associated_token_account

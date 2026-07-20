@@ -1,0 +1,24 @@
+{
+  "schema": "pr045.official-transport-shapes.v1",
+  "sources": {
+    "solana_send_transaction": "https://solana.com/docs/rpc/http/sendtransaction",
+    "solana_signature_statuses": "https://solana.com/docs/rpc/http/getsignaturestatuses",
+    "jito_low_latency_send": "https://docs.jito.wtf/lowlatencytxnsend/"
+  },
+  "jito": {
+    "transactions_path": "/api/v1/transactions",
+    "bundles_path": "/api/v1/bundles",
+    "inflight_path": "/api/v1/getInflightBundleStatuses",
+    "bundle_status_path": "/api/v1/getBundleStatuses",
+    "tip_accounts_path": "/api/v1/getTipAccounts",
+    "auth_header": "x-jito-auth",
+    "bundle_limit": 5,
+    "encoding": "base64"
+  },
+  "solana": {
+    "send_method": "sendTransaction",
+    "status_method": "getSignatureStatuses",
+    "encoding": "base64",
+    "status_history_field": "searchTransactionHistory"
+  }
+}

@@ -1,10 +1,12 @@
-"""Deterministic PR-022 dataset builder from immutable JSONL event trails."""
+"""Deterministic PR-022/PR-051 dataset builder from immutable JSONL event trails."""
 
 from __future__ import annotations
 
-import hashlib, json
+import hashlib
+import json
+from collections.abc import Mapping as MappingABC
 from dataclasses import asdict
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
 
@@ -20,6 +22,33 @@ from .contracts import (
 POSITIVE_TERMINAL = {"simulated_executable_profit"}
 TERMINAL_TYPES = {"shadow_terminal", "terminal_outcome"}
 CANDIDATE_TYPES = {"candidate_observed", "candidate"}
+SECRET_FIELD_TOKENS = (
+    "api_key",
+    "apikey",
+    "authorization",
+    "bearer",
+    "credential",
+    "hmac",
+    "keypair",
+    "mnemonic",
+    "passphrase",
+    "private_key",
+    "privatekey",
+    "seed_phrase",
+    "secret",
+    "signing_key",
+)
+SECRET_VALUE_MARKERS = (
+    "bearer ",
+    "api_key=",
+    "apikey=",
+    "authorization:",
+    "begin private key",
+    "mnemonic=",
+    "private_key=",
+    "secret=",
+    "seed phrase",
+)
 
 
 def _canon(obj: Any) -> str:
@@ -33,6 +62,34 @@ def sha256_text(text: str) -> str:
 def parse_utc(value: str) -> datetime:
     dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
     return dt.astimezone(timezone.utc)
+
+
+def _secret_paths(value: Any, path: tuple[str, ...] = ()) -> tuple[str, ...]:
+    findings: list[str] = []
+    if isinstance(value, MappingABC):
+        for raw_key, item in value.items():
+            key = str(raw_key)
+            lowered = key.lower()
+            next_path = path + (key,)
+            if any(token in lowered for token in SECRET_FIELD_TOKENS):
+                findings.append(".".join(next_path))
+            findings.extend(_secret_paths(item, next_path))
+    elif isinstance(value, (list, tuple)):
+        for index, item in enumerate(value):
+            findings.extend(_secret_paths(item, path + (str(index),)))
+    elif isinstance(value, str):
+        lowered_value = value.lower()
+        if any(marker in lowered_value for marker in SECRET_VALUE_MARKERS):
+            findings.append(".".join(path) or "<root>")
+    return tuple(findings)
+
+
+def validate_event_has_no_secrets(event: dict[str, Any]) -> None:
+    """Ensure offline advisory datasets never persist wallet/API secrets."""
+
+    findings = sorted(set(_secret_paths(event)))
+    if findings:
+        raise ValueError(f"secret material is forbidden in decision datasets: {findings}")
 
 
 def validate_pre_quote_features(features: dict[str, Any]) -> None:
@@ -64,11 +121,19 @@ class DecisionDatasetBuilder:
     ) -> dict[str, Any]:
         as_of_dt = parse_utc(as_of)
         events: list[dict[str, Any]] = []
+        excluded: dict[str, int] = {}
         for path in event_paths:
             with Path(path).open("r", encoding="utf-8") as fh:
                 for line in fh:
                     if line.strip():
                         event = json.loads(line)
+                        try:
+                            validate_event_has_no_secrets(event)
+                        except ValueError:
+                            excluded["secret_rejected"] = (
+                                excluded.get("secret_rejected", 0) + 1
+                            )
+                            continue
                         if parse_utc(event["timestamp"]) <= as_of_dt:
                             event["_hash"] = sha256_text(_canon(event))
                             events.append(event)
@@ -83,7 +148,6 @@ class DecisionDatasetBuilder:
             term_by_root.setdefault(root_key, []).append(e)
         history: dict[tuple[str, str], list[int]] = {}
         rows: list[DecisionFeatureRow] = []
-        excluded: dict[str, int] = {}
         for e in [x for x in events if x.get("event_type") in CANDIDATE_TYPES]:
             root_value = e.get("root_opportunity_id") or e.get("opportunity_id")
             if root_value is None:
@@ -106,7 +170,9 @@ class DecisionDatasetBuilder:
             )
             raw_features.setdefault(
                 "historical_reject_rate_ppm",
-                int((len(prior) - sum(prior)) * 1_000_000 / len(prior)) if prior else 0,
+                int((len(prior) - sum(prior)) * 1_000_000 / len(prior))
+                if prior
+                else 0,
             )
             try:
                 validate_pre_quote_features(raw_features)
@@ -191,6 +257,7 @@ class DecisionDatasetBuilder:
             "negative_count": sum(r.label_value == 0 for r in rows),
             "excluded_counts": excluded,
             "source_event_count": len(events),
+            "secret_policy": "reject wallet/API/signing secrets before hashing or writing rows",
         }
         (out / "manifest.json").write_text(_canon(manifest) + "\n", encoding="utf-8")
         return manifest

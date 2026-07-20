@@ -195,7 +195,10 @@ class CanaryReleaseReadinessGate:
         )
 
         check(release_result.production_ready, ReadinessBlocker.RELEASE_GATE_NOT_READY)
-        check(release_result.state == "production-ready", ReadinessBlocker.RELEASE_GATE_NOT_READY)
+        check(
+            release_result.state == "production-ready",
+            ReadinessBlocker.RELEASE_GATE_NOT_READY,
+        )
         check(not release_result.blockers, ReadinessBlocker.RELEASE_GATE_HAS_BLOCKERS)
         check(
             _SHA256_RE.fullmatch(release_result.manifest_sha256) is not None
@@ -203,17 +206,25 @@ class CanaryReleaseReadinessGate:
             ReadinessBlocker.RELEASE_MANIFEST_HASH_INVALID,
         )
         if release_result.warnings:
-            warnings.extend(f"RELEASE_GATE_WARNING:{item}" for item in release_result.warnings)
+            warnings.extend(
+                f"RELEASE_GATE_WARNING:{item}" for item in release_result.warnings
+            )
 
         upstream_hash = sha256_json(
-            tuple(sorted(evidence_by_dependency.values(), key=lambda item: item.dependency))
+            tuple(
+                sorted(
+                    evidence_by_dependency.values(), key=lambda item: item.dependency
+                )
+            )
         )
         unique_blockers = tuple(dict.fromkeys(blockers))
         ready = not unique_blockers
         return CanaryReleaseReadinessResult(
             schema_version=RESULT_SCHEMA_VERSION,
             ready=ready,
-            state="ready-for-human-controlled-canary-release" if ready else "blocked",
+            state=(
+                "ready-for-human-controlled-canary-release" if ready else "blocked"
+            ),
             blockers=unique_blockers,
             warnings=tuple(dict.fromkeys(warnings)),
             upstream_evidence_hash=upstream_hash,

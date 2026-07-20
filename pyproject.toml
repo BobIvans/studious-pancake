@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "studious-pancake-flashloan-bot"
-version = "0.26.0.dev1"
+version = "0.27.0.dev1"
 description = "Fail-closed Solana flash-loan arbitrage runtime under active production hardening"
 readme = "README.md"
 requires-python = ">=3.13,<3.14"
@@ -76,6 +76,7 @@ dev = [
 [project.scripts]
 flashloan-bot = "src.cli:main"
 flashloan-bot-healthcheck = "src.container_runtime:healthcheck_main"
+flashloan-contracts = "src.external_contracts.cli:main"
 
 [tool.setuptools]
 include-package-data = true
@@ -87,8 +88,7 @@ include = ["src*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-"src.resources" = ["*.json", "*.yaml"]
-
+"src.resources" = ["*.json", "*.yaml", "contracts/*/*"]
 
 [tool.black]
 target-version = ["py313"]

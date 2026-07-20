@@ -99,3 +99,8 @@ paper_wallet*.json
 *.new
 cloudflared.tgz
 patch_bot*.py
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/

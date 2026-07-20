@@ -1,8 +1,13 @@
-# Canonical production surface introduced before PR-024.
+# Canonical production surface maintained through PR-025.
 arb_bot.py
 src/application.py
+src/capabilities.py
+src/cli.py
+src/container_runtime.py
 src/domain
 src/execution
 src/providers
 src/routing
 src/strategy
+src
+scripts

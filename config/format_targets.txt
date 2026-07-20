@@ -4,3 +4,15 @@ scripts/verify_repo.py
 tests/test_launcher_startup_smoke.py
 tests/test_quality_quarantine.py
 tests/providers/test_marginfi_readonly_optin.py
+scripts/lock_requirements.py
+scripts/package_smoke.py
+src/capabilities.py
+src/cli.py
+src/container_runtime.py
+tests/test_pr023_runtime_truth.py
+tests/test_pr025_container_runtime.py
+tests/test_pr025_packaging.py
+src/decision/dataset.py
+src/decision/model.py
+src/decision/split.py
+src/strategy/ranker.py

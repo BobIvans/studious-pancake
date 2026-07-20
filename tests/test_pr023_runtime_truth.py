@@ -19,7 +19,7 @@ def test_capability_matrix_is_machine_readable_and_paths_exist():
     matrix = CapabilityMatrix.load_default()
     assert matrix.schema_version == "pr023.capabilities.v1"
     assert matrix.product_state == "not-production-ready"
-    assert matrix.supported_entrypoint == "python arb_bot.py"
+    assert matrix.supported_entrypoint == "flashloan-bot"
     assert matrix.validate_paths(ROOT) == ()
     assert {component.capability.value for component in matrix.components} <= {
         "implemented",
@@ -44,10 +44,14 @@ def test_capability_matrix_matches_strategy_registry_exactly():
 
 def test_quarantined_components_are_disabled_only():
     matrix = CapabilityMatrix.load_default()
-    quarantined = [component for component in matrix.components if component.quarantined]
+    quarantined = [
+        component for component in matrix.components if component.quarantined
+    ]
     assert quarantined
     assert all(component.allowed_modes == ("disabled",) for component in quarantined)
-    assert all(not component.active_in_supported_entrypoint for component in quarantined)
+    assert all(
+        not component.active_in_supported_entrypoint for component in quarantined
+    )
 
 
 @pytest.mark.asyncio
@@ -100,7 +104,7 @@ def test_supported_composition_root_does_not_import_quarantined_execution():
         "src.providers.orderbook",
         "src.venues.pump",
     }
-    for relative in ("arb_bot.py", "src/application.py"):
+    for relative in ("arb_bot.py", "src/cli.py", "src/application.py"):
         tree = ast.parse((ROOT / relative).read_text(encoding="utf-8"))
         imports: set[str] = set()
         for node in ast.walk(tree):
@@ -117,8 +121,7 @@ def test_supported_composition_root_does_not_import_quarantined_execution():
 
 def test_audit_snapshot_and_runtime_contract_are_present():
     assert (
-        ROOT
-        / "docs/audits/FLASHLOAN_BOT_PRODUCTION_AUDIT_AND_PR_ROADMAP_2026-07-19.md"
+        ROOT / "docs/audits/FLASHLOAN_BOT_PRODUCTION_AUDIT_AND_PR_ROADMAP_2026-07-19.md"
     ).is_file()
     assert (ROOT / "docs/runtime_contract_pr023.md").is_file()
     assert (ROOT / "docs/quarantine_pr023.md").is_file()

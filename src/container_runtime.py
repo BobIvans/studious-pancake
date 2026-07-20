@@ -202,7 +202,10 @@ def check_process_health(
     except (OSError, json.JSONDecodeError) as exc:
         return False, f"state file unreadable: {exc}"
 
-    if payload.get("schema_version") not in {STATE_SCHEMA, "pr025.container-runtime.v1"}:
+    if payload.get("schema_version") not in {
+        STATE_SCHEMA,
+        "pr025.container-runtime.v1",
+    }:
         return False, "unexpected state schema"
     if payload.get("mode") != "disabled":
         return False, "container supervisor is not fail-closed disabled mode"

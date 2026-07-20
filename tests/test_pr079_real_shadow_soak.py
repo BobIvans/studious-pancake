@@ -150,9 +150,7 @@ def test_pr079_accepts_real_reviewed_soak_without_live_enablement() -> None:
 
 def test_pr079_rejects_recorded_fixture_soak() -> None:
     soak, evaluation = _soak(SoakEnvironment.RECORDED)
-    result = evaluate_real_shadow_soak(
-        _package(soak=soak, soak_evaluation=evaluation)
-    )
+    result = evaluate_real_shadow_soak(_package(soak=soak, soak_evaluation=evaluation))
 
     assert result.state is RealShadowSoakState.BLOCKED
     assert "RECORDED_FIXTURE_NOT_REAL_SOAK" in result.blockers
@@ -170,10 +168,7 @@ def test_pr079_rejects_missing_upstream_prerequisite() -> None:
     )
 
     assert result.state is RealShadowSoakState.BLOCKED
-    assert (
-        "PREREQUISITE_MISSING:pr078.security-sbom-chaos-evidence"
-        in result.blockers
-    )
+    assert "PREREQUISITE_MISSING:pr078.security-sbom-chaos-evidence" in result.blockers
 
 
 def test_pr079_rejects_sender_or_live_submission_observation() -> None:

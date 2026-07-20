@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from typing import Any, cast
 
 from src.providers.marginfi.deployment_conformance import (
     EXPECTED_VERIFIED_BUILD_HASH,
@@ -17,32 +18,39 @@ _INSTRUCTION_VECTOR_HASH = "4" * 64
 _RPC_EVIDENCE_HASH = "5" * 64
 
 
-def _shadow_capable_manifest() -> dict[str, object]:
+def _section(manifest: dict[str, Any], name: str) -> dict[str, Any]:
+    return cast(dict[str, Any], manifest[name])
+
+
+def _shadow_capable_manifest() -> dict[str, Any]:
     manifest = deepcopy(load_marginfi_deployment_manifest())
-    manifest["idl"]["sha256"] = _IDL_HASH
-    manifest["idl"]["canonical_program_metadata_verified"] = True
-    manifest["sdk_golden_vectors"]["account_vectors_sha256"] = _ACCOUNT_VECTOR_HASH
-    manifest["sdk_golden_vectors"]["instruction_vectors_sha256"] = (
+    _section(manifest, "idl")["sha256"] = _IDL_HASH
+    _section(manifest, "idl")["canonical_program_metadata_verified"] = True
+    _section(manifest, "sdk_golden_vectors")["account_vectors_sha256"] = (
+        _ACCOUNT_VECTOR_HASH
+    )
+    _section(manifest, "sdk_golden_vectors")["instruction_vectors_sha256"] = (
         _INSTRUCTION_VECTOR_HASH
     )
-    manifest["rpc_evidence"]["sha256"] = _RPC_EVIDENCE_HASH
-    manifest["rpc_evidence"]["min_context_slot"] = 1
-    manifest["rpc_evidence"]["program_executable_verified"] = True
-    manifest["rpc_evidence"]["group_relationships_verified"] = True
-    manifest["rpc_evidence"]["bank_relationships_verified"] = True
-    manifest["rpc_evidence"]["flashloan_metas_verified"] = True
-    manifest["rpc_evidence"]["token_2022_paths_verified"] = True
-    manifest["promotion"]["execution_conformance_verified"] = True
-    manifest["promotion"]["human_reviewed"] = True
+    _section(manifest, "rpc_evidence")["sha256"] = _RPC_EVIDENCE_HASH
+    _section(manifest, "rpc_evidence")["min_context_slot"] = 1
+    _section(manifest, "rpc_evidence")["program_executable_verified"] = True
+    _section(manifest, "rpc_evidence")["group_relationships_verified"] = True
+    _section(manifest, "rpc_evidence")["bank_relationships_verified"] = True
+    _section(manifest, "rpc_evidence")["flashloan_metas_verified"] = True
+    _section(manifest, "rpc_evidence")["token_2022_paths_verified"] = True
+    _section(manifest, "promotion")["execution_conformance_verified"] = True
+    _section(manifest, "promotion")["human_reviewed"] = True
     return manifest
 
 
 def test_pr072_records_verified_build_hash_without_live_promotion() -> None:
     manifest = load_marginfi_deployment_manifest()
-    deployment = manifest["deployment"]
-    promotion = manifest["promotion"]
+    source = _section(manifest, "source")
+    deployment = _section(manifest, "deployment")
+    promotion = _section(manifest, "promotion")
 
-    assert manifest["source"]["source_commit"] == PINNED_SOURCE_COMMIT
+    assert source["source_commit"] == PINNED_SOURCE_COMMIT
     assert deployment["expected_verified_build_hash_sha256"] == (
         EXPECTED_VERIFIED_BUILD_HASH
     )
@@ -66,7 +74,7 @@ def test_pr072_records_verified_build_hash_without_live_promotion() -> None:
 
 def test_pr072_expected_verified_build_hash_is_enforced() -> None:
     manifest = _shadow_capable_manifest()
-    manifest["deployment"]["deployed_program_hash_sha256"] = _OTHER_HASH
+    _section(manifest, "deployment")["deployed_program_hash_sha256"] = _OTHER_HASH
 
     report = evaluate_marginfi_execution_conformance(manifest)
 
@@ -81,4 +89,4 @@ def test_pr072_complete_evidence_can_be_shadow_capable_without_live() -> None:
     report = evaluate_marginfi_execution_conformance(manifest)
 
     assert report.execution_allowed is True
-    assert manifest["promotion"]["live_allowed"] is False
+    assert _section(manifest, "promotion")["live_allowed"] is False

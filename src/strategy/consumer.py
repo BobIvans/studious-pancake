@@ -3,25 +3,80 @@ from __future__ import annotations
 
 import asyncio
 import time
-from dataclasses import dataclass
-from typing import Any, Protocol
+from dataclasses import dataclass, field
+from types import MappingProxyType
+from typing import Any, Mapping, Protocol
 
 from .domain import Opportunity
 from .interfaces import StrategyMode
 from .queue import OpportunityQueue
 from .registry import StrategyRegistry
-from .results import OpportunityResult, OpportunityResultSink, OpportunityResultStatus, make_result
-
-
+from .results import (
+    OpportunityResult,
+    OpportunityResultSink,
+    OpportunityResultStatus,
+    make_result,
+)
 from .tracker import InMemoryOpportunityTracker
 
 
+@dataclass(frozen=True, slots=True)
+class PrecheckDecision:
+    allowed: bool
+    reason_code: str
+    details: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "details", MappingProxyType(dict(self.details)))
+
+
+class OpportunityPrecheck(Protocol):
+    async def assess(self, opportunity: Opportunity) -> PrecheckDecision: ...
+
+
+class ConfiguredCapitalPrecheck:
+    """Fail-closed, config-only precheck pending the PR-032 capital engine merge."""
+
+    def __init__(self, config: Any = None) -> None:
+        self.config = config
+
+    async def assess(self, opportunity: Opportunity) -> PrecheckDecision:
+        monetary = getattr(self.config, "monetary", None)
+        minimum_profit = int(getattr(monetary, "minimum_net_profit_lamports", 0))
+        contingency = int(getattr(monetary, "contingency_lamports", 0))
+        gross_profit = int(opportunity.metadata.get("gross_profit_base_units", 0))
+        required_edge = minimum_profit + contingency
+        if gross_profit <= required_edge:
+            return PrecheckDecision(
+                allowed=False,
+                reason_code="no_trade_insufficient_prechecked_edge",
+                details={
+                    "gross_profit_base_units": gross_profit,
+                    "minimum_net_profit_lamports": minimum_profit,
+                    "contingency_lamports": contingency,
+                    "required_edge_lamports": required_edge,
+                },
+            )
+        return PrecheckDecision(
+            allowed=True,
+            reason_code="capital_precheck_passed",
+            details={
+                "gross_profit_base_units": gross_profit,
+                "required_edge_lamports": required_edge,
+            },
+        )
+
+
 class OpportunityHandler(Protocol):
-    async def handle(self, opportunity: Opportunity, *, mode: StrategyMode) -> OpportunityResult: ...
+    async def handle(
+        self, opportunity: Opportunity, *, mode: StrategyMode
+    ) -> OpportunityResult: ...
 
 
 class ShadowOnlyOpportunityHandler:
-    async def handle(self, opportunity: Opportunity, *, mode: StrategyMode) -> OpportunityResult:
+    async def handle(
+        self, opportunity: Opportunity, *, mode: StrategyMode
+    ) -> OpportunityResult:
         started_at = time.time()
         return make_result(
             opportunity_id=opportunity.opportunity_id,
@@ -31,6 +86,35 @@ class ShadowOnlyOpportunityHandler:
             reason_code="execution_backend_out_of_scope",
             started_at=started_at,
         )
+
+
+class CapitalAwareShadowOpportunityHandler:
+    """Run a read-only capital precheck before accepting shadow candidates."""
+
+    def __init__(
+        self,
+        precheck: OpportunityPrecheck,
+        delegate: OpportunityHandler | None = None,
+    ) -> None:
+        self.precheck = precheck
+        self.delegate = delegate or ShadowOnlyOpportunityHandler()
+
+    async def handle(
+        self, opportunity: Opportunity, *, mode: StrategyMode
+    ) -> OpportunityResult:
+        started_at = time.time()
+        decision = await self.precheck.assess(opportunity)
+        if not decision.allowed:
+            return make_result(
+                opportunity_id=opportunity.opportunity_id,
+                strategy_name=opportunity.strategy_name,
+                mode=mode,
+                status=OpportunityResultStatus.REJECTED,
+                reason_code=decision.reason_code,
+                started_at=started_at,
+                details=dict(decision.details),
+            )
+        return await self.delegate.handle(opportunity, mode=mode)
 
 
 @dataclass(slots=True)
@@ -44,8 +128,14 @@ class OpportunityConsumerMetrics:
 
 
 class OpportunityConsumer:
-    def __init__(self, queue: OpportunityQueue, registry: StrategyRegistry, tracker: InMemoryOpportunityTracker,
-                 handler: OpportunityHandler, sink: OpportunityResultSink) -> None:
+    def __init__(
+        self,
+        queue: OpportunityQueue,
+        registry: StrategyRegistry,
+        tracker: InMemoryOpportunityTracker,
+        handler: OpportunityHandler,
+        sink: OpportunityResultSink,
+    ) -> None:
         self.queue = queue
         self.registry = registry
         self.tracker = tracker
@@ -78,7 +168,13 @@ class OpportunityConsumer:
     async def process_one(self, opp: Opportunity) -> None:
         started = time.time()
         if opp.expires_at <= started:
-            await self._record(opp, StrategyMode.DISABLED, OpportunityResultStatus.REJECTED, "opportunity_expired", started)
+            await self._record(
+                opp,
+                StrategyMode.DISABLED,
+                OpportunityResultStatus.REJECTED,
+                "opportunity_expired",
+                started,
+            )
             return
         if not await self.tracker.claim(opp.opportunity_id):
             self.metrics.duplicates += 1
@@ -86,33 +182,87 @@ class OpportunityConsumer:
         try:
             strategy = self.registry.get(opp.strategy_name)
             if strategy is None:
-                await self._record(opp, StrategyMode.DISABLED, OpportunityResultStatus.REJECTED, "unknown_strategy", started)
+                await self._record(
+                    opp,
+                    StrategyMode.DISABLED,
+                    OpportunityResultStatus.REJECTED,
+                    "unknown_strategy",
+                    started,
+                )
             elif strategy.mode is StrategyMode.DISABLED:
-                await self._record(opp, strategy.mode, OpportunityResultStatus.REJECTED, strategy.disabled_reason or "strategy_disabled", started)
+                await self._record(
+                    opp,
+                    strategy.mode,
+                    OpportunityResultStatus.REJECTED,
+                    strategy.disabled_reason or "strategy_disabled",
+                    started,
+                )
             elif strategy.mode is StrategyMode.LIVE:
-                await self._record(opp, strategy.mode, OpportunityResultStatus.REJECTED, "live_execution_out_of_scope", started)
+                await self._record(
+                    opp,
+                    strategy.mode,
+                    OpportunityResultStatus.REJECTED,
+                    "live_execution_out_of_scope",
+                    started,
+                )
             elif strategy.mode is StrategyMode.SHADOW:
                 result = await self.handler.handle(opp, mode=strategy.mode)
                 await self.sink.record(result)
-                self.metrics.handled += 1
+                if result.status is OpportunityResultStatus.REJECTED:
+                    self.metrics.rejected += 1
+                else:
+                    self.metrics.handled += 1
             else:
-                await self._record(opp, StrategyMode.DISABLED, OpportunityResultStatus.REJECTED, "invalid_strategy_mode", started)
+                await self._record(
+                    opp,
+                    StrategyMode.DISABLED,
+                    OpportunityResultStatus.REJECTED,
+                    "invalid_strategy_mode",
+                    started,
+                )
         except asyncio.CancelledError:
             self.metrics.cancelled += 1
-            await self._record(opp, StrategyMode.DISABLED, OpportunityResultStatus.CANCELLED, "consumer_cancelled", started)
+            await self._record(
+                opp,
+                StrategyMode.DISABLED,
+                OpportunityResultStatus.CANCELLED,
+                "consumer_cancelled",
+                started,
+            )
             raise
         except Exception as exc:
             self.metrics.failed += 1
             self.metrics.last_error = str(exc)
-            await self._record(opp, StrategyMode.DISABLED, OpportunityResultStatus.FAILED, "handler_exception", started,
-                               {"error_type": type(exc).__name__})
+            await self._record(
+                opp,
+                StrategyMode.DISABLED,
+                OpportunityResultStatus.FAILED,
+                "handler_exception",
+                started,
+                {"error_type": type(exc).__name__},
+            )
         finally:
             await self.tracker.terminal(opp.opportunity_id)
 
-    async def _record(self, opp: Opportunity, mode: StrategyMode, status: OpportunityResultStatus, reason: str,
-                      started: float, details: dict[str, Any] | None = None) -> None:
+    async def _record(
+        self,
+        opp: Opportunity,
+        mode: StrategyMode,
+        status: OpportunityResultStatus,
+        reason: str,
+        started: float,
+        details: dict[str, Any] | None = None,
+    ) -> None:
         if status is OpportunityResultStatus.REJECTED:
             self.metrics.rejected += 1
-        await self.sink.record(make_result(opportunity_id=opp.opportunity_id, strategy_name=opp.strategy_name,
-                                           mode=mode, status=status, reason_code=reason,
-                                           started_at=started, details=details))
+        await self.sink.record(
+            make_result(
+                opportunity_id=opp.opportunity_id,
+                strategy_name=opp.strategy_name,
+                mode=mode,
+                status=status,
+                reason_code=reason,
+                started_at=started,
+                details=details,
+            )
+        )

@@ -69,8 +69,9 @@ class CircularArbitrageStrategy(BaseDetectionStrategy):
         detector_config = _circular_detector_config(context.config)
         if not self._configured_pairs:
             self.detector = CircularArbitrageDetector(_pairs_from_config(detector_config))
-        if detector_config is not None:
-            self.poll_interval_seconds = detector_config.poll_interval_ms / 1000
+        poll_interval_ms = getattr(detector_config, "poll_interval_ms", None)
+        if poll_interval_ms is not None:
+            self.poll_interval_seconds = int(poll_interval_ms) / 1000
 
     async def detect_once(self) -> Iterable[Opportunity]:
         if self._context is None:

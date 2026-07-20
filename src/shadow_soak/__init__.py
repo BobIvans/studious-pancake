@@ -1,4 +1,4 @@
-"""PR-060 shadow-soak evidence validation boundary."""
+"""PR-060 and PR-079 shadow-soak evidence validation boundaries."""
 
 from .evidence import (
     MINIMUM_SOAK_SECONDS,
@@ -18,11 +18,29 @@ from .evidence import (
     stable_json,
     to_pr047_shadow_soak_reference,
 )
+from .real_soak import (
+    REAL_SOAK_RESULT_SCHEMA_VERSION,
+    REAL_SOAK_SCHEMA_VERSION,
+    REQUIRED_PREREQUISITES,
+    ImmutableSoakBundle,
+    RealShadowSoakPackage,
+    RealShadowSoakReadiness,
+    RealShadowSoakState,
+    SoakPrerequisiteEvidence,
+    evaluate_real_shadow_soak,
+)
 
 __all__ = [
     "MINIMUM_SOAK_SECONDS",
+    "REAL_SOAK_RESULT_SCHEMA_VERSION",
+    "REAL_SOAK_SCHEMA_VERSION",
+    "REQUIRED_PREREQUISITES",
     "RESULT_SCHEMA_VERSION",
     "SCHEMA_VERSION",
+    "ImmutableSoakBundle",
+    "RealShadowSoakPackage",
+    "RealShadowSoakReadiness",
+    "RealShadowSoakState",
     "ReplayEvidence",
     "ShadowSoakError",
     "ShadowSoakEvaluation",
@@ -32,6 +50,8 @@ __all__ = [
     "SoakArtifactKind",
     "SoakArtifactReference",
     "SoakEnvironment",
+    "SoakPrerequisiteEvidence",
+    "evaluate_real_shadow_soak",
     "evaluate_shadow_soak",
     "sha256_payload",
     "stable_json",

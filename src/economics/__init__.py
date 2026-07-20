@@ -20,6 +20,12 @@ from src.economics.durable_reservations import (
     DurableCapitalReservationResult,
     WalletBalanceSnapshot,
 )
+from src.economics.exact_fee_workflow import (
+    ExactFeeCapitalResult,
+    ExactFeeCapitalStatus,
+    ExactFeeCapitalWorkflow,
+    candidate_with_exact_message_fee,
+)
 
 __all__ = [
     "AtomicCapitalLedger",
@@ -32,10 +38,14 @@ __all__ = [
     "CapitalReservation",
     "DurableCapitalCoordinator",
     "DurableCapitalReservationResult",
+    "ExactFeeCapitalResult",
+    "ExactFeeCapitalStatus",
+    "ExactFeeCapitalWorkflow",
     "MessageFeeQuote",
     "NativeCostBreakdown",
     "NoTradeReason",
     "PolicyProfile",
     "WalletBalanceSnapshot",
+    "candidate_with_exact_message_fee",
     "lamports_from_sol_string",
 ]

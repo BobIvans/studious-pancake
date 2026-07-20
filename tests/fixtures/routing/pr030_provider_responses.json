@@ -1,0 +1,74 @@
+{
+  "jupiter": {
+    "inputMint": "So11111111111111111111111111111111111111112",
+    "outputMint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+    "inAmount": "1000000",
+    "outAmount": "150000",
+    "otherAmountThreshold": "148000",
+    "swapMode": "ExactIn",
+    "slippageBps": 50,
+    "routePlan": [{"swapInfo": {"label": "Meteora"}}],
+    "computeBudgetInstructions": [],
+    "setupInstructions": [],
+    "swapInstruction": {
+      "programId": "11111111111111111111111111111111",
+      "accounts": [],
+      "data": "AA=="
+    },
+    "cleanupInstruction": null,
+    "otherInstructions": [],
+    "addressesByLookupTableAddress": {},
+    "blockhashWithMetadata": {
+      "blockhash": [1, 2, 3],
+      "lastValidBlockHeight": 123,
+      "fetchedAt": "2026-07-20T18:00:00Z"
+    },
+    "requestId": "jup-recorded-1",
+    "contextSlot": 350000000,
+    "priceImpactPct": "0.001"
+  },
+  "okx": {
+    "code": "0",
+    "data": {
+      "requestId": "okx-recorded-1",
+      "routerResult": {
+        "chainIndex": "501",
+        "fromTokenAmount": "1000000",
+        "toTokenAmount": "149000",
+        "minReceiveAmount": "147000",
+        "priceImpactPercent": "0.002",
+        "tradeFee": "12",
+        "dexRouterList": []
+      },
+      "instructionLists": [{
+        "programId": "11111111111111111111111111111111",
+        "accounts": [],
+        "data": "AA=="
+      }],
+      "addressLookupTableAccount": [],
+      "contextSlot": 350000001,
+      "timestamp": "2026-07-20T18:00:01Z"
+    }
+  },
+  "openocean": {
+    "data": {
+      "inAmount": "1000000",
+      "outAmount": "147000",
+      "sources": ["Jupiter", "Titan"],
+      "priceImpact": "0.003",
+      "fee": "unknown",
+      "traceId": "oo-recorded-1",
+      "contextSlot": 350000002,
+      "timestamp": "2026-07-20T18:00:02Z"
+    }
+  },
+  "odos": {
+    "pathId": "odos-recorded-1",
+    "outAmounts": ["146000"],
+    "pathViz": ["Meteora"],
+    "priceImpact": "0.004",
+    "providerFee": "8",
+    "contextSlot": 350000003,
+    "timestamp": "2026-07-20T18:00:03Z"
+  }
+}

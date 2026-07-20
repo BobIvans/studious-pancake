@@ -93,13 +93,19 @@ class AtomicVerticalRuntimeInputs:
                     "provider_pins values must be sha256 hex digests",
                     details={"field": f"provider_pins.{name}"},
                 )
-        object.__setattr__(self, "provider_pins", MappingProxyType(dict(self.provider_pins)))
+        object.__setattr__(
+            self,
+            "provider_pins",
+            MappingProxyType(dict(self.provider_pins)),
+        )
 
 
 class AtomicVerticalCandidateAdapter(Protocol):
     """Build one verified atomic vertical candidate for a runner opportunity."""
 
-    def build(self, context: PaperShadowStageContext) -> AtomicVerticalRuntimeInputs: ...
+    def build(
+        self, context: PaperShadowStageContext
+    ) -> AtomicVerticalRuntimeInputs: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -154,7 +160,9 @@ class AtomicVerticalRuntimeStageSuite:
             "live_mutation_allowed": False,
         }
 
-    async def planner_stage(self, context: PaperShadowStageContext) -> Mapping[str, Any]:
+    async def planner_stage(
+        self, context: PaperShadowStageContext
+    ) -> Mapping[str, Any]:
         self._require_previous(context, PaperShadowStageName.CAPITAL_SIZING)
         record = await self._ensure_record(context)
         trace = record.result.trace
@@ -171,7 +179,9 @@ class AtomicVerticalRuntimeStageSuite:
             "live_mutation_allowed": False,
         }
 
-    async def compiler_stage(self, context: PaperShadowStageContext) -> Mapping[str, Any]:
+    async def compiler_stage(
+        self, context: PaperShadowStageContext
+    ) -> Mapping[str, Any]:
         self._require_previous(
             context,
             PaperShadowStageName.PLANNER,
@@ -273,7 +283,9 @@ class AtomicVerticalRuntimeStageSuite:
         compiled_hash = result.finalized.compiled.message_hash
         reconciliation_hash = result.reconciliation.message_hash
         self._assert_same_hash(trace.message_hash, compiled_hash, "compiled")
-        self._assert_same_hash(trace.message_hash, reconciliation_hash, "reconciliation")
+        self._assert_same_hash(
+            trace.message_hash, reconciliation_hash, "reconciliation"
+        )
         if not trace.required_accounts:
             raise AtomicRuntimeStageError(
                 AtomicRuntimeStageErrorCode.MISSING_RUNTIME_INPUTS,
@@ -295,7 +307,10 @@ class AtomicVerticalRuntimeStageSuite:
             raise AtomicRuntimeStageError(
                 AtomicRuntimeStageErrorCode.WRONG_STAGE_ORDER,
                 f"{context.stage.value} requires prior {stage.value} output",
-                details={"required_stage": stage.value, "current_stage": context.stage.value},
+                details={
+                    "required_stage": stage.value,
+                    "current_stage": context.stage.value,
+                },
             )
         return output
 

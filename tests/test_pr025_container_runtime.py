@@ -79,6 +79,7 @@ def test_safe_idle_container_supervisor_has_live_process_heartbeat(tmp_path: Pat
     assert not state.exists()
 
 
+@pytest.mark.enable_socket
 def test_container_port_collision_leaves_no_healthy_state(tmp_path: Path):
     state = tmp_path / "runtime.json"
     listener, port = _reserved_loopback_listener()

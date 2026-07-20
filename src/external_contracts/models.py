@@ -6,7 +6,7 @@ from datetime import datetime
 from enum import StrEnum
 import re
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -46,6 +46,21 @@ class CredentialMode(StrEnum):
     WHITELIST_API_KEY = "whitelist-api-key"
 
 
+class HttpMethod(StrEnum):
+    GET = "GET"
+    POST = "POST"
+
+
+class JsonValueType(StrEnum):
+    OBJECT = "object"
+    ARRAY = "array"
+    STRING = "string"
+    NUMBER = "number"
+    INTEGER = "integer"
+    BOOLEAN = "boolean"
+    NULL = "null"
+
+
 class PromotionState(StrEnum):
     LOCAL_ARTIFACT_INTEGRITY_ONLY = "local-artifact-integrity-only"
     REMOTE_SCHEMA_FRESHNESS_PENDING = "remote-schema-freshness-pending"
@@ -67,10 +82,37 @@ _PROVIDER_HOSTS: dict[str, frozenset[str]] = {
     "odos": frozenset({"docs.odos.xyz", "github.com"}),
     "marginfi": frozenset({"github.com", "docs.marginfi.com"}),
 }
+_JSON_PATH_SEGMENT_RE = re.compile(r"[A-Za-z0-9_\-]+")
 
 
 class FrozenModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
+
+
+class JsonPathAssertion(FrozenModel):
+    path: str
+    value_type: JsonValueType | None = None
+    min_size: int | None = Field(default=None, ge=0)
+    expected_value: str | int | float | bool | None = None
+
+    @field_validator("path")
+    @classmethod
+    def _valid_json_path(cls, value: str) -> str:
+        if not value:
+            raise ValueError("json assertion path must not be empty")
+        segments = value.split(".")
+        if any(not _JSON_PATH_SEGMENT_RE.fullmatch(segment) for segment in segments):
+            raise ValueError(f"invalid json path segment in {value!r}")
+        return value
+
+    @model_validator(mode="after")
+    def _min_size_requires_collection(self) -> "JsonPathAssertion":
+        if self.min_size is not None and self.value_type not in {
+            JsonValueType.ARRAY,
+            JsonValueType.OBJECT,
+        }:
+            raise ValueError("min_size assertions require array or object value_type")
+        return self
 
 
 class ArtifactPin(FrozenModel):
@@ -132,6 +174,7 @@ class ContractEvidence(FrozenModel):
 
 class ConformanceProbe(FrozenModel):
     url: str
+    method: HttpMethod = HttpMethod.GET
     credential_env: str | None = None
     credential_mode: CredentialMode = CredentialMode.NONE
     required_env: tuple[str, ...] = ()
@@ -140,6 +183,11 @@ class ConformanceProbe(FrozenModel):
     credential_header_env: str | None = None
     expected_status: int = Field(default=200, ge=100, le=599)
     required_json_paths: tuple[str, ...] = ()
+    json_assertions: tuple[JsonPathAssertion, ...] = ()
+    business_code_path: str | None = None
+    business_code_equals: str | int | None = None
+    json_body: dict[str, Any] | None = None
+    timeout_seconds: int = Field(default=10, ge=1, le=60)
 
     @field_validator("url")
     @classmethod
@@ -168,6 +216,22 @@ class ConformanceProbe(FrozenModel):
             raise ValueError("invalid credential header name")
         return value
 
+    @field_validator("required_json_paths", "business_code_path")
+    @classmethod
+    def _json_path_names(
+        cls, value: tuple[str, ...] | str | None
+    ) -> tuple[str, ...] | str | None:
+        if value is None:
+            return None
+        paths = (value,) if isinstance(value, str) else value
+        for path in paths:
+            segments = path.split(".")
+            if not path or any(
+                not _JSON_PATH_SEGMENT_RE.fullmatch(segment) for segment in segments
+            ):
+                raise ValueError(f"invalid json path: {path!r}")
+        return value
+
     @model_validator(mode="after")
     def _credential_contract(self) -> "ConformanceProbe":
         if self.credential_env and not self.required_env:
@@ -194,7 +258,25 @@ class ConformanceProbe(FrozenModel):
                 raise ValueError(
                     f"okx-signed probe missing required env: {sorted(missing)}"
                 )
+        if (self.business_code_path is None) != (self.business_code_equals is None):
+            raise ValueError("business code assertions require path and expected value")
+        self._validate_protocol_shape()
         return self
+
+    def _validate_protocol_shape(self) -> None:
+        parsed = urlparse(self.url)
+        hostname = (parsed.hostname or "").lower()
+        query = parse_qs(parsed.query)
+        if hostname == "api.jup.ag" and parsed.path == "/swap/v2/build":
+            if not query.get("taker"):
+                raise ValueError("Jupiter /swap/v2/build conformance requires taker")
+        if "jito" in hostname and parsed.path.endswith("/getTipAccounts"):
+            if self.method is not HttpMethod.POST:
+                raise ValueError("Jito getTipAccounts conformance must use POST")
+            if not self.json_body or self.json_body.get("method") != "getTipAccounts":
+                raise ValueError(
+                    "Jito getTipAccounts conformance requires JSON-RPC body"
+                )
 
 
 class ExternalContract(FrozenModel):

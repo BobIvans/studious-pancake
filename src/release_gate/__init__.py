@@ -1,5 +1,13 @@
 """PR-047 production release evidence gate."""
 
+from .actual_evidence import (
+    REQUIRED_ACTUAL_EVIDENCE_KINDS,
+    ActualEvidenceArtifact,
+    ActualEvidenceGate,
+    ActualEvidenceGateResult,
+    ActualEvidenceKind,
+    ActualEvidencePackage,
+)
 from .gate import ReleaseGate, ReleaseGateResult
 from .models import (
     AccountOwnershipCheck,
@@ -34,6 +42,11 @@ from .operational_drills import (
 
 __all__ = [
     "AccountOwnershipCheck",
+    "ActualEvidenceArtifact",
+    "ActualEvidenceGate",
+    "ActualEvidenceGateResult",
+    "ActualEvidenceKind",
+    "ActualEvidencePackage",
     "DEFAULT_REQUIRED_FAILURE_AREAS",
     "DrillKind",
     "DrillRecord",
@@ -49,6 +62,7 @@ __all__ = [
     "OperationalReadinessResult",
     "OwnershipKind",
     "PinKind",
+    "REQUIRED_ACTUAL_EVIDENCE_KINDS",
     "ReleaseArtifacts",
     "ReleaseGate",
     "ReleaseGateResult",

@@ -4,41 +4,46 @@
     {
       "id": "jupiter.swap-v2-build",
       "provider": "jupiter",
-      "status": "disabled-unverified",
-      "capabilities": [
-        "quote"
-      ],
+      "status": "active",
+      "capabilities": ["quote", "composable-instructions"],
       "official_source_url": "https://dev.jup.ag/docs/swap/build-swap-transaction",
-      "source_ref": "documentation-reviewed-2026-07-20",
-      "artifacts": [],
+      "source_ref": "pr030-recorded-contract-2026-07-20",
+      "artifacts": [{
+        "path": "contracts/routing/pr030_provider_responses.json",
+        "sha256": "7e45ce9cc8c59082006d1434e7282d7ae39c772f4c5aeac4a017a44a3bc4a518",
+        "kind": "sanitized-response",
+        "fetched_at": "2026-07-20T18:00:00Z",
+        "required": true
+      }],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
       "conformance_probe": null,
-      "notes": "No sanitized versioned response fixture is pinned yet; execution remains denied."
+      "notes": "PR-030 pins a sanitized Swap V2 build response and fail-closed contract tests. Jupiter is the only composable provider; live execution remains blocked by later MarginFi, simulation, reconciliation and permit gates."
     },
     {
       "id": "okx.solana-swap-instruction-v6",
       "provider": "okx",
-      "status": "disabled-unverified",
-      "capabilities": [
-        "quote"
-      ],
+      "status": "discovery-only",
+      "capabilities": ["quote"],
       "official_source_url": "https://web3.okx.com/build/dev-docs/dex-api/dex-swap",
-      "source_ref": "documentation-reviewed-2026-07-20",
-      "artifacts": [],
+      "source_ref": "pr030-recorded-contract-2026-07-20",
+      "artifacts": [{
+        "path": "contracts/routing/pr030_provider_responses.json",
+        "sha256": "7e45ce9cc8c59082006d1434e7282d7ae39c772f4c5aeac4a017a44a3bc4a518",
+        "kind": "sanitized-response",
+        "fetched_at": "2026-07-20T18:00:01Z",
+        "required": true
+      }],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
       "conformance_probe": null,
-      "notes": "Authentication vectors and instruction fixtures require a separate reviewed promotion."
+      "notes": "PR-030 validates normalized discovery data and instruction shape, but OKX remains discovery-only until independent credentialed conformance and composed simulation evidence."
     },
     {
       "id": "jito.low-latency-json-rpc",
       "provider": "jito",
       "status": "disabled-unverified",
-      "capabilities": [
-        "bundle-status",
-        "read-only-rpc"
-      ],
+      "capabilities": ["bundle-status", "read-only-rpc"],
       "official_source_url": "https://docs.jito.wtf/lowlatencytxnsend/",
       "source_ref": "documentation-reviewed-2026-07-20",
       "artifacts": [],
@@ -50,42 +55,46 @@
     {
       "id": "openocean.solana-v4-quote",
       "provider": "openocean",
-      "status": "disabled-unverified",
-      "capabilities": [
-        "quote"
-      ],
+      "status": "discovery-only",
+      "capabilities": ["quote"],
       "official_source_url": "https://docs.openocean.finance/docs/solana-swap-api",
-      "source_ref": "documentation-reviewed-2026-07-20",
-      "artifacts": [],
+      "source_ref": "pr030-recorded-contract-2026-07-20",
+      "artifacts": [{
+        "path": "contracts/routing/pr030_provider_responses.json",
+        "sha256": "7e45ce9cc8c59082006d1434e7282d7ae39c772f4c5aeac4a017a44a3bc4a518",
+        "kind": "sanitized-response",
+        "fetched_at": "2026-07-20T18:00:02Z",
+        "required": true
+      }],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
       "conformance_probe": null,
-      "notes": "Discovery is denied until credentialed sanitized fixtures are reviewed."
+      "notes": "OpenOcean is admitted for credentialed discovery only. Correlation labels preserve disclosed Jupiter/Titan underliers and no composable execution capability is claimed."
     },
     {
       "id": "odos.solana-api",
       "provider": "odos",
-      "status": "disabled-unverified",
-      "capabilities": [
-        "quote",
-        "immutable-transaction"
-      ],
+      "status": "discovery-only",
+      "capabilities": ["quote", "immutable-transaction"],
       "official_source_url": "https://docs.odos.xyz/api/solana",
-      "source_ref": "documentation-reviewed-2026-07-20",
-      "artifacts": [],
+      "source_ref": "pr030-recorded-contract-2026-07-20",
+      "artifacts": [{
+        "path": "contracts/routing/pr030_provider_responses.json",
+        "sha256": "7e45ce9cc8c59082006d1434e7282d7ae39c772f4c5aeac4a017a44a3bc4a518",
+        "kind": "sanitized-response",
+        "fetched_at": "2026-07-20T18:00:03Z",
+        "required": true
+      }],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
       "conformance_probe": null,
-      "notes": "Assembled transactions are immutable and cannot be inserted into a flash-loan composition."
+      "notes": "Odos quote data is admitted for discovery; assembled transactions remain immutable and cannot be inserted into a flash-loan composition."
     },
     {
       "id": "marginfi.project-zero-mainnet",
       "provider": "marginfi",
       "status": "disabled-unverified",
-      "capabilities": [
-        "protocol-source",
-        "read-only-rpc"
-      ],
+      "capabilities": ["protocol-source", "read-only-rpc"],
       "official_source_url": "https://github.com/0dotxyz/marginfi-v2/tree/d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
       "source_ref": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
       "artifacts": [
@@ -107,7 +116,7 @@
       "deployment_program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
       "cluster": "mainnet-beta",
       "conformance_probe": null,
-      "notes": "Official source and deployment id are pinned, but IDL, binary layouts, account fixtures and instruction conformance remain PR-028 work."
+      "notes": "Official source and deployment id are pinned, but live execution remains denied until the complete MarginFi release gates are satisfied."
     }
   ]
 }

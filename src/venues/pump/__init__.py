@@ -1,7 +1,8 @@
-"""PR-023 QUARANTINE: fixture-only Pump venue package."""
+"""Shadow-only Pump venue package with official provenance guards."""
 
-__runtime_capability__ = "fixture-only"
-__quarantined__ = True
+__runtime_capability__ = "shadow-ready"
+__quarantined__ = False
+
 from .adapter import PumpAdapter, PumpContractManifest, TOKEN_2022_PROGRAM, TOKEN_PROGRAM
 from .models import (
     FeeBreakdown,
@@ -14,6 +15,13 @@ from .models import (
     ReasonCode,
     SwapDirection,
 )
+from .provenance import (
+    PumpManifestStatus,
+    PumpOfficialSource,
+    PumpProvenanceError,
+    manifest_shadow_errors,
+    provenance_from_family,
+)
 
 __all__ = [
     "FeeBreakdown",
@@ -21,6 +29,9 @@ __all__ = [
     "PumpContractManifest",
     "PumpFamily",
     "PumpLifecycle",
+    "PumpManifestStatus",
+    "PumpOfficialSource",
+    "PumpProvenanceError",
     "PumpQuote",
     "PumpSnapshot",
     "Rational",
@@ -29,4 +40,6 @@ __all__ = [
     "SwapDirection",
     "TOKEN_2022_PROGRAM",
     "TOKEN_PROGRAM",
+    "manifest_shadow_errors",
+    "provenance_from_family",
 ]

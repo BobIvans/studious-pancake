@@ -13,7 +13,10 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.security.secret_scan import PlaintextKeyMaterialError, assert_no_plaintext_key_material
+from src.security.secret_scan import (
+    PlaintextKeyMaterialError,
+    assert_no_plaintext_key_material,
+)
 from src.security.supply_chain import (
     DEFAULT_DEPENDENCY_AUDIT_POLICY,
     Severity,
@@ -62,18 +65,24 @@ def _load_records(path: Path | None) -> tuple[VulnerabilityRecord, ...]:
     if not isinstance(payload, list):
         raise ValueError("vulnerability input must be a list of records")
     records: list[VulnerabilityRecord] = []
+    known_severities = {severity.value for severity in Severity}
     for item in payload:
         if not isinstance(item, dict):
             raise ValueError("vulnerability records must be JSON objects")
+        raw_severity = str(item.get("severity", "unknown")).lower()
+        severity = (
+            Severity(raw_severity)
+            if raw_severity in known_severities
+            else Severity.UNKNOWN
+        )
         records.append(
             VulnerabilityRecord(
                 package=str(item["package"]),
                 vulnerability_id=str(item["vulnerability_id"]),
-                severity=Severity(str(item.get("severity", "unknown")).lower())
-                if str(item.get("severity", "unknown")).lower()
-                in {severity.value for severity in Severity}
-                else Severity.UNKNOWN,
-                fixed_versions=tuple(str(value) for value in item.get("fixed_versions", ())),
+                severity=severity,
+                fixed_versions=tuple(
+                    str(value) for value in item.get("fixed_versions", ())
+                ),
                 source=str(item.get("source", "normalized-json")),
             )
         )

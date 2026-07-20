@@ -73,9 +73,8 @@ def _relative_or_uri(value: str, field: str) -> str:
         return cleaned
     normalized = cleaned.replace("\\", "/")
     parts = normalized.split("/")
-    if (
-        normalized.startswith(("/", "~"))
-        or any(part in {"", ".", ".."} for part in parts)
+    if normalized.startswith(("/", "~")) or any(
+        part in {"", ".", ".."} for part in parts
     ):
         raise ShadowSoakError(f"{field} must be a normalized relative path or URI")
     return normalized
@@ -84,8 +83,7 @@ def _relative_or_uri(value: str, field: str) -> str:
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
         return {
-            item.name: _jsonable(getattr(value, item.name))
-            for item in fields(value)
+            item.name: _jsonable(getattr(value, item.name)) for item in fields(value)
         }
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")

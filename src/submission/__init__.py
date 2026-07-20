@@ -1,5 +1,24 @@
 """Permit-bound RPC/Jito submission boundary introduced by roadmap PR-045."""
 
+from .canonical_sender import (
+    CANONICAL_STATUS_ROUTES,
+    DEFAULT_JITO_BLOCK_ENGINE_URL,
+    JITO_BUNDLE_PATH,
+    JITO_BUNDLE_STATUS_PATH,
+    JITO_INFLIGHT_STATUS_PATH,
+    JITO_SINGLE_TRANSACTION_PATH,
+    JITO_TIP_ACCOUNTS_PATH,
+    SOLANA_SIGNATURE_STATUS_METHOD,
+    CanonicalEndpointRoute,
+    CanonicalFollowup,
+    CanonicalFollowupAction,
+    CanonicalSenderSettings,
+    CanonicalSubmissionStack,
+    JitoCredentialMode,
+    build_canonical_submission_stack,
+    canonical_followup_for_observation,
+    canonical_status_routes,
+)
 from .durable import DurableSubmissionResult, PermitBoundSubmissionService
 from .permit_bound import (
     AsyncJsonHttpTransport,
@@ -35,10 +54,24 @@ from .permit_bound import (
 )
 
 __all__ = [
+    "CANONICAL_STATUS_ROUTES",
+    "DEFAULT_JITO_BLOCK_ENGINE_URL",
+    "JITO_BUNDLE_PATH",
+    "JITO_BUNDLE_STATUS_PATH",
+    "JITO_INFLIGHT_STATUS_PATH",
+    "JITO_SINGLE_TRANSACTION_PATH",
+    "JITO_TIP_ACCOUNTS_PATH",
+    "SOLANA_SIGNATURE_STATUS_METHOD",
     "AsyncJsonHttpTransport",
+    "CanonicalEndpointRoute",
+    "CanonicalFollowup",
+    "CanonicalFollowupAction",
+    "CanonicalSenderSettings",
+    "CanonicalSubmissionStack",
     "DurableSubmissionResult",
     "ErrorDisposition",
     "HttpResponse",
+    "JitoCredentialMode",
     "JitoSender",
     "JitoUuidAuth",
     "LivePermitIssuer",
@@ -59,6 +92,9 @@ __all__ = [
     "TipAccountSnapshot",
     "TipEvidence",
     "TransportKind",
+    "build_canonical_submission_stack",
+    "canonical_followup_for_observation",
+    "canonical_status_routes",
     "classify_jito_bundle_status",
     "classify_jito_inflight_status",
     "classify_signature_statuses",

@@ -10,10 +10,10 @@ from dataclasses import dataclass
 from typing import Any
 
 from src.capabilities import CapabilityMatrix
+from src.economics.runtime_precheck import build_capital_precheck
 from src.strategy import OpportunityQueue, StrategyRegistry, StrategyRuntime
 from src.strategy.consumer import (
     CapitalAwareShadowOpportunityHandler,
-    ConfiguredCapitalPrecheck,
     InMemoryOpportunityTracker,
     OpportunityConsumer,
     OpportunityHandler,
@@ -206,7 +206,7 @@ def build_application(
         ranker=ArbitrageScorerRanker(),
         tracker=tracker,
     )
-    precheck = capital_precheck or ConfiguredCapitalPrecheck(config)
+    precheck = capital_precheck or build_capital_precheck(config)
     runtime = StrategyRuntime(
         registry,
         queue,

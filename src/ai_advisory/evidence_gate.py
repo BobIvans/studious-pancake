@@ -349,7 +349,10 @@ class AIAdvisoryReadinessGate:
     def __init__(self, policy: AIAdvisoryGatePolicy | None = None) -> None:
         self.policy = policy or AIAdvisoryGatePolicy()
 
-    def evaluate(self, evidence: AIAdvisoryEvidencePackage) -> AIAdvisoryReadinessResult:
+    def evaluate(
+        self,
+        evidence: AIAdvisoryEvidencePackage,
+    ) -> AIAdvisoryReadinessResult:
         blockers: list[str] = []
         warnings: list[str] = []
         checks = 0
@@ -377,7 +380,8 @@ class AIAdvisoryReadinessGate:
             check(
                 registry_entry.advisory_only
                 and not registry_entry.trading_authority_enabled
-                and registry_entry.promotion_state in self.policy.allowed_promotion_states,
+                and registry_entry.promotion_state
+                in self.policy.allowed_promotion_states,
                 AdvisoryFailureCode.MODEL_TRADING_AUTHORITY_ENABLED,
                 model_id,
             )

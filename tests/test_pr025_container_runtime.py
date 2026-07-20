@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import socket
 import subprocess
 import sys
 import time
@@ -30,6 +31,36 @@ def _wait_for_file(path: Path, process: subprocess.Popen[str]) -> None:
     raise AssertionError("container supervisor did not create its heartbeat")
 
 
+def _wait_for_missing(path: Path) -> None:
+    deadline = time.monotonic() + 8.0
+    while time.monotonic() < deadline:
+        if not path.exists():
+            return
+        time.sleep(0.05)
+    raise AssertionError(f"container supervisor left stale state file: {path}")
+
+
+def _terminate(process: subprocess.Popen[str]) -> tuple[str, str]:
+    if process.poll() is None:
+        process.terminate()
+    try:
+        stdout, stderr = process.communicate(timeout=5)
+    except subprocess.TimeoutExpired:
+        process.kill()
+        stdout, stderr = process.communicate(timeout=5)
+        raise AssertionError(
+            "container supervisor ignored SIGTERM and required SIGKILL\n"
+            f"stdout={stdout}\nstderr={stderr}"
+        )
+    return stdout, stderr
+
+
+def _container_env(**overrides: str) -> dict[str, str]:
+    env = os.environ.copy()
+    env.update(overrides)
+    return env
+
+
 def test_safe_idle_container_supervisor_has_live_process_heartbeat(tmp_path: Path):
     state = tmp_path / "runtime.json"
     process = subprocess.Popen(
@@ -45,6 +76,7 @@ def test_safe_idle_container_supervisor_has_live_process_heartbeat(tmp_path: Pat
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
+        env=_container_env(FLASHLOAN_HEALTH_PORT="0"),
     )
     try:
         _wait_for_file(state, process)
@@ -57,8 +89,42 @@ def test_safe_idle_container_supervisor_has_live_process_heartbeat(tmp_path: Pat
         assert payload["diagnostic"] == "SAFE_IDLE_NO_EXECUTION"
         assert payload["pid"] == process.pid
     finally:
-        process.terminate()
-        process.wait(timeout=5)
+        _terminate(process)
+    _wait_for_missing(state)
+
+
+def test_safe_idle_container_supervisor_cleans_state_when_http_bind_fails(
+    tmp_path: Path,
+):
+    state = tmp_path / "runtime.json"
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as reserved:
+        reserved.bind(("127.0.0.1", 0))
+        reserved.listen(1)
+        port = str(int(reserved.getsockname()[1]))
+
+        process = subprocess.Popen(
+            [
+                sys.executable,
+                "-m",
+                "src.cli",
+                "container",
+                "--state-file",
+                str(state),
+            ],
+            cwd=ROOT,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=_container_env(
+                FLASHLOAN_HEALTH_HOST="127.0.0.1",
+                FLASHLOAN_HEALTH_PORT=port,
+            ),
+        )
+        stdout, stderr = process.communicate(timeout=5)
+
+    assert process.returncode != 0
+    assert "Address already in use" in stderr or "address already in use" in stderr
+    assert stdout == ""
     assert not state.exists()
 
 

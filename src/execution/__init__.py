@@ -57,6 +57,17 @@ from .transaction_simulator import (
     parse_simulation_response,
     simulate_exact,
 )
+from .exact_simulation import (
+    ExactSimulationError,
+    ExactSimulationErrorCode,
+    ExactSimulationFinalizer,
+    ExactSimulationPolicy,
+    ExactSimulationReport,
+    FailureDisposition,
+    FinalizedSimulation,
+    RpcSimulationEvidence,
+    validate_exact_submission_binding,
+)
 from .journal import InMemoryExecutionJournal, MIGRATION_VERSION, SQLiteAttemptJournal
 from .lifecycle import SubmissionEnvelope, TransactionLifecycleService
 from .live_gate import LiveSubmissionGate
@@ -83,12 +94,19 @@ __all__ = [
     "CompiledTransaction",
     "CompilerDiagnostics",
     "ComputeBudgetPolicy",
+    "ExactSimulationError",
+    "ExactSimulationErrorCode",
+    "ExactSimulationFinalizer",
+    "ExactSimulationPolicy",
+    "ExactSimulationReport",
     "ExecutionAttempt",
     "ExecutionErrorCode",
     "ExecutionJournalEntry",
     "ExecutionReceipt",
     "ExecutionState",
     "ExecutionStateMachine",
+    "FailureDisposition",
+    "FinalizedSimulation",
     "HardenedCompilation",
     "HardenedV0Compiler",
     "InMemoryExecutionJournal",
@@ -100,6 +118,7 @@ __all__ = [
     "ReconciliationOutcome",
     "ResolvedAddressLookupTable",
     "RpcClient",
+    "RpcSimulationEvidence",
     "SQLiteAttemptJournal",
     "SignedTransaction",
     "SimulationReport",
@@ -129,5 +148,6 @@ __all__ = [
     "simulate_exact",
     "validate_canonical_plan",
     "validate_compiled_identity",
+    "validate_exact_submission_binding",
     "validate_exactly_one_tip",
 ]

@@ -132,7 +132,7 @@ async def coerce_snapshot_set(source: object | None) -> SnapshotSet:
     if isinstance(source, SnapshotSet):
         return source
     if hasattr(source, "latest"):
-        result = source.latest()  # type: ignore[attr-defined]
+        result = source.latest()
         if inspect.isawaitable(result):
             result = await result
         if isinstance(result, SnapshotSet):
@@ -140,7 +140,7 @@ async def coerce_snapshot_set(source: object | None) -> SnapshotSet:
         if isinstance(result, Iterable):
             return SnapshotSet(result)
     if isinstance(source, Iterable):
-        return SnapshotSet(source)  # type: ignore[arg-type]
+        return SnapshotSet(source)
     raise SnapshotSourceError(
         f"unsupported market snapshot source: {type(source).__name__}"
     )

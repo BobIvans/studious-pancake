@@ -19,6 +19,11 @@ from .canonical_sender import (
     canonical_followup_for_observation,
     canonical_status_routes,
 )
+from .canonical_status import (
+    CanonicalStatusReport,
+    consolidate_canonical_observations,
+    poll_canonical_status_once,
+)
 from .durable import DurableSubmissionResult, PermitBoundSubmissionService
 from .permit_bound import (
     AsyncJsonHttpTransport,
@@ -67,6 +72,7 @@ __all__ = [
     "CanonicalFollowup",
     "CanonicalFollowupAction",
     "CanonicalSenderSettings",
+    "CanonicalStatusReport",
     "CanonicalSubmissionStack",
     "DurableSubmissionResult",
     "ErrorDisposition",
@@ -98,9 +104,11 @@ __all__ = [
     "classify_jito_bundle_status",
     "classify_jito_inflight_status",
     "classify_signature_statuses",
+    "consolidate_canonical_observations",
     "inspect_exactly_one_system_tip",
     "inspect_exactly_one_system_tip_across_transactions",
     "permit_request_from_payload",
+    "poll_canonical_status_once",
     "resubmission_decision",
     "validate_permit_payload",
 ]

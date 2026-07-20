@@ -8,7 +8,7 @@ wallet balance snapshot and already-compiled/estimated candidate economics.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 from typing import Any
 
@@ -16,6 +16,7 @@ from src.durability import (
     AttemptKey,
     DurableAttempt,
     DurableLifecycleStore,
+    ReservationState,
 )
 from src.economics.capital import (
     AtomicCapitalLedger,
@@ -121,26 +122,50 @@ class DurableCapitalCoordinator:
         self.policy = policy
         self.owner_id = owner_id
 
-    def active_durable_reserved_lamports(self) -> int:
+    @staticmethod
+    def _excluded_attempt_ids(
+        exclude_attempt_ids: Iterable[str] | None,
+    ) -> frozenset[str]:
+        return frozenset(exclude_attempt_ids or ())
+
+    def active_durable_reserved_lamports(
+        self,
+        *,
+        exclude_attempt_ids: Iterable[str] | None = None,
+    ) -> int:
+        excluded = self._excluded_attempt_ids(exclude_attempt_ids)
         return sum(
             decision.attempt.reserved_lamports
             for decision in self.store.scan_startup_recovery()
             if decision.reservation_active
+            and decision.attempt.attempt_id not in excluded
         )
 
-    def recovery_attempt_ids(self) -> tuple[str, ...]:
+    def recovery_attempt_ids(
+        self,
+        *,
+        exclude_attempt_ids: Iterable[str] | None = None,
+    ) -> tuple[str, ...]:
+        excluded = self._excluded_attempt_ids(exclude_attempt_ids)
         return tuple(
             decision.attempt.attempt_id
             for decision in self.store.scan_startup_recovery()
             if decision.reservation_active
+            and decision.attempt.attempt_id not in excluded
         )
 
     def _ledger_for_snapshot(
         self,
         wallet_snapshot: WalletBalanceSnapshot,
+        *,
+        exclude_attempt_ids: Iterable[str] | None = None,
     ) -> tuple[AtomicCapitalLedger, int, tuple[str, ...]]:
-        active_reserved = self.active_durable_reserved_lamports()
-        recovery_ids = self.recovery_attempt_ids()
+        active_reserved = self.active_durable_reserved_lamports(
+            exclude_attempt_ids=exclude_attempt_ids
+        )
+        recovery_ids = self.recovery_attempt_ids(
+            exclude_attempt_ids=exclude_attempt_ids
+        )
         effective_wallet = max(0, wallet_snapshot.native_lamports - active_reserved)
         return (
             AtomicCapitalLedger(
@@ -156,15 +181,45 @@ class DurableCapitalCoordinator:
         candidate: CapitalCandidate,
         *,
         wallet_snapshot: WalletBalanceSnapshot,
+        exclude_attempt_ids: Iterable[str] | None = None,
     ) -> DurableCapitalReservationResult:
         ledger, active_reserved, recovery_ids = self._ledger_for_snapshot(
-            wallet_snapshot
+            wallet_snapshot,
+            exclude_attempt_ids=exclude_attempt_ids,
         )
         return DurableCapitalReservationResult(
             decision=ledger.evaluate(candidate),
             wallet_snapshot=wallet_snapshot,
             active_durable_reserved_lamports=active_reserved,
             recovery_attempt_ids=recovery_ids,
+        )
+
+    def evaluate_for_attempt(
+        self,
+        candidate: CapitalCandidate,
+        *,
+        wallet_snapshot: WalletBalanceSnapshot,
+        attempt_id: str,
+    ) -> DurableCapitalReservationResult:
+        """Re-evaluate an already-reserved attempt without double-counting it.
+
+        PR-074 needs to re-check the exact finalized message fee after a
+        candidate has already reserved capital.  The current attempt's own
+        active reservation must be excluded from startup-recovery subtraction;
+        all other active durable reservations remain fenced.
+        """
+
+        attempt = self.store.get_attempt(attempt_id)
+        if attempt is None:
+            raise CapitalEngineError("attempt not found for capital revalidation")
+        if attempt.reservation_state is not ReservationState.ACTIVE:
+            raise CapitalEngineError("attempt has no active reservation")
+        if attempt.reserved_lamports <= 0:
+            raise CapitalEngineError("attempt reservation has no lamports")
+        return self.evaluate(
+            candidate,
+            wallet_snapshot=wallet_snapshot,
+            exclude_attempt_ids=(attempt_id,),
         )
 
     def reserve(

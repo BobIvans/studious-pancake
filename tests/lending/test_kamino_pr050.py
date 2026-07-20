@@ -131,7 +131,7 @@ def test_profitability_includes_protocol_flash_and_network_costs() -> None:
     assert estimate.meets_min_profit is True
 
 
-def test_shadow_planner_accepts_only_liquidatable_profitable_verified_candidate() -> None:
+def test_shadow_planner_accepts_verified_candidate() -> None:
     combination = _combination(min_profit=100_000)
     registry = KaminoSupportedRegistry((combination,))
     planner = KaminoShadowLiquidationPlanner(registry)

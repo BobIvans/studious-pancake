@@ -54,3 +54,5 @@ tests/test_pr040_readiness_safety.py
 tests/test_pr040_rpc_ws.py
 src/economics/durable_reservations.py
 tests/test_pr057_durable_capital_reservations.py
+src/venues/pump/promotion.py
+tests/test_pr065_pump_promotion_guard.py

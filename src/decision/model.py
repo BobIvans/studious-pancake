@@ -87,7 +87,7 @@ def train_model(
     out.mkdir(parents=True, exist_ok=True)
     split = PurgedGroupedTimeSplit().split(rows)
     status = ModelStatus.SHADOW_CHALLENGER.value
-    artifact = {
+    artifact: dict[str, Any] = {
         "artifact_version": MODEL_ARTIFACT_VERSION,
         "feature_spec_version": FEATURE_SPEC_VERSION,
         "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -184,8 +184,8 @@ def recommend(
             DecisionStage.PRE_QUOTE,
             None,
             bp,
-            ("offline kill switch or no artifact: baseline only",),
             RecommendedBand.BASELINE_ONLY,
+            ("offline kill switch or no artifact: baseline only",),
             ModelStatus.MODEL_DISABLED,
         )
     try:
@@ -196,8 +196,8 @@ def recommend(
             DecisionStage.PRE_QUOTE,
             None,
             bp,
-            (f"artifact invalid: {e}",),
             RecommendedBand.BASELINE_ONLY,
+            (f"artifact invalid: {e}",),
             ModelStatus.MODEL_DISABLED,
         )
     if art.get("model_status") != ModelStatus.SHADOW_CHALLENGER.value:
@@ -206,8 +206,8 @@ def recommend(
             DecisionStage.PRE_QUOTE,
             None,
             bp,
-            (art.get("reason") or "disabled artifact",),
             RecommendedBand.BASELINE_ONLY,
+            (str(art.get("reason") or "disabled artifact"),),
             ModelStatus(art.get("model_status")),
             art.get("checksum"),
         )
@@ -229,8 +229,8 @@ def recommend(
         DecisionStage.PRE_QUOTE,
         p,
         bp,
-        tuple(f"{n}:{v:.3f}" for n, v in contrib),
         band,
+        tuple(f"{n}:{v:.3f}" for n, v in contrib),
         ModelStatus.SHADOW_CHALLENGER,
         art["checksum"],
     )

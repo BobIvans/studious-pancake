@@ -76,15 +76,23 @@ class DecisionDatasetBuilder:
         terminals = [e for e in events if e.get("event_type") in TERMINAL_TYPES]
         term_by_root: dict[str, list[dict[str, Any]]] = {}
         for e in terminals:
-            term_by_root.setdefault(
-                e.get("root_opportunity_id") or e.get("opportunity_id"), []
-            ).append(e)
+            root_value = e.get("root_opportunity_id") or e.get("opportunity_id")
+            if root_value is None:
+                continue
+            root_key = str(root_value)
+            term_by_root.setdefault(root_key, []).append(e)
         history: dict[tuple[str, str], list[int]] = {}
         rows: list[DecisionFeatureRow] = []
         excluded: dict[str, int] = {}
         for e in [x for x in events if x.get("event_type") in CANDIDATE_TYPES]:
-            root = e.get("root_opportunity_id") or e.get("opportunity_id")
-            lineage = e.get("lineage_group_id") or root
+            root_value = e.get("root_opportunity_id") or e.get("opportunity_id")
+            if root_value is None:
+                excluded["missing_root_opportunity_id"] = (
+                    excluded.get("missing_root_opportunity_id", 0) + 1
+                )
+                continue
+            root = str(root_value)
+            lineage = str(e.get("lineage_group_id") or root)
             obs = parse_utc(e["timestamp"])
             raw_features = dict(e.get("features_pre_quote") or {})
             key = (

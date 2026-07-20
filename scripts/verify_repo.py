@@ -117,8 +117,7 @@ def main() -> int:
         run(command)
 
     print(
-        "\nRepository verification passed. "
-        "Live trading readiness was not evaluated."
+        "\nRepository verification passed. " "Live trading readiness was not evaluated."
     )
     return 0
 

@@ -43,7 +43,12 @@ class PurgedGroupedTimeSplit:
         train_g = set(groups[: max(0, n - cal_n - test_n)])
         cal_g = set(groups[max(0, n - cal_n - test_n) : max(0, n - test_n)])
         test_g = set(groups[max(0, n - test_n) :])
-        parts = {"train": [], "calibration": [], "test": [], "excluded": []}
+        parts: dict[str, list[str]] = {
+            "train": [],
+            "calibration": [],
+            "test": [],
+            "excluded": [],
+        }
         last_train = max(
             (
                 parse_utc(r["candidate_observed_at"])

@@ -43,6 +43,7 @@ try:
 except ImportError:
     TOKEN_2022_PROGRAM_ID = Pubkey.default()
 from solders.system_program import ID as SYSTEM_PROGRAM_ID
+from src.config.chain_registry import TOKEN_2022_PROGRAM_ADDRESS
 
 # AToken Program ID constant for ATA detection
 ATOKEN_PROGRAM = str(ASSOCIATED_TOKEN_PROGRAM_ID)
@@ -667,7 +668,7 @@ class JupiterTxBuilder:
             "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc",  # Orca Whirlpool
             "LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3",  # Meteora DLMM
             "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",  # SPL Token
-            "TokenzQdBNbLqP5VEhfqASPWnGD1x1gUghStfV2hLwx",  # Token-2022
+            TOKEN_2022_PROGRAM_ADDRESS,  # Token-2022
             "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",  # Associated Token
             "11111111111111111111111111111111",              # System Program
             "ComputeBudget111111111111111111111111111111",  # Compute Budget

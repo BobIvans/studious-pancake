@@ -4,6 +4,9 @@ src/application.py
 src/capabilities.py
 src/cli.py
 src/container_runtime.py
+src/config/chain_registry.py
+src/config/doctor.py
+src/config/runtime.py
 src/domain
 src/execution
 src/providers

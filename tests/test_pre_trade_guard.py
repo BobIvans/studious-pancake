@@ -41,7 +41,7 @@ class TestPreTradeGuard(unittest.TestCase):
         mock_response.json = AsyncMock(return_value={
             "result": {
                 "value": {
-                    "owner": "TokenzQdBNbLqP5VEhfqASPWnGD1x1gUghStfV2hLwx",
+                    "owner": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
                     "data": [fake_b64, "base64"]
                 }
             }

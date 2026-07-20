@@ -9,12 +9,11 @@ from typing import Optional, Dict, Any, Tuple
 import aiohttp
 from solders.pubkey import Pubkey
 from solders.system_program import ID as SYSTEM_PROGRAM_ID
+from src.config.chain_registry import TOKEN_2022_PROGRAM_ADDRESS
 from src.ingest.flywheel_scaler import DynamicThresholds
 from spl.token.constants import TOKEN_PROGRAM_ID
 
-TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
-    "TokenzQdBNbLqP5VEhfqASPWnGD1x1gUghStfV2hLwx"
-)
+TOKEN_2022_PROGRAM_ID = Pubkey.from_string(TOKEN_2022_PROGRAM_ADDRESS)
 
 logger = logging.getLogger(__name__)
 

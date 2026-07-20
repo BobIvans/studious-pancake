@@ -1,122 +1,250 @@
 {
-  "schema_version": "pr027.external-contracts.v1",
+  "schema_version": "pr054.external-contracts.v2",
   "contracts": [
     {
       "id": "jupiter.swap-v2-build",
       "provider": "jupiter",
       "status": "active",
-      "capabilities": ["quote", "composable-instructions"],
-      "official_source_url": "https://dev.jup.ag/docs/swap/build-swap-transaction",
-      "source_ref": "pr030-recorded-contract-2026-07-20",
-      "artifacts": [{
-        "path": "contracts/routing/pr030_provider_responses.json",
-        "sha256": "7e45ce9cc8c59082006d1434e7282d7ae39c772f4c5aeac4a017a44a3bc4a518",
-        "kind": "sanitized-response",
-        "fetched_at": "2026-07-20T18:00:00Z",
-        "required": true
-      }],
+      "capabilities": [
+        "quote",
+        "composable-instructions"
+      ],
+      "official_source_url": "https://developers.jup.ag/docs/api-reference/swap/build",
+      "source_ref": "documentation-reviewed-2026-07-21",
+      "artifacts": [
+        {
+          "path": "contracts/routing/jupiter_swap_v2_build_review_2026-07-21.json",
+          "sha256": "62500380c328fc57018a00a425d8bbfddee91833bee2642c13d3252b693a0d71",
+          "kind": "review-snapshot",
+          "fetched_at": "2026-07-21T00:00:00Z",
+          "required": true
+        }
+      ],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
-      "conformance_probe": null,
-      "notes": "PR-030 pins a sanitized Swap V2 build response and fail-closed contract tests. Jupiter is the only composable provider; live execution remains blocked by later MarginFi, simulation, reconciliation and permit gates."
+      "conformance_probe": {
+        "url": "https://api.jup.ag/swap/v2/build?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000&slippageBps=50",
+        "credential_mode": "header-api-key",
+        "required_env": [
+          "JUPITER_API_KEY"
+        ],
+        "credential_header_name": "x-api-key",
+        "credential_header_env": "JUPITER_API_KEY",
+        "expected_status": 200,
+        "required_json_paths": [
+          "transaction"
+        ]
+      },
+      "promotion_state": "credentialed-conformance-pending",
+      "evidence": {
+        "local_artifact_integrity": true,
+        "remote_schema_freshness": false,
+        "credentialed_api_conformance": false,
+        "deployed_program_attestation": false,
+        "execution_conformance": false,
+        "promotion_evidence": false
+      },
+      "notes": "Jupiter Swap V2 /build is the only composable routing contract tracked here, but local review snapshot integrity is not remote conformance or execution permission."
     },
     {
       "id": "okx.solana-swap-instruction-v6",
       "provider": "okx",
       "status": "discovery-only",
-      "capabilities": ["quote"],
-      "official_source_url": "https://web3.okx.com/build/dev-docs/dex-api/dex-swap",
-      "source_ref": "pr030-recorded-contract-2026-07-20",
-      "artifacts": [{
-        "path": "contracts/routing/pr030_provider_responses.json",
-        "sha256": "7e45ce9cc8c59082006d1434e7282d7ae39c772f4c5aeac4a017a44a3bc4a518",
-        "kind": "sanitized-response",
-        "fetched_at": "2026-07-20T18:00:01Z",
-        "required": true
-      }],
+      "capabilities": [
+        "quote"
+      ],
+      "official_source_url": "https://web3.okx.com/onchainos/dev-docs/trade/dex-solana-swap-instruction",
+      "source_ref": "documentation-reviewed-2026-07-21",
+      "artifacts": [
+        {
+          "path": "contracts/routing/okx_solana_swap_instruction_v6_review_2026-07-21.json",
+          "sha256": "0e5b5d346656616ce1e058fd6f2cf2bbbfe988f806c8f5b6fa6af59cb314c944",
+          "kind": "review-snapshot",
+          "fetched_at": "2026-07-21T00:00:00Z",
+          "required": true
+        }
+      ],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
-      "conformance_probe": null,
-      "notes": "PR-030 validates normalized discovery data and instruction shape, but OKX remains discovery-only until independent credentialed conformance and composed simulation evidence."
+      "conformance_probe": {
+        "url": "https://web3.okx.com/api/v6/dex/aggregator/swap-instruction?chainIndex=501&amount=100000&fromTokenAddress=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&toTokenAddress=11111111111111111111111111111111&slippagePercent=0.05&userWalletAddress=11111111111111111111111111111111",
+        "credential_mode": "okx-signed",
+        "required_env": [
+          "OKX_API_KEY",
+          "OKX_SECRET_KEY",
+          "OKX_API_PASSPHRASE"
+        ],
+        "optional_env": [
+          "OKX_PROJECT_ID"
+        ],
+        "expected_status": 200,
+        "required_json_paths": [
+          "code",
+          "data"
+        ]
+      },
+      "promotion_state": "credentialed-conformance-pending",
+      "evidence": {
+        "local_artifact_integrity": true,
+        "remote_schema_freshness": false,
+        "credentialed_api_conformance": false,
+        "deployed_program_attestation": false,
+        "execution_conformance": false,
+        "promotion_evidence": false
+      },
+      "notes": "OKX Solana swap-instruction is discovery-only until signed credentialed conformance, ALT provenance and composed simulation evidence exist."
     },
     {
       "id": "jito.low-latency-json-rpc",
       "provider": "jito",
       "status": "disabled-unverified",
-      "capabilities": ["bundle-status", "read-only-rpc"],
+      "capabilities": [
+        "bundle-status",
+        "read-only-rpc"
+      ],
       "official_source_url": "https://docs.jito.wtf/lowlatencytxnsend/",
-      "source_ref": "documentation-reviewed-2026-07-20",
-      "artifacts": [],
+      "source_ref": "documentation-reviewed-2026-07-21",
+      "artifacts": [
+        {
+          "path": "contracts/submission/jito_low_latency_review_2026-07-21.json",
+          "sha256": "8d553b67a38293b92db202c1200ac2829dfb194cdb04d55b3f3a70d7d7e7ed02",
+          "kind": "review-snapshot",
+          "fetched_at": "2026-07-21T00:00:00Z",
+          "required": true
+        }
+      ],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
-      "conformance_probe": null,
-      "notes": "A UUID-shaped credential never promotes an unverified sender contract."
+      "conformance_probe": {
+        "url": "https://mainnet.block-engine.jito.wtf/api/v1/getTipAccounts",
+        "credential_mode": "optional-uuid",
+        "optional_env": [
+          "JITO_UUID"
+        ],
+        "expected_status": 200,
+        "required_json_paths": []
+      },
+      "promotion_state": "execution-conformance-pending",
+      "evidence": {
+        "local_artifact_integrity": true,
+        "remote_schema_freshness": false,
+        "credentialed_api_conformance": false,
+        "deployed_program_attestation": false,
+        "execution_conformance": false,
+        "promotion_evidence": false
+      },
+      "notes": "Jito supports no-auth default-rate-limit and optional UUID modes, but remains disabled until PR-063 sender consolidation and landing-status evidence."
     },
     {
       "id": "openocean.solana-v4-quote",
       "provider": "openocean",
       "status": "discovery-only",
-      "capabilities": ["quote"],
-      "official_source_url": "https://docs.openocean.finance/docs/solana-swap-api",
-      "source_ref": "pr030-recorded-contract-2026-07-20",
-      "artifacts": [{
-        "path": "contracts/routing/pr030_provider_responses.json",
-        "sha256": "7e45ce9cc8c59082006d1434e7282d7ae39c772f4c5aeac4a017a44a3bc4a518",
-        "kind": "sanitized-response",
-        "fetched_at": "2026-07-20T18:00:02Z",
-        "required": true
-      }],
+      "capabilities": [
+        "quote"
+      ],
+      "official_source_url": "https://docs.openocean.finance/docs/overview/supported-chains",
+      "source_ref": "documentation-reviewed-2026-07-21",
+      "artifacts": [
+        {
+          "path": "contracts/routing/openocean_solana_v4_review_2026-07-21.json",
+          "sha256": "9af2ba19a5656c19e4c5baf6874a031781f4b066f902853bbd532548670f4243",
+          "kind": "review-snapshot",
+          "fetched_at": "2026-07-21T00:00:00Z",
+          "required": true
+        }
+      ],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
-      "conformance_probe": null,
-      "notes": "OpenOcean is admitted for credentialed discovery only. Correlation labels preserve disclosed Jupiter/Titan underliers and no composable execution capability is claimed."
+      "conformance_probe": {
+        "url": "https://open-api.openocean.finance/v4/solana/quote?inTokenAddress=11111111111111111111111111111111&outTokenAddress=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amountDecimals=100000&gasPriceDecimals=0",
+        "credential_mode": "whitelist-api-key",
+        "required_env": [
+          "OPENOCEAN_API_KEY"
+        ],
+        "credential_header_name": "x-api-key",
+        "credential_header_env": "OPENOCEAN_API_KEY",
+        "expected_status": 200,
+        "required_json_paths": [
+          "code",
+          "data"
+        ]
+      },
+      "promotion_state": "credentialed-conformance-pending",
+      "evidence": {
+        "local_artifact_integrity": true,
+        "remote_schema_freshness": false,
+        "credentialed_api_conformance": false,
+        "deployed_program_attestation": false,
+        "execution_conformance": false,
+        "promotion_evidence": false
+      },
+      "notes": "OpenOcean Solana access is treated as whitelist-gated discovery only; it cannot promote from generic public-plan docs."
     },
     {
       "id": "odos.solana-api",
       "provider": "odos",
       "status": "discovery-only",
-      "capabilities": ["quote", "immutable-transaction"],
+      "capabilities": [
+        "quote",
+        "immutable-transaction"
+      ],
       "official_source_url": "https://docs.odos.xyz/api/solana",
-      "source_ref": "pr030-recorded-contract-2026-07-20",
-      "artifacts": [{
-        "path": "contracts/routing/pr030_provider_responses.json",
-        "sha256": "7e45ce9cc8c59082006d1434e7282d7ae39c772f4c5aeac4a017a44a3bc4a518",
-        "kind": "sanitized-response",
-        "fetched_at": "2026-07-20T18:00:03Z",
-        "required": true
-      }],
+      "source_ref": "documentation-reviewed-2026-07-21",
+      "artifacts": [
+        {
+          "path": "contracts/routing/odos_solana_api_review_2026-07-21.json",
+          "sha256": "a27a6bdcdcd6f11bdc0587e906c4e2fd90080643387a8fb6b76122c5106e0081",
+          "kind": "review-snapshot",
+          "fetched_at": "2026-07-21T00:00:00Z",
+          "required": true
+        }
+      ],
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
       "conformance_probe": null,
-      "notes": "Odos quote data is admitted for discovery; assembled transactions remain immutable and cannot be inserted into a flash-loan composition."
+      "promotion_state": "remote-schema-freshness-pending",
+      "evidence": {
+        "local_artifact_integrity": true,
+        "remote_schema_freshness": false,
+        "credentialed_api_conformance": false,
+        "deployed_program_attestation": false,
+        "execution_conformance": false,
+        "promotion_evidence": false
+      },
+      "notes": "Odos remains discovery-only because assembled transactions are immutable and not composable into the initial flash-loan vertical."
     },
     {
-      "id": "marginfi.project-zero-mainnet",
+      "id": "marginfi.v2-mainnet-source-identity",
       "provider": "marginfi",
       "status": "disabled-unverified",
-      "capabilities": ["protocol-source", "read-only-rpc"],
-      "official_source_url": "https://github.com/0dotxyz/marginfi-v2/tree/d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
-      "source_ref": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
+      "capabilities": [
+        "protocol-source",
+        "read-only-rpc"
+      ],
+      "official_source_url": "https://docs.marginfi.com/rust-sdk",
+      "source_ref": "source-identity-unresolved-2026-07-21",
       "artifacts": [
         {
-          "path": "contracts/marginfi/flashloan.rs",
-          "sha256": "48b25a28f1a6a02492cfa4dc88148e786e175c6459fcc4145705a140d797a120",
-          "kind": "official-source",
-          "fetched_at": "2026-07-20T11:55:00Z",
-          "required": true
-        },
-        {
-          "path": "contracts/marginfi/id_crate_mainnet.rs",
-          "sha256": "4f37583542c1d2c0181c6071b55ad919ba68c8bea1b7bc4c10e3c775b96bf99a",
-          "kind": "official-source",
-          "fetched_at": "2026-07-20T11:55:00Z",
+          "path": "contracts/marginfi/marginfi_source_identity_review_2026-07-21.json",
+          "sha256": "7c2ad0bf22fd8b0134a2644bee90a329a3c251298774e32cb1eb89d5bf347085",
+          "kind": "review-snapshot",
+          "fetched_at": "2026-07-21T00:00:00Z",
           "required": true
         }
       ],
       "deployment_program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
       "cluster": "mainnet-beta",
       "conformance_probe": null,
-      "notes": "Official source and deployment id are pinned, but live execution remains denied until the complete MarginFi release gates are satisfied."
+      "promotion_state": "deployment-attestation-pending",
+      "evidence": {
+        "local_artifact_integrity": true,
+        "remote_schema_freshness": false,
+        "credentialed_api_conformance": false,
+        "deployed_program_attestation": false,
+        "execution_conformance": false,
+        "promotion_evidence": false
+      },
+      "notes": "PR-054 records the current MarginFi source/deployment uncertainty and keeps execution disabled for PR-055."
     }
   ]
 }

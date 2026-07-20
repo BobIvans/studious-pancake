@@ -1,0 +1,83 @@
+"""CLI for external contract validation, drift, and read-only conformance."""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from typing import Sequence
+
+from src.external_contracts.conformance import run_read_only_conformance
+from src.external_contracts.drift import detect_drift
+from src.external_contracts.registry import ExternalContractError, ExternalContractRegistry
+from src.external_contracts.updater import propose_artifact_rotation
+
+
+def _parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="flashloan-contracts")
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("validate", help="load registry and verify all required pins")
+    commands.add_parser("status", help="print registry and promotion states")
+    commands.add_parser("drift", help="print deterministic artifact drift report")
+
+    proposal = commands.add_parser("propose", help="create a review-only pin proposal")
+    proposal.add_argument("--contract", required=True)
+    proposal.add_argument("--artifact", required=True)
+    proposal.add_argument("--candidate", required=True)
+
+    conformance = commands.add_parser(
+        "conformance", help="run opt-in read-only API conformance probes"
+    )
+    conformance.add_argument("--enable-online", action="store_true")
+    conformance.add_argument("--contract", default=None)
+    return parser
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    args = _parser().parse_args(list(argv) if argv is not None else None)
+    try:
+        registry = ExternalContractRegistry.load_default()
+        if args.command == "validate":
+            print(json.dumps({"ok": True, **registry.status_payload()}, indent=2, sort_keys=True))
+            return 0
+        if args.command == "status":
+            print(json.dumps(registry.status_payload(), indent=2, sort_keys=True))
+            return 0
+        if args.command == "drift":
+            report = detect_drift(registry)
+            print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+            return 0 if report.ok else 2
+        if args.command == "propose":
+            proposal = propose_artifact_rotation(
+                registry, args.contract, args.artifact, args.candidate
+            )
+            print(json.dumps(proposal, indent=2, sort_keys=True))
+            return 0
+        if args.command == "conformance":
+            contracts = (
+                (registry.get(args.contract),)
+                if args.contract
+                else registry.contracts
+            )
+            results = [
+                run_read_only_conformance(
+                    contract, enable_online=args.enable_online
+                ).to_dict()
+                for contract in contracts
+            ]
+            payload = {
+                "schema_version": "pr027.conformance-report.v1",
+                "online_enabled": args.enable_online,
+                "verified": any(item["verified"] for item in results),
+                "results": results,
+            }
+            print(json.dumps(payload, indent=2, sort_keys=True))
+            return 0 if all(item["state"] != "failed-request" for item in results) else 2
+    except (ExternalContractError, OSError, ValueError) as exc:
+        print(f"EXTERNAL_CONTRACT_ERROR: {exc}", file=sys.stderr)
+        return 2
+    return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -2,9 +2,16 @@
 
 __runtime_capability__ = "fixture-only"
 __quarantined__ = True
-from .models import *
-from .registry import VenueRegistry
-from .quote import OrderbookQuoteEngine
-from .adapters import PhoenixLegacyVenueAdapter, OpenBookV2VenueAdapter, MAGIC_PHOENIX, MAGIC_OPENBOOK
+
+from .adapters import OpenBookV2VenueAdapter, PhoenixLegacyVenueAdapter
+from .conformance import (
+    OFFICIAL_PHOENIX_MAINNET_PROGRAM_ID,
+    OFFICIAL_PHOENIX_SOURCE_REPOSITORY,
+    OFFICIAL_PHOENIX_VERIFY_COMMAND,
+    PHOENIX_COMMON_CRATE,
+)
 from .lifecycle import VenueAccountLifecycleService
-from .planner import OrderbookAmmPlanner, OrderbookAmmCandidate, PlannedOrderbookAmm
+from .models import *
+from .planner import OrderbookAmmCandidate, OrderbookAmmPlanner, PlannedOrderbookAmm
+from .quote import OrderbookQuoteEngine
+from .registry import VenueRegistry

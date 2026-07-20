@@ -7,6 +7,7 @@ import asyncio
 import json
 import logging
 import os
+from pathlib import Path
 import signal
 import sys
 from dataclasses import asdict
@@ -21,6 +22,7 @@ from src.config.runtime import (
     load_runtime_config,
 )
 from src.container_runtime import run_safe_idle
+from src.paper_shadow import PaperShadowRunner, PaperShadowRunnerConfig
 
 logger = logging.getLogger(__name__)
 
@@ -79,6 +81,17 @@ def _parser() -> argparse.ArgumentParser:
         "capabilities", help="print the machine-readable capability matrix"
     )
     capabilities_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    paper_parser = subparsers.add_parser(
+        "paper-shadow",
+        help="run one fail-closed PR-038 paper/shadow pass and record durable evidence",
+    )
+    paper_parser.add_argument(
+        "--journal-path",
+        default=None,
+        help="JSONL journal path; defaults to FLASHLOAN_PAPER_SHADOW_JOURNAL or .runtime/paper-shadow-journal.jsonl",
+    )
+    paper_parser.add_argument("--json", action="store_true", dest="as_json")
 
     container_parser = subparsers.add_parser(
         "container",
@@ -188,6 +201,37 @@ async def _run_application(app: Any) -> int:
     return 0
 
 
+def _paper_shadow_journal_path(override: str | None = None) -> Path:
+    configured = override or os.environ.get("FLASHLOAN_PAPER_SHADOW_JOURNAL")
+    return (
+        Path(configured) if configured else Path(".runtime/paper-shadow-journal.jsonl")
+    )
+
+
+def _print_paper_shadow_summary(payload: dict[str, Any], *, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return
+    print(
+        "PAPER_SHADOW_RUNNER: "
+        f"status={payload['status']} "
+        f"reason={payload['terminal_reason']} "
+        f"journal={payload['journal_path']} "
+        f"events={payload['events_written']}"
+    )
+
+
+def _run_paper_shadow_once(
+    *, journal_path: str | None = None, as_json: bool = False
+) -> int:
+    runner = PaperShadowRunner(
+        PaperShadowRunnerConfig(journal_path=_paper_shadow_journal_path(journal_path))
+    )
+    summary = asyncio.run(runner.run_once(()))
+    _print_paper_shadow_summary(summary.to_dict(), as_json=as_json)
+    return 0
+
+
 def _run_requested_mode(
     mode: str, matrix: CapabilityMatrix, app: Any, config: RuntimeConfig
 ) -> int:
@@ -200,12 +244,7 @@ def _run_requested_mode(
         )
         return EXIT_MODE_UNAVAILABLE
     if mode == "paper":
-        print(
-            "PAPER_MODE_UNAVAILABLE: the legacy paper trader is quarantined; "
-            "the canonical paper runner is scheduled for PR-038.",
-            file=sys.stderr,
-        )
-        return EXIT_MODE_UNAVAILABLE
+        return _run_paper_shadow_once(as_json=False)
     if mode == "disabled":
         _print_status(status, as_json=False)
         return 0
@@ -260,6 +299,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "capabilities":
             _print_capabilities(matrix, as_json=args.as_json)
             return 0
+        if args.command == "paper-shadow":
+            return _run_paper_shadow_once(
+                journal_path=args.journal_path,
+                as_json=args.as_json,
+            )
         if args.command == "run":
             return _run_requested_mode(args.mode, matrix, app, config)
         if args.command == "container":

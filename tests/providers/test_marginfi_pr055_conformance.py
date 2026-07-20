@@ -7,6 +7,7 @@ import pytest
 from src.providers.marginfi.deployment_conformance import (
     EXPECTED_MAIN_GROUP,
     EXPECTED_PROGRAM_ID,
+    EXPECTED_VERIFIED_BUILD_HASH,
     PINNED_SOURCE_COMMIT,
     MarginfiDeploymentConformanceError,
     assert_marginfi_execution_conformance,
@@ -17,9 +18,11 @@ from src.providers.marginfi.deployment_conformance import (
 
 def _complete_manifest() -> dict:
     raw = deepcopy(load_marginfi_deployment_manifest())
-    full_hash = "26dda5e" + ("0" * 57)
-    raw["deployment"]["deployed_program_hash_sha256"] = full_hash
-    raw["deployment"]["reproducible_build_hash_sha256"] = full_hash
+    raw["deployment"]["deployed_program_hash_sha256"] = EXPECTED_VERIFIED_BUILD_HASH
+    raw["deployment"]["reproducible_build_hash_sha256"] = EXPECTED_VERIFIED_BUILD_HASH
+    raw["deployment"]["expected_verified_build_hash_sha256"] = (
+        EXPECTED_VERIFIED_BUILD_HASH
+    )
     raw["idl"]["sha256"] = "1" * 64
     raw["idl"]["canonical_program_metadata_verified"] = True
     raw["sdk_golden_vectors"]["account_vectors_sha256"] = "2" * 64
@@ -47,12 +50,18 @@ def test_packaged_manifest_is_authoritative_but_fail_closed() -> None:
     assert raw["main_group"] == EXPECTED_MAIN_GROUP
     assert raw["source"]["source_commit"] == PINNED_SOURCE_COMMIT
     assert raw["source"]["repository_relation"] == "github-redirect-same-repository"
+    assert raw["deployment"]["deployed_program_hash_sha256"] == (
+        EXPECTED_VERIFIED_BUILD_HASH
+    )
+    assert raw["deployment"]["reproducible_build_hash_sha256"] == (
+        EXPECTED_VERIFIED_BUILD_HASH
+    )
 
     report = evaluate_marginfi_execution_conformance(raw)
 
     assert report.execution_allowed is False
-    assert "DEPLOYED_HASH_MISSING" in report.blockers
-    assert "BUILD_HASH_MISSING" in report.blockers
+    assert "DEPLOYED_HASH_MISSING" not in report.blockers
+    assert "BUILD_HASH_MISSING" not in report.blockers
     assert "CANONICAL_IDL_UNVERIFIED" in report.blockers
     assert "RPC_EVIDENCE_MISSING" in report.blockers
     assert "PROMOTION_FLAG_FALSE" in report.blockers
@@ -68,12 +77,15 @@ def test_complete_independent_evidence_is_required_for_promotion() -> None:
 
 def test_matching_prefix_without_matching_full_hash_is_rejected() -> None:
     raw = _complete_manifest()
-    raw["deployment"]["reproducible_build_hash_sha256"] = "26dda5e" + ("f" * 57)
+    raw["deployment"]["reproducible_build_hash_sha256"] = (
+        EXPECTED_VERIFIED_BUILD_HASH[:7] + ("f" * 57)
+    )
 
     report = evaluate_marginfi_execution_conformance(raw)
 
     assert report.execution_allowed is False
     assert "DEPLOYED_BUILD_HASH_MISMATCH" in report.blockers
+    assert "BUILD_HASH_UNEXPECTED" in report.blockers
 
 
 def test_repository_alias_does_not_replace_resolved_identity() -> None:

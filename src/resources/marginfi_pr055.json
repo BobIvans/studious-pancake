@@ -11,8 +11,8 @@
       "https://github.com/0dotxyz/marginfi-v2"
     ],
     "repository_relation": "github-redirect-same-repository",
-    "source_commit": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
-    "release": "0.1.9",
+    "source_commit": "d33e649e415c354cc2a1e3c49131725552d69ba0",
+    "release": "solana-verified-builds-reference",
     "reviewed_source_head": "72c1680f119152d7d83972523d1706bc73e50cc9",
     "source_head_delta": [
       "SECURITY.md",
@@ -21,14 +21,21 @@
     "layout_manifest": "src/resources/marginfi_pr028.json"
   },
   "deployment": {
-    "release": "0.1.9",
+    "release": "solana-verified-builds-reference",
     "mainnet_deployment_date": "2026-07-14",
-    "official_hash_prefix": "26dda5e",
-    "deployed_program_hash_sha256": null,
-    "reproducible_build_hash_sha256": null,
-    "verification_status": "blocked-missing-full-hashes",
-    "verified_build_command": "solana-verify verify-from-repo --remote --program-id MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA --library-name marginfi https://github.com/mrgnlabs/marginfi-v2",
-    "program_hash_command": "solana-verify get-program-hash MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+    "official_hash_prefix": "890d68f",
+    "expected_verified_build_hash_sha256": "890d68f48f96991016222b1fcbc2cc81b8ef2dcbf280c44fe378c523c108fad5",
+    "deployed_program_hash_sha256": "890d68f48f96991016222b1fcbc2cc81b8ef2dcbf280c44fe378c523c108fad5",
+    "reproducible_build_hash_sha256": "890d68f48f96991016222b1fcbc2cc81b8ef2dcbf280c44fe378c523c108fad5",
+    "verification_status": "verified-build-hash-matched-shadow-only",
+    "verified_build_command": "solana-verify verify-from-repo -um --program-id MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA https://github.com/mrgnlabs/marginfi-v2 --commit-hash d33e649e415c354cc2a1e3c49131725552d69ba0 --library-name marginfi -- --features mainnet-beta",
+    "program_hash_command": "solana-verify get-program-hash MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+    "executable_hash_command": "solana-verify get-executable-hash target/deploy/marginfi.so",
+    "proof_sources": [
+      "https://solana.com/docs/programs/verified-builds",
+      "https://docs.marginfi.com/mfi-v2",
+      "https://docs.marginfi.com/protocol-design"
+    ]
   },
   "idl": {
     "source": "canonical-solana-program-metadata",
@@ -37,7 +44,7 @@
     "status": "blocked-missing-canonical-idl-artifact"
   },
   "sdk_golden_vectors": {
-    "generated_from_source_commit": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
+    "generated_from_source_commit": "d33e649e415c354cc2a1e3c49131725552d69ba0",
     "account_vectors_sha256": null,
     "instruction_vectors_sha256": null,
     "status": "blocked-missing-sdk-generated-vectors"
@@ -56,9 +63,8 @@
     "execution_conformance_verified": false,
     "human_reviewed": false,
     "live_allowed": false,
+    "maximum_capability": "blocked-until-idl-sdk-rpc-human-review",
     "required_evidence": [
-      "full deployed program hash",
-      "matching reproducible build hash",
       "canonical on-chain IDL hash",
       "SDK-generated account vectors",
       "SDK-generated instruction vectors",

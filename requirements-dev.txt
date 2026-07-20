@@ -5,6 +5,7 @@ aiohttp==3.14.1
 aiohttp-socks==0.11.0
 aiolimiter==1.1.0
 aiosignal==1.4.0
+aiosqlite==0.20.0
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.14.2
@@ -93,6 +94,6 @@ uv==0.9.18
 uvicorn==0.38.0
 uvloop==0.22.1
 watchfiles==1.2.0
-websockets==16.1.1
+websockets==16.1
 wheel==0.47.0
 yarl==1.24.2

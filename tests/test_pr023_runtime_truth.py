@@ -87,9 +87,18 @@ def test_status_and_capabilities_json_are_stable(capsys):
     assert capabilities["schema_version"] == "pr023.capabilities.v1"
 
 
-def test_paper_and_live_modes_fail_closed(capsys):
-    assert arb_bot.main(["run", "--mode", "paper"]) == arb_bot.EXIT_MODE_UNAVAILABLE
-    assert "PAPER_MODE_UNAVAILABLE" in capsys.readouterr().err
+def test_paper_runner_is_available_but_live_mode_fails_closed(
+    capsys, monkeypatch, tmp_path
+):
+    journal_path = tmp_path / "paper-shadow.jsonl"
+    monkeypatch.setenv("FLASHLOAN_PAPER_SHADOW_JOURNAL", str(journal_path))
+
+    assert arb_bot.main(["run", "--mode", "paper"]) == 0
+    captured = capsys.readouterr()
+    assert "PAPER_SHADOW_RUNNER" in captured.out
+    assert "healthy_idle" in captured.out
+    assert journal_path.is_file()
+
     assert arb_bot.main(["run", "--mode", "live"]) == arb_bot.EXIT_MODE_UNAVAILABLE
     assert "LIVE_MODE_UNAVAILABLE" in capsys.readouterr().err
 

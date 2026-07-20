@@ -137,7 +137,10 @@ class KaminoDeploymentProvenance:
             raise KaminoRegistryError(
                 "rpc_fixture_sha256 must be a 64-character hex digest"
             )
-        _require_pubkey(self.lending_program_id, field="provenance.lending_program_id")
+        _require_pubkey(
+            self.lending_program_id,
+            field="provenance.lending_program_id",
+        )
         _require_int(self.deployment_slot, field="deployment_slot", minimum=1)
         return self
 
@@ -379,8 +382,12 @@ def estimate_liquidation_profitability(
 ) -> KaminoProfitabilityEstimate:
     """Estimate integer net profit after protocol, flash, and network costs."""
 
-    protocol_fee = (candidate.max_repay_lamports * combination.protocol_fee_bps) // 10_000
-    flash_fee = (candidate.max_repay_lamports * combination.flash_loan_fee_bps) // 10_000
+    protocol_fee = (
+        candidate.max_repay_lamports * combination.protocol_fee_bps
+    ) // 10_000
+    flash_fee = (
+        candidate.max_repay_lamports * combination.flash_loan_fee_bps
+    ) // 10_000
     gross_bonus_cap = (
         candidate.max_repay_lamports * combination.liquidation_bonus_bps
     ) // 10_000

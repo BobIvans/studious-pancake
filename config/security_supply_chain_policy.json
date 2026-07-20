@@ -1,0 +1,25 @@
+{
+  "schema_version": "pr043.security-supply-chain-policy.v1",
+  "dependency_audit": {
+    "block_at_or_above": "critical",
+    "fail_unknown_severity": true,
+    "allowlist": []
+  },
+  "least_privilege": {
+    "production_container_writes_only_to_state_dir": true,
+    "production_network_egress_requires_provider_allowlist": true,
+    "runtime_must_not_mount_repository_secrets": true
+  },
+  "sbom": {
+    "required_for_production_image": true,
+    "accepted_formats": ["cyclonedx-json", "spdx-json"]
+  },
+  "image_provenance": {
+    "signed_image_required_for_production": true,
+    "provenance_attestation_required": true
+  },
+  "license_inventory": {
+    "required_for_release_candidate": true,
+    "manual_review_required_for_unknown_license": true
+  }
+}

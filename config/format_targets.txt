@@ -34,3 +34,9 @@ tests/test_pr043_wallet_supply_chain.py
 src/lending/__init__.py
 src/lending/kamino.py
 tests/lending/test_kamino_pr050.py
+scripts/pr047_release_gate.py
+src/release_gate/__init__.py
+src/release_gate/cli.py
+src/release_gate/gate.py
+src/release_gate/models.py
+tests/test_pr047_release_gate.py

@@ -31,7 +31,7 @@ class KaminoRegistryError(ValueError):
     """Raised when Kamino protocol evidence is missing or malformed."""
 
 
-def _require_non_empty(value: str, *, field: str) -> str:
+def _require_non_empty(value: Any, *, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise KaminoRegistryError(f"{field} must be a non-empty string")
     return value.strip()
@@ -52,9 +52,9 @@ def _require_bps(value: Any, *, field: str) -> int:
     return checked
 
 
-def _require_pubkey(value: str, *, field: str) -> str:
+def _require_pubkey(value: Any, *, field: str) -> str:
     try:
-        return validate_pubkey(value, field=field)
+        return validate_pubkey(str(value), field=field)
     except ChainRegistryError as exc:
         raise KaminoRegistryError(str(exc)) from exc
 
@@ -65,13 +65,13 @@ def _require_mapping(value: Any, *, field: str) -> Mapping[str, Any]:
     return value
 
 
-def _tuple_of_strings(value: Any, *, field: str) -> tuple[str, ...]:
+def _tuple_of_pubkeys(value: Any, *, field: str) -> tuple[str, ...]:
     if not isinstance(value, list):
         raise KaminoRegistryError(f"{field} must be a list")
-    result = tuple(_require_non_empty(str(item), field=field) for item in value)
-    if len(result) != len(set(result)):
+    pubkeys = tuple(_require_pubkey(item, field=field) for item in value)
+    if len(pubkeys) != len(set(pubkeys)):
         raise KaminoRegistryError(f"{field} must not contain duplicates")
-    return result
+    return pubkeys
 
 
 @dataclass(frozen=True, slots=True)
@@ -90,31 +90,32 @@ class KaminoDeploymentProvenance:
     def from_mapping(cls, payload: Mapping[str, Any]) -> "KaminoDeploymentProvenance":
         return cls(
             source_url=_require_non_empty(
-                str(payload.get("source_url", "")),
+                payload.get("source_url"),
                 field="source_url",
             ),
             sdk_package=_require_non_empty(
-                str(payload.get("sdk_package", "")),
+                payload.get("sdk_package"),
                 field="sdk_package",
             ),
             lending_program_id=_require_pubkey(
-                str(payload.get("lending_program_id", "")),
+                payload.get("lending_program_id"),
                 field="provenance.lending_program_id",
             ),
             idl_sha256=_require_non_empty(
-                str(payload.get("idl_sha256", "")),
+                payload.get("idl_sha256"),
                 field="idl_sha256",
             ),
             rpc_fixture_sha256=_require_non_empty(
-                str(payload.get("rpc_fixture_sha256", "")),
+                payload.get("rpc_fixture_sha256"),
                 field="rpc_fixture_sha256",
             ),
             deployment_slot=_require_int(
                 payload.get("deployment_slot"),
                 field="deployment_slot",
+                minimum=1,
             ),
             reviewed_at=_require_non_empty(
-                str(payload.get("reviewed_at", "")),
+                payload.get("reviewed_at"),
                 field="reviewed_at",
             ),
         ).validated()
@@ -169,48 +170,43 @@ class KaminoSupportedCombination:
 
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> "KaminoSupportedCombination":
-        provenance = KaminoDeploymentProvenance.from_mapping(
-            _require_mapping(payload.get("provenance"), field="provenance")
+        provenance_payload = _require_mapping(
+            payload.get("provenance"),
+            field="provenance",
         )
         return cls(
             combination_id=_require_non_empty(
-                str(payload.get("combination_id", "")),
+                payload.get("combination_id"),
                 field="combination_id",
             ),
-            cluster=_require_non_empty(
-                str(payload.get("cluster", "")),
-                field="cluster",
-            ),
+            cluster=_require_non_empty(payload.get("cluster"), field="cluster"),
             lending_program_id=_require_pubkey(
-                str(payload.get("lending_program_id", "")),
+                payload.get("lending_program_id"),
                 field="lending_program_id",
             ),
             market_address=_require_pubkey(
-                str(payload.get("market_address", "")),
+                payload.get("market_address"),
                 field="market_address",
             ),
             collateral_mint=_require_pubkey(
-                str(payload.get("collateral_mint", "")),
+                payload.get("collateral_mint"),
                 field="collateral_mint",
             ),
-            debt_mint=_require_pubkey(
-                str(payload.get("debt_mint", "")),
-                field="debt_mint",
-            ),
+            debt_mint=_require_pubkey(payload.get("debt_mint"), field="debt_mint"),
             collateral_reserve=_require_pubkey(
-                str(payload.get("collateral_reserve", "")),
+                payload.get("collateral_reserve"),
                 field="collateral_reserve",
             ),
             debt_reserve=_require_pubkey(
-                str(payload.get("debt_reserve", "")),
+                payload.get("debt_reserve"),
                 field="debt_reserve",
             ),
             collateral_oracle=_require_pubkey(
-                str(payload.get("collateral_oracle", "")),
+                payload.get("collateral_oracle"),
                 field="collateral_oracle",
             ),
             debt_oracle=_require_pubkey(
-                str(payload.get("debt_oracle", "")),
+                payload.get("debt_oracle"),
                 field="debt_oracle",
             ),
             liquidation_bonus_bps=_require_bps(
@@ -229,14 +225,11 @@ class KaminoSupportedCombination:
                 payload.get("min_net_profit_lamports"),
                 field="min_net_profit_lamports",
             ),
-            writable_accounts=tuple(
-                _require_pubkey(account, field="writable_accounts")
-                for account in _tuple_of_strings(
-                    payload.get("writable_accounts"),
-                    field="writable_accounts",
-                )
+            writable_accounts=_tuple_of_pubkeys(
+                payload.get("writable_accounts"),
+                field="writable_accounts",
             ),
-            provenance=provenance,
+            provenance=KaminoDeploymentProvenance.from_mapping(provenance_payload),
             verified=bool(payload.get("verified", False)),
         ).validated()
 
@@ -279,7 +272,10 @@ class KaminoSupportedRegistry:
         if not isinstance(raw_combinations, list):
             raise KaminoRegistryError("combinations must be a list")
         combinations = tuple(
-            KaminoSupportedCombination.from_mapping(item) for item in raw_combinations
+            KaminoSupportedCombination.from_mapping(
+                _require_mapping(item, field="combinations[]")
+            )
+            for item in raw_combinations
         )
         identifiers = [item.combination_id for item in combinations]
         if len(identifiers) != len(set(identifiers)):
@@ -537,4 +533,6 @@ def load_default_kamino_registry() -> KaminoSupportedRegistry:
         "kamino_supported_combinations.json"
     )
     payload = json.loads(resource.read_text(encoding="utf-8"))
-    return KaminoSupportedRegistry.from_mapping(_require_mapping(payload, field="registry"))
+    return KaminoSupportedRegistry.from_mapping(
+        _require_mapping(payload, field="registry")
+    )

@@ -24,7 +24,6 @@ from src.economics.exact_fee_workflow import (
     candidate_with_exact_message_fee,
 )
 
-
 FINAL_HASH = "a" * 64
 OTHER_HASH = "c" * 64
 
@@ -188,8 +187,7 @@ def test_final_fee_growth_above_existing_reservation_fails_closed(
 
         assert result.accepted is False
         assert (
-            result.status
-            is ExactFeeCapitalStatus.FINAL_FEE_EXCEEDS_DURABLE_RESERVATION
+            result.status is ExactFeeCapitalStatus.FINAL_FEE_EXCEEDS_DURABLE_RESERVATION
         )
         assert result.decision is not None
         assert result.decision.allowed is True

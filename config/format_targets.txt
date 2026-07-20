@@ -54,8 +54,11 @@ src/data_plane/websocket.py
 tests/test_pr040_oracle_guards.py
 tests/test_pr040_readiness_safety.py
 tests/test_pr040_rpc_ws.py
+src/economics/__init__.py
 src/economics/durable_reservations.py
+src/economics/exact_fee_workflow.py
 tests/test_pr057_durable_capital_reservations.py
+tests/test_pr074_exact_fee_capital_workflow.py
 src/venues/pump/promotion.py
 tests/test_pr065_pump_promotion_guard.py
 src/runtime_discovery.py
@@ -65,7 +68,5 @@ src/runtime_discovery_builder.py
 src/market/snapshots.py
 src/strategy/detectors.py
 tests/test_pr056_runtime_discovery.py
-src/external_contracts/models.py
-src/external_contracts/conformance.py
-src/external_contracts/cli.py
-tests/test_pr070_protocol_aware_conformance.py
+src/paper_shadow/atomic_runtime_stages.py
+tests/test_pr075_atomic_runtime_stages.py

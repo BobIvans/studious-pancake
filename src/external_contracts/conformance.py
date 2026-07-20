@@ -7,9 +7,10 @@ import base64
 from datetime import UTC, datetime
 import hashlib
 import hmac
+import inspect
 import json
 import os
-from typing import Any, Callable, Mapping
+from typing import Any, Callable, Mapping, cast
 from urllib import request
 from urllib.parse import urlparse
 
@@ -47,7 +48,9 @@ class ConformanceResult:
         return asdict(self)
 
 
-Transport = Callable[[ConformanceHttpRequest], tuple[int, bytes]]
+StructuredTransport = Callable[[ConformanceHttpRequest], tuple[int, bytes]]
+LegacyTransport = Callable[[str, Mapping[str, str]], tuple[int, bytes]]
+Transport = StructuredTransport | LegacyTransport
 _MISSING = object()
 
 
@@ -70,6 +73,22 @@ def _http_request(probe_request: ConformanceHttpRequest) -> tuple[int, bytes]:
         req, timeout=probe_request.timeout_seconds
     ) as response:
         return int(response.status), response.read()
+
+
+def _invoke_transport(
+    transport: Transport | None, probe_request: ConformanceHttpRequest
+) -> tuple[int, bytes]:
+    if transport is None:
+        return _http_request(probe_request)
+    try:
+        parameters = inspect.signature(transport).parameters
+    except (TypeError, ValueError):
+        parameters = {}
+    if len(parameters) >= 2:
+        legacy = cast(LegacyTransport, transport)
+        return legacy(probe_request.url, probe_request.headers)
+    structured = cast(StructuredTransport, transport)
+    return structured(probe_request)
 
 
 def _json_path_value(payload: Any, path: str) -> Any:
@@ -136,7 +155,10 @@ def _utc_iso_timestamp() -> str:
 def _headers_for_probe(
     probe: ConformanceProbe, active_env: Mapping[str, str], body_text: str
 ) -> tuple[dict[str, str], tuple[str, ...], tuple[str, ...]]:
-    headers = {"accept": "application/json", "user-agent": "flashloan-contracts/pr070"}
+    headers = {
+        "accept": "application/json",
+        "user-agent": "flashloan-contracts/pr070",
+    }
     if probe.json_body is not None:
         headers["content-type"] = "application/json"
     required_env = _declared_required_env(probe)
@@ -319,7 +341,7 @@ def run_read_only_conformance(
     assert probe_request is not None
 
     try:
-        status, body = (transport or _http_request)(probe_request)
+        status, body = _invoke_transport(transport, probe_request)
         assertions = [
             f"credential-mode:{probe.credential_mode.value}",
             f"request-method:{probe_request.method}",

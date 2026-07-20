@@ -1,0 +1,42 @@
+name: PR-064 canary release readiness
+
+on:
+  pull_request:
+    paths:
+      - "src/release_gate/canary_release_readiness.py"
+      - "tests/test_pr064_canary_release_readiness.py"
+      - "docs/operations/pr064_canary_release_readiness.md"
+      - ".github/workflows/pr064-canary-release-readiness.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    name: PR-064 focused verification
+    runs-on: ubuntu-latest
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - run: python -m pip install --no-deps .
+      - name: Black
+        run: python -m black --check src/release_gate/canary_release_readiness.py tests/test_pr064_canary_release_readiness.py
+      - name: Mypy
+        run: python -m mypy --config-file mypy.ini src/release_gate
+      - name: Focused tests
+        run: python -m pytest tests/test_pr064_canary_release_readiness.py -q --disable-socket --allow-unix-socket
+      - name: Compile
+        run: python -m compileall -q src/release_gate/canary_release_readiness.py tests/test_pr064_canary_release_readiness.py

@@ -89,7 +89,9 @@ def validate_event_has_no_secrets(event: dict[str, Any]) -> None:
 
     findings = sorted(set(_secret_paths(event)))
     if findings:
-        raise ValueError(f"secret material is forbidden in decision datasets: {findings}")
+        raise ValueError(
+            f"secret material is forbidden in decision datasets: {findings}"
+        )
 
 
 def validate_pre_quote_features(features: dict[str, Any]) -> None:
@@ -177,7 +179,9 @@ class DecisionDatasetBuilder:
             try:
                 validate_pre_quote_features(raw_features)
             except ValueError:
-                excluded["forbidden_feature"] = excluded.get("forbidden_feature", 0) + 1
+                excluded["forbidden_feature"] = (
+                    excluded.get("forbidden_feature", 0) + 1
+                )
                 continue
             terms = [
                 t

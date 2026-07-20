@@ -1,4 +1,4 @@
-"""Fail-closed PR-055 MarginFi source and deployment conformance gate."""
+"""Fail-closed PR-055/PR-072 MarginFi source and deployment conformance gate."""
 
 from __future__ import annotations
 
@@ -18,8 +18,11 @@ EXPECTED_PROGRAM_ID = "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
 EXPECTED_MAIN_GROUP = "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8"
 DOCUMENTED_REPOSITORY_URL = "https://github.com/mrgnlabs/marginfi-v2"
 RESOLVED_REPOSITORY_URL = "https://github.com/0dotxyz/marginfi-v2"
-PINNED_SOURCE_COMMIT = "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428"
+PINNED_SOURCE_COMMIT = "d33e649e415c354cc2a1e3c49131725552d69ba0"
 REVIEWED_SOURCE_HEAD = "72c1680f119152d7d83972523d1706bc73e50cc9"
+EXPECTED_VERIFIED_BUILD_HASH = (
+    "890d68f48f96991016222b1fcbc2cc81b8ef2dcbf280c44fe378c523c108fad5"
+)
 EXPECTED_SOURCE_HEAD_DELTA = (
     "SECURITY.md",
     "guides/ADMIN/DEPLOY_GUIDE.md",
@@ -27,7 +30,7 @@ EXPECTED_SOURCE_HEAD_DELTA = (
 
 
 class MarginfiDeploymentConformanceError(RuntimeError):
-    """Raised when execution is requested without complete PR-055 evidence."""
+    """Raised when execution is requested without complete PR-055/072 evidence."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,7 +67,7 @@ def _mapping(value: object) -> Mapping[str, Any]:
 def load_marginfi_deployment_manifest(
     path: str | Path | None = None,
 ) -> dict[str, Any]:
-    """Load the PR-055 evidence manifest without promoting it."""
+    """Load the PR-055/PR-072 evidence manifest without promoting it."""
 
     try:
         if path is None:
@@ -89,9 +92,10 @@ def evaluate_marginfi_execution_conformance(
 ) -> MarginfiConformanceReport:
     """Evaluate source, build, IDL, vector and RPC evidence.
 
-    A local source pin or a matching hash prefix is never sufficient. Execution
-    is admitted only when full reproducible-build and deployed-program hashes
-    match and every independent evidence family is present.
+    A local source pin, a matching hash prefix or a Solana verified-build example
+    is never sufficient by itself. Execution is admitted only when the pinned
+    reproducible-build and deployed-program hashes match, the optional expected
+    hash is exactly satisfied, and every independent evidence family is present.
     """
 
     raw = dict(manifest) if manifest is not None else load_marginfi_deployment_manifest()
@@ -129,12 +133,18 @@ def evaluate_marginfi_execution_conformance(
     hash_prefix = deployment.get("official_hash_prefix")
     deployed_hash_value = deployment.get("deployed_program_hash_sha256")
     build_hash_value = deployment.get("reproducible_build_hash_sha256")
+    expected_hash_value = deployment.get("expected_verified_build_hash_sha256")
     deployed_hash = deployed_hash_value if isinstance(deployed_hash_value, str) else None
     build_hash = build_hash_value if isinstance(build_hash_value, str) else None
+    expected_hash = expected_hash_value if isinstance(expected_hash_value, str) else None
     if not _is_lower_hex(deployed_hash, 64):
         blockers.append("DEPLOYED_HASH_MISSING")
     if not _is_lower_hex(build_hash, 64):
         blockers.append("BUILD_HASH_MISSING")
+    if expected_hash_value is not None and not _is_lower_hex(expected_hash, 64):
+        blockers.append("EXPECTED_VERIFIED_BUILD_HASH_MALFORMED")
+    if _is_lower_hex(expected_hash, 64) and expected_hash != EXPECTED_VERIFIED_BUILD_HASH:
+        blockers.append("EXPECTED_VERIFIED_BUILD_HASH_UNEXPECTED")
     if (
         deployed_hash is not None
         and build_hash is not None
@@ -145,6 +155,11 @@ def evaluate_marginfi_execution_conformance(
             blockers.append("DEPLOYED_BUILD_HASH_MISMATCH")
         if not isinstance(hash_prefix, str) or not deployed_hash.startswith(hash_prefix):
             blockers.append("DEPLOYED_HASH_PREFIX_MISMATCH")
+        if _is_lower_hex(expected_hash, 64):
+            if deployed_hash != expected_hash:
+                blockers.append("DEPLOYED_HASH_UNEXPECTED")
+            if build_hash != expected_hash:
+                blockers.append("BUILD_HASH_UNEXPECTED")
 
     idl = _mapping(raw.get("idl"))
     if not _is_lower_hex(idl.get("sha256"), 64):

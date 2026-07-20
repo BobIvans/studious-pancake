@@ -10,8 +10,6 @@ from .models import (
     ExecutionAttempt,
     ExecutionErrorCode,
     ExecutionJournalEntry,
-    FlashLoanPlan,
-    Instruction,
     ExecutionState,
     JournalAttemptRecord,
     PlannedInstruction,
@@ -26,13 +24,17 @@ from .models import (
     TransactionPlan,
     compute_message_hash,
 )
-from .state_machine import ExecutionStateMachine
-from .transaction_compiler import (
-    AltValidator,
-    TransactionCompileError,
+from .transaction_compiler import AltValidator, TransactionCompileError
+from .canonical_domain import (
+    CanonicalExecutionContractError,
+    CanonicalTransactionCompiler,
+    ExecutionReceipt,
     TransactionCompiler,
     sign_fully,
+    validate_canonical_plan,
+    validate_compiled_identity,
 )
+from .state_machine import ExecutionStateMachine
 from .transaction_simulator import (
     CompilerDiagnostics,
     CanonicalSimulator,
@@ -45,7 +47,11 @@ from .transaction_simulator import (
 from .journal import InMemoryExecutionJournal, MIGRATION_VERSION, SQLiteAttemptJournal
 from .lifecycle import SubmissionEnvelope, TransactionLifecycleService
 from .live_gate import LiveSubmissionGate
-from .reconciliation import ReconciliationEvidence, ReconciliationOutcome, classify_reconciliation
+from .reconciliation import (
+    ReconciliationEvidence,
+    ReconciliationOutcome,
+    classify_reconciliation,
+)
 from .tip_validation import validate_exactly_one_tip
 
 __all__ = [
@@ -56,15 +62,16 @@ __all__ = [
     "AltValidator",
     "AttemptIdentity",
     "BlockhashContext",
+    "CanonicalExecutionContractError",
     "CanonicalSimulator",
+    "CanonicalTransactionCompiler",
     "CompiledTransaction",
     "CompilerDiagnostics",
     "ComputeBudgetPolicy",
     "ExecutionAttempt",
     "ExecutionErrorCode",
     "ExecutionJournalEntry",
-    "FlashLoanPlan",
-    "Instruction",
+    "ExecutionReceipt",
     "ExecutionState",
     "ExecutionStateMachine",
     "InMemoryExecutionJournal",
@@ -96,5 +103,7 @@ __all__ = [
     "parse_simulation_response",
     "sign_fully",
     "simulate_exact",
+    "validate_canonical_plan",
+    "validate_compiled_identity",
     "validate_exactly_one_tip",
 ]

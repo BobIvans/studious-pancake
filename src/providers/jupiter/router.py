@@ -543,6 +543,7 @@ def calculate_final_cu_limit(report: SimulationReport) -> int:
 
 
 __all__ = [
+    "COMPUTE_BUDGET_PROGRAM_ID",
     "JUPITER_COMPUTE_UNIT_LIMIT_MAX",
     "JUPITER_ROUTER_ENDPOINT",
     "JupiterBuildRequest",

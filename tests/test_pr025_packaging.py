@@ -11,9 +11,7 @@ import pytest
 
 pytestmark = pytest.mark.unit
 ROOT = Path(__file__).resolve().parents[1]
-PIN_RE = re.compile(
-    r"^([A-Za-z0-9_.-]+)(?:\[[A-Za-z0-9_,.-]+\])?==([^\s;]+)(.*)$"
-)
+PIN_RE = re.compile(r"^([A-Za-z0-9_.-]+)(?:\[[A-Za-z0-9_,.-]+\])?==([^\s;]+)(.*)$")
 
 
 def _canonical_name(value: str) -> str:

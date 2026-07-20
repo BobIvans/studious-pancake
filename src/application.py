@@ -12,10 +12,11 @@ from typing import Any
 from src.capabilities import CapabilityMatrix
 from src.strategy import OpportunityQueue, StrategyRegistry, StrategyRuntime
 from src.strategy.consumer import (
+    CapitalAwareShadowOpportunityHandler,
+    ConfiguredCapitalPrecheck,
     InMemoryOpportunityTracker,
     OpportunityConsumer,
     OpportunityHandler,
-    ShadowOnlyOpportunityHandler,
 )
 from src.strategy.interfaces import StrategyContext, StrategyMode
 from src.strategy.ranker import ArbitrageScorerRanker
@@ -85,7 +86,9 @@ class ArbitrageApplication:
                     reason=reason,
                     capability=declared.capability.value,
                     quarantined=declared.quarantined,
-                    active_in_supported_entrypoint=declared.active_in_supported_entrypoint,
+                    active_in_supported_entrypoint=(
+                        declared.active_in_supported_entrypoint
+                    ),
                 )
             )
         return entries
@@ -98,17 +101,11 @@ class ArbitrageApplication:
         return path_errors + registry_errors
 
     def executable_strategies(self) -> tuple[StrategyManifestEntry, ...]:
-        """Return strategies that the capability contract permits to do real work.
-
-        A merely registered shadow shell is not executable. It must be explicitly
-        declared shadow-ready/live-ready and enabled in a matching mode.
-        """
+        """Return strategies that the capability contract permits to do real work."""
         executable = []
         for entry in self.manifest():
-            if entry.effective_mode == StrategyMode.SHADOW.value and entry.capability in {
-                "shadow-ready",
-                "live-ready",
-            }:
+            shadow_ready = entry.capability in {"shadow-ready", "live-ready"}
+            if entry.effective_mode == StrategyMode.SHADOW.value and shadow_ready:
                 executable.append(entry)
             elif (
                 entry.effective_mode == StrategyMode.LIVE.value
@@ -123,8 +120,8 @@ class ArbitrageApplication:
         for strategy in self.context.registry.all():
             if strategy.mode is StrategyMode.LIVE:
                 raise ConfigurationError(
-                    "live mode is disabled until the canonical execution stack is implemented: "
-                    f"{strategy.name}"
+                    "live mode is disabled until the canonical execution stack "
+                    f"is implemented: {strategy.name}"
                 )
             if strategy.mode is StrategyMode.DISABLED and not strategy.disabled_reason:
                 raise ConfigurationError(
@@ -177,11 +174,17 @@ def _mode(
     try:
         return StrategyMode(value)
     except ValueError as exc:
-        raise ConfigurationError(f"invalid strategy mode for {name}: {value!r}") from exc
+        message = f"invalid strategy mode for {name}: {value!r}"
+        raise ConfigurationError(message) from exc
 
 
 def build_application(
-    config: Any = None, capabilities: CapabilityMatrix | None = None
+    config: Any = None,
+    capabilities: CapabilityMatrix | None = None,
+    *,
+    market_state: Any = None,
+    protocol_state: Any = None,
+    capital_precheck: Any = None,
 ) -> ArbitrageApplication:
     capability_matrix = capabilities or CapabilityMatrix.load_default()
     registry = StrategyRegistry()
@@ -203,9 +206,19 @@ def build_application(
         ranker=ArbitrageScorerRanker(),
         tracker=tracker,
     )
-    runtime = StrategyRuntime(registry, queue, StrategyContext(config=config))
+    precheck = capital_precheck or ConfiguredCapitalPrecheck(config)
+    runtime = StrategyRuntime(
+        registry,
+        queue,
+        StrategyContext(
+            config=config,
+            market_state=market_state,
+            protocol_state=protocol_state,
+            capital_precheck=precheck,
+        ),
+    )
     sink = InMemoryOpportunityResultSink()
-    handler = ShadowOnlyOpportunityHandler()
+    handler = CapitalAwareShadowOpportunityHandler(precheck)
     consumer = OpportunityConsumer(queue, registry, tracker, handler, sink)
     timeout = getattr(config, "shutdown_drain_timeout_seconds", 0.25)
     context = ApplicationContext(

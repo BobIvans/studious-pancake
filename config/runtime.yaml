@@ -1,0 +1,29 @@
+# Operator override for the packaged fail-closed defaults.
+# Precedence: this file < environment < explicit CLI overrides.
+schema_version: pr026.runtime-config.v1
+runtime:
+  mode: disabled
+cluster:
+  name: mainnet-beta
+  genesis_hash: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
+  rpc_http_url: null
+  rpc_ws_url: null
+wallet:
+  public_key: null
+  signer_reference: null
+providers:
+  jupiter:
+    enabled: false
+    api_key_reference: null
+  jito:
+    enabled: false
+    auth_reference: null
+  marginfi:
+    enabled: false
+    program_id: null
+    group: null
+    margin_account: null
+    banks: []
+validation:
+  verify_rpc_at_startup: false
+  owner_expectations: []

@@ -6,6 +6,10 @@ from dataclasses import dataclass
 from pathlib import Path
 from fractions import Fraction
 from typing import Any, Mapping
+from src.config.chain_registry import (
+    ASSOCIATED_TOKEN_PROGRAM_ADDRESS, SYSTEM_PROGRAM_ADDRESS,
+    TOKEN_2022_PROGRAM_ADDRESS, TOKEN_PROGRAM_ADDRESS,
+)
 from src.execution.models import Instruction
 from .models import (
     FeeBreakdown,
@@ -18,10 +22,10 @@ from .models import (
     SwapDirection,
 )
 
-TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPZ5VK5jY6aXL7YYg9V"
-SYSTEM_PROGRAM = "11111111111111111111111111111111"
-ASSOCIATED_TOKEN_PROGRAM = "ATokenGPvoter11111111111111111111111111111111"
+TOKEN_PROGRAM = TOKEN_PROGRAM_ADDRESS
+TOKEN_2022_PROGRAM = TOKEN_2022_PROGRAM_ADDRESS
+SYSTEM_PROGRAM = SYSTEM_PROGRAM_ADDRESS
+ASSOCIATED_TOKEN_PROGRAM = ASSOCIATED_TOKEN_PROGRAM_ADDRESS
 
 
 @dataclass(frozen=True)

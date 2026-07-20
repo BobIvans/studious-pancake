@@ -73,7 +73,9 @@ jobs:
               root = ET.parse(report).getroot()
               failed = []
               for case in root.iter("testcase"):
-                  node = case.find("failure") or case.find("error")
+                  node = case.find("failure")
+                  if node is None:
+                      node = case.find("error")
                   if node is None:
                       continue
                   test_id = f"{case.get('classname', '')}::{case.get('name', '')}".strip(":")

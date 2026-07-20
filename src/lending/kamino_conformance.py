@@ -125,9 +125,10 @@ def _require_timezone(value: datetime, *, field: str) -> datetime:
 
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
-        return {
-            item.name: _jsonable(getattr(value, item.name)) for item in fields(value)
-        }
+        result: dict[str, Any] = {}
+        for item in fields(value):
+            result[item.name] = _jsonable(getattr(value, item.name))
+        return result
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     if isinstance(value, Enum):
@@ -405,7 +406,9 @@ class KaminoConformanceEvidence:
         if self.schema_version != SCHEMA_VERSION:
             raise KaminoConformanceError("unsupported PR-067 evidence schema")
         if not isinstance(self.combination, KaminoSupportedCombination):
-            raise KaminoConformanceError("combination must be KaminoSupportedCombination")
+            raise KaminoConformanceError(
+                "combination must be KaminoSupportedCombination"
+            )
         try:
             self.combination.validated()
         except KaminoRegistryError as exc:
@@ -552,8 +555,13 @@ def evaluate_kamino_conformance(
             "CONFORMANCE_SIGNATURE_REFERENCE_MISSING",
         )
 
-    vector_accounts = {vector.account_address for vector in evidence.rpc_account_vectors}
-    check(combination.market_address in vector_accounts, "MARKET_ACCOUNT_VECTOR_MISSING")
+    vector_accounts = {
+        vector.account_address for vector in evidence.rpc_account_vectors
+    }
+    check(
+        combination.market_address in vector_accounts,
+        "MARKET_ACCOUNT_VECTOR_MISSING",
+    )
     check(
         combination.collateral_reserve in vector_accounts,
         "COLLATERAL_RESERVE_VECTOR_MISSING",

@@ -33,7 +33,9 @@ class ExactFeeCapitalStatus(StrEnum):
 
     READY_FOR_ATOMIC_VERTICAL = "ready_for_atomic_vertical"
     BLOCKED_BY_CAPITAL_DECISION = "blocked_by_capital_decision"
-    FINAL_FEE_EXCEEDS_DURABLE_RESERVATION = "final_fee_exceeds_durable_reservation"
+    FINAL_FEE_EXCEEDS_DURABLE_RESERVATION = (
+        "final_fee_exceeds_durable_reservation"
+    )
     MISSING_ATTEMPT = "missing_attempt"
     MISSING_ACTIVE_RESERVATION = "missing_active_reservation"
     MISSING_FINAL_MESSAGE_HASH = "missing_final_message_hash"
@@ -96,7 +98,10 @@ def candidate_with_exact_message_fee(
     profitability buffers from the upstream candidate.
     """
 
-    if expected_message_hash is not None and fee_quote.message_hash != expected_message_hash:
+    if (
+        expected_message_hash is not None
+        and fee_quote.message_hash != expected_message_hash
+    ):
         raise CapitalEngineError("final fee quote does not match expected message hash")
 
     current_costs = candidate.native_costs
@@ -175,7 +180,9 @@ class ExactFeeCapitalWorkflow:
                 reserved_lamports=attempt.reserved_lamports,
                 required_lamports=0,
                 released=released,
-                release_reason=("PR074_MISSING_FINAL_MESSAGE_HASH" if released else None),
+                release_reason=(
+                    "PR074_MISSING_FINAL_MESSAGE_HASH" if released else None
+                ),
             )
 
         try:
@@ -212,7 +219,9 @@ class ExactFeeCapitalWorkflow:
                 reserved_lamports=attempt.reserved_lamports,
                 required_lamports=required,
                 released=released,
-                release_reason=("PR074_FINAL_FEE_CAPITAL_REJECTED" if released else None),
+                release_reason=(
+                    "PR074_FINAL_FEE_CAPITAL_REJECTED" if released else None
+                ),
             )
 
         if required > attempt.reserved_lamports:

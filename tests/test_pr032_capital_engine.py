@@ -130,7 +130,7 @@ def test_positive_but_below_minimum_net_profit_is_rejected() -> None:
 
     decision = ledger.evaluate(
         _candidate(
-            guaranteed_min_out_lamports=1_000_360_000,
+            guaranteed_min_out_lamports=1_000_350_000,
             flash_repayment_lamports=1_000_000_000,
             base_network_fee_lamports=5_000,
             priority_fee_lamports=50_000,
@@ -141,7 +141,7 @@ def test_positive_but_below_minimum_net_profit_is_rejected() -> None:
 
     assert decision.allowed is False
     assert decision.reason is NoTradeReason.BELOW_MINIMUM_NET_PROFIT
-    assert decision.conservative_net_profit_lamports == 105_000
+    assert decision.conservative_net_profit_lamports == 95_000
 
 
 def test_fee_rent_tip_and_flash_size_policy_caps_fail_closed() -> None:

@@ -4,22 +4,52 @@ import ast
 import hashlib
 import json
 from pathlib import Path
+import re
 import tomllib
 
 import pytest
 
 pytestmark = pytest.mark.unit
 ROOT = Path(__file__).resolve().parents[1]
+PIN_RE = re.compile(r"^([A-Za-z0-9_.-]+)(?:\[[A-Za-z0-9_,.-]+\])?==([^\s;]+)(.*)$")
+
+
+def _canonical_name(value: str) -> str:
+    return re.sub(r"[-_.]+", "-", value).lower()
 
 
 def _pins(path: Path) -> set[str]:
-    names: set[str] = set()
+    return set(_pin_map(path))
+
+
+def _pin_map(path: Path) -> dict[str, str]:
+    pins: dict[str, str] = {}
     for raw in path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
-        if not line or line.startswith("#") or "==" not in line:
+        if not line or line.startswith("#") or line.startswith("-"):
             continue
-        names.add(line.split("==", 1)[0].lower().replace("_", "-"))
-    return names
+        match = PIN_RE.match(line)
+        if match is None:
+            raise AssertionError(f"non-exact requirement in {path.name}: {line}")
+        name, version, suffix = match.groups()
+        pins[_canonical_name(name)] = f"{name}=={version}{suffix}"
+    return pins
+
+
+def _project_direct_pins() -> dict[str, str]:
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        project = tomllib.load(handle)["project"]
+    values: list[str] = list(project["dependencies"])
+    for entries in project["optional-dependencies"].values():
+        values.extend(entries)
+
+    direct: dict[str, str] = {}
+    for value in values:
+        match = PIN_RE.match(value)
+        assert match is not None, f"non-exact direct project dependency: {value}"
+        name, version, suffix = match.groups()
+        direct[_canonical_name(name)] = f"{name}=={version}{suffix}"
+    return direct
 
 
 def test_pyproject_is_the_single_typed_package_contract():
@@ -70,6 +100,7 @@ def test_optional_lock_profiles_are_explicit_and_hashed():
         "mypy",
         "pip-audit",
         "pytest",
+        "types-pyyaml",
         "uv",
     } <= development
 
@@ -81,6 +112,13 @@ def test_optional_lock_profiles_are_explicit_and_hashed():
     for filename, details in manifest["locks"].items():
         digest = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
         assert digest == details["sha256"]
+
+
+def test_development_lock_is_exact_and_honors_direct_pins():
+    development = _pin_map(ROOT / "requirements-dev.txt")
+    direct = _project_direct_pins()
+    assert development["uv"] == direct["uv"]
+    assert development["types-pyyaml"] == direct["types-pyyaml"]
 
 
 def test_repository_and_packaged_capability_registries_match():

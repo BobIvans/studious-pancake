@@ -6,6 +6,7 @@ from __future__ import annotations
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -13,6 +14,18 @@ import venv
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+IGNORED_COPY_NAMES = {
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "build",
+    "dist",
+    "htmlcov",
+    "venv",
+}
 
 
 def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> str:
@@ -32,9 +45,23 @@ def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) ->
     return result.stdout
 
 
+def _copy_source_tree(destination: Path) -> None:
+    def ignore(_directory: str, names: list[str]) -> set[str]:
+        return {
+            name
+            for name in names
+            if name in IGNORED_COPY_NAMES or name.endswith(".egg-info")
+        }
+
+    shutil.copytree(ROOT, destination, ignore=ignore)
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="pr025-package-smoke-") as temp_dir:
         temporary = Path(temp_dir)
+        source = temporary / "source"
+        _copy_source_tree(source)
+
         dist = temporary / "dist"
         dist.mkdir()
         _run(
@@ -47,7 +74,7 @@ def main() -> int:
                 "--outdir",
                 str(dist),
             ],
-            cwd=ROOT,
+            cwd=source,
         )
         wheels = tuple(dist.glob("*.whl"))
         if len(wheels) != 1:
@@ -75,18 +102,31 @@ def main() -> int:
                     raise SystemExit(f"wheel entry point is missing: {executable}")
 
         environment = temporary / "venv"
-        venv.EnvBuilder(with_pip=True, system_site_packages=True).create(environment)
+        venv.EnvBuilder(with_pip=True, system_site_packages=False).create(environment)
         python = environment / (
             "Scripts/python.exe" if os.name == "nt" else "bin/python"
         )
         bin_dir = python.parent
         _run(
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                "-r",
+                str(source / "requirements.txt"),
+            ],
+            cwd=temporary,
+        )
+        _run(
             [str(python), "-m", "pip", "install", "--no-deps", str(wheel)],
             cwd=temporary,
         )
+        _run([str(python), "-m", "pip", "check"], cwd=temporary)
         clean_env = os.environ.copy()
         clean_env.pop("PYTHONPATH", None)
         clean_env["PATH"] = f"{bin_dir}{os.pathsep}{clean_env.get('PATH', '')}"
+        clean_env["PYTHONNOUSERSITE"] = "1"
         status = json.loads(
             _run(
                 [str(bin_dir / "flashloan-bot"), "status", "--json"],

@@ -69,6 +69,7 @@ dev = [
   "pytest-socket==0.7.0",
   "pytest-xprocess==1.0.2",
   "setuptools==83.0.0",
+  "types-PyYAML==6.0.12.20260518",
   "uv==0.10.0",
   "wheel==0.47.0",
 ]

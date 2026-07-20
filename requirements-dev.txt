@@ -5,7 +5,6 @@ aiohttp==3.14.1
 aiohttp-socks==0.11.0
 aiolimiter==1.1.0
 aiosignal==1.4.0
-aiosqlite==0.20.0
 annotated-doc==0.0.4
 annotated-types==0.7.0
 anyio==4.14.2
@@ -45,6 +44,7 @@ multidict==6.7.1
 mypy==1.18.2
 mypy-extensions==1.1.0
 numpy==2.4.2
+orjson==3.11.6
 packaging==26.2
 pandas==3.0.0
 pathspec==1.1.1

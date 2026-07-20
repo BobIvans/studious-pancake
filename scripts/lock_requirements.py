@@ -25,9 +25,7 @@ from typing import Iterable, Sequence
 ROOT = Path(__file__).resolve().parents[1]
 SUPPORTED_PYTHON = (3, 13)
 UV_VERSION = "0.10.0"
-PIN_RE = re.compile(
-    r"^([A-Za-z0-9_.-]+)(?:\[[A-Za-z0-9_,.-]+\])?==([^\s;]+)(.*)$"
-)
+PIN_RE = re.compile(r"^([A-Za-z0-9_.-]+)(?:\[[A-Za-z0-9_,.-]+\])?==([^\s;]+)(.*)$")
 
 
 def _sha256(path: Path) -> str:

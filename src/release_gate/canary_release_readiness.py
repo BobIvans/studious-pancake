@@ -136,9 +136,7 @@ class CanaryReleaseReadinessGate:
     clients, never opens or closes latches and never changes live/canary mode.
     """
 
-    required_dependencies: frozenset[UpstreamDependency] = frozenset(
-        UpstreamDependency
-    )
+    required_dependencies: frozenset[UpstreamDependency] = frozenset(UpstreamDependency)
 
     def evaluate(
         self,
@@ -222,9 +220,7 @@ class CanaryReleaseReadinessGate:
         return CanaryReleaseReadinessResult(
             schema_version=RESULT_SCHEMA_VERSION,
             ready=ready,
-            state=(
-                "ready-for-human-controlled-canary-release" if ready else "blocked"
-            ),
+            state=("ready-for-human-controlled-canary-release" if ready else "blocked"),
             blockers=unique_blockers,
             warnings=tuple(dict.fromkeys(warnings)),
             upstream_evidence_hash=upstream_hash,

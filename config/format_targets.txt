@@ -40,3 +40,14 @@ src/release_gate/cli.py
 src/release_gate/gate.py
 src/release_gate/models.py
 tests/test_pr047_release_gate.py
+src/data_plane/__init__.py
+src/data_plane/aggregate.py
+src/data_plane/common.py
+src/data_plane/guards.py
+src/data_plane/oracle.py
+src/data_plane/readiness.py
+src/data_plane/rpc.py
+src/data_plane/websocket.py
+tests/test_pr040_oracle_guards.py
+tests/test_pr040_readiness_safety.py
+tests/test_pr040_rpc_ws.py

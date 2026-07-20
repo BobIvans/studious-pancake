@@ -98,10 +98,8 @@ def candidate_with_exact_message_fee(
     profitability buffers from the upstream candidate.
     """
 
-    if (
-        expected_message_hash is not None
-        and fee_quote.message_hash != expected_message_hash
-    ):
+    expected_hash = expected_message_hash or candidate.message_hash
+    if expected_hash is not None and fee_quote.message_hash != expected_hash:
         raise CapitalEngineError("final fee quote does not match expected message hash")
 
     current_costs = candidate.native_costs

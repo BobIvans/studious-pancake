@@ -104,3 +104,8 @@ patch_bot*.py
 build/
 dist/
 *.egg-info/
+
+# Python build artifacts
+build/
+dist/
+*.egg-info/

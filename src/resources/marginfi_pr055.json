@@ -1,0 +1,70 @@
+{
+  "schema_version": "pr055.marginfi-authoritative-conformance.v1",
+  "cluster": "mainnet-beta",
+  "program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+  "main_group": "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8",
+  "source": {
+    "documented_repository_url": "https://github.com/mrgnlabs/marginfi-v2",
+    "resolved_repository_url": "https://github.com/0dotxyz/marginfi-v2",
+    "repository_aliases": [
+      "https://github.com/mrgnlabs/marginfi-v2",
+      "https://github.com/0dotxyz/marginfi-v2"
+    ],
+    "repository_relation": "github-redirect-same-repository",
+    "source_commit": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
+    "release": "0.1.9",
+    "reviewed_source_head": "72c1680f119152d7d83972523d1706bc73e50cc9",
+    "source_head_delta": [
+      "SECURITY.md",
+      "guides/ADMIN/DEPLOY_GUIDE.md"
+    ],
+    "layout_manifest": "src/resources/marginfi_pr028.json"
+  },
+  "deployment": {
+    "release": "0.1.9",
+    "mainnet_deployment_date": "2026-07-14",
+    "official_hash_prefix": "26dda5e",
+    "deployed_program_hash_sha256": null,
+    "reproducible_build_hash_sha256": null,
+    "verification_status": "blocked-missing-full-hashes",
+    "verified_build_command": "solana-verify verify-from-repo --remote --program-id MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA --library-name marginfi https://github.com/mrgnlabs/marginfi-v2",
+    "program_hash_command": "solana-verify get-program-hash MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+  },
+  "idl": {
+    "source": "canonical-solana-program-metadata",
+    "sha256": null,
+    "canonical_program_metadata_verified": false,
+    "status": "blocked-missing-canonical-idl-artifact"
+  },
+  "sdk_golden_vectors": {
+    "generated_from_source_commit": "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428",
+    "account_vectors_sha256": null,
+    "instruction_vectors_sha256": null,
+    "status": "blocked-missing-sdk-generated-vectors"
+  },
+  "rpc_evidence": {
+    "sha256": null,
+    "min_context_slot": null,
+    "program_executable_verified": false,
+    "group_relationships_verified": false,
+    "bank_relationships_verified": false,
+    "flashloan_metas_verified": false,
+    "token_2022_paths_verified": false,
+    "status": "blocked-missing-readonly-mainnet-evidence"
+  },
+  "promotion": {
+    "execution_conformance_verified": false,
+    "human_reviewed": false,
+    "live_allowed": false,
+    "required_evidence": [
+      "full deployed program hash",
+      "matching reproducible build hash",
+      "canonical on-chain IDL hash",
+      "SDK-generated account vectors",
+      "SDK-generated instruction vectors",
+      "read-only mainnet group/account/bank evidence",
+      "flashloan metas, pause, fee and Token-2022 verification",
+      "human review"
+    ]
+  }
+}

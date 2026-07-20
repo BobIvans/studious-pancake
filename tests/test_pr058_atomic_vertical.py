@@ -199,7 +199,7 @@ class _FakeRpc:
                         "err": None,
                         "unitsConsumed": units,
                         "loadedAccountsDataSize": 2_048,
-                        "logs": ("Program log: exact simulation",),
+                        "logs": ["Program log: exact simulation"],
                         "accounts": [_rpc_account(address) for address in addresses],
                         "replacementBlockhash": None,
                     },

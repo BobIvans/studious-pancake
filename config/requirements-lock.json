@@ -12,7 +12,7 @@
         "service",
         "dev"
       ],
-      "sha256": "fc4bc512cb8bf8a412088636e8b0e6b8f0314f78cfc901e8d53448feb05f622a"
+      "sha256": "87e1db9e6d9857cab1c8e505ddad1ba1e30e300e8a46a375f9ab2986db3bca6a"
     },
     "requirements.txt": {
       "extras": [],

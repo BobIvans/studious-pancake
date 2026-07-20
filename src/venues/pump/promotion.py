@@ -77,9 +77,7 @@ class PumpPromotionReport:
 
 
 def _manifest_blockers(manifest: PumpContractManifest) -> list[str]:
-    blockers = [
-        f"manifest_shadow_error:{error}" for error in manifest.shadow_errors()
-    ]
+    blockers = [f"manifest_shadow_error:{error}" for error in manifest.shadow_errors()]
     if manifest.live_capability != "DENIED_SHADOW_ONLY":
         blockers.append("manifest_live_capability_must_remain_denied")
     return blockers

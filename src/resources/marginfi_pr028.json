@@ -9,7 +9,15 @@
     "level": "source-derived-offline",
     "execution_mode": "shadow-only",
     "online_rpc_required_for_promotion": true,
-    "pr027_registry_required": true
+    "pr027_registry_required": true,
+    "supported_oracle_setups": [
+      3,
+      4
+    ],
+    "supported_asset_tags": [
+      0,
+      1
+    ]
   },
   "account_layouts": {
     "marginfi_group": {
@@ -51,6 +59,8 @@
         "oracle_keys": 602,
         "oracle_key_count": 5,
         "borrow_limit": 768,
+        "risk_tier": 776,
+        "asset_tag": 777,
         "flags": 832
       }
     }

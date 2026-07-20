@@ -12,7 +12,10 @@ from hashlib import sha256
 from typing import Iterable
 import time
 
-from .secret_scan import PlaintextKeyMaterialError, assert_no_plaintext_key_material
+from .secret_scan import (
+    PlaintextKeyMaterialError,
+    assert_no_plaintext_key_material,
+)
 
 
 class SignerPolicyError(ValueError):

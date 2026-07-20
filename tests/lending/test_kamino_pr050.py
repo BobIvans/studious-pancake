@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import struct
 
 import pytest
@@ -45,7 +46,11 @@ def _provenance() -> KaminoDeploymentProvenance:
     ).validated()
 
 
-def _combination(*, verified: bool = True, min_profit: int = 100_000) -> KaminoSupportedCombination:
+def _combination(
+    *,
+    verified: bool = True,
+    min_profit: int = 100_000,
+) -> KaminoSupportedCombination:
     return KaminoSupportedCombination(
         combination_id="mainnet-sol-usdc",
         cluster="mainnet-beta",
@@ -72,7 +77,11 @@ def _combination(*, verified: bool = True, min_profit: int = 100_000) -> KaminoS
     ).validated()
 
 
-def _candidate(*, health_factor_bps: int = 9_500, bonus: int = 500_000) -> UntrustedKaminoLiquidationCandidate:
+def _candidate(
+    *,
+    health_factor_bps: int = 9_500,
+    bonus: int = 500_000,
+) -> UntrustedKaminoLiquidationCandidate:
     return UntrustedKaminoLiquidationCandidate(
         combination_id="mainnet-sol-usdc",
         obligation_account=COMPUTE_BUDGET_PROGRAM_ADDRESS,
@@ -123,7 +132,8 @@ def test_profitability_includes_protocol_flash_and_network_costs() -> None:
 
 
 def test_shadow_planner_accepts_only_liquidatable_profitable_verified_candidate() -> None:
-    registry = KaminoSupportedRegistry((_combination(min_profit=100_000),))
+    combination = _combination(min_profit=100_000)
+    registry = KaminoSupportedRegistry((combination,))
     planner = KaminoShadowLiquidationPlanner(registry)
 
     plan = planner.plan(_candidate())
@@ -131,7 +141,7 @@ def test_shadow_planner_accepts_only_liquidatable_profitable_verified_candidate(
     assert plan.accepted is True
     assert plan.status is KaminoShadowPlanStatus.ACCEPTED
     assert plan.net_profit_lamports == 381_000
-    assert plan.writable_accounts == _combination().writable_accounts
+    assert plan.writable_accounts == combination.writable_accounts
 
 
 def test_shadow_planner_rejects_healthy_or_unprofitable_candidate() -> None:
@@ -158,9 +168,12 @@ def test_registry_rejects_bad_provenance_and_missing_writable_metas() -> None:
             reviewed_at="2026-07-20",
         ).validated()
 
-    broken = _combination().__dict__ | {"writable_accounts": (SYSTEM_PROGRAM_ADDRESS,)}
+    broken = replace(
+        _combination(),
+        writable_accounts=(SYSTEM_PROGRAM_ADDRESS,),
+    )
     with pytest.raises(KaminoRegistryError, match="writable_accounts"):
-        KaminoSupportedCombination(**broken).validated()
+        broken.validated()
 
 
 def test_reserve_fixture_decoder_fails_closed_on_bad_bytes() -> None:

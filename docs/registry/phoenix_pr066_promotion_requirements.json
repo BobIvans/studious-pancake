@@ -1,0 +1,25 @@
+{
+  "schema_version": "pr066.phoenix_promotion_requirements.v1",
+  "scope": "phoenix-first-shadow-only",
+  "reviewed_at": "2026-07-21T00:00:00Z",
+  "official_program_id": "PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY",
+  "official_source_repository": "https://github.com/Ellipsis-Labs/phoenix-v1",
+  "official_verify_command": "solana-verify verify-from-repo -um --program-id PhoeNiXZ8ByJGLkxNfZRnkUfjvmuYqLR89jjFHGqdXY https://github.com/Ellipsis-Labs/phoenix-v1",
+  "required_gates": [
+    "official-program-id",
+    "verified-build",
+    "market-owner",
+    "market-layout",
+    "golden-rpc-account",
+    "lot-and-fee-math",
+    "ioc-postconditions",
+    "shadow-soak"
+  ],
+  "non_scope": [
+    "openbook-v2",
+    "live-execution",
+    "automatic-market-discovery",
+    "synthetic-fixture-promotion"
+  ],
+  "promotion_rule": "Every required gate must be true and every evidence hash must be a sha256:<64 lowercase hex> digest before a Phoenix market may be admitted to shadow-only experiments. Live remains false even when shadow promotion is ready."
+}

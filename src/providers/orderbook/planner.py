@@ -3,11 +3,10 @@ from __future__ import annotations
 import hashlib
 from dataclasses import dataclass
 
-from src.execution.models import Instruction, TransactionPlan
+from src.execution.models import FlashLoanPlan, Instruction, TransactionPlan
 
 from .models import (
     ExecutionProfile,
-    FlashLoanPlan,
     OrderbookInstructionPlan,
     OrderbookMarketSnapshot,
     OrderbookReject,
@@ -75,7 +74,7 @@ class OrderbookAmmPlanner:
                 "account profile exceeded",
             )
 
-        _legacy_plan_hash = hashlib.sha256(
+        legacy_plan_hash = hashlib.sha256(
             b"".join(ix.stable_bytes() for ix in strategy)
             + c.snapshot.raw_market_hash.encode()
         ).hexdigest()
@@ -85,7 +84,7 @@ class OrderbookAmmPlanner:
             "a Solders v0 planner is required after PR-053 canonical cutover",
             {
                 "opportunity_id": c.opportunity_id,
-                "legacy_plan_hash": _legacy_plan_hash,
+                "legacy_plan_hash": legacy_plan_hash,
                 "venue_kind": c.snapshot.venue_spec.venue_kind.value,
             },
         )

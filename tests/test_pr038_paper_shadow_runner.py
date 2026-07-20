@@ -127,7 +127,9 @@ async def test_restart_continues_append_only_sequence(tmp_path) -> None:
     )
     await second.run_once(())
 
-    sequences = [event["sequence"] for event in JsonlPaperShadowJournal(path).read_events()]
+    sequences = [
+        event["sequence"] for event in JsonlPaperShadowJournal(path).read_events()
+    ]
     assert sequences == [1, 2, 3, 4]
 
 

@@ -91,6 +91,10 @@ def _artifacts() -> tuple[SoakArtifactReference, ...]:
 
 def _evidence(**overrides: object) -> ShadowSoakEvidence:
     start = datetime(2026, 7, 21, 0, 0, tzinfo=timezone.utc)
+    reviewed_at = start + timedelta(
+        seconds=MINIMUM_SOAK_SECONDS,
+        minutes=5,
+    )
     values = {
         "run_id": "shadow-soak-20260721-a",
         "code_commit": "a" * 40,
@@ -112,8 +116,7 @@ def _evidence(**overrides: object) -> ShadowSoakEvidence:
         "operator": "ops-shadow",
         "human_reviewed": True,
         "reviewer": "risk-owner",
-        "reviewed_at": start
-        + timedelta(seconds=MINIMUM_SOAK_SECONDS, minutes=5),
+        "reviewed_at": reviewed_at,
         "signed_by": "release-manager",
         "signature_reference": "artifacts/pr060/evidence.sig",
         "notes": "unit-test evidence object; not a real soak run",

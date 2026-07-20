@@ -37,9 +37,30 @@ class ArtifactKind(StrEnum):
     SCHEMA = "schema"
 
 
+class CredentialMode(StrEnum):
+    NONE = "none"
+    HEADER_API_KEY = "header-api-key"
+    BEARER_TOKEN = "bearer-token"
+    OKX_SIGNED = "okx-signed"
+    OPTIONAL_UUID = "optional-uuid"
+    WHITELIST_API_KEY = "whitelist-api-key"
+
+
+class PromotionState(StrEnum):
+    LOCAL_ARTIFACT_INTEGRITY_ONLY = "local-artifact-integrity-only"
+    REMOTE_SCHEMA_FRESHNESS_PENDING = "remote-schema-freshness-pending"
+    CREDENTIALED_CONFORMANCE_PENDING = "credentialed-conformance-pending"
+    DEPLOYMENT_ATTESTATION_PENDING = "deployment-attestation-pending"
+    EXECUTION_CONFORMANCE_PENDING = "execution-conformance-pending"
+    PROMOTION_EVIDENCE_PENDING = "promotion-evidence-pending"
+    EXECUTION_ALLOWED = "execution-allowed"
+
+
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _PROVIDER_HOSTS: dict[str, frozenset[str]] = {
-    "jupiter": frozenset({"dev.jup.ag", "hub.jup.ag", "github.com"}),
+    "jupiter": frozenset(
+        {"dev.jup.ag", "developers.jup.ag", "hub.jup.ag", "github.com"}
+    ),
     "okx": frozenset({"web3.okx.com", "www.okx.com", "github.com"}),
     "jito": frozenset({"docs.jito.wtf", "github.com"}),
     "openocean": frozenset({"docs.openocean.finance", "github.com"}),
@@ -75,7 +96,9 @@ class ArtifactPin(FrozenModel):
     def _real_sha256(cls, value: str) -> str:
         lowered = value.lower()
         if not _SHA256_RE.fullmatch(lowered):
-            raise ValueError("artifact sha256 must contain exactly 64 lowercase hex chars")
+            raise ValueError(
+                "artifact sha256 must contain exactly 64 lowercase hex chars"
+            )
         if lowered == "0" * 64:
             raise ValueError("placeholder all-zero artifact hashes are forbidden")
         return lowered
@@ -88,9 +111,33 @@ class ArtifactPin(FrozenModel):
         return value
 
 
+class ContractEvidence(FrozenModel):
+    local_artifact_integrity: bool = False
+    remote_schema_freshness: bool = False
+    credentialed_api_conformance: bool = False
+    deployed_program_attestation: bool = False
+    execution_conformance: bool = False
+    promotion_evidence: bool = False
+
+    @property
+    def execution_allowed(self) -> bool:
+        return (
+            self.local_artifact_integrity
+            and self.remote_schema_freshness
+            and self.credentialed_api_conformance
+            and self.execution_conformance
+            and self.promotion_evidence
+        )
+
+
 class ConformanceProbe(FrozenModel):
     url: str
     credential_env: str | None = None
+    credential_mode: CredentialMode = CredentialMode.NONE
+    required_env: tuple[str, ...] = ()
+    optional_env: tuple[str, ...] = ()
+    credential_header_name: str | None = None
+    credential_header_env: str | None = None
     expected_status: int = Field(default=200, ge=100, le=599)
     required_json_paths: tuple[str, ...] = ()
 
@@ -101,6 +148,53 @@ class ConformanceProbe(FrozenModel):
         if parsed.scheme != "https" or not parsed.hostname:
             raise ValueError("conformance URL must be an absolute HTTPS URL")
         return value
+
+    @field_validator("required_env", "optional_env")
+    @classmethod
+    def _environment_names(cls, value: tuple[str, ...]) -> tuple[str, ...]:
+        for name in value:
+            if not re.fullmatch(r"[A-Z][A-Z0-9_]{1,80}", name):
+                raise ValueError(f"invalid environment variable name: {name}")
+        if len(set(value)) != len(value):
+            raise ValueError("environment variable names must be unique")
+        return value
+
+    @field_validator("credential_header_name")
+    @classmethod
+    def _header_name(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if not re.fullmatch(r"[A-Za-z0-9-]{1,80}", value):
+            raise ValueError("invalid credential header name")
+        return value
+
+    @model_validator(mode="after")
+    def _credential_contract(self) -> "ConformanceProbe":
+        if self.credential_env and not self.required_env:
+            return self
+        if self.credential_header_env and self.credential_header_env not in (
+            self.required_env + self.optional_env
+        ):
+            raise ValueError("credential_header_env must be declared in env lists")
+        if self.credential_header_name and not self.credential_header_env:
+            raise ValueError("credential_header_name requires credential_header_env")
+        if self.credential_mode in {
+            CredentialMode.HEADER_API_KEY,
+            CredentialMode.BEARER_TOKEN,
+            CredentialMode.WHITELIST_API_KEY,
+        } and not (self.required_env or self.credential_env):
+            raise ValueError("credentialed probes must declare required_env")
+        if self.credential_mode is CredentialMode.OKX_SIGNED:
+            missing = {
+                "OKX_API_KEY",
+                "OKX_SECRET_KEY",
+                "OKX_API_PASSPHRASE",
+            }.difference(self.required_env)
+            if missing:
+                raise ValueError(
+                    f"okx-signed probe missing required env: {sorted(missing)}"
+                )
+        return self
 
 
 class ExternalContract(FrozenModel):
@@ -114,6 +208,8 @@ class ExternalContract(FrozenModel):
     deployment_program_id: str | None = None
     cluster: str | None = None
     conformance_probe: ConformanceProbe | None = None
+    promotion_state: PromotionState = PromotionState.LOCAL_ARTIFACT_INTEGRITY_ONLY
+    evidence: ContractEvidence = Field(default_factory=ContractEvidence)
     notes: str = ""
 
     @field_validator("official_source_url")
@@ -125,7 +221,9 @@ class ExternalContract(FrozenModel):
         provider = str(info.data.get("provider", "")).lower()
         allowed = _PROVIDER_HOSTS.get(provider)
         if allowed is None or parsed.hostname.lower() not in allowed:
-            raise ValueError(f"source host is not allowlisted for provider {provider!r}")
+            raise ValueError(
+                f"source host is not allowlisted for provider {provider!r}"
+            )
         return value
 
     @field_validator("deployment_program_id")
@@ -144,23 +242,47 @@ class ExternalContract(FrozenModel):
         if self.status is not ContractStatus.ACTIVE and (
             ContractCapability.COMPOSABLE_INSTRUCTIONS in self.capabilities
         ):
-            raise ValueError("only active verified contracts may claim composable instructions")
-        if self.status in {ContractStatus.ACTIVE, ContractStatus.DISCOVERY_ONLY} and not all(
-            artifact.required for artifact in self.artifacts
-        ):
+            raise ValueError(
+                "only active verified contracts may claim composable instructions"
+            )
+        if self.status in {
+            ContractStatus.ACTIVE,
+            ContractStatus.DISCOVERY_ONLY,
+        } and not all(artifact.required for artifact in self.artifacts):
             raise ValueError("active/discovery contracts require all pins")
+        if (
+            self.promotion_state is PromotionState.EXECUTION_ALLOWED
+            and not self.execution_allowed
+        ):
+            raise ValueError(
+                "execution-allowed promotion requires all execution evidence gates"
+            )
+        if self.execution_allowed and self.status is not ContractStatus.ACTIVE:
+            raise ValueError("only active contracts can become execution-allowed")
         return self
+
+    @property
+    def execution_allowed(self) -> bool:
+        if (
+            self.deployment_program_id
+            and not self.evidence.deployed_program_attestation
+        ):
+            return False
+        return self.evidence.execution_allowed
 
 
 class ExternalContractRegistryModel(FrozenModel):
-    schema_version: str = "pr027.external-contracts.v1"
+    schema_version: str = "pr054.external-contracts.v2"
     contracts: tuple[ExternalContract, ...]
 
     @model_validator(mode="after")
-    def _unique_contract_ids(self) -> "ExternalContractRegistryModel":
+    def _registry_contract(self) -> "ExternalContractRegistryModel":
         ids = [contract.id for contract in self.contracts]
         if len(ids) != len(set(ids)):
             raise ValueError("external contract ids must be unique")
-        if self.schema_version != "pr027.external-contracts.v1":
+        if self.schema_version not in {
+            "pr027.external-contracts.v1",
+            "pr054.external-contracts.v2",
+        }:
             raise ValueError("unsupported external contract registry schema")
         return self

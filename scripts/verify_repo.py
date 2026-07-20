@@ -24,6 +24,11 @@ QUALITY_COMMAND: Final[list[str]] = [
     "scripts/quality_gate.py",
 ]
 
+PACKAGE_SMOKE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/package_smoke.py",
+]
+
 # Public by design: tests inspect the final offline pytest command.
 COMMANDS: Final[list[list[str]]] = [
     [
@@ -97,6 +102,24 @@ def run(command: list[str]) -> None:
         raise SystemExit(completed.returncode)
 
 
+def ensure_clean_source_tree() -> None:
+    """Fail if repository verification leaves generated files behind."""
+    if not (ROOT / ".git").is_dir():
+        return
+    completed = subprocess.run(
+        ["git", "status", "--porcelain"],
+        cwd=ROOT,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+    if completed.returncode != 0:
+        raise SystemExit(completed.returncode)
+    if completed.stdout.strip():
+        print(completed.stdout, end="")
+        raise SystemExit("repository verification left a dirty source tree")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -112,9 +135,12 @@ def main() -> int:
     if not args.skip_dependency_audit:
         quality_command.append("--with-dependency-audit")
     run(quality_command)
+    run(PACKAGE_SMOKE_COMMAND)
 
     for command in COMMANDS[1:]:
         run(command)
+
+    ensure_clean_source_tree()
 
     print(
         "\nRepository verification passed. " "Live trading readiness was not evaluated."

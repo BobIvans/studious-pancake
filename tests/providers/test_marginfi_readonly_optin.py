@@ -19,7 +19,6 @@ from src.providers.marginfi import (
     load_marginfi_contract_pin,
 )
 
-
 pytestmark = pytest.mark.live
 
 
@@ -35,7 +34,10 @@ class RequestsReadonlyRpc:
         self.url = url
 
     def get_multiple_accounts(self, addresses, *, min_context_slot=None):
-        config = {"encoding": "base64", "commitment": "confirmed"}
+        config = {
+            "encoding": "base64",
+            "commitment": "confirmed",
+        }
         if min_context_slot is not None:
             config["minContextSlot"] = int(min_context_slot)
         response = requests.post(

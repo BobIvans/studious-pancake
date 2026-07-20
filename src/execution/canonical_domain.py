@@ -19,6 +19,7 @@ from solders.transaction import VersionedTransaction
 from .models import (
     BlockhashContext,
     CompiledTransaction,
+    ExecutionErrorCode,
     PlannedInstruction,
     ResolvedAddressLookupTable,
     SignedTransaction,
@@ -31,8 +32,11 @@ from .transaction_compiler import (
 )
 
 
-class CanonicalExecutionContractError(TypeError):
-    """Raised when an active caller crosses the execution boundary incorrectly."""
+class CanonicalExecutionContractError(TransactionCompileError, TypeError):
+    """Fail-closed canonical boundary error compatible with compiler callers."""
+
+    def __init__(self, message: str) -> None:
+        super().__init__(ExecutionErrorCode.INVALID_PLAN, message)
 
 
 @dataclass(frozen=True, slots=True)
@@ -53,7 +57,9 @@ class ExecutionReceipt:
         try:
             int(self.message_hash, 16)
         except ValueError as exc:
-            raise CanonicalExecutionContractError("message_hash must be sha256 hex") from exc
+            raise CanonicalExecutionContractError(
+                "message_hash must be sha256 hex"
+            ) from exc
         if not self.transport:
             raise CanonicalExecutionContractError("transport is required")
         if self.landed and not self.accepted:
@@ -88,7 +94,9 @@ def validate_canonical_plan(plan: TransactionPlan) -> None:
             *plan.monitored_accounts,
         )
     ):
-        raise CanonicalExecutionContractError("all account identities must be Pubkey values")
+        raise CanonicalExecutionContractError(
+            "all account identities must be Pubkey values"
+        )
 
 
 def validate_compiled_identity(compiled: CompiledTransaction) -> None:
@@ -104,11 +112,15 @@ def validate_compiled_identity(compiled: CompiledTransaction) -> None:
     if message_bytes != compiled.serialized_message:
         raise CanonicalExecutionContractError("serialized message identity mismatch")
     if bytes(compiled.versioned_transaction) != compiled.serialized_transaction:
-        raise CanonicalExecutionContractError("serialized transaction identity mismatch")
+        raise CanonicalExecutionContractError(
+            "serialized transaction identity mismatch"
+        )
     if compute_message_hash(message_bytes) != compiled.message_hash:
         raise CanonicalExecutionContractError("canonical message hash mismatch")
     if compiled.serialized_transaction.startswith(b"unsigned:"):
-        raise CanonicalExecutionContractError("synthetic unsigned transaction is forbidden")
+        raise CanonicalExecutionContractError(
+            "synthetic unsigned transaction is forbidden"
+        )
 
 
 class CanonicalTransactionCompiler:
@@ -142,7 +154,9 @@ class CanonicalTransactionCompiler:
         if signed.message_hash != compiled.message_hash:
             raise CanonicalExecutionContractError("signed message hash mismatch")
         if signed.serialized_transaction.startswith(b"unsigned:"):
-            raise CanonicalExecutionContractError("synthetic signed payload is forbidden")
+            raise CanonicalExecutionContractError(
+                "synthetic signed payload is forbidden"
+            )
         return signed
 
 

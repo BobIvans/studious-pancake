@@ -11,16 +11,36 @@
   "idl": {
     "status": "unverified-not-committed-at-pin",
     "sha256": null,
-    "reason": "The pinned upstream source tree does not provide a complete generated deployment IDL that can be accepted as binary conformance evidence."
+    "reason": "The pinned source tree does not provide a complete generated deployment IDL accepted as binary conformance evidence."
   },
   "binary_layouts": {
     "status": "unverified",
     "account_golden_bytes": false,
     "instruction_golden_bytes": false
   },
+  "sdk_identity": {
+    "name": "@mrgnlabs/marginfi-client-v2",
+    "usage": "sanitized offline fixture oracle only; not deployed binary conformance and not imported at runtime"
+  },
+  "instructions": {
+    "lending_account_start_flashloan": {"discriminator_hex": "0e8321dc51bab46b", "args": [{"name": "end_index", "type": "u64"}], "end_index_semantics": "absolute zero-based instruction index of lending_account_end_flashloan in the final transaction"},
+    "lending_account_borrow": {"discriminator_hex": "047e74353005d41f", "args": [{"name": "amount", "type": "u64"}]},
+    "lending_account_repay": {"discriminator_hex": "4fd1acb1de33ad97", "args": [{"name": "amount", "type": "u64"}, {"name": "repay_all", "type": "bool"}]},
+    "lending_account_end_flashloan": {"discriminator_hex": "697cc96a9902089c", "args": []}
+  },
+  "account_discriminators": {
+    "marginfi_group": "b79bd11fb45c4c32",
+    "marginfi_account": "43b774c54f1500e6",
+    "bank": "8e9b5c1e4f1a8f2a"
+  },
+  "approved_banks": {
+    "USDC": {"mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"},
+    "WSOL": {"mint": "So11111111111111111111111111111111111111112", "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"}
+  },
   "execution_admission": {
     "allowed": false,
     "reason": "PR-028 must prove deployed IDL, binary account decoding, instruction metas and read-only RPC conformance."
   },
+  "refresh_procedure": "Review pinned source and sanitized fixtures, rotate hashes in a dedicated review, and keep execution disabled until PR-028 conformance.",
   "generated_at": "2026-07-20T11:55:00Z"
 }

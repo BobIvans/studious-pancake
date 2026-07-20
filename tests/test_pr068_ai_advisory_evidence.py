@@ -193,7 +193,10 @@ def test_metric_latency_and_dataset_failures_are_blocked() -> None:
         f"{AdvisoryFailureCode.EVALUATION_METRIC_BELOW_THRESHOLD.value}:advisory-v1"
         in result.blockers
     )
-    assert f"{AdvisoryFailureCode.LATENCY_TOO_HIGH.value}:advisory-v1" in result.blockers
+    assert (
+        f"{AdvisoryFailureCode.LATENCY_TOO_HIGH.value}:advisory-v1"
+        in result.blockers
+    )
 
 
 def test_drift_and_missing_automatic_disable_block() -> None:
@@ -207,7 +210,10 @@ def test_drift_and_missing_automatic_disable_block() -> None:
 
     result = AIAdvisoryReadinessGate().evaluate(_package(drift_reports=(drift,)))
 
-    assert f"{AdvisoryFailureCode.FEATURE_DRIFT_TOO_HIGH.value}:advisory-v1" in result.blockers
+    assert (
+        f"{AdvisoryFailureCode.FEATURE_DRIFT_TOO_HIGH.value}:advisory-v1"
+        in result.blockers
+    )
     assert (
         f"{AdvisoryFailureCode.PREDICTION_DRIFT_TOO_HIGH.value}:advisory-v1"
         in result.blockers
@@ -233,7 +239,10 @@ def test_shadow_ab_must_not_take_live_decisions() -> None:
 
     result = AIAdvisoryReadinessGate().evaluate(_package(ab_reports=(ab,)))
 
-    assert f"{AdvisoryFailureCode.AB_SAMPLE_TOO_SMALL.value}:advisory-v1" in result.blockers
+    assert (
+        f"{AdvisoryFailureCode.AB_SAMPLE_TOO_SMALL.value}:advisory-v1"
+        in result.blockers
+    )
     assert (
         f"{AdvisoryFailureCode.AB_LIVE_DECISIONS_PRESENT.value}:advisory-v1"
         in result.blockers
@@ -242,7 +251,10 @@ def test_shadow_ab_must_not_take_live_decisions() -> None:
         f"{AdvisoryFailureCode.AB_AUTOMATIC_DISABLE_MISSING.value}:advisory-v1"
         in result.blockers
     )
-    assert f"{AdvisoryFailureCode.AB_HUMAN_REVIEW_MISSING.value}:advisory-v1" in result.blockers
+    assert (
+        f"{AdvisoryFailureCode.AB_HUMAN_REVIEW_MISSING.value}:advisory-v1"
+        in result.blockers
+    )
 
 
 def test_unregistered_extra_reports_are_blocked() -> None:
@@ -252,4 +264,7 @@ def test_unregistered_extra_reports_are_blocked() -> None:
         _package(evaluations=(_evaluation(), extra_evaluation))
     )
 
-    assert f"{AdvisoryFailureCode.MODEL_NOT_IN_REGISTRY.value}:unknown-model" in result.blockers
+    assert (
+        f"{AdvisoryFailureCode.MODEL_NOT_IN_REGISTRY.value}:unknown-model"
+        in result.blockers
+    )

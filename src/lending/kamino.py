@@ -59,6 +59,12 @@ def _require_pubkey(value: str, *, field: str) -> str:
         raise KaminoRegistryError(str(exc)) from exc
 
 
+def _require_mapping(value: Any, *, field: str) -> Mapping[str, Any]:
+    if not isinstance(value, Mapping):
+        raise KaminoRegistryError(f"{field} must be an object")
+    return value
+
+
 def _tuple_of_strings(value: Any, *, field: str) -> tuple[str, ...]:
     if not isinstance(value, list):
         raise KaminoRegistryError(f"{field} must be a list")
@@ -83,33 +89,54 @@ class KaminoDeploymentProvenance:
     @classmethod
     def from_mapping(cls, payload: Mapping[str, Any]) -> "KaminoDeploymentProvenance":
         return cls(
-            source_url=_require_non_empty(str(payload.get("source_url", "")), field="source_url"),
-            sdk_package=_require_non_empty(str(payload.get("sdk_package", "")), field="sdk_package"),
+            source_url=_require_non_empty(
+                str(payload.get("source_url", "")),
+                field="source_url",
+            ),
+            sdk_package=_require_non_empty(
+                str(payload.get("sdk_package", "")),
+                field="sdk_package",
+            ),
             lending_program_id=_require_pubkey(
                 str(payload.get("lending_program_id", "")),
                 field="provenance.lending_program_id",
             ),
-            idl_sha256=_require_non_empty(str(payload.get("idl_sha256", "")), field="idl_sha256"),
+            idl_sha256=_require_non_empty(
+                str(payload.get("idl_sha256", "")),
+                field="idl_sha256",
+            ),
             rpc_fixture_sha256=_require_non_empty(
                 str(payload.get("rpc_fixture_sha256", "")),
                 field="rpc_fixture_sha256",
             ),
-            deployment_slot=_require_int(payload.get("deployment_slot"), field="deployment_slot"),
-            reviewed_at=_require_non_empty(str(payload.get("reviewed_at", "")), field="reviewed_at"),
+            deployment_slot=_require_int(
+                payload.get("deployment_slot"),
+                field="deployment_slot",
+            ),
+            reviewed_at=_require_non_empty(
+                str(payload.get("reviewed_at", "")),
+                field="reviewed_at",
+            ),
         ).validated()
 
     def validated(self) -> "KaminoDeploymentProvenance":
         parsed = urlparse(self.source_url)
         if parsed.scheme != "https" or parsed.netloc not in _OFFICIAL_HOSTS:
-            raise KaminoRegistryError("Kamino source_url must point to an official HTTPS source")
-        if parsed.netloc == "github.com" and not parsed.path.startswith("/Kamino-Finance/"):
+            raise KaminoRegistryError(
+                "Kamino source_url must point to an official HTTPS source"
+            )
+        if parsed.netloc == "github.com" and not parsed.path.startswith(
+            "/Kamino-Finance/"
+        ):
             raise KaminoRegistryError("GitHub provenance must be under Kamino-Finance")
         if self.sdk_package != "@kamino-finance/klend-sdk":
             raise KaminoRegistryError("Kamino lending provenance must use klend-sdk")
         if not _HEX_64_RE.fullmatch(self.idl_sha256):
             raise KaminoRegistryError("idl_sha256 must be a 64-character hex digest")
         if not _HEX_64_RE.fullmatch(self.rpc_fixture_sha256):
-            raise KaminoRegistryError("rpc_fixture_sha256 must be a 64-character hex digest")
+            raise KaminoRegistryError(
+                "rpc_fixture_sha256 must be a 64-character hex digest"
+            )
         _require_pubkey(self.lending_program_id, field="provenance.lending_program_id")
         _require_int(self.deployment_slot, field="deployment_slot", minimum=1)
         return self
@@ -147,29 +174,50 @@ class KaminoSupportedCombination:
                 str(payload.get("combination_id", "")),
                 field="combination_id",
             ),
-            cluster=_require_non_empty(str(payload.get("cluster", "")), field="cluster"),
+            cluster=_require_non_empty(
+                str(payload.get("cluster", "")),
+                field="cluster",
+            ),
             lending_program_id=_require_pubkey(
                 str(payload.get("lending_program_id", "")),
                 field="lending_program_id",
             ),
-            market_address=_require_pubkey(str(payload.get("market_address", "")), field="market_address"),
-            collateral_mint=_require_pubkey(str(payload.get("collateral_mint", "")), field="collateral_mint"),
-            debt_mint=_require_pubkey(str(payload.get("debt_mint", "")), field="debt_mint"),
+            market_address=_require_pubkey(
+                str(payload.get("market_address", "")),
+                field="market_address",
+            ),
+            collateral_mint=_require_pubkey(
+                str(payload.get("collateral_mint", "")),
+                field="collateral_mint",
+            ),
+            debt_mint=_require_pubkey(
+                str(payload.get("debt_mint", "")),
+                field="debt_mint",
+            ),
             collateral_reserve=_require_pubkey(
                 str(payload.get("collateral_reserve", "")),
                 field="collateral_reserve",
             ),
-            debt_reserve=_require_pubkey(str(payload.get("debt_reserve", "")), field="debt_reserve"),
+            debt_reserve=_require_pubkey(
+                str(payload.get("debt_reserve", "")),
+                field="debt_reserve",
+            ),
             collateral_oracle=_require_pubkey(
                 str(payload.get("collateral_oracle", "")),
                 field="collateral_oracle",
             ),
-            debt_oracle=_require_pubkey(str(payload.get("debt_oracle", "")), field="debt_oracle"),
+            debt_oracle=_require_pubkey(
+                str(payload.get("debt_oracle", "")),
+                field="debt_oracle",
+            ),
             liquidation_bonus_bps=_require_bps(
                 payload.get("liquidation_bonus_bps"),
                 field="liquidation_bonus_bps",
             ),
-            protocol_fee_bps=_require_bps(payload.get("protocol_fee_bps"), field="protocol_fee_bps"),
+            protocol_fee_bps=_require_bps(
+                payload.get("protocol_fee_bps"),
+                field="protocol_fee_bps",
+            ),
             flash_loan_fee_bps=_require_bps(
                 payload.get("flash_loan_fee_bps"),
                 field="flash_loan_fee_bps",
@@ -180,7 +228,10 @@ class KaminoSupportedCombination:
             ),
             writable_accounts=tuple(
                 _require_pubkey(account, field="writable_accounts")
-                for account in _tuple_of_strings(payload.get("writable_accounts"), field="writable_accounts")
+                for account in _tuple_of_strings(
+                    payload.get("writable_accounts"),
+                    field="writable_accounts",
+                )
             ),
             provenance=provenance,
             verified=bool(payload.get("verified", False)),
@@ -188,7 +239,9 @@ class KaminoSupportedCombination:
 
     def validated(self) -> "KaminoSupportedCombination":
         if self.cluster != "mainnet-beta":
-            raise KaminoRegistryError("Kamino combinations must pin mainnet-beta explicitly")
+            raise KaminoRegistryError(
+                "Kamino combinations must pin mainnet-beta explicitly"
+            )
         if self.lending_program_id != self.provenance.lending_program_id:
             raise KaminoRegistryError("combination program does not match provenance")
         required_writable = {
@@ -197,7 +250,9 @@ class KaminoSupportedCombination:
             self.debt_reserve,
         }
         if not required_writable.issubset(set(self.writable_accounts)):
-            raise KaminoRegistryError("writable_accounts missing required market/reserve accounts")
+            raise KaminoRegistryError(
+                "writable_accounts missing required market/reserve accounts"
+            )
         if self.collateral_mint == self.debt_mint:
             raise KaminoRegistryError("collateral_mint and debt_mint must differ")
         if self.liquidation_bonus_bps <= 0:
@@ -217,9 +272,11 @@ class KaminoSupportedRegistry:
     def from_mapping(cls, payload: Mapping[str, Any]) -> "KaminoSupportedRegistry":
         if payload.get("schema_version") != KAMINO_REGISTRY_SCHEMA:
             raise KaminoRegistryError("unexpected Kamino registry schema")
+        raw_combinations = payload.get("combinations", [])
+        if not isinstance(raw_combinations, list):
+            raise KaminoRegistryError("combinations must be a list")
         combinations = tuple(
-            KaminoSupportedCombination.from_mapping(item)
-            for item in payload.get("combinations", [])
+            KaminoSupportedCombination.from_mapping(item) for item in raw_combinations
         )
         identifiers = [item.combination_id for item in combinations]
         if len(identifiers) != len(set(identifiers)):
@@ -448,7 +505,9 @@ class KaminoReserveFixture:
         if discriminator != KAMINO_RESERVE_FIXTURE_DISCRIMINATOR:
             raise KaminoRegistryError("reserve fixture discriminator mismatch")
         if ltv_bps > threshold_bps:
-            raise KaminoRegistryError("loan-to-value must not exceed liquidation threshold")
+            raise KaminoRegistryError(
+                "loan-to-value must not exceed liquidation threshold"
+            )
         return cls(
             available_liquidity_lamports=available,
             borrowed_liquidity_lamports=borrowed,
@@ -459,17 +518,16 @@ class KaminoReserveFixture:
                 field="liquidation_threshold_bps",
             ),
             protocol_fee_bps=_require_bps(protocol_fee_bps, field="protocol_fee_bps"),
-            liquidation_bonus_bps=_require_bps(bonus_bps, field="liquidation_bonus_bps"),
+            liquidation_bonus_bps=_require_bps(
+                bonus_bps,
+                field="liquidation_bonus_bps",
+            ),
         )
 
 
-def _require_mapping(value: Any, *, field: str) -> Mapping[str, Any]:
-    if not isinstance(value, Mapping):
-        raise KaminoRegistryError(f"{field} must be an object")
-    return value
-
-
 def load_default_kamino_registry() -> KaminoSupportedRegistry:
-    resource = resources.files("src.resources").joinpath("kamino_supported_combinations.json")
+    resource = resources.files("src.resources").joinpath(
+        "kamino_supported_combinations.json"
+    )
     payload = json.loads(resource.read_text(encoding="utf-8"))
     return KaminoSupportedRegistry.from_mapping(_require_mapping(payload, field="registry"))

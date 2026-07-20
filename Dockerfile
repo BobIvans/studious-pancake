@@ -28,6 +28,9 @@ ENV VIRTUAL_ENV=/opt/venv \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     FLASHLOAN_RUNTIME_STATE_PATH=/run/flashloan-bot/runtime.json \
+    FLASHLOAN_HEALTH_HOST=127.0.0.1 \
+    FLASHLOAN_HEALTH_PORT=8080 \
+    FLASHLOAN_HEALTH_URL=http://127.0.0.1:8080/health \
     PAPER_TRADING_ONLY=true \
     LIVE_TRADING_ENABLED=false \
     JITO_ENABLED=false \
@@ -42,8 +45,10 @@ COPY --from=builder /opt/venv /opt/venv
 WORKDIR /app
 USER 10001:10001
 
+EXPOSE 8080
+
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
-    CMD ["flashloan-bot-healthcheck"]
+    CMD ["flashloan-bot-healthcheck", "--url", "http://127.0.0.1:8080/health"]
 
 ENTRYPOINT ["flashloan-bot"]
 CMD ["container"]

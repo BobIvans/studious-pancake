@@ -69,6 +69,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_quality_quarantine.py",
         "tests/test_pr087_package_boundary.py",
         "tests/test_pr101_marginfi_complete_protocol_evidence.py",
+        "tests/test_pr106_canonical_sender_lifecycle_disabled.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",

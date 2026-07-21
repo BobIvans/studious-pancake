@@ -70,6 +70,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr087_package_boundary.py",
         "tests/test_pr101_marginfi_complete_protocol_evidence.py",
         "tests/test_pr106_canonical_sender_lifecycle_disabled.py",
+        "tests/test_pr116_coherent_marginfi_snapshot_oracle.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",

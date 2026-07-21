@@ -64,6 +64,14 @@ from .operational_drills import (
     OperationalReadinessResult,
     SecurityOperationalEvidence,
 )
+from .real_evidence_manifest import (
+    PR091_RELEASE_ARTIFACT_ROOT,
+    RealEvidenceManifestError,
+    RealEvidenceManifestLoadResult,
+    evaluate_pr091_actual_evidence_manifest,
+    load_pr091_actual_evidence_manifest,
+    load_pr091_actual_evidence_package,
+)
 
 __all__ = [
     "AccountOwnershipCheck",
@@ -100,6 +108,7 @@ __all__ = [
     "OwnershipKind",
     "PR078_SECURITY_EVIDENCE_NAME",
     "PR080_SENDER_CONFORMANCE_NAME",
+    "PR091_RELEASE_ARTIFACT_ROOT",
     "PR092_REAL_SOAK_EVIDENCE_NAME",
     "PR093_SENDER_LIFECYCLE_NAME",
     "PinKind",
@@ -109,6 +118,8 @@ __all__ = [
     "REQUIRED_MANIFEST_HASHES",
     "REQUIRED_RUNTIME_ACKS",
     "REQUIRED_SENDER_CONTROLS",
+    "RealEvidenceManifestError",
+    "RealEvidenceManifestLoadResult",
     "ReleaseArtifacts",
     "ReleaseGate",
     "ReleaseGateResult",
@@ -123,4 +134,7 @@ __all__ = [
     "WalletFundingCheck",
     "evaluate_limited_canary",
     "evaluate_limited_canary_runtime_request",
+    "evaluate_pr091_actual_evidence_manifest",
+    "load_pr091_actual_evidence_manifest",
+    "load_pr091_actual_evidence_package",
 ]

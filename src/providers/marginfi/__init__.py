@@ -13,6 +13,14 @@ from .accounts import (
     ReadonlyAccountPort,
     RpcAccount,
 )
+from .complete_evidence import (
+    MAXIMUM_SHADOW_CAPABILITY,
+    MarginfiCompleteEvidenceError,
+    MarginfiCompleteEvidenceEvaluation,
+    assert_marginfi_complete_evidence,
+    evaluate_marginfi_complete_evidence,
+    load_marginfi_complete_evidence_manifest,
+)
 from .errors import MarginfiRejection, MarginfiRejectionCode
 from .pin import MarginfiContractPin, load_marginfi_contract_pin
 from .protocol_conformance import (
@@ -42,10 +50,13 @@ from .provider import (
 __all__ = [
     "BankSnapshot",
     "FinalizedMarginfiFlashLoanPlan",
+    "MAXIMUM_SHADOW_CAPABILITY",
     "MarginAccountSnapshot",
     "MarginfiAccountReader",
     "MarginfiAccountVector",
     "MarginfiAccountVectorKind",
+    "MarginfiCompleteEvidenceError",
+    "MarginfiCompleteEvidenceEvaluation",
     "MarginfiContractPin",
     "MarginfiFlashLoanProvider",
     "MarginfiFlashloanMetaEvidence",
@@ -66,7 +77,10 @@ __all__ = [
     "PreparedMarginfiFlashLoan",
     "ReadonlyAccountPort",
     "RpcAccount",
+    "assert_marginfi_complete_evidence",
     "assert_marginfi_protocol_conformance",
+    "evaluate_marginfi_complete_evidence",
     "evaluate_marginfi_protocol_conformance",
+    "load_marginfi_complete_evidence_manifest",
     "load_marginfi_contract_pin",
 ]

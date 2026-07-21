@@ -55,6 +55,8 @@
     "program_executable_verified": false,
     "group_relationships_verified": false,
     "bank_relationships_verified": false,
+    "oracle_relationships_verified": false,
+    "fee_pause_config_verified": false,
     "flashloan_metas_verified": false,
     "token_2022_paths_verified": false,
     "status": "blocked-missing-readonly-mainnet-evidence"
@@ -87,6 +89,30 @@
       "https://solana.com/docs/programs/verified-builds"
     ],
     "blocking_reason": "Real canonical IDL, SDK-generated vectors, read-only RPC account evidence, flashloan meta proof, Token-2022 proof, repayment math proof and human review package have not been committed."
+  },
+  "complete_protocol_evidence": {
+    "schema_version": "pr101.marginfi-complete-evidence.v1",
+    "status": "blocked-missing-complete-marginfi-evidence",
+    "source_release_pin_sha256": null,
+    "canonical_idl_layout_sha256": null,
+    "account_vector_bundle_sha256": null,
+    "instruction_vector_bundle_sha256": null,
+    "flashloan_meta_vector_sha256": null,
+    "token_2022_vector_sha256": null,
+    "repayment_math_sha256": null,
+    "deployment_metadata_provenance_sha256": null,
+    "human_review_sha256": null,
+    "signature_reference": null,
+    "min_context_slot": null,
+    "full_idl_layout_verified": false,
+    "source_sdk_vectors_verified": false,
+    "flashloan_instruction_vectors_verified": false,
+    "conservative_repayment_math_verified": false,
+    "deployment_metadata_provenance_verified": false,
+    "human_reviewed": false,
+    "maximum_capability": "blocked-until-complete-marginfi-evidence",
+    "live_allowed": false,
+    "blocking_reason": "PR-101 requires full IDL/layout, SDK account and instruction vectors, read-only mainnet RPC relationships, flashloan metas, Token-2022 proof, conservative repayment arithmetic, deployment metadata provenance and human review before MarginFi can become a shadow execution dependency."
   },
   "promotion": {
     "execution_conformance_verified": false,

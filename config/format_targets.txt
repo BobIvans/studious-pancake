@@ -92,3 +92,6 @@ src/operations/operator_readiness.py
 tests/test_pr077_operator_readiness.py
 src/submission/sender_lifecycle_disabled.py
 tests/test_pr093_canonical_sender_lifecycle_disabled.py
+src/providers/marginfi/__init__.py
+src/providers/marginfi/complete_evidence.py
+tests/test_pr101_marginfi_complete_protocol_evidence.py

@@ -63,7 +63,10 @@ def test_pr091_manifest_rejects_artifacts_outside_release_root(tmp_path: Path) -
     manifest_path, payload = _write_manifest(tmp_path)
     artifact = payload["artifacts"][0]
     artifact["path"] = "tests/tmp-fixture.json"
-    manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    (tmp_path / manifest_path).write_text(
+        json.dumps(payload, indent=2),
+        encoding="utf-8",
+    )
     _git_init_and_add(tmp_path)
 
     with pytest.raises(
@@ -79,7 +82,10 @@ def test_pr091_manifest_rejects_artifacts_outside_release_root(tmp_path: Path) -
 def test_pr091_manifest_requires_scenario_evidence_file_hash(tmp_path: Path) -> None:
     manifest_path, payload = _write_manifest(tmp_path)
     payload["operational_drill_suite"]["scenarios"][0]["evidence_sha256"] = "1" * 64
-    manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    (tmp_path / manifest_path).write_text(
+        json.dumps(payload, indent=2),
+        encoding="utf-8",
+    )
     _git_init_and_add(tmp_path)
 
     with pytest.raises(
@@ -96,7 +102,10 @@ def test_pr091_manifest_keeps_live_submission_blocked(tmp_path: Path) -> None:
     manifest_path, payload = _write_manifest(tmp_path)
     payload = deepcopy(payload)
     payload["operational_drill_suite"]["no_live_submission"] = False
-    manifest_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    (tmp_path / manifest_path).write_text(
+        json.dumps(payload, indent=2),
+        encoding="utf-8",
+    )
     _git_init_and_add(tmp_path)
 
     result = evaluate_pr091_actual_evidence_manifest(

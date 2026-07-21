@@ -374,9 +374,12 @@ def test_source_pins_must_be_official_and_non_placeholder() -> None:
 
 
 def test_artifact_paths_and_digests_reject_tmp_fixtures() -> None:
-    with pytest.raises(KaminoRealConformanceError, match="under evidence/kamino/pr095"):
+    with pytest.raises(
+        KaminoRealConformanceError,
+        match="under evidence/kamino/pr095",
+    ):
         KaminoRealArtifact(
-            path="/tmp/kamino.json",
+            path="evidence/other/kamino.json",
             sha256=_digest("artifact"),
             kind=KaminoRealArtifactKind.IDL,
             produced_by="fixture",

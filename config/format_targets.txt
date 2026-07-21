@@ -78,3 +78,5 @@ src/shadow_soak/real_soak.py
 tests/test_pr079_real_shadow_soak.py
 src/submission/lifecycle_integration.py
 tests/test_pr080_canonical_sender_lifecycle.py
+src/execution/canonical_domain.py
+tests/execution/test_pr071_canonical_execution_domain.py

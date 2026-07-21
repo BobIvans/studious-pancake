@@ -79,9 +79,7 @@ def load_pr091_actual_evidence_manifest(
     payload = _read_json_object(manifest_file)
     schema_version = _string(payload, "schema_version")
     if schema_version != SCHEMA_VERSION:
-        raise RealEvidenceManifestError(
-            f"MANIFEST_SCHEMA_UNSUPPORTED:{schema_version}"
-        )
+        raise RealEvidenceManifestError(f"MANIFEST_SCHEMA_UNSUPPORTED:{schema_version}")
 
     artifacts_payload = _sequence(payload, "artifacts")
     artifacts = tuple(
@@ -190,7 +188,11 @@ def _parse_actual_artifact(
     root: Path,
     payload: Mapping[str, Any],
 ) -> ActualEvidenceArtifact:
-    relative_path = _repo_relative_path(root, _string(payload, "path"), "artifact.path")
+    relative_path = _repo_relative_path(
+        root,
+        _string(payload, "path"),
+        "artifact.path",
+    )
     _require_pr091_artifact_path(relative_path, "artifact.path")
     return ActualEvidenceArtifact(
         kind=ActualEvidenceKind(_string(payload, "kind")),
@@ -352,7 +354,7 @@ def _mapping(value: object, field: str) -> Mapping[str, Any]:
 
 def _sequence(payload: Mapping[str, Any], field: str) -> Sequence[object]:
     value = payload.get(field)
-    if not isinstance(value, list | tuple):
+    if not isinstance(value, (list, tuple)):
         raise RealEvidenceManifestError(f"FIELD_NOT_LIST:{field}")
     return value
 
@@ -383,10 +385,7 @@ def _optional_string(payload: Mapping[str, Any], field: str) -> str | None:
 
 
 def _bool(
-    payload: Mapping[str, Any],
-    field: str,
-    *,
-    default: bool | None = None,
+    payload: Mapping[str, Any], field: str, *, default: bool | None = None
 ) -> bool:
     value = payload.get(field, default)
     if not isinstance(value, bool):
@@ -395,10 +394,7 @@ def _bool(
 
 
 def _int(
-    payload: Mapping[str, Any],
-    field: str,
-    *,
-    default: int | None = None,
+    payload: Mapping[str, Any], field: str, *, default: int | None = None
 ) -> int:
     value = payload.get(field, default)
     if not isinstance(value, int) or isinstance(value, bool):

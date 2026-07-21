@@ -23,6 +23,10 @@ src/config/runtime.py
 tests/test_pr026_chain_registry.py
 tests/test_pr026_config_doctor.py
 tests/test_pr026_typed_config.py
+src/external_contracts/admission.py
+src/external_contracts/cli.py
+src/external_contracts/policy.py
+tests/test_pr099_evidence_bound_external_admission.py
 src/execution/exact_simulation.py
 tests/execution/test_exact_simulation_pr036.py
 tests/execution/test_pr053_canonical_cutover.py

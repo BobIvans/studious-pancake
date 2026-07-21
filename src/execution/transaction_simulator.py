@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+from typing import Any, cast
 
 from .models import (
     AccountSnapshot,
@@ -46,7 +47,12 @@ except ModuleNotFoundError:  # pragma: no cover - exercised by installed package
     class CanonicalSimulator:
         """Fail-closed placeholder when legacy shadow simulation is not packaged."""
 
-        def __init__(self, rpc: RpcClient | None = None, *_: object, **__: object) -> None:
+        def __init__(
+            self,
+            rpc: RpcClient | None = None,
+            *_: object,
+            **__: object,
+        ) -> None:
             self.rpc = rpc
 
         async def simulate(self, _: SimulationRequest) -> SimulationReport:
@@ -134,23 +140,28 @@ class TransactionSimulator(CanonicalSimulator):
             "getMultipleAccounts", [list(addresses), {"encoding": "base64"}]
         )
         vals = (resp.get("value") if isinstance(resp, dict) else resp) or []
-        return tuple(self._account(address, item or {}) for address, item in zip(addresses, vals))
+        return tuple(
+            self._account(address, item or {}) for address, item in zip(addresses, vals)
+        )
 
     def _decode_simulation_accounts(
         self, addresses: tuple[str, ...], accounts: list[object]
     ) -> tuple[AccountSnapshot, ...]:
-        return tuple(self._account(address, item or {}) for address, item in zip(addresses, accounts))
+        return tuple(
+            self._account(address, item or {}) for address, item in zip(addresses, accounts)
+        )
 
     def _account(self, address: str, item: object) -> AccountSnapshot:
-        data = item.get("data") or ["", "base64"]
+        raw_item = cast(dict[str, Any], item)
+        data = raw_item.get("data") or ["", "base64"]
         raw = base64.b64decode(data[0]) if isinstance(data, list) and data and data[0] else b""
         return AccountSnapshot(
             address,
-            int(item.get("lamports") or 0),
-            item.get("owner") or "",
+            int(raw_item.get("lamports") or 0),
+            raw_item.get("owner") or "",
             raw,
-            bool(item.get("executable") or False),
-            item.get("rentEpoch"),
+            bool(raw_item.get("executable") or False),
+            raw_item.get("rentEpoch"),
         )
 
     def _token_deltas(

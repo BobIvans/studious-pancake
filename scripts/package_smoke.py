@@ -26,6 +26,26 @@ IGNORED_COPY_NAMES = {
     "htmlcov",
     "venv",
 }
+FORBIDDEN_WHEEL_PATHS = frozenset(
+    {
+        "src/legacy_arb_bot.py",
+        "src/execution/live_control.py",
+        "src/execution/shadow.py",
+    }
+)
+FORBIDDEN_WHEEL_PREFIXES = (
+    "src/ingest/",
+    "src/execution/senders/",
+)
+
+
+def _forbidden_wheel_members(names: set[str]) -> list[str]:
+    return sorted(
+        name
+        for name in names
+        if name in FORBIDDEN_WHEEL_PATHS
+        or any(name.startswith(prefix) for prefix in FORBIDDEN_WHEEL_PREFIXES)
+    )
 
 
 def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> str:
@@ -91,6 +111,12 @@ def main() -> int:
             missing = sorted(required - names)
             if missing:
                 raise SystemExit(f"wheel is missing required files: {missing}")
+            forbidden = _forbidden_wheel_members(names)
+            if forbidden:
+                raise SystemExit(
+                    "wheel contains quarantined production members: "
+                    + ", ".join(forbidden)
+                )
             entry_points = [
                 name for name in names if name.endswith(".dist-info/entry_points.txt")
             ]
@@ -152,7 +178,7 @@ def main() -> int:
                 "installed package did not preserve fail-closed runtime truth"
             )
 
-    print("PR-025 package smoke passed.")
+    print("PR-087 package boundary smoke passed.")
     return 0
 
 

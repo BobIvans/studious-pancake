@@ -61,6 +61,11 @@ class JsonValueType(StrEnum):
     NULL = "null"
 
 
+class JsonSemanticType(StrEnum):
+    PUBKEY = "pubkey"
+    INTEGER_STRING = "integer-string"
+
+
 class PromotionState(StrEnum):
     LOCAL_ARTIFACT_INTEGRITY_ONLY = "local-artifact-integrity-only"
     REMOTE_SCHEMA_FRESHNESS_PENDING = "remote-schema-freshness-pending"
@@ -94,6 +99,9 @@ class JsonPathAssertion(FrozenModel):
     value_type: JsonValueType | None = None
     min_size: int | None = Field(default=None, ge=0)
     expected_value: str | int | float | bool | None = None
+    enum_values: tuple[str | int | float | bool, ...] = ()
+    semantic_type: JsonSemanticType | None = None
+    array_item_semantic_type: JsonSemanticType | None = None
 
     @field_validator("path")
     @classmethod
@@ -106,12 +114,25 @@ class JsonPathAssertion(FrozenModel):
         return value
 
     @model_validator(mode="after")
-    def _min_size_requires_collection(self) -> "JsonPathAssertion":
+    def _semantic_contract(self) -> "JsonPathAssertion":
         if self.min_size is not None and self.value_type not in {
             JsonValueType.ARRAY,
             JsonValueType.OBJECT,
         }:
             raise ValueError("min_size assertions require array or object value_type")
+        if self.enum_values and self.value_type is JsonValueType.ARRAY:
+            raise ValueError("enum_values apply to scalar JSON values, not arrays")
+        if (
+            self.semantic_type
+            in {JsonSemanticType.PUBKEY, JsonSemanticType.INTEGER_STRING}
+            and self.value_type is not JsonValueType.STRING
+        ):
+            raise ValueError("scalar semantic assertions require string value_type")
+        if (
+            self.array_item_semantic_type is not None
+            and self.value_type is not JsonValueType.ARRAY
+        ):
+            raise ValueError("array item semantic assertions require array value_type")
         return self
 
 
@@ -183,6 +204,7 @@ class ConformanceProbe(FrozenModel):
     credential_header_env: str | None = None
     expected_status: int = Field(default=200, ge=100, le=599)
     required_json_paths: tuple[str, ...] = ()
+    forbidden_json_paths: tuple[str, ...] = ()
     json_assertions: tuple[JsonPathAssertion, ...] = ()
     business_code_path: str | None = None
     business_code_equals: str | int | None = None
@@ -216,7 +238,9 @@ class ConformanceProbe(FrozenModel):
             raise ValueError("invalid credential header name")
         return value
 
-    @field_validator("required_json_paths", "business_code_path")
+    @field_validator(
+        "required_json_paths", "forbidden_json_paths", "business_code_path"
+    )
     @classmethod
     def _json_path_names(
         cls, value: tuple[str, ...] | str | None
@@ -270,6 +294,15 @@ class ConformanceProbe(FrozenModel):
         if hostname == "api.jup.ag" and parsed.path == "/swap/v2/build":
             if not query.get("taker"):
                 raise ValueError("Jupiter /swap/v2/build conformance requires taker")
+            invalid_transaction_paths = (
+                set(self.required_json_paths)
+                | {assertion.path for assertion in self.json_assertions}
+            )
+            if "transaction" in invalid_transaction_paths:
+                raise ValueError(
+                    "Jupiter /swap/v2/build conformance must assert raw "
+                    "instruction fields, not legacy transaction"
+                )
         if "jito" in hostname and parsed.path.endswith("/getTipAccounts"):
             if self.method is not HttpMethod.POST:
                 raise ValueError("Jito getTipAccounts conformance must use POST")

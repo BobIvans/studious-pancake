@@ -128,8 +128,7 @@ def test_pr105_missing_materialized_artifacts_block_assembly() -> None:
         artifact.path for artifact in plan.artifacts
     )
     assert any(
-        blocker.startswith("ARTIFACT_NOT_MATERIALIZED:")
-        for blocker in result.blockers
+        blocker.startswith("ARTIFACT_NOT_MATERIALIZED:") for blocker in result.blockers
     )
 
 

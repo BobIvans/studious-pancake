@@ -98,14 +98,15 @@ def test_pr118_non_monotonic_search_selects_best_allowed_after_rejection(
     }
     seen: list[int] = []
 
+    def candidate_factory(amount: int) -> PR118SizingCandidateEvidence:
+        seen.append(amount)
+        return _evidence(amount, profits[amount])
+
     result = evaluate_pr118_non_monotonic_sizing(
         coordinator=coordinator,
         wallet_snapshot=_snapshot(),
         amounts_lamports=(10, 20, 30),
-        candidate_factory=lambda amount: seen.append(amount) or _evidence(
-            amount,
-            profits[amount],
-        ),
+        candidate_factory=candidate_factory,
         max_evaluations=10,
     )
 

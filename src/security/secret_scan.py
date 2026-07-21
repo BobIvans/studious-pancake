@@ -161,7 +161,9 @@ def _literal_secret_value(value: str) -> bool:
     return _has_provider_token_shape(stripped) or _has_high_entropy_shape(stripped)
 
 
-def _scan_secret_field_assignments(text: str, *, source: str) -> list[SecretScanFinding]:
+def _scan_secret_field_assignments(
+    text: str, *, source: str
+) -> list[SecretScanFinding]:
     findings: list[SecretScanFinding] = []
     for line_number, line in enumerate(text.splitlines(), start=1):
         match = _SECRET_FIELD_ASSIGNMENT_RE.match(line)

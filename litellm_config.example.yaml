@@ -1,0 +1,38 @@
+# Sanitized LiteLLM example for local operators.
+#
+# PR-112 removed the production `litellm_config.yaml` from source control after
+# credential-shaped literals were identified in the audit snapshot. Keep the real
+# production file outside Git and source secrets from environment variables,
+# files, or an approved secret manager.
+#
+# LiteLLM accepts `os.environ/NAME` values for API keys; do not replace these
+# placeholders with literal keys in this repository.
+
+model_list:
+  - model_name: gemini/gemini-2.5-pro
+    litellm_params:
+      model: gemini/gemini-2.5-pro
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: gemini/gemini-2.5-flash
+    litellm_params:
+      model: gemini/gemini-2.5-flash
+      api_key: os.environ/GEMINI_API_KEY
+
+  - model_name: mistral/mistral-medium-latest
+    litellm_params:
+      model: mistral/mistral-medium-latest
+      api_key: os.environ/MISTRAL_API_KEY
+
+  - model_name: mistral/codestral-latest
+    litellm_params:
+      model: mistral/codestral-latest
+      api_key: os.environ/MISTRAL_API_KEY
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+  database_url: os.environ/LITELLM_DATABASE_URL
+
+litellm_settings:
+  drop_params: true
+  set_verbose: false

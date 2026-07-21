@@ -70,7 +70,10 @@ src/runtime_discovery_builder.py
 src/market/snapshots.py
 src/strategy/detectors.py
 tests/test_pr056_runtime_discovery.py
+src/paper_shadow/__init__.py
+src/paper_shadow/runner.py
 src/paper_shadow/atomic_runtime_stages.py
 tests/test_pr075_atomic_runtime_stages.py
+tests/test_pr076_paper_shadow_exit_semantics.py
 src/shadow_soak/real_soak.py
 tests/test_pr079_real_shadow_soak.py

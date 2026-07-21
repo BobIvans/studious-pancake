@@ -90,6 +90,80 @@ async def test_runner_records_healthy_idle_only_after_discovery_proof(tmp_path) 
 
 
 @pytest.mark.asyncio
+async def test_runtime_discovery_block_reason_is_durable(tmp_path) -> None:
+    journal = JsonlPaperShadowJournal(tmp_path / "paper-shadow.jsonl")
+    runner = PaperShadowRunner(
+        PaperShadowRunnerConfig(journal_path=journal.path, run_id="run-blocked-pr073"),
+        journal=journal,
+    )
+    discovery_evidence = {
+        "schema_version": "pr056.discovery-evidence.v1",
+        "cycle_id": "cycle-blocked",
+        "cycle_succeeded": False,
+        "terminal_reason": "blocked_required_discovery_incomplete",
+        "configured_pairs": 1,
+        "required_pairs": ["sol-usdc-loop"],
+        "completed_required_pairs": [],
+        "requests_attempted": 2,
+        "batches_completed": 2,
+        "snapshots_created": 0,
+        "candidates_created": 0,
+        "degraded_reasons": ["sol-usdc-loop:missing_second_leg"],
+    }
+
+    summary = await runner.run_once((), upstream_cycle_evidence=discovery_evidence)
+
+    assert summary.status is PaperShadowRunStatus.BLOCKED
+    assert summary.terminal_reason == "blocked_required_discovery_incomplete"
+    assert summary.to_dict()["upstream_cycle_evidence"]["cycle_id"] == "cycle-blocked"
+    events = journal.read_events()
+    assert events[-1]["event_type"] == "runner_blocked"
+    assert events[-1]["reason_code"] == "blocked_required_discovery_incomplete"
+    assert events[-1]["details"]["blocked_dependency"] == "runtime_discovery"
+    assert (
+        events[-1]["details"]["upstream_discovery_evidence"]["terminal_reason"]
+        == "blocked_required_discovery_incomplete"
+    )
+    assert events[-1]["details"]["healthy_idle_proven"] is False
+
+
+@pytest.mark.asyncio
+async def test_verified_empty_discovery_evidence_proves_healthy_idle(tmp_path) -> None:
+    journal = JsonlPaperShadowJournal(tmp_path / "paper-shadow.jsonl")
+    runner = PaperShadowRunner(
+        PaperShadowRunnerConfig(journal_path=journal.path, run_id="run-idle-pr073"),
+        journal=journal,
+    )
+    discovery_evidence = {
+        "schema_version": "pr056.discovery-evidence.v1",
+        "cycle_id": "cycle-empty",
+        "cycle_succeeded": True,
+        "terminal_reason": "discovery_cycle_completed",
+        "configured_pairs": 1,
+        "required_pairs": ["sol-usdc-loop"],
+        "completed_required_pairs": ["sol-usdc-loop"],
+        "requests_attempted": 2,
+        "batches_completed": 2,
+        "snapshots_created": 2,
+        "candidates_created": 0,
+    }
+
+    summary = await runner.run_once((), upstream_cycle_evidence=discovery_evidence)
+
+    assert summary.status is PaperShadowRunStatus.HEALTHY_IDLE
+    assert summary.terminal_reason == "healthy_idle_no_candidates_after_discovery"
+    assert summary.to_dict()["upstream_cycle_evidence"]["cycle_id"] == "cycle-empty"
+    events = journal.read_events()
+    assert events[0]["details"]["upstream_cycle_completed"] is True
+    assert events[-1]["event_type"] == "runner_idle"
+    assert events[-1]["details"]["healthy_idle_proven"] is True
+    assert (
+        events[-1]["details"]["upstream_discovery_evidence"]["terminal_reason"]
+        == "discovery_cycle_completed"
+    )
+
+
+@pytest.mark.asyncio
 async def test_missing_stage_is_durable_blocked_state(tmp_path, opportunity) -> None:
     journal = JsonlPaperShadowJournal(tmp_path / "paper-shadow.jsonl")
     runner = PaperShadowRunner(

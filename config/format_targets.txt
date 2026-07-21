@@ -82,7 +82,10 @@ tests/test_pr075_atomic_runtime_stages.py
 tests/test_pr076_paper_shadow_exit_semantics.py
 tests/test_pr089_active_paper_composition_root.py
 src/shadow_soak/real_soak.py
+src/shadow_soak/__init__.py
+src/shadow_soak/pr105_harness.py
 tests/test_pr079_real_shadow_soak.py
+tests/test_pr105_shadow_soak_harness.py
 src/submission/lifecycle_integration.py
 tests/test_pr080_canonical_sender_lifecycle.py
 src/execution/canonical_domain.py

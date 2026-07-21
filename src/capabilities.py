@@ -222,7 +222,9 @@ class CapabilityMatrix:
         repo_root = Path(root).resolve() if root is not None else self.root_path
         errors = []
         for component in self.components:
-            if self.installed_package and not component.required_in_installed_package:
+            if self.installed_package and (
+                component.quarantined or not component.required_in_installed_package
+            ):
                 continue
             if not (repo_root / component.path).exists():
                 errors.append(

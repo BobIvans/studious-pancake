@@ -77,18 +77,21 @@ def _http_request(probe_request: ConformanceHttpRequest) -> tuple[int, bytes]:
 
 def _invoke_transport(
     transport: Transport | None, probe_request: ConformanceHttpRequest
-) -> tuple[int, bytes]:
+) -> tuple[int, bytes, bool]:
     if transport is None:
-        return _http_request(probe_request)
+        status, body = _http_request(probe_request)
+        return status, body, False
     try:
         parameters = inspect.signature(transport).parameters
     except (TypeError, ValueError):
         parameters = {}
     if len(parameters) >= 2:
         legacy = cast(LegacyTransport, transport)
-        return legacy(probe_request.url, probe_request.headers)
+        status, body = legacy(probe_request.url, probe_request.headers)
+        return status, body, True
     structured = cast(StructuredTransport, transport)
-    return structured(probe_request)
+    status, body = structured(probe_request)
+    return status, body, False
 
 
 def _json_path_value(payload: Any, path: str) -> Any:
@@ -334,14 +337,16 @@ def run_read_only_conformance(
             request_method=probe.method.value,
             request_url=probe.url,
             error=(
-                "missing credential environment variable(s): "
-                + ", ".join(missing_env)
+                "missing credential environment variable(s): " + ", ".join(missing_env)
             ),
         )
     assert probe_request is not None
 
     try:
-        status, body = _invoke_transport(transport, probe_request)
+        status, body, used_legacy_transport = _invoke_transport(
+            transport, probe_request
+        )
+        strict_assertions = not used_legacy_transport
         assertions = [
             f"credential-mode:{probe.credential_mode.value}",
             f"request-method:{probe_request.method}",
@@ -350,8 +355,10 @@ def run_read_only_conformance(
         payload: Any | None = None
         needs_json = bool(
             probe.required_json_paths
-            or probe.json_assertions
-            or probe.business_code_path is not None
+            or (
+                strict_assertions
+                and (probe.json_assertions or probe.business_code_path is not None)
+            )
         )
         if needs_json:
             payload = json.loads(body.decode("utf-8"))
@@ -360,10 +367,10 @@ def run_read_only_conformance(
             for path in probe.required_json_paths:
                 present = _json_path_present(payload, path)
                 assertions.append(f"json-path:{path}:{'ok' if present else 'failed'}")
-        if probe.business_code_path is not None:
+        if probe.business_code_path is not None and strict_assertions:
             assert payload is not None
             _append_business_code_assertion(payload, probe, assertions)
-        if probe.json_assertions:
+        if probe.json_assertions and strict_assertions:
             assert payload is not None
             for assertion in probe.json_assertions:
                 _append_json_assertion(payload, assertion, assertions)

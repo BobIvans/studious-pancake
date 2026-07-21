@@ -34,6 +34,8 @@ KAMINO_DEVELOPER_DOCS = "https://kamino.com/docs/build/developers/borrow"
 
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _GIT_SHA_RE = re.compile(r"^[0-9a-f]{40}$")
+_MAX_HEALTH_ERROR_BPS = 1
+_MAX_FEE_ERROR_BPS = 1
 
 
 class KaminoRealConformanceError(ValueError):
@@ -80,26 +82,17 @@ class KaminoRealSourcePins:
         )
         object.__setattr__(
             self,
+            "klend_commit",
+            _require_git_sha(self.klend_commit, field="source.klend_commit"),
+        )
+        object.__setattr__(
+            self,
             "klend_sdk_repository_url",
             _require_exact_url(
                 self.klend_sdk_repository_url,
                 expected=KLEND_SDK_REPOSITORY,
                 field="source.klend_sdk_repository_url",
             ),
-        )
-        object.__setattr__(
-            self,
-            "developer_docs_url",
-            _require_exact_url(
-                self.developer_docs_url,
-                expected=KAMINO_DEVELOPER_DOCS,
-                field="source.developer_docs_url",
-            ),
-        )
-        object.__setattr__(
-            self,
-            "klend_commit",
-            _require_git_sha(self.klend_commit, field="source.klend_commit"),
         )
         object.__setattr__(
             self,
@@ -126,6 +119,15 @@ class KaminoRealSourcePins:
             self,
             "sdk_version",
             _require_non_empty(self.sdk_version, field="source.sdk_version"),
+        )
+        object.__setattr__(
+            self,
+            "developer_docs_url",
+            _require_exact_url(
+                self.developer_docs_url,
+                expected=KAMINO_DEVELOPER_DOCS,
+                field="source.developer_docs_url",
+            ),
         )
         _require_timezone(self.reviewed_at, field="source.reviewed_at")
 
@@ -317,12 +319,14 @@ class KaminoRealConformancePackage:
             )
         if not self.artifacts:
             raise KaminoRealConformanceError("artifacts cannot be empty")
+
         paths = [artifact.path for artifact in self.artifacts]
+        kinds = [artifact.kind for artifact in self.artifacts]
         if len(paths) != len(set(paths)):
             raise KaminoRealConformanceError("artifact paths must be unique")
-        kinds = [artifact.kind for artifact in self.artifacts]
         if len(kinds) != len(set(kinds)):
             raise KaminoRealConformanceError("artifact kinds must be unique")
+
         for name in (
             "deployment_program_hash_sha256",
             "idl_sha256",
@@ -389,8 +393,7 @@ def evaluate_kamino_real_conformance(
         "KAMINO_SDK_PACKAGE_MISMATCH",
     )
     check(
-        provenance.source_url
-        in {KLEND_SOURCE_REPOSITORY, KLEND_SDK_REPOSITORY, KAMINO_DEVELOPER_DOCS},
+        provenance.source_url in _official_sources(),
         "KAMINO_PROVENANCE_SOURCE_NOT_OFFICIAL",
     )
     check(
@@ -406,53 +409,42 @@ def evaluate_kamino_real_conformance(
         "DEPLOYMENT_HASH_MUST_BE_DISTINCT_FROM_IDL_HASH",
     )
     check(
-        package.sdk_account_vectors_sha256
-        != package.sdk_instruction_vectors_sha256,
+        package.sdk_account_vectors_sha256 != package.sdk_instruction_vectors_sha256,
         "SDK_ACCOUNT_AND_INSTRUCTION_VECTORS_COLLAPSED",
     )
 
-    rpc = package.rpc_evidence
-    check(rpc.market_count >= 1, "RPC_MARKET_VECTOR_MISSING")
-    check(rpc.reserve_count >= 2, "RPC_RESERVE_VECTORS_MISSING")
-    check(rpc.obligation_count >= 1, "RPC_OBLIGATION_VECTOR_MISSING")
-    check(rpc.oracle_count >= 1, "RPC_ORACLE_VECTOR_MISSING")
-    check(rpc.min_context_slot > 0, "RPC_CONTEXT_SLOT_MISSING")
+    _evaluate_rpc(package.rpc_evidence, check)
+    _evaluate_math(package.math_evidence, check)
+    _evaluate_soak(package.shadow_soak, check)
 
-    math = package.math_evidence
-    check(math.borrow_flashloan_path_verified, "BORROW_FLASHLOAN_PATH_UNVERIFIED")
-    check(math.liquidation_path_verified, "LIQUIDATION_PATH_UNVERIFIED")
-    check(math.no_live_authority, "LIVE_AUTHORITY_PRESENT")
-    check(math.sample_count >= 1, "MATH_SAMPLE_MISSING")
-    check(math.max_health_error_bps <= 1, "HEALTH_ERROR_TOO_HIGH")
-    check(math.max_fee_error_bps <= 1, "FEE_ERROR_TOO_HIGH")
+    check(
+        package.review.operator != package.review.reviewer,
+        "OPERATOR_AND_REVIEWER_MUST_DIFFER",
+    )
+    check(
+        package.review.signed_by
+        not in {package.review.operator, package.review.reviewer},
+        "SIGNER_MUST_BE_INDEPENDENT",
+    )
 
-    soak = package.shadow_soak
-    check(soak.duration_seconds >= MINIMUM_SHADOW_SOAK_SECONDS, "SOAK_TOO_SHORT")
-    check(soak.deterministic_replay_passed, "SOAK_REPLAY_NOT_DETERMINISTIC")
-    check(soak.human_reviewed, "SOAK_NOT_HUMAN_REVIEWED")
-
-    check(bool(package.review.reviewer.strip()), "HUMAN_REVIEW_MISSING")
-    check(bool(package.review.signed_by.strip()), "CONFORMANCE_BUNDLE_NOT_SIGNED")
-
-    unique_blockers = tuple(dict.fromkeys(blockers))
-    ready = not unique_blockers
+    ready = not blockers
     return KaminoRealConformanceEvaluation(
         schema_version=RESULT_SCHEMA_VERSION,
         ready_for_shadow_review=ready,
         live_execution_allowed=False,
         state="ready-for-shadow-review" if ready else "blocked",
-        blockers=unique_blockers,
-        warnings=tuple(dict.fromkeys(warnings)),
+        blockers=tuple(blockers),
+        warnings=tuple(warnings),
         evidence_sha256=package.evidence_sha256,
         checks_evaluated=checks,
         metrics_summary={
             "combination_id": combination.combination_id,
-            "market_count": rpc.market_count,
-            "reserve_count": rpc.reserve_count,
-            "obligation_count": rpc.obligation_count,
-            "oracle_count": rpc.oracle_count,
-            "math_samples": math.sample_count,
-            "soak_seconds": soak.duration_seconds,
+            "artifact_count": len(package.artifacts),
+            "market_count": package.rpc_evidence.market_count,
+            "reserve_count": package.rpc_evidence.reserve_count,
+            "obligation_count": package.rpc_evidence.obligation_count,
+            "oracle_count": package.rpc_evidence.oracle_count,
+            "min_context_slot": package.rpc_evidence.min_context_slot,
         },
     )
 
@@ -460,33 +452,77 @@ def evaluate_kamino_real_conformance(
 def assert_kamino_real_conformance(
     package: KaminoRealConformancePackage,
 ) -> KaminoRealConformanceEvaluation:
-    """Return ready evidence or fail closed with stable blocker codes."""
-
-    evaluation = evaluate_kamino_real_conformance(package)
-    if not evaluation.ready_for_shadow_review:
-        blockers = ",".join(evaluation.blockers)
-        raise KaminoRealConformanceError(f"PR095_KAMINO_BLOCKED:{blockers}")
-    return evaluation
+    result = evaluate_kamino_real_conformance(package)
+    if result.blockers:
+        joined = ",".join(result.blockers)
+        raise KaminoRealConformanceError(f"PR095_KAMINO_REAL_BLOCKED:{joined}")
+    return result
 
 
 def check_pr095_materialized_artifacts(
     package: KaminoRealConformancePackage,
     *,
-    repository_root: str | Path,
+    repository_root: Path,
 ) -> tuple[str, ...]:
-    """Verify every PR-095 artifact path exists and matches its pinned digest."""
+    """Verify that PR-095 evidence files exist and match their pinned digests."""
 
-    root = Path(repository_root)
     blockers: list[str] = []
+    root = Path(repository_root)
     for artifact in package.artifacts:
-        path = root / artifact.path
-        if not path.is_file():
+        full_path = root / artifact.path
+        if not full_path.is_file():
             blockers.append(f"ARTIFACT_MISSING:{artifact.path}")
             continue
-        actual = hashlib.sha256(path.read_bytes()).hexdigest()
-        if actual != artifact.sha256:
+
+        digest = hashlib.sha256(full_path.read_bytes()).hexdigest()
+        if digest != artifact.sha256:
             blockers.append(f"ARTIFACT_HASH_MISMATCH:{artifact.path}")
+
     return tuple(blockers)
+
+
+def stable_json(payload: Any) -> str:
+    return json.dumps(_jsonable(payload), sort_keys=True, separators=(",", ":"))
+
+
+def sha256_payload(payload: Any) -> str:
+    return hashlib.sha256(stable_json(payload).encode("utf-8")).hexdigest()
+
+
+def _evaluate_rpc(
+    evidence: KaminoRealRpcEvidence,
+    check: Any,
+) -> None:
+    check(evidence.market_count >= 1, "RPC_MARKET_VECTOR_MISSING")
+    check(evidence.reserve_count >= 2, "RPC_RESERVE_VECTORS_MISSING")
+    check(evidence.obligation_count >= 1, "RPC_OBLIGATION_VECTOR_MISSING")
+    check(evidence.oracle_count >= 1, "RPC_ORACLE_VECTOR_MISSING")
+
+
+def _evaluate_math(
+    evidence: KaminoRealMathEvidence,
+    check: Any,
+) -> None:
+    check(
+        evidence.borrow_flashloan_path_verified,
+        "BORROW_FLASHLOAN_PATH_UNVERIFIED",
+    )
+    check(evidence.liquidation_path_verified, "LIQUIDATION_PATH_UNVERIFIED")
+    check(evidence.no_live_authority, "MATH_EVIDENCE_HAS_LIVE_AUTHORITY")
+    check(
+        evidence.max_health_error_bps <= _MAX_HEALTH_ERROR_BPS,
+        "HEALTH_ERROR_TOO_HIGH",
+    )
+    check(evidence.max_fee_error_bps <= _MAX_FEE_ERROR_BPS, "FEE_ERROR_TOO_HIGH")
+
+
+def _evaluate_soak(
+    evidence: KaminoRealShadowSoakEvidence,
+    check: Any,
+) -> None:
+    check(evidence.duration_seconds >= MINIMUM_SHADOW_SOAK_SECONDS, "SOAK_TOO_SHORT")
+    check(evidence.deterministic_replay_passed, "SOAK_REPLAY_NOT_DETERMINISTIC")
+    check(evidence.human_reviewed, "SOAK_NOT_HUMAN_REVIEWED")
 
 
 def _require_non_empty(value: str, *, field: str) -> str:
@@ -516,9 +552,7 @@ def _require_bps(value: int, *, field: str) -> int:
 
 def _require_sha256(value: str, *, field: str) -> str:
     lowered = str(value).lower()
-    if not _SHA256_RE.fullmatch(lowered):
-        raise KaminoRealConformanceError(f"{field} must be a sha256 hex digest")
-    if lowered == "0" * 64 or len(set(lowered)) == 1:
+    if not _SHA256_RE.fullmatch(lowered) or _is_placeholder(lowered):
         raise KaminoRealConformanceError(
             f"{field} must be a non-placeholder sha256 digest"
         )
@@ -527,9 +561,7 @@ def _require_sha256(value: str, *, field: str) -> str:
 
 def _require_git_sha(value: str, *, field: str) -> str:
     lowered = str(value).lower()
-    if not _GIT_SHA_RE.fullmatch(lowered):
-        raise KaminoRealConformanceError(f"{field} must be a git SHA")
-    if lowered == "0" * 40 or len(set(lowered)) == 1:
+    if not _GIT_SHA_RE.fullmatch(lowered) or _is_placeholder(lowered):
         raise KaminoRealConformanceError(
             f"{field} must be a non-placeholder git SHA"
         )
@@ -552,24 +584,36 @@ def _require_exact_url(value: str, *, expected: str, field: str) -> str:
 
 
 def _require_pr095_path(value: str, *, field: str) -> str:
-    checked = _require_non_empty(value, field=field).replace("\\", "/")
-    parts = checked.split("/")
-    bad_part = any(part in {"", ".", ".."} for part in parts)
-    if checked.startswith(("/", "~")) or bad_part:
+    normalized = str(value).replace("\\", "/")
+    parts = normalized.split("/")
+    has_bad_part = any(part in {"", ".", ".."} for part in parts)
+    if normalized.startswith(("/", "~")) or has_bad_part:
         raise KaminoRealConformanceError(
             f"{field} must be under {REQUIRED_EVIDENCE_ROOT}"
         )
-    if not checked.startswith(f"{REQUIRED_EVIDENCE_ROOT}/"):
+    if not normalized.startswith(f"{REQUIRED_EVIDENCE_ROOT}/"):
         raise KaminoRealConformanceError(
             f"{field} must be under {REQUIRED_EVIDENCE_ROOT}"
         )
-    return checked
+    return normalized
 
 
 def _require_timezone(value: datetime, *, field: str) -> datetime:
     if value.tzinfo is None or value.utcoffset() is None:
         raise KaminoRealConformanceError(f"{field} must be timezone-aware")
     return value
+
+
+def _is_placeholder(value: str) -> bool:
+    return len(set(value)) == 1
+
+
+def _official_sources() -> set[str]:
+    return {
+        KLEND_SOURCE_REPOSITORY,
+        KLEND_SDK_REPOSITORY,
+        KAMINO_DEVELOPER_DOCS,
+    }
 
 
 def _jsonable(value: Any) -> Any:
@@ -587,11 +631,3 @@ def _jsonable(value: Any) -> Any:
     if isinstance(value, Mapping):
         return {str(key): _jsonable(item) for key, item in value.items()}
     return value
-
-
-def stable_json(payload: Any) -> str:
-    return json.dumps(_jsonable(payload), sort_keys=True, separators=(",", ":"))
-
-
-def sha256_payload(payload: Any) -> str:
-    return hashlib.sha256(stable_json(payload).encode("utf-8")).hexdigest()

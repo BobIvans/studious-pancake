@@ -34,6 +34,7 @@ class PaperShadowStageName(StrEnum):
 class PaperShadowRunStatus(StrEnum):
     HEALTHY_IDLE = "healthy_idle"
     BLOCKED = "blocked"
+    DEGRADED = "degraded"
     FAILED = "failed"
     PAPER_OUTCOME = "paper_outcome"
 
@@ -61,6 +62,10 @@ _FORBIDDEN_OUTPUT_KEYS = frozenset(
         "submitted",
         "txid",
     }
+)
+
+_READY_STATUSES = frozenset(
+    {PaperShadowRunStatus.HEALTHY_IDLE, PaperShadowRunStatus.PAPER_OUTCOME}
 )
 
 
@@ -101,16 +106,22 @@ class PaperShadowRunSummary:
     candidates_seen: int
     terminal_reason: str
     events_written: int
+    ready_for_next_cycle: bool
+    dependency_reasons: tuple[str, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
-            "schema_version": "pr038.paper-shadow-summary.v1",
+            "schema_version": "pr076.paper-shadow-summary.v1",
             "run_id": self.run_id,
             "status": self.status.value,
             "journal_path": self.journal_path,
             "candidates_seen": self.candidates_seen,
             "terminal_reason": self.terminal_reason,
             "events_written": self.events_written,
+            "readiness": {
+                "ready_for_next_cycle": self.ready_for_next_cycle,
+                "dependency_reasons": list(self.dependency_reasons),
+            },
         }
 
 
@@ -166,21 +177,27 @@ class PaperShadowRunner:
                 f"{sorted(present)}"
             )
 
-    def _append_missing_upstream_block(self) -> None:
+    def _append_missing_upstream_block(
+        self, dependency_reasons: Sequence[str] = ()
+    ) -> None:
+        details: dict[str, Any] = {
+            "required_upstream_stages": [
+                stage.value for stage in UPSTREAM_DISCOVERY_STAGES
+            ],
+            "upstream_cycle_completed": False,
+            "healthy_idle_proven": False,
+            "executed": False,
+            "synthetic_fill": False,
+        }
+        normalized = _normalize_dependency_reasons(dependency_reasons)
+        if normalized:
+            details["dependency_reasons"] = list(normalized)
         self._append(
             event_type="runner_blocked",
             status="blocked",
             reason_code="blocked_no_discovery_composition",
             stage=PaperShadowStageName.DISCOVERY,
-            details={
-                "required_upstream_stages": [
-                    stage.value for stage in UPSTREAM_DISCOVERY_STAGES
-                ],
-                "upstream_cycle_completed": False,
-                "healthy_idle_proven": False,
-                "executed": False,
-                "synthetic_fill": False,
-            },
+            details=details,
         )
 
     async def _run_stage(
@@ -242,32 +259,58 @@ class PaperShadowRunner:
         opportunities: Sequence[Opportunity] = (),
         *,
         upstream_cycle_completed: bool = False,
+        upstream_dependency_reasons: Sequence[str] = (),
     ) -> PaperShadowRunSummary:
         """Run one bounded paper/shadow pass over already-detected candidates.
 
-        On the current main branch detector/planner/compiler/simulation stages may
-        not exist yet.  Missing stages are terminal blocked outcomes, not success.
-        An empty candidate set is healthy only after the composition root proves
-        that discovery and detector completed a bounded upstream cycle.
+        Missing stages are terminal blocked outcomes, not success.  An empty
+        candidate set is healthy only after the composition root proves that
+        discovery and detector completed a bounded upstream cycle and did not
+        report dependency degradation.
         """
 
+        dependency_reasons = _normalize_dependency_reasons(upstream_dependency_reasons)
+        started_details: dict[str, Any] = {
+            "sender_enabled": False,
+            "synthetic_fill": False,
+            "upstream_cycle_completed": upstream_cycle_completed,
+        }
+        if dependency_reasons:
+            started_details["dependency_reasons"] = list(dependency_reasons)
         self._append(
             event_type="runner_started",
             status="started",
             reason_code="paper_shadow_once_started",
-            details={
-                "sender_enabled": False,
-                "synthetic_fill": False,
-                "upstream_cycle_completed": upstream_cycle_completed,
-            },
+            details=started_details,
         )
         if not opportunities:
             if not upstream_cycle_completed:
-                self._append_missing_upstream_block()
+                self._append_missing_upstream_block(dependency_reasons)
                 return self._summary(
                     PaperShadowRunStatus.BLOCKED,
                     candidates_seen=0,
                     terminal_reason="blocked_no_discovery_composition",
+                    dependency_reasons=dependency_reasons,
+                )
+            if dependency_reasons:
+                self._append(
+                    event_type="runner_degraded",
+                    status="degraded",
+                    reason_code="degraded_discovery_cycle",
+                    stage=PaperShadowStageName.DISCOVERY,
+                    details={
+                        "sender_enabled": False,
+                        "synthetic_fill": False,
+                        "upstream_cycle_completed": True,
+                        "healthy_idle_proven": False,
+                        "dependency_reasons": list(dependency_reasons),
+                    },
+                )
+                return self._summary(
+                    PaperShadowRunStatus.DEGRADED,
+                    candidates_seen=0,
+                    terminal_reason="degraded_discovery_cycle",
+                    dependency_reasons=dependency_reasons,
                 )
             self._append(
                 event_type="runner_idle",
@@ -300,7 +343,9 @@ class PaperShadowRunner:
                         "strategy_name": opportunity.strategy_name,
                         "opportunity_type": opportunity.opportunity_type,
                         "detection_slot": opportunity.detection_slot,
-                        "proposed_amount_base_units": opportunity.proposed_amount_base_units,
+                        "proposed_amount_base_units": (
+                            opportunity.proposed_amount_base_units
+                        ),
                         "executed": False,
                         "synthetic_fill": False,
                     },
@@ -313,6 +358,7 @@ class PaperShadowRunner:
                             PaperShadowRunStatus.BLOCKED,
                             candidates_seen=candidates_seen,
                             terminal_reason=f"blocked_missing_stage_{stage.value}",
+                            dependency_reasons=dependency_reasons,
                         )
                     outputs[stage.value] = output
 
@@ -348,6 +394,25 @@ class PaperShadowRunner:
                 PaperShadowRunStatus.FAILED,
                 candidates_seen=candidates_seen,
                 terminal_reason="paper_shadow_stage_failure",
+                dependency_reasons=dependency_reasons,
+            )
+
+        if dependency_reasons:
+            self._append(
+                event_type="runner_degraded",
+                status="degraded",
+                reason_code="degraded_dependency_reasons_after_outcome",
+                details={
+                    "executed": False,
+                    "synthetic_fill": False,
+                    "dependency_reasons": list(dependency_reasons),
+                },
+            )
+            return self._summary(
+                PaperShadowRunStatus.DEGRADED,
+                candidates_seen=candidates_seen,
+                terminal_reason="degraded_dependency_reasons_after_outcome",
+                dependency_reasons=dependency_reasons,
             )
 
         return self._summary(
@@ -362,10 +427,12 @@ class PaperShadowRunner:
         opportunities: Sequence[Opportunity] = (),
         *,
         upstream_cycle_completed: bool = False,
+        upstream_dependency_reasons: Sequence[str] = (),
     ) -> PaperShadowRunSummary:
         summary = await self.run_once(
             opportunities,
             upstream_cycle_completed=upstream_cycle_completed,
+            upstream_dependency_reasons=upstream_dependency_reasons,
         )
         try:
             await asyncio.wait_for(
@@ -388,7 +455,11 @@ class PaperShadowRunner:
         *,
         candidates_seen: int,
         terminal_reason: str,
+        dependency_reasons: Sequence[str] = (),
     ) -> PaperShadowRunSummary:
+        normalized_reasons = _normalize_dependency_reasons(dependency_reasons)
+        if status not in _READY_STATUSES and not normalized_reasons:
+            normalized_reasons = (terminal_reason,)
         return PaperShadowRunSummary(
             run_id=self.config.run_id,
             status=status,
@@ -396,4 +467,10 @@ class PaperShadowRunner:
             candidates_seen=candidates_seen,
             terminal_reason=terminal_reason,
             events_written=self._events_written,
+            ready_for_next_cycle=status in _READY_STATUSES,
+            dependency_reasons=normalized_reasons,
         )
+
+
+def _normalize_dependency_reasons(reasons: Sequence[str]) -> tuple[str, ...]:
+    return tuple(dict.fromkeys(str(reason) for reason in reasons if str(reason)))

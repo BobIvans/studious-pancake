@@ -1,4 +1,5 @@
 """Canonical immutable opportunity domain model."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

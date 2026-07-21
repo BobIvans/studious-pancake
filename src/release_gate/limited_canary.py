@@ -87,8 +87,7 @@ class LimitedCanaryRuntimeState(StrEnum):
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
         return {
-            item.name: _jsonable(getattr(value, item.name))
-            for item in fields(value)
+            item.name: _jsonable(getattr(value, item.name)) for item in fields(value)
         }
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -224,7 +223,9 @@ class LimitedCanaryRuntimeRequest:
         if not self.requested_by.strip():
             raise LimitedCanaryError("request.requested_by is required")
         if not isinstance(self.runtime_default_live_enabled, bool):
-            raise LimitedCanaryError("request.runtime_default_live_enabled must be bool")
+            raise LimitedCanaryError(
+                "request.runtime_default_live_enabled must be bool"
+            )
         if not isinstance(self.env_override_requested, bool):
             raise LimitedCanaryError("request.env_override_requested must be bool")
         _positive(self.max_exposure_lamports, "request.max_exposure_lamports")

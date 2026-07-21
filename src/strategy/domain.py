@@ -19,7 +19,7 @@ class Opportunity:
     input_mint: str
     output_mint: str
     proposed_amount_base_units: int
-    expected_gross_profit: float
+    expected_gross_profit: int
     expires_at: float
     metadata: Mapping[str, Any] = field(default_factory=dict)
     opportunity_id: str = field(default_factory=lambda: uuid4().hex)
@@ -29,6 +29,12 @@ class Opportunity:
             object.__setattr__(self, "opportunity_id", uuid4().hex)
         if self.expires_at <= self.detected_at:
             raise ValueError("opportunity expiration must be after detection timestamp")
+        if isinstance(self.expected_gross_profit, bool) or not isinstance(
+            self.expected_gross_profit, int
+        ):
+            raise TypeError("expected_gross_profit must be integer base units")
+        if self.proposed_amount_base_units <= 0:
+            raise ValueError("proposed_amount_base_units must be positive")
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
 
     @classmethod
@@ -41,7 +47,7 @@ class Opportunity:
         input_mint: str,
         output_mint: str,
         proposed_amount_base_units: int,
-        expected_gross_profit: float,
+        expected_gross_profit: int,
         ttl_seconds: float,
         metadata: Mapping[str, Any] | None = None,
         detected_at: float | None = None,

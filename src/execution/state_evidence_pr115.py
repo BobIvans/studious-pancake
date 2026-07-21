@@ -14,7 +14,7 @@ from dataclasses import asdict, dataclass
 from enum import StrEnum
 import hashlib
 import json
-from typing import Any
+from typing import Any, cast
 
 from .exact_simulation import ExactSimulationReport
 
@@ -161,10 +161,14 @@ def build_pr115_proof_from_report(
     post_state_accounts = getattr(report.final, "returned_accounts", ())
     if not post_state_accounts:
         raise PR115StateEvidenceError("final simulation did not preserve raw accounts")
+    typed_post_accounts = cast(
+        Sequence[Mapping[str, Any] | None],
+        post_state_accounts,
+    )
     return build_pr115_simulation_owned_economic_proof(
         monitored_accounts=report.monitored_accounts,
         pre_state_accounts=pre_state_accounts,
-        post_state_accounts=post_state_accounts,
+        post_state_accounts=typed_post_accounts,
         message_hash=report.message_hash,
         simulation_response_hash=report.final.response_hash,
         pre_state_slot=pre_state_slot,
@@ -217,11 +221,7 @@ def build_pr115_simulation_owned_economic_proof(
         _decode_snapshot(address, index, account, active_policy)
         for index, (address, account) in enumerate(zip(addresses, post_state_accounts))
     )
-    if expected_post_account_hashes is not None:
-        expected = tuple(expected_post_account_hashes)
-        actual = tuple(snapshot.raw_hash for snapshot in post_snapshots)
-        if expected != actual:
-            raise PR115StateEvidenceError(PR115StateEvidenceCode.COPIED_HASH_MISMATCH)
+    _validate_expected_hashes(expected_post_account_hashes, post_snapshots)
 
     native_deltas: list[PR115NativeLamportDelta] = []
     token_deltas: list[PR115TokenAccountDelta] = []
@@ -278,6 +278,18 @@ def build_pr115_simulation_owned_economic_proof(
     )
 
 
+def _validate_expected_hashes(
+    expected_post_account_hashes: Sequence[str] | None,
+    post_snapshots: Sequence[PR115RawAccountSnapshot],
+) -> None:
+    if expected_post_account_hashes is None:
+        return
+    expected = tuple(expected_post_account_hashes)
+    actual = tuple(snapshot.raw_hash for snapshot in post_snapshots)
+    if expected != actual:
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.COPIED_HASH_MISMATCH)
+
+
 def _decode_snapshot(
     address: str,
     index: int,
@@ -297,7 +309,7 @@ def _decode_snapshot(
         raise PR115StateEvidenceError(PR115StateEvidenceCode.UNEXPECTED_EXECUTABLE)
     if not isinstance(lamports, int) or isinstance(lamports, bool) or lamports < 0:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT)
-    expected_owner = (policy.expected_owner_by_address or {}).get(address)
+    expected_owner = _expected_owner(policy, address)
     if expected_owner is not None and owner != expected_owner:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.WRONG_OWNER)
     data_base64, data = _decode_account_data(account.get("data"))
@@ -323,9 +335,15 @@ def _decode_snapshot(
         lamports=lamports,
         data_base64=data_base64,
         data_hash=data_hash,
-        raw_hash=_hash_json(account),
+        raw_hash=_hash_json(dict(account)),
         decoded_hash=decoded_hash,
     )
+
+
+def _expected_owner(policy: PR115DecodePolicy, address: str) -> str | None:
+    if policy.expected_owner_by_address is None:
+        return None
+    return policy.expected_owner_by_address.get(address)
 
 
 def _native_delta(
@@ -350,24 +368,22 @@ def _token_delta(
 ) -> PR115TokenAccountDelta:
     pre_bytes = _decode_snapshot_data(pre)
     post_bytes = _decode_snapshot_data(post)
-    if len(pre_bytes) != SPL_TOKEN_ACCOUNT_LEN or len(post_bytes) != SPL_TOKEN_ACCOUNT_LEN:
+    if len(pre_bytes) != SPL_TOKEN_ACCOUNT_LEN:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.WRONG_DATA_LENGTH)
+    if len(post_bytes) != SPL_TOKEN_ACCOUNT_LEN:
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.WRONG_DATA_LENGTH)
+
     pre_mint = pre_bytes[SPL_TOKEN_MINT_OFFSET:SPL_TOKEN_OWNER_OFFSET]
     post_mint = post_bytes[SPL_TOKEN_MINT_OFFSET:SPL_TOKEN_OWNER_OFFSET]
     pre_owner = pre_bytes[SPL_TOKEN_OWNER_OFFSET:SPL_TOKEN_AMOUNT_OFFSET]
     post_owner = post_bytes[SPL_TOKEN_OWNER_OFFSET:SPL_TOKEN_AMOUNT_OFFSET]
     if pre_mint != post_mint or pre_owner != post_owner:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.WRONG_OWNER)
-    pre_amount = int.from_bytes(
-        pre_bytes[SPL_TOKEN_AMOUNT_OFFSET : SPL_TOKEN_AMOUNT_OFFSET + SPL_TOKEN_AMOUNT_LEN],
-        "little",
-    )
-    post_amount = int.from_bytes(
-        post_bytes[
-            SPL_TOKEN_AMOUNT_OFFSET : SPL_TOKEN_AMOUNT_OFFSET + SPL_TOKEN_AMOUNT_LEN
-        ],
-        "little",
-    )
+
+    amount_start = SPL_TOKEN_AMOUNT_OFFSET
+    amount_end = SPL_TOKEN_AMOUNT_OFFSET + SPL_TOKEN_AMOUNT_LEN
+    pre_amount = int.from_bytes(pre_bytes[amount_start:amount_end], "little")
+    post_amount = int.from_bytes(post_bytes[amount_start:amount_end], "little")
     return PR115TokenAccountDelta(
         address=post.address,
         mint_hash=_hash_bytes(post_mint),

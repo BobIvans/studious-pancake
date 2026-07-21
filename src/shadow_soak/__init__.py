@@ -1,4 +1,4 @@
-"""PR-060, PR-079 and PR-092 shadow-soak evidence validation boundaries."""
+"""PR-060, PR-079, PR-092 and PR-105 shadow-soak validation boundaries."""
 
 from .evidence import (
     MINIMUM_SOAK_SECONDS,
@@ -33,6 +33,20 @@ from .pr092_actual_soak import (
     check_pr092_materialized_artifacts,
     evaluate_pr092_actual_shadow_soak,
 )
+from .pr105_harness import (
+    PR105_HARNESS_RESULT_SCHEMA_VERSION,
+    PR105_HARNESS_SCHEMA_VERSION,
+    PR105HarnessArtifactTarget,
+    PR105HarnessCommand,
+    PR105HarnessReadiness,
+    PR105HarnessRunSnapshot,
+    PR105HarnessState,
+    PR105HarnessStep,
+    PR105ShadowSoakHarnessConfig,
+    PR105ShadowSoakHarnessPlan,
+    build_pr105_shadow_soak_harness,
+    evaluate_pr105_harness_snapshot,
+)
 from .real_soak import (
     REAL_SOAK_RESULT_SCHEMA_VERSION,
     REAL_SOAK_SCHEMA_VERSION,
@@ -49,6 +63,8 @@ __all__ = [
     "MINIMUM_SOAK_SECONDS",
     "PR092_ACTUAL_SOAK_RESULT_SCHEMA_VERSION",
     "PR092_ACTUAL_SOAK_SCHEMA_VERSION",
+    "PR105_HARNESS_RESULT_SCHEMA_VERSION",
+    "PR105_HARNESS_SCHEMA_VERSION",
     "REAL_SOAK_RESULT_SCHEMA_VERSION",
     "REAL_SOAK_SCHEMA_VERSION",
     "REQUIRED_PR092_ARTIFACTS",
@@ -64,6 +80,14 @@ __all__ = [
     "PR092MaterializedArtifactCheck",
     "PR092PrerequisiteEvidence",
     "PR092SoakArtifactPin",
+    "PR105HarnessArtifactTarget",
+    "PR105HarnessCommand",
+    "PR105HarnessReadiness",
+    "PR105HarnessRunSnapshot",
+    "PR105HarnessState",
+    "PR105HarnessStep",
+    "PR105ShadowSoakHarnessConfig",
+    "PR105ShadowSoakHarnessPlan",
     "RealShadowSoakPackage",
     "RealShadowSoakReadiness",
     "RealShadowSoakState",
@@ -77,8 +101,10 @@ __all__ = [
     "SoakArtifactReference",
     "SoakEnvironment",
     "SoakPrerequisiteEvidence",
+    "build_pr105_shadow_soak_harness",
     "check_pr092_materialized_artifacts",
     "evaluate_pr092_actual_shadow_soak",
+    "evaluate_pr105_harness_snapshot",
     "evaluate_real_shadow_soak",
     "evaluate_shadow_soak",
     "sha256_payload",

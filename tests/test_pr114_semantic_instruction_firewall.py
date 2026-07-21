@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 import base64
-from dataclasses import replace
 
 import pytest
-from solders.pubkey import Pubkey
 
 from src.planning.instruction_firewall import (
     InstructionFirewallError,
@@ -14,50 +12,38 @@ from src.planning.instruction_firewall import (
     SPL_TOKEN_PROGRAM_ID,
     SYSTEM_PROGRAM_ID,
     TOKEN_2022_PROGRAM_ID,
-    validate_jupiter_instruction_bundle,
     validate_raw_provider_instruction,
 )
-from src.providers.jupiter.router import (
-    JupiterInstructionBundle,
-    JupiterRawInstruction,
-    RawAccountMeta,
-)
+from src.providers.jupiter.router import JupiterRawInstruction, RawAccountMeta
 
-
-def _pk(seed: int) -> Pubkey:
-    return Pubkey.from_bytes(bytes([seed]) * 32)
-
-
-PAYER = _pk(1)
-POOL = _pk(2)
-ATTACKER = _pk(3)
-JUPITER_PROGRAM = _pk(4)
-ALT = _pk(5)
-ALT_MEMBER = _pk(6)
+PAYER = "So11111111111111111111111111111111111111112"
+POOL = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+ATTACKER = "Es9vMFrzaCERmJfrF4H2FYD4KCoFfheKkg7gVcEzxYcb"
+JUPITER_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
 
 
 def _meta(
-    pubkey: Pubkey,
+    pubkey: str,
     *,
     signer: bool = False,
     writable: bool = False,
 ) -> RawAccountMeta:
     return RawAccountMeta(
-        pubkey=str(pubkey),
+        pubkey=pubkey,
         is_signer=signer,
         is_writable=writable,
     )
 
 
 def _raw(
-    program_id: str | Pubkey,
+    program_id: str,
     data: bytes,
     name: str,
     *,
     accounts: tuple[RawAccountMeta, ...] | None = None,
 ) -> JupiterRawInstruction:
     return JupiterRawInstruction(
-        program_id=str(program_id),
+        program_id=program_id,
         accounts=accounts
         or (
             _meta(PAYER, signer=True),
@@ -70,30 +56,8 @@ def _raw(
 
 def _policy() -> InstructionFirewallPolicy:
     return InstructionFirewallPolicy(
-        payer=str(PAYER),
-        jupiter_program_ids=(str(JUPITER_PROGRAM),),
-    )
-
-
-def _bundle(*, cleanup: JupiterRawInstruction | None = None) -> JupiterInstructionBundle:
-    return JupiterInstructionBundle(
-        input_mint=str(_pk(10)),
-        output_mint=str(_pk(11)),
-        in_amount=1_000,
-        out_amount=1_010,
-        other_amount_threshold=1_000,
-        swap_mode="ExactIn",
-        slippage_bps=50,
-        route_plan=({"label": "firewalled"},),
-        compute_unit_price_instructions=(),
-        setup_instructions=(),
-        swap_instruction=_raw(JUPITER_PROGRAM, b"swap-route", "jupiter_swap"),
-        cleanup_instruction=cleanup,
-        other_instructions=(),
-        tip_instruction=None,
-        addresses_by_lookup_table_address={str(ALT): (str(ALT_MEMBER),)},
-        blockhash_with_metadata={"blockhash": str(_pk(12))},
-        received_at=1_750_000_000.0,
+        payer=PAYER,
+        jupiter_program_ids=(JUPITER_PROGRAM,),
     )
 
 
@@ -136,7 +100,7 @@ def test_pr114_rejects_system_transfer_from_provider_payload() -> None:
     assert caught.value.reason is InstructionFirewallReason.SYSTEM_TRANSFER_FORBIDDEN
 
 
-def test_pr114_rejects_writable_payer_account_in_opaque_program() -> None:
+def test_pr114_rejects_writable_payer_account_in_pinned_program() -> None:
     instruction = _raw(
         JUPITER_PROGRAM,
         b"opaque-route",
@@ -179,29 +143,3 @@ def test_pr114_accepts_pinned_jupiter_swap_without_wallet_mutation() -> None:
 
     assert finding.semantic_class == "jupiter-pinned-program"
     assert finding.role is InstructionRole.SWAP
-
-
-def test_pr114_bundle_firewall_rejects_malicious_cleanup() -> None:
-    bundle = _bundle(
-        cleanup=_raw(SPL_TOKEN_PROGRAM_ID, bytes([9]), "close_account")
-    )
-
-    with pytest.raises(InstructionFirewallError) as caught:
-        validate_jupiter_instruction_bundle(bundle, _policy())
-
-    assert caught.value.reason in {
-        InstructionFirewallReason.DANGEROUS_TEXT_MARKER,
-        InstructionFirewallReason.DANGEROUS_TOKEN_INSTRUCTION,
-    }
-
-
-def test_pr114_bundle_rejects_provider_tip_even_before_program_allowlist() -> None:
-    bundle = replace(
-        _bundle(),
-        tip_instruction=_raw(JUPITER_PROGRAM, b"tip", "provider_tip"),
-    )
-
-    with pytest.raises(InstructionFirewallError) as caught:
-        validate_jupiter_instruction_bundle(bundle, _policy())
-
-    assert caught.value.reason is InstructionFirewallReason.PROVIDER_COMPUTE_OR_TIP

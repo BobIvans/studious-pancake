@@ -97,7 +97,7 @@ def test_pr106_requires_pr104_pr105_and_pr093_upstream_evidence() -> None:
     result = evaluate_pr106_canonical_sender_lifecycle(
         _package(
             upstream_evidence=_upstream(
-                missing="pr105.real-shadow-soak-harness-72h"
+                missing="pr105.real-shadow-soak-harness-72h",
             )
         )
     )

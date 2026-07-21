@@ -63,7 +63,9 @@ class PR115DecodePolicy:
 
     def __post_init__(self) -> None:
         if self.max_account_data_bytes <= 0:
-            raise PR115StateEvidenceError("max_account_data_bytes must be positive")
+            raise PR115StateEvidenceError(
+                "max_account_data_bytes must be positive"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,7 +162,9 @@ def build_pr115_proof_from_report(
 
     post_state_accounts = getattr(report.final, "returned_accounts", ())
     if not post_state_accounts:
-        raise PR115StateEvidenceError("final simulation did not preserve raw accounts")
+        raise PR115StateEvidenceError(
+            "final simulation did not preserve raw accounts"
+        )
     typed_post_accounts = cast(
         Sequence[Mapping[str, Any] | None],
         post_state_accounts,
@@ -209,7 +213,9 @@ def build_pr115_simulation_owned_economic_proof(
         post_root_slot=post_root_slot,
     )
     if len(pre_state_accounts) != len(addresses):
-        raise PR115StateEvidenceError(PR115StateEvidenceCode.ADDRESS_SET_MISMATCH)
+        raise PR115StateEvidenceError(
+            PR115StateEvidenceCode.ADDRESS_SET_MISMATCH
+        )
     if len(post_state_accounts) != len(addresses):
         raise PR115StateEvidenceError(PR115StateEvidenceCode.UNREQUESTED_ACCOUNT)
 
@@ -237,7 +243,9 @@ def build_pr115_simulation_owned_economic_proof(
                 )
             token_deltas.append(_token_delta(pre, post))
         elif post.owner == TOKEN_2022_PROGRAM_ID:
-            raise PR115StateEvidenceError(PR115StateEvidenceCode.UNSUPPORTED_TOKEN_2022)
+            raise PR115StateEvidenceError(
+                PR115StateEvidenceCode.UNSUPPORTED_TOKEN_2022
+            )
         else:
             raise PR115StateEvidenceError(
                 PR115StateEvidenceCode.UNSUPPORTED_ACCOUNT_OWNER
@@ -446,12 +454,24 @@ def _validate_slots(
     post_root_slot: int | None,
 ) -> None:
     values = (pre_state_slot, post_state_slot, min_context_slot)
-    if any(not isinstance(value, int) or isinstance(value, bool) for value in values):
-        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
-    if pre_state_slot < min_context_slot or post_state_slot < min_context_slot:
-        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+    if any(
+        not isinstance(value, int) or isinstance(value, bool)
+        for value in values
+    ):
+        raise PR115StateEvidenceError(
+            PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
+        )
+    if (
+        pre_state_slot < min_context_slot
+        or post_state_slot < min_context_slot
+    ):
+        raise PR115StateEvidenceError(
+            PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
+        )
     if post_state_slot < pre_state_slot:
-        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+        raise PR115StateEvidenceError(
+            PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
+        )
     for root_slot, state_slot in (
         (pre_root_slot, pre_state_slot),
         (post_root_slot, post_state_slot),
@@ -459,9 +479,13 @@ def _validate_slots(
         if root_slot is None:
             continue
         if not isinstance(root_slot, int) or isinstance(root_slot, bool):
-            raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+            raise PR115StateEvidenceError(
+                PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
+            )
         if root_slot < state_slot:
-            raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+            raise PR115StateEvidenceError(
+                PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
+            )
 
 
 def _hash_bytes(value: bytes) -> str:
@@ -478,7 +502,9 @@ def _hash_json(value: Any) -> str:
             allow_nan=False,
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
-        raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT) from exc
+        raise PR115StateEvidenceError(
+            PR115StateEvidenceCode.MALFORMED_ACCOUNT
+        ) from exc
     return hashlib.sha256(payload).hexdigest()
 
 

@@ -3,12 +3,12 @@ from __future__ import annotations
 import pytest
 
 from src.submission.canonical_lifecycle_pr106 import (
-    REQUIRED_PR106_LIFECYCLE_CONTROLS,
-    REQUIRED_PR106_UPSTREAM_EVIDENCE,
     PR106CanonicalSenderLifecycleError,
     PR106CanonicalSenderLifecyclePackage,
     PR106CanonicalSenderLifecycleState,
     PR106UpstreamEvidenceRef,
+    REQUIRED_PR106_LIFECYCLE_CONTROLS,
+    REQUIRED_PR106_UPSTREAM_EVIDENCE,
     evaluate_pr106_canonical_sender_lifecycle,
 )
 from src.submission.lifecycle_integration import CANONICAL_SUBMISSION_OUTBOX_TOPIC
@@ -95,11 +95,18 @@ def test_pr106_ready_package_is_reviewable_but_live_disabled() -> None:
 
 def test_pr106_requires_pr104_pr105_and_pr093_upstream_evidence() -> None:
     result = evaluate_pr106_canonical_sender_lifecycle(
-        _package(upstream_evidence=_upstream(missing="pr105.real-shadow-soak-harness-72h"))
+        _package(
+            upstream_evidence=_upstream(
+                missing="pr105.real-shadow-soak-harness-72h"
+            )
+        )
     )
 
     assert result.state is PR106CanonicalSenderLifecycleState.BLOCKED
-    assert "UPSTREAM_EVIDENCE_MISSING:pr105.real-shadow-soak-harness-72h" in result.blockers
+    assert (
+        "UPSTREAM_EVIDENCE_MISSING:pr105.real-shadow-soak-harness-72h"
+        in result.blockers
+    )
     assert not result.live_allowed
 
 

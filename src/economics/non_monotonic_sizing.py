@@ -521,7 +521,9 @@ def _sha256(value: str, field: str) -> str:
 
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
-        return {item.name: _jsonable(getattr(value, item.name)) for item in fields(value)}
+        return {
+            item.name: _jsonable(getattr(value, item.name)) for item in fields(value)
+        }
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, tuple):

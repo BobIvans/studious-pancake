@@ -1,4 +1,4 @@
-"""PR-060 and PR-079 shadow-soak evidence validation boundaries."""
+"""PR-060, PR-079 and PR-092 shadow-soak evidence validation boundaries."""
 
 from .evidence import (
     MINIMUM_SOAK_SECONDS,
@@ -18,6 +18,21 @@ from .evidence import (
     stable_json,
     to_pr047_shadow_soak_reference,
 )
+from .pr092_actual_soak import (
+    PR092_ACTUAL_SOAK_RESULT_SCHEMA_VERSION,
+    PR092_ACTUAL_SOAK_SCHEMA_VERSION,
+    REQUIRED_PR092_ARTIFACTS,
+    REQUIRED_PR092_PREREQUISITES,
+    PR092ActualSoakArtifactKind,
+    PR092ActualSoakManifest,
+    PR092ActualSoakReadiness,
+    PR092ActualSoakState,
+    PR092MaterializedArtifactCheck,
+    PR092PrerequisiteEvidence,
+    PR092SoakArtifactPin,
+    check_pr092_materialized_artifacts,
+    evaluate_pr092_actual_shadow_soak,
+)
 from .real_soak import (
     REAL_SOAK_RESULT_SCHEMA_VERSION,
     REAL_SOAK_SCHEMA_VERSION,
@@ -32,12 +47,23 @@ from .real_soak import (
 
 __all__ = [
     "MINIMUM_SOAK_SECONDS",
+    "PR092_ACTUAL_SOAK_RESULT_SCHEMA_VERSION",
+    "PR092_ACTUAL_SOAK_SCHEMA_VERSION",
     "REAL_SOAK_RESULT_SCHEMA_VERSION",
     "REAL_SOAK_SCHEMA_VERSION",
+    "REQUIRED_PR092_ARTIFACTS",
+    "REQUIRED_PR092_PREREQUISITES",
     "REQUIRED_PREREQUISITES",
     "RESULT_SCHEMA_VERSION",
     "SCHEMA_VERSION",
     "ImmutableSoakBundle",
+    "PR092ActualSoakArtifactKind",
+    "PR092ActualSoakManifest",
+    "PR092ActualSoakReadiness",
+    "PR092ActualSoakState",
+    "PR092MaterializedArtifactCheck",
+    "PR092PrerequisiteEvidence",
+    "PR092SoakArtifactPin",
     "RealShadowSoakPackage",
     "RealShadowSoakReadiness",
     "RealShadowSoakState",
@@ -51,6 +77,8 @@ __all__ = [
     "SoakArtifactReference",
     "SoakEnvironment",
     "SoakPrerequisiteEvidence",
+    "check_pr092_materialized_artifacts",
+    "evaluate_pr092_actual_shadow_soak",
     "evaluate_real_shadow_soak",
     "evaluate_shadow_soak",
     "sha256_payload",

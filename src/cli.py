@@ -24,11 +24,9 @@ from src.config.runtime import (
 from src.container_runtime import run_safe_idle
 from src.paper_shadow import (
     PaperShadowRunStatus,
-    PaperShadowRunner,
-    PaperShadowRunnerConfig,
+    build_paper_shadow_runtime,
 )
 from src.paper_shadow.runner import PaperShadowRunSummary
-from src.runtime_discovery import build_runtime_discovery
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +94,7 @@ def _parser() -> argparse.ArgumentParser:
 
     paper_parser = subparsers.add_parser(
         "paper-shadow",
-        help="run one fail-closed PR-038 paper/shadow pass and record durable evidence",
+        help="run one fail-closed PR-089 paper/shadow pass and record durable evidence",
     )
     paper_parser.add_argument(
         "--journal-path",
@@ -276,28 +274,6 @@ def _paper_shadow_exit_code(summary: PaperShadowRunSummary) -> int:
     return EXIT_PAPER_SHADOW_FAILED
 
 
-def _paper_shadow_dependency_reasons(evidence: Any) -> tuple[str, ...]:
-    reasons: list[str] = []
-    if not evidence.cycle_succeeded:
-        reasons.append(str(evidence.terminal_reason))
-    reasons.extend(str(reason) for reason in getattr(evidence, "degraded_reasons", ()))
-    return tuple(dict.fromkeys(reason for reason in reasons if reason))
-
-
-async def _run_paper_shadow_cycle(
-    config: RuntimeConfig,
-    runner: PaperShadowRunner,
-) -> PaperShadowRunSummary:
-    discovery = build_runtime_discovery(config, environ=os.environ)
-    report = await discovery.run_cycle()
-    return await runner.run_once(
-        report.opportunities,
-        upstream_cycle_completed=report.evidence.cycle_succeeded,
-        upstream_dependency_reasons=_paper_shadow_dependency_reasons(report.evidence),
-        upstream_cycle_evidence=report.evidence.to_dict(),
-    )
-
-
 def _run_paper_shadow_once(
     config: RuntimeConfig,
     *,
@@ -305,10 +281,11 @@ def _run_paper_shadow_once(
     as_json: bool = False,
     pr023_compat_reason: bool = False,
 ) -> int:
-    runner = PaperShadowRunner(
-        PaperShadowRunnerConfig(journal_path=_paper_shadow_journal_path(journal_path))
+    runtime = build_paper_shadow_runtime(
+        config,
+        journal_path=_paper_shadow_journal_path(journal_path),
     )
-    summary = asyncio.run(_run_paper_shadow_cycle(config, runner))
+    summary = asyncio.run(runtime.run_once())
     _print_paper_shadow_summary(
         summary.to_dict(),
         as_json=as_json,

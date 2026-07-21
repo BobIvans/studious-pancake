@@ -63,9 +63,7 @@ class PR115DecodePolicy:
 
     def __post_init__(self) -> None:
         if self.max_account_data_bytes <= 0:
-            raise PR115StateEvidenceError(
-                "max_account_data_bytes must be positive"
-            )
+            raise PR115StateEvidenceError("max_account_data_bytes must be positive")
 
 
 @dataclass(frozen=True, slots=True)
@@ -197,9 +195,7 @@ def build_pr115_proof_from_report(
 
     post_state_accounts = getattr(report.final, "returned_accounts", None)
     if post_state_accounts is None:
-        raise PR115StateEvidenceError(
-            "final simulation did not preserve raw accounts"
-        )
+        raise PR115StateEvidenceError("final simulation did not preserve raw accounts")
     typed_post_accounts = cast(
         Sequence[Mapping[str, Any] | None],
         post_state_accounts,
@@ -443,9 +439,7 @@ def _decode_snapshot_data(snapshot: PR115RawAccountSnapshot) -> bytes:
     try:
         return base64.b64decode(snapshot.data_base64, validate=True)
     except (ValueError, binascii.Error) as exc:
-        raise PR115StateEvidenceError(
-            PR115StateEvidenceCode.MALFORMED_ACCOUNT
-        ) from exc
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT) from exc
 
 
 def _decode_account_data(value: Any) -> tuple[str, bytes]:
@@ -464,9 +458,7 @@ def _decode_account_data(value: Any) -> tuple[str, bytes]:
     try:
         return encoded, base64.b64decode(encoded, validate=True)
     except (ValueError, binascii.Error) as exc:
-        raise PR115StateEvidenceError(
-            PR115StateEvidenceCode.MALFORMED_ACCOUNT
-        ) from exc
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT) from exc
 
 
 def _validate_addresses(addresses: tuple[str, ...]) -> None:

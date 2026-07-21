@@ -24,6 +24,7 @@ providers:
   jito:
     enabled: false
     base_url: https://mainnet.block-engine.jito.wtf
+    auth_mode: none
     auth_reference: null
     min_tip_lamports: 1000
   marginfi:

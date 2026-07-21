@@ -6,6 +6,7 @@ import pytest
 
 from src.config.runtime import (
     ConfigurationLoadError,
+    JitoAuthMode,
     RuntimeMode,
     SecretReference,
     load_runtime_config,
@@ -23,6 +24,7 @@ def test_defaults_are_immutable_fail_closed_and_have_no_external_addresses() -> 
     assert config.runtime.mode is RuntimeMode.DISABLED
     assert config.providers.jupiter.enabled is False
     assert config.providers.jito.enabled is False
+    assert config.providers.jito.auth_mode is JitoAuthMode.NONE
     assert config.providers.marginfi.enabled is False
     assert config.providers.marginfi.program_id is None
     assert config.providers.marginfi.group is None
@@ -92,6 +94,7 @@ providers:
     api_key_reference: keychain:jupiter/api
   jito:
     enabled: true
+    auth_mode: uuid
     auth_reference: env:JITO_AUTH_UUID
 """,
     )
@@ -118,7 +121,10 @@ def test_inline_secret_and_endpoint_shaped_jito_url_are_rejected(
 
     endpoint = _write(
         tmp_path / "endpoint.yaml",
-        "providers:\n  jito:\n    base_url: https://mainnet.block-engine.jito.wtf/api/v1/bundles\n",
+        (
+            "providers:\n  jito:\n    base_url: "
+            "https://mainnet.block-engine.jito.wtf/api/v1/bundles\n"
+        ),
     )
     with pytest.raises(ConfigurationLoadError, match="must not include"):
         load_runtime_config(endpoint, environ={})

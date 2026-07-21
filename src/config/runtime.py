@@ -36,6 +36,7 @@ from src.config.chain_registry import (
     validate_genesis_hash,
     validate_pubkey,
 )
+from src.config.secret_resolver import SecretHandle, resolve_secret_reference
 
 
 class ConfigurationLoadError(ValueError):
@@ -53,6 +54,11 @@ class Commitment(StrEnum):
     PROCESSED = "processed"
     CONFIRMED = "confirmed"
     FINALIZED = "finalized"
+
+
+class JitoAuthMode(StrEnum):
+    NONE = "none"
+    UUID = "uuid"
 
 
 class FrozenModel(BaseModel):
@@ -78,7 +84,8 @@ class SecretReference(FrozenModel):
         match = _SECRET_REF_PATTERN.fullmatch(value.strip())
         if not match:
             raise ConfigurationLoadError(
-                "secret reference must use env:, file:, or keychain:; inline secrets are forbidden"
+                "secret reference must use env:, file:, or keychain:; "
+                "inline secrets are forbidden"
             )
         scheme, locator = match.groups()
         if scheme == "env" and not _ENV_NAME_PATTERN.fullmatch(locator):
@@ -94,10 +101,14 @@ class SecretReference(FrozenModel):
     def display(self) -> str:
         return f"{self.scheme}:<redacted>"
 
-    def resolve_from_environment(self, environ: Mapping[str, str]) -> str | None:
-        if self.scheme != "env":
-            return None
-        return environ.get(self.locator)
+    def fingerprint_identity(self) -> str:
+        return f"{self.scheme}:{self.locator}"
+
+    def resolve(self, *, environ: Mapping[str, str] | None = None) -> SecretHandle:
+        return resolve_secret_reference(self, environ=environ)
+
+    def resolve_from_environment(self, environ: Mapping[str, str]) -> str:
+        return self.resolve(environ=environ).reveal()
 
 
 class ClusterConfig(FrozenModel):
@@ -210,6 +221,7 @@ class JupiterConfig(FrozenModel):
 class JitoConfig(FrozenModel):
     enabled: bool = False
     base_url: str = "https://mainnet.block-engine.jito.wtf"
+    auth_mode: JitoAuthMode = JitoAuthMode.NONE
     auth_reference: SecretReference | None = None
     min_tip_lamports: StrictInt = Field(default=1000, ge=0)
 
@@ -234,9 +246,13 @@ class JitoConfig(FrozenModel):
         return SecretReference.parse(value)
 
     @model_validator(mode="after")
-    def _auth_required_when_enabled(self) -> "JitoConfig":
-        if self.enabled and self.auth_reference is None:
-            raise ValueError("enabled Jito requires an issued UUID secret reference")
+    def _auth_contract_matches_mode(self) -> "JitoConfig":
+        if self.auth_mode is JitoAuthMode.UUID and self.auth_reference is None:
+            raise ValueError(
+                "Jito auth_mode=uuid requires an issued UUID secret reference"
+            )
+        if self.auth_mode is JitoAuthMode.NONE and self.auth_reference is not None:
+            raise ValueError("Jito auth_reference requires auth_mode=uuid")
         return self
 
 
@@ -282,7 +298,8 @@ class MarginFiConfig(FrozenModel):
             ]
             if missing:
                 raise ValueError(
-                    f"enabled MarginFi requires explicit values for: {', '.join(missing)}"
+                    "enabled MarginFi requires explicit values for: "
+                    f"{', '.join(missing)}"
                 )
         return self
 
@@ -426,9 +443,28 @@ class RuntimeConfig(FrozenModel):
 
         return redact(self)
 
+    def _fingerprint_dict(self) -> dict[str, Any]:
+        def normalize(value: Any) -> Any:
+            if isinstance(value, SecretReference):
+                return value.fingerprint_identity()
+            if isinstance(value, BaseModel):
+                return {
+                    name: normalize(getattr(value, name))
+                    for name in type(value).model_fields
+                }
+            if isinstance(value, tuple):
+                return [normalize(item) for item in value]
+            if isinstance(value, Mapping):
+                return {str(key): normalize(item) for key, item in value.items()}
+            if isinstance(value, StrEnum):
+                return value.value
+            return value
+
+        return normalize(self)
+
     def fingerprint(self) -> str:
         payload = json.dumps(
-            self.redacted_dict(), sort_keys=True, separators=(",", ":")
+            self._fingerprint_dict(), sort_keys=True, separators=(",", ":")
         ).encode("utf-8")
         return hashlib.sha256(payload).hexdigest()
 
@@ -455,6 +491,7 @@ _ENV_BINDINGS: dict[str, tuple[str, str]] = {
     ),
     "FLASHLOAN_JITO_ENABLED": ("providers.jito.enabled", "bool"),
     "FLASHLOAN_JITO_BASE_URL": ("providers.jito.base_url", "str"),
+    "FLASHLOAN_JITO_AUTH_MODE": ("providers.jito.auth_mode", "str"),
     "FLASHLOAN_JITO_AUTH_REFERENCE": ("providers.jito.auth_reference", "str"),
     "FLASHLOAN_JITO_MIN_TIP_LAMPORTS": ("providers.jito.min_tip_lamports", "int"),
     "FLASHLOAN_MARGINFI_ENABLED": ("providers.marginfi.enabled", "bool"),
@@ -567,7 +604,8 @@ def load_runtime_config(
         raw = env.get(name)
         if raw and raw.strip().lower() in {"1", "true", "yes"}:
             raise ConfigurationLoadError(
-                f"legacy activation flag {name}=true is rejected; use typed PR-026 configuration"
+                f"legacy activation flag {name}=true is rejected; "
+                "use typed PR-026 configuration"
             )
 
     payload = _default_payload()

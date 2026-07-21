@@ -20,9 +20,11 @@ src/config/__init__.py
 src/config/chain_registry.py
 src/config/doctor.py
 src/config/runtime.py
+src/config/secret_resolver.py
 tests/test_pr026_chain_registry.py
 tests/test_pr026_config_doctor.py
 tests/test_pr026_typed_config.py
+tests/test_pr120_secret_resolver_config_jito.py
 src/external_contracts/admission.py
 src/external_contracts/cli.py
 src/external_contracts/policy.py

@@ -9,7 +9,8 @@ from typing import Any, Callable, Mapping
 from urllib import request
 
 from src.config.chain_registry import ChainRegistry, ChainRegistryError
-from src.config.runtime import RuntimeConfig
+from src.config.runtime import JitoAuthMode, RuntimeConfig
+from src.config.secret_resolver import SecretResolutionError
 
 _UUID_RE = re.compile(
     r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-5][0-9a-fA-F]{3}-"
@@ -115,9 +116,22 @@ def _offline_diagnostics(
             )
         )
 
+    jito = config.providers.jito
+    if jito.enabled and jito.auth_mode is JitoAuthMode.NONE:
+        diagnostics.append(
+            Diagnostic(
+                "JITO_AUTH_MODE_NONE",
+                "info",
+                "Jito is enabled without UUID auth; "
+                "default sends do not require UUID auth",
+            )
+        )
+
     secret_refs = {
         "wallet.signer_reference": config.wallet.signer_reference,
-        "providers.jupiter.api_key_reference": config.providers.jupiter.api_key_reference,
+        "providers.jupiter.api_key_reference": (
+            config.providers.jupiter.api_key_reference
+        ),
         "providers.jito.auth_reference": config.providers.jito.auth_reference,
     }
     for label, reference in secret_refs.items():
@@ -130,34 +144,30 @@ def _offline_diagnostics(
         )
         if not check_secrets:
             continue
-        if reference.scheme != "env":
+        try:
+            secret = reference.resolve(environ=environ)
+        except SecretResolutionError as exc:
             diagnostics.append(
                 Diagnostic(
-                    "SECRET_NOT_RESOLVED",
-                    "warning",
-                    f"{label} is not an env reference and was not resolved by config doctor",
+                    "SECRET_RESOLUTION_FAILED",
+                    "error",
+                    f"{label} cannot be resolved safely: {exc}",
                 )
             )
             continue
-        secret = reference.resolve_from_environment(environ)
-        if not secret:
-            diagnostics.append(
-                Diagnostic(
-                    "SECRET_MISSING",
-                    "error",
-                    f"{label} points to missing environment variable {reference.locator}",
-                )
-            )
-        elif label == "providers.jito.auth_reference" and not _UUID_RE.fullmatch(
-            secret
+        if (
+            label == "providers.jito.auth_reference"
+            and jito.auth_mode is JitoAuthMode.UUID
         ):
-            diagnostics.append(
-                Diagnostic(
-                    "JITO_AUTH_NOT_UUID",
-                    "error",
-                    "Jito authentication value is not an issued UUID-shaped credential",
+            if not _UUID_RE.fullmatch(secret.reveal()):
+                diagnostics.append(
+                    Diagnostic(
+                        "JITO_AUTH_NOT_UUID",
+                        "error",
+                        "Jito authentication value is not an "
+                        "issued UUID-shaped credential",
+                    )
                 )
-            )
 
     if config.cluster.rpc_http_url is None:
         diagnostics.append(
@@ -183,7 +193,8 @@ def _online_diagnostics(
                 Diagnostic(
                     "RPC_CLUSTER_MISMATCH",
                     "error",
-                    f"RPC genesis hash {observed_genesis} does not match configured cluster",
+                    f"RPC genesis hash {observed_genesis} does not "
+                    "match configured cluster",
                 )
             )
         else:
@@ -242,7 +253,8 @@ def _online_diagnostics(
                     Diagnostic(
                         "ACCOUNT_OWNER_MISMATCH",
                         "error",
-                        f"{label} owner mismatch: expected {expected_owner}, got {observed_owner}",
+                        f"{label} owner mismatch: expected {expected_owner}, "
+                        f"got {observed_owner}",
                     )
                 )
             else:

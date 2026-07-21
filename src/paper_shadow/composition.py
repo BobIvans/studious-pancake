@@ -30,7 +30,6 @@ from src.paper_shadow.runner import (
 )
 from src.runtime_discovery import RuntimeDiscoveryCoordinator, build_runtime_discovery
 
-
 PR089_COMPOSITION_SCHEMA = "pr089.paper-shadow-composition.v1"
 PR089_MISSING_ATOMIC_DEPENDENCIES = "blocked_pr089_atomic_dependencies_missing"
 
@@ -177,9 +176,7 @@ def _paper_shadow_dependency_reasons(evidence: Any) -> tuple[str, ...]:
     reasons: list[str] = []
     if not evidence.cycle_succeeded:
         reasons.append(str(evidence.terminal_reason))
-    reasons.extend(
-        str(reason) for reason in getattr(evidence, "degraded_reasons", ())
-    )
+    reasons.extend(str(reason) for reason in getattr(evidence, "degraded_reasons", ()))
     return tuple(dict.fromkeys(reason for reason in reasons if reason))
 
 

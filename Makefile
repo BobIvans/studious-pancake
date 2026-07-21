@@ -71,5 +71,4 @@ container:
 	flashloan-bot container
 
 paper:
-	@echo "PAPER_MODE_UNAVAILABLE: scripts/paper_trader.py is quarantined; canonical paper mode is planned for PR-038." >&2
-	@exit 4
+	flashloan-bot run --mode paper

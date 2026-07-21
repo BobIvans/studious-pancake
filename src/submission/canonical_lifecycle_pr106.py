@@ -74,7 +74,7 @@ class PR106UpstreamEvidenceRef:
     def __post_init__(self) -> None:
         if not self.name.strip():
             raise PR106CanonicalSenderLifecycleError(
-                "upstream evidence name required"
+                "upstream evidence name required",
             )
         object.__setattr__(
             self,
@@ -90,11 +90,11 @@ class PR106UpstreamEvidenceRef:
             raise PR106CanonicalSenderLifecycleError("passed must be boolean")
         if not isinstance(self.human_reviewed, bool):
             raise PR106CanonicalSenderLifecycleError(
-                "human_reviewed must be boolean"
+                "human_reviewed must be boolean",
             )
         if self.human_reviewed and not self.reviewer.strip():
             raise PR106CanonicalSenderLifecycleError(
-                "reviewed evidence must include reviewer"
+                "reviewed evidence must include reviewer",
             )
 
 
@@ -117,19 +117,19 @@ class PR106CanonicalSenderLifecyclePackage:
     def __post_init__(self) -> None:
         if self.schema_version != PR106_SCHEMA_VERSION:
             raise PR106CanonicalSenderLifecycleError(
-                "unsupported PR-106 package schema"
+                "unsupported PR-106 package schema",
             )
         if not isinstance(
             self.pr093_readiness,
             CanonicalSenderLifecycleDisabledReadiness,
         ):
             raise PR106CanonicalSenderLifecycleError(
-                "pr093_readiness must be CanonicalSenderLifecycleDisabledReadiness"
+                "pr093_readiness must be CanonicalSenderLifecycleDisabledReadiness",
             )
         names = [item.name for item in self.upstream_evidence]
         if len(names) != len(set(names)):
             raise PR106CanonicalSenderLifecycleError(
-                "upstream evidence names must be unique"
+                "upstream evidence names must be unique",
             )
         for field_name in (
             "compile_time_live_enabled",
@@ -139,12 +139,12 @@ class PR106CanonicalSenderLifecyclePackage:
         ):
             if not isinstance(getattr(self, field_name), bool):
                 raise PR106CanonicalSenderLifecycleError(
-                    f"{field_name} must be boolean"
+                    f"{field_name} must be boolean",
                 )
         for name, value in self.lifecycle_controls.items():
             if value is not True and value is not False:
                 raise PR106CanonicalSenderLifecycleError(
-                    f"lifecycle control must be boolean: {name}"
+                    f"lifecycle control must be boolean: {name}",
                 )
 
 
@@ -267,7 +267,7 @@ def _require_sha256(value: str, field: str) -> str:
     lowered = str(value).lower()
     if not _SHA256_RE.fullmatch(lowered) or lowered == "0" * 64:
         raise PR106CanonicalSenderLifecycleError(
-            f"{field} must be a non-placeholder sha256"
+            f"{field} must be a non-placeholder sha256",
         )
     return lowered
 
@@ -276,7 +276,7 @@ def _require_git_sha(value: str, field: str) -> str:
     lowered = str(value).lower()
     if not _GIT_SHA_RE.fullmatch(lowered) or lowered == "0" * 40:
         raise PR106CanonicalSenderLifecycleError(
-            f"{field} must be a non-placeholder git SHA"
+            f"{field} must be a non-placeholder git SHA",
         )
     return lowered
 

@@ -108,9 +108,10 @@ class PaperShadowRunSummary:
     events_written: int
     ready_for_next_cycle: bool
     dependency_reasons: tuple[str, ...] = ()
+    upstream_cycle_evidence: Mapping[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        payload: dict[str, Any] = {
             "schema_version": "pr076.paper-shadow-summary.v1",
             "run_id": self.run_id,
             "status": self.status.value,
@@ -123,6 +124,9 @@ class PaperShadowRunSummary:
                 "dependency_reasons": list(self.dependency_reasons),
             },
         }
+        if self.upstream_cycle_evidence:
+            payload["upstream_cycle_evidence"] = dict(self.upstream_cycle_evidence)
+        return payload
 
 
 class PaperShadowRunner:
@@ -177,9 +181,47 @@ class PaperShadowRunner:
                 f"{sorted(present)}"
             )
 
+    @staticmethod
+    def _normalise_upstream_evidence(
+        upstream_cycle_evidence: Mapping[str, Any] | None,
+    ) -> dict[str, Any]:
+        if not upstream_cycle_evidence:
+            return {}
+        return dict(upstream_cycle_evidence)
+
+    @staticmethod
+    def _upstream_terminal_reason(upstream_cycle_evidence: Mapping[str, Any]) -> str:
+        reason = str(upstream_cycle_evidence.get("terminal_reason", "")).strip()
+        return reason or "blocked_no_discovery_composition"
+
+    @staticmethod
+    def _dependency_reasons_from_upstream_evidence(
+        upstream_cycle_evidence: Mapping[str, Any],
+    ) -> tuple[str, ...]:
+        if not upstream_cycle_evidence:
+            return ()
+        reasons: list[str] = []
+        if upstream_cycle_evidence.get("cycle_succeeded") is not True:
+            reasons.append(PaperShadowRunner._upstream_terminal_reason(upstream_cycle_evidence))
+        degraded_reasons = upstream_cycle_evidence.get("degraded_reasons", ())
+        if isinstance(degraded_reasons, str):
+            reasons.append(degraded_reasons)
+        elif isinstance(degraded_reasons, (list, tuple)):
+            reasons.extend(str(reason) for reason in degraded_reasons)
+        return _normalize_dependency_reasons(reasons)
+
     def _append_missing_upstream_block(
-        self, dependency_reasons: Sequence[str] = ()
-    ) -> None:
+        self,
+        dependency_reasons: Sequence[str] = (),
+        *,
+        upstream_cycle_evidence: Mapping[str, Any] | None = None,
+    ) -> str:
+        evidence = self._normalise_upstream_evidence(upstream_cycle_evidence)
+        reason_code = (
+            self._upstream_terminal_reason(evidence)
+            if evidence
+            else "blocked_no_discovery_composition"
+        )
         details: dict[str, Any] = {
             "required_upstream_stages": [
                 stage.value for stage in UPSTREAM_DISCOVERY_STAGES
@@ -192,13 +234,17 @@ class PaperShadowRunner:
         normalized = _normalize_dependency_reasons(dependency_reasons)
         if normalized:
             details["dependency_reasons"] = list(normalized)
+        if evidence:
+            details["blocked_dependency"] = "runtime_discovery"
+            details["upstream_discovery_evidence"] = evidence
         self._append(
             event_type="runner_blocked",
             status="blocked",
-            reason_code="blocked_no_discovery_composition",
+            reason_code=reason_code,
             stage=PaperShadowStageName.DISCOVERY,
             details=details,
         )
+        return reason_code
 
     async def _run_stage(
         self,
@@ -260,6 +306,7 @@ class PaperShadowRunner:
         *,
         upstream_cycle_completed: bool = False,
         upstream_dependency_reasons: Sequence[str] = (),
+        upstream_cycle_evidence: Mapping[str, Any] | None = None,
     ) -> PaperShadowRunSummary:
         """Run one bounded paper/shadow pass over already-detected candidates.
 
@@ -269,14 +316,25 @@ class PaperShadowRunner:
         report dependency degradation.
         """
 
-        dependency_reasons = _normalize_dependency_reasons(upstream_dependency_reasons)
+        evidence = self._normalise_upstream_evidence(upstream_cycle_evidence)
+        upstream_completed = upstream_cycle_completed or (
+            evidence.get("cycle_succeeded") is True
+        )
+        dependency_reasons = _normalize_dependency_reasons(
+            (
+                *upstream_dependency_reasons,
+                *self._dependency_reasons_from_upstream_evidence(evidence),
+            )
+        )
         started_details: dict[str, Any] = {
             "sender_enabled": False,
             "synthetic_fill": False,
-            "upstream_cycle_completed": upstream_cycle_completed,
+            "upstream_cycle_completed": upstream_completed,
         }
         if dependency_reasons:
             started_details["dependency_reasons"] = list(dependency_reasons)
+        if evidence:
+            started_details["upstream_discovery_evidence"] = evidence
         self._append(
             event_type="runner_started",
             status="started",
@@ -284,71 +342,86 @@ class PaperShadowRunner:
             details=started_details,
         )
         if not opportunities:
-            if not upstream_cycle_completed:
-                self._append_missing_upstream_block(dependency_reasons)
+            if not upstream_completed:
+                terminal_reason = self._append_missing_upstream_block(
+                    dependency_reasons,
+                    upstream_cycle_evidence=evidence,
+                )
                 return self._summary(
                     PaperShadowRunStatus.BLOCKED,
                     candidates_seen=0,
-                    terminal_reason="blocked_no_discovery_composition",
+                    terminal_reason=terminal_reason,
                     dependency_reasons=dependency_reasons,
+                    upstream_cycle_evidence=evidence,
                 )
             if dependency_reasons:
+                degraded_details: dict[str, Any] = {
+                    "sender_enabled": False,
+                    "synthetic_fill": False,
+                    "upstream_cycle_completed": True,
+                    "healthy_idle_proven": False,
+                    "dependency_reasons": list(dependency_reasons),
+                }
+                if evidence:
+                    degraded_details["upstream_discovery_evidence"] = evidence
                 self._append(
                     event_type="runner_degraded",
                     status="degraded",
                     reason_code="degraded_discovery_cycle",
                     stage=PaperShadowStageName.DISCOVERY,
-                    details={
-                        "sender_enabled": False,
-                        "synthetic_fill": False,
-                        "upstream_cycle_completed": True,
-                        "healthy_idle_proven": False,
-                        "dependency_reasons": list(dependency_reasons),
-                    },
+                    details=degraded_details,
                 )
                 return self._summary(
                     PaperShadowRunStatus.DEGRADED,
                     candidates_seen=0,
                     terminal_reason="degraded_discovery_cycle",
                     dependency_reasons=dependency_reasons,
+                    upstream_cycle_evidence=evidence,
                 )
+            idle_details: dict[str, Any] = {
+                "sender_enabled": False,
+                "synthetic_fill": False,
+                "upstream_cycle_completed": True,
+                "healthy_idle_proven": True,
+            }
+            if evidence:
+                idle_details["upstream_discovery_evidence"] = evidence
             self._append(
                 event_type="runner_idle",
                 status="succeeded",
                 reason_code="healthy_idle_no_candidates_after_discovery",
-                details={
-                    "sender_enabled": False,
-                    "synthetic_fill": False,
-                    "upstream_cycle_completed": True,
-                    "healthy_idle_proven": True,
-                },
+                details=idle_details,
             )
             return self._summary(
                 PaperShadowRunStatus.HEALTHY_IDLE,
                 candidates_seen=0,
                 terminal_reason="healthy_idle_no_candidates_after_discovery",
+                upstream_cycle_evidence=evidence,
             )
 
         candidates_seen = 0
         try:
             for opportunity in opportunities:
                 candidates_seen += 1
+                candidate_details: dict[str, Any] = {
+                    "strategy_name": opportunity.strategy_name,
+                    "opportunity_type": opportunity.opportunity_type,
+                    "detection_slot": opportunity.detection_slot,
+                    "proposed_amount_base_units": (
+                        opportunity.proposed_amount_base_units
+                    ),
+                    "executed": False,
+                    "synthetic_fill": False,
+                }
+                if evidence:
+                    candidate_details["upstream_cycle_id"] = evidence.get("cycle_id")
                 self._append(
                     event_type="candidate_received",
                     status="succeeded",
                     reason_code="detected_candidate_ingested",
                     stage=PaperShadowStageName.DETECTOR,
                     opportunity=opportunity,
-                    details={
-                        "strategy_name": opportunity.strategy_name,
-                        "opportunity_type": opportunity.opportunity_type,
-                        "detection_slot": opportunity.detection_slot,
-                        "proposed_amount_base_units": (
-                            opportunity.proposed_amount_base_units
-                        ),
-                        "executed": False,
-                        "synthetic_fill": False,
-                    },
+                    details=candidate_details,
                 )
                 outputs: dict[str, Mapping[str, Any]] = {}
                 for stage in PAPER_SHADOW_REQUIRED_STAGES:
@@ -359,6 +432,7 @@ class PaperShadowRunner:
                             candidates_seen=candidates_seen,
                             terminal_reason=f"blocked_missing_stage_{stage.value}",
                             dependency_reasons=dependency_reasons,
+                            upstream_cycle_evidence=evidence,
                         )
                     outputs[stage.value] = output
 
@@ -395,30 +469,36 @@ class PaperShadowRunner:
                 candidates_seen=candidates_seen,
                 terminal_reason="paper_shadow_stage_failure",
                 dependency_reasons=dependency_reasons,
+                upstream_cycle_evidence=evidence,
             )
 
         if dependency_reasons:
+            degraded_details = {
+                "executed": False,
+                "synthetic_fill": False,
+                "dependency_reasons": list(dependency_reasons),
+            }
+            if evidence:
+                degraded_details["upstream_discovery_evidence"] = evidence
             self._append(
                 event_type="runner_degraded",
                 status="degraded",
                 reason_code="degraded_dependency_reasons_after_outcome",
-                details={
-                    "executed": False,
-                    "synthetic_fill": False,
-                    "dependency_reasons": list(dependency_reasons),
-                },
+                details=degraded_details,
             )
             return self._summary(
                 PaperShadowRunStatus.DEGRADED,
                 candidates_seen=candidates_seen,
                 terminal_reason="degraded_dependency_reasons_after_outcome",
                 dependency_reasons=dependency_reasons,
+                upstream_cycle_evidence=evidence,
             )
 
         return self._summary(
             PaperShadowRunStatus.PAPER_OUTCOME,
             candidates_seen=candidates_seen,
             terminal_reason="paper_only_outcome_no_sender",
+            upstream_cycle_evidence=evidence,
         )
 
     async def run_until_stopped(
@@ -428,11 +508,13 @@ class PaperShadowRunner:
         *,
         upstream_cycle_completed: bool = False,
         upstream_dependency_reasons: Sequence[str] = (),
+        upstream_cycle_evidence: Mapping[str, Any] | None = None,
     ) -> PaperShadowRunSummary:
         summary = await self.run_once(
             opportunities,
             upstream_cycle_completed=upstream_cycle_completed,
             upstream_dependency_reasons=upstream_dependency_reasons,
+            upstream_cycle_evidence=upstream_cycle_evidence,
         )
         try:
             await asyncio.wait_for(
@@ -456,6 +538,7 @@ class PaperShadowRunner:
         candidates_seen: int,
         terminal_reason: str,
         dependency_reasons: Sequence[str] = (),
+        upstream_cycle_evidence: Mapping[str, Any] | None = None,
     ) -> PaperShadowRunSummary:
         normalized_reasons = _normalize_dependency_reasons(dependency_reasons)
         if status not in _READY_STATUSES and not normalized_reasons:
@@ -469,6 +552,9 @@ class PaperShadowRunner:
             events_written=self._events_written,
             ready_for_next_cycle=status in _READY_STATUSES,
             dependency_reasons=normalized_reasons,
+            upstream_cycle_evidence=self._normalise_upstream_evidence(
+                upstream_cycle_evidence
+            ),
         )
 
 

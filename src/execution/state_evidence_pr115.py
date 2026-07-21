@@ -1,8 +1,8 @@
 """PR-115 simulation-owned pre/post state evidence.
 
 This boundary derives economic observations from raw account evidence. It does
-not accept caller-supplied native, token, MarginFi, or decoded-hash evidence, and
-it never signs, submits, or calls RPC.
+not accept caller-supplied native, token, MarginFi, or decoded-hash evidence,
+and it never signs, submits, or calls RPC.
 """
 
 from __future__ import annotations
@@ -10,7 +10,7 @@ from __future__ import annotations
 import base64
 import binascii
 from collections.abc import Mapping, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 from enum import StrEnum
 import hashlib
 import json
@@ -82,6 +82,19 @@ class PR115RawAccountSnapshot:
     raw_hash: str
     decoded_hash: str
 
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "address": self.address,
+            "index": self.index,
+            "owner": self.owner,
+            "executable": self.executable,
+            "lamports": self.lamports,
+            "data_base64": self.data_base64,
+            "data_hash": self.data_hash,
+            "raw_hash": self.raw_hash,
+            "decoded_hash": self.decoded_hash,
+        }
+
 
 @dataclass(frozen=True, slots=True)
 class PR115NativeLamportDelta:
@@ -93,6 +106,16 @@ class PR115NativeLamportDelta:
     delta_lamports: int
     pre_raw_hash: str
     post_raw_hash: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "address": self.address,
+            "pre_lamports": self.pre_lamports,
+            "post_lamports": self.post_lamports,
+            "delta_lamports": self.delta_lamports,
+            "pre_raw_hash": self.pre_raw_hash,
+            "post_raw_hash": self.post_raw_hash,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -107,6 +130,18 @@ class PR115TokenAccountDelta:
     delta_amount: int
     pre_raw_hash: str
     post_raw_hash: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "address": self.address,
+            "mint_hash": self.mint_hash,
+            "owner_hash": self.owner_hash,
+            "pre_amount": self.pre_amount,
+            "post_amount": self.post_amount,
+            "delta_amount": self.delta_amount,
+            "pre_raw_hash": self.pre_raw_hash,
+            "post_raw_hash": self.post_raw_hash,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,8 +179,8 @@ class PR115SimulationOwnedEconomicProof:
             "pre_state_hash": self.pre_state_hash,
             "post_state_hash": self.post_state_hash,
             "raw_evidence_hash": self.raw_evidence_hash,
-            "native_deltas": [asdict(item) for item in self.native_deltas],
-            "token_deltas": [asdict(item) for item in self.token_deltas],
+            "native_deltas": [item.to_dict() for item in self.native_deltas],
+            "token_deltas": [item.to_dict() for item in self.token_deltas],
         }
 
 
@@ -160,8 +195,8 @@ def build_pr115_proof_from_report(
 ) -> PR115SimulationOwnedEconomicProof:
     """Derive economic proof from exact simulation raw account evidence only."""
 
-    post_state_accounts = getattr(report.final, "returned_accounts", ())
-    if not post_state_accounts:
+    post_state_accounts = getattr(report.final, "returned_accounts", None)
+    if post_state_accounts is None:
         raise PR115StateEvidenceError(
             "final simulation did not preserve raw accounts"
         )
@@ -213,9 +248,7 @@ def build_pr115_simulation_owned_economic_proof(
         post_root_slot=post_root_slot,
     )
     if len(pre_state_accounts) != len(addresses):
-        raise PR115StateEvidenceError(
-            PR115StateEvidenceCode.ADDRESS_SET_MISMATCH
-        )
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.ADDRESS_SET_MISMATCH)
     if len(post_state_accounts) != len(addresses):
         raise PR115StateEvidenceError(PR115StateEvidenceCode.UNREQUESTED_ACCOUNT)
 
@@ -243,16 +276,14 @@ def build_pr115_simulation_owned_economic_proof(
                 )
             token_deltas.append(_token_delta(pre, post))
         elif post.owner == TOKEN_2022_PROGRAM_ID:
-            raise PR115StateEvidenceError(
-                PR115StateEvidenceCode.UNSUPPORTED_TOKEN_2022
-            )
+            raise PR115StateEvidenceError(PR115StateEvidenceCode.UNSUPPORTED_TOKEN_2022)
         else:
             raise PR115StateEvidenceError(
                 PR115StateEvidenceCode.UNSUPPORTED_ACCOUNT_OWNER
             )
 
-    pre_state_hash = _hash_json([asdict(item) for item in pre_snapshots])
-    post_state_hash = _hash_json([asdict(item) for item in post_snapshots])
+    pre_state_hash = _hash_json([item.to_dict() for item in pre_snapshots])
+    post_state_hash = _hash_json([item.to_dict() for item in post_snapshots])
     raw_evidence_hash = _hash_json(
         {
             "message_hash": message_hash,
@@ -315,7 +346,9 @@ def _decode_snapshot(
         raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT)
     if executable:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.UNEXPECTED_EXECUTABLE)
-    if not isinstance(lamports, int) or isinstance(lamports, bool) or lamports < 0:
+    if not isinstance(lamports, int):
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT)
+    if isinstance(lamports, bool) or lamports < 0:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT)
     expected_owner = _expected_owner(policy, address)
     if expected_owner is not None and owner != expected_owner:
@@ -454,38 +487,27 @@ def _validate_slots(
     post_root_slot: int | None,
 ) -> None:
     values = (pre_state_slot, post_state_slot, min_context_slot)
-    if any(
-        not isinstance(value, int) or isinstance(value, bool)
-        for value in values
-    ):
-        raise PR115StateEvidenceError(
-            PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
-        )
-    if (
-        pre_state_slot < min_context_slot
-        or post_state_slot < min_context_slot
-    ):
-        raise PR115StateEvidenceError(
-            PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
-        )
+    if any(not isinstance(value, int) for value in values):
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+    if any(isinstance(value, bool) for value in values):
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+    if pre_state_slot < min_context_slot:
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+    if post_state_slot < min_context_slot:
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
     if post_state_slot < pre_state_slot:
-        raise PR115StateEvidenceError(
-            PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
-        )
-    for root_slot, state_slot in (
-        (pre_root_slot, pre_state_slot),
-        (post_root_slot, post_state_slot),
-    ):
-        if root_slot is None:
-            continue
-        if not isinstance(root_slot, int) or isinstance(root_slot, bool):
-            raise PR115StateEvidenceError(
-                PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
-            )
-        if root_slot < state_slot:
-            raise PR115StateEvidenceError(
-                PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION
-            )
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+    _validate_root_slot(pre_root_slot, pre_state_slot)
+    _validate_root_slot(post_root_slot, post_state_slot)
+
+
+def _validate_root_slot(root_slot: int | None, state_slot: int) -> None:
+    if root_slot is None:
+        return
+    if not isinstance(root_slot, int) or isinstance(root_slot, bool):
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
+    if root_slot < state_slot:
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.CONTEXT_SLOT_VIOLATION)
 
 
 def _hash_bytes(value: bytes) -> str:
@@ -502,9 +524,7 @@ def _hash_json(value: Any) -> str:
             allow_nan=False,
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
-        raise PR115StateEvidenceError(
-            PR115StateEvidenceCode.MALFORMED_ACCOUNT
-        ) from exc
+        raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT) from exc
     return hashlib.sha256(payload).hexdigest()
 
 

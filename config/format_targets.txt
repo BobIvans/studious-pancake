@@ -34,11 +34,13 @@ tests/execution/test_exact_simulation_pr036.py
 tests/execution/test_pr053_canonical_cutover.py
 scripts/security_gate.py
 src/security/__init__.py
+src/security/parser_invariants.py
 src/security/secret_scan.py
 src/security/signer_policy.py
 src/security/supply_chain.py
 tests/test_pr043_wallet_supply_chain.py
 tests/test_pr112_credential_incident_response.py
+tests/test_pr126_parser_invariant_hardening.py
 src/durability/__init__.py
 src/durability/single_truth.py
 tests/test_pr121_single_durable_lifecycle_truth.py

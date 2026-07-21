@@ -43,8 +43,10 @@ src/release_gate/cli.py
 src/release_gate/gate.py
 src/release_gate/models.py
 src/release_gate/actual_evidence.py
+src/release_gate/limited_canary.py
 tests/test_pr047_release_gate.py
 tests/test_pr078_actual_security_sbom_chaos_evidence.py
+tests/test_pr081_limited_canary_release.py
 src/data_plane/__init__.py
 src/data_plane/aggregate.py
 src/data_plane/common.py
@@ -74,3 +76,5 @@ src/paper_shadow/atomic_runtime_stages.py
 tests/test_pr075_atomic_runtime_stages.py
 src/shadow_soak/real_soak.py
 tests/test_pr079_real_shadow_soak.py
+src/submission/lifecycle_integration.py
+tests/test_pr080_canonical_sender_lifecycle.py

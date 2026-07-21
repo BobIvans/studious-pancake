@@ -86,3 +86,5 @@ tests/execution/test_pr071_canonical_execution_domain.py
 src/operations/__init__.py
 src/operations/operator_readiness.py
 tests/test_pr077_operator_readiness.py
+src/submission/sender_lifecycle_disabled.py
+tests/test_pr093_canonical_sender_lifecycle_disabled.py

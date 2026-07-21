@@ -1,0 +1,49 @@
+name: PR-123 hardened transport
+
+on:
+  pull_request:
+    paths:
+      - "src/transport_hardening_pr123.py"
+      - "tests/test_pr123_transport_hardening.py"
+      - ".github/workflows/pr123-hardened-transport.yml"
+  push:
+    branches:
+      - "pr-123-hardened-outbound-http-rpc-transport"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.13"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - run: python -m pip install --no-deps .
+      - name: Black
+        run: >-
+          python -m black --check
+          src/transport_hardening_pr123.py
+          tests/test_pr123_transport_hardening.py
+      - name: Focused PR-123 tests
+        run: >-
+          python -m pytest
+          tests/test_pr123_transport_hardening.py
+          -q --disable-socket --allow-unix-socket
+      - name: Compile
+        run: >-
+          python -m compileall -q
+          src/transport_hardening_pr123.py
+          tests/test_pr123_transport_hardening.py
+      - name: PR-123 hardened transport self-check
+        run: >-
+          python -m src.transport_hardening_pr123
+          --json

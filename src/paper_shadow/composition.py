@@ -131,9 +131,11 @@ def build_paper_shadow_runtime(
     dependency_reasons = _dependency_reasons(active_dependencies)
     runner = PaperShadowRunner(
         PaperShadowRunnerConfig(
-            journal_path=Path(journal_path)
-            if journal_path is not None
-            else Path(".runtime/paper-shadow-journal.jsonl")
+            journal_path=(
+                Path(journal_path)
+                if journal_path is not None
+                else Path(".runtime/paper-shadow-journal.jsonl")
+            )
         ),
         stages=stages,
     )
@@ -175,7 +177,9 @@ def _paper_shadow_dependency_reasons(evidence: Any) -> tuple[str, ...]:
     reasons: list[str] = []
     if not evidence.cycle_succeeded:
         reasons.append(str(evidence.terminal_reason))
-    reasons.extend(str(reason) for reason in getattr(evidence, "degraded_reasons", ()))
+    reasons.extend(
+        str(reason) for reason in getattr(evidence, "degraded_reasons", ())
+    )
     return tuple(dict.fromkeys(reason for reason in reasons if reason))
 
 

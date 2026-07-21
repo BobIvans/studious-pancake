@@ -86,6 +86,10 @@ py-modules = ["arb_bot"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
+exclude = [
+  "src.ingest*",
+  "src.execution.senders*",
+]
 namespaces = true
 
 [tool.setuptools.package-data]

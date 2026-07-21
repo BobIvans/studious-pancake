@@ -38,6 +38,7 @@ src/security/secret_scan.py
 src/security/signer_policy.py
 src/security/supply_chain.py
 tests/test_pr043_wallet_supply_chain.py
+tests/test_pr112_credential_incident_response.py
 src/durability/__init__.py
 src/durability/single_truth.py
 tests/test_pr121_single_durable_lifecycle_truth.py

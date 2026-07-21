@@ -3,6 +3,13 @@
 .env.local
 .env.*.local
 
+# ── Local LiteLLM production config / state ──────────────────────────────────
+litellm_config.yaml
+.litellm/
+litellm*.db
+litellm*.sqlite
+litellm*.sqlite3
+
 # ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Offline PR-043 security gate.
+"""Offline PR-043/PR-112 security gate.
 
 The gate intentionally does not call the network. It can scan local text files
-for plaintext wallet/signing key material and evaluate normalized dependency
-vulnerability records produced by another scanner.
+for plaintext wallet/signing/provider credential material and evaluate
+normalized dependency vulnerability records produced by another scanner.
 """
 
 from __future__ import annotations
@@ -34,10 +34,19 @@ _TEXT_SUFFIXES = {
     ".yml",
 }
 _DEFAULT_SCAN_DIRS = ("config", "docs", "scripts", "src", "tests")
+_ROOT_SCAN_FILES = (
+    ".gitleaks.toml",
+    "litellm_config.yaml",
+    "litellm_config.example.yaml",
+)
 
 
 def _iter_scan_files(repo_root: Path) -> tuple[Path, ...]:
     paths: list[Path] = []
+    for relative_file in _ROOT_SCAN_FILES:
+        path = repo_root / relative_file
+        if path.is_file() and path.suffix in _TEXT_SUFFIXES:
+            paths.append(path)
     for relative_dir in _DEFAULT_SCAN_DIRS:
         directory = repo_root / relative_dir
         if not directory.exists():
@@ -45,7 +54,7 @@ def _iter_scan_files(repo_root: Path) -> tuple[Path, ...]:
         for path in directory.rglob("*"):
             if path.is_file() and path.suffix in _TEXT_SUFFIXES:
                 paths.append(path)
-    return tuple(sorted(paths))
+    return tuple(sorted(set(paths)))
 
 
 def _scan_repo(repo_root: Path) -> None:

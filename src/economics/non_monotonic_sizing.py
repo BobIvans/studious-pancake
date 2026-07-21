@@ -8,9 +8,9 @@ made every quote amount-coupled.
 
 from __future__ import annotations
 
-from collections.abc import Callable, Iterable, Mapping
-from dataclasses import dataclass, fields, is_dataclass
-from enum import Enum, StrEnum
+from collections.abc import Callable, Iterable
+from dataclasses import dataclass
+from enum import StrEnum
 import hashlib
 import json
 import re
@@ -180,16 +180,16 @@ class PR118TypedCostLedger:
         if not isinstance(self.min_out, PR118AssetAmount):
             raise CapitalEngineError("min_out must be PR118AssetAmount")
         if not isinstance(self.flash_repayment, PR118FlashRepaymentTerms):
-            raise CapitalEngineError(
-                "flash_repayment must be PR118FlashRepaymentTerms"
-            )
+            raise CapitalEngineError("flash_repayment must be PR118FlashRepaymentTerms")
         if self.min_out.asset_id != self.flash_repayment.asset_id:
             raise CapitalEngineError(
                 "min_out and flash repayment must share an asset without a "
                 "verified conversion contract"
             )
-        object.__setattr__(self, "entries", tuple(self.entries))
-        for entry in self.entries:
+
+        entries = tuple(self.entries)
+        object.__setattr__(self, "entries", entries)
+        for entry in entries:
             if not isinstance(entry, PR118CostLedgerEntry):
                 raise CapitalEngineError("entries must be PR118CostLedgerEntry")
             if entry.kind in {
@@ -219,7 +219,7 @@ class PR118TypedCostLedger:
             assets.add(entry.asset_id)
         return tuple(sorted(assets))
 
-    def net_cost_by_asset(self) -> Mapping[str, int]:
+    def net_cost_by_asset(self) -> dict[str, int]:
         costs: dict[str, int] = {}
         for entry in self.entries:
             costs[entry.asset_id] = costs.get(entry.asset_id, 0) + entry.signed_amount()
@@ -242,12 +242,7 @@ class PR118TypedCostLedger:
         native_costs: NativeCostBreakdown,
         message_hash: str | None = None,
     ) -> CapitalCandidate:
-        """Convert native/wSOL settlement economics into the existing gate type.
-
-        `CapitalCandidate.protocol_fee_lamports` is intentionally set to zero
-        because the PR-118 ledger places flash fee and protocol rounding inside
-        `flash_repayment`, preventing double-counting by the legacy PR-032 gate.
-        """
+        """Convert native/wSOL settlement economics into the existing gate type."""
 
         if self.min_out.asset_id not in _NATIVE_SETTLEMENT_ASSETS:
             raise CapitalEngineError(
@@ -279,8 +274,14 @@ class PR118TypedCostLedger:
             total += entry.amount
         return total
 
-    def to_json(self) -> dict[str, Any]:
-        return _jsonable(self)
+    def to_json(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "min_out": self.min_out.to_json(),
+            "flash_repayment": self.flash_repayment.to_json(),
+            "entries": [entry.to_json() for entry in self.entries],
+            "route_provenance_hash": self.route_provenance_hash,
+        }
 
 
 @dataclass(frozen=True, slots=True)
@@ -310,14 +311,14 @@ class PR118SizingCandidateEvidence:
     def evidence_hash(self) -> str:
         return _sha256_payload(
             {
-                "amount_lamports": self.amount_lamports,
+                "amount_lamports": str(self.amount_lamports),
                 "candidate_id": self.candidate.candidate_id,
-                "quote_hashes": self.quote_hashes,
+                "quote_hashes": list(self.quote_hashes),
                 "route_id": self.route_id,
             }
         )
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> dict[str, object]:
         return {
             "amount_lamports": str(self.amount_lamports),
             "candidate_id": self.candidate.candidate_id,
@@ -344,7 +345,7 @@ class PR118SizingEvaluation:
     def allowed(self) -> bool:
         return self.decision.allowed
 
-    def to_json(self) -> dict[str, Any]:
+    def to_json(self) -> dict[str, object]:
         return {
             "amount_lamports": str(self.amount_lamports),
             "allowed": self.allowed,
@@ -375,8 +376,19 @@ class PR118NonMonotonicSizingResult:
     def evaluated_amounts(self) -> tuple[int, ...]:
         return tuple(item.amount_lamports for item in self.evaluations)
 
-    def to_json(self) -> dict[str, Any]:
-        return _jsonable(self)
+    def to_json(self) -> dict[str, object]:
+        return {
+            "schema_version": self.schema_version,
+            "selected_amount_lamports": (
+                None
+                if self.selected_amount_lamports is None
+                else str(self.selected_amount_lamports)
+            ),
+            "allowed": self.allowed,
+            "selected": None if self.selected is None else self.selected.to_json(),
+            "evaluations": [item.to_json() for item in self.evaluations],
+            "stop_reason": self.stop_reason.value,
+        }
 
 
 def build_pr118_amount_grid(
@@ -403,10 +415,7 @@ def build_pr118_amount_grid(
     if span == 0:
         return (lower_lamports,)
 
-    points = {
-        lower_lamports,
-        upper_lamports,
-    }
+    points = {lower_lamports, upper_lamports}
     for index in range(1, max_points - 1):
         point = lower_lamports + (span * index) // (max_points - 1)
         points.add(point)
@@ -499,6 +508,8 @@ def _unique_amounts(amounts_lamports: Iterable[int]) -> tuple[int, ...]:
 
 
 def _asset_id(value: str) -> str:
+    if not isinstance(value, str):
+        raise CapitalEngineError("asset_id must be a normalized asset symbol")
     cleaned = value.strip().upper()
     if not _ASSET_ID_RE.fullmatch(cleaned):
         raise CapitalEngineError("asset_id must be a normalized asset symbol")
@@ -513,28 +524,16 @@ def _integer_amount(value: int, field: str) -> None:
 
 
 def _sha256(value: str, field: str) -> str:
+    if not isinstance(value, str):
+        raise CapitalEngineError(f"{field} must be a non-placeholder sha256")
     lowered = value.lower()
     if not _SHA256_RE.fullmatch(lowered) or lowered == "0" * 64:
         raise CapitalEngineError(f"{field} must be a non-placeholder sha256")
     return lowered
 
 
-def _jsonable(value: Any) -> Any:
-    if is_dataclass(value):
-        return {
-            item.name: _jsonable(getattr(value, item.name)) for item in fields(value)
-        }
-    if isinstance(value, Enum):
-        return value.value
-    if isinstance(value, tuple):
-        return [_jsonable(item) for item in value]
-    if isinstance(value, Mapping):
-        return {str(key): _jsonable(item) for key, item in value.items()}
-    return value
-
-
 def _stable_json(payload: Any) -> str:
-    return json.dumps(_jsonable(payload), sort_keys=True, separators=(",", ":"))
+    return json.dumps(payload, sort_keys=True, separators=(",", ":"))
 
 
 def _sha256_payload(payload: Any) -> str:

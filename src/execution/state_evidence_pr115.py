@@ -1,7 +1,7 @@
 """PR-115 simulation-owned pre/post state evidence.
 
 The PR-115 boundary derives economic observations from raw RPC account evidence
-owned by the exact simulation report.  It intentionally does not accept
+owned by the exact simulation report. It intentionally does not accept
 caller-supplied native/token/MarginFi observations, and it does not submit,
 sign, or contact RPC.
 """
@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import StrEnum
 import hashlib
 import json
@@ -142,8 +142,8 @@ class PR115SimulationOwnedEconomicProof:
             "pre_state_hash": self.pre_state_hash,
             "post_state_hash": self.post_state_hash,
             "raw_evidence_hash": self.raw_evidence_hash,
-            "native_deltas": [item.__dict__ for item in self.native_deltas],
-            "token_deltas": [item.__dict__ for item in self.token_deltas],
+            "native_deltas": [asdict(item) for item in self.native_deltas],
+            "token_deltas": [asdict(item) for item in self.token_deltas],
         }
 
 
@@ -158,12 +158,13 @@ def build_pr115_proof_from_report(
 ) -> PR115SimulationOwnedEconomicProof:
     """Derive economic proof from exact simulation raw account evidence only."""
 
-    if not report.final.returned_accounts:
+    post_state_accounts = getattr(report.final, "returned_accounts", ())
+    if not post_state_accounts:
         raise PR115StateEvidenceError("final simulation did not preserve raw accounts")
     return build_pr115_simulation_owned_economic_proof(
         monitored_accounts=report.monitored_accounts,
         pre_state_accounts=pre_state_accounts,
-        post_state_accounts=report.final.returned_accounts,
+        post_state_accounts=post_state_accounts,
         message_hash=report.message_hash,
         simulation_response_hash=report.final.response_hash,
         pre_state_slot=pre_state_slot,
@@ -230,6 +231,10 @@ def build_pr115_simulation_owned_economic_proof(
         if post.owner == SYSTEM_PROGRAM_ID:
             native_deltas.append(_native_delta(pre, post))
         elif post.owner == SPL_TOKEN_PROGRAM_ID:
+            if not active_policy.allow_legacy_spl_token_accounts:
+                raise PR115StateEvidenceError(
+                    PR115StateEvidenceCode.UNSUPPORTED_ACCOUNT_OWNER
+                )
             token_deltas.append(_token_delta(pre, post))
         elif post.owner == TOKEN_2022_PROGRAM_ID:
             raise PR115StateEvidenceError(PR115StateEvidenceCode.UNSUPPORTED_TOKEN_2022)
@@ -238,8 +243,8 @@ def build_pr115_simulation_owned_economic_proof(
                 PR115StateEvidenceCode.UNSUPPORTED_ACCOUNT_OWNER
             )
 
-    pre_state_hash = _hash_json([item.__dict__ for item in pre_snapshots])
-    post_state_hash = _hash_json([item.__dict__ for item in post_snapshots])
+    pre_state_hash = _hash_json([asdict(item) for item in pre_snapshots])
+    post_state_hash = _hash_json([asdict(item) for item in post_snapshots])
     raw_evidence_hash = _hash_json(
         {
             "message_hash": message_hash,
@@ -298,6 +303,7 @@ def _decode_snapshot(
     data_base64, data = _decode_account_data(account.get("data"))
     if len(data) > policy.max_account_data_bytes:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.WRONG_DATA_LENGTH)
+    data_hash = _hash_bytes(data)
     decoded_hash = _hash_json(
         {
             "address": address,
@@ -305,7 +311,7 @@ def _decode_snapshot(
             "owner": owner,
             "executable": executable,
             "lamports": lamports,
-            "data_hash": _hash_bytes(data),
+            "data_hash": data_hash,
             "decoder_version": PR115_DECODER_VERSION,
         }
     )
@@ -316,7 +322,7 @@ def _decode_snapshot(
         executable=executable,
         lamports=lamports,
         data_base64=data_base64,
-        data_hash=_hash_bytes(data),
+        data_hash=data_hash,
         raw_hash=_hash_json(account),
         decoded_hash=decoded_hash,
     )

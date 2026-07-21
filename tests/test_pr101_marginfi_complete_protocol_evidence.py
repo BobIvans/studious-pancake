@@ -36,7 +36,11 @@ def test_pr101_default_marginfi_manifest_remains_blocked_until_complete() -> Non
     assert not result.live_execution_allowed
     assert "DECISIVE_FIELD_MISSING:idl.sha256" in result.blockers
     assert "DECISIVE_FIELD_FALSE:promotion.human_reviewed" in result.blockers
-    assert "PR101_SCHEMA_MISMATCH" in result.blockers
+    assert (
+        "DECISIVE_FIELD_MISSING:complete_protocol_evidence.source_release_pin_sha256"
+        in result.blockers
+    )
+    assert "MAXIMUM_CAPABILITY_NOT_SHADOW_EXECUTION_CAPABLE" in result.blockers
 
 
 def test_pr101_complete_manifest_can_reach_shadow_but_never_live() -> None:

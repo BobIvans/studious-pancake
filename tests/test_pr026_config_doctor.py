@@ -26,13 +26,16 @@ def test_offline_doctor_passes_fail_closed_defaults() -> None:
 def test_secret_check_requires_uuid_shaped_jito_credential(tmp_path: Path) -> None:
     path = _write(
         tmp_path / "jito.yaml",
-        "providers:\n  jito:\n    enabled: true\n    auth_reference: env:JITO_AUTH_UUID\n",
+        (
+            "providers:\n  jito:\n    enabled: true\n    auth_mode: uuid\n"
+            "    auth_reference: env:JITO_AUTH_UUID\n"
+        ),
     )
     config = load_runtime_config(path, environ={})
 
     missing = run_config_doctor(config, check_secrets=True, environ={})
     assert missing.ok is False
-    assert any(item.code == "SECRET_MISSING" for item in missing.diagnostics)
+    assert any(item.code == "SECRET_RESOLUTION_FAILED" for item in missing.diagnostics)
 
     malformed = run_config_doctor(
         config,

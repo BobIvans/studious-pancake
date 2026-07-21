@@ -103,6 +103,8 @@ src/submission/sender_lifecycle_disabled.py
 tests/test_pr093_canonical_sender_lifecycle_disabled.py
 src/providers/marginfi/__init__.py
 src/providers/marginfi/complete_evidence.py
+src/providers/marginfi/coherent_snapshot.py
 tests/test_pr101_marginfi_complete_protocol_evidence.py
+tests/test_pr116_coherent_marginfi_snapshot_oracle.py
 src/submission/canonical_lifecycle_pr106.py
 tests/test_pr106_canonical_sender_lifecycle_disabled.py

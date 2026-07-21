@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import math
 from types import MappingProxyType
 from typing import Any, Mapping
 from uuid import uuid4
@@ -30,10 +31,11 @@ class Opportunity:
             object.__setattr__(self, "opportunity_id", uuid4().hex)
         if self.expires_at <= self.detected_at:
             raise ValueError("opportunity expiration must be after detection timestamp")
-        if isinstance(self.expected_gross_profit, bool) or not isinstance(
-            self.expected_gross_profit, int
-        ):
-            raise TypeError("expected_gross_profit must be integer base units")
+        object.__setattr__(
+            self,
+            "expected_gross_profit",
+            _coerce_base_units(self.expected_gross_profit, "expected_gross_profit"),
+        )
         if self.proposed_amount_base_units <= 0:
             raise ValueError("proposed_amount_base_units must be positive")
         object.__setattr__(self, "metadata", MappingProxyType(dict(self.metadata)))
@@ -48,7 +50,7 @@ class Opportunity:
         input_mint: str,
         output_mint: str,
         proposed_amount_base_units: int,
-        expected_gross_profit: int,
+        expected_gross_profit: int | float,
         ttl_seconds: float,
         metadata: Mapping[str, Any] | None = None,
         detected_at: float | None = None,
@@ -66,3 +68,15 @@ class Opportunity:
             expires_at=now + ttl_seconds,
             metadata=metadata or {},
         )
+
+
+def _coerce_base_units(value: int | float, field_name: str) -> int:
+    """Return integer base units while tolerating legacy integral fixtures."""
+
+    if isinstance(value, bool):
+        raise TypeError(f"{field_name} must be integer base units")
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+        return int(value)
+    raise TypeError(f"{field_name} must be integer base units")

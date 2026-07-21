@@ -24,9 +24,14 @@ from src.paper_shadow.atomic_vertical import (
 from src.paper_shadow.composition import (
     PR089_COMPOSITION_SCHEMA,
     PR089_MISSING_ATOMIC_DEPENDENCIES,
+    PR102_COMPOSITION_SCHEMA,
+    PR102_TYPE_SAFE_DEPENDENCY_REJECTED,
+    ExactFeeCapitalWorkflowDependency,
+    JupiterV2BuildDependency,
     PaperShadowDependencyGate,
     PaperShadowRuntime,
     PaperShadowRuntimeDependencies,
+    VerifiedMarginfiProviderDependency,
     build_paper_shadow_runtime,
 )
 from src.paper_shadow.journal import JsonlPaperShadowJournal, PaperShadowEvent
@@ -54,10 +59,14 @@ __all__ = [
     "AtomicVerticalRuntimeStageSuite",
     "AtomicVerticalStageRecord",
     "AtomicVerticalTrace",
+    "ExactFeeCapitalWorkflowDependency",
     "JsonlPaperShadowJournal",
+    "JupiterV2BuildDependency",
     "PAPER_SHADOW_REQUIRED_STAGES",
     "PR089_COMPOSITION_SCHEMA",
     "PR089_MISSING_ATOMIC_DEPENDENCIES",
+    "PR102_COMPOSITION_SCHEMA",
+    "PR102_TYPE_SAFE_DEPENDENCY_REJECTED",
     "PaperShadowDependencyGate",
     "PaperShadowEvent",
     "PaperShadowRunStatus",
@@ -68,6 +77,7 @@ __all__ = [
     "PaperShadowRuntimeDependencies",
     "PaperShadowStageContext",
     "PaperShadowStageName",
+    "VerifiedMarginfiProviderDependency",
     "build_paper_shadow_runtime",
     "paper_shadow_stage_blocked",
 ]

@@ -1,7 +1,7 @@
 """PR-091 committed real evidence manifest loader.
 
 PR-091 must not be satisfied by pytest ``tmp_path`` fixtures or by ad-hoc
-files that merely satisfy the PR-078 dataclasses.  This module loads a
+files that merely satisfy the PR-078 dataclasses. This module loads a
 repository-owned JSON manifest from ``release_artifacts/pr091/``, verifies that
 all referenced artifact files are also inside that release-artifact directory,
 and, by default, asks Git whether every referenced file is tracked before the
@@ -63,7 +63,7 @@ def load_pr091_actual_evidence_manifest(
     """Load a committed PR-091 manifest and convert it to gate dataclasses.
 
     ``manifest_path`` and every ``artifact.path`` must be under
-    ``release_artifacts/pr091/``.  When ``require_git_tracked`` is true, the
+    ``release_artifacts/pr091/``. When ``require_git_tracked`` is true, the
     manifest and all artifact files must already be present in ``git ls-files``.
     That is the key PR-091 distinction from synthetic tmp-path unit fixtures.
     """
@@ -81,10 +81,9 @@ def load_pr091_actual_evidence_manifest(
     if schema_version != SCHEMA_VERSION:
         raise RealEvidenceManifestError(f"MANIFEST_SCHEMA_UNSUPPORTED:{schema_version}")
 
-    artifacts_payload = _sequence(payload, "artifacts")
     artifacts = tuple(
         _parse_actual_artifact(root, _mapping(item, "artifacts[]"))
-        for item in artifacts_payload
+        for item in _sequence(payload, "artifacts")
     )
     drill_suite_payload = _mapping(
         payload.get("operational_drill_suite"),
@@ -233,12 +232,11 @@ def _parse_drill_suite(payload: Mapping[str, Any]) -> OperationalDrillSuite:
 def _parse_security(payload: Mapping[str, Any]) -> SecurityOperationalEvidence:
     decision = _mapping(payload.get("dependency_decision"), "dependency_decision")
     release_manifest_sha256 = payload.get("release_manifest_sha256")
-    if release_manifest_sha256 is not None and not isinstance(
-        release_manifest_sha256, str
-    ):
-        raise RealEvidenceManifestError(
-            "FIELD_NOT_STRING:security.release_manifest_sha256"
-        )
+    if release_manifest_sha256 is not None:
+        if not isinstance(release_manifest_sha256, str):
+            raise RealEvidenceManifestError(
+                "FIELD_NOT_STRING:security.release_manifest_sha256"
+            )
     return SecurityOperationalEvidence(
         generated_at=_datetime(payload, "generated_at"),
         secret_scan_passed=_bool(payload, "secret_scan_passed"),
@@ -385,7 +383,10 @@ def _optional_string(payload: Mapping[str, Any], field: str) -> str | None:
 
 
 def _bool(
-    payload: Mapping[str, Any], field: str, *, default: bool | None = None
+    payload: Mapping[str, Any],
+    field: str,
+    *,
+    default: bool | None = None,
 ) -> bool:
     value = payload.get(field, default)
     if not isinstance(value, bool):
@@ -394,7 +395,10 @@ def _bool(
 
 
 def _int(
-    payload: Mapping[str, Any], field: str, *, default: int | None = None
+    payload: Mapping[str, Any],
+    field: str,
+    *,
+    default: int | None = None,
 ) -> int:
     value = payload.get(field, default)
     if not isinstance(value, int) or isinstance(value, bool):

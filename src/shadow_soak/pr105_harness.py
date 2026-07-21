@@ -1,7 +1,7 @@
 """PR-105 sender-free shadow-soak harness planning boundary.
 
-The PR-092 gate validates completed 72-hour evidence.  This module defines the
-reviewable run harness that operators can start before such evidence exists.  It
+The PR-092 gate validates completed 72-hour evidence. This module defines the
+reviewable run harness that operators can start before such evidence exists. It
 never connects to RPC, imports a sender, signs, submits, polls, or waits 72h by
 itself; it only plans and validates the sender-free artifact contract that a real
 long-running process must satisfy later.
@@ -123,6 +123,11 @@ def _relative_path(value: str, field: str) -> str:
 def _positive(value: int, field: str) -> None:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
         raise ShadowSoakError(f"{field} must be a positive integer")
+
+
+def _non_negative(value: int, field: str) -> None:
+    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
+        raise ShadowSoakError(f"{field} must be a non-negative integer")
 
 
 def _jsonable(value: Any) -> Any:
@@ -317,10 +322,12 @@ class PR105HarnessRunSnapshot:
             _aware(self.ended_at, "ended_at")
             if self.ended_at < self.started_at:
                 raise ShadowSoakError("ended_at cannot be before started_at")
-        for name in ("events_recorded", "candidates_seen", "live_submissions_observed"):
-            value = getattr(self, name)
-            if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-                raise ShadowSoakError(f"{name} must be a non-negative integer")
+        for name in (
+            "events_recorded",
+            "candidates_seen",
+            "live_submissions_observed",
+        ):
+            _non_negative(getattr(self, name), name)
         object.__setattr__(
             self,
             "materialized_artifact_paths",
@@ -394,9 +401,7 @@ def build_pr105_shadow_soak_harness(
     return PR105ShadowSoakHarnessPlan(
         run_id=config.run_id,
         state=(
-            PR105HarnessState.BLOCKED
-            if blockers
-            else PR105HarnessState.READY_TO_START
+            PR105HarnessState.BLOCKED if blockers else PR105HarnessState.READY_TO_START
         ),
         code_commit=config.code_commit,
         environment=config.environment,
@@ -463,9 +468,11 @@ def evaluate_pr105_harness_snapshot(
     state = (
         PR105HarnessState.READY_FOR_PR092_ASSEMBLY
         if ready
-        else PR105HarnessState.RUNNING
-        if snapshot.ended_at is None
-        else PR105HarnessState.BLOCKED
+        else (
+            PR105HarnessState.RUNNING
+            if snapshot.ended_at is None
+            else PR105HarnessState.BLOCKED
+        )
     )
     if ready:
         warnings.append(

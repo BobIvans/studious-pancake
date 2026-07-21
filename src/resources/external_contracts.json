@@ -182,9 +182,6 @@
           "method": "getTipAccounts",
           "params": []
         },
-        "required_json_paths": [
-          "result"
-        ],
         "json_assertions": [
           {
             "path": "result",

@@ -202,7 +202,9 @@ class PaperShadowRunner:
             return ()
         reasons: list[str] = []
         if upstream_cycle_evidence.get("cycle_succeeded") is not True:
-            reasons.append(PaperShadowRunner._upstream_terminal_reason(upstream_cycle_evidence))
+            reasons.append(
+                PaperShadowRunner._upstream_terminal_reason(upstream_cycle_evidence)
+            )
         degraded_reasons = upstream_cycle_evidence.get("degraded_reasons", ())
         if isinstance(degraded_reasons, str):
             reasons.append(degraded_reasons)

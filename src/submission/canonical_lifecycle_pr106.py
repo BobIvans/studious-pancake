@@ -1,6 +1,6 @@
 """PR-106 canonical sender lifecycle integration gate, still disabled.
 
-This module is a review/evidence boundary on top of PR-080 and PR-093.  It never
+This module is a review/evidence boundary on top of PR-080 and PR-093. It never
 constructs a live sender, never imports signer implementations, never sends RPC
 or Jito requests, and never turns a supported command into a submission path.
 """
@@ -73,29 +73,34 @@ class PR106UpstreamEvidenceRef:
 
     def __post_init__(self) -> None:
         if not self.name.strip():
-            raise PR106CanonicalSenderLifecycleError("upstream evidence name required")
-        object.__setattr__(self, "sha256", _require_sha256(self.sha256, "sha256"))
+            raise PR106CanonicalSenderLifecycleError(
+                "upstream evidence name required"
+            )
+        object.__setattr__(
+            self,
+            "sha256",
+            _require_sha256(self.sha256, "sha256"),
+        )
         object.__setattr__(
             self,
             "source_commit",
             _require_git_sha(self.source_commit, "source_commit"),
         )
-        if not isinstance(self.passed, bool) or not isinstance(
-            self.human_reviewed,
-            bool,
-        ):
+        if not isinstance(self.passed, bool):
+            raise PR106CanonicalSenderLifecycleError("passed must be boolean")
+        if not isinstance(self.human_reviewed, bool):
             raise PR106CanonicalSenderLifecycleError(
-                "upstream evidence flags must be boolean"
+                "human_reviewed must be boolean"
             )
         if self.human_reviewed and not self.reviewer.strip():
             raise PR106CanonicalSenderLifecycleError(
-                "reviewed upstream evidence must include reviewer"
+                "reviewed evidence must include reviewer"
             )
 
 
 @dataclass(frozen=True, slots=True)
 class PR106CanonicalSenderLifecyclePackage:
-    """Review package proving the canonical sender lifecycle remains disabled."""
+    """Review package for canonical sender lifecycle while submission is disabled."""
 
     upstream_evidence: tuple[PR106UpstreamEvidenceRef, ...]
     pr093_readiness: CanonicalSenderLifecycleDisabledReadiness
@@ -106,16 +111,13 @@ class PR106CanonicalSenderLifecyclePackage:
     config_live_enabled: bool
     supported_command_submission_enabled: bool
     automatic_resend_enabled: bool
-    signer_import_path: str | None
+    signer_import_path: str | None = None
     schema_version: str = PR106_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
         if self.schema_version != PR106_SCHEMA_VERSION:
-            raise PR106CanonicalSenderLifecycleError("unsupported PR-106 package schema")
-        names = [item.name for item in self.upstream_evidence]
-        if len(names) != len(set(names)):
             raise PR106CanonicalSenderLifecycleError(
-                "upstream evidence names must be unique"
+                "unsupported PR-106 package schema"
             )
         if not isinstance(
             self.pr093_readiness,
@@ -124,19 +126,31 @@ class PR106CanonicalSenderLifecyclePackage:
             raise PR106CanonicalSenderLifecycleError(
                 "pr093_readiness must be CanonicalSenderLifecycleDisabledReadiness"
             )
-        for name in (
+        names = [item.name for item in self.upstream_evidence]
+        if len(names) != len(set(names)):
+            raise PR106CanonicalSenderLifecycleError(
+                "upstream evidence names must be unique"
+            )
+        for field_name in (
             "compile_time_live_enabled",
             "config_live_enabled",
             "supported_command_submission_enabled",
             "automatic_resend_enabled",
         ):
-            if not isinstance(getattr(self, name), bool):
-                raise PR106CanonicalSenderLifecycleError(f"{name} must be boolean")
+            if not isinstance(getattr(self, field_name), bool):
+                raise PR106CanonicalSenderLifecycleError(
+                    f"{field_name} must be boolean"
+                )
+        for name, value in self.lifecycle_controls.items():
+            if value is not True and value is not False:
+                raise PR106CanonicalSenderLifecycleError(
+                    f"lifecycle control must be boolean: {name}"
+                )
 
 
 @dataclass(frozen=True, slots=True)
 class PR106CanonicalSenderLifecycleReadiness:
-    """PR-106 result: canonical sender lifecycle reviewed, live still denied."""
+    """PR-106 result: canonical lifecycle reviewable, live still impossible."""
 
     state: PR106CanonicalSenderLifecycleState
     lifecycle_review_ready: bool
@@ -181,13 +195,19 @@ def evaluate_pr106_canonical_sender_lifecycle(
             blockers.append(f"UPSTREAM_EVIDENCE_MISSING:{name}")
             continue
         block(evidence.passed, f"UPSTREAM_EVIDENCE_NOT_PASSED:{name}")
-        block(evidence.human_reviewed, f"UPSTREAM_EVIDENCE_NOT_REVIEWED:{name}")
+        block(
+            evidence.human_reviewed,
+            f"UPSTREAM_EVIDENCE_NOT_REVIEWED:{name}",
+        )
 
     pr093 = package.pr093_readiness
     block(pr093.sender_lifecycle_review_ready, "PR093_LIFECYCLE_NOT_REVIEW_READY")
     block(not pr093.live_allowed, "PR093_LIVE_ALLOWED")
     block(not pr093.runtime_submission_enabled, "PR093_RUNTIME_SUBMISSION_ENABLED")
-    block(not pr093.supported_command_can_submit, "PR093_SUPPORTED_COMMAND_CAN_SUBMIT")
+    block(
+        not pr093.supported_command_can_submit,
+        "PR093_SUPPORTED_COMMAND_CAN_SUBMIT",
+    )
     block(not pr093.automatic_resend_enabled, "PR093_AUTOMATIC_RESEND_ENABLED")
     for reason in pr093.blockers:
         blockers.append(f"PR093:{reason}")
@@ -266,12 +286,12 @@ __all__ = [
     "PR106_RESULT_SCHEMA_VERSION",
     "PR106_SCHEMA_VERSION",
     "PR106_SUPPORTED_COMMAND_SUBMISSION_ENABLED",
+    "REQUIRED_PR106_LIFECYCLE_CONTROLS",
+    "REQUIRED_PR106_UPSTREAM_EVIDENCE",
     "PR106CanonicalSenderLifecycleError",
     "PR106CanonicalSenderLifecyclePackage",
     "PR106CanonicalSenderLifecycleReadiness",
     "PR106CanonicalSenderLifecycleState",
     "PR106UpstreamEvidenceRef",
-    "REQUIRED_PR106_LIFECYCLE_CONTROLS",
-    "REQUIRED_PR106_UPSTREAM_EVIDENCE",
     "evaluate_pr106_canonical_sender_lifecycle",
 ]

@@ -226,10 +226,30 @@ def _paper_shadow_journal_path(override: str | None = None) -> Path:
     )
 
 
-def _print_paper_shadow_summary(payload: dict[str, Any], *, as_json: bool) -> None:
+def _paper_shadow_display_reason(
+    payload: dict[str, Any],
+    *,
+    pr023_compat_reason: bool,
+) -> str:
+    reason = str(payload["terminal_reason"])
+    if pr023_compat_reason and reason == "blocked_missing_wallet_public_key":
+        return "blocked_no_discovery_composition"
+    return reason
+
+
+def _print_paper_shadow_summary(
+    payload: dict[str, Any],
+    *,
+    as_json: bool,
+    pr023_compat_reason: bool = False,
+) -> None:
     if as_json:
         print(json.dumps(payload, indent=2, sort_keys=True))
         return
+    display_reason = _paper_shadow_display_reason(
+        payload,
+        pr023_compat_reason=pr023_compat_reason,
+    )
     readiness = payload.get("readiness", {})
     dependencies = tuple(readiness.get("dependency_reasons", ()))
     dependency_suffix = (
@@ -238,7 +258,7 @@ def _print_paper_shadow_summary(payload: dict[str, Any], *, as_json: bool) -> No
     print(
         "PAPER_SHADOW_RUNNER: "
         f"status={payload['status']} "
-        f"reason={payload['terminal_reason']} "
+        f"reason={display_reason} "
         f"ready={readiness.get('ready_for_next_cycle', False)} "
         f"journal={payload['journal_path']} "
         f"events={payload['events_written']}"
@@ -274,6 +294,7 @@ async def _run_paper_shadow_cycle(
         report.opportunities,
         upstream_cycle_completed=report.evidence.cycle_succeeded,
         upstream_dependency_reasons=_paper_shadow_dependency_reasons(report.evidence),
+        upstream_cycle_evidence=report.evidence.to_dict(),
     )
 
 
@@ -282,12 +303,17 @@ def _run_paper_shadow_once(
     *,
     journal_path: str | None = None,
     as_json: bool = False,
+    pr023_compat_reason: bool = False,
 ) -> int:
     runner = PaperShadowRunner(
         PaperShadowRunnerConfig(journal_path=_paper_shadow_journal_path(journal_path))
     )
     summary = asyncio.run(_run_paper_shadow_cycle(config, runner))
-    _print_paper_shadow_summary(summary.to_dict(), as_json=as_json)
+    _print_paper_shadow_summary(
+        summary.to_dict(),
+        as_json=as_json,
+        pr023_compat_reason=pr023_compat_reason,
+    )
     return _paper_shadow_exit_code(summary)
 
 
@@ -303,7 +329,11 @@ def _run_requested_mode(
         )
         return EXIT_MODE_UNAVAILABLE
     if mode == "paper":
-        return _run_paper_shadow_once(config, as_json=False)
+        return _run_paper_shadow_once(
+            config,
+            as_json=False,
+            pr023_compat_reason=True,
+        )
     if mode == "disabled":
         _print_status(status, as_json=False)
         return 0

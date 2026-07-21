@@ -9,6 +9,7 @@ import pytest
 
 from src.paper_shadow import (
     PR089_MISSING_ATOMIC_DEPENDENCIES,
+    PR102_TYPE_SAFE_DEPENDENCY_REJECTED,
     AtomicVerticalRuntimeInputs,
     AtomicVerticalRuntimeStageSuite,
     PaperShadowRunStatus,
@@ -116,6 +117,26 @@ class _Vertical:
         )
 
 
+class _ExactFeeWorkflow:
+    def finalize_reserved_attempt(self, *args: Any, **kwargs: Any) -> Any:
+        return SimpleNamespace(accepted=True, final_message_hash=MESSAGE_HASH)
+
+
+@dataclass(frozen=True)
+class _VerifiedMarginfiProvider:
+    shadow_execution_capable: bool = True
+    evidence_sha256: str = HASH
+
+
+@dataclass(frozen=True)
+class _JupiterV2Build:
+    execution_allowed: bool = True
+    contract_pin: str = JUPITER_HASH
+
+    def build_swap_instructions(self, *args: Any, **kwargs: Any) -> Any:
+        return SimpleNamespace(message_hash=MESSAGE_HASH)
+
+
 def _opportunity() -> Opportunity:
     return Opportunity.create(
         strategy_name="fixture",
@@ -175,6 +196,74 @@ async def test_pr089_empty_market_stays_healthy_idle_without_atomic_dependencies
 
 
 @pytest.mark.asyncio
+async def test_pr102_fake_dependency_objects_do_not_unlock_paper_outcome(
+    tmp_path,
+) -> None:
+    suite = AtomicVerticalRuntimeStageSuite(
+        adapter=_Adapter(),
+        vertical=_Vertical(),  # type: ignore[arg-type]
+    )
+    runtime = build_paper_shadow_runtime(
+        object(),  # type: ignore[arg-type]
+        journal_path=tmp_path / "paper-shadow.jsonl",
+        dependencies=PaperShadowRuntimeDependencies(
+            atomic_stage_suite=suite,
+            exact_fee_workflow=object(),  # type: ignore[arg-type]
+            verified_marginfi_provider=object(),  # type: ignore[arg-type]
+            jupiter_v2_build=object(),  # type: ignore[arg-type]
+        ),
+        discovery=_Discovery((_opportunity(),)),  # type: ignore[arg-type]
+    )
+
+    summary = await runtime.run_once()
+
+    assert summary.status is PaperShadowRunStatus.BLOCKED
+    assert summary.terminal_reason == PR102_TYPE_SAFE_DEPENDENCY_REJECTED
+    assert PR102_TYPE_SAFE_DEPENDENCY_REJECTED in summary.dependency_reasons
+    events = runtime.runner.journal.read_events()
+    blocked = [event for event in events if event["event_type"] == "stage_blocked"]
+    assert blocked[0]["details"]["invalid_dependencies"] == [
+        "exact_fee_workflow_contract",
+        "verified_marginfi_provider_contract",
+        "jupiter_v2_build_contract",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_pr102_evidence_disabled_provider_cannot_unlock_paper_outcome(
+    tmp_path,
+) -> None:
+    suite = AtomicVerticalRuntimeStageSuite(
+        adapter=_Adapter(),
+        vertical=_Vertical(),  # type: ignore[arg-type]
+    )
+    runtime = build_paper_shadow_runtime(
+        object(),  # type: ignore[arg-type]
+        journal_path=tmp_path / "paper-shadow.jsonl",
+        dependencies=PaperShadowRuntimeDependencies(
+            atomic_stage_suite=suite,
+            exact_fee_workflow=_ExactFeeWorkflow(),
+            verified_marginfi_provider=_VerifiedMarginfiProvider(
+                shadow_execution_capable=False
+            ),
+            jupiter_v2_build=_JupiterV2Build(execution_allowed=False),
+        ),
+        discovery=_Discovery((_opportunity(),)),  # type: ignore[arg-type]
+    )
+
+    summary = await runtime.run_once()
+
+    assert summary.status is PaperShadowRunStatus.BLOCKED
+    assert summary.terminal_reason == PR102_TYPE_SAFE_DEPENDENCY_REJECTED
+    assert "invalid_verified_marginfi_provider_not_shadow_capable" in (
+        summary.dependency_reasons
+    )
+    assert "invalid_jupiter_v2_build_execution_not_allowed" in (
+        summary.dependency_reasons
+    )
+
+
+@pytest.mark.asyncio
 async def test_pr089_active_dependencies_wire_atomic_stage_suite(tmp_path) -> None:
     suite = AtomicVerticalRuntimeStageSuite(
         adapter=_Adapter(),
@@ -185,9 +274,9 @@ async def test_pr089_active_dependencies_wire_atomic_stage_suite(tmp_path) -> No
         journal_path=tmp_path / "paper-shadow.jsonl",
         dependencies=PaperShadowRuntimeDependencies(
             atomic_stage_suite=suite,
-            exact_fee_workflow=object(),
-            verified_marginfi_provider=object(),
-            jupiter_v2_build=object(),
+            exact_fee_workflow=_ExactFeeWorkflow(),
+            verified_marginfi_provider=_VerifiedMarginfiProvider(),
+            jupiter_v2_build=_JupiterV2Build(),
         ),
         discovery=_Discovery((_opportunity(),)),  # type: ignore[arg-type]
     )

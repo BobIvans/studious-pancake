@@ -20,7 +20,9 @@ def test_pr099_jupiter_false_promotion_is_denied_by_admission() -> None:
 
     decision = evaluate_contract_execution_admission(jupiter, environ={})
     assert decision.allowed is False
-    assert decision.reason == "execution-evidence-blocked:credentialed-conformance-pending"
+    assert (
+        decision.reason == "execution-evidence-blocked:credentialed-conformance-pending"
+    )
 
     report = evaluate_runtime_admission(config, registry=registry, environ={})
     jupiter_report = _provider(report, "jupiter")

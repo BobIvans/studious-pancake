@@ -26,6 +26,20 @@ from src.economics.exact_fee_workflow import (
     ExactFeeCapitalWorkflow,
     candidate_with_exact_message_fee,
 )
+from src.economics.non_monotonic_sizing import (
+    PR118AssetAmount,
+    PR118CostComponentKind,
+    PR118CostLedgerEntry,
+    PR118FlashRepaymentTerms,
+    PR118LedgerDirection,
+    PR118NonMonotonicSizingResult,
+    PR118SizingCandidateEvidence,
+    PR118SizingEvaluation,
+    PR118SizingStopReason,
+    PR118TypedCostLedger,
+    build_pr118_amount_grid,
+    evaluate_pr118_non_monotonic_sizing,
+)
 
 __all__ = [
     "AtomicCapitalLedger",
@@ -44,8 +58,20 @@ __all__ = [
     "MessageFeeQuote",
     "NativeCostBreakdown",
     "NoTradeReason",
+    "PR118AssetAmount",
+    "PR118CostComponentKind",
+    "PR118CostLedgerEntry",
+    "PR118FlashRepaymentTerms",
+    "PR118LedgerDirection",
+    "PR118NonMonotonicSizingResult",
+    "PR118SizingCandidateEvidence",
+    "PR118SizingEvaluation",
+    "PR118SizingStopReason",
+    "PR118TypedCostLedger",
     "PolicyProfile",
     "WalletBalanceSnapshot",
+    "build_pr118_amount_grid",
     "candidate_with_exact_message_fee",
+    "evaluate_pr118_non_monotonic_sizing",
     "lamports_from_sol_string",
 ]

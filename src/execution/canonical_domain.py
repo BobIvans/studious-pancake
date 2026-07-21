@@ -1,13 +1,18 @@
 """Strict canonical execution boundary for production code.
 
 PR-053 makes the public execution package fail closed unless all plans and
-compiled artifacts use Solders primitives and canonical v0 bytes.
+compiled artifacts use Solders primitives and canonical v0 bytes.  PR-071 adds
+the explicit ownership registry for execution-domain reports, receipts and
+sender protocols so later runtime composition cannot silently pick a duplicate
+shadow/canary/sender boundary.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Sequence
+from enum import StrEnum
+from importlib import import_module
+from typing import Any, Sequence
 
 from solders.instruction import Instruction
 from solders.keypair import Keypair
@@ -65,6 +70,160 @@ class ExecutionReceipt:
             raise CanonicalExecutionContractError("transport is required")
         if self.landed and not self.accepted:
             raise CanonicalExecutionContractError("landed receipt must be accepted")
+
+
+class DomainRole(StrEnum):
+    """Execution-domain roles that must have exactly one production owner."""
+
+    SIMULATION_REPORT = "simulation_report"
+    RECONCILIATION_REPORT = "reconciliation_report"
+    EXECUTION_RECEIPT = "execution_receipt"
+    SENDER_PROTOCOL = "sender_protocol"
+
+
+@dataclass(frozen=True, slots=True)
+class CanonicalDomainSymbol:
+    """A single importable production owner for one execution-domain role."""
+
+    role: DomainRole
+    module: str
+    name: str
+    rationale: str
+
+    @property
+    def qualified_name(self) -> str:
+        return f"{self.module}.{self.name}"
+
+    def resolve(self) -> Any:
+        return getattr(import_module(self.module), self.name)
+
+
+@dataclass(frozen=True, slots=True)
+class QuarantinedDomainSymbol:
+    """Known non-production compatibility symbol retained for migration only."""
+
+    module: str
+    name: str
+    replacement_role: DomainRole
+    reason: str
+
+    @property
+    def qualified_name(self) -> str:
+        return f"{self.module}.{self.name}"
+
+
+CANONICAL_EXECUTION_DOMAIN: tuple[CanonicalDomainSymbol, ...] = (
+    CanonicalDomainSymbol(
+        DomainRole.SIMULATION_REPORT,
+        "src.execution.models",
+        "SimulationReport",
+        "Solders/exact simulator report shared by compiler, simulator and paper evidence.",
+    ),
+    CanonicalDomainSymbol(
+        DomainRole.RECONCILIATION_REPORT,
+        "src.execution.economic_reconciliation.models",
+        "ReconciliationReport",
+        "State-derived economic report with repayment, fee and account evidence.",
+    ),
+    CanonicalDomainSymbol(
+        DomainRole.EXECUTION_RECEIPT,
+        "src.execution.canonical_domain",
+        "ExecutionReceipt",
+        "Transport-neutral post-attempt receipt tied to exactly one message hash.",
+    ),
+    CanonicalDomainSymbol(
+        DomainRole.SENDER_PROTOCOL,
+        "src.submission.permit_bound",
+        "Sender",
+        "Permit-bound sender protocol; transport senders are implementations only.",
+    ),
+)
+
+
+QUARANTINED_EXECUTION_DOMAIN_SYMBOLS: tuple[QuarantinedDomainSymbol, ...] = (
+    QuarantinedDomainSymbol(
+        "src.execution.shadow",
+        "SimulationReport",
+        DomainRole.SIMULATION_REPORT,
+        "PR-013 replay fixture shape only; active exact simulation uses src.execution.models.",
+    ),
+    QuarantinedDomainSymbol(
+        "src.execution.shadow",
+        "ReconciliationResult",
+        DomainRole.RECONCILIATION_REPORT,
+        "Legacy shadow ledger result; production reconciliation uses economic_reconciliation.models.",
+    ),
+    QuarantinedDomainSymbol(
+        "src.live_canary.models",
+        "ReconciliationResult",
+        DomainRole.RECONCILIATION_REPORT,
+        "Canary status DTO only; it must not replace the canonical economic report.",
+    ),
+    QuarantinedDomainSymbol(
+        "src.execution.live_control",
+        "LiveSubmissionPermit",
+        DomainRole.EXECUTION_RECEIPT,
+        "Live-control permit DTO only; it is not the canonical post-attempt receipt.",
+    ),
+    QuarantinedDomainSymbol(
+        "src.execution.live_control",
+        "PermitBoundSender",
+        DomainRole.SENDER_PROTOCOL,
+        "Legacy live-control sender adapter; canonical protocol is src.submission.permit_bound.Sender.",
+    ),
+    QuarantinedDomainSymbol(
+        "src.execution.senders.rpc_sender",
+        "RpcTransactionSender",
+        DomainRole.SENDER_PROTOCOL,
+        "Legacy sender implementation kept outside the supported canonical sender stack.",
+    ),
+    QuarantinedDomainSymbol(
+        "src.execution.senders.jito_single_sender",
+        "JitoSingleTransactionSender",
+        DomainRole.SENDER_PROTOCOL,
+        "Legacy sender implementation kept outside the supported canonical sender stack.",
+    ),
+    QuarantinedDomainSymbol(
+        "src.execution.senders.jito_bundle_sender",
+        "JitoBundleSender",
+        DomainRole.SENDER_PROTOCOL,
+        "Legacy sender implementation kept outside the supported canonical sender stack.",
+    ),
+)
+
+
+def canonical_symbol(role: DomainRole) -> CanonicalDomainSymbol:
+    matches = tuple(item for item in CANONICAL_EXECUTION_DOMAIN if item.role is role)
+    if len(matches) != 1:
+        raise RuntimeError(f"expected exactly one canonical symbol for {role.value}")
+    return matches[0]
+
+
+def canonical_qualified_names() -> frozenset[str]:
+    return frozenset(item.qualified_name for item in CANONICAL_EXECUTION_DOMAIN)
+
+
+def quarantined_qualified_names() -> frozenset[str]:
+    return frozenset(
+        item.qualified_name for item in QUARANTINED_EXECUTION_DOMAIN_SYMBOLS
+    )
+
+
+def validate_canonical_execution_domain() -> None:
+    """Fail closed if role ownership drifts or any canonical import is broken."""
+
+    roles = [item.role for item in CANONICAL_EXECUTION_DOMAIN]
+    if len(roles) != len(set(roles)):
+        raise RuntimeError("duplicate canonical execution-domain role")
+    for item in CANONICAL_EXECUTION_DOMAIN:
+        if item.resolve() is None:
+            raise RuntimeError(
+                f"canonical symbol is not importable: {item.qualified_name}"
+            )
+    overlap = canonical_qualified_names() & quarantined_qualified_names()
+    if overlap:
+        names = ", ".join(sorted(overlap))
+        raise RuntimeError(f"canonical symbols cannot be quarantined: {names}")
 
 
 def validate_canonical_plan(plan: TransactionPlan) -> None:

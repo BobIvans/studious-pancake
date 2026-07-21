@@ -68,8 +68,28 @@ class MarketQuoteSnapshot:
             return False
         return self.age_seconds(now=reference) <= max_age_seconds
 
+    def exact_output_for(self, input_amount: int) -> int:
+        """Return the quoted output only for the exact request amount.
+
+        Executable and economic decisions must never linearly project an AMM or
+        aggregator quote to a different input amount. The quote is evidence for
+        precisely ``self.in_amount`` and no other amount.
+        """
+
+        if input_amount <= 0:
+            raise ValueError("input_amount must be positive")
+        if input_amount != self.in_amount:
+            raise ValueError(
+                "quote amount mismatch: executable decisions require exact quoted amount"
+            )
+        return self.out_amount
+
     def project_output(self, input_amount: int) -> int:
-        """Project output for ``input_amount`` using integer floor math."""
+        """Return a non-executable discovery hint using integer floor math.
+
+        This helper is retained only for legacy ranking/debug hints. PR-113
+        detector and execution-adjacent economics must use ``exact_output_for``.
+        """
 
         if input_amount < 0:
             raise ValueError("input_amount must not be negative")

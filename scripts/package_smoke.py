@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and validate the installed PR-025 console package outside the repo."""
+"""Build and validate the installed PR-025/100 console package outside the repo."""
 
 from __future__ import annotations
 
@@ -12,6 +12,8 @@ import sys
 import tempfile
 import venv
 import zipfile
+
+from scripts.package_boundary import forbidden_wheel_members
 
 ROOT = Path(__file__).resolve().parents[1]
 IGNORED_COPY_NAMES = {
@@ -26,26 +28,10 @@ IGNORED_COPY_NAMES = {
     "htmlcov",
     "venv",
 }
-FORBIDDEN_WHEEL_PATHS = frozenset(
-    {
-        "src/legacy_arb_bot.py",
-        "src/execution/live_control.py",
-        "src/execution/shadow.py",
-    }
-)
-FORBIDDEN_WHEEL_PREFIXES = (
-    "src/ingest/",
-    "src/execution/senders/",
-)
 
 
 def _forbidden_wheel_members(names: set[str]) -> list[str]:
-    return sorted(
-        name
-        for name in names
-        if name in FORBIDDEN_WHEEL_PATHS
-        or any(name.startswith(prefix) for prefix in FORBIDDEN_WHEEL_PREFIXES)
-    )
+    return forbidden_wheel_members(names)
 
 
 def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> str:
@@ -185,7 +171,7 @@ def main() -> int:
                 "installed package did not preserve fail-closed runtime truth"
             )
 
-    print("PR-087 package boundary smoke passed.")
+    print("PR-100 physical package boundary smoke passed.")
     return 0
 
 

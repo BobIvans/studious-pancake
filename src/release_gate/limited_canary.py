@@ -87,7 +87,8 @@ class LimitedCanaryRuntimeState(StrEnum):
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
         return {
-            item.name: _jsonable(getattr(value, item.name)) for item in fields(value)
+            item.name: _jsonable(getattr(value, item.name))
+            for item in fields(value)
         }
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -321,7 +322,8 @@ def evaluate_limited_canary(package: LimitedCanaryPackage) -> LimitedCanaryReadi
         block(latch.get("armed") is True, f"LATCH_NOT_ARMED:{latch_name}")
         block(latch.get("tested") is True, f"LATCH_NOT_TESTED:{latch_name}")
         block(
-            latch.get("blocks_on_trigger") is True, f"LATCH_DOES_NOT_BLOCK:{latch_name}"
+            latch.get("blocks_on_trigger") is True,
+            f"LATCH_DOES_NOT_BLOCK:{latch_name}",
         )
 
     max_exposure = _positive(

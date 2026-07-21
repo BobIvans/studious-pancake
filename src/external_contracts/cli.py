@@ -82,9 +82,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "conformance":
             contracts = (
-                (registry.get(args.contract),)
-                if args.contract
-                else registry.contracts
+                (registry.get(args.contract),) if args.contract else registry.contracts
             )
             results = [
                 run_read_only_conformance(

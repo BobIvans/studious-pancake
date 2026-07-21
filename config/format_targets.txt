@@ -64,7 +64,9 @@ src/economics/exact_fee_workflow.py
 tests/test_pr057_durable_capital_reservations.py
 tests/test_pr074_exact_fee_capital_workflow.py
 src/venues/pump/promotion.py
+src/venues/pump/pr096_shadow_promotion.py
 tests/test_pr065_pump_promotion_guard.py
+tests/test_pr096_pump_shadow_promotion.py
 src/runtime_discovery.py
 src/runtime_discovery_models.py
 src/runtime_discovery_coordinator.py

@@ -240,7 +240,11 @@ class KaminoRealShadowSoakEvidence:
     human_reviewed: bool
 
     def __post_init__(self) -> None:
-        object.__setattr__(self, "run_id", _require_non_empty(self.run_id, field="soak.run_id"))
+        object.__setattr__(
+            self,
+            "run_id",
+            _require_non_empty(self.run_id, field="soak.run_id"),
+        )
         object.__setattr__(
             self,
             "evidence_sha256",

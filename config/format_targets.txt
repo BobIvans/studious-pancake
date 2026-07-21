@@ -16,6 +16,7 @@ src/decision/dataset.py
 src/decision/model.py
 src/decision/split.py
 src/strategy/ranker.py
+src/strategy/domain.py
 src/config/__init__.py
 src/config/chain_registry.py
 src/config/doctor.py
@@ -80,6 +81,7 @@ src/runtime_discovery_builder.py
 src/market/snapshots.py
 src/strategy/detectors.py
 tests/test_pr056_runtime_discovery.py
+tests/test_pr113_amount_coupled_discovery.py
 src/paper_shadow/__init__.py
 src/paper_shadow/runner.py
 src/paper_shadow/atomic_runtime_stages.py

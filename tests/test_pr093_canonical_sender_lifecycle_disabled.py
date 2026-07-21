@@ -100,8 +100,7 @@ def test_pr093_unreviewed_or_failed_evidence_blocks() -> None:
     )
 
     assert (
-        "EVIDENCE_NOT_PASSED:pr086.protocol-aware-rpc-jito-transport"
-        in result.blockers
+        "EVIDENCE_NOT_PASSED:pr086.protocol-aware-rpc-jito-transport" in result.blockers
     )
     assert "EVIDENCE_NOT_REVIEWED:pr091.security-signer-boundary" in result.blockers
 

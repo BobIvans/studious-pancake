@@ -42,7 +42,9 @@ src/release_gate/__init__.py
 src/release_gate/cli.py
 src/release_gate/gate.py
 src/release_gate/models.py
+src/release_gate/actual_evidence.py
 tests/test_pr047_release_gate.py
+tests/test_pr078_actual_security_sbom_chaos_evidence.py
 src/data_plane/__init__.py
 src/data_plane/aggregate.py
 src/data_plane/common.py

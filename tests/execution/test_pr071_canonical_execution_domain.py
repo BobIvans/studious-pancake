@@ -66,7 +66,11 @@ def _relative_shadow_imports(source: str) -> set[str]:
     tree = ast.parse(source)
     imports: set[str] = set()
     for node in ast.walk(tree):
-        if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module == "shadow":
+        if (
+            isinstance(node, ast.ImportFrom)
+            and node.level == 1
+            and node.module == "shadow"
+        ):
             imports.update(alias.name for alias in node.names)
     return imports
 

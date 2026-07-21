@@ -56,6 +56,10 @@ class Opportunity:
         detected_at: float | None = None,
     ) -> "Opportunity":
         now = time.time() if detected_at is None else detected_at
+        expected_gross_profit_base_units = _coerce_base_units(
+            expected_gross_profit,
+            "expected_gross_profit",
+        )
         return cls(
             strategy_name=strategy_name,
             opportunity_type=opportunity_type,
@@ -64,7 +68,7 @@ class Opportunity:
             input_mint=input_mint,
             output_mint=output_mint,
             proposed_amount_base_units=proposed_amount_base_units,
-            expected_gross_profit=expected_gross_profit,
+            expected_gross_profit=expected_gross_profit_base_units,
             expires_at=now + ttl_seconds,
             metadata=metadata or {},
         )

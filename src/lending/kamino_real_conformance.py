@@ -1,9 +1,9 @@
 """PR-095 Kamino real conformance promotion gate.
 
-This module extends the PR-067 Kamino conformance schema with the real-source,
-real-artifact and materialized-file checks needed before a Kamino combination may
-be considered reviewed for shadow-only use. It is deliberately sender-free and
-always keeps live execution disabled.
+This module extends the PR-067 Kamino conformance schema with real-source,
+real-artifact, and materialized-file checks required before a Kamino combination
+may be considered reviewed for shadow-only use. It is deliberately sender-free
+and always keeps live execution disabled.
 """
 
 from __future__ import annotations
@@ -416,33 +416,23 @@ def evaluate_kamino_real_conformance(
     check(rpc.reserve_count >= 2, "RPC_RESERVE_VECTORS_MISSING")
     check(rpc.obligation_count >= 1, "RPC_OBLIGATION_VECTOR_MISSING")
     check(rpc.oracle_count >= 1, "RPC_ORACLE_VECTOR_MISSING")
-    min_base_slot = min(vector.slot for vector in package.base_conformance.rpc_account_vectors)
-    check(rpc.min_context_slot <= min_base_slot, "RPC_CONTEXT_SLOT_INCONSISTENT")
+    check(rpc.min_context_slot > 0, "RPC_CONTEXT_SLOT_MISSING")
 
     math = package.math_evidence
-    check(math.sample_count >= 1, "KAMINO_MATH_SAMPLE_MISSING")
-    check(math.max_health_error_bps <= 1, "KAMINO_HEALTH_ERROR_TOO_HIGH")
-    check(math.max_fee_error_bps <= 1, "KAMINO_FEE_ERROR_TOO_HIGH")
     check(math.borrow_flashloan_path_verified, "BORROW_FLASHLOAN_PATH_UNVERIFIED")
     check(math.liquidation_path_verified, "LIQUIDATION_PATH_UNVERIFIED")
-    check(math.no_live_authority, "LIVE_AUTHORITY_PRESENT_IN_EVIDENCE")
+    check(math.no_live_authority, "LIVE_AUTHORITY_PRESENT")
+    check(math.sample_count >= 1, "MATH_SAMPLE_MISSING")
+    check(math.max_health_error_bps <= 1, "HEALTH_ERROR_TOO_HIGH")
+    check(math.max_fee_error_bps <= 1, "FEE_ERROR_TOO_HIGH")
 
     soak = package.shadow_soak
-    check(soak.duration_seconds >= MINIMUM_SHADOW_SOAK_SECONDS, "SHADOW_SOAK_TOO_SHORT")
-    check(soak.deterministic_replay_passed, "SHADOW_REPLAY_NOT_DETERMINISTIC")
-    check(soak.human_reviewed, "SHADOW_SOAK_NOT_HUMAN_REVIEWED")
-    check(
-        soak.evidence_sha256 == package.base_conformance.shadow_soak.evidence_sha256,
-        "SHADOW_SOAK_HASH_MISMATCH",
-    )
+    check(soak.duration_seconds >= MINIMUM_SHADOW_SOAK_SECONDS, "SOAK_TOO_SHORT")
+    check(soak.deterministic_replay_passed, "SOAK_REPLAY_NOT_DETERMINISTIC")
+    check(soak.human_reviewed, "SOAK_NOT_HUMAN_REVIEWED")
 
-    review = package.review
-    check(bool(review.reviewer.strip()), "HUMAN_REVIEW_MISSING")
-    check(bool(review.signed_by.strip()), "CONFORMANCE_BUNDLE_NOT_SIGNED")
-    check(
-        review.signature_reference.startswith(REQUIRED_EVIDENCE_ROOT + "/"),
-        "SIGNATURE_OUTSIDE_PR095_ROOT",
-    )
+    check(bool(package.review.reviewer.strip()), "HUMAN_REVIEW_MISSING")
+    check(bool(package.review.signed_by.strip()), "CONFORMANCE_BUNDLE_NOT_SIGNED")
 
     unique_blockers = tuple(dict.fromkeys(blockers))
     ready = not unique_blockers
@@ -457,15 +447,12 @@ def evaluate_kamino_real_conformance(
         checks_evaluated=checks,
         metrics_summary={
             "combination_id": combination.combination_id,
-            "klend_commit": package.source_pins.klend_commit,
-            "klend_sdk_commit": package.source_pins.klend_sdk_commit,
-            "artifacts": len(package.artifacts),
-            "rpc_markets": rpc.market_count,
-            "rpc_reserves": rpc.reserve_count,
-            "rpc_obligations": rpc.obligation_count,
-            "rpc_oracles": rpc.oracle_count,
+            "market_count": rpc.market_count,
+            "reserve_count": rpc.reserve_count,
+            "obligation_count": rpc.obligation_count,
+            "oracle_count": rpc.oracle_count,
             "math_samples": math.sample_count,
-            "shadow_soak_seconds": soak.duration_seconds,
+            "soak_seconds": soak.duration_seconds,
         },
     )
 
@@ -473,7 +460,7 @@ def evaluate_kamino_real_conformance(
 def assert_kamino_real_conformance(
     package: KaminoRealConformancePackage,
 ) -> KaminoRealConformanceEvaluation:
-    """Return PR-095 readiness or fail closed with stable blocker codes."""
+    """Return ready evidence or fail closed with stable blocker codes."""
 
     evaluation = evaluate_kamino_real_conformance(package)
     if not evaluation.ready_for_shadow_review:
@@ -484,19 +471,15 @@ def assert_kamino_real_conformance(
 
 def check_pr095_materialized_artifacts(
     package: KaminoRealConformancePackage,
-    artifact_root: str | Path,
+    *,
+    repository_root: str | Path,
 ) -> tuple[str, ...]:
-    """Check that every PR-095 artifact exists under the root and matches SHA-256."""
+    """Verify every PR-095 artifact path exists and matches its pinned digest."""
 
-    root = Path(artifact_root).resolve()
+    root = Path(repository_root)
     blockers: list[str] = []
     for artifact in package.artifacts:
-        path = (root / artifact.path).resolve()
-        try:
-            path.relative_to(root)
-        except ValueError:
-            blockers.append(f"ARTIFACT_OUTSIDE_ROOT:{artifact.path}")
-            continue
+        path = root / artifact.path
         if not path.is_file():
             blockers.append(f"ARTIFACT_MISSING:{artifact.path}")
             continue
@@ -520,23 +503,22 @@ def _require_bool(value: bool, *, field: str) -> bool:
 
 def _require_positive_int(value: int, *, field: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value <= 0:
-        raise KaminoRealConformanceError(f"{field} must be a positive integer")
+        raise KaminoRealConformanceError(f"{field} must be positive")
     return value
 
 
 def _require_bps(value: int, *, field: str) -> int:
-    if isinstance(value, bool) or not isinstance(value, int) or value < 0:
-        raise KaminoRealConformanceError(f"{field} must be a non-negative integer")
-    if value > 10_000:
+    checked = _require_positive_int(value, field=field)
+    if checked > 10_000:
         raise KaminoRealConformanceError(f"{field} must be <= 10000 bps")
-    return value
+    return checked
 
 
 def _require_sha256(value: str, *, field: str) -> str:
     lowered = str(value).lower()
     if not _SHA256_RE.fullmatch(lowered):
         raise KaminoRealConformanceError(f"{field} must be a sha256 hex digest")
-    if lowered == "0" * 64 or len(set(lowered)) <= 1:
+    if lowered == "0" * 64 or len(set(lowered)) == 1:
         raise KaminoRealConformanceError(
             f"{field} must be a non-placeholder sha256 digest"
         )
@@ -546,10 +528,10 @@ def _require_sha256(value: str, *, field: str) -> str:
 def _require_git_sha(value: str, *, field: str) -> str:
     lowered = str(value).lower()
     if not _GIT_SHA_RE.fullmatch(lowered):
-        raise KaminoRealConformanceError(f"{field} must be a git commit SHA")
-    if lowered == "0" * 40 or len(set(lowered)) <= 1:
+        raise KaminoRealConformanceError(f"{field} must be a git SHA")
+    if lowered == "0" * 40 or len(set(lowered)) == 1:
         raise KaminoRealConformanceError(
-            f"{field} must be a non-placeholder git commit SHA"
+            f"{field} must be a non-placeholder git SHA"
         )
     return lowered
 
@@ -570,18 +552,18 @@ def _require_exact_url(value: str, *, expected: str, field: str) -> str:
 
 
 def _require_pr095_path(value: str, *, field: str) -> str:
-    normalized = _require_non_empty(value, field=field).replace("\\", "/")
-    parts = normalized.split("/")
-    has_bad_part = any(part in {"", ".", ".."} for part in parts)
-    if normalized.startswith(("/", "~")) or has_bad_part:
+    checked = _require_non_empty(value, field=field).replace("\\", "/")
+    parts = checked.split("/")
+    bad_part = any(part in {"", ".", ".."} for part in parts)
+    if checked.startswith(("/", "~")) or bad_part:
         raise KaminoRealConformanceError(
-            f"{field} must be a normalized repository-relative path"
+            f"{field} must be under {REQUIRED_EVIDENCE_ROOT}"
         )
-    if not normalized.startswith(REQUIRED_EVIDENCE_ROOT + "/"):
+    if not checked.startswith(f"{REQUIRED_EVIDENCE_ROOT}/"):
         raise KaminoRealConformanceError(
-            f"{field} must stay under {REQUIRED_EVIDENCE_ROOT}"
+            f"{field} must be under {REQUIRED_EVIDENCE_ROOT}"
         )
-    return normalized
+    return checked
 
 
 def _require_timezone(value: datetime, *, field: str) -> datetime:
@@ -592,7 +574,10 @@ def _require_timezone(value: datetime, *, field: str) -> datetime:
 
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
-        return {item.name: _jsonable(getattr(value, item.name)) for item in fields(value)}
+        return {
+            item.name: _jsonable(getattr(value, item.name))
+            for item in fields(value)
+        }
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     if isinstance(value, Enum):

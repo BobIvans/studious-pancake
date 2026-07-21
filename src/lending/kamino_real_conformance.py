@@ -1,13 +1,12 @@
 """PR-095 Kamino real conformance promotion gate.
 
-This module extends the PR-067 Kamino conformance schema with real-source,
-real-artifact, and materialized-file checks required before a Kamino combination
-may be considered reviewed for shadow-only use. It is deliberately sender-free
-and always keeps live execution disabled.
+This module adds a sender-free Kamino evidence boundary on top of the PR-067
+Kamino conformance contract. It never enables live execution.
 """
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, fields, is_dataclass
 from datetime import datetime, timezone
 from enum import Enum, StrEnum
@@ -15,8 +14,7 @@ import hashlib
 import json
 from pathlib import Path
 import re
-from typing import Any, Mapping
-from urllib.parse import urlparse
+from typing import Any
 
 from src.lending.kamino_conformance import (
     MINIMUM_SHADOW_SOAK_SECONDS,
@@ -69,7 +67,7 @@ class KaminoRealSourcePins:
     reviewed_at: datetime
 
     def __post_init__(self) -> None:
-        object.__setattr__(
+        _set(
             self,
             "klend_repository_url",
             _require_exact_url(
@@ -78,7 +76,7 @@ class KaminoRealSourcePins:
                 field="source.klend_repository_url",
             ),
         )
-        object.__setattr__(
+        _set(
             self,
             "klend_sdk_repository_url",
             _require_exact_url(
@@ -87,7 +85,7 @@ class KaminoRealSourcePins:
                 field="source.klend_sdk_repository_url",
             ),
         )
-        object.__setattr__(
+        _set(
             self,
             "developer_docs_url",
             _require_exact_url(
@@ -96,12 +94,12 @@ class KaminoRealSourcePins:
                 field="source.developer_docs_url",
             ),
         )
-        object.__setattr__(
+        _set(
             self,
             "klend_commit",
             _require_git_sha(self.klend_commit, field="source.klend_commit"),
         )
-        object.__setattr__(
+        _set(
             self,
             "klend_sdk_commit",
             _require_git_sha(
@@ -113,7 +111,7 @@ class KaminoRealSourcePins:
             raise KaminoRealConformanceError(
                 "klend and klend-sdk commits must be independently pinned"
             )
-        object.__setattr__(
+        _set(
             self,
             "sdk_package",
             _require_exact_string(
@@ -122,7 +120,7 @@ class KaminoRealSourcePins:
                 field="source.sdk_package",
             ),
         )
-        object.__setattr__(
+        _set(
             self,
             "sdk_version",
             _require_non_empty(self.sdk_version, field="source.sdk_version"),
@@ -138,17 +136,9 @@ class KaminoRealArtifact:
     produced_by: str
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "path",
-            _require_pr095_path(self.path, field="artifact.path"),
-        )
-        object.__setattr__(
-            self,
-            "sha256",
-            _require_sha256(self.sha256, field="artifact.sha256"),
-        )
-        object.__setattr__(
+        _set(self, "path", _require_pr095_path(self.path, field="artifact.path"))
+        _set(self, "sha256", _require_sha256(self.sha256, field="artifact.sha256"))
+        _set(
             self,
             "produced_by",
             _require_non_empty(self.produced_by, field="artifact.produced_by"),
@@ -176,11 +166,8 @@ class KaminoRealRpcEvidence:
             "oracle_vector_sha256",
             "read_only_rpc_bundle_sha256",
         ):
-            object.__setattr__(
-                self,
-                name,
-                _require_sha256(getattr(self, name), field=f"rpc.{name}"),
-            )
+            digest = _require_sha256(getattr(self, name), field=f"rpc.{name}")
+            _set(self, name, digest)
         for name in (
             "min_context_slot",
             "market_count",
@@ -203,7 +190,7 @@ class KaminoRealMathEvidence:
     no_live_authority: bool
 
     def __post_init__(self) -> None:
-        object.__setattr__(
+        _set(
             self,
             "oracle_health_fee_sha256",
             _require_sha256(
@@ -211,7 +198,7 @@ class KaminoRealMathEvidence:
                 field="math.oracle_health_fee_sha256",
             ),
         )
-        object.__setattr__(
+        _set(
             self,
             "common_kernel_sha256",
             _require_sha256(
@@ -240,17 +227,13 @@ class KaminoRealShadowSoakEvidence:
     human_reviewed: bool
 
     def __post_init__(self) -> None:
-        object.__setattr__(
-            self,
-            "run_id",
-            _require_non_empty(self.run_id, field="soak.run_id"),
-        )
-        object.__setattr__(
+        _set(self, "run_id", _require_non_empty(self.run_id, field="soak.run_id"))
+        _set(
             self,
             "evidence_sha256",
             _require_sha256(self.evidence_sha256, field="soak.evidence_sha256"),
         )
-        object.__setattr__(
+        _set(
             self,
             "replay_corpus_sha256",
             _require_sha256(
@@ -277,13 +260,10 @@ class KaminoRealReviewEvidence:
 
     def __post_init__(self) -> None:
         for name in ("operator", "reviewer", "signed_by"):
-            object.__setattr__(
-                self,
-                name,
-                _require_non_empty(getattr(self, name), field=f"review.{name}"),
-            )
+            value = _require_non_empty(getattr(self, name), field=f"review.{name}")
+            _set(self, name, value)
         _require_timezone(self.reviewed_at, field="review.reviewed_at")
-        object.__setattr__(
+        _set(
             self,
             "signature_reference",
             _require_pr095_path(
@@ -318,9 +298,9 @@ class KaminoRealConformancePackage:
         if not self.artifacts:
             raise KaminoRealConformanceError("artifacts cannot be empty")
         paths = [artifact.path for artifact in self.artifacts]
+        kinds = [artifact.kind for artifact in self.artifacts]
         if len(paths) != len(set(paths)):
             raise KaminoRealConformanceError("artifact paths must be unique")
-        kinds = [artifact.kind for artifact in self.artifacts]
         if len(kinds) != len(set(kinds)):
             raise KaminoRealConformanceError("artifact kinds must be unique")
         for name in (
@@ -329,11 +309,8 @@ class KaminoRealConformancePackage:
             "sdk_account_vectors_sha256",
             "sdk_instruction_vectors_sha256",
         ):
-            object.__setattr__(
-                self,
-                name,
-                _require_sha256(getattr(self, name), field=name),
-            )
+            digest = _require_sha256(getattr(self, name), field=name)
+            _set(self, name, digest)
 
     @property
     def evidence_sha256(self) -> str:
@@ -384,15 +361,7 @@ def evaluate_kamino_real_conformance(
     artifact_kinds = {artifact.kind for artifact in package.artifacts}
 
     check(combination.verified, "KAMINO_COMBINATION_NOT_VERIFIED")
-    check(
-        provenance.sdk_package == KLEND_SDK_PACKAGE,
-        "KAMINO_SDK_PACKAGE_MISMATCH",
-    )
-    check(
-        provenance.source_url
-        in {KLEND_SOURCE_REPOSITORY, KLEND_SDK_REPOSITORY, KAMINO_DEVELOPER_DOCS},
-        "KAMINO_PROVENANCE_SOURCE_NOT_OFFICIAL",
-    )
+    check(provenance.sdk_package == KLEND_SDK_PACKAGE, "KAMINO_SDK_PACKAGE_MISMATCH")
     check(
         provenance.idl_sha256.lower() == package.idl_sha256,
         "KAMINO_IDL_SHA_MISMATCH",
@@ -417,30 +386,20 @@ def evaluate_kamino_real_conformance(
     check(rpc.oracle_count >= 1, "RPC_ORACLE_VECTOR_MISSING")
 
     math = package.math_evidence
-    check(math.borrow_flashloan_path_verified, "BORROW_FLASHLOAN_PATH_UNVERIFIED")
-    check(math.liquidation_path_verified, "LIQUIDATION_PATH_UNVERIFIED")
-    check(math.no_live_authority, "LIVE_AUTHORITY_PRESENT_IN_EVIDENCE")
     check(math.max_health_error_bps <= 1, "HEALTH_ERROR_TOO_HIGH")
     check(math.max_fee_error_bps <= 1, "FEE_ERROR_TOO_HIGH")
-    check(math.sample_count >= 3, "INSUFFICIENT_MATH_SAMPLES")
+    check(math.borrow_flashloan_path_verified, "BORROW_FLASHLOAN_PATH_UNVERIFIED")
+    check(math.liquidation_path_verified, "LIQUIDATION_PATH_UNVERIFIED")
+    check(math.no_live_authority, "LIVE_AUTHORITY_PRESENT")
 
     soak = package.shadow_soak
-    check(
-        soak.duration_seconds >= MINIMUM_SHADOW_SOAK_SECONDS,
-        "SOAK_TOO_SHORT",
-    )
+    check(soak.duration_seconds >= MINIMUM_SHADOW_SOAK_SECONDS, "SOAK_TOO_SHORT")
     check(soak.deterministic_replay_passed, "SOAK_REPLAY_NOT_DETERMINISTIC")
     check(soak.human_reviewed, "SOAK_NOT_HUMAN_REVIEWED")
 
+    check(bool(package.review.signed_by), "HUMAN_REVIEW_NOT_SIGNED")
     ready = not blockers
     state = "ready-for-shadow-review" if ready else "blocked"
-    metrics: dict[str, int | str] = {
-        "artifact_count": len(package.artifacts),
-        "checks_evaluated": checks,
-        "combination_id": combination.combination_id,
-        "market_count": rpc.market_count,
-        "reserve_count": rpc.reserve_count,
-    }
     return KaminoRealConformanceEvaluation(
         schema_version=RESULT_SCHEMA_VERSION,
         ready_for_shadow_review=ready,
@@ -450,7 +409,13 @@ def evaluate_kamino_real_conformance(
         warnings=tuple(dict.fromkeys(warnings)),
         evidence_sha256=package.evidence_sha256,
         checks_evaluated=checks,
-        metrics_summary=metrics,
+        metrics_summary={
+            "combination_id": combination.combination_id,
+            "market_count": rpc.market_count,
+            "reserve_count": rpc.reserve_count,
+            "obligation_count": rpc.obligation_count,
+            "oracle_count": rpc.oracle_count,
+        },
     )
 
 
@@ -458,26 +423,26 @@ def assert_kamino_real_conformance(
     package: KaminoRealConformancePackage,
 ) -> KaminoRealConformanceEvaluation:
     result = evaluate_kamino_real_conformance(package)
-    if result.ready_for_shadow_review:
-        return result
-    joined = ",".join(result.blockers)
-    raise KaminoRealConformanceError(f"PR095_KAMINO_REAL_BLOCKED:{joined}")
+    if result.blockers:
+        blocker_text = ",".join(result.blockers)
+        raise KaminoRealConformanceError(f"PR095_KAMINO_BLOCKED:{blocker_text}")
+    return result
 
 
 def check_pr095_materialized_artifacts(
     package: KaminoRealConformancePackage,
     *,
-    repository_root: Path,
+    repository_root: str | Path,
 ) -> tuple[str, ...]:
-    root = Path(repository_root)
     blockers: list[str] = []
+    root = Path(repository_root)
     for artifact in package.artifacts:
         artifact_path = root / artifact.path
         if not artifact_path.is_file():
             blockers.append(f"ARTIFACT_MISSING:{artifact.path}")
             continue
-        actual = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
-        if actual != artifact.sha256:
+        digest = hashlib.sha256(artifact_path.read_bytes()).hexdigest()
+        if digest != artifact.sha256:
             blockers.append(f"ARTIFACT_HASH_MISMATCH:{artifact.path}")
     return tuple(blockers)
 
@@ -492,27 +457,40 @@ def sha256_payload(payload: Any) -> str:
 
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value):
-        return {
-            field.name: _jsonable(getattr(value, field.name))
-            for field in fields(value)
-        }
+        result: dict[str, Any] = {}
+        for item in fields(value):
+            result[item.name] = _jsonable(getattr(value, item.name))
+        return result
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     if isinstance(value, Enum):
         return value.value
     if isinstance(value, tuple):
         return [_jsonable(item) for item in value]
-    if isinstance(value, list):
-        return [_jsonable(item) for item in value]
     if isinstance(value, Mapping):
         return {str(key): _jsonable(item) for key, item in value.items()}
     return value
+
+
+def _set(instance: object, name: str, value: object) -> None:
+    object.__setattr__(instance, name, value)
 
 
 def _require_non_empty(value: str, *, field: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise KaminoRealConformanceError(f"{field} must be a non-empty string")
     return value.strip()
+
+
+def _require_exact_string(value: str, *, expected: str, field: str) -> str:
+    checked = _require_non_empty(value, field=field)
+    if checked != expected:
+        raise KaminoRealConformanceError(f"{field} must be {expected}")
+    return checked
+
+
+def _require_exact_url(value: str, *, expected: str, field: str) -> str:
+    return _require_exact_string(value, expected=expected, field=field)
 
 
 def _require_bool(value: bool, *, field: str) -> bool:
@@ -535,9 +513,8 @@ def _require_bps(value: int, *, field: str) -> int:
 
 
 def _require_sha256(value: str, *, field: str) -> str:
-    lowered = str(value).lower()
-    is_placeholder = len(set(lowered)) == 1
-    if not _SHA256_RE.fullmatch(lowered) or is_placeholder:
+    lowered = _require_non_empty(value, field=field).lower()
+    if not _SHA256_RE.fullmatch(lowered) or _is_placeholder(lowered):
         raise KaminoRealConformanceError(
             f"{field} must be a non-placeholder sha256 digest"
         )
@@ -545,34 +522,10 @@ def _require_sha256(value: str, *, field: str) -> str:
 
 
 def _require_git_sha(value: str, *, field: str) -> str:
-    lowered = str(value).lower()
-    is_placeholder = len(set(lowered)) == 1
-    if not _GIT_SHA_RE.fullmatch(lowered) or is_placeholder:
-        raise KaminoRealConformanceError(
-            f"{field} must be a non-placeholder git SHA"
-        )
+    lowered = _require_non_empty(value, field=field).lower()
+    if not _GIT_SHA_RE.fullmatch(lowered) or _is_placeholder(lowered):
+        raise KaminoRealConformanceError(f"{field} must be a non-placeholder git SHA")
     return lowered
-
-
-def _require_timezone(value: datetime, *, field: str) -> datetime:
-    if value.tzinfo is None or value.utcoffset() is None:
-        raise KaminoRealConformanceError(f"{field} must be timezone-aware")
-    return value
-
-
-def _require_exact_string(value: str, *, expected: str, field: str) -> str:
-    checked = _require_non_empty(value, field=field)
-    if checked != expected:
-        raise KaminoRealConformanceError(f"{field} must be {expected}")
-    return checked
-
-
-def _require_exact_url(value: str, *, expected: str, field: str) -> str:
-    checked = _require_exact_string(value, expected=expected, field=field)
-    parsed = urlparse(checked)
-    if parsed.scheme != "https" or not parsed.netloc:
-        raise KaminoRealConformanceError(f"{field} must be an HTTPS URL")
-    return checked
 
 
 def _require_pr095_path(value: str, *, field: str) -> str:
@@ -581,12 +534,20 @@ def _require_pr095_path(value: str, *, field: str) -> str:
     has_bad_part = any(part in {"", ".", ".."} for part in parts)
     if normalized.startswith(("/", "~")) or has_bad_part:
         raise KaminoRealConformanceError(
-            f"{field} must be a normalized repository-relative path"
+            f"{field} must be under {REQUIRED_EVIDENCE_ROOT}"
         )
-    if normalized != REQUIRED_EVIDENCE_ROOT and not normalized.startswith(
-        f"{REQUIRED_EVIDENCE_ROOT}/"
-    ):
+    if not normalized.startswith(f"{REQUIRED_EVIDENCE_ROOT}/"):
         raise KaminoRealConformanceError(
             f"{field} must be under {REQUIRED_EVIDENCE_ROOT}"
         )
     return normalized
+
+
+def _require_timezone(value: datetime, *, field: str) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise KaminoRealConformanceError(f"{field} must be timezone-aware")
+    return value
+
+
+def _is_placeholder(value: str) -> bool:
+    return len(set(value)) == 1

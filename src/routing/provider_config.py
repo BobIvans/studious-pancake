@@ -56,22 +56,35 @@ def _enabled(
     return default
 
 
+def _coerce_secret_reference(value: Any, label: str) -> Any | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, (str, SecretReference)):
+        return SecretReference.parse(value)
+    if hasattr(value, "resolve_from_environment"):
+        # Some older unit tests pass a minimal duck-typed secret reference.  Keep
+        # accepting it here so this PR changes provider admission only, not the
+        # public build_runtime_discovery test contract.
+        return value
+    raise ConfigurationLoadError(f"{label} must be a secret reference")
+
+
 def _secret_reference(
     section: Any | None,
     environ: Mapping[str, str],
     env_name: str,
     attribute: str,
-) -> SecretReference | None:
+) -> Any | None:
     raw = environ.get(env_name)
     if raw is not None and raw != "":
-        return SecretReference.parse(raw)
+        return _coerce_secret_reference(raw, env_name)
     if section is not None and hasattr(section, attribute):
-        return SecretReference.parse(getattr(section, attribute))
+        return _coerce_secret_reference(getattr(section, attribute), attribute)
     return None
 
 
 def _resolve(
-    reference: SecretReference | None,
+    reference: Any | None,
     environ: Mapping[str, str],
 ) -> str | None:
     if reference is None:
@@ -79,8 +92,12 @@ def _resolve(
     return reference.resolve_from_environment(environ)
 
 
-def _redacted(reference: SecretReference | None) -> str | None:
-    return reference.display() if reference is not None else None
+def _redacted(reference: Any | None) -> str | None:
+    if reference is None:
+        return None
+    if hasattr(reference, "display"):
+        return str(reference.display())
+    return "secret:<redacted>"
 
 
 @dataclass(frozen=True)
@@ -88,17 +105,17 @@ class DiscoveryProviderRuntimeConfig:
     """Runtime-admitted provider settings with secret-safe representation."""
 
     jupiter_enabled: bool = False
-    jupiter_api_key_reference: SecretReference | None = None
+    jupiter_api_key_reference: Any | None = None
     jupiter_api_key: str | None = field(default=None, repr=False)
     okx_enabled: bool = False
-    okx_api_key_reference: SecretReference | None = None
-    okx_passphrase_reference: SecretReference | None = None
-    okx_secret_key_reference: SecretReference | None = None
+    okx_api_key_reference: Any | None = None
+    okx_passphrase_reference: Any | None = None
+    okx_secret_key_reference: Any | None = None
     okx_api_key: str | None = field(default=None, repr=False)
     okx_passphrase: str | None = field(default=None, repr=False)
     okx_secret_key: str | None = field(default=None, repr=False)
     openocean_enabled: bool = False
-    openocean_api_key_reference: SecretReference | None = None
+    openocean_api_key_reference: Any | None = None
     openocean_api_key: str | None = field(default=None, repr=False)
     odos_enabled: bool = False
 

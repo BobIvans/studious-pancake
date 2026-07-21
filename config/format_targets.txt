@@ -69,8 +69,10 @@ tests/test_pr040_rpc_ws.py
 src/economics/__init__.py
 src/economics/durable_reservations.py
 src/economics/exact_fee_workflow.py
+src/economics/non_monotonic_sizing.py
 tests/test_pr057_durable_capital_reservations.py
 tests/test_pr074_exact_fee_capital_workflow.py
+tests/test_pr118_non_monotonic_sizing.py
 src/venues/pump/promotion.py
 tests/test_pr065_pump_promotion_guard.py
 src/runtime_discovery.py

@@ -79,6 +79,7 @@ src/paper_shadow/composition.py
 tests/test_pr075_atomic_runtime_stages.py
 tests/test_pr076_paper_shadow_exit_semantics.py
 tests/test_pr089_active_paper_composition_root.py
+tests/test_pr090_readme_runtime_truth.py
 src/shadow_soak/real_soak.py
 tests/test_pr079_real_shadow_soak.py
 src/submission/lifecycle_integration.py

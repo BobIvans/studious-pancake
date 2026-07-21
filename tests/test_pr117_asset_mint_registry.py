@@ -63,8 +63,7 @@ def test_pr117_rejects_address_and_decimals_only_tradable_asset(tmp_path: Path) 
 
     assert result.registry_valid is False
     assert any(
-        blocker.startswith("PR117_ASSET_ENTRY_INVALID")
-        for blocker in result.blockers
+        blocker.startswith("PR117_ASSET_ENTRY_INVALID") for blocker in result.blockers
     )
 
 

@@ -36,6 +36,9 @@ src/security/secret_scan.py
 src/security/signer_policy.py
 src/security/supply_chain.py
 tests/test_pr043_wallet_supply_chain.py
+src/durability/__init__.py
+src/durability/single_truth.py
+tests/test_pr121_single_durable_lifecycle_truth.py
 src/lending/__init__.py
 src/lending/kamino.py
 src/lending/kamino_conformance.py

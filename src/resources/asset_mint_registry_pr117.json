@@ -1,0 +1,219 @@
+{
+  "schema_version": "pr117.asset-mint-registry.v1",
+  "policy": {
+    "all_token_2022_fail_closed": true,
+    "first_vertical": "legacy-spl-only-until-reviewed-token2022-matrix",
+    "execution_claimed": false
+  },
+  "token_2022_extension_matrix": {
+    "extensions": [
+      {
+        "name": "transfer_fee_config",
+        "disposition": "forbidden",
+        "reason": "fee math and epoch state not yet attested"
+      },
+      {
+        "name": "transfer_fee_amount",
+        "disposition": "forbidden",
+        "reason": "withheld fee accounting not yet attested"
+      },
+      {
+        "name": "transfer_hook",
+        "disposition": "forbidden",
+        "reason": "hook program and extra metas not yet pinned"
+      },
+      {
+        "name": "permanent_delegate",
+        "disposition": "forbidden",
+        "reason": "delegate authority can change transfer semantics"
+      },
+      {
+        "name": "default_account_state",
+        "disposition": "forbidden",
+        "reason": "frozen/default state not yet proven safe"
+      },
+      {
+        "name": "non_transferable",
+        "disposition": "forbidden",
+        "reason": "not compatible with arbitrage settlement"
+      },
+      {
+        "name": "memo_transfer",
+        "disposition": "forbidden",
+        "reason": "memo requirements not integrated into planner"
+      },
+      {
+        "name": "cpi_guard",
+        "disposition": "forbidden",
+        "reason": "CPI restrictions not integrated into planner"
+      },
+      {
+        "name": "interest_bearing",
+        "disposition": "forbidden",
+        "reason": "amount math not yet epoch/rate aware"
+      },
+      {
+        "name": "confidential_transfer",
+        "disposition": "forbidden",
+        "reason": "confidential balances unsupported"
+      },
+      {
+        "name": "confidential_transfer_fee",
+        "disposition": "forbidden",
+        "reason": "confidential fee accounting unsupported"
+      }
+    ]
+  },
+  "assets": [
+    {
+      "symbol": "SOL",
+      "mint": "So11111111111111111111111111111111111111112",
+      "cluster": "mainnet-beta",
+      "token_program": "legacy-spl-token",
+      "token_program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 9,
+      "asset_class": "wrapped-native",
+      "admission": "discovery-only",
+      "provenance": "Wrapped SOL candidate from discovery_universe; no PR-117 RPC evidence committed.",
+      "rpc_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "authority_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "extensions": [],
+      "oracle_evidence": null,
+      "redemption_evidence": null,
+      "reviewed": false,
+      "reviewer": null
+    },
+    {
+      "symbol": "USDC",
+      "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "cluster": "mainnet-beta",
+      "token_program": "legacy-spl-token",
+      "token_program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 6,
+      "asset_class": "stablecoin",
+      "admission": "discovery-only",
+      "provenance": "USDC candidate from discovery_universe; no authority/RPC evidence committed.",
+      "rpc_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "authority_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "extensions": [],
+      "oracle_evidence": null,
+      "redemption_evidence": null,
+      "reviewed": false,
+      "reviewer": null
+    },
+    {
+      "symbol": "JitoSOL",
+      "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+      "cluster": "mainnet-beta",
+      "token_program": "legacy-spl-token",
+      "token_program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 9,
+      "asset_class": "lst",
+      "admission": "discovery-only",
+      "provenance": "LST candidate requires later oracle/redemption policy before execution.",
+      "rpc_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "authority_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "extensions": [],
+      "oracle_evidence": null,
+      "redemption_evidence": null,
+      "reviewed": false,
+      "reviewer": null
+    },
+    {
+      "symbol": "mSOL",
+      "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+      "cluster": "mainnet-beta",
+      "token_program": "legacy-spl-token",
+      "token_program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 9,
+      "asset_class": "lst",
+      "admission": "discovery-only",
+      "provenance": "LST candidate requires later oracle/redemption policy before execution.",
+      "rpc_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "authority_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "extensions": [],
+      "oracle_evidence": null,
+      "redemption_evidence": null,
+      "reviewed": false,
+      "reviewer": null
+    },
+    {
+      "symbol": "bSOL",
+      "mint": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
+      "cluster": "mainnet-beta",
+      "token_program": "legacy-spl-token",
+      "token_program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 9,
+      "asset_class": "lst",
+      "admission": "discovery-only",
+      "provenance": "LST candidate requires later oracle/redemption policy before execution.",
+      "rpc_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "authority_evidence": {
+        "status": "pending",
+        "slot": null,
+        "sha256": null,
+        "source": "not-attested-in-pr117-bootstrap",
+        "reviewer": null
+      },
+      "extensions": [],
+      "oracle_evidence": null,
+      "redemption_evidence": null,
+      "reviewed": false,
+      "reviewer": null
+    }
+  ]
+}

@@ -71,6 +71,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr101_marginfi_complete_protocol_evidence.py",
         "tests/test_pr106_canonical_sender_lifecycle_disabled.py",
         "tests/test_pr116_coherent_marginfi_snapshot_oracle.py",
+        "tests/test_pr121_single_durable_lifecycle_truth.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",

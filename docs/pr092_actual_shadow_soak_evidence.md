@@ -47,6 +47,13 @@ submissions, recorded fixtures, missing prerequisites, missing artifacts, digest
 mismatches, insufficient duration, replay failures, reconciliation mismatches, or
 stale unsafe PR-060 evidence.
 
+## Formatting note
+
+The PR-092 module and focused test are not added to the current incremental
+Black baseline in this slice. They remain covered by compile and full pytest
+verification, and should be added to `config/format_targets.txt` after the next
+formatting cleanup or when the repository's full formatting target is widened.
+
 ## Suggested verification
 
 ```bash

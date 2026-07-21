@@ -46,10 +46,18 @@ def test_pr115_decodes_legacy_spl_token_amounts_from_raw_bytes() -> None:
     proof = build_pr115_simulation_owned_economic_proof(
         monitored_accounts=(ADDRESS,),
         pre_state_accounts=(
-            _account(lamports=2_039_280, owner=SPL_TOKEN_PROGRAM_ID, data=_token_account(100)),
+            _account(
+                lamports=2_039_280,
+                owner=SPL_TOKEN_PROGRAM_ID,
+                data=_token_account(100),
+            ),
         ),
         post_state_accounts=(
-            _account(lamports=2_039_280, owner=SPL_TOKEN_PROGRAM_ID, data=_token_account(175)),
+            _account(
+                lamports=2_039_280,
+                owner=SPL_TOKEN_PROGRAM_ID,
+                data=_token_account(175),
+            ),
         ),
         message_hash=MESSAGE_HASH,
         simulation_response_hash=SIM_RESPONSE_HASH,
@@ -82,9 +90,21 @@ def test_pr115_copied_hashes_do_not_authorize_different_raw_accounts() -> None:
     ("pre_accounts", "post_accounts", "message"),
     (
         ((None,), (_account(lamports=1),), "missing_account"),
-        ((_account(lamports=1),), (_account(lamports=2), _account(lamports=3)), "unrequested_account"),
-        ((_account(lamports=1),), (_account(lamports=2, owner=TOKEN_2022_PROGRAM_ID),), "unsupported_token_2022"),
-        ((_account(lamports=1),), (_account(lamports=2, executable=True),), "unexpected_executable"),
+        (
+            (_account(lamports=1),),
+            (_account(lamports=2), _account(lamports=3)),
+            "unrequested_account",
+        ),
+        (
+            (_account(lamports=1, owner=TOKEN_2022_PROGRAM_ID),),
+            (_account(lamports=2, owner=TOKEN_2022_PROGRAM_ID),),
+            "unsupported_token_2022",
+        ),
+        (
+            (_account(lamports=1),),
+            (_account(lamports=2, executable=True),),
+            "unexpected_executable",
+        ),
     ),
 )
 def test_pr115_rejects_unproven_raw_account_shapes(

@@ -107,9 +107,7 @@ def evaluate_runtime_admission(
         "verified"
         if execution_allowed
         else (
-            "disabled-contract-drift"
-            if not drift.ok
-            else "disabled-contract-admission"
+            "disabled-contract-drift" if not drift.ok else "disabled-contract-admission"
         )
     )
     return RuntimeAdmissionReport(

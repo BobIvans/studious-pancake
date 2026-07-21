@@ -256,9 +256,10 @@ async def test_coordinator_requests_second_leg_for_each_exact_first_output() -> 
     assert second_amounts == [110, 120]
     assert len(report.opportunities) == 1
     route = report.opportunities[0].metadata["route"]
-    assert route[1]["in_amount"] == report.opportunities[0].metadata[
-        "intermediate_amount_base_units"
-    ]
+    assert (
+        route[1]["in_amount"]
+        == report.opportunities[0].metadata["intermediate_amount_base_units"]
+    )
     assert route[1]["request_fingerprint"] in {
         plane.calls[1].fingerprint,
         plane.calls[2].fingerprint,

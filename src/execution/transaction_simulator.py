@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+from typing import Any, cast
 
 from .models import (
     AccountSnapshot,
@@ -11,12 +12,60 @@ from .models import (
     SimulationReport,
     TokenDelta,
 )
-from .shadow import (
-    CanonicalSimulator,
-    CompilerDiagnostics,
-    SimulationRequest,
-    parse_simulation_response,
-)
+
+try:
+    from .shadow import (
+        CanonicalSimulator,
+        CompilerDiagnostics,
+        SimulationRequest,
+        parse_simulation_response,
+    )
+except ModuleNotFoundError:  # pragma: no cover - exercised by installed package smoke
+
+    class CompilerDiagnostics:
+        """Compatibility placeholder when quarantined shadow code is not packaged."""
+
+        def __init__(
+            self,
+            static_account_keys: tuple[str, ...] = (),
+            loaded_writable: tuple[str, ...] = (),
+            loaded_readonly: tuple[str, ...] = (),
+        ) -> None:
+            self.static_account_keys = static_account_keys
+            self.loaded_writable = loaded_writable
+            self.loaded_readonly = loaded_readonly
+
+    class SimulationRequest:
+        """Fail-closed placeholder for the removed PR-013 shadow request shape."""
+
+        def rpc_payload(self) -> dict[str, object]:
+            raise RuntimeError(
+                "legacy shadow SimulationRequest is quarantined and is not present "
+                "in the installed production package"
+            )
+
+    class CanonicalSimulator:
+        """Fail-closed placeholder when legacy shadow simulation is not packaged."""
+
+        def __init__(
+            self,
+            rpc: RpcClient | None = None,
+            *_: object,
+            **__: object,
+        ) -> None:
+            self.rpc = rpc
+
+        async def simulate(self, _: SimulationRequest) -> SimulationReport:
+            raise RuntimeError(
+                "legacy shadow CanonicalSimulator is quarantined and is not present "
+                "in the installed production package"
+            )
+
+    def parse_simulation_response(*_: object, **__: object) -> SimulationReport:
+        raise RuntimeError(
+            "legacy shadow parse_simulation_response is quarantined and is not "
+            "present in the installed production package"
+        )
 
 
 class TransactionSimulator(CanonicalSimulator):
@@ -82,28 +131,37 @@ class TransactionSimulator(CanonicalSimulator):
             accounts.extend(str(getattr(meta, "pubkey", meta)) for meta in ix.accounts)
         return tuple(dict.fromkeys(accounts))
 
-    async def _get_multiple_accounts(self, addresses: tuple[str, ...]) -> tuple[AccountSnapshot, ...]:
+    async def _get_multiple_accounts(
+        self, addresses: tuple[str, ...]
+    ) -> tuple[AccountSnapshot, ...]:
         if not addresses:
             return ()
-        resp = await self.rpc.call("getMultipleAccounts", [list(addresses), {"encoding": "base64"}])
+        resp = await self.rpc.call(
+            "getMultipleAccounts", [list(addresses), {"encoding": "base64"}]
+        )
         vals = (resp.get("value") if isinstance(resp, dict) else resp) or []
-        return tuple(self._account(address, item or {}) for address, item in zip(addresses, vals))
+        return tuple(
+            self._account(address, item or {}) for address, item in zip(addresses, vals)
+        )
 
     def _decode_simulation_accounts(
         self, addresses: tuple[str, ...], accounts: list[object]
     ) -> tuple[AccountSnapshot, ...]:
-        return tuple(self._account(address, item or {}) for address, item in zip(addresses, accounts))
+        return tuple(
+            self._account(address, item or {}) for address, item in zip(addresses, accounts)
+        )
 
     def _account(self, address: str, item: object) -> AccountSnapshot:
-        data = item.get("data") or ["", "base64"]
+        raw_item = cast(dict[str, Any], item)
+        data = raw_item.get("data") or ["", "base64"]
         raw = base64.b64decode(data[0]) if isinstance(data, list) and data and data[0] else b""
         return AccountSnapshot(
             address,
-            int(item.get("lamports") or 0),
-            item.get("owner") or "",
+            int(raw_item.get("lamports") or 0),
+            raw_item.get("owner") or "",
             raw,
-            bool(item.get("executable") or False),
-            item.get("rentEpoch"),
+            bool(raw_item.get("executable") or False),
+            raw_item.get("rentEpoch"),
         )
 
     def _token_deltas(

@@ -1,8 +1,8 @@
-"""Production-grade paper/shadow runner boundary for PR-038.
+"""Production-grade paper/shadow runner boundary for PR-038/PR-089.
 
 The package is intentionally sender-free.  It records durable lifecycle evidence
 for the same high-level stages that live will later use, while fail-closing when
-an upstream stage from PR-033..PR-037 is not present on the current branch.
+required upstream evidence is not present on the current branch.
 """
 
 from src.paper_shadow.atomic_runtime_stages import (
@@ -21,6 +21,14 @@ from src.paper_shadow.atomic_vertical import (
     AtomicVerticalResult,
     AtomicVerticalTrace,
 )
+from src.paper_shadow.composition import (
+    PR089_COMPOSITION_SCHEMA,
+    PR089_MISSING_ATOMIC_DEPENDENCIES,
+    PaperShadowDependencyGate,
+    PaperShadowRuntime,
+    PaperShadowRuntimeDependencies,
+    build_paper_shadow_runtime,
+)
 from src.paper_shadow.journal import JsonlPaperShadowJournal, PaperShadowEvent
 from src.paper_shadow.runner import (
     PAPER_SHADOW_REQUIRED_STAGES,
@@ -30,6 +38,7 @@ from src.paper_shadow.runner import (
     PaperShadowRunnerConfig,
     PaperShadowStageContext,
     PaperShadowStageName,
+    paper_shadow_stage_blocked,
 )
 
 __all__ = [
@@ -47,11 +56,18 @@ __all__ = [
     "AtomicVerticalTrace",
     "JsonlPaperShadowJournal",
     "PAPER_SHADOW_REQUIRED_STAGES",
+    "PR089_COMPOSITION_SCHEMA",
+    "PR089_MISSING_ATOMIC_DEPENDENCIES",
+    "PaperShadowDependencyGate",
     "PaperShadowEvent",
     "PaperShadowRunStatus",
     "PaperShadowRunSummary",
     "PaperShadowRunner",
     "PaperShadowRunnerConfig",
+    "PaperShadowRuntime",
+    "PaperShadowRuntimeDependencies",
     "PaperShadowStageContext",
     "PaperShadowStageName",
+    "build_paper_shadow_runtime",
+    "paper_shadow_stage_blocked",
 ]

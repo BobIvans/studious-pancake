@@ -59,6 +59,35 @@
     "token_2022_paths_verified": false,
     "status": "blocked-missing-readonly-mainnet-evidence"
   },
+  "protocol_conformance": {
+    "schema_version": "pr088.marginfi-protocol-conformance.v1",
+    "status": "blocked-missing-protocol-evidence",
+    "shadow_execution_capable": false,
+    "live_allowed": false,
+    "required_artifact_kinds": [
+      "idl",
+      "account-layouts",
+      "sdk-account-vectors",
+      "sdk-instruction-vectors",
+      "readonly-rpc-evidence",
+      "flashloan-meta-proof",
+      "token-2022-proof",
+      "repayment-math-proof",
+      "human-review"
+    ],
+    "required_instruction_names": [
+      "lending_account_start_flashloan",
+      "lending_account_borrow",
+      "lending_account_repay",
+      "lending_account_end_flashloan"
+    ],
+    "official_sources_reviewed": [
+      "https://docs.marginfi.com/mfi-v2",
+      "https://docs.marginfi.com/ts-sdk",
+      "https://solana.com/docs/programs/verified-builds"
+    ],
+    "blocking_reason": "Real canonical IDL, SDK-generated vectors, read-only RPC account evidence, flashloan meta proof, Token-2022 proof, repayment math proof and human review package have not been committed."
+  },
   "promotion": {
     "execution_conformance_verified": false,
     "human_reviewed": false,

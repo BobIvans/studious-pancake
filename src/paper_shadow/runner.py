@@ -64,9 +64,37 @@ _FORBIDDEN_OUTPUT_KEYS = frozenset(
     }
 )
 
+_STAGE_BLOCKED_MARKER = "paper_shadow_stage_blocked"
+_STAGE_BLOCKED_REASON = "paper_shadow_stage_block_reason"
+
 _READY_STATUSES = frozenset(
     {PaperShadowRunStatus.HEALTHY_IDLE, PaperShadowRunStatus.PAPER_OUTCOME}
 )
+
+
+def paper_shadow_stage_blocked(
+    reason_code: str,
+    *,
+    details: Mapping[str, Any] | None = None,
+) -> Mapping[str, Any]:
+    """Return a safe stage payload that stops a candidate as ``blocked``.
+
+    PR-089 needs active stage wiring without pretending that missing MarginFi,
+    Jupiter, account, capital, or lifecycle evidence is usable.  Stage handlers
+    can therefore return this sentinel to create a durable ``stage_blocked``
+    journal event and a non-zero blocked summary, instead of raising an
+    infrastructure failure or falling back to ``blocked_missing_stage_*``.
+    """
+
+    reason = str(reason_code).strip()
+    if not reason:
+        raise ValueError("paper/shadow blocked stage reason_code is required")
+    payload = dict(details or {})
+    payload[_STAGE_BLOCKED_MARKER] = True
+    payload[_STAGE_BLOCKED_REASON] = reason
+    payload.setdefault("executed", False)
+    payload.setdefault("synthetic_fill", False)
+    return payload
 
 
 @dataclass(frozen=True, slots=True)
@@ -144,6 +172,7 @@ class PaperShadowRunner:
         self.stages = dict(stages or {})
         self._next_sequence = self.journal.next_sequence()
         self._events_written = 0
+        self._last_stage_block_reason: str | None = None
 
     def _append(
         self,
@@ -256,10 +285,12 @@ class PaperShadowRunner:
     ) -> Mapping[str, Any] | None:
         handler = self.stages.get(stage)
         if handler is None:
+            reason_code = f"blocked_missing_stage_{stage.value}"
+            self._last_stage_block_reason = reason_code
             self._append(
                 event_type="stage_blocked",
                 status="blocked",
-                reason_code=f"blocked_missing_stage_{stage.value}",
+                reason_code=reason_code,
                 stage=stage,
                 opportunity=opportunity,
                 details={
@@ -287,6 +318,27 @@ class PaperShadowRunner:
         )
         self._assert_stage_output_safe(stage, output)
         safe_output = dict(output)
+        blocked_marker = safe_output.pop(_STAGE_BLOCKED_MARKER, False)
+        blocked_reason = safe_output.pop(
+            _STAGE_BLOCKED_REASON,
+            f"blocked_{stage.value}",
+        )
+        if blocked_marker is True:
+            reason_code = str(blocked_reason)
+            safe_output.setdefault("required_stage", stage.value)
+            safe_output.setdefault("executed", False)
+            safe_output.setdefault("synthetic_fill", False)
+            self._last_stage_block_reason = reason_code
+            self._append(
+                event_type="stage_blocked",
+                status="blocked",
+                reason_code=reason_code,
+                stage=stage,
+                opportunity=opportunity,
+                details=safe_output,
+            )
+            return None
+
         self._append(
             event_type="stage_completed",
             status="succeeded",
@@ -318,6 +370,7 @@ class PaperShadowRunner:
         report dependency degradation.
         """
 
+        self._last_stage_block_reason = None
         evidence = self._normalise_upstream_evidence(upstream_cycle_evidence)
         upstream_completed = upstream_cycle_completed or (
             evidence.get("cycle_succeeded") is True
@@ -429,10 +482,14 @@ class PaperShadowRunner:
                 for stage in PAPER_SHADOW_REQUIRED_STAGES:
                     output = await self._run_stage(opportunity, stage, outputs)
                     if output is None:
+                        terminal_reason = (
+                            self._last_stage_block_reason
+                            or f"blocked_missing_stage_{stage.value}"
+                        )
                         return self._summary(
                             PaperShadowRunStatus.BLOCKED,
                             candidates_seen=candidates_seen,
-                            terminal_reason=f"blocked_missing_stage_{stage.value}",
+                            terminal_reason=terminal_reason,
                             dependency_reasons=dependency_reasons,
                             upstream_cycle_evidence=evidence,
                         )

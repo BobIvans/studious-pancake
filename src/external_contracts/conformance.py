@@ -14,11 +14,13 @@ from typing import Any, Callable, Mapping, cast
 from urllib import request
 from urllib.parse import urlparse
 
+from src.config.chain_registry import ChainRegistryError, validate_pubkey
 from src.external_contracts.models import (
     ConformanceProbe,
     CredentialMode,
     ExternalContract,
     JsonPathAssertion,
+    JsonSemanticType,
     JsonValueType,
 )
 
@@ -131,6 +133,20 @@ def _json_type_matches(value: Any, expected_type: JsonValueType) -> bool:
     return False
 
 
+def _semantic_matches(value: Any, expected: JsonSemanticType) -> bool:
+    if expected is JsonSemanticType.PUBKEY:
+        if not isinstance(value, str):
+            return False
+        try:
+            validate_pubkey(value, field="conformance_json_path")
+        except ChainRegistryError:
+            return False
+        return True
+    if expected is JsonSemanticType.INTEGER_STRING:
+        return isinstance(value, str) and value.isdecimal()
+    return False
+
+
 def _declared_required_env(probe: ConformanceProbe) -> tuple[str, ...]:
     if probe.required_env:
         return probe.required_env
@@ -160,7 +176,7 @@ def _headers_for_probe(
 ) -> tuple[dict[str, str], tuple[str, ...], tuple[str, ...]]:
     headers = {
         "accept": "application/json",
-        "user-agent": "flashloan-contracts/pr070",
+        "user-agent": "flashloan-contracts/pr086",
     }
     if probe.json_body is not None:
         headers["content-type"] = "application/json"
@@ -264,6 +280,14 @@ def _append_business_code_assertion(
     )
 
 
+def _append_forbidden_path_assertions(
+    payload: Any, probe: ConformanceProbe, assertions: list[str]
+) -> None:
+    for path in probe.forbidden_json_paths:
+        absent = not _json_path_present(payload, path)
+        assertions.append(f"json-forbidden:{path}:{'ok' if absent else 'failed'}")
+
+
 def _append_json_assertion(
     payload: Any, assertion: JsonPathAssertion, assertions: list[str]
 ) -> None:
@@ -288,6 +312,27 @@ def _append_json_assertion(
         equals_ok = value == assertion.expected_value
         assertions.append(
             f"json-equals:{assertion.path}:{'ok' if equals_ok else 'failed'}"
+        )
+    if assertion.enum_values:
+        enum_ok = value in assertion.enum_values
+        assertions.append(
+            f"json-enum:{assertion.path}:{'ok' if enum_ok else 'failed'}"
+        )
+    if assertion.semantic_type is not None:
+        semantic_ok = _semantic_matches(value, assertion.semantic_type)
+        assertions.append(
+            f"json-semantic:{assertion.path}:{assertion.semantic_type.value}:"
+            f"{'ok' if semantic_ok else 'failed'}"
+        )
+    if assertion.array_item_semantic_type is not None:
+        item_ok = isinstance(value, list) and all(
+            _semantic_matches(item, assertion.array_item_semantic_type)
+            for item in value
+        )
+        assertions.append(
+            f"json-array-semantic:{assertion.path}:"
+            f"{assertion.array_item_semantic_type.value}:"
+            f"{'ok' if item_ok else 'failed'}"
         )
 
 
@@ -355,6 +400,7 @@ def run_read_only_conformance(
         payload: Any | None = None
         needs_json = bool(
             probe.required_json_paths
+            or probe.forbidden_json_paths
             or (
                 strict_assertions
                 and (probe.json_assertions or probe.business_code_path is not None)
@@ -367,6 +413,9 @@ def run_read_only_conformance(
             for path in probe.required_json_paths:
                 present = _json_path_present(payload, path)
                 assertions.append(f"json-path:{path}:{'ok' if present else 'failed'}")
+        if probe.forbidden_json_paths and strict_assertions:
+            assert payload is not None
+            _append_forbidden_path_assertions(payload, probe, assertions)
         if probe.business_code_path is not None and strict_assertions:
             assert payload is not None
             _append_business_code_assertion(payload, probe, assertions)

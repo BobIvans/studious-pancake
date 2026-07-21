@@ -190,33 +190,55 @@ class RuntimeDiscoveryCoordinator:
                 degraded_reasons=tuple(degraded),
             )
 
-        intermediate_amount = max(snapshot.out_amount for snapshot in first)
-        second_request = QuoteRequest(
-            input_mint=pair.intermediate_mint,
-            output_mint=pair.base_mint,
-            amount_base_units=intermediate_amount,
-            user_wallet=str(self.user_wallet),
-            slippage_bps=self.universe.slippage_bps,
-            input_decimals=item.intermediate_decimals,
-            output_decimals=item.base_decimals,
-        )
-        second_batch = await self.plane.discover(second_request)
-        self._count_failures(second_batch, failures)
-        second = self._snapshots_from_batch(
-            cycle_id=cycle_id,
-            pair_id=pair.pair_id,
-            leg=2,
-            batch=second_batch,
-        )
-        if not second:
+        second_snapshots: list[MarketQuoteSnapshot] = []
+        requests_attempted = 1
+        batches_completed = 1
+        requested_second_amounts: set[int] = set()
+
+        for first_snapshot in first:
+            intermediate_amount = first_snapshot.out_amount
+            if intermediate_amount <= 0:
+                degraded.append(f"{pair.pair_id}:zero_intermediate_amount")
+                continue
+            if intermediate_amount in requested_second_amounts:
+                continue
+            requested_second_amounts.add(intermediate_amount)
+
+            second_request = QuoteRequest(
+                input_mint=pair.intermediate_mint,
+                output_mint=pair.base_mint,
+                amount_base_units=intermediate_amount,
+                user_wallet=str(self.user_wallet),
+                slippage_bps=self.universe.slippage_bps,
+                input_decimals=item.intermediate_decimals,
+                output_decimals=item.base_decimals,
+            )
+            second_batch = await self.plane.discover(second_request)
+            requests_attempted += 1
+            batches_completed += 1
+            self._count_failures(second_batch, failures)
+            second = self._snapshots_from_batch(
+                cycle_id=cycle_id,
+                pair_id=pair.pair_id,
+                leg=2,
+                batch=second_batch,
+            )
+            if not second:
+                degraded.append(
+                    f"{pair.pair_id}:missing_second_leg_amount:{intermediate_amount}"
+                )
+                continue
+            second_snapshots.extend(second)
+
+        if not second_snapshots:
             degraded.append(f"{pair.pair_id}:missing_second_leg")
         return _PairCycleResult(
             pair_id=pair.pair_id,
             required=item.required,
-            snapshots=(*first, *second),
-            requests_attempted=2,
-            batches_completed=2,
-            complete=bool(first and second),
+            snapshots=(*first, *tuple(second_snapshots)),
+            requests_attempted=requests_attempted,
+            batches_completed=batches_completed,
+            complete=bool(first and second_snapshots),
             provider_failures=failures,
             degraded_reasons=tuple(degraded),
         )
@@ -250,6 +272,7 @@ class RuntimeDiscoveryCoordinator:
                         f"cycle:{cycle_id}",
                         f"pair:{pair_id}",
                         f"leg:{leg}",
+                        f"request_amount:{quote.input_amount}",
                     )
                 )
             )
@@ -329,6 +352,7 @@ class RuntimeDiscoveryCoordinator:
                     "slot": opportunity.detection_slot,
                     "route": route,
                     "amount": opportunity.proposed_amount_base_units,
+                    "route_identity": opportunity.metadata.get("route_identity"),
                 },
                 sort_keys=True,
                 separators=(",", ":"),

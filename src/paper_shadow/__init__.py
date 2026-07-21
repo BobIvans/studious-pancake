@@ -25,6 +25,7 @@ from src.paper_shadow.journal import JsonlPaperShadowJournal, PaperShadowEvent
 from src.paper_shadow.runner import (
     PAPER_SHADOW_REQUIRED_STAGES,
     PaperShadowRunStatus,
+    PaperShadowRunSummary,
     PaperShadowRunner,
     PaperShadowRunnerConfig,
     PaperShadowStageContext,
@@ -48,6 +49,7 @@ __all__ = [
     "PAPER_SHADOW_REQUIRED_STAGES",
     "PaperShadowEvent",
     "PaperShadowRunStatus",
+    "PaperShadowRunSummary",
     "PaperShadowRunner",
     "PaperShadowRunnerConfig",
     "PaperShadowStageContext",

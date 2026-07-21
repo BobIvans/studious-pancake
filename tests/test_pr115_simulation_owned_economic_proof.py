@@ -13,9 +13,35 @@ from src.execution.state_evidence_pr115 import (
     build_pr115_simulation_owned_economic_proof,
 )
 
+pytestmark = pytest.mark.unit
+
 MESSAGE_HASH = "a" * 64
 SIM_RESPONSE_HASH = "b" * 64
 ADDRESS = "11111111111111111111111111111112"
+
+
+def _account(
+    *,
+    lamports: int,
+    owner: str = SYSTEM_PROGRAM_ID,
+    data: bytes = b"",
+    executable: bool = False,
+) -> dict[str, Any]:
+    return {
+        "lamports": lamports,
+        "owner": owner,
+        "executable": executable,
+        "data": [base64.b64encode(data).decode("ascii"), "base64"],
+        "rentEpoch": 0,
+    }
+
+
+def _token_account(amount: int) -> bytes:
+    data = bytearray(165)
+    data[0:32] = bytes([1]) * 32
+    data[32:64] = bytes([2]) * 32
+    data[64:72] = amount.to_bytes(8, "little")
+    return bytes(data)
 
 
 def test_pr115_derives_native_delta_from_raw_accounts_only() -> None:
@@ -149,27 +175,3 @@ def test_pr115_rejects_duplicate_accounts_and_stale_slots() -> None:
             post_state_slot=11,
             min_context_slot=9,
         )
-
-
-def _account(
-    *,
-    lamports: int,
-    owner: str = SYSTEM_PROGRAM_ID,
-    data: bytes = b"",
-    executable: bool = False,
-) -> dict[str, Any]:
-    return {
-        "lamports": lamports,
-        "owner": owner,
-        "executable": executable,
-        "data": [base64.b64encode(data).decode("ascii"), "base64"],
-        "rentEpoch": 0,
-    }
-
-
-def _token_account(amount: int) -> bytes:
-    data = bytearray(165)
-    data[0:32] = bytes([1]) * 32
-    data[32:64] = bytes([2]) * 32
-    data[64:72] = amount.to_bytes(8, "little")
-    return bytes(data)

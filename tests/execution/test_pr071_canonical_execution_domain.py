@@ -62,6 +62,15 @@ def _class_definitions(path: str, module: str) -> set[str]:
     }
 
 
+def _relative_shadow_imports(source: str) -> set[str]:
+    tree = ast.parse(source)
+    imports: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom) and node.level == 1 and node.module == "shadow":
+            imports.update(alias.name for alias in node.names)
+    return imports
+
+
 def test_pr071_has_exactly_one_canonical_owner_per_execution_role() -> None:
     validate_canonical_execution_domain()
 
@@ -124,11 +133,12 @@ def test_pr071_transaction_simulator_uses_canonical_report_model() -> None:
     source = (ROOT / "src/execution/transaction_simulator.py").read_text(
         encoding="utf-8"
     )
+    shadow_imports = _relative_shadow_imports(source)
 
     assert "from .models import (" in source
     assert "    SimulationReport," in source
-    assert "from .shadow import (\n    CanonicalSimulator" in source
-    assert "from .shadow import (\n    SimulationReport" not in source
+    assert "CanonicalSimulator" in shadow_imports
+    assert "SimulationReport" not in shadow_imports
 
 
 def test_pr071_public_canonical_sender_stack_uses_one_sender_protocol() -> None:

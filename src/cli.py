@@ -22,7 +22,12 @@ from src.config.runtime import (
     load_runtime_config,
 )
 from src.container_runtime import run_safe_idle
-from src.paper_shadow import PaperShadowRunner, PaperShadowRunnerConfig
+from src.paper_shadow import (
+    PaperShadowRunStatus,
+    PaperShadowRunner,
+    PaperShadowRunnerConfig,
+)
+from src.paper_shadow.runner import PaperShadowRunSummary
 from src.runtime_discovery import build_runtime_discovery
 
 logger = logging.getLogger(__name__)
@@ -30,7 +35,13 @@ logger = logging.getLogger(__name__)
 EXIT_CONFIGURATION_ERROR = 2
 EXIT_NO_EXECUTABLE_STRATEGIES = 3
 EXIT_MODE_UNAVAILABLE = 4
+EXIT_PAPER_SHADOW_BLOCKED = 5
+EXIT_PAPER_SHADOW_FAILED = 6
+EXIT_PAPER_SHADOW_DEGRADED = 7
 
+PAPER_SHADOW_SUCCESS_STATUSES = frozenset(
+    {PaperShadowRunStatus.HEALTHY_IDLE, PaperShadowRunStatus.PAPER_OUTCOME}
+)
 
 LauncherConfig = RuntimeConfig
 
@@ -90,7 +101,10 @@ def _parser() -> argparse.ArgumentParser:
     paper_parser.add_argument(
         "--journal-path",
         default=None,
-        help="JSONL journal path; defaults to FLASHLOAN_PAPER_SHADOW_JOURNAL or .runtime/paper-shadow-journal.jsonl",
+        help=(
+            "JSONL journal path; defaults to FLASHLOAN_PAPER_SHADOW_JOURNAL "
+            "or .runtime/paper-shadow-journal.jsonl"
+        ),
     )
     paper_parser.add_argument("--json", action="store_true", dest="as_json")
 
@@ -101,7 +115,10 @@ def _parser() -> argparse.ArgumentParser:
     container_parser.add_argument(
         "--state-file",
         default=None,
-        help="override the liveness state path used by the temporary PR-025 healthcheck",
+        help=(
+            "override the liveness state path used by the temporary PR-025 "
+            "healthcheck"
+        ),
     )
 
     config_parser = subparsers.add_parser(
@@ -213,24 +230,50 @@ def _print_paper_shadow_summary(payload: dict[str, Any], *, as_json: bool) -> No
     if as_json:
         print(json.dumps(payload, indent=2, sort_keys=True))
         return
+    readiness = payload.get("readiness", {})
+    dependencies = tuple(readiness.get("dependency_reasons", ()))
+    dependency_suffix = (
+        f" dependencies={','.join(dependencies)}" if dependencies else ""
+    )
     print(
         "PAPER_SHADOW_RUNNER: "
         f"status={payload['status']} "
         f"reason={payload['terminal_reason']} "
+        f"ready={readiness.get('ready_for_next_cycle', False)} "
         f"journal={payload['journal_path']} "
         f"events={payload['events_written']}"
+        f"{dependency_suffix}"
     )
+
+
+def _paper_shadow_exit_code(summary: PaperShadowRunSummary) -> int:
+    if summary.status in PAPER_SHADOW_SUCCESS_STATUSES:
+        return 0
+    if summary.status is PaperShadowRunStatus.BLOCKED:
+        return EXIT_PAPER_SHADOW_BLOCKED
+    if summary.status is PaperShadowRunStatus.DEGRADED:
+        return EXIT_PAPER_SHADOW_DEGRADED
+    return EXIT_PAPER_SHADOW_FAILED
+
+
+def _paper_shadow_dependency_reasons(evidence: Any) -> tuple[str, ...]:
+    reasons: list[str] = []
+    if not evidence.cycle_succeeded:
+        reasons.append(str(evidence.terminal_reason))
+    reasons.extend(str(reason) for reason in getattr(evidence, "degraded_reasons", ()))
+    return tuple(dict.fromkeys(reason for reason in reasons if reason))
 
 
 async def _run_paper_shadow_cycle(
     config: RuntimeConfig,
     runner: PaperShadowRunner,
-) -> Any:
+) -> PaperShadowRunSummary:
     discovery = build_runtime_discovery(config, environ=os.environ)
     report = await discovery.run_cycle()
     return await runner.run_once(
         report.opportunities,
         upstream_cycle_completed=report.evidence.cycle_succeeded,
+        upstream_dependency_reasons=_paper_shadow_dependency_reasons(report.evidence),
     )
 
 
@@ -245,7 +288,7 @@ def _run_paper_shadow_once(
     )
     summary = asyncio.run(_run_paper_shadow_cycle(config, runner))
     _print_paper_shadow_summary(summary.to_dict(), as_json=as_json)
-    return 0
+    return _paper_shadow_exit_code(summary)
 
 
 def _run_requested_mode(

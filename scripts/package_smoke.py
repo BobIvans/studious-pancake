@@ -54,7 +54,7 @@ def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) ->
         command,
         cwd=cwd,
         env=env,
-        check=True,
+        check=False,
         text=True,
         capture_output=True,
     )
@@ -62,6 +62,13 @@ def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) ->
         print(result.stdout, end="")
     if result.stderr:
         print(result.stderr, end="", file=sys.stderr)
+    if result.returncode != 0:
+        raise subprocess.CalledProcessError(
+            result.returncode,
+            command,
+            output=result.stdout,
+            stderr=result.stderr,
+        )
     return result.stdout
 
 

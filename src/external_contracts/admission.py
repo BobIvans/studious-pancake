@@ -2,12 +2,15 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import asdict, dataclass
+import os
 from typing import Any
 
 from src.config.runtime import RuntimeConfig
 from src.external_contracts.drift import detect_drift
-from src.external_contracts.models import ContractCapability, ContractStatus
+from src.external_contracts.models import ContractStatus
+from src.external_contracts.policy import evaluate_contract_execution_admission
 from src.external_contracts.registry import ExternalContractRegistry
 
 
@@ -17,6 +20,8 @@ class ProviderAdmission:
     allowed: bool
     reason: str
     contract_id: str | None
+    required_env: tuple[str, ...] = ()
+    missing_env: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)
@@ -43,24 +48,27 @@ def _first(registry: ExternalContractRegistry, provider: str):
 def evaluate_runtime_admission(
     config: RuntimeConfig,
     registry: ExternalContractRegistry | None = None,
+    environ: Mapping[str, str] | None = None,
 ) -> RuntimeAdmissionReport:
     active_registry = registry or ExternalContractRegistry.load_default()
+    active_env = os.environ if environ is None else environ
     drift = detect_drift(active_registry)
     decisions: list[ProviderAdmission] = []
 
     jupiter = _first(active_registry, "jupiter")
-    jupiter_allowed = bool(
-        jupiter
-        and jupiter.status is ContractStatus.ACTIVE
-        and ContractCapability.COMPOSABLE_INSTRUCTIONS in jupiter.capabilities
-        and drift.ok
+    jupiter_decision = evaluate_contract_execution_admission(
+        jupiter,
+        environ=active_env,
     )
+    jupiter_allowed = bool(jupiter_decision.allowed and drift.ok)
     decisions.append(
         ProviderAdmission(
             "jupiter",
             jupiter_allowed,
-            "verified-composable-pin" if jupiter_allowed else "contract-not-active-composable",
-            jupiter.id if jupiter else None,
+            jupiter_decision.reason if drift.ok else "disabled-contract-drift",
+            jupiter_decision.contract_id,
+            jupiter_decision.required_env,
+            jupiter_decision.missing_env,
         )
     )
 
@@ -81,6 +89,8 @@ def evaluate_runtime_admission(
         pinned = marginfi.deployment_program_id if marginfi else None
         if configured != pinned:
             marginfi_reason = "configured-marginfi-program-does-not-match-official-pin"
+    elif marginfi is not None and marginfi.status is ContractStatus.DISABLED_UNVERIFIED:
+        marginfi_reason = f"contract-not-active:{marginfi.status.value}"
     decisions.append(
         ProviderAdmission(
             "marginfi",
@@ -91,15 +101,17 @@ def evaluate_runtime_admission(
     )
 
     execution_allowed = drift.execution_allowed and all(
-        item.allowed
-        for item in decisions
-        if item.provider in {"jupiter", "marginfi"}
+        item.allowed for item in decisions if item.provider in {"jupiter", "marginfi"}
     )
-    diagnostic = "verified" if execution_allowed else (
-        "disabled-contract-drift" if not drift.ok else "disabled-contract-admission"
+    diagnostic = (
+        "verified"
+        if execution_allowed
+        else (
+            "disabled-contract-drift" if not drift.ok else "disabled-contract-admission"
+        )
     )
     return RuntimeAdmissionReport(
-        schema_version="pr027.runtime-admission.v1",
+        schema_version="pr099.runtime-admission.v1",
         execution_allowed=execution_allowed,
         diagnostic=diagnostic,
         providers=tuple(decisions),

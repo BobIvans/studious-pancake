@@ -40,9 +40,18 @@ def _conformance_verified(results: list[dict[str, Any]]) -> bool:
     return bool(results) and all(item["verified"] for item in results)
 
 
-def _conformance_exit_code(results: list[dict[str, Any]]) -> int:
+def _conformance_exit_code(
+    results: list[dict[str, Any]],
+    *,
+    online_requested: bool = False,
+) -> int:
     failed_states = {"failed-request", "failed-assertion"}
-    return 2 if any(item["state"] in failed_states for item in results) else 0
+    incomplete_states = {"skipped-missing-env", "skipped-no-probe"}
+    if any(item["state"] in failed_states for item in results):
+        return 2
+    if online_requested and any(item["state"] in incomplete_states for item in results):
+        return 3
+    return 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -73,9 +82,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             return 0
         if args.command == "conformance":
             contracts = (
-                (registry.get(args.contract),)
-                if args.contract
-                else registry.contracts
+                (registry.get(args.contract),) if args.contract else registry.contracts
             )
             results = [
                 run_read_only_conformance(
@@ -90,7 +97,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "results": results,
             }
             print(json.dumps(payload, indent=2, sort_keys=True))
-            return _conformance_exit_code(results)
+            return _conformance_exit_code(
+                results,
+                online_requested=args.enable_online,
+            )
     except (ExternalContractError, OSError, ValueError) as exc:
         print(f"EXTERNAL_CONTRACT_ERROR: {exc}", file=sys.stderr)
         return 2

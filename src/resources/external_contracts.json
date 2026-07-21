@@ -23,7 +23,8 @@
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
       "conformance_probe": {
-        "url": "https://api.jup.ag/swap/v2/build?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000&slippageBps=50",
+        "url": "https://api.jup.ag/swap/v2/build?inputMint=So11111111111111111111111111111111111111112&outputMint=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amount=1000&slippageBps=50&taker=11111111111111111111111111111111",
+        "method": "GET",
         "credential_mode": "header-api-key",
         "required_env": [
           "JUPITER_API_KEY"
@@ -32,7 +33,44 @@
         "credential_header_env": "JUPITER_API_KEY",
         "expected_status": 200,
         "required_json_paths": [
-          "transaction"
+          "inputMint",
+          "outputMint",
+          "inAmount",
+          "outAmount",
+          "setupInstructions",
+          "swapInstruction.programId",
+          "swapInstruction.accounts",
+          "swapInstruction.data",
+          "addressesByLookupTableAddress",
+          "blockhashWithMetadata.blockhash",
+          "blockhashWithMetadata.lastValidBlockHeight"
+        ],
+        "json_assertions": [
+          {
+            "path": "setupInstructions",
+            "value_type": "array"
+          },
+          {
+            "path": "swapInstruction",
+            "value_type": "object"
+          },
+          {
+            "path": "swapInstruction.accounts",
+            "value_type": "array",
+            "min_size": 1
+          },
+          {
+            "path": "addressesByLookupTableAddress",
+            "value_type": "object"
+          },
+          {
+            "path": "blockhashWithMetadata.blockhash",
+            "value_type": "string"
+          },
+          {
+            "path": "blockhashWithMetadata.lastValidBlockHeight",
+            "value_type": "integer"
+          }
         ]
       },
       "promotion_state": "credentialed-conformance-pending",
@@ -44,7 +82,7 @@
         "execution_conformance": false,
         "promotion_evidence": false
       },
-      "notes": "Jupiter Swap V2 /build is the only composable routing contract tracked here, but local review snapshot integrity is not remote conformance or execution permission."
+      "notes": "Jupiter Swap V2 /build is the only composable routing contract tracked here, but local review snapshot integrity is not remote conformance or execution permission. PR-070 validates the raw instruction response shape only."
     },
     {
       "id": "okx.solana-swap-instruction-v6",
@@ -68,6 +106,7 @@
       "cluster": "mainnet-beta",
       "conformance_probe": {
         "url": "https://web3.okx.com/api/v6/dex/aggregator/swap-instruction?chainIndex=501&amount=100000&fromTokenAddress=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&toTokenAddress=11111111111111111111111111111111&slippagePercent=0.05&userWalletAddress=11111111111111111111111111111111",
+        "method": "GET",
         "credential_mode": "okx-signed",
         "required_env": [
           "OKX_API_KEY",
@@ -81,6 +120,20 @@
         "required_json_paths": [
           "code",
           "data"
+        ],
+        "business_code_path": "code",
+        "business_code_equals": "0",
+        "json_assertions": [
+          {
+            "path": "code",
+            "value_type": "string",
+            "expected_value": "0"
+          },
+          {
+            "path": "data",
+            "value_type": "array",
+            "min_size": 1
+          }
         ]
       },
       "promotion_state": "credentialed-conformance-pending",
@@ -92,7 +145,7 @@
         "execution_conformance": false,
         "promotion_evidence": false
       },
-      "notes": "OKX Solana swap-instruction is discovery-only until signed credentialed conformance, ALT provenance and composed simulation evidence exist."
+      "notes": "OKX Solana swap-instruction is discovery-only until signed credentialed conformance, ALT provenance and composed simulation evidence exist. PR-070 requires ISO-8601 signed requests and business code 0."
     },
     {
       "id": "jito.low-latency-json-rpc",
@@ -117,12 +170,25 @@
       "cluster": "mainnet-beta",
       "conformance_probe": {
         "url": "https://mainnet.block-engine.jito.wtf/api/v1/getTipAccounts",
+        "method": "POST",
         "credential_mode": "optional-uuid",
         "optional_env": [
           "JITO_UUID"
         ],
         "expected_status": 200,
-        "required_json_paths": []
+        "json_body": {
+          "jsonrpc": "2.0",
+          "id": 1,
+          "method": "getTipAccounts",
+          "params": []
+        },
+        "json_assertions": [
+          {
+            "path": "result",
+            "value_type": "array",
+            "min_size": 1
+          }
+        ]
       },
       "promotion_state": "execution-conformance-pending",
       "evidence": {
@@ -133,7 +199,7 @@
         "execution_conformance": false,
         "promotion_evidence": false
       },
-      "notes": "Jito supports no-auth default-rate-limit and optional UUID modes, but remains disabled until PR-063 sender consolidation and landing-status evidence."
+      "notes": "Jito supports no-auth default-rate-limit and optional UUID modes, but remains disabled until PR-063 sender consolidation and landing-status evidence. PR-070 proves only JSON-RPC POST getTipAccounts shape."
     },
     {
       "id": "openocean.solana-v4-quote",
@@ -157,6 +223,7 @@
       "cluster": "mainnet-beta",
       "conformance_probe": {
         "url": "https://open-api.openocean.finance/v4/solana/quote?inTokenAddress=11111111111111111111111111111111&outTokenAddress=EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v&amountDecimals=100000&gasPriceDecimals=0",
+        "method": "GET",
         "credential_mode": "whitelist-api-key",
         "required_env": [
           "OPENOCEAN_API_KEY"
@@ -167,6 +234,12 @@
         "required_json_paths": [
           "code",
           "data"
+        ],
+        "json_assertions": [
+          {
+            "path": "data",
+            "value_type": "object"
+          }
         ]
       },
       "promotion_state": "credentialed-conformance-pending",
@@ -178,7 +251,7 @@
         "execution_conformance": false,
         "promotion_evidence": false
       },
-      "notes": "OpenOcean Solana access is treated as whitelist-gated discovery only; it cannot promote from generic public-plan docs."
+      "notes": "OpenOcean Solana access is treated as whitelist-gated discovery only; missing OPENOCEAN_API_KEY is skipped, not verified. It cannot promote from generic public-plan docs."
     },
     {
       "id": "odos.solana-api",

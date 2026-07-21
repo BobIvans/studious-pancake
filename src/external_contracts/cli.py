@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from typing import Sequence
+from typing import Any, Sequence
 
 from src.external_contracts.conformance import run_read_only_conformance
 from src.external_contracts.drift import detect_drift
@@ -34,6 +34,15 @@ def _parser() -> argparse.ArgumentParser:
     conformance.add_argument("--enable-online", action="store_true")
     conformance.add_argument("--contract", default=None)
     return parser
+
+
+def _conformance_verified(results: list[dict[str, Any]]) -> bool:
+    return bool(results) and all(item["verified"] for item in results)
+
+
+def _conformance_exit_code(results: list[dict[str, Any]]) -> int:
+    failed_states = {"failed-request", "failed-assertion"}
+    return 2 if any(item["state"] in failed_states for item in results) else 0
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -75,17 +84,13 @@ def main(argv: Sequence[str] | None = None) -> int:
                 for contract in contracts
             ]
             payload = {
-                "schema_version": "pr054.conformance-report.v2",
+                "schema_version": "pr070.conformance-report.v1",
                 "online_enabled": args.enable_online,
-                "verified": any(item["verified"] for item in results),
+                "verified": _conformance_verified(results),
                 "results": results,
             }
             print(json.dumps(payload, indent=2, sort_keys=True))
-            return (
-                0
-                if all(item["state"] != "failed-request" for item in results)
-                else 2
-            )
+            return _conformance_exit_code(results)
     except (ExternalContractError, OSError, ValueError) as exc:
         print(f"EXTERNAL_CONTRACT_ERROR: {exc}", file=sys.stderr)
         return 2

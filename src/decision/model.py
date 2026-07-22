@@ -1,20 +1,26 @@
 """Safe JSON linear ranker, baseline, evaluation and quota replay."""
 
 from __future__ import annotations
-import json, math, os, hashlib
+
+import hashlib
+import json
+import math
+import os
+import stat
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
 from .contracts import (
     ALLOWED_PRE_QUOTE_FEATURES,
     FEATURE_SPEC_VERSION,
     MODEL_ARTIFACT_VERSION,
+    DecisionStage,
     ModelStatus,
     RankingRecommendation,
-    DecisionStage,
     RecommendedBand,
 )
-from .dataset import load_rows, sha256_text, _canon
+from .dataset import _canon, load_rows, sha256_text
 from .split import PurgedGroupedTimeSplit
 
 MIN_TOTAL = 12
@@ -25,6 +31,30 @@ CATEGORICAL = [
     k for k, v in ALLOWED_PRE_QUOTE_FEATURES.items() if v.startswith("category")
 ]
 NUMERIC = [k for k in ALLOWED_PRE_QUOTE_FEATURES if k not in CATEGORICAL]
+
+_ARTIFACT_POINTER = "latest.json"
+_SECURE_FILE_MODE = 0o600
+_SHA256_LEN = 64
+_ALLOWED_BASE_ARTIFACT_KEYS = {
+    "artifact_version",
+    "feature_spec_version",
+    "created_at",
+    "model_status",
+    "reason",
+    "split_manifest",
+    "dependency_versions",
+    "class_counts",
+    "checksum",
+}
+_ALLOWED_CHALLENGER_KEYS = {
+    "feature_order",
+    "categories",
+    "means",
+    "stds",
+    "coefficients",
+    "intercept",
+}
+_ALLOWED_POINTER_KEYS = {"artifact", "checksum"}
 
 
 def baseline_priority(features: dict[str, Any]) -> int:
@@ -127,7 +157,7 @@ def train_model(
             for r in train:
                 x = _vector(r["features_pre_quote"], cats, means, stds)
                 y = r["label_value"]
-                pred = _sig(sum(a * b for a, b in zip(w, x)) + b)
+                pred = _sig(sum(a * b for a, b in zip(w, x, strict=True)) + b)
                 err = pred - y
                 for i, xi in enumerate(x):
                     w[i] -= lr * (err * xi + 0.001 * w[i])
@@ -147,25 +177,47 @@ def train_model(
                 },
             }
         )
-    body = {k: v for k, v in artifact.items() if k != "checksum"}
-    artifact["checksum"] = sha256_text(_canon(body))
+    artifact["checksum"] = _artifact_checksum(artifact)
     path = out / f"artifact-{artifact['checksum'][:12]}.json"
-    path.write_text(_canon(artifact) + "\n", encoding="utf-8")
-    (out / "latest.json").write_text(
-        json.dumps({"artifact": path.name, "checksum": artifact["checksum"]}) + "\n",
-        encoding="utf-8",
+    _write_text_atomic(path, _model_canon(artifact) + "\n")
+    _write_text_atomic(
+        out / _ARTIFACT_POINTER,
+        _model_canon({"artifact": path.name, "checksum": artifact["checksum"]}) + "\n",
     )
     return artifact
 
 
 def load_artifact(path: str | Path) -> dict[str, Any]:
     p = Path(path)
-    p = p / json.loads((p / "latest.json").read_text())["artifact"] if p.is_dir() else p
-    art = json.loads(p.read_text())
-    chk = art.get("checksum")
-    body = {k: v for k, v in art.items() if k != "checksum"}
-    if sha256_text(_canon(body)) != chk:
+    pointer_checksum: str | None = None
+    if p.is_dir():
+        root = _resolve_existing_directory(p)
+        pointer_path = root / _ARTIFACT_POINTER
+        _validate_trusted_file(pointer_path, root=root)
+        pointer = _strict_json_loads(pointer_path.read_text(encoding="utf-8"))
+        if not isinstance(pointer, dict):
+            raise ValueError("artifact pointer must be a JSON object")
+        if set(pointer) != _ALLOWED_POINTER_KEYS:
+            raise ValueError("artifact pointer contains unexpected keys")
+        artifact_name = str(pointer["artifact"])
+        pointer_checksum = _validate_sha256(str(pointer["checksum"]))
+        p = _resolve_artifact_child(root, artifact_name)
+    else:
+        p = p.resolve(strict=True)
+        root = p.parent.resolve(strict=True)
+
+    _validate_trusted_file(p, root=root)
+    art = _strict_json_loads(p.read_text(encoding="utf-8"))
+    if not isinstance(art, dict):
+        raise ValueError("model artifact must be a JSON object")
+    _validate_model_artifact_schema(art)
+
+    chk = str(art.get("checksum"))
+    expected = _artifact_checksum(art)
+    if expected != chk:
         raise ValueError("artifact checksum mismatch")
+    if pointer_checksum is not None and pointer_checksum != chk:
+        raise ValueError("artifact pointer checksum mismatch")
     return art
 
 
@@ -212,10 +264,15 @@ def recommend(
             art.get("checksum"),
         )
     x = _vector(features, art["categories"], art["means"], art["stds"])
-    z = sum(a * b for a, b in zip(art["coefficients"], x)) + art["intercept"]
+    coefficients = art["coefficients"]
+    z = sum(a * b for a, b in zip(coefficients, x, strict=True)) + art["intercept"]
     p = _sig(z)
     contrib = sorted(
-        zip(art["feature_order"], [a * b for a, b in zip(art["coefficients"], x)]),
+        zip(
+            art["feature_order"],
+            [a * b for a, b in zip(coefficients, x, strict=True)],
+            strict=True,
+        ),
         key=lambda t: abs(t[1]),
         reverse=True,
     )[:3]
@@ -289,7 +346,7 @@ def evaluate_model(dataset_dir, artifact_path, report_dir, as_of):
     }
     out = Path(report_dir)
     out.mkdir(parents=True, exist_ok=True)
-    (out / "report.json").write_text(_canon(report) + "\n")
+    _write_text_atomic(out / "report.json", _model_canon(report) + "\n")
     return report
 
 
@@ -314,3 +371,187 @@ def replay_quota(dataset_dir, artifact_path, quota_policy: dict[str, Any]):
         "provider_limits_preserved": True,
         "discovery_only_not_executable": True,
     }
+
+
+def _artifact_checksum(artifact: dict[str, Any]) -> str:
+    body = {k: v for k, v in artifact.items() if k != "checksum"}
+    return sha256_text(_model_canon(body))
+
+
+def _model_canon(obj: Any) -> str:
+    _reject_non_finite(obj)
+    return json.dumps(obj, sort_keys=True, separators=(",", ":"), allow_nan=False)
+
+
+def _strict_json_loads(text: str) -> Any:
+    def reject_constant(value: str) -> None:
+        raise ValueError(f"non-finite JSON number is forbidden: {value}")
+
+    def reject_duplicate_keys(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in out:
+                raise ValueError(f"duplicate JSON key is forbidden: {key}")
+            out[key] = value
+        return out
+
+    return json.loads(
+        text,
+        parse_constant=reject_constant,
+        object_pairs_hook=reject_duplicate_keys,
+    )
+
+
+def _validate_model_artifact_schema(artifact: dict[str, Any]) -> None:
+    _reject_non_finite(artifact)
+    model_status = artifact.get("model_status")
+    allowed = set(_ALLOWED_BASE_ARTIFACT_KEYS)
+    if model_status == ModelStatus.SHADOW_CHALLENGER.value:
+        allowed.update(_ALLOWED_CHALLENGER_KEYS)
+    if set(artifact) - allowed:
+        raise ValueError("model artifact contains unexpected keys")
+    if artifact.get("artifact_version") != MODEL_ARTIFACT_VERSION:
+        raise ValueError("unexpected model artifact version")
+    if artifact.get("feature_spec_version") != FEATURE_SPEC_VERSION:
+        raise ValueError("unexpected feature spec version")
+    if model_status not in {status.value for status in ModelStatus}:
+        raise ValueError("unknown model status")
+    _validate_sha256(str(artifact.get("checksum", "")))
+    if model_status == ModelStatus.SHADOW_CHALLENGER.value:
+        _validate_challenger_dimensions(artifact)
+
+
+def _validate_challenger_dimensions(artifact: dict[str, Any]) -> None:
+    feature_order = artifact.get("feature_order")
+    coefficients = artifact.get("coefficients")
+    categories = artifact.get("categories")
+    means = artifact.get("means")
+    stds = artifact.get("stds")
+    if not isinstance(feature_order, list) or not all(
+        isinstance(item, str) for item in feature_order
+    ):
+        raise ValueError("feature_order must be a list of strings")
+    if not isinstance(coefficients, list) or not all(
+        _is_finite_number(item) for item in coefficients
+    ):
+        raise ValueError("coefficients must be finite numbers")
+    if len(coefficients) != len(feature_order):
+        raise ValueError("coefficient count must match feature_order count")
+    if not isinstance(categories, dict) or set(categories) != set(CATEGORICAL):
+        raise ValueError("categories must match categorical feature spec")
+    if not isinstance(means, dict) or set(means) != set(NUMERIC):
+        raise ValueError("means must match numeric feature spec")
+    if not isinstance(stds, dict) or set(stds) != set(NUMERIC):
+        raise ValueError("stds must match numeric feature spec")
+    for key, values in categories.items():
+        if not isinstance(values, list) or not values:
+            raise ValueError(f"category list is empty or malformed: {key}")
+        if not all(isinstance(value, str) for value in values):
+            raise ValueError(f"category values must be strings: {key}")
+    if not all(_is_finite_number(value) for value in means.values()):
+        raise ValueError("means must be finite numbers")
+    if not all(_is_finite_number(value) and value > 0 for value in stds.values()):
+        raise ValueError("stds must be positive finite numbers")
+    if not _is_finite_number(artifact.get("intercept")):
+        raise ValueError("intercept must be a finite number")
+    expected = NUMERIC + [
+        f"{key}={value}" for key in CATEGORICAL for value in categories[key]
+    ]
+    if feature_order != expected:
+        raise ValueError("feature_order must match category and numeric spec")
+
+
+def _resolve_existing_directory(path: Path) -> Path:
+    resolved = path.resolve(strict=True)
+    if not resolved.is_dir():
+        raise ValueError("artifact root must be a directory")
+    return resolved
+
+
+def _resolve_artifact_child(root: Path, artifact_name: str) -> Path:
+    raw = Path(artifact_name)
+    if raw.is_absolute():
+        raise ValueError("artifact pointer must not use an absolute path")
+    if raw.name != artifact_name or artifact_name in {"", ".", ".."}:
+        raise ValueError("artifact pointer must be a relative artifact basename")
+    candidate = (root / artifact_name).resolve(strict=True)
+    if candidate.parent != root:
+        raise ValueError("artifact pointer escaped artifact root")
+    return candidate
+
+
+def _validate_trusted_file(path: Path, *, root: Path) -> None:
+    resolved = path.resolve(strict=True)
+    if root not in (resolved.parent, *resolved.parents):
+        raise ValueError("artifact path escaped trusted root")
+    st = path.stat(follow_symlinks=False)
+    if stat.S_ISLNK(st.st_mode):
+        raise ValueError("artifact path must not be a symlink")
+    if not stat.S_ISREG(st.st_mode):
+        raise ValueError("artifact path must be a regular file")
+    if getattr(st, "st_nlink", 1) != 1:
+        raise ValueError("artifact path must not be hard-linked")
+    if hasattr(os, "getuid") and st.st_uid != os.getuid():
+        raise ValueError("artifact file owner mismatch")
+    mode = stat.S_IMODE(st.st_mode)
+    if mode & 0o077:
+        raise ValueError("artifact file permissions must be 0600")
+
+
+def _write_text_atomic(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(f".{path.name}.tmp-{os.getpid()}")
+    flags = os.O_WRONLY | os.O_CREAT | os.O_TRUNC
+    fd = os.open(tmp, flags, _SECURE_FILE_MODE)
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+        os.chmod(path, _SECURE_FILE_MODE)
+        _fsync_directory(path.parent)
+    finally:
+        if tmp.exists():
+            tmp.unlink()
+
+
+def _fsync_directory(path: Path) -> None:
+    if os.name == "nt":
+        return
+    fd = os.open(path, os.O_RDONLY)
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _reject_non_finite(value: Any) -> None:
+    if isinstance(value, bool):
+        return
+    if isinstance(value, float) and not math.isfinite(value):
+        raise ValueError("non-finite numeric value is forbidden")
+    if isinstance(value, dict):
+        for item in value.values():
+            _reject_non_finite(item)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            _reject_non_finite(item)
+
+
+def _is_finite_number(value: Any) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    if isinstance(value, float) and not math.isfinite(value):
+        return False
+    return True
+
+
+def _validate_sha256(value: str) -> str:
+    if len(value) != _SHA256_LEN:
+        raise ValueError("expected sha256 digest")
+    try:
+        int(value, 16)
+    except ValueError as exc:
+        raise ValueError("expected sha256 digest") from exc
+    return value

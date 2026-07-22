@@ -1,0 +1,53 @@
+name: PR-02 capture failure
+
+on:
+  push:
+    branches: [roadmap/pr-02-unified-lifecycle-authority]
+    paths: [.github/workflows/pr02-fetch-failure-log.yml]
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  capture:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap/pr-02-unified-lifecycle-authority
+      - name: Download exact failed-job log
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --silent --show-error \
+            --header "Authorization: Bearer ${GH_TOKEN}" \
+            --header "Accept: application/vnd.github+json" \
+            --header "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/actions/jobs/89079197568/logs" \
+            --output /tmp/pr02-job-logs.zip
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          archive = Path('/tmp/pr02-job-logs.zip')
+          with zipfile.ZipFile(archive) as bundle:
+              text = '\n'.join(
+                  bundle.read(name).decode('utf-8', errors='replace')
+                  for name in sorted(bundle.namelist())
+              )
+          lines = text.splitlines()
+          Path('pr02-verification.log').write_text(
+              '\n'.join(lines[-650:]) + '\n', encoding='utf-8'
+          )
+          PY
+      - name: Publish diagnostic and remove workflow
+        run: |
+          rm .github/workflows/pr02-fetch-failure-log.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "PR-02: capture focused verification failure"
+          git push origin HEAD:roadmap/pr-02-unified-lifecycle-authority

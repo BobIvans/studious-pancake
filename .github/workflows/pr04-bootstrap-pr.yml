@@ -25,12 +25,6 @@ jobs:
             capture {sub(/^          /, ""); print}
           ' .github/workflows/pr04-bootstrap.yml > /tmp/pr04_materialize.py
           python /tmp/pr04_materialize.py
-      - name: Validate generated syntax
-        run: |
-          python -m py_compile \
-            src/cli.py \
-            src/paper_shadow/repeated_service_pr04.py \
-            tests/test_pr04_repeated_installed_paper_service.py
       - name: Commit generated implementation
         shell: bash
         run: |

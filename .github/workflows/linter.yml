@@ -58,6 +58,14 @@ jobs:
           status=$?
           tail -n 120 /tmp/repository-verification.log
           exit "$status"
+      - name: Upload repository verification log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: repository-verification-log
+          path: /tmp/repository-verification.log
+          if-no-files-found: error
+          retention-days: 3
 
   package-smoke:
     name: Wheel and console smoke

@@ -64,7 +64,7 @@ src/lending/kamino_conformance.py
 src/lending/kamino_real_conformance.py
 tests/lending/test_kamino_pr050.py
 tests/lending/test_kamino_pr067_conformance.py
-tests/lending/test_kamino_pr095_real_conformance.py
+tests/lending/test_pr095_real_conformance.py
 scripts/pr047_release_gate.py
 src/release_gate/__init__.py
 src/release_gate/cli.py
@@ -148,3 +148,6 @@ src/release_gate/materialized_evidence.py
 tests/test_o1_management_evidence_pipeline.py
 src/submission/resubmission_proof_pr197.py
 tests/test_pr197_archive_complete_resubmission.py
+src/authority_map.py
+scripts/validate_authority_map.py
+tests/test_pr01_authority_map.py

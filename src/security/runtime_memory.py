@@ -287,7 +287,9 @@ def build_safe_crash_artifact(
     )
 
 
-def build_allowlisted_support_bundle(metadata: Mapping[str, object]) -> dict[str, object]:
+def build_allowlisted_support_bundle(
+    metadata: Mapping[str, object],
+) -> dict[str, object]:
     """Build a support bundle from a fixed metadata allowlist.
 
     Environment variables, headers, request/response bodies, configuration trees,

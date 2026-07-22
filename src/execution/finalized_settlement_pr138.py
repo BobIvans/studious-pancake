@@ -360,9 +360,7 @@ def _validate_evidence(evidence: FinalizedTransactionEvidence) -> None:
         )
 
 
-def _comparison_to_dict(
-    comparison: SettlementComparison | None,
-) -> dict[str, Any] | None:
+def _comparison_to_dict(comparison: SettlementComparison | None) -> dict[str, Any] | None:
     if comparison is None:
         return None
     return comparison.to_dict()
@@ -401,9 +399,7 @@ def _canonical_json(value: Any) -> bytes:
             sort_keys=True,
         )
     except (TypeError, ValueError) as exc:
-        raise PR138SettlementError(
-            "settlement evidence is not canonical JSON"
-        ) from exc
+        raise PR138SettlementError("settlement evidence is not canonical JSON") from exc
     return payload.encode("utf-8")
 
 

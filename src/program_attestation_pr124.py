@@ -99,34 +99,26 @@ def evaluate_pr124_program_attestation(
 
     cluster_reviewed = _check_cluster(registry, blockers, drift)
     programs = tuple(_program(item) for item in _sequence(registry, "programs"))
-    evidence_by_id = {
-        _pubkey(item, "program_id"): _mapping(item, "evidence")
-        for item in _sequence(evidence, "programs", default=())
-    }
+    evidence_by_id = _evidence_by_program_id(evidence)
 
-    for label in sorted(REQUIRED_PROGRAM_LABELS - {item["label"] for item in programs}):
+    covered = {str(item["label"]) for item in programs}
+    for label in sorted(REQUIRED_PROGRAM_LABELS - covered):
         blockers.append(f"PR124_REQUIRED_PROGRAM_CLASS_MISSING:{label}")
 
-    results = tuple(
-        _check_program(
+    results = []
+    for program in programs:
+        result = _check_program(
             program,
             evidence_by_id.get(str(program["program_id"])),
             explicit_degraded_discovery_mode,
         )
-        for program in programs
-    )
-    for result in results:
+        results.append(result)
         blockers.extend(result.blockers)
         drift.extend(result.drift_events)
 
     unique_blockers = tuple(dict.fromkeys(blockers))
     unique_drift = tuple(dict.fromkeys(drift))
-    active_results = tuple(
-        result
-        for result in results
-        if _find_program(programs, result.program_id)["admission"]
-        is ProgramAdmission.ACTIVE
-    )
+    active_results = _active_results(programs, results)
     execution_allowed = (
         cluster_reviewed
         and bool(active_results)
@@ -139,15 +131,16 @@ def evaluate_pr124_program_attestation(
         and not execution_allowed
         and any(item.degraded_discovery_allowed for item in results)
     )
+    operator_alert = bool(unique_drift) or any(item.operator_alert for item in results)
+
     return PR124EvaluationResult(
         schema_version=PR124_RESULT_SCHEMA_VERSION,
         attestation_action=attestation_action,
         execution_capability_allowed=execution_allowed,
         degraded_discovery_allowed=degraded_allowed,
-        operator_alert=bool(unique_drift)
-        or any(item.operator_alert for item in results),
+        operator_alert=operator_alert,
         cluster_identity_reviewed=cluster_reviewed,
-        program_results=results,
+        program_results=tuple(results),
         blockers=unique_blockers,
         drift_events=unique_drift,
         reattestation_required=True,
@@ -161,6 +154,28 @@ def make_program_evidence_hash(payload: Mapping[str, object]) -> str:
     canonical["evidence_hash"] = None
     encoded = json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
+
+
+def _evidence_by_program_id(
+    evidence: Mapping[str, object],
+) -> dict[str, Mapping[str, object]]:
+    by_program_id = {}
+    for item in _sequence(evidence, "programs", default=()):
+        observed = _mapping(item, "evidence")
+        by_program_id[_pubkey(observed, "program_id")] = observed
+    return by_program_id
+
+
+def _active_results(
+    programs: Sequence[Mapping[str, object]],
+    results: Sequence[ProgramAttestation],
+) -> tuple[ProgramAttestation, ...]:
+    active = []
+    for result in results:
+        program = _find_program(programs, result.program_id)
+        if program["admission"] is ProgramAdmission.ACTIVE:
+            active.append(result)
+    return tuple(active)
 
 
 def _check_cluster(
@@ -191,7 +206,7 @@ def _check_cluster(
 
 def _program(raw: object) -> dict[str, object]:
     item = _mapping(raw, "program")
-    program = {
+    return {
         "label": _string(item, "label"),
         "program_id": _pubkey(item, "program_id"),
         "admission": ProgramAdmission(_string(item, "admission")),
@@ -208,17 +223,16 @@ def _program(raw: object) -> dict[str, object]:
             item,
             "expected_upgrade_authority",
         ),
-        "allowed_authorities": tuple(
-            _pubkey_value(value, "allowed_upgrade_authorities[]")
-            for value in _sequence(
-                item,
-                "allowed_upgrade_authorities",
-                default=(),
-            )
-        ),
+        "allowed_authorities": _allowed_authorities(item),
         "required": _bool(item, "required", default=True),
     }
-    return program
+
+
+def _allowed_authorities(item: Mapping[str, object]) -> tuple[str, ...]:
+    authorities = []
+    for value in _sequence(item, "allowed_upgrade_authorities", default=()):
+        authorities.append(_pubkey_value(value, "allowed_upgrade_authorities[]"))
+    return tuple(authorities)
 
 
 def _check_program(
@@ -231,36 +245,36 @@ def _check_program(
     admission = expected["admission"]
     if admission is not ProgramAdmission.ACTIVE:
         return ProgramAttestation(
-            label,
-            program_id,
-            False,
-            admission is ProgramAdmission.DISCOVERY_ONLY,
-            False,
-            (),
-            (),
+            label=label,
+            program_id=program_id,
+            execution_allowed=False,
+            degraded_discovery_allowed=admission is ProgramAdmission.DISCOVERY_ONLY,
+            operator_alert=False,
+            blockers=(),
+            drift_events=(),
         )
     if observed is None:
         return ProgramAttestation(
-            label,
-            program_id,
-            False,
-            explicit_degraded,
-            bool(expected["required"]),
-            (f"PR124_PROGRAM_EVIDENCE_MISSING:{label}",),
-            (),
+            label=label,
+            program_id=program_id,
+            execution_allowed=False,
+            degraded_discovery_allowed=explicit_degraded,
+            operator_alert=bool(expected["required"]),
+            blockers=(f"PR124_PROGRAM_EVIDENCE_MISSING:{label}",),
+            drift_events=(),
         )
 
     blockers = _evidence_blockers(expected, observed)
     drift = _drift_events(expected, observed)
     allowed = not blockers and not drift
     return ProgramAttestation(
-        label,
-        program_id,
-        allowed,
-        explicit_degraded and not allowed,
-        bool(drift),
-        tuple(blockers),
-        tuple(drift),
+        label=label,
+        program_id=program_id,
+        execution_allowed=allowed,
+        degraded_discovery_allowed=explicit_degraded and not allowed,
+        operator_alert=bool(drift),
+        blockers=tuple(blockers),
+        drift_events=tuple(drift),
     )
 
 
@@ -287,7 +301,8 @@ def _evidence_blockers(
     if not _valid_sha(str(expected["code_hash"])):
         blockers.append(f"PR124_EXPECTED_CODE_HASH_MISSING:{label}")
     if not _valid_sha(_optional_string(observed, "evidence_hash")):
-        blockers.append(f"PR124_EVIDENCE_HASH_INVALID:{observed.get('program_id')}")
+        program_id = observed.get("program_id")
+        blockers.append(f"PR124_EVIDENCE_HASH_INVALID:{program_id}")
     elif observed["evidence_hash"] != make_program_evidence_hash(observed):
         blockers.append(f"PR124_EVIDENCE_HASH_MISMATCH:{observed['program_id']}")
     if expected["authority_policy"] is AuthorityPolicy.FIXED:
@@ -319,6 +334,7 @@ def _drift_events(
     for name, actual, wanted in checks:
         if wanted is not None and actual != wanted:
             drift.append(f"PR124_{name}_DRIFT:{label}")
+
     policy = expected["authority_policy"]
     authority = observed.get("upgrade_authority")
     if policy is AuthorityPolicy.IMMUTABLE and authority is not None:
@@ -420,8 +436,10 @@ def _optional_sha(payload: Mapping[str, object], field: str) -> str | None:
 
 
 def _valid_sha(value: str | None) -> bool:
-    return isinstance(value, str) and bool(_SHA_RE.fullmatch(value)) and value != (
-        "0" * 64
+    return (
+        isinstance(value, str)
+        and bool(_SHA_RE.fullmatch(value))
+        and value != ("0" * 64)
     )
 
 
@@ -465,7 +483,11 @@ def _self_check_payload() -> tuple[dict[str, object], dict[str, object]]:
 
 
 def _fixture_registry(active_program_id: str) -> dict[str, object]:
-    def entry(label: str, program_id: str, admission: str) -> dict[str, object]:
+    def entry(
+        label: str,
+        program_id: str,
+        admission: str,
+    ) -> dict[str, object]:
         return {
             "label": label,
             "program_id": program_id,
@@ -519,7 +541,7 @@ def _fixture_registry(active_program_id: str) -> dict[str, object]:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
-        description="Run the offline PR-124 deployment-attestation self-check."
+        description="Run the offline PR-124 deployment-attestation self-check.",
     )
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
@@ -535,7 +557,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         print(
             "PR-124 execution capability allowed: "
-            f"{result.execution_capability_allowed}"
+            f"{result.execution_capability_allowed}",
         )
     return 0 if result.execution_capability_allowed else 1
 

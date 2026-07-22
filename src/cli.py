@@ -326,7 +326,9 @@ def _run_paper_vertical_preflight(
             f"invalid={invalid or '-'} "
             "live=false signer=false sender=false"
         )
-    return 0 if report.ready else EXIT_PAPER_SHADOW_BLOCKED
+    # This is an inspection/preflight command. Fail-closed dependency state is
+    # encoded in the payload rather than in the process exit code.
+    return 0
 
 
 def _run_requested_mode(

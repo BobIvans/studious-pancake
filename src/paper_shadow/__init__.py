@@ -53,6 +53,14 @@ from src.paper_shadow.runner import (
     PaperShadowStageName,
     paper_shadow_stage_blocked,
 )
+from src.paper_shadow.immutable_lifecycle_pr191 import (
+    ImmutableSQLitePaperLifecycleStore,
+    LifecycleImmutabilityConflict,
+    OutboxDeliveryState,
+    OutboxLease,
+    PR191_LIFECYCLE_SCHEMA,
+    TransitionCommitResult,
+)
 
 __all__ = [
     "A2PaperOutcomeStatus",
@@ -73,13 +81,18 @@ __all__ = [
     "ExactAttemptRuntimeRecord",
     "ExactAttemptRuntimeReport",
     "ExactFeeCapitalWorkflowDependency",
+    "ImmutableSQLitePaperLifecycleStore",
     "JsonlPaperShadowJournal",
     "JupiterV2BuildDependency",
+    "LifecycleImmutabilityConflict",
+    "OutboxDeliveryState",
+    "OutboxLease",
     "PAPER_SHADOW_REQUIRED_STAGES",
     "PR089_COMPOSITION_SCHEMA",
     "PR089_MISSING_ATOMIC_DEPENDENCIES",
     "PR102_COMPOSITION_SCHEMA",
     "PR102_TYPE_SAFE_DEPENDENCY_REJECTED",
+    "PR191_LIFECYCLE_SCHEMA",
     "PaperShadowDependencyGate",
     "PaperShadowEvent",
     "PaperShadowRunStatus",
@@ -90,6 +103,7 @@ __all__ = [
     "PaperShadowRuntimeDependencies",
     "PaperShadowStageContext",
     "PaperShadowStageName",
+    "TransitionCommitResult",
     "VerifiedMarginfiProviderDependency",
     "build_paper_shadow_runtime",
     "paper_shadow_stage_blocked",

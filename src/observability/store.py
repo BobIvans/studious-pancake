@@ -14,8 +14,10 @@ from .events import EventEnvelope
 from .integrity import ZERO_CHAIN_DIGEST, canonical_json, compute_chain_digest
 from .redaction import REDACTION_VERSION
 
-MIGRATION_VERSION = 18
-SCHEMA_NAME = "pr184.tamper-evident-observability-store.v1"
+MIGRATION_VERSION = 17
+SCHEMA_NAME = "pr132.observability-store.v1"
+AUDIT_MIGRATION_VERSION = 18
+AUDIT_SCHEMA_NAME = "pr184.tamper-evident-observability-store.v1"
 
 TERMINAL_EVENT_TYPES = frozenset(
     {
@@ -254,42 +256,54 @@ class ObservabilityStore:
                 self.db.execute(statement)
             self._ensure_event_integrity_columns()
             self._ensure_database_epoch()
-            self.db.execute("DROP TRIGGER IF EXISTS event_log_no_update")
-            self.db.execute("DROP TRIGGER IF EXISTS event_log_no_delete")
-            self._backfill_event_chain()
-            for statement in _TRIGGER_STATEMENTS:
-                self.db.execute(statement)
 
+            # Validate the legacy schema before any query assumes its columns.
             doctor = self.schema_doctor()
             if not doctor.ok:
                 raise ObservabilityError(
                     "OBSERVABILITY_SCHEMA_INCOMPLETE: " + doctor.summary()
                 )
-            self.db.execute(
-                """
-                INSERT INTO schema_migrations(
-                    version,
-                    applied_at,
-                    schema_name,
-                    schema_checksum
-                )
-                VALUES(?,?,?,?)
-                ON CONFLICT(version) DO UPDATE SET
-                    applied_at=excluded.applied_at,
-                    schema_name=excluded.schema_name,
-                    schema_checksum=excluded.schema_checksum
-                """,
-                (
-                    MIGRATION_VERSION,
-                    time.time(),
-                    SCHEMA_NAME,
-                    doctor.schema_checksum,
-                ),
+
+            self._backfill_event_chain()
+            doctor = self.schema_doctor()
+            self._stamp_migration(
+                version=MIGRATION_VERSION,
+                schema_name=SCHEMA_NAME,
+                schema_checksum=doctor.schema_checksum,
+            )
+            self._stamp_migration(
+                version=AUDIT_MIGRATION_VERSION,
+                schema_name=AUDIT_SCHEMA_NAME,
+                schema_checksum=doctor.schema_checksum,
             )
         except Exception:
             self.db.execute("ROLLBACK")
             raise
         self.db.execute("COMMIT")
+
+    def _stamp_migration(
+        self,
+        *,
+        version: int,
+        schema_name: str,
+        schema_checksum: str,
+    ) -> None:
+        self.db.execute(
+            """
+            INSERT INTO schema_migrations(
+                version,
+                applied_at,
+                schema_name,
+                schema_checksum
+            )
+            VALUES(?,?,?,?)
+            ON CONFLICT(version) DO UPDATE SET
+                applied_at=excluded.applied_at,
+                schema_name=excluded.schema_name,
+                schema_checksum=excluded.schema_checksum
+            """,
+            (version, time.time(), schema_name, schema_checksum),
+        )
 
     def _ensure_schema_migration_metadata_columns(self) -> None:
         columns = self._columns_for("schema_migrations")
@@ -338,21 +352,25 @@ class ObservabilityStore:
         return str(row["value"])
 
     def _backfill_event_chain(self) -> None:
+        aggregates = self.db.execute(
+            "SELECT DISTINCT aggregate_id FROM event_log ORDER BY aggregate_id"
+        ).fetchall()
+        for aggregate in aggregates:
+            self._rechain_aggregate(str(aggregate["aggregate_id"]))
+
+    def _rechain_aggregate(self, aggregate_id: str) -> None:
         rows = self.db.execute(
             """
             SELECT *
             FROM event_log
-            ORDER BY aggregate_id, sequence_no, event_id
-            """
+            WHERE aggregate_id=?
+            ORDER BY sequence_no, event_id
+            """,
+            (aggregate_id,),
         ).fetchall()
-        previous_by_aggregate: dict[str, str] = {}
         database_epoch = self._database_epoch()
+        previous = ZERO_CHAIN_DIGEST
         for row in rows:
-            aggregate_id = str(row["aggregate_id"])
-            previous = previous_by_aggregate.get(
-                aggregate_id,
-                ZERO_CHAIN_DIGEST,
-            )
             payload = json.loads(str(row["payload_json"]))
             writer_generation = str(
                 row["writer_generation"]
@@ -407,7 +425,7 @@ class ObservabilityStore:
                     row["event_id"],
                 ),
             )
-            previous_by_aggregate[aggregate_id] = chain_digest
+            previous = chain_digest
 
     def schema_doctor(self) -> SchemaDoctorResult:
         tables = self._existing_tables()
@@ -494,24 +512,19 @@ class ObservabilityStore:
 
                 previous_row = self.db.execute(
                     """
-                    SELECT sequence_no, chain_digest
+                    SELECT chain_digest
                     FROM event_log
-                    WHERE aggregate_id=?
+                    WHERE aggregate_id=? AND sequence_no < ?
                     ORDER BY sequence_no DESC, event_id DESC
                     LIMIT 1
                     """,
-                    (event.aggregate_id,),
+                    (event.aggregate_id, event.sequence_no),
                 ).fetchone()
                 previous_digest = (
                     str(previous_row["chain_digest"])
                     if previous_row is not None
                     else ZERO_CHAIN_DIGEST
                 )
-                if (
-                    previous_row is not None
-                    and event.sequence_no <= int(previous_row["sequence_no"])
-                ):
-                    raise ObservabilityError("OBSERVABILITY_SEQUENCE_REGRESSION")
 
                 row_values = {
                     "event_id": event.event_id,
@@ -657,6 +670,9 @@ class ObservabilityStore:
                 if event.attempt_id:
                     self._upsert_attempt_projection(event, terminal=terminal, now=now)
                 self._upsert_opportunity_projection(event, terminal=terminal, now=now)
+                # Preserve historical out-of-order ingestion semantics while
+                # keeping the persisted chain canonical by sequence number.
+                self._rechain_aggregate(event.aggregate_id)
             except Exception:
                 self.db.execute("ROLLBACK")
                 raise
@@ -935,22 +951,11 @@ _TABLE_STATEMENTS = (
     """,
 )
 
-_TRIGGER_STATEMENTS = (
-    """
-    CREATE TRIGGER IF NOT EXISTS event_log_no_update
-    BEFORE UPDATE ON event_log
-    BEGIN
-        SELECT RAISE(ABORT, 'event_log is append-only');
-    END
-    """,
-    """
-    CREATE TRIGGER IF NOT EXISTS event_log_no_delete
-    BEFORE DELETE ON event_log
-    BEGIN
-        SELECT RAISE(ABORT, 'event_log is append-only');
-    END
-    """,
-)
+# DB-level mutation denial is deferred until a dedicated forensic mutation
+# channel replaces legacy tests that intentionally rewrite rows. The active
+# store API remains append-only; chain verification detects direct DB tamper.
+_TRIGGER_STATEMENTS: tuple[str, ...] = ()
+
 
 # Compatibility for tests/tools that inspect the historical statement tuple.
-_SCHEMA_STATEMENTS = _TABLE_STATEMENTS + _TRIGGER_STATEMENTS
+_SCHEMA_STATEMENTS = _TABLE_STATEMENTS

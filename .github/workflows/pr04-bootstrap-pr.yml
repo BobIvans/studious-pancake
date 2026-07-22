@@ -1,0 +1,51 @@
+name: PR-04 pull-request bootstrap
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: ${{ !contains(github.event.pull_request.head.sha, 'pr04-bootstrap') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pr-04-repeated-installed-paper-service
+          fetch-depth: 0
+      - name: Extract and run materializer
+        shell: bash
+        run: |
+          awk '
+            /python - <<'"'"'PY'"'"'/ {capture=1; next}
+            capture && /^          PY$/ {capture=0; exit}
+            capture {sub(/^          /, ""); print}
+          ' .github/workflows/pr04-bootstrap.yml > /tmp/pr04_materialize.py
+          python /tmp/pr04_materialize.py
+      - name: Format generated Python
+        run: |
+          python -m pip install --quiet black==26.3.1
+          python -m black \
+            src/cli.py \
+            src/paper_shadow/repeated_service_pr04.py \
+            tests/test_pr04_repeated_installed_paper_service.py
+      - name: Commit generated implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/cli.py \
+            src/paper_shadow/repeated_service_pr04.py \
+            tests/test_pr04_repeated_installed_paper_service.py \
+            docs/pr04_repeated_installed_paper_service.md \
+            config/format_targets.txt \
+            .github/workflows/pr04-repeated-installed-paper-service.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "PR-04: add repeated installed paper supervisor [pr04-bootstrap]"
+            git push origin HEAD:pr-04-repeated-installed-paper-service
+          fi

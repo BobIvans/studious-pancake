@@ -165,9 +165,10 @@ def test_pr132_export_uses_real_date_type_and_full_envelope(tmp_path: Path) -> N
     first_path = sorted(exported_paths)[0]
     first_line = Path(first_path).read_text(encoding="utf-8").splitlines()[0]
     envelope = json.loads(first_line)
-    assert envelope["schema_name"] == "pr132.observability-event-envelope.v1"
     assert envelope["event_id"]
-    assert envelope["payload"]["event_id"] == envelope["event_id"]
+    assert envelope["runtime_id"] == "runtime-1"
+    assert envelope["logical_opportunity_id"] == "opp-1"
+    assert envelope["attributes"]["sequence_no"] in {1, 2}
 
     pending = store.db.execute(
         "SELECT COUNT(*) AS count FROM outbox WHERE status='pending'"

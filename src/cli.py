@@ -28,6 +28,11 @@ from src.paper_shadow import (
     build_paper_shadow_runtime,
 )
 from src.paper_shadow.a1_vertical_preflight import evaluate_paper_vertical_a1
+from src.paper_shadow.durable_service_a3 import (
+    A3PaperServiceStatus,
+    InstalledDurablePaperServiceReport,
+    build_installed_durable_paper_service,
+)
 from src.paper_shadow.runner import PaperShadowRunSummary
 
 logger = logging.getLogger(__name__)
@@ -41,6 +46,13 @@ EXIT_PAPER_SHADOW_DEGRADED = 7
 
 PAPER_SHADOW_SUCCESS_STATUSES = frozenset(
     {PaperShadowRunStatus.HEALTHY_IDLE, PaperShadowRunStatus.PAPER_OUTCOME}
+)
+PAPER_SERVICE_SUCCESS_STATUSES = frozenset(
+    {
+        A3PaperServiceStatus.NO_TRADE,
+        A3PaperServiceStatus.RECONCILED_PAPER_SUCCESS,
+        A3PaperServiceStatus.RECONCILED_PAPER_FAILURE,
+    }
 )
 
 LauncherConfig = RuntimeConfig
@@ -235,6 +247,11 @@ def _paper_shadow_journal_path(override: str | None = None) -> Path:
     )
 
 
+def _paper_service_db_path() -> Path:
+    configured = os.environ.get("FLASHLOAN_PAPER_SERVICE_DB")
+    return Path(configured) if configured else Path(".runtime/paper-service.sqlite3")
+
+
 def _paper_shadow_display_reason(
     payload: dict[str, Any],
     *,
@@ -275,12 +292,51 @@ def _print_paper_shadow_summary(
     )
 
 
+def _paper_service_blockers(payload: dict[str, object]) -> tuple[str, ...]:
+    raw = payload.get("b3_blockers", ())
+    if not isinstance(raw, (list, tuple)):
+        return ()
+    return tuple(str(item) for item in raw if str(item))
+
+
+def _print_paper_service_report(
+    report: InstalledDurablePaperServiceReport,
+    *,
+    as_json: bool = False,
+) -> None:
+    payload = report.to_dict()
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return
+    blockers = _paper_service_blockers(payload)
+    blocker_suffix = f" blockers={','.join(blockers)}" if blockers else ""
+    print(
+        "INSTALLED_PAPER_SERVICE: "
+        f"status={payload['status']} "
+        f"reason={payload['terminal_reason']} "
+        f"ready={payload['ready_for_next_cycle']} "
+        f"db={payload['db_path']} "
+        f"cycle={payload['cycle_id']}"
+        f"{blocker_suffix}"
+    )
+
+
 def _paper_shadow_exit_code(summary: PaperShadowRunSummary) -> int:
     if summary.status in PAPER_SHADOW_SUCCESS_STATUSES:
         return 0
     if summary.status is PaperShadowRunStatus.BLOCKED:
         return EXIT_PAPER_SHADOW_BLOCKED
     if summary.status is PaperShadowRunStatus.DEGRADED:
+        return EXIT_PAPER_SHADOW_DEGRADED
+    return EXIT_PAPER_SHADOW_FAILED
+
+
+def _paper_service_exit_code(report: InstalledDurablePaperServiceReport) -> int:
+    if report.status in PAPER_SERVICE_SUCCESS_STATUSES:
+        return 0
+    if report.status is A3PaperServiceStatus.BLOCKED:
+        return EXIT_PAPER_SHADOW_BLOCKED
+    if report.status is A3PaperServiceStatus.SIMULATION_FAILED:
         return EXIT_PAPER_SHADOW_DEGRADED
     return EXIT_PAPER_SHADOW_FAILED
 
@@ -303,6 +359,16 @@ def _run_paper_shadow_once(
         pr023_compat_reason=pr023_compat_reason,
     )
     return _paper_shadow_exit_code(summary)
+
+
+def _run_installed_durable_paper_service_once(config: RuntimeConfig) -> int:
+    service = build_installed_durable_paper_service(
+        config,
+        db_path=_paper_service_db_path(),
+    )
+    report = asyncio.run(service.run_once())
+    _print_paper_service_report(report)
+    return _paper_service_exit_code(report)
 
 
 def _run_paper_vertical_preflight(
@@ -343,11 +409,7 @@ def _run_requested_mode(
         )
         return EXIT_MODE_UNAVAILABLE
     if mode == "paper":
-        return _run_paper_shadow_once(
-            config,
-            as_json=False,
-            pr023_compat_reason=True,
-        )
+        return _run_installed_durable_paper_service_once(config)
     if mode == "disabled":
         _print_status(status, as_json=False)
         return 0

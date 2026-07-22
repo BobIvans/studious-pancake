@@ -72,11 +72,9 @@ def test_a3_ready_batch_runs_a2_projection_and_persists_no_trade(tmp_path):
         assert cycle_id
         assert items == ("request-1",)
         return ExactAttemptRuntimeReport(
-            runtime_cycle_id=cycle_id,
+            cycle_id=cycle_id,
             status=A2PaperOutcomeStatus.NO_TRADE,
             terminal_reason="no_trade",
-            report_hash=_sha({"cycle": cycle_id, "status": "no_trade"}),
-            ready_for_next_cycle=True,
             records=(),
         )
 
@@ -121,5 +119,5 @@ def test_a3_service_is_the_installed_paper_mode_authority():
 
     assert "build_installed_durable_paper_service" in source
     assert 'if mode == "paper":' in source
-    assert "_run_installed_paper_service_once" in source
+    assert "_run_installed_durable_paper_service_once" in source
     assert "INSTALLED_PAPER_SERVICE" in source

@@ -135,7 +135,7 @@ src/providers/marginfi/__init__.py
 src/providers/marginfi/complete_evidence.py
 src/providers/marginfi/coherent_snapshot.py
 tests/test_pr101_marginfi_complete_protocol_evidence.py
-tests/test_pr116_coherent_marginfi_snapshot_oracle.py
+tests/test_pr116_coherent_snapshot_oracle.py
 src/submission/canonical_lifecycle_pr106.py
 tests/test_pr106_canonical_sender_lifecycle_disabled.py
 src/freshness/__init__.py
@@ -146,3 +146,7 @@ tests/test_pr134_production_sandbox_policy.py
 src/observability/active_management.py
 src/release_gate/materialized_evidence.py
 tests/test_o1_management_evidence_pipeline.py
+src/providers/jupiter/quota.py
+src/providers/jupiter/scheduler.py
+src/scheduling/proof_critical.py
+tests/providers/test_pr194_proof_critical_scheduling.py

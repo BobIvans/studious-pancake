@@ -40,8 +40,8 @@ def _append_two(store: ObservabilityStore) -> list[sqlite3.Row]:
 
 
 def _drop_immutability_triggers(store: ObservabilityStore) -> None:
-    store.db.execute("DROP TRIGGER event_log_no_update")
-    store.db.execute("DROP TRIGGER event_log_no_delete")
+    store.db.execute("DROP TRIGGER IF EXISTS event_log_no_update")
+    store.db.execute("DROP TRIGGER IF EXISTS event_log_no_delete")
 
 
 def test_store_creates_restrictive_database_and_valid_chain(tmp_path: Path) -> None:
@@ -56,19 +56,15 @@ def test_store_creates_restrictive_database_and_valid_chain(tmp_path: Path) -> N
     assert stat.S_IMODE(db_path.stat().st_mode) == 0o600
 
 
-def test_event_log_rejects_update_and_delete(tmp_path: Path) -> None:
+def test_store_preserves_pr132_and_adds_pr184_migrations(tmp_path: Path) -> None:
     with ObservabilityStore(tmp_path / "events.sqlite3") as store:
-        rows = _append_two(store)
-        with pytest.raises(sqlite3.DatabaseError, match="append-only"):
-            store.db.execute(
-                "UPDATE event_log SET stage='rewritten' WHERE event_id=?",
-                (rows[0]["event_id"],),
-            )
-        with pytest.raises(sqlite3.DatabaseError, match="append-only"):
-            store.db.execute(
-                "DELETE FROM event_log WHERE event_id=?",
-                (rows[0]["event_id"],),
-            )
+        rows = store.db.execute(
+            "SELECT version, schema_name FROM schema_migrations ORDER BY version"
+        ).fetchall()
+
+    migrations = {row["version"]: row["schema_name"] for row in rows}
+    assert migrations[17] == "pr132.observability-store.v1"
+    assert migrations[18] == "pr184.tamper-evident-observability-store.v1"
 
 
 def test_payload_and_digest_rewrite_breaks_chain(tmp_path: Path) -> None:
@@ -146,7 +142,9 @@ def test_deleting_middle_event_breaks_previous_chain(tmp_path: Path) -> None:
     assert "PREVIOUS_CHAIN_DIVERGENCE" in codes
 
 
-def test_reopening_database_preserves_chain_and_triggers(tmp_path: Path) -> None:
+def test_reopening_database_preserves_chain_and_detects_rewrite(
+    tmp_path: Path,
+) -> None:
     db_path = tmp_path / "reopen.sqlite3"
     with ObservabilityStore(db_path) as store:
         _append_two(store)
@@ -157,10 +155,16 @@ def test_reopening_database_preserves_chain_and_triggers(tmp_path: Path) -> None
             verify=True,
         )
         assert report["divergences"] == []
-        with pytest.raises(sqlite3.DatabaseError, match="append-only"):
-            reopened.db.execute(
-                "UPDATE event_log SET stage='rewritten' WHERE sequence_no=0"
-            )
+        reopened.db.execute(
+            "UPDATE event_log SET stage='rewritten' WHERE sequence_no=0"
+        )
+        tampered = replay_event_rows(
+            reopened.events_for(aggregate_id="agg-1"),
+            verify=True,
+        )
+        codes = {item["code"] for item in tampered["divergences"]}
+        assert "DENORMALIZED_COLUMN_DIVERGENCE" in codes
+        assert "CHAIN_DIGEST_DIVERGENCE" in codes
 
 
 def test_exact_duplicate_returns_original_idempotent_result(tmp_path: Path) -> None:

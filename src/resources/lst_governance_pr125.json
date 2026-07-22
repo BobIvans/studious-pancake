@@ -1,0 +1,181 @@
+{
+  "schema_version": "pr125.lst-governance.v1",
+  "policy": {
+    "fair_value_requires_oracle_and_redemption": true,
+    "abnormal_redemption_state_blocks": true,
+    "depeg_kill_switch_bps": 100,
+    "max_total_lst_exposure_pct": 0,
+    "optional_lst_pairs_enabled_by_default": false,
+    "execution_claimed": false
+  },
+  "strategies": [
+    {
+      "strategy_id": "circular_dex_arbitrage",
+      "enabled": false,
+      "description": "DEX quote loops are not a fair-value oracle for LST assets.",
+      "price_sources": [
+        "dex_route_quote"
+      ],
+      "lst_pair_semantics": "optional-disabled-until-reviewed-evidence"
+    },
+    {
+      "strategy_id": "lst_fair_value_depeg",
+      "enabled": false,
+      "description": "Compares DEX price only against reviewed oracle and exchange-rate evidence.",
+      "price_sources": [
+        "oracle",
+        "redemption_exchange_rate"
+      ],
+      "lst_pair_semantics": "blocked-until-reviewed-evidence"
+    },
+    {
+      "strategy_id": "lst_redemption_unstake",
+      "enabled": false,
+      "description": "Requires reviewed redemption source, withdrawal delay and protocol fee.",
+      "price_sources": [
+        "redemption_exchange_rate"
+      ],
+      "lst_pair_semantics": "blocked-until-reviewed-evidence"
+    }
+  ],
+  "assets": [
+    {
+      "cluster": "mainnet-beta",
+      "token_program": "legacy-spl-token",
+      "token_program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 9,
+      "extensions": [],
+      "admission": "disabled_until_reviewed_evidence",
+      "max_asset_exposure_pct": 0,
+      "symbol": "JitoSOL",
+      "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+      "official_mint_provenance": {
+        "status": "pending_review",
+        "source": "must-be-pinned-to-official-protocol-documentation",
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "oracle_model": {
+        "status": "missing",
+        "source": null,
+        "max_staleness_seconds": 600,
+        "confidence": null,
+        "last_update_slot": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "redemption_model": {
+        "status": "missing",
+        "exchange_rate_source": null,
+        "withdrawal_delay_seconds": null,
+        "protocol_fee_bps": null,
+        "abnormal_state_source": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "deployment_attestation": {
+        "status": "pending_pr124",
+        "programdata_hash": null,
+        "upgrade_authority_policy": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "liquidity_policy": {
+        "max_price_impact_bps": 50,
+        "min_liquidity_usd": null
+      }
+    },
+    {
+      "cluster": "mainnet-beta",
+      "token_program": "legacy-spl-token",
+      "token_program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 9,
+      "extensions": [],
+      "admission": "disabled_until_reviewed_evidence",
+      "max_asset_exposure_pct": 0,
+      "symbol": "mSOL",
+      "mint": "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So",
+      "official_mint_provenance": {
+        "status": "pending_review",
+        "source": "must-be-pinned-to-official-protocol-documentation",
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "oracle_model": {
+        "status": "missing",
+        "source": null,
+        "max_staleness_seconds": 600,
+        "confidence": null,
+        "last_update_slot": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "redemption_model": {
+        "status": "missing",
+        "exchange_rate_source": null,
+        "withdrawal_delay_seconds": null,
+        "protocol_fee_bps": null,
+        "abnormal_state_source": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "deployment_attestation": {
+        "status": "pending_pr124",
+        "programdata_hash": null,
+        "upgrade_authority_policy": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "liquidity_policy": {
+        "max_price_impact_bps": 50,
+        "min_liquidity_usd": null
+      }
+    },
+    {
+      "cluster": "mainnet-beta",
+      "token_program": "legacy-spl-token",
+      "token_program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "decimals": 9,
+      "extensions": [],
+      "admission": "disabled_until_reviewed_evidence",
+      "max_asset_exposure_pct": 0,
+      "symbol": "bSOL",
+      "mint": "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1",
+      "official_mint_provenance": {
+        "status": "pending_review",
+        "source": "must-be-pinned-to-official-protocol-documentation",
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "oracle_model": {
+        "status": "missing",
+        "source": null,
+        "max_staleness_seconds": 600,
+        "confidence": null,
+        "last_update_slot": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "redemption_model": {
+        "status": "missing",
+        "exchange_rate_source": null,
+        "withdrawal_delay_seconds": null,
+        "protocol_fee_bps": null,
+        "abnormal_state_source": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "deployment_attestation": {
+        "status": "pending_pr124",
+        "programdata_hash": null,
+        "upgrade_authority_policy": null,
+        "evidence_sha256": null,
+        "reviewer": null
+      },
+      "liquidity_policy": {
+        "max_price_impact_bps": 50,
+        "min_liquidity_usd": null
+      }
+    }
+  ]
+}

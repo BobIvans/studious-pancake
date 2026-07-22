@@ -41,8 +41,7 @@ class DurableSubmissionIntentStore:
     def _initialize(self) -> None:
         try:
             with self._connect() as connection:
-                connection.executescript(
-                    """
+                connection.executescript("""
                     CREATE TABLE IF NOT EXISTS pr08_meta(
                       singleton INTEGER PRIMARY KEY CHECK(singleton=1),
                       product_id TEXT NOT NULL,
@@ -62,8 +61,7 @@ class DurableSubmissionIntentStore:
                       created_at_ns INTEGER NOT NULL,
                       updated_at_ns INTEGER NOT NULL
                     );
-                    """
-                )
+                    """)
                 connection.execute(
                     """INSERT INTO pr08_meta VALUES(1, ?, ?)
                     ON CONFLICT(singleton) DO NOTHING""",

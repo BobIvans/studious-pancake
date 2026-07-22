@@ -78,6 +78,7 @@ dev = [
 flashloan-bot = "src.cli:main"
 flashloan-bot-healthcheck = "src.container_runtime:healthcheck_main"
 flashloan-contracts = "src.external_contracts.cli:main"
+flashloan-release-evidence = "src.release_gate.materialized_evidence:main"
 
 [tool.setuptools]
 include-package-data = true

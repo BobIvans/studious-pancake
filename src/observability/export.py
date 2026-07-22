@@ -11,7 +11,8 @@ import time
 from .redaction import REDACTION_VERSION
 from .store import ObservabilityStore
 
-EXPORT_TOOL_VERSION = "observability-export.v2"
+EXPORT_TOOL_VERSION = "observability-export.v1"
+PR132_EXPORT_TOOL_VERSION = "observability-export.v2"
 
 
 def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, object]:
@@ -51,7 +52,7 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
             path=final,
             checksum=checksum,
             event_ids=[row["event_id"] for row in partition_rows],
-            tool=EXPORT_TOOL_VERSION,
+            tool=PR132_EXPORT_TOOL_VERSION,
         )
         manifest = {
             "manifest_id": manifest_id,
@@ -106,22 +107,16 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
     store.db.execute("COMMIT")
 
     result: dict[str, object] = {
+        "manifest_id": legacy_manifest["manifest_id"],
+        "checksum": legacy_manifest["checksum"],
         "event_count": len(rows),
+        "path": legacy_manifest["path"],
+        "export_tool_version": EXPORT_TOOL_VERSION,
         "manifest_count": len(manifests),
         "manifests": manifests,
-        "export_tool_version": EXPORT_TOOL_VERSION,
         "legacy_path": legacy_manifest["path"],
+        "pr132_export_tool_version": PR132_EXPORT_TOOL_VERSION,
     }
-    if len(manifests) == 1:
-        result.update(manifests[0])
-    else:
-        result.update(
-            {
-                "manifest_id": legacy_manifest["manifest_id"],
-                "path": legacy_manifest["path"],
-                "checksum": legacy_manifest["checksum"],
-            }
-        )
     return result
 
 
@@ -154,12 +149,7 @@ def _write_legacy_compat_jsonl(
     os.replace(tmp, final)
     _fsync_dir(part)
     return {
-        "manifest_id": _manifest_id(
-            path=final,
-            checksum=checksum,
-            event_ids=[row["event_id"] for row in legacy_rows],
-            tool="observability-export.v1-compat",
-        ),
+        "manifest_id": hashlib.sha256((str(final) + checksum).encode()).hexdigest(),
         "checksum": checksum,
         "event_count": len(legacy_rows),
         "first_event_id": legacy_rows[0]["event_id"],

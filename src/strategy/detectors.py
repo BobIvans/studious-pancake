@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+import hashlib
+import json
 import time
 from typing import Any
 
@@ -140,13 +142,34 @@ class CircularArbitrageDetector:
                 },
             )
             return None
+
         candidates: list[_RouteCandidate] = []
+        first_amount_mismatches = 0
+        second_amount_mismatches = 0
+        exact_amount_pairs = 0
+        cross_slot_pairs = 0
+
         for first in first_legs:
-            for second in second_legs:
+            if first.in_amount != pair.probe_amount_base_units:
+                first_amount_mismatches += 1
+                continue
+
+            intermediate_amount = first.exact_output_for(pair.probe_amount_base_units)
+            exact_second_legs = tuple(
+                second
+                for second in second_legs
+                if second.in_amount == intermediate_amount
+            )
+            if not exact_second_legs:
+                second_amount_mismatches += 1
+                continue
+
+            for second in exact_second_legs:
+                exact_amount_pairs += 1
                 if abs(first.slot - second.slot) > pair.max_slot_skew:
+                    cross_slot_pairs += 1
                     continue
-                intermediate_amount = first.project_output(pair.probe_amount_base_units)
-                final_amount = second.project_output(intermediate_amount)
+                final_amount = second.exact_output_for(intermediate_amount)
                 candidates.append(
                     _RouteCandidate(
                         first=first,
@@ -155,11 +178,26 @@ class CircularArbitrageDetector:
                         final_amount=final_amount,
                     )
                 )
+
         if not candidates:
+            reason_code = (
+                "second_leg_amount_mismatch"
+                if second_amount_mismatches
+                else "cross_slot_or_stale_snapshot"
+            )
             self.last_rejections[pair.pair_id] = DetectionRejection(
                 pair.pair_id,
-                "cross_slot_or_stale_snapshot",
-                {"max_slot_skew": pair.max_slot_skew},
+                reason_code,
+                {
+                    "first_leg_count": len(first_legs),
+                    "second_leg_count": len(second_legs),
+                    "first_leg_amount_mismatches": first_amount_mismatches,
+                    "second_leg_amount_mismatches": second_amount_mismatches,
+                    "exact_amount_pairs": exact_amount_pairs,
+                    "cross_slot_pairs": cross_slot_pairs,
+                    "probe_amount_base_units": pair.probe_amount_base_units,
+                    "max_slot_skew": pair.max_slot_skew,
+                },
             )
             return None
         return max(candidates, key=lambda candidate: candidate.gross_profit_base_units)
@@ -172,12 +210,17 @@ class CircularArbitrageDetector:
         now: float,
     ) -> Opportunity:
         gross_profit = candidate.gross_profit_base_units
+        route_identity = self._route_identity(pair, candidate)
         metadata = {
-            "schema_version": "pr033.snapshot-opportunity.v1",
+            "schema_version": "pr113.amount-coupled-route.v1",
             "detector_pair_id": pair.pair_id,
+            "route_identity": route_identity,
+            "amount_coupled_quotes": True,
             "gross_profit_base_units": gross_profit,
             "projected_final_base_units": candidate.final_amount,
             "intermediate_amount_base_units": candidate.intermediate_amount,
+            "second_leg_request_amount_base_units": candidate.second.in_amount,
+            "final_requote_required_before_planning": True,
             "route": [
                 self._route_leg_metadata(candidate.first),
                 self._route_leg_metadata(candidate.second),
@@ -186,8 +229,9 @@ class CircularArbitrageDetector:
                 "gross_profit_base_units": gross_profit,
                 "probe_amount_base_units": pair.probe_amount_base_units,
                 "route_slot_skew": abs(candidate.first.slot - candidate.second.slot),
+                "route_identity": route_identity,
             },
-            "reason_code": "candidate_detected",
+            "reason_code": "candidate_detected_amount_coupled",
         }
         return Opportunity.create(
             strategy_name="circular_arbitrage",
@@ -196,7 +240,7 @@ class CircularArbitrageDetector:
             input_mint=pair.base_mint,
             output_mint=pair.base_mint,
             proposed_amount_base_units=pair.probe_amount_base_units,
-            expected_gross_profit=float(gross_profit),
+            expected_gross_profit=gross_profit,
             ttl_seconds=pair.ttl_seconds,
             metadata=metadata,
             detected_at=now,
@@ -208,6 +252,8 @@ class CircularArbitrageDetector:
             "provider": snapshot.provider,
             "input_mint": snapshot.input_mint,
             "output_mint": snapshot.output_mint,
+            "in_amount": snapshot.in_amount,
+            "out_amount": snapshot.out_amount,
             "slot": snapshot.slot,
             "commitment": snapshot.commitment,
             "observed_at": snapshot.observed_at,
@@ -219,3 +265,33 @@ class CircularArbitrageDetector:
             "provider_timestamp": snapshot.provider_timestamp,
             "correlation_labels": list(snapshot.correlation_labels),
         }
+
+    @staticmethod
+    def _route_identity(pair: DetectorPair, candidate: _RouteCandidate) -> str:
+        payload = {
+            "schema_version": "pr113.route-identity.v1",
+            "pair_id": pair.pair_id,
+            "base_mint": pair.base_mint,
+            "intermediate_mint": pair.intermediate_mint,
+            "probe_amount_base_units": pair.probe_amount_base_units,
+            "first": {
+                "provider": candidate.first.provider,
+                "request_fingerprint": candidate.first.request_fingerprint,
+                "response_hash": candidate.first.response_hash,
+                "in_amount": candidate.first.in_amount,
+                "out_amount": candidate.first.out_amount,
+                "slot": candidate.first.slot,
+                "quote_id": candidate.first.quote_id,
+            },
+            "second": {
+                "provider": candidate.second.provider,
+                "request_fingerprint": candidate.second.request_fingerprint,
+                "response_hash": candidate.second.response_hash,
+                "in_amount": candidate.second.in_amount,
+                "out_amount": candidate.second.out_amount,
+                "slot": candidate.second.slot,
+                "quote_id": candidate.second.quote_id,
+            },
+        }
+        encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+        return hashlib.sha256(encoded).hexdigest()

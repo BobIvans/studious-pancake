@@ -26,7 +26,7 @@ def opportunity() -> Opportunity:
         input_mint="So11111111111111111111111111111111111111112",
         output_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
         proposed_amount_base_units=1_000_000,
-        expected_gross_profit=0.0,
+        expected_gross_profit=0,
         ttl_seconds=30.0,
         metadata={"fixture": "pr038"},
         detected_at=100.0,

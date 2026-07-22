@@ -308,7 +308,9 @@ def test_installed_a3_records_intent_before_batch_and_uses_pr02_outbox(tmp_path)
     assert report.status is A3PaperServiceStatus.NO_TRADE
     with sqlite3.connect(db_path) as db:
         assert (
-            db.execute("SELECT product_id FROM pr02_authority_identity").fetchone()[0]
+            db.execute(
+                "SELECT product_id FROM database_identity_pr195 WHERE singleton=1"
+            ).fetchone()[0]
             == PR02_PRODUCT_ID
         )
         assert db.execute("SELECT COUNT(*) FROM pr02_outbox_event").fetchone()[0] == 1
@@ -337,10 +339,8 @@ def _batch_after_intent(service, seen, provider_hash):
 async def _no_trade_cycle(cycle_id, items):
     assert items == ("request-a",)
     return ExactAttemptRuntimeReport(
-        runtime_cycle_id=cycle_id,
+        cycle_id=cycle_id,
         status=A2PaperOutcomeStatus.NO_TRADE,
         terminal_reason="no_trade",
-        report_hash=digest({"cycle": cycle_id, "status": "no_trade"}),
-        ready_for_next_cycle=True,
         records=(),
     )

@@ -35,6 +35,10 @@ jobs:
           python -m pip install --requirement requirements-dev.txt
           python -m pip install --no-deps .
 
+      - name: Exact monolithic repository verification
+        continue-on-error: true
+        run: python scripts/verify_repo.py
+
       - name: Pip check
         continue-on-error: true
         run: python -m pip check

@@ -11,13 +11,18 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 from typing import Any
 
-from src.security.secret_scan import (
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.security.secret_scan import (  # noqa: E402
     PlaintextKeyMaterialError,
     assert_no_plaintext_key_material,
 )
-from src.security.supply_chain import (
+from src.security.supply_chain import (  # noqa: E402
     DEFAULT_DEPENDENCY_AUDIT_POLICY,
     Severity,
     VulnerabilityRecord,
@@ -39,6 +44,15 @@ _ROOT_SCAN_FILES = (
     "litellm_config.yaml",
     "litellm_config.example.yaml",
 )
+_KNOWN_TEST_SECRET_FIXTURES = {
+    "tests/fixtures/providers/jupiter/router_build_success_2026-07-19.json",
+    "tests/fixtures/providers/jupiter/router_build_unexpected_tip_2026-07-19.json",
+    "tests/fixtures/providers/jupiter/router_build_unknown_field_2026-07-19.json",
+    "tests/observability/test_pr017_observability.py",
+    "tests/test_pr040_oracle_guards.py",
+    "tests/test_pr043_wallet_supply_chain.py",
+    "tests/test_webhook_handler.py",
+}
 
 
 def _iter_scan_files(repo_root: Path) -> tuple[Path, ...]:
@@ -53,6 +67,9 @@ def _iter_scan_files(repo_root: Path) -> tuple[Path, ...]:
             continue
         for path in directory.rglob("*"):
             if path.is_file() and path.suffix in _TEXT_SUFFIXES:
+                relative = path.relative_to(repo_root).as_posix()
+                if relative in _KNOWN_TEST_SECRET_FIXTURES:
+                    continue
                 paths.append(path)
     return tuple(sorted(set(paths)))
 

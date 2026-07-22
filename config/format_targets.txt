@@ -17,6 +17,8 @@ src/decision/model.py
 src/decision/split.py
 src/strategy/ranker.py
 src/strategy/domain.py
+src/domain/numeric_safety_pr180.py
+tests/test_pr180_numeric_safety.py
 src/config/__init__.py
 src/config/chain_registry.py
 src/config/doctor.py

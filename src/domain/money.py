@@ -10,6 +10,14 @@ from src.config.chain_registry import (
     TOKEN_2022_PROGRAM_ADDRESS,
     TOKEN_PROGRAM_ADDRESS,
 )
+from src.domain.numeric_safety_pr180 import (
+    NumericSafetyError,
+    checked_basis_points,
+    checked_compute_priority_fee,
+    checked_micro_lamports_per_cu,
+    checked_token_account_amount_u64,
+    checked_token_decimals,
+)
 
 NATIVE_SOL_MINT = "11111111111111111111111111111111"
 WSOL_MINT = "So11111111111111111111111111111111111111112"
@@ -42,7 +50,37 @@ def _reject_float(value: object, field: str) -> None:
         raise MonetaryUnitError(f"{field} cannot be a binary float")
 
 
+def _checked_decimals(value: object) -> int:
+    try:
+        return checked_token_decimals(value)
+    except NumericSafetyError as exc:
+        raise MonetaryUnitError(str(exc)) from exc
+
+
+def _checked_basis_points(value: object) -> int:
+    try:
+        return checked_basis_points(value)
+    except NumericSafetyError as exc:
+        raise MonetaryUnitError(str(exc)) from exc
+
+
+def _checked_compute_price(value: object) -> int:
+    try:
+        return checked_micro_lamports_per_cu(value)
+    except NumericSafetyError as exc:
+        raise MonetaryUnitError(str(exc)) from exc
+
+
+def _checked_wire_amount(value: object, field: str = "token amount") -> int:
+    try:
+        return checked_token_account_amount_u64(value, field)
+    except NumericSafetyError as exc:
+        raise MonetaryUnitError(str(exc)) from exc
+
+
 def _check_u128(value: int, field: str) -> None:
+    if isinstance(value, bool):
+        raise MonetaryUnitError(f"{field} cannot be bool")
     if value < 0 or value > U128_MAX:
         raise MonetaryUnitError(f"{field} outside u128 range")
 
@@ -56,10 +94,10 @@ class TokenMetadata:
     is_native: bool = False
 
     def __post_init__(self):
-        if self.decimals < 0:
-            raise MonetaryUnitError("decimals cannot be negative")
+        decimals = _checked_decimals(self.decimals)
         if not self.mint or not self.token_program:
             raise MonetaryUnitError("token metadata requires mint and program")
+        object.__setattr__(self, "decimals", decimals)
 
 
 class TokenRegistry:
@@ -92,22 +130,36 @@ class TokenAmount:
     decimals: int
 
     def __post_init__(self):
-        _check_u128(int(self.base_units), "token amount")
-        if self.decimals < 0:
-            raise MonetaryUnitError("decimals cannot be negative")
-        object.__setattr__(self, "base_units", int(self.base_units))
-        object.__setattr__(self, "decimals", int(self.decimals))
+        if isinstance(self.base_units, bool):
+            raise MonetaryUnitError("token amount cannot be bool")
+        base_units = int(self.base_units)
+        _check_u128(base_units, "token amount")
+        object.__setattr__(self, "base_units", base_units)
+        object.__setattr__(self, "decimals", _checked_decimals(self.decimals))
 
     @classmethod
-    def from_base_units(cls, mint: str, base_units: int, decimals: int) -> "TokenAmount":
+    def from_base_units(
+        cls,
+        mint: str,
+        base_units: int,
+        decimals: int,
+    ) -> "TokenAmount":
         return cls(mint, int(base_units), int(decimals))
 
     @classmethod
-    def from_ui(cls, mint: str, ui_amount: Decimal | int | str, decimals: int) -> "TokenAmount":
+    def from_ui(
+        cls,
+        mint: str,
+        ui_amount: Decimal | int | str,
+        decimals: int,
+    ) -> "TokenAmount":
         _reject_float(ui_amount, "ui_amount")
-        scale = Decimal(10) ** int(decimals)
-        units = (Decimal(str(ui_amount)) * scale).to_integral_value(rounding=ROUND_FLOOR)
-        return cls(mint, int(units), int(decimals))
+        safe_decimals = _checked_decimals(decimals)
+        scale = Decimal(10) ** safe_decimals
+        units = (
+            Decimal(str(ui_amount)) * scale
+        ).to_integral_value(rounding=ROUND_FLOOR)
+        return cls(mint, int(units), safe_decimals)
 
     def _check(self, other: "TokenAmount | TokenDelta") -> None:
         if (self.mint, self.decimals) != (other.mint, other.decimals):
@@ -115,7 +167,11 @@ class TokenAmount:
 
     def __add__(self, other: "TokenAmount") -> "TokenAmount":
         self._check(other)
-        return TokenAmount(self.mint, self.base_units + other.base_units, self.decimals)
+        return TokenAmount(
+            self.mint,
+            self.base_units + other.base_units,
+            self.decimals,
+        )
 
     def __sub__(self, other: "TokenAmount") -> "TokenDelta":
         self._check(other)
@@ -127,22 +183,44 @@ class TokenAmount:
             raise MonetaryUnitError("token subtraction would be negative")
         return TokenAmount(self.mint, delta.base_units, self.decimals)
 
-    def multiply_ratio(self, numerator: int, denominator: int, rounding: RoundingMode) -> "TokenAmount":
+    def multiply_ratio(
+        self,
+        numerator: int,
+        denominator: int,
+        rounding: RoundingMode,
+    ) -> "TokenAmount":
         if numerator < 0:
             raise MonetaryUnitError("numerator cannot be negative")
         raw = self.base_units * numerator
-        value = _ceil_div(raw, denominator) if rounding is RoundingMode.ROUND_UP else raw // denominator
+        value = (
+            _ceil_div(raw, denominator)
+            if rounding is RoundingMode.ROUND_UP
+            else raw // denominator
+        )
         return TokenAmount(self.mint, value, self.decimals)
+
+    def to_wire_amount_u64(self) -> int:
+        """Narrow an intermediate token amount to a protocol account amount."""
+
+        return _checked_wire_amount(self.base_units)
 
     def to_ui_decimal(self) -> Decimal:
         return Decimal(self.base_units) / (Decimal(10) ** self.decimals)
 
     def to_json(self) -> dict:
-        return {"mint": self.mint, "base_units": str(self.base_units), "decimals": self.decimals}
+        return {
+            "mint": self.mint,
+            "base_units": str(self.base_units),
+            "decimals": self.decimals,
+        }
 
     @classmethod
     def from_json(cls, payload: dict) -> "TokenAmount":
-        return cls(str(payload["mint"]), int(payload["base_units"]), int(payload["decimals"]))
+        return cls(
+            str(payload["mint"]),
+            int(payload["base_units"]),
+            int(payload["decimals"]),
+        )
 
 
 @dataclass(frozen=True)
@@ -152,10 +230,13 @@ class TokenDelta:
     decimals: int
 
     def __post_init__(self):
-        if abs(int(self.base_units)) > U128_MAX:
+        if isinstance(self.base_units, bool):
+            raise MonetaryUnitError("token delta cannot be bool")
+        base_units = int(self.base_units)
+        if abs(base_units) > U128_MAX:
             raise MonetaryUnitError("token delta outside signed u128 magnitude")
-        if self.decimals < 0:
-            raise MonetaryUnitError("decimals cannot be negative")
+        object.__setattr__(self, "base_units", base_units)
+        object.__setattr__(self, "decimals", _checked_decimals(self.decimals))
 
     def to_amount_floor_zero(self) -> TokenAmount:
         return TokenAmount(self.mint, max(0, self.base_units), self.decimals)
@@ -166,6 +247,8 @@ class Lamports:
     value: int
 
     def __post_init__(self):
+        if isinstance(self.value, bool):
+            raise MonetaryUnitError("lamports cannot be bool")
         if int(self.value) < 0 or int(self.value) > U64_MAX:
             raise MonetaryUnitError("lamports outside u64 range")
         object.__setattr__(self, "value", int(self.value))
@@ -173,7 +256,13 @@ class Lamports:
     @classmethod
     def from_sol(cls, sol: Decimal | int | str) -> "Lamports":
         _reject_float(sol, "sol")
-        return cls(int((Decimal(str(sol)) * LAMPORTS_PER_SOL).to_integral_value(rounding=ROUND_FLOOR)))
+        return cls(
+            int(
+                (Decimal(str(sol)) * LAMPORTS_PER_SOL).to_integral_value(
+                    rounding=ROUND_FLOOR,
+                )
+            )
+        )
 
     def to_sol_decimal(self) -> Decimal:
         return Decimal(self.value) / LAMPORTS_PER_SOL
@@ -196,7 +285,9 @@ def lamports_to_wrapped_sol(amount: Lamports) -> TokenAmount:
 
 def wrapped_sol_to_lamports(amount: TokenAmount) -> Lamports:
     if amount.mint != WSOL_MINT or amount.decimals != 9:
-        raise MonetaryUnitError("explicit wSOL conversion requires wSOL mint with 9 decimals")
+        raise MonetaryUnitError(
+            "explicit wSOL conversion requires wSOL mint with 9 decimals"
+        )
     return Lamports(amount.base_units)
 
 
@@ -205,8 +296,7 @@ class BasisPoints:
     value: int
 
     def __post_init__(self):
-        if self.value < 0:
-            raise MonetaryUnitError("basis points cannot be negative")
+        object.__setattr__(self, "value", _checked_basis_points(self.value))
 
     def apply_floor(self, amount: TokenAmount) -> TokenAmount:
         return amount.multiply_ratio(self.value, 10_000, RoundingMode.ROUND_DOWN)
@@ -220,8 +310,11 @@ class ComputeUnitPrice:
     micro_lamports_per_cu: int
 
     def __post_init__(self):
-        if self.micro_lamports_per_cu < 0:
-            raise MonetaryUnitError("compute unit price cannot be negative")
+        object.__setattr__(
+            self,
+            "micro_lamports_per_cu",
+            _checked_compute_price(self.micro_lamports_per_cu),
+        )
 
 
 @dataclass(frozen=True)
@@ -230,10 +323,14 @@ class ComputeBudget:
     unit_price: ComputeUnitPrice
 
     def priority_fee(self) -> Lamports:
-        if self.unit_limit < 0:
-            raise MonetaryUnitError("compute unit limit cannot be negative")
-        micro = self.unit_limit * self.unit_price.micro_lamports_per_cu
-        return Lamports(_ceil_div(micro, MICRO_LAMPORTS_PER_LAMPORT))
+        try:
+            fee = checked_compute_priority_fee(
+                self.unit_limit,
+                self.unit_price.micro_lamports_per_cu,
+            )
+        except NumericSafetyError as exc:
+            raise MonetaryUnitError(str(exc)) from exc
+        return Lamports(fee)
 
 
 class FeeComponentKind(str, Enum):

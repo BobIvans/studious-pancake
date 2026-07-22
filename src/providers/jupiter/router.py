@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import base64
+import json
 import math
 import time
 from dataclasses import dataclass, field
@@ -27,6 +28,20 @@ from .quota import (
 
 JUPITER_ROUTER_ENDPOINT = "/swap/v2/build"
 JUPITER_COMPUTE_UNIT_LIMIT_MAX = 1_400_000
+JUPITER_U64_MAX = 2**64 - 1
+JUPITER_MAX_INTEGER_DIGITS = 20
+JUPITER_MAX_ROUTE_PLAN_SEGMENTS = 8
+JUPITER_MAX_INSTRUCTIONS_BY_BUCKET: dict[str, int] = {
+    "computeBudgetInstructions": 2,
+    "setupInstructions": 16,
+    "otherInstructions": 16,
+}
+JUPITER_MAX_ACCOUNTS_PER_INSTRUCTION = 64
+JUPITER_MAX_DECODED_INSTRUCTION_BYTES = 4_096
+JUPITER_MAX_ALT_TABLES = 8
+JUPITER_MAX_ALT_ADDRESSES_PER_TABLE = 256
+JUPITER_MAX_TOTAL_ALT_ADDRESSES = 512
+JUPITER_BLOCKHASH_BYTES = 32
 SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
 
 
@@ -160,12 +175,18 @@ class JupiterRawInstruction:
     @property
     def data(self) -> bytes:
         try:
-            return base64.b64decode(self.data_b64, validate=True)
+            decoded = base64.b64decode(self.data_b64, validate=True)
         except Exception as exc:
             raise JupiterRouterError(
                 JupiterRejectionReason.SCHEMA_FAILURE,
                 "instruction data is not base64",
             ) from exc
+        if len(decoded) > JUPITER_MAX_DECODED_INSTRUCTION_BYTES:
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                "instruction data exceeds structural budget",
+            )
+        return decoded
 
     def to_execution_instruction(self, *, kind: str = "jupiter") -> Instruction:
         return Instruction(
@@ -317,7 +338,8 @@ class JupiterRouterAdapter:
                         JupiterRejectionReason.SCHEMA_FAILURE,
                         f"Jupiter HTTP status {resp.status}",
                     )
-                data = await resp.json(content_type=None)
+                payload = await resp.text()
+                data = strict_json_loads(payload)
             self._health = JupiterHealth.READY
             return parse_build_response(data, request)
         except asyncio.TimeoutError as exc:
@@ -338,18 +360,67 @@ def _retry_after(value: str | None) -> float | None:
         return None
 
 
-def _int_string(data: Mapping[str, Any], key: str, positive: bool = True) -> int:
-    value = data.get(key)
-    if not isinstance(value, str) or not value.isdigit():
+def strict_json_loads(payload: str) -> Any:
+    """Decode provider JSON without duplicate keys or non-finite constants."""
+
+    def reject_constant(value: str) -> None:
         raise JupiterRouterError(
             JupiterRejectionReason.SCHEMA_FAILURE,
-            f"{key} must be unsigned integer string",
+            f"non-finite JSON constant rejected: {value}",
+        )
+
+    def object_pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+        seen: dict[str, Any] = {}
+        for key, value in pairs:
+            if key in seen:
+                raise JupiterRouterError(
+                    JupiterRejectionReason.SCHEMA_FAILURE,
+                    "duplicate JSON key rejected",
+                )
+            seen[key] = value
+        return seen
+
+    try:
+        return json.loads(
+            payload,
+            parse_constant=reject_constant,
+            object_pairs_hook=object_pairs,
+        )
+    except JupiterRouterError:
+        raise
+    except json.JSONDecodeError as exc:
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "provider JSON could not be decoded",
+        ) from exc
+
+
+def _int_string(
+    data: Mapping[str, Any],
+    key: str,
+    positive: bool = True,
+    max_value: int = JUPITER_U64_MAX,
+) -> int:
+    value = data.get(key)
+    if (
+        not isinstance(value, str)
+        or not value.isdigit()
+        or len(value) > JUPITER_MAX_INTEGER_DIGITS
+    ):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            f"{key} must be bounded unsigned integer string",
         )
     parsed = int(value)
     if positive and parsed <= 0:
         raise JupiterRouterError(
             JupiterRejectionReason.SCHEMA_FAILURE,
             f"{key} must be positive",
+        )
+    if parsed > max_value:
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            f"{key} exceeds protocol numeric budget",
         )
     return parsed
 
@@ -365,18 +436,40 @@ def _str(data: Mapping[str, Any], key: str) -> str:
 
 
 def _ix(raw: Mapping[str, Any], name: str) -> JupiterRawInstruction:
+    allowed = {"programId", "accounts", "data"}
+    unknown = set(raw) - allowed
+    if unknown:
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            f"{name} contains unknown instruction fields",
+        )
     accounts = raw.get("accounts")
     if not isinstance(accounts, list):
         raise JupiterRouterError(
             JupiterRejectionReason.SCHEMA_FAILURE,
             f"{name}.accounts missing",
         )
+    if len(accounts) > JUPITER_MAX_ACCOUNTS_PER_INSTRUCTION:
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            f"{name}.accounts exceeds structural budget",
+        )
     metas: list[RawAccountMeta] = []
-    for account in accounts:
-        if (
-            not isinstance(account, Mapping)
-            or not isinstance(account.get("isSigner"), bool)
-            or not isinstance(account.get("isWritable"), bool)
+    for index, account in enumerate(accounts):
+        if not isinstance(account, Mapping):
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                f"{name}.accounts[{index}] malformed",
+            )
+        account_unknown = set(account) - {"pubkey", "isSigner", "isWritable"}
+        if account_unknown:
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                f"{name}.accounts[{index}] contains unknown fields",
+            )
+        if not isinstance(account.get("isSigner"), bool) or not isinstance(
+            account.get("isWritable"),
+            bool,
         ):
             raise JupiterRouterError(
                 JupiterRejectionReason.SCHEMA_FAILURE,
@@ -404,7 +497,135 @@ def _ix_list(data: Mapping[str, Any], key: str) -> tuple[JupiterRawInstruction, 
             JupiterRejectionReason.SCHEMA_FAILURE,
             f"{key} must be list",
         )
-    return tuple(_ix(item, key) for item in value if isinstance(item, Mapping))
+    max_items = JUPITER_MAX_INSTRUCTIONS_BY_BUCKET[key]
+    if len(value) > max_items:
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            f"{key} exceeds structural budget",
+        )
+    instructions: list[JupiterRawInstruction] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                f"{key}[{index}] malformed element",
+            )
+        instructions.append(_ix(item, key))
+    return tuple(instructions)
+
+
+def _route_plan(data: Mapping[str, Any]) -> tuple[Mapping[str, Any], ...]:
+    value = data.get("routePlan")
+    if not isinstance(value, list):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "routePlan must be list",
+        )
+    if len(value) > JUPITER_MAX_ROUTE_PLAN_SEGMENTS:
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "routePlan exceeds structural budget",
+        )
+    route: list[Mapping[str, Any]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, Mapping):
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                f"routePlan[{index}] malformed element",
+            )
+        if "percent" in item and not isinstance(item["percent"], int):
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                f"routePlan[{index}].percent invalid",
+            )
+        if "bps" in item and not isinstance(item["bps"], int):
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                f"routePlan[{index}].bps invalid",
+            )
+        route.append(item)
+    return tuple(route)
+
+
+def _alt_map(data: Mapping[str, Any]) -> dict[str, tuple[str, ...]]:
+    alt_raw = data.get("addressesByLookupTableAddress")
+    if alt_raw is None:
+        return {}
+    if not isinstance(alt_raw, Mapping):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "addressesByLookupTableAddress invalid",
+        )
+    if len(alt_raw) > JUPITER_MAX_ALT_TABLES:
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "ALT table count exceeds structural budget",
+        )
+    alt_map: dict[str, tuple[str, ...]] = {}
+    total_addresses = 0
+    for key, value in alt_raw.items():
+        if not isinstance(key, str) or not key:
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                "ALT address key malformed",
+            )
+        if not isinstance(value, list):
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                f"ALT {key} addresses must be list",
+            )
+        if len(value) > JUPITER_MAX_ALT_ADDRESSES_PER_TABLE:
+            raise JupiterRouterError(
+                JupiterRejectionReason.SCHEMA_FAILURE,
+                f"ALT {key} exceeds per-table address budget",
+            )
+        addresses: list[str] = []
+        for index, address in enumerate(value):
+            if not isinstance(address, str) or not address:
+                raise JupiterRouterError(
+                    JupiterRejectionReason.SCHEMA_FAILURE,
+                    f"ALT {key}[{index}] malformed address",
+                )
+            addresses.append(address)
+        total_addresses += len(addresses)
+        alt_map[key] = tuple(addresses)
+    if total_addresses > JUPITER_MAX_TOTAL_ALT_ADDRESSES:
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "ALT total address budget exceeded",
+        )
+    return alt_map
+
+
+def _blockhash(data: Mapping[str, Any]) -> Mapping[str, Any]:
+    blockhash = data.get("blockhashWithMetadata")
+    if not isinstance(blockhash, Mapping):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "blockhashWithMetadata invalid",
+        )
+    blockhash_bytes = blockhash.get("blockhash")
+    if (
+        not isinstance(blockhash_bytes, list)
+        or len(blockhash_bytes) != JUPITER_BLOCKHASH_BYTES
+        or any(
+            not isinstance(item, int) or isinstance(item, bool) or not 0 <= item <= 255
+            for item in blockhash_bytes
+        )
+    ):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "blockhashWithMetadata.blockhash invalid",
+        )
+    if not isinstance(blockhash.get("lastValidBlockHeight"), int) or isinstance(
+        blockhash.get("lastValidBlockHeight"),
+        bool,
+    ):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "blockhashWithMetadata.lastValidBlockHeight invalid",
+        )
+    return blockhash
 
 
 def parse_build_response(
@@ -451,6 +672,14 @@ def parse_build_response(
             JupiterRejectionReason.MINT_AMOUNT_SWAP_MODE_MISMATCH,
             "quote fields differ from request",
         )
+    if not isinstance(data.get("slippageBps"), int) or isinstance(
+        data.get("slippageBps"),
+        bool,
+    ):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "slippageBps must be integer",
+        )
     if data.get("slippageBps") != request.slippage_bps:
         raise JupiterRouterError(
             JupiterRejectionReason.MINT_AMOUNT_SWAP_MODE_MISMATCH,
@@ -464,40 +693,26 @@ def parse_build_response(
             "swapInstruction required",
         )
     cleanup_raw = data.get("cleanupInstruction")
+    if cleanup_raw is not None and not isinstance(cleanup_raw, Mapping):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "cleanupInstruction malformed",
+        )
     tip_raw = data.get("tipInstruction")
+    if tip_raw is not None and not isinstance(tip_raw, Mapping):
+        raise JupiterRouterError(
+            JupiterRejectionReason.SCHEMA_FAILURE,
+            "tipInstruction malformed",
+        )
     if tip_raw is not None and request.tip_owner == TipOwner.COMPILER_OR_JITO:
         raise JupiterRouterError(
             JupiterRejectionReason.UNSAFE_TIP,
             "unexpected Jupiter tipInstruction",
         )
 
-    alt_raw = data.get("addressesByLookupTableAddress")
-    if alt_raw is None:
-        alt_map: dict[str, tuple[str, ...]] = {}
-    elif isinstance(alt_raw, Mapping):
-        alt_map = {
-            key: tuple(value)
-            for key, value in alt_raw.items()
-            if isinstance(key, str)
-            and isinstance(value, list)
-            and all(isinstance(item, str) for item in value)
-        }
-    else:
-        raise JupiterRouterError(
-            JupiterRejectionReason.SCHEMA_FAILURE,
-            "addressesByLookupTableAddress invalid",
-        )
-
-    blockhash = data.get("blockhashWithMetadata")
-    if (
-        not isinstance(blockhash, Mapping)
-        or not isinstance(blockhash.get("blockhash"), list)
-        or not isinstance(blockhash.get("lastValidBlockHeight"), int)
-    ):
-        raise JupiterRouterError(
-            JupiterRejectionReason.SCHEMA_FAILURE,
-            "blockhashWithMetadata invalid",
-        )
+    alt_map = _alt_map(data)
+    blockhash = _blockhash(data)
+    route_plan = _route_plan(data)
 
     compute_budget = _ix_list(data, "computeBudgetInstructions")
     if (
@@ -517,7 +732,7 @@ def parse_build_response(
         _int_string(data, "otherAmountThreshold"),
         _str(data, "swapMode"),
         data["slippageBps"],
-        tuple(data.get("routePlan") or ()),
+        route_plan,
         compute_budget,
         _ix_list(data, "setupInstructions"),
         _ix(swap_raw, "swapInstruction"),
@@ -544,8 +759,18 @@ def calculate_final_cu_limit(report: SimulationReport) -> int:
 
 __all__ = [
     "COMPUTE_BUDGET_PROGRAM_ID",
+    "JUPITER_BLOCKHASH_BYTES",
     "JUPITER_COMPUTE_UNIT_LIMIT_MAX",
+    "JUPITER_MAX_ACCOUNTS_PER_INSTRUCTION",
+    "JUPITER_MAX_ALT_ADDRESSES_PER_TABLE",
+    "JUPITER_MAX_ALT_TABLES",
+    "JUPITER_MAX_DECODED_INSTRUCTION_BYTES",
+    "JUPITER_MAX_INSTRUCTIONS_BY_BUCKET",
+    "JUPITER_MAX_INTEGER_DIGITS",
+    "JUPITER_MAX_ROUTE_PLAN_SEGMENTS",
+    "JUPITER_MAX_TOTAL_ALT_ADDRESSES",
     "JUPITER_ROUTER_ENDPOINT",
+    "JUPITER_U64_MAX",
     "JupiterBuildRequest",
     "JupiterHealth",
     "JupiterInstructionBundle",
@@ -564,4 +789,5 @@ __all__ = [
     "TipOwner",
     "calculate_final_cu_limit",
     "parse_build_response",
+    "strict_json_loads",
 ]

@@ -165,7 +165,9 @@ def sha256_json(payload: object) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def authorize_transaction(request: SignerAuthorizationRequest) -> TransactionAuthorization:
+def authorize_transaction(
+    request: SignerAuthorizationRequest,
+) -> TransactionAuthorization:
     """Authorize one exact unsigned message for an isolated signer boundary."""
 
     _validate_identity(request)
@@ -186,7 +188,9 @@ def authorize_transaction(request: SignerAuthorizationRequest) -> TransactionAut
             AuthorizationFailure.BAD_SIGNER_SET,
             "decoded signer set does not match authorization request",
         )
-    unknown_programs = sorted(set(decoded.program_ids) - set(request.allowed_program_ids))
+    unknown_programs = sorted(
+        set(decoded.program_ids) - set(request.allowed_program_ids)
+    )
     if unknown_programs:
         raise SignerAuthorizationError(
             AuthorizationFailure.BAD_PROGRAM,
@@ -211,10 +215,12 @@ def authorize_transaction(request: SignerAuthorizationRequest) -> TransactionAut
             AuthorizationFailure.BAD_EXPIRY,
             "authorization expiry must be after issue time",
         )
-    if not is_sha256_hex(request.nonce_digest):
+    if not is_sha256_hex(request.nonce_digest) or is_placeholder_sha256(
+        request.nonce_digest
+    ):
         raise SignerAuthorizationError(
             AuthorizationFailure.BAD_NONCE,
-            "authorization nonce digest must be a sha256 hex value",
+            "authorization nonce digest must be a non-placeholder sha256 value",
         )
     return TransactionAuthorization(
         authorization_id=request.authorization_id,
@@ -242,6 +248,19 @@ def authorize_transaction(request: SignerAuthorizationRequest) -> TransactionAut
 
 def is_sha256_hex(value: str) -> bool:
     return bool(_SHA256_RE.fullmatch(value))
+
+
+def is_placeholder_sha256(value: str) -> bool:
+    """Reject obvious test/placeholder digests at legacy structural boundaries."""
+
+    if not is_sha256_hex(value):
+        return True
+    if len(set(value)) == 1:
+        return True
+    for width in (2, 4, 8, 16):
+        if value == value[:width] * (len(value) // width):
+            return True
+    return False
 
 
 def _validate_identity(request: SignerAuthorizationRequest) -> None:

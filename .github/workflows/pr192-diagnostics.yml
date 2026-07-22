@@ -31,7 +31,7 @@ jobs:
               git diff --binary > /tmp/pr192-black.patch
               ;;
             mypy)
-              python -m mypy --config-file mypy.ini
+              python -m mypy --config-file mypy.ini > /tmp/pr192-mypy.txt 2>&1 || true
               ;;
             bandit)
               python -m bandit -r arb_bot.py src scripts -x src/legacy_arb_bot.py,tests -lll -iii -q
@@ -51,5 +51,13 @@ jobs:
         with:
           name: pr192-black-patch
           path: /tmp/pr192-black.patch
+          if-no-files-found: error
+          retention-days: 1
+      - name: Upload mypy diagnostics
+        if: matrix.check == 'mypy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr192-mypy-diagnostics
+          path: /tmp/pr192-mypy.txt
           if-no-files-found: error
           retention-days: 1

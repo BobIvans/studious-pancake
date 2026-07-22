@@ -235,7 +235,7 @@ class CircularArbitrageDetector:
         }
         return Opportunity.create(
             strategy_name="circular_arbitrage",
-            opportunity_type="two_leg_circular_amount_coupled_snapshot",
+            opportunity_type="two_leg_circular_snapshot",
             detection_slot=min(candidate.first.slot, candidate.second.slot),
             input_mint=pair.base_mint,
             output_mint=pair.base_mint,

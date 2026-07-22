@@ -32,7 +32,13 @@ jobs:
       - run: python -m pip install --requirement requirements.txt
       - run: python -m pip install --requirement requirements-dev.txt
       - run: python -m pip install --no-deps .
-      - run: python scripts/verify_repo.py
+      - name: Run repository verification
+        run: |
+          set +e
+          python scripts/verify_repo.py > /tmp/repository-verification.log 2>&1
+          status=$?
+          tail -n 200 /tmp/repository-verification.log
+          exit "$status"
 
   package-smoke:
     name: Wheel and console smoke

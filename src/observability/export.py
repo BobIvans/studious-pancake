@@ -71,7 +71,7 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
     completed_at = time.time()
     store.db.execute("BEGIN IMMEDIATE")
     try:
-        for manifest in [*manifests, legacy_manifest]:
+        for manifest in manifests:
             store.db.execute(
                 """
                 INSERT OR IGNORE INTO export_manifest(
@@ -114,9 +114,14 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
     }
     if len(manifests) == 1:
         result.update(manifests[0])
-    result["path"] = legacy_manifest["path"]
-    result["checksum"] = legacy_manifest["checksum"]
-    result["manifest_id"] = legacy_manifest["manifest_id"]
+    else:
+        result.update(
+            {
+                "manifest_id": legacy_manifest["manifest_id"],
+                "path": legacy_manifest["path"],
+                "checksum": legacy_manifest["checksum"],
+            }
+        )
     return result
 
 

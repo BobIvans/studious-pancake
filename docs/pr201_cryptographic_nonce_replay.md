@@ -89,6 +89,7 @@ python -m compileall -q src tests
 python scripts/verify_repo.py
 ```
 
+The branch must be reverified after every synchronization with current `main`.
 The PR-201 source and focused test are registered in the repository Black manifest.
 Focused tests cover all-zero nonce rejection, CSPRNG issuance, placeholder rejection,
 MAC/domain tampering, cross-domain nonce reuse, single-use PR-141 authorization,

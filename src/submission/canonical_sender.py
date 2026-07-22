@@ -232,9 +232,12 @@ class CanonicalSenderSettings:
     def pr130_jito_mev_protection(self) -> dict[str, object] | None:
         if not self.uses_jito:
             return None
+        transaction_count = 1
+        if self.transport is TransportKind.JITO_BUNDLE:
+            transaction_count = 2
         evaluation = evaluate_pr130_jito_mev_policy(
             transport=self.transport,
-            transaction_count=1 if self.transport is TransportKind.JITO_SINGLE else 2,
+            transaction_count=transaction_count,
             tip_transaction_index=0,
             bundle_only=self.jito_bundle_only,
             tip_account_static=True,

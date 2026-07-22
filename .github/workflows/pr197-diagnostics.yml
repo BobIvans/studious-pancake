@@ -12,7 +12,7 @@ permissions:
 
 jobs:
   diagnostics:
-    runs-on: ubuntu-24.04
+    runs-on: ubuntu-latest
     env:
       PAPER_TRADING_ONLY: "true"
       LIVE_TRADING_ENABLED: "false"

@@ -90,8 +90,7 @@ def test_deployment_validator_accepts_reviewed_control_shape() -> None:
             }
         }
     )
-    validate_compose(
-        """
+    validate_compose("""
 FLASHLOAN_MEMORY_HARDENING_REQUIRED: "true"
 ulimits:
   core:
@@ -102,14 +101,11 @@ cap_drop:
 security_opt:
   - no-new-privileges:true
   - seccomp=./deploy/production/seccomp-runtime.json
-"""
-    )
+""")
     validate_seccomp(
         {
             "defaultAction": "SCMP_ACT_ERRNO",
-            "syscalls": [
-                {"action": "SCMP_ACT_ALLOW", "names": ["prctl", "prlimit64"]}
-            ],
+            "syscalls": [{"action": "SCMP_ACT_ALLOW", "names": ["prctl", "prlimit64"]}],
         }
     )
     validate_entrypoint('flashloan-bot = "src.secure_cli:main"')

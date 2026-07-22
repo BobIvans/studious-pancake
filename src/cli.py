@@ -33,6 +33,10 @@ from src.paper_shadow.durable_service_a3 import (
     InstalledDurablePaperServiceReport,
     build_installed_durable_paper_service,
 )
+from src.paper_shadow.repeated_service_pr04 import (
+    RepeatedInstalledPaperService,
+    RepeatedPaperServiceConfig,
+)
 from src.paper_shadow.runner import PaperShadowRunSummary
 
 logger = logging.getLogger(__name__)
@@ -371,6 +375,69 @@ def _run_installed_durable_paper_service_once(config: RuntimeConfig) -> int:
     return _paper_service_exit_code(report)
 
 
+def _paper_service_max_cycles() -> int | None:
+    raw = os.environ.get("FLASHLOAN_PAPER_MAX_CYCLES", "0").strip()
+    try:
+        value = int(raw)
+    except ValueError as exc:
+        raise ConfigurationLoadError(
+            "FLASHLOAN_PAPER_MAX_CYCLES must be an integer"
+        ) from exc
+    if value < 0:
+        raise ConfigurationLoadError(
+            "FLASHLOAN_PAPER_MAX_CYCLES must be non-negative"
+        )
+    return None if value == 0 else value
+
+
+def _paper_service_idle_delay_seconds() -> float:
+    raw = os.environ.get(
+        "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25"
+    ).strip()
+    try:
+        value = float(raw)
+    except ValueError as exc:
+        raise ConfigurationLoadError(
+            "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS must be numeric"
+        ) from exc
+    if value < 0:
+        raise ConfigurationLoadError(
+            "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS must be non-negative"
+        )
+    return value
+
+
+async def _run_installed_durable_paper_service_async(
+    config: RuntimeConfig,
+) -> int:
+    cycle_service = build_installed_durable_paper_service(
+        config,
+        db_path=_paper_service_db_path(),
+    )
+    stop_event = asyncio.Event()
+    install_signal_handlers(stop_event)
+    supervisor = RepeatedInstalledPaperService(
+        cycle_service,
+        RepeatedPaperServiceConfig(
+            max_cycles=_paper_service_max_cycles(),
+            idle_delay_seconds=_paper_service_idle_delay_seconds(),
+        ),
+        on_report=_print_paper_service_report,
+    )
+    summary = await supervisor.run(stop_event)
+    final_report = summary.final_report
+    if final_report is None:
+        print(
+            "INSTALLED_PAPER_SERVICE: status=STOPPED reason=signal_before_cycle"
+        )
+        return 0
+    return _paper_service_exit_code(final_report)
+
+
+def _run_installed_durable_paper_service(config: RuntimeConfig) -> int:
+    return asyncio.run(_run_installed_durable_paper_service_async(config))
+
+
 def _run_paper_vertical_preflight(
     config: RuntimeConfig,
     *,
@@ -409,7 +476,7 @@ def _run_requested_mode(
         )
         return EXIT_MODE_UNAVAILABLE
     if mode == "paper":
-        return _run_installed_durable_paper_service_once(config)
+        return _run_installed_durable_paper_service(config)
     if mode == "disabled":
         _print_status(status, as_json=False)
         return 0

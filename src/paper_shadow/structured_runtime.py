@@ -12,7 +12,6 @@ import sqlite3
 import time
 from types import MappingProxyType
 from typing import Any, Protocol
-import zlib
 
 from src.paper_shadow.runner import PaperShadowRunStatus, PaperShadowRunSummary
 
@@ -88,9 +87,7 @@ class PaperLifecycleTransition:
     ready_for_next_cycle: bool
     dependency_reasons: tuple[str, ...] = ()
     details: Mapping[str, Any] = field(default_factory=dict)
-    created_at_unix_ms: int = field(
-        default_factory=lambda: int(time.time() * 1000)
-    )
+    created_at_unix_ms: int = field(default_factory=lambda: int(time.time() * 1000))
     schema_version: str = PR150_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -432,9 +429,9 @@ def _reject_unsafe_details(details: Mapping[str, Any]) -> None:
 
 
 def _digest(*parts: str) -> str:
-    payload = "\x1f".join(("pr150", *parts)).encode("utf-8")
-    checksum = zlib.crc32(payload) & 0xFFFFFFFF
-    return f"pr150-{checksum:08x}-{len(payload)}"
+    payload = "\x1f".join(("pr150", *parts))
+    checksum = sum((index + 1) * ord(char) for index, char in enumerate(payload))
+    return f"pr150-{checksum:x}-{len(payload)}"
 
 
 def _transition_row(row: tuple[Any, ...]) -> dict[str, Any]:

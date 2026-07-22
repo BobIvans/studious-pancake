@@ -169,7 +169,11 @@ def _registry(
     expected_upgrade_authority: str | None = None,
 ) -> dict[str, object]:
     programs = {
-        "marginfi": _expectation("marginfi", _PROG_MARGINFI, admission="discovery-only"),
+        "marginfi": _expectation(
+            "marginfi",
+            _PROG_MARGINFI,
+            admission="discovery-only",
+        ),
         "jupiter-aggregator": _expectation(
             "jupiter-aggregator",
             _PROG_JUP,

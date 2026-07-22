@@ -11,6 +11,7 @@ import time
 import pytest
 
 from src.container_runtime import STATE_SCHEMA, check_process_health
+from src.observability.management_plane_pr170 import PR170_STATE_SCHEMA
 
 pytestmark = pytest.mark.unit
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,7 +69,9 @@ def test_safe_idle_container_supervisor_has_live_process_heartbeat(tmp_path: Pat
         healthy, detail = check_process_health(state)
         assert healthy is True
         assert "safe-idle" in detail
-        payload = json.loads(state.read_text(encoding="utf-8"))
+        wrapper = json.loads(state.read_text(encoding="utf-8"))
+        assert wrapper["schema_version"] == PR170_STATE_SCHEMA
+        payload = wrapper["payload"]
         assert payload["schema_version"] == STATE_SCHEMA
         assert payload["mode"] == "disabled"
         assert payload["diagnostic"] == "SAFE_IDLE_NO_EXECUTION"

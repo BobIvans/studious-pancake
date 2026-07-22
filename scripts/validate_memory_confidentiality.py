@@ -83,7 +83,10 @@ def validate_compose(compose_text: str) -> None:
 
 
 def validate_seccomp(profile: dict[str, Any]) -> None:
-    _require(profile.get("defaultAction") == "SCMP_ACT_ERRNO", "seccomp must default deny")
+    _require(
+        profile.get("defaultAction") == "SCMP_ACT_ERRNO",
+        "seccomp must default deny",
+    )
     syscalls = profile.get("syscalls")
     _require(isinstance(syscalls, list), "seccomp syscalls must be a list")
     allowed: set[str] = set()
@@ -94,9 +97,15 @@ def validate_seccomp(profile: dict[str, Any]) -> None:
         if isinstance(names, list):
             allowed.update(name for name in names if isinstance(name, str))
     missing = REQUIRED_RUNTIME_SYSCALLS - allowed
-    _require(not missing, f"seccomp blocks runtime hardening syscalls: {sorted(missing)}")
+    _require(
+        not missing,
+        f"seccomp blocks runtime hardening syscalls: {sorted(missing)}",
+    )
     exposed = FORBIDDEN_INSPECTION_SYSCALLS & allowed
-    _require(not exposed, f"seccomp allows process inspection syscalls: {sorted(exposed)}")
+    _require(
+        not exposed,
+        f"seccomp allows process inspection syscalls: {sorted(exposed)}",
+    )
 
 
 def validate_entrypoint(pyproject_text: str) -> None:

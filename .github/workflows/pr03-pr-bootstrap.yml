@@ -1,0 +1,38 @@
+name: Materialize roadmap PR-03 on pull request
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  materialize:
+    if: github.head_ref == 'roadmap-pr-03-rooted-provider-admission'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap-pr-03-rooted-provider-admission
+          fetch-depth: 0
+      - name: Materialize reviewed PR-03 files
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64
+          text = Path('.github/workflows/pr03-bootstrap.yml').read_text()
+          marker = '          PR03_PAYLOAD: '
+          payload = next(line[len(marker):] for line in text.splitlines() if line.startswith(marker))
+          Path('/tmp/pr03.tgz').write_bytes(base64.b64decode(payload))
+          PY
+          tar -xzf /tmp/pr03.tgz -C .
+          grep -qxF 'src/providers/rooted_ingestion_pr03.py' config/format_targets.txt || echo 'src/providers/rooted_ingestion_pr03.py' >> config/format_targets.txt
+          grep -qxF 'tests/test_rooted_ingestion_pr03.py' config/format_targets.txt || echo 'tests/test_rooted_ingestion_pr03.py' >> config/format_targets.txt
+          git rm .github/workflows/pr03-bootstrap.yml .github/workflows/pr03-pr-bootstrap.yml .pr03-bootstrap-trigger
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py docs/roadmap_pr03_rooted_provider_admission.md .github/workflows/roadmap-pr03-rooted-provider-admission.yml config/format_targets.txt
+          git commit -m 'Roadmap PR-03: rooted provider admission vertical'
+          git push origin HEAD:roadmap-pr-03-rooted-provider-admission

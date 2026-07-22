@@ -1,9 +1,9 @@
-"""PR-042 container health/readiness supervisor.
+"""O1 authenticated container management and signed runtime truth.
 
 The container remains fail-closed and starts no detector, RPC client, signer,
-simulator or sender.  It now exposes local HTTP `/health`, `/ready`,
-redacted `/status`, and `/metrics` endpoints so Docker and operators observe
-the same dependency-aware surface.
+simulator or sender.  The active management listener now consumes a MACed,
+generation-fenced runtime snapshot and exposes PR-174 canonical readiness as the
+only readiness authority.
 """
 
 from __future__ import annotations
@@ -14,22 +14,41 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import secrets
 import signal
 import sys
+import tempfile
 import time
 from typing import Any, Sequence
 
+from src.canonical_readiness import (
+    BlockingMode,
+    EvidenceState,
+    ImplementationState,
+    RequirementRecord,
+    evaluate_canonical_readiness,
+)
+from src.observability.active_management import (
+    ActiveManagementHttpServer,
+    SignedRuntimeStateProvider,
+)
 from src.observability.health import (
     DEFAULT_HEALTH_HOST,
     DEFAULT_HEALTH_PORT,
     DEFAULT_MAX_HEARTBEAT_AGE_SECONDS,
     DependencyState,
-    RuntimeStatusHttpServer,
     check_http_health,
+)
+from src.observability.management_plane_pr170 import (
+    ManagementPlanePolicy,
+    PR170_STATE_SCHEMA,
+    RuntimeTruth,
+    read_signed_state_snapshot,
+    write_signed_state_snapshot,
 )
 
 DEFAULT_STATE_FILE = "/tmp/flashloan-bot-runtime.json"
-STATE_SCHEMA = "pr042.container-runtime.v1"
+STATE_SCHEMA = "o1.container-runtime.v1"
 MAX_HEARTBEAT_AGE_SECONDS = DEFAULT_MAX_HEARTBEAT_AGE_SECONDS
 HEARTBEAT_INTERVAL_SECONDS = 5.0
 
@@ -44,14 +63,34 @@ def _capability_digest(matrix: Any) -> str:
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
-def _write_state(path: Path, payload: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.{os.getpid()}.tmp")
-    temporary.write_text(
-        json.dumps(payload, sort_keys=True, separators=(",", ":")),
-        encoding="utf-8",
-    )
-    os.replace(temporary, path)
+def _read_owner_only_secret(
+    path_value: str | None, *, text: bool
+) -> bytes | str | None:
+    if not path_value:
+        return None
+    path = Path(path_value)
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("management secret path must be a regular file")
+    stat_result = path.stat()
+    if stat_result.st_mode & 0o077:
+        raise ValueError("management secret file must be owner-only")
+    if stat_result.st_nlink != 1:
+        raise ValueError("management secret file must not be hardlinked")
+    raw = path.read_bytes()
+    if not raw or len(raw) > 4096:
+        raise ValueError("management secret file has invalid size")
+    if text:
+        value = raw.decode("utf-8").strip()
+        if not value:
+            raise ValueError("management bearer token is empty")
+        return value
+    return raw
+
+
+def _require_sha256(value: str, field: str) -> str:
+    if len(value) != 64 or any(char not in "0123456789abcdef" for char in value):
+        raise ValueError(f"{field} must be lowercase sha256")
+    return value
 
 
 def _unlink_state(path: Path) -> None:
@@ -59,6 +98,36 @@ def _unlink_state(path: Path) -> None:
         path.unlink()
     except FileNotFoundError:
         pass
+
+
+def _companion_state_key_path(state_path: Path) -> Path:
+    return state_path.with_name(f".{state_path.name}.key")
+
+
+def _write_owner_only_bytes(path: Path, value: bytes) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary = tempfile.mkstemp(
+        prefix=f".{path.name}.", suffix=".tmp", dir=str(path.parent)
+    )
+    try:
+        os.fchmod(descriptor, 0o600)
+        with os.fdopen(descriptor, "wb", closefd=True) as handle:
+            handle.write(value)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        os.chmod(path, 0o600)
+        directory = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory)
+        finally:
+            os.close(directory)
+    except Exception:
+        try:
+            os.unlink(temporary)
+        except FileNotFoundError:
+            pass
+        raise
 
 
 def _install_stop_handlers(stop_event: asyncio.Event) -> None:
@@ -89,6 +158,53 @@ def _dependency(
     }
 
 
+def _safe_idle_readiness(*, release_id: str) -> dict[str, Any]:
+    requirement = RequirementRecord(
+        domain_id="runtime.paper",
+        title="Canonical sender-free paper runtime",
+        owner_module="src.paper_shadow.composition",
+        blocking_mode=BlockingMode.P0_BLOCKS_PAPER_AND_LIVE,
+        implementation_state=ImplementationState.INTEGRATED_DISABLED,
+        evidence_state=EvidenceState.MISSING,
+        evidence_producer="src.paper_shadow.runner",
+        evidence_verifier="src.canonical_readiness",
+        architecture=None,
+        package=None,
+        blockers=("O1_SAFE_IDLE_EXECUTION_DISABLED",),
+    )
+    return evaluate_canonical_readiness(
+        (requirement,),
+        evaluated_release=release_id,
+    ).to_dict()
+
+
+def _signed_runtime_payload(
+    *,
+    base: dict[str, Any],
+    process_boot_id: str,
+    release_id: str,
+    runtime_generation: int,
+    policy_bundle_hash: str,
+    heartbeat_sequence: int,
+) -> tuple[RuntimeTruth, dict[str, Any]]:
+    truth = RuntimeTruth(
+        process_boot_id=process_boot_id,
+        release_id=release_id,
+        runtime_generation=runtime_generation,
+        policy_bundle_hash=policy_bundle_hash,
+        heartbeat_sequence=heartbeat_sequence,
+        active_task_generation=0,
+        live_enabled=False,
+        trading_enabled=False,
+    )
+    extra = {
+        **base,
+        "heartbeat_unix_ns": time.time_ns(),
+        "canonical_readiness": _safe_idle_readiness(release_id=release_id),
+    }
+    return truth, extra
+
+
 async def run_safe_idle(
     matrix: Any,
     app: Any,
@@ -97,11 +213,8 @@ async def run_safe_idle(
     health_host: str | None = None,
     health_port: int | None = None,
 ) -> int:
-    """Validate the declared runtime contract, expose health, then idle safely.
+    """Validate the runtime contract, expose authenticated management, then idle."""
 
-    No application strategy tasks are started.  `/health` is process liveness,
-    while `/ready` remains false until a real paper/shadow pipeline is connected.
-    """
     app.validate()
     errors = tuple(app.capability_errors())
     if errors:
@@ -116,8 +229,56 @@ async def run_safe_idle(
         if health_port is not None
         else os.environ.get("FLASHLOAN_HEALTH_PORT") or DEFAULT_HEALTH_PORT
     )
+    capability_digest = _capability_digest(matrix)
+    policy_bundle_hash = _require_sha256(
+        os.environ.get("FLASHLOAN_POLICY_BUNDLE_HASH") or capability_digest,
+        "FLASHLOAN_POLICY_BUNDLE_HASH",
+    )
+    release_id = os.environ.get("FLASHLOAN_RELEASE_ID") or (
+        f"development-{capability_digest[:12]}"
+    )
+    runtime_generation = int(os.environ.get("FLASHLOAN_RUNTIME_GENERATION") or "1")
+    if runtime_generation < 1:
+        raise ValueError("FLASHLOAN_RUNTIME_GENERATION must be positive")
+
+    configured_state_key = _read_owner_only_secret(
+        os.environ.get("FLASHLOAN_MANAGEMENT_STATE_KEY_FILE"),
+        text=False,
+    )
+    companion_key_path: Path | None = None
+    if isinstance(configured_state_key, bytes):
+        signing_key = configured_state_key
+    else:
+        signing_key = secrets.token_bytes(32)
+        companion_key_path = _companion_state_key_path(path)
+        _unlink_state(companion_key_path)
+        _write_owner_only_bytes(companion_key_path, signing_key)
+    configured_token = _read_owner_only_secret(
+        os.environ.get("FLASHLOAN_MANAGEMENT_BEARER_TOKEN_FILE"),
+        text=True,
+    )
+    bearer_token = configured_token if isinstance(configured_token, str) else None
+    token_digest = (
+        hashlib.sha256(bearer_token.encode("utf-8")).hexdigest()
+        if bearer_token is not None
+        else None
+    )
+    authenticated_proxy = (
+        os.environ.get("FLASHLOAN_MANAGEMENT_AUTHENTICATED_PROXY", "false").lower()
+        == "true"
+    )
+    policy = ManagementPlanePolicy(
+        bind_host=host,
+        bearer_token_sha256=token_digest,
+        authenticated_proxy=authenticated_proxy,
+        release_id=release_id,
+        runtime_generation=runtime_generation,
+        policy_bundle_hash=policy_bundle_hash,
+    )
+
     stop_event = asyncio.Event()
     _install_stop_handlers(stop_event)
+    process_boot_id = secrets.token_hex(16)
     base = {
         "schema_version": STATE_SCHEMA,
         "pid": os.getpid(),
@@ -125,7 +286,7 @@ async def run_safe_idle(
         "mode": "disabled",
         "diagnostic": "SAFE_IDLE_NO_EXECUTION",
         "product_state": matrix.product_state,
-        "capability_sha256": _capability_digest(matrix),
+        "capability_sha256": capability_digest,
         "dependencies": [
             _dependency(
                 name="runtime_contract",
@@ -154,24 +315,30 @@ async def run_safe_idle(
         ],
     }
 
-    # PR-069 startup transaction:
-    #
-    # 1. invalidate stale health state before attempting startup;
-    # 2. bind the HTTP surface before publishing a live heartbeat;
-    # 3. always remove the state file on any startup/runtime/shutdown path.
-    #
-    # This prevents a failed bind on the default Docker port from leaving a
-    # process-looking heartbeat that can be misread as a healthy supervisor.
     _unlink_state(path)
-    server: RuntimeStatusHttpServer | None = None
+    state_provider = SignedRuntimeStateProvider(
+        path=path,
+        signing_key=signing_key,
+        minimum_generation=runtime_generation,
+        expected_policy_bundle_hash=policy_bundle_hash,
+    )
+    server = ActiveManagementHttpServer(
+        state_provider,
+        policy=policy,
+        max_heartbeat_age_seconds=MAX_HEARTBEAT_AGE_SECONDS,
+    )
+    heartbeat_sequence = 0
     try:
-        server = RuntimeStatusHttpServer(
-            lambda: json.loads(path.read_text(encoding="utf-8")),
-            host=host,
-            port=port,
-            max_heartbeat_age_seconds=MAX_HEARTBEAT_AGE_SECONDS,
-        ).start()
-        _write_state(path, {**base, "heartbeat_unix_ns": time.time_ns()})
+        await server.start(port=port)
+        truth, extra = _signed_runtime_payload(
+            base=base,
+            process_boot_id=process_boot_id,
+            release_id=release_id,
+            runtime_generation=runtime_generation,
+            policy_bundle_hash=policy_bundle_hash,
+            heartbeat_sequence=heartbeat_sequence,
+        )
+        write_signed_state_snapshot(path, truth, signing_key, extra=extra)
         print(
             json.dumps(
                 {
@@ -182,15 +349,24 @@ async def run_safe_idle(
                     "mode": "disabled",
                     "live_enabled": False,
                     "submitted": False,
+                    "management_auth_configured": bearer_token is not None,
+                    "runtime_generation": runtime_generation,
                 },
                 sort_keys=True,
             ),
             flush=True,
         )
         while not stop_event.is_set():
-            payload = dict(base)
-            payload["heartbeat_unix_ns"] = time.time_ns()
-            _write_state(path, payload)
+            heartbeat_sequence += 1
+            truth, extra = _signed_runtime_payload(
+                base=base,
+                process_boot_id=process_boot_id,
+                release_id=release_id,
+                runtime_generation=runtime_generation,
+                policy_bundle_hash=policy_bundle_hash,
+                heartbeat_sequence=heartbeat_sequence,
+            )
+            write_signed_state_snapshot(path, truth, signing_key, extra=extra)
             try:
                 await asyncio.wait_for(
                     stop_event.wait(), timeout=HEARTBEAT_INTERVAL_SECONDS
@@ -198,9 +374,10 @@ async def run_safe_idle(
             except asyncio.TimeoutError:
                 continue
     finally:
-        if server is not None:
-            server.stop()
+        await server.stop()
         _unlink_state(path)
+        if companion_key_path is not None:
+            _unlink_state(companion_key_path)
     return 0
 
 
@@ -212,14 +389,49 @@ def check_process_health(
 ) -> tuple[bool, str]:
     path = _state_path(state_file)
     try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
+        wrapper = json.loads(path.read_text(encoding="utf-8"))
     except FileNotFoundError:
         return False, f"state file missing: {path}"
     except (OSError, json.JSONDecodeError) as exc:
         return False, f"state file unreadable: {exc}"
 
+    if wrapper.get("schema_version") == PR170_STATE_SCHEMA:
+        configured_key_path = os.environ.get("FLASHLOAN_MANAGEMENT_STATE_KEY_FILE")
+        if configured_key_path is None:
+            companion = _companion_state_key_path(path)
+            configured_key_path = str(companion) if companion.is_file() else None
+        key = _read_owner_only_secret(configured_key_path, text=False)
+        if not isinstance(key, bytes):
+            return (
+                False,
+                "signed state requires the configured management key or HTTP probe",
+            )
+        payload = wrapper.get("payload")
+        if not isinstance(payload, dict):
+            return False, "signed state payload is invalid"
+        try:
+            minimum_generation = int(payload.get("runtime_generation", -1))
+            policy_hash = str(payload.get("policy_bundle_hash", ""))
+        except (TypeError, ValueError):
+            return False, "signed state generation or policy is invalid"
+        validation = read_signed_state_snapshot(
+            path,
+            key,
+            minimum_generation=minimum_generation,
+            expected_policy_bundle_hash=policy_hash,
+        )
+        if not validation.ok or validation.payload is None:
+            reason = (
+                validation.reason.value if validation.reason is not None else "invalid"
+            )
+            return False, f"signed state validation failed: {reason}"
+        payload = dict(validation.payload)
+    else:
+        payload = wrapper
+
     if payload.get("schema_version") not in {
         STATE_SCHEMA,
+        "pr042.container-runtime.v1",
         "pr025.container-runtime.v1",
     }:
         return False, "unexpected state schema"
@@ -243,13 +455,13 @@ def check_process_health(
         return False, "heartbeat is unexpectedly in the future"
     if age_seconds > max_age_seconds:
         return False, f"heartbeat stale: {age_seconds:.3f}s"
-    return True, "healthy: safe-idle process heartbeat is current"
+    return True, "healthy: signed safe-idle process heartbeat is current"
 
 
 def healthcheck_main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="flashloan-bot-healthcheck",
-        description="PR-042 local HTTP health probe with state-file fallback.",
+        description="O1 local HTTP health probe with signed-state fallback.",
     )
     parser.add_argument(
         "--url",

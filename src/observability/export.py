@@ -1,20 +1,183 @@
 from __future__ import annotations
-import hashlib, json, os, time
+
+from collections import defaultdict
+from datetime import UTC, datetime
+import hashlib
+import json
+import os
 from pathlib import Path
-from .store import ObservabilityStore
+import time
+
 from .redaction import REDACTION_VERSION
-EXPORT_TOOL_VERSION="observability-export.v1"
-def export_jsonl(store: ObservabilityStore, out_dir: str|Path) -> dict:
-    rows=list(store.db.execute("SELECT * FROM event_log ORDER BY occurred_at_utc_ns,event_id")); out=Path(out_dir); out.mkdir(parents=True,exist_ok=True)
-    if not rows: return {"event_count":0}
-    date="1970-01-01"; et=rows[0]["event_type"]; part=out/f"date_utc={date}"/f"event_type={et}"; part.mkdir(parents=True,exist_ok=True)
-    tmp=part/"events.jsonl.tmp"; final=part/"events.jsonl"
-    with open(tmp,"w",encoding="utf-8") as f:
-        for r in rows: f.write(r["payload_json"]+"\n")
-        f.flush(); os.fsync(f.fileno())
-    data=tmp.read_bytes(); checksum=hashlib.sha256(data).hexdigest(); os.replace(tmp, final)
-    manifest_id=hashlib.sha256((str(final)+checksum).encode()).hexdigest()
-    with store.db:
-        store.db.execute("INSERT OR IGNORE INTO export_manifest(manifest_id,partition_path,checksum,event_count,first_event_id,last_event_id,schema_version,redaction_version,created_at) VALUES(?,?,?,?,?,?,?,?,?)", (manifest_id,str(final),checksum,len(rows),rows[0]["event_id"],rows[-1]["event_id"],rows[0]["schema_version"],REDACTION_VERSION,time.time()))
-        store.db.execute("UPDATE outbox SET status='done', completed_at=? WHERE status='pending'", (time.time(),))
-    return {"manifest_id":manifest_id,"checksum":checksum,"event_count":len(rows),"path":str(final),"export_tool_version":EXPORT_TOOL_VERSION}
+from .store import ObservabilityStore
+
+EXPORT_TOOL_VERSION = "observability-export.v2"
+
+
+def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, object]:
+    """Export pending event envelopes into deterministic UTC/type partitions."""
+
+    rows = store.pending_export_rows()
+    out = Path(out_dir)
+    out.mkdir(parents=True, exist_ok=True)
+    if not rows:
+        return {
+            "event_count": 0,
+            "manifest_count": 0,
+            "manifests": [],
+            "export_tool_version": EXPORT_TOOL_VERSION,
+        }
+
+    partitions: dict[tuple[str, str], list[object]] = defaultdict(list)
+    for row in rows:
+        key = (_date_partition(row["occurred_at_utc_ns"]), row["event_type"])
+        partitions[key].append(row)
+
+    manifests: list[dict[str, object]] = []
+    completed_outbox_ids: list[int] = []
+    for (date_utc, event_type), partition_rows in sorted(partitions.items()):
+        part = out / f"date_utc={date_utc}" / f"event_type={event_type}"
+        part.mkdir(parents=True, exist_ok=True)
+        tmp = part / "events.jsonl.tmp"
+        final = part / "events.jsonl"
+
+        with open(tmp, "w", encoding="utf-8") as handle:
+            for row in partition_rows:
+                handle.write(_canonical_json(_event_envelope(row)) + "\n")
+            handle.flush()
+            os.fsync(handle.fileno())
+
+        data = tmp.read_bytes()
+        checksum = hashlib.sha256(data).hexdigest()
+        os.replace(tmp, final)
+        _fsync_dir(part)
+
+        manifest_id = hashlib.sha256(
+            _canonical_json(
+                {
+                    "partition_path": str(final),
+                    "checksum": checksum,
+                    "event_ids": [row["event_id"] for row in partition_rows],
+                    "tool": EXPORT_TOOL_VERSION,
+                }
+            ).encode("utf-8")
+        ).hexdigest()
+        manifest = {
+            "manifest_id": manifest_id,
+            "checksum": checksum,
+            "event_count": len(partition_rows),
+            "first_event_id": partition_rows[0]["event_id"],
+            "last_event_id": partition_rows[-1]["event_id"],
+            "path": str(final),
+            "date_utc": date_utc,
+            "event_type": event_type,
+        }
+        manifests.append(manifest)
+        completed_outbox_ids.extend(int(row["outbox_id"]) for row in partition_rows)
+
+    completed_at = time.time()
+    store.db.execute("BEGIN IMMEDIATE")
+    try:
+        for manifest in manifests:
+            store.db.execute(
+                """
+                INSERT OR IGNORE INTO export_manifest(
+                    manifest_id,
+                    partition_path,
+                    checksum,
+                    event_count,
+                    first_event_id,
+                    last_event_id,
+                    schema_version,
+                    redaction_version,
+                    created_at
+                )
+                VALUES(?,?,?,?,?,?,?,?,?)
+                """,
+                (
+                    manifest["manifest_id"],
+                    manifest["path"],
+                    manifest["checksum"],
+                    manifest["event_count"],
+                    manifest["first_event_id"],
+                    manifest["last_event_id"],
+                    1,
+                    REDACTION_VERSION,
+                    completed_at,
+                ),
+            )
+        store.mark_outbox_done(completed_outbox_ids, completed_at=completed_at)
+    except Exception:
+        store.db.execute("ROLLBACK")
+        raise
+    store.db.execute("COMMIT")
+
+    result: dict[str, object] = {
+        "event_count": len(rows),
+        "manifest_count": len(manifests),
+        "manifests": manifests,
+        "export_tool_version": EXPORT_TOOL_VERSION,
+    }
+    if len(manifests) == 1:
+        result.update(manifests[0])
+    return result
+
+
+def _date_partition(utc_ns: int) -> str:
+    seconds = utc_ns / 1_000_000_000
+    return datetime.fromtimestamp(seconds, tz=UTC).date().isoformat()
+
+
+def _event_envelope(row: object) -> dict[str, object]:
+    return {
+        "schema_name": "pr132.observability-event-envelope.v1",
+        "event_id": row["event_id"],
+        "aggregate_id": row["aggregate_id"],
+        "sequence_no": row["sequence_no"],
+        "idempotency_key": row["idempotency_key"],
+        "occurred_at_utc_ns": row["occurred_at_utc_ns"],
+        "monotonic_ns": row["monotonic_ns"],
+        "event_type": row["event_type"],
+        "schema_version": row["schema_version"],
+        "reason_code": row["reason_code"],
+        "outcome": row["outcome"],
+        "stage": row["stage"],
+        "severity": row["severity"],
+        "environment": row["environment"],
+        "logical_opportunity_id": row["logical_opportunity_id"],
+        "plan_hash": row["plan_hash"],
+        "attempt_generation": row["attempt_generation"],
+        "attempt_id": row["attempt_id"],
+        "message_hash": row["message_hash"],
+        "tx_signature": row["tx_signature"],
+        "jito_bundle_id": row["jito_bundle_id"],
+        "provider_id": row["provider_id"],
+        "venue_id": row["venue_id"],
+        "payload": json.loads(row["payload_json"]),
+        "payload_digest": row["payload_digest"],
+        "config_checksum": row["config_checksum"],
+        "redaction_version": row["redaction_version"],
+        "redaction_hits": row["redaction_hits"],
+        "producer_code_version": row["producer_code_version"],
+        "contract_fixture_version": row["contract_fixture_version"],
+    }
+
+
+def _canonical_json(payload: object) -> str:
+    return json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    )
+
+
+def _fsync_dir(path: Path) -> None:
+    try:
+        fd = os.open(path, os.O_RDONLY)
+    except OSError:
+        return
+    try:
+        os.fsync(fd)
+    finally:
+        os.close(fd)

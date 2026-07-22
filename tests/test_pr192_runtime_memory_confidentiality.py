@@ -71,7 +71,7 @@ def test_active_tracer_fails_closed(tmp_path: Path) -> None:
 def test_backend_error_message_is_not_propagated(tmp_path: Path) -> None:
     class Broken(_Backend):
         def set_dumpable(self, value: int) -> None:
-            raise OSError("credential=do-not-leak")
+            raise OSError("SENSITIVE_OS_DETAIL")
 
     with pytest.raises(RuntimeMemoryHardeningError) as exc_info:
         harden_process_memory(
@@ -79,7 +79,7 @@ def test_backend_error_message_is_not_propagated(tmp_path: Path) -> None:
             proc_status_path=_proc_status(tmp_path),
         )
 
-    assert "credential=do-not-leak" not in str(exc_info.value)
+    assert "SENSITIVE_OS_DETAIL" not in str(exc_info.value)
     assert "DUMPABLE_DISABLE_FAILED" in str(exc_info.value)
 
 
@@ -105,9 +105,9 @@ assert status.tracer_pid == 0
 
 
 def test_crash_artifact_drops_exception_message_args_and_traceback() -> None:
-    secret = "provider-secret-should-never-appear"
+    marker = "SENSITIVE_EXCEPTION_DETAIL"
     try:
-        raise RuntimeError(secret)
+        raise RuntimeError(marker)
     except RuntimeError as exc:
         artifact = build_safe_crash_artifact(
             exc,
@@ -118,7 +118,7 @@ def test_crash_artifact_drops_exception_message_args_and_traceback() -> None:
         ).to_dict()
 
     rendered = repr(artifact)
-    assert secret not in rendered
+    assert marker not in rendered
     assert artifact["exception_type"] == "RuntimeError"
     assert "traceback" not in artifact
     assert "message" not in artifact
@@ -150,7 +150,7 @@ def test_support_bundle_is_allowlist_only() -> None:
         "locals",
     ):
         with pytest.raises(CrashArtifactError, match="non-allowlisted"):
-            build_allowlisted_support_bundle({forbidden: "secret"})
+            build_allowlisted_support_bundle({forbidden: "placeholder"})
 
 
 def test_non_linux_production_policy_fails_closed(tmp_path: Path) -> None:

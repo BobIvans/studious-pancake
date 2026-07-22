@@ -109,7 +109,9 @@ src/shadow_soak/pr105_harness.py
 tests/test_pr079_real_shadow_soak.py
 tests/test_pr105_shadow_soak_harness.py
 src/submission/lifecycle_integration.py
+src/submission/jito_mev_policy.py
 tests/test_pr080_canonical_sender_lifecycle.py
+tests/test_pr130_jito_mev_unbundling_policy.py
 src/execution/canonical_domain.py
 tests/execution/test_pr071_canonical_execution_domain.py
 src/operations/__init__.py

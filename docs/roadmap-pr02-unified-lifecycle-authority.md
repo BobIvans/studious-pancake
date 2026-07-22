@@ -33,6 +33,10 @@ create a competing database-identity table.
 calls the batch source. A3 cycle/outbox tables remain only compatibility
 projections written inside the same PR-02 terminal transaction.
 
+The A3 adapter consumes the current PR-187 `ExactAttemptRuntimeReport`
+contract; report hashes and next-cycle readiness are derived by that authority
+rather than accepted as caller-supplied fields.
+
 ## B3 transactional boundary
 
 `UnifiedA3AdmissionSink` implements the existing B3 `A3AdmissionSinkPort`. It

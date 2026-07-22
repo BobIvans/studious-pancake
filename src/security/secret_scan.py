@@ -90,10 +90,14 @@ _SAFE_LITERAL_VALUES = {
 _SAFE_REFERENCE_NAMES = {
     "credential",
     "env_value",
+    "env_values",
     "key",
+    "os",
     "provider_token_shape",
     "reference",
     "secret",
+    "secrets",
+    "settings",
     "token",
     "value",
 }

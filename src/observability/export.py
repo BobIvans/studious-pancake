@@ -47,16 +47,12 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
         os.replace(tmp, final)
         _fsync_dir(part)
 
-        manifest_id = hashlib.sha256(
-            _canonical_json(
-                {
-                    "partition_path": str(final),
-                    "checksum": checksum,
-                    "event_ids": [row["event_id"] for row in partition_rows],
-                    "tool": EXPORT_TOOL_VERSION,
-                }
-            ).encode("utf-8")
-        ).hexdigest()
+        manifest_id = _manifest_id(
+            path=final,
+            checksum=checksum,
+            event_ids=[row["event_id"] for row in partition_rows],
+            tool=EXPORT_TOOL_VERSION,
+        )
         manifest = {
             "manifest_id": manifest_id,
             "checksum": checksum,
@@ -70,12 +66,12 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
         manifests.append(manifest)
         completed_outbox_ids.extend(int(row["outbox_id"]) for row in partition_rows)
 
-    legacy_path, legacy_checksum = _write_legacy_compat_jsonl(store, out)
+    legacy_manifest = _write_legacy_compat_jsonl(store, out)
 
     completed_at = time.time()
     store.db.execute("BEGIN IMMEDIATE")
     try:
-        for manifest in manifests:
+        for manifest in [*manifests, legacy_manifest]:
             store.db.execute(
                 """
                 INSERT OR IGNORE INTO export_manifest(
@@ -114,12 +110,13 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
         "manifest_count": len(manifests),
         "manifests": manifests,
         "export_tool_version": EXPORT_TOOL_VERSION,
-        "legacy_path": str(legacy_path),
+        "legacy_path": legacy_manifest["path"],
     }
     if len(manifests) == 1:
         result.update(manifests[0])
-    result["path"] = str(legacy_path)
-    result["checksum"] = legacy_checksum
+    result["path"] = legacy_manifest["path"]
+    result["checksum"] = legacy_manifest["checksum"]
+    result["manifest_id"] = legacy_manifest["manifest_id"]
     return result
 
 
@@ -131,7 +128,7 @@ def _date_partition(utc_ns: int) -> str:
 def _write_legacy_compat_jsonl(
     store: ObservabilityStore,
     out: Path,
-) -> tuple[Path, str]:
+) -> dict[str, object]:
     legacy_rows = list(
         store.db.execute(
             "SELECT * FROM event_log ORDER BY occurred_at_utc_ns, event_id"
@@ -151,7 +148,40 @@ def _write_legacy_compat_jsonl(
     checksum = hashlib.sha256(data).hexdigest()
     os.replace(tmp, final)
     _fsync_dir(part)
-    return final, checksum
+    return {
+        "manifest_id": _manifest_id(
+            path=final,
+            checksum=checksum,
+            event_ids=[row["event_id"] for row in legacy_rows],
+            tool="observability-export.v1-compat",
+        ),
+        "checksum": checksum,
+        "event_count": len(legacy_rows),
+        "first_event_id": legacy_rows[0]["event_id"],
+        "last_event_id": legacy_rows[-1]["event_id"],
+        "path": str(final),
+        "date_utc": "1970-01-01",
+        "event_type": event_type,
+    }
+
+
+def _manifest_id(
+    *,
+    path: Path,
+    checksum: str,
+    event_ids: list[str],
+    tool: str,
+) -> str:
+    return hashlib.sha256(
+        _canonical_json(
+            {
+                "partition_path": str(path),
+                "checksum": checksum,
+                "event_ids": event_ids,
+                "tool": tool,
+            }
+        ).encode("utf-8")
+    ).hexdigest()
 
 
 def _canonical_json(payload: object) -> str:

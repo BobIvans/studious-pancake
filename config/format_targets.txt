@@ -64,7 +64,7 @@ src/lending/kamino_conformance.py
 src/lending/kamino_real_conformance.py
 tests/lending/test_kamino_pr050.py
 tests/lending/test_kamino_pr067_conformance.py
-tests/lending/test_pr095_real_conformance.py
+tests/lending/test_kamino_pr095_real_conformance.py
 scripts/pr047_release_gate.py
 src/release_gate/__init__.py
 src/release_gate/cli.py

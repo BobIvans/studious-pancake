@@ -9,10 +9,16 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
+import re
 from typing import Any
 
 import yaml
-from yaml.events import AliasEvent, CollectionEndEvent, CollectionStartEvent
+from yaml.events import (
+    AliasEvent,
+    CollectionEndEvent,
+    CollectionStartEvent,
+    ScalarEvent,
+)
 from yaml.nodes import MappingNode, ScalarNode
 
 
@@ -31,12 +37,33 @@ class _StrictLoader(yaml.SafeLoader):
     pass
 
 
+# Resolver dictionaries are inherited by reference. Copy them before removing the
+# timestamp resolver so this security policy cannot mutate global SafeLoader
+# behavior elsewhere in the process.
+_StrictLoader.yaml_implicit_resolvers = {
+    first_char: list(resolvers)
+    for first_char, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
 for first_char, resolvers in list(_StrictLoader.yaml_implicit_resolvers.items()):
     _StrictLoader.yaml_implicit_resolvers[first_char] = [
         resolver
         for resolver in resolvers
         if resolver[0] != "tag:yaml.org,2002:timestamp"
     ]
+
+_AMBIGUOUS_PLAIN_DATE = re.compile(
+    r"^[0-9]{4}-[0-9]{1,2}-[0-9]{1,2}(?:[Tt ](?:.*))?$"
+)
+_ALLOWED_EXPLICIT_TAGS = {
+    None,
+    "tag:yaml.org,2002:null",
+    "tag:yaml.org,2002:bool",
+    "tag:yaml.org,2002:int",
+    "tag:yaml.org,2002:float",
+    "tag:yaml.org,2002:str",
+    "tag:yaml.org,2002:seq",
+    "tag:yaml.org,2002:map",
+}
 
 
 def _construct_mapping(
@@ -92,6 +119,16 @@ def _preflight(text: str, *, limits: StrictYamlLimits) -> None:
                 raise StrictYamlError("YAML aliases are forbidden")
             if getattr(event, "anchor", None) is not None:
                 raise StrictYamlError("YAML anchors are forbidden")
+            if getattr(event, "tag", None) not in _ALLOWED_EXPLICIT_TAGS:
+                raise StrictYamlError("custom YAML tags are forbidden")
+            if (
+                isinstance(event, ScalarEvent)
+                and event.style is None
+                and _AMBIGUOUS_PLAIN_DATE.fullmatch(event.value)
+            ):
+                raise StrictYamlError(
+                    "implicit YAML date/timestamp scalars are forbidden; quote the value"
+                )
             if isinstance(event, CollectionStartEvent):
                 depth += 1
                 if depth > limits.max_depth:

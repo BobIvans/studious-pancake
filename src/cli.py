@@ -384,16 +384,12 @@ def _paper_service_max_cycles() -> int | None:
             "FLASHLOAN_PAPER_MAX_CYCLES must be an integer"
         ) from exc
     if value < 0:
-        raise ConfigurationLoadError(
-            "FLASHLOAN_PAPER_MAX_CYCLES must be non-negative"
-        )
+        raise ConfigurationLoadError("FLASHLOAN_PAPER_MAX_CYCLES must be non-negative")
     return None if value == 0 else value
 
 
 def _paper_service_idle_delay_seconds() -> float:
-    raw = os.environ.get(
-        "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25"
-    ).strip()
+    raw = os.environ.get("FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25").strip()
     try:
         value = float(raw)
     except ValueError as exc:
@@ -427,9 +423,7 @@ async def _run_installed_durable_paper_service_async(
     summary = await supervisor.run(stop_event)
     final_report = summary.final_report
     if final_report is None:
-        print(
-            "INSTALLED_PAPER_SERVICE: status=STOPPED reason=signal_before_cycle"
-        )
+        print("INSTALLED_PAPER_SERVICE: status=STOPPED reason=signal_before_cycle")
         return 0
     return _paper_service_exit_code(final_report)
 

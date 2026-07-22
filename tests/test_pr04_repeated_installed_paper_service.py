@@ -159,7 +159,10 @@ def test_pr04_cli_paper_mode_uses_repeated_supervisor() -> None:
         'if mode == "disabled":', 1
     )[0]
     assert "_run_installed_durable_paper_service_once" not in paper_branch
-    assert "sendTransaction" not in open(
-        "src/paper_shadow/repeated_service_pr04.py",
-        encoding="utf-8",
-    ).read()
+    assert (
+        "sendTransaction"
+        not in open(
+            "src/paper_shadow/repeated_service_pr04.py",
+            encoding="utf-8",
+        ).read()
+    )

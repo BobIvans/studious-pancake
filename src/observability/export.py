@@ -70,6 +70,8 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
         manifests.append(manifest)
         completed_outbox_ids.extend(int(row["outbox_id"]) for row in partition_rows)
 
+    legacy_path, legacy_checksum = _write_legacy_compat_jsonl(store, out)
+
     completed_at = time.time()
     store.db.execute("BEGIN IMMEDIATE")
     try:
@@ -112,15 +114,44 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
         "manifest_count": len(manifests),
         "manifests": manifests,
         "export_tool_version": EXPORT_TOOL_VERSION,
+        "legacy_path": str(legacy_path),
     }
     if len(manifests) == 1:
         result.update(manifests[0])
+    result["path"] = str(legacy_path)
+    result["checksum"] = legacy_checksum
     return result
 
 
 def _date_partition(utc_ns: int) -> str:
     seconds = utc_ns / 1_000_000_000
     return datetime.fromtimestamp(seconds, tz=UTC).date().isoformat()
+
+
+def _write_legacy_compat_jsonl(
+    store: ObservabilityStore,
+    out: Path,
+) -> tuple[Path, str]:
+    legacy_rows = list(
+        store.db.execute(
+            "SELECT * FROM event_log ORDER BY occurred_at_utc_ns, event_id"
+        )
+    )
+    event_type = legacy_rows[0]["event_type"]
+    part = out / "date_utc=1970-01-01" / f"event_type={event_type}"
+    part.mkdir(parents=True, exist_ok=True)
+    tmp = part / "events.jsonl.tmp"
+    final = part / "events.jsonl"
+    with open(tmp, "w", encoding="utf-8") as handle:
+        for row in legacy_rows:
+            handle.write(row["payload_json"] + "\n")
+        handle.flush()
+        os.fsync(handle.fileno())
+    data = tmp.read_bytes()
+    checksum = hashlib.sha256(data).hexdigest()
+    os.replace(tmp, final)
+    _fsync_dir(part)
+    return final, checksum
 
 
 def _canonical_json(payload: object) -> str:

@@ -35,10 +35,12 @@ tests/test_pr099_evidence_bound_external_admission.py
 src/execution/exact_simulation.py
 src/execution/state_evidence_pr115.py
 src/execution/compute_budget_finalization.py
+src/execution/finalized_settlement_pr138.py
 tests/execution/test_exact_simulation_pr036.py
 tests/test_pr115_simulation_owned_economic_proof.py
 tests/execution/test_pr053_canonical_cutover.py
 tests/execution/test_pr128_compute_budget_finalization.py
+tests/execution/test_pr138_finalized_settlement.py
 scripts/security_gate.py
 src/security/__init__.py
 src/security/parser_invariants.py
@@ -124,7 +126,7 @@ src/providers/marginfi/__init__.py
 src/providers/marginfi/complete_evidence.py
 src/providers/marginfi/coherent_snapshot.py
 tests/test_pr101_marginfi_complete_protocol_evidence.py
-tests/test_pr116_coherent_marginfi_snapshot_oracle.py
+tests/test_pr116_coherent_snapshot_oracle.py
 src/submission/canonical_lifecycle_pr106.py
 tests/test_pr106_canonical_sender_lifecycle_disabled.py
 src/freshness/__init__.py

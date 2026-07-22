@@ -67,16 +67,19 @@ jobs:
                       or '..' in path.parts
                       or member.issym()
                       or member.islnk()
-                      or not member.isfile()
+                      or not (member.isfile() or member.isdir())
                   ):
                       raise SystemExit(f'unsafe payload member: {member.name}')
               for member in members:
+                  target = (root / member.name).resolve()
+                  if target != root and root not in target.parents:
+                      raise SystemExit(f'payload escapes repository: {member.name}')
+                  if member.isdir():
+                      target.mkdir(parents=True, exist_ok=True)
+                      continue
                   source = bundle.extractfile(member)
                   if source is None:
                       raise SystemExit(f'missing payload bytes: {member.name}')
-                  target = (root / member.name).resolve()
-                  if root not in target.parents:
-                      raise SystemExit(f'payload escapes repository: {member.name}')
                   target.parent.mkdir(parents=True, exist_ok=True)
                   target.write_bytes(source.read())
           PY

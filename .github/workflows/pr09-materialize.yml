@@ -1,9 +1,9 @@
 name: PR-09 materialize repository
 
 on:
-  push:
+  pull_request:
     branches:
-      - roadmap-pr-09-finalized-settlement-ledger
+      - main
   workflow_dispatch:
 
 permissions:

@@ -17,7 +17,6 @@ from src.submission.resubmission_proof_pr197 import (
     resubmission_decision_from_proof,
 )
 
-
 H = "a" * 64
 POLICY = "b" * 64
 NEW_PERMIT = "c" * 64

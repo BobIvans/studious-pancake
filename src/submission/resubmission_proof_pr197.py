@@ -147,9 +147,15 @@ class SourceObservation:
             blockers.append("SOURCE_SIGNATURE_STATUS_COUNT_MISMATCH")
         if len(self.transaction_states) != signature_count:
             blockers.append("SOURCE_TRANSACTION_LOOKUP_COUNT_MISMATCH")
-        if any(state is not SignatureEvidenceState.MISSING for state in self.signature_states):
+        if any(
+            state is not SignatureEvidenceState.MISSING
+            for state in self.signature_states
+        ):
             blockers.append("SOURCE_SIGNATURE_ABSENCE_NOT_PROVEN")
-        if any(state is not TransactionLookupState.MISSING for state in self.transaction_states):
+        if any(
+            state is not TransactionLookupState.MISSING
+            for state in self.transaction_states
+        ):
             blockers.append("SOURCE_TRANSACTION_ABSENCE_NOT_PROVEN")
         if not self.response_hashes or any(
             not _is_sha256(value) for value in self.response_hashes
@@ -161,10 +167,14 @@ class SourceObservation:
 
     @property
     def landed(self) -> bool:
-        return any(
-            state in {SignatureEvidenceState.CONFIRMED, SignatureEvidenceState.FINALIZED}
-            for state in self.signature_states
-        ) or TransactionLookupState.SUCCEEDED in self.transaction_states
+        return (
+            any(
+                state
+                in {SignatureEvidenceState.CONFIRMED, SignatureEvidenceState.FINALIZED}
+                for state in self.signature_states
+            )
+            or TransactionLookupState.SUCCEEDED in self.transaction_states
+        )
 
     @property
     def failed(self) -> bool:
@@ -266,16 +276,22 @@ class ResubmissionProof:
         if not self.old_blockhash.strip():
             raise ResubmissionProofError("old_blockhash is required")
         if self.last_valid_block_height < 0 or self.min_context_slot < 0:
-            raise ResubmissionProofError("block height and context slot must be non-negative")
+            raise ResubmissionProofError(
+                "block height and context slot must be non-negative"
+            )
         if self.minimum_independent_sources < 2:
-            raise ResubmissionProofError("at least two independent sources are required")
+            raise ResubmissionProofError(
+                "at least two independent sources are required"
+            )
         if self.grace_period_ns < 0:
             raise ResubmissionProofError("grace period cannot be negative")
         if not (
             0 < self.issued_at_ns <= self.expires_at_ns
             and self.expires_at_ns - self.issued_at_ns <= MAX_PROOF_TTL_NS
         ):
-            raise ResubmissionProofError("proof expiry must be positive and short-lived")
+            raise ResubmissionProofError(
+                "proof expiry must be positive and short-lived"
+            )
         if self.observation_completed_at_ns < self.observation_started_at_ns:
             raise ResubmissionProofError("observation window is inverted")
 
@@ -302,7 +318,9 @@ class ResubmissionProof:
         if len(groups) < self.minimum_independent_sources:
             blockers.append("INSUFFICIENT_INDEPENDENT_CORRELATION_GROUPS")
         genesis_values = {
-            source.genesis_hash for source in self.sources if source.genesis_hash is not None
+            source.genesis_hash
+            for source in self.sources
+            if source.genesis_hash is not None
         }
         if len(genesis_values) != 1:
             blockers.append("RPC_GENESIS_DISAGREEMENT")
@@ -433,7 +451,9 @@ class ArchiveCompleteResubmissionClient:
     ) -> None:
         values = tuple(sources)
         if len(values) < minimum_independent_sources or minimum_independent_sources < 2:
-            raise ResubmissionProofError("at least two RPC evidence sources are required")
+            raise ResubmissionProofError(
+                "at least two RPC evidence sources are required"
+            )
         if timeout_seconds <= 0:
             raise ResubmissionProofError("timeout_seconds must be positive")
         if len({item.provider_id for item in values}) != len(values):
@@ -707,8 +727,7 @@ class SQLiteResubmissionProofStore:
 
     def _migrate(self) -> None:
         with self._connect() as connection:
-            connection.executescript(
-                """
+            connection.executescript("""
                 CREATE TABLE IF NOT EXISTS pr197_resubmission_proofs (
                     proof_hash TEXT PRIMARY KEY,
                     attempt_id TEXT NOT NULL,
@@ -736,8 +755,7 @@ class SQLiteResubmissionProofStore:
                     PRIMARY KEY(proof_hash, signature),
                     FOREIGN KEY(proof_hash) REFERENCES pr197_resubmission_proofs(proof_hash)
                 );
-                """
-            )
+                """)
 
     def record_proof(self, proof: ResubmissionProof) -> str:
         payload = _canonical_json(proof.identity_payload())
@@ -748,7 +766,9 @@ class SQLiteResubmissionProofStore:
             ).fetchone()
             if existing is not None:
                 if existing["payload_json"] != payload:
-                    raise ResubmissionProofError("proof hash collision or mutation detected")
+                    raise ResubmissionProofError(
+                        "proof hash collision or mutation detected"
+                    )
                 return proof.proof_hash
             connection.execute(
                 """
@@ -794,13 +814,19 @@ class SQLiteResubmissionProofStore:
             if row is None:
                 raise ResubmissionProofError("resubmission proof is not recorded")
             if row["state"] != AbsenceProofState.VERIFIED_ABSENT.value:
-                raise ResubmissionProofError("only verified absence can authorize rebuild")
+                raise ResubmissionProofError(
+                    "only verified absence can authorize rebuild"
+                )
             if not row["issued_at_ns"] <= now < row["expires_at_ns"]:
-                raise ResubmissionProofError("resubmission proof is expired or not yet valid")
+                raise ResubmissionProofError(
+                    "resubmission proof is expired or not yet valid"
+                )
             if row["consumed"]:
                 raise ResubmissionProofError("resubmission proof was already consumed")
             if row["late_landing"]:
-                raise ResubmissionProofError("late landing conflict freezes resubmission")
+                raise ResubmissionProofError(
+                    "late landing conflict freezes resubmission"
+                )
             authorization = ResendAuthorization(
                 authorization_id=f"resend-{uuid4()}",
                 proof_hash=proof_hash,

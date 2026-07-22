@@ -46,11 +46,15 @@ services:
       LIVE_TRADING_ENABLED: "false"
       JITO_ENABLED: "false"
       KAMINO_LIQUIDATION_ENABLED: "false"
+      FLASHLOAN_MEMORY_HARDENING_REQUIRED: "true"
       FLASHLOAN_RUNTIME_STATE_PATH: /run/flashloan-bot/runtime.json
       FLASHLOAN_HEALTH_HOST: 127.0.0.1
       FLASHLOAN_HEALTH_PORT: "8080"
       FLASHLOAN_HEALTH_URL: http://127.0.0.1:8080/health
     ulimits:
+      core:
+        soft: 0
+        hard: 0
       nofile:
         soft: 1024
         hard: 4096

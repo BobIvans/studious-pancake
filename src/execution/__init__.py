@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+import importlib
+from typing import Any
+
 from .models import (
     ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
     COMPUTE_BUDGET_PROGRAM_ID,
@@ -90,6 +95,32 @@ from .reconciliation import (
 )
 from .tip_validation import validate_exactly_one_tip
 
+_PR191_LAZY_EXPORTS = frozenset(
+    {
+        "ImmutableLiveControlStore",
+        "PR191_ACCOUNTING_SCHEMA",
+        "TerminalAccountingConflict",
+        "TerminalOutcomeCommit",
+        "TerminalOutcomeIdentity",
+        "record_actual_outcome",
+    }
+)
+
+
+def __getattr__(name: str) -> Any:
+    """Load source-only PR-191 live accounting only when explicitly requested.
+
+    ``src.execution.live_control`` is intentionally excluded from the production
+    wheel.  Eagerly importing the PR-191 compatibility cutover therefore broke
+    installed CLI smoke even though normal paper execution never uses that surface.
+    """
+
+    if name in _PR191_LAZY_EXPORTS:
+        module = importlib.import_module("src.execution.immutable_accounting_pr191")
+        return getattr(module, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 __all__ = [
     "ADDRESS_LOOKUP_TABLE_PROGRAM_ID",
     "COMPUTE_BUDGET_PROGRAM_ID",
@@ -122,6 +153,7 @@ __all__ = [
     "FinalizedSimulation",
     "HardenedCompilation",
     "HardenedV0Compiler",
+    "ImmutableLiveControlStore",
     "InMemoryExecutionJournal",
     "JournalAttemptRecord",
     "LiveSubmissionGate",
@@ -133,6 +165,7 @@ __all__ = [
     "PR115StateEvidenceCode",
     "PR115StateEvidenceError",
     "PR115TokenAccountDelta",
+    "PR191_ACCOUNTING_SCHEMA",
     "PlannedInstruction",
     "ReconciliationEvidence",
     "ReconciliationOutcome",
@@ -145,6 +178,9 @@ __all__ = [
     "SimulationRequest",
     "SubmissionEnvelope",
     "SubmissionResult",
+    "TerminalAccountingConflict",
+    "TerminalOutcomeCommit",
+    "TerminalOutcomeIdentity",
     "TipPolicy",
     "TokenDelta",
     "TransactionCompileError",
@@ -166,6 +202,7 @@ __all__ = [
     "lookup_tables_fingerprint",
     "parse_simulation_response",
     "plan_fingerprint",
+    "record_actual_outcome",
     "sign_fully",
     "simulate_exact",
     "validate_canonical_plan",

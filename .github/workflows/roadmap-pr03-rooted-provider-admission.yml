@@ -1,0 +1,48 @@
+name: Roadmap PR-03 rooted provider admission
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/providers/rooted_ingestion_pr03.py"
+      - "tests/test_rooted_ingestion_pr03.py"
+      - "docs/roadmap_pr03_rooted_provider_admission.md"
+      - "config/format_targets.txt"
+      - ".github/workflows/roadmap-pr03-rooted-provider-admission.yml"
+  push:
+    branches:
+      - roadmap-pr-03-rooted-provider-admission
+
+permissions:
+  contents: read
+
+jobs:
+  focused-verification:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - run: python -m pip install --no-deps .
+      - name: Black
+        run: |
+          python -m black --check \
+            src/providers/rooted_ingestion_pr03.py \
+            tests/test_rooted_ingestion_pr03.py
+      - name: Mypy
+        run: |
+          python -m mypy --config-file mypy.ini \
+            src/providers/rooted_ingestion_pr03.py
+      - name: Focused tests
+        run: |
+          python -m pytest \
+            tests/test_rooted_ingestion_pr03.py \
+            -q --disable-socket --allow-unix-socket
+      - name: Compile
+        run: |
+          python -m compileall -q \
+            src/providers/rooted_ingestion_pr03.py \
+            tests/test_rooted_ingestion_pr03.py

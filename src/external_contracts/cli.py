@@ -9,6 +9,10 @@ from typing import Any, Sequence
 
 from src.external_contracts.conformance import run_read_only_conformance
 from src.external_contracts.drift import detect_drift
+from src.external_contracts.provider_protocol_b1 import (
+    b1_exit_code,
+    evaluate_b1_provider_protocol_readiness,
+)
 from src.external_contracts.registry import (
     ExternalContractError,
     ExternalContractRegistry,
@@ -33,6 +37,14 @@ def _parser() -> argparse.ArgumentParser:
     )
     conformance.add_argument("--enable-online", action="store_true")
     conformance.add_argument("--contract", default=None)
+
+    readiness = commands.add_parser(
+        "provider-readiness",
+        help="print MEGA-PR B1 provider/protocol readiness for paper runtime",
+    )
+    readiness.add_argument("--enable-online", action="store_true")
+    readiness.add_argument("--provider", action="append", default=None)
+    readiness.add_argument("--require-ready", action="store_true")
     return parser
 
 
@@ -101,6 +113,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 results,
                 online_requested=args.enable_online,
             )
+        if args.command == "provider-readiness":
+            report = evaluate_b1_provider_protocol_readiness(
+                registry,
+                providers=tuple(args.provider) if args.provider else None
+                or ("jupiter", "marginfi", "jito"),
+                enable_online=args.enable_online,
+            )
+            print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+            return b1_exit_code(report, require_ready=args.require_ready)
     except (ExternalContractError, OSError, ValueError) as exc:
         print(f"EXTERNAL_CONTRACT_ERROR: {exc}", file=sys.stderr)
         return 2

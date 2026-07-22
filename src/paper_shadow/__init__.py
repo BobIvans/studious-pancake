@@ -13,6 +13,22 @@ from src.paper_shadow.a2_exact_attempt_runtime import (
     ExactAttemptRuntimeReport,
     run_exact_attempt_runtime_cycle,
 )
+from src.paper_shadow.a2_supported_paper_runtime import (
+    A2_RECORDED_EVIDENCE_SCHEMA,
+    A2_SQLITE_SCHEMA,
+    A2_SUPPORTED_RUNTIME_SCHEMA,
+    RecordedEvidenceCycle,
+    RecordedEvidenceManifest,
+    SupportedPaperRuntimeError,
+    SupportedPaperRuntimeProfile,
+    SupportedPaperRuntimeStore,
+    SupportedPaperRuntimeSummary,
+    load_recorded_evidence_manifest,
+    manifest_from_json,
+    report_from_json,
+    run_supported_paper_runtime,
+    run_supported_paper_runtime_from_manifest,
+)
 from src.paper_shadow.atomic_runtime_stages import (
     AtomicRuntimeStageError,
     AtomicRuntimeStageErrorCode,
@@ -56,6 +72,9 @@ from src.paper_shadow.runner import (
 
 __all__ = [
     "A2PaperOutcomeStatus",
+    "A2_RECORDED_EVIDENCE_SCHEMA",
+    "A2_SQLITE_SCHEMA",
+    "A2_SUPPORTED_RUNTIME_SCHEMA",
     "AtomicPlannerSimulationReconciliationVertical",
     "AtomicRuntimeStageError",
     "AtomicRuntimeStageErrorCode",
@@ -90,8 +109,19 @@ __all__ = [
     "PaperShadowRuntimeDependencies",
     "PaperShadowStageContext",
     "PaperShadowStageName",
+    "RecordedEvidenceCycle",
+    "RecordedEvidenceManifest",
+    "SupportedPaperRuntimeError",
+    "SupportedPaperRuntimeProfile",
+    "SupportedPaperRuntimeStore",
+    "SupportedPaperRuntimeSummary",
     "VerifiedMarginfiProviderDependency",
     "build_paper_shadow_runtime",
+    "load_recorded_evidence_manifest",
+    "manifest_from_json",
     "paper_shadow_stage_blocked",
+    "report_from_json",
     "run_exact_attempt_runtime_cycle",
+    "run_supported_paper_runtime",
+    "run_supported_paper_runtime_from_manifest",
 ]

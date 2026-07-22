@@ -28,6 +28,10 @@ from src.paper_shadow import (
     build_paper_shadow_runtime,
 )
 from src.paper_shadow.a1_vertical_preflight import evaluate_paper_vertical_a1
+from src.paper_shadow.a2_supported_paper_runtime import (
+    SupportedPaperRuntimeError,
+    run_supported_paper_runtime_from_manifest,
+)
 from src.paper_shadow.runner import PaperShadowRunSummary
 
 logger = logging.getLogger(__name__)
@@ -83,6 +87,33 @@ def _parser() -> argparse.ArgumentParser:
         default="shadow",
         help="requested product mode; unavailable modes fail closed",
     )
+    run_parser.add_argument(
+        "--paper-profile",
+        choices=("default", "recorded-evidence"),
+        default="default",
+        help=(
+            "paper runtime profile. The default preserves the existing fail-closed "
+            "paper/shadow composition; recorded-evidence runs MEGA-PR A2 from a "
+            "reviewed exact-attempt manifest without network, sender or signer access."
+        ),
+    )
+    run_parser.add_argument(
+        "--recorded-evidence-manifest",
+        default=None,
+        help="MEGA-PR A2 recorded exact-attempt evidence manifest for --paper-profile recorded-evidence",
+    )
+    run_parser.add_argument(
+        "--paper-runtime-db",
+        default=".runtime/supported-paper-runtime.sqlite",
+        help="SQLite lifecycle/outbox authority used by the MEGA-PR A2 paper runtime",
+    )
+    run_parser.add_argument(
+        "--max-paper-cycles",
+        type=int,
+        default=None,
+        help="maximum recorded paper cycles to process in this invocation",
+    )
+    run_parser.add_argument("--json", action="store_true", dest="run_as_json")
 
     status_parser = subparsers.add_parser(
         "status", help="show runtime, strategy, and capability status"
@@ -331,8 +362,74 @@ def _run_paper_vertical_preflight(
     return 0
 
 
+def _print_supported_paper_runtime_summary(
+    payload: dict[str, Any],
+    *,
+    as_json: bool,
+) -> None:
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return
+    print(
+        "SUPPORTED_PAPER_RUNTIME: "
+        f"profile={payload['profile']} "
+        f"status={payload['final_status']} "
+        f"reason={payload['terminal_reason']} "
+        f"ready={payload['ready_for_next_cycle']} "
+        f"cycles={payload['cycles_processed']} "
+        f"db={payload['state_db_path']} "
+        f"outbox_events={payload['outbox_events_written']}"
+    )
+
+
+def _supported_paper_runtime_exit_code(payload: dict[str, Any]) -> int:
+    if payload.get("ready_for_next_cycle") is True:
+        return 0
+    status = str(payload.get("final_status", ""))
+    if status == "BLOCKED":
+        return EXIT_PAPER_SHADOW_BLOCKED
+    if status == "SIMULATION_FAILED":
+        return EXIT_PAPER_SHADOW_FAILED
+    if status == "INDETERMINATE":
+        return EXIT_PAPER_SHADOW_DEGRADED
+    return EXIT_PAPER_SHADOW_FAILED
+
+
+def _run_supported_paper_runtime(
+    *,
+    manifest_path: str | None,
+    state_db_path: str,
+    max_cycles: int | None,
+    as_json: bool,
+) -> int:
+    if not manifest_path:
+        print(
+            "CONFIGURATION_ERROR: --recorded-evidence-manifest is required for "
+            "--paper-profile recorded-evidence",
+            file=sys.stderr,
+        )
+        return EXIT_CONFIGURATION_ERROR
+    summary = run_supported_paper_runtime_from_manifest(
+        manifest_path=manifest_path,
+        state_db_path=state_db_path,
+        max_cycles=max_cycles,
+    )
+    payload = summary.to_json()
+    _print_supported_paper_runtime_summary(payload, as_json=as_json)
+    return _supported_paper_runtime_exit_code(payload)
+
+
 def _run_requested_mode(
-    mode: str, matrix: CapabilityMatrix, app: Any, config: RuntimeConfig
+    mode: str,
+    matrix: CapabilityMatrix,
+    app: Any,
+    config: RuntimeConfig,
+    *,
+    paper_profile: str = "default",
+    recorded_evidence_manifest: str | None = None,
+    paper_runtime_db: str = ".runtime/supported-paper-runtime.sqlite",
+    max_paper_cycles: int | None = None,
+    as_json: bool = False,
 ) -> int:
     status = _status_payload(matrix, app, config)
     if mode == "live":
@@ -343,9 +440,16 @@ def _run_requested_mode(
         )
         return EXIT_MODE_UNAVAILABLE
     if mode == "paper":
+        if paper_profile == "recorded-evidence":
+            return _run_supported_paper_runtime(
+                manifest_path=recorded_evidence_manifest,
+                state_db_path=paper_runtime_db,
+                max_cycles=max_paper_cycles,
+                as_json=as_json,
+            )
         return _run_paper_shadow_once(
             config,
-            as_json=False,
+            as_json=as_json,
             pr023_compat_reason=True,
         )
     if mode == "disabled":
@@ -411,7 +515,17 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "paper-vertical-preflight":
             return _run_paper_vertical_preflight(config, as_json=args.as_json)
         if args.command == "run":
-            return _run_requested_mode(args.mode, matrix, app, config)
+            return _run_requested_mode(
+                args.mode,
+                matrix,
+                app,
+                config,
+                paper_profile=args.paper_profile,
+                recorded_evidence_manifest=args.recorded_evidence_manifest,
+                paper_runtime_db=args.paper_runtime_db,
+                max_paper_cycles=args.max_paper_cycles,
+                as_json=args.run_as_json,
+            )
         if args.command == "container":
             return asyncio.run(run_safe_idle(matrix, app, state_file=args.state_file))
         if args.command == "config" and args.config_command == "dump":
@@ -444,6 +558,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         CapabilityContractError,
         ConfigurationError,
         ConfigurationLoadError,
+        SupportedPaperRuntimeError,
     ) as exc:
         print(f"CONFIGURATION_ERROR: {exc}", file=sys.stderr)
         return EXIT_CONFIGURATION_ERROR

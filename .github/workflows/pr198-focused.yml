@@ -1,0 +1,60 @@
+name: PR-198 focused archive checks
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/observability/archive*.py"
+      - "src/observability/export.py"
+      - "tests/observability/test_pr017_observability.py"
+      - "tests/test_pr132_observability_integrity.py"
+      - "tests/test_pr198_immutable_observability_export.py"
+      - ".github/workflows/pr198-focused.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-regressions:
+    runs-on: ubuntu-24.04
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --quiet --requirement requirements.txt
+      - run: python -m pip install --quiet --requirement requirements-dev.txt
+      - run: python -m pip install --quiet --no-deps .
+      - name: Compile PR-198 boundary
+        run: |
+          python -m compileall -q \
+            src/observability \
+            tests/test_pr198_immutable_observability_export.py
+      - name: Critical static errors
+        run: |
+          python -m flake8 \
+            src/observability/archive.py \
+            src/observability/archive_claims.py \
+            src/observability/archive_manifest.py \
+            src/observability/archive_schema.py \
+            src/observability/archive_segments.py \
+            src/observability/archive_types.py \
+            src/observability/archive_verify.py \
+            src/observability/export.py \
+            tests/test_pr198_immutable_observability_export.py \
+            --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: PR-017, PR-132 and PR-198 regressions
+        run: |
+          python -m pytest \
+            tests/observability/test_pr017_observability.py \
+            tests/test_pr132_observability_integrity.py \
+            tests/test_pr198_immutable_observability_export.py \
+            -q --disable-socket --allow-unix-socket

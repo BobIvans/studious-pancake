@@ -88,6 +88,7 @@ python -m py_compile \
 python -m compileall -q src tests
 ```
 
+The PR-201 source and focused test are registered in the repository Black manifest.
 Focused tests cover all-zero nonce rejection, CSPRNG issuance, placeholder rejection,
 MAC/domain tampering, cross-domain nonce reuse, single-use PR-141 authorization,
 idempotent exact retry, conflicting second envelope, expiry/revocation, unknown

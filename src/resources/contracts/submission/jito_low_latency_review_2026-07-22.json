@@ -1,0 +1,35 @@
+{
+  "contract_id": "jito.low-latency-json-rpc",
+  "credential_modes": [
+    "none/default-rate-limit",
+    "optional-uuid"
+  ],
+  "endpoint_families": [
+    "https://mainnet.block-engine.jito.wtf/api/v1/transactions",
+    "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
+  ],
+  "execution_allowed": false,
+  "official_sources": [
+    "https://docs.jito.wtf/lowlatencytxnsend/"
+  ],
+  "promotion_notes": [
+    "ACK or bundle id is not rooted/finalized landing evidence.",
+    "Jito remains disabled until permit-bound submission, bounded polling, unbundling protection and finalized settlement are proven."
+  ],
+  "provider": "jito",
+  "reviewed_at": "2026-07-22T18:00:00Z",
+  "reviewed_contract_facts": {
+    "bundle_atomic_same_slot": true,
+    "bundle_id_is_landing_proof": false,
+    "default_rate_limit": "1 request per second per IP per region",
+    "landing_status_methods": [
+      "getBundleStatuses",
+      "getInflightBundleStatuses"
+    ],
+    "max_transactions_per_bundle": 5,
+    "minimum_tip_lamports": 1000,
+    "send_transaction_skip_preflight": true,
+    "uncle_unbundling_requires_transaction_local_assertions": true
+  },
+  "schema_version": "production.external-review-snapshot.v1"
+}

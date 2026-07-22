@@ -1,0 +1,27 @@
+{
+  "contract_id": "marginfi.v2-mainnet-source-identity",
+  "execution_allowed": false,
+  "main_group": "4qp6Fx6tnZkY5Wropq9wUYgtFxXKwE6viZxFHg3rdAG8",
+  "mainnet_program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+  "official_sources": [
+    "https://docs.marginfi.com/ts-sdk/client",
+    "https://github.com/mrgnlabs/marginfi-v2",
+    "https://docs.marginfi.com/protocol-design"
+  ],
+  "promotion_notes": [
+    "Program and group identifiers are pinned as reviewed source identity, not deployed bytecode attestation.",
+    "Execution remains blocked until official SDK vectors, deployed program evidence and exact borrow/repay simulation are accepted."
+  ],
+  "provider": "marginfi",
+  "reviewed_at": "2026-07-22T18:00:00Z",
+  "reviewed_contract_facts": {
+    "deployed_program_attestation_complete": false,
+    "golden_instruction_vectors_complete": false,
+    "official_sdk_flash_loan_methods": [
+      "flashLoan",
+      "buildFlashLoanTx"
+    ],
+    "program_and_group_identity_reviewed": true
+  },
+  "schema_version": "production.external-review-snapshot.v1"
+}

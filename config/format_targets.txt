@@ -150,3 +150,9 @@ src/submission/resubmission_proof_pr197.py
 tests/test_pr197_archive_complete_resubmission.py
 src/authorization_replay_pr201.py
 tests/test_pr201_authorization_replay.py
+isolated_signer_service/src/flashloan_isolated_signer/__init__.py
+isolated_signer_service/src/flashloan_isolated_signer/models.py
+isolated_signer_service/src/flashloan_isolated_signer/store.py
+isolated_signer_service/src/flashloan_isolated_signer/boundary.py
+isolated_signer_service/src/flashloan_isolated_signer/service.py
+tests/test_roadmap_pr08_isolated_signer_foundation.py

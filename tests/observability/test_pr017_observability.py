@@ -62,8 +62,16 @@ def test_metrics_funnel_and_export_idempotent(tmp_path):
         s.append(make_event(event_type=et, logical_opportunity_id='o', plan_hash='p', sequence_no=i, reason_code=ReasonCode.CAPITAL_INSUFFICIENT if 'rejected' in et.value else None, attributes={'latency_ms': i*10}))
     f=rejection_funnel(s); assert f['stages']['opportunity_detected']==1 and f['not_attempted']==1 and f['latency']['p95_ms']['quote_received']=='N/A'
     assert daily_shadow_summary(s)['simulated_pnl_distribution'] == 'N/A'
-    m1=export_jsonl(s,tmp_path/'x'); m2=export_jsonl(s,tmp_path/'x')
-    assert m1['checksum']==m2['checksum'] and s.db.execute('select count(*) from export_manifest').fetchone()[0] == 1
+    m1=export_jsonl(s,tmp_path/'x')
+    first_manifest_count=s.db.execute('select count(*) from export_manifest').fetchone()[0]
+    first_authoritative_count=s.db.execute('select count(*) from archive_segment_manifest').fetchone()[0]
+    m2=export_jsonl(s,tmp_path/'x')
+    second_manifest_count=s.db.execute('select count(*) from export_manifest').fetchone()[0]
+    second_authoritative_count=s.db.execute('select count(*) from archive_segment_manifest').fetchone()[0]
+    assert m1['checksum']==m2['checksum']
+    assert m1['manifest_count'] == 4 and m2['manifest_count'] == 0
+    assert first_manifest_count == second_manifest_count == 4
+    assert first_authoritative_count == second_authoritative_count == 4
 
 
 def test_replay_offline_and_digest_divergence(tmp_path):

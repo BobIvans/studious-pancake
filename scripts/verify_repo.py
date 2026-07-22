@@ -24,6 +24,11 @@ QUALITY_COMMAND: Final[list[str]] = [
     "scripts/quality_gate.py",
 ]
 
+AUTHORITY_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/validate_authority_map.py",
+]
+
 PACKAGE_SMOKE_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/package_smoke.py",
@@ -63,6 +68,7 @@ COMMANDS: Final[list[list[str]]] = [
         sys.executable,
         "-m",
         "pytest",
+        "tests/test_pr01_authority_map.py",
         "tests/test_pr023_runtime_truth.py",
         "tests/test_launcher_startup_smoke.py",
         "tests/test_import_smoke.py",
@@ -145,6 +151,7 @@ def main() -> int:
     if not args.skip_dependency_audit:
         quality_command.append("--with-dependency-audit")
     run(quality_command)
+    run(AUTHORITY_COMMAND)
     run(PACKAGE_SMOKE_COMMAND)
 
     for command in COMMANDS[1:]:

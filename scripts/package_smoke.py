@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build and validate the installed PR-025 console package outside the repo."""
+"""Build and validate the installed PR-025/PR-01 console package outside the repo."""
 
 from __future__ import annotations
 
@@ -83,6 +83,29 @@ def _copy_source_tree(destination: Path) -> None:
     shutil.copytree(ROOT, destination, ignore=ignore)
 
 
+def _load_installed_authority(
+    python: Path,
+    *,
+    cwd: Path,
+    env: dict[str, str],
+) -> dict[str, object]:
+    output = _run(
+        [
+            str(python),
+            "-c",
+            (
+                "import json; "
+                "from src.authority_map import AuthorityMap; "
+                "print(json.dumps(AuthorityMap.load_default().to_dict(), "
+                "sort_keys=True))"
+            ),
+        ],
+        cwd=cwd,
+        env=env,
+    )
+    return json.loads(output)
+
+
 def main() -> int:
     with tempfile.TemporaryDirectory(prefix="pr025-package-smoke-") as temp_dir:
         temporary = Path(temp_dir)
@@ -111,9 +134,12 @@ def main() -> int:
             names = set(archive.namelist())
             required = {
                 "arb_bot.py",
+                "src/authority_map.py",
                 "src/cli.py",
+                "src/cli_pr189.py",
                 "src/container_runtime.py",
                 "src/resources/capabilities.json",
+                "src/resources/runtime_authority_map.json",
             }
             missing = sorted(required - names)
             if missing:
@@ -130,9 +156,16 @@ def main() -> int:
             if len(entry_points) != 1:
                 raise SystemExit("wheel does not contain one entry_points.txt")
             entry_text = archive.read(entry_points[0]).decode("utf-8")
-            for executable in ("flashloan-bot", "flashloan-bot-healthcheck"):
-                if executable not in entry_text:
-                    raise SystemExit(f"wheel entry point is missing: {executable}")
+            required_entrypoints = {
+                "flashloan-bot": "src.cli_pr189:main",
+                "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
+            }
+            for executable, target in required_entrypoints.items():
+                expected = f"{executable} = {target}"
+                if expected not in entry_text:
+                    raise SystemExit(
+                        f"wheel entry point mismatch: expected {expected!r}"
+                    )
 
         environment = temporary / "venv"
         venv.EnvBuilder(with_pip=True, system_site_packages=False).create(environment)
@@ -174,6 +207,11 @@ def main() -> int:
                 env=clean_env,
             )
         )
+        authority = _load_installed_authority(
+            python,
+            cwd=temporary,
+            env=clean_env,
+        )
         if status["supported_entrypoint"] != "flashloan-bot":
             raise SystemExit("installed CLI reports an unexpected supported entrypoint")
         if capabilities["schema_version"] != "pr023.capabilities.v1":
@@ -184,8 +222,34 @@ def main() -> int:
             raise SystemExit(
                 "installed package did not preserve fail-closed runtime truth"
             )
+        if authority["schema_version"] != "pr01.authority-map.v1":
+            raise SystemExit("installed package did not load the PR-01 authority map")
+        if authority["product_state"] != "not-production-ready":
+            raise SystemExit("installed authority map weakened the product state")
+        entrypoint = authority["supported_entrypoint"]
+        if not isinstance(entrypoint, dict) or entrypoint.get("target") != (
+            "src.cli_pr189:main"
+        ):
+            raise SystemExit("installed authority map entrypoint does not match wheel")
+        active = {
+            vertical["roadmap_pr"]: vertical["active_branches"][0]
+            for vertical in authority["verticals"]
+            if vertical["active_branches"]
+        }
+        if active != {
+            "PR-01": "roadmap/pr-01-repository-authority-consolidation",
+            "PR-02": "roadmap/pr-02-unified-lifecycle-authority",
+            "PR-03": "roadmap-pr-03-rooted-provider-admission",
+            "PR-04": "pr-04-repeated-installed-paper-service",
+        }:
+            raise SystemExit("installed authority map has unexpected active branches")
+        if any(
+            vertical["active_branches"] or not vertical["hard_disabled"]
+            for vertical in authority["verticals"][7:]
+        ):
+            raise SystemExit("installed authority map weakened PR-08 through PR-10")
 
-    print("PR-087 package boundary smoke passed.")
+    print("PR-087/PR-01 package boundary smoke passed.")
     return 0
 
 

@@ -53,6 +53,15 @@ from src.paper_shadow.runner import (
     PaperShadowStageName,
     paper_shadow_stage_blocked,
 )
+from src.paper_shadow.durable_service_a3 import (
+    A3ExactAttemptBatch,
+    A3PaperServiceStatus,
+    A3ProviderEvidenceState,
+    InstalledDurablePaperService,
+    InstalledDurablePaperServiceReport,
+    InstalledPaperServiceConfig,
+    build_installed_durable_paper_service,
+)
 from src.paper_shadow.immutable_lifecycle_pr191 import (
     ImmutableSQLitePaperLifecycleStore,
     LifecycleImmutabilityConflict,
@@ -64,6 +73,9 @@ from src.paper_shadow.immutable_lifecycle_pr191 import (
 
 __all__ = [
     "A2PaperOutcomeStatus",
+    "A3ExactAttemptBatch",
+    "A3PaperServiceStatus",
+    "A3ProviderEvidenceState",
     "AtomicPlannerSimulationReconciliationVertical",
     "AtomicRuntimeStageError",
     "AtomicRuntimeStageErrorCode",
@@ -82,6 +94,9 @@ __all__ = [
     "ExactAttemptRuntimeReport",
     "ExactFeeCapitalWorkflowDependency",
     "ImmutableSQLitePaperLifecycleStore",
+    "InstalledDurablePaperService",
+    "InstalledDurablePaperServiceReport",
+    "InstalledPaperServiceConfig",
     "JsonlPaperShadowJournal",
     "JupiterV2BuildDependency",
     "LifecycleImmutabilityConflict",
@@ -105,6 +120,7 @@ __all__ = [
     "PaperShadowStageName",
     "TransitionCommitResult",
     "VerifiedMarginfiProviderDependency",
+    "build_installed_durable_paper_service",
     "build_paper_shadow_runtime",
     "paper_shadow_stage_blocked",
     "run_exact_attempt_runtime_cycle",

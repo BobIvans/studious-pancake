@@ -97,12 +97,12 @@ class Opportunity:
 
 
 def _coerce_base_units(value: int | float, field_name: str) -> int:
-    """Return integer base units while tolerating legacy integral fixtures."""
+    """Return integer base units while tolerating legacy float fixtures."""
 
     if isinstance(value, bool):
         raise TypeError(f"{field_name} must be integer base units")
     if isinstance(value, int):
         return value
-    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+    if isinstance(value, float) and math.isfinite(value):
         return int(value)
     raise TypeError(f"{field_name} must be integer base units")

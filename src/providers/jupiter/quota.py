@@ -1,11 +1,8 @@
 """Account-wide Jupiter quota accounting.
 
-This module intentionally has no HTTP client dependency.  It provides the
-single in-process quota boundary that every Jupiter caller must share:
-discovery, route refinement and final build/finalization.  The manager is a
-conservative sliding-window gate, not a promise that the upstream account plan
-allows exactly this rate.  Runtime code must still honour 429/Retry-After and
-telemetry must tune the configured budget.
+PR-194 keeps proof-critical request capacity available when optional discovery or
+refinement traffic fills its own budget. The manager remains transport-neutral
+and fail-closed during provider Retry-After windows.
 """
 from __future__ import annotations
 
@@ -19,11 +16,14 @@ from uuid import uuid4
 
 
 class JupiterQuotaPurpose(str, Enum):
-    """Quota buckets used by the PR-031 scheduler."""
+    """Purpose-specific quota buckets ordered by proof criticality."""
 
     DISCOVERY = "discovery"
+    REQUIRED_DISCOVERY = "required_discovery"
     REFINEMENT = "refinement"
     FINALIZATION = "finalization"
+    SETTLEMENT_STATUS = "settlement_status"
+    EMERGENCY_RECONCILIATION = "emergency_reconciliation"
 
     @classmethod
     def normalize(cls, value: "JupiterQuotaPurpose | str") -> "JupiterQuotaPurpose":
@@ -32,18 +32,26 @@ class JupiterQuotaPurpose(str, Enum):
         try:
             return cls(str(value))
         except ValueError:
-            # Unknown callers are treated as discovery so they cannot consume the
-            # reserved finalization budget by accident.
+            # Unknown callers are treated as optional discovery so they can never
+            # consume proof-critical reserve by accident.
             return cls.DISCOVERY
+
+    @property
+    def is_proof_critical(self) -> bool:
+        return self in {
+            JupiterQuotaPurpose.FINALIZATION,
+            JupiterQuotaPurpose.SETTLEMENT_STATUS,
+            JupiterQuotaPurpose.EMERGENCY_RECONCILIATION,
+        }
+
+    @property
+    def is_required(self) -> bool:
+        return self is not JupiterQuotaPurpose.DISCOVERY
 
 
 @dataclass(frozen=True)
 class QuotaReservation:
-    """A reserved Jupiter request slot.
-
-    ``issued`` is tracked by the manager's event log rather than mutating this
-    object, so the token stays hashable and safe to pass through async code.
-    """
+    """A reserved Jupiter request slot."""
 
     reservation_id: str
     purpose: JupiterQuotaPurpose
@@ -145,10 +153,38 @@ class JupiterQuotaManager:
             if self.metrics.circuit_state == "rate_limited":
                 self.metrics.circuit_state = "ready"
 
-    def _capacity_for(self, purpose: JupiterQuotaPurpose) -> int:
-        if purpose is JupiterQuotaPurpose.FINALIZATION:
+    def capacity_for(self, purpose: JupiterQuotaPurpose | str) -> int:
+        """Return the maximum sliding-window occupancy for one purpose.
+
+        Optional discovery and refinement cannot consume the protected reserve.
+        Required discovery is still exploratory, so it uses the non-critical cap.
+        Finalization, settlement/status and emergency reconciliation may use the
+        whole account window because they close already-started economic work.
+        """
+
+        normalized = JupiterQuotaPurpose.normalize(purpose)
+        if normalized.is_proof_critical:
             return self.limit
         return max(0, self.limit - self.finalization_reserve)
+
+    def _capacity_for(self, purpose: JupiterQuotaPurpose) -> int:
+        """Compatibility alias for existing white-box tests."""
+
+        return self.capacity_for(purpose)
+
+    def available_for(self, purpose: JupiterQuotaPurpose | str) -> int:
+        """Return currently available slots without consuming a reservation."""
+
+        now = self.clock()
+        self._prune(now)
+        if self.metrics.retry_after_until is not None and now < self.metrics.retry_after_until:
+            return 0
+        return max(0, self.capacity_for(purpose) - len(self._events))
+
+    def can_reserve(self, purpose: JupiterQuotaPurpose | str) -> bool:
+        """Pure eligibility check used by deterministic planners."""
+
+        return self.available_for(purpose) > 0
 
     def _deny(self, reason: str) -> None:
         self.metrics.denied += 1
@@ -161,13 +197,7 @@ class JupiterQuotaManager:
         *,
         request_fingerprint: str = "",
     ) -> QuotaReservation:
-        """Reserve one quota slot before issuing a Jupiter request.
-
-        Non-finalization callers cannot consume the protected finalization
-        reserve.  Finalization can use the whole configured window because it is
-        the proof-critical quote/build path that follows capital and route
-        prechecks.
-        """
+        """Reserve one quota slot before issuing a Jupiter request."""
 
         normalized = JupiterQuotaPurpose.normalize(purpose)
         start = self.clock()
@@ -178,9 +208,9 @@ class JupiterQuotaManager:
                 self._deny("retry-after-active")
                 raise JupiterQuotaError("retry-after-active")
 
-            cap = self._capacity_for(normalized)
+            cap = self.capacity_for(normalized)
             if len(self._events) >= cap:
-                if normalized is not JupiterQuotaPurpose.FINALIZATION:
+                if not normalized.is_proof_critical:
                     self.metrics.finalization_reserve_starvation += 1
                 self._deny("account-wide-quota-exhausted")
                 raise JupiterQuotaError("account-wide-quota-exhausted")

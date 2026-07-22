@@ -28,8 +28,7 @@ _JSON_KEYPAIR_ARRAY_RE = re.compile(
     r"{31,}\s*(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\s*\]"
 )
 _BASE58_SECRET_RE = re.compile(
-    r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{80,120}"
-    r"(?![1-9A-HJ-NP-Za-km-z])"
+    r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{80,120}" r"(?![1-9A-HJ-NP-Za-km-z])"
 )
 _PROVIDER_TOKEN_RES = (
     re.compile(r"AIza[0-9A-Za-z_-]{20,}"),

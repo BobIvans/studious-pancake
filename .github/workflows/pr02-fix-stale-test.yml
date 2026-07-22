@@ -1,0 +1,84 @@
+name: PR-02 fix stale test contract
+
+on:
+  push:
+    branches: [roadmap/pr-02-unified-lifecycle-authority]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pr02-fix-stale-test-contract
+  cancel-in-progress: false
+
+jobs:
+  fix-and-verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap/pr-02-unified-lifecycle-authority
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Correct current A2 and PR-195 assertions
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('tests/test_pr02_unified_lifecycle_authority.py')
+          text = path.read_text(encoding='utf-8')
+          old_identity = '''            db.execute("SELECT product_id FROM pr02_authority_identity").fetchone()[0]
+              == PR02_PRODUCT_ID
+'''
+          new_identity = '''            db.execute(
+                "SELECT product_id FROM database_identity_pr195 WHERE singleton=1"
+            ).fetchone()[0]
+            == PR02_PRODUCT_ID
+'''
+          old_report = '''    return ExactAttemptRuntimeReport(
+        runtime_cycle_id=cycle_id,
+        status=A2PaperOutcomeStatus.NO_TRADE,
+        terminal_reason="no_trade",
+        report_hash=digest({"cycle": cycle_id, "status": "no_trade"}),
+        ready_for_next_cycle=True,
+        records=(),
+    )
+'''
+          new_report = '''    return ExactAttemptRuntimeReport(
+        cycle_id=cycle_id,
+        status=A2PaperOutcomeStatus.NO_TRADE,
+        terminal_reason="no_trade",
+        records=(),
+    )
+'''
+          if old_identity not in text:
+              raise SystemExit('stale PR-02 identity assertion was not found')
+          if old_report not in text:
+              raise SystemExit('stale ExactAttemptRuntimeReport fixture was not found')
+          path.write_text(
+              text.replace(old_identity, new_identity).replace(old_report, new_report),
+              encoding='utf-8',
+          )
+          PY
+          rm -f pr02-ci-failure.log
+          rm .github/workflows/pr02-fix-stale-test.yml
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - name: Verify corrected integration contract
+        run: |
+          python -m black --check tests/test_pr02_unified_lifecycle_authority.py
+          python -m pytest -q \
+            tests/test_pr02_unified_lifecycle_authority.py \
+            tests/test_mega_pr_a3_installed_durable_paper_service.py
+      - name: Publish clean correction
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "PR-02: align integration test with A2 and PR-195 contracts"
+          git push origin HEAD:roadmap/pr-02-unified-lifecycle-authority

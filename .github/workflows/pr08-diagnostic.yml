@@ -1,53 +1,38 @@
-name: PR08 repository verification diagnostic
+name: PR08 apply exact formatting
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - roadmap/pr-08-isolated-signer-submission-foundation
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  capture-verification:
+  apply-formatting:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
-    timeout-minutes: 20
-    env:
-      PAPER_TRADING_ONLY: "true"
-      LIVE_TRADING_ENABLED: "false"
-      JITO_ENABLED: "false"
-      KAMINO_LIQUIDATION_ENABLED: "false"
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: roadmap/pr-08-isolated-signer-submission-foundation
           fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
           cache: pip
-      - name: Install repository requirements
-        run: |
-          python -m pip install --requirement requirements.txt
-          python -m pip install --requirement requirements-dev.txt
-          python -m pip install --no-deps .
-      - name: Capture repository verification
-        id: verification
+      - name: Install formatter
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Apply Black and remove temporary workflow
         shell: bash
         run: |
-          set +e
-          python scripts/verify_repo.py > pr08-verification.log 2>&1
-          status=$?
-          echo "exit_code=${status}" >> "$GITHUB_OUTPUT"
-          cat pr08-verification.log
-          exit 0
-      - name: Upload repository verification log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: pr08-verification-log
-          path: pr08-verification.log
-          if-no-files-found: error
-          retention-days: 1
-      - name: Preserve verification result
-        if: always()
-        run: exit "${{ steps.verification.outputs.exit_code }}"
+          set -euo pipefail
+          python -m black isolated_signer_service/src/flashloan_isolated_signer/store.py
+          rm .github/workflows/pr08-diagnostic.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add isolated_signer_service/src/flashloan_isolated_signer/store.py
+          git add .github/workflows/pr08-diagnostic.yml
+          git commit -m "PR-08: apply repository formatter"
+          git push origin HEAD:roadmap/pr-08-isolated-signer-submission-foundation

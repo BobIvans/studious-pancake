@@ -25,14 +25,14 @@ REQUIRED_PROGRAM_LABELS = frozenset(
         "token",
         "token-2022",
         "associated-token-account",
-    }
+    },
 )
 
 _PUBKEY_RE = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 _SHA_RE = re.compile(r"^[0-9a-f]{64}$")
 _UTC_RE = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 _ACTIONS = frozenset(
-    {"startup", "periodic", "promotion", "release", "programdata-change"}
+    {"startup", "periodic", "promotion", "release", "programdata-change"},
 )
 
 

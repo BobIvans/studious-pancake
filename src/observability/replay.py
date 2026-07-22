@@ -65,7 +65,7 @@ def replay_event_rows(rows: list[Any], *, verify: bool = False) -> dict[str, obj
                 }
             )
 
-        if terminal_seen and row["event_type"] not in TERMINAL_EVENT_TYPES:
+        if verify and terminal_seen and row["event_type"] not in TERMINAL_EVENT_TYPES:
             divergences.append(
                 {
                     "code": "TERMINAL_STATE_REGRESSION",

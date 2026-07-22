@@ -1,4 +1,8 @@
-"""Durable single-node lifecycle primitives introduced by roadmap PR-041."""
+"""Durable single-node lifecycle primitives introduced by roadmap PR-041.
+
+PR-182 keeps the PR-041 state machine as the single lifecycle truth while making
+its public store entrypoint boot-bound and monotonic for lease/outbox ownership.
+"""
 
 from .lifecycle import (
     MIGRATION_VERSION,
@@ -9,7 +13,7 @@ from .lifecycle import (
     DuplicateSubmissionError,
     DurableAttempt,
     DurableLifecycleError,
-    DurableLifecycleStore,
+    DurableLifecycleStore as LegacyDurableLifecycleStore,
     LeaseLostError,
     LeaseToken,
     OutboxItem,
@@ -17,6 +21,11 @@ from .lifecycle import (
     RecoveryDecision,
     ReservationState,
     UnsupportedTopologyError,
+)
+from .trusted_time_store import (
+    ClockSafeDurableLifecycleStore,
+    DurableLifecycleStore,
+    PR182_DURABLE_TIME_SCHEMA,
 )
 from .single_truth import (
     PR121_BLOCKED_STATE,
@@ -42,11 +51,13 @@ __all__ = [
     "SCHEMA_NAME",
     "AttemptKey",
     "BackupManifest",
+    "ClockSafeDurableLifecycleStore",
     "CorruptJournalError",
     "DuplicateSubmissionError",
     "DurableAttempt",
     "DurableLifecycleError",
     "DurableLifecycleStore",
+    "LegacyDurableLifecycleStore",
     "LeaseLostError",
     "LeaseToken",
     "OutboxItem",
@@ -54,6 +65,7 @@ __all__ = [
     "PR121_READY_STATE",
     "PR121_RESULT_SCHEMA_VERSION",
     "PR121_SCHEMA_VERSION",
+    "PR182_DURABLE_TIME_SCHEMA",
     "REQUIRED_BACKUP_FEATURES",
     "REQUIRED_FAILURE_INJECTIONS",
     "REQUIRED_OUTBOX_FEATURES",

@@ -130,3 +130,5 @@ tests/test_pr106_canonical_sender_lifecycle_disabled.py
 src/freshness/__init__.py
 src/freshness/clock.py
 tests/test_pr127_dual_clock_freshness.py
+scripts/validate_deployment_sandbox.py
+tests/test_pr134_production_sandbox_policy.py

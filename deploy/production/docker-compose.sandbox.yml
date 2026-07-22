@@ -1,0 +1,80 @@
+# PR-134 production sandbox profile.
+#
+# This compose file is intentionally separate from the development/runtime image
+# smoke path. It documents the minimum sandbox controls required before any
+# production-style deployment review. Replace FLASHLOAN_RUNTIME_IMAGE with a
+# reviewed digest-pinned image reference before use.
+
+services:
+  flashloan-bot:
+    image: ${FLASHLOAN_RUNTIME_IMAGE:?set digest-pinned image ref, e.g. ghcr.io/org/image@sha256:<digest>}
+    command: ["container"]
+    init: true
+    user: "10001:10001"
+    read_only: true
+    pull_policy: never
+    stop_grace_period: 30s
+    pids_limit: 256
+    mem_limit: 768m
+    cpus: "1.0"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+      - seccomp=./deploy/production/seccomp-runtime.json
+      - apparmor=flashloan-bot-runtime
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,size=64m,mode=1777
+      - /run/flashloan-bot:rw,noexec,nosuid,nodev,size=16m,uid=10001,gid=10001,mode=0750
+    volumes:
+      - type: volume
+        source: lifecycle-db
+        target: /var/lib/flashloan-bot
+        read_only: false
+      - type: volume
+        source: evidence-log
+        target: /var/log/flashloan-bot
+        read_only: false
+    secrets:
+      - source: runtime_env
+        target: runtime.env
+        uid: "10001"
+        gid: "10001"
+        mode: 0400
+    environment:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+      FLASHLOAN_RUNTIME_STATE_PATH: /run/flashloan-bot/runtime.json
+      FLASHLOAN_HEALTH_HOST: 127.0.0.1
+      FLASHLOAN_HEALTH_PORT: "8080"
+      FLASHLOAN_HEALTH_URL: http://127.0.0.1:8080/health
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 4096
+      nproc: 256
+    healthcheck:
+      test: ["CMD", "flashloan-bot-healthcheck", "--url", "http://127.0.0.1:8080/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - runtime-egress
+
+secrets:
+  runtime_env:
+    file: ./deploy/production/runtime.env.example
+
+volumes:
+  lifecycle-db:
+  evidence-log:
+
+networks:
+  runtime-egress:
+    driver: bridge
+    internal: false
+    driver_opts:
+      com.docker.network.bridge.name: flashloan-egress

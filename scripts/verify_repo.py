@@ -76,6 +76,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr120_secret_resolver_config_jito.py",
         "tests/test_pr125_lst_governance_policy.py",
         "tests/test_pr136_rooted_rpc_quorum.py",
+        "tests/test_pr140_data_lineage_quarantine.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",

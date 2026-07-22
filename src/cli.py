@@ -24,8 +24,10 @@ from src.config.runtime import (
 from src.container_runtime import run_safe_idle
 from src.paper_shadow import (
     PaperShadowRunStatus,
+    PaperShadowRuntimeDependencies,
     build_paper_shadow_runtime,
 )
+from src.paper_shadow.a1_vertical_preflight import evaluate_paper_vertical_a1
 from src.paper_shadow.runner import PaperShadowRunSummary
 
 logger = logging.getLogger(__name__)
@@ -105,6 +107,15 @@ def _parser() -> argparse.ArgumentParser:
         ),
     )
     paper_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    vertical_parser = subparsers.add_parser(
+        "paper-vertical-preflight",
+        help=(
+            "inspect the MEGA-PR A1 canonical sender-free paper-vertical "
+            "dependency seam"
+        ),
+    )
+    vertical_parser.add_argument("--json", action="store_true", dest="as_json")
 
     container_parser = subparsers.add_parser(
         "container",
@@ -294,6 +305,32 @@ def _run_paper_shadow_once(
     return _paper_shadow_exit_code(summary)
 
 
+def _run_paper_vertical_preflight(
+    config: RuntimeConfig,
+    *,
+    as_json: bool = False,
+) -> int:
+    report = evaluate_paper_vertical_a1(config, PaperShadowRuntimeDependencies())
+    payload = report.to_dict()
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        missing = ",".join(payload["missing_surfaces"])
+        invalid = ",".join(payload["invalid_surfaces"])
+        print(
+            "PAPER_VERTICAL_PREFLIGHT: "
+            f"state={payload['state']} "
+            f"reason={payload['reason_code']} "
+            f"ready={payload['ready']} "
+            f"missing={missing or '-'} "
+            f"invalid={invalid or '-'} "
+            "live=false signer=false sender=false"
+        )
+    # This is an inspection/preflight command. Fail-closed dependency state is
+    # encoded in the payload rather than in the process exit code.
+    return 0
+
+
 def _run_requested_mode(
     mode: str, matrix: CapabilityMatrix, app: Any, config: RuntimeConfig
 ) -> int:
@@ -371,6 +408,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 journal_path=args.journal_path,
                 as_json=args.as_json,
             )
+        if args.command == "paper-vertical-preflight":
+            return _run_paper_vertical_preflight(config, as_json=args.as_json)
         if args.command == "run":
             return _run_requested_mode(args.mode, matrix, app, config)
         if args.command == "container":

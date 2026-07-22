@@ -105,9 +105,11 @@ src/paper_shadow/__init__.py
 src/paper_shadow/runner.py
 src/paper_shadow/atomic_runtime_stages.py
 src/paper_shadow/composition.py
+src/paper_shadow/a1_vertical_preflight.py
 tests/test_pr075_atomic_runtime_stages.py
 tests/test_pr076_paper_shadow_exit_semantics.py
 tests/test_pr089_active_paper_composition_root.py
+tests/test_pr_a1_paper_vertical_preflight.py
 src/shadow_soak/real_soak.py
 src/shadow_soak/__init__.py
 src/shadow_soak/pr105_harness.py

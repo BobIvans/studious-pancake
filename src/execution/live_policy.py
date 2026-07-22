@@ -8,9 +8,9 @@ and assignment is validated against an explicit schema.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import (
     BaseModel,
@@ -61,12 +61,6 @@ class PolicyModel(BaseModel):
     def values(self) -> tuple[Any, ...]:
         return tuple(getattr(self, key) for key in self.keys())
 
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.keys())
-
-    def __len__(self) -> int:
-        return len(type(self).model_fields)
-
 
 class SecretIdentityReference(PolicyModel):
     scheme: Literal["env", "file", "keychain"]
@@ -87,7 +81,8 @@ class SecretIdentityReference(PolicyModel):
                     "secret reference must use env:, file:, or keychain:; "
                     "inline values are forbidden"
                 )
-            scheme, locator = match.groups()
+            scheme_raw, locator = match.groups()
+            scheme = cast(Literal["env", "file", "keychain"], scheme_raw)
             if scheme == "file" and not locator.startswith("/"):
                 raise LivePolicyError(
                     "file secret references must use absolute paths"
@@ -221,7 +216,7 @@ class ControlPlanePolicy(PolicyModel):
 
 
 class LiveRiskPolicy(PolicyModel):
-    schema_version: Literal[SCHEMA_VERSION]
+    schema_version: Literal["pr018.live-risk.v1"]
     live_enabled: StrictBool
     cluster: ClusterPolicy
     wallet: WalletPolicy

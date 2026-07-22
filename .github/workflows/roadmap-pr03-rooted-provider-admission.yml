@@ -1,31 +1,42 @@
-name: Roadmap PR-03 rooted provider admission
+name: Rebuild roadmap PR-03 on latest main
 
 on:
   pull_request:
     branches: [main]
-  push:
-    branches:
-      - roadmap-pr-03-rooted-provider-admission
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
-  rebuild-metadata:
+  rebuild:
+    if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
         with:
+          ref: roadmap-pr-03-rooted-provider-admission
           fetch-depth: 0
-      - name: Capture latest main tree
+      - name: Rebuild one clean PR-03 commit
+        shell: bash
         run: |
+          set -euxo pipefail
+          work=/tmp/pr03-clean
+          mkdir -p "$work/src/providers" "$work/tests" "$work/docs" "$work/config" "$work/.github/workflows"
+          cp src/providers/rooted_ingestion_pr03.py "$work/src/providers/"
+          cp tests/test_rooted_ingestion_pr03.py "$work/tests/"
+          cp docs/roadmap_pr03_rooted_provider_admission.md "$work/docs/"
+          cp config/format_targets.txt "$work/config/"
+          cp .github/workflows/roadmap-pr03-rooted-provider-admission.yml "$work/.github/workflows/"
           git fetch origin main
-          {
-            echo "main_sha=$(git rev-parse origin/main)"
-            echo "main_tree=$(git rev-parse 'origin/main^{tree}')"
-          } > /tmp/pr03-main-tree.txt
-          cat /tmp/pr03-main-tree.txt
-      - uses: actions/upload-artifact@v4
-        with:
-          name: pr03-main-tree
-          path: /tmp/pr03-main-tree.txt
+          git reset --hard origin/main
+          mkdir -p src/providers tests docs config .github/workflows
+          cp "$work/src/providers/rooted_ingestion_pr03.py" src/providers/
+          cp "$work/tests/test_rooted_ingestion_pr03.py" tests/
+          cp "$work/docs/roadmap_pr03_rooted_provider_admission.md" docs/
+          cp "$work/config/format_targets.txt" config/
+          cp "$work/.github/workflows/roadmap-pr03-rooted-provider-admission.yml" .github/workflows/
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py docs/roadmap_pr03_rooted_provider_admission.md config/format_targets.txt .github/workflows/roadmap-pr03-rooted-provider-admission.yml
+          git commit -m 'Roadmap PR-03: rooted provider admission vertical'
+          git push --force-with-lease origin HEAD:roadmap-pr-03-rooted-provider-admission

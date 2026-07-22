@@ -72,7 +72,7 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
     completed_at = time.time()
     store.db.execute("BEGIN IMMEDIATE")
     try:
-        for manifest in manifests:
+        for manifest in [*manifests, legacy_manifest]:
             store.db.execute(
                 """
                 INSERT OR IGNORE INTO export_manifest(

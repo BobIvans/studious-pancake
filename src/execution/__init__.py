@@ -1,3 +1,8 @@
+from __future__ import annotations
+
+import importlib
+from typing import Any
+
 from .models import (
     ADDRESS_LOOKUP_TABLE_PROGRAM_ID,
     COMPUTE_BUDGET_PROGRAM_ID,
@@ -89,14 +94,32 @@ from .reconciliation import (
     classify_reconciliation,
 )
 from .tip_validation import validate_exactly_one_tip
-from .immutable_accounting_pr191 import (
-    ImmutableLiveControlStore,
-    PR191_ACCOUNTING_SCHEMA,
-    TerminalAccountingConflict,
-    TerminalOutcomeCommit,
-    TerminalOutcomeIdentity,
-    record_actual_outcome,
+
+_PR191_LAZY_EXPORTS = frozenset(
+    {
+        "ImmutableLiveControlStore",
+        "PR191_ACCOUNTING_SCHEMA",
+        "TerminalAccountingConflict",
+        "TerminalOutcomeCommit",
+        "TerminalOutcomeIdentity",
+        "record_actual_outcome",
+    }
 )
+
+
+def __getattr__(name: str) -> Any:
+    """Load source-only PR-191 live accounting only when explicitly requested.
+
+    ``src.execution.live_control`` is intentionally excluded from the production
+    wheel.  Eagerly importing the PR-191 compatibility cutover therefore broke
+    installed CLI smoke even though normal paper execution never uses that surface.
+    """
+
+    if name in _PR191_LAZY_EXPORTS:
+        module = importlib.import_module("src.execution.immutable_accounting_pr191")
+        return getattr(module, name)
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
 
 __all__ = [
     "ADDRESS_LOOKUP_TABLE_PROGRAM_ID",

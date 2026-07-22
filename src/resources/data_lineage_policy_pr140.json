@@ -1,0 +1,22 @@
+{
+  "schema_version": "pr140.data-lineage-policy.v1",
+  "forbidden_tracked_root_artifacts": [
+    {
+      "path": "ai_training_data.csv",
+      "reason": "generated training rows require lineage"
+    },
+    {
+      "path": "trade_history.csv",
+      "reason": "runtime trade history requires settlement provenance"
+    },
+    {
+      "path": "bot_health.json",
+      "reason": "runtime state cannot be release evidence"
+    },
+    {
+      "path": "helius-sanctum-lst-webhook.json",
+      "reason": "runtime webhook config is not repository evidence"
+    }
+  ],
+  "default_admission": "blocked_until_lineage_manifest_and_settlement_evidence"
+}

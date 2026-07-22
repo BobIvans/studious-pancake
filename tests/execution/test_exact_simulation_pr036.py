@@ -76,6 +76,10 @@ def _blockhash(*, last_valid_block_height: int = 100) -> BlockhashContext:
     )
 
 
+def _blockhash_valid(*, slot: int = 21, value: bool = True) -> dict[str, Any]:
+    return {"context": {"slot": slot}, "value": value}
+
+
 def _simulation(
     *,
     slot: int,
@@ -102,6 +106,7 @@ def _success_rpc(*, provisional_units: int = 200_000) -> FakeRpc:
     return FakeRpc(
         {
             "getBlockHeight": [50, 51],
+            "isBlockhashValid": [_blockhash_valid(slot=21), _blockhash_valid(slot=22)],
             "simulateTransaction": [
                 _simulation(slot=21, units=provisional_units),
                 _simulation(slot=22, units=210_000),
@@ -133,15 +138,32 @@ async def test_two_pass_finalization_binds_exact_message_and_fee() -> None:
     assert finalized.report.message_hash == finalized.compiled.message_hash
     assert len(finalized.report.final.response_hash) == 64
     assert len(finalized.report.final.logs_hash) == 64
+    assert len(finalized.report.blockhash_validations) == 2
+    assert all(item.valid for item in finalized.report.blockhash_validations)
+    assert all(
+        item.min_context_slot == 11 for item in finalized.report.blockhash_validations
+    )
 
     methods = [method for method, _ in rpc.calls]
     assert methods == [
         "getBlockHeight",
+        "isBlockhashValid",
         "simulateTransaction",
         "getBlockHeight",
+        "isBlockhashValid",
         "simulateTransaction",
         "getFeeForMessage",
     ]
+    blockhash_configs = [
+        params[1] for method, params in rpc.calls if method == "isBlockhashValid"
+    ]
+    assert all(config["commitment"] == "confirmed" for config in blockhash_configs)
+    assert all(config["minContextSlot"] == 11 for config in blockhash_configs)
+    assert all(
+        params[0] == str(_blockhash().blockhash)
+        for method, params in rpc.calls
+        if method == "isBlockhashValid"
+    )
     simulation_configs = [
         params[1] for method, params in rpc.calls if method == "simulateTransaction"
     ]
@@ -154,6 +176,48 @@ async def test_two_pass_finalization_binds_exact_message_and_fee() -> None:
     assert all(
         config["accounts"]["addresses"] == [str(payer)] for config in simulation_configs
     )
+
+
+@pytest.mark.asyncio
+async def test_blockhash_height_low_but_invalid_for_fork_is_retryable() -> None:
+    rpc = FakeRpc(
+        {
+            "getBlockHeight": [50],
+            "isBlockhashValid": [_blockhash_valid(slot=21, value=False)],
+        }
+    )
+
+    with pytest.raises(ExactSimulationError, match="not valid") as captured:
+        await ExactSimulationFinalizer(rpc).finalize(
+            _plan(Keypair().pubkey()),
+            _blockhash(),
+        )
+
+    assert captured.value.code == ExactSimulationErrorCode.BLOCKHASH_INVALID
+    assert captured.value.disposition == FailureDisposition.RETRYABLE
+    assert [method for method, _ in rpc.calls] == [
+        "getBlockHeight",
+        "isBlockhashValid",
+    ]
+
+
+@pytest.mark.asyncio
+async def test_is_blockhash_valid_must_satisfy_min_context_slot() -> None:
+    rpc = FakeRpc(
+        {
+            "getBlockHeight": [50],
+            "isBlockhashValid": [_blockhash_valid(slot=10, value=True)],
+        }
+    )
+
+    with pytest.raises(ExactSimulationError, match="isBlockhashValid") as captured:
+        await ExactSimulationFinalizer(rpc).finalize(
+            _plan(Keypair().pubkey()),
+            _blockhash(),
+        )
+
+    assert captured.value.code == ExactSimulationErrorCode.CONTEXT_SLOT_VIOLATION
+    assert captured.value.disposition == FailureDisposition.RETRYABLE
 
 
 @pytest.mark.asyncio
@@ -217,6 +281,7 @@ async def test_blockhash_expiry_between_passes_forces_rebuild() -> None:
     rpc = FakeRpc(
         {
             "getBlockHeight": [50, 101],
+            "isBlockhashValid": [_blockhash_valid(slot=21)],
             "simulateTransaction": [_simulation(slot=21, units=200_000)],
         }
     )
@@ -230,6 +295,7 @@ async def test_blockhash_expiry_between_passes_forces_rebuild() -> None:
     assert captured.value.code == ExactSimulationErrorCode.BLOCKHASH_EXPIRED
     assert [method for method, _ in rpc.calls] == [
         "getBlockHeight",
+        "isBlockhashValid",
         "simulateTransaction",
         "getBlockHeight",
     ]
@@ -259,6 +325,7 @@ async def test_rpc_must_return_exact_targeted_account_count() -> None:
     rpc = FakeRpc(
         {
             "getBlockHeight": [50],
+            "isBlockhashValid": [_blockhash_valid(slot=21)],
             "simulateTransaction": [
                 _simulation(slot=21, units=200_000, account_count=0),
             ],
@@ -281,14 +348,24 @@ async def test_wire_and_transaction_account_caps_are_enforced() -> None:
 
     with pytest.raises(ExactSimulationError) as wire_error:
         await ExactSimulationFinalizer(
-            FakeRpc({"getBlockHeight": [50]}),
+            FakeRpc(
+                {
+                    "getBlockHeight": [50],
+                    "isBlockhashValid": [_blockhash_valid(slot=21)],
+                }
+            ),
             policy=ExactSimulationPolicy(max_wire_bytes=1),
         ).finalize(_plan(payer), _blockhash())
     assert wire_error.value.code == ExactSimulationErrorCode.WIRE_SIZE_EXCEEDED
 
     with pytest.raises(ExactSimulationError) as account_error:
         await ExactSimulationFinalizer(
-            FakeRpc({"getBlockHeight": [50]}),
+            FakeRpc(
+                {
+                    "getBlockHeight": [50],
+                    "isBlockhashValid": [_blockhash_valid(slot=21)],
+                }
+            ),
             policy=ExactSimulationPolicy(max_transaction_accounts=1),
         ).finalize(_plan(payer), _blockhash())
     assert account_error.value.code == ExactSimulationErrorCode.ACCOUNT_LIMIT_EXCEEDED
@@ -299,6 +376,7 @@ async def test_loaded_account_byte_cap_is_enforced() -> None:
     rpc = FakeRpc(
         {
             "getBlockHeight": [50],
+            "isBlockhashValid": [_blockhash_valid(slot=21)],
             "simulateTransaction": [
                 _simulation(slot=21, units=200_000, loaded_size=1_025),
             ],
@@ -329,6 +407,7 @@ async def test_timeout_and_unknown_success_shape_fail_closed() -> None:
     malformed_rpc = FakeRpc(
         {
             "getBlockHeight": [50],
+            "isBlockhashValid": [_blockhash_valid(slot=21)],
             "simulateTransaction": [
                 _simulation(slot=21, units=None),
             ],
@@ -347,6 +426,7 @@ async def test_null_fee_and_stale_context_never_become_success() -> None:
     null_fee_rpc = FakeRpc(
         {
             "getBlockHeight": [50, 51],
+            "isBlockhashValid": [_blockhash_valid(slot=21), _blockhash_valid(slot=22)],
             "simulateTransaction": [
                 _simulation(slot=21, units=200_000),
                 _simulation(slot=22, units=210_000),
@@ -367,6 +447,7 @@ async def test_null_fee_and_stale_context_never_become_success() -> None:
     stale_rpc = FakeRpc(
         {
             "getBlockHeight": [50],
+            "isBlockhashValid": [_blockhash_valid(slot=21)],
             "simulateTransaction": [
                 _simulation(slot=10, units=200_000),
             ],
@@ -390,6 +471,7 @@ async def test_program_failure_is_fatal_but_blockhash_error_is_retryable() -> No
         rpc = FakeRpc(
             {
                 "getBlockHeight": [50],
+                "isBlockhashValid": [_blockhash_valid(slot=21)],
                 "simulateTransaction": [
                     _simulation(slot=21, units=1, error=provider_error),
                 ],

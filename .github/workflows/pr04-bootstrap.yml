@@ -1,0 +1,648 @@
+name: PR-04 bootstrap
+
+on:
+  push:
+    branches:
+      - pr-04-repeated-installed-paper-service
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    if: ${{ !contains(github.event.head_commit.message, '[pr04-bootstrap]') }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: pr-04-repeated-installed-paper-service
+          fetch-depth: 0
+      - name: Materialize PR-04 implementation
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          files = {
+              "src/paper_shadow/repeated_service_pr04.py": r'''"""PR-04 repeated supervisor for the installed sender-free paper service.
+
+The supervisor deliberately reuses the durable A3 cycle authority.  It does not
+create another lifecycle database and it cannot sign, submit, or enable live
+trading.  A new cycle is admitted only after the previous durable report says it
+is safe to continue.
+"""
+
+from __future__ import annotations
+
+import asyncio
+from collections.abc import Callable
+from dataclasses import dataclass, field
+from enum import StrEnum
+import hashlib
+import json
+import time
+from typing import Protocol
+
+from src.paper_shadow.durable_service_a3 import (
+    InstalledDurablePaperServiceReport,
+)
+
+PR04_SCHEMA = "pr04.repeated-installed-paper-service.v1"
+
+
+class PaperCycleRunner(Protocol):
+    """Small protocol implemented by the existing durable A3 service."""
+
+    async def run_once(self) -> InstalledDurablePaperServiceReport: ...
+
+
+class RepeatedPaperServiceStopReason(StrEnum):
+    SIGNALLED = "signalled"
+    MAX_CYCLES = "max_cycles"
+    CYCLE_NOT_READY = "cycle_not_ready"
+
+
+class UnsafePaperServiceReportError(RuntimeError):
+    """Raised when a supposedly sender-free cycle exposes an unsafe surface."""
+
+
+@dataclass(frozen=True, slots=True)
+class RepeatedPaperServiceConfig:
+    """Bounded scheduling policy frozen for the lifetime of the supervisor."""
+
+    max_cycles: int | None = None
+    idle_delay_seconds: float = 0.25
+    stop_when_not_ready: bool = True
+
+    def __post_init__(self) -> None:
+        if self.max_cycles is not None and self.max_cycles <= 0:
+            raise ValueError("max_cycles must be positive or None")
+        if self.idle_delay_seconds < 0:
+            raise ValueError("idle_delay_seconds must be non-negative")
+
+
+@dataclass(frozen=True, slots=True)
+class RepeatedPaperServiceSummary:
+    """Auditable supervisor result without duplicating cycle authority."""
+
+    stop_reason: RepeatedPaperServiceStopReason
+    reports: tuple[InstalledDurablePaperServiceReport, ...] = field(
+        default_factory=tuple
+    )
+    started_at_ns: int = 0
+    completed_at_ns: int = 0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "reports", tuple(self.reports))
+        if self.started_at_ns < 0 or self.completed_at_ns < self.started_at_ns:
+            raise ValueError("invalid supervisor timestamps")
+        for report in self.reports:
+            _assert_sender_free(report)
+
+    @property
+    def cycle_count(self) -> int:
+        return len(self.reports)
+
+    @property
+    def final_report(self) -> InstalledDurablePaperServiceReport | None:
+        return self.reports[-1] if self.reports else None
+
+    @property
+    def summary_hash(self) -> str:
+        return hashlib.sha256(
+            _canonical_json(self.to_dict(include_hash=False)).encode("utf-8")
+        ).hexdigest()
+
+    def to_dict(self, *, include_hash: bool = True) -> dict[str, object]:
+        payload: dict[str, object] = {
+            "schema_version": PR04_SCHEMA,
+            "stop_reason": self.stop_reason.value,
+            "cycle_count": self.cycle_count,
+            "started_at_ns": self.started_at_ns,
+            "completed_at_ns": self.completed_at_ns,
+            "cycle_ids": [report.cycle_id for report in self.reports],
+            "statuses": [report.status.value for report in self.reports],
+            "final_report_hash": (
+                self.final_report.report_hash if self.final_report is not None else None
+            ),
+            "sender_imported": False,
+            "submission_allowed": False,
+            "live_enabled": False,
+        }
+        if include_hash:
+            payload["summary_hash"] = self.summary_hash
+        return payload
+
+
+class RepeatedInstalledPaperService:
+    """Run durable paper cycles sequentially until a reviewed stop boundary."""
+
+    def __init__(
+        self,
+        cycle_runner: PaperCycleRunner,
+        config: RepeatedPaperServiceConfig | None = None,
+        *,
+        on_report: Callable[[InstalledDurablePaperServiceReport], None] | None = None,
+        clock_ns: Callable[[], int] = time.time_ns,
+    ) -> None:
+        self.cycle_runner = cycle_runner
+        self.config = config or RepeatedPaperServiceConfig()
+        self.on_report = on_report
+        self.clock_ns = clock_ns
+        self._run_lock = asyncio.Lock()
+
+    async def run(self, stop_event: asyncio.Event) -> RepeatedPaperServiceSummary:
+        """Run one cycle at a time; never overlap durable attempt ownership."""
+
+        if self._run_lock.locked():
+            raise RuntimeError("PR04_SUPERVISOR_ALREADY_RUNNING")
+        async with self._run_lock:
+            started_at_ns = self.clock_ns()
+            reports: list[InstalledDurablePaperServiceReport] = []
+            stop_reason = RepeatedPaperServiceStopReason.SIGNALLED
+
+            while True:
+                if stop_event.is_set():
+                    stop_reason = RepeatedPaperServiceStopReason.SIGNALLED
+                    break
+                if self._max_cycles_reached(reports):
+                    stop_reason = RepeatedPaperServiceStopReason.MAX_CYCLES
+                    break
+
+                report = await self.cycle_runner.run_once()
+                _assert_sender_free(report)
+                reports.append(report)
+                if self.on_report is not None:
+                    self.on_report(report)
+
+                if not report.ready_for_next_cycle and self.config.stop_when_not_ready:
+                    stop_reason = RepeatedPaperServiceStopReason.CYCLE_NOT_READY
+                    break
+                if self._max_cycles_reached(reports):
+                    stop_reason = RepeatedPaperServiceStopReason.MAX_CYCLES
+                    break
+                if await _wait_for_stop(
+                    stop_event, timeout=self.config.idle_delay_seconds
+                ):
+                    stop_reason = RepeatedPaperServiceStopReason.SIGNALLED
+                    break
+
+            return RepeatedPaperServiceSummary(
+                stop_reason=stop_reason,
+                reports=tuple(reports),
+                started_at_ns=started_at_ns,
+                completed_at_ns=self.clock_ns(),
+            )
+
+    def _max_cycles_reached(
+        self, reports: list[InstalledDurablePaperServiceReport]
+    ) -> bool:
+        maximum = self.config.max_cycles
+        return maximum is not None and len(reports) >= maximum
+
+
+async def _wait_for_stop(stop_event: asyncio.Event, *, timeout: float) -> bool:
+    if stop_event.is_set():
+        return True
+    if timeout == 0:
+        await asyncio.sleep(0)
+        return stop_event.is_set()
+    try:
+        await asyncio.wait_for(stop_event.wait(), timeout=timeout)
+    except TimeoutError:
+        return False
+    return True
+
+
+def _assert_sender_free(report: InstalledDurablePaperServiceReport) -> None:
+    if report.sender_imported or report.submission_allowed or report.live_enabled:
+        raise UnsafePaperServiceReportError(
+            "PR04_UNSAFE_SENDER_SUBMISSION_OR_LIVE_EVIDENCE"
+        )
+
+
+def _canonical_json(value: object) -> str:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    )
+
+
+__all__ = [
+    "PR04_SCHEMA",
+    "PaperCycleRunner",
+    "RepeatedInstalledPaperService",
+    "RepeatedPaperServiceConfig",
+    "RepeatedPaperServiceStopReason",
+    "RepeatedPaperServiceSummary",
+    "UnsafePaperServiceReportError",
+]
+''',
+              "tests/test_pr04_repeated_installed_paper_service.py": r'''from __future__ import annotations
+
+import asyncio
+import hashlib
+import json
+
+import pytest
+
+from src.paper_shadow.durable_service_a3 import (
+    A3PaperServiceStatus,
+    InstalledDurablePaperServiceReport,
+)
+from src.paper_shadow.repeated_service_pr04 import (
+    RepeatedInstalledPaperService,
+    RepeatedPaperServiceConfig,
+    RepeatedPaperServiceStopReason,
+    UnsafePaperServiceReportError,
+)
+
+pytestmark = pytest.mark.unit
+
+
+def _sha(value: object) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":")).encode()
+    return hashlib.sha256(encoded).hexdigest()
+
+
+def _report(
+    sequence: int,
+    *,
+    ready: bool = True,
+    status: A3PaperServiceStatus = A3PaperServiceStatus.NO_TRADE,
+    sender_imported: bool = False,
+) -> InstalledDurablePaperServiceReport:
+    return InstalledDurablePaperServiceReport(
+        cycle_id=_sha({"cycle": sequence}),
+        status=status,
+        terminal_reason="no_trade" if ready else "blocked_missing_evidence",
+        db_path=":memory:",
+        provider_evidence_hash=_sha({"provider": sequence}),
+        report_hash=_sha({"report": sequence}),
+        ready_for_next_cycle=ready,
+        sequence=sequence,
+        sender_imported=sender_imported,
+    )
+
+
+class _Runner:
+    def __init__(self, reports):
+        self.reports = list(reports)
+        self.calls = 0
+        self.active = 0
+        self.max_active = 0
+
+    async def run_once(self):
+        self.calls += 1
+        self.active += 1
+        self.max_active = max(self.max_active, self.active)
+        await asyncio.sleep(0)
+        try:
+            return self.reports.pop(0)
+        finally:
+            self.active -= 1
+
+
+def test_pr04_repeats_ready_cycles_until_configured_bound():
+    runner = _Runner((_report(1), _report(2), _report(3)))
+    observed = []
+    service = RepeatedInstalledPaperService(
+        runner,
+        RepeatedPaperServiceConfig(max_cycles=3, idle_delay_seconds=0),
+        on_report=observed.append,
+        clock_ns=iter((100, 200)).__next__,
+    )
+
+    summary = asyncio.run(service.run(asyncio.Event()))
+
+    assert summary.stop_reason is RepeatedPaperServiceStopReason.MAX_CYCLES
+    assert summary.cycle_count == 3
+    assert summary.final_report == observed[-1]
+    assert runner.calls == 3
+    assert runner.max_active == 1
+    assert summary.to_dict()["sender_imported"] is False
+
+
+def test_pr04_stops_immediately_when_durable_cycle_is_not_ready():
+    runner = _Runner((_report(1, ready=False), _report(2)))
+    service = RepeatedInstalledPaperService(
+        runner,
+        RepeatedPaperServiceConfig(max_cycles=10, idle_delay_seconds=0),
+        clock_ns=iter((100, 200)).__next__,
+    )
+
+    summary = asyncio.run(service.run(asyncio.Event()))
+
+    assert summary.stop_reason is RepeatedPaperServiceStopReason.CYCLE_NOT_READY
+    assert summary.cycle_count == 1
+    assert runner.calls == 1
+
+
+def test_pr04_honours_shutdown_during_idle_boundary():
+    runner = _Runner((_report(1), _report(2)))
+    stop_event = asyncio.Event()
+
+    def observe(_report):
+        stop_event.set()
+
+    service = RepeatedInstalledPaperService(
+        runner,
+        RepeatedPaperServiceConfig(idle_delay_seconds=10),
+        on_report=observe,
+        clock_ns=iter((100, 200)).__next__,
+    )
+
+    summary = asyncio.run(service.run(stop_event))
+
+    assert summary.stop_reason is RepeatedPaperServiceStopReason.SIGNALLED
+    assert summary.cycle_count == 1
+    assert runner.calls == 1
+
+
+def test_pr04_rejects_any_sender_submission_or_live_evidence():
+    runner = _Runner(
+        (
+            _report(
+                1,
+                ready=False,
+                status=A3PaperServiceStatus.INDETERMINATE,
+                sender_imported=True,
+            ),
+        )
+    )
+    service = RepeatedInstalledPaperService(runner)
+
+    with pytest.raises(
+        UnsafePaperServiceReportError,
+        match="PR04_UNSAFE_SENDER_SUBMISSION_OR_LIVE_EVIDENCE",
+    ):
+        asyncio.run(service.run(asyncio.Event()))
+
+
+def test_pr04_rejects_invalid_scheduler_configuration():
+    with pytest.raises(ValueError, match="max_cycles"):
+        RepeatedPaperServiceConfig(max_cycles=0)
+    with pytest.raises(ValueError, match="idle_delay"):
+        RepeatedPaperServiceConfig(idle_delay_seconds=-0.1)
+
+
+def test_pr04_cli_paper_mode_uses_repeated_supervisor():
+    source = open("src/cli.py", encoding="utf-8").read()
+
+    assert "RepeatedInstalledPaperService" in source
+    assert "_run_installed_durable_paper_service(config)" in source
+    paper_branch = source.split('if mode == "paper":', 1)[1].split(
+        'if mode == "disabled":', 1
+    )[0]
+    assert "_run_installed_durable_paper_service_once" not in paper_branch
+    assert "sendTransaction" not in open(
+        "src/paper_shadow/repeated_service_pr04.py", encoding="utf-8"
+    ).read()
+''',
+              "docs/pr04_repeated_installed_paper_service.md": r'''# PR-04 — Repeated installed sender-free paper execution service
+
+## Scope
+
+This change replaces the installed paper command's one-shot scheduling behavior
+with a sequential supervisor around the existing durable A3 cycle authority.
+It intentionally does **not** create a new lifecycle database or claim that the
+provider, Jupiter, MarginFi, planner, compiler, simulator, and reconciliation
+vertical is already complete.
+
+## Active runtime behavior
+
+`flashloan-bot run --mode paper` now:
+
+1. creates the existing durable SQLite A3 service;
+2. installs SIGINT/SIGTERM shutdown handling;
+3. executes one durable cycle at a time;
+4. emits each committed cycle report;
+5. starts another cycle only when `ready_for_next_cycle` is true;
+6. stops fail-closed on a blocked or indeterminate cycle;
+7. stops on signal or on the configured cycle limit.
+
+The scheduler is configured once at startup through:
+
+- `FLASHLOAN_PAPER_MAX_CYCLES` — `0` means no numeric limit;
+- `FLASHLOAN_PAPER_IDLE_DELAY_SECONDS` — delay between admitted cycles.
+
+The default A3 composition still has no concrete B3 provider batch, so it emits
+a durable blocked report and exits after one cycle. This is honest fail-closed
+behavior until PR-02 and PR-03 supply the canonical lifecycle/provider inputs.
+
+## Safety invariants
+
+The supervisor rejects any cycle report where:
+
+- `sender_imported` is true;
+- `submission_allowed` is true;
+- `live_enabled` is true.
+
+Cycles never overlap, so one process cannot acquire concurrent ownership through
+this scheduling layer. `asyncio.CancelledError` is not swallowed.
+
+## Deliberate boundary
+
+This PR establishes the repeated installed-service control loop and active CLI
+cutover. Remaining roadmap PR-04 work includes the typed real batch source,
+production composition factory, outbox worker, queue budgets, provider-backed
+wallet observations, wheel/container parity, and end-to-end captured-mainnet
+paper outcome. Those dependencies must converge on PR-02/PR-03 rather than
+creating a second authority here.
+''',
+              ".github/workflows/pr04-repeated-installed-paper-service.yml": r'''name: PR-04 repeated installed paper service
+
+on:
+  pull_request:
+    paths:
+      - "src/cli.py"
+      - "src/paper_shadow/repeated_service_pr04.py"
+      - "tests/test_pr04_repeated_installed_paper_service.py"
+      - "docs/pr04_repeated_installed_paper_service.md"
+      - "config/format_targets.txt"
+      - ".github/workflows/pr04-repeated-installed-paper-service.yml"
+  push:
+    branches:
+      - pr-04-repeated-installed-paper-service
+
+permissions:
+  contents: read
+
+jobs:
+  focused-verification:
+    runs-on: ubuntu-24.04
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - run: >-
+          python -m black --check
+          src/cli.py
+          src/paper_shadow/repeated_service_pr04.py
+          tests/test_pr04_repeated_installed_paper_service.py
+      - run: >-
+          python -m mypy
+          src/paper_shadow/repeated_service_pr04.py
+      - run: >-
+          python -m pytest -q
+          tests/test_pr04_repeated_installed_paper_service.py
+          tests/test_mega_pr_a3_installed_durable_paper_service.py
+      - run: >-
+          python -m compileall -q
+          src/cli.py
+          src/paper_shadow/repeated_service_pr04.py
+''',
+          }
+
+          for relative, content in files.items():
+              path = Path(relative)
+              path.parent.mkdir(parents=True, exist_ok=True)
+              path.write_text(content, encoding="utf-8")
+
+          cli_path = Path("src/cli.py")
+          cli = cli_path.read_text(encoding="utf-8")
+          import_anchor = '''from src.paper_shadow.durable_service_a3 import (
+              A3PaperServiceStatus,
+              InstalledDurablePaperServiceReport,
+              build_installed_durable_paper_service,
+          )
+          '''
+          repeated_import = import_anchor + '''from src.paper_shadow.repeated_service_pr04 import (
+              RepeatedInstalledPaperService,
+              RepeatedPaperServiceConfig,
+          )
+          '''
+          if "RepeatedInstalledPaperService" not in cli:
+              if import_anchor not in cli:
+                  raise SystemExit("PR04_IMPORT_ANCHOR_NOT_FOUND")
+              cli = cli.replace(import_anchor, repeated_import, 1)
+
+          one_shot = '''def _run_installed_durable_paper_service_once(config: RuntimeConfig) -> int:
+              service = build_installed_durable_paper_service(
+                  config,
+                  db_path=_paper_service_db_path(),
+              )
+              report = asyncio.run(service.run_once())
+              _print_paper_service_report(report)
+              return _paper_service_exit_code(report)
+          '''
+          repeated_block = one_shot + '''
+
+          def _paper_service_max_cycles() -> int | None:
+              raw = os.environ.get("FLASHLOAN_PAPER_MAX_CYCLES", "0").strip()
+              try:
+                  value = int(raw)
+              except ValueError as exc:
+                  raise ConfigurationLoadError(
+                      "FLASHLOAN_PAPER_MAX_CYCLES must be an integer"
+                  ) from exc
+              if value < 0:
+                  raise ConfigurationLoadError(
+                      "FLASHLOAN_PAPER_MAX_CYCLES must be non-negative"
+                  )
+              return None if value == 0 else value
+
+
+          def _paper_service_idle_delay_seconds() -> float:
+              raw = os.environ.get(
+                  "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25"
+              ).strip()
+              try:
+                  value = float(raw)
+              except ValueError as exc:
+                  raise ConfigurationLoadError(
+                      "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS must be numeric"
+                  ) from exc
+              if value < 0:
+                  raise ConfigurationLoadError(
+                      "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS must be non-negative"
+                  )
+              return value
+
+
+          async def _run_installed_durable_paper_service_async(
+              config: RuntimeConfig,
+          ) -> int:
+              cycle_service = build_installed_durable_paper_service(
+                  config,
+                  db_path=_paper_service_db_path(),
+              )
+              stop_event = asyncio.Event()
+              install_signal_handlers(stop_event)
+              supervisor = RepeatedInstalledPaperService(
+                  cycle_service,
+                  RepeatedPaperServiceConfig(
+                      max_cycles=_paper_service_max_cycles(),
+                      idle_delay_seconds=_paper_service_idle_delay_seconds(),
+                  ),
+                  on_report=_print_paper_service_report,
+              )
+              summary = await supervisor.run(stop_event)
+              final_report = summary.final_report
+              if final_report is None:
+                  print(
+                      "INSTALLED_PAPER_SERVICE: status=STOPPED reason=signal_before_cycle"
+                  )
+                  return 0
+              return _paper_service_exit_code(final_report)
+
+
+          def _run_installed_durable_paper_service(config: RuntimeConfig) -> int:
+              return asyncio.run(_run_installed_durable_paper_service_async(config))
+          '''
+          if "def _paper_service_max_cycles" not in cli:
+              if one_shot not in cli:
+                  raise SystemExit("PR04_ONE_SHOT_ANCHOR_NOT_FOUND")
+              cli = cli.replace(one_shot, repeated_block, 1)
+
+          cli = cli.replace(
+              "return _run_installed_durable_paper_service_once(config)",
+              "return _run_installed_durable_paper_service(config)",
+              1,
+          )
+          cli_path.write_text(cli, encoding="utf-8")
+
+          targets = Path("config/format_targets.txt")
+          existing = targets.read_text(encoding="utf-8")
+          additions = (
+              "src/paper_shadow/repeated_service_pr04.py",
+              "tests/test_pr04_repeated_installed_paper_service.py",
+          )
+          for item in additions:
+              if item not in existing.splitlines():
+                  existing = existing.rstrip() + "\n" + item + "\n"
+          targets.write_text(existing, encoding="utf-8")
+          PY
+      - name: Format generated Python
+        run: |
+          python -m pip install --quiet black==26.3.1
+          python -m black \
+            src/cli.py \
+            src/paper_shadow/repeated_service_pr04.py \
+            tests/test_pr04_repeated_installed_paper_service.py
+      - name: Commit generated implementation
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/cli.py \
+            src/paper_shadow/repeated_service_pr04.py \
+            tests/test_pr04_repeated_installed_paper_service.py \
+            docs/pr04_repeated_installed_paper_service.md \
+            config/format_targets.txt \
+            .github/workflows/pr04-repeated-installed-paper-service.yml
+          if ! git diff --cached --quiet; then
+            git commit -m "PR-04: add repeated installed paper supervisor [pr04-bootstrap]"
+            git push origin HEAD:pr-04-repeated-installed-paper-service
+          fi

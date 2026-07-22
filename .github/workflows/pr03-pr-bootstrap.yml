@@ -19,11 +19,12 @@ jobs:
           fetch-depth: 0
       - name: Materialize reviewed PR-03 files
         run: |
-          base64 -d .pr03_payload.b64 > /tmp/pr03.tgz
+          cat .pr03_payload.part00 .pr03_payload.part01 .pr03_payload.part02 .pr03_payload.part03 .pr03_payload.part04 > /tmp/pr03_payload.b64
+          base64 -d /tmp/pr03_payload.b64 > /tmp/pr03.tgz
           tar -xzf /tmp/pr03.tgz -C .
           grep -qxF 'src/providers/rooted_ingestion_pr03.py' config/format_targets.txt || echo 'src/providers/rooted_ingestion_pr03.py' >> config/format_targets.txt
           grep -qxF 'tests/test_rooted_ingestion_pr03.py' config/format_targets.txt || echo 'tests/test_rooted_ingestion_pr03.py' >> config/format_targets.txt
-          git rm .github/workflows/pr03-bootstrap.yml .github/workflows/pr03-pr-bootstrap.yml .pr03-bootstrap-trigger .pr03_payload.b64
+          git rm .github/workflows/pr03-bootstrap.yml .github/workflows/pr03-pr-bootstrap.yml .pr03-bootstrap-trigger .pr03_payload.b64 .pr03_payload.part00 .pr03_payload.part01 .pr03_payload.part02 .pr03_payload.part03 .pr03_payload.part04
           git rm -f docs/pr03_bootstrap_notice*.md
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'

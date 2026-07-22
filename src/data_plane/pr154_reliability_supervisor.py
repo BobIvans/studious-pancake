@@ -14,7 +14,7 @@ import json
 from pathlib import Path
 import re
 import sqlite3
-from typing import Callable
+from typing import Callable, Protocol
 
 from src.data_plane.rpc import (
     RootedRpcQuorumDecision,
@@ -26,13 +26,24 @@ from src.providers.jupiter.quota import (
     JupiterQuotaManager,
     JupiterQuotaPurpose,
 )
-from src.webhook_ingest_pr135 import (
-    GapRecoveryCursor,
-    WebhookEnvelope,
-    WebhookGapDecision,
-)
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
+
+
+class WebhookIdentityPort(Protocol):
+    @property
+    def key(self) -> str: ...
+
+    @property
+    def slot(self) -> int: ...
+
+    @property
+    def payload_hash(self) -> str: ...
+
+
+class WebhookEnvelopePort(Protocol):
+    @property
+    def identity(self) -> WebhookIdentityPort: ...
 
 
 class DataIngressSource(StrEnum):
@@ -96,7 +107,7 @@ class ProviderIngressRequest:
 
 @dataclass(frozen=True, slots=True)
 class WebhookIngressRequest:
-    envelope: WebhookEnvelope
+    envelope: WebhookEnvelopePort
     queue_depth: int
     queue_capacity: int
     max_allowed_slot_gap: int
@@ -376,7 +387,8 @@ class DataReliabilitySupervisor:
         )
 
     def admit_webhook(self, request: WebhookIngressRequest) -> DataIngressDecision:
-        event_key = request.envelope.identity.key
+        identity = request.envelope.identity
+        event_key = identity.key
         if self.journal.contains_admitted(event_key):
             return _duplicate_decision(DataIngressSource.WEBHOOK, event_key)
         if request.queue_depth >= request.queue_capacity:
@@ -385,27 +397,27 @@ class DataReliabilitySupervisor:
                 source=DataIngressSource.WEBHOOK,
                 status=DataIngressStatus.BACKPRESSURE,
                 reason="PR154_WEBHOOK_QUEUE_FULL",
-                canonical_slot=request.envelope.identity.slot,
-                payload_hash=request.envelope.identity.payload_hash,
+                canonical_slot=identity.slot,
+                payload_hash=identity.payload_hash,
                 rpc_evidence_hash=None,
                 quota_reservation_id=None,
                 backfill_required=False,
                 created_monotonic_ms=request.now_monotonic_ms,
             )
 
-        gap = GapRecoveryCursor(
-            last_seen_slot=self.journal.last_accepted_webhook_slot(),
-            incoming_slot=request.envelope.identity.slot,
-            max_allowed_slot_gap=request.max_allowed_slot_gap,
-        ).evaluate()
-        if gap is WebhookGapDecision.GAP_RECOVERY_REQUIRED:
+        last_slot = self.journal.last_accepted_webhook_slot()
+        gap_required = (
+            last_slot is not None
+            and identity.slot > last_slot + request.max_allowed_slot_gap
+        )
+        if gap_required:
             return self.journal.record(
                 event_key=event_key,
                 source=DataIngressSource.WEBHOOK,
                 status=DataIngressStatus.GAP_RECOVERY_REQUIRED,
                 reason="PR154_ROOTED_BACKFILL_REQUIRED",
-                canonical_slot=request.envelope.identity.slot,
-                payload_hash=request.envelope.identity.payload_hash,
+                canonical_slot=identity.slot,
+                payload_hash=identity.payload_hash,
                 rpc_evidence_hash=None,
                 quota_reservation_id=None,
                 backfill_required=True,
@@ -417,8 +429,8 @@ class DataReliabilitySupervisor:
             source=DataIngressSource.WEBHOOK,
             status=DataIngressStatus.ADMITTED,
             reason="PR154_WEBHOOK_READY",
-            canonical_slot=request.envelope.identity.slot,
-            payload_hash=request.envelope.identity.payload_hash,
+            canonical_slot=identity.slot,
+            payload_hash=identity.payload_hash,
             rpc_evidence_hash=None,
             quota_reservation_id=None,
             backfill_required=False,

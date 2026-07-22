@@ -106,7 +106,11 @@ def test_streaming_gzip_bomb_is_bounded_before_delivery(tmp_path):
         raw_body=compressed,
     )
 
-    assert outcome.reason in {"BAD_JSON", "JSON_TOO_LARGE"}
+    assert outcome.reason in {
+        "BAD_JSON",
+        "JSON_TOO_LARGE",
+        "COMPRESSION_RATIO_EXCEEDED",
+    }
 
 
 @pytest.mark.asyncio

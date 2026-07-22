@@ -1,0 +1,117 @@
+{
+  "schema_version": "pr149.production-debt-policy.v1",
+  "reviewed_at": "2026-07-22T00:00:00Z",
+  "required_product_state": "not-production-ready",
+  "required_live_available": false,
+  "forbidden_active_import_roots": [
+    "src.legacy_arb_bot",
+    "src.ingest.execution_router",
+    "src.ingest.jito_executor",
+    "src.ingest.tx_builder"
+  ],
+  "forbidden_active_endpoint_fragments": [
+    "quote-api.jup.ag",
+    "/swap/v1/quote",
+    "/swap/v1/swap",
+    "/swap/v1/swap-instructions",
+    "/swap/v2/quote",
+    "/swap/v2/swap",
+    "/swap/v2/swap-instructions"
+  ],
+  "allowed_quarantined_paths": [
+    "src/legacy_arb_bot.py",
+    "src/ingest/execution_router.py",
+    "src/ingest/jito_executor.py",
+    "src/ingest/tx_builder.py"
+  ],
+  "external_contract_requirements": {
+    "jupiter.swap-v2-build": {
+      "provider": "jupiter",
+      "required_status": "active",
+      "required_endpoint_fragment": "/swap/v2/build",
+      "required_method": "GET",
+      "required_evidence": [
+        "local_artifact_integrity",
+        "remote_schema_freshness",
+        "credentialed_api_conformance",
+        "execution_conformance",
+        "promotion_evidence"
+      ],
+      "remediation_group": "EXECUTION_VERTICAL"
+    },
+    "jito.low-latency-json-rpc": {
+      "provider": "jito",
+      "required_endpoint_fragment": "/getTipAccounts",
+      "required_method": "POST",
+      "required_evidence": [
+        "local_artifact_integrity",
+        "remote_schema_freshness",
+        "execution_conformance",
+        "promotion_evidence"
+      ],
+      "remediation_group": "SUBMISSION_SETTLEMENT"
+    },
+    "marginfi.v2-mainnet-source-identity": {
+      "provider": "marginfi",
+      "required_program_id": "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA",
+      "required_evidence": [
+        "local_artifact_integrity",
+        "remote_schema_freshness",
+        "deployed_program_attestation",
+        "execution_conformance",
+        "promotion_evidence"
+      ],
+      "remediation_group": "EXECUTION_VERTICAL"
+    }
+  },
+  "umbrella_groups": [
+    {
+      "id": "EXECUTION_VERTICAL",
+      "title": "Canonical paper execution vertical and provider promotion",
+      "priority": "P0",
+      "exit_criteria": [
+        "Jupiter Swap V2 /build credentialed conformance is current and pinned",
+        "MarginFi deployed binary, IDL, account layouts and instruction metas are attested",
+        "paper runtime composes planner, compiler, exact simulation, fee/rent sizing and reconciliation",
+        "ATA, wSOL, Token-2022 and lookup-table lifecycle evidence is exact",
+        "no sender is imported by the paper vertical"
+      ]
+    },
+    {
+      "id": "SUBMISSION_SETTLEMENT",
+      "title": "Permit-bound submission, Jito safety and finalized settlement",
+      "priority": "P0",
+      "exit_criteria": [
+        "single-message Jito tip policy is enforced at the permit boundary",
+        "bundle or transaction acknowledgement is never treated as settlement",
+        "ambiguous landing is durably reconciled without duplicate submission",
+        "finalized transaction and account deltas prove repayment and net economics",
+        "live remains impossible until operator and canary gates are satisfied"
+      ]
+    },
+    {
+      "id": "DATA_RELIABILITY",
+      "title": "Rooted data plane, bounded providers and durable backpressure",
+      "priority": "P1",
+      "exit_criteria": [
+        "provider bodies, redirects, compression, JSON depth and retries are bounded",
+        "quotes carry provider expiry, slot, block height and request/response identity",
+        "RPC quorum, webhook dedup, reconnect gaps and queue overload fail closed",
+        "silent exception suppression is removed from risk-critical active paths",
+        "replay and chaos tests cover partial provider and RPC failures"
+      ]
+    },
+    {
+      "id": "RELEASE_OPERATIONS",
+      "title": "Release evidence, key isolation and production operations",
+      "priority": "P1",
+      "exit_criteria": [
+        "signer keys are isolated behind a narrow capability boundary",
+        "container seccomp, non-root, read-only filesystem and secret mounting are real",
+        "SBOM, dependency hashes, image digest and provenance are reproducible and reviewed",
+        "real shadow soak and drift probes produce immutable evidence",
+        "release promotion requires explicit operator acknowledgement and rollback rehearsal"
+      ]
+    }
+  ]
+}

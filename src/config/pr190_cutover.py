@@ -63,21 +63,21 @@ def _patch_runtime(module: ModuleType) -> None:
             environment=config.cluster.name,
         )
 
-    module._read_yaml = read_yaml
-    module._default_payload = default_payload
+    setattr(module, "_read_yaml", read_yaml)
+    setattr(module, "_default_payload", default_payload)
     module.RuntimeConfig.safe_display = safe_display
     module.RuntimeConfig.identity_payload = identity_payload
     module.RuntimeConfig.runtime_materialization = runtime_materialization
     module.RuntimeConfig.fingerprint = fingerprint
-    module.PR190_CANONICAL_CONFIG_ACTIVE = True
+    setattr(module, "PR190_CANONICAL_CONFIG_ACTIVE", True)
 
 
 def _patch_live_control(module: ModuleType) -> None:
     from src.execution.live_policy import canonical_policy_hash, load_live_policy
 
-    module.load_policy = load_live_policy
-    module.canonical_policy_hash = canonical_policy_hash
-    module.PR190_CANONICAL_POLICY_ACTIVE = True
+    setattr(module, "load_policy", load_live_policy)
+    setattr(module, "canonical_policy_hash", canonical_policy_hash)
+    setattr(module, "PR190_CANONICAL_POLICY_ACTIVE", True)
 
 
 def _patch(module: ModuleType) -> None:

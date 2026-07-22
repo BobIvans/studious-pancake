@@ -58,6 +58,7 @@ from .transaction_simulator import (
     simulate_exact,
 )
 from .exact_simulation import (
+    BlockhashValidityEvidence,
     ExactSimulationError,
     ExactSimulationErrorCode,
     ExactSimulationFinalizer,
@@ -97,6 +98,7 @@ __all__ = [
     "AltValidator",
     "AttemptIdentity",
     "BlockhashContext",
+    "BlockhashValidityEvidence",
     "CanonicalExecutionContractError",
     "CanonicalSimulator",
     "CanonicalTransactionCompiler",

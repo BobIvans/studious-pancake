@@ -188,6 +188,8 @@ class _FakeRpc:
     async def call(self, method: str, params: list[Any]) -> object:
         if method == "getBlockHeight":
             return {"result": 100}
+        if method == "isBlockhashValid":
+            return {"result": {"context": {"slot": 950}, "value": True}}
         if method == "simulateTransaction":
             config = params[1]
             addresses = tuple(config["accounts"]["addresses"])

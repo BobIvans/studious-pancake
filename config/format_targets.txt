@@ -32,9 +32,11 @@ src/external_contracts/policy.py
 tests/test_pr099_evidence_bound_external_admission.py
 src/execution/exact_simulation.py
 src/execution/state_evidence_pr115.py
+src/execution/compute_budget_finalization.py
 tests/execution/test_exact_simulation_pr036.py
 tests/test_pr115_simulation_owned_economic_proof.py
 tests/execution/test_pr053_canonical_cutover.py
+tests/execution/test_pr128_compute_budget_finalization.py
 scripts/security_gate.py
 src/security/__init__.py
 src/security/parser_invariants.py

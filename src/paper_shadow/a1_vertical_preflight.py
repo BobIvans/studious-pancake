@@ -44,7 +44,9 @@ class PaperVerticalPreflight:
     missing_surfaces: tuple[str, ...] = ()
     invalid_surfaces: tuple[str, ...] = ()
     schema_version: str = PR_A1_SCHEMA
-    required_surfaces: tuple[str, ...] = field(default_factory=lambda: REQUIRED_A1_SURFACES)
+    required_surfaces: tuple[str, ...] = field(
+        default_factory=lambda: REQUIRED_A1_SURFACES,
+    )
     live_enabled: bool = False
     signer_reachable: bool = False
     sender_reachable: bool = False

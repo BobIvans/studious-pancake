@@ -146,3 +146,9 @@ tests/test_pr134_production_sandbox_policy.py
 src/observability/active_management.py
 src/release_gate/materialized_evidence.py
 tests/test_o1_management_evidence_pipeline.py
+scripts/validate_memory_confidentiality.py
+src/secure_cli.py
+src/security/runtime_memory.py
+tests/test_pr192_runtime_memory_confidentiality.py
+tests/test_pr192_secure_cli_and_deployment.py
+tests/test_pr192_secret_buffer.py

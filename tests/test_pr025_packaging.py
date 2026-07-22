@@ -58,7 +58,7 @@ def test_pyproject_is_the_single_typed_package_contract():
     project = data["project"]
     assert project["requires-python"] == ">=3.13,<3.14"
     assert project["scripts"] == {
-        "flashloan-bot": "src.cli_pr189:main",
+        "flashloan-bot": "src.secure_cli:main",
         "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
         "flashloan-contracts": "src.external_contracts.cli_pr189:main",
         "flashloan-checks": "src.automation_cli_pr189:main",

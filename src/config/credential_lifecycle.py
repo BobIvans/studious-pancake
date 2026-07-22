@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 import errno
@@ -10,9 +11,10 @@ import os
 from pathlib import Path
 import stat
 import time
-from typing import Callable, Mapping
+from typing import Callable, Iterator, Mapping, TypeVar
 
 MAX_FILE_SECRET_BYTES = 8192
+_ResultT = TypeVar("_ResultT")
 
 
 class SecretLifecycleError(ValueError):
@@ -171,7 +173,7 @@ class SecretLease:
 
 
 class SecretHandle:
-    """Redacted short-lived handle with explicit revocation and zeroization."""
+    """Redacted short-lived handle with scoped bytes and explicit zeroization."""
 
     __slots__ = ("_value", "source_scheme", "lease", "_clock_ns", "_closed")
 
@@ -202,11 +204,46 @@ class SecretHandle:
         self._clock_ns = clock_ns
         self._closed = False
 
-    def reveal(self) -> str:
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    def _authorize_use(self) -> None:
         if self._closed or not self.lease.usable(self._clock_ns()):
             raise SecretLifecycleError("secret lease is expired, revoked, or exhausted")
         self.lease.use_count += 1
-        return bytes(self._value).decode("utf-8")
+
+    @contextmanager
+    def borrow_bytes(self) -> Iterator[memoryview]:
+        """Borrow a read-only view without creating an immutable plaintext string."""
+
+        self._authorize_use()
+        view = memoryview(self._value).toreadonly()
+        try:
+            yield view
+        finally:
+            view.release()
+
+    def use_bytes(
+        self,
+        consumer: Callable[[memoryview], _ResultT],
+        *,
+        close_after: bool = False,
+    ) -> _ResultT:
+        """Run a scoped consumer and optionally revoke immediately afterwards."""
+
+        try:
+            with self.borrow_bytes() as view:
+                return consumer(view)
+        finally:
+            if close_after:
+                self.close()
+
+    def reveal(self) -> str:
+        """Compatibility API; prefer ``borrow_bytes`` or ``use_bytes`` in runtime code."""
+
+        with self.borrow_bytes() as view:
+            return view.tobytes().decode("utf-8")
 
     def revoke(self) -> None:
         self.lease.revoked = True
@@ -215,6 +252,14 @@ class SecretHandle:
         self._closed = True
 
     close = revoke
+
+    def __enter__(self) -> "SecretHandle":
+        if self._closed:
+            raise SecretLifecycleError("secret handle is closed")
+        return self
+
+    def __exit__(self, *_: object) -> None:
+        self.close()
 
     def __repr__(self) -> str:
         return (

@@ -46,6 +46,17 @@
     "forbid_plaintext_environment_secrets": true,
     "runtime_env_secret_target": "runtime.env"
   },
+  "memory_confidentiality": {
+    "core_limit_zero": true,
+    "process_non_dumpable": true,
+    "ptrace_forbidden": true,
+    "process_vm_read_forbidden": true,
+    "crash_artifacts_allowlist_only": true,
+    "support_bundles_allowlist_only": true,
+    "signer_stricter_profile_required": true,
+    "swap_policy": "encrypted-or-disabled",
+    "host_coredump_storage": "disabled-or-restricted"
+  },
   "network": {
     "egress_policy_required": true,
     "approved_egress_purposes": [

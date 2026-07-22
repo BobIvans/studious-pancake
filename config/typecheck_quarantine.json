@@ -48,6 +48,14 @@
         "PR-030"
       ],
       "reason": "Provider response schemas require typed normalization."
+    },
+    {
+      "module": "src.paper_shadow.durable_service_a3",
+      "owner_prs": [
+        "MEGA-PR A3",
+        "MEGA-PR B3"
+      ],
+      "reason": "Installed durable paper service typing is finalized once B3 evidence and the exact-attempt batch source are fully cut over."
     }
   ]
 }

@@ -1,0 +1,23 @@
+{
+  "contract_id": "helius.webhook-auth-delivery",
+  "execution_allowed": false,
+  "official_sources": [
+    "https://www.helius.dev/docs/faqs/webhooks",
+    "https://www.helius.dev/docs/api-reference/webhooks/create-webhook",
+    "https://www.helius.dev/docs/api-reference/webhooks/update-webhook"
+  ],
+  "promotion_notes": [
+    "Authorization header review does not prove current webhook configuration or delivery identity.",
+    "Ingest admission remains blocked until configuration drift, durable dedup, failed transaction policy and bounded backfill are proven."
+  ],
+  "provider": "helius",
+  "reviewed_at": "2026-07-22T18:00:00Z",
+  "reviewed_contract_facts": {
+    "auth_header_configuration_field": "authHeader",
+    "delivery_header": "Authorization",
+    "durable_dedup_and_gap_recovery_required_locally": true,
+    "provider_may_disable_high_failure_webhook": true,
+    "public_https_endpoint_required": true
+  },
+  "schema_version": "production.external-review-snapshot.v1"
+}

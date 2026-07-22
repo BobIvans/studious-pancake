@@ -1,0 +1,27 @@
+{
+  "contract_id": "solana.v0-rpc-settlement",
+  "execution_allowed": false,
+  "official_sources": [
+    "https://solana.com/docs/rpc/http/gettransaction",
+    "https://solana.com/docs/rpc/http/simulatetransaction",
+    "https://solana.com/docs/rpc/http/sendtransaction",
+    "https://solana.com/developers/guides/advanced/versions"
+  ],
+  "promotion_notes": [
+    "Public documentation is not provider-specific RPC conformance or rooted quorum evidence.",
+    "Execution remains blocked until bounded fixtures and finalized settlement are proven across independent RPC identities."
+  ],
+  "provider": "solana",
+  "reviewed_at": "2026-07-22T18:00:00Z",
+  "reviewed_contract_facts": {
+    "base_fee_lamports_per_signature": 5000,
+    "finalized_transaction_and_balance_evidence_required": true,
+    "lookup_table_provenance_required": true,
+    "max_compute_units": 1400000,
+    "max_wire_transaction_bytes": 1232,
+    "send_transaction_is_submission_not_confirmation": true,
+    "simulation_supports_replace_recent_blockhash": true,
+    "v0_requires_max_supported_transaction_version": true
+  },
+  "schema_version": "production.external-review-snapshot.v1"
+}

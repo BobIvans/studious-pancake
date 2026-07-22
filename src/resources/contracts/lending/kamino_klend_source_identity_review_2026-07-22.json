@@ -1,0 +1,24 @@
+{
+  "contract_id": "kamino.klend-mainnet-source-identity",
+  "execution_allowed": false,
+  "mainnet_program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+  "official_sources": [
+    "https://github.com/Kamino-Finance/klend",
+    "https://github.com/Kamino-Finance/klend-sdk"
+  ],
+  "promotion_notes": [
+    "Program identity and source repositories are review inputs, not deployment or instruction conformance.",
+    "Execution remains blocked while the supported combinations registry is empty and deployed/golden evidence is missing."
+  ],
+  "provider": "kamino",
+  "reviewed_at": "2026-07-22T18:00:00Z",
+  "reviewed_contract_facts": {
+    "deployed_program_attestation_complete": false,
+    "golden_instruction_vectors_complete": false,
+    "official_sdk_repository_pinned": true,
+    "official_source_repository_pinned": true,
+    "reviewed_release": "v1.23.0",
+    "supported_market_reserve_registry_complete": false
+  },
+  "schema_version": "production.external-review-snapshot.v1"
+}

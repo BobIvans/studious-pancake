@@ -1,0 +1,41 @@
+{
+  "contract_id": "jupiter.swap-v2-build",
+  "credential_modes": [
+    "x-api-key"
+  ],
+  "endpoint_family": "https://api.jup.ag/swap/v2/build",
+  "execution_allowed": false,
+  "official_sources": [
+    "https://dev.jup.ag/docs/swap/v2/build-transaction",
+    "https://dev.jup.ag/docs/swap/v2",
+    "https://dev.jup.ag/docs/swap/v2/metis-migration"
+  ],
+  "promotion_notes": [
+    "Documentation review does not prove current credentialed response conformance.",
+    "Execution remains blocked until the exact returned instruction graph is compiled, simulated and reconciled without mutation."
+  ],
+  "provider": "jupiter",
+  "reviewed_at": "2026-07-22T18:00:00Z",
+  "reviewed_contract_facts": {
+    "blockhash_metadata_required": true,
+    "exact_in_only": true,
+    "gas_payer_costs_must_include": [
+      "transaction_fee",
+      "priority_fee",
+      "jito_tip",
+      "token_account_rent",
+      "amm_open_order_rent"
+    ],
+    "lookup_table_mapping_field": "addressesByLookupTableAddress",
+    "method": "GET",
+    "raw_instruction_groups": [
+      "computeBudgetInstructions",
+      "setupInstructions",
+      "otherInstructions",
+      "swapInstruction",
+      "cleanupInstruction"
+    ],
+    "taker_required": true
+  },
+  "schema_version": "production.external-review-snapshot.v1"
+}

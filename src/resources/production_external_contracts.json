@@ -1,0 +1,84 @@
+{
+  "schema_version": "production-readiness.external-review-manifest.v1",
+  "reviewed_at": "2026-07-22T18:00:00Z",
+  "contracts": [
+    {
+      "id": "solana.v0-rpc-settlement",
+      "provider": "solana",
+      "review_state": "documentation-reviewed-execution-blocked",
+      "execution_allowed": false,
+      "snapshot_path": "contracts/solana/solana_rpc_v0_settlement_review_2026-07-22.json",
+      "snapshot_sha256": "63b86fcf4b8efd4e8d0d641aaf1a164ff5fa66e06810af3c85cbbf403b8dcbce",
+      "official_sources": [
+        "https://solana.com/docs/rpc/http/gettransaction",
+        "https://solana.com/docs/rpc/http/simulatetransaction",
+        "https://solana.com/docs/rpc/http/sendtransaction"
+      ],
+      "notes": "v0 simulation, submission and finalized settlement require provider fixtures and rooted quorum."
+    },
+    {
+      "id": "jupiter.swap-v2-build",
+      "provider": "jupiter",
+      "review_state": "documentation-reviewed-execution-blocked",
+      "execution_allowed": false,
+      "snapshot_path": "contracts/routing/jupiter_swap_v2_build_review_2026-07-22.json",
+      "snapshot_sha256": "ef22856debb228fff6d4711948732209ce586159b444380f005f877d98b5a539",
+      "official_sources": [
+        "https://dev.jup.ag/docs/swap/v2/build-transaction",
+        "https://dev.jup.ag/docs/swap/v2/metis-migration"
+      ],
+      "notes": "Raw instructions are reviewed but credentialed composition and exact simulation remain pending."
+    },
+    {
+      "id": "helius.webhook-auth-delivery",
+      "provider": "helius",
+      "review_state": "documentation-reviewed-execution-blocked",
+      "execution_allowed": false,
+      "snapshot_path": "contracts/ingest/helius_webhook_auth_review_2026-07-22.json",
+      "snapshot_sha256": "2607b3c4e46d55dffcce5ae2c92b17fe162ee78bee86d2519560707d9074e441",
+      "official_sources": [
+        "https://www.helius.dev/docs/faqs/webhooks",
+        "https://www.helius.dev/docs/api-reference/webhooks/create-webhook"
+      ],
+      "notes": "Authorization delivery is reviewed; configuration drift, durable dedup and gap recovery remain pending."
+    },
+    {
+      "id": "jito.low-latency-json-rpc",
+      "provider": "jito",
+      "review_state": "documentation-reviewed-execution-blocked",
+      "execution_allowed": false,
+      "snapshot_path": "contracts/submission/jito_low_latency_review_2026-07-22.json",
+      "snapshot_sha256": "8dd306effe410a00e10eab1b08130871818a717d9cbb1ef71ba6cec2975b5fb6",
+      "official_sources": [
+        "https://docs.jito.wtf/lowlatencytxnsend/"
+      ],
+      "notes": "Bundle receipts are not landing proof; polling, unbundling protection and settlement remain pending."
+    },
+    {
+      "id": "marginfi.v2-mainnet-source-identity",
+      "provider": "marginfi",
+      "review_state": "documentation-reviewed-execution-blocked",
+      "execution_allowed": false,
+      "snapshot_path": "contracts/marginfi/marginfi_source_identity_review_2026-07-22.json",
+      "snapshot_sha256": "2874c1e7d7af0e8a7d87d39bec2cae608a8ca4afe08305b466c65984099fed2b",
+      "official_sources": [
+        "https://docs.marginfi.com/ts-sdk/client",
+        "https://github.com/mrgnlabs/marginfi-v2"
+      ],
+      "notes": "Program/group identity is reviewed; deployed bytecode and golden instruction vectors remain pending."
+    },
+    {
+      "id": "kamino.klend-mainnet-source-identity",
+      "provider": "kamino",
+      "review_state": "documentation-reviewed-execution-blocked",
+      "execution_allowed": false,
+      "snapshot_path": "contracts/lending/kamino_klend_source_identity_review_2026-07-22.json",
+      "snapshot_sha256": "39a55a8c3d2f5d4d485b0f5c3fd99aea38c731a874af546f7f6a8c7537e481e9",
+      "official_sources": [
+        "https://github.com/Kamino-Finance/klend",
+        "https://github.com/Kamino-Finance/klend-sdk"
+      ],
+      "notes": "Program/source identity is reviewed; deployment, combinations and golden vectors remain pending."
+    }
+  ]
+}

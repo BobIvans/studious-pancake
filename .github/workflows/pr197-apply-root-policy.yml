@@ -25,35 +25,23 @@ jobs:
 
           path = Path("src/security/secret_scan.py")
           text = path.read_text(encoding="utf-8")
-          old = '''_SAFE_REFERENCE_NAMES = {
-              "credential",
-              "env_value",
-              "key",
-              "provider_token_shape",
-              "reference",
-              "secret",
-              "token",
-              "value",
-          }
-          '''
-          new = '''_SAFE_REFERENCE_NAMES = {
-              "credential",
-              "env_value",
-              "env_values",
-              "key",
-              "os",
-              "provider_token_shape",
-              "reference",
-              "secret",
-              "secrets",
-              "settings",
-              "token",
-              "value",
-          }
-          '''
-          if old not in text:
-              raise SystemExit("expected safe-reference block not found")
-          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          if '    "env_values",\n' not in text:
+              marker = '    "env_value",\n'
+              insertion = (
+                  '    "env_value",\n'
+                  '    "env_values",\n'
+                  '    "key",\n'
+                  '    "os",\n'
+              )
+              if marker not in text:
+                  raise SystemExit("safe-reference insertion marker not found")
+              text = text.replace(marker + '    "key",\n', insertion, 1)
+              text = text.replace(
+                  '    "secret",\n    "token",\n',
+                  '    "secret",\n    "secrets",\n    "settings",\n    "token",\n',
+                  1,
+              )
+              path.write_text(text, encoding="utf-8")
           PY
 
       - name: Install formatter and test dependencies

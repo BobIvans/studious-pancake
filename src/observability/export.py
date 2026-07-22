@@ -15,7 +15,7 @@ EXPORT_TOOL_VERSION = "observability-export.v2"
 
 
 def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, object]:
-    """Export pending event envelopes into deterministic UTC/type partitions."""
+    """Export pending full event envelopes into deterministic UTC/type partitions."""
 
     rows = store.pending_export_rows()
     out = Path(out_dir)
@@ -129,37 +129,17 @@ def _date_partition(utc_ns: int) -> str:
 
 
 def _event_envelope(row: object) -> dict[str, object]:
+    payload = json.loads(row["payload_json"])
     return {
+        **payload,
         "schema_name": "pr132.observability-event-envelope.v1",
-        "event_id": row["event_id"],
-        "aggregate_id": row["aggregate_id"],
-        "sequence_no": row["sequence_no"],
-        "idempotency_key": row["idempotency_key"],
-        "occurred_at_utc_ns": row["occurred_at_utc_ns"],
-        "monotonic_ns": row["monotonic_ns"],
-        "event_type": row["event_type"],
-        "schema_version": row["schema_version"],
-        "reason_code": row["reason_code"],
-        "outcome": row["outcome"],
-        "stage": row["stage"],
-        "severity": row["severity"],
-        "environment": row["environment"],
-        "logical_opportunity_id": row["logical_opportunity_id"],
-        "plan_hash": row["plan_hash"],
-        "attempt_generation": row["attempt_generation"],
-        "attempt_id": row["attempt_id"],
-        "message_hash": row["message_hash"],
-        "tx_signature": row["tx_signature"],
-        "jito_bundle_id": row["jito_bundle_id"],
-        "provider_id": row["provider_id"],
-        "venue_id": row["venue_id"],
-        "payload": json.loads(row["payload_json"]),
+        "payload": payload,
         "payload_digest": row["payload_digest"],
-        "config_checksum": row["config_checksum"],
         "redaction_version": row["redaction_version"],
         "redaction_hits": row["redaction_hits"],
-        "producer_code_version": row["producer_code_version"],
-        "contract_fixture_version": row["contract_fixture_version"],
+        "stored_event_id": row["event_id"],
+        "stored_sequence_no": row["sequence_no"],
+        "export_tool_version": EXPORT_TOOL_VERSION,
     }
 
 

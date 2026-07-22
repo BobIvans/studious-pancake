@@ -27,7 +27,8 @@ jobs:
         run: |
           case "${{ matrix.check }}" in
             black)
-              python -m black --check $(grep -vE '^[[:space:]]*(#|$)' config/format_targets.txt)
+              python -m black $(grep -vE '^[[:space:]]*(#|$)' config/format_targets.txt)
+              git diff --binary > /tmp/pr192-black.patch
               ;;
             mypy)
               python -m mypy --config-file mypy.ini
@@ -44,3 +45,11 @@ jobs:
                 -q
               ;;
           esac
+      - name: Upload Black patch
+        if: matrix.check == 'black'
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr192-black-patch
+          path: /tmp/pr192-black.patch
+          if-no-files-found: error
+          retention-days: 1

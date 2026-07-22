@@ -11,12 +11,53 @@ class SQLiteAttemptJournal:
     def __init__(self, path: str | Path, *, busy_timeout_ms: int = 2500):
         self.path = str(path)
         self._lock = asyncio.Lock()
+        self._closed = False
         self.db = sqlite3.connect(self.path, isolation_level=None, timeout=busy_timeout_ms/1000, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
         self.db.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA foreign_keys=ON")
         self.migrate()
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    @property
+    def resource_id(self) -> str:
+        return f"sqlite-attempt-journal:{self.path}"
+
+    def close(self) -> None:
+        """Rollback open work, checkpoint WAL, and close exactly once."""
+        if self._closed:
+            return
+        checkpoint_error: sqlite3.Error | None = None
+        try:
+            if self.db.in_transaction:
+                self.db.rollback()
+            if self.path != ":memory:":
+                self.db.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()
+        except sqlite3.Error as exc:
+            checkpoint_error = exc
+        finally:
+            self.db.close()
+            self._closed = True
+        if checkpoint_error is not None:
+            raise RuntimeError("attempt journal WAL checkpoint failed during close") from checkpoint_error
+
+    def __enter__(self) -> SQLiteAttemptJournal:
+        if self._closed:
+            raise RuntimeError("SQLiteAttemptJournal is closed")
+        return self
+
+    def __exit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        self.close()
+
+    async def __aenter__(self) -> SQLiteAttemptJournal:
+        return self.__enter__()
+
+    async def __aexit__(self, exc_type: Any, exc: Any, traceback: Any) -> None:
+        self.close()
 
     def migrate(self) -> None:
         self.db.executescript("""

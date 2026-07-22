@@ -3,6 +3,7 @@
 This standard-library-only module never imports a wallet, signs, submits, or calls
 RPC. It provides the one-time boundary an isolated signer/operator backend must use.
 """
+
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
@@ -221,8 +222,7 @@ class SQLiteAuthorizationReplayLedger:
     def _initialize(self) -> None:
         try:
             with self._connect() as connection:
-                connection.executescript(
-                    """
+                connection.executescript("""
                     CREATE TABLE IF NOT EXISTS authorization_replay_meta(
                       singleton INTEGER PRIMARY KEY CHECK(singleton=1),
                       product_id TEXT NOT NULL,
@@ -258,8 +258,7 @@ class SQLiteAuthorizationReplayLedger:
                     );
                     CREATE INDEX IF NOT EXISTS idx_pr201_state_expiry
                     ON authorization_nonce_ledger(state, expires_at_ns);
-                    """
-                )
+                    """)
                 connection.execute(
                     """INSERT INTO authorization_replay_meta VALUES(1, ?, ?)
                     ON CONFLICT(singleton) DO NOTHING""",

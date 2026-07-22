@@ -68,6 +68,17 @@ from .exact_simulation import (
     RpcSimulationEvidence,
     validate_exact_submission_binding,
 )
+from .state_evidence_pr115 import (
+    PR115DecodePolicy,
+    PR115NativeLamportDelta,
+    PR115RawAccountSnapshot,
+    PR115SimulationOwnedEconomicProof,
+    PR115StateEvidenceCode,
+    PR115StateEvidenceError,
+    PR115TokenAccountDelta,
+    build_pr115_proof_from_report,
+    build_pr115_simulation_owned_economic_proof,
+)
 from .journal import InMemoryExecutionJournal, MIGRATION_VERSION, SQLiteAttemptJournal
 from .lifecycle import SubmissionEnvelope, TransactionLifecycleService
 from .live_gate import LiveSubmissionGate
@@ -113,6 +124,13 @@ __all__ = [
     "JournalAttemptRecord",
     "LiveSubmissionGate",
     "MIGRATION_VERSION",
+    "PR115DecodePolicy",
+    "PR115NativeLamportDelta",
+    "PR115RawAccountSnapshot",
+    "PR115SimulationOwnedEconomicProof",
+    "PR115StateEvidenceCode",
+    "PR115StateEvidenceError",
+    "PR115TokenAccountDelta",
     "PlannedInstruction",
     "ReconciliationEvidence",
     "ReconciliationOutcome",
@@ -137,6 +155,8 @@ __all__ = [
     "V0CompilePolicy",
     "V0HardeningError",
     "blockhash_fingerprint",
+    "build_pr115_proof_from_report",
+    "build_pr115_simulation_owned_economic_proof",
     "classify_reconciliation",
     "compute_message_hash",
     "get_fee_for_message",

@@ -12,6 +12,7 @@ from enum import StrEnum
 import hashlib
 import json
 from pathlib import Path
+import re
 import sqlite3
 from typing import Callable
 
@@ -30,6 +31,8 @@ from src.webhook_ingest_pr135 import (
     WebhookEnvelope,
     WebhookGapDecision,
 )
+
+_SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
 
 class DataIngressSource(StrEnum):
@@ -65,17 +68,20 @@ class ProviderIngressRequest:
     now_monotonic_ms: int
 
     def __post_init__(self) -> None:
-        if not all(
-            (
-                self.event_key,
-                self.candidate_id,
-                self.request_fingerprint,
-                self.expected_genesis_hash,
-                self.expected_method,
-                self.expected_request_hash,
-            )
-        ):
+        required = (
+            self.event_key,
+            self.candidate_id,
+            self.request_fingerprint,
+            self.expected_genesis_hash,
+            self.expected_method,
+            self.expected_request_hash,
+        )
+        if not all(required):
             raise ValueError("provider ingress identity fields are required")
+        if not _SHA256.fullmatch(self.expected_request_hash):
+            raise ValueError(
+                "expected_request_hash must be a lowercase sha256 digest"
+            )
         _validate_queue(self.queue_depth, self.queue_capacity)
         if min(
             self.deadline_monotonic_ms,
@@ -136,6 +142,8 @@ class DataIngressDecision:
 
 
 class DurableDataPlaneJournal:
+    """Append-only decisions plus one current-state row per durable identity."""
+
     def __init__(self, path: str | Path) -> None:
         self.path = Path(path)
         self.connection = sqlite3.connect(str(self.path))
@@ -235,7 +243,12 @@ class DurableDataPlaneJournal:
                     created_monotonic_ms,
                 ),
             )
-            sequence = int(cursor.lastrowid)
+            lastrowid = cursor.lastrowid
+            if lastrowid is None:
+                raise RuntimeError(
+                    "PR154 durable decision insert returned no row id"
+                )
+            sequence = lastrowid
             self.connection.execute(
                 """
                 INSERT INTO data_plane_event_state (
@@ -279,6 +292,8 @@ class DurableDataPlaneJournal:
         row = self.connection.execute(
             "SELECT COUNT(*) FROM data_plane_decisions"
         ).fetchone()
+        if row is None:
+            raise RuntimeError("PR154 durable decision count returned no row")
         return int(row[0])
 
     def close(self) -> None:
@@ -318,44 +333,46 @@ class DataReliabilitySupervisor:
                 request_fingerprint=request.request_fingerprint,
             )
         except JupiterQuotaError as exc:
-            return self.journal.record(
-                event_key=request.event_key,
-                source=DataIngressSource.PROVIDER,
+            return self._record(
+                request,
                 status=DataIngressStatus.QUOTA_BLOCKED,
                 reason=f"PR154_QUOTA:{exc.reason}",
-                canonical_slot=None,
-                payload_hash=None,
-                rpc_evidence_hash=None,
-                quota_reservation_id=None,
-                backfill_required=False,
-                created_monotonic_ms=self.clock_monotonic_ms(),
             )
 
-        quorum = self.rpc_quorum.evaluate(
-            request.rooted_samples,
-            expected_genesis_hash=request.expected_genesis_hash,
-            expected_method=request.expected_method,
-            expected_request_hash=request.expected_request_hash,
-            min_context_slot=request.min_context_slot,
-            now_wall_ms=request.now_wall_ms,
-            now_monotonic_ms=request.now_monotonic_ms,
-        )
+        try:
+            quorum = self.rpc_quorum.evaluate(
+                request.rooted_samples,
+                expected_genesis_hash=request.expected_genesis_hash,
+                expected_method=request.expected_method,
+                expected_request_hash=request.expected_request_hash,
+                min_context_slot=request.min_context_slot,
+                now_wall_ms=request.now_wall_ms,
+                now_monotonic_ms=request.now_monotonic_ms,
+            )
+        except (TypeError, ValueError) as exc:
+            await self.quota.release_unissued(quota_token)
+            return self._record(
+                request,
+                status=DataIngressStatus.RPC_BLOCKED,
+                reason=(
+                    "PR154_RPC_VALIDATION_"
+                    f"{type(exc).__name__.upper()}"
+                ),
+            )
+
         if not quorum.accepted:
             await self.quota.release_unissued(quota_token)
             return self._record_rpc_blocked(request, quorum)
 
         await self.quota.mark_used(quota_token)
-        return self.journal.record(
-            event_key=request.event_key,
-            source=DataIngressSource.PROVIDER,
+        return self._record(
+            request,
             status=DataIngressStatus.ADMITTED,
             reason="PR154_PROVIDER_READY",
             canonical_slot=quorum.canonical_slot,
             payload_hash=quorum.payload_hash,
             rpc_evidence_hash=quorum.evidence_hash,
             quota_reservation_id=quota_token.reservation_id,
-            backfill_required=False,
-            created_monotonic_ms=self.clock_monotonic_ms(),
         )
 
     def admit_webhook(self, request: WebhookIngressRequest) -> DataIngressDecision:
@@ -448,22 +465,42 @@ class DataReliabilitySupervisor:
             )
         return None
 
+    def _record(
+        self,
+        request: ProviderIngressRequest,
+        *,
+        status: DataIngressStatus,
+        reason: str,
+        canonical_slot: int | None = None,
+        payload_hash: str | None = None,
+        rpc_evidence_hash: str | None = None,
+        quota_reservation_id: str | None = None,
+    ) -> DataIngressDecision:
+        return self.journal.record(
+            event_key=request.event_key,
+            source=DataIngressSource.PROVIDER,
+            status=status,
+            reason=reason,
+            canonical_slot=canonical_slot,
+            payload_hash=payload_hash,
+            rpc_evidence_hash=rpc_evidence_hash,
+            quota_reservation_id=quota_reservation_id,
+            backfill_required=False,
+            created_monotonic_ms=self.clock_monotonic_ms(),
+        )
+
     def _record_rpc_blocked(
         self,
         request: ProviderIngressRequest,
         quorum: RootedRpcQuorumDecision,
     ) -> DataIngressDecision:
-        return self.journal.record(
-            event_key=request.event_key,
-            source=DataIngressSource.PROVIDER,
+        return self._record(
+            request,
             status=DataIngressStatus.RPC_BLOCKED,
             reason=quorum.reason.value,
             canonical_slot=quorum.canonical_slot,
             payload_hash=quorum.payload_hash,
             rpc_evidence_hash=quorum.evidence_hash,
-            quota_reservation_id=None,
-            backfill_required=False,
-            created_monotonic_ms=self.clock_monotonic_ms(),
         )
 
 

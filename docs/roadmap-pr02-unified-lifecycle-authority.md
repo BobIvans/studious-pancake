@@ -25,6 +25,10 @@ The authority owns:
 - append-only dead-letter history;
 - deterministic exact replay or explicit safe-indeterminacy recovery.
 
+Database product identity, schema manifest, epoch compatibility, and migration
+fencing are delegated to the already merged PR-195 authority. PR-02 does not
+create a competing database-identity table.
+
 `src/paper_shadow/durable_service_a3.py` now records a PR-02 intent before it
 calls the batch source. A3 cycle/outbox tables remain only compatibility
 projections written inside the same PR-02 terminal transaction.
@@ -32,9 +36,10 @@ projections written inside the same PR-02 terminal transaction.
 ## B3 transactional boundary
 
 `UnifiedA3AdmissionSink` implements the existing B3 `A3AdmissionSinkPort`. It
-accepts only the SQLite connection whose `pr02_authority_identity` matches the
-reviewed PR-02 product and schema. Therefore a Helius/B3 database cannot claim
-an atomic A3 handoff unless it is the same physical SQLite product.
+accepts only the SQLite connection whose PR-195 `database_identity_pr195`
+record matches the reviewed PR-02 product, schema family, and application
+schema version. Therefore a Helius/B3 database cannot claim an atomic A3
+handoff unless it is the same physical SQLite product.
 
 Production composition must configure Helius delivery/rooted recovery and the
 paper lifecycle authority to the same reviewed database path before installing

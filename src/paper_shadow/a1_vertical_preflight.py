@@ -8,6 +8,7 @@ operators or CI try to run a sender-free paper cycle.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from enum import StrEnum
 from types import MappingProxyType
@@ -156,6 +157,10 @@ def _safe_runtime_mode(config: Any) -> str:
 def _string_tuple(values: object) -> tuple[str, ...]:
     if values is None:
         return ()
+    if isinstance(values, str):
+        return (values,)
+    if not isinstance(values, Iterable):
+        return (str(values),)
     return tuple(str(value) for value in values)
 
 

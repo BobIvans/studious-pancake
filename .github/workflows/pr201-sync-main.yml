@@ -1,0 +1,46 @@
+name: PR201 sync main
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  merge-current-main:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - name: Merge current main and resolve format manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          set +e
+          git merge --no-ff --no-commit origin/main
+          merge_status=$?
+          set -e
+          if [ "$merge_status" -ne 0 ]; then
+            conflicts="$(git diff --name-only --diff-filter=U)"
+            if [ "$conflicts" != "config/format_targets.txt" ]; then
+              echo "Unexpected conflicts: $conflicts" >&2
+              exit 1
+            fi
+            git checkout origin/main -- config/format_targets.txt
+            grep -qxF 'src/authorization_replay_pr201.py' config/format_targets.txt || echo 'src/authorization_replay_pr201.py' >> config/format_targets.txt
+            grep -qxF 'tests/test_pr201_authorization_replay.py' config/format_targets.txt || echo 'tests/test_pr201_authorization_replay.py' >> config/format_targets.txt
+            git add config/format_targets.txt
+          fi
+          rm .github/workflows/pr201-sync-main.yml
+          git add .github/workflows/pr201-sync-main.yml
+          git commit -m "Merge current main into PR-201 and resolve format targets"
+          git push origin "HEAD:${{ github.head_ref }}"

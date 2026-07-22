@@ -1,7 +1,7 @@
 """Exact-message simulation and compute-budget finalization.
 
 PR-036 makes one compiled Solana v0 message the authority for simulation,
-fee quoting, permit binding, and eventual submission.  RPC ambiguity never
+fee quoting, permit binding, and eventual submission. RPC ambiguity never
 becomes success: a caller receives either a fully bound result or a typed,
 fail-closed error.
 """
@@ -25,7 +25,6 @@ from .models import (
     SOLANA_WIRE_TRANSACTION_LIMIT_BYTES,
     BlockhashContext,
     CompiledTransaction,
-    ComputeBudgetPolicy,
     ResolvedAddressLookupTable,
     RpcClient,
     TransactionPlan,
@@ -44,6 +43,7 @@ class ExactSimulationErrorCode(str, Enum):
     INVALID_CONTEXT = "invalid_context"
     COMPILATION_FAILED = "compilation_failed"
     BLOCKHASH_EXPIRED = "blockhash_expired"
+    BLOCKHASH_INVALID = "blockhash_invalid"
     RPC_TIMEOUT = "rpc_timeout"
     RPC_ERROR = "rpc_error"
     MALFORMED_RPC_RESPONSE = "malformed_rpc_response"
@@ -135,6 +135,19 @@ class RpcSimulationEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class BlockhashValidityEvidence:
+    """Fork-bound evidence that an exact blockhash was valid at one RPC context."""
+
+    blockhash: str
+    current_block_height: int
+    last_valid_block_height: int
+    validation_slot: int
+    commitment: str
+    min_context_slot: int
+    valid: bool
+
+
+@dataclass(frozen=True, slots=True)
 class ExactSimulationReport:
     """Evidence binding both simulation passes and the final fee quote."""
 
@@ -148,6 +161,7 @@ class ExactSimulationReport:
     min_context_slot: int
     last_valid_block_height: int
     monitored_accounts: tuple[str, ...]
+    blockhash_validations: tuple[BlockhashValidityEvidence, ...] = ()
 
     @property
     def message_hash(self) -> str:
@@ -227,7 +241,10 @@ class ExactSimulationFinalizer:
         self._validate_context(plan, blockhash)
         monitored = self._targeted_accounts(plan)
 
-        await self._ensure_blockhash_live(blockhash, plan.min_context_slot)
+        provisional_blockhash = await self._ensure_blockhash_live(
+            blockhash,
+            plan.min_context_slot,
+        )
         provisional_plan = self._with_unit_limit(
             plan,
             self.policy.provisional_compute_unit_limit,
@@ -246,7 +263,10 @@ class ExactSimulationFinalizer:
         final_limit = self._final_compute_limit(provisional.units_consumed)
         final_plan = self._with_unit_limit(plan, final_limit)
 
-        await self._ensure_blockhash_live(blockhash, plan.min_context_slot)
+        final_blockhash = await self._ensure_blockhash_live(
+            blockhash,
+            plan.min_context_slot,
+        )
         final_compiled = self._compile(final_plan, blockhash, lookup_tables)
         final = await self._simulate(
             final_compiled,
@@ -268,6 +288,7 @@ class ExactSimulationFinalizer:
             min_context_slot=final_compiled.min_context_slot,
             last_valid_block_height=blockhash.last_valid_block_height,
             monitored_accounts=monitored,
+            blockhash_validations=(provisional_blockhash, final_blockhash),
         )
         result = FinalizedSimulation(final_compiled, report)
         result.validate_submission(
@@ -380,7 +401,46 @@ class ExactSimulationFinalizer:
         self,
         blockhash: BlockhashContext,
         min_context_slot: int,
-    ) -> None:
+    ) -> BlockhashValidityEvidence:
+        current_height = await self._get_current_block_height(min_context_slot)
+        if current_height > blockhash.last_valid_block_height:
+            raise ExactSimulationError(
+                ExactSimulationErrorCode.BLOCKHASH_EXPIRED,
+                FailureDisposition.RETRYABLE,
+                "recent blockhash is expired",
+                {
+                    "current_block_height": current_height,
+                    "last_valid_block_height": blockhash.last_valid_block_height,
+                },
+            )
+
+        validation_slot, is_valid = await self._is_blockhash_valid(
+            blockhash,
+            min_context_slot,
+        )
+        if not is_valid:
+            raise ExactSimulationError(
+                ExactSimulationErrorCode.BLOCKHASH_INVALID,
+                FailureDisposition.RETRYABLE,
+                "recent blockhash is not valid on the selected fork",
+                {
+                    "current_block_height": current_height,
+                    "last_valid_block_height": blockhash.last_valid_block_height,
+                    "validation_slot": validation_slot,
+                },
+            )
+
+        return BlockhashValidityEvidence(
+            blockhash=str(blockhash.blockhash),
+            current_block_height=current_height,
+            last_valid_block_height=blockhash.last_valid_block_height,
+            validation_slot=validation_slot,
+            commitment=self.policy.commitment,
+            min_context_slot=min_context_slot,
+            valid=True,
+        )
+
+    async def _get_current_block_height(self, min_context_slot: int) -> int:
         raw = await self._rpc_call(
             "getBlockHeight",
             [
@@ -399,16 +459,52 @@ class ExactSimulationFinalizer:
                 FailureDisposition.RETRYABLE,
                 "getBlockHeight returned an invalid value",
             )
-        if value > blockhash.last_valid_block_height:
-            raise ExactSimulationError(
-                ExactSimulationErrorCode.BLOCKHASH_EXPIRED,
-                FailureDisposition.RETRYABLE,
-                "recent blockhash is expired",
+        return value
+
+    async def _is_blockhash_valid(
+        self,
+        blockhash: BlockhashContext,
+        min_context_slot: int,
+    ) -> tuple[int, bool]:
+        raw = await self._rpc_call(
+            "isBlockhashValid",
+            [
+                str(blockhash.blockhash),
                 {
-                    "current_block_height": value,
-                    "last_valid_block_height": blockhash.last_valid_block_height,
+                    "commitment": self.policy.commitment,
+                    "minContextSlot": min_context_slot,
+                },
+            ],
+        )
+        result = self._unwrap_rpc_result(raw)
+        result_dict = self._require_dict(result, "isBlockhashValid result")
+        context = self._require_dict(
+            result_dict.get("context"),
+            "isBlockhashValid context",
+        )
+        slot_value = context.get("slot")
+        if (
+            not isinstance(slot_value, int)
+            or isinstance(slot_value, bool)
+            or slot_value < min_context_slot
+        ):
+            raise ExactSimulationError(
+                ExactSimulationErrorCode.CONTEXT_SLOT_VIOLATION,
+                FailureDisposition.RETRYABLE,
+                "isBlockhashValid context slot is below minContextSlot",
+                {
+                    "slot": slot_value if _is_int(slot_value) else None,
+                    "min_context_slot": min_context_slot,
                 },
             )
+        value = result_dict.get("value")
+        if not isinstance(value, bool):
+            raise ExactSimulationError(
+                ExactSimulationErrorCode.MALFORMED_RPC_RESPONSE,
+                FailureDisposition.RETRYABLE,
+                "isBlockhashValid returned an invalid value",
+            )
+        return slot_value, value
 
     async def _simulate(
         self,
@@ -749,6 +845,7 @@ def _is_int(value: Any) -> bool:
 
 
 __all__ = [
+    "BlockhashValidityEvidence",
     "ExactSimulationError",
     "ExactSimulationErrorCode",
     "ExactSimulationFinalizer",

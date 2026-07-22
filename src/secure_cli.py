@@ -31,9 +31,7 @@ def _truthy(value: str | None) -> bool:
 
 def _requests_live(args: Sequence[str]) -> bool:
     return any(
-        argument == "--mode"
-        and index + 1 < len(args)
-        and args[index + 1] == "live"
+        argument == "--mode" and index + 1 < len(args) and args[index + 1] == "live"
         for index, argument in enumerate(args)
     )
 

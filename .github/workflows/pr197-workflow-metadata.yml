@@ -1,0 +1,21 @@
+name: PR-197 workflow metadata
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/pr197-workflow-metadata.yml"
+
+permissions:
+  actions: read
+  contents: read
+
+jobs:
+  metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show primary CI workflow metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/313890720" \
+            --jq '"name=\(.name) path=\(.path) state=\(.state)"'

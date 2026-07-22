@@ -1,8 +1,9 @@
 """PR-192 hardened console entrypoint.
 
-This wrapper applies process-memory controls before importing the canonical CLI,
-which in turn loads configuration, resolves credentials, constructs clients and
-starts the runtime. ``src.cli`` remains the single command implementation.
+This wrapper applies process-memory controls before importing the active PR-189
+CLI contract, which then delegates to automation-safe commands or the canonical
+legacy command implementation. Configuration, credentials and runtime clients are
+therefore not imported before memory hardening succeeds.
 """
 
 from __future__ import annotations
@@ -76,7 +77,7 @@ class _CanonicalCli(Protocol):
 
 
 def _load_canonical_cli() -> _CanonicalCli:
-    return cast(_CanonicalCli, import_module("src.cli"))
+    return cast(_CanonicalCli, import_module("src.cli_pr189"))
 
 
 def main(argv: Sequence[str] | None = None) -> int:

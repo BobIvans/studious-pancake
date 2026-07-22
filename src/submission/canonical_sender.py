@@ -234,9 +234,7 @@ class CanonicalSenderSettings:
             return None
         evaluation = evaluate_pr130_jito_mev_policy(
             transport=self.transport,
-            transaction_count=(
-                1 if self.transport is TransportKind.JITO_SINGLE else 2
-            ),
+            transaction_count=1 if self.transport is TransportKind.JITO_SINGLE else 2,
             tip_transaction_index=0,
             bundle_only=self.jito_bundle_only,
             tip_account_static=True,

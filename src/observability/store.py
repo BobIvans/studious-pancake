@@ -83,14 +83,7 @@ REQUIRED_TABLE_COLUMNS: dict[str, frozenset[str]] = {
         {"digest", "classification", "size_bytes", "payload_json", "created_at"}
     ),
     "outbox": frozenset(
-        {
-            "id",
-            "event_id",
-            "work_type",
-            "status",
-            "created_at",
-            "completed_at",
-        }
+        {"id", "event_id", "work_type", "status", "created_at", "completed_at"}
     ),
     "export_manifest": frozenset(
         {
@@ -386,6 +379,7 @@ class ObservabilityStore:
                         (event.idempotency_key,),
                     ).fetchone()
                     if existing and existing["event_id"] == event.event_id:
+                        self.db.execute("ROLLBACK")
                         return False
                     raise ObservabilityError("OBSERVABILITY_DURABLE_WRITE_FAILED")
 

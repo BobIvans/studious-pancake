@@ -88,6 +88,16 @@ _SAFE_LITERAL_VALUES = {
     "dummy",
     "placeholder",
 }
+_SAFE_REFERENCE_NAMES = {
+    "credential",
+    "env_value",
+    "key",
+    "provider_token_shape",
+    "reference",
+    "secret",
+    "token",
+    "value",
+}
 
 
 class PlaintextKeyMaterialError(ValueError):
@@ -171,7 +181,9 @@ def _literal_atom_is_secret(value: str) -> bool:
 
 def _is_safe_reference_expression(node: ast.AST) -> bool:
     if isinstance(node, ast.Name):
-        return True
+        return node.id in _SAFE_REFERENCE_NAMES or node.id.endswith(
+            ("_value", "_token", "_secret", "_key", "_reference", "_ref", "_shape")
+        )
     if isinstance(node, ast.Attribute):
         return _is_safe_reference_expression(node.value)
     if isinstance(node, ast.Subscript):
@@ -191,15 +203,16 @@ def _expression_contains_secret_literal(node: ast.AST) -> bool:
 
 def _literal_secret_value(value: str) -> bool:
     stripped = value.strip().rstrip(",")
-    if _literal_atom_is_secret(stripped):
-        return True
     try:
-        parsed = ast.parse(stripped, mode="eval").body
+        expression = ast.parse(stripped, mode="eval")
     except (SyntaxError, ValueError):
-        return False
-    if not _is_safe_reference_expression(parsed):
-        return False
-    return _expression_contains_secret_literal(parsed)
+        return _literal_atom_is_secret(stripped)
+    if not isinstance(expression, ast.Expression):
+        return _literal_atom_is_secret(stripped)
+    parsed = expression.body
+    if _is_safe_reference_expression(parsed):
+        return _expression_contains_secret_literal(parsed)
+    return _literal_atom_is_secret(stripped)
 
 
 def _scan_secret_field_assignments(

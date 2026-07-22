@@ -64,6 +64,7 @@ helius-sanctum-lst-webhook.json
 # ── Runtime state files (bot-generated, never commit) ──────────────────────────
 bot_health.json
 bot_history.json
+trade_history.csv
 paper_trades.jsonl
 trades.jsonl
 extra_accounts.json

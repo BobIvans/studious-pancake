@@ -12,7 +12,7 @@ import sqlite3
 import time
 from types import MappingProxyType
 from typing import Any, Protocol
-from uuid import NAMESPACE_URL, uuid5
+import zlib
 
 from src.paper_shadow.runner import PaperShadowRunStatus, PaperShadowRunSummary
 
@@ -88,7 +88,9 @@ class PaperLifecycleTransition:
     ready_for_next_cycle: bool
     dependency_reasons: tuple[str, ...] = ()
     details: Mapping[str, Any] = field(default_factory=dict)
-    created_at_unix_ms: int = field(default_factory=lambda: int(time.time() * 1000))
+    created_at_unix_ms: int = field(
+        default_factory=lambda: int(time.time() * 1000)
+    )
     schema_version: str = PR150_SCHEMA_VERSION
 
     def __post_init__(self) -> None:
@@ -133,7 +135,7 @@ class PaperLifecycleTransition:
         summary: PaperShadowRunSummary,
         *,
         cycle: int,
-    ) -> "PaperLifecycleTransition":
+    ) -> PaperLifecycleTransition:
         return cls(
             run_id=summary.run_id,
             cycle=cycle,
@@ -155,7 +157,9 @@ class PaperLifecycleTransition:
         state: StructuredPaperRuntimeState,
         reason: str,
         details: Mapping[str, Any],
-    ) -> "PaperLifecycleTransition":
+    ) -> PaperLifecycleTransition:
+        safe_details = {"sender_enabled": False, "live_enabled": False}
+        safe_details.update(dict(details))
         return cls(
             run_id=run_id,
             cycle=cycle,
@@ -165,7 +169,7 @@ class PaperLifecycleTransition:
             events_written=0,
             ready_for_next_cycle=False,
             dependency_reasons=(reason,),
-            details={"sender_enabled": False, "live_enabled": False, **dict(details)},
+            details=safe_details,
         )
 
 
@@ -338,7 +342,10 @@ class StructuredPaperRuntimeController:
             if self.policy.idle_sleep_seconds:
                 await asyncio.sleep(self.policy.idle_sleep_seconds)
 
-        final = transitions[-1] if transitions else self._empty_cancelled_transition()
+        if transitions:
+            final = transitions[-1]
+        else:
+            final = self._empty_cancelled_transition()
         return StructuredPaperRuntimeReport(
             run_id=self.run_id,
             cycles_completed=len(transitions),
@@ -392,11 +399,10 @@ def build_structured_paper_runtime(
     idle_sleep_seconds: float = 0.0,
     run_id: str = "pr150-paper-runtime",
 ) -> StructuredPaperRuntimeController:
-    policy_store_path = (
-        Path(store_path)
-        if store_path is not None
-        else StructuredPaperRuntimePolicy().store_path
-    )
+    if store_path is None:
+        policy_store_path = StructuredPaperRuntimePolicy().store_path
+    else:
+        policy_store_path = Path(store_path)
     policy = StructuredPaperRuntimePolicy(
         store_path=policy_store_path,
         max_cycles=max_cycles,
@@ -426,8 +432,9 @@ def _reject_unsafe_details(details: Mapping[str, Any]) -> None:
 
 
 def _digest(*parts: str) -> str:
-    payload = "\x1f".join(("pr150", *parts))
-    return uuid5(NAMESPACE_URL, payload).hex
+    payload = "\x1f".join(("pr150", *parts)).encode("utf-8")
+    checksum = zlib.crc32(payload) & 0xFFFFFFFF
+    return f"pr150-{checksum:08x}-{len(payload)}"
 
 
 def _transition_row(row: tuple[Any, ...]) -> dict[str, Any]:

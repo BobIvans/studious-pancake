@@ -198,7 +198,7 @@ def _reject_legacy_endpoint(evidence: ProviderProtocolEvidence) -> None:
     method = evidence.method.strip()
     if evidence.provider is ProviderId.JUPITER:
         if evidence.purpose is Purpose.ROUTE_BUILD and "/swap/v2/build" not in endpoint:
-            raise ProviderConformanceError("jupiter route build must use /swap/v2/build")
+            raise ProviderConformanceError("Jupiter route build must use /swap/v2/build")
         stale = ("/swap/v1/", "/swap/v2/quote", "/swap/v2/swap-instructions")
         if any(fragment in endpoint for fragment in stale):
             raise ProviderConformanceError("legacy Jupiter endpoint is not promotable")

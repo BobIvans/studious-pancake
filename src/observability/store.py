@@ -3,15 +3,19 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+import os
 from pathlib import Path
 import sqlite3
+import stat
 import time
+import uuid
 
 from .events import EventEnvelope
+from .integrity import ZERO_CHAIN_DIGEST, canonical_json, compute_chain_digest
 from .redaction import REDACTION_VERSION
 
-MIGRATION_VERSION = 17
-SCHEMA_NAME = "pr132.observability-store.v1"
+MIGRATION_VERSION = 18
+SCHEMA_NAME = "pr184.tamper-evident-observability-store.v1"
 
 TERMINAL_EVENT_TYPES = frozenset(
     {
@@ -21,10 +25,22 @@ TERMINAL_EVENT_TYPES = frozenset(
     }
 )
 
+EVENT_CHAIN_COLUMNS = frozenset(
+    {
+        "previous_chain_digest",
+        "chain_digest",
+        "database_epoch",
+        "writer_generation",
+        "release_id",
+        "policy_bundle_hash",
+    }
+)
+
 REQUIRED_TABLE_COLUMNS: dict[str, frozenset[str]] = {
     "schema_migrations": frozenset(
         {"version", "applied_at", "schema_name", "schema_checksum"}
     ),
+    "audit_meta": frozenset({"key", "value"}),
     "event_log": frozenset(
         {
             "event_id",
@@ -57,6 +73,7 @@ REQUIRED_TABLE_COLUMNS: dict[str, frozenset[str]] = {
             "producer_code_version",
             "contract_fixture_version",
             "created_at",
+            *EVENT_CHAIN_COLUMNS,
         }
     ),
     "attempt_projection": frozenset(
@@ -134,12 +151,7 @@ class SchemaDoctorResult:
 
 
 def _canonical_json(payload: object) -> str:
-    return json.dumps(
-        payload,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-    )
+    return canonical_json(payload)
 
 
 def _enum_value(value: object) -> str | None:
@@ -148,9 +160,14 @@ def _enum_value(value: object) -> str | None:
     return getattr(value, "value", str(value))
 
 
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
 class ObservabilityStore:
     def __init__(self, path: str | Path, *, busy_timeout_ms: int = 2500):
         self.path = str(path)
+        self._prepare_database_path()
         self.db = sqlite3.connect(
             self.path,
             isolation_level=None,
@@ -162,9 +179,54 @@ class ObservabilityStore:
         if self.path != ":memory:":
             self.db.execute("PRAGMA journal_mode=WAL")
         self.migrate()
+        self._secure_database_files()
+
+    def _prepare_database_path(self) -> None:
+        if self.path == ":memory:":
+            return
+        path = Path(self.path)
+        if not path.parent.exists():
+            path.parent.mkdir(parents=True, mode=0o700)
+        else:
+            path.parent.mkdir(parents=True, exist_ok=True)
+        if path.exists() or path.is_symlink():
+            metadata = path.lstat()
+            if stat.S_ISLNK(metadata.st_mode):
+                raise ObservabilityError("OBSERVABILITY_DATABASE_SYMLINK")
+            if not stat.S_ISREG(metadata.st_mode):
+                raise ObservabilityError("OBSERVABILITY_DATABASE_NOT_REGULAR")
+            if metadata.st_nlink != 1:
+                raise ObservabilityError("OBSERVABILITY_DATABASE_HARDLINKED")
+            if hasattr(os, "getuid") and metadata.st_uid != os.getuid():
+                raise ObservabilityError("OBSERVABILITY_DATABASE_WRONG_OWNER")
+            path.chmod(0o600)
+            return
+        descriptor = os.open(path, os.O_RDWR | os.O_CREAT | os.O_EXCL, 0o600)
+        os.close(descriptor)
+
+    def _secure_database_files(self) -> None:
+        if self.path == ":memory:":
+            return
+        for candidate in (
+            Path(self.path),
+            Path(self.path + "-wal"),
+            Path(self.path + "-shm"),
+        ):
+            if not candidate.exists():
+                continue
+            metadata = candidate.lstat()
+            if stat.S_ISLNK(metadata.st_mode) or not stat.S_ISREG(metadata.st_mode):
+                raise ObservabilityError("OBSERVABILITY_DATABASE_FILE_UNSAFE")
+            if metadata.st_nlink != 1:
+                raise ObservabilityError("OBSERVABILITY_DATABASE_FILE_HARDLINKED")
+            if hasattr(os, "getuid") and metadata.st_uid != os.getuid():
+                raise ObservabilityError("OBSERVABILITY_DATABASE_FILE_WRONG_OWNER")
+            candidate.chmod(0o600)
 
     def close(self) -> None:
+        self._secure_database_files()
         self.db.close()
+        self._secure_database_files()
 
     def __enter__(self) -> "ObservabilityStore":
         return self
@@ -173,7 +235,7 @@ class ObservabilityStore:
         self.close()
 
     def migrate(self) -> None:
-        """Create/repair the current schema and only stamp it after verification."""
+        """Create/repair schema, backfill the chain, then enforce immutability."""
 
         self.db.execute("BEGIN IMMEDIATE")
         try:
@@ -188,7 +250,14 @@ class ObservabilityStore:
                 """
             )
             self._ensure_schema_migration_metadata_columns()
-            for statement in _SCHEMA_STATEMENTS:
+            for statement in _TABLE_STATEMENTS:
+                self.db.execute(statement)
+            self._ensure_event_integrity_columns()
+            self._ensure_database_epoch()
+            self.db.execute("DROP TRIGGER IF EXISTS event_log_no_update")
+            self.db.execute("DROP TRIGGER IF EXISTS event_log_no_delete")
+            self._backfill_event_chain()
+            for statement in _TRIGGER_STATEMENTS:
                 self.db.execute(statement)
 
             doctor = self.schema_doctor()
@@ -235,6 +304,111 @@ class ObservabilityStore:
                 "ADD COLUMN schema_checksum TEXT NOT NULL DEFAULT ''"
             )
 
+    def _ensure_event_integrity_columns(self) -> None:
+        columns = self._columns_for("event_log")
+        definitions = {
+            "previous_chain_digest": "TEXT NOT NULL DEFAULT ''",
+            "chain_digest": "TEXT NOT NULL DEFAULT ''",
+            "database_epoch": "TEXT NOT NULL DEFAULT ''",
+            "writer_generation": "TEXT NOT NULL DEFAULT 'legacy'",
+            "release_id": "TEXT NOT NULL DEFAULT 'unknown'",
+            "policy_bundle_hash": "TEXT NOT NULL DEFAULT 'unknown'",
+        }
+        for column, definition in definitions.items():
+            if column not in columns:
+                self.db.execute(
+                    f"ALTER TABLE event_log ADD COLUMN {column} {definition}"
+                )
+
+    def _ensure_database_epoch(self) -> None:
+        self.db.execute(
+            """
+            INSERT OR IGNORE INTO audit_meta(key,value)
+            VALUES('database_epoch',?)
+            """,
+            (uuid.uuid4().hex,),
+        )
+
+    def _database_epoch(self) -> str:
+        row = self.db.execute(
+            "SELECT value FROM audit_meta WHERE key='database_epoch'"
+        ).fetchone()
+        if row is None:
+            raise ObservabilityError("OBSERVABILITY_DATABASE_EPOCH_MISSING")
+        return str(row["value"])
+
+    def _backfill_event_chain(self) -> None:
+        rows = self.db.execute(
+            """
+            SELECT *
+            FROM event_log
+            ORDER BY aggregate_id, sequence_no, event_id
+            """
+        ).fetchall()
+        previous_by_aggregate: dict[str, str] = {}
+        database_epoch = self._database_epoch()
+        for row in rows:
+            aggregate_id = str(row["aggregate_id"])
+            previous = previous_by_aggregate.get(
+                aggregate_id,
+                ZERO_CHAIN_DIGEST,
+            )
+            payload = json.loads(str(row["payload_json"]))
+            writer_generation = str(
+                row["writer_generation"]
+                or payload.get("runtime_id")
+                or "legacy"
+            )
+            release_id = str(
+                row["release_id"]
+                or row["producer_code_version"]
+                or "unknown"
+            )
+            policy_bundle_hash = str(
+                row["policy_bundle_hash"]
+                or row["config_checksum"]
+                or "unknown"
+            )
+            row_values = dict(row)
+            row_values.update(
+                {
+                    "database_epoch": database_epoch,
+                    "writer_generation": writer_generation,
+                    "release_id": release_id,
+                    "policy_bundle_hash": policy_bundle_hash,
+                }
+            )
+            chain_digest = compute_chain_digest(
+                row=row_values,
+                previous_chain_digest=previous,
+                database_epoch=database_epoch,
+                writer_generation=writer_generation,
+                release_id=release_id,
+                policy_bundle_hash=policy_bundle_hash,
+            )
+            self.db.execute(
+                """
+                UPDATE event_log
+                SET previous_chain_digest=?,
+                    chain_digest=?,
+                    database_epoch=?,
+                    writer_generation=?,
+                    release_id=?,
+                    policy_bundle_hash=?
+                WHERE event_id=?
+                """,
+                (
+                    previous,
+                    chain_digest,
+                    database_epoch,
+                    writer_generation,
+                    release_id,
+                    policy_bundle_hash,
+                    row["event_id"],
+                ),
+            )
+            previous_by_aggregate[aggregate_id] = chain_digest
+
     def schema_doctor(self) -> SchemaDoctorResult:
         tables = self._existing_tables()
         missing_tables = tuple(
@@ -280,7 +454,7 @@ class ObservabilityStore:
             }
             for row in rows
         ]
-        return hashlib.sha256(_canonical_json(payload).encode("utf-8")).hexdigest()
+        return _sha256_text(_canonical_json(payload))
 
     def _existing_tables(self) -> set[str]:
         rows = self.db.execute(
@@ -300,10 +474,84 @@ class ObservabilityStore:
         payload, hits = event.redacted_payload()
         digest = event.payload_digest()
         now = time.time()
+        database_epoch = self._database_epoch()
+        writer_generation = event.runtime_id
+        release_id = event.producer_code_version
+        policy_bundle_hash = event.config_checksum
 
         try:
             self.db.execute("BEGIN IMMEDIATE")
             try:
+                existing = self.db.execute(
+                    "SELECT event_id FROM event_log WHERE idempotency_key=?",
+                    (event.idempotency_key,),
+                ).fetchone()
+                if existing is not None:
+                    if existing["event_id"] == event.event_id:
+                        self.db.execute("ROLLBACK")
+                        return False
+                    raise ObservabilityError("OBSERVABILITY_DURABLE_WRITE_FAILED")
+
+                previous_row = self.db.execute(
+                    """
+                    SELECT sequence_no, chain_digest
+                    FROM event_log
+                    WHERE aggregate_id=?
+                    ORDER BY sequence_no DESC, event_id DESC
+                    LIMIT 1
+                    """,
+                    (event.aggregate_id,),
+                ).fetchone()
+                previous_digest = (
+                    str(previous_row["chain_digest"])
+                    if previous_row is not None
+                    else ZERO_CHAIN_DIGEST
+                )
+                if (
+                    previous_row is not None
+                    and event.sequence_no <= int(previous_row["sequence_no"])
+                ):
+                    raise ObservabilityError("OBSERVABILITY_SEQUENCE_REGRESSION")
+
+                row_values = {
+                    "event_id": event.event_id,
+                    "aggregate_id": event.aggregate_id,
+                    "sequence_no": event.sequence_no,
+                    "idempotency_key": event.idempotency_key,
+                    "occurred_at_utc_ns": event.occurred_at_utc_ns,
+                    "monotonic_ns": event.monotonic_ns,
+                    "event_type": event.event_type.value,
+                    "schema_version": event.schema_version,
+                    "reason_code": _enum_value(event.reason_code),
+                    "outcome": event.outcome.value,
+                    "stage": event.stage,
+                    "severity": event.severity.value,
+                    "environment": event.environment.value,
+                    "logical_opportunity_id": event.logical_opportunity_id,
+                    "plan_hash": event.plan_hash,
+                    "attempt_generation": event.attempt_generation,
+                    "attempt_id": event.attempt_id,
+                    "message_hash": event.message_hash,
+                    "tx_signature": event.tx_signature,
+                    "jito_bundle_id": event.jito_bundle_id,
+                    "provider_id": event.provider_id,
+                    "venue_id": event.venue_id,
+                    "payload_digest": digest,
+                    "config_checksum": event.config_checksum,
+                    "redaction_version": REDACTION_VERSION,
+                    "redaction_hits": hits,
+                    "producer_code_version": event.producer_code_version,
+                    "contract_fixture_version": event.contract_fixture_version,
+                }
+                chain_digest = compute_chain_digest(
+                    row=row_values,
+                    previous_chain_digest=previous_digest,
+                    database_epoch=database_epoch,
+                    writer_generation=writer_generation,
+                    release_id=release_id,
+                    policy_bundle_hash=policy_bundle_hash,
+                )
+
                 cur = self.db.execute(
                     """
                     INSERT OR IGNORE INTO event_log(
@@ -336,9 +584,18 @@ class ObservabilityStore:
                         redaction_hits,
                         producer_code_version,
                         contract_fixture_version,
-                        created_at
+                        created_at,
+                        previous_chain_digest,
+                        chain_digest,
+                        database_epoch,
+                        writer_generation,
+                        release_id,
+                        policy_bundle_hash
                     )
-                    VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    VALUES(
+                        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,
+                        ?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+                    )
                     """,
                     (
                         event.event_id,
@@ -371,6 +628,12 @@ class ObservabilityStore:
                         event.producer_code_version,
                         event.contract_fixture_version,
                         now,
+                        previous_digest,
+                        chain_digest,
+                        database_epoch,
+                        writer_generation,
+                        release_id,
+                        policy_bundle_hash,
                     ),
                 )
                 if cur.rowcount == 0:
@@ -398,6 +661,7 @@ class ObservabilityStore:
                 self.db.execute("ROLLBACK")
                 raise
             self.db.execute("COMMIT")
+            self._secure_database_files()
             return True
         except sqlite3.Error as exc:
             raise ObservabilityError("OBSERVABILITY_DURABLE_WRITE_FAILED") from exc
@@ -548,7 +812,7 @@ class ObservabilityStore:
                     SELECT *
                     FROM event_log
                     WHERE logical_opportunity_id=?
-                    ORDER BY sequence_no
+                    ORDER BY aggregate_id, sequence_no
                     """,
                     (opportunity_id,),
                 )
@@ -556,7 +820,13 @@ class ObservabilityStore:
         raise ValueError("one selector required")
 
 
-_SCHEMA_STATEMENTS = (
+_TABLE_STATEMENTS = (
+    """
+    CREATE TABLE IF NOT EXISTS audit_meta(
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+    )
+    """,
     """
     CREATE TABLE IF NOT EXISTS event_log(
         event_id TEXT PRIMARY KEY,
@@ -589,6 +859,12 @@ _SCHEMA_STATEMENTS = (
         producer_code_version TEXT,
         contract_fixture_version TEXT,
         created_at REAL NOT NULL,
+        previous_chain_digest TEXT NOT NULL DEFAULT '',
+        chain_digest TEXT NOT NULL DEFAULT '',
+        database_epoch TEXT NOT NULL DEFAULT '',
+        writer_generation TEXT NOT NULL DEFAULT 'legacy',
+        release_id TEXT NOT NULL DEFAULT 'unknown',
+        policy_bundle_hash TEXT NOT NULL DEFAULT 'unknown',
         UNIQUE(aggregate_id, sequence_no)
     )
     """,
@@ -658,3 +934,23 @@ _SCHEMA_STATEMENTS = (
     )
     """,
 )
+
+_TRIGGER_STATEMENTS = (
+    """
+    CREATE TRIGGER IF NOT EXISTS event_log_no_update
+    BEFORE UPDATE ON event_log
+    BEGIN
+        SELECT RAISE(ABORT, 'event_log is append-only');
+    END
+    """,
+    """
+    CREATE TRIGGER IF NOT EXISTS event_log_no_delete
+    BEFORE DELETE ON event_log
+    BEGIN
+        SELECT RAISE(ABORT, 'event_log is append-only');
+    END
+    """,
+)
+
+# Compatibility for tests/tools that inspect the historical statement tuple.
+_SCHEMA_STATEMENTS = _TABLE_STATEMENTS + _TRIGGER_STATEMENTS

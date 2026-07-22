@@ -116,8 +116,11 @@ def main(argv: Sequence[str] | None = None) -> int:
         if args.command == "provider-readiness":
             report = evaluate_b1_provider_protocol_readiness(
                 registry,
-                providers=tuple(args.provider) if args.provider else None
-                or ("jupiter", "marginfi", "jito"),
+                providers=(
+                    tuple(args.provider)
+                    if args.provider
+                    else ("jupiter", "marginfi", "jito")
+                ),
                 enable_online=args.enable_online,
             )
             print(json.dumps(report.to_dict(), indent=2, sort_keys=True))

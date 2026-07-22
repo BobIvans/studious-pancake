@@ -11,8 +11,7 @@ from importlib import import_module
 import json
 import os
 import sys
-from types import ModuleType
-from typing import Mapping, Sequence
+from typing import Mapping, Protocol, Sequence, cast
 
 from src.security.runtime_memory import (
     RuntimeMemoryHardeningError,
@@ -72,8 +71,12 @@ def _emit_verified(status: RuntimeMemoryStatus) -> None:
     print(json.dumps(payload, sort_keys=True), flush=True)
 
 
-def _load_canonical_cli() -> ModuleType:
-    return import_module("src.cli")
+class _CanonicalCli(Protocol):
+    def main(self, argv: Sequence[str] | None = None) -> int: ...
+
+
+def _load_canonical_cli() -> _CanonicalCli:
+    return cast(_CanonicalCli, import_module("src.cli"))
 
 
 def main(argv: Sequence[str] | None = None) -> int:

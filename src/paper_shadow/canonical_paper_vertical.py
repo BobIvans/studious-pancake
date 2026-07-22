@@ -9,7 +9,8 @@ sender-free vertical.
 The important PR-A change is that the supported composition root can no longer
 look like a generic "all atomic dependencies are missing" placeholder.  It now
 creates a deterministic startup decision, records it into runner evidence, and
-uses stable reason codes that identify which real vertical surface is absent.
+uses stable PR-A integration reason codes while preserving the older PR-089/102
+terminal reason contract for existing callers.
 """
 
 from __future__ import annotations
@@ -22,6 +23,8 @@ from typing import Any, Mapping
 MEGA_PR_A_SCHEMA = "mega-pr-a.canonical-paper-vertical.startup.v1"
 PR_A_CANONICAL_VERTICAL_UNWIRED = "blocked_pr_a_canonical_vertical_unwired"
 PR_A_CANONICAL_VERTICAL_INVALID = "blocked_pr_a_canonical_vertical_invalid"
+LEGACY_MISSING_ATOMIC_DEPENDENCIES = "blocked_pr089_atomic_dependencies_missing"
+LEGACY_TYPE_SAFE_DEPENDENCY_REJECTED = "blocked_pr102_type_safe_dependency_rejected"
 
 # These names intentionally match PaperShadowRuntimeDependencies attributes.
 _REQUIRED_VERTICAL_SURFACES: tuple[str, ...] = (
@@ -90,6 +93,18 @@ class CanonicalPaperVerticalStartup:
 
     @property
     def reason_code(self) -> str | None:
+        """Legacy terminal reason preserved for the active PR-089/102 runner."""
+
+        if self.invalid_surfaces and not self.missing_surfaces:
+            return LEGACY_TYPE_SAFE_DEPENDENCY_REJECTED
+        if self.missing_surfaces or self.invalid_surfaces:
+            return LEGACY_MISSING_ATOMIC_DEPENDENCIES
+        return None
+
+    @property
+    def integration_reason_code(self) -> str | None:
+        """MEGA-PR-A specific reason recorded inside startup evidence."""
+
         if self.invalid_surfaces and not self.missing_surfaces:
             return PR_A_CANONICAL_VERTICAL_INVALID
         if self.missing_surfaces or self.invalid_surfaces:
@@ -98,12 +113,18 @@ class CanonicalPaperVerticalStartup:
 
     def dependency_reasons(self) -> tuple[str, ...]:
         reason = self.reason_code
+        integration_reason = self.integration_reason_code
         if reason is None:
             return ()
-        return (
-            reason,
-            *tuple(f"missing_{name}" for name in self.missing_surfaces),
-            *tuple(f"invalid_{name}" for name in self.invalid_surfaces),
+        return tuple(
+            dict.fromkeys(
+                (
+                    reason,
+                    integration_reason,
+                    *tuple(f"missing_{name}" for name in self.missing_surfaces),
+                    *tuple(f"invalid_{name}" for name in self.invalid_surfaces),
+                )
+            )
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -112,6 +133,7 @@ class CanonicalPaperVerticalStartup:
             "status": self.status.value,
             "ready": self.ready,
             "reason_code": self.reason_code,
+            "integration_reason_code": self.integration_reason_code,
             "config_fingerprint": self.config_fingerprint,
             "runtime_mode": self.runtime_mode,
             "required_surfaces": list(self.required_surfaces),
@@ -167,6 +189,8 @@ def _safe_runtime_mode(config: Any) -> str:
 __all__ = [
     "CanonicalPaperVerticalStartup",
     "CanonicalPaperVerticalStatus",
+    "LEGACY_MISSING_ATOMIC_DEPENDENCIES",
+    "LEGACY_TYPE_SAFE_DEPENDENCY_REJECTED",
     "MEGA_PR_A_SCHEMA",
     "PR_A_CANONICAL_VERTICAL_INVALID",
     "PR_A_CANONICAL_VERTICAL_UNWIRED",

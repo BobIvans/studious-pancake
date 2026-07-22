@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import os
 import subprocess
 import sys
 
@@ -57,9 +58,18 @@ def test_pr126_require_invariant_is_not_optimized_away(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
+    env = os.environ.copy()
+    existing_pythonpath = env.get("PYTHONPATH")
+    env["PYTHONPATH"] = (
+        str(REPO_ROOT)
+        if not existing_pythonpath
+        else os.pathsep.join((str(REPO_ROOT), existing_pythonpath))
+    )
+
     completed = subprocess.run(
         [sys.executable, "-O", str(script)],
         cwd=REPO_ROOT,
+        env=env,
         text=True,
         capture_output=True,
         check=False,

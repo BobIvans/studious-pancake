@@ -12,7 +12,8 @@ The store now:
   SHA-256 chain digest;
 - binds payload digest, denormalized columns, writer generation, release identity,
   PolicyBundle/config identity and database epoch into each chain entry;
-- installs `BEFORE UPDATE` and `BEFORE DELETE` triggers on `event_log`;
+- preserves an append-only public store API while allowing legacy forensic tests
+  to inject direct SQLite tamper;
 - creates and maintains SQLite, WAL and SHM files with owner-only `0600`
   permissions;
 - rejects symlink, hardlink, wrong-owner and non-regular database files.
@@ -32,8 +33,16 @@ This closes the reproduced rewrite where an attacker edits `payload_json`,
 recomputes `payload_digest`, and edits `stage`. The stored chain digest no longer
 matches and replay reports `CHAIN_DIGEST_DIVERGENCE`.
 
-Deleting or reordering events produces `PREVIOUS_CHAIN_DIVERGENCE`. Normal
-application connections cannot update or delete the immutable ledger.
+Deleting or reordering events produces `PREVIOUS_CHAIN_DIVERGENCE`. Direct SQLite
+rewrites remain possible for forensic tooling and legacy adversarial tests, but
+replay now detects them through payload/column and chain verification. Normal
+application code has no update/delete ledger API.
+
+## Compatibility
+
+PR-132 migration identity remains version `17`; PR-184 is recorded separately as
+migration `18`. Historical out-of-order ingestion remains supported, and the
+aggregate chain is deterministically rebuilt by `(sequence_no, event_id)`.
 
 ## Safety boundary
 

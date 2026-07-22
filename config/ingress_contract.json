@@ -1,0 +1,31 @@
+{
+  "schema_version": "pr199.ingress-contract.v1",
+  "provider": "helius",
+  "active_boundary": "src.providers.helius.authenticated_ingress",
+  "delivery_plane": "src.providers.helius.delivery.HeliusDeliveryPlane",
+  "public_ingress_enabled": false,
+  "activation_requirements": {
+    "tls_required": true,
+    "plaintext_fallback_allowed": false,
+    "trusted_gateway_required": true,
+    "direct_bypass_allowed": false,
+    "trusted_proxy_configuration_required": true,
+    "source_network_policy_required": true,
+    "server_owned_webhook_identity": true,
+    "config_generation_binding_required": true,
+    "logical_credential_version_audit": true,
+    "static_header_is_cryptographic_origin_proof": false
+  },
+  "legacy_boundaries": [
+    {
+      "path": "src/ingest/helius_webhook_handler.py",
+      "active": false,
+      "reason": "legacy HMAC/X-Forwarded-For/TLS-fallback contract is not provider-conformant"
+    },
+    {
+      "path": "src/webhook_ingest_pr135.py",
+      "active": false,
+      "reason": "superseded standalone contract uses deterministic secret fingerprinting"
+    }
+  ]
+}

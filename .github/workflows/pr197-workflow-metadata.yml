@@ -1,98 +1,38 @@
-name: PR-197 primary verification reproduction
+name: PR-197 Black formatter
 
 on:
   pull_request:
     paths:
       - ".github/workflows/pr197-workflow-metadata.yml"
       - "src/security/secret_scan.py"
-      - "tests/test_pr146_secret_scanner_followup.py"
 
 permissions:
   contents: read
 
 jobs:
-  reproduction:
+  format:
     runs-on: ubuntu-latest
-    env:
-      PAPER_TRADING_ONLY: "true"
-      LIVE_TRADING_ENABLED: "false"
-      JITO_ENABLED: "false"
-      KAMINO_LIQUIDATION_ENABLED: "false"
     steps:
-      - name: Checkout full history
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Set up exact CI Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13.13"
           cache: pip
-          cache-dependency-path: |
-            requirements.txt
-            requirements-dev.txt
+          cache-dependency-path: requirements-dev.txt
 
-      - name: Show runtime
-        run: |
-          python --version
-          python -m pip --version
+      - name: Install Black
+        run: python -m pip install --quiet --requirement requirements-dev.txt
 
-      - name: Install runtime requirements
-        run: python -m pip install --requirement requirements.txt
+      - name: Format scanner
+        run: python -m black src/security/secret_scan.py
 
-      - name: Install development requirements
-        run: python -m pip install --requirement requirements-dev.txt
-
-      - name: Install repository
-        run: python -m pip install --no-deps .
-
-      - name: Exact monolithic repository verification
-        id: monolithic
-        continue-on-error: true
-        run: python scripts/verify_repo.py
-
-      - name: Quality gate with dependency audit
-        if: always()
-        continue-on-error: true
-        run: python scripts/quality_gate.py --with-dependency-audit
-
-      - name: Package smoke
-        if: always()
-        continue-on-error: true
-        run: python scripts/package_smoke.py
-
-      - name: Selected baseline tests
-        if: always()
-        continue-on-error: true
-        run: >-
-          python -m pytest
-          tests/test_pr023_runtime_truth.py
-          tests/test_launcher_startup_smoke.py
-          tests/test_import_smoke.py
-          tests/test_quality_quarantine.py
-          tests/test_pr087_package_boundary.py
-          tests/test_pr101_marginfi_complete_protocol_evidence.py
-          tests/test_pr106_canonical_sender_lifecycle_disabled.py
-          tests/test_pr115_simulation_owned_economic_proof.py
-          tests/test_pr116_coherent_marginfi_snapshot_oracle.py
-          tests/test_pr121_single_durable_lifecycle_truth.py
-          tests/test_pr120_secret_resolver_config_jito.py
-          tests/test_pr125_lst_governance_policy.py
-          tests/test_pr136_rooted_rpc_quorum.py
-          tests/test_pr140_data_lineage_quarantine.py
-          -q --disable-socket --allow-unix-socket
-
-      - name: Full offline pytest
-        if: always()
-        continue-on-error: true
-        run: >-
-          python -m pytest -m "not live and not manual"
-          --disable-socket --allow-unix-socket -q
-
-      - name: Clean tree
-        if: always()
-        continue-on-error: true
-        run: |
-          git status --porcelain
-          test -z "$(git status --porcelain)"
+      - name: Upload formatted scanner
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr197-black-formatted-scanner
+          path: src/security/secret_scan.py
+          if-no-files-found: error
+          retention-days: 1

@@ -27,7 +27,8 @@ _JSON_KEYPAIR_ARRAY_RE = re.compile(
     r"{31,}\s*(?:[0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\s*\]"
 )
 _BASE58_SECRET_RE = re.compile(
-    r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{80,120}" r"(?![1-9A-HJ-NP-Za-km-z])"
+    r"(?<![1-9A-HJ-NP-Za-km-z])[1-9A-HJ-NP-Za-km-z]{80,120}"
+    r"(?![1-9A-HJ-NP-Za-km-z])"
 )
 _PROVIDER_TOKEN_RES = (
     re.compile(r"AIza[0-9A-Za-z_-]{20,}"),
@@ -47,6 +48,10 @@ _CREDENTIAL_NAME_RE = re.compile(
     r"(?i)(?:^|[_\-.])(?:api[_-]?key|access[_-]?token|auth[_-]?token|"
     r"bearer[_-]?token|client[_-]?secret|secret|passphrase|password)(?:$|[_\-.])"
 )
+_SECRET_METADATA_NAME_RE = re.compile(
+    r"(?i)(?:secret|credential|token|auth)[_-]?(?:locator|reference|ref|domain)"
+    r"|(?:locator|reference|ref|domain)[_-]?(?:secret|credential|token|auth)"
+)
 _CONTEXT_KEY_HINT_RE = re.compile(
     r"(?i)(private[_-]?key|secret[_-]?key|keypair|signer[_-]?key|phantom)\s*[:=]"
 )
@@ -63,6 +68,16 @@ _SECRET_FIELD_ASSIGNMENT_RE = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
+_SAFE_CODE_REFERENCE_RE = re.compile(
+    r"^(?:"
+    r"[a-z_][a-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+|"
+    r"(?:value|token|secret|key|credential|env_value|provider_token_shape)|"
+    r"[a-z_][a-z0-9_]*(?:_(?:value|token|secret|key|credential|ref|reference|shape|pattern))|"
+    r"[A-Za-z_][A-Za-z0-9_]*\([^\n]*\)|"
+    r"[A-Za-z_][A-Za-z0-9_]*\[[^\n\]]+\]"
+    r")$"
+)
+_QUOTED_LITERAL_RE = re.compile(r"(?P<quote>['\"])(?P<value>(?:\\.|(?!\1).)*)\1")
 _SAFE_LITERAL_VALUES = {
     "",
     "null",
@@ -119,15 +134,21 @@ def _looks_like_reference(value: str) -> bool:
     )
 
 
-def _name_suggests_key_material(name: str | None) -> bool:
+def _name_is_secret_metadata(name: str | None) -> bool:
     if name is None:
+        return False
+    return bool(_SECRET_METADATA_NAME_RE.search(name.strip("'\"")))
+
+
+def _name_suggests_key_material(name: str | None) -> bool:
+    if name is None or _name_is_secret_metadata(name):
         return False
     upper_name = name.upper()
     return any(hint in upper_name for hint in _SECRET_NAME_HINTS)
 
 
 def _name_suggests_credential(name: str | None) -> bool:
-    if name is None:
+    if name is None or _name_is_secret_metadata(name):
         return False
     return bool(_CREDENTIAL_NAME_RE.search(name))
 
@@ -147,7 +168,7 @@ def _has_high_entropy_shape(value: str) -> bool:
     return len(alphabet) >= 10 and has_alpha and (has_digit or has_symbol)
 
 
-def _literal_secret_value(value: str) -> bool:
+def _literal_atom_is_secret(value: str) -> bool:
     stripped = _strip_literal(value)
     lowered = stripped.lower()
     if lowered in _SAFE_LITERAL_VALUES:
@@ -161,6 +182,22 @@ def _literal_secret_value(value: str) -> bool:
     return _has_provider_token_shape(stripped) or _has_high_entropy_shape(stripped)
 
 
+def _contains_secret_literal_fragment(value: str) -> bool:
+    for match in _QUOTED_LITERAL_RE.finditer(value):
+        if _literal_atom_is_secret(match.group("value")):
+            return True
+    return False
+
+
+def _literal_secret_value(value: str) -> bool:
+    stripped = value.strip().rstrip(",")
+    if _literal_atom_is_secret(stripped):
+        return True
+    if _SAFE_CODE_REFERENCE_RE.fullmatch(stripped):
+        return _contains_secret_literal_fragment(stripped)
+    return False
+
+
 def _scan_secret_field_assignments(
     text: str, *, source: str
 ) -> list[SecretScanFinding]:
@@ -170,6 +207,8 @@ def _scan_secret_field_assignments(
         if not match:
             continue
         raw_name = match.group("name").strip("'\"")
+        if _name_is_secret_metadata(raw_name):
+            continue
         raw_value = match.group("value")
         if _literal_secret_value(raw_value):
             findings.append(

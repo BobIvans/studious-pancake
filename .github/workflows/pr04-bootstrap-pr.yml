@@ -10,7 +10,6 @@ permissions:
 
 jobs:
   bootstrap:
-    if: ${{ !contains(github.event.pull_request.head.sha, 'pr04-bootstrap') }}
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
@@ -26,10 +25,9 @@ jobs:
             capture {sub(/^          /, ""); print}
           ' .github/workflows/pr04-bootstrap.yml > /tmp/pr04_materialize.py
           python /tmp/pr04_materialize.py
-      - name: Format generated Python
+      - name: Validate generated syntax
         run: |
-          python -m pip install --quiet black==26.3.1
-          python -m black \
+          python -m py_compile \
             src/cli.py \
             src/paper_shadow/repeated_service_pr04.py \
             tests/test_pr04_repeated_installed_paper_service.py

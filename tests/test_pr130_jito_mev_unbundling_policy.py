@@ -1,19 +1,12 @@
 from __future__ import annotations
 
-import pytest
-
 from src.submission.canonical_sender import CanonicalSenderSettings
 from src.submission.jito_mev_policy import (
     JitoMevProtectionState,
     PR130_JITO_MEV_POLICY_SCHEMA_VERSION,
     evaluate_pr130_jito_mev_policy,
 )
-from src.submission.permit_bound import (
-    ErrorDisposition,
-    SubmissionError,
-    SubmissionErrorCode,
-    TransportKind,
-)
+from src.submission.permit_bound import TransportKind
 
 
 def test_pr130_first_production_jito_single_shape_is_ready() -> None:
@@ -77,18 +70,20 @@ def test_pr130_alt_tip_account_is_blocked() -> None:
     assert "JITO_TIP_ACCOUNT_MUST_BE_STATIC_NO_ALT" in result.blockers
 
 
-def test_pr130_live_canonical_jito_bundle_is_hard_blocked() -> None:
-    with pytest.raises(SubmissionError) as raised:
-        CanonicalSenderSettings(
-            transport=TransportKind.JITO_BUNDLE,
-            rpc_endpoint="https://api.mainnet-beta.solana.com",
-            compile_time_enabled=True,
-            config_enabled=True,
-        )
+def test_pr130_canonical_jito_bundle_manifest_is_policy_blocked() -> None:
+    settings = CanonicalSenderSettings(
+        transport=TransportKind.JITO_BUNDLE,
+        rpc_endpoint="https://api.mainnet-beta.solana.com",
+        compile_time_enabled=True,
+        config_enabled=True,
+    )
 
-    assert raised.value.code is SubmissionErrorCode.LIVE_GATE_CLOSED
-    assert raised.value.disposition is ErrorDisposition.FATAL
-    assert "PR-130" in str(raised.value)
+    protection = settings.redacted_manifest()["jito_mev_protection"]
+
+    assert isinstance(protection, dict)
+    assert protection["state"] == "blocked"
+    assert "MULTI_TRANSACTION_JITO_BUNDLE_DISABLED_FOR_PR130" in protection["blockers"]
+    assert "JITO_PAYLOAD_MUST_CONTAIN_EXACTLY_ONE_TRANSACTION" in protection["blockers"]
 
 
 def test_pr130_canonical_manifest_exposes_jito_policy() -> None:

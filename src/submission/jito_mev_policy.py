@@ -40,18 +40,17 @@ class JitoMevProtectionPolicy:
     jitodontfront_policy_reviewed: bool = True
 
     def to_dict(self) -> dict[str, Any]:
+        tip_in_primary = self.require_tip_in_primary_transaction
+        bundle_status_is_settlement = self.bundle_status_is_settlement_proof
+        settlement_reconciliation = self.require_explicit_settlement_reconciliation
         return {
             "schema_version": self.schema_version,
             "first_production_policy": self.first_production_policy,
             "allow_multi_transaction_bundle": self.allow_multi_transaction_bundle,
-            "require_tip_in_primary_transaction": (
-                self.require_tip_in_primary_transaction
-            ),
+            "require_tip_in_primary_transaction": tip_in_primary,
             "require_static_tip_account": self.require_static_tip_account,
-            "bundle_status_is_settlement_proof": self.bundle_status_is_settlement_proof,
-            "require_explicit_settlement_reconciliation": (
-                self.require_explicit_settlement_reconciliation
-            ),
+            "bundle_status_is_settlement_proof": bundle_status_is_settlement,
+            "require_explicit_settlement_reconciliation": settlement_reconciliation,
             "jitodontfront_policy_reviewed": self.jitodontfront_policy_reviewed,
         }
 
@@ -75,6 +74,7 @@ class JitoMevProtectionReadiness:
         return self.state is JitoMevProtectionState.READY
 
     def to_dict(self) -> dict[str, Any]:
+        ack_treated_as_settlement = self.bundle_ack_treated_as_settlement
         return {
             "schema_version": self.policy.schema_version,
             "state": self.state.value,
@@ -83,7 +83,7 @@ class JitoMevProtectionReadiness:
             "tip_transaction_index": self.tip_transaction_index,
             "bundle_only": self.bundle_only,
             "tip_account_static": self.tip_account_static,
-            "bundle_ack_treated_as_settlement": self.bundle_ack_treated_as_settlement,
+            "bundle_ack_treated_as_settlement": ack_treated_as_settlement,
             "blockers": list(self.blockers),
             "policy": self.policy.to_dict(),
         }

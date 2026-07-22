@@ -116,7 +116,9 @@ security_opt:
 
 
 def test_deployment_validator_rejects_process_inspection() -> None:
-    with pytest.raises(MemoryConfidentialityValidationError, match="process inspection"):
+    with pytest.raises(
+        MemoryConfidentialityValidationError, match="process inspection"
+    ):
         validate_seccomp(
             {
                 "defaultAction": "SCMP_ACT_ERRNO",

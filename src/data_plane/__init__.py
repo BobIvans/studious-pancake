@@ -28,7 +28,17 @@ from .oracle import (
     OracleStatus,
 )
 from .readiness import ReadinessReport
-from .rpc import RpcConsistencyDecision, RpcConsistencyGate, RpcSample
+from .rpc import (
+    RootedRpcQuorumDecision,
+    RootedRpcQuorumGate,
+    RootedRpcQuorumPolicy,
+    RootedRpcQuorumReason,
+    RootedRpcSample,
+    RpcConsistencyDecision,
+    RpcConsistencyGate,
+    RpcEndpointIdentity,
+    RpcSample,
+)
 from .websocket import (
     SubscriptionSpec,
     SubscriptionState,
@@ -57,8 +67,14 @@ __all__ = [
     "PollingFallbackController",
     "ReadinessReport",
     "ReadinessState",
+    "RootedRpcQuorumDecision",
+    "RootedRpcQuorumGate",
+    "RootedRpcQuorumPolicy",
+    "RootedRpcQuorumReason",
+    "RootedRpcSample",
     "RpcConsistencyDecision",
     "RpcConsistencyGate",
+    "RpcEndpointIdentity",
     "RpcSample",
     "SubscriptionSpec",
     "SubscriptionState",

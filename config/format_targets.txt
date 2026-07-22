@@ -81,6 +81,7 @@ src/data_plane/websocket.py
 tests/test_pr040_oracle_guards.py
 tests/test_pr040_readiness_safety.py
 tests/test_pr040_rpc_ws.py
+tests/test_pr136_rooted_rpc_quorum.py
 src/economics/__init__.py
 src/economics/durable_reservations.py
 src/economics/exact_fee_workflow.py

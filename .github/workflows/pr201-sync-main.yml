@@ -1,22 +1,21 @@
 name: PR201 sync main
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - pr-201-cryptographic-nonce-replay-ledger
 
 permissions:
   contents: write
 
 jobs:
   merge-current-main:
-    if: github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ github.head_ref }}
+          ref: pr-201-cryptographic-nonce-replay-ledger
           fetch-depth: 0
       - name: Merge current main and resolve format manifest
         shell: bash
@@ -43,4 +42,4 @@ jobs:
           rm .github/workflows/pr201-sync-main.yml
           git add .github/workflows/pr201-sync-main.yml
           git commit -m "Merge current main into PR-201 and resolve format targets"
-          git push origin "HEAD:${{ github.head_ref }}"
+          git push origin HEAD:pr-201-cryptographic-nonce-replay-ledger

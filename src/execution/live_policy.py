@@ -8,9 +8,9 @@ and assignment is validated against an explicit schema.
 from __future__ import annotations
 
 import re
-from collections.abc import Iterator, Mapping
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 from pydantic import (
     BaseModel,
@@ -28,6 +28,7 @@ from src.config.strict_yaml import load_strict_yaml
 
 SCHEMA_VERSION = "pr018.live-risk.v1"
 _SECRET_REF_PATTERN = re.compile(r"^(env|file|keychain):(.+)$")
+_SecretScheme = Literal["env", "file", "keychain"]
 
 
 class LivePolicyError(ValueError):
@@ -35,7 +36,7 @@ class LivePolicyError(ValueError):
 
 
 class PolicyModel(BaseModel):
-    """Strict model with a compatibility Mapping surface for existing gates."""
+    """Strict model with a compatibility mapping surface for existing gates."""
 
     model_config = ConfigDict(extra="forbid", strict=False, validate_assignment=True)
 
@@ -61,15 +62,9 @@ class PolicyModel(BaseModel):
     def values(self) -> tuple[Any, ...]:
         return tuple(getattr(self, key) for key in self.keys())
 
-    def __iter__(self) -> Iterator[str]:
-        return iter(self.keys())
-
-    def __len__(self) -> int:
-        return len(type(self).model_fields)
-
 
 class SecretIdentityReference(PolicyModel):
-    scheme: Literal["env", "file", "keychain"]
+    scheme: _SecretScheme
     locator: StrictStr = Field(min_length=1, max_length=4096)
     version: StrictStr | None = Field(default=None, min_length=1, max_length=256)
     usage_scope: StrictStr = Field(
@@ -92,7 +87,7 @@ class SecretIdentityReference(PolicyModel):
                 raise LivePolicyError(
                     "file secret references must use absolute paths"
                 )
-            return cls(scheme=scheme, locator=locator)
+            return cls(scheme=cast(_SecretScheme, scheme), locator=locator)
         if isinstance(value, Mapping):
             return cls.model_validate(dict(value))
         raise LivePolicyError("secret reference must be a string or typed mapping")
@@ -221,7 +216,7 @@ class ControlPlanePolicy(PolicyModel):
 
 
 class LiveRiskPolicy(PolicyModel):
-    schema_version: Literal[SCHEMA_VERSION]
+    schema_version: Literal["pr018.live-risk.v1"]
     live_enabled: StrictBool
     cluster: ClusterPolicy
     wallet: WalletPolicy

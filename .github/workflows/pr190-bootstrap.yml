@@ -38,3 +38,5 @@ jobs:
           git add -A
           git commit -m "PR-190: wire strict canonical configuration paths"
           git push origin HEAD:pr-190-canonical-config-identity
+
+# Retriggered after parallel branch preparation; this workflow deletes itself.

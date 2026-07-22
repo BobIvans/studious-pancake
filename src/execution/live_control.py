@@ -15,9 +15,12 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
-import yaml
-
 from src.execution.journal import SQLiteAttemptJournal
+from src.execution.live_policy import (
+    LiveRiskPolicy,
+    canonical_policy_hash,
+    load_live_policy,
+)
 from src.execution.models import ExecutionState
 
 SCHEMA_VERSION = "pr018.live-risk.v1"
@@ -143,20 +146,8 @@ def _redact(value: Any) -> Any:
     return value
 
 
-def load_policy(path: str | Path) -> dict[str, Any]:
-    with open(path, "r", encoding="utf-8") as f:
-        data = yaml.safe_load(f) or {}
-    if not isinstance(data, dict):
-        raise ValueError("live risk config must be a mapping")
-    return data
-
-
-def canonical_policy_hash(policy: dict[str, Any]) -> str:
-    sanitized = _redact(policy)
-    blob = json.dumps(
-        sanitized, sort_keys=True, separators=(",", ":"), ensure_ascii=True
-    )
-    return hashlib.sha256(blob.encode()).hexdigest()
+def load_policy(path: str | Path) -> LiveRiskPolicy:
+    return load_live_policy(path)
 
 
 class LiveControlStore:
@@ -350,7 +341,7 @@ class LiveReadinessService:
 
     def __init__(
         self,
-        policy: dict[str, Any],
+        policy: LiveRiskPolicy | dict[str, Any],
         store: LiveControlStore,
         journal: SQLiteAttemptJournal | None = None,
         *,
@@ -548,7 +539,7 @@ class LiveReadinessService:
 class LiveAdmissionService:
     def __init__(
         self,
-        policy: dict[str, Any],
+        policy: LiveRiskPolicy | dict[str, Any],
         store: LiveControlStore,
         journal: SQLiteAttemptJournal,
         *,
@@ -687,7 +678,7 @@ def record_actual_outcome(
 
 def _paths(
     args: Any,
-) -> tuple[dict[str, Any], LiveControlStore, SQLiteAttemptJournal, str]:
+) -> tuple[LiveRiskPolicy, LiveControlStore, SQLiteAttemptJournal, str]:
     policy = load_policy(args.config)
     h = canonical_policy_hash(policy)
     state = Path(

@@ -44,6 +44,10 @@ class TransportPolicy:
     max_attempts: int = 2
     backoff_base_seconds: float = 0.1
     max_retry_after_seconds: float = 2.0
+    max_response_bytes: int = 1_048_576
+    max_json_depth: int = 32
+    max_json_nodes: int = 50_000
+    require_json_content_type: bool = True
 
     def __post_init__(self) -> None:
         if self.max_attempts < 1:
@@ -57,6 +61,16 @@ class TransportPolicy:
         ):
             if getattr(self, field_name) <= 0:
                 raise ValueError(f"{field_name} must be positive")
+        for field_name in (
+            "max_response_bytes",
+            "max_json_depth",
+            "max_json_nodes",
+        ):
+            value = getattr(self, field_name)
+            if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+                raise ValueError(f"{field_name} must be a positive integer")
+        if not isinstance(self.require_json_content_type, bool):
+            raise ValueError("require_json_content_type must be boolean")
 
 
 class SanitizedTransportError(RuntimeError):
@@ -84,6 +98,99 @@ def redact_headers(headers: Mapping[str, str] | None) -> dict[str, str]:
         key: ("<redacted>" if key.lower() in _SECRET_HEADER_NAMES else value)
         for key, value in (headers or {}).items()
     }
+
+
+def _content_length(headers: Mapping[str, str]) -> int | None:
+    raw = headers.get("content-length")
+    if raw is None:
+        return None
+    try:
+        parsed = int(raw)
+    except ValueError:
+        return None
+    if parsed < 0:
+        return None
+    return parsed
+
+
+def _is_json_content_type(raw_content_type: str | None) -> bool:
+    if raw_content_type is None:
+        return False
+    media_type = raw_content_type.split(";", 1)[0].strip().lower()
+    return media_type == "application/json" or media_type.endswith("+json")
+
+
+def _json_node_metrics(payload: Any) -> tuple[int, int]:
+    nodes = 0
+    max_depth = 0
+    stack: list[tuple[Any, int]] = [(payload, 1)]
+    while stack:
+        item, depth = stack.pop()
+        nodes += 1
+        max_depth = max(max_depth, depth)
+        if isinstance(item, dict):
+            stack.extend((value, depth + 1) for value in item.values())
+        elif isinstance(item, list):
+            stack.extend((value, depth + 1) for value in item)
+    return nodes, max_depth
+
+
+def _bounded_json_payload(
+    response: httpx.Response,
+    *,
+    method: str,
+    safe_target: str,
+    response_headers: Mapping[str, str],
+    policy: TransportPolicy,
+) -> Any:
+    content_length = _content_length(response_headers)
+    if content_length is not None and content_length > policy.max_response_bytes:
+        raise SanitizedTransportError(
+            f"{method.upper()} {safe_target} exceeded response byte limit",
+            status_code=response.status_code,
+            retryable=False,
+        )
+
+    if policy.require_json_content_type and not _is_json_content_type(
+        response_headers.get("content-type")
+    ):
+        raise SanitizedTransportError(
+            f"{method.upper()} {safe_target} returned non-JSON content type",
+            status_code=response.status_code,
+            retryable=False,
+        )
+
+    body = response.content
+    if len(body) > policy.max_response_bytes:
+        raise SanitizedTransportError(
+            f"{method.upper()} {safe_target} exceeded response byte limit",
+            status_code=response.status_code,
+            retryable=False,
+        )
+
+    try:
+        payload = json.loads(body)
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise SanitizedTransportError(
+            f"{method.upper()} {safe_target} returned non-JSON data",
+            status_code=response.status_code,
+            retryable=False,
+        ) from exc
+
+    nodes, depth = _json_node_metrics(payload)
+    if depth > policy.max_json_depth:
+        raise SanitizedTransportError(
+            f"{method.upper()} {safe_target} returned over-nested JSON",
+            status_code=response.status_code,
+            retryable=False,
+        )
+    if nodes > policy.max_json_nodes:
+        raise SanitizedTransportError(
+            f"{method.upper()} {safe_target} returned oversized JSON",
+            status_code=response.status_code,
+            retryable=False,
+        )
+    return payload
 
 
 class HttpxJsonTransport:
@@ -209,14 +316,13 @@ class HttpxJsonTransport:
                 await asyncio.sleep(delay)
                 continue
 
-            try:
-                payload = response.json()
-            except (json.JSONDecodeError, ValueError) as exc:
-                raise SanitizedTransportError(
-                    f"{method.upper()} {safe_target} returned non-JSON data",
-                    status_code=response.status_code,
-                    retryable=False,
-                ) from exc
+            payload = _bounded_json_payload(
+                response,
+                method=method,
+                safe_target=safe_target,
+                response_headers=response_headers,
+                policy=self.policy,
+            )
             return response.status_code, response_headers, payload
 
         raise AssertionError("transport retry loop exited unexpectedly")

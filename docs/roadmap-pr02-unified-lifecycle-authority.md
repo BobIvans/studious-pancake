@@ -70,6 +70,12 @@ product.
 - indeterminate attempts keep capital frozen rather than auto-releasing it;
 - dead-letter records are append-only and cannot be replaced.
 
+## Merge safety
+
+The branch is rebased by merge onto the then-current `main` before verification.
+Review and merge decisions must use the current GitHub merge-commit checks,
+not an older green head from a previous base.
+
 ## Verification
 
 Focused coverage is in `tests/test_pr02_unified_lifecycle_authority.py`:

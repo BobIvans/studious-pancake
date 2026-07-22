@@ -1,3 +1,4 @@
+# fmt: off
 from __future__ import annotations
 
 from copy import deepcopy
@@ -260,3 +261,4 @@ def _complete_evidence(
     }
     item["evidence_hash"] = make_program_evidence_hash(item)
     return deepcopy(item)
+# fmt: on

@@ -5,6 +5,14 @@ for the same high-level stages that live will later use, while fail-closing when
 required upstream evidence is not present on the current branch.
 """
 
+from src.paper_shadow.a2_exact_attempt_runtime import (
+    A2PaperOutcomeStatus,
+    ExactAttemptRuntimeItem,
+    ExactAttemptRuntimePort,
+    ExactAttemptRuntimeRecord,
+    ExactAttemptRuntimeReport,
+    run_exact_attempt_runtime_cycle,
+)
 from src.paper_shadow.atomic_runtime_stages import (
     AtomicRuntimeStageError,
     AtomicRuntimeStageErrorCode,
@@ -47,6 +55,7 @@ from src.paper_shadow.runner import (
 )
 
 __all__ = [
+    "A2PaperOutcomeStatus",
     "AtomicPlannerSimulationReconciliationVertical",
     "AtomicRuntimeStageError",
     "AtomicRuntimeStageErrorCode",
@@ -59,6 +68,10 @@ __all__ = [
     "AtomicVerticalRuntimeStageSuite",
     "AtomicVerticalStageRecord",
     "AtomicVerticalTrace",
+    "ExactAttemptRuntimeItem",
+    "ExactAttemptRuntimePort",
+    "ExactAttemptRuntimeRecord",
+    "ExactAttemptRuntimeReport",
     "ExactFeeCapitalWorkflowDependency",
     "JsonlPaperShadowJournal",
     "JupiterV2BuildDependency",
@@ -80,4 +93,5 @@ __all__ = [
     "VerifiedMarginfiProviderDependency",
     "build_paper_shadow_runtime",
     "paper_shadow_stage_blocked",
+    "run_exact_attempt_runtime_cycle",
 ]

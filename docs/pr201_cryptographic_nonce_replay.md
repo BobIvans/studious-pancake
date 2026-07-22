@@ -86,6 +86,7 @@ python -m py_compile \
   src/signer_authorization_pr141.py \
   tests/test_pr201_authorization_replay.py
 python -m compileall -q src tests
+python scripts/verify_repo.py
 ```
 
 The PR-201 source and focused test are registered in the repository Black manifest.

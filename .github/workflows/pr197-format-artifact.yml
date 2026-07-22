@@ -1,6 +1,9 @@
 name: PR-197 formatter artifact
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - pr-197-archive-complete-resubmission

@@ -1,3 +1,4 @@
+# fmt: off
 """PR-124 on-chain program deployment attestation and drift gate.
 
 Offline evidence contract for proving that an allowlisted Solana program address
@@ -580,3 +581,4 @@ __all__ = [
     "main",
     "make_program_evidence_hash",
 ]
+# fmt: on

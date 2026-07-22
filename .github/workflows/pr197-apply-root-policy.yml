@@ -1,9 +1,7 @@
 name: PR-197 apply root policy
 
 on:
-  push:
-    branches:
-      - pr-146-secret-scanner-followup
+  pull_request:
     paths:
       - ".github/workflows/pr197-apply-root-policy.yml"
 

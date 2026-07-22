@@ -159,17 +159,6 @@ class CanonicalSenderSettings:
                 )
         elif self.transport in {TransportKind.JITO_SINGLE, TransportKind.JITO_BUNDLE}:
             if (
-                self.transport is TransportKind.JITO_BUNDLE
-                and (self.compile_time_enabled or self.config_enabled)
-            ):
-                raise SubmissionError(
-                    SubmissionErrorCode.LIVE_GATE_CLOSED,
-                    ErrorDisposition.FATAL,
-                    "PR-130 first production Jito policy requires one "
-                    "transaction via JITO_SINGLE; multi-transaction bundles "
-                    "remain disabled until unbundling chaos evidence exists",
-                )
-            if (
                 self.jito_credential_mode is JitoCredentialMode.UUID
                 and not self.jito_uuid
             ):

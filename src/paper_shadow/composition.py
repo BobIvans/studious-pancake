@@ -8,6 +8,13 @@ binds the PR-075 atomic runtime stages without importing a sender.
 PR-102 hardens the PR-089 dependency seam: arbitrary ``object()`` sentinels no
 longer unlock paper outcomes. Dependencies must satisfy explicit runtime
 contracts and carry the reviewed evidence needed by the atomic stage suite.
+
+MEGA-PR A starts the active cutover: the default paper path now builds and
+records a deterministic canonical-paper-vertical startup decision instead of
+silently presenting a generic "all dependencies missing" placeholder.  The
+supported CLI still fails closed until real provider/RPC/MarginFi/Jupiter/capital
+dependencies are supplied, but the active runtime now owns a named integration
+seam that later PR-A commits can satisfy.
 """
 
 from __future__ import annotations
@@ -21,6 +28,13 @@ from typing import Any, Protocol, runtime_checkable
 
 from src.config.runtime import RuntimeConfig
 from src.paper_shadow.atomic_runtime_stages import AtomicVerticalRuntimeStageSuite
+from src.paper_shadow.canonical_paper_vertical import (
+    CanonicalPaperVerticalStartup,
+    MEGA_PR_A_SCHEMA,
+    PR_A_CANONICAL_VERTICAL_INVALID,
+    PR_A_CANONICAL_VERTICAL_UNWIRED,
+    build_canonical_paper_vertical_startup,
+)
 from src.paper_shadow.runner import (
     PAPER_SHADOW_REQUIRED_STAGES,
     PaperShadowRunSummary,
@@ -155,24 +169,29 @@ class PaperShadowDependencyGate:
         invalid_dependencies: Sequence[str] = (),
         *,
         reason_code: str = PR089_MISSING_ATOMIC_DEPENDENCIES,
+        canonical_startup: CanonicalPaperVerticalStartup | None = None,
     ) -> None:
         self.missing_dependencies = tuple(missing_dependencies)
         self.invalid_dependencies = tuple(invalid_dependencies)
         self.reason_code = reason_code
+        self.canonical_startup = canonical_startup
 
     async def __call__(self, context: PaperShadowStageContext) -> Mapping[str, Any]:
+        details: dict[str, Any] = {
+            "schema_version": PR102_COMPOSITION_SCHEMA,
+            "previous_schema_version": PR089_COMPOSITION_SCHEMA,
+            "stage": context.stage.value,
+            "missing_dependencies": list(self.missing_dependencies),
+            "invalid_dependencies": list(self.invalid_dependencies),
+            "required_dependencies": list(_REQUIRED_ACTIVE_DEPENDENCIES),
+            "sender_imported": False,
+            "live_mutation_allowed": False,
+        }
+        if self.canonical_startup is not None:
+            details["canonical_paper_vertical"] = self.canonical_startup.to_dict()
         return paper_shadow_stage_blocked(
             self.reason_code,
-            details={
-                "schema_version": PR102_COMPOSITION_SCHEMA,
-                "previous_schema_version": PR089_COMPOSITION_SCHEMA,
-                "stage": context.stage.value,
-                "missing_dependencies": list(self.missing_dependencies),
-                "invalid_dependencies": list(self.invalid_dependencies),
-                "required_dependencies": list(_REQUIRED_ACTIVE_DEPENDENCIES),
-                "sender_imported": False,
-                "live_mutation_allowed": False,
-            },
+            details=details,
         )
 
 
@@ -184,17 +203,23 @@ class PaperShadowRuntime:
     discovery: RuntimeDiscoveryCoordinator
     runner: PaperShadowRunner
     dependency_reasons_on_candidates: tuple[str, ...] = ()
+    canonical_startup: CanonicalPaperVerticalStartup | None = None
 
     async def run_once(self) -> PaperShadowRunSummary:
         report = await self.discovery.run_cycle()
         reasons = list(_paper_shadow_dependency_reasons(report.evidence))
         if report.opportunities:
             reasons.extend(self.dependency_reasons_on_candidates)
+        cycle_evidence = report.evidence.to_dict()
+        if self.canonical_startup is not None:
+            cycle_evidence["canonical_paper_vertical"] = (
+                self.canonical_startup.to_dict()
+            )
         return await self.runner.run_once(
             report.opportunities,
             upstream_cycle_completed=report.evidence.cycle_succeeded,
             upstream_dependency_reasons=tuple(reasons),
-            upstream_cycle_evidence=report.evidence.to_dict(),
+            upstream_cycle_evidence=cycle_evidence,
         )
 
 
@@ -209,8 +234,12 @@ def build_paper_shadow_runtime(
     """Build the supported sender-free paper/shadow runtime from ``config``."""
 
     active_dependencies = dependencies or PaperShadowRuntimeDependencies()
-    stages = _stage_mapping(active_dependencies)
-    dependency_reasons = _dependency_reasons(active_dependencies)
+    canonical_startup = build_canonical_paper_vertical_startup(
+        config,
+        active_dependencies,
+    )
+    stages = _stage_mapping(active_dependencies, canonical_startup)
+    dependency_reasons = _dependency_reasons(active_dependencies, canonical_startup)
     runner = PaperShadowRunner(
         PaperShadowRunnerConfig(
             journal_path=(
@@ -230,11 +259,13 @@ def build_paper_shadow_runtime(
         discovery=active_discovery,
         runner=runner,
         dependency_reasons_on_candidates=dependency_reasons,
+        canonical_startup=canonical_startup,
     )
 
 
 def _stage_mapping(
     dependencies: PaperShadowRuntimeDependencies,
+    canonical_startup: CanonicalPaperVerticalStartup,
 ) -> Mapping[PaperShadowStageName, PaperShadowStage]:
     if dependencies.complete and dependencies.atomic_stage_suite is not None:
         return dependencies.atomic_stage_suite.stage_handlers()
@@ -244,29 +275,35 @@ def _stage_mapping(
     gate = PaperShadowDependencyGate(
         missing,
         invalid,
-        reason_code=_dependency_gate_reason(missing, invalid),
+        reason_code=_dependency_gate_reason(missing, invalid, canonical_startup),
+        canonical_startup=canonical_startup,
     )
     return {stage: gate for stage in PAPER_SHADOW_REQUIRED_STAGES}
 
 
 def _dependency_reasons(
     dependencies: PaperShadowRuntimeDependencies,
+    canonical_startup: CanonicalPaperVerticalStartup,
 ) -> tuple[str, ...]:
     if dependencies.complete:
         return ()
     missing = dependencies.missing()
     invalid = dependencies.invalid()
     return (
-        _dependency_gate_reason(missing, invalid),
+        _dependency_gate_reason(missing, invalid, canonical_startup),
         *tuple(f"missing_{name}" for name in missing),
         *tuple(f"invalid_{name}" for name in invalid),
+        *canonical_startup.dependency_reasons(),
     )
 
 
 def _dependency_gate_reason(
     missing: Sequence[str],
     invalid: Sequence[str],
+    canonical_startup: CanonicalPaperVerticalStartup | None = None,
 ) -> str:
+    if canonical_startup is not None and canonical_startup.reason_code is not None:
+        return canonical_startup.reason_code
     if invalid and not missing:
         return PR102_TYPE_SAFE_DEPENDENCY_REJECTED
     return PR089_MISSING_ATOMIC_DEPENDENCIES
@@ -287,10 +324,13 @@ def _is_sha256_hex(value: str) -> bool:
 __all__ = [
     "ExactFeeCapitalWorkflowDependency",
     "JupiterV2BuildDependency",
+    "MEGA_PR_A_SCHEMA",
     "PR089_COMPOSITION_SCHEMA",
     "PR089_MISSING_ATOMIC_DEPENDENCIES",
     "PR102_COMPOSITION_SCHEMA",
     "PR102_TYPE_SAFE_DEPENDENCY_REJECTED",
+    "PR_A_CANONICAL_VERTICAL_INVALID",
+    "PR_A_CANONICAL_VERTICAL_UNWIRED",
     "PaperShadowDependencyGate",
     "PaperShadowRuntime",
     "PaperShadowRuntimeDependencies",

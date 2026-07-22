@@ -1,13 +1,12 @@
 """Conflict-safe active cutover for PR-190 configuration seams.
 
-The repository is receiving parallel production-readiness changes.  This module
+The repository is receiving parallel production-readiness changes. This module
 patches only the configuration ingress/identity callables after the corresponding
-active modules load, avoiding replacement of unrelated runtime code.  It adds no
+active modules load, avoiding replacement of unrelated runtime code. It adds no
 signer, sender, provider call, or live activation path.
 """
 from __future__ import annotations
 
-import hashlib
 from importlib import resources
 from importlib.abc import Loader, MetaPathFinder
 from importlib.machinery import PathFinder
@@ -18,7 +17,6 @@ from typing import Any
 
 from src.config.canonical import canonical_digest
 from src.config.strict_yaml import StrictYamlError, load_strict_yaml, loads_strict_yaml
-from src.execution.live_policy import canonical_policy_hash, load_live_policy
 
 _TARGETS = frozenset({"src.config.runtime", "src.execution.live_control"})
 _INSTALLED = False
@@ -75,6 +73,8 @@ def _patch_runtime(module: ModuleType) -> None:
 
 
 def _patch_live_control(module: ModuleType) -> None:
+    from src.execution.live_policy import canonical_policy_hash, load_live_policy
+
     module.load_policy = load_live_policy
     module.canonical_policy_hash = canonical_policy_hash
     module.PR190_CANONICAL_POLICY_ACTIVE = True

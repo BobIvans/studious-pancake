@@ -6,6 +6,7 @@ import json
 import sys
 from typing import Any
 
+from .integrity import ZERO_CHAIN_DIGEST, verify_chain_row
 from .store import ObservabilityStore
 
 TERMINAL_EVENT_TYPES = frozenset(
@@ -19,7 +20,7 @@ TERMINAL_EVENT_TYPES = frozenset(
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Offline deterministic PR-017/PR-132 event replay"
+        description="Offline deterministic PR-017/PR-132/PR-184 event replay"
     )
     parser.add_argument("--db", required=False, help="SQLite observability database")
     group = parser.add_mutually_exclusive_group()
@@ -33,12 +34,15 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def replay_event_rows(rows: list[Any], *, verify: bool = False) -> dict[str, object]:
-    previous_sequence = -1
+    previous_sequence_by_aggregate: dict[str, int] = {}
+    previous_chain_by_aggregate: dict[str, str] = {}
     divergences: list[dict[str, object]] = []
     timeline: list[dict[str, object]] = []
-    terminal_seen = False
+    terminal_by_aggregate: dict[str, bool] = {}
 
     for row in rows:
+        aggregate_id = str(row["aggregate_id"])
+        previous_sequence = previous_sequence_by_aggregate.get(aggregate_id, -1)
         if row["sequence_no"] <= previous_sequence:
             divergences.append(
                 {
@@ -46,38 +50,42 @@ def replay_event_rows(rows: list[Any], *, verify: bool = False) -> dict[str, obj
                     "event_id": row["event_id"],
                 }
             )
-        previous_sequence = row["sequence_no"]
+        previous_sequence_by_aggregate[aggregate_id] = int(row["sequence_no"])
 
-        payload = json.loads(row["payload_json"])
-        digest = hashlib.sha256(
-            json.dumps(
-                payload,
-                sort_keys=True,
-                separators=(",", ":"),
-                ensure_ascii=False,
-            ).encode("utf-8")
-        ).hexdigest()
-        if verify and digest != row["payload_digest"]:
-            divergences.append(
-                {
-                    "code": "PAYLOAD_DIGEST_DIVERGENCE",
-                    "event_id": row["event_id"],
-                }
+        if verify:
+            expected_previous = previous_chain_by_aggregate.get(
+                aggregate_id,
+                ZERO_CHAIN_DIGEST,
+            )
+            divergences.extend(
+                verify_chain_row(
+                    row,
+                    expected_previous_digest=expected_previous,
+                )
             )
 
-        if verify and terminal_seen and row["event_type"] not in TERMINAL_EVENT_TYPES:
-            divergences.append(
-                {
-                    "code": "TERMINAL_STATE_REGRESSION",
-                    "event_id": row["event_id"],
-                }
-            )
+        if verify and terminal_by_aggregate.get(aggregate_id, False):
+            if row["event_type"] not in TERMINAL_EVENT_TYPES:
+                divergences.append(
+                    {
+                        "code": "TERMINAL_STATE_REGRESSION",
+                        "event_id": row["event_id"],
+                    }
+                )
         if row["event_type"] in TERMINAL_EVENT_TYPES:
-            terminal_seen = True
+            terminal_by_aggregate[aggregate_id] = True
+
+        row_keys = set(row.keys())
+        chain_digest = (
+            str(row["chain_digest"]) if "chain_digest" in row_keys else None
+        )
+        if chain_digest is not None:
+            previous_chain_by_aggregate[aggregate_id] = chain_digest
 
         timeline.append(
             {
                 "event_id": row["event_id"],
+                "aggregate_id": aggregate_id,
                 "sequence_no": row["sequence_no"],
                 "event_type": row["event_type"],
                 "reason_code": row["reason_code"],
@@ -86,6 +94,15 @@ def replay_event_rows(rows: list[Any], *, verify: bool = False) -> dict[str, obj
                 "config_checksum": row["config_checksum"],
                 "contract_fixture_version": row["contract_fixture_version"],
                 "payload_digest": row["payload_digest"],
+                "previous_chain_digest": (
+                    row["previous_chain_digest"]
+                    if "previous_chain_digest" in row_keys
+                    else None
+                ),
+                "chain_digest": chain_digest,
+                "database_epoch": (
+                    row["database_epoch"] if "database_epoch" in row_keys else None
+                ),
             }
         )
 
@@ -99,6 +116,7 @@ def replay_event_rows(rows: list[Any], *, verify: bool = False) -> dict[str, obj
     ).hexdigest()
     return {
         "network_free": True,
+        "tamper_evident_chain": True,
         "timeline": timeline,
         "divergences": divergences,
         "decision_replay_hash": decision_replay_hash,
@@ -139,7 +157,8 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"{event['sequence_no']}: {event['event_type']} "
                 f"outcome={event['outcome']} reason={event['reason_code']} "
-                f"digest={event['payload_digest']}"
+                f"digest={event['payload_digest']} "
+                f"chain={event['chain_digest']}"
             )
         if output["divergences"]:
             print("DIVERGENCES: " + json.dumps(output["divergences"]))

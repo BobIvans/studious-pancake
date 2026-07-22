@@ -1,0 +1,71 @@
+{
+  "schema_version": "pr134.container_sandbox.v1",
+  "service": "flashloan-bot",
+  "live_submission_default": "hard-disabled",
+  "runtime_user": "10001:10001",
+  "image_reference": {
+    "require_digest_pin": true,
+    "forbid_latest_tag": true,
+    "allow_runtime_substitution": true
+  },
+  "filesystem": {
+    "read_only_root_filesystem": true,
+    "approved_writable_targets": [
+      "/run/flashloan-bot",
+      "/tmp",
+      "/var/lib/flashloan-bot",
+      "/var/log/flashloan-bot"
+    ],
+    "tmpfs_targets": [
+      "/run/flashloan-bot",
+      "/tmp"
+    ],
+    "forbid_arbitrary_host_mounts": true
+  },
+  "linux_security": {
+    "drop_all_capabilities": true,
+    "no_new_privileges": true,
+    "seccomp_profile_required": true,
+    "apparmor_profile_required": true,
+    "privileged": false,
+    "host_pid": false,
+    "host_ipc": false,
+    "host_network": false
+  },
+  "limits": {
+    "pids_limit": 256,
+    "memory_limit": "768m",
+    "cpus": "1.0",
+    "nofile_soft": 1024,
+    "nofile_hard": 4096,
+    "nproc": 256,
+    "stop_grace_period": "30s"
+  },
+  "secrets": {
+    "secret_mount_required": true,
+    "forbid_plaintext_environment_secrets": true,
+    "runtime_env_secret_target": "runtime.env"
+  },
+  "network": {
+    "egress_policy_required": true,
+    "approved_egress_purposes": [
+      "solana-rpc",
+      "approved-route-provider",
+      "approved-jito-relay",
+      "telemetry-sink"
+    ],
+    "deny_arbitrary_internet": true,
+    "split_signer_from_network_runtime": true
+  },
+  "health": {
+    "healthcheck_required": true,
+    "readiness_must_use_real_runtime": true,
+    "health_url": "http://127.0.0.1:8080/health"
+  },
+  "required_environment": {
+    "PAPER_TRADING_ONLY": "true",
+    "LIVE_TRADING_ENABLED": "false",
+    "JITO_ENABLED": "false",
+    "KAMINO_LIQUIDATION_ENABLED": "false"
+  }
+}

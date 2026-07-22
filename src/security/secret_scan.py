@@ -8,6 +8,7 @@ operator-provided configuration snippets.
 
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass
 import re
 from typing import Mapping
@@ -68,16 +69,6 @@ _SECRET_FIELD_ASSIGNMENT_RE = re.compile(
     """,
     re.IGNORECASE | re.VERBOSE,
 )
-_SAFE_CODE_REFERENCE_RE = re.compile(
-    r"^(?:"
-    r"[a-z_][a-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+|"
-    r"(?:value|token|secret|key|credential|env_value|provider_token_shape)|"
-    r"[a-z_][a-z0-9_]*(?:_(?:value|token|secret|key|credential|ref|reference|shape|pattern))|"
-    r"[A-Za-z_][A-Za-z0-9_]*\([^\n]*\)|"
-    r"[A-Za-z_][A-Za-z0-9_]*\[[^\n\]]+\]"
-    r")$"
-)
-_QUOTED_LITERAL_RE = re.compile(r"(?P<quote>['\"])(?P<value>(?:\\.|(?!\1).)*)\1")
 _SAFE_LITERAL_VALUES = {
     "",
     "null",
@@ -105,11 +96,7 @@ class PlaintextKeyMaterialError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class SecretScanFinding:
-    """Redacted key-material finding.
-
-    The actual value is intentionally omitted so logs and test failures cannot
-    leak the key material that triggered the guard.
-    """
+    """Redacted key-material finding."""
 
     source: str
     reason: str
@@ -182,10 +169,23 @@ def _literal_atom_is_secret(value: str) -> bool:
     return _has_provider_token_shape(stripped) or _has_high_entropy_shape(stripped)
 
 
-def _contains_secret_literal_fragment(value: str) -> bool:
-    for match in _QUOTED_LITERAL_RE.finditer(value):
-        if _literal_atom_is_secret(match.group("value")):
-            return True
+def _is_safe_reference_expression(node: ast.AST) -> bool:
+    if isinstance(node, ast.Name):
+        return True
+    if isinstance(node, ast.Attribute):
+        return _is_safe_reference_expression(node.value)
+    if isinstance(node, ast.Subscript):
+        return _is_safe_reference_expression(node.value)
+    if isinstance(node, ast.Call):
+        return _is_safe_reference_expression(node.func)
+    return False
+
+
+def _expression_contains_secret_literal(node: ast.AST) -> bool:
+    for child in ast.walk(node):
+        if isinstance(child, ast.Constant) and isinstance(child.value, str):
+            if _literal_atom_is_secret(child.value):
+                return True
     return False
 
 
@@ -193,9 +193,13 @@ def _literal_secret_value(value: str) -> bool:
     stripped = value.strip().rstrip(",")
     if _literal_atom_is_secret(stripped):
         return True
-    if _SAFE_CODE_REFERENCE_RE.fullmatch(stripped):
-        return _contains_secret_literal_fragment(stripped)
-    return False
+    try:
+        parsed = ast.parse(stripped, mode="eval").body
+    except (SyntaxError, ValueError):
+        return False
+    if not _is_safe_reference_expression(parsed):
+        return False
+    return _expression_contains_secret_literal(parsed)
 
 
 def _scan_secret_field_assignments(
@@ -209,8 +213,7 @@ def _scan_secret_field_assignments(
         raw_name = match.group("name").strip("'\"")
         if _name_is_secret_metadata(raw_name):
             continue
-        raw_value = match.group("value")
-        if _literal_secret_value(raw_value):
+        if _literal_secret_value(match.group("value")):
             findings.append(
                 SecretScanFinding(
                     source=f"{source}:{line_number}",

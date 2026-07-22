@@ -113,19 +113,15 @@ class CanonicalPaperVerticalStartup:
 
     def dependency_reasons(self) -> tuple[str, ...]:
         reason = self.reason_code
-        integration_reason = self.integration_reason_code
         if reason is None:
             return ()
-        return tuple(
-            dict.fromkeys(
-                (
-                    reason,
-                    integration_reason,
-                    *tuple(f"missing_{name}" for name in self.missing_surfaces),
-                    *tuple(f"invalid_{name}" for name in self.invalid_surfaces),
-                )
-            )
-        )
+        reasons = [reason]
+        integration_reason = self.integration_reason_code
+        if integration_reason is not None:
+            reasons.append(integration_reason)
+        reasons.extend(f"missing_{name}" for name in self.missing_surfaces)
+        reasons.extend(f"invalid_{name}" for name in self.invalid_surfaces)
+        return tuple(dict.fromkeys(reasons))
 
     def to_dict(self) -> dict[str, Any]:
         return {

@@ -25,7 +25,7 @@ jobs:
             capture {sub(/^          /, ""); print}
           ' .github/workflows/pr04-bootstrap.yml > /tmp/pr04_materialize.py
           python /tmp/pr04_materialize.py
-      - name: Commit generated implementation
+      - name: Commit generated runtime implementation
         shell: bash
         run: |
           git config user.name "github-actions[bot]"
@@ -35,8 +35,7 @@ jobs:
             src/paper_shadow/repeated_service_pr04.py \
             tests/test_pr04_repeated_installed_paper_service.py \
             docs/pr04_repeated_installed_paper_service.md \
-            config/format_targets.txt \
-            .github/workflows/pr04-repeated-installed-paper-service.yml
+            config/format_targets.txt
           if ! git diff --cached --quiet; then
             git commit -m "PR-04: add repeated installed paper supervisor [pr04-bootstrap]"
             git push origin HEAD:pr-04-repeated-installed-paper-service

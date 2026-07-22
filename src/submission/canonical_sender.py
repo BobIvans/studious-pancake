@@ -16,6 +16,10 @@ import json
 
 from src.execution.models import ExecutionState
 
+from .jito_mev_policy import (
+    JitoMevProtectionPolicy,
+    evaluate_pr130_jito_mev_policy,
+)
 from .permit_bound import (
     AsyncJsonHttpTransport,
     ErrorDisposition,
@@ -41,6 +45,7 @@ JITO_INFLIGHT_STATUS_PATH = "/api/v1/getInflightBundleStatuses"
 JITO_BUNDLE_STATUS_PATH = "/api/v1/getBundleStatuses"
 JITO_TIP_ACCOUNTS_PATH = "/api/v1/getTipAccounts"
 SOLANA_SIGNATURE_STATUS_METHOD = "getSignatureStatuses"
+PR130_JITO_MEV_POLICY = JitoMevProtectionPolicy()
 
 
 class JitoCredentialMode(StrEnum):
@@ -213,6 +218,23 @@ class CanonicalSenderSettings:
             )
         return JitoUuidAuth.parse(self.jito_uuid)
 
+    def pr130_jito_mev_protection(self) -> dict[str, object] | None:
+        if not self.uses_jito:
+            return None
+        transaction_count = 1
+        if self.transport is TransportKind.JITO_BUNDLE:
+            transaction_count = 2
+        evaluation = evaluate_pr130_jito_mev_policy(
+            transport=self.transport,
+            transaction_count=transaction_count,
+            tip_transaction_index=0,
+            bundle_only=self.jito_bundle_only,
+            tip_account_static=True,
+            bundle_ack_treated_as_settlement=False,
+            policy=PR130_JITO_MEV_POLICY,
+        )
+        return evaluation.to_dict()
+
     def redacted_manifest(self) -> dict[str, object]:
         auth = self.jito_auth()
         return {
@@ -224,6 +246,7 @@ class CanonicalSenderSettings:
             "allowed_transports": [self.transport.value],
             "transport_fallback_allowed": False,
             "duplicate_submission_allowed": False,
+            "jito_mev_protection": self.pr130_jito_mev_protection(),
             "status_routes": [
                 {
                     "name": route.name,
@@ -374,6 +397,7 @@ __all__ = [
     "JITO_INFLIGHT_STATUS_PATH",
     "JITO_SINGLE_TRANSACTION_PATH",
     "JITO_TIP_ACCOUNTS_PATH",
+    "PR130_JITO_MEV_POLICY",
     "SOLANA_SIGNATURE_STATUS_METHOD",
     "CanonicalEndpointRoute",
     "CanonicalFollowup",

@@ -1,118 +1,192 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from datetime import UTC, datetime
+from collections.abc import Mapping
 import hashlib
-import json
 import os
 from pathlib import Path
-import time
-from typing import Any
+from typing import Any, Protocol
+import uuid
 
-from .redaction import REDACTION_VERSION
+from .archive import ArchiveCoordinator, ArchiveError, RemoteArchiveAck
+from .archive_segments import (
+    date_partition,
+    fsync_dir,
+    recover_orphan_segments,
+    remove_stale_temp_files,
+    secure_directory,
+    write_immutable_segment,
+)
+from .archive_types import PR198_EXPORT_TOOL_VERSION
+from .archive_verify import verify_archive
 from .store import ObservabilityStore
 
 EXPORT_TOOL_VERSION = "observability-export.v1"
 PR132_EXPORT_TOOL_VERSION = "observability-export.v2"
 
 
-def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, object]:
-    """Export pending full event envelopes into deterministic UTC/type partitions."""
+class ArchiveUploader(Protocol):
+    def upload(
+        self,
+        *,
+        segment_path: Path,
+        manifest: Mapping[str, object],
+    ) -> RemoteArchiveAck: ...
 
-    rows = store.pending_export_rows()
+
+def export_jsonl(
+    store: ObservabilityStore,
+    out_dir: str | Path,
+    *,
+    exporter_id: str | None = None,
+    lease_seconds: float = 30.0,
+    claim_limit: int = 10_000,
+    archive_uploader: ArchiveUploader | None = None,
+    require_remote_ack: bool = False,
+) -> dict[str, object]:
+    """Export pending envelopes as fenced immutable JSONL segments."""
+
+    if require_remote_ack and archive_uploader is None:
+        raise ArchiveError("ARCHIVE_REMOTE_UPLOADER_REQUIRED")
     out = Path(out_dir)
-    out.mkdir(parents=True, exist_ok=True)
-    if not rows:
-        return _legacy_noop_result(store, out)
+    secure_directory(out)
+    coordinator = ArchiveCoordinator(store)
+    coordinator.expire_claims()
+    remove_stale_temp_files(coordinator, out)
+    effective_id = exporter_id or f"exporter-{uuid.uuid4().hex}"
+    recovered = recover_orphan_segments(
+        coordinator,
+        out,
+        exporter_id=effective_id,
+        lease_seconds=lease_seconds,
+        remote_required=require_remote_ack,
+    )
+    _retry_remote_archives(coordinator, archive_uploader)
 
-    partitions: dict[tuple[str, str], list[Any]] = defaultdict(list)
+    claim = coordinator.claim_pending(
+        exporter_id=effective_id,
+        lease_seconds=lease_seconds,
+        limit=claim_limit,
+    )
+    if claim is None:
+        return _noop_result(store, out, coordinator, recovered)
+    rows = coordinator.rows_for_claim(claim)
+    if not rows:
+        raise ArchiveError("ARCHIVE_CLAIM_WITHOUT_ROWS")
+
+    partitions: dict[tuple[object, ...], list[Any]] = defaultdict(list)
     for row in rows:
-        key = (_date_partition(row["occurred_at_utc_ns"]), row["event_type"])
+        key = (
+            date_partition(int(row["occurred_at_utc_ns"])),
+            str(row["event_type"]),
+            str(row["database_epoch"]),
+            str(row["release_id"]),
+            str(row["policy_bundle_hash"]),
+            int(row["schema_version"]),
+            str(row["redaction_version"]),
+        )
         partitions[key].append(row)
 
     manifests: list[dict[str, object]] = []
-    completed_outbox_ids: list[int] = []
-    for (date_utc, event_type), partition_rows in sorted(partitions.items()):
-        part = out / f"date_utc={date_utc}" / f"event_type={event_type}"
-        part.mkdir(parents=True, exist_ok=True)
-        tmp = part / "events.jsonl.tmp"
-        final = part / "events.jsonl"
-
-        with open(tmp, "w", encoding="utf-8") as handle:
-            for row in partition_rows:
-                handle.write(row["payload_json"] + "\n")
-            handle.flush()
-            os.fsync(handle.fileno())
-
-        data = tmp.read_bytes()
-        checksum = hashlib.sha256(data).hexdigest()
-        os.replace(tmp, final)
-        _fsync_dir(part)
-
-        manifest_id = _manifest_id(
-            path=final,
-            checksum=checksum,
-            event_ids=[row["event_id"] for row in partition_rows],
-            tool=PR132_EXPORT_TOOL_VERSION,
+    for partition_rows in partitions.values():
+        ordered = sorted(
+            partition_rows,
+            key=lambda row: (
+                int(row["occurred_at_utc_ns"]),
+                str(row["event_id"]),
+                int(row["outbox_id"]),
+            ),
         )
-        manifest = {
-            "manifest_id": manifest_id,
-            "checksum": checksum,
-            "event_count": len(partition_rows),
-            "first_event_id": partition_rows[0]["event_id"],
-            "last_event_id": partition_rows[-1]["event_id"],
-            "path": str(final),
-            "date_utc": date_utc,
-            "event_type": event_type,
-        }
+        manifest = write_immutable_segment(
+            out,
+            claim=claim,
+            rows=ordered,
+            remote_required=require_remote_ack,
+        )
+        coordinator.commit_segment(claim=claim, manifest=manifest, rows=ordered)
         manifests.append(manifest)
-        completed_outbox_ids.extend(int(row["outbox_id"]) for row in partition_rows)
+        _upload_manifest(coordinator, archive_uploader, manifest)
 
-    legacy_manifest = _write_legacy_compat_jsonl(store, out)
-
-    completed_at = time.time()
-    store.db.execute("BEGIN IMMEDIATE")
-    try:
-        _insert_export_manifest(store, legacy_manifest, completed_at=completed_at)
-        store.mark_outbox_done(completed_outbox_ids, completed_at=completed_at)
-    except Exception:
-        store.db.execute("ROLLBACK")
-        raise
-    store.db.execute("COMMIT")
-
-    result: dict[str, object] = _legacy_result(
-        legacy_manifest,
-        event_count=len(rows),
-    )
+    legacy = _write_legacy_compat_jsonl(store, out)
+    result = _legacy_result(legacy, event_count=len(rows))
     result.update(
         {
             "manifest_count": len(manifests),
             "manifests": manifests,
-            "legacy_path": legacy_manifest["path"],
+            "recovered_manifest_count": len(recovered),
+            "recovered_manifests": recovered,
+            "legacy_path": legacy["path"],
+            "legacy_authoritative": False,
             "pr132_export_tool_version": PR132_EXPORT_TOOL_VERSION,
+            "pr198_export_tool_version": PR198_EXPORT_TOOL_VERSION,
+            "remote_ack_required": require_remote_ack,
+            "remote_ack_pending": len(coordinator.manifests_needing_remote_ack()),
         }
     )
     return result
 
 
-def _legacy_noop_result(
+def _retry_remote_archives(
+    coordinator: ArchiveCoordinator,
+    uploader: ArchiveUploader | None,
+) -> None:
+    if uploader is None:
+        return
+    for manifest in coordinator.manifests_needing_remote_ack():
+        _upload_manifest(coordinator, uploader, manifest)
+
+
+def _upload_manifest(
+    coordinator: ArchiveCoordinator,
+    uploader: ArchiveUploader | None,
+    manifest: Mapping[str, object],
+) -> None:
+    if uploader is None:
+        return
+    segment_id = str(manifest["segment_id"])
+    path_value = manifest.get("path") or manifest.get("partition_path")
+    if not path_value:
+        raise ArchiveError("ARCHIVE_SEGMENT_PATH_MISSING")
+    try:
+        ack = uploader.upload(
+            segment_path=Path(str(path_value)),
+            manifest=manifest,
+        )
+        coordinator.record_remote_ack(segment_id=segment_id, ack=ack)
+    except Exception as exc:
+        coordinator.record_remote_failure(
+            segment_id=segment_id,
+            reason=type(exc).__name__,
+        )
+        if bool(manifest.get("remote_required", False)):
+            raise ArchiveError("ARCHIVE_REMOTE_ACK_FAILED") from exc
+
+
+def _noop_result(
     store: ObservabilityStore,
     out: Path,
+    coordinator: ArchiveCoordinator,
+    recovered: list[dict[str, object]],
 ) -> dict[str, object]:
-    legacy_rows = _legacy_event_rows(store)
-    if not legacy_rows:
-        return {"event_count": 0}
-    legacy_manifest = _write_legacy_compat_jsonl(
-        store,
-        out,
-        legacy_rows=legacy_rows,
-    )
-    result = _legacy_result(legacy_manifest, event_count=0)
+    rows = _legacy_event_rows(store)
+    common = {
+        "event_count": 0,
+        "manifest_count": 0,
+        "manifests": [],
+        "recovered_manifest_count": len(recovered),
+        "recovered_manifests": recovered,
+        "remote_ack_pending": len(coordinator.manifests_needing_remote_ack()),
+        "legacy_authoritative": False,
+        "pr198_export_tool_version": PR198_EXPORT_TOOL_VERSION,
+    }
+    if not rows:
+        return common
+    legacy = _write_legacy_compat_jsonl(store, out, legacy_rows=rows)
+    result = _legacy_result(legacy, event_count=0)
+    result.update(common)
     result.update(
         {
-            "manifest_count": 0,
-            "manifests": [],
-            "legacy_path": legacy_manifest["path"],
+            "legacy_path": legacy["path"],
             "pr132_export_tool_version": PR132_EXPORT_TOOL_VERSION,
         }
     )
@@ -120,57 +194,18 @@ def _legacy_noop_result(
 
 
 def _legacy_result(
-    legacy_manifest: dict[str, object],
+    legacy: Mapping[str, object],
     *,
     event_count: int,
 ) -> dict[str, object]:
     return {
-        "manifest_id": legacy_manifest["manifest_id"],
-        "checksum": legacy_manifest["checksum"],
+        "manifest_id": legacy["manifest_id"],
+        "checksum": legacy["checksum"],
         "event_count": event_count,
-        "path": legacy_manifest["path"],
+        "path": legacy["path"],
         "export_tool_version": EXPORT_TOOL_VERSION,
+        "authoritative": False,
     }
-
-
-def _insert_export_manifest(
-    store: ObservabilityStore,
-    manifest: dict[str, object],
-    *,
-    completed_at: float,
-) -> None:
-    store.db.execute(
-        """
-        INSERT OR IGNORE INTO export_manifest(
-            manifest_id,
-            partition_path,
-            checksum,
-            event_count,
-            first_event_id,
-            last_event_id,
-            schema_version,
-            redaction_version,
-            created_at
-        )
-        VALUES(?,?,?,?,?,?,?,?,?)
-        """,
-        (
-            manifest["manifest_id"],
-            manifest["path"],
-            manifest["checksum"],
-            manifest["event_count"],
-            manifest["first_event_id"],
-            manifest["last_event_id"],
-            1,
-            REDACTION_VERSION,
-            completed_at,
-        ),
-    )
-
-
-def _date_partition(utc_ns: int) -> str:
-    seconds = utc_ns / 1_000_000_000
-    return datetime.fromtimestamp(seconds, tz=UTC).date().isoformat()
 
 
 def _legacy_event_rows(store: ObservabilityStore) -> list[Any]:
@@ -188,20 +223,21 @@ def _write_legacy_compat_jsonl(
     legacy_rows: list[Any] | None = None,
 ) -> dict[str, object]:
     rows = legacy_rows if legacy_rows is not None else _legacy_event_rows(store)
-    event_type = rows[0]["event_type"]
+    event_type = str(rows[0]["event_type"])
     part = out / "date_utc=1970-01-01" / f"event_type={event_type}"
-    part.mkdir(parents=True, exist_ok=True)
-    tmp = part / "events.jsonl.tmp"
+    secure_directory(part)
+    tmp = part / f"events.jsonl.{uuid.uuid4().hex}.tmp"
     final = part / "events.jsonl"
     with open(tmp, "w", encoding="utf-8") as handle:
+        os.chmod(tmp, 0o600)
         for row in rows:
-            handle.write(row["payload_json"] + "\n")
+            handle.write(str(row["payload_json"]) + "\n")
         handle.flush()
         os.fsync(handle.fileno())
     data = tmp.read_bytes()
     checksum = hashlib.sha256(data).hexdigest()
     os.replace(tmp, final)
-    _fsync_dir(part)
+    fsync_dir(part)
     return {
         "manifest_id": hashlib.sha256((str(final) + checksum).encode()).hexdigest(),
         "checksum": checksum,
@@ -211,43 +247,16 @@ def _write_legacy_compat_jsonl(
         "path": str(final),
         "date_utc": "1970-01-01",
         "event_type": event_type,
+        "authoritative": False,
+        "artifact_role": "legacy_compatibility_only",
     }
 
 
-def _manifest_id(
-    *,
-    path: Path,
-    checksum: str,
-    event_ids: list[str],
-    tool: str,
-) -> str:
-    return hashlib.sha256(
-        _canonical_json(
-            {
-                "partition_path": str(path),
-                "checksum": checksum,
-                "event_ids": event_ids,
-                "tool": tool,
-            }
-        ).encode("utf-8")
-    ).hexdigest()
-
-
-def _canonical_json(payload: object) -> str:
-    return json.dumps(
-        payload,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-    )
-
-
-def _fsync_dir(path: Path) -> None:
-    try:
-        fd = os.open(path, os.O_RDONLY)
-    except OSError:
-        return
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+__all__ = [
+    "ArchiveUploader",
+    "EXPORT_TOOL_VERSION",
+    "PR132_EXPORT_TOOL_VERSION",
+    "PR198_EXPORT_TOOL_VERSION",
+    "export_jsonl",
+    "verify_archive",
+]

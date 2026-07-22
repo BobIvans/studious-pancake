@@ -143,3 +143,9 @@ src/freshness/clock.py
 tests/test_pr127_dual_clock_freshness.py
 scripts/validate_deployment_sandbox.py
 tests/test_pr134_production_sandbox_policy.py
+scripts/validate_memory_confidentiality.py
+src/secure_cli.py
+src/security/runtime_memory.py
+tests/test_pr192_runtime_memory_confidentiality.py
+tests/test_pr192_secure_cli_and_deployment.py
+tests/test_pr192_secret_buffer.py

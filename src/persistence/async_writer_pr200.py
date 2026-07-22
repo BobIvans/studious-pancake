@@ -319,7 +319,9 @@ class AsyncPersistenceWriter:
                     "deadline_expired_before_admission",
                 )
                 return cast(PersistenceResult[T], result), None
-            if not self._has_capacity(operation):
+            if not self._has_capacity(
+                operation.work_class, operation.estimated_bytes
+            ):
                 self._queue_rejections += 1
                 result = self._not_submitted_result(
                     operation.operation_id, "queue_full"
@@ -348,15 +350,17 @@ class AsyncPersistenceWriter:
             )
             return None, promise
 
-    def _has_capacity(self, operation: PersistenceOperation[object]) -> bool:
+    def _has_capacity(
+        self, work_class: PersistenceWorkClass, estimated_bytes: int
+    ) -> bool:
         item_limit = self.config.max_queue_items
         byte_limit = self.config.max_queue_bytes
-        if not operation.work_class.proof_critical:
+        if not work_class.proof_critical:
             item_limit -= self.config.reserved_critical_items
             byte_limit -= self.config.reserved_critical_bytes
         return (
             self._queued_items + 1 <= item_limit
-            and self._queued_bytes + operation.estimated_bytes <= byte_limit
+            and self._queued_bytes + estimated_bytes <= byte_limit
         )
 
     def _run(self) -> None:
@@ -379,6 +383,7 @@ class AsyncPersistenceWriter:
                     and not operation.work_class.proof_critical
                 )
             started_ns = self._monotonic_ns()
+            result: PersistenceResult[object]
             if cancel_for_shutdown:
                 result = PersistenceResult(
                     operation_id=operation.operation_id,
@@ -450,7 +455,7 @@ class AsyncPersistenceWriter:
     def _not_submitted_result(
         self, operation_id: str, reason: str
     ) -> PersistenceResult[object]:
-        result = PersistenceResult(
+        result: PersistenceResult[object] = PersistenceResult(
             operation_id=operation_id,
             state=PersistenceState.NOT_SUBMITTED,
             reason=reason,

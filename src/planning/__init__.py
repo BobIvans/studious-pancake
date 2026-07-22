@@ -12,9 +12,26 @@ from .atomic_marginfi_jupiter import (
     CapitalReservationEvidence,
     VerifiedMarginfiProviderPort,
 )
+from .instruction_firewall import (
+    ASSOCIATED_TOKEN_PROGRAM_ID,
+    SPL_TOKEN_PROGRAM_ID,
+    SYSTEM_PROGRAM_ID,
+    TOKEN_2022_PROGRAM_ID,
+    InstructionFirewallError,
+    InstructionFirewallFinding,
+    InstructionFirewallPolicy,
+    InstructionFirewallReason,
+    InstructionRole,
+    validate_jupiter_instruction_bundle,
+    validate_raw_provider_instruction,
+)
 
 __all__ = [
+    "ASSOCIATED_TOKEN_PROGRAM_ID",
     "PLANNER_VERSION",
+    "SPL_TOKEN_PROGRAM_ID",
+    "SYSTEM_PROGRAM_ID",
+    "TOKEN_2022_PROGRAM_ID",
     "AtomicMarginfiJupiterPlanner",
     "AtomicPlannerError",
     "AtomicPlannerPolicy",
@@ -23,5 +40,12 @@ __all__ = [
     "AtomicPlannerRequest",
     "AtomicPlannerResult",
     "CapitalReservationEvidence",
+    "InstructionFirewallError",
+    "InstructionFirewallFinding",
+    "InstructionFirewallPolicy",
+    "InstructionFirewallReason",
+    "InstructionRole",
     "VerifiedMarginfiProviderPort",
+    "validate_jupiter_instruction_bundle",
+    "validate_raw_provider_instruction",
 ]

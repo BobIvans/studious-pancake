@@ -1,6 +1,8 @@
 from types import SimpleNamespace
 
 from src.paper_shadow.canonical_paper_vertical import (
+    LEGACY_MISSING_ATOMIC_DEPENDENCIES,
+    LEGACY_TYPE_SAFE_DEPENDENCY_REJECTED,
     PR_A_CANONICAL_VERTICAL_INVALID,
     PR_A_CANONICAL_VERTICAL_UNWIRED,
     build_canonical_paper_vertical_startup,
@@ -57,7 +59,8 @@ def test_default_paper_vertical_startup_is_named_blocked_state():
     startup = build_canonical_paper_vertical_startup(_config(), EmptyDependencies())
 
     assert startup.ready is False
-    assert startup.reason_code == PR_A_CANONICAL_VERTICAL_UNWIRED
+    assert startup.reason_code == LEGACY_MISSING_ATOMIC_DEPENDENCIES
+    assert startup.integration_reason_code == PR_A_CANONICAL_VERTICAL_UNWIRED
     assert startup.live_allowed is False
     assert startup.sender_reachable is False
     assert startup.signer_reachable is False
@@ -68,7 +71,8 @@ def test_invalid_dependencies_are_distinguished_from_missing_dependencies():
     startup = build_canonical_paper_vertical_startup(_config(), InvalidDependencies())
 
     assert startup.ready is False
-    assert startup.reason_code == PR_A_CANONICAL_VERTICAL_INVALID
+    assert startup.reason_code == LEGACY_TYPE_SAFE_DEPENDENCY_REJECTED
+    assert startup.integration_reason_code == PR_A_CANONICAL_VERTICAL_INVALID
     assert "invalid_atomic_stage_suite_type" in startup.dependency_reasons()
 
 
@@ -77,6 +81,7 @@ def test_complete_dependencies_are_ready_but_still_sender_free():
 
     assert startup.ready is True
     assert startup.reason_code is None
+    assert startup.integration_reason_code is None
     assert startup.dependency_reasons() == ()
     assert startup.to_dict()["runtime_mode"] == "paper"
     assert startup.to_dict()["live_allowed"] is False
@@ -88,6 +93,8 @@ def test_startup_dict_is_deterministic_and_bounded_to_required_surfaces():
     payload = startup.to_dict()
 
     assert payload["schema_version"] == "mega-pr-a.canonical-paper-vertical.startup.v1"
+    assert payload["reason_code"] == LEGACY_MISSING_ATOMIC_DEPENDENCIES
+    assert payload["integration_reason_code"] == PR_A_CANONICAL_VERTICAL_UNWIRED
     assert payload["required_surfaces"] == [
         "atomic_stage_suite",
         "exact_fee_workflow",

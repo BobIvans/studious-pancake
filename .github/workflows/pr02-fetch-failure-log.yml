@@ -4,6 +4,9 @@ on:
   push:
     branches: [roadmap/pr-02-unified-lifecycle-authority]
     paths: [.github/workflows/pr02-fetch-failure-log.yml]
+  pull_request:
+    branches: [main]
+    paths: [.github/workflows/pr02-fetch-failure-log.yml]
 
 permissions:
   actions: read

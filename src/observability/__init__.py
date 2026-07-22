@@ -1,5 +1,6 @@
 """PR-017/PR-042 append-only observability and health API."""
 
+from .authoritative_store_pr195 import AuthoritativeObservabilityStore
 from .events import (
     Environment,
     EventEnvelope,
@@ -25,6 +26,7 @@ from .reasons import REASON_REGISTRY, ReasonCode, classify_exception
 from .store import ObservabilityError, ObservabilityStore
 
 __all__ = [
+    "AuthoritativeObservabilityStore",
     "DependencyState",
     "DependencyStatus",
     "Environment",

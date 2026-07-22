@@ -185,7 +185,11 @@ def _registry(
             authority_policy=authority_policy,
             expected_upgrade_authority=expected_upgrade_authority,
         ),
-        "token-2022": _expectation("token-2022", _PROG_T22, admission="discovery-only"),
+        "token-2022": _expectation(
+            "token-2022",
+            _PROG_T22,
+            admission="discovery-only",
+        ),
         "associated-token-account": _expectation(
             "associated-token-account",
             _PROG_ATA,

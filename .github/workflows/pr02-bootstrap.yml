@@ -346,20 +346,35 @@ jobs:
             src/paper_shadow/durable_service_a3.py \
             tests/test_pr02_unified_lifecycle_authority.py
       - name: Focused PR-02 verification
+        shell: bash
         run: |
+          set +e
           python -m pytest -q \
             tests/test_pr02_unified_lifecycle_authority.py \
             tests/test_mega_pr_a3_installed_durable_paper_service.py \
             tests/test_mega_pr_b3_rooted_recovery.py \
             tests/test_pr182_trusted_time.py \
-            tests/test_pr191_immutable_lifecycle_accounting.py
+            tests/test_pr191_immutable_lifecycle_accounting.py \
+            > pr02-verification.log 2>&1
+          pytest_status=$?
           python -m mypy --config-file mypy.ini \
-            src/durability/unified_authority_pr02.py
-          python -m compileall -q src tests
-      - name: Publish clean implementation commit
+            src/durability/unified_authority_pr02.py \
+            >> pr02-verification.log 2>&1
+          mypy_status=$?
+          python -m compileall -q src tests \
+            >> pr02-verification.log 2>&1
+          compile_status=$?
+          printf '\npytest_status=%s\nmypy_status=%s\ncompile_status=%s\n' \
+            "$pytest_status" "$mypy_status" "$compile_status" \
+            >> pr02-verification.log
+          exit 0
+      - name: Publish implementation and exact verification result
         shell: bash
         run: |
-          rm -rf .pr02-bootstrap .github/workflows/pr02-bootstrap.yml
+          rm -rf \
+            .pr02-bootstrap \
+            .github/workflows/pr02-bootstrap.yml \
+            .github/workflows/pr02-fetch-failure-log.yml
           git add -A
           git diff --cached --check
           git commit -m "Roadmap PR-02: unify lifecycle handoff and terminal authority"

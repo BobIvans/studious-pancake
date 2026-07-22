@@ -21,12 +21,7 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
     if not rows:
-        return {
-            "event_count": 0,
-            "manifest_count": 0,
-            "manifests": [],
-            "export_tool_version": EXPORT_TOOL_VERSION,
-        }
+        return {"event_count": 0}
 
     partitions: dict[tuple[str, str], list[object]] = defaultdict(list)
     for row in rows:
@@ -43,7 +38,7 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
 
         with open(tmp, "w", encoding="utf-8") as handle:
             for row in partition_rows:
-                handle.write(_canonical_json(_event_envelope(row)) + "\n")
+                handle.write(row["payload_json"] + "\n")
             handle.flush()
             os.fsync(handle.fileno())
 
@@ -126,21 +121,6 @@ def export_jsonl(store: ObservabilityStore, out_dir: str | Path) -> dict[str, ob
 def _date_partition(utc_ns: int) -> str:
     seconds = utc_ns / 1_000_000_000
     return datetime.fromtimestamp(seconds, tz=UTC).date().isoformat()
-
-
-def _event_envelope(row: object) -> dict[str, object]:
-    payload = json.loads(row["payload_json"])
-    return {
-        **payload,
-        "schema_name": "pr132.observability-event-envelope.v1",
-        "payload": payload,
-        "payload_digest": row["payload_digest"],
-        "redaction_version": row["redaction_version"],
-        "redaction_hits": row["redaction_hits"],
-        "stored_event_id": row["event_id"],
-        "stored_sequence_no": row["sequence_no"],
-        "export_tool_version": EXPORT_TOOL_VERSION,
-    }
 
 
 def _canonical_json(payload: object) -> str:

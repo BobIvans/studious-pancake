@@ -146,3 +146,5 @@ tests/test_pr134_production_sandbox_policy.py
 src/observability/active_management.py
 src/release_gate/materialized_evidence.py
 tests/test_o1_management_evidence_pipeline.py
+src/authorization_replay_pr201.py
+tests/test_pr201_authorization_replay.py

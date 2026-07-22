@@ -1,12 +1,22 @@
-"""Shared asynchronous JSON transport for the PR-030 discovery plane."""
+"""Shared asynchronous JSON transport for the discovery plane.
+
+PR-185 hardens the active HTTPX boundary: endpoint URLs are canonicalized,
+credentials in URLs are forbidden, redirects and ambient environment trust are
+disabled, and TLS verification is constructed explicitly.
+"""
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+import hashlib
+import ipaddress
 import json
+from pathlib import Path
+import ssl
 from typing import Any, Mapping, Protocol
-from urllib.parse import urlsplit, urlunsplit
+from urllib.parse import SplitResult, urlsplit, urlunsplit
 
+import certifi
 import httpx
 
 _SECRET_HEADER_NAMES = frozenset(
@@ -44,6 +54,12 @@ class TransportPolicy:
     max_attempts: int = 2
     backoff_base_seconds: float = 0.1
     max_retry_after_seconds: float = 2.0
+    allowed_ports: tuple[int, ...] = (443,)
+    allow_url_query: bool = False
+    allow_private_ip_literals: bool = False
+    minimum_tls_version: ssl.TLSVersion = ssl.TLSVersion.TLSv1_2
+    ca_bundle_path: str | None = None
+    expected_ca_bundle_sha256: str | None = None
 
     def __post_init__(self) -> None:
         if self.max_attempts < 1:
@@ -57,6 +73,28 @@ class TransportPolicy:
         ):
             if getattr(self, field_name) <= 0:
                 raise ValueError(f"{field_name} must be positive")
+        if not self.allowed_ports or any(
+            isinstance(port, bool) or not 1 <= port <= 65_535
+            for port in self.allowed_ports
+        ):
+            raise ValueError("allowed_ports must contain valid TCP ports")
+        if self.minimum_tls_version < ssl.TLSVersion.TLSv1_2:
+            raise ValueError("minimum_tls_version must be TLS 1.2 or newer")
+        if self.expected_ca_bundle_sha256 is not None:
+            digest = self.expected_ca_bundle_sha256
+            if len(digest) != 64 or any(
+                char not in "0123456789abcdef" for char in digest
+            ):
+                raise ValueError("expected_ca_bundle_sha256 must be lowercase sha256")
+
+
+@dataclass(frozen=True)
+class TlsTrustEvidence:
+    ca_bundle_path: str
+    ca_bundle_sha256: str
+    minimum_tls_version: str
+    check_hostname: bool
+    verify_mode: str
 
 
 class SanitizedTransportError(RuntimeError):
@@ -74,9 +112,21 @@ class SanitizedTransportError(RuntimeError):
         self.retryable = retryable
 
 
+def _safe_netloc(parsed: SplitResult) -> str:
+    host = parsed.hostname or ""
+    display_host = f"[{host}]" if ":" in host and not host.startswith("[") else host
+    try:
+        port = parsed.port
+    except ValueError:
+        port = None
+    return f"{display_host}:{port}" if port is not None else display_host
+
+
 def sanitize_url(url: str) -> str:
+    """Return a credential-free URL suitable for logs and errors."""
+
     parsed = urlsplit(url)
-    return urlunsplit((parsed.scheme, parsed.netloc, parsed.path, "", ""))
+    return urlunsplit((parsed.scheme, _safe_netloc(parsed), parsed.path, "", ""))
 
 
 def redact_headers(headers: Mapping[str, str] | None) -> dict[str, str]:
@@ -84,6 +134,65 @@ def redact_headers(headers: Mapping[str, str] | None) -> dict[str, str]:
         key: ("<redacted>" if key.lower() in _SECRET_HEADER_NAMES else value)
         for key, value in (headers or {}).items()
     }
+
+
+def _canonical_hostname(host: str) -> str:
+    if not host or host != host.lower() or host.endswith("."):
+        raise SanitizedTransportError("provider host is not canonical")
+    try:
+        ascii_host = host.encode("idna").decode("ascii")
+    except UnicodeError as exc:
+        raise SanitizedTransportError("provider host IDNA encoding is invalid") from exc
+    if ascii_host != host:
+        raise SanitizedTransportError("provider host must use canonical ASCII IDNA")
+    return host
+
+
+def _reject_private_ip_literal(host: str, *, allowed: bool) -> None:
+    try:
+        address = ipaddress.ip_address(host)
+    except ValueError:
+        return
+    unsafe = (
+        address.is_private
+        or address.is_loopback
+        or address.is_link_local
+        or address.is_multicast
+        or address.is_reserved
+        or address.is_unspecified
+    )
+    if unsafe and not allowed:
+        raise SanitizedTransportError("private or special endpoint address is denied")
+
+
+def build_tls_context(
+    policy: TransportPolicy,
+) -> tuple[ssl.SSLContext, TlsTrustEvidence]:
+    """Build explicit verified TLS context and record trust-store identity."""
+
+    ca_bundle_path = policy.ca_bundle_path or certifi.where()
+    ca_path = Path(ca_bundle_path).resolve()
+    if not ca_path.is_file():
+        raise ValueError("CA bundle must be a regular file")
+    ca_digest = hashlib.sha256(ca_path.read_bytes()).hexdigest()
+    if (
+        policy.expected_ca_bundle_sha256 is not None
+        and ca_digest != policy.expected_ca_bundle_sha256
+    ):
+        raise ValueError("CA bundle digest does not match reviewed policy")
+
+    context = ssl.create_default_context(cafile=str(ca_path))
+    context.minimum_version = policy.minimum_tls_version
+    context.check_hostname = True
+    context.verify_mode = ssl.CERT_REQUIRED
+    evidence = TlsTrustEvidence(
+        ca_bundle_path=str(ca_path),
+        ca_bundle_sha256=ca_digest,
+        minimum_tls_version=context.minimum_version.name,
+        check_hostname=context.check_hostname,
+        verify_mode=ssl.VerifyMode(context.verify_mode).name,
+    )
+    return context, evidence
 
 
 class HttpxJsonTransport:
@@ -97,7 +206,11 @@ class HttpxJsonTransport:
         client: httpx.AsyncClient | None = None,
     ) -> None:
         self.policy = policy or TransportPolicy()
-        self.allowed_hosts = allowed_hosts
+        self.allowed_hosts = (
+            None
+            if allowed_hosts is None
+            else frozenset(_canonical_hostname(host) for host in allowed_hosts)
+        )
         self._owns_client = client is None
         timeout = httpx.Timeout(
             connect=self.policy.connect_timeout_seconds,
@@ -105,7 +218,14 @@ class HttpxJsonTransport:
             write=self.policy.write_timeout_seconds,
             pool=self.policy.pool_timeout_seconds,
         )
-        self._client = client or httpx.AsyncClient(timeout=timeout)
+        tls_context, tls_evidence = build_tls_context(self.policy)
+        self.tls_evidence = tls_evidence
+        self._client = client or httpx.AsyncClient(
+            timeout=timeout,
+            verify=tls_context,
+            trust_env=False,
+            follow_redirects=False,
+        )
 
     async def aclose(self) -> None:
         if self._owns_client:
@@ -123,13 +243,27 @@ class HttpxJsonTransport:
             raise SanitizedTransportError(
                 "provider transport requires an absolute HTTPS endpoint"
             )
-        if (
-            self.allowed_hosts is not None
-            and parsed.hostname not in self.allowed_hosts
-        ):
+        if parsed.username is not None or parsed.password is not None:
+            raise SanitizedTransportError("provider URL credentials are forbidden")
+        if parsed.fragment:
+            raise SanitizedTransportError("provider URL fragments are forbidden")
+        if parsed.query and not self.policy.allow_url_query:
             raise SanitizedTransportError(
-                f"provider host is not allowlisted: {parsed.hostname}"
+                "provider URL query is forbidden; use request params"
             )
+        host = _canonical_hostname(parsed.hostname)
+        try:
+            port = parsed.port or 443
+        except ValueError as exc:
+            raise SanitizedTransportError("provider URL port is invalid") from exc
+        if port not in self.policy.allowed_ports:
+            raise SanitizedTransportError("provider URL port is not approved")
+        _reject_private_ip_literal(
+            host,
+            allowed=self.policy.allow_private_ip_literals,
+        )
+        if self.allowed_hosts is not None and host not in self.allowed_hosts:
+            raise SanitizedTransportError(f"provider host is not allowlisted: {host}")
 
     @staticmethod
     def _retry_after_seconds(
@@ -220,3 +354,15 @@ class HttpxJsonTransport:
             return response.status_code, response_headers, payload
 
         raise AssertionError("transport retry loop exited unexpectedly")
+
+
+__all__ = [
+    "HttpxJsonTransport",
+    "SanitizedTransportError",
+    "TlsTrustEvidence",
+    "Transport",
+    "TransportPolicy",
+    "build_tls_context",
+    "redact_headers",
+    "sanitize_url",
+]

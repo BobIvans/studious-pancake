@@ -42,7 +42,9 @@ def _proc_status(tmp_path: Path, tracer_pid: int = 0) -> Path:
     return path
 
 
-def test_hardening_sets_and_verifies_core_dumpability_and_tracer(tmp_path: Path) -> None:
+def test_hardening_sets_and_verifies_core_dumpability_and_tracer(
+    tmp_path: Path,
+) -> None:
     backend = _Backend()
 
     status = harden_process_memory(

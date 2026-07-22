@@ -83,9 +83,7 @@ class JitoMevProtectionReadiness:
             "tip_transaction_index": self.tip_transaction_index,
             "bundle_only": self.bundle_only,
             "tip_account_static": self.tip_account_static,
-            "bundle_ack_treated_as_settlement": (
-                self.bundle_ack_treated_as_settlement
-            ),
+            "bundle_ack_treated_as_settlement": self.bundle_ack_treated_as_settlement,
             "blockers": list(self.blockers),
             "policy": self.policy.to_dict(),
         }

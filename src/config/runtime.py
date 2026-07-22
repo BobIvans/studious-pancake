@@ -4,9 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from enum import StrEnum
-import hashlib
 from importlib import resources
-import json
 import os
 from pathlib import Path
 import re
@@ -22,8 +20,8 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-import yaml
 
+from src.config.canonical import canonical_digest
 from src.config.chain_registry import (
     ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
     COMPUTE_BUDGET_PROGRAM_ADDRESS,
@@ -37,6 +35,7 @@ from src.config.chain_registry import (
     validate_pubkey,
 )
 from src.config.secret_resolver import SecretHandle, resolve_secret_reference
+from src.config.strict_yaml import StrictYamlError, loads_strict_yaml
 
 
 class ConfigurationLoadError(ValueError):
@@ -462,11 +461,22 @@ class RuntimeConfig(FrozenModel):
 
         return normalize(self)
 
+    def safe_display(self) -> dict[str, Any]:
+        return self.redacted_dict()
+
+    def identity_payload(self) -> dict[str, Any]:
+        return self._fingerprint_dict()
+
+    def runtime_materialization(self) -> dict[str, Any]:
+        return self._fingerprint_dict()
+
     def fingerprint(self) -> str:
-        payload = json.dumps(
-            self._fingerprint_dict(), sort_keys=True, separators=(",", ":")
-        ).encode("utf-8")
-        return hashlib.sha256(payload).hexdigest()
+        return canonical_digest(
+            self.identity_payload(),
+            domain="flashloan.runtime-config",
+            schema_version=self.schema_version,
+            environment=self.cluster.name,
+        )
 
 
 _ENV_BINDINGS: dict[str, tuple[str, str]] = {
@@ -568,24 +578,19 @@ def _parse_scalar(raw: str, kind: str, *, name: str) -> Any:
 
 def _read_yaml(path: Path) -> dict[str, Any]:
     try:
-        payload = yaml.safe_load(path.read_text(encoding="utf-8"))
-    except (OSError, yaml.YAMLError) as exc:
+        return loads_strict_yaml(path.read_text(encoding="utf-8"))
+    except (OSError, StrictYamlError) as exc:
         raise ConfigurationLoadError(
             f"cannot read configuration file {path}: {exc}"
         ) from exc
-    if payload is None:
-        return {}
-    if not isinstance(payload, dict):
-        raise ConfigurationLoadError("configuration root must be a mapping")
-    return payload
 
 
 def _default_payload() -> dict[str, Any]:
     resource = resources.files("src.resources").joinpath("runtime.default.yaml")
-    payload = yaml.safe_load(resource.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ConfigurationLoadError("packaged runtime defaults are invalid")
-    return payload
+    try:
+        return loads_strict_yaml(resource.read_text(encoding="utf-8"))
+    except StrictYamlError as exc:
+        raise ConfigurationLoadError("packaged runtime defaults are invalid") from exc
 
 
 def load_runtime_config(

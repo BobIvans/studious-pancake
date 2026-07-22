@@ -1,20 +1,23 @@
-"""PR-176 hermetic qualification contract.
+"""PR-176/PR-186 hermetic qualification plan contract.
 
-Pure, non-mutating model for release qualification profiles, dependency closure
-and deterministic qualification manifests.
+The plan is descriptive only.  Dependency closure is based on the selected
+interpreter's installed distributions and import probes, not package names found
+in requirements files.  Only an executed PR-186 verdict may authorize a release
+claim.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
+from importlib import metadata, util
 import json
 import platform
 from pathlib import Path
 import sys
 from typing import Any, Iterable, Mapping, Sequence
 
-PR176_SCHEMA = "pr176.hermetic-qualification.v1"
+PR176_SCHEMA = "pr176.hermetic-qualification.v2"
 MANDATORY_PROFILES = ("core", "paper")
 REQUIRED_COLLECTION_PACKAGES = ("aiolimiter", "pytest", "solders")
 
@@ -64,19 +67,42 @@ class DependencyClosure:
     present_packages: tuple[str, ...]
     missing_packages: tuple[str, ...]
     global_site_packages: bool = False
+    declared_packages: tuple[str, ...] = ()
+    undeclared_packages: tuple[str, ...] = ()
+    installed_versions: Mapping[str, str] = None  # type: ignore[assignment]
+    importable_packages: tuple[str, ...] = ()
+    non_importable_packages: tuple[str, ...] = ()
+    interpreter_executable: str = sys.executable
+
+    def __post_init__(self) -> None:
+        if self.installed_versions is None:
+            object.__setattr__(self, "installed_versions", {})
+        object.__setattr__(self, "installed_versions", dict(self.installed_versions))
 
     @property
     def complete(self) -> bool:
-        return not self.missing_packages and not self.global_site_packages
+        return bool(
+            not self.missing_packages
+            and not self.undeclared_packages
+            and not self.non_importable_packages
+            and not self.global_site_packages
+        )
 
     def to_dict(self) -> dict[str, Any]:
         return {
             "complete": self.complete,
             "lock_hashes": dict(sorted(self.lock_hashes.items())),
             "required_packages": list(self.required_packages),
+            "declared_packages": list(self.declared_packages),
+            "undeclared_packages": list(self.undeclared_packages),
             "present_packages": list(self.present_packages),
             "missing_packages": list(self.missing_packages),
+            "installed_versions": dict(sorted(self.installed_versions.items())),
+            "importable_packages": list(self.importable_packages),
+            "non_importable_packages": list(self.non_importable_packages),
             "global_site_packages": self.global_site_packages,
+            "interpreter_executable": self.interpreter_executable,
+            "evidence_kind": "installed-distribution-and-import-probe",
         }
 
 
@@ -108,16 +134,17 @@ class QualificationPlan:
 
     @property
     def release_claim_allowed(self) -> bool:
-        return self.dependency_closure.complete and all(
-            profile.isolated_collection for profile in self.profiles
-        )
+        """Plans never authorize release claims; retained for safe compatibility."""
+        return False
 
     def to_manifest(self, *, source_digest: str, execution_mode: str) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "schema_version": self.schema_version,
             "execution_mode": execution_mode,
+            "qualification_state": "planned_not_executed",
             "python_requirement": self.python_requirement,
             "python_version": ".".join(map(str, sys.version_info[:3])),
+            "interpreter_executable": str(Path(sys.executable).resolve()),
             "platform": {
                 "system": platform.system(),
                 "machine": platform.machine(),
@@ -132,13 +159,21 @@ class QualificationPlan:
             "mandatory_profiles": list(self.mandatory_profiles),
             "dependency_closure": self.dependency_closure.to_dict(),
             "profiles": [profile.to_dict() for profile in self.profiles],
-            "release_claim_allowed": self.release_claim_allowed,
+            "release_claim_allowed": False,
+            "qualified": False,
         }
         payload["manifest_hash"] = canonical_hash(payload)
         return payload
 
 
-def build_default_qualification_plan(root: Path) -> QualificationPlan:
+def build_default_qualification_plan(
+    root: Path,
+    *,
+    installed_distributions: Mapping[str, str] | None = None,
+    importable_packages: Iterable[str] | None = None,
+    global_site_packages: bool = False,
+    interpreter_executable: str | None = None,
+) -> QualificationPlan:
     closure = inspect_dependency_closure(
         root,
         lock_paths=(
@@ -147,13 +182,18 @@ def build_default_qualification_plan(root: Path) -> QualificationPlan:
             root / "pyproject.toml",
         ),
         required_packages=REQUIRED_COLLECTION_PACKAGES,
+        installed_distributions=installed_distributions,
+        importable_packages=importable_packages,
+        global_site_packages=global_site_packages,
+        interpreter_executable=interpreter_executable,
     )
+    python = interpreter_executable or sys.executable
     return QualificationPlan(
         dependency_closure=closure,
         profiles=(
             QualificationProfile(
                 "core",
-                ("python", "scripts/verify_repo.py", "--skip-dependency-audit"),
+                (python, "scripts/verify_repo.py", "--skip-dependency-audit"),
                 True,
                 "core package, quality, security and offline tests",
                 REQUIRED_COLLECTION_PACKAGES,
@@ -161,7 +201,7 @@ def build_default_qualification_plan(root: Path) -> QualificationPlan:
             QualificationProfile(
                 "paper",
                 (
-                    "python",
+                    python,
                     "-m",
                     "pytest",
                     "-m",
@@ -176,7 +216,7 @@ def build_default_qualification_plan(root: Path) -> QualificationPlan:
             ),
             QualificationProfile(
                 "live-gated",
-                ("python", "-m", "pytest", "-m", "live_gated", "--disable-socket", "-q"),
+                (python, "-m", "pytest", "-m", "live_gated", "--disable-socket", "-q"),
                 False,
                 "gated live-control tests without submission",
                 ("pytest",),
@@ -184,7 +224,7 @@ def build_default_qualification_plan(root: Path) -> QualificationPlan:
             ),
             QualificationProfile(
                 "plugins",
-                ("python", "-m", "pytest", "tests/plugins", "-q"),
+                (python, "-m", "pytest", "tests/plugins", "-q"),
                 False,
                 "optional plugin qualification isolated from core",
                 ("pytest",),
@@ -192,7 +232,7 @@ def build_default_qualification_plan(root: Path) -> QualificationPlan:
             ),
             QualificationProfile(
                 "legacy-quarantine",
-                ("python", "-m", "pytest", "tests/legacy", "-q"),
+                (python, "-m", "pytest", "tests/legacy", "-q"),
                 False,
                 "legacy quarantine regression only",
                 ("pytest",),
@@ -200,7 +240,7 @@ def build_default_qualification_plan(root: Path) -> QualificationPlan:
             ),
             QualificationProfile(
                 "all-development",
-                ("python", "-m", "pytest", "-q"),
+                (python, "-m", "pytest", "-q"),
                 False,
                 "developer full suite, not release green by itself",
                 REQUIRED_COLLECTION_PACKAGES,
@@ -216,9 +256,12 @@ def inspect_dependency_closure(
     lock_paths: Sequence[Path],
     required_packages: Iterable[str],
     global_site_packages: bool = False,
+    installed_distributions: Mapping[str, str] | None = None,
+    importable_packages: Iterable[str] | None = None,
+    interpreter_executable: str | None = None,
 ) -> DependencyClosure:
     lock_hashes: dict[str, str] = {}
-    present: set[str] = set()
+    declared: set[str] = set()
     for path in lock_paths:
         key = _relative_name(root, path)
         if not path.exists():
@@ -226,22 +269,77 @@ def inspect_dependency_closure(
             continue
         text = path.read_text(encoding="utf-8")
         lock_hashes[key] = sha256_text(text)
-        present.update(parse_requirement_names(text))
+        declared.update(parse_requirement_names(text))
+
     required = tuple(sorted(set(map(normalise_package_name, required_packages))))
+    versions = (
+        _installed_versions(required)
+        if installed_distributions is None
+        else {
+            normalise_package_name(name): str(version)
+            for name, version in installed_distributions.items()
+        }
+    )
+    importable = (
+        _importable_packages(required)
+        if importable_packages is None
+        else set(map(normalise_package_name, importable_packages))
+    )
+    present = set(required).intersection(versions)
+    missing = set(required).difference(present)
+    undeclared = set(required).difference(declared)
+    non_importable = set(required).difference(importable)
     return DependencyClosure(
         lock_hashes=lock_hashes,
         required_packages=required,
-        present_packages=tuple(sorted(set(required).intersection(present))),
-        missing_packages=tuple(sorted(set(required).difference(present))),
+        declared_packages=tuple(sorted(declared)),
+        undeclared_packages=tuple(sorted(undeclared)),
+        present_packages=tuple(sorted(present)),
+        missing_packages=tuple(sorted(missing)),
+        installed_versions={name: versions[name] for name in sorted(present)},
+        importable_packages=tuple(sorted(set(required).intersection(importable))),
+        non_importable_packages=tuple(sorted(non_importable)),
         global_site_packages=global_site_packages,
+        interpreter_executable=str(Path(interpreter_executable or sys.executable).resolve()),
     )
+
+
+def _installed_versions(required: Sequence[str]) -> dict[str, str]:
+    output: dict[str, str] = {}
+    for name in required:
+        try:
+            output[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            continue
+    return output
+
+
+def _importable_packages(required: Sequence[str]) -> set[str]:
+    output: set[str] = set()
+    for name in required:
+        module_name = name.replace("-", "_")
+        try:
+            found = util.find_spec(module_name)
+        except (ImportError, AttributeError, ValueError):
+            found = None
+        if found is not None:
+            output.add(name)
+    return output
 
 
 def canonical_hash(value: Mapping[str, Any]) -> str:
     data = dict(value)
     data.pop("manifest_hash", None)
+    data.pop("run_hash", None)
+    data.pop("verdict_hash", None)
     return hashlib.sha256(
-        json.dumps(data, sort_keys=True, separators=(",", ":")).encode("utf-8")
+        json.dumps(
+            data,
+            sort_keys=True,
+            separators=(",", ":"),
+            ensure_ascii=True,
+            allow_nan=False,
+        ).encode("utf-8")
     ).hexdigest()
 
 
@@ -258,7 +356,9 @@ def parse_requirement_names(text: str) -> set[str]:
         for sep in ("==", ">=", "<=", "~=", "!=", ">", "<", ";", "["):
             if sep in line:
                 line = line.split(sep, 1)[0]
-        names.add(normalise_package_name(line.strip()))
+        normalized = normalise_package_name(line.strip())
+        if normalized:
+            names.add(normalized)
     return names
 
 

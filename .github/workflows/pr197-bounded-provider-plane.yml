@@ -1,0 +1,44 @@
+name: PR-197 bounded provider plane
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/data_plane/bounded_provider_plane_pr197.py"
+      - "tests/test_pr197_bounded_provider_plane.py"
+      - "docs/pr197_bounded_data_provider_plane.md"
+      - ".github/workflows/pr197-bounded-provider-plane.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-verification:
+    runs-on: ubuntu-24.04
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --quiet --requirement requirements.txt
+      - run: python -m pip install --quiet --requirement requirements-dev.txt
+      - run: python -m pip install --quiet --no-deps .
+      - name: Static type gate
+        run: python -m mypy --config-file mypy.ini src/data_plane/bounded_provider_plane_pr197.py
+      - name: Focused PR-197 regressions
+        run: |
+          python -m pytest -q tests/test_pr197_bounded_provider_plane.py \
+            --disable-socket --allow-unix-socket
+      - name: Compile
+        run: |
+          python -m py_compile \
+            src/data_plane/bounded_provider_plane_pr197.py \
+            tests/test_pr197_bounded_provider_plane.py

@@ -1,8 +1,10 @@
-"""Durable lifecycle primitives and the canonical roadmap PR-02 authority.
+"""Durable lifecycle primitives and canonical roadmap authorities.
 
-PR-182 keeps the PR-041 state machine as the lifecycle truth. PR-02 extends that
-same SQLite product with provider/cycle intent, atomic terminal effects, and one
-split producer/delivery outbox authority.
+PR-182 keeps the PR-041 state machine as lifecycle truth. PR-02 extends that
+SQLite product with provider/cycle intent, atomic terminal effects, and one
+split producer/delivery outbox authority. PR-196 adds the sender-free runtime
+kernel facade for deterministic identity, lease/fencing, recovery and bounded
+supervision.
 """
 
 from .lifecycle import (
@@ -23,10 +25,26 @@ from .lifecycle import (
     ReservationState,
     UnsupportedTopologyError,
 )
-from .trusted_time_store import (
-    ClockSafeDurableLifecycleStore,
-    DurableLifecycleStore,
-    PR182_DURABLE_TIME_SCHEMA,
+from .runtime_kernel_pr196 import (
+    PR196AttemptIdentity,
+    PR196AttemptRecord,
+    PR196BackupManifest,
+    PR196ContinuousSupervisor,
+    PR196CycleReport,
+    PR196FenceLost,
+    PR196KernelError,
+    PR196Lease,
+    PR196LeaseBusy,
+    PR196OutboxEvent,
+    PR196OutboxState,
+    PR196RecoveryAction,
+    PR196RecoveryItem,
+    PR196ReplayConflict,
+    PR196RuntimeKernelStore,
+    PR196State,
+    PR196SupervisorConfig,
+    PR196SupervisorState,
+    PR196SupervisorSummary,
 )
 from .single_truth import (
     PR121_BLOCKED_STATE,
@@ -45,6 +63,11 @@ from .single_truth import (
     SingleTruthReadinessState,
     assert_single_durable_lifecycle_truth,
     evaluate_single_durable_lifecycle_truth,
+)
+from .trusted_time_store import (
+    ClockSafeDurableLifecycleStore,
+    DurableLifecycleStore,
+    PR182_DURABLE_TIME_SCHEMA,
 )
 from .unified_authority_pr02 import (
     AuthorityFence,
@@ -84,6 +107,25 @@ __all__ = [
     "PR121_RESULT_SCHEMA_VERSION",
     "PR121_SCHEMA_VERSION",
     "PR182_DURABLE_TIME_SCHEMA",
+    "PR196AttemptIdentity",
+    "PR196AttemptRecord",
+    "PR196BackupManifest",
+    "PR196ContinuousSupervisor",
+    "PR196CycleReport",
+    "PR196FenceLost",
+    "PR196KernelError",
+    "PR196Lease",
+    "PR196LeaseBusy",
+    "PR196OutboxEvent",
+    "PR196OutboxState",
+    "PR196RecoveryAction",
+    "PR196RecoveryItem",
+    "PR196ReplayConflict",
+    "PR196RuntimeKernelStore",
+    "PR196State",
+    "PR196SupervisorConfig",
+    "PR196SupervisorState",
+    "PR196SupervisorSummary",
     "REQUIRED_BACKUP_FEATURES",
     "REQUIRED_FAILURE_INJECTIONS",
     "REQUIRED_OUTBOX_FEATURES",

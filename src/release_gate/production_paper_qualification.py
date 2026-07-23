@@ -244,7 +244,7 @@ class SoakQualificationEvidence:
 
     def __post_init__(self) -> None:
         _non_negative_int(self.duration_hours, "duration_hours")
-        for value, name in (
+        for digest, digest_name in (
             (self.release_wheel_sha256, "release_wheel_sha256"),
             (self.release_image_sha256, "release_image_sha256"),
             (self.release_config_sha256, "release_config_sha256"),
@@ -253,14 +253,14 @@ class SoakQualificationEvidence:
                 "release_provider_contracts_sha256",
             ),
         ):
-            _sha256(value, name)
-        for value, name in (
+            _sha256(digest, digest_name)
+        for count, count_name in (
             (self.synthetic_contamination_count, "synthetic_contamination_count"),
             (self.lost_intents, "lost_intents"),
             (self.duplicate_intents, "duplicate_intents"),
             (self.unexplained_terminal_states, "unexplained_terminal_states"),
         ):
-            _non_negative_int(value, name)
+            _non_negative_int(count, count_name)
         if not isinstance(self.required_chaos_scenarios_completed, tuple):
             raise QualificationEvidenceError(
                 "required_chaos_scenarios_completed must be a tuple"

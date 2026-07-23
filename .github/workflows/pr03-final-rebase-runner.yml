@@ -1,0 +1,40 @@
+name: Final clean rebase for roadmap PR-03
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  rebase:
+    if: github.head_ref == 'roadmap-pr-03-final-rebase-runner'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap-pr-03-rooted-provider-admission
+          fetch-depth: 0
+      - name: Rebuild feature branch on current main
+        shell: bash
+        run: |
+          set -euxo pipefail
+          work=/tmp/pr03-final
+          mkdir -p "$work/src/providers" "$work/tests" "$work/docs"
+          cp src/providers/rooted_ingestion_pr03.py "$work/src/providers/"
+          cp tests/test_rooted_ingestion_pr03.py "$work/tests/"
+          cp docs/roadmap_pr03_rooted_provider_admission.md "$work/docs/"
+          git fetch origin main
+          git reset --hard origin/main
+          mkdir -p src/providers tests docs
+          cp "$work/src/providers/rooted_ingestion_pr03.py" src/providers/
+          cp "$work/tests/test_rooted_ingestion_pr03.py" tests/
+          cp "$work/docs/roadmap_pr03_rooted_provider_admission.md" docs/
+          grep -qxF 'src/providers/rooted_ingestion_pr03.py' config/format_targets.txt || echo 'src/providers/rooted_ingestion_pr03.py' >> config/format_targets.txt
+          grep -qxF 'tests/test_rooted_ingestion_pr03.py' config/format_targets.txt || echo 'tests/test_rooted_ingestion_pr03.py' >> config/format_targets.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py docs/roadmap_pr03_rooted_provider_admission.md config/format_targets.txt
+          git commit -m 'Roadmap PR-03: rooted provider admission vertical'
+          git push --force-with-lease origin HEAD:roadmap-pr-03-rooted-provider-admission

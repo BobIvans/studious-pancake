@@ -281,7 +281,10 @@ async def test_helius_sqlite_lock_keeps_heartbeat_schedulable(
             webhook_id="helius-mainnet",
             cluster_genesis="mainnet-genesis",
             limits=DeliveryLimits(
-                delivery_deadline_ms=80,
+                # This regression isolates event-loop schedulability while
+                # SQLite is locked. Timeout behavior is covered above, so keep
+                # this above cold SQLite schema/WAL migration jitter in CI.
+                delivery_deadline_ms=800,
                 sqlite_busy_timeout_ms=60,
             ),
         )

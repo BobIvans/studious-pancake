@@ -206,7 +206,6 @@ def evaluate_mpr30_evidence(evidence: MPR30Evidence) -> MPR30Report:
     )
 
 
-
 def _validate_hashes(evidence: MPR30Evidence, blockers: list[MPR30Violation]) -> None:
     for field_name in (
         "signer_policy_hash",
@@ -231,12 +230,10 @@ def _validate_hashes(evidence: MPR30Evidence, blockers: list[MPR30Violation]) ->
             _add(blockers, "MPR30_BAD_PERMIT_HASH", f"{field_name} must be strict sha256")
 
 
-
 def _validate_findings(findings_covered: Sequence[str], blockers: list[MPR30Violation]) -> None:
     missing = [finding for finding in REQUIRED_FINDINGS if finding not in set(findings_covered)]
     if missing:
         _add(blockers, "MPR30_FINDINGS_INCOMPLETE", "missing: " + ", ".join(missing))
-
 
 
 def _validate_runtime_surface(evidence: MPR30Evidence, blockers: list[MPR30Violation]) -> None:
@@ -252,7 +249,6 @@ def _validate_runtime_surface(evidence: MPR30Evidence, blockers: list[MPR30Viola
         _add(blockers, "MPR30_SIGNER_REQUESTED", "signer remains disabled by default")
 
 
-
 def _validate_permit_window(permit: MPR30PermitEnvelope, blockers: list[MPR30Violation]) -> None:
     issued = permit.issued_at_ns
     not_before = permit.not_before_ns
@@ -262,8 +258,8 @@ def _validate_permit_window(permit: MPR30PermitEnvelope, blockers: list[MPR30Vio
         return
     if not_before < issued:
         _add(blockers, "MPR30_NOT_BEFORE_REGRESSION", "not-before cannot be earlier than issued_at")
-    if expires <= not_before:
-        _add(blockers, "MPR30_BAD_EXPIRY_WINDOW", "expires_at must be later than not_before")
+    if expires <= not_before or expires <= issued:
+        _add(blockers, "MPR30_BAD_EXPIRY_WINDOW", "expires_at must be later than issued_at and not_before")
     if permit.revocation_generation < 1:
         _add(blockers, "MPR30_BAD_REVOCATION_GENERATION", "revocation generation must be positive")
     if not permit.canonical_signed_envelope:
@@ -274,7 +270,6 @@ def _validate_permit_window(permit: MPR30PermitEnvelope, blockers: list[MPR30Vio
         _add(blockers, "MPR30_TRUSTED_TIME_NOT_FRESH", "permit must use fresh trusted time")
     if not permit.reviewer_principal_id.strip():
         _add(blockers, "MPR30_REVIEWER_MISSING", "reviewer principal is required")
-
 
 
 def _validate_flag_group(
@@ -288,7 +283,6 @@ def _validate_flag_group(
             _add(blockers, code, f"{field_name} is required")
 
 
-
 def _dedupe(blockers: Iterable[MPR30Violation]) -> Iterable[MPR30Violation]:
     seen: set[tuple[str, str]] = set()
     for blocker in blockers:
@@ -298,15 +292,12 @@ def _dedupe(blockers: Iterable[MPR30Violation]) -> Iterable[MPR30Violation]:
             yield blocker
 
 
-
 def _add(blockers: list[MPR30Violation], code: str, message: str) -> None:
     blockers.append(MPR30Violation(code=code, message=message))
 
 
-
 def _is_hash(value: str) -> bool:
     return bool(HEX_64_RE.fullmatch(value))
-
 
 
 def _stable_hash(evidence: MPR30Evidence) -> str:

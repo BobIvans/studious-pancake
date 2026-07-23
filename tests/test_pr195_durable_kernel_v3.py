@@ -29,7 +29,7 @@ def test_pr195_default_claim_is_fail_closed() -> None:
     assert "ATOMIC_WALLET_CAPITAL_AUTHORITY:MISSING_PROOF" in report.reason_codes
 
 
-def test_pr195_complete_sender_free_claim_is_ready_and_deterministic() -> None:
+def test_pr195_complete_claim_is_non_authoritative_and_deterministic() -> None:
     claim = complete_offline_claim(
         evidence_refs=("tests/pr195/kernel/webhook-capital-replay.json",)
     )
@@ -37,8 +37,8 @@ def test_pr195_complete_sender_free_claim_is_ready_and_deterministic() -> None:
     first = evaluate_pr195_durable_kernel(claim)
     second = evaluate_pr195_durable_kernel(claim)
 
-    assert first.ready
-    assert first.reason_codes == ()
+    assert not first.ready
+    assert first.reason_codes == ("PR206_AUTHORITATIVE_STORE_EVIDENCE_REQUIRED",)
     assert first.claim_hash == second.claim_hash
     assert {item.requirement_id for item in first.requirement_results} == {
         item.requirement_id for item in REQUIREMENTS
@@ -127,9 +127,7 @@ def test_pr195_mapping_input_is_strict() -> None:
         PR195DurableKernelClaim.from_mapping({"surprise": True})
 
     with pytest.raises(PR195DurableKernelError, match="must be boolean"):
-        PR195DurableKernelClaim.from_mapping(
-            {"one_database_authority": "true"}
-        )
+        PR195DurableKernelClaim.from_mapping({"one_database_authority": "true"})
 
     with pytest.raises(PR195DurableKernelError, match="string list"):
         PR195DurableKernelClaim.from_mapping({"evidence_refs": "one-file"})
@@ -159,7 +157,7 @@ def test_pr195_render_report_json_is_stable_json() -> None:
     )
     payload = json.loads(rendered)
 
-    assert payload["ready"] is True
+    assert payload["ready"] is False
     assert payload["schema_version"] == SCHEMA_VERSION
-    assert payload["reason_codes"] == []
+    assert payload["reason_codes"] == ["PR206_AUTHORITATIVE_STORE_EVIDENCE_REQUIRED"]
     assert len(payload["claim_hash"]) == 64

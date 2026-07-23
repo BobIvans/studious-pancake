@@ -66,8 +66,16 @@ jobs:
                           raise ProviderVerificationError(
                               "PR03_STORED_EVIDENCE_BINDING_MISMATCH"
                           )
-                      issued_at_ns = int(payload.get("issued_at_ns", -1))
-                      expires_at_ns = int(payload.get("expires_at_ns", -1))
+                      issued_at_raw = payload.get("issued_at_ns")
+                      expires_at_raw = payload.get("expires_at_ns")
+                      if not isinstance(issued_at_raw, int) or not isinstance(
+                          expires_at_raw, int
+                      ):
+                          raise ProviderVerificationError(
+                              "PR03_STORED_EVIDENCE_TIME_INVALID"
+                          )
+                      issued_at_ns = issued_at_raw
+                      expires_at_ns = expires_at_raw
                       now_ns = int(self._now_ns())
                       if (
                           issued_at_ns < 0
@@ -139,13 +147,16 @@ jobs:
           '''
           tests_path.write_text(tests)
           PY
-      - name: Format and verify
+      - name: Black
         run: |
           python -m black src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
           python -m black --check src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
-          python -m mypy --config-file mypy.ini src/providers/rooted_ingestion_pr03.py
-          python -m pytest tests/test_rooted_ingestion_pr03.py -q --disable-socket --allow-unix-socket
-          python -m compileall -q src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
+      - name: Mypy
+        run: python -m mypy --config-file mypy.ini src/providers/rooted_ingestion_pr03.py
+      - name: Focused tests
+        run: python -m pytest tests/test_rooted_ingestion_pr03.py -q --disable-socket --allow-unix-socket
+      - name: Compile
+        run: python -m compileall -q src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
       - name: Commit verified changes
         run: |
           git config user.name 'github-actions[bot]'

@@ -42,8 +42,13 @@ The validator maps Pass 7 PR-217 findings into deterministic blockers:
   evidence model and deterministic report.
 - `tests/test_pr217_installed_behavioral_quality_gate.py` covers the happy path
   and fail-closed blockers from the audit.
-- `.github/workflows/pr217-installed-behavioral-quality-gate.yml` runs focused
-  compile and pytest checks.
+
+## Why no focused workflow
+
+This PR deliberately does not add a new workflow file. The PR-217 roadmap owns
+quality/coverage/format workflow reform, and the current global CI remains the
+source of truth for repository compatibility. Local focused verification was
+performed before opening the PR.
 
 ## Non-goals
 

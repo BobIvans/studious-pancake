@@ -1,0 +1,43 @@
+name: NEW-MEGA-PR-01 canonical paper retirement
+
+on:
+  pull_request:
+    paths:
+      - "src/canonical_paper/model.py"
+      - "src/canonical_paper/store.py"
+      - "src/canonical_paper/platform.py"
+      - "src/new_mega_pr_01_retirement_gate.py"
+      - "tests/test_new_mega_pr_01_canonical_paper_retirement.py"
+      - "docs/roadmap/new_mega_pr_01_canonical_paper_retirement.md"
+      - ".github/workflows/new-mega-pr-01-canonical-paper-retirement.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-paper-retirement:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: "3.13"
+      - name: Install pytest
+        run: python -m pip install pytest==9.0.2
+      - name: Compile NEW-MEGA-PR-01 slice
+        run: |
+          python -m py_compile \
+            src/canonical_paper/model.py \
+            src/canonical_paper/store.py \
+            src/canonical_paper/platform.py \
+            src/new_mega_pr_01_retirement_gate.py \
+            tests/test_new_mega_pr_01_canonical_paper_retirement.py
+      - name: Run focused NEW-MEGA-PR-01 tests
+        env:
+          PYTHONPATH: .
+        run: |
+          python -m pytest -q \
+            tests/test_new_mega_pr_01_canonical_paper_retirement.py

@@ -32,6 +32,17 @@ from .pr199 import (
     PR199TransportKind,
     pr199_status_payload,
 )
+from .pr199_followup import (
+    PR199FinalityOutcome,
+    PR199FinalizedChainEvidence,
+    PR199OperatorCanaryGate,
+    PR199ReconciliationReport,
+    PR199SignedPayloadBinding,
+    PR199SignerIsolationEvidence,
+    PR199SignerRequestEnvelope,
+    pr199_followup_status_payload,
+    reconcile_finalized_attempt,
+)
 from .store import DurableSubmissionIntentStore
 
 __all__ = [
@@ -53,8 +64,15 @@ __all__ = [
     "PR199BoundaryError",
     "PR199CanaryLimits",
     "PR199Failure",
+    "PR199FinalityOutcome",
+    "PR199FinalizedChainEvidence",
     "PR199IntentRecord",
     "PR199IntentState",
+    "PR199OperatorCanaryGate",
+    "PR199ReconciliationReport",
+    "PR199SignedPayloadBinding",
+    "PR199SignerIsolationEvidence",
+    "PR199SignerRequestEnvelope",
     "PR199SubmissionBoundary",
     "PR199SubmissionIntentStore",
     "PR199SubmissionPermit",
@@ -64,5 +82,7 @@ __all__ = [
     "SubmissionPermit",
     "SubmissionTransport",
     "TransportKind",
+    "pr199_followup_status_payload",
     "pr199_status_payload",
+    "reconcile_finalized_attempt",
 ]

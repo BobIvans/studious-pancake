@@ -70,11 +70,13 @@ def test_pr213_automation_cli_dependency_failure_is_structured(
 
     monkeypatch.setattr(automation_cli_pr189, "evaluate_paper_vertical", unavailable)
 
-    exit_code = automation_cli_pr189.main(["paper-vertical", "inspect"])
+    exit_code = automation_cli_pr189.main(["paper-vertical", "check"])
     payload = json.loads(capsys.readouterr().out)
 
     assert exit_code == int(CommandExitCode.DEPENDENCY_UNAVAILABLE)
     assert payload["schema_version"] == "pr189.command-result.v1"
+    assert payload["command_mode"] == "check"
+    assert payload["check_passed"] is False
     assert payload["verdict"] == "unavailable"
     assert payload["reason_codes"] == ["PR189_DEPENDENCY_UNAVAILABLE"]
     assert payload["details"] == {

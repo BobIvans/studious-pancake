@@ -1,9 +1,8 @@
 """Roadmap PR-196 durable runtime kernel.
 
-Sender-free runtime authority for deterministic attempt identity, SQLite
-lease/fencing ownership, terminal/outbox atomicity, recovery scanning,
-backup/restore, and a bounded continuous supervisor.  This module never imports
-a signer, never submits a transaction, and never enables live trading.
+Sender-free authority for deterministic attempt identity, SQLite lease/fencing,
+terminal/outbox atomicity, recovery scanning, backup/restore, and bounded
+supervision. It never imports a signer, submits a transaction, or enables live.
 """
 
 from __future__ import annotations
@@ -23,23 +22,23 @@ from typing import Protocol
 PR196_SCHEMA_VERSION = "roadmap-pr196.durable-runtime-kernel.v1"
 PR196_PRODUCT_ID = "studious-pancake.durable-runtime-kernel"
 PR196_BUSY_TIMEOUT_MS = 5_000
-_TERMINAL_STATES = frozenset({"completed", "failed", "blocked", "incomplete"})
+_TERMINAL_VALUES = frozenset({"completed", "failed", "blocked", "incomplete"})
 
 
 class PR196KernelError(RuntimeError):
-    """Base error for explicit fail-closed PR-196 kernel failures."""
+    """Base error for fail-closed PR-196 failures."""
 
 
 class PR196LeaseBusy(PR196KernelError):
-    """Raised when a non-expired lease is owned by another worker."""
+    """Raised when another owner still has a valid lease."""
 
 
 class PR196FenceLost(PR196KernelError):
-    """Raised when a stale owner/fencing token attempts a mutation."""
+    """Raised when a stale owner or fencing token tries to write."""
 
 
 class PR196ReplayConflict(PR196KernelError):
-    """Raised when idempotent replay changes durable contents."""
+    """Raised when an exact replay changes durable contents."""
 
 
 class PR196State(StrEnum):
@@ -79,10 +78,10 @@ class PR196AttemptIdentity:
     attempt_generation: int
 
     def __post_init__(self) -> None:
-        _require_text(self.opportunity_identity, "opportunity_identity")
-        _require_non_negative(self.evidence_generation, "evidence_generation")
-        _require_sha256(self.plan_hash, "plan_hash")
-        _require_non_negative(self.attempt_generation, "attempt_generation")
+        _text(self.opportunity_identity, "opportunity_identity")
+        _non_negative(self.evidence_generation, "evidence_generation")
+        _sha256(self.plan_hash, "plan_hash")
+        _non_negative(self.attempt_generation, "attempt_generation")
 
     @property
     def attempt_id(self) -> str:
@@ -128,7 +127,7 @@ class PR196AttemptRecord:
 
     @property
     def is_terminal(self) -> bool:
-        return self.state.value in _TERMINAL_STATES
+        return self.state.value in _TERMINAL_VALUES
 
 
 @dataclass(frozen=True, slots=True)
@@ -196,13 +195,10 @@ class PR196SupervisorConfig:
     mandatory: bool = True
 
     def __post_init__(self) -> None:
-        _require_text(self.owner_id, "owner_id")
+        _text(self.owner_id, "owner_id")
         if self.max_cycles is not None and self.max_cycles <= 0:
             raise ValueError("max_cycles must be positive or None")
-        _require_positive_float(
-            self.cycle_deadline_seconds,
-            "cycle_deadline_seconds",
-        )
+        _positive_float(self.cycle_deadline_seconds, "cycle_deadline_seconds")
         if self.idle_delay_seconds < 0:
             raise ValueError("idle_delay_seconds must be non-negative")
 
@@ -229,18 +225,12 @@ class PR196IdentitySource(Protocol):
 
 
 class PR196RuntimeKernelStore:
-    """Single SQLite authority for sender-free runtime state."""
+    """One SQLite state, lease, terminal and outbox authority."""
 
     def __init__(self, db_path: Path | str) -> None:
         self.path = Path(db_path)
-        if self.path.parent and str(self.path.parent) != ".":
-            self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.connection = sqlite3.connect(
-            self.path,
-            isolation_level=None,
-            timeout=PR196_BUSY_TIMEOUT_MS / 1000,
-        )
-        self.connection.row_factory = sqlite3.Row
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.connection = self._connect(self.path)
         self._configure()
         self._migrate()
 
@@ -259,7 +249,7 @@ class PR196RuntimeKernelStore:
         *,
         admitted_at_ns: int | None = None,
     ) -> PR196AttemptRecord:
-        now_ns = _now_or(admitted_at_ns)
+        now_ns = _now(admitted_at_ns)
         identity_hash = _hash_json(identity.to_json())
         with self._tx():
             existing = self._attempt(identity.attempt_id)
@@ -269,13 +259,9 @@ class PR196RuntimeKernelStore:
                 return existing
             self.connection.execute(
                 """
-                INSERT INTO pr196_attempts (
-                    attempt_id, opportunity_identity, evidence_generation,
-                    plan_hash, attempt_generation, identity_hash, state,
-                    admitted_at_ns, acquired_at_ns, updated_at_ns, owner_id,
-                    fencing_token, lease_expires_at_ns, terminal_reason,
-                    terminal_hash
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL, 0, NULL, NULL, NULL)
+                INSERT INTO pr196_attempts VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, NULL, 0, NULL, NULL, NULL
+                )
                 """,
                 (
                     identity.attempt_id,
@@ -300,23 +286,23 @@ class PR196RuntimeKernelStore:
         now_ns: int | None = None,
         lease_ttl_ns: int,
     ) -> PR196Lease:
-        _require_text(owner_id, "owner_id")
-        _require_positive_int(lease_ttl_ns, "lease_ttl_ns")
-        current_ns = _now_or(now_ns)
+        _text(owner_id, "owner_id")
+        _positive_int(lease_ttl_ns, "lease_ttl_ns")
+        current_ns = _now(now_ns)
         self.admit_attempt(identity, admitted_at_ns=current_ns)
         with self._tx():
-            row = self._attempt_required(identity.attempt_id)
-            if row.is_terminal:
+            record = self._attempt_required(identity.attempt_id)
+            if record.is_terminal:
                 raise PR196FenceLost("PR196_ATTEMPT_ALREADY_TERMINAL")
-            held = (
-                row.owner_id is not None
-                and row.owner_id != owner_id
-                and row.lease_expires_at_ns is not None
-                and row.lease_expires_at_ns > current_ns
+            active = (
+                record.owner_id is not None
+                and record.owner_id != owner_id
+                and record.lease_expires_at_ns is not None
+                and record.lease_expires_at_ns > current_ns
             )
-            if held:
+            if active:
                 raise PR196LeaseBusy("PR196_LEASE_HELD_BY_ANOTHER_OWNER")
-            token = row.fencing_token + 1
+            token = record.fencing_token + 1
             expires = current_ns + lease_ttl_ns
             self.connection.execute(
                 """
@@ -353,10 +339,10 @@ class PR196RuntimeKernelStore:
         payload: Mapping[str, object],
         now_ns: int | None = None,
     ) -> PR196CycleReport:
-        if state.value not in _TERMINAL_STATES:
+        if state.value not in _TERMINAL_VALUES:
             raise ValueError("terminalize requires a terminal state")
-        _require_text(reason, "reason")
-        current_ns = _now_or(now_ns)
+        _text(reason, "reason")
+        current_ns = _now(now_ns)
         terminal_hash = _hash_json(
             {
                 "schema": PR196_SCHEMA_VERSION,
@@ -382,14 +368,14 @@ class PR196RuntimeKernelStore:
             }
         )
         with self._tx():
-            row = self._attempt_required(lease.attempt_id)
-            if row.is_terminal:
-                if row.terminal_hash == terminal_hash:
+            record = self._attempt_required(lease.attempt_id)
+            if record.is_terminal:
+                if record.terminal_hash == terminal_hash and record.terminal_hash:
                     return PR196CycleReport(
                         lease.attempt_id,
-                        row.state,
-                        row.terminal_reason or reason,
-                        row.terminal_hash,
+                        record.state,
+                        record.terminal_reason or reason,
+                        record.terminal_hash,
                     )
                 raise PR196ReplayConflict("PR196_TERMINAL_REPLAY_CHANGED")
             self._require_fence(lease, now_ns=current_ns)
@@ -413,11 +399,7 @@ class PR196RuntimeKernelStore:
             )
             self.connection.execute(
                 """
-                INSERT INTO pr196_outbox (
-                    event_id, attempt_id, event_type, state, fencing_token,
-                    payload_hash, payload_json, created_at_ns, updated_at_ns,
-                    owner_id
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO pr196_outbox VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     event_id,
@@ -450,7 +432,7 @@ class PR196RuntimeKernelStore:
                 "SELECT * FROM pr196_outbox ORDER BY created_at_ns, event_id"
             ).fetchall()
         else:
-            values = tuple(state.value for state in states)
+            values = tuple(item.value for item in states)
             if not values:
                 return ()
             markers = ",".join("?" for _ in values)
@@ -471,17 +453,11 @@ class PR196RuntimeKernelStore:
         owner_id: str,
         now_ns: int | None = None,
     ) -> PR196OutboxEvent:
-        _require_sha256(event_id, "event_id")
-        _require_text(owner_id, "owner_id")
-        current_ns = _now_or(now_ns)
+        _sha256(event_id, "event_id")
+        _text(owner_id, "owner_id")
         with self._tx():
-            row = self.connection.execute(
-                "SELECT * FROM pr196_outbox WHERE event_id = ?",
-                (event_id,),
-            ).fetchone()
-            if row is None:
-                raise KeyError(event_id)
-            if row["state"] != PR196OutboxState.PENDING.value:
+            row = self._outbox_row(event_id)
+            if str(row["state"]) != PR196OutboxState.PENDING.value:
                 raise PR196LeaseBusy("PR196_OUTBOX_NOT_PENDING")
             attempt = self._attempt_required(str(row["attempt_id"]))
             if attempt.fencing_token != int(row["fencing_token"]):
@@ -492,14 +468,9 @@ class PR196RuntimeKernelStore:
                    SET state = ?, owner_id = ?, updated_at_ns = ?
                  WHERE event_id = ?
                 """,
-                (PR196OutboxState.CLAIMED.value, owner_id, current_ns, event_id),
+                (PR196OutboxState.CLAIMED.value, owner_id, _now(now_ns), event_id),
             )
-            return _outbox(
-                self.connection.execute(
-                    "SELECT * FROM pr196_outbox WHERE event_id = ?",
-                    (event_id,),
-                ).fetchone()
-            )
+            return _outbox(self._outbox_row(event_id))
 
     def mark_outbox_published(
         self,
@@ -508,42 +479,26 @@ class PR196RuntimeKernelStore:
         owner_id: str,
         now_ns: int | None = None,
     ) -> PR196OutboxEvent:
-        _require_sha256(event_id, "event_id")
-        _require_text(owner_id, "owner_id")
-        current_ns = _now_or(now_ns)
+        _sha256(event_id, "event_id")
+        _text(owner_id, "owner_id")
         with self._tx():
-            row = self.connection.execute(
-                "SELECT * FROM pr196_outbox WHERE event_id = ?",
-                (event_id,),
-            ).fetchone()
-            if row is None:
-                raise KeyError(event_id)
-            if row["state"] != PR196OutboxState.CLAIMED.value:
+            row = self._outbox_row(event_id)
+            if str(row["state"]) != PR196OutboxState.CLAIMED.value:
                 raise PR196FenceLost("PR196_OUTBOX_NOT_CLAIMED")
-            if row["owner_id"] != owner_id:
+            if str(row["owner_id"]) != owner_id:
                 raise PR196FenceLost("PR196_OUTBOX_OWNER_MISMATCH")
             self.connection.execute(
-                """
-                UPDATE pr196_outbox
-                   SET state = ?, updated_at_ns = ?
-                 WHERE event_id = ?
-                """,
-                (PR196OutboxState.PUBLISHED.value, current_ns, event_id),
+                "UPDATE pr196_outbox SET state = ?, updated_at_ns = ? WHERE event_id = ?",
+                (PR196OutboxState.PUBLISHED.value, _now(now_ns), event_id),
             )
-            return _outbox(
-                self.connection.execute(
-                    "SELECT * FROM pr196_outbox WHERE event_id = ?",
-                    (event_id,),
-                ).fetchone()
-            )
+            return _outbox(self._outbox_row(event_id))
 
     def recovery_scan(
         self,
         *,
         now_ns: int | None = None,
     ) -> tuple[PR196RecoveryItem, ...]:
-        current_ns = _now_or(now_ns)
-        items: list[PR196RecoveryItem] = []
+        current_ns = _now(now_ns)
         rows = self.connection.execute(
             """
             SELECT * FROM pr196_attempts
@@ -552,8 +507,10 @@ class PR196RuntimeKernelStore:
             """,
             (PR196State.ACQUIRED.value,),
         ).fetchall()
+        items: list[PR196RecoveryItem] = []
         for row in rows:
-            expired = row["lease_expires_at_ns"] <= current_ns
+            expires_at = int(row["lease_expires_at_ns"])
+            expired = expires_at <= current_ns
             action = (
                 PR196RecoveryAction.STEAL_STALE_LEASE
                 if expired
@@ -590,20 +547,18 @@ class PR196RuntimeKernelStore:
         if integrity != "ok":
             raise PR196KernelError(f"PR196_INTEGRITY_CHECK_FAILED:{integrity}")
         destination = Path(backup_path)
-        if destination.parent and str(destination.parent) != ".":
-            destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.parent.mkdir(parents=True, exist_ok=True)
         tmp = destination.with_suffix(destination.suffix + ".tmp")
         with sqlite3.connect(tmp) as target:
             self.connection.backup(target)
         tmp.replace(destination)
-        digest = _file_sha256(destination)
         manifest = PR196BackupManifest(
             PR196_SCHEMA_VERSION,
             str(self.path),
             str(destination),
-            digest,
+            _file_sha256(destination),
             integrity,
-            _now_or(now_ns),
+            _now(now_ns),
         )
         destination.with_suffix(destination.suffix + ".manifest.json").write_text(
             _canonical_json(manifest.to_json()) + "\n",
@@ -617,22 +572,22 @@ class PR196RuntimeKernelStore:
         *,
         expected_sha256: str,
     ) -> None:
-        _require_sha256(expected_sha256, "expected_sha256")
+        _sha256(expected_sha256, "expected_sha256")
         source = Path(backup_path)
         if _file_sha256(source) != expected_sha256:
             raise PR196KernelError("PR196_BACKUP_DIGEST_MISMATCH")
         validation = sqlite3.connect(f"file:{source}?mode=ro", uri=True)
         try:
             validation.row_factory = sqlite3.Row
-            integrity = validation.execute("PRAGMA integrity_check").fetchone()[0]
+            integrity = _pragma_text(validation, "PRAGMA integrity_check")
             if integrity != "ok":
                 raise PR196KernelError(f"PR196_BACKUP_INTEGRITY_FAILED:{integrity}")
             meta = validation.execute(
                 "SELECT schema_version, product_id FROM pr196_schema_meta"
             ).fetchone()
-            if meta is None or meta["schema_version"] != PR196_SCHEMA_VERSION:
+            if meta is None or str(meta["schema_version"]) != PR196_SCHEMA_VERSION:
                 raise PR196KernelError("PR196_BACKUP_SCHEMA_MISMATCH")
-            if meta["product_id"] != PR196_PRODUCT_ID:
+            if str(meta["product_id"]) != PR196_PRODUCT_ID:
                 raise PR196KernelError("PR196_BACKUP_PRODUCT_MISMATCH")
         finally:
             validation.close()
@@ -640,16 +595,21 @@ class PR196RuntimeKernelStore:
         tmp = self.path.with_suffix(self.path.suffix + ".restore.tmp")
         shutil.copyfile(source, tmp)
         tmp.replace(self.path)
-        self.connection = sqlite3.connect(
-            self.path,
-            isolation_level=None,
-            timeout=PR196_BUSY_TIMEOUT_MS / 1000,
-        )
-        self.connection.row_factory = sqlite3.Row
+        self.connection = self._connect(self.path)
         self._configure()
 
     def integrity_check(self) -> str:
-        return str(self.connection.execute("PRAGMA integrity_check").fetchone()[0])
+        return _pragma_text(self.connection, "PRAGMA integrity_check")
+
+    @staticmethod
+    def _connect(path: Path) -> sqlite3.Connection:
+        connection = sqlite3.connect(
+            path,
+            isolation_level=None,
+            timeout=PR196_BUSY_TIMEOUT_MS / 1000,
+        )
+        connection.row_factory = sqlite3.Row
+        return connection
 
     def _configure(self) -> None:
         for statement in (
@@ -670,16 +630,12 @@ class PR196RuntimeKernelStore:
             ).fetchone()
             if meta is None:
                 self.connection.execute(
-                    """
-                    INSERT INTO pr196_schema_meta (
-                        singleton, schema_version, product_id, migrated_at_ns
-                    ) VALUES (1, ?, ?, ?)
-                    """,
+                    "INSERT INTO pr196_schema_meta VALUES (1, ?, ?, ?)",
                     (PR196_SCHEMA_VERSION, PR196_PRODUCT_ID, time.time_ns()),
                 )
             elif (
-                meta["schema_version"] != PR196_SCHEMA_VERSION
-                or meta["product_id"] != PR196_PRODUCT_ID
+                str(meta["schema_version"]) != PR196_SCHEMA_VERSION
+                or str(meta["product_id"]) != PR196_PRODUCT_ID
             ):
                 raise PR196KernelError("PR196_SCHEMA_META_MISMATCH")
         if self.integrity_check() != "ok":
@@ -701,22 +657,27 @@ class PR196RuntimeKernelStore:
             raise KeyError(attempt_id)
         return record
 
+    def _outbox_row(self, event_id: str) -> sqlite3.Row:
+        row = self.connection.execute(
+            "SELECT * FROM pr196_outbox WHERE event_id = ?",
+            (event_id,),
+        ).fetchone()
+        if row is None:
+            raise KeyError(event_id)
+        return row
+
     def _require_fence(self, lease: PR196Lease, *, now_ns: int) -> None:
-        row = self._attempt_required(lease.attempt_id)
-        if row.owner_id != lease.owner_id or row.fencing_token != lease.fencing_token:
+        record = self._attempt_required(lease.attempt_id)
+        if record.owner_id != lease.owner_id or record.fencing_token != lease.fencing_token:
             raise PR196FenceLost("PR196_FENCE_TOKEN_LOST")
-        if row.is_terminal:
+        if record.is_terminal:
             raise PR196FenceLost("PR196_ATTEMPT_ALREADY_TERMINAL")
-        if row.lease_expires_at_ns is None or row.lease_expires_at_ns <= now_ns:
+        if record.lease_expires_at_ns is None or record.lease_expires_at_ns <= now_ns:
             raise PR196FenceLost("PR196_LEASE_EXPIRED")
 
     def _log(self, attempt_id: str, action: str, reason: str, now_ns: int) -> None:
         self.connection.execute(
-            """
-            INSERT INTO pr196_recovery_log (
-                attempt_id, action, reason, recorded_at_ns
-            ) VALUES (?, ?, ?, ?)
-            """,
+            "INSERT INTO pr196_recovery_log (attempt_id, action, reason, recorded_at_ns) VALUES (?, ?, ?, ?)",
             (attempt_id, action, reason, now_ns),
         )
 
@@ -734,7 +695,7 @@ class PR196ContinuousSupervisor:
         lease_ttl_ns: int = 30_000_000_000,
         clock_ns: Callable[[], int] = time.time_ns,
     ) -> None:
-        _require_positive_int(lease_ttl_ns, "lease_ttl_ns")
+        _positive_int(lease_ttl_ns, "lease_ttl_ns")
         self.store = store
         self.identity_source = identity_source
         self.cycle_runner = cycle_runner
@@ -810,10 +771,8 @@ class PR196ContinuousSupervisor:
         )
 
     def _max_cycles_reached(self, reports: Sequence[PR196CycleReport]) -> bool:
-        return (
-            self.config.max_cycles is not None
-            and len(reports) >= self.config.max_cycles
-        )
+        maximum = self.config.max_cycles
+        return maximum is not None and len(reports) >= maximum
 
 
 class _Transaction:
@@ -890,15 +849,14 @@ _DDL = (
 
 
 def _attempt(row: sqlite3.Row) -> PR196AttemptRecord:
-    identity = PR196AttemptIdentity(
-        str(row["opportunity_identity"]),
-        int(row["evidence_generation"]),
-        str(row["plan_hash"]),
-        int(row["attempt_generation"]),
-    )
     return PR196AttemptRecord(
         str(row["attempt_id"]),
-        identity,
+        PR196AttemptIdentity(
+            str(row["opportunity_identity"]),
+            int(row["evidence_generation"]),
+            str(row["plan_hash"]),
+            int(row["attempt_generation"]),
+        ),
         PR196State(str(row["state"])),
         None if row["owner_id"] is None else str(row["owner_id"]),
         int(row["fencing_token"]),
@@ -910,9 +868,7 @@ def _attempt(row: sqlite3.Row) -> PR196AttemptRecord:
     )
 
 
-def _outbox(row: sqlite3.Row | None) -> PR196OutboxEvent:
-    if row is None:
-        raise KeyError("outbox row missing")
+def _outbox(row: sqlite3.Row) -> PR196OutboxEvent:
     return PR196OutboxEvent(
         str(row["event_id"]),
         str(row["attempt_id"]),
@@ -968,35 +924,42 @@ def _jsonable(value: object) -> object:
     return value
 
 
-def _now_or(value: int | None) -> int:
+def _now(value: int | None) -> int:
     if value is None:
         return time.time_ns()
-    _require_non_negative(value, "now_ns")
+    _non_negative(value, "now_ns")
     return value
 
 
-def _require_text(value: str, name: str) -> None:
+def _pragma_text(connection: sqlite3.Connection, statement: str) -> str:
+    row = connection.execute(statement).fetchone()
+    if row is None:
+        raise PR196KernelError("PR196_SQLITE_PRAGMA_RETURNED_NO_ROWS")
+    return str(row[0])
+
+
+def _text(value: str, name: str) -> None:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{name} is required")
 
 
-def _require_sha256(value: str, name: str) -> None:
+def _sha256(value: str, name: str) -> None:
     if not isinstance(value, str) or len(value) != 64:
         raise ValueError(f"{name} must be lowercase sha256")
     if any(character not in "0123456789abcdef" for character in value):
         raise ValueError(f"{name} must be lowercase sha256")
 
 
-def _require_non_negative(value: int, name: str) -> None:
+def _non_negative(value: int, name: str) -> None:
     if not isinstance(value, int) or value < 0:
         raise ValueError(f"{name} must be non-negative")
 
 
-def _require_positive_int(value: int, name: str) -> None:
+def _positive_int(value: int, name: str) -> None:
     if not isinstance(value, int) or value <= 0:
         raise ValueError(f"{name} must be positive")
 
 
-def _require_positive_float(value: float, name: str) -> None:
+def _positive_float(value: float, name: str) -> None:
     if not isinstance(value, (float, int)) or float(value) <= 0:
         raise ValueError(f"{name} must be positive")

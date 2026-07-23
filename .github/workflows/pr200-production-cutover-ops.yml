@@ -1,0 +1,55 @@
+name: PR-200 production cutover ops
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/production_cutover_pr200.py"
+      - "tests/test_pr200_production_cutover_ops.py"
+      - "docs/pr200_production_cutover_ops.md"
+      - ".github/workflows/pr200-production-cutover-ops.yml"
+  push:
+    branches:
+      - roadmap-pr-200-production-cutover-ops
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  production-cutover-ops:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Compile PR-200 cutover boundary
+        run: |
+          python -m compileall -q \
+            src/production_cutover_pr200.py \
+            tests/test_pr200_production_cutover_ops.py
+      - name: Critical static errors
+        run: |
+          python -m flake8 \
+            src/production_cutover_pr200.py \
+            tests/test_pr200_production_cutover_ops.py \
+            --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Focused regression suite
+        run: |
+          python -m pytest \
+            tests/test_pr200_production_cutover_ops.py \
+            -q --disable-socket --allow-unix-socket

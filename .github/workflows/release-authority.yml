@@ -29,10 +29,10 @@ jobs:
         with:
           python-version: "3.13"
           cache: pip
-      - name: Install release-check dependencies
-        run: python -m pip install --disable-pip-version-check -e ".[dev]"
       - name: Source hygiene
         run: python scripts/verify_source_hygiene.py --strict
+      - name: Install release-check dependencies
+        run: python -m pip install --disable-pip-version-check -e ".[dev]"
       - name: Compile source, scripts and tests
         run: python -m compileall -q arb_bot.py src scripts tests
       - name: Production debt inventory consistency

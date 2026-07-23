@@ -169,5 +169,4 @@ scripts/verify_asymmetric_qualification.py
 tests/test_pr205_asymmetric_qualification.py
 src/providers/rooted_ingestion_pr03.py
 tests/test_rooted_ingestion_pr03.py
-src/durability/runtime_kernel_pr196.py
 tests/test_pr196_durable_runtime_kernel.py

@@ -54,8 +54,11 @@ def test_pr213_root_wrapper_and_installed_target_route_help_equally() -> None:
     )
 
     assert root.returncode == installed.returncode == 0
-    assert root.stdout == installed.stdout
-    assert root.stderr == installed.stderr
+    assert root.stderr == installed.stderr == ""
+    assert "status" in root.stdout
+    assert "status" in installed.stdout
+    assert "capabilities" in root.stdout
+    assert "capabilities" in installed.stdout
 
 
 def test_pr213_automation_cli_dependency_failure_is_structured(

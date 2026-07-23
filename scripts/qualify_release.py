@@ -1,5 +1,10 @@
 #!/usr/bin/env python3
-"""Materialize a final release-evidence bundle and compute fail-closed qualification."""
+"""Materialize a final release-evidence bundle and compute fail-closed qualification.
+
+Default invocation preserves the legacy PR-186 dry-run qualification plan contract.
+Pass ``--execute --profile production`` to run the MPR-CLOSE-06 release bundle
+materialization flow.
+"""
 
 from __future__ import annotations
 
@@ -8,6 +13,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import sys
 import tempfile
 import time
 from typing import Any, Iterable, Sequence
@@ -19,6 +25,12 @@ EXIT_FAILED = 2
 SCHEMA_VERSION = "mpr-close-06.release-qualification.v1"
 BUNDLE_SCHEMA_VERSION = "mpr-close-06.release-bundle.v1"
 HUMAN_REVIEW_SCHEMA_VERSION = "mpr-close-06.human-review-manifest.v1"
+
+
+def _bootstrap_repo_imports() -> None:
+    if str(ROOT) not in sys.path:
+        sys.path.insert(0, str(ROOT))
+
 
 REQUIRED_ARTIFACTS: dict[str, tuple[str, ...]] = {
     "runtime_wheel_digest": ("dist/*.whl",),
@@ -398,6 +410,19 @@ def build_release_bundle(
     return qualification
 
 
+def _legacy_dry_run(args: argparse.Namespace) -> int:
+    _bootstrap_repo_imports()
+    from src.qualification_pr176 import build_default_qualification_plan
+    from src.qualification_pr186 import qualification_plan_document, source_tree_identity
+
+    root = Path(args.project_root).resolve()
+    source = source_tree_identity(root)
+    plan = build_default_qualification_plan(root)
+    payload = qualification_plan_document(plan, source)
+    _write_or_print(payload, args.output)
+    return 0
+
+
 def _write_or_print(payload: dict[str, Any], path: str | None) -> None:
     rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
     if path:
@@ -421,34 +446,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(list(argv) if argv is not None else None)
     root = Path(args.project_root).resolve()
     selected_profiles = tuple(sorted(set(args.profile or ["production"])))
-    if selected_profiles != ("production",):
-        payload = {
-            "schema_version": SCHEMA_VERSION,
-            "qualified": False,
-            "release_claim_allowed": False,
-            "reason_codes": ["unsupported_profile_selection"],
-            "selected_profiles": list(selected_profiles),
-        }
-        _write_or_print(payload, args.output)
-        return EXIT_FAILED
-    output = Path(args.output or root / ".runtime" / "release-qualification.json")
-    release_id = args.release_id or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
     try:
         if not args.execute:
+            return _legacy_dry_run(args)
+        if selected_profiles != ("production",):
             payload = {
                 "schema_version": SCHEMA_VERSION,
-                "execution_mode": "inspect",
                 "qualified": False,
                 "release_claim_allowed": False,
-                "reason_codes": ["execution_required_for_materialization"],
-                "default_output": output.relative_to(root).as_posix()
-                if output.is_absolute()
-                else output.as_posix(),
-                "release_id": release_id,
-                "profile": "production",
+                "reason_codes": ["unsupported_profile_selection"],
+                "selected_profiles": list(selected_profiles),
             }
             _write_or_print(payload, args.output)
-            return 0
+            return EXIT_FAILED
+        output = Path(args.output or root / ".runtime" / "release-qualification.json")
+        release_id = args.release_id or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
         qualification = build_release_bundle(
             root,
             release_id=release_id,

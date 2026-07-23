@@ -173,6 +173,5 @@ src/protocol_account_conformance_pr198.py
 tests/test_pr198_protocol_account_conformance.py
 src/config/product_contract_pr195.py
 tests/test_pr195_product_contract.py
-setup.py
-src/production_surface.py
-tests/test_pr194_production_surface_manifest.py
+src/release_gate/final_promotion_governance_pr203.py
+tests/test_pr203_final_promotion_governance.py

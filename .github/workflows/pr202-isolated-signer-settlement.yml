@@ -5,6 +5,7 @@ on:
     branches:
       - main
     paths:
+      - "src/live_boundary/pr202_isolated_signer_settlement.py"
       - "src/submission/pr202_isolated_signer_settlement.py"
       - "tests/test_pr202_isolated_signer_settlement.py"
       - "docs/pr202_isolated_signer_settlement.md"
@@ -38,5 +39,6 @@ jobs:
       - name: Compile
         run: |
           python -m py_compile \
+            src/live_boundary/pr202_isolated_signer_settlement.py \
             src/submission/pr202_isolated_signer_settlement.py \
             tests/test_pr202_isolated_signer_settlement.py

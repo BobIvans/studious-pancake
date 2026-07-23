@@ -153,6 +153,14 @@ tests/test_pr201_authorization_replay.py
 src/authority_map.py
 scripts/validate_authority_map.py
 tests/test_pr01_authority_map.py
+src/paper_shadow/repeated_service_pr04.py
+tests/test_pr04_repeated_installed_paper_service.py
+isolated_signer_service/src/flashloan_isolated_signer/__init__.py
+isolated_signer_service/src/flashloan_isolated_signer/models.py
+isolated_signer_service/src/flashloan_isolated_signer/store.py
+isolated_signer_service/src/flashloan_isolated_signer/boundary.py
+isolated_signer_service/src/flashloan_isolated_signer/service.py
+tests/test_roadmap_pr08_isolated_signer_foundation.py
 src/durability/unified_authority_pr02.py
 tests/test_pr02_unified_lifecycle_authority.py
 src/paper_shadow/durable_service_a3.py

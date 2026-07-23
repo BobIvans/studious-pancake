@@ -1,0 +1,33 @@
+name: PR-206 latest main materialization
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  upload-main:
+    if: github.head_ref == 'pr-206-durable-time-semantic-replay'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - name: Archive exact latest main
+        shell: bash
+        run: |
+          git rev-parse HEAD > /tmp/pr206-main-sha.txt
+          tar --exclude=.git -czf /tmp/pr206-latest-main.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr206-latest-main
+          path: |
+            /tmp/pr206-latest-main.tar.gz
+            /tmp/pr206-main-sha.txt
+          if-no-files-found: error
+          retention-days: 1

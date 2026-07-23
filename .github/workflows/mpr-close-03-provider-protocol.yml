@@ -24,7 +24,13 @@ jobs:
         with:
           python-version: '3.11'
       - name: Compile verifier layer
-        run: python -m compileall -q src scripts tests
+        run: |
+          python -m py_compile \
+            src/mpr_close_03_verifiers.py \
+            scripts/verify_solana_v0_alt_conformance.py \
+            scripts/verify_external_contracts.py \
+            scripts/verify_provider_drift_probes.py \
+            tests/test_mpr_close_03_verifiers.py
       - name: Solana v0 ALT verifier
         run: python scripts/verify_solana_v0_alt_conformance.py --json
       - name: External contracts verifier

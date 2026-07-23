@@ -1,0 +1,252 @@
+{
+  "schema_version": "pr200.production-cutover-gate.v1",
+  "promotion_state": "blocked_pending_evidence",
+  "live_trading_enabled": false,
+  "cutover_unit": {
+    "requires_signed_release_manifest": true,
+    "release_manifest_must_bind_wheel_image_config_and_evidence": true,
+    "signing_key_source": "external-secret-provider",
+    "generated_production_key_allowed": false,
+    "promotion_requires_outstanding_unknown_attempts": 0
+  },
+  "required_release_artifacts": [
+    {
+      "id": "runtime_wheel_digest",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_RUNTIME_WHEEL_DIGEST"
+    },
+    {
+      "id": "runtime_image_digest",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_RUNTIME_IMAGE_DIGEST"
+    },
+    {
+      "id": "sbom_digest",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_SBOM_DIGEST"
+    },
+    {
+      "id": "config_generation_digest",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_CONFIG_GENERATION_DIGEST"
+    },
+    {
+      "id": "capability_manifest_digest",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_CAPABILITY_MANIFEST_DIGEST"
+    },
+    {
+      "id": "program_idl_hashes",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_PROGRAM_IDL_HASHES"
+    },
+    {
+      "id": "database_schema_fingerprint",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_DATABASE_SCHEMA_FINGERPRINT"
+    },
+    {
+      "id": "shadow_campaign_report_digest",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_SHADOW_CAMPAIGN_REPORT"
+    },
+    {
+      "id": "fault_injection_report_digest",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_FAULT_INJECTION_REPORT"
+    },
+    {
+      "id": "backup_restore_report_digest",
+      "required_before_promotion": true,
+      "promotion_blocker": "MISSING_BACKUP_RESTORE_REPORT"
+    }
+  ],
+  "isolation": {
+    "runtime": {
+      "digest_pinned_image_required": true,
+      "read_only_root_filesystem_required": true,
+      "egress_allowlist_required": true,
+      "deny_arbitrary_internet": true,
+      "approved_egress_purposes": [
+        "solana-rpc",
+        "approved-route-provider",
+        "approved-jito-relay",
+        "telemetry-sink"
+      ]
+    },
+    "signer": {
+      "separate_process_required": true,
+      "shared_internet_egress_allowed": false,
+      "private_key_environment_allowed": false,
+      "shared_runtime_filesystem_allowed": false
+    }
+  },
+  "readiness": {
+    "liveness_endpoint": "/health",
+    "readiness_endpoint": "/ready",
+    "must_be_distinct": true,
+    "readiness_blocks_on": [
+      "dead_strategy",
+      "stale_rooted_data",
+      "db_degraded",
+      "release_latch",
+      "signer_unavailable",
+      "outstanding_unknown_attempt",
+      "provider_budget_exhausted"
+    ]
+  },
+  "slo_budgets": {
+    "event_loop_lag_p99_ms": {
+      "max": 100,
+      "evidence_required": true
+    },
+    "opportunity_age_p99_ms": {
+      "max": 1000,
+      "evidence_required": true
+    },
+    "queue_depth_max": {
+      "max": 1000,
+      "evidence_required": true
+    },
+    "db_commit_p99_ms": {
+      "max": 50,
+      "evidence_required": true
+    },
+    "rto_seconds": {
+      "max": 300,
+      "evidence_required": true
+    },
+    "signed_intent_rpo": {
+      "max": 0,
+      "evidence_required": true
+    },
+    "unknown_submission_count_before_promotion": {
+      "max": 0,
+      "evidence_required": true
+    },
+    "soak_memory_fd_growth": {
+      "max": 0,
+      "evidence_required": true
+    }
+  },
+  "fault_injection": [
+    {
+      "id": "kill_after_state_row_before_event_row",
+      "required_before_promotion": true,
+      "expected_invariant": "no_partial_transition"
+    },
+    {
+      "id": "kill_after_submission_accept_before_db_ack",
+      "required_before_promotion": true,
+      "expected_invariant": "unknown_then_reconcile_no_blind_resend"
+    },
+    {
+      "id": "dual_process_attempt_creation",
+      "required_before_promotion": true,
+      "expected_invariant": "single_winner_deterministic_duplicate"
+    },
+    {
+      "id": "clock_jump_suspend_reboot",
+      "required_before_promotion": true,
+      "expected_invariant": "permit_and_lease_not_extended"
+    },
+    {
+      "id": "disk_full_read_only_db",
+      "required_before_promotion": true,
+      "expected_invariant": "admission_off_latch_on_audit_event"
+    },
+    {
+      "id": "corrupt_wal_or_torn_tail",
+      "required_before_promotion": true,
+      "expected_invariant": "startup_refusal_or_verified_recovery"
+    },
+    {
+      "id": "duplicate_webhook",
+      "required_before_promotion": true,
+      "expected_invariant": "idempotent_same_outcome"
+    },
+    {
+      "id": "lost_webhook",
+      "required_before_promotion": true,
+      "expected_invariant": "rooted_rpc_backfill_recovers_gap"
+    },
+    {
+      "id": "provider_429_5xx_across_replicas",
+      "required_before_promotion": true,
+      "expected_invariant": "bounded_jittered_budget_no_storm"
+    },
+    {
+      "id": "dns_resolves_private_or_link_local",
+      "required_before_promotion": true,
+      "expected_invariant": "request_denied_before_connect"
+    },
+    {
+      "id": "strategy_generator_raises",
+      "required_before_promotion": true,
+      "expected_invariant": "readiness_false_supervised_restart_or_stop"
+    },
+    {
+      "id": "sigterm_with_non_empty_queue",
+      "required_before_promotion": true,
+      "expected_invariant": "bounded_single_owner_drain_terminal_evidence"
+    },
+    {
+      "id": "blockhash_expires_before_send",
+      "required_before_promotion": true,
+      "expected_invariant": "intent_aborts_before_sign_or_send"
+    },
+    {
+      "id": "jito_ack_without_chain_record",
+      "required_before_promotion": true,
+      "expected_invariant": "pending_unknown_until_history_reconciliation"
+    },
+    {
+      "id": "landed_failed_transaction",
+      "required_before_promotion": true,
+      "expected_invariant": "fee_accounted_no_profit_latch_policy_applied"
+    },
+    {
+      "id": "oversized_v0_message",
+      "required_before_promotion": true,
+      "expected_invariant": "reject_in_compile_and_sign_public_apis"
+    },
+    {
+      "id": "malicious_allowed_program_instruction",
+      "required_before_promotion": true,
+      "expected_invariant": "semantic_firewall_rejects_effect"
+    },
+    {
+      "id": "token_2022_unknown_extension",
+      "required_before_promotion": true,
+      "expected_invariant": "fail_closed_before_planning"
+    },
+    {
+      "id": "backup_during_wal_writes",
+      "required_before_promotion": true,
+      "expected_invariant": "restored_db_passes_integrity_and_event_chain"
+    }
+  ],
+  "backup_restore": {
+    "online_backup_required": true,
+    "wal_checkpoint_required": true,
+    "restore_drill_required": true,
+    "event_chain_verification_required": true,
+    "corruption_drill_required": true
+  },
+  "rollback": {
+    "mode": "drain-only",
+    "old_writer_allowed": false,
+    "outstanding_signed_intents_must_be_zero": true,
+    "unknown_attempts_must_be_zero": true,
+    "database_remains_source_of_truth": true
+  },
+  "legacy_execution_surface": {
+    "source_only_live_paths_allowed_in_production_image": false,
+    "production_image_must_exclude": [
+      "arb_bot.py",
+      "src/execution/senders",
+      "src/execution/live_control.py",
+      "src/execution/shadow.py"
+    ]
+  }
+}

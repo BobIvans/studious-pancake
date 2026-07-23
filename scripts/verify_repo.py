@@ -45,6 +45,12 @@ PR194_TRUSTED_FOUNDATION_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr200_production_cutover.py",
+    "--json",
+]
+
 # Public by design: tests inspect the final offline pytest command.
 COMMANDS: Final[list[list[str]]] = [
     [
@@ -96,6 +102,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr140_data_lineage_quarantine.py",
         "tests/test_pr194_trusted_foundation.py",
         "tests/test_pr195_durable_webhook_intake.py",
+        "tests/test_pr200_production_cutover.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",
@@ -168,6 +175,7 @@ def main() -> int:
     run(PACKAGE_SMOKE_COMMAND)
     run(VERIFY_PR194_REQUIRED_CONTROLS_COMMAND)
     run(PR194_TRUSTED_FOUNDATION_COMMAND)
+    run(PR200_PRODUCTION_CUTOVER_COMMAND)
 
     for command in COMMANDS[1:]:
         run(command)

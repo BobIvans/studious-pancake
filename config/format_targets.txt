@@ -171,3 +171,5 @@ src/providers/rooted_ingestion_pr03.py
 tests/test_rooted_ingestion_pr03.py
 src/protocol_account_conformance_pr198.py
 tests/test_pr198_protocol_account_conformance.py
+src/config/product_contract_pr195.py
+tests/test_pr195_product_contract.py

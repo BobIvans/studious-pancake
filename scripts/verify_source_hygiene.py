@@ -2,8 +2,9 @@
 """Fail closed when generated artifacts are present in the source tree.
 
 MPR-CLOSE-01 treats source hygiene as release evidence.  The check is intentionally
-offline and deterministic: it scans the checkout and reports committed/runtime
-byproducts that must never be part of a production artifact.
+offline and deterministic.  In a Git checkout it inspects tracked files, so CI
+build byproducts such as editable-install ``*.egg-info`` do not create false
+positives while checked-in generated artifacts still fail closed.
 """
 
 from __future__ import annotations
@@ -12,6 +13,7 @@ import argparse
 from dataclasses import asdict, dataclass
 import json
 from pathlib import Path
+import subprocess
 from typing import Iterable, Sequence
 
 SCHEMA_VERSION = "mpr-close-01.source-hygiene.v1"
@@ -82,13 +84,23 @@ class HygieneReport:
         }
 
 
-def _is_egg_info(path: Path) -> bool:
-    return path.name.endswith(".egg-info")
+def _is_egg_info_name(name: str) -> bool:
+    return name.endswith(".egg-info")
 
 
-def _reason_for(path: Path) -> str | None:
+def _reason_for_tracked_path(path: Path) -> str | None:
+    for part in path.parts[:-1]:
+        if part in FORBIDDEN_DIR_NAMES or _is_egg_info_name(part):
+            return "forbidden generated directory"
     name = path.name
-    if path.is_dir() and (name in FORBIDDEN_DIR_NAMES or _is_egg_info(path)):
+    if name in FORBIDDEN_FILE_NAMES or path.suffix in FORBIDDEN_SUFFIXES:
+        return "forbidden generated file"
+    return None
+
+
+def _reason_for_filesystem_path(path: Path) -> str | None:
+    name = path.name
+    if path.is_dir() and (name in FORBIDDEN_DIR_NAMES or _is_egg_info_name(name)):
         return "forbidden generated directory"
     if path.is_file() and (
         name in FORBIDDEN_FILE_NAMES or path.suffix in FORBIDDEN_SUFFIXES
@@ -105,7 +117,35 @@ def _skip_children(path: Path) -> bool:
     return path.name in {".runtime", "release_artifacts"}
 
 
-def iter_violations(root: Path) -> Iterable[HygieneViolation]:
+def _git_tracked_paths(root: Path) -> tuple[Path, ...] | None:
+    try:
+        result = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=root,
+            check=True,
+            capture_output=True,
+        )
+    except (OSError, subprocess.CalledProcessError):
+        return None
+    if not result.stdout:
+        return None
+    names = [item for item in result.stdout.decode("utf-8").split("\0") if item]
+    return tuple(Path(name) for name in names)
+
+
+def _iter_tracked_violations(root: Path) -> Iterable[HygieneViolation]:
+    tracked = _git_tracked_paths(root)
+    if tracked is None:
+        return ()
+    violations: list[HygieneViolation] = []
+    for rel_path in tracked:
+        reason = _reason_for_tracked_path(rel_path)
+        if reason is not None:
+            violations.append(HygieneViolation(rel_path.as_posix(), reason))
+    return tuple(violations)
+
+
+def _iter_filesystem_violations(root: Path) -> Iterable[HygieneViolation]:
     stack = [root]
     while stack:
         current = stack.pop()
@@ -117,11 +157,20 @@ def iter_violations(root: Path) -> Iterable[HygieneViolation]:
             continue
         for child in children:
             rel = child.relative_to(root).as_posix()
-            reason = _reason_for(child)
+            reason = _reason_for_filesystem_path(child)
             if reason is not None:
                 yield HygieneViolation(rel, reason)
             if child.is_dir():
                 stack.append(child)
+
+
+def iter_violations(root: Path) -> Iterable[HygieneViolation]:
+    tracked = tuple(_iter_tracked_violations(root))
+    if tracked:
+        return tracked
+    if _git_tracked_paths(root) is not None:
+        return ()
+    return tuple(_iter_filesystem_violations(root))
 
 
 def evaluate_source_hygiene(root: Path, *, strict: bool = False) -> HygieneReport:

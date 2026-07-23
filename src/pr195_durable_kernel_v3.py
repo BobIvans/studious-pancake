@@ -12,7 +12,7 @@ from __future__ import annotations
 from dataclasses import dataclass, fields
 import hashlib
 import json
-from typing import Any, Mapping, Self
+from typing import Mapping, Self
 
 SCHEMA_VERSION = "pr195.durable-kernel-v3.v1"
 
@@ -130,7 +130,15 @@ class PR195DurableKernelReport:
 REQUIREMENTS: tuple[PR195Requirement, ...] = (
     PR195Requirement(
         requirement_id="DURABLE_BEFORE_ACK_WEBHOOK_INTAKE",
-        finding_ids=("F-140", "F-141", "F-142", "F-143", "F-145", "F-146", "F-147"),
+        finding_ids=(
+            "F-140",
+            "F-141",
+            "F-142",
+            "F-143",
+            "F-145",
+            "F-146",
+            "F-147",
+        ),
         description="Webhook intake cannot acknowledge before durable receipt.",
         required_claim_fields=(
             "webhook_ack_after_durable_commit",

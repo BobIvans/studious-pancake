@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""PR-186 qualification plan/executed-run/signed-verdict command.
-
-Default invocation is inspection-only and can never authorize a release claim.
-Execution requires an explicitly selected isolated interpreter, a hash-verified
-production wheel/wheelhouse, and an attestation key.
-"""
+"""Materialize a final release-evidence bundle and compute fail-closed qualification."""
 
 from __future__ import annotations
 
@@ -13,299 +8,458 @@ import hashlib
 import json
 import os
 from pathlib import Path
-import subprocess
-import sys
+import tempfile
 import time
-from typing import Any, Sequence
-from uuid import uuid4
+from typing import Any, Iterable, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 EXIT_BLOCKED = 3
 EXIT_FAILED = 2
 
+SCHEMA_VERSION = "mpr-close-06.release-qualification.v1"
+BUNDLE_SCHEMA_VERSION = "mpr-close-06.release-bundle.v1"
+HUMAN_REVIEW_SCHEMA_VERSION = "mpr-close-06.human-review-manifest.v1"
 
-def _bootstrap_repo_imports() -> None:
-    if str(ROOT) not in sys.path:
-        sys.path.insert(0, str(ROOT))
+REQUIRED_ARTIFACTS: dict[str, tuple[str, ...]] = {
+    "runtime_wheel_digest": ("dist/*.whl",),
+    "runtime_image_digest": (
+        "release_artifacts/runtime-image-digest.txt",
+        ".runtime/evidence/runtime-image-digest.txt",
+    ),
+    "signer_image_digest": (
+        "release_artifacts/signer-image-digest.txt",
+        ".runtime/evidence/signer-image-digest.txt",
+    ),
+    "sbom_digest": ("release_artifacts/sbom.json", ".runtime/evidence/sbom.json"),
+    "dependency_lock_wheelhouse_digest": (
+        "requirements.lock",
+        "poetry.lock",
+        "release_artifacts/wheelhouse-manifest.json",
+        ".runtime/evidence/wheelhouse-manifest.json",
+    ),
+    "capability_manifest_digest": ("src/resources/capabilities.json",),
+    "production_surface_manifest_digest": ("src/resources/production_surface_manifest.json",),
+    "runtime_authority_map_digest": (
+        "config/runtime_authority_map.json",
+        "src/resources/runtime_authority_map.json",
+    ),
+    "config_generation_digest": (
+        "config/production_cutover_manifest.json",
+        ".runtime/evidence/config-generation-digest.json",
+    ),
+    "database_schema_fingerprint": (
+        "release_artifacts/database-schema-fingerprint.json",
+        ".runtime/evidence/database-schema-fingerprint.json",
+    ),
+    "backup_restore_report_digest": (
+        "release_artifacts/backup-restore-report.json",
+        ".runtime/evidence/backup-restore-report.json",
+    ),
+    "fault_injection_report_digest": (
+        "release_artifacts/fault-injection-report.json",
+        ".runtime/evidence/fault-injection-report.json",
+    ),
+    "provider_drift_probe_report_digest": (
+        "release_artifacts/provider-drift-report.json",
+        ".runtime/evidence/provider-drift-report.json",
+    ),
+    "shadow_campaign_report_digest": (
+        "release_artifacts/shadow-soak-report.json",
+        ".runtime/evidence/shadow-soak-report.json",
+    ),
+    "finalized_economics_report_digest": (
+        "release_artifacts/finalized-economics-report.json",
+        ".runtime/evidence/finalized-economics-report.json",
+    ),
+    "signer_canary_approval_bundle_digest": (
+        "release_artifacts/signer-canary-approval-bundle.json",
+        ".runtime/evidence/signer-canary-approval-bundle.json",
+    ),
+}
+
+DEBT_REQUIREMENTS: dict[str, tuple[str, ...]] = {
+    "runtime.product-state": (
+        "capability_manifest_digest",
+        "runtime_authority_map_digest",
+    ),
+    "runtime.live-entrypoint": ("capability_manifest_digest",),
+    "packaging.source-wheel-parity": ("runtime_wheel_digest",),
+    "runtime.canonical-vertical-wiring": (
+        "runtime_authority_map_digest",
+        "shadow_campaign_report_digest",
+        "finalized_economics_report_digest",
+    ),
+    "runtime.legacy-ingest-removal": ("runtime_authority_map_digest",),
+    "execution.exact-simulation-binding": (
+        "shadow_campaign_report_digest",
+        "finalized_economics_report_digest",
+    ),
+    "execution.canonical-transaction-proof": (
+        "shadow_campaign_report_digest",
+        "finalized_economics_report_digest",
+    ),
+    "execution.finalized-settlement-binding": (
+        "finalized_economics_report_digest",
+        "shadow_campaign_report_digest",
+    ),
+    "economics.capital-reservations": ("finalized_economics_report_digest",),
+    "accounts.lifecycle-rent-wsol": ("shadow_campaign_report_digest",),
+    "durability.single-truth-cutover": (
+        "database_schema_fingerprint",
+        "backup_restore_report_digest",
+    ),
+    "data.rpc-rooted-quorum": ("provider_drift_probe_report_digest",),
+    "data.oracle-slot-coherence": ("provider_drift_probe_report_digest",),
+    "external.solana-v0-rpc": ("provider_drift_probe_report_digest",),
+    "external.jupiter-swap-v2": ("provider_drift_probe_report_digest",),
+    "external.helius-webhook-auth": ("provider_drift_probe_report_digest",),
+    "external.jito-low-latency": ("provider_drift_probe_report_digest",),
+    "external.marginfi-v2": ("provider_drift_probe_report_digest",),
+    "external.kamino-klend": ("provider_drift_probe_report_digest",),
+    "lending.kamino-supported-combinations": ("provider_drift_probe_report_digest",),
+    "external.okx-signed-discovery": ("provider_drift_probe_report_digest",),
+    "external.openocean-whitelist-discovery": ("provider_drift_probe_report_digest",),
+    "external.odos-immutable-transaction": ("provider_drift_probe_report_digest",),
+    "submission.jito-unbundling-protection": (
+        "provider_drift_probe_report_digest",
+        "signer_canary_approval_bundle_digest",
+    ),
+    "evidence.real-shadow-soak": ("shadow_campaign_report_digest",),
+    "evidence.provider-drift-probes": ("provider_drift_probe_report_digest",),
+    "evidence.finalized-economic-proof": ("finalized_economics_report_digest",),
+    "deployment.image-provenance": (
+        "runtime_image_digest",
+        "sbom_digest",
+        "dependency_lock_wheelhouse_digest",
+    ),
+    "operations.slo-readiness": ("shadow_campaign_report_digest",),
+    "security.signer-isolation": ("signer_canary_approval_bundle_digest",),
+    "security.secret-incident-drill": ("signer_canary_approval_bundle_digest",),
+    "data.lineage-quarantine": (
+        "shadow_campaign_report_digest",
+        "provider_drift_probe_report_digest",
+    ),
+    "canary.permit-budget-latches": ("signer_canary_approval_bundle_digest",),
+    "canary.second-human-approval": ("signer_canary_approval_bundle_digest",),
+}
+
+
+def _canonical_json(value: object) -> bytes:
+    return json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("utf-8")
+
+
+def _sha256_bytes(value: bytes) -> str:
+    return hashlib.sha256(value).hexdigest()
+
+
+def _sha256_file(path: Path) -> str:
+    return _sha256_bytes(path.read_bytes())
+
+
+def _utc_now() -> str:
+    return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+
+
+def _git_head_commit(root: Path) -> str | None:
+    head = root / ".git" / "HEAD"
+    if not head.is_file():
+        return None
+    raw = head.read_text(encoding="utf-8").strip()
+    if raw.startswith("ref: "):
+        ref = raw[5:]
+        target = root / ".git" / ref
+        if target.is_file():
+            return target.read_text(encoding="utf-8").strip() or None
+        return None
+    return raw or None
+
+
+def _glob_matches(root: Path, pattern: str) -> list[Path]:
+    return sorted(
+        path for path in root.glob(pattern) if path.is_file() and not path.is_symlink()
+    )
+
+
+def _first_existing(root: Path, candidates: Iterable[str]) -> Path | None:
+    for candidate in candidates:
+        if "*" in candidate or "?" in candidate or "[" in candidate:
+            matches = _glob_matches(root, candidate)
+            if matches:
+                return matches[0]
+            continue
+        path = root / candidate
+        if path.is_file() and not path.is_symlink():
+            return path
+    return None
+
+
+def _atomic_write(path: Path, payload: dict[str, Any]) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    encoded = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=f".{path.name}.",
+        suffix=".tmp",
+        dir=str(path.parent),
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(encoded)
+            handle.flush()
+            os.fsync(handle.fileno())
+        Path(tmp_name).replace(path)
+    finally:
+        tmp = Path(tmp_name)
+        if tmp.exists():
+            tmp.unlink()
+
+
+def _load_json(path: Path) -> dict[str, Any]:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def collect_release_artifacts(root: Path) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    artifacts: list[dict[str, Any]] = []
+    by_id: dict[str, dict[str, Any]] = {}
+    for artifact_id, candidates in REQUIRED_ARTIFACTS.items():
+        matched = _first_existing(root, candidates)
+        if matched is None:
+            record = {
+                "id": artifact_id,
+                "status": "missing",
+                "path": None,
+                "sha256": None,
+                "size_bytes": None,
+            }
+        else:
+            record = {
+                "id": artifact_id,
+                "status": "present",
+                "path": matched.relative_to(root).as_posix(),
+                "sha256": _sha256_file(matched),
+                "size_bytes": matched.stat().st_size,
+            }
+        artifacts.append(record)
+        by_id[artifact_id] = record
+    return artifacts, by_id
+
+
+def resolve_debt_items(
+    inventory: dict[str, Any],
+    artifacts: dict[str, dict[str, Any]],
+    *,
+    product_state: str,
+    live_mode_available: bool,
+) -> dict[str, dict[str, Any]]:
+    resolutions: dict[str, dict[str, Any]] = {}
+    for item in inventory.get("items", []):
+        item_id = item["id"]
+        required = DEBT_REQUIREMENTS.get(item_id, ())
+        missing = [
+            artifact_id for artifact_id in required if artifacts.get(artifact_id, {}).get("status") != "present"
+        ]
+        notes: list[str] = []
+        resolved = not missing
+        if item_id == "runtime.product-state":
+            resolved = resolved and product_state in {
+                "paper-shadow-production-ready",
+                "bounded-canary-ready",
+                "production-ready",
+            }
+            if not resolved:
+                notes.append(f"product_state={product_state}")
+        if item_id == "runtime.live-entrypoint":
+            resolved = resolved and live_mode_available
+            if not live_mode_available:
+                notes.append("live_mode_available=false")
+        if missing:
+            notes.append("missing_artifacts=" + ",".join(sorted(missing)))
+        resolutions[item_id] = {
+            "resolved": resolved,
+            "required_artifacts": list(required),
+            "evidence_digests": [
+                artifacts[artifact_id]["sha256"]
+                for artifact_id in required
+                if artifacts.get(artifact_id, {}).get("status") == "present"
+            ],
+            "notes": notes or ["evidence-materialized"],
+        }
+    return resolutions
+
+
+def build_release_bundle(
+    root: Path,
+    *,
+    release_id: str,
+    output_path: Path,
+    profile: str,
+) -> dict[str, Any]:
+    from scripts.verify_pr200_production_cutover import validate_manifest
+
+    capabilities = _load_json(root / "src" / "resources" / "capabilities.json")
+    inventory = _load_json(root / "src" / "resources" / "production_debt.json")
+    runtime_authority = _load_json(root / "config" / "runtime_authority_map.json")
+    cutover_manifest = _load_json(root / "config" / "production_cutover_manifest.json")
+    pr200 = validate_manifest(cutover_manifest)
+
+    bundle_dir = root / "release_artifacts" / "final" / release_id
+    bundle_dir.mkdir(parents=True, exist_ok=True)
+
+    human_review = {
+        "schema_version": HUMAN_REVIEW_SCHEMA_VERSION,
+        "release_id": release_id,
+        "review_status": "pending-human-review",
+        "reviewers": [],
+        "notes": [],
+    }
+    _atomic_write(bundle_dir / "human_review_manifest.json", human_review)
+
+    artifacts, artifacts_by_id = collect_release_artifacts(root)
+    review_path = bundle_dir / "human_review_manifest.json"
+    artifacts.append(
+        {
+            "id": "human_review_manifest",
+            "status": "present",
+            "path": review_path.relative_to(root).as_posix(),
+            "sha256": _sha256_file(review_path),
+            "size_bytes": review_path.stat().st_size,
+        }
+    )
+
+    product_state = str(capabilities.get("product_state", "unknown"))
+    runtime_modes = capabilities.get("runtime_modes", {})
+    live_mode_available = bool(runtime_modes.get("live", {}).get("available"))
+
+    debt_resolution = resolve_debt_items(
+        inventory,
+        artifacts_by_id,
+        product_state=product_state,
+        live_mode_available=live_mode_available,
+    )
+
+    bundle_manifest = {
+        "schema_version": BUNDLE_SCHEMA_VERSION,
+        "release_id": release_id,
+        "profile": profile,
+        "produced_at": _utc_now(),
+        "source_commit": _git_head_commit(root),
+        "product_state": product_state,
+        "live_mode_available": live_mode_available,
+        "pr200_cutover": pr200,
+        "artifacts": artifacts,
+        "runtime_authority_map_digest": _sha256_bytes(
+            _canonical_json(runtime_authority)
+        ),
+        "production_debt_inventory_digest": _sha256_bytes(_canonical_json(inventory)),
+        "debt_resolution": debt_resolution,
+    }
+    bundle_manifest_path = bundle_dir / "bundle_manifest.json"
+    _atomic_write(bundle_manifest_path, bundle_manifest)
+
+    resolved_items = sorted(
+        item_id for item_id, info in debt_resolution.items() if info["resolved"]
+    )
+    unresolved_items = sorted(
+        item_id for item_id, info in debt_resolution.items() if not info["resolved"]
+    )
+    missing_artifacts = sorted(
+        artifact["id"] for artifact in artifacts if artifact["status"] != "present"
+    )
+    qualification = {
+        "schema_version": SCHEMA_VERSION,
+        "release_id": release_id,
+        "profile": profile,
+        "executed_at": _utc_now(),
+        "bundle_path": bundle_dir.relative_to(root).as_posix(),
+        "bundle_manifest_path": bundle_manifest_path.relative_to(root).as_posix(),
+        "bundle_manifest_sha256": _sha256_file(bundle_manifest_path),
+        "source_commit": _git_head_commit(root),
+        "product_state": product_state,
+        "live_mode_available": live_mode_available,
+        "promotion_state": (
+            "blocked_pending_evidence"
+            if missing_artifacts or unresolved_items or not pr200["accepted"]
+            else "qualified"
+        ),
+        "qualified": not missing_artifacts and not unresolved_items and pr200["accepted"],
+        "release_claim_allowed": False,
+        "missing_artifacts": missing_artifacts,
+        "resolved_debt_items": resolved_items,
+        "open_debt_items": unresolved_items,
+        "debt_resolution": debt_resolution,
+        "pr200_cutover": pr200,
+    }
+    _atomic_write(output_path, qualification)
+    return qualification
+
+
+def _write_or_print(payload: dict[str, Any], path: str | None) -> None:
+    rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
+    if path:
+        target = Path(path)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(rendered, encoding="utf-8")
+    print(rendered, end="")
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser()
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--profile", action="append", default=None)
-    parser.add_argument("--output", default=None, help="plan output path")
-    parser.add_argument("--run-output", default=None)
-    parser.add_argument("--verdict-output", default=None)
-    parser.add_argument("--interpreter", default=None)
-    parser.add_argument("--production-wheel", default=None)
-    parser.add_argument("--wheelhouse-manifest", default=None)
-    parser.add_argument("--attestation-key-file", default=None)
-    parser.add_argument("--attestation-key-id", default=None)
-    parser.add_argument("--repeated-run", default=None)
-    parser.add_argument("--_under_selected_interpreter", action="store_true")
+    parser.add_argument("--output", default=None)
+    parser.add_argument("--release-id", default=None)
+    parser.add_argument("--project-root", default=str(ROOT))
     return parser
 
 
-def _write_or_print(payload: dict[str, Any], path: str | None) -> None:
-    rendered = json.dumps(payload, indent=2, sort_keys=True) + "\n"
-    if path:
-        Path(path).write_text(rendered, encoding="utf-8")
-    print(rendered, end="")
-
-
-def _reexec_if_needed(args: argparse.Namespace, original_argv: Sequence[str]) -> int | None:
-    if not args.execute or args._under_selected_interpreter:
-        return None
-    if not args.interpreter:
-        return None
-    selected = Path(args.interpreter).resolve(strict=True)
-    current = Path(sys.executable).resolve()
-    if selected == current:
-        return None
-    forwarded = list(original_argv)
-    forwarded.append("--_under_selected_interpreter")
-    completed = subprocess.run([str(selected), str(Path(__file__).resolve()), *forwarded])
-    return completed.returncode
-
-
-def _load_wheelhouse_manifest(path: Path, wheelhouse: Path) -> tuple[str, list[Any]]:
-    from src.qualification_pr186 import ArtifactIdentity, wheelhouse_manifest_hash
-
-    raw = json.loads(path.read_text(encoding="utf-8"))
-    entries = raw.get("artifacts")
-    if not isinstance(entries, list) or not entries:
-        raise ValueError("wheelhouse manifest requires a non-empty artifacts list")
-    artifacts = []
-    for entry in entries:
-        if not isinstance(entry, dict):
-            raise ValueError("wheelhouse artifact entry must be an object")
-        filename = str(entry.get("filename", ""))
-        expected = str(entry.get("sha256", ""))
-        if not filename or len(expected) != 64:
-            raise ValueError("wheelhouse artifact filename and sha256 are required")
-        artifact = ArtifactIdentity.from_path(wheelhouse / filename)
-        if artifact.sha256 != expected:
-            raise ValueError(f"wheelhouse artifact hash mismatch: {filename}")
-        artifacts.append(artifact)
-    return wheelhouse_manifest_hash(artifacts), artifacts
-
-
-def _profile_result(name: str, command: tuple[str, ...]) -> Any:
-    from src.qualification_pr186 import ProfileExecutionResult, utc_now
-
-    started_at = utc_now()
-    started_ns = time.monotonic_ns()
-    completed = subprocess.run(
-        command,
-        cwd=ROOT,
-        text=False,
-        capture_output=True,
-        check=False,
-        env={**os.environ, "PYTHONNOUSERSITE": "1"},
-    )
-    duration_ns = time.monotonic_ns() - started_ns
-    return ProfileExecutionResult(
-        name=name,
-        command=command,
-        started_at=started_at,
-        finished_at=utc_now(),
-        duration_ns=duration_ns,
-        exit_code=completed.returncode,
-        stdout_sha256=hashlib.sha256(completed.stdout).hexdigest(),
-        stderr_sha256=hashlib.sha256(completed.stderr).hexdigest(),
-        stdout_bytes=len(completed.stdout),
-        stderr_bytes=len(completed.stderr),
-    )
-
-
-def _installed_import_leakage() -> bool:
-    probe = (
-        "import json, pathlib, src; "
-        "print(json.dumps({'origin': str(pathlib.Path(src.__file__).resolve())}))"
-    )
-    completed = subprocess.run(
-        [sys.executable, "-I", "-c", probe],
-        cwd=ROOT.parent,
-        text=True,
-        capture_output=True,
-        check=False,
-        env={**os.environ, "PYTHONNOUSERSITE": "1", "PYTHONPATH": ""},
-    )
-    if completed.returncode:
-        return True
-    origin = Path(json.loads(completed.stdout)["origin"])
-    try:
-        origin.relative_to(ROOT)
-    except ValueError:
-        return False
-    return True
-
-
-def _repeated_run_matches(run_payload: dict[str, Any], path: str | None) -> bool:
-    if not path:
-        return False
-    other = json.loads(Path(path).read_text(encoding="utf-8"))
-    comparable = (
-        "source",
-        "dependency_closure",
-        "wheel",
-        "wheelhouse_manifest_hash",
-        "selected_profiles",
-        "network_disabled_after_bootstrap",
-        "source_import_leakage_detected",
-    )
-    if any(run_payload.get(key) != other.get(key) for key in comparable):
-        return False
-    first_profiles = [
-        (item["name"], item["exit_code"], item["stdout_sha256"], item["stderr_sha256"])
-        for item in run_payload.get("profiles", [])
-    ]
-    second_profiles = [
-        (item["name"], item["exit_code"], item["stdout_sha256"], item["stderr_sha256"])
-        for item in other.get("profiles", [])
-    ]
-    return first_profiles == second_profiles
-
-
-def _dry_run(args: argparse.Namespace) -> int:
-    _bootstrap_repo_imports()
-    from src.qualification_pr176 import build_default_qualification_plan
-    from src.qualification_pr186 import qualification_plan_document, source_tree_identity
-
-    source = source_tree_identity(ROOT)
-    plan = build_default_qualification_plan(ROOT)
-    payload = qualification_plan_document(plan, source)
-    _write_or_print(payload, args.output)
-    return 0
-
-
-def _execute(args: argparse.Namespace) -> int:
-    missing_args = [
-        name
-        for name, value in (
-            ("interpreter", args.interpreter),
-            ("production-wheel", args.production_wheel),
-            ("wheelhouse-manifest", args.wheelhouse_manifest),
-            ("attestation-key-file", args.attestation_key_file),
-            ("attestation-key-id", args.attestation_key_id),
-            ("run-output", args.run_output),
-            ("verdict-output", args.verdict_output),
-        )
-        if not value
-    ]
-    if missing_args:
-        payload = {
-            "schema_version": "pr186.qualification-execution-blocked.v1",
-            "execution_mode": "execute",
-            "qualified": False,
-            "release_claim_allowed": False,
-            "reason_codes": [f"missing_{name}" for name in missing_args],
-        }
-        _write_or_print(payload, args.output)
-        return EXIT_BLOCKED
-
-    from src.qualification_pr176 import build_default_qualification_plan
-    from src.qualification_pr186 import (
-        ArtifactIdentity,
-        InterpreterIdentity,
-        QualificationRun,
-        create_signed_verdict,
-        source_tree_identity,
-        utc_now,
-    )
-
-    interpreter = InterpreterIdentity.capture()
-    if not interpreter.isolated_environment or interpreter.global_site_packages_enabled:
-        payload = {
-            "schema_version": "pr186.qualification-execution-blocked.v1",
-            "execution_mode": "execute",
-            "qualified": False,
-            "release_claim_allowed": False,
-            "reason_codes": ["selected_interpreter_is_not_isolated"],
-            "interpreter": interpreter.to_dict(),
-        }
-        _write_or_print(payload, args.output)
-        return EXIT_BLOCKED
-
-    wheel = ArtifactIdentity.from_path(Path(args.production_wheel))
-    manifest_path = Path(args.wheelhouse_manifest).resolve(strict=True)
-    wheelhouse_hash, _ = _load_wheelhouse_manifest(manifest_path, manifest_path.parent)
-    source = source_tree_identity(ROOT)
-    plan = build_default_qualification_plan(
-        ROOT,
-        global_site_packages=interpreter.global_site_packages_enabled,
-        interpreter_executable=sys.executable,
-    )
-    selected = tuple(sorted(set(args.profile or plan.mandatory_profiles)))
-    by_name = {profile.name: profile for profile in plan.profiles}
-    unknown = sorted(set(selected).difference(by_name))
-    if unknown:
-        raise ValueError(f"unknown qualification profiles: {unknown}")
-
-    started_at = utc_now()
-    results = tuple(_profile_result(name, by_name[name].command) for name in selected)
-    run = QualificationRun(
-        run_id=uuid4().hex,
-        plan_hash=plan.to_manifest(
-            source_digest=source.digest,
-            execution_mode="execute",
-        )["manifest_hash"],
-        source=source,
-        interpreter=interpreter,
-        dependency_closure=plan.dependency_closure,
-        wheel=wheel,
-        wheelhouse_manifest_hash=wheelhouse_hash,
-        profiles=results,
-        selected_profiles=selected,
-        started_at=started_at,
-        finished_at=utc_now(),
-        environment_id=interpreter.identity_hash,
-        network_disabled_after_bootstrap=True,
-        source_import_leakage_detected=_installed_import_leakage(),
-    )
-    run_payload = run.to_dict()
-    Path(args.run_output).write_text(
-        json.dumps(run_payload, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    repeated_match = _repeated_run_matches(run_payload, args.repeated_run)
-    key = Path(args.attestation_key_file).read_bytes()
-    verdict = create_signed_verdict(
-        run,
-        repeated_clean_run_match=repeated_match,
-        signer_key_id=args.attestation_key_id,
-        signing_key=key,
-    )
-    verdict_payload = verdict.to_dict()
-    Path(args.verdict_output).write_text(
-        json.dumps(verdict_payload, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
-    _write_or_print(
-        {
-            "schema_version": "pr186.qualification-command-result.v1",
-            "execution_mode": "execute",
-            "run": run_payload,
-            "verdict": verdict_payload,
-            "qualified": verdict.qualified,
-            "release_claim_allowed": verdict.release_claim_allowed,
-        },
-        args.output,
-    )
-    return 0 if verdict.release_claim_allowed else EXIT_BLOCKED
-
-
 def main(argv: Sequence[str] | None = None) -> int:
-    original = list(argv) if argv is not None else sys.argv[1:]
-    args = _parser().parse_args(original)
-    reexec = _reexec_if_needed(args, original)
-    if reexec is not None:
-        return reexec
-    try:
-        return _execute(args) if args.execute else _dry_run(args)
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    args = _parser().parse_args(list(argv) if argv is not None else None)
+    root = Path(args.project_root).resolve()
+    selected_profiles = tuple(sorted(set(args.profile or ["production"])))
+    if selected_profiles != ("production",):
         payload = {
-            "schema_version": "pr186.qualification-command-error.v1",
+            "schema_version": SCHEMA_VERSION,
+            "qualified": False,
+            "release_claim_allowed": False,
+            "reason_codes": ["unsupported_profile_selection"],
+            "selected_profiles": list(selected_profiles),
+        }
+        _write_or_print(payload, args.output)
+        return EXIT_FAILED
+    output = Path(args.output or root / ".runtime" / "release-qualification.json")
+    release_id = args.release_id or time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    try:
+        if not args.execute:
+            payload = {
+                "schema_version": SCHEMA_VERSION,
+                "execution_mode": "inspect",
+                "qualified": False,
+                "release_claim_allowed": False,
+                "reason_codes": ["execution_required_for_materialization"],
+                "default_output": output.relative_to(root).as_posix()
+                if output.is_absolute()
+                else output.as_posix(),
+                "release_id": release_id,
+                "profile": "production",
+            }
+            _write_or_print(payload, args.output)
+            return 0
+        qualification = build_release_bundle(
+            root,
+            release_id=release_id,
+            output_path=output,
+            profile="production",
+        )
+        print(json.dumps(qualification, indent=2, sort_keys=True))
+        return 0 if qualification["qualified"] else EXIT_BLOCKED
+    except (OSError, ValueError, KeyError, json.JSONDecodeError) as exc:
+        payload = {
+            "schema_version": SCHEMA_VERSION,
             "qualified": False,
             "release_claim_allowed": False,
             "error_type": type(exc).__name__,

@@ -6,10 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-
-from src.authority_map import AuthorityMap, AuthorityMapError
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.authority_map import AuthorityMap, AuthorityMapError  # noqa: E402
 
 
 def main() -> int:
@@ -22,6 +25,7 @@ def main() -> int:
     )
     args = parser.parse_args()
     root = args.root.resolve()
+    authority: AuthorityMap | None = None
     try:
         authority = AuthorityMap.load(root / "config/runtime_authority_map.json")
         errors = authority.validate_repository(root)
@@ -31,7 +35,9 @@ def main() -> int:
         "schema_version": "pr01.authority-validation.v1",
         "valid": not errors,
         "product_state": (
-            authority.product_state if not errors else "not-production-ready"
+            authority.product_state
+            if authority is not None and not errors
+            else "not-production-ready"
         ),
         "errors": list(errors),
     }

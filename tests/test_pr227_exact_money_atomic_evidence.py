@@ -284,10 +284,17 @@ def test_bundle_blocks_dependency_mismatch_and_cluster_drift() -> None:
         replace(bundle, provider_plane_ready=False)
     with pytest.raises(PR227Error, match="PR227_PR228_TRUST_PLANE_NOT_READY"):
         replace(bundle, secret_release_ready=False)
+
+    wrong_cluster_simulation = replace(bundle.simulation, cluster_genesis_hash=D4)
+    wrong_cluster_freshness = replace(
+        bundle.freshness,
+        simulation_hash=wrong_cluster_simulation.simulation_hash,
+    )
     with pytest.raises(PR227Error, match="PR227_SIMULATION_CLUSTER_MISMATCH"):
         replace(
             bundle,
-            simulation=replace(bundle.simulation, cluster_genesis_hash=D4),
+            simulation=wrong_cluster_simulation,
+            freshness=wrong_cluster_freshness,
         )
 
 

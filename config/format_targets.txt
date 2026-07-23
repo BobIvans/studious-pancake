@@ -169,3 +169,5 @@ scripts/verify_asymmetric_qualification.py
 tests/test_pr205_asymmetric_qualification.py
 src/providers/rooted_ingestion_pr03.py
 tests/test_rooted_ingestion_pr03.py
+src/config/product_contract_pr195.py
+tests/test_pr195_product_contract.py

@@ -45,6 +45,12 @@ PR194_TRUSTED_FOUNDATION_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_mpr32_public_entrypoint_truth.py",
+    "--json",
+]
+
 PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr200_production_cutover.py",
@@ -183,6 +189,7 @@ def main() -> int:
     run(PACKAGE_SMOKE_COMMAND)
     run(VERIFY_PR194_REQUIRED_CONTROLS_COMMAND)
     run(PR194_TRUSTED_FOUNDATION_COMMAND)
+    run(MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
 

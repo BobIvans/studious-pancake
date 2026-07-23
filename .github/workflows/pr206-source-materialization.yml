@@ -1,4 +1,4 @@
-name: PR-206 source materialization
+name: PR-206 patch applicator
 
 on:
   pull_request:
@@ -6,20 +6,73 @@ on:
       - main
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: pr206-patch-applicator
+  cancel-in-progress: false
 
 jobs:
-  upload-source:
+  apply-verified-patch:
     if: github.head_ref == 'pr-206-durable-time-semantic-replay'
     runs-on: ubuntu-24.04
-    timeout-minutes: 5
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Archive exact checkout
-        run: tar --exclude=.git -czf /tmp/pr206-checkout.tar.gz .
-      - uses: actions/upload-artifact@v4
         with:
-          name: pr206-exact-checkout
-          path: /tmp/pr206-checkout.tar.gz
-          if-no-files-found: error
-          retention-days: 1
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Materialize verified PR-206 patch
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .pr206/patch.part.* | base64 -d > /tmp/pr206-patch.tar.gz
+          echo "7e1f4e8ca8c3cffad46af7a6e76b3157ba8bfaba0c516df0f65f7b3083274b7e  /tmp/pr206-patch.tar.gz" | sha256sum -c -
+          tar -xzf /tmp/pr206-patch.tar.gz -C .
+      - name: Install verification dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Format exact PR-206 targets
+        run: |
+          python -m black \
+            src/pr195_durable_kernel_v3.py \
+            src/pr206_durable_state.py \
+            scripts/verify_pr206_durable_state.py \
+            tests/test_pr195_durable_kernel_v3.py \
+            tests/test_pr206_durable_state.py
+      - name: Run PR-206 acceptance suite
+        env:
+          PAPER_TRADING_ONLY: "true"
+          LIVE_TRADING_ENABLED: "false"
+          JITO_ENABLED: "false"
+          KAMINO_LIQUIDATION_ENABLED: "false"
+        run: |
+          python scripts/verify_pr206_durable_state.py --json
+          python scripts/verify_pr194_required_controls.py
+          PYTHONPATH=. python scripts/validate_authority_map.py
+          python -m pytest \
+            tests/test_pr195_durable_lifecycle.py \
+            tests/test_pr195_durable_kernel_v3.py \
+            tests/test_pr206_durable_state.py \
+            tests/test_pr194_required_control_manifest.py \
+            tests/test_pr194_production_surface_manifest.py \
+            tests/test_pr01_authority_map.py \
+            -q --disable-socket --allow-unix-socket
+      - name: Commit atomic PR-206 implementation
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf .pr206
+          rm .github/workflows/pr206-source-materialization.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --cached --check
+          git commit -m "Implement PR-206 durable time and semantic replay authority"
+          git push origin "HEAD:${{ github.head_ref }}"

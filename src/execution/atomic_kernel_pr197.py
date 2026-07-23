@@ -2,9 +2,10 @@
 """Roadmap PR-197 sender-free atomic execution and economic kernel.
 
 This module binds rooted state, provider build evidence, instruction order,
-blockhash freshness, ALT identities, final message identity, simulation evidence
-and integer-only economics into one immutable sender-free report. It never
-imports signer, sender, Jito submit or RPC transport code.
+semantic account-effect proofs, blockhash freshness, ALT identities, final
+message identity, simulation evidence and integer-only economics into one
+immutable sender-free report. It never imports signer, sender, Jito submit or
+RPC transport code.
 """
 
 from __future__ import annotations
@@ -17,8 +18,8 @@ import json
 import re
 from typing import Any
 
-SCHEMA_VERSION = "pr197.atomic-execution-kernel.v1"
-RESULT_SCHEMA_VERSION = "pr197.atomic-execution-kernel-result.v1"
+SCHEMA_VERSION = "pr197.atomic-execution-kernel.v2"
+RESULT_SCHEMA_VERSION = "pr197.atomic-execution-kernel-result.v2"
 SOLANA_WIRE_TRANSACTION_LIMIT_BYTES = 1232
 _U128_MAX = 2**128 - 1
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -34,6 +35,7 @@ class AtomicKernelStatus(StrEnum):
 
     READY_SENDER_FREE = "ready_sender_free"
     STRUCTURE_REJECTED = "structure_rejected"
+    SEMANTIC_REJECTED = "semantic_rejected"
     FRESHNESS_REJECTED = "freshness_rejected"
     SIMULATION_REJECTED = "simulation_rejected"
     ECONOMICS_REJECTED = "economics_rejected"
@@ -238,6 +240,242 @@ class InstructionSequenceBinding:
         return tuple(diagnostics)
 
 
+_REQUIRED_ROLE_ACTIONS: dict[str, frozenset[str]] = {
+    "marginfi.begin": frozenset({"marginfi_flash_begin"}),
+    "marginfi.borrow": frozenset({"marginfi_flash_borrow"}),
+    "jupiter.leg_a": frozenset({"jupiter_swap_exact_in"}),
+    "jupiter.leg_b": frozenset({"jupiter_swap_exact_in"}),
+    "marginfi.repay": frozenset({"marginfi_flash_repay"}),
+    "marginfi.end": frozenset({"marginfi_flash_end"}),
+}
+
+_ALLOWED_PROGRAM_FAMILIES = frozenset(
+    {
+        "marginfi",
+        "jupiter",
+        "system",
+        "associated_token_account",
+        "spl_token",
+        "token_2022",
+        "compute_budget",
+    }
+)
+
+_FORBIDDEN_ACCOUNT_EFFECT_ACTIONS = frozenset(
+    {
+        "system_transfer",
+        "spl_token_transfer",
+        "spl_token_approve",
+        "spl_token_revoke",
+        "spl_token_set_authority",
+        "spl_token_mint_to",
+        "spl_token_burn",
+        "spl_token_freeze_account",
+        "spl_token_thaw_account",
+        "spl_token_delegate",
+    }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class SemanticInstructionEffect:
+    """Decoded account-effect proof for one compiled instruction.
+
+    PR-197 must not trust a program-id allowlist alone.  Every allowed System,
+    ATA, SPL Token, Jupiter and MarginFi instruction is represented here by its
+    decoded semantic action, authority role, subject role, optional destination,
+    mint binding and maximum wallet debit.  The values are hashes/roles only, so
+    this sender-free evidence can be reviewed without importing signer or sender
+    code.
+    """
+
+    role: str
+    program_family: str
+    action: str
+    authority_role: str
+    subject_role: str
+    destination_role: str | None = None
+    mint_hash: str | None = None
+    amount_lamports: int = 0
+    max_wallet_lamports_debit: int = 0
+
+    def __post_init__(self) -> None:
+        for field in (
+            "role",
+            "program_family",
+            "action",
+            "authority_role",
+            "subject_role",
+        ):
+            object.__setattr__(
+                self,
+                field,
+                _require_safe_id(getattr(self, field), field),
+            )
+        if self.destination_role is not None:
+            object.__setattr__(
+                self,
+                "destination_role",
+                _require_safe_id(self.destination_role, "destination_role"),
+            )
+        if self.mint_hash is not None:
+            object.__setattr__(
+                self,
+                "mint_hash",
+                _require_sha256(self.mint_hash, "mint_hash"),
+            )
+        _require_int(self.amount_lamports, field="amount_lamports")
+        _require_int(
+            self.max_wallet_lamports_debit,
+            field="max_wallet_lamports_debit",
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class SemanticFirewallBinding:
+    """Fail-closed semantic account-effect firewall for the final message."""
+
+    effects: tuple[SemanticInstructionEffect, ...]
+    account_effects_hash: str
+    writable_delta_budget_lamports: int
+    token_program_policy: str = "legacy_spl_only"
+    token2022_extensions_hash: str | None = None
+
+    def __post_init__(self) -> None:
+        if not self.effects:
+            raise AtomicKernelError("semantic firewall effects must not be empty")
+        object.__setattr__(self, "effects", tuple(self.effects))
+        object.__setattr__(
+            self,
+            "account_effects_hash",
+            _require_sha256(self.account_effects_hash, "account_effects_hash"),
+        )
+        _require_int(
+            self.writable_delta_budget_lamports,
+            field="writable_delta_budget_lamports",
+        )
+        object.__setattr__(
+            self,
+            "token_program_policy",
+            _require_safe_id(self.token_program_policy, "token_program_policy"),
+        )
+        if self.token2022_extensions_hash is not None:
+            object.__setattr__(
+                self,
+                "token2022_extensions_hash",
+                _require_sha256(
+                    self.token2022_extensions_hash,
+                    "token2022_extensions_hash",
+                ),
+            )
+
+    @property
+    def computed_effects_hash(self) -> str:
+        return sha256_payload(self.effects)
+
+    def diagnostics(
+        self,
+        instruction_roles: tuple[str, ...],
+    ) -> tuple[KernelDiagnostic, ...]:
+        diagnostics: list[KernelDiagnostic] = []
+        seen_roles = set(instruction_roles)
+        effects_by_role: dict[str, list[SemanticInstructionEffect]] = {}
+        total_wallet_debit = 0
+
+        if self.account_effects_hash != self.computed_effects_hash:
+            diagnostics.append(
+                KernelDiagnostic(
+                    "SEMANTIC_EFFECT_HASH_MISMATCH",
+                    "semantic account-effect hash does not match decoded effects",
+                    AtomicKernelStatus.IDENTITY_REJECTED,
+                )
+            )
+
+        for effect in self.effects:
+            effects_by_role.setdefault(effect.role, []).append(effect)
+            total_wallet_debit += effect.max_wallet_lamports_debit
+
+            if effect.program_family not in _ALLOWED_PROGRAM_FAMILIES:
+                diagnostics.append(
+                    KernelDiagnostic(
+                        "UNKNOWN_PROGRAM_FAMILY",
+                        f"program family {effect.program_family!r} is not allowed",
+                        AtomicKernelStatus.SEMANTIC_REJECTED,
+                    )
+                )
+
+            if effect.role not in seen_roles:
+                diagnostics.append(
+                    KernelDiagnostic(
+                        "SEMANTIC_ROLE_NOT_IN_SEQUENCE",
+                        f"semantic effect role {effect.role!r} is not present in instruction sequence",
+                        AtomicKernelStatus.SEMANTIC_REJECTED,
+                    )
+                )
+
+            if effect.action in _FORBIDDEN_ACCOUNT_EFFECT_ACTIONS:
+                diagnostics.append(
+                    KernelDiagnostic(
+                        "FORBIDDEN_ACCOUNT_EFFECT",
+                        f"account effect {effect.action!r} is forbidden in PR-197",
+                        AtomicKernelStatus.SEMANTIC_REJECTED,
+                    )
+                )
+
+            if effect.action == "spl_token_close_account":
+                safe_close = (
+                    effect.role == "cleanup.close_ata"
+                    and effect.authority_role == "payer"
+                    and effect.destination_role == "payer"
+                    and effect.amount_lamports == 0
+                    and effect.max_wallet_lamports_debit == 0
+                )
+                if not safe_close:
+                    diagnostics.append(
+                        KernelDiagnostic(
+                            "UNSAFE_TOKEN_CLOSE_ACCOUNT",
+                            "token account close is only allowed for cleanup.close_ata back to payer",
+                            AtomicKernelStatus.SEMANTIC_REJECTED,
+                        )
+                    )
+
+            if effect.program_family == "token_2022":
+                token2022_attested = (
+                    self.token_program_policy == "token2022_attested"
+                    and self.token2022_extensions_hash is not None
+                )
+                if not token2022_attested:
+                    diagnostics.append(
+                        KernelDiagnostic(
+                            "TOKEN2022_REQUIRES_ATTESTATION",
+                            "Token-2022 effects are fail-closed until extensions are attested",
+                            AtomicKernelStatus.SEMANTIC_REJECTED,
+                        )
+                    )
+
+        for role, expected_actions in _REQUIRED_ROLE_ACTIONS.items():
+            matching_actions = {effect.action for effect in effects_by_role.get(role, ())}
+            if not matching_actions & expected_actions:
+                diagnostics.append(
+                    KernelDiagnostic(
+                        "MISSING_REQUIRED_SEMANTIC_EFFECT",
+                        f"required role {role!r} lacks decoded expected account effect",
+                        AtomicKernelStatus.SEMANTIC_REJECTED,
+                    )
+                )
+
+        if total_wallet_debit > self.writable_delta_budget_lamports:
+            diagnostics.append(
+                KernelDiagnostic(
+                    "WRITABLE_DELTA_BUDGET_EXCEEDED",
+                    "decoded wallet debit exceeds semantic writable delta budget",
+                    AtomicKernelStatus.ECONOMICS_REJECTED,
+                )
+            )
+
+        return tuple(diagnostics)
+
+
 @dataclass(frozen=True, slots=True)
 class BlockhashBinding:
     blockhash: str
@@ -344,14 +582,21 @@ class SimulationBinding:
 
 @dataclass(frozen=True, slots=True)
 class IntegerEconomics:
-    """Integer-only conservative economics for the exact final message."""
+    """Integer-only conservative economics for the exact final message.
+
+    ``rpc_total_message_fee_lamports`` is the authoritative total returned for
+    the final message.  ``message_base_fee_lamports`` and
+    ``message_priority_fee_lamports`` are explanatory components only and are
+    never added a second time to native cost.
+    """
 
     principal_lamports: int
     repayment_lamports: int
     flash_fee_lamports: int
     expected_output_lamports: int
-    base_network_fee_lamports: int
-    priority_fee_lamports: int
+    rpc_total_message_fee_lamports: int
+    message_base_fee_lamports: int
+    message_priority_fee_lamports: int
     jito_tip_lamports: int
     ata_rent_peak_lamports: int
     token2022_transfer_fee_lamports: int
@@ -376,8 +621,7 @@ class IntegerEconomics:
     @property
     def native_cost_lamports(self) -> int:
         return (
-            self.base_network_fee_lamports
-            + self.priority_fee_lamports
+            self.rpc_total_message_fee_lamports
             + self.jito_tip_lamports
             + self.ata_rent_peak_lamports
             + self.contingency_lamports
@@ -387,8 +631,7 @@ class IntegerEconomics:
     def total_required_output_lamports(self) -> int:
         return (
             self.repayment_lamports
-            + self.base_network_fee_lamports
-            + self.priority_fee_lamports
+            + self.rpc_total_message_fee_lamports
             + self.jito_tip_lamports
             + self.token2022_transfer_fee_lamports
             + self.minimum_profit_lamports
@@ -398,14 +641,24 @@ class IntegerEconomics:
     def conservative_profit_lamports(self) -> int:
         return self.expected_output_lamports - (
             self.repayment_lamports
-            + self.base_network_fee_lamports
-            + self.priority_fee_lamports
+            + self.rpc_total_message_fee_lamports
             + self.jito_tip_lamports
             + self.token2022_transfer_fee_lamports
         )
 
     def diagnostics(self) -> tuple[KernelDiagnostic, ...]:
         diagnostics: list[KernelDiagnostic] = []
+        if (
+            self.message_base_fee_lamports + self.message_priority_fee_lamports
+            != self.rpc_total_message_fee_lamports
+        ):
+            diagnostics.append(
+                KernelDiagnostic(
+                    "MESSAGE_FEE_BREAKDOWN_MISMATCH",
+                    "base plus priority fee explanation must equal RPC total message fee",
+                    AtomicKernelStatus.ECONOMICS_REJECTED,
+                )
+            )
         if self.expected_output_lamports < self.total_required_output_lamports:
             diagnostics.append(
                 KernelDiagnostic(
@@ -436,6 +689,7 @@ class ExecutionBinding:
     policy_bundle_hash: str
     external_state: ExternalStateBinding
     instruction_sequence: InstructionSequenceBinding
+    semantic_firewall: SemanticFirewallBinding
     blockhash: BlockhashBinding
     final_message: FinalMessageBinding
     economics: IntegerEconomics
@@ -505,6 +759,11 @@ def evaluate_atomic_sender_free_kernel(
 ) -> AtomicKernelReport:
     diagnostics: list[KernelDiagnostic] = []
     diagnostics.extend(binding.instruction_sequence.diagnostics())
+    diagnostics.extend(
+        binding.semantic_firewall.diagnostics(
+            binding.instruction_sequence.instruction_roles,
+        )
+    )
     diagnostics.extend(binding.economics.diagnostics())
 
     if binding.final_message.wire_size_bytes > SOLANA_WIRE_TRANSACTION_LIMIT_BYTES:
@@ -607,6 +866,8 @@ __all__ = [
     "KernelDiagnostic",
     "RESULT_SCHEMA_VERSION",
     "SCHEMA_VERSION",
+    "SemanticFirewallBinding",
+    "SemanticInstructionEffect",
     "SimulationBinding",
     "evaluate_atomic_sender_free_kernel",
     "sha256_payload",

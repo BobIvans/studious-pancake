@@ -1,0 +1,152 @@
+name: Apply PR-03 formatter and evidence-expiry fix
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.head_ref == 'roadmap-pr-03-fix-trigger'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap-pr-03-rooted-provider-admission
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - name: Apply evidence-consumption hardening
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source_path = Path("src/providers/rooted_ingestion_pr03.py")
+          source = source_path.read_text()
+          source = source.replace(
+              """    def __init__(self, path: str | Path) -> None:
+                  self.path = Path(path)
+          """,
+              """    def __init__(
+                  self,
+                  path: str | Path,
+                  *,
+                  now_ns: Callable[[], int] = time.time_ns,
+              ) -> None:
+                  self.path = Path(path)
+                  self._now_ns = now_ns
+          """,
+              1,
+          )
+          source = source.replace(
+              "        now_ns = time.time_ns()\n",
+              "        now_ns = int(self._now_ns())\n",
+              2,
+          )
+          old = """            if _hash_json(rebuilt) != str(row["evidence_hash"]):
+                          raise ProviderVerificationError("PR03_STORED_EVIDENCE_HASH_MISMATCH")
+                      items.append(
+          """
+          new = """            if _hash_json(rebuilt) != str(row["evidence_hash"]):
+                          raise ProviderVerificationError("PR03_STORED_EVIDENCE_HASH_MISMATCH")
+                      bindings = (
+                          str(payload.get("event_id", "")) == str(row["event_id"]),
+                          str(payload.get("payload_hash", "")) == str(row["payload_hash"]),
+                          str(payload.get("release_id", "")) == str(row["release_id"]),
+                          str(payload.get("policy_bundle_hash", ""))
+                          == str(row["policy_bundle_hash"]),
+                      )
+                      if not all(bindings):
+                          raise ProviderVerificationError(
+                              "PR03_STORED_EVIDENCE_BINDING_MISMATCH"
+                          )
+                      issued_at_ns = int(payload.get("issued_at_ns", -1))
+                      expires_at_ns = int(payload.get("expires_at_ns", -1))
+                      now_ns = int(self._now_ns())
+                      if (
+                          issued_at_ns < 0
+                          or expires_at_ns <= issued_at_ns
+                          or now_ns < issued_at_ns
+                      ):
+                          raise ProviderVerificationError(
+                              "PR03_STORED_EVIDENCE_TIME_INVALID"
+                          )
+                      if now_ns >= expires_at_ns:
+                          raise ProviderVerificationError("PR03_STORED_EVIDENCE_EXPIRED")
+                      items.append(
+          """
+          if old not in source:
+              raise SystemExit("source anchor not found")
+          source_path.write_text(source.replace(old, new, 1))
+
+          tests_path = Path("tests/test_rooted_ingestion_pr03.py")
+          tests = tests_path.read_text().replace(
+              "    store = RootedProviderIngestionStore(db_path)\n",
+              "    store = RootedProviderIngestionStore(db_path, now_ns=lambda: now)\n",
+              1,
+          )
+          tests += """
+
+          def test_expired_stored_evidence_fails_closed_before_a3(tmp_path):
+              db = tmp_path / "helius.sqlite3"
+              seed(db)
+              now = time.time_ns()
+              auth, _, _, worker = build(db, now, quorum(now))
+              assert worker.run_once(admission(now)).decision is WorkerDecision.ADMITTED
+              expired_store = RootedProviderIngestionStore(
+                  db,
+                  now_ns=lambda: now + 31_000_000_000,
+              )
+
+              batch = A3RootedProviderBatchSource(
+                  store=expired_store,
+                  authenticator=auth,
+              )()
+
+              assert batch.evidence.ready is False
+              assert batch.evidence.blockers == ("PR03_STORED_EVIDENCE_EXPIRED",)
+
+
+          def test_tampered_handoff_metadata_fails_closed_at_a3_boundary(tmp_path):
+              db = tmp_path / "helius.sqlite3"
+              seed(db)
+              now = time.time_ns()
+              auth, store, _, worker = build(db, now, quorum(now))
+              assert worker.run_once(admission(now)).decision is WorkerDecision.ADMITTED
+              with sqlite3.connect(db) as con:
+                  con.execute(
+                      "UPDATE pr03_provider_handoff SET release_id=?",
+                      ("release-tampered",),
+                  )
+                  con.commit()
+
+              batch = A3RootedProviderBatchSource(store=store, authenticator=auth)()
+
+              assert batch.evidence.ready is False
+              assert batch.evidence.blockers == (
+                  "PR03_STORED_EVIDENCE_BINDING_MISMATCH",
+              )
+          """
+          tests_path.write_text(tests)
+          PY
+      - name: Format and verify
+        shell: bash
+        run: |
+          python -m black src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
+          python -m mypy --config-file mypy.ini src/providers/rooted_ingestion_pr03.py
+          python -m pytest tests/test_rooted_ingestion_pr03.py -q --disable-socket --allow-unix-socket
+          python -m compileall -q src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
+      - name: Commit verified fix
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
+          git commit -m 'PR-03: enforce evidence expiry and authenticated metadata bindings'
+          git push origin HEAD:roadmap-pr-03-rooted-provider-admission

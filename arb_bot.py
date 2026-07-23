@@ -11,8 +11,8 @@ from src.cli import (
     LauncherConfig,
     install_signal_handlers,
     load_configuration,
-    main,
 )
+from src.cli_pr189 import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

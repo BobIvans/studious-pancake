@@ -48,28 +48,3 @@ jobs:
           setup.py
           scripts/package_smoke.py
           src/production_surface.py
-  repository-verification-diagnostic:
-    runs-on: ubuntu-24.04
-    env:
-      PAPER_TRADING_ONLY: "true"
-      LIVE_TRADING_ENABLED: "false"
-      JITO_ENABLED: "false"
-      KAMINO_LIQUIDATION_ENABLED: "false"
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - run: python -m pip install -q --requirement requirements.txt
-      - run: python -m pip install -q --requirement requirements-dev.txt
-      - run: python -m pip install -q --no-deps .
-      - name: Run repository verification with compact failure tail
-        run: |
-          set +e
-          python scripts/verify_repo.py > /tmp/pr194-verify-repo.log 2>&1
-          status=$?
-          set -e
-          if [ "$status" -ne 0 ]; then
-            tail -n 160 /tmp/pr194-verify-repo.log
-          fi
-          exit "$status"

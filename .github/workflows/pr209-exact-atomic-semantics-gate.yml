@@ -1,0 +1,43 @@
+name: PR-209 exact atomic semantics gate
+
+on:
+  pull_request:
+    paths:
+      - "src/execution/pr209_exact_atomic_semantics_gate.py"
+      - "tests/test_pr209_exact_atomic_semantics_gate.py"
+      - "docs/pr209_exact_atomic_semantics_gate.md"
+      - ".github/workflows/pr209-exact-atomic-semantics-gate.yml"
+  push:
+    paths:
+      - "src/execution/pr209_exact_atomic_semantics_gate.py"
+      - "tests/test_pr209_exact_atomic_semantics_gate.py"
+      - "docs/pr209_exact_atomic_semantics_gate.md"
+      - ".github/workflows/pr209-exact-atomic-semantics-gate.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused-verification:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+      - name: Install requirements
+        run: |
+          python -m pip install --upgrade pip
+          if [ -f requirements.txt ]; then python -m pip install -r requirements.txt; fi
+          if [ -f requirements-dev.txt ]; then python -m pip install -r requirements-dev.txt; fi
+      - name: Compile focused files
+        run: |
+          python -m py_compile \
+            src/execution/pr209_exact_atomic_semantics_gate.py \
+            tests/test_pr209_exact_atomic_semantics_gate.py
+      - name: Run focused tests
+        run: |
+          python -m pytest -q tests/test_pr209_exact_atomic_semantics_gate.py
+      - name: Compile package subtree
+        run: |
+          python -m compileall -q src/execution tests/test_pr209_exact_atomic_semantics_gate.py

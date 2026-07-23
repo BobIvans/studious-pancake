@@ -1,0 +1,36 @@
+name: MPR-04 protocol-bound economics
+
+on:
+  pull_request:
+    paths:
+      - "src/mpr04_protocol_bound_economics.py"
+      - "tests/test_mpr04_protocol_bound_economics.py"
+      - "docs/mpr04_protocol_bound_economic_execution.md"
+      - ".github/workflows/mpr04-protocol-bound-economics.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mpr04-protocol-bound-economics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install focused test dependency
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==9.0.2
+      - name: Compile focused MPR-04 gate
+        run: |
+          python -m py_compile \
+            src/mpr04_protocol_bound_economics.py \
+            tests/test_mpr04_protocol_bound_economics.py
+      - name: Run focused MPR-04 tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_mpr04_protocol_bound_economics.py

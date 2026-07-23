@@ -1,0 +1,61 @@
+name: PR08 sync current main
+
+on:
+  push:
+    branches:
+      - roadmap/pr-08-isolated-signer-submission-foundation
+
+permissions:
+  contents: write
+
+jobs:
+  sync-main:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap/pr-08-isolated-signer-submission-foundation
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Merge current main and resolve append-only manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          set +e
+          git merge --no-commit --no-ff origin/main
+          merge_status=$?
+          set -e
+
+          if git diff --name-only --diff-filter=U | grep -qx 'config/format_targets.txt'; then
+            git checkout --theirs config/format_targets.txt
+            for target in \
+              isolated_signer_service/src/flashloan_isolated_signer/__init__.py \
+              isolated_signer_service/src/flashloan_isolated_signer/models.py \
+              isolated_signer_service/src/flashloan_isolated_signer/store.py \
+              isolated_signer_service/src/flashloan_isolated_signer/boundary.py \
+              isolated_signer_service/src/flashloan_isolated_signer/service.py \
+              tests/test_roadmap_pr08_isolated_signer_foundation.py
+            do
+              grep -Fqx "$target" config/format_targets.txt || printf '%s\n' "$target" >> config/format_targets.txt
+            done
+            git add config/format_targets.txt
+          fi
+
+          unresolved="$(git diff --name-only --diff-filter=U)"
+          if [ -n "$unresolved" ]; then
+            printf 'Unresolved conflicts:\n%s\n' "$unresolved" >&2
+            exit 1
+          fi
+          if [ "$merge_status" -ne 0 ] && ! git rev-parse -q --verify MERGE_HEAD >/dev/null; then
+            echo "git merge failed without a resolvable merge state" >&2
+            exit 1
+          fi
+
+          rm -f .github/workflows/pr08-sync-main.yml
+          git add -A
+          git commit -m "Merge current main into PR-08 and resolve format manifest"
+          git push origin HEAD:roadmap/pr-08-isolated-signer-submission-foundation

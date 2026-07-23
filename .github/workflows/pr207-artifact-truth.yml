@@ -1,0 +1,38 @@
+name: PR-207 artifact truth
+
+on:
+  pull_request:
+    paths:
+      - "src/pr207_artifact_truth_gate.py"
+      - "tests/test_pr207_artifact_truth_gate.py"
+      - "docs/pr207_artifact_truth_package_closure.md"
+      - ".github/workflows/pr207-artifact-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  artifact-truth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Compile PR-207 gate
+        run: |
+          python -m py_compile \
+            src/pr207_artifact_truth_gate.py \
+            tests/test_pr207_artifact_truth_gate.py
+
+      - name: Install focused test dependency
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==9.0.2
+
+      - name: Run focused tests
+        run: PYTHONPATH=. python -m pytest -q tests/test_pr207_artifact_truth_gate.py

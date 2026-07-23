@@ -1,0 +1,50 @@
+name: PR-194 optimize invariant
+
+on:
+  pull_request:
+    paths:
+      - "scripts/pr194_optimize_invariant_gate_lib.py"
+      - "scripts/verify_pr194_optimize_invariant.py"
+      - "tests/test_pr194_optimize_invariant_gate.py"
+      - "docs/pr194_optimize_invariant_gate.md"
+      - ".github/workflows/pr194-optimize-invariant.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  optimize-invariant:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Compile PR-194 optimize invariant gate
+        run: |
+          python -m py_compile \
+            scripts/pr194_optimize_invariant_gate_lib.py \
+            scripts/verify_pr194_optimize_invariant.py \
+            tests/test_pr194_optimize_invariant_gate.py
+      - name: Verify normal mode evidence
+        env:
+          PYTHONPATH: .
+        run: |
+          python scripts/verify_pr194_optimize_invariant.py --json
+      - name: Verify optimized mode evidence
+        env:
+          PYTHONPATH: .
+          PYTHONOPTIMIZE: "1"
+        run: |
+          python scripts/verify_pr194_optimize_invariant.py --json
+      - name: Install focused test dependency
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pytest==9.0.2
+      - name: Run focused PR-194 optimize invariant tests
+        env:
+          PYTHONPATH: .
+        run: |
+          python -m pytest -q tests/test_pr194_optimize_invariant_gate.py

@@ -34,5 +34,25 @@ jobs:
           python -m pip install -q --requirement requirements.txt
           python -m pip install -q --requirement requirements-dev.txt
           python -m pip install -q --no-deps .
-      - name: Run concise repository verification
-        run: python scripts/verify_repo.py
+      - name: Capture repository verification
+        id: verify
+        shell: bash
+        run: |
+          set +e
+          python scripts/verify_repo.py > verify.log 2>&1
+          status=$?
+          printf '%s\n' "$status" > verify.exit
+          tail -n 120 verify.log
+          exit 0
+      - name: Upload diagnostic log
+        uses: actions/upload-artifact@v7.0.1
+        with:
+          name: mega-pr-02-verify-log
+          path: |
+            verify.log
+            verify.exit
+          if-no-files-found: error
+          retention-days: 1
+      - name: Preserve verification exit status
+        shell: bash
+        run: exit "$(cat verify.exit)"

@@ -125,5 +125,90 @@
     "sender_free": true,
     "supported_entrypoint": "flashloan-bot"
   },
+  "runtime_cutover": {
+    "canonical_composition": {
+      "authority_id": "canonical-installed-runtime",
+      "composition_module": "src.cli_pr189",
+      "console_entrypoint": "flashloan-bot",
+      "paper_command": "flashloan-bot paper",
+      "runtime_authority_manifest": "src/resources/runtime_authority_map.json",
+      "supported_entrypoint": "flashloan-bot"
+    },
+    "container_paper_mode": {
+      "command": "flashloan-bot container --mode paper",
+      "composition_module": "src.cli_pr189",
+      "cutover_state": "blocked_until_canonical_paper_mode",
+      "workload_ready": false
+    },
+    "declared_blockers": [
+      "MPR01_SAFE_IDLE_NOT_WORKLOAD_READY",
+      "MPR01_PAPER_CONTAINER_COMPOSITION_NOT_UNIFIED",
+      "MPR01_RELEASE_QUALIFICATION_NOT_AUTHORITATIVE",
+      "MPR01_PROOF_ISLANDS_NOT_RUNTIME_AUTHORITIES"
+    ],
+    "paper_ready": false,
+    "production_ready": false,
+    "proof_island_dispositions": [
+      {
+        "disposition": "must_integrate_or_quarantine",
+        "module": "src.pr198_sender_free_qualification_v3"
+      },
+      {
+        "disposition": "must_integrate_or_quarantine",
+        "module": "src.pr199_live_boundary_canary_gate"
+      },
+      {
+        "disposition": "must_integrate_or_quarantine",
+        "module": "src.production_operations_pr199"
+      },
+      {
+        "disposition": "must_integrate_or_quarantine",
+        "module": "src.production_cutover_pr200"
+      }
+    ],
+    "readiness_endpoints": [
+      {
+        "kind": "process_health",
+        "may_be_green_when_blocked": true,
+        "name": "liveness"
+      },
+      {
+        "kind": "diagnostic_only",
+        "may_be_green_when_blocked": true,
+        "name": "safe_idle"
+      },
+      {
+        "kind": "workload_precondition",
+        "may_be_green_when_blocked": false,
+        "name": "data_ready"
+      },
+      {
+        "kind": "sender_free_workload",
+        "may_be_green_when_blocked": false,
+        "name": "paper_ready"
+      },
+      {
+        "kind": "live_permission",
+        "may_be_green_when_blocked": false,
+        "name": "live_gate"
+      }
+    ],
+    "release_truth": {
+      "ambient_packages_forbidden": true,
+      "authoritative_check": "release-qualification",
+      "clean_wheel_import_closure_required": true,
+      "full_sha_actions_required": true,
+      "local_reproduction_commands": [
+        "python scripts/verify_repo.py --skip-dependency-audit",
+        "python scripts/verify_mpr01_runtime_cutover.py --json"
+      ],
+      "network_disabled_release_required": true,
+      "sbom_required": true,
+      "signed_wheelhouse_required": true
+    },
+    "roadmap": "MPR-01",
+    "schema_version": "mpr01.runtime-cutover.v1",
+    "state": "blocked_pending_runtime_cutover"
+  },
   "schema_version": "pr194.production-surface.v1"
 }

@@ -88,7 +88,8 @@ def test_status_and_capabilities_json_are_stable(capsys):
 
 
 def test_canonical_paper_service_is_available_but_live_mode_fails_closed(
-    capsys, tmp_path
+    capsys,
+    tmp_path,
 ):
     db_path = tmp_path / "canonical-paper.sqlite3"
 

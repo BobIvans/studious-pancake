@@ -16,7 +16,14 @@ from src.providers.helius.delivery import (
 
 
 def _plane(tmp_path: Path, **limit_overrides) -> HeliusDeliveryPlane:
-    limits = DeliveryLimits(**limit_overrides)
+    limits = DeliveryLimits(
+        # CI runners can spend more than the production ingress budget on cold
+        # SQLite/WAL setup. Keep production defaults in source, but make the
+        # ordinary unit-test helper non-flaky; deadline-specific tests override
+        # this with intentionally tiny values below.
+        delivery_deadline_ms=5_000,
+        **limit_overrides,
+    )
     return HeliusDeliveryPlane(
         HeliusDeliveryConfig(
             auth_header="Bearer test",

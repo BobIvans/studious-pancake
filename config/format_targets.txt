@@ -167,3 +167,5 @@ src/paper_shadow/durable_service_a3.py
 src/release_gate/asymmetric_qualification.py
 scripts/verify_asymmetric_qualification.py
 tests/test_pr205_asymmetric_qualification.py
+src/providers/rooted_ingestion_pr03.py
+tests/test_rooted_ingestion_pr03.py

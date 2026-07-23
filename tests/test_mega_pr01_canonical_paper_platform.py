@@ -133,7 +133,8 @@ def test_rooted_slot_skew_is_rejected(tmp_path: Path) -> None:
 
 def test_duplicate_candidate_ids_fail_closed_and_are_recorded(tmp_path: Path) -> None:
     recording = _write_recording(
-        tmp_path / "recording.json", [_candidate(), _candidate()]
+        tmp_path / "recording.json",
+        [_candidate(), _candidate()],
     )
     report = _platform(tmp_path, recording).run_once()
     assert report.outcome is PaperOutcome.BLOCKED
@@ -166,7 +167,9 @@ def test_same_source_and_config_replay_is_idempotent(tmp_path: Path) -> None:
     with sqlite3.connect(tmp_path / "paper.sqlite3") as connection:
         assert connection.execute("SELECT COUNT(*) FROM paper_cycles").fetchone()[0] == 1
         assert (
-            connection.execute("SELECT COUNT(*) FROM paper_candidate_decisions").fetchone()[0]
+            connection.execute(
+                "SELECT COUNT(*) FROM paper_candidate_decisions"
+            ).fetchone()[0]
             == 1
         )
 
@@ -183,7 +186,8 @@ def test_migration_checksum_tamper_hard_stops(tmp_path: Path) -> None:
 
 
 def test_cli_default_package_recording_executes_sender_free_cycle(
-    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     code = paper_main(["--db-path", str(tmp_path / "cli.sqlite3"), "--json"])
     payload = json.loads(capsys.readouterr().out)
@@ -198,5 +202,7 @@ def test_cli_default_package_recording_executes_sender_free_cycle(
 def test_root_wrapper_and_installed_cli_share_main_target() -> None:
     root = Path("arb_bot.py").read_text()
     installed = Path("pyproject.toml").read_text()
-    assert "from src.cli_pr189 import main" in root
+    assert 'CANONICAL_MAIN_TARGET = "src.cli_pr189:main"' in root
+    assert "import_module(module_name)" in root
+    assert "from src.cli_pr189 import" not in root
     assert 'flashloan-bot = "src.cli_pr189:main"' in installed

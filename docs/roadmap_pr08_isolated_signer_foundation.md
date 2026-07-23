@@ -52,4 +52,8 @@ python -m py_compile \
   isolated_signer_service/src/flashloan_isolated_signer/boundary.py \
   isolated_signer_service/src/flashloan_isolated_signer/service.py \
   tests/test_roadmap_pr08_isolated_signer_foundation.py
+python scripts/verify_repo.py
 ```
+
+The isolated package sources and regression test are registered in the repository
+Black manifest, so aggregate verification checks their exact formatter output.

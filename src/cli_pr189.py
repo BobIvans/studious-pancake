@@ -267,6 +267,25 @@ def _inspection_command_name(args: list[str]) -> str | None:
     return None
 
 
+def _requested_run_mode(args: list[str]) -> str | None:
+    """Return an explicitly requested ``run --mode`` without full parsing."""
+
+    try:
+        run_index = args.index("run")
+    except ValueError:
+        return None
+    tail = args[run_index + 1 :]
+    index = 0
+    while index < len(tail):
+        item = tail[index]
+        if item == "--mode" and index + 1 < len(tail):
+            return tail[index + 1]
+        if item.startswith("--mode="):
+            return item.partition("=")[2]
+        index += 1
+    return "shadow"
+
+
 def _run_lightweight_inspection(args: list[str]) -> int | None:
     """Handle commands that must not import heavy runtime modules before dispatch."""
 
@@ -275,6 +294,11 @@ def _run_lightweight_inspection(args: list[str]) -> int | None:
         _inspection_parser().print_help()
         return 0
     if command_name not in {"status", "capabilities", "config", "run"}:
+        return None
+    # The canonical sender-free paper service accepts its own arguments
+    # (for example ``--db-path``).  Do not parse it with the dependency-light
+    # inspection parser; delegate it to the canonical paper CLI below.
+    if command_name == "run" and _requested_run_mode(args) == "paper":
         return None
 
     try:

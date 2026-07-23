@@ -14,7 +14,7 @@ from src.mpr_close_05_isolated_signer_jito_canary import (
 
 
 MESSAGE = b"mpr-close-05-message"
-MESSAGE_HASH = "93947fcc54b9793dad50ff5f15f020077373def81b44fe43421d6f23bcfc0f7b"
+MESSAGE_HASH = "e33b813f251949d0e9fd8bfd77c8b9a19cdabb6e62f9e093bca71e8dc1ee1889"
 
 
 def _codes(report):

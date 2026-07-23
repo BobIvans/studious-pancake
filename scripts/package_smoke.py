@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
 import os
 from pathlib import Path
@@ -14,6 +15,16 @@ import venv
 import zipfile
 
 ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.production_surface import (  # noqa: E402
+    assert_no_forbidden_wheel_members,
+    forbidden_wheel_members,
+    required_entrypoints,
+    required_wheel_members,
+)
+
 IGNORED_COPY_NAMES = {
     ".git",
     ".mypy_cache",
@@ -26,26 +37,12 @@ IGNORED_COPY_NAMES = {
     "htmlcov",
     "venv",
 }
-FORBIDDEN_WHEEL_PATHS = frozenset(
-    {
-        "src/legacy_arb_bot.py",
-        "src/execution/live_control.py",
-        "src/execution/shadow.py",
-    }
-)
-FORBIDDEN_WHEEL_PREFIXES = (
-    "src/ingest/",
-    "src/execution/senders/",
-)
 
 
-def _forbidden_wheel_members(names: set[str]) -> list[str]:
-    return sorted(
-        name
-        for name in names
-        if name in FORBIDDEN_WHEEL_PATHS
-        or any(name.startswith(prefix) for prefix in FORBIDDEN_WHEEL_PREFIXES)
-    )
+def _forbidden_wheel_members(names: Iterable[str]) -> list[str]:
+    """Compatibility wrapper for PR-087 tests around the manifest boundary."""
+
+    return forbidden_wheel_members(names)
 
 
 def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> str:
@@ -132,35 +129,20 @@ def main() -> int:
         wheel = wheels[0]
         with zipfile.ZipFile(wheel) as archive:
             names = set(archive.namelist())
-            required = {
-                "arb_bot.py",
-                "src/authority_map.py",
-                "src/cli.py",
-                "src/cli_pr189.py",
-                "src/container_runtime.py",
-                "src/resources/capabilities.json",
-                "src/resources/runtime_authority_map.json",
-            }
-            missing = sorted(required - names)
+            missing = sorted(required_wheel_members() - names)
             if missing:
                 raise SystemExit(f"wheel is missing required files: {missing}")
-            forbidden = _forbidden_wheel_members(names)
-            if forbidden:
-                raise SystemExit(
-                    "wheel contains quarantined production members: "
-                    + ", ".join(forbidden)
-                )
+            try:
+                assert_no_forbidden_wheel_members(names)
+            except RuntimeError as exc:
+                raise SystemExit(str(exc)) from exc
             entry_points = [
                 name for name in names if name.endswith(".dist-info/entry_points.txt")
             ]
             if len(entry_points) != 1:
                 raise SystemExit("wheel does not contain one entry_points.txt")
             entry_text = archive.read(entry_points[0]).decode("utf-8")
-            required_entrypoints = {
-                "flashloan-bot": "src.cli_pr189:main",
-                "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
-            }
-            for executable, target in required_entrypoints.items():
+            for executable, target in required_entrypoints().items():
                 expected = f"{executable} = {target}"
                 if expected not in entry_text:
                     raise SystemExit(
@@ -193,6 +175,19 @@ def main() -> int:
         clean_env.pop("PYTHONPATH", None)
         clean_env["PATH"] = f"{bin_dir}{os.pathsep}{clean_env.get('PATH', '')}"
         clean_env["PYTHONNOUSERSITE"] = "1"
+        _run(
+            [
+                str(python),
+                "-c",
+                (
+                    "from src.production_surface import "
+                    "assert_forbidden_imports_unavailable, forbidden_import_names; "
+                    "assert_forbidden_imports_unavailable(forbidden_import_names())"
+                ),
+            ],
+            cwd=temporary,
+            env=clean_env,
+        )
         status = json.loads(
             _run(
                 [str(bin_dir / "flashloan-bot"), "status", "--json"],

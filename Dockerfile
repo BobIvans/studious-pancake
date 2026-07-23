@@ -12,7 +12,7 @@ ENV VIRTUAL_ENV=/opt/venv \
 WORKDIR /build
 RUN python -m venv "$VIRTUAL_ENV"
 
-COPY requirements.txt pyproject.toml README.md arb_bot.py ./
+COPY requirements.txt pyproject.toml setup.py README.md arb_bot.py ./
 COPY src ./src
 
 RUN python -m pip install --requirement requirements.txt \

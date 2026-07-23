@@ -1,0 +1,57 @@
+{
+  "dependency_profiles": {
+    "dev": "requirements-dev.txt",
+    "runtime": "requirements.txt"
+  },
+  "description": "Single source of truth for the PR-194 production package/image surface.",
+  "entrypoints": {
+    "flashloan-bot": "src.cli_pr189:main",
+    "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main"
+  },
+  "forbidden": {
+    "import_names": [
+      "src.legacy_arb_bot",
+      "src.execution.live_control",
+      "src.execution.shadow",
+      "src.ingest",
+      "src.execution.senders"
+    ],
+    "module_files": [
+      "src/legacy_arb_bot.py",
+      "src/execution/live_control.py",
+      "src/execution/shadow.py"
+    ],
+    "package_prefixes": [
+      "src/ingest/",
+      "src/execution/senders/"
+    ]
+  },
+  "image": {
+    "forbidden_imports": [
+      "numpy",
+      "pandas",
+      "pyarrow",
+      "sklearn",
+      "pytest"
+    ]
+  },
+  "package_name": "studious-pancake-flashloan-bot",
+  "product_state": "not-production-ready",
+  "required_wheel_members": [
+    "arb_bot.py",
+    "src/authority_map.py",
+    "src/cli.py",
+    "src/cli_pr189.py",
+    "src/container_runtime.py",
+    "src/production_surface.py",
+    "src/resources/capabilities.json",
+    "src/resources/production_surface_manifest.json",
+    "src/resources/runtime_authority_map.json"
+  ],
+  "runtime": {
+    "live_trading_enabled": false,
+    "sender_free": true,
+    "supported_entrypoint": "flashloan-bot"
+  },
+  "schema_version": "pr194.production-surface.v1"
+}

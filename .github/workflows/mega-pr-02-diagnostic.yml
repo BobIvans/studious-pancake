@@ -67,8 +67,6 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add src/release_gate/production_paper_qualification.py
-          git rm --cached .github/workflows/mega-pr-02-diagnostic.yml 2>/dev/null || true
-          git add -u .github/workflows/mega-pr-02-diagnostic.yml
+          git add -A src/release_gate/production_paper_qualification.py .github/workflows/mega-pr-02-diagnostic.yml
           git commit -m 'fix: use type-specific evidence loop variables'
           git push origin HEAD:${{ github.event.pull_request.head.ref || github.ref_name }}

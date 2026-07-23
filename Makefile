@@ -1,4 +1,4 @@
-.PHONY: install install-dev install-analytics lock syntax lint format-check type-check security test test-live verify verify-offline package-smoke image-smoke contracts-validate contracts-status contracts-drift mpr01-runtime-cutover pr200-production-cutover pr206-durable-state status capabilities run container paper
+.PHONY: install install-dev install-analytics lock syntax lint format-check type-check security test test-live verify verify-offline package-smoke image-smoke contracts-validate contracts-status contracts-drift mpr01-runtime-cutover pr200-production-cutover pr206-durable-state status capabilities run container paper verify-clean package-smoke-clean test-collect-clean release-artifacts-clean
 
 install:
 	python -m pip install --requirement requirements.txt
@@ -45,6 +45,18 @@ verify-offline:
 
 package-smoke:
 	python scripts/package_smoke.py
+
+verify-clean:
+	python scripts/hermetic_runtime.py verify-clean
+
+package-smoke-clean:
+	python scripts/hermetic_runtime.py package-smoke-clean
+
+test-collect-clean:
+	python scripts/hermetic_runtime.py test-collect-clean
+
+release-artifacts-clean:
+	python scripts/hermetic_runtime.py release-artifacts-clean
 
 image-smoke:
 	bash scripts/image_smoke.sh

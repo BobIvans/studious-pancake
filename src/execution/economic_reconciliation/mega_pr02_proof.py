@@ -1,12 +1,9 @@
 """MEGA-PR-02 raw-state-owned economic proof qualification.
 
-This module is deliberately additive. It does not enable live execution and it
-must not be used as a shortcut around the existing reconciliation engine.  It is
-an explicit fail-closed qualification boundary for the V4 IMPL-58/IMPL-59
-findings: decoded economic fields must be bound to raw simulation state and a
-`PROVEN_PROFIT` report is not production-qualified unless every asset delta is
-converted into one conservative quote currency and the total is strictly above
-policy threshold.
+This additive, live-disabled boundary qualifies legacy reconciliation reports only
+when raw simulation state, decoded account identity, MarginFi registry admission,
+and conservative cross-asset valuation all agree.  It intentionally does not
+sign, submit, book PnL, release capital, or enable live execution.
 """
 
 from __future__ import annotations
@@ -216,63 +213,6 @@ class RawStateEconomicProofAuthority:
             self._bind_decoded_state(evidence, raw_accounts)
             self._registry_bound_marginfi(evidence.marginfi, registry, raw_accounts)
             quote_net = self._quote_report(report, valuation, evidence.simulation_slot)
-
-            if report.status is not ReconciliationStatus.PROVEN_PROFIT:
-                return self._result(
-                    QualificationStatus.PROVEN_LOSS
-                    if report.status is ReconciliationStatus.PROVEN_LOSS
-                    else QualificationStatus.INDETERMINATE,
-                    QualificationReason.REPORT_NOT_PROFIT,
-                    False,
-                    report,
-                    valuation,
-                    registry,
-                    quote_net,
-                    f"reconciliation status is {report.status.value}",
-                )
-            if quote_net < 0:
-                return self._result(
-                    QualificationStatus.PROVEN_LOSS,
-                    QualificationReason.NEGATIVE_CROSS_ASSET_NET,
-                    False,
-                    report,
-                    valuation,
-                    registry,
-                    quote_net,
-                    "conservative cross-asset net is negative",
-                )
-            if quote_net == 0:
-                return self._result(
-                    QualificationStatus.BREAK_EVEN,
-                    QualificationReason.NET_NOT_STRICTLY_POSITIVE,
-                    False,
-                    report,
-                    valuation,
-                    registry,
-                    quote_net,
-                    "zero total value is not profit",
-                )
-            if quote_net <= valuation.min_profit_quote_units:
-                return self._result(
-                    QualificationStatus.BREAK_EVEN,
-                    QualificationReason.NET_BELOW_MINIMUM_THRESHOLD,
-                    False,
-                    report,
-                    valuation,
-                    registry,
-                    quote_net,
-                    "total value does not clear policy threshold",
-                )
-            return self._result(
-                QualificationStatus.QUALIFIED_PROFIT,
-                QualificationReason.QUALIFIED_STRICT_POSITIVE_VALUE,
-                True,
-                report,
-                valuation,
-                registry,
-                quote_net,
-                "all raw-state, registry and valuation invariants were proven",
-            )
         except _RejectedQualification as exc:
             return EconomicProofQualification(
                 status=QualificationStatus.INDETERMINATE,
@@ -286,6 +226,66 @@ class RawStateEconomicProofAuthority:
                 registry_hash=registry.registry_hash,
                 diagnostic=exc.diagnostic,
             )
+
+        if report.status != ReconciliationStatus.PROVEN_PROFIT:
+            status = (
+                QualificationStatus.PROVEN_LOSS
+                if report.status == ReconciliationStatus.PROVEN_LOSS
+                else QualificationStatus.INDETERMINATE
+            )
+            return self._result(
+                status,
+                QualificationReason.REPORT_NOT_PROFIT,
+                False,
+                report,
+                valuation,
+                registry,
+                quote_net,
+                f"reconciliation status is {report.status.value}",
+            )
+        if quote_net < 0:
+            return self._result(
+                QualificationStatus.PROVEN_LOSS,
+                QualificationReason.NEGATIVE_CROSS_ASSET_NET,
+                False,
+                report,
+                valuation,
+                registry,
+                quote_net,
+                "conservative cross-asset net is negative",
+            )
+        if quote_net == 0:
+            return self._result(
+                QualificationStatus.BREAK_EVEN,
+                QualificationReason.NET_NOT_STRICTLY_POSITIVE,
+                False,
+                report,
+                valuation,
+                registry,
+                quote_net,
+                "zero total value is not profit",
+            )
+        if quote_net <= valuation.min_profit_quote_units:
+            return self._result(
+                QualificationStatus.BREAK_EVEN,
+                QualificationReason.NET_BELOW_MINIMUM_THRESHOLD,
+                False,
+                report,
+                valuation,
+                registry,
+                quote_net,
+                "total value does not clear policy threshold",
+            )
+        return self._result(
+            QualificationStatus.QUALIFIED_PROFIT,
+            QualificationReason.QUALIFIED_STRICT_POSITIVE_VALUE,
+            True,
+            report,
+            valuation,
+            registry,
+            quote_net,
+            "all raw-state, registry and valuation invariants were proven",
+        )
 
     def _core_identity(
         self,
@@ -356,13 +356,15 @@ class RawStateEconomicProofAuthority:
         evidence: ReconciliationEvidence,
         raw_accounts: dict[str, RawAccountBinding],
     ) -> None:
-        for observation in evidence.native:
+        for native_observation in evidence.native:
             self._require_decoded_hash(
-                raw_accounts[observation.address], decoded_observation_hash(observation)
+                raw_accounts[native_observation.address],
+                decoded_observation_hash(native_observation),
             )
-        for observation in evidence.tokens:
+        for token_observation in evidence.tokens:
             self._require_decoded_hash(
-                raw_accounts[observation.address], decoded_observation_hash(observation)
+                raw_accounts[token_observation.address],
+                decoded_observation_hash(token_observation),
             )
 
     def _registry_bound_marginfi(
@@ -387,10 +389,6 @@ class RawStateEconomicProofAuthority:
                 "MarginFi account/program identity is not in the admitted registry",
             )
         marginfi_hash = decoded_marginfi_hash(item)
-        # The liquidity vault can also be a token observation for the same raw
-        # account. Its token-account decoded view is already bound in
-        # _bind_decoded_state; the registry admission above still proves the
-        # vault address is the admitted protocol vault.
         for address in (item.margin_account, item.bank):
             self._require_decoded_hash(raw_accounts[address], marginfi_hash)
 
@@ -468,9 +466,9 @@ def _plain(value: Any) -> Any:
         }
     if is_dataclass(value) and not isinstance(value, type):
         return {field.name: _plain(getattr(value, field.name)) for field in fields(value)}
-    if isinstance(value, tuple | list):
+    if isinstance(value, (tuple, list)):
         return [_plain(item) for item in value]
-    if isinstance(value, frozenset | set):
+    if isinstance(value, (frozenset, set)):
         return sorted(_plain(item) for item in value)
     if isinstance(value, dict):
         return {str(key): _plain(item) for key, item in sorted(value.items())}

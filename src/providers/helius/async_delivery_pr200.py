@@ -28,6 +28,8 @@ from src.providers.helius.delivery import (
 )
 
 ASYNC_DELIVERY_SCHEMA_VERSION = "pr200.helius-async-delivery.v1"
+_BOOTSTRAP_OPERATION_ID = "pr200.helius-async-delivery.bootstrap"
+_BOOTSTRAP_DEADLINE_FLOOR_MS = 1_000
 
 
 @dataclass(frozen=True, slots=True)
@@ -80,11 +82,26 @@ class AsyncHeliusDeliveryPlane:
             if started_monotonic_ns is None
             else started_monotonic_ns
         )
-        deadline_ns = started_ns + self.config.limits.delivery_deadline_ms * 1_000_000
         operation_id = self._operation_id(
             headers=headers,
             raw_body=raw_body,
             webhook_id=webhook_id,
+        )
+        bootstrap = await self._ensure_plane_ready()
+        if bootstrap.state is not PersistenceState.COMMITTED:
+            return AsyncDeliveryResult(
+                schema_version=ASYNC_DELIVERY_SCHEMA_VERSION,
+                operation_id=operation_id,
+                persistence_state=bootstrap.state,
+                outcome=self._retryable_outcome(
+                    started_ns=started_ns,
+                    reason=RejectReason.STORE_ERROR,
+                ),
+            )
+
+        delivery_started_ns = self._monotonic_ns()
+        deadline_ns = (
+            delivery_started_ns + self.config.limits.delivery_deadline_ms * 1_000_000
         )
 
         def run(absolute_deadline_ns: int) -> PersistenceCommit[DeliveryOutcome]:
@@ -120,7 +137,7 @@ class AsyncHeliusDeliveryPlane:
                 else RejectReason.STORE_ERROR
             )
             outcome = self._retryable_outcome(
-                started_ns=started_ns,
+                started_ns=delivery_started_ns,
                 reason=reason,
             )
         return AsyncDeliveryResult(
@@ -138,6 +155,38 @@ class AsyncHeliusDeliveryPlane:
 
     async def close(self, *, cancel_optional: bool = True) -> PersistenceHealth:
         return await self._writer.close(cancel_optional=cancel_optional)
+
+    async def _ensure_plane_ready(self) -> PersistenceResult[bool]:
+        if self._sync_plane is not None:
+            return PersistenceResult(
+                operation_id=_BOOTSTRAP_OPERATION_ID,
+                state=PersistenceState.COMMITTED,
+                value=True,
+            )
+
+        bootstrap_budget_ms = max(
+            _BOOTSTRAP_DEADLINE_FLOOR_MS,
+            self.config.limits.delivery_deadline_ms,
+            self.config.limits.sqlite_busy_timeout_ms * 4,
+        )
+        deadline_ns = self._monotonic_ns() + bootstrap_budget_ms * 1_000_000
+
+        def run(_absolute_deadline_ns: int) -> PersistenceCommit[bool]:
+            # HeliusDeliveryPlane construction initializes the SQLite schema. Keep
+            # that blocking bootstrap on the dedicated writer thread, but do not let
+            # a cold schema setup consume an individual webhook delivery deadline.
+            self._plane_on_writer_thread()
+            return PersistenceCommit(committed=True, value=True)
+
+        return await self._writer.submit(
+            PersistenceOperation(
+                operation_id=_BOOTSTRAP_OPERATION_ID,
+                work_class=PersistenceWorkClass.WEBHOOK_DURABLE_ENQUEUE,
+                deadline_ns=deadline_ns,
+                estimated_bytes=0,
+                run=run,
+            )
+        )
 
     def _plane_on_writer_thread(self) -> HeliusDeliveryPlane:
         if self._sync_plane is None:

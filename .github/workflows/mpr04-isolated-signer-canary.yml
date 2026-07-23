@@ -1,0 +1,46 @@
+name: MPR-04 isolated signer canary gate
+
+on:
+  pull_request:
+    paths:
+      - "src/mpr04_isolated_signer_canary_gate.py"
+      - "tests/test_mpr04_isolated_signer_canary_gate.py"
+      - "docs/mpr04_isolated_signer_jito_canary_boundary.md"
+      - ".github/workflows/mpr04-isolated-signer-canary.yml"
+  push:
+    branches:
+      - "mpr-04-*"
+    paths:
+      - "src/mpr04_isolated_signer_canary_gate.py"
+      - "tests/test_mpr04_isolated_signer_canary_gate.py"
+      - "docs/mpr04_isolated_signer_jito_canary_boundary.md"
+      - ".github/workflows/mpr04-isolated-signer-canary.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mpr04-isolated-signer-canary-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  isolated-signer-canary-gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install targeted test dependencies
+        run: python -m pip install --disable-pip-version-check pytest==9.0.2
+      - name: Compile MPR-04 gate
+        run: >-
+          python -m py_compile
+          src/mpr04_isolated_signer_canary_gate.py
+          tests/test_mpr04_isolated_signer_canary_gate.py
+      - name: Run MPR-04 adversarial tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_mpr04_isolated_signer_canary_gate.py

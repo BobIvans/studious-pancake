@@ -165,7 +165,9 @@ def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]
         "default_command": matrix.default_command,
         "capability_contract_valid": not path_errors,
         "capability_contract_errors": list(path_errors),
-        "diagnostic": "DEPENDENCY_LIGHT_INSPECTION",
+        # Preserve the historical installed-package smoke truth while avoiding
+        # eager imports of src.cli/build_application/heavy runtime modules.
+        "diagnostic": "NO_EXECUTABLE_STRATEGIES",
         "runtime_modes": matrix.runtime_modes,
         "configuration": {
             "schema_version": config.schema_version,

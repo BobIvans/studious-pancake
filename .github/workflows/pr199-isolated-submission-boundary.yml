@@ -1,0 +1,40 @@
+name: PR-199 isolated submission boundary
+
+on:
+  pull_request:
+    paths:
+      - "isolated_signer_service/src/flashloan_isolated_signer/__init__.py"
+      - "isolated_signer_service/src/flashloan_isolated_signer/pr199.py"
+      - "tests/test_roadmap_pr199_isolated_submission_boundary.py"
+      - "docs/roadmap_pr199_isolated_submission_boundary.md"
+      - ".github/workflows/pr199-isolated-submission-boundary.yml"
+  push:
+    branches:
+      - roadmap-pr-199-isolated-signer-submission-boundary
+
+permissions:
+  contents: read
+
+jobs:
+  focused-verification:
+    runs-on: ubuntu-24.04
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+      PYTHONPATH: isolated_signer_service/src
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - run: >-
+          python -m pytest -q
+          tests/test_roadmap_pr199_isolated_submission_boundary.py
+      - run: >-
+          python -m compileall -q
+          isolated_signer_service/src/flashloan_isolated_signer
+          tests/test_roadmap_pr199_isolated_submission_boundary.py

@@ -1,4 +1,4 @@
-"""Fail-closed roadmap PR-08 isolated signer foundation."""
+"""Fail-closed isolated signer foundations and PR-199 submission scaffold."""
 
 from .boundary import IsolatedSignerBoundary, SubmissionTransport
 from .models import (
@@ -15,10 +15,28 @@ from .models import (
     SubmissionPermit,
     TransportKind,
 )
+from .pr199 import (
+    COMPILE_TIME_LIVE_SUBMISSION_ENABLED,
+    PR198AcceptanceEvidence,
+    PR199AdmissionPolicy,
+    PR199AuthorizationRequest,
+    PR199BoundaryError,
+    PR199CanaryLimits,
+    PR199Failure,
+    PR199IntentRecord,
+    PR199IntentState,
+    PR199SubmissionBoundary,
+    PR199SubmissionIntentStore,
+    PR199SubmissionPermit,
+    PR199Transport,
+    PR199TransportKind,
+    pr199_status_payload,
+)
 from .store import DurableSubmissionIntentStore
 
 __all__ = [
     "COMPILE_TIME_SUBMISSION_ENABLED",
+    "COMPILE_TIME_LIVE_SUBMISSION_ENABLED",
     "ActivationBundle",
     "ApprovalEvidence",
     "BoundaryFailure",
@@ -29,8 +47,22 @@ __all__ = [
     "KillSwitchState",
     "MessageReview",
     "PR08BoundaryError",
+    "PR198AcceptanceEvidence",
+    "PR199AdmissionPolicy",
+    "PR199AuthorizationRequest",
+    "PR199BoundaryError",
+    "PR199CanaryLimits",
+    "PR199Failure",
+    "PR199IntentRecord",
+    "PR199IntentState",
+    "PR199SubmissionBoundary",
+    "PR199SubmissionIntentStore",
+    "PR199SubmissionPermit",
+    "PR199Transport",
+    "PR199TransportKind",
     "SignerPolicy",
     "SubmissionPermit",
     "SubmissionTransport",
     "TransportKind",
+    "pr199_status_payload",
 ]

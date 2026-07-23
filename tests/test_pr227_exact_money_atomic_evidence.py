@@ -94,7 +94,10 @@ def _plan() -> AtomicPlanEvidence:
     return AtomicPlanEvidence(
         plan_id="attempt-001",
         input_amount=TokenAmount(asset, ExactBaseUnit(1_000_000, "u64")),
-        leg_a_guaranteed_output=TokenAmount(quote_asset, ExactBaseUnit(2_000_000, "u64")),
+        leg_a_guaranteed_output=TokenAmount(
+            quote_asset,
+            ExactBaseUnit(2_000_000, "u64"),
+        ),
         leg_b_input=TokenAmount(quote_asset, ExactBaseUnit(2_000_010, "u64")),
         leg_b_guaranteed_output=TokenAmount(asset, ExactBaseUnit(1_200_000, "u64")),
         flash_repayment_lamports=ExactBaseUnit(100_000, "u64"),
@@ -212,7 +215,10 @@ def test_asset_identity_is_cluster_mint_program_and_rooted_bytes_bound() -> None
 def test_plan_hash_changes_on_tip_compute_blockhash_and_alt_identity() -> None:
     plan = _plan()
 
-    assert replace(plan, max_jito_tip_lamports=ExactBaseUnit(3_000)).plan_hash != plan.plan_hash
+    assert (
+        replace(plan, max_jito_tip_lamports=ExactBaseUnit(3_000)).plan_hash
+        != plan.plan_hash
+    )
     assert replace(plan, compute_unit_limit=500_000).plan_hash != plan.plan_hash
     assert replace(plan, blockhash="blockhash-2").plan_hash != plan.plan_hash
     assert replace(plan, alt_hashes=(D6,)).plan_hash != plan.plan_hash

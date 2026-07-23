@@ -178,3 +178,5 @@ tests/test_pr203_final_promotion_governance.py
 setup.py
 src/production_surface.py
 tests/test_pr194_production_surface_manifest.py
+src/paper_shadow/sender_free_runtime_evidence_pr198.py
+tests/test_pr198_sender_free_runtime_evidence.py

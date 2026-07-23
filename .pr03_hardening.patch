@@ -1,0 +1,129 @@
+--- a/src/providers/rooted_ingestion_pr03.py
++++ b/src/providers/rooted_ingestion_pr03.py
+@@ -357,8 +357,14 @@
+ class RootedProviderIngestionStore:
+     """Extends the existing Helius SQLite inbox without creating lifecycle truth."""
+ 
+-    def __init__(self, path: str | Path) -> None:
++    def __init__(
++        self,
++        path: str | Path,
++        *,
++        now_ns: Callable[[], int] = time.time_ns,
++    ) -> None:
+         self.path = Path(path)
++        self._now_ns = now_ns
+ 
+     def _connect(self) -> sqlite3.Connection:
+         con = sqlite3.connect(str(self.path), timeout=1.0)
+@@ -455,7 +461,7 @@
+ 
+     def record_retryable(self, event_id: str | None, reason_code: str) -> None:
+         self.initialize()
+-        now_ns = time.time_ns()
++        now_ns = int(self._now_ns())
+         with self._connect() as con:
+             con.execute(
+                 "INSERT INTO pr03_provider_handoff_audit"
+@@ -484,7 +490,7 @@
+                 "evidence_hash": evidence.evidence_hash,
+             }
+         )
+-        now_ns = time.time_ns()
++        now_ns = int(self._now_ns())
+         with self._connect() as con:
+             con.execute("BEGIN IMMEDIATE")
+             existing = con.execute(
+@@ -577,6 +583,39 @@
+             rebuilt["authentication_mac"] = mac
+             if _hash_json(rebuilt) != str(row["evidence_hash"]):
+                 raise ProviderVerificationError("PR03_STORED_EVIDENCE_HASH_MISMATCH")
++            bindings = (
++                str(payload.get("event_id", "")) == str(row["event_id"]),
++                str(payload.get("payload_hash", "")) == str(row["payload_hash"]),
++                str(payload.get("release_id", "")) == str(row["release_id"]),
++                str(payload.get("policy_bundle_hash", ""))
++                == str(row["policy_bundle_hash"]),
++            )
++            if not all(bindings):
++                raise ProviderVerificationError(
++                    "PR03_STORED_EVIDENCE_BINDING_MISMATCH"
++                )
++            issued_at_raw = payload.get("issued_at_ns")
++            expires_at_raw = payload.get("expires_at_ns")
++            if not isinstance(issued_at_raw, int) or not isinstance(expires_at_raw, int):
++                raise ProviderVerificationError(
++                    "PR03_STORED_EVIDENCE_TIME_INVALID"
++                )
++            issued_at_ns = issued_at_raw
++            expires_at_ns = expires_at_raw
++            now_ns = int(self._now_ns())
++            if (
++                issued_at_ns < 0
++                or expires_at_ns <= issued_at_ns
++                or now_ns < issued_at_ns
++            ):
++                raise ProviderVerificationError(
++                    "PR03_STORED_EVIDENCE_TIME_INVALID"
++                )
++            if now_ns >= expires_at_ns:
++                raise ProviderVerificationError("PR03_STORED_EVIDENCE_EXPIRED")
+             items.append(
+                 VerifiedProviderWorkItem(
+                     event_id=str(row["event_id"]),
+--- a/tests/test_rooted_ingestion_pr03.py
++++ b/tests/test_rooted_ingestion_pr03.py
+@@ -153,7 +153,7 @@
+         trust_anchor_id="pr03-test-anchor",
+         secret=b"x" * 32,
+     )
+-    store = RootedProviderIngestionStore(db_path)
++    store = RootedProviderIngestionStore(db_path, now_ns=lambda: now)
+     verifier = RootedProviderEvidenceVerifier(
+         expected_genesis="mainnet-beta",
+         release_id="release-1",
+@@ -317,3 +317,46 @@
+         match="PR03_DUPLICATE_HANDOFF_IDENTITY_CONFLICT",
+     ):
+         store.commit_verified(event=event, evidence=changed)
++
++
++def test_expired_stored_evidence_fails_closed_before_a3(tmp_path):
++    db = tmp_path / "helius.sqlite3"
++    seed(db)
++    now = time.time_ns()
++    auth, _, _, worker = build(db, now, quorum(now))
++    assert worker.run_once(admission(now)).decision is WorkerDecision.ADMITTED
++    expired_store = RootedProviderIngestionStore(
++        db,
++        now_ns=lambda: now + 31_000_000_000,
++    )
++
++    batch = A3RootedProviderBatchSource(
++        store=expired_store,
++        authenticator=auth,
++    )()
++
++    assert batch.evidence.ready is False
++    assert batch.evidence.blockers == ("PR03_STORED_EVIDENCE_EXPIRED",)
++
++
++def test_tampered_handoff_metadata_fails_closed_at_a3_boundary(tmp_path):
++    db = tmp_path / "helius.sqlite3"
++    seed(db)
++    now = time.time_ns()
++    auth, store, _, worker = build(db, now, quorum(now))
++    assert worker.run_once(admission(now)).decision is WorkerDecision.ADMITTED
++    with sqlite3.connect(db) as con:
++        con.execute(
++            "UPDATE pr03_provider_handoff SET release_id=?",
++            ("release-tampered",),
++        )
++        con.commit()
++
++    batch = A3RootedProviderBatchSource(store=store, authenticator=auth)()
++
++    assert batch.evidence.ready is False
++    assert batch.evidence.blockers == (
++        "PR03_STORED_EVIDENCE_BINDING_MISMATCH",
++    )

@@ -415,13 +415,7 @@ class DurableJupiterQuotaManager(JupiterQuotaManager):
                     expires_at = excluded.expires_at,
                     provenance_json = excluded.provenance_json
                 """,
-                (
-                    self.api_account_id,
-                    key,
-                    value_json,
-                    now + ttl_seconds,
-                    provenance_json,
-                ),
+                (self.api_account_id, key, value_json, now + ttl_seconds, provenance_json),
             )
 
     def active_purposes(self) -> tuple[JupiterQuotaPurpose, ...]:

@@ -1,4 +1,21 @@
 {
+  "blocked_command_contracts": [
+    {
+      "command": "flashloan-bot paper-vertical check",
+      "expected_exit": "non_zero_when_blocked",
+      "reason": "blocked or misconfigured paper vertical must not look CI-green"
+    },
+    {
+      "command": "flashloan-bot readiness check",
+      "expected_exit": "non_zero_when_blocked",
+      "reason": "production readiness blockers must keep the CLI non-zero"
+    },
+    {
+      "command": "flashloan-checks production-debt check",
+      "expected_exit": "non_zero_when_blocked",
+      "reason": "shared inspection command must enforce readiness blockers"
+    }
+  ],
   "dependency_profiles": {
     "dev": "requirements-dev.txt",
     "runtime": "requirements.txt"
@@ -6,7 +23,10 @@
   "description": "Single source of truth for the PR-194 production package/image surface.",
   "entrypoints": {
     "flashloan-bot": "src.cli_pr189:main",
-    "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main"
+    "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
+    "flashloan-checks": "src.automation_cli_pr189:main",
+    "flashloan-contracts": "src.external_contracts.cli_pr189:main",
+    "flashloan-release-evidence": "src.release_gate.materialized_evidence:main"
   },
   "forbidden": {
     "import_names": [
@@ -37,13 +57,65 @@
   },
   "package_name": "studious-pancake-flashloan-bot",
   "product_state": "not-production-ready",
+  "required_controls": [
+    {
+      "category": "composition_root",
+      "entrypoint": "flashloan-bot",
+      "id": "PR194_AUTOMATION_SAFE_ENTRYPOINT",
+      "module": "src.cli_pr189",
+      "wheel_member": "src/cli_pr189.py"
+    },
+    {
+      "category": "runtime_health",
+      "entrypoint": "flashloan-bot-healthcheck",
+      "id": "PR194_HEALTHCHECK_ENTRYPOINT",
+      "module": "src.container_runtime",
+      "wheel_member": "src/container_runtime.py"
+    },
+    {
+      "category": "external_contracts",
+      "entrypoint": "flashloan-contracts",
+      "id": "PR194_EXTERNAL_CONTRACTS_ENTRYPOINT",
+      "module": "src.external_contracts.cli_pr189",
+      "wheel_member": "src/external_contracts/cli_pr189.py"
+    },
+    {
+      "category": "inspection_checks",
+      "entrypoint": "flashloan-checks",
+      "id": "PR194_CHECKS_ENTRYPOINT",
+      "module": "src.automation_cli_pr189",
+      "wheel_member": "src/automation_cli_pr189.py"
+    },
+    {
+      "category": "release_evidence",
+      "entrypoint": "flashloan-release-evidence",
+      "id": "PR194_RELEASE_EVIDENCE_ENTRYPOINT",
+      "module": "src.release_gate.materialized_evidence",
+      "wheel_member": "src/release_gate/materialized_evidence.py"
+    },
+    {
+      "category": "authority",
+      "id": "PR194_AUTHORITY_MAP",
+      "module": "src.authority_map",
+      "wheel_member": "src/authority_map.py"
+    },
+    {
+      "category": "surface_manifest",
+      "id": "PR194_PRODUCTION_SURFACE",
+      "module": "src.production_surface",
+      "wheel_member": "src/production_surface.py"
+    }
+  ],
   "required_wheel_members": [
     "arb_bot.py",
     "src/authority_map.py",
+    "src/automation_cli_pr189.py",
     "src/cli.py",
     "src/cli_pr189.py",
     "src/container_runtime.py",
+    "src/external_contracts/cli_pr189.py",
     "src/production_surface.py",
+    "src/release_gate/materialized_evidence.py",
     "src/resources/capabilities.json",
     "src/resources/production_surface_manifest.json",
     "src/resources/runtime_authority_map.json"

@@ -6,12 +6,22 @@ import hashlib
 from pathlib import Path
 
 from .model import (
-    CandidateDecision, DualClock, PaperCandidate, PaperCycleReport,
-    PaperOutcome, PaperPlatformError, RecordingError, SCHEMA_VERSION,
-    hash_json, is_sha256, positive_clock,
+    CandidateDecision,
+    DualClock,
+    PaperCandidate,
+    PaperCycleReport,
+    PaperOutcome,
+    PaperPlatformError,
+    RecordingError,
+    SCHEMA_VERSION,
+    hash_json,
+    is_sha256,
+    positive_clock,
 )
 from .source import (
-    BoundedRecordedBatchSource, DEFAULT_MAX_BYTES, DEFAULT_MAX_ITEMS,
+    BoundedRecordedBatchSource,
+    DEFAULT_MAX_BYTES,
+    DEFAULT_MAX_ITEMS,
     DEFAULT_RECORDING_RESOURCE,
 )
 from .store import CanonicalPaperStore
@@ -42,7 +52,12 @@ class CanonicalPaperConfig:
 
 
 class CanonicalPaperPlatform:
-    def __init__(self, config: CanonicalPaperConfig, *, clock: DualClock | None = None) -> None:
+    def __init__(
+        self,
+        config: CanonicalPaperConfig,
+        *,
+        clock: DualClock | None = None,
+    ) -> None:
         self.config, self.clock = config, clock or DualClock()
 
     def run_once(self) -> PaperCycleReport:
@@ -69,41 +84,91 @@ class CanonicalPaperPlatform:
         duration = end_mono - start_mono
         if duration < 0:
             raise PaperPlatformError("monotonic clock moved backwards")
-        cycle_id = hash_json(
-            {"schema": SCHEMA_VERSION, "source_digest": source_digest, "config_digest": self.config.config_digest}
-        )
-        unsigned = {
-            "schema_version": SCHEMA_VERSION, "cycle_id": cycle_id,
-            "source_digest": source_digest, "config_digest": self.config.config_digest,
-            "started_utc_ns": start_utc, "completed_utc_ns": end_utc,
-            "duration_ns": duration, "outcome": outcome.value, "reason_code": reason,
-            "decisions": [d.to_dict() for d in decisions], "db_path": str(self.config.db_path),
-            "source_name": source_name, "live_enabled": False,
-            "signer_loaded": False, "sender_loaded": False,
-        }
-        report = PaperCycleReport(
-            cycle_id=cycle_id, source_digest=source_digest,
-            config_digest=self.config.config_digest, started_utc_ns=start_utc,
-            completed_utc_ns=end_utc, duration_ns=duration, outcome=outcome,
-            reason_code=reason, decisions=decisions, db_path=str(self.config.db_path),
-            source_name=source_name, report_hash=hash_json(unsigned),
+        input_identity = hash_json(
+            {
+                "schema": SCHEMA_VERSION,
+                "source_digest": source_digest,
+                "config_digest": self.config.config_digest,
+            }
         )
         with CanonicalPaperStore(self.config.db_path) as store:
+            run_sequence = store.allocate_run_sequence(input_identity)
+            cycle_id = hash_json(
+                {
+                    "schema": SCHEMA_VERSION,
+                    "input_identity": input_identity,
+                    "run_sequence": run_sequence,
+                    "started_utc_ns": start_utc,
+                    "started_monotonic_ns": start_mono,
+                }
+            )
+            unsigned = {
+                "schema_version": SCHEMA_VERSION,
+                "cycle_id": cycle_id,
+                "input_identity": input_identity,
+                "run_sequence": run_sequence,
+                "source_digest": source_digest,
+                "config_digest": self.config.config_digest,
+                "started_utc_ns": start_utc,
+                "completed_utc_ns": end_utc,
+                "duration_ns": duration,
+                "outcome": outcome.value,
+                "reason_code": reason,
+                "decisions": [d.to_dict() for d in decisions],
+                "db_path": str(self.config.db_path),
+                "source_name": source_name,
+                "live_enabled": False,
+                "signer_loaded": False,
+                "sender_loaded": False,
+            }
+            report = PaperCycleReport(
+                cycle_id=cycle_id,
+                source_digest=source_digest,
+                config_digest=self.config.config_digest,
+                started_utc_ns=start_utc,
+                completed_utc_ns=end_utc,
+                duration_ns=duration,
+                outcome=outcome,
+                reason_code=reason,
+                decisions=decisions,
+                db_path=str(self.config.db_path),
+                source_name=source_name,
+                report_hash=hash_json(unsigned),
+                input_identity=input_identity,
+                run_sequence=run_sequence,
+            )
             return store.commit(report)
 
     def _evaluate(self, candidate: PaperCandidate) -> CandidateDecision:
         outcome, reason = PaperOutcome.PAPER_ACCEPTED, "paper_candidate_accepted"
         if candidate.compiled_message_digest != candidate.simulation_message_digest:
-            outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_message_simulation_digest_mismatch"
-        elif candidate.repayment_lamports != candidate.principal_lamports + candidate.flash_fee_lamports:
-            outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_repayment_formula_mismatch"
+            outcome, reason = (
+                PaperOutcome.PAPER_REJECTED,
+                "rejected_message_simulation_digest_mismatch",
+            )
+        elif candidate.repayment_lamports != (
+            candidate.principal_lamports + candidate.flash_fee_lamports
+        ):
+            outcome, reason = (
+                PaperOutcome.PAPER_REJECTED,
+                "rejected_repayment_formula_mismatch",
+            )
         elif candidate.rooted_slot > candidate.observed_slot:
-            outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_root_after_observation"
+            outcome, reason = (
+                PaperOutcome.PAPER_REJECTED,
+                "rejected_root_after_observation",
+            )
         elif candidate.observed_slot - candidate.rooted_slot > self.config.max_slot_skew:
             outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_rooted_slot_skew"
         elif candidate.net_profit_lamports < self.config.min_profit_lamports:
-            outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_conservative_profit_below_threshold"
+            outcome, reason = (
+                PaperOutcome.PAPER_REJECTED,
+                "rejected_conservative_profit_below_threshold",
+            )
         return CandidateDecision(
-            candidate.candidate_id, candidate.digest, outcome, reason,
+            candidate.candidate_id,
+            candidate.digest,
+            outcome,
+            reason,
             candidate.net_profit_lamports,
         )

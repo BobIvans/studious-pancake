@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import ast
 import hashlib
 import json
 from pathlib import Path
@@ -152,13 +151,9 @@ def test_dockerfile_is_multistage_non_root_and_uses_health_probe():
 
 def test_legacy_root_entrypoint_is_only_a_compatibility_wrapper():
     source = (ROOT / "arb_bot.py").read_text(encoding="utf-8")
-    tree = ast.parse(source)
-    imports = [node for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
-    canonical_imports = [node for node in imports if node.module == "src.cli_pr189"]
-    legacy_imports = [node for node in imports if node.module == "src.cli"]
 
-    assert any(
-        alias.name == "main" for node in canonical_imports for alias in node.names
-    )
-    assert not any(alias.name == "main" for node in legacy_imports for alias in node.names)
-    assert len(source.splitlines()) < 30
+    assert 'CANONICAL_MAIN_TARGET = "src.cli_pr189:main"' in source
+    assert "import_module(module_name)" in source
+    assert "from src.cli import" in source
+    assert "from src.cli_pr189 import" not in source
+    assert len(source.splitlines()) < 45

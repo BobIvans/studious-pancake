@@ -1,0 +1,55 @@
+name: SUPER-MPR-C canary gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/super_mpr_c_canary_gate.py"
+      - "tests/test_super_mpr_c_canary_gate.py"
+      - "docs/roadmap/super_mpr_c_canary_gate.md"
+      - ".github/workflows/super-mpr-c-canary-gate.yml"
+  push:
+    branches:
+      - roadmap/super-mpr-c-canary-gate
+
+permissions:
+  contents: read
+
+jobs:
+  canary-gate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install focused test dependencies
+        run: python -m pip install pytest==9.0.2
+      - name: Compile SUPER-MPR-C gate
+        run: |
+          python -m py_compile \
+            src/super_mpr_c_canary_gate.py \
+            tests/test_super_mpr_c_canary_gate.py
+      - name: Run focused SUPER-MPR-C tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_super_mpr_c_canary_gate.py
+      - name: Record focused evidence identities
+        shell: bash
+        run: |
+          sha256sum \
+            src/super_mpr_c_canary_gate.py \
+            tests/test_super_mpr_c_canary_gate.py \
+            docs/roadmap/super_mpr_c_canary_gate.md \
+            > super-mpr-c-canary-gate.sha256
+      - name: Upload focused evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: super-mpr-c-canary-gate
+          path: super-mpr-c-canary-gate.sha256
+          if-no-files-found: error
+          retention-days: 14

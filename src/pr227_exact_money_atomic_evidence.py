@@ -118,7 +118,9 @@ class AssetIdentity:
         _digest(self.rooted_mint_bytes_hash, "rooted_mint_bytes_hash")
         _strict_decimal_count(self.decimals)
         _strict_non_negative_int(self.metadata_slot, "metadata_slot")
-        normalized_extensions = tuple(_require_text(ext, "extension") for ext in self.extensions)
+        normalized_extensions = tuple(
+            _require_text(ext, "extension") for ext in self.extensions
+        )
         if len(normalized_extensions) != len(set(normalized_extensions)):
             raise PR227Error("PR227_DUPLICATE_TOKEN_EXTENSION")
         object.__setattr__(self, "extensions", normalized_extensions)
@@ -187,7 +189,9 @@ class AltSnapshotEvidence:
             raise PR227Error("PR227_ALT_SOURCE_SLOT_IN_FUTURE")
         if len(self.addresses) > _MAX_V0_ALT_ACCOUNTS:
             raise PR227Error("PR227_ALT_V0_ACCOUNT_LIMIT_EXCEEDED")
-        normalized_addresses = tuple(_pubkey(address, "alt_address") for address in self.addresses)
+        normalized_addresses = tuple(
+            _pubkey(address, "alt_address") for address in self.addresses
+        )
         if len(normalized_addresses) != len(set(normalized_addresses)):
             raise PR227Error("PR227_ALT_DUPLICATE_ADDRESS")
         object.__setattr__(self, "addresses", normalized_addresses)
@@ -324,7 +328,11 @@ class AtomicPlanEvidence:
         if self.compute_unit_price_micro_lamports > 1_000_000:
             raise PR227Error("PR227_COMPUTE_UNIT_PRICE_OVER_CAP")
         _require_text(self.blockhash, "blockhash")
-        object.__setattr__(self, "alt_hashes", _unique_digests(self.alt_hashes, "alt_hash"))
+        object.__setattr__(
+            self,
+            "alt_hashes",
+            _unique_digests(self.alt_hashes, "alt_hash"),
+        )
         object.__setattr__(
             self,
             "protocol_pin_hashes",
@@ -420,7 +428,10 @@ class PR227EvidenceBundle:
             raise PR227Error("PR227_FRESHNESS_SIMULATION_HASH_MISMATCH")
         if self.simulation.blockhash != self.plan.blockhash:
             raise PR227Error("PR227_SIMULATION_BLOCKHASH_MISMATCH")
-        if self.simulation.cluster_genesis_hash != self.plan.input_amount.asset.cluster_genesis_hash:
+        if (
+            self.simulation.cluster_genesis_hash
+            != self.plan.input_amount.asset.cluster_genesis_hash
+        ):
             raise PR227Error("PR227_SIMULATION_CLUSTER_MISMATCH")
         if self.plan.conservative_surplus_lamports <= 0:
             raise PR227Error("PR227_CONSERVATIVE_SURPLUS_NOT_POSITIVE")
@@ -461,7 +472,10 @@ def _canonicalize(value: object) -> object:
     if isinstance(value, tuple):
         return tuple(_canonicalize(item) for item in value)
     if isinstance(value, Mapping):
-        return {str(key): _canonicalize(value[key]) for key in sorted(value)}
+        return {
+            str(key): _canonicalize(raw_value)
+            for key, raw_value in sorted(value.items(), key=lambda item: str(item[0]))
+        }
     if isinstance(value, float):
         raise PR227Error("PR227_FLOAT_NOT_CANONICAL")
     return value

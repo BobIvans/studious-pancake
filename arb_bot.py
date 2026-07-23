@@ -1,7 +1,7 @@
 """Backward-compatible wrapper for the installed ``flashloan-bot`` command."""
 from __future__ import annotations
 
-from src.cli import (
+from src.cli import (  # re-exported for legacy import compatibility
     EXIT_CONFIGURATION_ERROR,
     EXIT_MODE_UNAVAILABLE,
     EXIT_NO_EXECUTABLE_STRATEGIES,
@@ -11,8 +11,8 @@ from src.cli import (
     LauncherConfig,
     install_signal_handlers,
     load_configuration,
-    main,
 )
+from src.cli_pr189 import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

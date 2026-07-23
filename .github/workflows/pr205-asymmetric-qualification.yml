@@ -1,0 +1,83 @@
+name: PR-205 asymmetric qualification
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/qualification_pr186.py"
+      - "src/release_gate/asymmetric_qualification.py"
+      - "src/security/trust_anchors.py"
+      - "scripts/verify_asymmetric_qualification.py"
+      - "tests/test_pr183_credential_trust_lifecycle.py"
+      - "tests/test_pr186_executed_qualification.py"
+      - "tests/test_pr205_asymmetric_qualification.py"
+      - "docs/pr205_asymmetric_qualification.md"
+      - "config/format_targets.txt"
+      - ".github/workflows/pr205-asymmetric-qualification.yml"
+  push:
+    branches:
+      - pr-205-asymmetric-release-qualification
+
+permissions:
+  contents: read
+
+jobs:
+  asymmetric-verification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Black
+        run: |
+          python -m black --check \
+            src/qualification_pr186.py \
+            src/release_gate/asymmetric_qualification.py \
+            scripts/verify_asymmetric_qualification.py \
+            tests/test_pr186_executed_qualification.py \
+            tests/test_pr205_asymmetric_qualification.py
+      - name: Mypy
+        run: |
+          python -m mypy --config-file mypy.ini \
+            src/qualification_pr186.py \
+            src/release_gate/asymmetric_qualification.py
+      - name: Focused regression suite
+        run: |
+          python -m pytest \
+            tests/test_pr183_credential_trust_lifecycle.py \
+            tests/test_pr186_executed_qualification.py \
+            tests/test_pr205_asymmetric_qualification.py \
+            -q --disable-socket --allow-unix-socket \
+            --junitxml=pr205-junit.xml
+      - name: Compile verifier
+        run: |
+          python -m compileall -q \
+            src/qualification_pr186.py \
+            src/release_gate/asymmetric_qualification.py \
+            scripts/verify_asymmetric_qualification.py \
+            tests/test_pr205_asymmetric_qualification.py
+      - name: Record focused evidence identities
+        shell: bash
+        run: |
+          sha256sum \
+            src/release_gate/asymmetric_qualification.py \
+            scripts/verify_asymmetric_qualification.py \
+            tests/test_pr205_asymmetric_qualification.py \
+            pr205-junit.xml > pr205-focused-evidence.sha256
+      - name: Upload focused evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr205-asymmetric-qualification
+          path: |
+            pr205-junit.xml
+            pr205-focused-evidence.sha256
+          if-no-files-found: error
+          retention-days: 14

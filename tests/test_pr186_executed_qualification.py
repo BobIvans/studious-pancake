@@ -103,9 +103,11 @@ def test_only_signed_executed_verdict_can_allow_release(tmp_path: Path):
     )
 
     assert verdict.qualified is True
-    assert verdict.release_claim_allowed is True
+    assert verdict.release_claim_allowed is False
     assert verify_signed_verdict(verdict, key) is True
-    assert verify_signed_verdict(verdict, b"different-key-material-32-bytes-long") is False
+    assert (
+        verify_signed_verdict(verdict, b"different-key-material-32-bytes-long") is False
+    )
 
 
 def test_missing_repeated_clean_run_blocks_release_claim(tmp_path: Path):

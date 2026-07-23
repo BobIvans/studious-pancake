@@ -13,7 +13,6 @@ from scripts.verify_pr200_production_cutover import (
     validate_manifest,
 )
 
-
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "config/production_cutover_manifest.json"
 
@@ -64,9 +63,7 @@ def test_pr200_cutover_gate_rejects_missing_fault_drill() -> None:
     manifest = _load_current_manifest()
     fault_cases = copy.deepcopy(manifest["fault_injection"])  # type: ignore[index]
     manifest["fault_injection"] = [
-        case
-        for case in fault_cases
-        if case["id"] != "jito_ack_without_chain_record"
+        case for case in fault_cases if case["id"] != "jito_ack_without_chain_record"
     ]
 
     with pytest.raises(ProductionCutoverError, match="missing fault injections"):

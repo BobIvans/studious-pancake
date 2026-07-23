@@ -134,6 +134,8 @@ Expected result:
 17 passed
 ```
 
+The repository-wide mypy gate also checks the complete `src.release_gate` package. The evidence validation loops therefore use separate `digest` and `count` variables so string hashes and integer counters retain distinct inferred types without suppressions or quarantine.
+
 ## Remaining MEGA-PR-02 implementation
 
 This checkpoint is the strict acceptance contract, not the full completion of MEGA-PR-02. Follow-up commit sets on the same mega branch must still:

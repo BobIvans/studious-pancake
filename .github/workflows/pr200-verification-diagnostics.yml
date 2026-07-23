@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - pr-200-production-ops-cutover
 
 permissions:
   contents: read
@@ -40,11 +37,23 @@ jobs:
           tail -n 400 pr200-verify.log > pr200-verify-tail.log
           printf '%s\n' "$status" > pr200-exit-status.txt
           exit 0
+      - name: Produce exact Black output
+        run: |
+          mkdir -p pr200-formatted/scripts pr200-formatted/tests
+          cp scripts/verify_pr200_production_cutover.py pr200-formatted/scripts/
+          cp tests/test_pr200_production_cutover.py pr200-formatted/tests/
+          python -m black \
+            pr200-formatted/scripts/verify_pr200_production_cutover.py \
+            pr200-formatted/tests/test_pr200_production_cutover.py
+          python -m black --check \
+            pr200-formatted/scripts/verify_pr200_production_cutover.py \
+            pr200-formatted/tests/test_pr200_production_cutover.py
       - uses: actions/upload-artifact@v4
         with:
           name: pr200-verification-diagnostics
           path: |
             pr200-verify-tail.log
             pr200-exit-status.txt
+            pr200-formatted/
           if-no-files-found: error
           retention-days: 1

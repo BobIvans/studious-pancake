@@ -69,7 +69,9 @@ def required_entrypoints(manifest: Mapping[str, Any] | None = None) -> dict[str,
         isinstance(key, str) and isinstance(value, str)
         for key, value in entrypoints.items()
     ):
-        raise ProductionSurfaceError("manifest field 'entrypoints' must be a string map")
+        raise ProductionSurfaceError(
+            "manifest field 'entrypoints' must be a string map"
+        )
     return dict(cast(Mapping[str, str], entrypoints))
 
 
@@ -83,7 +85,9 @@ def forbidden_wheel_paths(manifest: Mapping[str, Any] | None = None) -> frozense
     )
 
 
-def forbidden_wheel_prefixes(manifest: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+def forbidden_wheel_prefixes(
+    manifest: Mapping[str, Any] | None = None,
+) -> tuple[str, ...]:
     """Return wheel member prefixes that must never be shipped."""
 
     manifest = manifest or load_manifest()
@@ -94,7 +98,9 @@ def forbidden_wheel_prefixes(manifest: Mapping[str, Any] | None = None) -> tuple
     )
 
 
-def forbidden_import_names(manifest: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+def forbidden_import_names(
+    manifest: Mapping[str, Any] | None = None,
+) -> tuple[str, ...]:
     """Return production import names that must not resolve after install."""
 
     manifest = manifest or load_manifest()
@@ -105,7 +111,9 @@ def forbidden_import_names(manifest: Mapping[str, Any] | None = None) -> tuple[s
     )
 
 
-def image_forbidden_imports(manifest: Mapping[str, Any] | None = None) -> tuple[str, ...]:
+def image_forbidden_imports(
+    manifest: Mapping[str, Any] | None = None,
+) -> tuple[str, ...]:
     """Return development or analytics imports banned from the runtime image."""
 
     manifest = manifest or load_manifest()
@@ -151,8 +159,10 @@ def importable_forbidden_names(
     """Return forbidden import names that resolve in the current environment."""
 
     manifest = load_manifest()
-    candidates = tuple(names) if names is not None else (
-        forbidden_import_names(manifest) + image_forbidden_imports(manifest)
+    candidates = (
+        tuple(names)
+        if names is not None
+        else (forbidden_import_names(manifest) + image_forbidden_imports(manifest))
     )
     return sorted(
         name for name in dict.fromkeys(candidates) if importlib.util.find_spec(name)

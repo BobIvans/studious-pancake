@@ -46,7 +46,9 @@ def _manifest_string_list(section: str, key: str) -> tuple[str, ...]:
 def _module_path_to_package_module(relative_path: str) -> tuple[str, str]:
     path = PurePosixPath(relative_path)
     if path.suffix != ".py":
-        raise RuntimeError(f"forbidden module path is not a Python file: {relative_path}")
+        raise RuntimeError(
+            f"forbidden module path is not a Python file: {relative_path}"
+        )
     without_suffix = path.with_suffix("")
     package = ".".join(without_suffix.parts[:-1])
     module = without_suffix.name
@@ -85,10 +87,14 @@ def _is_forbidden_package(package: str) -> bool:
 
 
 def _is_forbidden_module(package: str, module: str) -> bool:
-    return _is_forbidden_package(package) or (
-        package,
-        module,
-    ) in _forbidden_production_modules()
+    return (
+        _is_forbidden_package(package)
+        or (
+            package,
+            module,
+        )
+        in _forbidden_production_modules()
+    )
 
 
 class ProductionBoundaryBuildPy(_build_py):
@@ -160,7 +166,8 @@ def _forbidden_wheel_paths() -> frozenset[Path]:
 
 def _forbidden_wheel_prefixes() -> tuple[Path, ...]:
     return tuple(
-        Path(prefix) for prefix in _manifest_string_list("forbidden", "package_prefixes")
+        Path(prefix)
+        for prefix in _manifest_string_list("forbidden", "package_prefixes")
     )
 
 

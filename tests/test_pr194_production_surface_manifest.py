@@ -62,14 +62,15 @@ def test_pr194_forbidden_member_detection_is_manifest_driven() -> None:
 def test_pr194_docker_build_copies_setup_py_before_install() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
-    assert "COPY requirements.txt pyproject.toml setup.py README.md arb_bot.py ./" in dockerfile
+    assert (
+        "COPY requirements.txt pyproject.toml setup.py README.md arb_bot.py ./"
+        in dockerfile
+    )
     assert "pip install --no-deps --no-build-isolation ." in dockerfile
 
 
 def test_pr194_package_and_image_smoke_use_manifest_authority() -> None:
-    package_smoke = (ROOT / "scripts" / "package_smoke.py").read_text(
-        encoding="utf-8"
-    )
+    package_smoke = (ROOT / "scripts" / "package_smoke.py").read_text(encoding="utf-8")
     image_smoke = (ROOT / "scripts" / "image_smoke.sh").read_text(encoding="utf-8")
     setup_py = (ROOT / "setup.py").read_text(encoding="utf-8")
 

@@ -1,4 +1,4 @@
-"""PR-189 automation-safe wrapper for the installed flashloan-bot CLI."""
+"""Automation-safe installed CLI with the canonical sender-free paper root."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from typing import Sequence
 
 from src import automation_cli_pr189
 from src import cli as legacy_cli
+from src.canonical_paper import cli as canonical_paper_cli
 
 
 def _rewrite_legacy_preflight(args: list[str]) -> list[str] | None:
@@ -19,8 +20,58 @@ def _rewrite_legacy_preflight(args: list[str]) -> list[str] | None:
     return None
 
 
+def _canonical_paper_args(args: list[str]) -> list[str] | None:
+    """Translate the installed ``run --mode paper`` surface to one paper root."""
+
+    try:
+        run_index = args.index("run")
+    except ValueError:
+        return None
+
+    prefix = args[:run_index]
+    tail = args[run_index + 1 :]
+    forwarded: list[str] = []
+
+    index = 0
+    while index < len(prefix):
+        item = prefix[index]
+        if item == "--config-file":
+            if index + 1 >= len(prefix):
+                return None
+            forwarded.extend((item, prefix[index + 1]))
+            index += 2
+            continue
+        if item.startswith("--config-file="):
+            forwarded.append(item)
+            index += 1
+            continue
+        return None
+
+    mode: str | None = None
+    index = 0
+    while index < len(tail):
+        item = tail[index]
+        if item == "--mode":
+            if index + 1 >= len(tail):
+                return None
+            mode = tail[index + 1]
+            index += 2
+            continue
+        if item.startswith("--mode="):
+            mode = item.partition("=")[2]
+            index += 1
+            continue
+        forwarded.append(item)
+        index += 1
+
+    return forwarded if mode == "paper" else None
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(argv) if argv is not None else sys.argv[1:]
+    canonical_paper_args = _canonical_paper_args(args)
+    if canonical_paper_args is not None:
+        return canonical_paper_cli.main(canonical_paper_args)
     if args and args[0] == "checks":
         return automation_cli_pr189.main(args[1:])
     if args and args[0] == "paper-vertical":

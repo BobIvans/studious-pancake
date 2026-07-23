@@ -76,6 +76,23 @@ def _reason_codes_from_blockers(blockers: Any) -> tuple[str, ...]:
     return tuple(dict.fromkeys(values))
 
 
+def _dependency_unavailable_result(
+    *,
+    command: str,
+    mode: CommandMode,
+    exc: ImportError,
+) -> CommandResult:
+    missing = getattr(exc, "name", None) or type(exc).__name__
+    return result(
+        command=command,
+        mode=mode,
+        ready=False,
+        verdict=CommandVerdict.UNAVAILABLE,
+        reason_codes=("PR189_DEPENDENCY_UNAVAILABLE",),
+        details={"error_type": type(exc).__name__, "dependency": str(missing)},
+    )
+
+
 def evaluate_paper_vertical(
     mode: CommandMode,
     config_file: str | None,
@@ -285,6 +302,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     mode = _mode(args.mode)
     try:
         command_result = _evaluate(args)
+    except ImportError as exc:
+        command_result = _dependency_unavailable_result(
+            command=str(args.command),
+            mode=mode,
+            exc=exc,
+        )
     except (OSError, ValueError, json.JSONDecodeError) as exc:
         command_result = error_result(
             command=str(args.command),

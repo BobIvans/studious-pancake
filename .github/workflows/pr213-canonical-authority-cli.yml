@@ -1,0 +1,46 @@
+name: PR-213 canonical authority CLI
+
+on:
+  pull_request:
+    paths:
+      - "arb_bot.py"
+      - "scripts/validate_authority_map.py"
+      - "src/automation_cli_pr189.py"
+      - "tests/test_pr025_packaging.py"
+      - "tests/test_pr213_canonical_authority_cli.py"
+      - "docs/pr213_canonical_authority_cli_debt_ledger.md"
+      - ".github/workflows/pr213-canonical-authority-cli.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  canonical-authority-cli:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install focused dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --requirement requirements.txt
+          python -m pip install pytest==9.0.2
+      - name: Compile PR-213 slice
+        run: |
+          python -m py_compile \
+            arb_bot.py \
+            scripts/validate_authority_map.py \
+            src/automation_cli_pr189.py \
+            tests/test_pr025_packaging.py \
+            tests/test_pr213_canonical_authority_cli.py
+      - name: Run focused PR-213 tests
+        env:
+          PYTHONPATH: .
+        run: |
+          python -m pytest -q \
+            tests/test_pr025_packaging.py \
+            tests/test_pr213_canonical_authority_cli.py

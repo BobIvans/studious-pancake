@@ -48,7 +48,16 @@ jobs:
             --count --select=E9,F63,F7,F82 --show-source --statistics
       - name: PR-033 and PR-199 regressions
         run: |
+          set -o pipefail
           python -m pytest \
             tests/test_pr033_snapshot_detectors.py \
             tests/test_pr199_economic_execution_vertical.py \
-            -q --disable-socket --allow-unix-socket
+            -vv --disable-socket --allow-unix-socket 2>&1 | tee pr199-focused.log
+      - name: Capture focused diagnostic
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr199-focused-diagnostic
+          path: pr199-focused.log
+          if-no-files-found: ignore
+          retention-days: 1

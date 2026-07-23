@@ -175,3 +175,6 @@ src/config/product_contract_pr195.py
 tests/test_pr195_product_contract.py
 src/release_gate/final_promotion_governance_pr203.py
 tests/test_pr203_final_promotion_governance.py
+setup.py
+src/production_surface.py
+tests/test_pr194_production_surface_manifest.py

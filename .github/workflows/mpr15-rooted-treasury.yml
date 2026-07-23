@@ -1,0 +1,67 @@
+name: MPR-15 rooted treasury
+
+on:
+  pull_request:
+    paths:
+      - "src/treasury/mpr15_*.py"
+      - "src/treasury/rooted_accounting.py"
+      - "src/treasury/financial_risk.py"
+      - "tests/test_pr163_treasury_financial_risk.py"
+      - "docs/mpr15_rooted_treasury_accounting.md"
+      - ".github/workflows/mpr15-rooted-treasury.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rooted-treasury:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install focused test tools
+        run: python -m pip install pytest==9.0.2
+      - name: Check whitespace and line length
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          paths = [
+              Path("src/treasury/mpr15_common.py"),
+              Path("src/treasury/mpr15_observation.py"),
+              Path("src/treasury/mpr15_risk.py"),
+              Path("src/treasury/mpr15_ledger.py"),
+              Path("src/treasury/rooted_accounting.py"),
+              Path("src/treasury/financial_risk.py"),
+              Path("tests/test_pr163_treasury_financial_risk.py"),
+          ]
+          failures = []
+          for path in paths:
+              for number, line in enumerate(path.read_text().splitlines(), 1):
+                  if line.rstrip() != line:
+                      failures.append(f"{path}:{number}: trailing whitespace")
+                  if "\t" in line:
+                      failures.append(f"{path}:{number}: tab")
+                  if len(line) > 88:
+                      failures.append(f"{path}:{number}: line length {len(line)}")
+          if failures:
+              raise SystemExit("\n".join(failures))
+          PY
+      - name: Compile MPR-15 slice
+        run: |
+          python -m py_compile \
+            src/treasury/mpr15_common.py \
+            src/treasury/mpr15_observation.py \
+            src/treasury/mpr15_risk.py \
+            src/treasury/mpr15_ledger.py \
+            src/treasury/rooted_accounting.py \
+            src/treasury/financial_risk.py \
+            tests/test_pr163_treasury_financial_risk.py
+      - name: Run adversarial MPR-15 tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_pr163_treasury_financial_risk.py

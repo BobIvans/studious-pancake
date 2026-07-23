@@ -90,9 +90,10 @@ class CommandResult:
 
 
 def exit_code_for(mode: CommandMode, verdict: CommandVerdict) -> int:
-    if mode is CommandMode.INSPECT and verdict not in {
-        CommandVerdict.ERROR,
-        CommandVerdict.SECURITY_VIOLATION,
+    if mode is CommandMode.INSPECT and verdict in {
+        CommandVerdict.PASSED,
+        CommandVerdict.BLOCKED,
+        CommandVerdict.STALE,
     }:
         return int(CommandExitCode.OK)
     return int(_CHECK_EXIT_CODES[verdict])

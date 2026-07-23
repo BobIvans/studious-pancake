@@ -1,15 +1,19 @@
 """Account-wide Jupiter quota accounting.
 
-This module intentionally has no HTTP client dependency.  It provides the
-single in-process quota boundary that every Jupiter caller must share:
-discovery, route refinement and final build/finalization.  The manager is a
-conservative sliding-window gate, not a promise that the upstream account plan
-allows exactly this rate.  Runtime code must still honour 429/Retry-After and
-telemetry must tune the configured budget.
+This module intentionally has no HTTP client dependency. It provides the
+process-local fallback quota boundary that every Jupiter caller can share inside
+one runtime process. MEGA-PR-01 V6 adds ``DurableJupiterQuotaManager`` in
+``src.providers.jupiter.durable_quota`` for API-account-wide cross-process and
+restart-safe enforcement.
+
+Runtime code must still honour 429/Retry-After and telemetry must tune the
+configured budget.
 """
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -110,7 +114,7 @@ class JupiterQuotaError(RuntimeError):
 
 
 class JupiterQuotaManager:
-    """Sliding-window Jupiter quota manager shared by all active callers."""
+    """Sliding-window Jupiter quota manager shared by one active process."""
 
     def __init__(
         self,
@@ -271,7 +275,43 @@ class JupiterQuotaManager:
         return tuple(event.token.purpose for event in self._events)
 
 
-def cache_key(parts: Iterable[object]) -> str:
-    """Stable, redaction-safe cache key for quote/build request identity."""
+def _cache_identity_part(value: object) -> object:
+    if value is None or isinstance(value, (str, int, bool)):
+        return value
+    if isinstance(value, float):
+        if not (value == value and value not in (float("inf"), float("-inf"))):
+            raise ValueError("cache identity does not allow non-finite floats")
+        return value
+    if isinstance(value, tuple):
+        return [_cache_identity_part(item) for item in value]
+    if isinstance(value, list):
+        return [_cache_identity_part(item) for item in value]
+    if isinstance(value, Mapping):
+        return {
+            str(key): _cache_identity_part(item)
+            for key, item in sorted(value.items(), key=lambda entry: str(entry[0]))
+        }
+    return str(value)
 
-    return "|".join(str(part) for part in parts)
+
+def cache_key(parts: Iterable[object]) -> str:
+    """Collision-resistant cache key for semantic quote/build request identity.
+
+    The old delimiter-joined key made ``("a|b", "c")`` collide with
+    ``("a", "b|c")``. MEGA-PR-01 V6 requires canonical encoding before quota
+    spend, so the supported key is now the SHA-256 digest of a strict JSON
+    envelope with type-preserving values and deterministic ordering.
+    """
+
+    payload = {
+        "schema_version": "mega-pr-01.jupiter-cache-key.v2",
+        "parts": [_cache_identity_part(part) for part in parts],
+    }
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()

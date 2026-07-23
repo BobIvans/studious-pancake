@@ -1,4 +1,4 @@
-.PHONY: install install-dev install-analytics lock syntax lint format-check type-check security test test-live verify verify-offline package-smoke image-smoke contracts-validate contracts-status contracts-drift status capabilities run container paper pr200-production-cutover
+.PHONY: install install-dev install-analytics lock syntax lint format-check type-check security test test-live verify verify-offline package-smoke image-smoke contracts-validate contracts-status contracts-drift mpr01-runtime-cutover pr200-production-cutover status capabilities run container paper
 
 install:
 	python -m pip install --requirement requirements.txt
@@ -58,6 +58,12 @@ contracts-status:
 contracts-drift:
 	flashloan-contracts drift
 
+mpr01-runtime-cutover:
+	python scripts/verify_mpr01_runtime_cutover.py --json
+
+pr200-production-cutover:
+	python scripts/verify_pr200_production_cutover.py
+
 status:
 	flashloan-bot status
 
@@ -72,6 +78,3 @@ container:
 
 paper:
 	flashloan-bot run --mode paper
-
-pr200-production-cutover:
-	python scripts/verify_pr200_production_cutover.py

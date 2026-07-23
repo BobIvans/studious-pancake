@@ -171,7 +171,10 @@ def _validate_release_artifacts(manifest: dict[str, Any]) -> list[str]:
     blockers: list[str] = []
     for item in artifacts:
         artifact_id = item.get("id")
-        _require(isinstance(artifact_id, str) and bool(artifact_id), "artifact id required")
+        _require(
+            isinstance(artifact_id, str) and bool(artifact_id),
+            "artifact id required",
+        )
         _require(
             item.get("required_before_promotion") is True,
             f"{artifact_id} must block promotion",

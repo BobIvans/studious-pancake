@@ -87,18 +87,21 @@ def test_status_and_capabilities_json_are_stable(capsys):
     assert capabilities["schema_version"] == "pr023.capabilities.v1"
 
 
-def test_canonical_paper_service_is_available_but_live_mode_fails_closed(
+def test_installed_paper_service_blocks_without_provider_evidence_and_live_fails_closed(
     capsys,
     tmp_path,
 ):
     db_path = tmp_path / "canonical-paper.sqlite3"
 
-    assert arb_bot.main(["run", "--mode", "paper", "--db-path", str(db_path)]) == 0
+    assert (
+        arb_bot.main(["run", "--mode", "paper", "--db-path", str(db_path)])
+        == arb_bot.EXIT_PAPER_SHADOW_BLOCKED
+    )
     captured = capsys.readouterr()
-    assert "CANONICAL_PAPER_CYCLE" in captured.out
-    assert "outcome=PAPER_ACCEPTED" in captured.out
-    assert "reason=paper_accepted" in captured.out
-    assert "live=false signer=false sender=false" in captured.out
+    assert "INSTALLED_PAPER_SERVICE" in captured.out
+    assert "status=BLOCKED" in captured.out
+    assert "reason=blocked_a3_b3_provider_evidence_missing" in captured.out
+    assert f"db={db_path}" in captured.out
     assert db_path.is_file()
 
     assert arb_bot.main(["run", "--mode", "live"]) == arb_bot.EXIT_MODE_UNAVAILABLE

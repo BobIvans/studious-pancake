@@ -1,0 +1,31 @@
+name: PR-195 durable lifecycle
+
+on:
+  pull_request:
+    paths:
+      - "src/pr195_durable_lifecycle.py"
+      - "tests/test_pr195_durable_lifecycle.py"
+      - "docs/pr195_durable_lifecycle_followup.md"
+      - ".github/workflows/pr195-durable-lifecycle.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  durable-lifecycle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Compile PR-195 durable lifecycle gate
+        run: |
+          python -m py_compile \
+            src/pr195_durable_lifecycle.py \
+            tests/test_pr195_durable_lifecycle.py
+      - name: Run focused PR-195 durable lifecycle tests
+        run: |
+          python -m pytest -q tests/test_pr195_durable_lifecycle.py

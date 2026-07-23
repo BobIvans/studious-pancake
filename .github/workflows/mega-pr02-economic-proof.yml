@@ -51,6 +51,17 @@ jobs:
             src/execution/economic_reconciliation/mega_pr02_proof.py \
             tests/execution/test_mega_pr02_economic_proof.py
       - name: Type-check MEGA-PR-02 proof boundary
-        run: python -m mypy --config-file mypy.ini src/execution/economic_reconciliation/mega_pr02_proof.py
+        run: |
+          set +e
+          python -m mypy --config-file mypy.ini src/execution/economic_reconciliation/mega_pr02_proof.py > mypy-output.txt 2>&1
+          status=$?
+          cat mypy-output.txt
+          exit "$status"
+      - name: Upload mypy diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mega-pr02-mypy-output
+          path: mypy-output.txt
       - name: Run MEGA-PR-02 proof tests
         run: python -m pytest -q tests/execution/test_mega_pr02_economic_proof.py

@@ -1,0 +1,37 @@
+name: SUPER-MPR-A canonical runtime gateway
+
+on:
+  pull_request:
+    paths:
+      - src/super_mpr_a_runtime_gateway.py
+      - src/cli_pr189.py
+      - tests/test_super_mpr_a_runtime_gateway.py
+      - docs/roadmap/super_mpr_a_canonical_runtime_gateway.md
+      - .github/workflows/super-mpr-a-runtime-gateway.yml
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-gateway:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Install pytest
+        run: python -m pip install pytest==9.0.2
+      - name: Compile SUPER-MPR-A slice
+        run: |
+          python -m py_compile \
+            src/super_mpr_a_runtime_gateway.py \
+            src/cli_pr189.py \
+            tests/test_super_mpr_a_runtime_gateway.py
+      - name: Run focused SUPER-MPR-A tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_super_mpr_a_runtime_gateway.py

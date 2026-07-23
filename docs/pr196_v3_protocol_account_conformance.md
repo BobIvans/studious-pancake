@@ -50,6 +50,13 @@ inside pytest. The focused tests now use `dataclasses.asdict()` rather than
 `claim.__dict__`, because the claim dataclass is intentionally declared with
 `slots=True` and therefore has no instance `__dict__`.
 
+A later full repository verification run reached the complete suite and failed in
+`tests/test_pr188_helius_ingress_dedup.py` because the generic test helper reused
+the production delivery deadline on a cold CI SQLite/WAL setup. This branch keeps
+the production deadline unchanged in `src/providers/helius/delivery.py` and raises
+only the ordinary PR-188 test helper deadline. Deadline-specific PR-188 tests still
+override the helper with intentionally tiny values.
+
 ## Safety boundary
 
 This slice always preserves:

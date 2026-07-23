@@ -1,0 +1,35 @@
+name: PR-227 exact money atomic evidence
+
+on:
+  pull_request:
+    paths:
+      - src/pr227_exact_money_atomic_evidence.py
+      - tests/test_pr227_exact_money_atomic_evidence.py
+      - docs/pr227_exact_money_atomic_evidence.md
+      - .github/workflows/pr227-exact-money-atomic-evidence.yml
+
+permissions:
+  contents: read
+
+jobs:
+  exact-money-atomic-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Install pytest
+        run: python -m pip install pytest==9.0.2
+      - name: Compile PR-227 checkpoint
+        run: |
+          python -m py_compile \
+            src/pr227_exact_money_atomic_evidence.py \
+            tests/test_pr227_exact_money_atomic_evidence.py
+      - name: Run focused PR-227 tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_pr227_exact_money_atomic_evidence.py

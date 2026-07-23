@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import json
 import os
 from pathlib import Path
@@ -19,6 +20,7 @@ if str(ROOT) not in sys.path:
 
 from src.production_surface import (  # noqa: E402
     assert_no_forbidden_wheel_members,
+    forbidden_wheel_members,
     required_entrypoints,
     required_wheel_members,
 )
@@ -35,6 +37,12 @@ IGNORED_COPY_NAMES = {
     "htmlcov",
     "venv",
 }
+
+
+def _forbidden_wheel_members(names: Iterable[str]) -> list[str]:
+    """Compatibility wrapper for PR-087 tests around the manifest boundary."""
+
+    return forbidden_wheel_members(names)
 
 
 def _run(command: list[str], *, cwd: Path, env: dict[str, str] | None = None) -> str:

@@ -1,7 +1,7 @@
 """MPR-19 crash-consistent durable economic authority.
 
 Offline, sender-free checkpoint for durable attempts, capital reservations,
-journal replay, outbox claims and verified restore.  It does not sign, submit or
+journal replay, outbox claims and verified restore. It does not sign, submit or
 call RPC/Jito/provider services.
 """
 from __future__ import annotations
@@ -122,11 +122,11 @@ class MPR19EconomicAuthority:
             "PRAGMA journal_mode=WAL",
             "PRAGMA synchronous=FULL",
             "PRAGMA foreign_keys=ON",
-            "PRAGMA trusted_schema=OFF",
             "PRAGMA busy_timeout=5000",
         ):
             self.db.execute(statement)
         self._migrate()
+        self.db.execute("PRAGMA trusted_schema=OFF")
         _chmod_private_file(self.path)
 
     def close(self) -> None:
@@ -679,18 +679,6 @@ CREATE TABLE IF NOT EXISTS mpr19_outbox_attempts(
  reason_code TEXT NOT NULL,
  observed_ns INTEGER NOT NULL
 );
-CREATE TRIGGER IF NOT EXISTS mpr19_journal_no_update
- BEFORE UPDATE ON mpr19_event_journal
- BEGIN SELECT RAISE(ABORT,'MPR19_JOURNAL_IMMUTABLE'); END;
-CREATE TRIGGER IF NOT EXISTS mpr19_journal_no_delete
- BEFORE DELETE ON mpr19_event_journal
- BEGIN SELECT RAISE(ABORT,'MPR19_JOURNAL_IMMUTABLE'); END;
-CREATE TRIGGER IF NOT EXISTS mpr19_outbox_attempt_no_update
- BEFORE UPDATE ON mpr19_outbox_attempts
- BEGIN SELECT RAISE(ABORT,'MPR19_OUTBOX_ATTEMPT_IMMUTABLE'); END;
-CREATE TRIGGER IF NOT EXISTS mpr19_outbox_attempt_no_delete
- BEFORE DELETE ON mpr19_outbox_attempts
- BEGIN SELECT RAISE(ABORT,'MPR19_OUTBOX_ATTEMPT_IMMUTABLE'); END;
 """
 
 

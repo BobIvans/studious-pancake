@@ -205,7 +205,10 @@ class MegaPR03AuthorizationGate:
             reason_codes.append("MEGA_PR03_PERMIT_NOT_YET_VALID")
         if now_ns >= permit.expires_at_ns:
             reason_codes.append("MEGA_PR03_PERMIT_EXPIRED")
-        if current_block_height + remaining_height_margin > permit.last_valid_block_height:
+        if (
+            current_block_height + remaining_height_margin
+            > permit.last_valid_block_height
+        ):
             reason_codes.append("MEGA_PR03_BLOCKHASH_HEIGHT_MARGIN_EXPIRED")
         if permit.attempt_generation == 1:
             if permit.predecessor_absence_hash is None:

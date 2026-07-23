@@ -90,7 +90,9 @@ def _reason_for(path: Path) -> str | None:
     name = path.name
     if path.is_dir() and (name in FORBIDDEN_DIR_NAMES or _is_egg_info(path)):
         return "forbidden generated directory"
-    if path.is_file() and (name in FORBIDDEN_FILE_NAMES or path.suffix in FORBIDDEN_SUFFIXES):
+    if path.is_file() and (
+        name in FORBIDDEN_FILE_NAMES or path.suffix in FORBIDDEN_SUFFIXES
+    ):
         return "forbidden generated file"
     return None
 
@@ -118,8 +120,6 @@ def iter_violations(root: Path) -> Iterable[HygieneViolation]:
             reason = _reason_for(child)
             if reason is not None:
                 yield HygieneViolation(rel, reason)
-                if child.is_dir():
-                    continue
             if child.is_dir():
                 stack.append(child)
 

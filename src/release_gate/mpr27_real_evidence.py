@@ -1,7 +1,7 @@
 """MPR-CLOSE-27 real release evidence artifact gate.
 
-This module deliberately separates *materialized evidence* from promotion.  It
-never creates fake soak, backup/restore or fault-injection reports.  Instead, it
+This module deliberately separates *materialized evidence* from promotion. It
+never creates fake soak, backup/restore or fault-injection reports. Instead, it
 computes hashes from files that already exist under an approved release-artifacts
 root, rejects placeholder evidence, validates the high-risk MPR-27 semantics and
 keeps live trading disabled.
@@ -36,14 +36,9 @@ REQUIRED_RELEASE_ARTIFACTS = frozenset(
         "backup_restore_report_digest",
     }
 )
-
 OPTIONAL_OPERATIONAL_ARTIFACTS = frozenset(
-    {
-        "slo_baseline_report_digest",
-        "secret_incident_drill_report_digest",
-    }
+    {"slo_baseline_report_digest", "secret_incident_drill_report_digest"}
 )
-
 ALL_KNOWN_ARTIFACTS = REQUIRED_RELEASE_ARTIFACTS | OPTIONAL_OPERATIONAL_ARTIFACTS
 
 REQUIRED_FAULT_CASES = frozenset(
@@ -59,7 +54,6 @@ REQUIRED_FAULT_CASES = frozenset(
         "partial_restore",
     }
 )
-
 REQUIRED_SLO_METRICS = frozenset(
     {
         "quote_latency_p99_ms",
@@ -70,7 +64,6 @@ REQUIRED_SLO_METRICS = frozenset(
         "memory_fd_growth",
     }
 )
-
 REQUIRED_SECRET_DRILLS = frozenset(
     {
         "missing_secret",
@@ -80,7 +73,6 @@ REQUIRED_SECRET_DRILLS = frozenset(
         "leaked_env_alias_blocked",
     }
 )
-
 PLACEHOLDER_MARKERS = (
     "placeholder",
     "fake evidence",
@@ -189,11 +181,8 @@ def _validate_shadow_campaign(raw: bytes) -> tuple[str, ...]:
 
 def _validate_fault_injection(raw: bytes) -> tuple[str, ...]:
     data = _load_json_object(raw, "fault_injection_report_digest")
-    passed = _passed_case_ids(data.get("cases"))
-    missing = REQUIRED_FAULT_CASES - passed
-    if missing:
-        return tuple(f"FAULT_CASE_MISSING_{case}" for case in sorted(missing))
-    return ()
+    missing = REQUIRED_FAULT_CASES - _passed_case_ids(data.get("cases"))
+    return tuple(f"FAULT_CASE_MISSING_{case}" for case in sorted(missing))
 
 
 def _validate_backup_restore(raw: bytes) -> tuple[str, ...]:
@@ -209,7 +198,12 @@ def _validate_backup_restore(raw: bytes) -> tuple[str, ...]:
 
 
 def _is_non_negative_number(value: object) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value) and value >= 0
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+        and value >= 0
+    )
 
 
 def _validate_slo_baseline(raw: bytes) -> tuple[str, ...]:
@@ -217,43 +211,42 @@ def _validate_slo_baseline(raw: bytes) -> tuple[str, ...]:
     metrics = data.get("metrics")
     if not isinstance(metrics, dict):
         return ("SLO_BASELINE_METRICS_MISSING",)
-    blockers: list[str] = []
-    for metric in sorted(REQUIRED_SLO_METRICS):
-        if not _is_non_negative_number(metrics.get(metric)):
-            blockers.append(f"SLO_METRIC_INVALID_{metric}")
-    return tuple(blockers)
+    return tuple(
+        f"SLO_METRIC_INVALID_{metric}"
+        for metric in sorted(REQUIRED_SLO_METRICS)
+        if not _is_non_negative_number(metrics.get(metric))
+    )
 
 
 def _validate_secret_drill(raw: bytes) -> tuple[str, ...]:
     data = _load_json_object(raw, "secret_incident_drill_report_digest")
-    passed = _passed_case_ids(data.get("cases"))
-    missing = REQUIRED_SECRET_DRILLS - passed
-    if missing:
-        return tuple(f"SECRET_DRILL_MISSING_{case}" for case in sorted(missing))
+    missing = REQUIRED_SECRET_DRILLS - _passed_case_ids(data.get("cases"))
+    blockers = [f"SECRET_DRILL_MISSING_{case}" for case in sorted(missing)]
     if data.get("raw_secret_logged") is not False:
-        return ("SECRET_DRILL_RAW_SECRET_LOGGED",)
-    return ()
+        blockers.append("SECRET_DRILL_RAW_SECRET_LOGGED")
+    return tuple(blockers)
 
 
 def _semantic_blockers(artifact_id: str, raw: bytes) -> tuple[str, ...]:
     text = raw[:8192].decode("utf-8", errors="ignore").lower()
-    for marker in PLACEHOLDER_MARKERS:
-        if marker in text:
-            return ("PLACEHOLDER_EVIDENCE_REJECTED",)
-    if artifact_id == "shadow_campaign_report_digest":
-        return _validate_shadow_campaign(raw)
-    if artifact_id == "fault_injection_report_digest":
-        return _validate_fault_injection(raw)
-    if artifact_id == "backup_restore_report_digest":
-        return _validate_backup_restore(raw)
-    if artifact_id == "slo_baseline_report_digest":
-        return _validate_slo_baseline(raw)
-    if artifact_id == "secret_incident_drill_report_digest":
-        return _validate_secret_drill(raw)
-    return ()
+    if any(marker in text for marker in PLACEHOLDER_MARKERS):
+        return ("PLACEHOLDER_EVIDENCE_REJECTED",)
+    validators = {
+        "shadow_campaign_report_digest": _validate_shadow_campaign,
+        "fault_injection_report_digest": _validate_fault_injection,
+        "backup_restore_report_digest": _validate_backup_restore,
+        "slo_baseline_report_digest": _validate_slo_baseline,
+        "secret_incident_drill_report_digest": _validate_secret_drill,
+    }
+    validator = validators.get(artifact_id)
+    return validator(raw) if validator is not None else ()
 
 
-def _materialize_artifact(root: Path, artifact_id: str, relative: str) -> tuple[EvidenceArtifact | None, tuple[str, ...]]:
+def _materialize_artifact(
+    root: Path,
+    artifact_id: str,
+    relative: str,
+) -> tuple[EvidenceArtifact | None, tuple[str, ...]]:
     if artifact_id not in ALL_KNOWN_ARTIFACTS:
         return None, (f"UNKNOWN_ARTIFACT_{artifact_id}",)
     try:
@@ -286,10 +279,9 @@ def build_release_evidence_report(
     artifact_paths: Mapping[str, str],
     generated_at_unix_ns: int | None = None,
 ) -> EvidenceReport:
-    approved_root = Path(root)
     artifacts: list[EvidenceArtifact] = []
     blockers: list[str] = []
-
+    approved_root = Path(root)
     for artifact_id, relative in sorted(artifact_paths.items()):
         artifact, artifact_blockers = _materialize_artifact(
             approved_root,
@@ -370,6 +362,7 @@ def verify_report(
     raw_artifacts = loaded.get("artifacts")
     if not isinstance(raw_artifacts, list):
         raise ValueError("MPR-27 evidence report artifacts must be a list")
+
     artifact_paths: dict[str, str] = {}
     for item in raw_artifacts:
         if not isinstance(item, dict):
@@ -379,10 +372,16 @@ def verify_report(
         if not isinstance(artifact_id, str) or not isinstance(relative, str):
             raise ValueError("MPR-27 evidence artifact id/path must be strings")
         artifact_paths[artifact_id] = relative
-    current = build_release_evidence_report(root=root, artifact_paths=artifact_paths)
+
+    generated_at = loaded.get("generated_at_unix_ns")
+    current = build_release_evidence_report(
+        root=root,
+        artifact_paths=artifact_paths,
+        generated_at_unix_ns=generated_at if isinstance(generated_at, int) else None,
+    )
     original_sha = hashlib.sha256(_canonical_json(loaded)).hexdigest()
     current_sha = hashlib.sha256(_canonical_json(current.to_dict())).hexdigest()
-    if original_sha != current_sha and current.accepted:
+    if original_sha != current_sha:
         current = EvidenceReport(
             schema_version=current.schema_version,
             generated_at_unix_ns=current.generated_at_unix_ns,

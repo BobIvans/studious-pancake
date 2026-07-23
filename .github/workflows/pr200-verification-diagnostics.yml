@@ -1,6 +1,9 @@
 name: PR-200 verification diagnostics
 
 on:
+  pull_request:
+    branches:
+      - main
   push:
     branches:
       - pr-200-production-ops-cutover

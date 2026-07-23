@@ -43,9 +43,18 @@ docker exec "$CONTAINER" flashloan-bot status --json >/dev/null
 docker exec "$CONTAINER" flashloan-bot capabilities --json >/dev/null
 docker exec "$CONTAINER" python - <<'PY'
 from importlib.util import find_spec
-for package in ("numpy", "pandas", "pyarrow", "sklearn", "pytest"):
+
+from src.production_surface import (
+    assert_forbidden_imports_unavailable,
+    image_forbidden_imports,
+)
+
+assert_forbidden_imports_unavailable()
+for package in image_forbidden_imports():
     if find_spec(package) is not None:
-        raise SystemExit(f"development/analytics package leaked into runtime image: {package}")
+        raise SystemExit(
+            f"development/analytics package leaked into runtime image: {package}"
+        )
 PY
 
 echo "PR-025 image smoke passed."

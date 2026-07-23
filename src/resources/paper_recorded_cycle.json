@@ -1,0 +1,37 @@
+{
+  "candidates": [
+    {
+      "candidate_id": "recorded-marginfi-jupiter-001",
+      "compiled_message_digest": "71c7f0b603ba1785b6490e9fc82ec0621499ce0474c0d4696b5d36c47fcd80d0",
+      "flash_fee_lamports": 1000,
+      "observed_slot": 250000004,
+      "principal_lamports": 1000000,
+      "provider_evidence_digest": "f046ac1a9af91957477017f01bdcb48628ccf64620ab95853bba1624082f4c73",
+      "rent_lamports": 0,
+      "repayment_lamports": 1001000,
+      "rooted_slot": 250000000,
+      "safety_buffer_lamports": 5000,
+      "simulated_output_lamports": 1045000,
+      "simulation_message_digest": "71c7f0b603ba1785b6490e9fc82ec0621499ce0474c0d4696b5d36c47fcd80d0",
+      "tip_lamports": 0,
+      "total_tx_fee_lamports": 5000
+    },
+    {
+      "candidate_id": "recorded-marginfi-jupiter-002",
+      "compiled_message_digest": "71c7f0b603ba1785b6490e9fc82ec0621499ce0474c0d4696b5d36c47fcd80d0",
+      "flash_fee_lamports": 1000,
+      "observed_slot": 250000004,
+      "principal_lamports": 1000000,
+      "provider_evidence_digest": "f046ac1a9af91957477017f01bdcb48628ccf64620ab95853bba1624082f4c73",
+      "rent_lamports": 0,
+      "repayment_lamports": 1001000,
+      "rooted_slot": 250000000,
+      "safety_buffer_lamports": 5000,
+      "simulated_output_lamports": 1008000,
+      "simulation_message_digest": "71c7f0b603ba1785b6490e9fc82ec0621499ce0474c0d4696b5d36c47fcd80d0",
+      "tip_lamports": 0,
+      "total_tx_fee_lamports": 5000
+    }
+  ],
+  "schema_version": "mega-pr-01.recorded-paper-batch.v1"
+}

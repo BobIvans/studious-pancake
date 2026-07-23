@@ -10,7 +10,7 @@ is economically admissible.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, is_dataclass
 import hashlib
 import json
 import re
@@ -21,7 +21,7 @@ TOKEN_2022_PROGRAM_ID = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
 LEGACY_SPL_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
 WSOL_MINT = "So11111111111111111111111111111111111111112"
-ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvoter11111111111111111111111111111111"
+ASSOCIATED_TOKEN_PROGRAM_ID = "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
 
 _ALLOWED_PROGRAMS: frozenset[str] = frozenset(
     {
@@ -63,6 +63,10 @@ class ChainProgramRegistry:
     def validate(self) -> None:
         if self.token_2022_program_id != TOKEN_2022_PROGRAM_ID:
             raise MPR04ProtocolExecutionError("MPR04_NON_CANONICAL_TOKEN_2022_PROGRAM")
+        if self.associated_token_program_id != ASSOCIATED_TOKEN_PROGRAM_ID:
+            raise MPR04ProtocolExecutionError(
+                "MPR04_NON_CANONICAL_ASSOCIATED_TOKEN_PROGRAM"
+            )
         if self.wsol_mint == self.system_program_id:
             raise MPR04ProtocolExecutionError("MPR04_NATIVE_SOL_AND_WSOL_COLLAPSED")
         for value in (
@@ -122,14 +126,15 @@ class InstructionFirewallEvidence:
         if required_positions != sorted(required_positions):
             raise MPR04ProtocolExecutionError("MPR04_REQUIRED_ROLE_ORDER_INVALID")
         for role in roles:
-            if role.startswith(("marginfi.", "kamino.", "jupiter.")) and role not in _EXACTLY_ONCE_ROLES:
+            if (
+                role.startswith(("marginfi.", "kamino.", "jupiter."))
+                and role not in _EXACTLY_ONCE_ROLES
+            ):
                 raise MPR04ProtocolExecutionError("MPR04_UNKNOWN_SIDE_EFFECTING_ROLE")
         return _stable_hash(
             {
                 "schema": SCHEMA_VERSION,
-                "instructions": [
-                    _dataclass_payload(item) for item in ordered
-                ],
+                "instructions": [_dataclass_payload(item) for item in ordered],
             }
         )
 
@@ -150,7 +155,10 @@ class BlockhashFreshnessEvidence:
             raise MPR04ProtocolExecutionError("MPR04_BLOCKHEIGHT_NEGATIVE")
         if self.safety_margin_blocks < 0:
             raise MPR04ProtocolExecutionError("MPR04_BLOCKHEIGHT_MARGIN_NEGATIVE")
-        if self.current_block_height + self.safety_margin_blocks > self.last_valid_block_height:
+        if (
+            self.current_block_height + self.safety_margin_blocks
+            > self.last_valid_block_height
+        ):
             raise MPR04ProtocolExecutionError("MPR04_BLOCKHASH_EXPIRED_OR_TOO_CLOSE")
 
 
@@ -166,10 +174,16 @@ class SerializedTransactionEvidence:
         _require_sha256(self.message_hash, "message_hash")
         _require_sha256(self.versioned_message_bytes_hash, "versioned_message_bytes_hash")
         if self.unsigned_transaction_bytes <= 0 or self.required_signature_count <= 0:
-            raise MPR04ProtocolExecutionError("MPR04_SERIALIZED_TRANSACTION_SHAPE_INVALID")
-        signed_size = self.unsigned_transaction_bytes + 1 + (64 * self.required_signature_count)
+            raise MPR04ProtocolExecutionError(
+                "MPR04_SERIALIZED_TRANSACTION_SHAPE_INVALID"
+            )
+        signed_size = self.unsigned_transaction_bytes + 1 + (
+            64 * self.required_signature_count
+        )
         if signed_size > self.max_wire_bytes:
-            raise MPR04ProtocolExecutionError("MPR04_SIGNED_TRANSACTION_WIRE_SIZE_EXCEEDED")
+            raise MPR04ProtocolExecutionError(
+                "MPR04_SIGNED_TRANSACTION_WIRE_SIZE_EXCEEDED"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -222,7 +236,9 @@ class ExactSimulationArtifact:
                 "blockhash": self.blockhash,
                 "slot": self.slot,
                 "decoder_version": self.decoder_version,
-                "accounts": [_dataclass_payload(item) for item in self.returned_accounts],
+                "accounts": [
+                    _dataclass_payload(item) for item in self.returned_accounts
+                ],
             }
         )
 
@@ -244,11 +260,25 @@ class DecoderOwnedEconomics:
     decoder_version: str
 
     def validate(self, *, simulation_hash: str, decoder_version: str) -> tuple[int, int]:
+        non_negative_fields = {
+            "principal_lamports",
+            "flash_fee_lamports",
+            "repayment_lamports",
+            "gross_output_lamports",
+            "network_fee_lamports",
+            "priority_tip_lamports",
+            "rent_loss_lamports",
+            "transfer_fee_lamports",
+            "contingency_lamports",
+            "minimum_profit_lamports",
+        }
         for field in fields(self):
             value = getattr(self, field.name)
             if field.name in {"source_simulation_hash", "decoder_version"}:
                 continue
-            if not isinstance(value, int) or value < 0:
+            if not isinstance(value, int):
+                raise MPR04ProtocolExecutionError("MPR04_ECONOMIC_FIELD_NOT_INTEGER")
+            if field.name in non_negative_fields and value < 0:
                 raise MPR04ProtocolExecutionError("MPR04_ECONOMIC_FIELD_NEGATIVE")
         _require_sha256(self.source_simulation_hash, "source_simulation_hash")
         _require_safe_id(self.decoder_version, "decoder_version")
@@ -270,7 +300,9 @@ class DecoderOwnedEconomics:
         if conservative_profit != self.realized_account_delta_lamports:
             raise MPR04ProtocolExecutionError("MPR04_DECODER_DELTA_MISMATCH")
         if conservative_profit < self.minimum_profit_lamports:
-            raise MPR04ProtocolExecutionError("MPR04_CONSERVATIVE_PROFIT_BELOW_THRESHOLD")
+            raise MPR04ProtocolExecutionError(
+                "MPR04_CONSERVATIVE_PROFIT_BELOW_THRESHOLD"
+            )
         return total_cost, conservative_profit
 
 
@@ -347,6 +379,8 @@ def evaluate_mpr04_candidate(
 
 
 def _dataclass_payload(value: object) -> dict[str, object]:
+    if not is_dataclass(value) or isinstance(value, type):
+        raise MPR04ProtocolExecutionError("MPR04_DATACLASS_PAYLOAD_REQUIRED")
     return {field.name: getattr(value, field.name) for field in fields(value)}
 
 

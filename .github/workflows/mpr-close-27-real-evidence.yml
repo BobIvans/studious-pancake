@@ -1,0 +1,43 @@
+name: MPR-CLOSE-27 real release evidence
+
+on:
+  pull_request:
+    paths:
+      - pyproject.toml
+      - flashloan_release_evidence.py
+      - src/release_gate/mpr27_real_evidence.py
+      - tests/test_mpr_close_27_real_evidence.py
+      - docs/roadmap/mpr_close_27_real_release_evidence.md
+      - .github/workflows/mpr-close-27-real-evidence.yml
+
+permissions:
+  contents: read
+
+jobs:
+  real-release-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Install pytest
+        run: python -m pip install pytest==9.0.2
+      - name: Compile MPR-27 evidence gate
+        run: |
+          python -m py_compile \
+            flashloan_release_evidence.py \
+            src/release_gate/mpr27_real_evidence.py \
+            tests/test_mpr_close_27_real_evidence.py
+      - name: Run focused MPR-27 tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_mpr_close_27_real_evidence.py
+      - name: Generate blocked report without fake evidence
+        run: |
+          python -m flashloan_release_evidence generate \
+            --root . \
+            --output /tmp/mpr27-evidence

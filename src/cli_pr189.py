@@ -8,9 +8,17 @@ from typing import Sequence
 
 from src import automation_cli_pr189
 from src import cli as legacy_cli
+from src.super_mpr_a_runtime_gateway import rewrite_canonical_command
 
 
 PAPER_DB_ENV = "FLASHLOAN_PAPER_SERVICE_DB"
+
+
+def _rewrite_super_mpr_a_command(args: list[str]) -> list[str] | None:
+    """Expose SUPER-MPR-A public command aliases through the installed CLI only."""
+
+    rewritten = rewrite_canonical_command(args)
+    return rewritten if rewritten != args else None
 
 
 def _rewrite_legacy_preflight(args: list[str]) -> list[str] | None:
@@ -65,6 +73,9 @@ def _consume_legacy_paper_db_path(args: list[str]) -> list[str]:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(argv) if argv is not None else sys.argv[1:]
+    rewritten_super_mpr_a = _rewrite_super_mpr_a_command(args)
+    if rewritten_super_mpr_a is not None:
+        args = rewritten_super_mpr_a
     if args and args[0] == "checks":
         return automation_cli_pr189.main(args[1:])
     if args and args[0] == "paper-vertical":

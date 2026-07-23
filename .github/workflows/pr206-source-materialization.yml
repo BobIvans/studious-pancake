@@ -1,0 +1,25 @@
+name: PR-206 source materialization
+
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  upload-source:
+    if: github.head_ref == 'pr-206-durable-time-semantic-replay'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - name: Archive exact checkout
+        run: tar --exclude=.git -czf pr206-checkout.tar.gz .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr206-exact-checkout
+          path: pr206-checkout.tar.gz
+          if-no-files-found: error
+          retention-days: 1

@@ -144,7 +144,8 @@ def test_recovery_scanner_separates_stale_leases_and_pending_outbox(tmp_path):
 
     redrive_items = store.recovery_scan(now_ns=1_360)
     assert any(
-        item.action is PR196RecoveryAction.DELIVER_OUTBOX for item in redrive_items
+        item.action is PR196RecoveryAction.DELIVER_OUTBOX
+        for item in redrive_items
     )
 
 
@@ -206,7 +207,10 @@ def test_backup_restore_preserves_attempt_and_outbox_hashes(tmp_path):
     restored.restore_from_backup(backup, expected_sha256=manifest.database_sha256)
 
     assert restored.integrity_check() == "ok"
-    assert restored.list_outbox()[0].payload_hash == store.list_outbox()[0].payload_hash
+    assert (
+        restored.list_outbox()[0].payload_hash
+        == store.list_outbox()[0].payload_hash
+    )
 
 
 @pytest.mark.asyncio

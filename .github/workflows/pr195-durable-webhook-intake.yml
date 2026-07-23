@@ -1,0 +1,45 @@
+name: PR-195 durable webhook intake
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/pr195_durable_webhook_intake.py"
+      - "tests/test_pr195_durable_webhook_intake.py"
+      - "docs/pr195_durable_webhook_intake.md"
+      - "config/format_targets.txt"
+      - "scripts/verify_repo.py"
+      - ".github/workflows/pr195-durable-webhook-intake.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  durable-webhook-intake:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install focused test dependency
+        run: |
+          python -m pip install pytest==9.0.2 pytest-socket==0.7.0
+      - name: Compile durable webhook intake
+        run: |
+          python -m compileall -q \
+            src/pr195_durable_webhook_intake.py \
+            tests/test_pr195_durable_webhook_intake.py
+      - name: Run focused durable webhook intake tests
+        run: |
+          python -m pytest \
+            tests/test_pr195_durable_webhook_intake.py \
+            -q --disable-socket --allow-unix-socket

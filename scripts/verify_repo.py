@@ -95,6 +95,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr136_rooted_rpc_quorum.py",
         "tests/test_pr140_data_lineage_quarantine.py",
         "tests/test_pr194_trusted_foundation.py",
+        "tests/test_pr195_durable_webhook_intake.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",

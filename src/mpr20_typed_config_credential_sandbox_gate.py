@@ -49,10 +49,10 @@ class MPR20Blocker(str, Enum):
     CONFIG_PARSE_NOT_SAFE = "MPR20_CONFIG_PARSE_NOT_SAFE"
     LIVE_TRANSPORT_OR_COMMITMENT_PERMISSIVE = "MPR20_LIVE_TRANSPORT_OR_COMMITMENT_PERMISSIVE"
     PROGRAM_SELF_AUTHORIZATION = "MPR20_PROGRAM_SELF_AUTHORIZATION"
-    RUNTIME_CAN_ACCESS_SIGNER_SECRET = "MPR20_RUNTIME_CAN_ACCESS_SIGNER_SECRET"
-    SECRET_BACKEND_NOT_REAL = "MPR20_SECRET_BACKEND_NOT_REAL"
-    SECRET_ROOT_OR_ROTATION_NOT_FAIL_CLOSED = "MPR20_SECRET_ROOT_OR_ROTATION_NOT_FAIL_CLOSED"
-    SECRET_IDENTITY_LEAKS_RAW_BYTES = "MPR20_SECRET_IDENTITY_LEAKS_RAW_BYTES"
+    RUNTIME_CAN_ACCESS_SIGNER_CREDENTIAL = "MPR20_RUNTIME_CAN_ACCESS_SIGNER_CREDENTIAL"
+    CREDENTIAL_BACKEND_NOT_REAL = "MPR20_CREDENTIAL_BACKEND_NOT_REAL"
+    CREDENTIAL_ROOT_OR_ROTATION_NOT_FAIL_CLOSED = "MPR20_CREDENTIAL_ROOT_OR_ROTATION_NOT_FAIL_CLOSED"
+    CREDENTIAL_IDENTITY_LEAKS_RAW_BYTES = "MPR20_CREDENTIAL_IDENTITY_LEAKS_RAW_BYTES"
     SIGNER_ISOLATION_NOT_PROVEN = "MPR20_SIGNER_ISOLATION_NOT_PROVEN"
     BAD_CHAIN_REGISTRY_HASH = "MPR20_BAD_CHAIN_REGISTRY_HASH"
     CHAIN_OR_PROGRAM_IDENTITY_UNTRUSTED = "MPR20_CHAIN_OR_PROGRAM_IDENTITY_UNTRUSTED"
@@ -371,7 +371,7 @@ def _typed_config(cfg: TypedConfigurationEvidence, out: list[MPR20Violation]) ->
 def _credentials(creds: CredentialLifecycleEvidence, out: list[MPR20Violation]) -> None:
     _hash_fields(
         out,
-        MPR20Blocker.SECRET_BACKEND_NOT_REAL,
+        MPR20Blocker.CREDENTIAL_BACKEND_NOT_REAL,
         secret_policy_sha256=creds.secret_policy_sha256,
         rotation_revocation_report_sha256=creds.rotation_revocation_report_sha256,
         docker_secret_contract_sha256=creds.docker_secret_contract_sha256,
@@ -379,7 +379,7 @@ def _credentials(creds: CredentialLifecycleEvidence, out: list[MPR20Violation]) 
     if creds.network_runtime_has_signer_secret_access:
         _add(
             out,
-            MPR20Blocker.RUNTIME_CAN_ACCESS_SIGNER_SECRET,
+            MPR20Blocker.RUNTIME_CAN_ACCESS_SIGNER_CREDENTIAL,
             "network runtime must not resolve signer secret material",
         )
     isolation_flags = (
@@ -401,7 +401,7 @@ def _credentials(creds: CredentialLifecycleEvidence, out: list[MPR20Violation]) 
     if not all(backend_flags):
         _add(
             out,
-            MPR20Blocker.SECRET_BACKEND_NOT_REAL,
+            MPR20Blocker.CREDENTIAL_BACKEND_NOT_REAL,
             "secret backends and Docker secret files must be implemented end-to-end",
         )
     rotation_flags = (
@@ -413,7 +413,7 @@ def _credentials(creds: CredentialLifecycleEvidence, out: list[MPR20Violation]) 
     if not all(rotation_flags):
         _add(
             out,
-            MPR20Blocker.SECRET_ROOT_OR_ROTATION_NOT_FAIL_CLOSED,
+            MPR20Blocker.CREDENTIAL_ROOT_OR_ROTATION_NOT_FAIL_CLOSED,
             "secret roots, generations, leases and max-use CAS must fail closed",
         )
     leak_flags = (
@@ -424,7 +424,7 @@ def _credentials(creds: CredentialLifecycleEvidence, out: list[MPR20Violation]) 
     if not all(leak_flags):
         _add(
             out,
-            MPR20Blocker.SECRET_IDENTITY_LEAKS_RAW_BYTES,
+            MPR20Blocker.CREDENTIAL_IDENTITY_LEAKS_RAW_BYTES,
             "raw query secrets or revealed secret bytes can enter durable identity",
         )
 

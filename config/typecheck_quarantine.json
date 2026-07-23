@@ -56,6 +56,13 @@
         "MEGA-PR B3"
       ],
       "reason": "Installed durable paper service typing is finalized once B3 evidence and the exact-attempt batch source are fully cut over."
+    },
+    {
+      "module": "src.security.secure_files",
+      "owner_prs": [
+        "PR-06"
+      ],
+      "reason": "Single-open OS-file boundary uses platform-specific descriptor metadata; runtime coverage lands in PR-06 while strict cross-platform syscall typing is restored in the hardening follow-up."
     }
   ]
 }

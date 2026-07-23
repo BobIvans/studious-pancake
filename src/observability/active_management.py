@@ -1,21 +1,22 @@
-"""Active O1 authenticated management plane.
+"""Active authenticated management plane hardened by roadmap PR-06.
 
-This module replaces the active ``http.server`` listener with a bounded aiohttp
-service that consumes PR-170 signed, generation-fenced runtime truth.  Canonical
-PR-174 readiness is the only source that may make ``/ready`` return success.
+The service consumes generation-fenced signed runtime truth. Canonical readiness
+is the only source that may make ``/ready`` succeed. PR-06 additionally places
+queue admission inside the request deadline and moves filesystem-backed state
+verification off the asyncio event loop.
 """
 
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Callable, Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from dataclasses import dataclass
 import errno
-from http import HTTPStatus
 import hashlib
-import secrets
+from http import HTTPStatus
 import json
 from pathlib import Path
+import secrets
 import time
 from typing import Any
 
@@ -31,16 +32,21 @@ from src.observability.management_plane_pr170 import (
     ManagementSurface,
     SnapshotErrorCode,
     SnapshotValidation,
+    PR170_STATE_SCHEMA,
     authorize_surface,
     build_ingress_limits,
     build_public_liveness_payload,
-    read_signed_state_snapshot,
+    make_signed_snapshot,
 )
 from src.observability.redaction import sanitize
+from src.security.secure_files import SecureFileError, read_secure_regular_file
 
 O1_READINESS_SCHEMA = "o1.canonical-readiness-http.v1"
 O1_STATUS_SCHEMA = "o1.management-status.v1"
 O1_METRICS_SCHEMA = "o1.management-metrics.v1"
+
+SnapshotProvider = Callable[[], SnapshotValidation]
+ManagementHandler = Callable[[web.Request], Awaitable[web.Response]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -51,12 +57,40 @@ class SignedRuntimeStateProvider:
     expected_policy_bundle_hash: str
 
     def __call__(self) -> SnapshotValidation:
-        return read_signed_state_snapshot(
-            self.path,
-            self.signing_key,
-            minimum_generation=self.minimum_generation,
-            expected_policy_bundle_hash=self.expected_policy_bundle_hash,
-        )
+        if not self.path.exists():
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_FILE_MISSING)
+        if self.path.is_symlink():
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_PATH_IS_SYMLINK)
+        try:
+            result = read_secure_regular_file(
+                self.path, max_bytes=64 * 1024, owner_only=True
+            )
+        except SecureFileError:
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_JSON_INVALID)
+        try:
+            wrapper = json.loads(result.data.decode("utf-8"))
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_JSON_INVALID)
+        if (
+            not isinstance(wrapper, dict)
+            or wrapper.get("schema_version") != PR170_STATE_SCHEMA
+        ):
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_SCHEMA_INVALID)
+        payload = wrapper.get("payload")
+        supplied_mac = wrapper.get("mac_sha256")
+        if not isinstance(payload, dict) or not isinstance(supplied_mac, str):
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_SCHEMA_INVALID)
+        expected_mac = make_signed_snapshot(payload, self.signing_key).mac_sha256
+        if not secrets.compare_digest(supplied_mac, expected_mac):
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_MAC_INVALID)
+        generation = payload.get("runtime_generation")
+        if isinstance(generation, bool) or not isinstance(generation, int):
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_SCHEMA_INVALID)
+        if generation < self.minimum_generation:
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_GENERATION_STALE)
+        if payload.get("policy_bundle_hash") != self.expected_policy_bundle_hash:
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_POLICY_MISMATCH)
+        return SnapshotValidation(True, None, payload)
 
 
 @dataclass(frozen=True, slots=True)
@@ -105,11 +139,11 @@ def _bearer_token(request: web.Request) -> str | None:
 
 
 class ActiveManagementHttpServer:
-    """Bounded authenticated management service for the active container runtime."""
+    """Bounded authenticated service for the active container runtime."""
 
     def __init__(
         self,
-        state_provider: Callable[[], SnapshotValidation],
+        state_provider: SnapshotProvider,
         *,
         policy: ManagementPlanePolicy,
         max_heartbeat_age_seconds: float = DEFAULT_MAX_HEARTBEAT_AGE_SECONDS,
@@ -143,7 +177,7 @@ class ActiveManagementHttpServer:
         )
         return f"http://{host}:{self.port}"
 
-    async def start(self, *, port: int) -> "ActiveManagementHttpServer":
+    async def start(self, *, port: int) -> ActiveManagementHttpServer:
         application = web.Application(client_max_size=1024)
         application.router.add_get("/health", self._health)
         application.router.add_get("/ready", self._ready)
@@ -186,19 +220,28 @@ class ActiveManagementHttpServer:
 
     async def _bounded(
         self,
-        handler: Callable[[web.Request], Any],
+        handler: ManagementHandler,
         request: web.Request,
     ) -> web.Response:
-        async with self._connections:
-            try:
-                async with asyncio.timeout(self.policy.request_timeout_seconds):
-                    response = await handler(request)
-            except TimeoutError:
-                response = self._json(
-                    HTTPStatus.SERVICE_UNAVAILABLE,
-                    {"ok": False, "reason": "MANAGEMENT_REQUEST_TIMEOUT"},
-                )
-            return response
+        """Bound queue wait and handler work by one end-to-end deadline."""
+
+        try:
+            async with asyncio.timeout(self.policy.request_timeout_seconds):
+                async with self._connections:
+                    return await handler(request)
+        except TimeoutError:
+            return self._json(
+                HTTPStatus.SERVICE_UNAVAILABLE,
+                {"ok": False, "reason": "MANAGEMENT_REQUEST_TIMEOUT"},
+            )
+
+    async def _state_validation(self) -> SnapshotValidation:
+        """Verify filesystem-backed state without blocking the event loop."""
+
+        try:
+            return await asyncio.to_thread(self.state_provider)
+        except (OSError, TypeError, ValueError):
+            return SnapshotValidation(False, SnapshotErrorCode.STATE_JSON_INVALID)
 
     async def _health(self, request: web.Request) -> web.Response:
         return await self._bounded(self._health_impl, request)
@@ -217,7 +260,7 @@ class ActiveManagementHttpServer:
         denied = self._authorize(request, ManagementSurface.READINESS)
         if denied is not None:
             return denied
-        validation = self.state_provider()
+        validation = await self._state_validation()
         if not validation.ok or validation.payload is None:
             return self._snapshot_failure(validation.reason)
         state = dict(validation.payload)
@@ -243,7 +286,8 @@ class ActiveManagementHttpServer:
         elif not ready:
             requirement_blockers = canonical_payload.get("requirement_blockers", {})
             global_blockers = canonical_payload.get("global_blockers", [])
-            reasons.extend(str(item) for item in global_blockers)
+            if isinstance(global_blockers, list):
+                reasons.extend(str(item) for item in global_blockers)
             if isinstance(requirement_blockers, Mapping):
                 for domain, blockers in requirement_blockers.items():
                     if isinstance(blockers, list):
@@ -266,7 +310,7 @@ class ActiveManagementHttpServer:
         denied = self._authorize(request, ManagementSurface.OPERATOR_STATUS)
         if denied is not None:
             return denied
-        validation = self.state_provider()
+        validation = await self._state_validation()
         if not validation.ok or validation.payload is None:
             return self._snapshot_failure(validation.reason)
         state = dict(validation.payload)
@@ -301,7 +345,7 @@ class ActiveManagementHttpServer:
         denied = self._authorize(request, ManagementSurface.METRICS)
         if denied is not None:
             return denied
-        validation = self.state_provider()
+        validation = await self._state_validation()
         snapshot_ok = validation.ok and validation.payload is not None
         snapshot_payload = validation.payload or {}
         canonical = validate_canonical_readiness_payload(

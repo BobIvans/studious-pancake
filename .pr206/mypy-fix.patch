@@ -1,0 +1,107 @@
+--- a/src/pr206_durable_state.py
++++ b/src/pr206_durable_state.py
+@@ -617,7 +617,7 @@
+             "evidence": dict(evidence or {}),
+         }
+         with self._write_transaction() as now:
+-            self._expire_due_locked(
++            self._expire_due_pr206_locked(
+                 now,
+                 terminal_retention_ns=terminal_retention_ns,
+             )
+@@ -967,14 +967,14 @@
+             raise ValueError("terminal retention must be non-negative")
+         with self._write_transaction() as now:
+             return tuple(
+-                self._expire_due_locked(
++                self._expire_due_pr206_locked(
+                     now,
+                     terminal_retention_ns=terminal_retention_ns,
+                     limit=limit,
+                 )
+             )
+ 
+-    def _expire_due_locked(
++    def _expire_due_pr206_locked(
+         self,
+         now: TrustedLifecycleTime,
+         *,
+@@ -1147,11 +1147,15 @@
+         *,
+         reservation_id: str,
+         expected_revision: int,
+-        charged_fee_lamports: int,
+-        idempotency_key: str,
+-        principal: str,
++        charged_fee_lamports: int = 0,
++        idempotency_key: str | None = None,
++        principal: str | None = None,
+         generation: int = 1,
+     ) -> WalletReservation:
++        if idempotency_key is None or principal is None:
++            raise ReservationConflictError(
++                "PR-206 semantic identity is required for terminal release"
++            )
+         if expected_revision < 0 or charged_fee_lamports < 0:
+             raise ValueError("revision and charged fee must be non-negative")
+         request = {
+@@ -1432,17 +1436,24 @@
+             ).fetchone()
+             if event is None:
+                 raise ProjectionMismatchError("semantic event linkage is missing")
+-            expected = (
++            result_revision = result.get("revision")
++            if not isinstance(result_revision, int) or isinstance(
++                result_revision, bool
++            ):
++                raise ProjectionMismatchError(
++                    "semantic event result has an invalid revision"
++                )
++            expected_event = (
+                 str(result.get("opportunity_id", "")),
+-                int(result.get("revision", -1)),
++                result_revision,
+                 str(result.get("state", "")),
+             )
+-            actual = (
++            actual_event = (
+                 str(event["opportunity_id"]),
+                 int(event["revision"]),
+                 str(event["to_state"]),
+             )
+-            if actual != expected:
++            if actual_event != expected_event:
+                 raise ProjectionMismatchError("semantic event result mismatch")
+             self._verify_projection_locked(str(event["opportunity_id"]))
+         elif operation_kind == "reserve_wallet":
+@@ -1452,19 +1463,26 @@
+             ).fetchone()
+             if reservation is None:
+                 raise ProjectionMismatchError("semantic reservation linkage is missing")
+-            expected = (
++            result_lamports = result.get("lamports")
++            if not isinstance(result_lamports, int) or isinstance(
++                result_lamports, bool
++            ):
++                raise ProjectionMismatchError(
++                    "semantic reservation result has invalid lamports"
++                )
++            expected_reservation = (
+                 str(result.get("reservation_id", "")),
+                 str(result.get("wallet_id", "")),
+                 str(result.get("attempt_id", "")),
+-                int(result.get("lamports", -1)),
++                result_lamports,
+             )
+-            actual = (
++            actual_reservation = (
+                 str(reservation["reservation_id"]),
+                 str(reservation["wallet_id"]),
+                 str(reservation["attempt_id"]),
+                 int(reservation["lamports"]),
+             )
+-            if actual != expected:
++            if actual_reservation != expected_reservation:
+                 raise ProjectionMismatchError("semantic reservation result mismatch")
+         elif operation_kind == "release_wallet":
+             terminal = self.db.execute(

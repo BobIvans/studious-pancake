@@ -75,7 +75,9 @@ def test_pr200_cutover_gate_rejects_missing_fault_drill() -> None:
 
 def test_pr200_cutover_gate_rejects_missing_release_artifact() -> None:
     manifest = _load_current_manifest()
-    artifacts = copy.deepcopy(manifest["required_release_artifacts"])  # type: ignore[index]
+    artifacts = copy.deepcopy(
+        manifest["required_release_artifacts"]
+    )  # type: ignore[index]
     manifest["required_release_artifacts"] = [
         artifact
         for artifact in artifacts

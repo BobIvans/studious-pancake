@@ -88,11 +88,17 @@ class UiToBaseUnitConversion:
             if self.remainder_numerator != 0:
                 raise PR227Error("PR227_EXACT_CONVERSION_REMAINDER_RECORDED")
         elif self.rounding_policy is RoundingPolicy.FLOOR_WITH_REMAINDER:
-            if self.base_units.value != quotient or self.remainder_numerator != remainder:
+            if (
+                self.base_units.value != quotient
+                or self.remainder_numerator != remainder
+            ):
                 raise PR227Error("PR227_FLOOR_CONVERSION_MISMATCH")
         elif self.rounding_policy is RoundingPolicy.CEIL_WITH_REMAINDER:
             expected = quotient + (1 if remainder else 0)
-            if self.base_units.value != expected or self.remainder_numerator != remainder:
+            if (
+                self.base_units.value != expected
+                or self.remainder_numerator != remainder
+            ):
                 raise PR227Error("PR227_CEIL_CONVERSION_MISMATCH")
         else:
             raise PR227Error("PR227_UNKNOWN_ROUNDING_POLICY")
@@ -379,8 +385,14 @@ class PreSignerFreshnessEvidence:
             raise PR227Error("PR227_RESERVATION_PLAN_MISMATCH")
         _strict_positive_int(self.current_block_height, "current_block_height")
         _strict_positive_int(self.last_valid_block_height, "last_valid_block_height")
-        _strict_non_negative_int(self.remaining_height_margin, "remaining_height_margin")
-        if self.current_block_height + self.remaining_height_margin > self.last_valid_block_height:
+        _strict_non_negative_int(
+            self.remaining_height_margin,
+            "remaining_height_margin",
+        )
+        if (
+            self.current_block_height + self.remaining_height_margin
+            > self.last_valid_block_height
+        ):
             raise PR227Error("PR227_BLOCKHASH_NOT_FRESH_BEFORE_SIGNER")
         _strict_non_negative_int(self.current_slot, "current_slot")
         if self.reservation.expiry_slot <= self.current_slot:

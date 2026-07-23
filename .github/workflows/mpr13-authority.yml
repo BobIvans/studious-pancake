@@ -1,0 +1,46 @@
+name: MPR-13 submission authority
+
+on:
+  pull_request:
+    paths:
+      - "src/submission/mpr13_authority.py"
+      - "tests/test_mpr13_authority.py"
+      - "docs/mpr13_cryptographic_submission_authority.md"
+      - ".github/workflows/mpr13-authority.yml"
+  push:
+    branches:
+      - "mpr-13-*"
+    paths:
+      - "src/submission/mpr13_authority.py"
+      - "tests/test_mpr13_authority.py"
+      - "docs/mpr13_cryptographic_submission_authority.md"
+      - ".github/workflows/mpr13-authority.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mpr13-authority-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  authority-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install targeted test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            pytest==9.0.2 \
+            solders==0.28.0
+      - name: Compile MPR-13 authority
+        run: python -m py_compile src/submission/mpr13_authority.py tests/test_mpr13_authority.py
+      - name: Run MPR-13 adversarial tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_mpr13_authority.py

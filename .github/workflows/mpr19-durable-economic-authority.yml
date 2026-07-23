@@ -1,0 +1,67 @@
+name: MPR-19 durable economic authority
+
+on:
+  pull_request:
+    paths:
+      - "src/durability/mpr19_economic_authority.py"
+      - "tests/test_mpr19_economic_authority.py"
+      - "docs/mpr19_durable_economic_authority.md"
+      - ".github/workflows/mpr19-durable-economic-authority.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PAPER_TRADING_ONLY: "true"
+  LIVE_TRADING_ENABLED: "false"
+  JITO_ENABLED: "false"
+  KAMINO_LIQUIDATION_ENABLED: "false"
+  PYTHONPATH: "."
+
+jobs:
+  durable-economic-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Install focused test dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install pytest==9.0.2
+      - name: Compile MPR-19 surface
+        run: |
+          python -m py_compile \
+            src/durability/mpr19_economic_authority.py \
+            tests/test_mpr19_economic_authority.py
+      - name: Probe module import
+        run: python -c "import src.durability.mpr19_economic_authority as m; print(m.MPR19_SCHEMA_VERSION)"
+      - name: Probe path guard
+        run: python -c "from pathlib import Path; import src.durability.mpr19_economic_authority as m; m._prepare_private_db_path(Path('tmp-mpr19/path.sqlite3')); print('path-ok')"
+      - name: Probe sqlite pragmas
+        run: python -c "import sqlite3; c=sqlite3.connect('tmp-mpr19/pragmas.sqlite3', isolation_level=None); [c.execute(s) for s in ('PRAGMA journal_mode=WAL','PRAGMA synchronous=FULL','PRAGMA foreign_keys=ON','PRAGMA busy_timeout=5000')]; c.close(); print('pragma-ok')"
+      - name: Probe schema script
+        run: python -c "import sqlite3; import src.durability.mpr19_economic_authority as m; c=sqlite3.connect('tmp-mpr19/schema.sqlite3', isolation_level=None); c.executescript(m._SCHEMA); c.close(); print('schema-ok')"
+      - name: Probe constructor
+        run: python -c "from pathlib import Path; from src.durability.mpr19_economic_authority import MPR19EconomicAuthority; authority=MPR19EconomicAuthority(Path('tmp-mpr19/init.sqlite3')); authority.close(); print('constructor-ok')"
+      - name: Probe create attempt
+        run: python -c "from pathlib import Path; from src.durability.mpr19_economic_authority import AttemptRequest, MPR19EconomicAuthority; req=AttemptRequest('opp-001','wallet-001','recorded-paper-arb',100000,{'slot':123}); authority=MPR19EconomicAuthority(Path('tmp-mpr19/create.sqlite3')); authority.create_attempt(req, now_ns=1); authority.close(); print('create-ok')"
+      - name: Probe terminal outbox replay
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_attempt_terminal_outbox_and_replay_are_one_durable_authority
+      - name: Run statement crash matrix
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_statement_level_crash_probe_rolls_back_every_partial_write
+      - name: Run identity probes
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_canonical_identity_rejects_bool_float_and_delimiter_collisions
+      - name: Run CAS preservation
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_revision_cas_failure_preserves_active_reservation
+      - name: Run stale owner probe
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_outbox_stale_owner_cannot_complete_after_reclaim
+      - name: Run replay tamper probe
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_replay_detects_materialized_state_tampering
+      - name: Run backup restore probe
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_backup_restore_is_verified_before_activation
+      - name: Run complete focused suite
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py

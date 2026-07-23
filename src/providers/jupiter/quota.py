@@ -291,7 +291,9 @@ def _cache_identity_part(value: object) -> object:
             str(key): _cache_identity_part(item)
             for key, item in sorted(value.items(), key=lambda entry: str(entry[0]))
         }
-    return str(value)
+    raise TypeError(
+        f"cache identity part is not JSON-serializable: {type(value).__name__}"
+    )
 
 
 def cache_key(parts: Iterable[object]) -> str:
@@ -314,4 +316,4 @@ def cache_key(parts: Iterable[object]) -> str:
         ensure_ascii=True,
         allow_nan=False,
     ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return "jupiter-cache:v2:" + hashlib.sha256(encoded).hexdigest()

@@ -22,7 +22,7 @@ CANONICAL_OWNER_BY_ROLE = {
     "signer_boundary": "src.live_boundary.pr202_isolated_signer_settlement",
     "authorization": "src.pr211_signer_outbox_finality_gate",
     "durable_submission_intent": (
-        "isolated_signer_service.flashloan_isolated_signer.pr199"
+        "isolated-signer-service/pr199-artifact"
     ),
     "finalized_settlement": "src.live_boundary.pr202_isolated_signer_settlement",
     "canary_governance": "src.mpr14_durable_canary_operator_control",

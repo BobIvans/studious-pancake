@@ -1,0 +1,53 @@
+name: MEGA-PR-02 economic proof qualification
+
+on:
+  pull_request:
+    paths:
+      - "src/execution/economic_reconciliation/mega_pr02_proof.py"
+      - "tests/execution/test_mega_pr02_economic_proof.py"
+      - "docs/mega_pr02_economic_proof_qualification.md"
+      - ".github/workflows/mega-pr02-economic-proof.yml"
+  push:
+    branches:
+      - "mega-pr-02-*"
+    paths:
+      - "src/execution/economic_reconciliation/mega_pr02_proof.py"
+      - "tests/execution/test_mega_pr02_economic_proof.py"
+      - "docs/mega_pr02_economic_proof_qualification.md"
+      - ".github/workflows/mega-pr02-economic-proof.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mega-pr02-economic-proof-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PAPER_TRADING_ONLY: "true"
+  LIVE_TRADING_ENABLED: "false"
+  JITO_ENABLED: "false"
+  PYTHONPATH: "."
+
+jobs:
+  economic-proof-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install focused test dependencies
+        run: |
+          python -m pip install --disable-pip-version-check \
+            pytest==9.0.2 \
+            solders==0.28.0
+      - name: Compile MEGA-PR-02 proof boundary
+        run: |
+          python -m py_compile \
+            src/execution/economic_reconciliation/mega_pr02_proof.py \
+            tests/execution/test_mega_pr02_economic_proof.py
+      - name: Run MEGA-PR-02 proof tests
+        run: python -m pytest -q tests/execution/test_mega_pr02_economic_proof.py

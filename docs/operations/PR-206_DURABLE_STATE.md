@@ -63,6 +63,12 @@ wallet reservations, terminal fee conflicts, parent/current migration tamper,
 projection tamper, immutable evidence, transactional fault rollback, and
 concurrent lifecycle admission.
 
+The implementation was integrated on top of `main` commit
+`3277b495ee26cf2e4d08593898041183a714c768`. The latest-main merge, exact Black
+check, authoritative verifier, required-control validation, authority-map
+validation, and focused compatibility suite all completed successfully before
+the review-ready CI run.
+
 ## Rollback boundary
 
 The migration is additive and preserves all PR-195 rows and immutable events.

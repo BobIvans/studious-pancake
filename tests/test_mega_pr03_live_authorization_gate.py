@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from src.submission.mega_pr03_live_authorization_gate import (
+from src.live_boundary.mega_pr03_live_authorization_gate import (
     AuthorizationStatus,
     MegaPR03AuthorizationGate,
     MegaPR03Error,

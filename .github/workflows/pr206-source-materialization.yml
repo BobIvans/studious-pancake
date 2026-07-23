@@ -16,10 +16,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Archive exact checkout
-        run: tar --exclude=.git -czf pr206-checkout.tar.gz .
+        run: tar --exclude=.git -czf /tmp/pr206-checkout.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
           name: pr206-exact-checkout
-          path: pr206-checkout.tar.gz
+          path: /tmp/pr206-checkout.tar.gz
           if-no-files-found: error
           retention-days: 1

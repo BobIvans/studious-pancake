@@ -150,5 +150,6 @@ src/submission/resubmission_proof_pr197.py
 tests/test_pr197_archive_complete_resubmission.py
 src/authorization_replay_pr201.py
 tests/test_pr201_authorization_replay.py
-src/paper_shadow/repeated_service_pr04.py
-tests/test_pr04_repeated_installed_paper_service.py
+src/authority_map.py
+scripts/validate_authority_map.py
+tests/test_pr01_authority_map.py

@@ -58,7 +58,11 @@ class EndpointContract:
     def from_dict(cls, provider: str, raw: Mapping[str, Any]) -> "EndpointContract":
         origin = str(raw.get("origin", "")).rstrip("/")
         parsed = urlparse(origin)
-        if parsed.scheme != "https" or not parsed.netloc or parsed.path not in {"", "/"}:
+        if (
+            parsed.scheme != "https"
+            or not parsed.netloc
+            or parsed.path not in {"", "/"}
+        ):
             raise ProductContractError(
                 f"endpoint origin for {provider} must be an HTTPS origin without a path"
             )
@@ -127,14 +131,18 @@ class ProductContract:
         return cls(
             schema_version=schema_version,
             product_state=str(raw.get("product_state", "")),
-            runtime_config_schema_version=str(raw.get("runtime_config_schema_version", "")),
+            runtime_config_schema_version=str(
+                raw.get("runtime_config_schema_version", "")
+            ),
             live_available=bool(raw.get("live_available", False)),
             endpoint_contracts=endpoint_contracts,
             legacy_secret_aliases={
                 str(name): str(replacement)
                 for name, replacement in legacy_aliases.items()
             },
-            forbidden_generated_secret_fields=tuple(str(item) for item in forbidden_fields),
+            forbidden_generated_secret_fields=tuple(
+                str(item) for item in forbidden_fields
+            ),
             raw=dict(raw),
             source_path=source_path,
             installed_package=installed_package,
@@ -171,7 +179,9 @@ class ProductContract:
                 "installed PR-195 product contract is missing or malformed"
             ) from exc
         if not isinstance(raw, Mapping):
-            raise ProductContractError("installed product contract root must be an object")
+            raise ProductContractError(
+                "installed product contract root must be an object"
+            )
         return cls._from_raw(
             raw,
             source_path=root / "src" / "resources" / "product_contract_pr195.json",
@@ -218,7 +228,8 @@ class ProductContract:
                     ContractDiagnostic(
                         "ENDPOINT_FIELD_DEFERRED",
                         ContractSeverity.INFO,
-                        f"{endpoint.provider} endpoint field is not active in RuntimeConfig",
+                        f"{endpoint.provider} endpoint field is not active in "
+                        "RuntimeConfig",
                     )
                 )
                 continue
@@ -239,7 +250,8 @@ class ProductContract:
                     ContractDiagnostic(
                         "SECRET_FIELD_LEAK",
                         ContractSeverity.ERROR,
-                        f"redacted configuration contains forbidden secret field {field!r}",
+                        "redacted configuration contains forbidden secret field "
+                        f"{field!r}",
                     )
                 )
         return tuple(diagnostics)
@@ -265,7 +277,8 @@ class ProductContract:
                 ContractDiagnostic(
                     "LIVE_CAPABILITY_CONTRADICTION",
                     ContractSeverity.ERROR,
-                    "capability matrix advertises live while product contract denies it",
+                    "capability matrix advertises live while product contract "
+                    "denies it",
                 )
             )
 
@@ -313,7 +326,8 @@ class ProductContract:
                         ContractDiagnostic(
                             "LIVE_COMPONENT_NOT_PERMITTED",
                             ContractSeverity.ERROR,
-                            f"{component.id} allows live while product contract denies it",
+                            f"{component.id} allows live while product contract "
+                            "denies it",
                         )
                     )
             if component.active_in_supported_entrypoint and not any(
@@ -335,7 +349,8 @@ class ProductContract:
                     ContractDiagnostic(
                         "ACTIVE_LIVE_READY_COMPONENT",
                         ContractSeverity.ERROR,
-                        f"{component.id} is active live-ready before live contract approval",
+                        f"{component.id} is active live-ready before live contract "
+                        "approval",
                     )
                 )
         return tuple(diagnostics)

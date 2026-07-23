@@ -164,3 +164,6 @@ tests/test_roadmap_pr08_isolated_signer_foundation.py
 src/durability/unified_authority_pr02.py
 tests/test_pr02_unified_lifecycle_authority.py
 src/paper_shadow/durable_service_a3.py
+src/release_gate/asymmetric_qualification.py
+scripts/verify_asymmetric_qualification.py
+tests/test_pr205_asymmetric_qualification.py

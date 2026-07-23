@@ -303,7 +303,9 @@ class QualificationVerdict:
 
     @property
     def release_claim_allowed(self) -> bool:
-        return self.qualified and bool(self.signature)
+        """Legacy HMAC verdicts are CI evidence, not release authority."""
+
+        return False
 
     def unsigned_payload(self) -> dict[str, Any]:
         return {
@@ -347,10 +349,14 @@ def source_tree_identity(root: Path) -> SourceTreeIdentity:
             )
         )
     manifest = {"files": [item.to_dict() for item in identities]}
-    return SourceTreeIdentity(root.name, tuple(identities), _hash_bytes(_canonical_bytes(manifest)))
+    return SourceTreeIdentity(
+        root.name, tuple(identities), _hash_bytes(_canonical_bytes(manifest))
+    )
 
 
-def qualification_plan_document(plan: QualificationPlan, source: SourceTreeIdentity) -> dict[str, Any]:
+def qualification_plan_document(
+    plan: QualificationPlan, source: SourceTreeIdentity
+) -> dict[str, Any]:
     payload = plan.to_manifest(source_digest=source.digest, execution_mode="planned")
     payload["schema_version"] = PR186_PLAN_SCHEMA
     payload["qualification_state"] = "planned_not_executed"
@@ -407,11 +413,13 @@ def create_signed_verdict(
         "signature_algorithm": "hmac-sha256",
         "issued_at": issued,
     }
-    signature = hmac.new(signing_key, _canonical_bytes(unsigned), hashlib.sha256).hexdigest()
+    signature = hmac.new(
+        signing_key, _canonical_bytes(unsigned), hashlib.sha256
+    ).hexdigest()
     return QualificationVerdict(
         run_hash=run.run_hash,
         source_digest=run.source.digest,
-        wheel_sha256=unsigned["wheel_sha256"],
+        wheel_sha256=str(unsigned["wheel_sha256"]),
         qualified=qualified,
         reason_codes=tuple(reasons),
         repeated_clean_run_match=repeated_clean_run_match,
@@ -434,7 +442,8 @@ def verify_signed_verdict(verdict: QualificationVerdict, signing_key: bytes) -> 
 def wheelhouse_manifest_hash(artifacts: Iterable[ArtifactIdentity]) -> str:
     payload = {
         "artifacts": [
-            item.to_dict() for item in sorted(artifacts, key=lambda value: value.filename)
+            item.to_dict()
+            for item in sorted(artifacts, key=lambda value: value.filename)
         ]
     }
     return _hash_bytes(_canonical_bytes(payload))

@@ -226,7 +226,7 @@ def test_network_runtime_signer_secret_access_blocked() -> None:
         ),
     )
 
-    assert MPR20Blocker.RUNTIME_CAN_ACCESS_SIGNER_SECRET in codes(mutated)
+    assert MPR20Blocker.RUNTIME_CAN_ACCESS_SIGNER_CREDENTIAL in codes(mutated)
 
 
 def test_parse_only_secret_backend_and_missing_docker_secret_blocked() -> None:
@@ -240,7 +240,7 @@ def test_parse_only_secret_backend_and_missing_docker_secret_blocked() -> None:
         ),
     )
 
-    assert MPR20Blocker.SECRET_BACKEND_NOT_REAL in codes(mutated)
+    assert MPR20Blocker.CREDENTIAL_BACKEND_NOT_REAL in codes(mutated)
 
 
 def test_secret_roots_generation_and_lease_are_fail_closed() -> None:
@@ -255,7 +255,7 @@ def test_secret_roots_generation_and_lease_are_fail_closed() -> None:
         ),
     )
 
-    assert MPR20Blocker.SECRET_ROOT_OR_ROTATION_NOT_FAIL_CLOSED in codes(mutated)
+    assert MPR20Blocker.CREDENTIAL_ROOT_OR_ROTATION_NOT_FAIL_CLOSED in codes(mutated)
 
 
 def test_program_self_authorization_and_untrusted_chain_identity_blocked() -> None:

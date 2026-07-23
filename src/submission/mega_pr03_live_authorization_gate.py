@@ -8,7 +8,7 @@ submits, calls RPC/Jito, reads private keys or enables live trading.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass
 from enum import StrEnum
 import hashlib
 import json
@@ -244,15 +244,30 @@ class MegaPR03AuthorizationGate:
             wire.wire_tip_account,
         )
 
-        _compare(reason_codes, "MEGA_PR03_INTENT_PERMIT_HASH_MISMATCH", permit.permit_hash, intent.permit_hash)
-        _compare(reason_codes, "MEGA_PR03_INTENT_ATTEMPT_MISMATCH", permit.attempt_id, intent.attempt_id)
+        _compare(
+            reason_codes,
+            "MEGA_PR03_INTENT_PERMIT_HASH_MISMATCH",
+            permit.permit_hash,
+            intent.permit_hash,
+        )
+        _compare(
+            reason_codes,
+            "MEGA_PR03_INTENT_ATTEMPT_MISMATCH",
+            permit.attempt_id,
+            intent.attempt_id,
+        )
         _compare(
             reason_codes,
             "MEGA_PR03_INTENT_GENERATION_MISMATCH",
             permit.attempt_generation,
             intent.attempt_generation,
         )
-        _compare(reason_codes, "MEGA_PR03_INTENT_MESSAGE_MISMATCH", permit.message_hash, intent.message_hash)
+        _compare(
+            reason_codes,
+            "MEGA_PR03_INTENT_MESSAGE_MISMATCH",
+            permit.message_hash,
+            intent.message_hash,
+        )
         _compare(
             reason_codes,
             "MEGA_PR03_INTENT_SIGNED_TX_MISMATCH",
@@ -277,7 +292,12 @@ class MegaPR03AuthorizationGate:
             permit.tip_account,
             intent.tip_account,
         )
-        _compare(reason_codes, "MEGA_PR03_INTENT_BLOCKHASH_MISMATCH", permit.blockhash, intent.blockhash)
+        _compare(
+            reason_codes,
+            "MEGA_PR03_INTENT_BLOCKHASH_MISMATCH",
+            permit.blockhash,
+            intent.blockhash,
+        )
         _compare(
             reason_codes,
             "MEGA_PR03_INTENT_RESEND_AUTH_MISMATCH",
@@ -332,7 +352,9 @@ class MegaPR03AuthorizationGate:
                 "permit_hash": permit.permit_hash,
                 "signed_transaction_hash": wire.signed_transaction_hash,
                 "intent": _dataclass_payload(intent),
-                "settlement": None if settlement is None else _dataclass_payload(settlement),
+                "settlement": (
+                    None if settlement is None else _dataclass_payload(settlement)
+                ),
                 "current_block_height": current_block_height,
                 "remaining_height_margin": remaining_height_margin,
                 "status": AuthorizationStatus.READY_DEFAULT_OFF.value,
@@ -352,7 +374,9 @@ def _compare(reason_codes: list[str], code: str, left: object, right: object) ->
 
 
 def _dataclass_payload(value: object) -> Mapping[str, object]:
-    return {name: getattr(value, name) for name in value.__dataclass_fields__}
+    if not is_dataclass(value) or isinstance(value, type):
+        raise MegaPR03Error("dataclass evidence payload is required")
+    return {field.name: getattr(value, field.name) for field in fields(value)}
 
 
 def _canonical_json(value: object) -> str:

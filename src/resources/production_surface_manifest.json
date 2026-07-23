@@ -104,6 +104,12 @@
       "id": "PR194_PRODUCTION_SURFACE",
       "module": "src.production_surface",
       "wheel_member": "src/production_surface.py"
+    },
+    {
+      "category": "durable_state_authority",
+      "id": "PR194_PR206_DURABLE_STATE_AUTHORITY",
+      "module": "src.pr206_durable_state",
+      "wheel_member": "src/pr206_durable_state.py"
     }
   ],
   "required_wheel_members": [
@@ -114,6 +120,7 @@
     "src/cli_pr189.py",
     "src/container_runtime.py",
     "src/external_contracts/cli_pr189.py",
+    "src/pr206_durable_state.py",
     "src/production_surface.py",
     "src/release_gate/materialized_evidence.py",
     "src/resources/capabilities.json",

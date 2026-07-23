@@ -234,7 +234,12 @@ def evaluate_pr195_durable_kernel(
     if sender_or_signer_enabled:
         reason_codes.append("SENDER_OR_SIGNER_NOT_ALLOWED_IN_PR195")
 
-    ready = not reason_codes
+    # PR-206 makes SQLite inspection and immutable-event replay authoritative.
+    # This historical boolean contract may still describe foundation coverage,
+    # but it can no longer produce a promotion-ready verdict by itself.
+    reason_codes.append("PR206_AUTHORITATIVE_STORE_EVIDENCE_REQUIRED")
+
+    ready = False
     return PR195DurableKernelReport(
         schema_version=SCHEMA_VERSION,
         ready=ready,
@@ -246,8 +251,10 @@ def evaluate_pr195_durable_kernel(
     )
 
 
-def complete_offline_claim(*, evidence_refs: tuple[str, ...]) -> PR195DurableKernelClaim:
-    """Return a complete sender-free claim for focused tests and examples."""
+def complete_offline_claim(
+    *, evidence_refs: tuple[str, ...]
+) -> PR195DurableKernelClaim:
+    """Return a complete historical claim; it is never promotion-authoritative."""
 
     if not evidence_refs:
         raise PR195DurableKernelError("complete PR-195 claim requires evidence_refs")

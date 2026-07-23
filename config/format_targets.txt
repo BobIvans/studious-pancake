@@ -186,3 +186,8 @@ src/pr195_durable_webhook_intake.py
 tests/test_pr195_durable_webhook_intake.py
 scripts/verify_pr200_production_cutover.py
 tests/test_pr200_production_cutover.py
+src/pr195_durable_kernel_v3.py
+src/pr206_durable_state.py
+scripts/verify_pr206_durable_state.py
+tests/test_pr195_durable_kernel_v3.py
+tests/test_pr206_durable_state.py

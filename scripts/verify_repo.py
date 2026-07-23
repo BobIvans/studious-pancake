@@ -51,6 +51,12 @@ PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+PR206_DURABLE_STATE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr206_durable_state.py",
+    "--json",
+]
+
 # Public by design: tests inspect the final offline pytest command.
 COMMANDS: Final[list[list[str]]] = [
     [
@@ -103,6 +109,8 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr194_trusted_foundation.py",
         "tests/test_pr195_durable_webhook_intake.py",
         "tests/test_pr200_production_cutover.py",
+        "tests/test_pr195_durable_kernel_v3.py",
+        "tests/test_pr206_durable_state.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",
@@ -176,6 +184,7 @@ def main() -> int:
     run(VERIFY_PR194_REQUIRED_CONTROLS_COMMAND)
     run(PR194_TRUSTED_FOUNDATION_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
+    run(PR206_DURABLE_STATE_COMMAND)
 
     for command in COMMANDS[1:]:
         run(command)

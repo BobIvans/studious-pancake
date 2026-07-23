@@ -182,3 +182,5 @@ src/paper_shadow/sender_free_runtime_evidence_pr198.py
 tests/test_pr198_sender_free_runtime_evidence.py
 scripts/verify_pr194_trusted_foundation.py
 tests/test_pr194_trusted_foundation.py
+src/pr195_durable_webhook_intake.py
+tests/test_pr195_durable_webhook_intake.py

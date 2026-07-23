@@ -1,0 +1,48 @@
+name: MPR-CLOSE-23 hermetic runtime
+
+on:
+  pull_request:
+    paths:
+      - scripts/hermetic_runtime.py
+      - tests/test_mpr_close_23_hermetic_runtime.py
+      - Makefile
+      - pyproject.toml
+      - arb_bot.py
+      - .github/workflows/mpr-close-23-hermetic-runtime.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: "3.13"
+      - name: Install focused test dependency
+        run: python -m pip install pytest==9.0.2
+      - name: Compile hermetic driver
+        run: python -m py_compile scripts/hermetic_runtime.py tests/test_mpr_close_23_hermetic_runtime.py
+      - name: Run focused contract tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_mpr_close_23_hermetic_runtime.py
+
+  clean-package-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: "3.13"
+      - name: Run isolated package smoke
+        run: python scripts/hermetic_runtime.py package-smoke-clean

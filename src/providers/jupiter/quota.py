@@ -10,6 +10,8 @@ telemetry must tune the configured budget.
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import time
 from collections import deque
 from dataclasses import dataclass, field
@@ -271,7 +273,37 @@ class JupiterQuotaManager:
         return tuple(event.token.purpose for event in self._events)
 
 
+def _cache_identity_part(value: object) -> object:
+    if value is None or isinstance(value, (str, int, bool)):
+        return value
+    if isinstance(value, float):
+        if not (value == value and value not in (float("inf"), float("-inf"))):
+            raise ValueError("cache identity does not allow non-finite floats")
+        return value
+    if isinstance(value, tuple):
+        return [_cache_identity_part(item) for item in value]
+    if isinstance(value, list):
+        return [_cache_identity_part(item) for item in value]
+    if isinstance(value, Mapping):
+        return {
+            str(key): _cache_identity_part(item)
+            for key, item in sorted(value.items(), key=lambda entry: str(entry[0]))
+        }
+    raise TypeError(f"cache identity does not support {type(value).__name__}")
+
+
 def cache_key(parts: Iterable[object]) -> str:
     """Stable, redaction-safe cache key for quote/build request identity."""
 
-    return "|".join(str(part) for part in parts)
+    payload = {
+        "schema_version": "jupiter-cache-key.v2",
+        "parts": [_cache_identity_part(part) for part in parts],
+    }
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+        allow_nan=False,
+    ).encode("utf-8")
+    return "jupiter-cache:v2:" + hashlib.sha256(encoded).hexdigest()

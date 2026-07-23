@@ -157,6 +157,8 @@ def test_legacy_root_entrypoint_is_only_a_compatibility_wrapper():
     canonical_imports = [node for node in imports if node.module == "src.cli_pr189"]
     legacy_imports = [node for node in imports if node.module == "src.cli"]
 
-    assert any(alias.name == "main" for node in canonical_imports for alias in node.names)
+    assert any(
+        alias.name == "main" for node in canonical_imports for alias in node.names
+    )
     assert not any(alias.name == "main" for node in legacy_imports for alias in node.names)
     assert len(source.splitlines()) < 30

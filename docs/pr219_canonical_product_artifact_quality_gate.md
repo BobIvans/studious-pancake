@@ -1,40 +1,54 @@
-# PR-219 — Canonical Product, Artifact and Quality Truth gate
+# PR-219 canonical product artifact quality gate
 
-This checkpoint turns the PR-219 roadmap scope into a deterministic,
-side-effect-free evidence contract.  It does not build wheels, mutate
-configuration, inspect a host, load a key, sign, send, or enable live trading.
+This slice starts **PR-219 — Canonical Product, Artifact and Quality Truth** from
+ the mega-roadmap.
+
+It is a narrow reviewable acceptance gate for the PR-219 boundary. It does not
+rewrite the runtime or complete the whole cutover. Instead, it defines one
+deterministic evidence contract that later PR-219 implementation work must
+satisfy before the repository can claim one canonical installed sender-free
+product.
 
 ## Scope
 
-The gate covers the PR-219 ownership group from the 409-finding roadmap:
-canonical product authority, one CLI/composition root, installed wheel closure,
-architecture retirement, typed configuration, hermetic dependency/release truth,
-CI truth and installed behavioral quality.
+- require one canonical sender-free product identity and composition root;
+- require the five public installed CLI contracts;
+- require installed-wheel reachability for required controls;
+- fail closed if sender, signer or live namespaces remain packaged;
+- fail closed if checked-in build artifacts or source launchers bypass the
+  installed release;
+- fail closed if workflow actions or base images remain mutable;
+- fail closed if reachable production asserts, import cycles, broad quarantine
+  or ambient qualification dependencies remain;
+- require offline verified build inputs, signed wheelhouse and source/wheel/image
+  surface parity.
 
-## Safety boundary
+## Non-goals
 
-The report always returns:
+This PR does not:
+
+- enable live trading;
+- enable signer or sender execution;
+- mutate deployment manifests;
+- build or publish wheels/images;
+- delete legacy paths automatically;
+- perform the full PR-219 architectural cutover.
+
+A passing report still returns:
 
 ```text
 live_execution_allowed=false
-sender_allowed=false
 signer_allowed=false
+sender_allowed=false
 ```
 
-A green report only means that PR-220 and PR-221 are unblocked from depending on
-one canonical sender-free checkout/wheel/release truth.  It is not a paper-trade,
-signer or live-trade permit.
+## Verification
 
-## Required follow-up cutover
+```bash
+python -m py_compile \
+  src/pr219_canonical_product_artifact_quality_gate.py \
+  tests/test_pr219_canonical_product_artifact_quality_gate.py
 
-This first checkpoint intentionally avoids risky mass deletion.  The remaining
-PR-219 work must materialize the evidence consumed by the gate:
-
-1. build the main and signer wheels as one release set;
-2. compare root launcher and installed console contracts;
-3. generate installed reachability and required-control traces;
-4. retire duplicate schemas/enums/authorities and version-by-filename selection;
-5. create one immutable typed config snapshot and signed activation policy;
-6. pin Actions/base images and publish SBOM/provenance;
-7. enforce coverage, mypy, lint, black and no-production-assert gates over the
-   installed graph.
+python -m pytest -q \
+  tests/test_pr219_canonical_product_artifact_quality_gate.py
+```

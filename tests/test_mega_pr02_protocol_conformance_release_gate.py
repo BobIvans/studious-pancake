@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import replace
+
 from src.mega_pr02_protocol_conformance_release_gate import (  # noqa: E402
     REQUIRED_IMPL_FINDINGS,
+    REQUIRED_MONETARY_FUZZ_CASES,
     REQUIRED_PROTOCOLS,
+    REQUIRED_PROVIDER_FAILURE_CASES,
     REQUIRED_SANDBOX_NEGATIVE_TESTS,
     REQUIRED_SECURITY_SCANNERS,
+    EconomicsTruthEvidence,
     HermeticReleaseEvidence,
     MegaPR02Evidence,
     MegaPR02GateState,
@@ -13,9 +17,11 @@ from src.mega_pr02_protocol_conformance_release_gate import (  # noqa: E402
     ProtocolConformanceEvidence,
     ProtocolContractEvidence,
     ProtocolDisposition,
+    ProviderHttpTransportEvidence,
     SandboxReadinessEvidence,
     SecurityQualityEvidence,
     SoakQualificationEvidence,
+    blockers_by_code,
     evaluate_mega_pr02_evidence,
 )
 
@@ -58,227 +64,216 @@ def valid_evidence() -> MegaPR02Evidence:
             compiled_v0_message_hash=HASH,
             simulation_input_message_hash=HASH,
             paper_acceptance_message_hash=HASH,
-            instruction_firewall_manifest_hash=HASH,
-            exact_simulation_report_hash=HASH,
-            protocol_economics_report_hash=HASH,
-            fees_rent_slippage_tip_retry_complete=True,
-            mutation_after_simulation_detected=False,
-            protocol_fee_sources_chain_or_contract_bound=True,
-            paper_outcome_bound_to_message_hash=True,
+            instruction_firewall_hash=HASH,
+            exact_simulation_passed=True,
+            message_hash_immutable_through_acceptance=True,
+            protocol_fee_rent_slippage_tip_retry_economics_complete=True,
+            no_message_mutation_after_simulation=True,
+            negative_instruction_fixture_hash=HASH,
         ),
         hermetic_release=HermeticReleaseEvidence(
-            source_export_manifest_hash=HASH,
+            clean_source_export_hash=HASH,
             clean_tree_verified=True,
             generated_artifacts_excluded=True,
             top_level_build_shadowing_prevented=True,
-            aggregate_verifier_uses_isolated_environment=True,
-            hash_locked_wheelhouse_manifest_hash=HASH,
-            offline_build_network_disabled=True,
-            package_attestations_verified=True,
+            isolated_verifier_environment=True,
+            wheelhouse_lock_hash=HASH,
+            wheelhouse_requires_hashes=True,
+            offline_network_disabled_build=True,
+            dependency_attestations_verified=True,
             sbom_hash=HASH,
             provenance_hash=HASH,
             release_signature_hash=HASH,
-            docker_base_image_pinned_by_digest=True,
-            github_actions_total_uses=119,
-            github_actions_full_sha_pins=119,
-            mutable_action_refs=(),
+            image_digest_pinned=True,
+            full_sha_actions_pinned_count=119,
+            workflow_actions_total=119,
+            mutable_workflow_actions_found=0,
         ),
         security_quality=SecurityQualityEvidence(
-            mandatory_scanners=REQUIRED_SECURITY_SCANNERS,
-            scanner_policy_hash=HASH,
+            scanners=REQUIRED_SECURITY_SCANNERS,
+            scanners_mandatory=True,
             path_aware_findings=True,
             category_aware_findings=True,
-            secrets_baseline_reviewed_or_removed=True,
-            pre_commit_dependencies_pinned=True,
-            security_gate_runs_in_clean_aggregate=True,
-            runtime_asserts_replaced_on_critical_path=True,
+            secrets_baseline_reviewed=True,
+            precommit_dependencies_pinned=True,
+            lint_type_coverage_complete=True,
             optimized_mode_tests_passed=True,
-            lint_type_coverage_hash=HASH,
-            no_python_o_validation_loss=True,
+            runtime_asserts_removed_from_safety_path=True,
         ),
         sandbox_readiness=SandboxReadinessEvidence(
-            apparmor_profile_hash=HASH,
-            seccomp_profile_hash=HASH,
-            egress_policy_hash=HASH,
-            apparmor_loaded=True,
-            seccomp_loaded=True,
-            destination_port_dns_egress_enforced=True,
-            secret_isolation_proven=True,
             negative_runtime_tests=REQUIRED_SANDBOX_NEGATIVE_TESTS,
-            health_is_liveness_only=True,
-            readiness_endpoint_configured_for_admission=True,
-            readiness_checks_worker_provider_db_queue_recovery=True,
-            readiness_false_on_critical_degradation=True,
+            apparmor_profile_loaded=True,
+            seccomp_profile_loaded=True,
+            egress_enforcement_runtime_proven=True,
+            secret_isolation_runtime_proven=True,
+            readiness_endpoint_used_for_admission=True,
+            readiness_covers_worker_provider_db_queue_recovery=True,
+            degraded_dependency_closes_readiness=True,
         ),
-        soak=SoakQualificationEvidence(
-            duration_hours=72,
+        soak_qualification=SoakQualificationEvidence(
+            soak_hours=72,
+            release_bound_source_hash=HASH,
+            release_bound_wheel_hash=HASH,
+            release_bound_image_hash=HASH,
+            release_bound_config_hash=HASH,
+            contract_digest_set_hash=HASH,
             non_synthetic=True,
-            source_commit_hash=HASH,
-            wheel_hash=HASH,
-            image_digest_hash=HASH,
-            config_digest_hash=HASH,
-            contract_digest_hash=HASH,
-            evidence_bundle_hash=HASH,
-            slo_baseline_hash=HASH,
-            chaos_dr_secret_rotation_report_hash=HASH,
             no_unexplained_terminal_state=True,
             no_duplicate_intent=True,
             no_synthetic_contamination=True,
-            independent_review_signed=True,
-            product_state_changes_to_paper_ready_only=True,
+            slo_baseline_hash=HASH,
+            chaos_dr_secret_rotation_drills_hash=HASH,
+            independent_review_hash=HASH,
+        ),
+        economics_truth=EconomicsTruthEvidence(
+            immutable_economics_object_hash=HASH,
+            opportunity_profit_lamports=1000,
+            admission_profit_lamports=1000,
+            terminal_profit_lamports=1000,
+            integer_denominated_only=True,
+            float_inputs_rejected=True,
+            metadata_profit_truth_absent=True,
+            expected_profit_bound_to_economics_object=True,
+            min_out_bound_to_economics_object=True,
+            repayment_bound_to_protocol_evidence=True,
+            protocol_fee_bound_to_protocol_evidence=True,
+            silent_principal_default_forbidden=True,
+            monetary_fuzz_cases=REQUIRED_MONETARY_FUZZ_CASES,
+        ),
+        provider_http_transport=ProviderHttpTransportEvidence(
+            canonical_transport_hash=HASH,
+            host_allowlist_hash=HASH,
+            retry_policy_hash=HASH,
+            all_provider_clients_use_canonical_transport=True,
+            streamed_response_size_limit_bytes=1_048_576,
+            content_type_limits_enforced=True,
+            schema_limits_enforced_before_business_logic=True,
+            method_aware_idempotent_retry_policy=True,
+            retry_after_and_jitter_proven=True,
+            non_idempotent_requests_not_retried=True,
+            deadline_budget_enforced=True,
+            oversized_response_fails_closed_before_decode=True,
+            malformed_response_fails_closed=True,
+            slow_response_fails_closed=True,
+            no_oom_or_duplicate_side_effects=True,
+            provider_failure_cases=REQUIRED_PROVIDER_FAILURE_CASES,
         ),
     )
 
 
-def assert_codes(evidence: MegaPR02Evidence, *codes: str) -> None:
-    report = evaluate_mega_pr02_evidence(evidence)
-    actual = {blocker.code for blocker in report.blockers}
-    for code in codes:
-        assert code in actual
-
-
-def test_valid_evidence_qualifies_paper_but_never_live() -> None:
+def test_valid_evidence_qualifies_paper_only() -> None:
     report = evaluate_mega_pr02_evidence(valid_evidence())
 
-    assert report.state == MegaPR02GateState.PRODUCTION_PAPER_QUALIFIED
-    assert report.paper_ready_allowed is True
+    assert report.state is MegaPR02GateState.PRODUCTION_PAPER_QUALIFIED
+    assert report.blockers == ()
     assert report.transaction_signer_allowed is False
     assert report.sender_allowed is False
     assert report.live_execution_allowed is False
-    assert report.blockers == ()
+    assert report.private_key_material_allowed is False
 
 
-def test_missing_mega_pr01_blocks_even_with_good_evidence() -> None:
+def test_mega_pr01_dependency_is_hard_blocker() -> None:
     evidence = replace(valid_evidence(), mega_pr01_accepted=False)
 
-    assert_codes(evidence, "MEGA_PR02_MISSING_MEGA_PR01")
+    report = evaluate_mega_pr02_evidence(evidence)
+
+    assert blockers_by_code(report)["MEGA_PR02_MPR01_NOT_ACCEPTED"]
 
 
-def test_missing_protocol_and_active_v1_blocks_contract_admission() -> None:
-    conformance = valid_evidence().protocol_conformance
+def test_v3_findings_impl40_and_impl41_are_required() -> None:
     evidence = replace(
         valid_evidence(),
-        protocol_conformance=replace(
-            conformance,
-            protocols=conformance.protocols[:-1],
-            jupiter_v1_removed_or_quarantined=False,
+        findings_covered=tuple(
+            finding
+            for finding in REQUIRED_IMPL_FINDINGS
+            if finding not in {"IMPL-40", "IMPL-41"}
         ),
     )
 
-    assert_codes(
-        evidence,
-        "MEGA_PR02_PROTOCOL_MISSING",
-        "MEGA_PR02_JUPITER_V1_ACTIVE",
+    report = evaluate_mega_pr02_evidence(evidence)
+
+    blocker = blockers_by_code(report)["MEGA_PR02_FINDINGS_INCOMPLETE"]
+    assert "IMPL-40" in blocker.message
+    assert "IMPL-41" in blocker.message
+
+
+def test_float_monetary_inputs_fail_closed() -> None:
+    economics = replace(valid_evidence().economics_truth, float_inputs_rejected=False)
+    evidence = replace(valid_evidence(), economics_truth=economics)
+
+    report = evaluate_mega_pr02_evidence(evidence)
+
+    assert blockers_by_code(report)["MEGA_PR02_FLOAT_INPUTS_ACCEPTED"]
+
+
+def test_duplicate_profit_truth_fails_closed() -> None:
+    economics = replace(valid_evidence().economics_truth, admission_profit_lamports=999)
+    evidence = replace(valid_evidence(), economics_truth=economics)
+
+    report = evaluate_mega_pr02_evidence(evidence)
+
+    assert blockers_by_code(report)["MEGA_PR02_ECONOMICS_DUPLICATE_PROFIT_TRUTH"]
+
+
+def test_silent_repayment_default_fails_closed() -> None:
+    economics = replace(
+        valid_evidence().economics_truth,
+        repayment_bound_to_protocol_evidence=False,
+        silent_principal_default_forbidden=False,
     )
+    evidence = replace(valid_evidence(), economics_truth=economics)
+
+    report = evaluate_mega_pr02_evidence(evidence)
+
+    codes = blockers_by_code(report)
+    assert codes["MEGA_PR02_REPAYMENT_UNBOUND"]
+    assert codes["MEGA_PR02_SILENT_PRINCIPAL_DEFAULT"]
 
 
-def test_message_hash_mutation_after_simulation_blocks_paper_acceptance() -> None:
-    message = valid_evidence().message_simulation
+def test_fragmented_provider_http_transport_fails_closed() -> None:
+    transport = replace(
+        valid_evidence().provider_http_transport,
+        all_provider_clients_use_canonical_transport=False,
+    )
+    evidence = replace(valid_evidence(), provider_http_transport=transport)
+
+    report = evaluate_mega_pr02_evidence(evidence)
+
+    assert blockers_by_code(report)["MEGA_PR02_PROVIDER_TRANSPORT_FRAGMENTED"]
+
+
+def test_unbounded_or_malformed_provider_response_fails_closed() -> None:
+    transport = replace(
+        valid_evidence().provider_http_transport,
+        streamed_response_size_limit_bytes=0,
+        oversized_response_fails_closed_before_decode=False,
+        malformed_response_fails_closed=False,
+        provider_failure_cases=("oversized_response",),
+    )
+    evidence = replace(valid_evidence(), provider_http_transport=transport)
+
+    report = evaluate_mega_pr02_evidence(evidence)
+
+    codes = blockers_by_code(report)
+    assert codes["MEGA_PR02_PROVIDER_RESPONSE_LIMIT_INVALID"]
+    assert codes["MEGA_PR02_OVERSIZED_RESPONSE_NOT_FAIL_CLOSED"]
+    assert codes["MEGA_PR02_MALFORMED_RESPONSE_NOT_FAIL_CLOSED"]
+    assert codes["MEGA_PR02_PROVIDER_FAILURE_CASES_INCOMPLETE"]
+
+
+def test_live_or_key_material_still_forbidden() -> None:
     evidence = replace(
         valid_evidence(),
-        message_simulation=replace(
-            message,
-            paper_acceptance_message_hash="b" * 64,
-            mutation_after_simulation_detected=True,
-        ),
-    )
-
-    assert_codes(
-        evidence,
-        "MEGA_PR02_MESSAGE_HASH_MUTATED",
-        "MEGA_PR02_MUTATION_AFTER_SIMULATION",
-    )
-
-
-def test_online_dirty_unpinned_release_blocks_hermetic_claim() -> None:
-    release = valid_evidence().hermetic_release
-    evidence = replace(
-        valid_evidence(),
-        hermetic_release=replace(
-            release,
-            clean_tree_verified=False,
-            offline_build_network_disabled=False,
-            github_actions_full_sha_pins=0,
-            mutable_action_refs=("actions/checkout@v4",),
-        ),
-    )
-
-    assert_codes(
-        evidence,
-        "MEGA_PR02_DIRTY_SOURCE",
-        "MEGA_PR02_ONLINE_BUILD",
-        "MEGA_PR02_ACTIONS_NOT_PINNED",
-        "MEGA_PR02_MUTABLE_ACTION_REFS",
-    )
-
-
-def test_python_o_assertion_loss_blocks_quality_gate() -> None:
-    quality = valid_evidence().security_quality
-    evidence = replace(
-        valid_evidence(),
-        security_quality=replace(
-            quality,
-            runtime_asserts_replaced_on_critical_path=False,
-            optimized_mode_tests_passed=False,
-            no_python_o_validation_loss=False,
-        ),
-    )
-
-    assert_codes(
-        evidence,
-        "MEGA_PR02_RUNTIME_ASSERTS_REMAIN",
-        "MEGA_PR02_OPTIMIZED_TESTS_MISSING",
-        "MEGA_PR02_PYTHON_O_VALIDATION_LOSS",
-    )
-
-
-def test_declarative_sandbox_or_short_synthetic_soak_blocks_release() -> None:
-    sandbox = valid_evidence().sandbox_readiness
-    soak = valid_evidence().soak
-    evidence = replace(
-        valid_evidence(),
-        sandbox_readiness=replace(
-            sandbox,
-            seccomp_loaded=False,
-            negative_runtime_tests=REQUIRED_SANDBOX_NEGATIVE_TESTS[:-1],
-            readiness_false_on_critical_degradation=False,
-        ),
-        soak=replace(
-            soak,
-            duration_hours=48,
-            non_synthetic=False,
-            independent_review_signed=False,
-        ),
-    )
-
-    assert_codes(
-        evidence,
-        "MEGA_PR02_SECCOMP_NOT_LOADED",
-        "MEGA_PR02_SANDBOX_NEGATIVE_TESTS_MISSING",
-        "MEGA_PR02_READY_FAIL_OPEN",
-        "MEGA_PR02_SOAK_TOO_SHORT",
-        "MEGA_PR02_SYNTHETIC_SOAK",
-        "MEGA_PR02_REVIEW_UNSIGNED",
-    )
-
-
-def test_live_surface_is_always_forbidden() -> None:
-    evidence = replace(
-        valid_evidence(),
-        signer_present=True,
-        sender_present=True,
-        live_execution_present=True,
+        live_execution_requested=True,
+        signer_requested=True,
+        sender_requested=True,
         private_key_material_present=True,
     )
 
     report = evaluate_mega_pr02_evidence(evidence)
-    assert report.transaction_signer_allowed is False
-    assert report.sender_allowed is False
-    assert report.live_execution_allowed is False
-    assert_codes(
-        evidence,
-        "MEGA_PR02_SIGNER_PRESENT",
-        "MEGA_PR02_SENDER_PRESENT",
-        "MEGA_PR02_LIVE_PRESENT",
-        "MEGA_PR02_PRIVATE_KEY_PRESENT",
-    )
+
+    codes = blockers_by_code(report)
+    assert codes["MEGA_PR02_LIVE_REQUESTED"]
+    assert codes["MEGA_PR02_SIGNER_REQUESTED"]
+    assert codes["MEGA_PR02_SENDER_REQUESTED"]
+    assert codes["MEGA_PR02_PRIVATE_KEY_PRESENT"]

@@ -164,3 +164,5 @@ tests/test_roadmap_pr08_isolated_signer_foundation.py
 src/durability/unified_authority_pr02.py
 tests/test_pr02_unified_lifecycle_authority.py
 src/paper_shadow/durable_service_a3.py
+src/durability/runtime_kernel_pr196.py
+tests/test_pr196_durable_runtime_kernel.py

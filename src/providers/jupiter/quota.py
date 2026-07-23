@@ -287,11 +287,13 @@ def _cache_identity_part(value: object) -> object:
     if isinstance(value, list):
         return [_cache_identity_part(item) for item in value]
     if isinstance(value, Mapping):
-        return {
-            str(key): _cache_identity_part(item)
-            for key, item in sorted(value.items(), key=lambda entry: str(entry[0]))
-        }
-    return str(value)
+        normalized: dict[str, object] = {}
+        for key, item in sorted(value.items(), key=lambda entry: str(entry[0])):
+            if not isinstance(key, (str, int, bool)):
+                raise TypeError("cache identity mapping keys must be JSON-compatible scalars")
+            normalized[str(key)] = _cache_identity_part(item)
+        return normalized
+    raise TypeError(f"cache identity does not support value type: {type(value).__name__}")
 
 
 def cache_key(parts: Iterable[object]) -> str:
@@ -314,4 +316,4 @@ def cache_key(parts: Iterable[object]) -> str:
         ensure_ascii=True,
         allow_nan=False,
     ).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()
+    return "jupiter-cache:v2:" + hashlib.sha256(encoded).hexdigest()

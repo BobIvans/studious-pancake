@@ -56,4 +56,5 @@ python scripts/verify_repo.py
 ```
 
 The isolated package sources and regression test are registered in the repository
-Black manifest, so aggregate verification checks their exact formatter output.
+Black manifest, so aggregate verification checks their exact formatter output. The
+branch must be reverified after every synchronization with current `main`.

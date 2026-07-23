@@ -1,11 +1,10 @@
 """Bounded Jupiter route-attempt scheduling.
 
-The scheduler is deliberately deterministic: it chooses a finite list of quote or
-build attempts inside a universal safety envelope.  It never weakens slippage,
-program/mint allowlists, freshness, quota reserve or minimum-profit policy.  If
-all bounded profiles are exhausted, callers must return NO_TRADE or a retryable
-reason rather than keep probing Jupiter.
+The scheduler is deterministic and purpose-aware. Optional discovery and
+refinement profiles can be skipped when their shared budget is full while
+proof-critical finalization remains eligible for the reserved quota.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
@@ -31,7 +30,7 @@ class JupiterAttemptStopReason(str, Enum):
 
 
 def _required_snapshot_int(snapshot: Mapping[str, object], key: str) -> int:
-    """Return a required integer quota snapshot field with mypy-safe narrowing."""
+    """Return a required integer quota snapshot field."""
 
     value = snapshot.get(key)
     if not isinstance(value, int) or isinstance(value, bool):
@@ -82,12 +81,16 @@ class JupiterAttemptProfile:
 
     def validate_against(self, envelope: JupiterSafetyEnvelope) -> None:
         if self.max_accounts > 64:
-            raise ValueError("max_accounts cannot exceed Jupiter composable safety cap 64")
+            raise ValueError(
+                "max_accounts cannot exceed Jupiter composable safety cap 64"
+            )
         if self.max_accounts < 50 and not envelope.allow_below_50_accounts:
             raise ValueError("max_accounts below 50 requires explicit envelope policy")
         overlap = set(self.include_dexes).intersection(self.exclude_dexes)
         if overlap:
-            raise ValueError(f"profile includes and excludes the same DEXes: {sorted(overlap)}")
+            raise ValueError(
+                f"profile includes and excludes the same DEXes: {sorted(overlap)}"
+            )
 
 
 @dataclass(frozen=True)
@@ -108,10 +111,13 @@ class JupiterRouteAttempt:
 class JupiterRouteAttemptPlan:
     attempts: tuple[JupiterRouteAttempt, ...]
     stop_reason: JupiterAttemptStopReason = JupiterAttemptStopReason.READY
+    quota_skipped_profiles: tuple[str, ...] = ()
 
     @property
     def is_exhausted(self) -> bool:
-        return self.stop_reason is not JupiterAttemptStopReason.READY or not self.attempts
+        return (
+            self.stop_reason is not JupiterAttemptStopReason.READY or not self.attempts
+        )
 
 
 @dataclass(frozen=True)
@@ -150,9 +156,19 @@ class JupiterAttemptSchedulerConfig:
             seen.insert(0, 64)
         return tuple(seen)
 
+    def validate(self) -> None:
+        if self.max_attempts <= 0:
+            raise ValueError("max_attempts must be positive")
+        if self.reserve_finalization_profiles <= 0:
+            raise ValueError("at least one finalization profile is required")
+        if self.reserve_finalization_profiles > self.max_attempts:
+            raise ValueError("max_attempts cannot truncate all finalization profiles")
+        if self.cache_ttl_seconds < 0:
+            raise ValueError("cache_ttl_seconds must be non-negative")
+
 
 class JupiterRouteAttemptScheduler:
-    """Build deterministic attempt plans under quota-aware stop conditions."""
+    """Build deterministic attempt plans under purpose-aware quota limits."""
 
     def __init__(
         self,
@@ -161,8 +177,7 @@ class JupiterRouteAttemptScheduler:
         quota: JupiterQuotaManager | None = None,
     ) -> None:
         envelope.validate()
-        if config.max_attempts <= 0:
-            raise ValueError("max_attempts must be positive")
+        config.validate()
         self.config = config
         self.envelope = envelope
         self.quota = quota
@@ -171,7 +186,7 @@ class JupiterRouteAttemptScheduler:
         steps = self.config.normalized_steps(
             allow_below_50_accounts=self.envelope.allow_below_50_accounts
         )
-        profiles: list[JupiterAttemptProfile] = []
+        optional_profiles: list[JupiterAttemptProfile] = []
         for index, accounts in enumerate(steps):
             role = (
                 JupiterAttemptRole.DISCOVERY
@@ -183,7 +198,7 @@ class JupiterRouteAttemptScheduler:
                 if role is JupiterAttemptRole.DISCOVERY
                 else JupiterQuotaPurpose.REFINEMENT
             )
-            profiles.append(
+            optional_profiles.append(
                 JupiterAttemptProfile(
                     name=f"{role.value}-max-accounts-{accounts}",
                     role=role,
@@ -195,23 +210,24 @@ class JupiterRouteAttemptScheduler:
                 )
             )
 
-        # Finalization is separate so its reserved quota cannot be consumed by
-        # exploratory retries.
-        for index in range(max(0, self.config.reserve_finalization_profiles)):
-            profiles.append(
-                JupiterAttemptProfile(
-                    name=f"finalization-{index + 1}",
-                    role=JupiterAttemptRole.FINALIZATION,
-                    max_accounts=steps[-1],
-                    include_dexes=self.config.include_dexes,
-                    exclude_dexes=self.config.exclude_dexes,
-                    request_purpose=JupiterQuotaPurpose.FINALIZATION,
-                    cache_ttl_seconds=0.0,
-                )
+        finalization_profiles = [
+            JupiterAttemptProfile(
+                name=f"finalization-{index + 1}",
+                role=JupiterAttemptRole.FINALIZATION,
+                max_accounts=steps[-1],
+                include_dexes=self.config.include_dexes,
+                exclude_dexes=self.config.exclude_dexes,
+                request_purpose=JupiterQuotaPurpose.FINALIZATION,
+                cache_ttl_seconds=0.0,
             )
-        return tuple(profile for profile in profiles[: self.config.max_attempts])
+            for index in range(self.config.reserve_finalization_profiles)
+        ]
+        optional_limit = self.config.max_attempts - len(finalization_profiles)
+        return tuple(optional_profiles[:optional_limit] + finalization_profiles)
 
-    def stop_reason(self, context: JupiterAttemptContext) -> JupiterAttemptStopReason:
+    def _context_stop_reason(
+        self, context: JupiterAttemptContext
+    ) -> JupiterAttemptStopReason:
         if context.now >= context.deadline_at:
             return JupiterAttemptStopReason.DEADLINE_EXCEEDED
         if context.quote_created_at is not None:
@@ -225,22 +241,60 @@ class JupiterRouteAttemptScheduler:
             return JupiterAttemptStopReason.EDGE_BELOW_THRESHOLD
         if context.remaining_profiles is not None and context.remaining_profiles <= 0:
             return JupiterAttemptStopReason.ATTEMPT_LIMIT_REACHED
-        if self.quota is not None:
-            snap = self.quota.snapshot()
-            limit = _required_snapshot_int(snap, "limit")
-            reserve = _required_snapshot_int(snap, "finalization_reserve")
-            occupancy = _required_snapshot_int(snap, "window_occupancy")
-            if occupancy >= max(0, limit - reserve):
-                return JupiterAttemptStopReason.QUOTA_EXHAUSTED
+        return JupiterAttemptStopReason.READY
+
+    def _purpose_has_capacity(
+        self,
+        purpose: JupiterQuotaPurpose,
+        snapshot: Mapping[str, object],
+    ) -> bool:
+        limit = _required_snapshot_int(snapshot, "limit")
+        reserve = _required_snapshot_int(snapshot, "finalization_reserve")
+        occupancy = _required_snapshot_int(snapshot, "window_occupancy")
+        if purpose is JupiterQuotaPurpose.FINALIZATION:
+            return occupancy < limit
+        return occupancy < max(0, limit - reserve)
+
+    def _eligible_profiles(
+        self,
+    ) -> tuple[tuple[JupiterAttemptProfile, ...], tuple[str, ...]]:
+        profiles = self.profiles()
+        if self.quota is None:
+            return profiles, ()
+        snapshot = self.quota.snapshot()
+        eligible: list[JupiterAttemptProfile] = []
+        skipped: list[str] = []
+        for profile in profiles:
+            if self._purpose_has_capacity(profile.request_purpose, snapshot):
+                eligible.append(profile)
+            else:
+                skipped.append(profile.name)
+        return tuple(eligible), tuple(skipped)
+
+    def stop_reason(self, context: JupiterAttemptContext) -> JupiterAttemptStopReason:
+        stop = self._context_stop_reason(context)
+        if stop is not JupiterAttemptStopReason.READY:
+            return stop
+        eligible, _ = self._eligible_profiles()
+        if not eligible:
+            return JupiterAttemptStopReason.QUOTA_EXHAUSTED
         return JupiterAttemptStopReason.READY
 
     def plan(self, context: JupiterAttemptContext) -> JupiterRouteAttemptPlan:
-        stop = self.stop_reason(context)
+        stop = self._context_stop_reason(context)
         if stop is not JupiterAttemptStopReason.READY:
             return JupiterRouteAttemptPlan(attempts=(), stop_reason=stop)
 
+        profiles, skipped = self._eligible_profiles()
+        if not profiles:
+            return JupiterRouteAttemptPlan(
+                attempts=(),
+                stop_reason=JupiterAttemptStopReason.QUOTA_EXHAUSTED,
+                quota_skipped_profiles=skipped,
+            )
+
         attempts: list[JupiterRouteAttempt] = []
-        for sequence, profile in enumerate(self.profiles(), start=1):
+        for sequence, profile in enumerate(profiles, start=1):
             profile.validate_against(self.envelope)
             attempts.append(
                 JupiterRouteAttempt(
@@ -248,7 +302,7 @@ class JupiterRouteAttemptScheduler:
                     trace_id=context.trace_id,
                     profile=profile,
                     envelope=self.envelope,
-                    reason="bounded-profile",
+                    reason="bounded-purpose-eligible-profile",
                     cache_key=cache_key(
                         (
                             context.request_fingerprint,
@@ -260,7 +314,9 @@ class JupiterRouteAttemptScheduler:
                     ),
                 )
             )
-        return JupiterRouteAttemptPlan(attempts=tuple(attempts))
+        return JupiterRouteAttemptPlan(
+            attempts=tuple(attempts), quota_skipped_profiles=skipped
+        )
 
     def with_profile_failure(
         self,
@@ -268,23 +324,28 @@ class JupiterRouteAttemptScheduler:
         *,
         reason: str,
     ) -> "JupiterRouteAttemptScheduler":
-        """Return a scheduler with one failed profile removed.
-
-        The safety envelope is copied verbatim, so failure handling cannot loosen
-        hard policy while searching for the next bounded route profile.
-        """
+        """Remove a failed optional profile without relaxing finalization policy."""
 
         profiles = [
             profile
             for profile in self.profiles()
             if profile.name != failed_profile.name
         ]
+        finalization_count = sum(
+            1 for profile in profiles if profile.role is JupiterAttemptRole.FINALIZATION
+        )
+        if finalization_count <= 0:
+            raise ValueError("profile failure cannot remove every finalization profile")
+        optional_steps = tuple(
+            profile.max_accounts
+            for profile in profiles
+            if profile.role is not JupiterAttemptRole.FINALIZATION
+        )
         next_config = replace(
             self.config,
-            account_budget_steps=tuple(profile.max_accounts for profile in profiles),
-            reserve_finalization_profiles=sum(
-                1 for profile in profiles if profile.role is JupiterAttemptRole.FINALIZATION
-            ),
+            account_budget_steps=optional_steps or self.config.account_budget_steps,
+            reserve_finalization_profiles=finalization_count,
+            max_attempts=len(profiles),
         )
         return JupiterRouteAttemptScheduler(next_config, self.envelope, self.quota)
 
@@ -297,12 +358,14 @@ def build_default_scheduler(
     max_price_impact_bps: int,
     min_net_profit_base_units: int,
 ) -> JupiterRouteAttemptScheduler:
-    """Factory used by runtime composition roots that do not need custom profiles."""
+    """Build the default purpose-aware route scheduler."""
 
     envelope = JupiterSafetyEnvelope(
         max_slippage_bps=max_slippage_bps,
         max_price_impact_bps=max_price_impact_bps,
         min_net_profit_base_units=min_net_profit_base_units,
     )
-    config = JupiterAttemptSchedulerConfig(account_budget_steps=tuple(account_budget_steps))
+    config = JupiterAttemptSchedulerConfig(
+        account_budget_steps=tuple(account_budget_steps)
+    )
     return JupiterRouteAttemptScheduler(config, envelope, quota)

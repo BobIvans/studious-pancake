@@ -191,3 +191,5 @@ src/pr206_durable_state.py
 scripts/verify_pr206_durable_state.py
 tests/test_pr195_durable_kernel_v3.py
 tests/test_pr206_durable_state.py
+src/pr227_exact_money_atomic_evidence.py
+tests/test_pr227_exact_money_atomic_evidence.py

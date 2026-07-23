@@ -151,8 +151,12 @@ def test_dockerfile_is_multistage_non_root_and_uses_health_probe():
 
 
 def test_legacy_root_entrypoint_is_only_a_compatibility_wrapper():
-    tree = ast.parse((ROOT / "arb_bot.py").read_text(encoding="utf-8"))
+    source = (ROOT / "arb_bot.py").read_text(encoding="utf-8")
+    tree = ast.parse(source)
     imports = [node for node in ast.walk(tree) if isinstance(node, ast.ImportFrom)]
-    cli_imports = [node for node in imports if node.module == "src.cli"]
-    assert len(cli_imports) == 1
-    assert len((ROOT / "arb_bot.py").read_text(encoding="utf-8").splitlines()) < 30
+    canonical_imports = [node for node in imports if node.module == "src.cli_pr189"]
+    legacy_imports = [node for node in imports if node.module == "src.cli"]
+
+    assert any(alias.name == "main" for node in canonical_imports for alias in node.names)
+    assert not any(alias.name == "main" for node in legacy_imports for alias in node.names)
+    assert len(source.splitlines()) < 30

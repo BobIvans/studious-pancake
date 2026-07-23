@@ -1,0 +1,31 @@
+name: Align PR-03 format targets with main
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  align:
+    if: github.head_ref == 'roadmap-pr-03-format-sync-trigger'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap-pr-03-rooted-provider-admission
+          fetch-depth: 0
+      - name: Align shared format targets
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git fetch origin main
+          git checkout origin/main -- config/format_targets.txt
+          grep -qxF 'src/providers/rooted_ingestion_pr03.py' config/format_targets.txt || echo 'src/providers/rooted_ingestion_pr03.py' >> config/format_targets.txt
+          grep -qxF 'tests/test_rooted_ingestion_pr03.py' config/format_targets.txt || echo 'tests/test_rooted_ingestion_pr03.py' >> config/format_targets.txt
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add config/format_targets.txt
+          git commit -m 'PR-03: align shared format targets with current main'
+          git push origin HEAD:roadmap-pr-03-rooted-provider-admission

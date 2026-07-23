@@ -1,4 +1,4 @@
-name: PR-206 latest main materialization
+name: PR-206 exact checkout materialization
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  upload-main:
+  upload-checkouts:
     if: github.head_ref == 'pr-206-durable-time-semantic-replay'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
@@ -23,11 +23,23 @@ jobs:
         run: |
           git rev-parse HEAD > /tmp/pr206-main-sha.txt
           tar --exclude=.git -czf /tmp/pr206-latest-main.tar.gz .
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          clean: true
+      - name: Archive exact PR head
+        shell: bash
+        run: |
+          git rev-parse HEAD > /tmp/pr206-head-sha.txt
+          tar --exclude=.git -czf /tmp/pr206-current-head.tar.gz .
       - uses: actions/upload-artifact@v4
         with:
-          name: pr206-latest-main
+          name: pr206-exact-checkouts
           path: |
             /tmp/pr206-latest-main.tar.gz
             /tmp/pr206-main-sha.txt
+            /tmp/pr206-current-head.tar.gz
+            /tmp/pr206-head-sha.txt
           if-no-files-found: error
           retention-days: 1

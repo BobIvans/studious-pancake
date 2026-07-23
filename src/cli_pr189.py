@@ -1,17 +1,49 @@
-"""Automation-safe installed CLI with the active sender-free paper root."""
+"""Automation-safe installed CLI with dependency-light inspection dispatch.
+
+MPR-CLOSE-01 keeps the installed ``flashloan-bot`` command usable even when
+optional Solana execution dependencies are not importable.  Inspection commands
+are handled here and import only configuration/capability modules.  Runtime
+commands are imported lazily after dispatch.
+
+The current ``main`` branch owns the active durable paper service and the
+SUPER-MPR-A public command aliases.  Therefore ``run --mode paper`` keeps the
+MPR-CLOSE-24 compatibility path that maps legacy ``--db-path`` into
+``FLASHLOAN_PAPER_SERVICE_DB`` before delegating to the active runtime root,
+and the installed CLI still rewrites SUPER-MPR-A aliases before dispatch.
+"""
 
 from __future__ import annotations
 
+import argparse
+from importlib import import_module
+import json
 import os
 import sys
-from typing import Sequence
+from typing import Any, Sequence
 
-from src import automation_cli_pr189
-from src import cli as legacy_cli
 from src.super_mpr_a_runtime_gateway import rewrite_canonical_command
 
-
 PAPER_DB_ENV = "FLASHLOAN_PAPER_SERVICE_DB"
+PAPER_MAX_CYCLES_ENV = "FLASHLOAN_PAPER_MAX_CYCLES"
+PAPER_IDLE_DELAY_ENV = "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS"
+
+
+class _LazyCliModule:
+    """Module-shaped proxy that keeps runtime imports out of inspection paths."""
+
+    def __init__(self, module_name: str) -> None:
+        self._module_name = module_name
+
+    def main(self, argv: Sequence[str] | None = None) -> int:
+        module = import_module(self._module_name)
+        return int(module.main(argv))
+
+
+# MPR-CLOSE-24/SUPER-MPR-A tests monkeypatch these module-level attributes
+# directly. Keep them module-shaped without importing heavy runtime dependencies
+# eagerly on dependency-light inspection paths.
+automation_cli_pr189 = _LazyCliModule("src.automation_cli_pr189")
+legacy_cli = _LazyCliModule("src.cli")
 
 
 def _rewrite_super_mpr_a_command(args: list[str]) -> list[str] | None:
@@ -31,44 +63,283 @@ def _rewrite_legacy_preflight(args: list[str]) -> list[str] | None:
     return None
 
 
+def _requested_run_mode(args: list[str]) -> str | None:
+    """Return an explicitly requested ``run --mode`` without full parsing."""
+
+    try:
+        run_index = args.index("run")
+    except ValueError:
+        return None
+    tail = args[run_index + 1 :]
+    index = 0
+    while index < len(tail):
+        item = tail[index]
+        if item == "--mode" and index + 1 < len(tail):
+            return tail[index + 1]
+        if item.startswith("--mode="):
+            return item.partition("=")[2]
+        index += 1
+    return "shadow"
+
+
 def _is_run_mode_paper(args: list[str]) -> bool:
-    if not args or args[0] != "run":
-        return False
-    for index, item in enumerate(args[1:], start=1):
-        if item == "--mode":
-            return index + 1 < len(args) and args[index + 1] == "paper"
-        if item == "--mode=paper":
-            return True
-    return False
+    return _requested_run_mode(args) == "paper"
 
 
-def _consume_legacy_paper_db_path(args: list[str]) -> list[str]:
-    """Map the old canonical-paper ``--db-path`` flag to the active service env.
-
-    MPR-CLOSE-24 intentionally routes installed paper execution into the active
-    durable paper service. Older smoke tests and scripts still pass ``--db-path``
-    to ``flashloan-bot run --mode paper`` from the previous canonical-paper CLI;
-    keep that hidden compatibility path without exposing a second paper root.
-    """
+def _consume_legacy_paper_args(args: list[str]) -> list[str]:
+    """Map old paper CLI flags to the active durable paper service contract."""
 
     if not _is_run_mode_paper(args):
         return args
     forwarded: list[str] = []
+    legacy_smoke = False
     index = 0
     while index < len(args):
         item = args[index]
         if item == "--db-path":
             if index + 1 < len(args):
                 os.environ[PAPER_DB_ENV] = args[index + 1]
+                legacy_smoke = True
                 index += 2
                 continue
         elif item.startswith("--db-path="):
             os.environ[PAPER_DB_ENV] = item.partition("=")[2]
+            legacy_smoke = True
+            index += 1
+            continue
+        elif item == "--json":
+            # The durable paper service reports text evidence. Accept the legacy
+            # installed-artifact flag without exposing a second paper root.
+            legacy_smoke = True
             index += 1
             continue
         forwarded.append(item)
         index += 1
+    if legacy_smoke:
+        os.environ.setdefault(PAPER_MAX_CYCLES_ENV, "1")
+        os.environ.setdefault(PAPER_IDLE_DELAY_ENV, "0")
     return forwarded
+
+
+def _inspection_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(
+        prog="flashloan-bot",
+        description=(
+            "Inspect or run the supported fail-closed Solana flash-loan runtime. "
+            "Live trading, signer loading and sender transports remain unavailable."
+        ),
+    )
+    parser.add_argument(
+        "--config-file",
+        default=None,
+        help="optional typed YAML override; environment and CLI values take precedence",
+    )
+    subparsers = parser.add_subparsers(dest="command")
+
+    run_parser = subparsers.add_parser("run", help="start a supported runtime mode")
+    run_parser.add_argument(
+        "--mode",
+        choices=("disabled", "paper", "shadow", "live"),
+        default="shadow",
+        help="requested product mode; unavailable modes fail closed",
+    )
+    run_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="validate dispatch without enabling live submission",
+    )
+    run_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    status_parser = subparsers.add_parser(
+        "status", help="show dependency-light product status"
+    )
+    status_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    capabilities_parser = subparsers.add_parser(
+        "capabilities", help="print the machine-readable capability matrix"
+    )
+    capabilities_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    config_parser = subparsers.add_parser(
+        "config", help="inspect or validate immutable runtime configuration"
+    )
+    config_commands = config_parser.add_subparsers(dest="config_command", required=True)
+    doctor_parser = config_commands.add_parser(
+        "doctor", help="validate config, registry, secrets and optional RPC identity"
+    )
+    doctor_parser.add_argument("--online", action="store_true")
+    doctor_parser.add_argument("--check-secrets", action="store_true")
+    doctor_parser.add_argument("--json", action="store_true", dest="as_json")
+    return parser
+
+
+def _load_config(config_file: str | None, *, mode: str | None = None) -> Any:
+    from src.config.runtime import load_runtime_config
+
+    overrides: dict[str, Any] = {}
+    if mode and mode != "live":
+        overrides["runtime.mode"] = mode
+    return load_runtime_config(config_file, cli_overrides=overrides or None, environ=os.environ)
+
+
+def _capability_matrix() -> Any:
+    from src.capabilities import CapabilityMatrix
+
+    return CapabilityMatrix.load_default()
+
+
+def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]:
+    config = _load_config(config_file)
+    matrix = _capability_matrix()
+    path_errors = tuple(matrix.validate_paths())
+    live_available = bool(matrix.runtime_modes.get("live", {}).get("available", False))
+    return {
+        "schema_version": "mpr-close-01.dependency-light-status.v1",
+        "product_state": matrix.product_state,
+        "supported_entrypoint": matrix.supported_entrypoint,
+        "default_command": matrix.default_command,
+        "capability_contract_valid": not path_errors,
+        "capability_contract_errors": list(path_errors),
+        "diagnostic": "NO_EXECUTABLE_STRATEGIES",
+        "executable_strategies": [],
+        "runtime_modes": matrix.runtime_modes,
+        "configuration": {
+            "schema_version": config.schema_version,
+            "fingerprint": config.fingerprint(),
+            "mode": config.runtime.mode.value,
+            "cluster": config.cluster.name,
+            "rpc_configured": config.cluster.rpc_http_url is not None,
+            "jupiter_enabled": config.providers.jupiter.enabled,
+            "jito_enabled": config.providers.jito.enabled,
+            "marginfi_enabled": config.providers.marginfi.enabled,
+        },
+        "live_enabled": False,
+        "live_available": live_available,
+        "signer_loaded": False,
+        "sender_loaded": False,
+        "private_key_material_allowed": False,
+    }
+
+
+def _print_status(payload: dict[str, Any], *, as_json: bool) -> None:
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return
+    print(f"Product state: {payload['product_state']}")
+    print(f"Supported entrypoint: {payload['supported_entrypoint']}")
+    print(f"Diagnostic: {payload['diagnostic']}")
+    if payload["capability_contract_errors"]:
+        print("Capability contract errors:")
+        for error in payload["capability_contract_errors"]:
+            print(f"  - {error}")
+
+
+def _print_capabilities(*, as_json: bool) -> None:
+    matrix = _capability_matrix()
+    payload = matrix.to_dict()
+    if as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return
+    print(f"Capability schema: {matrix.schema_version}")
+    print(f"Product state: {matrix.product_state}")
+    print(f"Supported entrypoint: {matrix.supported_entrypoint}")
+    for component in matrix.components:
+        quarantine = " quarantined" if component.quarantined else ""
+        active = "active" if component.active_in_supported_entrypoint else "inactive"
+        print(
+            f"  - {component.id}: {component.capability.value}, {active}{quarantine}; "
+            f"modes={','.join(component.allowed_modes)}"
+        )
+
+
+def _run_config_doctor(args: argparse.Namespace) -> int:
+    from src.config.doctor import run_config_doctor
+
+    config = _load_config(args.config_file)
+    report = run_config_doctor(
+        config,
+        online=args.online,
+        check_secrets=args.check_secrets,
+        environ=os.environ,
+    )
+    if args.as_json:
+        print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
+    else:
+        print(f"Configuration fingerprint: {report.config_fingerprint}")
+        for diagnostic in report.diagnostics:
+            print(
+                f"[{diagnostic.severity.upper()}] "
+                f"{diagnostic.code}: {diagnostic.message}"
+            )
+    return 0 if report.ok else 2
+
+
+def _run_disabled_or_dry_mode(args: argparse.Namespace) -> int:
+    payload = _inspection_status_payload(args.config_file)
+    if args.as_json:
+        print(json.dumps(payload, indent=2, sort_keys=True))
+    else:
+        _print_status(payload, as_json=False)
+    return 0
+
+
+def _inspection_command_name(args: list[str]) -> str | None:
+    """Return the subcommand that belongs to the dependency-light parser."""
+
+    index = 0
+    while index < len(args):
+        item = args[index]
+        if item in {"--help", "-h"}:
+            return item
+        if item == "--config-file":
+            index += 2
+            continue
+        if item.startswith("--config-file="):
+            index += 1
+            continue
+        return item
+    return None
+
+
+def _run_lightweight_inspection(args: list[str]) -> int | None:
+    """Handle commands that must not import heavy runtime modules before dispatch."""
+
+    command_name = _inspection_command_name(args)
+    if not args or command_name in {"--help", "-h"}:
+        _inspection_parser().print_help()
+        return 0
+    if command_name not in {"status", "capabilities", "config", "run"}:
+        return None
+    if command_name == "run" and _requested_run_mode(args) == "paper":
+        return None
+
+    try:
+        parsed = _inspection_parser().parse_args(args)
+    except SystemExit as exc:
+        return int(exc.code)
+
+    if parsed.command == "status":
+        _print_status(
+            _inspection_status_payload(parsed.config_file),
+            as_json=parsed.as_json,
+        )
+        return 0
+    if parsed.command == "capabilities":
+        _print_capabilities(as_json=parsed.as_json)
+        return 0
+    if parsed.command == "config" and parsed.config_command == "doctor":
+        return _run_config_doctor(parsed)
+    if parsed.command == "run" and parsed.mode in {"disabled", "live"}:
+        if parsed.mode == "live":
+            print(
+                "LIVE_MODE_UNAVAILABLE: live submission is hard-denied by the product contract.",
+                file=sys.stderr,
+            )
+            return 4
+        return _run_disabled_or_dry_mode(parsed)
+    if parsed.command == "run" and parsed.dry_run and parsed.mode != "paper":
+        return _run_disabled_or_dry_mode(parsed)
+    return None
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -76,6 +347,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     rewritten_super_mpr_a = _rewrite_super_mpr_a_command(args)
     if rewritten_super_mpr_a is not None:
         args = rewritten_super_mpr_a
+
+    inspection_exit = _run_lightweight_inspection(args)
+    if inspection_exit is not None:
+        return inspection_exit
+
     if args and args[0] == "checks":
         return automation_cli_pr189.main(args[1:])
     if args and args[0] == "paper-vertical":
@@ -84,10 +360,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         return automation_cli_pr189.main(["production-debt", *args[1:]])
     if args and args[0] == "release-soak":
         return automation_cli_pr189.main(args)
+
     rewritten = _rewrite_legacy_preflight(args)
     if rewritten is not None:
         return automation_cli_pr189.main(rewritten)
-    return legacy_cli.main(_consume_legacy_paper_db_path(args))
+
+    return legacy_cli.main(_consume_legacy_paper_args(args))
 
 
 if __name__ == "__main__":

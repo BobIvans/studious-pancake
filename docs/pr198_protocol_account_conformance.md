@@ -43,3 +43,9 @@ decision from the existing MarginFi evidence gates.
 The report always returns `live_execution_allowed=false`.  A clean report only
 means "shadow-conformant account/protocol evidence"; it is not a permit, signer
 authority, final-message proof or settlement result.
+
+## Verification note
+
+The branch is rebuilt from the current `main`; `config/format_targets.txt`
+preserves all existing formatter targets and adds only the PR-198 authority and
+its focused regression test.

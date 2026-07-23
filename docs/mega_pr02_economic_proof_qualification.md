@@ -59,9 +59,15 @@ The qualification gate rejects or downgrades profit when:
 - a valuation quote is stale relative to the simulation slot;
 - total conservative cross-asset value is zero, below threshold or negative.
 
-## Focused tests
+## Focused verification
 
-The checkpoint suite covers:
+The focused workflow compiles the proof boundary and runs:
+
+```bash
+python -m pytest -q tests/execution/test_mega_pr02_economic_proof.py
+```
+
+The suite covers:
 
 1. positive settlement-token delta with negative native value is not qualified;
 2. strictly positive conservative total can qualify;
@@ -70,6 +76,9 @@ The checkpoint suite covers:
 5. attacker-controlled MarginFi program IDs are rejected by registry binding;
 6. mutated decoded account hash fails closed;
 7. stale valuation fails closed.
+
+The clean-head focused gate has passed after dependency alignment with
+`solders==0.28.0`, which is already part of the project dependency set.
 
 ## Remaining MEGA-PR-02 cutover
 

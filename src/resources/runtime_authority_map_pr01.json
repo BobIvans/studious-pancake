@@ -1,0 +1,127 @@
+{
+  "schema_version": "new-mega-pr-01.runtime-authority-map.v1",
+  "active_composition_root": {
+    "entrypoint": "flashloan-bot",
+    "module": "src.cli_pr189",
+    "callable": "main",
+    "package_script": "src.cli_pr189:main",
+    "paper_service": "src.paper_shadow.durable_service_a3:build_installed_durable_paper_service",
+    "sender_free": true,
+    "live_enabled": false
+  },
+  "lifecycle_authority": "src.durability.unified_authority_pr02:UnifiedLifecycleAuthority",
+  "capital_authority": "src.economics.durable_reservations:DurableCapitalCoordinator",
+  "alternate_runtime_surfaces": [
+    {
+      "path": "arb_bot.py",
+      "active": false,
+      "disposition": "compatibility-wrapper",
+      "reason": "delegates to installed CLI"
+    },
+    {
+      "path": "src.cli",
+      "active": false,
+      "disposition": "compatibility-wrapper",
+      "reason": "legacy command surface behind src.cli_pr189"
+    },
+    {
+      "path": "src.legacy_arb_bot",
+      "active": false,
+      "disposition": "quarantined",
+      "reason": "legacy source-checkout execution surface"
+    },
+    {
+      "path": "src.ingest.execution_router",
+      "active": false,
+      "disposition": "removed-from-package",
+      "reason": "legacy execution router excluded from production wheel"
+    },
+    {
+      "path": "src.execution.senders",
+      "active": false,
+      "disposition": "removed-from-package",
+      "reason": "sender package excluded from production wheel"
+    }
+  ],
+  "sensitive_writes": [
+    {
+      "surface": "pr02_intents",
+      "single_transaction": true,
+      "invariants": [
+        "owner_id",
+        "fencing_token",
+        "lease_generation",
+        "boot_id",
+        "process_generation",
+        "payload_hash"
+      ]
+    },
+    {
+      "surface": "pr02_terminal_records+pr02_outbox_event",
+      "single_transaction": true,
+      "invariants": [
+        "owner_id",
+        "fencing_token",
+        "lease_generation",
+        "boot_id",
+        "process_generation",
+        "payload_hash"
+      ]
+    },
+    {
+      "surface": "durable_capital_reservations",
+      "single_transaction": true,
+      "invariants": [
+        "owner_id",
+        "fencing_token",
+        "lease_generation",
+        "boot_id",
+        "process_generation",
+        "payload_hash"
+      ]
+    },
+    {
+      "surface": "a3_paper_service_cycles+a3_paper_service_outbox",
+      "single_transaction": true,
+      "invariants": [
+        "owner_id",
+        "fencing_token",
+        "lease_generation",
+        "boot_id",
+        "process_generation",
+        "payload_hash"
+      ]
+    }
+  ],
+  "terminal_policy": {
+    "irreversible": true,
+    "terminal_and_outbox_same_transaction": true,
+    "terminal_visibility_after_result_commit_only": true,
+    "sql_triggers_required": true
+  },
+  "capital_reservation_policy": {
+    "compare_balance_and_reserve_same_transaction": true,
+    "global_unique_reservation_id": true,
+    "restart_reconciliation_required": true,
+    "release_on_terminal_reject_or_expiry": true,
+    "reservation_id_bindings": [
+      "attempt_id",
+      "attempt_generation",
+      "candidate_id",
+      "message_hash",
+      "policy_bundle_hash"
+    ]
+  },
+  "worker_supervision": {
+    "critical_worker_death_closes_readiness": true,
+    "bounded_queues_required": true,
+    "incident_record_required": true,
+    "shutdown_order": [
+      "stop_intake",
+      "cancel_producers",
+      "drain_bounded_queue",
+      "persist_terminal_and_outbox",
+      "close_database"
+    ]
+  }
+}

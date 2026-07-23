@@ -23,7 +23,7 @@ or hard-disablement of legacy live paths.
 
 ## Added surface
 
-- `src/submission/mega_pr03_live_authorization_gate.py`
+- `src/live_boundary/mega_pr03_live_authorization_gate.py`
 - `tests/test_mega_pr03_live_authorization_gate.py`
 - `.github/workflows/mega-pr03-live-authorization-boundary.yml`
 
@@ -57,7 +57,7 @@ The successful state is deliberately named `READY_DEFAULT_OFF`, not `LIVE_READY`
 
 ```bash
 python -m py_compile \
-  src/submission/mega_pr03_live_authorization_gate.py \
+  src/live_boundary/mega_pr03_live_authorization_gate.py \
   tests/test_mega_pr03_live_authorization_gate.py
 python -m pytest -q tests/test_mega_pr03_live_authorization_gate.py
 ```

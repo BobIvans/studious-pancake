@@ -6,13 +6,17 @@ on:
       - main
     paths:
       - "src/paper_shadow/sender_free_runtime_evidence_pr198.py"
+      - "src/paper_shadow/durable_runtime_supervision_pr198.py"
       - "tests/test_pr198_sender_free_runtime_evidence.py"
+      - "tests/test_pr198_durable_runtime_supervision.py"
       - "docs/pr198_sender_free_runtime_evidence.md"
+      - "docs/pr198_durable_runtime_supervision.md"
       - "config/format_targets.txt"
       - ".github/workflows/pr198-sender-free-runtime-evidence.yml"
   push:
     branches:
       - roadmap-pr-198-sender-free-runtime-evidence
+      - roadmap-pr-198-durable-runtime-supervision
 
 permissions:
   contents: read
@@ -35,28 +39,36 @@ jobs:
         run: |
           python -m black --check \
             src/paper_shadow/sender_free_runtime_evidence_pr198.py \
-            tests/test_pr198_sender_free_runtime_evidence.py
+            src/paper_shadow/durable_runtime_supervision_pr198.py \
+            tests/test_pr198_sender_free_runtime_evidence.py \
+            tests/test_pr198_durable_runtime_supervision.py
       - name: Mypy
         run: |
           python -m mypy --config-file mypy.ini \
-            src/paper_shadow/sender_free_runtime_evidence_pr198.py
+            src/paper_shadow/sender_free_runtime_evidence_pr198.py \
+            src/paper_shadow/durable_runtime_supervision_pr198.py
       - name: Focused regression suite
         run: |
           python -m pytest \
             tests/test_pr198_sender_free_runtime_evidence.py \
+            tests/test_pr198_durable_runtime_supervision.py \
             -q --disable-socket --allow-unix-socket \
             --junitxml=pr198-sender-free-runtime-evidence-junit.xml
       - name: Compile sender-free evidence gate
         run: |
           python -m compileall -q \
             src/paper_shadow/sender_free_runtime_evidence_pr198.py \
-            tests/test_pr198_sender_free_runtime_evidence.py
+            src/paper_shadow/durable_runtime_supervision_pr198.py \
+            tests/test_pr198_sender_free_runtime_evidence.py \
+            tests/test_pr198_durable_runtime_supervision.py
       - name: Record focused evidence identities
         shell: bash
         run: |
           sha256sum \
             src/paper_shadow/sender_free_runtime_evidence_pr198.py \
+            src/paper_shadow/durable_runtime_supervision_pr198.py \
             tests/test_pr198_sender_free_runtime_evidence.py \
+            tests/test_pr198_durable_runtime_supervision.py \
             pr198-sender-free-runtime-evidence-junit.xml \
             > pr198-sender-free-runtime-evidence.sha256
       - name: Upload focused evidence

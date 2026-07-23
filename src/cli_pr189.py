@@ -4,6 +4,11 @@ MPR-CLOSE-01 keeps the installed ``flashloan-bot`` command usable even when
 optional Solana execution dependencies are not importable.  Inspection commands
 are handled here and import only configuration/capability modules.  Runtime
 commands are imported lazily after dispatch.
+
+The current ``main`` branch owns the active durable paper service.  Therefore
+``run --mode paper`` keeps the MPR-CLOSE-24 compatibility path that maps legacy
+``--db-path`` into ``FLASHLOAN_PAPER_SERVICE_DB`` before delegating to the active
+runtime root, instead of reviving the older canonical-paper CLI root.
 """
 
 from __future__ import annotations
@@ -31,58 +36,59 @@ def _has_option(args: list[str], name: str) -> bool:
     return name in args or any(item.startswith(f"{name}=") for item in args)
 
 
-def _canonical_paper_args(args: list[str]) -> list[str] | None:
-    """Translate the installed ``run --mode paper`` surface to one paper root."""
+def _requested_run_mode(args: list[str]) -> str | None:
+    """Return an explicitly requested ``run --mode`` without full parsing."""
 
     try:
         run_index = args.index("run")
     except ValueError:
         return None
-
-    prefix = args[:run_index]
     tail = args[run_index + 1 :]
-    forwarded: list[str] = []
-
-    index = 0
-    while index < len(prefix):
-        item = prefix[index]
-        if item == "--config-file":
-            if index + 1 >= len(prefix):
-                return None
-            forwarded.extend((item, prefix[index + 1]))
-            index += 2
-            continue
-        if item.startswith("--config-file="):
-            forwarded.append(item)
-            index += 1
-            continue
-        return None
-
-    mode: str | None = None
     index = 0
     while index < len(tail):
         item = tail[index]
-        if item == "--mode":
-            if index + 1 >= len(tail):
-                return None
-            mode = tail[index + 1]
-            index += 2
-            continue
+        if item == "--mode" and index + 1 < len(tail):
+            return tail[index + 1]
         if item.startswith("--mode="):
-            mode = item.partition("=")[2]
+            return item.partition("=")[2]
+        index += 1
+    return "shadow"
+
+
+def _is_run_mode_paper(args: list[str]) -> bool:
+    return _requested_run_mode(args) == "paper"
+
+
+def _consume_legacy_paper_args(args: list[str]) -> list[str]:
+    """Map old paper CLI flags to the active durable paper service contract."""
+
+    if not _is_run_mode_paper(args):
+        return args
+    forwarded: list[str] = []
+    index = 0
+    while index < len(args):
+        item = args[index]
+        if item == "--db-path":
+            if index + 1 < len(args):
+                os.environ[PAPER_DB_ENV] = args[index + 1]
+                index += 2
+                continue
+        elif item.startswith("--db-path="):
+            os.environ[PAPER_DB_ENV] = item.partition("=")[2]
+            index += 1
+            continue
+        elif item == "--json":
+            # The durable paper service currently reports text evidence.  Accept
+            # the legacy installed-artifact flag without exposing a second paper root.
             index += 1
             continue
         forwarded.append(item)
         index += 1
-
-    if mode != "paper":
-        return None
-    if "--dry-run" in forwarded:
-        forwarded.remove("--dry-run")
     if not _has_option(forwarded, "--db-path"):
         db_path = os.environ.get(PAPER_DB_ENV)
         if db_path:
-            forwarded.extend(("--db-path", db_path))
+            # ``src.cli`` does not consume --db-path; the env var is the authority.
+            pass
     return forwarded
 
 
@@ -165,9 +171,8 @@ def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]
         "default_command": matrix.default_command,
         "capability_contract_valid": not path_errors,
         "capability_contract_errors": list(path_errors),
-        # Preserve the historical installed-package smoke truth while avoiding
-        # eager imports of src.cli/build_application/heavy runtime modules.
         "diagnostic": "NO_EXECUTABLE_STRATEGIES",
+        "executable_strategies": [],
         "runtime_modes": matrix.runtime_modes,
         "configuration": {
             "schema_version": config.schema_version,
@@ -267,25 +272,6 @@ def _inspection_command_name(args: list[str]) -> str | None:
     return None
 
 
-def _requested_run_mode(args: list[str]) -> str | None:
-    """Return an explicitly requested ``run --mode`` without full parsing."""
-
-    try:
-        run_index = args.index("run")
-    except ValueError:
-        return None
-    tail = args[run_index + 1 :]
-    index = 0
-    while index < len(tail):
-        item = tail[index]
-        if item == "--mode" and index + 1 < len(tail):
-            return tail[index + 1]
-        if item.startswith("--mode="):
-            return item.partition("=")[2]
-        index += 1
-    return "shadow"
-
-
 def _run_lightweight_inspection(args: list[str]) -> int | None:
     """Handle commands that must not import heavy runtime modules before dispatch."""
 
@@ -295,9 +281,6 @@ def _run_lightweight_inspection(args: list[str]) -> int | None:
         return 0
     if command_name not in {"status", "capabilities", "config", "run"}:
         return None
-    # The canonical sender-free paper service accepts its own arguments
-    # (for example ``--db-path``).  Do not parse it with the dependency-light
-    # inspection parser; delegate it to the canonical paper CLI below.
     if command_name == "run" and _requested_run_mode(args) == "paper":
         return None
 
@@ -337,12 +320,6 @@ def main(argv: Sequence[str] | None = None) -> int:
     if inspection_exit is not None:
         return inspection_exit
 
-    canonical_paper_args = _canonical_paper_args(args)
-    if canonical_paper_args is not None:
-        from src.canonical_paper import cli as canonical_paper_cli
-
-        return canonical_paper_cli.main(canonical_paper_args)
-
     if args and args[0] == "checks":
         from src import automation_cli_pr189
 
@@ -368,7 +345,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     from src import cli as legacy_cli
 
-    return legacy_cli.main(args)
+    return legacy_cli.main(_consume_legacy_paper_args(args))
 
 
 if __name__ == "__main__":

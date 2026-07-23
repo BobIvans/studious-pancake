@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# CI regression note: these tests intentionally use dataclasses.asdict() for
+# slotted PR196ProtocolConformanceClaim instances; they must not use __dict__.
 from dataclasses import asdict
 import json
 

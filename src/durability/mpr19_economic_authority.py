@@ -1,9 +1,9 @@
 """MPR-19 crash-consistent durable economic authority.
 
-This module is an offline, sender-free checkpoint for the MPR-19 cutover.  It
-keeps attempt identity, capital reservations, event journal, outbox delivery and
-recovery evidence inside one SQLite authority with explicit transaction
-boundaries.  It intentionally does not sign, submit, or reach external services.
+Offline, sender-free checkpoint for the MPR-19 durable cutover.  It puts
+attempt identity, capital reservations, event journal, outbox delivery and
+restore verification behind one SQLite writer using explicit BEGIN IMMEDIATE
+transactions.  It never signs, submits, or reaches provider/RPC/Jito services.
 """
 from __future__ import annotations
 
@@ -19,6 +19,7 @@ from typing import Callable, Mapping
 
 MPR19_SCHEMA_VERSION = "mpr19.durable-economic-authority.v1"
 _SCHEMA_ID = "mpr19-0001"
+_ZERO_HASH = "0" * 64
 
 
 class MPR19AuthorityError(RuntimeError):
@@ -60,9 +61,7 @@ class AttemptRequest:
         for name in ("opportunity_id", "wallet_id", "strategy", "outbox_topic"):
             if not str(getattr(self, name)).strip():
                 raise ValueError(f"{name} is required")
-        _strict_non_negative_int(self.capital_lamports, "capital_lamports")
-        if self.capital_lamports <= 0:
-            raise ValueError("capital_lamports must be positive")
+        _strict_positive_int(self.capital_lamports, "capital_lamports")
         _canonical_json(self.payload)
 
     @property
@@ -140,28 +139,6 @@ class MPR19EconomicAuthority:
     def __exit__(self, *_exc: object) -> None:
         self.close()
 
-    def _migrate(self) -> None:
-        checksum = hashlib.sha256(_SCHEMA.encode()).hexdigest()
-        self.db.execute("BEGIN IMMEDIATE")
-        try:
-            self.db.executescript(_SCHEMA)
-            row = self.db.execute(
-                "SELECT checksum FROM mpr19_migrations WHERE migration_id=?",
-                (_SCHEMA_ID,),
-            ).fetchone()
-            if row is None:
-                self.db.execute(
-                    "INSERT INTO mpr19_migrations VALUES(?,?,?)",
-                    (_SCHEMA_ID, checksum, MPR19_SCHEMA_VERSION),
-                )
-            elif str(row["checksum"]) != checksum:
-                raise MPR19AuthorityError("MPR19_MIGRATION_CHECKSUM_MISMATCH")
-            self.db.execute("COMMIT")
-        except Exception:
-            if self.db.in_transaction:
-                self.db.execute("ROLLBACK")
-            raise
-
     def create_attempt(
         self,
         request: AttemptRequest,
@@ -173,13 +150,12 @@ class MPR19EconomicAuthority:
         request_json = _canonical_json(request.payload)
         request_hash = hashlib.sha256(request_json.encode()).hexdigest()
         outbox_event_id = _identity(
-            "outbox",
-            {"attempt_id": request.attempt_id, "topic": request.outbox_topic},
+            "outbox", {"attempt_id": request.attempt_id, "topic": request.outbox_topic}
         )
         self.db.execute("BEGIN IMMEDIATE")
         try:
             existing = self.db.execute(
-                "SELECT * FROM mpr19_attempts WHERE attempt_id=?",
+                "SELECT request_hash FROM mpr19_attempts WHERE attempt_id=?",
                 (request.attempt_id,),
             ).fetchone()
             if existing is not None:
@@ -237,30 +213,17 @@ class MPR19EconomicAuthority:
                 "reservation_id": request.reservation_id,
                 "state": AttemptState.RECORDED.value,
             }
-            outbox_json = _canonical_json(outbox_payload)
-            self.db.execute(
-                "INSERT INTO mpr19_outbox_events VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (
-                    outbox_event_id,
-                    request.attempt_id,
-                    request.outbox_topic,
-                    outbox_json,
-                    hashlib.sha256(outbox_json.encode()).hexdigest(),
-                    OutboxState.QUEUED.value,
-                    None,
-                    None,
-                    None,
-                    0,
-                    now_ns,
-                    None,
-                    now_ns,
-                ),
+            self._insert_outbox(
+                event_id=outbox_event_id,
+                attempt_id=request.attempt_id,
+                topic=request.outbox_topic,
+                payload=outbox_payload,
+                now_ns=now_ns,
             )
             self._after("outbox_queued", step_hook)
             self.db.execute("COMMIT")
         except Exception:
-            if self.db.in_transaction:
-                self.db.execute("ROLLBACK")
+            self._rollback_if_open()
             raise
         return self._snapshot(request.attempt_id, replayed=False)
 
@@ -286,8 +249,7 @@ class MPR19EconomicAuthority:
         try:
             updated = self.db.execute(
                 "UPDATE mpr19_attempts SET state=?,revision=revision+1,terminal_ns=?,"
-                "reason_code=?,updated_ns=? WHERE attempt_id=? AND revision=? "
-                "AND state=?",
+                "reason_code=?,updated_ns=? WHERE attempt_id=? AND revision=? AND state=?",
                 (
                     terminal_state.value,
                     now_ns,
@@ -313,59 +275,30 @@ class MPR19EconomicAuthority:
             )
             if reservation.rowcount != 1:
                 raise MPR19AuthorityError("MPR19_RESERVATION_CAS_MISMATCH")
-            self._append_event(
-                attempt_id,
-                "attempt.terminal",
-                {
-                    "state": terminal_state.value,
-                    "reservation_state": reservation_state.value,
-                    "reason_code": reason_code,
-                },
-                now_ns=now_ns,
-            )
-            event_id = _identity(
-                "outbox",
-                {"attempt_id": attempt_id, "topic": "economic.attempt.terminal"},
-            )
-            payload = _canonical_json(
-                {
-                    "attempt_id": attempt_id,
-                    "state": terminal_state.value,
-                    "reservation_state": reservation_state.value,
-                    "reason_code": reason_code,
-                }
-            )
-            self.db.execute(
-                "INSERT INTO mpr19_outbox_events VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                (
-                    event_id,
-                    attempt_id,
-                    "economic.attempt.terminal",
-                    payload,
-                    hashlib.sha256(payload.encode()).hexdigest(),
-                    OutboxState.QUEUED.value,
-                    None,
-                    None,
-                    None,
-                    0,
-                    now_ns,
-                    None,
-                    now_ns,
+            payload = {
+                "state": terminal_state.value,
+                "reservation_state": reservation_state.value,
+                "reason_code": reason_code,
+            }
+            self._append_event(attempt_id, "attempt.terminal", payload, now_ns=now_ns)
+            self._insert_outbox(
+                event_id=_identity(
+                    "outbox",
+                    {"attempt_id": attempt_id, "topic": "economic.attempt.terminal"},
                 ),
+                attempt_id=attempt_id,
+                topic="economic.attempt.terminal",
+                payload={"attempt_id": attempt_id, **payload},
+                now_ns=now_ns,
             )
             self.db.execute("COMMIT")
         except Exception:
-            if self.db.in_transaction:
-                self.db.execute("ROLLBACK")
+            self._rollback_if_open()
             raise
         return self._snapshot(attempt_id, replayed=False)
 
     def claim_outbox(
-        self,
-        *,
-        owner_id: str,
-        now_ns: int,
-        lease_ttl_ns: int,
+        self, *, owner_id: str, now_ns: int, lease_ttl_ns: int
     ) -> OutboxClaim | None:
         if not owner_id.strip():
             raise ValueError("owner_id is required")
@@ -416,17 +349,11 @@ class MPR19EconomicAuthority:
             self.db.execute("COMMIT")
             return OutboxClaim(str(row["event_id"]), owner_id, token, now_ns + lease_ttl_ns)
         except Exception:
-            if self.db.in_transaction:
-                self.db.execute("ROLLBACK")
+            self._rollback_if_open()
             raise
 
     def complete_outbox(
-        self,
-        claim: OutboxClaim,
-        *,
-        delivered: bool,
-        reason_code: str,
-        now_ns: int,
+        self, claim: OutboxClaim, *, delivered: bool, reason_code: str, now_ns: int
     ) -> OutboxState:
         if not reason_code.strip():
             raise ValueError("reason_code is required")
@@ -465,8 +392,7 @@ class MPR19EconomicAuthority:
             )
             self.db.execute("COMMIT")
         except Exception:
-            if self.db.in_transaction:
-                self.db.execute("ROLLBACK")
+            self._rollback_if_open()
             raise
         return target
 
@@ -474,7 +400,7 @@ class MPR19EconomicAuthority:
         rows = self.db.execute(
             "SELECT * FROM mpr19_event_journal ORDER BY sequence"
         ).fetchall()
-        previous = "0" * 64
+        previous = _ZERO_HASH
         reconstructed: dict[str, tuple[str, str]] = {}
         terminal_count = 0
         for row in rows:
@@ -484,7 +410,7 @@ class MPR19EconomicAuthority:
                 raise MPR19AuthorityError("MPR19_JOURNAL_PAYLOAD_DIGEST_MISMATCH")
             if previous != str(row["previous_hash"]):
                 raise MPR19AuthorityError("MPR19_JOURNAL_CHAIN_MISMATCH")
-            expected_event_hash = _identity(
+            expected_hash = _identity(
                 "journal",
                 {
                     "sequence": int(row["sequence"]),
@@ -495,11 +421,9 @@ class MPR19EconomicAuthority:
                     "created_ns": int(row["created_ns"]),
                 },
             )
-            if expected_event_hash != str(row["event_hash"]):
+            if expected_hash != str(row["event_hash"]):
                 raise MPR19AuthorityError("MPR19_JOURNAL_EVENT_HASH_MISMATCH")
             payload = json.loads(payload_json)
-            if not isinstance(payload, Mapping):
-                raise MPR19AuthorityError("MPR19_JOURNAL_PAYLOAD_SHAPE_INVALID")
             if row["event_type"] == "attempt.created":
                 reconstructed[str(row["attempt_id"])] = (
                     AttemptState.RECORDED.value,
@@ -511,11 +435,10 @@ class MPR19EconomicAuthority:
                     str(payload["state"]),
                     str(payload["reservation_state"]),
                 )
-            previous = expected_event_hash
+            previous = expected_hash
         for attempt_id, (state, reservation_state) in reconstructed.items():
             attempt = self.db.execute(
-                "SELECT state FROM mpr19_attempts WHERE attempt_id=?",
-                (attempt_id,),
+                "SELECT state FROM mpr19_attempts WHERE attempt_id=?", (attempt_id,)
             ).fetchone()
             reservation = self.db.execute(
                 "SELECT state FROM mpr19_capital_reservations WHERE attempt_id=?",
@@ -529,12 +452,7 @@ class MPR19EconomicAuthority:
             "SELECT COUNT(*) FROM mpr19_outbox_events WHERE state IN (?,?)",
             (OutboxState.QUEUED.value, OutboxState.CLAIMED.value),
         ).fetchone()[0]
-        return ReplayReport(
-            event_count=len(rows),
-            terminal_count=terminal_count,
-            outbox_pending_count=int(pending),
-            digest=previous,
-        )
+        return ReplayReport(len(rows), terminal_count, int(pending), previous)
 
     def backup_to(self, destination: str | Path) -> Path:
         target = Path(destination)
@@ -542,7 +460,6 @@ class MPR19EconomicAuthority:
         tmp = target.with_suffix(target.suffix + ".tmp")
         if tmp.exists():
             tmp.unlink()
-        target.parent.mkdir(parents=True, exist_ok=True)
         backup = sqlite3.connect(tmp)
         try:
             self.db.backup(backup)
@@ -583,20 +500,66 @@ class MPR19EconomicAuthority:
                 tmp.unlink()
             raise
 
-    def _append_event(
+    def _migrate(self) -> None:
+        checksum = hashlib.sha256(_SCHEMA.encode()).hexdigest()
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            self.db.executescript(_SCHEMA)
+            row = self.db.execute(
+                "SELECT checksum FROM mpr19_migrations WHERE migration_id=?",
+                (_SCHEMA_ID,),
+            ).fetchone()
+            if row is None:
+                self.db.execute(
+                    "INSERT INTO mpr19_migrations VALUES(?,?,?)",
+                    (_SCHEMA_ID, checksum, MPR19_SCHEMA_VERSION),
+                )
+            elif str(row["checksum"]) != checksum:
+                raise MPR19AuthorityError("MPR19_MIGRATION_CHECKSUM_MISMATCH")
+            self.db.execute("COMMIT")
+        except Exception:
+            self._rollback_if_open()
+            raise
+
+    def _insert_outbox(
         self,
-        attempt_id: str,
-        event_type: str,
-        payload: Mapping[str, object],
         *,
+        event_id: str,
+        attempt_id: str,
+        topic: str,
+        payload: Mapping[str, object],
         now_ns: int,
+    ) -> None:
+        payload_json = _canonical_json(payload)
+        self.db.execute(
+            "INSERT INTO mpr19_outbox_events VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                event_id,
+                attempt_id,
+                topic,
+                payload_json,
+                hashlib.sha256(payload_json.encode()).hexdigest(),
+                OutboxState.QUEUED.value,
+                None,
+                None,
+                None,
+                0,
+                now_ns,
+                None,
+                now_ns,
+                now_ns,
+            ),
+        )
+
+    def _append_event(
+        self, attempt_id: str, event_type: str, payload: Mapping[str, object], *, now_ns: int
     ) -> None:
         payload_json = _canonical_json(payload)
         payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
         row = self.db.execute(
             "SELECT event_hash FROM mpr19_event_journal ORDER BY sequence DESC LIMIT 1"
         ).fetchone()
-        previous_hash = "0" * 64 if row is None else str(row["event_hash"])
+        previous_hash = _ZERO_HASH if row is None else str(row["event_hash"])
         sequence = int(
             self.db.execute(
                 "SELECT COALESCE(MAX(sequence),0)+1 FROM mpr19_event_journal"
@@ -613,18 +576,18 @@ class MPR19EconomicAuthority:
                 "created_ns": now_ns,
             },
         )
-        event_id = _identity("event", {"event_hash": event_hash})
         self.db.execute(
-            "INSERT INTO mpr19_event_journal VALUES(?,?,?,?,?,?,?,?)",
+            "INSERT INTO mpr19_event_journal VALUES(?,?,?,?,?,?,?,?,?)",
             (
                 sequence,
-                event_id,
+                _identity("event", {"event_hash": event_hash}),
                 attempt_id,
                 event_type,
                 payload_json,
                 payload_hash,
                 previous_hash,
                 event_hash,
+                now_ns,
             ),
         )
 
@@ -646,6 +609,10 @@ class MPR19EconomicAuthority:
             outbox_event_id=str(row["outbox_event_id"]),
             replayed=replayed,
         )
+
+    def _rollback_if_open(self) -> None:
+        if self.db.in_transaction:
+            self.db.execute("ROLLBACK")
 
     @staticmethod
     def _after(step: str, hook: StepHook | None) -> None:
@@ -691,7 +658,8 @@ CREATE TABLE IF NOT EXISTS mpr19_event_journal(
  payload_json TEXT NOT NULL,
  payload_hash TEXT NOT NULL,
  previous_hash TEXT NOT NULL,
- event_hash TEXT NOT NULL UNIQUE
+ event_hash TEXT NOT NULL UNIQUE,
+ created_ns INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS mpr19_outbox_events(
  event_id TEXT PRIMARY KEY,
@@ -706,7 +674,8 @@ CREATE TABLE IF NOT EXISTS mpr19_outbox_events(
  retry_count INTEGER NOT NULL CHECK(retry_count>=0),
  next_attempt_ns INTEGER NOT NULL,
  last_reason TEXT,
- created_ns INTEGER NOT NULL
+ created_ns INTEGER NOT NULL,
+ updated_ns INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS mpr19_outbox_attempts(
  attempt_no INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -734,13 +703,7 @@ CREATE TRIGGER IF NOT EXISTS mpr19_outbox_attempt_no_delete
 
 def _identity(kind: str, payload: Mapping[str, object]) -> str:
     return hashlib.sha256(
-        _canonical_json(
-            {
-                "schema": MPR19_SCHEMA_VERSION,
-                "kind": kind,
-                "payload": payload,
-            }
-        ).encode()
+        _canonical_json({"schema": MPR19_SCHEMA_VERSION, "kind": kind, "payload": payload}).encode()
     ).hexdigest()
 
 

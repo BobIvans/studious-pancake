@@ -35,5 +35,19 @@ jobs:
           python -m py_compile \
             src/durability/mpr19_economic_authority.py \
             tests/test_mpr19_economic_authority.py
-      - name: Run MPR-19 focused tests
+      - name: Run authority happy path
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_attempt_terminal_outbox_and_replay_are_one_durable_authority
+      - name: Run statement crash matrix
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_statement_level_crash_probe_rolls_back_every_partial_write
+      - name: Run identity probes
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_canonical_identity_rejects_bool_float_and_delimiter_collisions
+      - name: Run CAS preservation
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_revision_cas_failure_preserves_active_reservation
+      - name: Run stale owner probe
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_outbox_stale_owner_cannot_complete_after_reclaim
+      - name: Run replay tamper probe
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_replay_detects_materialized_state_tampering
+      - name: Run backup restore probe
+        run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_backup_restore_is_verified_before_activation
+      - name: Run complete focused suite
         run: python -m pytest -q tests/test_mpr19_economic_authority.py

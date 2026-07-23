@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Print or enforce production debt with PR-189 explicit command modes."""
+"""Print or enforce production debt with optional release-qualification overlay."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ import argparse
 import json
 from pathlib import Path
 import sys
-from typing import Sequence
+from typing import Any, Sequence
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -16,27 +16,96 @@ if str(ROOT) not in sys.path:
 from src.automation_cli_pr189 import main as automation_main
 from src.production_debt import evaluate_production_debt
 
+QUALIFICATION_SCHEMA = "mpr-close-06.release-qualification.v1"
 
-def _legacy_main(*, as_json: bool, require_ready: bool) -> int:
+
+def _load_optional_qualification(path: str | None) -> dict[str, Any] | None:
+    if not path:
+        return None
+    candidate = Path(path)
+    if not candidate.is_absolute():
+        candidate = ROOT / candidate
+    if not candidate.is_file():
+        return None
+    payload = json.loads(candidate.read_text(encoding="utf-8"))
+    if payload.get("schema_version") != QUALIFICATION_SCHEMA:
+        return None
+    payload["_resolved_path"] = str(candidate)
+    return payload
+
+
+def _apply_qualification_overlay(
+    payload: dict[str, Any],
+    qualification: dict[str, Any] | None,
+) -> dict[str, Any]:
+    if not qualification:
+        return payload
+
+    resolved = qualification.get("debt_resolution", {})
+    blockers = []
+    resolved_ids: list[str] = []
+    for blocker in payload.get("blockers", []):
+        if resolved.get(blocker["id"], {}).get("resolved") is True:
+            resolved_ids.append(blocker["id"])
+            continue
+        blockers.append(blocker)
+
+    payload = dict(payload)
+    payload["blockers"] = blockers
+    payload["resolved_by_release_qualification"] = sorted(resolved_ids)
+    payload["qualification"] = {
+        "path": qualification.get("_resolved_path"),
+        "release_id": qualification.get("release_id"),
+        "qualified": bool(qualification.get("qualified")),
+        "promotion_state": qualification.get("promotion_state"),
+        "missing_artifacts": list(qualification.get("missing_artifacts", [])),
+    }
+
+    consistency_errors = list(payload.get("consistency_errors", []))
+    payload["paper_ready"] = not consistency_errors and not any(
+        row.get("blocks_paper") for row in blockers
+    )
+    payload["live_ready"] = not consistency_errors and not any(
+        row.get("blocks_live") for row in blockers
+    )
+    observed = dict(payload.get("observed", {}))
+    observed["qualification_path"] = qualification.get("_resolved_path")
+    observed["qualification_release_id"] = qualification.get("release_id")
+    payload["observed"] = observed
+    payload["production_ready"] = (
+        bool(qualification.get("qualified"))
+        and payload["paper_ready"]
+        and payload["live_ready"]
+        and qualification.get("product_state") == "production-ready"
+        and bool(qualification.get("live_mode_available"))
+    )
+    return payload
+
+
+def _legacy_main(*, as_json: bool, require_ready: bool, qualification_path: str | None) -> int:
     """Preserve the pre-PR-189 script payload and human-readable output."""
 
     report = evaluate_production_debt()
-    payload = report.to_dict()
+    payload = _apply_qualification_overlay(
+        report.to_dict(),
+        _load_optional_qualification(qualification_path),
+    )
+
     if as_json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
-        print(f"production_ready={report.production_ready}")
-        print(f"paper_ready={report.paper_ready}")
-        print(f"live_ready={report.live_ready}")
-        print(f"blockers={len(report.blockers)}")
-        for batch in report.batches:
+        print(f"production_ready={payload['production_ready']}")
+        print(f"paper_ready={payload['paper_ready']}")
+        print(f"live_ready={payload['live_ready']}")
+        print(f"blockers={len(payload['blockers'])}")
+        for batch in payload["batches"]:
             print(f"{batch['id']}: open={batch['open_items']} p0={batch['p0_items']}")
-        for error in report.consistency_errors:
+        for error in payload["consistency_errors"]:
             print(f"CONSISTENCY_ERROR: {error}")
 
-    if report.consistency_errors:
+    if payload["consistency_errors"]:
         return 2
-    if require_ready and not report.production_ready:
+    if require_ready and not payload["production_ready"]:
         return 3
     return 0
 
@@ -56,12 +125,18 @@ def main(argv: Sequence[str] | None = None) -> int:
         action="store_true",
         help="legacy readiness enforcement; preserves the historical output",
     )
+    parser.add_argument(
+        "--qualification",
+        default=".runtime/release-qualification.json",
+        help="optional MPR-CLOSE-06 release qualification overlay",
+    )
     args = parser.parse_args(argv)
 
     if args.mode is None:
         return _legacy_main(
             as_json=args.as_json,
             require_ready=args.require_ready,
+            qualification_path=args.qualification,
         )
     if args.require_ready and args.mode != "check":
         parser.error("--require-ready conflicts with explicit inspect mode")

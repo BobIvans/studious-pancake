@@ -20,7 +20,6 @@ HEX_F = "f" * 64
 HEX_1 = "1" * 64
 
 
-
 def _permit() -> MPR30PermitEnvelope:
     return MPR30PermitEnvelope(
         reviewer_principal_id="reviewer-1",
@@ -39,7 +38,6 @@ def _permit() -> MPR30PermitEnvelope:
         independent_reviewer=True,
         fresh_trusted_time=True,
     )
-
 
 
 def _evidence() -> MPR30Evidence:
@@ -79,7 +77,6 @@ def _evidence() -> MPR30Evidence:
     )
 
 
-
 def test_mpr30_happy_path_is_ready_but_default_off() -> None:
     report = evaluate_mpr30_evidence(_evidence())
 
@@ -92,13 +89,11 @@ def test_mpr30_happy_path_is_ready_but_default_off() -> None:
     assert len(report.evidence_hash) == 64
 
 
-
 def test_mpr30_missing_findings_block_foundation() -> None:
     report = evaluate_mpr30_evidence(replace(_evidence(), findings_covered=("F-314",)))
 
     assert report.state is MPR30State.BLOCKED
     assert any(item.code == "MPR30_FINDINGS_INCOMPLETE" for item in report.blockers)
-
 
 
 def test_mpr30_runtime_cannot_expose_key_or_reach_signer_ipc() -> None:
@@ -121,7 +116,6 @@ def test_mpr30_runtime_cannot_expose_key_or_reach_signer_ipc() -> None:
     assert "MPR30_LIVE_REQUESTED" in codes
 
 
-
 def test_mpr30_permit_must_be_cryptographic_and_time_bound() -> None:
     report = evaluate_mpr30_evidence(
         replace(
@@ -134,7 +128,7 @@ def test_mpr30_permit_must_be_cryptographic_and_time_bound() -> None:
                 independent_reviewer=False,
                 fresh_trusted_time=False,
                 not_before_ns=50,
-                expires_at_ns=90,
+                expires_at_ns=40,
                 revocation_generation=0,
             ),
         )
@@ -148,7 +142,6 @@ def test_mpr30_permit_must_be_cryptographic_and_time_bound() -> None:
     assert "MPR30_NOT_BEFORE_REGRESSION" in codes
     assert "MPR30_BAD_EXPIRY_WINDOW" in codes
     assert "MPR30_BAD_REVOCATION_GENERATION" in codes
-
 
 
 def test_mpr30_issue_consume_intent_must_be_one_shot() -> None:
@@ -165,7 +158,6 @@ def test_mpr30_issue_consume_intent_must_be_one_shot() -> None:
     assert any(item.code == "MPR30_INTENT_NOT_ONESHOT" for item in report.blockers)
 
 
-
 def test_mpr30_jito_bundle_identity_and_transport_staging_are_mandatory() -> None:
     report = evaluate_mpr30_evidence(
         replace(
@@ -180,7 +172,6 @@ def test_mpr30_jito_bundle_identity_and_transport_staging_are_mandatory() -> Non
     codes = {item.code for item in report.blockers}
     assert "MPR30_BUNDLE_IDENTITY_INCOMPLETE" in codes
     assert "MPR30_TRANSPORT_EVIDENCE_INCOMPLETE" in codes
-
 
 
 def test_mpr30_fsm_and_rooted_settlement_cannot_be_weakened() -> None:
@@ -200,7 +191,6 @@ def test_mpr30_fsm_and_rooted_settlement_cannot_be_weakened() -> None:
     assert "MPR30_SETTLEMENT_NOT_ROOTED" in codes
 
 
-
 def test_mpr30_absence_proof_must_be_independent_and_freeze_bound() -> None:
     report = evaluate_mpr30_evidence(
         replace(
@@ -212,7 +202,6 @@ def test_mpr30_absence_proof_must_be_independent_and_freeze_bound() -> None:
 
     assert report.state is MPR30State.BLOCKED
     assert any(item.code == "MPR30_ABSENCE_PROOF_UNSAFE" for item in report.blockers)
-
 
 
 def test_mpr30_default_off_flags_must_remain_true() -> None:

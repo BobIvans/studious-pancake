@@ -17,7 +17,7 @@ on:
       - ".github/workflows/mega-pr02-economic-proof.yml"
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: mega-pr02-economic-proof-${{ github.ref }}
@@ -35,6 +35,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: mega-pr-02-economic-proof-qualification
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -45,23 +47,64 @@ jobs:
             pytest==9.0.2 \
             mypy==1.18.2 \
             solders==0.28.0
+      - name: Apply explicit observation variable names
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("src/execution/economic_reconciliation/mega_pr02_proof.py")
+          source = path.read_text(encoding="utf-8")
+          old = '''    def _bind_decoded_state(
+              self,
+              evidence: ReconciliationEvidence,
+              raw_accounts: dict[str, RawAccountBinding],
+          ) -> None:
+              for observation in evidence.native:
+                  self._require_decoded_hash(
+                      raw_accounts[observation.address], decoded_observation_hash(observation)
+                  )
+              for observation in evidence.tokens:
+                  self._require_decoded_hash(
+                      raw_accounts[observation.address], decoded_observation_hash(observation)
+                  )
+          '''
+          new = '''    def _bind_decoded_state(
+              self,
+              evidence: ReconciliationEvidence,
+              raw_accounts: dict[str, RawAccountBinding],
+          ) -> None:
+              for native_observation in evidence.native:
+                  self._require_decoded_hash(
+                      raw_accounts[native_observation.address],
+                      decoded_observation_hash(native_observation),
+                  )
+              for token_observation in evidence.tokens:
+                  self._require_decoded_hash(
+                      raw_accounts[token_observation.address],
+                      decoded_observation_hash(token_observation),
+                  )
+          '''
+          if old in source:
+              path.write_text(source.replace(old, new, 1), encoding="utf-8")
+          else:
+              print("mypy variable fix already applied")
+          PY
       - name: Compile MEGA-PR-02 proof boundary
         run: |
           python -m py_compile \
             src/execution/economic_reconciliation/mega_pr02_proof.py \
             tests/execution/test_mega_pr02_economic_proof.py
       - name: Type-check MEGA-PR-02 proof boundary
-        run: |
-          set +e
-          python -m mypy --config-file mypy.ini src/execution/economic_reconciliation/mega_pr02_proof.py > mypy-output.txt 2>&1
-          status=$?
-          cat mypy-output.txt
-          exit "$status"
-      - name: Upload mypy diagnostics
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: mega-pr02-mypy-output
-          path: mypy-output.txt
+        run: python -m mypy --config-file mypy.ini src/execution/economic_reconciliation/mega_pr02_proof.py
       - name: Run MEGA-PR-02 proof tests
         run: python -m pytest -q tests/execution/test_mega_pr02_economic_proof.py
+      - name: Commit verified mypy fix
+        run: |
+          if git diff --quiet -- src/execution/economic_reconciliation/mega_pr02_proof.py; then
+            echo "No source changes to commit"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/execution/economic_reconciliation/mega_pr02_proof.py
+          git commit -m "MEGA-PR-02: make decoded binding mypy-clean"
+          git push origin HEAD:mega-pr-02-economic-proof-qualification

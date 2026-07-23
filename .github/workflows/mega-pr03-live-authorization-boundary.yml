@@ -3,7 +3,7 @@ name: MEGA-PR-03 live authorization boundary
 on:
   pull_request:
     paths:
-      - "src/submission/mega_pr03_live_authorization_gate.py"
+      - "src/live_boundary/mega_pr03_live_authorization_gate.py"
       - "tests/test_mega_pr03_live_authorization_gate.py"
       - "docs/mega_pr03_live_authorization_boundary.md"
       - ".github/workflows/mega-pr03-live-authorization-boundary.yml"
@@ -33,7 +33,7 @@ jobs:
       - name: Compile MEGA-PR-03 surface
         run: |
           python -m py_compile \
-            src/submission/mega_pr03_live_authorization_gate.py \
+            src/live_boundary/mega_pr03_live_authorization_gate.py \
             tests/test_mega_pr03_live_authorization_gate.py
       - name: Run focused MEGA-PR-03 tests
         run: python -m pytest -q tests/test_mega_pr03_live_authorization_gate.py

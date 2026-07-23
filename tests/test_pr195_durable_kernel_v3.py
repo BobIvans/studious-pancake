@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 
 import pytest
@@ -60,12 +61,7 @@ def test_pr195_live_or_sender_enablement_is_rejected_even_with_complete_claim() 
 
 def test_pr195_webhook_ack_requires_all_intake_proofs() -> None:
     almost = complete_offline_claim(evidence_refs=("evidence/pr195/intake.json",))
-    claim = PR195DurableKernelClaim(
-        **{
-            **almost.__dict__,
-            "webhook_ack_after_durable_commit": False,
-        }
-    )
+    claim = replace(almost, webhook_ack_after_durable_commit=False)
 
     report = evaluate_pr195_durable_kernel(claim)
     intake = next(
@@ -89,12 +85,7 @@ def test_pr195_webhook_ack_requires_all_intake_proofs() -> None:
 
 def test_pr195_chain_identity_must_not_include_payload_hash() -> None:
     almost = complete_offline_claim(evidence_refs=("evidence/pr195/webhook.json",))
-    claim = PR195DurableKernelClaim(
-        **{
-            **almost.__dict__,
-            "chain_identity_excludes_payload_hash": False,
-        }
-    )
+    claim = replace(almost, chain_identity_excludes_payload_hash=False)
 
     report = evaluate_pr195_durable_kernel(claim)
     identity = next(
@@ -110,12 +101,10 @@ def test_pr195_chain_identity_must_not_include_payload_hash() -> None:
 
 def test_pr195_capital_authority_requires_serializable_wallet_fencing() -> None:
     almost = complete_offline_claim(evidence_refs=("evidence/pr195/capital.json",))
-    claim = PR195DurableKernelClaim(
-        **{
-            **almost.__dict__,
-            "capital_reservation_serializable": False,
-            "negative_headroom_latches": False,
-        }
+    claim = replace(
+        almost,
+        capital_reservation_serializable=False,
+        negative_headroom_latches=False,
     )
 
     report = evaluate_pr195_durable_kernel(claim)

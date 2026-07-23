@@ -1,0 +1,99 @@
+name: Finalize verified PR-03 hardening
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  finalize:
+    if: github.head_ref == 'roadmap-pr-03-fix-runner'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap-pr-03-rooted-provider-admission
+          path: feature
+          fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          ref: roadmap-pr-03-fix-runner
+          path: runner
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - working-directory: feature
+        run: python -m pip install --requirement requirements.txt
+      - working-directory: feature
+        run: python -m pip install --requirement requirements-dev.txt
+      - name: Apply hardening and typed constructor fix
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          lines = Path('runner/.github/workflows/pr03-fix-runner.yml').read_text().splitlines()
+          start = next(i for i, line in enumerate(lines) if line.strip() == "python - <<'PY'") + 1
+          end = next(i for i in range(start, len(lines)) if lines[i].strip() == 'PY')
+          script = '\n'.join(line[10:] if line.startswith('          ') else line for line in lines[start:end]) + '\n'
+          Path('/tmp/pr03-harden.py').write_text(script)
+          PY
+          cd feature
+          python /tmp/pr03-harden.py
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path('src/providers/rooted_ingestion_pr03.py')
+          source = path.read_text()
+          old = '        return VerifiedProviderEvent(authentication_mac=mac, **unsigned)\n'
+          new = '''        return VerifiedProviderEvent(
+              event_id=event.event_id,
+              delivery_id=event.delivery_id,
+              webhook_id=event.webhook_id,
+              signature=event.signature,
+              slot=event.slot,
+              payload_hash=event.payload_hash,
+              raw_evidence_ref=(
+                  "sqlite://helius_event_inbox/dedup_key/" + event.event_id
+              ),
+              cluster_genesis=self.expected_genesis,
+              rooted_slot=rooted_slot,
+              release_id=self.release_id,
+              policy_bundle_hash=self.policy_bundle_hash,
+              provider_admission_hash=admission.evidence_hash,
+              provider_endpoint_identity_hash=admission.endpoint_identity_hash,
+              rpc_quorum_hash=quorum.evidence_hash,
+              verifier_trust_anchor_id=self.authenticator.trust_anchor_id,
+              issued_at_ns=now_ns,
+              expires_at_ns=now_ns + self.evidence_ttl_ns,
+              schema=PR03_EVIDENCE_SCHEMA,
+              authentication_mac=mac,
+          )
+          '''
+          if source.count(old) != 1:
+              raise SystemExit('typed constructor anchor missing')
+          path.write_text(source.replace(old, new, 1))
+          PY
+      - name: Black
+        working-directory: feature
+        run: |
+          python -m black src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
+          python -m black --check src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
+      - name: Mypy
+        working-directory: feature
+        run: python -m mypy --config-file mypy.ini src/providers/rooted_ingestion_pr03.py
+      - name: Focused tests
+        working-directory: feature
+        run: python -m pytest tests/test_rooted_ingestion_pr03.py -q --disable-socket --allow-unix-socket
+      - name: Compile
+        working-directory: feature
+        run: python -m compileall -q src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
+      - name: Commit verified changes
+        working-directory: feature
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src/providers/rooted_ingestion_pr03.py tests/test_rooted_ingestion_pr03.py
+          git commit -m 'PR-03: enforce evidence expiry and authenticated bindings'
+          git push origin HEAD:roadmap-pr-03-rooted-provider-admission

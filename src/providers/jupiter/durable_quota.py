@@ -101,7 +101,8 @@ class DurableJupiterQuotaManager(JupiterQuotaManager):
 
     @staticmethod
     def _commit(connection: sqlite3.Connection) -> None:
-        connection.execute("COMMIT")
+        if connection.in_transaction:
+            connection.execute("COMMIT")
 
     @staticmethod
     def _rollback(connection: sqlite3.Connection) -> None:

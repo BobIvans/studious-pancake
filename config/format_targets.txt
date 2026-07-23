@@ -153,3 +153,5 @@ tests/test_pr201_authorization_replay.py
 src/authority_map.py
 scripts/validate_authority_map.py
 tests/test_pr01_authority_map.py
+src/providers/rooted_ingestion_pr03.py
+tests/test_rooted_ingestion_pr03.py

@@ -69,6 +69,11 @@ check, authoritative verifier, required-control validation, authority-map
 validation, and focused compatibility suite all completed successfully before
 the review-ready CI run.
 
+The full repository mypy gate also passes after preserving the historical
+superclass method signatures and validating JSON-derived revision and lamport
+values before typed comparison. The compatibility fix does not weaken the
+PR-206 requirement for principal-bound semantic identity on terminal release.
+
 ## Rollback boundary
 
 The migration is additive and preserves all PR-195 rows and immutable events.

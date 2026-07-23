@@ -3,6 +3,7 @@ name: MPR-CLOSE-27 real release evidence
 on:
   pull_request:
     paths:
+      - pyproject.toml
       - flashloan_release_evidence.py
       - src/release_gate/mpr27_real_evidence.py
       - tests/test_mpr_close_27_real_evidence.py

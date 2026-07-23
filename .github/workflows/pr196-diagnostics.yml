@@ -1,9 +1,15 @@
 name: PR-196 verifier diagnostics
 
 on:
-  push:
+  pull_request:
     branches:
-      - roadmap/pr-196-durable-runtime-kernel
+      - main
+    paths:
+      - "src/durability/runtime_kernel_pr196.py"
+      - "tests/test_pr196_durable_runtime_kernel.py"
+      - "mypy.ini"
+      - "config/format_targets.txt"
+      - ".github/workflows/pr196-diagnostics.yml"
 
 permissions:
   contents: read

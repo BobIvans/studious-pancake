@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools==83.0.0", "wheel==0.47.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "studious-pancake-isolated-signer"
+version = "0.1.0.dev0"
+description = "Fail-closed isolated signer and durable submission boundary"
+requires-python = ">=3.13,<3.14"
+dependencies = []
+classifiers = [
+  "Development Status :: 2 - Pre-Alpha",
+  "Private :: Do Not Upload",
+  "Programming Language :: Python :: 3.13",
+]
+
+[project.scripts]
+flashloan-isolated-signer = "flashloan_isolated_signer.service:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["flashloan_isolated_signer*"]
+
+[tool.black]
+target-version = ["py313"]
+line-length = 88

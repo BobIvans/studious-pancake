@@ -1,0 +1,48 @@
+name: PR-04 repeated installed paper service
+
+on:
+  pull_request:
+    paths:
+      - "src/cli.py"
+      - "src/paper_shadow/repeated_service_pr04.py"
+      - "tests/test_pr04_repeated_installed_paper_service.py"
+      - "docs/pr04_repeated_installed_paper_service.md"
+      - "config/format_targets.txt"
+      - ".github/workflows/pr04-repeated-installed-paper-service.yml"
+  push:
+    branches:
+      - pr-04-repeated-installed-paper-service
+
+permissions:
+  contents: read
+
+jobs:
+  focused-verification:
+    runs-on: ubuntu-24.04
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - run: >-
+          python -m black --check
+          src/cli.py
+          src/paper_shadow/repeated_service_pr04.py
+          tests/test_pr04_repeated_installed_paper_service.py
+      - run: >-
+          python -m mypy
+          src/paper_shadow/repeated_service_pr04.py
+      - run: >-
+          python -m pytest -q
+          tests/test_pr04_repeated_installed_paper_service.py
+          tests/test_mega_pr_a3_installed_durable_paper_service.py
+      - run: >-
+          python -m compileall -q
+          src/cli.py
+          src/paper_shadow/repeated_service_pr04.py

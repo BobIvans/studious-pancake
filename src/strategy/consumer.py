@@ -35,35 +35,27 @@ class OpportunityPrecheck(Protocol):
 
 
 class ConfiguredCapitalPrecheck:
-    """Fail-closed, config-only precheck pending the PR-032 capital engine merge."""
+    """Fail-closed PR-199 economic precheck for shadow candidates.
+
+    The legacy implementation compared ``gross_profit_base_units`` directly
+    with lamport-denominated policy values. PR-199 replaces that with a
+    native/wSOL-only, fee/rent/tip/protocol-cost-bound capital gate while
+    preserving the historical weak-edge rejection code for existing telemetry.
+    """
 
     def __init__(self, config: Any = None) -> None:
         self.config = config
 
     async def assess(self, opportunity: Opportunity) -> PrecheckDecision:
-        monetary = getattr(self.config, "monetary", None)
-        minimum_profit = int(getattr(monetary, "minimum_net_profit_lamports", 0))
-        contingency = int(getattr(monetary, "contingency_lamports", 0))
-        gross_profit = int(opportunity.metadata.get("gross_profit_base_units", 0))
-        required_edge = minimum_profit + contingency
-        if gross_profit <= required_edge:
-            return PrecheckDecision(
-                allowed=False,
-                reason_code="no_trade_insufficient_prechecked_edge",
-                details={
-                    "gross_profit_base_units": gross_profit,
-                    "minimum_net_profit_lamports": minimum_profit,
-                    "contingency_lamports": contingency,
-                    "required_edge_lamports": required_edge,
-                },
-            )
+        from src.economics.execution_vertical_pr199 import (
+            assess_shadow_opportunity_pr199,
+        )
+
+        report = assess_shadow_opportunity_pr199(opportunity, self.config)
         return PrecheckDecision(
-            allowed=True,
-            reason_code="capital_precheck_passed",
-            details={
-                "gross_profit_base_units": gross_profit,
-                "required_edge_lamports": required_edge,
-            },
+            allowed=report.allowed,
+            reason_code=report.reason_code,
+            details=dict(report.details),
         )
 
 

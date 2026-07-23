@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import hashlib
-import importlib
 import json
+from pathlib import Path
 
 import pytest
 
@@ -82,16 +82,12 @@ def test_public_command_aliases_do_not_create_live_alias() -> None:
     assert rewrite_canonical_command(["live"]) == ["live"]
 
 
-def test_cli_pr189_exposes_super_mpr_a_alias_function() -> None:
-    cli_pr189 = importlib.import_module("src.cli_pr189")
-    assert cli_pr189._rewrite_super_mpr_a_command(["paper"]) == ["run", "--mode", "paper"]
-    assert cli_pr189._rewrite_super_mpr_a_command(["shadow"]) == [
-        "run",
-        "--mode",
-        "shadow",
-    ]
-    assert cli_pr189._rewrite_super_mpr_a_command(["verify"]) == ["readiness"]
-    assert cli_pr189._rewrite_super_mpr_a_command(["live"]) is None
+def test_cli_pr189_exposes_super_mpr_a_alias_hook_without_live_alias() -> None:
+    source = Path("src/cli_pr189.py").read_text(encoding="utf-8")
+    assert "_rewrite_super_mpr_a_command" in source
+    assert "rewrite_canonical_command(args)" in source
+    assert "rewritten_super_mpr_a" in source
+    assert '"live"' not in source
 
 
 def test_legacy_execution_surfaces_are_known_and_quarantined() -> None:

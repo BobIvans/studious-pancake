@@ -117,3 +117,52 @@ jobs:
             --disable-socket --allow-unix-socket -q
       - name: Require clean source tree
         run: test -z "$(git status --porcelain)"
+
+  mandatory-focused-split:
+    name: mandatory-focused-${{ matrix.group }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - group: a
+            files: >-
+              tests/test_pr01_authority_map.py
+              tests/test_pr023_runtime_truth.py
+              tests/test_launcher_startup_smoke.py
+              tests/test_import_smoke.py
+              tests/test_quality_quarantine.py
+          - group: b
+            files: >-
+              tests/test_pr087_package_boundary.py
+              tests/test_pr101_marginfi_complete_protocol_evidence.py
+              tests/test_pr106_canonical_sender_lifecycle_disabled.py
+              tests/test_pr115_simulation_owned_economic_proof.py
+              tests/test_pr116_coherent_marginfi_snapshot_oracle.py
+          - group: c
+            files: >-
+              tests/test_pr121_single_durable_lifecycle_truth.py
+              tests/test_pr120_secret_resolver_config_jito.py
+              tests/test_pr125_lst_governance_policy.py
+              tests/test_pr136_rooted_rpc_quorum.py
+              tests/test_pr140_data_lineage_quarantine.py
+          - group: d
+            files: >-
+              tests/test_pr194_trusted_foundation.py
+              tests/test_pr195_durable_webhook_intake.py
+              tests/test_pr200_production_cutover.py
+              tests/test_pr195_durable_kernel_v3.py
+              tests/test_pr206_durable_state.py
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install repository dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Run focused group ${{ matrix.group }}
+        run: python -m pytest ${{ matrix.files }} -q --disable-socket --allow-unix-socket

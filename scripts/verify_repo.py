@@ -34,6 +34,11 @@ PACKAGE_SMOKE_COMMAND: Final[list[str]] = [
     "scripts/package_smoke.py",
 ]
 
+VERIFY_PR194_REQUIRED_CONTROLS_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr194_required_controls.py",
+]
+
 # Public by design: tests inspect the final offline pytest command.
 COMMANDS: Final[list[list[str]]] = [
     [
@@ -153,6 +158,7 @@ def main() -> int:
     run(quality_command)
     run(AUTHORITY_COMMAND)
     run(PACKAGE_SMOKE_COMMAND)
+    run(VERIFY_PR194_REQUIRED_CONTROLS_COMMAND)
 
     for command in COMMANDS[1:]:
         run(command)

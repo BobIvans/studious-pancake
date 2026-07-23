@@ -1,0 +1,48 @@
+name: PR-212 O1 management evidence
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/observability/active_management.py"
+      - "src/observability/management_plane_pr170.py"
+      - "src/release_gate/materialized_evidence.py"
+      - "tests/test_o1_management_evidence_pipeline.py"
+      - ".github/workflows/pr212-o1-management-evidence.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-verification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install repository dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Compile O1 management evidence files
+        run: |
+          python -m compileall -q \
+            src/observability/active_management.py \
+            src/observability/management_plane_pr170.py \
+            src/release_gate/materialized_evidence.py \
+            tests/test_o1_management_evidence_pipeline.py
+      - name: Run PR-212 O1 focused tests
+        run: |
+          python -m pytest \
+            tests/test_o1_management_evidence_pipeline.py \
+            -q --disable-socket --allow-unix-socket

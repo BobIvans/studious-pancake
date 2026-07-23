@@ -43,6 +43,13 @@ pr196.protocol-account-conformance-v3.v1
 | `JUPITER_BUILD_ALT_BLOCKHASH_CONTRACT` | F-111…F-115 |
 | `REVIEWED_CREDENTIALED_CONFORMANCE_FIXTURES` | F-116…F-123 |
 
+## CI fix note
+
+The first focused workflow run reached `py_compile` successfully and failed only
+inside pytest. The focused tests now use `dataclasses.asdict()` rather than
+`claim.__dict__`, because the claim dataclass is intentionally declared with
+`slots=True` and therefore has no instance `__dict__`.
+
 ## Safety boundary
 
 This slice always preserves:

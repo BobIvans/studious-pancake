@@ -98,8 +98,14 @@ def _plan() -> AtomicPlanEvidence:
             quote_asset,
             ExactBaseUnit(2_000_000, "u64"),
         ),
-        leg_b_input=TokenAmount(quote_asset, ExactBaseUnit(2_000_010, "u64")),
-        leg_b_guaranteed_output=TokenAmount(asset, ExactBaseUnit(1_200_000, "u64")),
+        leg_b_input=TokenAmount(
+            quote_asset,
+            ExactBaseUnit(2_000_010, "u64"),
+        ),
+        leg_b_guaranteed_output=TokenAmount(
+            asset,
+            ExactBaseUnit(1_200_000, "u64"),
+        ),
         flash_repayment_lamports=ExactBaseUnit(100_000, "u64"),
         max_network_fee_lamports=ExactBaseUnit(5_000, "u64"),
         max_jito_tip_lamports=ExactBaseUnit(2_000, "u64"),
@@ -227,12 +233,18 @@ def test_plan_hash_changes_on_tip_compute_blockhash_and_alt_identity() -> None:
 def test_caller_supplied_fingerprint_and_missing_dust_accounting_block() -> None:
     plan = _plan()
 
-    with pytest.raises(PR227Error, match="PR227_CALLER_SUPPLIED_FINGERPRINT_FORBIDDEN"):
+    with pytest.raises(
+        PR227Error,
+        match="PR227_CALLER_SUPPLIED_FINGERPRINT_FORBIDDEN",
+    ):
         replace(plan, caller_sequence_fingerprint=D1)
     with pytest.raises(PR227Error, match="PR227_LEG_B_DUST_ACCOUNTING_MISSING"):
         replace(
             plan,
-            leg_b_input=TokenAmount(_other_asset(), ExactBaseUnit(1_999_999, "u64")),
+            leg_b_input=TokenAmount(
+                _other_asset(),
+                ExactBaseUnit(1_999_999, "u64"),
+            ),
         )
 
 
@@ -257,12 +269,15 @@ def test_alt_evidence_blocks_manual_inconsistent_snapshots() -> None:
         replace(_alt(), last_extended_slot_start_index=99)
 
 
-def test_simulation_envelope_requires_raw_rpc_identity_and_non_retryable_success() -> None:
+def test_simulation_envelope_requires_raw_rpc_identity_and_success() -> None:
     plan = _plan()
 
     with pytest.raises(PR227Error, match="PR227_JSONRPC_VERSION_MISMATCH"):
         replace(_simulation(plan), jsonrpc_version="1.0")
-    with pytest.raises(PR227Error, match="PR227_RETRYABLE_SIMULATION_ERROR_NOT_AUTHORITY"):
+    with pytest.raises(
+        PR227Error,
+        match="PR227_RETRYABLE_SIMULATION_ERROR_NOT_AUTHORITY",
+    ):
         replace(_simulation(plan), retryable_error=True)
     with pytest.raises(PR227Error):
         replace(_simulation(plan), sig_verify=1)  # type: ignore[arg-type]

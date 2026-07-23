@@ -50,17 +50,18 @@ merge commit/image digest.
 ## Verification
 
 ```bash
-python -m mypy --config-file mypy.ini src/operations/pr201_observability_readiness.py
 python -m pytest -q tests/test_pr201_observability_readiness.py --disable-socket --allow-unix-socket
 python -m py_compile \
   src/operations/pr201_observability_readiness.py \
   tests/test_pr201_observability_readiness.py
 ```
 
-Formatter enrollment is intentionally not added to `config/format_targets.txt`
-in this PR because that manifest is the highest-conflict parallel-roadmap
-hotspot. PR-194 remains the right vertical for full production-surface quality
-baseline expansion.
+Focused CI intentionally runs behavior and compile gates only. `src/operations`
+is not part of the current repository mypy production target; full typecheck and
+formatter enrollment for this new surface belong to PR-194's production-surface
+quality baseline expansion. This keeps PR-201 from repeatedly conflicting on
+shared `mypy.ini` and `config/format_targets.txt` while parallel roadmap PRs are
+landing.
 
 ## Rollback
 

@@ -1,0 +1,33 @@
+name: PR-195 Durable Kernel V3
+
+on:
+  pull_request:
+    paths:
+      - src/pr195_durable_kernel_v3.py
+      - tests/test_pr195_durable_kernel_v3.py
+      - docs/pr195_v3_durable_kernel_intake_capital.md
+      - .github/workflows/pr195-durable-kernel-v3.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pr195-durable-kernel-v3:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - name: Install test dependencies
+        run: python -m pip install pytest==9.0.2
+      - name: Compile PR-195 durable kernel files
+        run: >-
+          python -m py_compile
+          src/pr195_durable_kernel_v3.py
+          tests/test_pr195_durable_kernel_v3.py
+      - name: Run PR-195 durable kernel focused tests
+        run: python -m pytest -q tests/test_pr195_durable_kernel_v3.py

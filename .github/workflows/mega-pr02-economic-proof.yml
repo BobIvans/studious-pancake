@@ -17,7 +17,7 @@ on:
       - ".github/workflows/mega-pr02-economic-proof.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: mega-pr02-economic-proof-${{ github.ref }}
@@ -35,8 +35,6 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: mega-pr-02-economic-proof-qualification
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
@@ -47,43 +45,6 @@ jobs:
             pytest==9.0.2 \
             mypy==1.18.2 \
             solders==0.28.0
-      - name: Apply explicit observation variable names
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          path = Path("src/execution/economic_reconciliation/mega_pr02_proof.py")
-          source = path.read_text(encoding="utf-8")
-          old = '''        for observation in evidence.native:
-              self._require_decoded_hash(
-                  raw_accounts[observation.address], decoded_observation_hash(observation)
-              )
-          for observation in evidence.tokens:
-              self._require_decoded_hash(
-                  raw_accounts[observation.address], decoded_observation_hash(observation)
-              )
-  '''
-          new = '''        for native_observation in evidence.native:
-              self._require_decoded_hash(
-                  raw_accounts[native_observation.address],
-                  decoded_observation_hash(native_observation),
-              )
-          for token_observation in evidence.tokens:
-              self._require_decoded_hash(
-                  raw_accounts[token_observation.address],
-                  decoded_observation_hash(token_observation),
-              )
-  '''
-          if old not in source:
-              raise SystemExit("target block not found")
-          path.write_text(source.replace(old, new, 1), encoding="utf-8")
-          PY
-      - name: Commit decoded binding source fix
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add src/execution/economic_reconciliation/mega_pr02_proof.py
-          git commit -m "MEGA-PR-02: make decoded binding mypy-clean"
-          git push origin HEAD:mega-pr-02-economic-proof-qualification
       - name: Compile MEGA-PR-02 proof boundary
         run: |
           python -m py_compile \

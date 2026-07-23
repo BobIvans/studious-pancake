@@ -1,6 +1,0 @@
-Traceback (most recent call last):
-  File "/home/runner/work/studious-pancake/studious-pancake/scripts/package_smoke.py", line 16, in <module>
-    from src.production_surface import (
-    ...<3 lines>...
-    )
-ModuleNotFoundError: No module named 'src'

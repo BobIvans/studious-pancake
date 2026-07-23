@@ -4,16 +4,22 @@ on:
   pull_request:
     paths:
       - "src/execution/economic_reconciliation/mega_pr02_proof.py"
+      - "src/execution/finalized_message_evidence_mega_pr02.py"
       - "tests/execution/test_mega_pr02_economic_proof.py"
+      - "tests/execution/test_mega_pr02_v5_finalized_message_evidence.py"
       - "docs/mega_pr02_economic_proof_qualification.md"
+      - "docs/mega_pr02_v5_finalized_message_evidence.md"
       - ".github/workflows/mega-pr02-economic-proof.yml"
   push:
     branches:
       - "mega-pr-02-*"
     paths:
       - "src/execution/economic_reconciliation/mega_pr02_proof.py"
+      - "src/execution/finalized_message_evidence_mega_pr02.py"
       - "tests/execution/test_mega_pr02_economic_proof.py"
+      - "tests/execution/test_mega_pr02_v5_finalized_message_evidence.py"
       - "docs/mega_pr02_economic_proof_qualification.md"
+      - "docs/mega_pr02_v5_finalized_message_evidence.md"
       - ".github/workflows/mega-pr02-economic-proof.yml"
 
 permissions:
@@ -45,12 +51,20 @@ jobs:
             pytest==9.0.2 \
             mypy==1.18.2 \
             solders==0.28.0
-      - name: Compile MEGA-PR-02 proof boundary
+      - name: Compile MEGA-PR-02 proof boundaries
         run: |
           python -m py_compile \
             src/execution/economic_reconciliation/mega_pr02_proof.py \
-            tests/execution/test_mega_pr02_economic_proof.py
-      - name: Type-check MEGA-PR-02 proof boundary
-        run: python -m mypy --config-file mypy.ini src/execution/economic_reconciliation/mega_pr02_proof.py
+            src/execution/finalized_message_evidence_mega_pr02.py \
+            tests/execution/test_mega_pr02_economic_proof.py \
+            tests/execution/test_mega_pr02_v5_finalized_message_evidence.py
+      - name: Type-check MEGA-PR-02 proof boundaries
+        run: |
+          python -m mypy --config-file mypy.ini \
+            src/execution/economic_reconciliation/mega_pr02_proof.py \
+            src/execution/finalized_message_evidence_mega_pr02.py
       - name: Run MEGA-PR-02 proof tests
-        run: python -m pytest -q tests/execution/test_mega_pr02_economic_proof.py
+        run: |
+          python -m pytest -q \
+            tests/execution/test_mega_pr02_economic_proof.py \
+            tests/execution/test_mega_pr02_v5_finalized_message_evidence.py

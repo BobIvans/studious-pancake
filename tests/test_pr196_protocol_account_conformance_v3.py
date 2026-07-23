@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import asdict
 import json
 
 import pytest
@@ -90,7 +91,7 @@ def test_pr196_chain_identity_requirement_lists_v3_findings() -> None:
     almost = complete_offline_claim(evidence_refs=("evidence/pr196/chain.json",))
     claim = PR196ProtocolConformanceClaim(
         **{
-            **almost.__dict__,
+            **asdict(almost),
             "false_token_2022_literals_rejected": False,
             "native_sol_and_wsol_are_distinct_types": False,
         }
@@ -115,7 +116,7 @@ def test_pr196_provider_boundary_requires_transport_dns_retry_and_quota() -> Non
     almost = complete_offline_claim(evidence_refs=("evidence/pr196/provider.json",))
     claim = PR196ProtocolConformanceClaim(
         **{
-            **almost.__dict__,
+            **asdict(almost),
             "dns_public_ip_pinning": False,
             "retry_quota_budget_is_typed_and_shared": False,
         }

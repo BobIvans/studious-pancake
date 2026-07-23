@@ -48,6 +48,26 @@ def _string_sequence(value: object, *, field: str) -> tuple[str, ...]:
     return tuple(value)
 
 
+def _mapping_sequence(value: object, *, field: str) -> tuple[Mapping[str, Any], ...]:
+    if not isinstance(value, list):
+        raise ProductionSurfaceError(f"manifest field {field!r} must be an object list")
+    items: list[Mapping[str, Any]] = []
+    for item in value:
+        if not isinstance(item, Mapping):
+            raise ProductionSurfaceError(
+                f"manifest field {field!r} must be an object list"
+            )
+        items.append(cast(Mapping[str, Any], item))
+    return tuple(items)
+
+
+def _required_string(item: Mapping[str, Any], field: str) -> str:
+    value = item.get(field)
+    if not isinstance(value, str) or not value:
+        raise ProductionSurfaceError(f"manifest field {field!r} must be a string")
+    return value
+
+
 def required_wheel_members(manifest: Mapping[str, Any] | None = None) -> frozenset[str]:
     """Return files that must be present in every production wheel."""
 
@@ -73,6 +93,85 @@ def required_entrypoints(manifest: Mapping[str, Any] | None = None) -> dict[str,
             "manifest field 'entrypoints' must be a string map"
         )
     return dict(cast(Mapping[str, str], entrypoints))
+
+
+def required_controls(
+    manifest: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, str], ...]:
+    """Return PR-194 required controls that must be packaged and reachable."""
+
+    manifest = manifest or load_manifest()
+    controls: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for index, item in enumerate(
+        _mapping_sequence(manifest.get("required_controls"), field="required_controls")
+    ):
+        control_id = _required_string(item, "id")
+        if control_id in seen:
+            raise ProductionSurfaceError(
+                f"duplicate required control id: {control_id!r}"
+            )
+        seen.add(control_id)
+        control = {
+            "id": control_id,
+            "module": _required_string(item, "module"),
+            "wheel_member": _required_string(item, "wheel_member"),
+            "category": _required_string(item, "category"),
+        }
+        entrypoint = item.get("entrypoint")
+        if entrypoint is not None:
+            if not isinstance(entrypoint, str) or not entrypoint:
+                raise ProductionSurfaceError(
+                    f"manifest field 'required_controls[{index}].entrypoint' "
+                    "must be a string"
+                )
+            control["entrypoint"] = entrypoint
+        controls.append(control)
+    return tuple(controls)
+
+
+def required_control_modules(
+    manifest: Mapping[str, Any] | None = None,
+) -> frozenset[str]:
+    """Return modules that are required to remain reachable controls."""
+
+    return frozenset(control["module"] for control in required_controls(manifest))
+
+
+def required_control_wheel_members(
+    manifest: Mapping[str, Any] | None = None,
+) -> frozenset[str]:
+    """Return wheel members that back required PR-194 controls."""
+
+    return frozenset(control["wheel_member"] for control in required_controls(manifest))
+
+
+def blocked_command_contracts(
+    manifest: Mapping[str, Any] | None = None,
+) -> tuple[dict[str, str], ...]:
+    """Return CLI commands that must keep blocked/misconfigured states non-zero."""
+
+    manifest = manifest or load_manifest()
+    contracts: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for item in _mapping_sequence(
+        manifest.get("blocked_command_contracts"),
+        field="blocked_command_contracts",
+    ):
+        command = _required_string(item, "command")
+        if command in seen:
+            raise ProductionSurfaceError(
+                f"duplicate blocked command contract: {command!r}"
+            )
+        seen.add(command)
+        contracts.append(
+            {
+                "command": command,
+                "expected_exit": _required_string(item, "expected_exit"),
+                "reason": _required_string(item, "reason"),
+            }
+        )
+    return tuple(contracts)
 
 
 def forbidden_wheel_paths(manifest: Mapping[str, Any] | None = None) -> frozenset[str]:

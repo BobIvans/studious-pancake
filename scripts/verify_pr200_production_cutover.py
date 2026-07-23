@@ -256,8 +256,7 @@ def _validate_slo_budgets(manifest: dict[str, Any]) -> None:
         "event loop lag p99 budget must be positive",
     )
     _require(
-        _dict(budgets, "unknown_submission_count_before_promotion").get("max")
-        == 0,
+        _dict(budgets, "unknown_submission_count_before_promotion").get("max") == 0,
         "UNKNOWN submissions must be zero before promotion",
     )
     _require(

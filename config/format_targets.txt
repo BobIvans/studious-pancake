@@ -161,3 +161,6 @@ isolated_signer_service/src/flashloan_isolated_signer/store.py
 isolated_signer_service/src/flashloan_isolated_signer/boundary.py
 isolated_signer_service/src/flashloan_isolated_signer/service.py
 tests/test_roadmap_pr08_isolated_signer_foundation.py
+src/durability/unified_authority_pr02.py
+tests/test_pr02_unified_lifecycle_authority.py
+src/paper_shadow/durable_service_a3.py

@@ -1,8 +1,8 @@
-"""MEGA-PR A3 installed durable sender-free paper service.
+"""Installed sender-free paper service backed by the roadmap PR-02 authority.
 
-The installed paper command now records one transactional SQLite service cycle.
-The default source stays fail-closed until B3 provides verified exact-attempt
-work; no sender, signer, live, RPC, or fake settlement surface is enabled here.
+The former A3 cycle/outbox tables are retained only as compatibility projections.
+The authoritative intent, terminal record, ownership lease, and outbox event are
+committed by :class:`UnifiedLifecycleAuthority` in the PR-041/PR-182 database.
 """
 
 from __future__ import annotations
@@ -14,59 +14,25 @@ from enum import StrEnum
 import hashlib
 import json
 from pathlib import Path
-import sqlite3
 import time
-from typing import Any
 
 from src.config.runtime import RuntimeConfig
+from src.durability.unified_authority_pr02 import (
+    AuthorityFence,
+    UnifiedLifecycleAuthority,
+)
 from src.paper_shadow.a2_exact_attempt_runtime import (
     A2PaperOutcomeStatus,
     ExactAttemptRuntimeReport,
 )
 
-A3_SCHEMA = "mega-pr-a3.installed-durable-paper-service.v1"
+A3_SCHEMA = "roadmap-pr02.a3-compatibility-projection.v1"
 A3_DEFAULT_DB_PATH = Path(".runtime/paper-service.sqlite3")
 A3_DEFAULT_OWNER_ID = "installed-durable-paper-service"
 A3_B3_EVIDENCE_MISSING = "blocked_a3_b3_provider_evidence_missing"
 A3_RUNTIME_UNWIRED = "blocked_a3_exact_attempt_runtime_unwired"
 A3_RUNTIME_TIMEOUT = "blocked_a3_global_cycle_deadline_exceeded"
-
-_SCHEMA = """
-CREATE TABLE IF NOT EXISTS a3_paper_service_cycles(
- cycle_id TEXT PRIMARY KEY,
- run_id TEXT NOT NULL,
- sequence INTEGER NOT NULL CHECK(sequence>=1),
- schema_version TEXT NOT NULL,
- status TEXT NOT NULL,
- terminal_reason TEXT NOT NULL,
- ready_for_next_cycle INTEGER NOT NULL CHECK(ready_for_next_cycle IN (0,1)),
- provider_evidence_hash TEXT NOT NULL,
- report_hash TEXT NOT NULL,
- source_surface TEXT NOT NULL,
- owner_id TEXT NOT NULL,
- fencing_token INTEGER NOT NULL CHECK(fencing_token>=1),
- lease_expires_at_ns INTEGER NOT NULL,
- started_at_ns INTEGER NOT NULL,
- completed_at_ns INTEGER NOT NULL,
- sender_imported INTEGER NOT NULL CHECK(sender_imported IN (0,1)),
- submission_allowed INTEGER NOT NULL CHECK(submission_allowed IN (0,1)),
- live_enabled INTEGER NOT NULL CHECK(live_enabled IN (0,1)),
- report_json TEXT NOT NULL,
- UNIQUE(run_id, sequence)
-);
-CREATE TABLE IF NOT EXISTS a3_paper_service_outbox(
- outbox_id INTEGER PRIMARY KEY,
- cycle_id TEXT NOT NULL UNIQUE
-  REFERENCES a3_paper_service_cycles(cycle_id) ON DELETE RESTRICT,
- topic TEXT NOT NULL,
- payload_json TEXT NOT NULL,
- status TEXT NOT NULL DEFAULT 'pending',
- owner_id TEXT NOT NULL,
- fencing_token INTEGER NOT NULL CHECK(fencing_token>=1),
- created_at_ns INTEGER NOT NULL,
- completed_at_ns INTEGER
-);
-"""
+A3_BATCH_SOURCE_FAILED = "blocked_a3_batch_source_failed"
 
 
 class A3PaperServiceStatus(StrEnum):
@@ -173,6 +139,10 @@ class InstalledDurablePaperServiceReport:
                 raise ValueError(
                     "unsafe sender/submission evidence must be indeterminate"
                 )
+        if not _is_sha256(self.provider_evidence_hash):
+            raise ValueError("provider_evidence_hash must be lowercase sha256")
+        if not _is_sha256(self.report_hash):
+            raise ValueError("report_hash must be lowercase sha256")
         object.__setattr__(self, "records", _record_tuple(self.records))
         object.__setattr__(self, "b3_blockers", _dedupe(self.b3_blockers))
 
@@ -201,7 +171,7 @@ A3RuntimeCycle = Callable[[str, Sequence[object]], Awaitable[ExactAttemptRuntime
 
 
 class InstalledDurablePaperService:
-    """One installed, transactional, sender-free paper-mode service."""
+    """Installed paper service using the single PR-02 SQLite authority."""
 
     def __init__(
         self,
@@ -211,39 +181,97 @@ class InstalledDurablePaperService:
         batch_source: ExactAttemptBatchSource | None = None,
         runtime_cycle: A3RuntimeCycle | None = None,
         clock_ns: Callable[[], int] = time.time_ns,
+        authority: UnifiedLifecycleAuthority | None = None,
     ) -> None:
         self.runtime_config = config
         self.config = service_config or InstalledPaperServiceConfig()
         self.batch_source = batch_source or self._default_blocked_batch
         self.runtime_cycle = runtime_cycle
+        # Retained for constructor compatibility. Correctness-sensitive ownership
+        # is read by the injected/default TimeAuthority inside PR-02.
         self.clock_ns = clock_ns
-        self.db = _connect(self.config.db_path)
-        self.db.executescript(_SCHEMA)
+        identity = _config_identity(config)
+        self.authority = authority or UnifiedLifecycleAuthority(
+            self.config.db_path,
+            release_digest=identity,
+            policy_bundle_hash=identity,
+            owner_id=self.config.owner_id,
+            lease_ttl_ns=self.config.lease_ttl_ns,
+            environment=_runtime_environment(config),
+            cluster_genesis=_cluster_genesis(config),
+        )
+        self._owns_authority = authority is None
+
+    def close(self) -> None:
+        if self._owns_authority:
+            self.authority.close()
+
+    def __enter__(self) -> "InstalledDurablePaperService":
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        self.close()
 
     async def run_once(self) -> InstalledDurablePaperServiceReport:
-        sequence = self._next_sequence()
-        started_at_ns = self.clock_ns()
-        cycle_id = self._cycle_id(sequence, started_at_ns)
-        batch = self.batch_source()
-        report = await self._report_for_batch(cycle_id, sequence, batch)
-        self._commit_report(
-            report,
-            started_at_ns=started_at_ns,
-            completed_at_ns=self.clock_ns(),
+        sequence = self.authority.next_cycle_sequence(self.config.run_id)
+        cycle_id = self._cycle_id(sequence)
+        fence = self.authority.begin_cycle_intent(
+            run_id=self.config.run_id,
+            sequence=sequence,
+            config_fingerprint=_safe_config_fingerprint(self.runtime_config),
+            source_surface=self.config.source_surface,
         )
+        try:
+            batch = self.batch_source()
+        except Exception as exc:
+            report = self._indeterminate_report(
+                cycle_id,
+                sequence,
+                A3ProviderEvidenceState(
+                    provider_evidence_hash=_hash_json(
+                        {"cycle_id": cycle_id, "source": "batch-source"}
+                    ),
+                    ready=False,
+                    blockers=(A3_BATCH_SOURCE_FAILED,),
+                ),
+                f"{A3_BATCH_SOURCE_FAILED}_{type(exc).__name__}",
+            )
+            self._commit(fence, report)
+            return report
+        self.authority.bind_provider_evidence(
+            fence,
+            provider_evidence_hash=batch.evidence.provider_evidence_hash,
+        )
+        report = await self._report_for_batch(cycle_id, sequence, batch)
+        self._commit(fence, report)
         return report
 
     def recovery_state(self) -> tuple[Mapping[str, object], ...]:
-        rows = self.db.execute(
-            "SELECT cycle_id,status,terminal_reason,owner_id,fencing_token,"
-            "lease_expires_at_ns FROM a3_paper_service_cycles "
-            "ORDER BY sequence"
-        ).fetchall()
-        return tuple(dict(row) for row in rows)
+        return tuple(self.authority.recovery_summary())
+
+    def _commit(
+        self,
+        fence: AuthorityFence,
+        report: InstalledDurablePaperServiceReport,
+    ) -> None:
+        self.authority.commit_cycle_terminal(
+            fence,
+            outcome=report.status.value,
+            reason_code=report.terminal_reason,
+            report_hash=report.report_hash,
+            report_payload=report.to_dict(),
+            provider_evidence_hash=report.provider_evidence_hash,
+            ready_for_next_cycle=report.ready_for_next_cycle,
+            source_surface=report.source_surface,
+            sender_imported=report.sender_imported,
+            submission_allowed=report.submission_allowed,
+            live_enabled=report.live_enabled,
+        )
 
     def _default_blocked_batch(self) -> A3ExactAttemptBatch:
-        evidence = A3ProviderEvidenceState.missing_b3(self.runtime_config)
-        return A3ExactAttemptBatch(evidence)
+        return A3ExactAttemptBatch(
+            A3ProviderEvidenceState.missing_b3(self.runtime_config)
+        )
 
     async def _report_for_batch(
         self,
@@ -275,11 +303,12 @@ class InstalledDurablePaperService:
     ) -> InstalledDurablePaperServiceReport:
         assert self.runtime_cycle is not None
         try:
+            operation = self.runtime_cycle(cycle_id, tuple(batch.items))
             a2_report = await asyncio.wait_for(
-                self.runtime_cycle(cycle_id, batch.items),
+                operation,
                 timeout=self.config.cycle_deadline_seconds,
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             return self._blocked_report(
                 cycle_id,
                 sequence,
@@ -356,57 +385,15 @@ class InstalledDurablePaperService:
             source_surface=self.config.source_surface,
         )
 
-    def _next_sequence(self) -> int:
-        row = self.db.execute(
-            "SELECT COALESCE(MAX(sequence), 0) + 1 AS sequence "
-            "FROM a3_paper_service_cycles"
-        ).fetchone()
-        return int(row["sequence"])
-
-    def _cycle_id(self, sequence: int, started_at_ns: int) -> str:
+    def _cycle_id(self, sequence: int) -> str:
         return _hash_json(
             {
-                "schema": A3_SCHEMA,
                 "run_id": self.config.run_id,
                 "sequence": sequence,
-                "started_at_ns": started_at_ns,
                 "config_fingerprint": _safe_config_fingerprint(self.runtime_config),
+                "source_surface": self.config.source_surface,
             }
         )
-
-    def _commit_report(
-        self,
-        report: InstalledDurablePaperServiceReport,
-        *,
-        started_at_ns: int,
-        completed_at_ns: int,
-    ) -> None:
-        report_json = _canonical_json(report.to_dict())
-        with self.db:
-            self.db.execute(
-                "INSERT INTO a3_paper_service_cycles VALUES"
-                "(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
-                _cycle_row(
-                    report,
-                    self.config,
-                    started_at_ns,
-                    completed_at_ns,
-                    report_json,
-                ),
-            )
-            self.db.execute(
-                "INSERT INTO a3_paper_service_outbox("
-                "cycle_id,topic,payload_json,owner_id,fencing_token,created_at_ns) "
-                "VALUES(?,?,?,?,?,?)",
-                (
-                    report.cycle_id,
-                    "paper.service.cycle_recorded",
-                    report_json,
-                    self.config.owner_id,
-                    1,
-                    completed_at_ns,
-                ),
-            )
 
 
 def build_installed_durable_paper_service(
@@ -416,6 +403,7 @@ def build_installed_durable_paper_service(
     batch_source: ExactAttemptBatchSource | None = None,
     runtime_cycle: A3RuntimeCycle | None = None,
     clock_ns: Callable[[], int] = time.time_ns,
+    authority: UnifiedLifecycleAuthority | None = None,
 ) -> InstalledDurablePaperService:
     service_config = InstalledPaperServiceConfig(
         db_path=Path(db_path) if db_path is not None else A3_DEFAULT_DB_PATH,
@@ -426,44 +414,7 @@ def build_installed_durable_paper_service(
         batch_source=batch_source,
         runtime_cycle=runtime_cycle,
         clock_ns=clock_ns,
-    )
-
-
-def _connect(path: Path) -> sqlite3.Connection:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    db = sqlite3.connect(path)
-    db.row_factory = sqlite3.Row
-    db.execute("PRAGMA foreign_keys=ON")
-    return db
-
-
-def _cycle_row(
-    report: InstalledDurablePaperServiceReport,
-    config: InstalledPaperServiceConfig,
-    started_at_ns: int,
-    completed_at_ns: int,
-    report_json: str,
-) -> tuple[object, ...]:
-    return (
-        report.cycle_id,
-        config.run_id,
-        report.sequence,
-        A3_SCHEMA,
-        report.status.value,
-        report.terminal_reason,
-        int(report.ready_for_next_cycle),
-        report.provider_evidence_hash,
-        report.report_hash,
-        config.source_surface,
-        config.owner_id,
-        1,
-        started_at_ns + config.lease_ttl_ns,
-        started_at_ns,
-        completed_at_ns,
-        int(report.sender_imported),
-        int(report.submission_allowed),
-        int(report.live_enabled),
-        report_json,
+        authority=authority,
     )
 
 
@@ -471,11 +422,32 @@ def _status_from_a2(status: A2PaperOutcomeStatus) -> A3PaperServiceStatus:
     return A3PaperServiceStatus(status.value)
 
 
+def _config_identity(config: RuntimeConfig) -> str:
+    value = _safe_config_fingerprint(config)
+    return value if _is_sha256(value) else hashlib.sha256(value.encode()).hexdigest()
+
+
 def _safe_config_fingerprint(config: RuntimeConfig) -> str:
     fingerprint = getattr(config, "fingerprint", None)
     if callable(fingerprint):
         return str(fingerprint())
     return "unavailable"
+
+
+def _runtime_environment(config: RuntimeConfig) -> str:
+    runtime = getattr(config, "runtime", None)
+    mode = getattr(runtime, "mode", "paper")
+    value = getattr(mode, "value", mode)
+    return str(value or "paper")
+
+
+def _cluster_genesis(config: RuntimeConfig) -> str:
+    cluster = getattr(config, "cluster", None)
+    for name in ("genesis_hash", "genesis", "name"):
+        value = getattr(cluster, name, None)
+        if value:
+            return str(value)
+    return "mainnet-beta"
 
 
 def _record_tuple(
@@ -495,7 +467,7 @@ def _canonical_json(value: object) -> str:
 
 
 def _hash_json(value: object) -> str:
-    return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
+    return hashlib.sha256(_canonical_json(value).encode()).hexdigest()
 
 
 def _is_sha256(value: str) -> bool:
@@ -511,6 +483,7 @@ def _dedupe(values: Sequence[str]) -> tuple[str, ...]:
 
 
 __all__ = [
+    "A3_BATCH_SOURCE_FAILED",
     "A3_B3_EVIDENCE_MISSING",
     "A3_DEFAULT_DB_PATH",
     "A3_RUNTIME_TIMEOUT",

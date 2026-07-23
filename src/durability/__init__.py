@@ -1,7 +1,8 @@
-"""Durable single-node lifecycle primitives introduced by roadmap PR-041.
+"""Durable lifecycle primitives and the canonical roadmap PR-02 authority.
 
-PR-182 keeps the PR-041 state machine as the single lifecycle truth while making
-its public store entrypoint boot-bound and monotonic for lease/outbox ownership.
+PR-182 keeps the PR-041 state machine as the lifecycle truth. PR-02 extends that
+same SQLite product with provider/cycle intent, atomic terminal effects, and one
+split producer/delivery outbox authority.
 """
 
 from .lifecycle import (
@@ -45,11 +46,24 @@ from .single_truth import (
     assert_single_durable_lifecycle_truth,
     evaluate_single_durable_lifecycle_truth,
 )
+from .unified_authority_pr02 import (
+    AuthorityFence,
+    IntentKind,
+    IntentStatus,
+    PR02_PRODUCT_ID,
+    PR02_SCHEMA_VERSION,
+    ReservationTerminalState,
+    TerminalCommit,
+    UnifiedA3AdmissionSink,
+    UnifiedAuthorityError,
+    UnifiedLifecycleAuthority,
+)
 
 __all__ = [
     "MIGRATION_VERSION",
     "SCHEMA_NAME",
     "AttemptKey",
+    "AuthorityFence",
     "BackupManifest",
     "ClockSafeDurableLifecycleStore",
     "CorruptJournalError",
@@ -57,10 +71,14 @@ __all__ = [
     "DurableAttempt",
     "DurableLifecycleError",
     "DurableLifecycleStore",
+    "IntentKind",
+    "IntentStatus",
     "LegacyDurableLifecycleStore",
     "LeaseLostError",
     "LeaseToken",
     "OutboxItem",
+    "PR02_PRODUCT_ID",
+    "PR02_SCHEMA_VERSION",
     "PR121_BLOCKED_STATE",
     "PR121_READY_STATE",
     "PR121_RESULT_SCHEMA_VERSION",
@@ -75,10 +93,15 @@ __all__ = [
     "RecoveryAction",
     "RecoveryDecision",
     "ReservationState",
+    "ReservationTerminalState",
     "SingleTruthError",
     "SingleTruthPackage",
     "SingleTruthReadiness",
     "SingleTruthReadinessState",
+    "TerminalCommit",
+    "UnifiedA3AdmissionSink",
+    "UnifiedAuthorityError",
+    "UnifiedLifecycleAuthority",
     "UnsupportedTopologyError",
     "assert_single_durable_lifecycle_truth",
     "evaluate_single_durable_lifecycle_truth",

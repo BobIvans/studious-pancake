@@ -39,6 +39,12 @@ VERIFY_PR194_REQUIRED_CONTROLS_COMMAND: Final[list[str]] = [
     "scripts/verify_pr194_required_controls.py",
 ]
 
+PR194_TRUSTED_FOUNDATION_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr194_trusted_foundation.py",
+    "--json",
+]
+
 # Public by design: tests inspect the final offline pytest command.
 COMMANDS: Final[list[list[str]]] = [
     [
@@ -88,6 +94,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr125_lst_governance_policy.py",
         "tests/test_pr136_rooted_rpc_quorum.py",
         "tests/test_pr140_data_lineage_quarantine.py",
+        "tests/test_pr194_trusted_foundation.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",
@@ -159,6 +166,7 @@ def main() -> int:
     run(AUTHORITY_COMMAND)
     run(PACKAGE_SMOKE_COMMAND)
     run(VERIFY_PR194_REQUIRED_CONTROLS_COMMAND)
+    run(PR194_TRUSTED_FOUNDATION_COMMAND)
 
     for command in COMMANDS[1:]:
         run(command)

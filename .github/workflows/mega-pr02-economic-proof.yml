@@ -43,11 +43,14 @@ jobs:
         run: |
           python -m pip install --disable-pip-version-check \
             pytest==9.0.2 \
+            mypy==1.18.2 \
             solders==0.28.0
       - name: Compile MEGA-PR-02 proof boundary
         run: |
           python -m py_compile \
             src/execution/economic_reconciliation/mega_pr02_proof.py \
             tests/execution/test_mega_pr02_economic_proof.py
+      - name: Type-check MEGA-PR-02 proof boundary
+        run: python -m mypy --config-file mypy.ini src/execution/economic_reconciliation/mega_pr02_proof.py
       - name: Run MEGA-PR-02 proof tests
         run: python -m pytest -q tests/execution/test_mega_pr02_economic_proof.py

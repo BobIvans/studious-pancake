@@ -1,0 +1,39 @@
+name: NEW-MEGA-PR-05 live canary boundary
+
+on:
+  pull_request:
+    paths:
+      - src/new_mega_pr05_live_canary_boundary.py
+      - scripts/verify_new_mega_pr05_live_canary_boundary.py
+      - tests/test_new_mega_pr05_live_canary_boundary.py
+      - docs/new_mega_pr05_authenticated_isolated_signer_canary.md
+      - .github/workflows/new-mega-pr05-live-canary-boundary.yml
+
+permissions:
+  contents: read
+
+jobs:
+  new-mega-pr05-live-canary-boundary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Install pytest
+        run: python -m pip install pytest==9.0.2
+      - name: Compile NEW-MEGA-PR-05 boundary
+        run: |
+          python -m py_compile \
+            src/new_mega_pr05_live_canary_boundary.py \
+            scripts/verify_new_mega_pr05_live_canary_boundary.py \
+            tests/test_new_mega_pr05_live_canary_boundary.py
+      - name: Run NEW-MEGA-PR-05 verifier
+        run: python scripts/verify_new_mega_pr05_live_canary_boundary.py --strict --json
+      - name: Run focused tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_new_mega_pr05_live_canary_boundary.py

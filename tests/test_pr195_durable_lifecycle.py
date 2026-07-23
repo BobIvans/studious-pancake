@@ -12,9 +12,6 @@ from src.pr195_durable_lifecycle import (
 )
 
 
-pytestmark = pytest.mark.unit
-
-
 def _store(tmp_path, clock: ManualLifecycleClock | None = None) -> DurableLifecycleStore:
     return DurableLifecycleStore(
         tmp_path / "durable-lifecycle.sqlite",

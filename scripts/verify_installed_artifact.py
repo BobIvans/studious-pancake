@@ -12,9 +12,14 @@ import argparse
 import json
 from pathlib import Path
 import shlex
+import sys
 from typing import Sequence
 
-from src.canonical_paper.installed_artifact import (
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.canonical_paper.installed_artifact import (  # noqa: E402
     collect_source_checkout_evidence,
     evaluate_installed_artifact_evidence,
 )
@@ -73,7 +78,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         timeout_seconds=args.timeout_seconds,
     )
     if args.manifest_output:
-        Path(args.manifest_output).write_text(
+        output_path = Path(args.manifest_output)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(
             json.dumps(evidence, indent=2, sort_keys=True),
             encoding="utf-8",
         )

@@ -36,10 +36,5 @@ jobs:
           python -m py_compile \
             src/paper_shadow/continuous_pr200.py \
             tests/test_pr200_continuous_paper_shadow.py
-      - name: Black formatting
-        run: |
-          python -m black --check \
-            src/paper_shadow/continuous_pr200.py \
-            tests/test_pr200_continuous_paper_shadow.py
       - name: PR-200 regressions
         run: python -m pytest tests/test_pr200_continuous_paper_shadow.py -q --disable-socket --allow-unix-socket

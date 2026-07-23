@@ -89,7 +89,9 @@ def _jsonable(value: Any) -> Any:
                 raise AtomicKernelError("canonical object keys must be strings")
             converted[key] = _jsonable(item)
         return converted
-    if isinstance(value, Sequence) and not isinstance(value, (str, bytes, bytearray)):
+    if isinstance(value, Sequence) and not isinstance(
+        value, (str, bytes, bytearray)
+    ):
         return [_jsonable(item) for item in value]
     if isinstance(value, bytes):
         return value.hex()
@@ -167,7 +169,10 @@ class InstructionSequenceBinding:
         object.__setattr__(
             self,
             "instruction_roles",
-            tuple(_require_safe_id(role, "instruction_role") for role in self.instruction_roles),
+            tuple(
+                _require_safe_id(role, "instruction_role")
+                for role in self.instruction_roles
+            ),
         )
         for field in (
             "instruction_programs_hash",
@@ -356,7 +361,11 @@ class IntegerEconomics:
     def __post_init__(self) -> None:
         for field in fields(self):
             minimum = 1 if field.name in {"principal_lamports"} else 0
-            _require_int(getattr(self, field.name), field=field.name, minimum=minimum)
+            _require_int(
+                getattr(self, field.name),
+                field=field.name,
+                minimum=minimum,
+            )
         if self.repayment_lamports < self.principal_lamports:
             raise AtomicKernelError("repayment must cover principal")
         if self.flash_fee_lamports > self.repayment_lamports:
@@ -521,7 +530,10 @@ def evaluate_atomic_sender_free_kernel(
                     AtomicKernelStatus.FRESHNESS_REJECTED,
                 )
             )
-        if alt.deactivation_slot is not None and alt.deactivation_slot <= binding.min_context_slot:
+        if (
+            alt.deactivation_slot is not None
+            and alt.deactivation_slot <= binding.min_context_slot
+        ):
             diagnostics.append(
                 KernelDiagnostic(
                     "ALT_DEACTIVATED_AT_CONTEXT",

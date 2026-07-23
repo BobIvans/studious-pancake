@@ -1,9 +1,8 @@
 """MPR-19 crash-consistent durable economic authority.
 
-Offline, sender-free checkpoint for the MPR-19 durable cutover.  It puts
-attempt identity, capital reservations, event journal, outbox delivery and
-restore verification behind one SQLite writer using explicit BEGIN IMMEDIATE
-transactions.  It never signs, submits, or reaches provider/RPC/Jito services.
+Offline, sender-free checkpoint for durable attempts, capital reservations,
+journal replay, outbox claims and verified restore.  It does not sign, submit or
+call RPC/Jito/provider services.
 """
 from __future__ import annotations
 
@@ -207,17 +206,16 @@ class MPR19EconomicAuthority:
                 now_ns=now_ns,
             )
             self._after("journal_appended", step_hook)
-            outbox_payload = {
-                "attempt_id": request.attempt_id,
-                "request_hash": request_hash,
-                "reservation_id": request.reservation_id,
-                "state": AttemptState.RECORDED.value,
-            }
             self._insert_outbox(
                 event_id=outbox_event_id,
                 attempt_id=request.attempt_id,
                 topic=request.outbox_topic,
-                payload=outbox_payload,
+                payload={
+                    "attempt_id": request.attempt_id,
+                    "request_hash": request_hash,
+                    "reservation_id": request.reservation_id,
+                    "state": AttemptState.RECORDED.value,
+                },
                 now_ns=now_ns,
             )
             self._after("outbox_queued", step_hook)
@@ -283,8 +281,7 @@ class MPR19EconomicAuthority:
             self._append_event(attempt_id, "attempt.terminal", payload, now_ns=now_ns)
             self._insert_outbox(
                 event_id=_identity(
-                    "outbox",
-                    {"attempt_id": attempt_id, "topic": "economic.attempt.terminal"},
+                    "outbox", {"attempt_id": attempt_id, "topic": "economic.attempt.terminal"}
                 ),
                 attempt_id=attempt_id,
                 topic="economic.attempt.terminal",
@@ -397,9 +394,7 @@ class MPR19EconomicAuthority:
         return target
 
     def verify_replay_integrity(self) -> ReplayReport:
-        rows = self.db.execute(
-            "SELECT * FROM mpr19_event_journal ORDER BY sequence"
-        ).fetchall()
+        rows = self.db.execute("SELECT * FROM mpr19_event_journal ORDER BY sequence").fetchall()
         previous = _ZERO_HASH
         reconstructed: dict[str, tuple[str, str]] = {}
         terminal_count = 0
@@ -466,11 +461,11 @@ class MPR19EconomicAuthority:
         finally:
             backup.close()
         _chmod_private_file(tmp)
-        restored = MPR19EconomicAuthority(tmp)
+        verifier = MPR19EconomicAuthority(tmp)
         try:
-            restored.verify_replay_integrity()
+            verifier.verify_replay_integrity()
         finally:
-            restored.close()
+            verifier.close()
         os.replace(tmp, target)
         _chmod_private_file(target)
         return target
@@ -486,28 +481,26 @@ class MPR19EconomicAuthority:
         if tmp.exists():
             tmp.unlink()
         shutil.copy2(source, tmp, follow_symlinks=False)
-        _chmod_private_file(tmp)
-        authority = cls(tmp)
+        verifier = cls(tmp)
         try:
-            authority.verify_replay_integrity()
-            authority.close()
+            verifier.verify_replay_integrity()
+            verifier.close()
             os.replace(tmp, target)
             _chmod_private_file(target)
             return cls(target)
         except Exception:
-            authority.close()
+            verifier.close()
             if tmp.exists():
                 tmp.unlink()
             raise
 
     def _migrate(self) -> None:
         checksum = hashlib.sha256(_SCHEMA.encode()).hexdigest()
+        self.db.executescript(_SCHEMA)
         self.db.execute("BEGIN IMMEDIATE")
         try:
-            self.db.executescript(_SCHEMA)
             row = self.db.execute(
-                "SELECT checksum FROM mpr19_migrations WHERE migration_id=?",
-                (_SCHEMA_ID,),
+                "SELECT checksum FROM mpr19_migrations WHERE migration_id=?", (_SCHEMA_ID,)
             ).fetchone()
             if row is None:
                 self.db.execute(

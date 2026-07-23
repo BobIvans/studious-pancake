@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+# CI regression note: ordinary tests use a relaxed helper deadline so cold
+# SQLite/WAL setup on shared runners cannot mask dedup semantics.
 import gzip
 import json
 import os

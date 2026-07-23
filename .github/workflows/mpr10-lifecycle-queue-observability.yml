@@ -1,0 +1,55 @@
+name: MPR-10 lifecycle queue observability gate
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/mpr10_lifecycle_queue_observability.py"
+      - "tests/test_mpr10_lifecycle_queue_observability.py"
+      - "docs/mpr10_lifecycle_queue_observability_gate.md"
+      - ".github/workflows/mpr10-lifecycle-queue-observability.yml"
+  push:
+    branches:
+      - mpr-10-lifecycle-queue-observability-gate
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mpr10-lifecycle-queue-observability:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Compile MPR-10 boundary
+        run: |
+          python -m compileall -q \
+            src/mpr10_lifecycle_queue_observability.py \
+            tests/test_mpr10_lifecycle_queue_observability.py
+      - name: Critical static errors
+        run: |
+          python -m flake8 \
+            src/mpr10_lifecycle_queue_observability.py \
+            tests/test_mpr10_lifecycle_queue_observability.py \
+            --count --select=E9,F63,F7,F82 --show-source --statistics
+      - name: Focused regression suite
+        run: |
+          python -m pytest \
+            tests/test_mpr10_lifecycle_queue_observability.py \
+            -q --disable-socket --allow-unix-socket

@@ -247,4 +247,6 @@ async def test_application_wires_snapshot_detector_to_shadow_handler() -> None:
     assert app.executable_strategies()[0].name == "circular_arbitrage"
     assert app.context.result_sink.results
     result = app.context.result_sink.results[0]
-    assert result.status is OpportunityResultStatus.SHADOW_NOT_EXECUTED
+    assert result.status is OpportunityResultStatus.REJECTED
+    assert result.reason_code == "pr199_cost_evidence_missing"
+    assert result.details["error_code"] == "PR199_COST_EVIDENCE_MISSING"

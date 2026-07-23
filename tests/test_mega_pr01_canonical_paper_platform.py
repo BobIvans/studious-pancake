@@ -159,18 +159,25 @@ def test_non_finite_json_is_rejected(tmp_path: Path) -> None:
         BoundedRecordedBatchSource(path).load()
 
 
-def test_same_source_and_config_replay_is_idempotent(tmp_path: Path) -> None:
+def test_same_source_and_config_repeated_runs_create_distinct_evidence(
+    tmp_path: Path,
+) -> None:
     recording = _write_recording(tmp_path / "recording.json", [_candidate()])
     first = _platform(tmp_path, recording).run_once()
     second = _platform(tmp_path, recording).run_once()
-    assert second == first
+
+    assert second != first
+    assert second.input_identity == first.input_identity
+    assert second.cycle_id != first.cycle_id
+    assert second.run_sequence == first.run_sequence + 1
+
     with sqlite3.connect(tmp_path / "paper.sqlite3") as connection:
-        assert connection.execute("SELECT COUNT(*) FROM paper_cycles").fetchone()[0] == 1
+        assert connection.execute("SELECT COUNT(*) FROM paper_cycles").fetchone()[0] == 2
         assert (
             connection.execute(
                 "SELECT COUNT(*) FROM paper_candidate_decisions"
             ).fetchone()[0]
-            == 1
+            == 2
         )
 
 

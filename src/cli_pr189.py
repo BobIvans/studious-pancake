@@ -94,6 +94,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         return automation_cli_pr189.main(["production-debt", *args[1:]])
     if args and args[0] == "release-soak":
         return automation_cli_pr189.main(args)
+    if args and args[0] == "shadow-soak":
+        from src.mpr_close_04_runtime import shadow_soak_cli_main
+
+        return shadow_soak_cli_main(args[1:])
     rewritten = _rewrite_legacy_preflight(args)
     if rewritten is not None:
         return automation_cli_pr189.main(rewritten)

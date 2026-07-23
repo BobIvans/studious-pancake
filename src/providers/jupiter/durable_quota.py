@@ -114,12 +114,16 @@ class DurableJupiterQuotaManager(JupiterQuotaManager):
         with self._connect() as connection:
             self._begin(connection)
             try:
-                connection.executescript(
+                connection.execute(
                     """
                     CREATE TABLE IF NOT EXISTS quota_schema_migrations (
                         migration_id TEXT PRIMARY KEY,
                         checksum TEXT NOT NULL
-                    );
+                    )
+                    """
+                )
+                connection.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS jupiter_quota_events (
                         account_id TEXT NOT NULL,
                         reservation_id TEXT NOT NULL,
@@ -129,13 +133,25 @@ class DurableJupiterQuotaManager(JupiterQuotaManager):
                         issued INTEGER NOT NULL DEFAULT 0,
                         released INTEGER NOT NULL DEFAULT 0,
                         PRIMARY KEY(account_id, reservation_id)
-                    );
+                    )
+                    """
+                )
+                connection.execute(
+                    """
                     CREATE INDEX IF NOT EXISTS idx_jupiter_quota_window
-                        ON jupiter_quota_events(account_id, reserved_at);
+                        ON jupiter_quota_events(account_id, reserved_at)
+                    """
+                )
+                connection.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS jupiter_quota_cooldowns (
                         account_id TEXT PRIMARY KEY,
                         retry_after_until REAL NOT NULL
-                    );
+                    )
+                    """
+                )
+                connection.execute(
+                    """
                     CREATE TABLE IF NOT EXISTS jupiter_semantic_cache (
                         account_id TEXT NOT NULL,
                         cache_key TEXT NOT NULL,
@@ -143,7 +159,7 @@ class DurableJupiterQuotaManager(JupiterQuotaManager):
                         expires_at REAL NOT NULL,
                         provenance_json TEXT NOT NULL,
                         PRIMARY KEY(account_id, cache_key)
-                    );
+                    )
                     """
                 )
                 row = connection.execute(

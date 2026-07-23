@@ -1,10 +1,4 @@
-"""Roadmap PR-200 sender-free continuous paper/shadow replay harness.
-
-This boundary is offline and additive.  It gives paper/shadow runs a
-deterministic evidence spine without importing signer, sender, wallet, RPC or
-Jito submission code.  Later PR-196/197/198/199 composition can feed real
-candidates into the same contracts.
-"""
+"""Roadmap PR-200 sender-free continuous paper/shadow replay harness."""
 
 from __future__ import annotations
 
@@ -66,24 +60,20 @@ class PR200RunIdentity:
     data_hash: str
 
     def __post_init__(self) -> None:
-        for name, value in (
-            ("release_hash", self.release_hash),
-            ("config_hash", self.config_hash),
-            ("code_hash", self.code_hash),
-            ("data_hash", self.data_hash),
-        ):
+        for name, value in self.as_dict().items():
             _require_digestish(name, value)
+
+    def as_dict(self) -> dict[str, str]:
+        return {
+            "release_hash": self.release_hash,
+            "config_hash": self.config_hash,
+            "code_hash": self.code_hash,
+            "data_hash": self.data_hash,
+        }
 
     @property
     def run_hash(self) -> str:
-        return _stable_hash(
-            {
-                "release_hash": self.release_hash,
-                "config_hash": self.config_hash,
-                "code_hash": self.code_hash,
-                "data_hash": self.data_hash,
-            }
-        )
+        return _stable_hash(self.as_dict())
 
 
 @dataclass(frozen=True, slots=True)
@@ -160,10 +150,8 @@ class PR200ContinuousConfig:
     output_dir: Path = Path(".runtime/pr200-paper")
 
     def __post_init__(self) -> None:
-        if self.max_cycles <= 0:
-            raise ValueError("max_cycles must be positive")
-        if self.cycle_deadline_millis <= 0:
-            raise ValueError("cycle_deadline_millis must be positive")
+        if self.max_cycles <= 0 or self.cycle_deadline_millis <= 0:
+            raise ValueError("cycle settings must be positive")
         if self.max_events_per_cycle <= 0:
             raise ValueError("max_events_per_cycle must be positive")
 
@@ -192,31 +180,6 @@ class PR200ServiceReport:
     invariant_violations: list[str] = field(default_factory=list)
     sender_free_modules_checked: tuple[str, ...] = _FORBIDDEN_MODULE_PREFIXES
 
-    def to_dict(self) -> dict[str, object]:
-        samples = sorted(self.latency_samples_millis)
-        return {
-            "schema_version": "pr200.service_report.v1",
-            "run_hash": self.run_identity.run_hash,
-            "release_hash": self.run_identity.release_hash,
-            "config_hash": self.run_identity.config_hash,
-            "code_hash": self.run_identity.code_hash,
-            "data_hash": self.run_identity.data_hash,
-            "mode": self.mode.value,
-            "cycles_completed": self.cycles_completed,
-            "accepted_events": self.accepted_events,
-            "terminal_outcomes": self.terminal_outcomes,
-            "duplicate_terminal_outcomes": self.duplicate_terminal_outcomes,
-            "rejection_counters": dict(sorted(self.rejection_counters.items())),
-            "latency_millis": {
-                "p50": _percentile(samples, 0.50),
-                "p95": _percentile(samples, 0.95),
-                "p99": _percentile(samples, 0.99),
-            },
-            "invariant_violations": tuple(self.invariant_violations),
-            "sender_free_modules_checked": self.sender_free_modules_checked,
-            "soak_artifact_hash": self.artifact_hash,
-        }
-
     @property
     def artifact_hash(self) -> str:
         return _stable_hash(
@@ -232,6 +195,28 @@ class PR200ServiceReport:
                 "invariant_violations": tuple(self.invariant_violations),
             }
         )
+
+    def to_dict(self) -> dict[str, object]:
+        samples = sorted(self.latency_samples_millis)
+        return {
+            "schema_version": "pr200.service_report.v1",
+            **self.run_identity.as_dict(),
+            "run_hash": self.run_identity.run_hash,
+            "mode": self.mode.value,
+            "cycles_completed": self.cycles_completed,
+            "accepted_events": self.accepted_events,
+            "terminal_outcomes": self.terminal_outcomes,
+            "duplicate_terminal_outcomes": self.duplicate_terminal_outcomes,
+            "rejection_counters": dict(sorted(self.rejection_counters.items())),
+            "latency_millis": {
+                "p50": _percentile(samples, 0.50),
+                "p95": _percentile(samples, 0.95),
+                "p99": _percentile(samples, 0.99),
+            },
+            "invariant_violations": tuple(self.invariant_violations),
+            "sender_free_modules_checked": self.sender_free_modules_checked,
+            "soak_artifact_hash": self.artifact_hash,
+        }
 
 
 class PR200ImmutableJsonlStore:
@@ -339,18 +324,19 @@ class PR200ContinuousPaperService:
         chaos: PR200ChaosScenario | None = None,
     ) -> None:
         self.config = config
-        self.run_identity = run_identity
         self._events = iter(events)
         self._store = store or PR200ImmutableJsonlStore(config.output_dir)
         self._clock_millis = clock_millis or (lambda: int(time.time() * 1000))
         self._chaos = chaos
         self._replay = PR200DeterministicReplayHarness(run_identity, config.mode)
         self._seen_terminal: MutableMapping[str, str] = {}
+        self._import_baseline = frozenset(sys.modules)
+        self._run_identity = run_identity
 
     def run(self) -> PR200ServiceReport:
-        _assert_sender_free_process()
+        _assert_sender_free_process(self._import_baseline)
         report = PR200ServiceReport(
-            run_identity=self.run_identity,
+            run_identity=self._run_identity,
             mode=self.config.mode,
             cycles_completed=0,
             accepted_events=0,
@@ -425,8 +411,8 @@ def build_pr200_run_identity(
     )
 
 
-def _assert_sender_free_process() -> None:
-    for module_name in sorted(sys.modules):
+def _assert_sender_free_process(import_baseline: frozenset[str]) -> None:
+    for module_name in sorted(set(sys.modules) - import_baseline):
         if module_name.startswith(_FORBIDDEN_MODULE_PREFIXES):
             raise PR200InvariantViolation(
                 f"sender-free process imported forbidden module: {module_name}"

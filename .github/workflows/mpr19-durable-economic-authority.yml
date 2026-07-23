@@ -35,24 +35,18 @@ jobs:
           python -m py_compile \
             src/durability/mpr19_economic_authority.py \
             tests/test_mpr19_economic_authority.py
-      - name: Probe schema init
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          from src.durability.mpr19_economic_authority import MPR19EconomicAuthority
-          authority = MPR19EconomicAuthority(Path('tmp-mpr19/init.sqlite3'))
-          authority.close()
-          PY
+      - name: Probe module import
+        run: python -c "import src.durability.mpr19_economic_authority as m; print(m.MPR19_SCHEMA_VERSION)"
+      - name: Probe path guard
+        run: python -c "from pathlib import Path; import src.durability.mpr19_economic_authority as m; m._prepare_private_db_path(Path('tmp-mpr19/path.sqlite3')); print('path-ok')"
+      - name: Probe sqlite pragmas
+        run: python -c "import sqlite3; c=sqlite3.connect('tmp-mpr19/pragmas.sqlite3', isolation_level=None); [c.execute(s) for s in ('PRAGMA journal_mode=WAL','PRAGMA synchronous=FULL','PRAGMA foreign_keys=ON','PRAGMA busy_timeout=5000')]; c.close(); print('pragma-ok')"
+      - name: Probe schema script
+        run: python -c "import sqlite3; import src.durability.mpr19_economic_authority as m; c=sqlite3.connect('tmp-mpr19/schema.sqlite3', isolation_level=None); c.executescript(m._SCHEMA); c.close(); print('schema-ok')"
+      - name: Probe constructor
+        run: python -c "from pathlib import Path; from src.durability.mpr19_economic_authority import MPR19EconomicAuthority; authority=MPR19EconomicAuthority(Path('tmp-mpr19/init.sqlite3')); authority.close(); print('constructor-ok')"
       - name: Probe create attempt
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-          from src.durability.mpr19_economic_authority import AttemptRequest, MPR19EconomicAuthority
-          req = AttemptRequest('opp-001', 'wallet-001', 'recorded-paper-arb', 100000, {'slot': 123})
-          authority = MPR19EconomicAuthority(Path('tmp-mpr19/create.sqlite3'))
-          authority.create_attempt(req, now_ns=1)
-          authority.close()
-          PY
+        run: python -c "from pathlib import Path; from src.durability.mpr19_economic_authority import AttemptRequest, MPR19EconomicAuthority; req=AttemptRequest('opp-001','wallet-001','recorded-paper-arb',100000,{'slot':123}); authority=MPR19EconomicAuthority(Path('tmp-mpr19/create.sqlite3')); authority.create_attempt(req, now_ns=1); authority.close(); print('create-ok')"
       - name: Probe terminal outbox replay
         run: python -m pytest -q tests/test_mpr19_economic_authority.py::test_attempt_terminal_outbox_and_replay_are_one_durable_authority
       - name: Run statement crash matrix

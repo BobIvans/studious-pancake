@@ -247,12 +247,33 @@ def _run_disabled_or_dry_mode(args: argparse.Namespace) -> int:
     return 0
 
 
+def _inspection_command_name(args: list[str]) -> str | None:
+    """Return the subcommand that belongs to the dependency-light parser."""
+
+    index = 0
+    while index < len(args):
+        item = args[index]
+        if item in {"--help", "-h"}:
+            return item
+        if item == "--config-file":
+            index += 2
+            continue
+        if item.startswith("--config-file="):
+            index += 1
+            continue
+        return item
+    return None
+
+
 def _run_lightweight_inspection(args: list[str]) -> int | None:
     """Handle commands that must not import heavy runtime modules before dispatch."""
 
-    if not args or args == ["--help"] or args == ["-h"]:
+    command_name = _inspection_command_name(args)
+    if not args or command_name in {"--help", "-h"}:
         _inspection_parser().print_help()
         return 0
+    if command_name not in {"status", "capabilities", "config", "run"}:
+        return None
 
     try:
         parsed = _inspection_parser().parse_args(args)

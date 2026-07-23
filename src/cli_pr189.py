@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+import os
 import sys
 from typing import Sequence
 
 from src import automation_cli_pr189
 from src import cli as legacy_cli
 from src.canonical_paper import cli as canonical_paper_cli
+
+
+PAPER_DB_ENV = "FLASHLOAN_PAPER_SERVICE_DB"
 
 
 def _rewrite_legacy_preflight(args: list[str]) -> list[str] | None:
@@ -18,6 +22,10 @@ def _rewrite_legacy_preflight(args: list[str]) -> list[str] | None:
         forwarded.extend(item for item in args[1:] if item != "--json")
         return forwarded
     return None
+
+
+def _has_option(args: list[str], name: str) -> bool:
+    return name in args or any(item.startswith(f"{name}=") for item in args)
 
 
 def _canonical_paper_args(args: list[str]) -> list[str] | None:
@@ -64,7 +72,13 @@ def _canonical_paper_args(args: list[str]) -> list[str] | None:
         forwarded.append(item)
         index += 1
 
-    return forwarded if mode == "paper" else None
+    if mode != "paper":
+        return None
+    if not _has_option(forwarded, "--db-path"):
+        db_path = os.environ.get(PAPER_DB_ENV)
+        if db_path:
+            forwarded.extend(("--db-path", db_path))
+    return forwarded
 
 
 def main(argv: Sequence[str] | None = None) -> int:

@@ -27,6 +27,7 @@ def build_wheel(
     include_entrypoints: bool = True,
     incomplete_record: bool = False,
 ) -> Path:
+    tmp_path.mkdir(parents=True, exist_ok=True)
     wheel_path = tmp_path / "flashloan_bot-0.0.0-py3-none-any.whl"
     package_files = {
         "src/cli_pr189.py": "def main():\n    return 0\n",

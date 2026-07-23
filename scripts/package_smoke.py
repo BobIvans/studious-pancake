@@ -170,8 +170,8 @@ def main() -> int:
                 "-c",
                 (
                     "from src.production_surface import "
-                    "assert_forbidden_imports_unavailable; "
-                    "assert_forbidden_imports_unavailable()"
+                    "assert_forbidden_imports_unavailable, forbidden_import_names; "
+                    "assert_forbidden_imports_unavailable(forbidden_import_names())"
                 ),
             ],
             cwd=temporary,

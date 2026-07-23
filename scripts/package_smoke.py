@@ -13,13 +13,16 @@ import tempfile
 import venv
 import zipfile
 
-from src.production_surface import (
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from src.production_surface import (  # noqa: E402
     assert_no_forbidden_wheel_members,
     required_entrypoints,
     required_wheel_members,
 )
 
-ROOT = Path(__file__).resolve().parents[1]
 IGNORED_COPY_NAMES = {
     ".git",
     ".mypy_cache",

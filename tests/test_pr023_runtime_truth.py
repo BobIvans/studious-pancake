@@ -92,12 +92,7 @@ def test_canonical_paper_service_is_available_but_live_mode_fails_closed(
 ):
     db_path = tmp_path / "canonical-paper.sqlite3"
 
-    assert (
-        arb_bot.main(
-            ["run", "--mode", "paper", "--db-path", str(db_path)]
-        )
-        == 0
-    )
+    assert arb_bot.main(["run", "--mode", "paper", "--db-path", str(db_path)]) == 0
     captured = capsys.readouterr()
     assert "CANONICAL_PAPER_CYCLE" in captured.out
     assert "outcome=PAPER_ACCEPTED" in captured.out

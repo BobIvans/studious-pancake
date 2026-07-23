@@ -38,6 +38,11 @@ module can only produce review readiness. Runtime arming must still be handled b
 later signer/permit/sender boundaries and by manually-reviewed operational
 controls.
 
+## Verification note
+
+The focused workflow checks Black, strict Mypy for the governance module, the
+PR-203 regression tests, compileability and SHA evidence identities.
+
 ## Deliberate limits
 
 This slice does not delete legacy files, rewrite packaging, fetch external

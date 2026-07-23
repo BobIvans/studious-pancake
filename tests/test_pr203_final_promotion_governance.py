@@ -56,7 +56,9 @@ def _legacy_surface(**overrides: object) -> LegacySurfaceEvidence:
     return LegacySurfaceEvidence(**values)
 
 
-def _assurance(role: str, *, reviewer: str = "independent-a") -> IndependentAssuranceReview:
+def _assurance(
+    role: str, *, reviewer: str = "independent-a"
+) -> IndependentAssuranceReview:
     return IndependentAssuranceReview(
         role=role,
         reviewer=reviewer,
@@ -69,7 +71,9 @@ def _assurance(role: str, *, reviewer: str = "independent-a") -> IndependentAssu
 
 def _assurance_reviews() -> tuple[IndependentAssuranceReview, ...]:
     return tuple(
-        _assurance(role, reviewer="independent-a" if index % 2 == 0 else "independent-b")
+        _assurance(
+            role, reviewer="independent-a" if index % 2 == 0 else "independent-b"
+        )
         for index, role in enumerate(REQUIRED_ASSURANCE_ROLES)
     )
 
@@ -191,7 +195,9 @@ def test_legacy_import_surface_must_be_empty_in_wheel_image_and_entrypoint() -> 
     )
 
     assert "WHEEL_FORBIDDEN_IMPORT_PRESENT:src.legacy_arb_bot" in report.blockers
-    assert "IMAGE_FORBIDDEN_IMPORT_PRESENT:src.execution.live_control" in report.blockers
+    assert (
+        "IMAGE_FORBIDDEN_IMPORT_PRESENT:src.execution.live_control" in report.blockers
+    )
     assert "ENTRYPOINT_REACHES_FORBIDDEN_PATH:src.execution.senders" in report.blockers
     assert "DUPLICATE_RUNTIME_PATHS_NOT_REMOVED" in report.blockers
 
@@ -200,7 +206,9 @@ def test_independent_assurance_requires_all_roles_and_not_assembler() -> None:
     report = evaluate_final_promotion_governance(
         _bundle(
             independent_assurance=(
-                _assurance("protocol-vectors", reviewer="release-assembler@example.com"),
+                _assurance(
+                    "protocol-vectors", reviewer="release-assembler@example.com"
+                ),
             )
         )
     )
@@ -251,7 +259,9 @@ def test_dual_approval_is_bound_distinct_and_expiring() -> None:
     )
 
     assert "DUAL_APPROVAL_REQUIRES_DISTINCT_APPROVERS" in report.blockers
-    assert "APPROVAL_RELEASE_HASH_MISMATCH:independent-second-approver" in expired.blockers
+    assert (
+        "APPROVAL_RELEASE_HASH_MISMATCH:independent-second-approver" in expired.blockers
+    )
     assert "APPROVAL_EXPIRED:independent-second-approver" in expired.blockers
 
 

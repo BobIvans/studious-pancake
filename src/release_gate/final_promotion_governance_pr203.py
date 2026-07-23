@@ -80,9 +80,11 @@ class AcceptedEvidenceRef:
         object.__setattr__(
             self,
             "reviewer",
-            _require_text(self.reviewer, "evidence.reviewer")
-            if self.human_reviewed
-            else self.reviewer,
+            (
+                _require_text(self.reviewer, "evidence.reviewer")
+                if self.human_reviewed
+                else self.reviewer
+            ),
         )
 
 
@@ -238,7 +240,9 @@ class DualApprovalSignature:
         _require_aware(self.signed_at, "approval.signed_at")
         _require_aware(self.expires_at, "approval.expires_at")
         if self.expires_at <= self.signed_at:
-            raise FinalPromotionGovernanceError("approval must expire after it is signed")
+            raise FinalPromotionGovernanceError(
+                "approval must expire after it is signed"
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -414,7 +418,9 @@ def _evaluate_legacy_surface(surface: LegacySurfaceEvidence, check: Any) -> None
         check(False, f"IMAGE_FORBIDDEN_IMPORT_PRESENT:{item}")
     for item in surface.supported_entrypoint_forbidden_reachability:
         check(False, f"ENTRYPOINT_REACHES_FORBIDDEN_PATH:{item}")
-    check(surface.duplicate_runtime_paths_removed, "DUPLICATE_RUNTIME_PATHS_NOT_REMOVED")
+    check(
+        surface.duplicate_runtime_paths_removed, "DUPLICATE_RUNTIME_PATHS_NOT_REMOVED"
+    )
     check(surface.stale_pr_workflows_removed, "STALE_PR_WORKFLOWS_NOT_REMOVED")
     check(
         surface.final_docs_reduced_to_current_set,
@@ -443,8 +449,13 @@ def _evaluate_assurance(
             review.source_commit == bundle.source_commit,
             f"ASSURANCE_SOURCE_COMMIT_MISMATCH:{role}",
         )
-        check(review.reviewed_at <= bundle.assembled_at, f"ASSURANCE_AFTER_ASSEMBLY:{role}")
-        check(review.reviewer != bundle.assembled_by, f"ASSURANCE_NOT_INDEPENDENT:{role}")
+        check(
+            review.reviewed_at <= bundle.assembled_at,
+            f"ASSURANCE_AFTER_ASSEMBLY:{role}",
+        )
+        check(
+            review.reviewer != bundle.assembled_by, f"ASSURANCE_NOT_INDEPENDENT:{role}"
+        )
     check(len(reviewers) >= 2, "ASSURANCE_REQUIRES_TWO_DISTINCT_REVIEWERS")
 
 
@@ -506,7 +517,9 @@ def _evaluate_approvals(
             approval.signed_config_hash == bundle.config_hash,
             f"APPROVAL_CONFIG_HASH_MISMATCH:{role}",
         )
-        check(approval.signed_at <= bundle.assembled_at, f"APPROVAL_AFTER_ASSEMBLY:{role}")
+        check(
+            approval.signed_at <= bundle.assembled_at, f"APPROVAL_AFTER_ASSEMBLY:{role}"
+        )
         check(bundle.assembled_at < approval.expires_at, f"APPROVAL_EXPIRED:{role}")
     check(len(approvers) >= 2, "DUAL_APPROVAL_REQUIRES_DISTINCT_APPROVERS")
 
@@ -558,7 +571,9 @@ def _require_sha256(value: str, field: str) -> str:
 def _require_git_sha(value: str, field: str) -> str:
     lowered = str(value).lower()
     if not _GIT_SHA_RE.fullmatch(lowered) or lowered == "0" * 40:
-        raise FinalPromotionGovernanceError(f"{field} must be a non-placeholder git sha")
+        raise FinalPromotionGovernanceError(
+            f"{field} must be a non-placeholder git sha"
+        )
     return lowered
 
 
@@ -578,7 +593,9 @@ def _tuple_of_text(value: Sequence[str], field: str) -> tuple[str, ...]:
 
 def _jsonable(value: Any) -> Any:
     if is_dataclass(value) and not isinstance(value, type):
-        return {field.name: _jsonable(getattr(value, field.name)) for field in fields(value)}
+        return {
+            field.name: _jsonable(getattr(value, field.name)) for field in fields(value)
+        }
     if isinstance(value, datetime):
         return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
     if isinstance(value, Enum):

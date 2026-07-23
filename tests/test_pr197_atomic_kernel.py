@@ -15,8 +15,11 @@ from src.execution.atomic_kernel_pr197 import (
     FinalMessageBinding,
     InstructionSequenceBinding,
     IntegerEconomics,
+    SemanticFirewallBinding,
+    SemanticInstructionEffect,
     SimulationBinding,
     evaluate_atomic_sender_free_kernel,
+    sha256_payload,
     stable_json,
 )
 
@@ -25,6 +28,66 @@ pytestmark = pytest.mark.unit
 
 def _h(label: str) -> str:
     return hashlib.sha256(label.encode("utf-8")).hexdigest()
+
+
+def _semantic_firewall() -> SemanticFirewallBinding:
+    effects = (
+        SemanticInstructionEffect(
+            role="marginfi.begin",
+            program_family="marginfi",
+            action="marginfi_flash_begin",
+            authority_role="payer",
+            subject_role="marginfi_account",
+        ),
+        SemanticInstructionEffect(
+            role="marginfi.borrow",
+            program_family="marginfi",
+            action="marginfi_flash_borrow",
+            authority_role="marginfi_program",
+            subject_role="marginfi_bank",
+            amount_lamports=1_000_000,
+        ),
+        SemanticInstructionEffect(
+            role="jupiter.leg_a",
+            program_family="jupiter",
+            action="jupiter_swap_exact_in",
+            authority_role="payer",
+            subject_role="source_token_account",
+            destination_role="intermediate_token_account",
+            mint_hash=_h("mint-a"),
+            amount_lamports=1_000_000,
+        ),
+        SemanticInstructionEffect(
+            role="jupiter.leg_b",
+            program_family="jupiter",
+            action="jupiter_swap_exact_in",
+            authority_role="payer",
+            subject_role="intermediate_token_account",
+            destination_role="destination_token_account",
+            mint_hash=_h("mint-b"),
+            amount_lamports=1_010_000,
+        ),
+        SemanticInstructionEffect(
+            role="marginfi.repay",
+            program_family="marginfi",
+            action="marginfi_flash_repay",
+            authority_role="payer",
+            subject_role="marginfi_bank",
+            amount_lamports=1_003_000,
+        ),
+        SemanticInstructionEffect(
+            role="marginfi.end",
+            program_family="marginfi",
+            action="marginfi_flash_end",
+            authority_role="marginfi_program",
+            subject_role="marginfi_account",
+        ),
+    )
+    return SemanticFirewallBinding(
+        effects=effects,
+        account_effects_hash=sha256_payload(effects),
+        writable_delta_budget_lamports=2_039_280,
+    )
 
 
 def _binding() -> ExecutionBinding:
@@ -56,8 +119,9 @@ def _binding() -> ExecutionBinding:
         repayment_lamports=1_003_000,
         flash_fee_lamports=3_000,
         expected_output_lamports=1_020_000,
-        base_network_fee_lamports=5_000,
-        priority_fee_lamports=1_000,
+        rpc_total_message_fee_lamports=6_000,
+        message_base_fee_lamports=5_000,
+        message_priority_fee_lamports=1_000,
         jito_tip_lamports=1_000,
         ata_rent_peak_lamports=2_039_280,
         token2022_transfer_fee_lamports=0,
@@ -74,6 +138,7 @@ def _binding() -> ExecutionBinding:
         policy_bundle_hash=_h("policy-bundle"),
         external_state=external,
         instruction_sequence=sequence,
+        semantic_firewall=_semantic_firewall(),
         blockhash=BlockhashBinding(
             blockhash="ExampleBlockhash197",
             source_slot=130,
@@ -144,8 +209,9 @@ def test_floating_point_values_are_forbidden_in_kernel_evidence() -> None:
             repayment_lamports=1,
             flash_fee_lamports=0,
             expected_output_lamports=2,
-            base_network_fee_lamports=0,
-            priority_fee_lamports=0,
+            rpc_total_message_fee_lamports=0,
+            message_base_fee_lamports=0,
+            message_priority_fee_lamports=0,
             jito_tip_lamports=0,
             ata_rent_peak_lamports=0,
             token2022_transfer_fee_lamports=0,
@@ -205,18 +271,81 @@ def test_provider_tip_and_incomplete_marginfi_bracket_reject() -> None:
     assert "MISSING_INSTRUCTION_ROLE" in codes
 
 
-def test_economics_reject_when_profit_or_wallet_reserve_is_insufficient() -> None:
+def test_semantic_firewall_rejects_forbidden_allowed_program_effects() -> None:
+    binding = _binding()
+    unsafe_effects = tuple(
+        replace(effect, program_family="spl_token", action="spl_token_approve")
+        if effect.role == "jupiter.leg_a"
+        else effect
+        for effect in binding.semantic_firewall.effects
+    )
+    unsafe_firewall = replace(
+        binding.semantic_firewall,
+        effects=unsafe_effects,
+        account_effects_hash=sha256_payload(unsafe_effects),
+    )
+    candidate = replace(binding, semantic_firewall=unsafe_firewall)
+
+    report = evaluate_atomic_sender_free_kernel(candidate, _simulation(candidate))
+
+    codes = {item.code for item in report.diagnostics}
+    assert report.status is AtomicKernelStatus.SEMANTIC_REJECTED
+    assert "FORBIDDEN_ACCOUNT_EFFECT" in codes
+    assert "MISSING_REQUIRED_SEMANTIC_EFFECT" in codes
+
+
+def test_semantic_firewall_rejects_unattested_token2022_effects() -> None:
+    binding = _binding()
+    token2022_effects = tuple(
+        replace(effect, program_family="token_2022")
+        if effect.role == "jupiter.leg_b"
+        else effect
+        for effect in binding.semantic_firewall.effects
+    )
+    token2022_firewall = replace(
+        binding.semantic_firewall,
+        effects=token2022_effects,
+        account_effects_hash=sha256_payload(token2022_effects),
+    )
+    candidate = replace(binding, semantic_firewall=token2022_firewall)
+
+    report = evaluate_atomic_sender_free_kernel(candidate, _simulation(candidate))
+
+    codes = {item.code for item in report.diagnostics}
+    assert "TOKEN2022_REQUIRES_ATTESTATION" in codes
+
+
+def test_semantic_effect_hash_mismatch_rejects_identity() -> None:
     binding = replace(
         _binding(),
-        economics=replace(
-            _binding().economics,
-            expected_output_lamports=1_005_000,
-            wallet_lamports=100,
+        semantic_firewall=replace(
+            _binding().semantic_firewall,
+            account_effects_hash=_h("stale-effects"),
         ),
     )
 
     report = evaluate_atomic_sender_free_kernel(binding, _simulation(binding))
 
     codes = {item.code for item in report.diagnostics}
+    assert "SEMANTIC_EFFECT_HASH_MISMATCH" in codes
+
+
+def test_economics_reject_when_fee_breakdown_double_counts_or_reserve_fails() -> None:
+    binding = replace(
+        _binding(),
+        economics=replace(
+            _binding().economics,
+            expected_output_lamports=1_005_000,
+            wallet_lamports=100,
+            rpc_total_message_fee_lamports=5_000,
+            message_base_fee_lamports=5_000,
+            message_priority_fee_lamports=1_000,
+        ),
+    )
+
+    report = evaluate_atomic_sender_free_kernel(binding, _simulation(binding))
+
+    codes = {item.code for item in report.diagnostics}
+    assert "MESSAGE_FEE_BREAKDOWN_MISMATCH" in codes
     assert "INSUFFICIENT_CONSERVATIVE_OUTPUT" in codes
     assert "INSUFFICIENT_WALLET_RESERVE" in codes

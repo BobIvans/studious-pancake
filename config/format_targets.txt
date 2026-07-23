@@ -178,3 +178,5 @@ tests/test_pr203_final_promotion_governance.py
 setup.py
 src/production_surface.py
 tests/test_pr194_production_surface_manifest.py
+isolated_signer_service/src/flashloan_isolated_signer/pr199.py
+tests/test_roadmap_pr199_isolated_submission_boundary.py

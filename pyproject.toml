@@ -83,7 +83,7 @@ flashloan-release-evidence = "src.release_gate.materialized_evidence:main"
 
 [tool.setuptools]
 include-package-data = true
-py-modules = ["arb_bot"]
+py-modules = ["arb_bot", "flashloan_release_evidence"]
 
 [tool.setuptools.packages.find]
 where = ["."]

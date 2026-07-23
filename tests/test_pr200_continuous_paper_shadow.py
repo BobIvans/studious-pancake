@@ -85,13 +85,13 @@ def test_duplicate_terminal_outcomes_are_counted_not_rewritten(tmp_path: Path):
 
 def test_sender_module_import_fails_closed(tmp_path: Path, monkeypatch):
     module_name = "src.execution.senders.fake_sender"
-    monkeypatch.setitem(sys.modules, module_name, object())
     service = PR200ContinuousPaperService(
         PR200ContinuousConfig(max_cycles=1, output_dir=tmp_path),
         _identity([]),
         [],
         clock_millis=lambda: 1_000,
     )
+    monkeypatch.setitem(sys.modules, module_name, object())
 
     with pytest.raises(PR200InvariantViolation):
         service.run()

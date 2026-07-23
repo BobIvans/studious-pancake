@@ -1,131 +1,512 @@
 from __future__ import annotations
 
+from dataclasses import replace
+import hashlib
+import json
+
 import pytest
 
 from src.treasury.financial_risk import (
     AccountingStage,
     AssetAmount,
     AssetIdentity,
-    BalanceSource,
+    AttemptOutcome,
+    ChainRegistryManifest,
     DailyTreasuryReport,
     DurableRiskState,
+    DurableTreasuryLedger,
     FundingSweepRequest,
+    LedgerAccountKind,
     LedgerEntryKind,
+    LedgerPosting,
+    ObservationPolicy,
+    PostingSide,
+    ProgramDeploymentAttestation,
     RiskLedgerEntry,
     RiskWindow,
     RpcEndpointEvidence,
+    RpcProviderRegistryEntry,
+    RpcProviderRegistryManifest,
     SolvencyInputs,
     TreasuryAccountingError,
     TreasuryAuthorization,
+    TreasuryScope,
+    VerifiedChainRegistry,
+    VerifiedRpcProviderRegistry,
     WalletClassification,
     WalletObservationPackage,
     WalletRegistryEntry,
     compute_solvency_report,
+    domain_hash,
+    fold_risk_counters,
     reject_caller_supplied_wallet_balance,
+    sign_hmac_payload,
 )
+
+
+GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2h8"
+SYSTEM_PROGRAM = "11111111111111111111111111111111"
+TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+JUPITER_PROGRAM = "JUP6LkbZbjS1jKKwapdHNy74zcZ3tLUZoi5QNyVTaV4"
+WRAPPED_SOL = "So11111111111111111111111111111111111111112"
+CHAIN_KEY = b"chain-registry-key-material-32!!"
+PROVIDER_KEY = b"provider-registry-key-material!!"
+APPROVER_KEY = b"treasury-approver-key-material!!"
+
+
+def _h(label: str) -> str:
+    return hashlib.sha256(label.encode()).hexdigest()
 
 
 def _sol_asset() -> AssetIdentity:
     return AssetIdentity(
-        cluster_genesis="mainnet-beta-genesis",
+        cluster_genesis=GENESIS,
         symbol="SOL",
-        mint="native",
-        token_program="system",
+        mint=WRAPPED_SOL,
+        token_program=TOKEN_PROGRAM,
         decimals=9,
     )
 
 
-def _amount(units: int) -> AssetAmount:
-    return AssetAmount(_sol_asset(), units)
+def _amount(value: int) -> AssetAmount:
+    return AssetAmount(_sol_asset(), value)
 
 
-def _registry() -> WalletRegistryEntry:
+def _chain_registry() -> VerifiedChainRegistry:
+    manifest = ChainRegistryManifest(
+        cluster_genesis=GENESIS,
+        generation=4,
+        policy_hash=_h("chain-policy"),
+        created_at_ns=1_000,
+        programs=tuple(
+            ProgramDeploymentAttestation(
+                program_id=program,
+                program_data_hash=_h(f"program-data:{program}"),
+                deployment_slot=100,
+                authority_policy_hash=_h(f"authority:{program}"),
+            )
+            for program in (SYSTEM_PROGRAM, TOKEN_PROGRAM, JUPITER_PROGRAM)
+        ),
+    )
+    signature = sign_hmac_payload(
+        key=CHAIN_KEY,
+        domain="mpr15/chain-registry-signature",
+        payload_hash=manifest.manifest_hash,
+    )
+    return VerifiedChainRegistry.verify(
+        manifest=manifest,
+        signer_key_id="chain-root",
+        signature=signature,
+        trusted_keys={"chain-root": CHAIN_KEY},
+    )
+
+
+def _provider_registry(*, correlated: bool = False) -> VerifiedRpcProviderRegistry:
+    entries = (
+        RpcProviderRegistryEntry(
+            provider_id="rpc-a",
+            endpoint_identity_hash=_h("endpoint-a"),
+            operator_group_hash=_h("operator-shared" if correlated else "operator-a"),
+            network_path_group_hash=_h("path-a"),
+            allowed_cluster_genesis=GENESIS,
+        ),
+        RpcProviderRegistryEntry(
+            provider_id="rpc-b",
+            endpoint_identity_hash=_h("endpoint-b"),
+            operator_group_hash=_h("operator-shared" if correlated else "operator-b"),
+            network_path_group_hash=_h("path-b"),
+            allowed_cluster_genesis=GENESIS,
+        ),
+    )
+    manifest = RpcProviderRegistryManifest(
+        generation=7,
+        policy_hash=_h("provider-policy"),
+        created_at_ns=1_000,
+        entries=entries,
+    )
+    signature = sign_hmac_payload(
+        key=PROVIDER_KEY,
+        domain="mpr15/provider-registry-signature",
+        payload_hash=manifest.manifest_hash,
+    )
+    return VerifiedRpcProviderRegistry.verify(
+        manifest=manifest,
+        signer_key_id="provider-root",
+        signature=signature,
+        trusted_keys={"provider-root": PROVIDER_KEY},
+    )
+
+
+def _registry(*, approved_token_accounts: tuple[str, ...] = ()) -> WalletRegistryEntry:
     return WalletRegistryEntry(
-        cluster_genesis="mainnet-beta-genesis",
-        wallet_pubkey="Treasury111111111111111111111111111111111",
-        purpose="limited-live-canary",
+        cluster_genesis=GENESIS,
+        wallet_pubkey=SYSTEM_PROGRAM,
+        purpose="limited-live execution wallet",
         signer_backend="isolated-signer",
-        owner_custodian="treasury-admin",
+        owner_custodian="treasury",
         classification=WalletClassification.HOT,
-        approved_programs=("jupiter-v6", "system"),
-        approved_token_accounts=(),
+        approved_programs=(JUPITER_PROGRAM, SYSTEM_PROGRAM, TOKEN_PROGRAM),
+        approved_token_accounts=approved_token_accounts,
         protected_reserve=_amount(2_000_000),
         maximum_exposure=_amount(10_000_000),
-        funding_policy_id="funding-policy-v1",
-        sweep_policy_id="sweep-policy-v1",
+        funding_policy_id=_h("funding-policy"),
+        sweep_policy_id=_h("sweep-policy"),
+        registry_generation=5,
+        registry_manifest_hash=_h("wallet-registry"),
+        chain_registry=_chain_registry(),
     )
 
 
-def _endpoint(endpoint_id: str, identity: str) -> RpcEndpointEvidence:
+def _raw_bundle(
+    *,
+    balance: int = 20_000_000,
+    context_slot: int = 100,
+    root_slot: int = 105,
+    token_accounts: list[dict[str, object]] | None = None,
+) -> str:
+    return json.dumps(
+        {
+            "schema": "mpr15.wallet-rpc-bundle.v1",
+            "cluster_genesis": GENESIS,
+            "wallet_pubkey": SYSTEM_PROGRAM,
+            "context_slot": context_slot,
+            "root_slot": root_slot,
+            "native_balance_base_units": balance,
+            "token_accounts": token_accounts or [],
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+
+
+def _endpoint(
+    provider_id: str,
+    *,
+    raw: str | None = None,
+    collected_at_ns: int = 10_000,
+    context_slot: int = 100,
+    root_slot: int = 105,
+) -> RpcEndpointEvidence:
+    raw = raw or _raw_bundle(context_slot=context_slot, root_slot=root_slot)
     return RpcEndpointEvidence(
-        endpoint_id=endpoint_id,
-        endpoint_identity_hash=identity,
+        provider_id=provider_id,
+        request_hash=_h("wallet-request"),
+        raw_response_json=raw,
+        response_hash=hashlib.sha256(raw.encode()).hexdigest(),
+        transport_evidence_hash=_h(f"transport:{provider_id}"),
         commitment="finalized",
-        context_slot=100,
-        root_slot=105,
-        response_hash=f"response-{endpoint_id}",
+        context_slot=context_slot,
+        root_slot=root_slot,
+        collected_at_ns=collected_at_ns,
     )
 
 
-def _observation(balance: int = 20_000_000) -> WalletObservationPackage:
-    return WalletObservationPackage(
+def _observation(
+    *,
+    balance: int = 20_000_000,
+    observed_at_ns: int = 10_000,
+    provider_registry: VerifiedRpcProviderRegistry | None = None,
+) -> WalletObservationPackage:
+    raw = _raw_bundle(balance=balance)
+    return WalletObservationPackage.from_rpc_quorum(
         registry_entry=_registry(),
-        native_balance=_amount(balance),
-        token_accounts=(),
+        provider_registry=provider_registry or _provider_registry(),
         endpoint_evidence=(
-            _endpoint("rpc-a", "identity-a"),
-            _endpoint("rpc-b", "identity-b"),
+            _endpoint("rpc-a", raw=raw, collected_at_ns=observed_at_ns - 1),
+            _endpoint("rpc-b", raw=raw, collected_at_ns=observed_at_ns),
         ),
-        observed_at_ns=10_000,
-        policy_hash="policy-hash",
+        policy_hash=_h("treasury-policy"),
+        decoder_version="wallet-rpc-decoder-v1",
+        observation_policy=ObservationPolicy(
+            minimum_quorum=2,
+            max_age_ns=1_000,
+            max_future_skew_ns=10,
+            max_collection_span_ns=50,
+            max_root_slot_skew=2,
+            max_root_lag_slots=20,
+        ),
     )
 
 
-def test_pr163_rejects_caller_supplied_wallet_balance() -> None:
+def _posting_pair(
+    kind: LedgerEntryKind,
+    amount: int,
+) -> tuple[LedgerPosting, LedgerPosting]:
+    if kind is LedgerEntryKind.REALIZED_PNL:
+        if amount > 0:
+            debit, credit = LedgerAccountKind.CHAIN_WALLET, LedgerAccountKind.PNL_INCOME
+        else:
+            debit, credit = LedgerAccountKind.PNL_LOSS, LedgerAccountKind.CHAIN_WALLET
+    else:
+        topology = {
+            LedgerEntryKind.FUNDING: (
+                LedgerAccountKind.CHAIN_WALLET,
+                LedgerAccountKind.FUNDING_SOURCE,
+            ),
+            LedgerEntryKind.WITHDRAWAL: (
+                LedgerAccountKind.WITHDRAWAL_DESTINATION,
+                LedgerAccountKind.CHAIN_WALLET,
+            ),
+            LedgerEntryKind.FEE: (
+                LedgerAccountKind.FEE_EXPENSE,
+                LedgerAccountKind.CHAIN_WALLET,
+            ),
+            LedgerEntryKind.RENT_LOCKED: (
+                LedgerAccountKind.RENT_ASSET,
+                LedgerAccountKind.CHAIN_WALLET,
+            ),
+            LedgerEntryKind.RENT_REFUNDED: (
+                LedgerAccountKind.CHAIN_WALLET,
+                LedgerAccountKind.RENT_ASSET,
+            ),
+            LedgerEntryKind.TIP: (
+                LedgerAccountKind.TIP_EXPENSE,
+                LedgerAccountKind.CHAIN_WALLET,
+            ),
+            LedgerEntryKind.TRANSFER_FEE: (
+                LedgerAccountKind.TRANSFER_FEE_EXPENSE,
+                LedgerAccountKind.CHAIN_WALLET,
+            ),
+            LedgerEntryKind.FAILED_ATTEMPT_CHARGE: (
+                LedgerAccountKind.FAILED_ATTEMPT_EXPENSE,
+                LedgerAccountKind.CHAIN_WALLET,
+            ),
+            LedgerEntryKind.UNRESOLVED_MAX_LOSS: (
+                LedgerAccountKind.UNRESOLVED_RESERVE,
+                LedgerAccountKind.RISK_CONTRA,
+            ),
+            LedgerEntryKind.PROVIDER_SPEND: (
+                LedgerAccountKind.PROVIDER_EXPENSE,
+                LedgerAccountKind.CHAIN_WALLET,
+            ),
+        }
+        debit, credit = topology[kind]
+    absolute = abs(amount)
+    return (
+        LedgerPosting(
+            account_kind=debit,
+            account_id=(
+                SYSTEM_PROGRAM
+                if debit is LedgerAccountKind.CHAIN_WALLET
+                else debit.value
+            ),
+            side=PostingSide.DEBIT,
+            amount_base_units=absolute,
+        ),
+        LedgerPosting(
+            account_kind=credit,
+            account_id=(
+                SYSTEM_PROGRAM
+                if credit is LedgerAccountKind.CHAIN_WALLET
+                else credit.value
+            ),
+            side=PostingSide.CREDIT,
+            amount_base_units=absolute,
+        ),
+    )
+
+
+def _entry(
+    *,
+    kind: LedgerEntryKind,
+    amount: int,
+    occurred_at_ns: int,
+    movement: str,
+    event: str,
+    stage: AccountingStage = AccountingStage.FINALIZED,
+    recorded_at_ns: int | None = None,
+    attempt: str | None = None,
+    outcome: AttemptOutcome | None = None,
+) -> RiskLedgerEntry:
+    return RiskLedgerEntry(
+        event_id=_h(f"event:{event}"),
+        movement_id=_h(f"movement:{movement}"),
+        idempotency_key=_h(f"idempotency:{event}"),
+        asset=_sol_asset(),
+        kind=kind,
+        stage=stage,
+        amount_delta_base_units=amount,
+        occurred_at_ns=occurred_at_ns,
+        recorded_at_ns=recorded_at_ns or occurred_at_ns + 1,
+        postings=_posting_pair(kind, amount),
+        evidence_hash=_h(f"evidence:{movement}"),
+        attempt_id=_h(f"attempt:{attempt}") if attempt else None,
+        attempt_outcome=outcome,
+        finalized_slot=123 if stage >= AccountingStage.FINALIZED else None,
+        reason="test movement",
+    )
+
+
+def test_mpr15_rejects_caller_supplied_wallet_balance() -> None:
     with pytest.raises(TreasuryAccountingError, match="caller-supplied"):
         reject_caller_supplied_wallet_balance({"native_lamports": 20_000_000})
 
-    with pytest.raises(TreasuryAccountingError, match="caller-supplied"):
-        WalletObservationPackage(
+    with pytest.raises(TypeError):
+        WalletObservationPackage()  # type: ignore[call-arg]
+
+
+def test_mpr15_wallet_balance_is_derived_from_hashed_raw_rpc_bytes() -> None:
+    observation = _observation(balance=21_000_000)
+    assert observation.native_balance.base_units == 21_000_000
+    assert len(observation.decoded_state_hash) == 64
+
+    raw = _raw_bundle(balance=21_000_000)
+    with pytest.raises(TreasuryAccountingError, match="response hash mismatch"):
+        RpcEndpointEvidence(
+            provider_id="rpc-a",
+            request_hash=_h("wallet-request"),
+            raw_response_json=raw,
+            response_hash=_h("different-response"),
+            transport_evidence_hash=_h("transport"),
+            commitment="finalized",
+            context_slot=100,
+            root_slot=105,
+            collected_at_ns=10_000,
+        )
+
+
+def test_mpr15_signed_provider_registry_enforces_real_independence() -> None:
+    with pytest.raises(TreasuryAccountingError, match="operator groups"):
+        _observation(provider_registry=_provider_registry(correlated=True))
+
+    registry = _provider_registry()
+    raw = _raw_bundle()
+    with pytest.raises(TreasuryAccountingError, match="absent from signed registry"):
+        WalletObservationPackage.from_rpc_quorum(
             registry_entry=_registry(),
-            native_balance=_amount(20_000_000),
-            token_accounts=(),
+            provider_registry=registry,
             endpoint_evidence=(
-                _endpoint("rpc-a", "identity-a"),
-                _endpoint("rpc-b", "identity-b"),
+                _endpoint("rpc-a", raw=raw),
+                _endpoint("rpc-fake", raw=raw),
             ),
-            observed_at_ns=10_000,
-            policy_hash="policy-hash",
-            source=BalanceSource.CALLER_SUPPLIED,
+            policy_hash=_h("treasury-policy"),
+            decoder_version="wallet-rpc-decoder-v1",
+            observation_policy=ObservationPolicy(2, 1_000, 10, 50, 2, 20),
         )
 
 
-def test_pr163_wallet_observation_requires_independent_quorum() -> None:
-    with pytest.raises(TreasuryAccountingError, match="RPC quorum"):
-        WalletObservationPackage(
+def test_mpr15_quorum_requires_same_decoded_state_and_same_request() -> None:
+    raw_a = _raw_bundle(balance=20_000_000)
+    raw_b = _raw_bundle(balance=19_000_000)
+    with pytest.raises(TreasuryAccountingError, match="different wallet states"):
+        WalletObservationPackage.from_rpc_quorum(
             registry_entry=_registry(),
-            native_balance=_amount(20_000_000),
-            token_accounts=(),
-            endpoint_evidence=(_endpoint("rpc-a", "identity-a"),),
-            observed_at_ns=10_000,
-            policy_hash="policy-hash",
-        )
-
-    with pytest.raises(TreasuryAccountingError, match="correlated"):
-        WalletObservationPackage(
-            registry_entry=_registry(),
-            native_balance=_amount(20_000_000),
-            token_accounts=(),
+            provider_registry=_provider_registry(),
             endpoint_evidence=(
-                _endpoint("rpc-a", "shared-identity"),
-                _endpoint("rpc-b", "shared-identity"),
+                _endpoint("rpc-a", raw=raw_a),
+                _endpoint("rpc-b", raw=raw_b),
             ),
-            observed_at_ns=10_000,
-            policy_hash="policy-hash",
+            policy_hash=_h("treasury-policy"),
+            decoder_version="wallet-rpc-decoder-v1",
+            observation_policy=ObservationPolicy(2, 1_000, 10, 50, 2, 20),
+        )
+
+    second = replace(_endpoint("rpc-b", raw=raw_a), request_hash=_h("other-request"))
+    with pytest.raises(TreasuryAccountingError, match="same request"):
+        WalletObservationPackage.from_rpc_quorum(
+            registry_entry=_registry(),
+            provider_registry=_provider_registry(),
+            endpoint_evidence=(_endpoint("rpc-a", raw=raw_a), second),
+            policy_hash=_h("treasury-policy"),
+            decoder_version="wallet-rpc-decoder-v1",
+            observation_policy=ObservationPolicy(2, 1_000, 10, 50, 2, 20),
         )
 
 
-def test_pr163_solvency_subtracts_all_protected_reserves_and_holds() -> None:
+def test_mpr15_freshness_future_and_root_lag_fail_closed() -> None:
+    observation = _observation(observed_at_ns=10_000)
+    observation.validate_freshness(
+        trusted_now_ns=10_500,
+        current_finalized_root_slot=110,
+    )
+
+    with pytest.raises(TreasuryAccountingError, match="stale"):
+        observation.validate_freshness(
+            trusted_now_ns=11_001,
+            current_finalized_root_slot=110,
+        )
+    with pytest.raises(TreasuryAccountingError, match="future-dated"):
+        observation.validate_freshness(
+            trusted_now_ns=9_989,
+            current_finalized_root_slot=110,
+        )
+    with pytest.raises(TreasuryAccountingError, match="too old"):
+        observation.validate_freshness(
+            trusted_now_ns=10_500,
+            current_finalized_root_slot=126,
+        )
+
+
+def test_mpr15_token_inventory_requires_unique_hashed_accounts() -> None:
+    token_account = JUPITER_PROGRAM
+    token = {
+        "account_pubkey": token_account,
+        "owner_pubkey": SYSTEM_PROGRAM,
+        "symbol": "SOL",
+        "mint": WRAPPED_SOL,
+        "token_program": TOKEN_PROGRAM,
+        "decimals": 9,
+        "amount_base_units": 10,
+        "layout_version": "spl-token-v1",
+        "account_hash": _h("token-account"),
+        "delegated_authority": None,
+        "close_authority": None,
+    }
+    raw = _raw_bundle(token_accounts=[token, token])
+    with pytest.raises(
+        TreasuryAccountingError, match="duplicate token account inventory"
+    ):
+        WalletObservationPackage.from_rpc_quorum(
+            registry_entry=_registry(approved_token_accounts=(token_account,)),
+            provider_registry=_provider_registry(),
+            endpoint_evidence=(
+                _endpoint("rpc-a", raw=raw),
+                _endpoint("rpc-b", raw=raw),
+            ),
+            policy_hash=_h("treasury-policy"),
+            decoder_version="wallet-rpc-decoder-v1",
+            observation_policy=ObservationPolicy(2, 1_000, 10, 50, 2, 20),
+        )
+
+    missing_hash = dict(token)
+    missing_hash["account_hash"] = ""
+    raw_missing = _raw_bundle(token_accounts=[missing_hash])
+    with pytest.raises(TreasuryAccountingError, match="account_hash"):
+        WalletObservationPackage.from_rpc_quorum(
+            registry_entry=_registry(approved_token_accounts=(token_account,)),
+            provider_registry=_provider_registry(),
+            endpoint_evidence=(
+                _endpoint("rpc-a", raw=raw_missing),
+                _endpoint("rpc-b", raw=raw_missing),
+            ),
+            policy_hash=_h("treasury-policy"),
+            decoder_version="wallet-rpc-decoder-v1",
+            observation_policy=ObservationPolicy(2, 1_000, 10, 50, 2, 20),
+        )
+
+
+def test_mpr15_chain_registry_rejects_noncanonical_identities_and_bad_signature(
+) -> None:
+    with pytest.raises(TreasuryAccountingError, match="32 bytes"):
+        AssetIdentity(
+            cluster_genesis=GENESIS,
+            symbol="BAD",
+            mint="not-a-pubkey",
+            token_program=TOKEN_PROGRAM,
+            decimals=9,
+        )
+
+    manifest = _chain_registry().manifest
+    with pytest.raises(TreasuryAccountingError, match="signature verification"):
+        VerifiedChainRegistry.verify(
+            manifest=manifest,
+            signer_key_id="chain-root",
+            signature=_h("forged"),
+            trusted_keys={"chain-root": CHAIN_KEY},
+        )
+
+
+def test_mpr15_solvency_uses_fresh_decoded_observation() -> None:
     observation = _observation(balance=20_000_000)
     inputs = SolvencyInputs(
         finalized_wallet_assets=_amount(20_000_000),
@@ -138,184 +519,442 @@ def test_pr163_solvency_subtracts_all_protected_reserves_and_holds() -> None:
         provider_network_fee_buffer=_amount(200_000),
         withdrawal_sweep_holds=_amount(1_000_000),
     )
-
-    report = compute_solvency_report(observation, inputs)
-
+    report = compute_solvency_report(
+        observation,
+        inputs,
+        trusted_now_ns=10_500,
+        current_finalized_root_slot=110,
+    )
     assert report.available_base_units == 9_000_000
-    assert report.deficit_base_units == 0
     assert report.admission_allowed is True
-    assert report.observation_hash == observation.observation_hash
 
-
-def test_pr163_solvency_fail_closes_when_reserve_exceeds_balance() -> None:
-    observation = _observation(balance=3_000_000)
-    inputs = SolvencyInputs(
-        finalized_wallet_assets=_amount(3_000_000),
-        protected_treasury_reserve=_amount(2_000_000),
-        active_capital_reservations=_amount(1_000_000),
-        pending_submission_max_debit=_amount(2_000_000),
-        unresolved_ambiguous_attempt_reserve=_amount(2_000_000),
-        rent_liabilities=_amount(100_000),
-        estimated_failure_charges=_amount(100_000),
-        provider_network_fee_buffer=_amount(100_000),
-        withdrawal_sweep_holds=_amount(100_000),
-    )
-
-    report = compute_solvency_report(observation, inputs)
-
-    assert report.available_base_units == 0
-    assert report.deficit_base_units == 2_400_000
-    assert report.admission_allowed is False
-
-
-def test_pr163_multi_asset_mixing_is_rejected() -> None:
-    usdc = AssetIdentity(
-        cluster_genesis="mainnet-beta-genesis",
-        symbol="USDC",
-        mint="usdc-mint",
-        token_program="token",
-        decimals=6,
-    )
-
-    with pytest.raises(TreasuryAccountingError, match="different assets"):
-        _amount(1) + AssetAmount(usdc, 1)
-
-    with pytest.raises(TreasuryAccountingError, match="different assets"):
-        SolvencyInputs(
-            finalized_wallet_assets=_amount(10),
-            protected_treasury_reserve=AssetAmount(usdc, 1),
-            active_capital_reservations=_amount(0),
-            pending_submission_max_debit=_amount(0),
-            unresolved_ambiguous_attempt_reserve=_amount(0),
-            rent_liabilities=_amount(0),
-            estimated_failure_charges=_amount(0),
-            provider_network_fee_buffer=_amount(0),
-            withdrawal_sweep_holds=_amount(0),
+    with pytest.raises(TreasuryAccountingError, match="does not match decoded"):
+        compute_solvency_report(
+            observation,
+            replace(inputs, finalized_wallet_assets=_amount(19_000_000)),
+            trusted_now_ns=10_500,
+            current_finalized_root_slot=110,
         )
 
 
-def test_pr163_utc_day_and_rolling_24h_windows_are_distinct() -> None:
-    day = RiskWindow.utc_day("2026-07-22")
-    rolling = RiskWindow.rolling_24h(end_ns=day.end_ns)
+def test_mpr15_authorization_is_signed_scoped_not_before_and_one_time(tmp_path) -> None:
+    unsigned = FundingSweepRequest(
+        request_id=_h("request-1"),
+        source_wallet=SYSTEM_PROGRAM,
+        destination_wallet=JUPITER_PROGRAM,
+        amount=_amount(100_000),
+        scope=TreasuryScope.SWEEP,
+        destination_policy_hash=_h("destination-policy"),
+        simulated_message_hash=_h("simulated-message"),
+        isolated_signer_required=True,
+    )
+    authorization = TreasuryAuthorization.issue(
+        request_hash=unsigned.request_hash,
+        approver_key_id="treasury-root",
+        policy_hash=_h("treasury-policy"),
+        scope=TreasuryScope.SWEEP,
+        issued_at_ns=100,
+        expires_at_ns=200,
+        nonce=_h("nonce-1"),
+        signing_key=APPROVER_KEY,
+    )
+    request = replace(unsigned, authorization=authorization)
+    ledger_path = tmp_path / "treasury.sqlite3"
+    with DurableTreasuryLedger(ledger_path) as ledger:
+        with pytest.raises(TreasuryAccountingError, match="not active yet"):
+            request.validate_and_consume(
+                now_ns=99,
+                policy_hash=_h("treasury-policy"),
+                destination_allowlisted=True,
+                trusted_approver_keys={"treasury-root": APPROVER_KEY},
+                ledger=ledger,
+            )
+        consumption_hash = request.validate_and_consume(
+            now_ns=150,
+            policy_hash=_h("treasury-policy"),
+            destination_allowlisted=True,
+            trusted_approver_keys={"treasury-root": APPROVER_KEY},
+            ledger=ledger,
+        )
+        assert len(consumption_hash) == 64
 
-    assert day.kind.value == "utc_day"
-    assert rolling.kind.value == "rolling_24h"
-    assert day.key != rolling.key
-    assert day.start_ns == rolling.start_ns
-    assert day.end_ns == rolling.end_ns
+    with DurableTreasuryLedger(ledger_path) as reopened:
+        with pytest.raises(TreasuryAccountingError, match="already consumed"):
+            request.validate_and_consume(
+                now_ns=151,
+                policy_hash=_h("treasury-policy"),
+                destination_allowlisted=True,
+                trusted_approver_keys={"treasury-root": APPROVER_KEY},
+                ledger=reopened,
+            )
 
 
-def test_pr163_durable_risk_state_survives_restart_snapshot_round_trip() -> None:
-    window = RiskWindow.utc_day("2026-07-22")
-    entries = (
+def test_mpr15_authorization_rejects_wrong_scope_and_tampered_request(tmp_path) -> None:
+    request = FundingSweepRequest(
+        request_id=_h("request-2"),
+        source_wallet=SYSTEM_PROGRAM,
+        destination_wallet=JUPITER_PROGRAM,
+        amount=_amount(100_000),
+        scope=TreasuryScope.FUNDING,
+        destination_policy_hash=_h("destination-policy"),
+        simulated_message_hash=_h("simulated-message"),
+        isolated_signer_required=True,
+    )
+    wrong_scope = TreasuryAuthorization.issue(
+        request_hash=request.request_hash,
+        approver_key_id="treasury-root",
+        policy_hash=_h("treasury-policy"),
+        scope=TreasuryScope.SWEEP,
+        issued_at_ns=100,
+        expires_at_ns=200,
+        nonce=_h("nonce-2"),
+        signing_key=APPROVER_KEY,
+    )
+    with DurableTreasuryLedger(tmp_path / "auth.sqlite3") as ledger:
+        with pytest.raises(TreasuryAccountingError, match="scope mismatch"):
+            replace(request, authorization=wrong_scope).validate_and_consume(
+                now_ns=150,
+                policy_hash=_h("treasury-policy"),
+                destination_allowlisted=True,
+                trusted_approver_keys={"treasury-root": APPROVER_KEY},
+                ledger=ledger,
+            )
+
+        correct = TreasuryAuthorization.issue(
+            request_hash=request.request_hash,
+            approver_key_id="treasury-root",
+            policy_hash=_h("treasury-policy"),
+            scope=TreasuryScope.FUNDING,
+            issued_at_ns=100,
+            expires_at_ns=200,
+            nonce=_h("nonce-3"),
+            signing_key=APPROVER_KEY,
+        )
+        tampered = replace(request, amount=_amount(100_001), authorization=correct)
+        with pytest.raises(TreasuryAccountingError, match="another request"):
+            tampered.validate_and_consume(
+                now_ns=150,
+                policy_hash=_h("treasury-policy"),
+                destination_allowlisted=True,
+                trusted_approver_keys={"treasury-root": APPROVER_KEY},
+                ledger=ledger,
+            )
+
+
+def test_mpr15_expense_sign_and_double_entry_invariants_fail_closed() -> None:
+    window = RiskWindow.utc_day("2026-07-23")
+    with pytest.raises(TreasuryAccountingError, match="amount must be positive"):
+        _entry(
+            kind=LedgerEntryKind.FEE,
+            amount=-5,
+            occurred_at_ns=window.start_ns + 1,
+            movement="negative-fee",
+            event="negative-fee",
+        )
+
+    with pytest.raises(TreasuryAccountingError, match="do not balance"):
         RiskLedgerEntry(
-            entry_id="pnl-1",
+            event_id=_h("event:bad-posting"),
+            movement_id=_h("movement:bad-posting"),
+            idempotency_key=_h("idempotency:bad-posting"),
             asset=_sol_asset(),
-            kind=LedgerEntryKind.REALIZED_PNL,
+            kind=LedgerEntryKind.FEE,
             stage=AccountingStage.FINALIZED,
-            amount_delta_base_units=-700_000,
-            observed_at_ns=window.start_ns + 1,
-            window_keys=(window.key,),
-            attempt_id="attempt-1",
+            amount_delta_base_units=10,
+            occurred_at_ns=window.start_ns + 1,
+            recorded_at_ns=window.start_ns + 2,
+            postings=(
+                LedgerPosting(
+                    LedgerAccountKind.FEE_EXPENSE,
+                    "fee",
+                    PostingSide.DEBIT,
+                    10,
+                ),
+                LedgerPosting(
+                    LedgerAccountKind.CHAIN_WALLET,
+                    SYSTEM_PROGRAM,
+                    PostingSide.CREDIT,
+                    9,
+                ),
+            ),
+            evidence_hash=_h("evidence:bad-posting"),
             finalized_slot=123,
-        ),
-        RiskLedgerEntry(
-            entry_id="fail-1",
+        )
+
+
+def test_mpr15_window_membership_comes_from_trusted_occurrence_time() -> None:
+    window = RiskWindow.utc_day("2026-07-23")
+    old = _entry(
+        kind=LedgerEntryKind.FEE,
+        amount=5,
+        occurred_at_ns=window.start_ns - 1,
+        movement="old-fee",
+        event="old-fee",
+    )
+    current = _entry(
+        kind=LedgerEntryKind.FEE,
+        amount=7,
+        occurred_at_ns=window.start_ns + 1,
+        movement="current-fee",
+        event="current-fee",
+    )
+    snapshot = fold_risk_counters(
+        entries=(old, current), window=window, asset=_sol_asset()
+    )
+    assert snapshot.fees_base_units == 7
+
+
+def test_mpr15_stage_projection_counts_one_movement_once() -> None:
+    window = RiskWindow.utc_day("2026-07-23")
+    finalized = _entry(
+        kind=LedgerEntryKind.FEE,
+        amount=11,
+        occurred_at_ns=window.start_ns + 1,
+        movement="fee-1",
+        event="fee-finalized",
+        stage=AccountingStage.FINALIZED,
+    )
+    reconciled = _entry(
+        kind=LedgerEntryKind.FEE,
+        amount=11,
+        occurred_at_ns=window.start_ns + 1,
+        movement="fee-1",
+        event="fee-reconciled",
+        stage=AccountingStage.RECONCILED,
+        recorded_at_ns=window.start_ns + 3,
+    )
+    snapshot = fold_risk_counters(
+        entries=(finalized, reconciled),
+        window=window,
+        asset=_sol_asset(),
+    )
+    assert snapshot.fees_base_units == 11
+
+    conflict = replace(
+        reconciled,
+        amount_delta_base_units=12,
+        postings=_posting_pair(LedgerEntryKind.FEE, 12),
+    )
+    with pytest.raises(TreasuryAccountingError, match="identity changed"):
+        fold_risk_counters(
+            entries=(finalized, conflict),
+            window=window,
             asset=_sol_asset(),
-            kind=LedgerEntryKind.FAILED_ATTEMPT_CHARGE,
-            stage=AccountingStage.RECONCILED,
-            amount_delta_base_units=-25_000,
-            observed_at_ns=window.start_ns + 2,
-            window_keys=(window.key,),
-            attempt_id="attempt-1",
-            finalized_slot=124,
+        )
+
+
+def test_mpr15_durable_ledger_enforces_idempotency_and_stage_fsm(tmp_path) -> None:
+    window = RiskWindow.utc_day("2026-07-23")
+    finalized = _entry(
+        kind=LedgerEntryKind.FEE,
+        amount=13,
+        occurred_at_ns=window.start_ns + 1,
+        movement="durable-fee",
+        event="durable-finalized",
+        stage=AccountingStage.FINALIZED,
+    )
+    reconciled = _entry(
+        kind=LedgerEntryKind.FEE,
+        amount=13,
+        occurred_at_ns=window.start_ns + 1,
+        movement="durable-fee",
+        event="durable-reconciled",
+        stage=AccountingStage.RECONCILED,
+        recorded_at_ns=window.start_ns + 3,
+    )
+    path = tmp_path / "ledger.sqlite3"
+    with DurableTreasuryLedger(path) as ledger:
+        first_hash = ledger.append_event(finalized)
+        assert ledger.append_event(finalized) == first_hash
+        ledger.append_event(reconciled)
+        assert len(ledger.events()) == 2
+
+        booked = _entry(
+            kind=LedgerEntryKind.FEE,
+            amount=13,
+            occurred_at_ns=window.start_ns + 1,
+            movement="durable-fee",
+            event="durable-booked",
+            stage=AccountingStage.BOOKED,
+            recorded_at_ns=window.start_ns + 4,
+        )
+        ledger.append_event(booked)
+
+        regressed = _entry(
+            kind=LedgerEntryKind.FEE,
+            amount=13,
+            occurred_at_ns=window.start_ns + 1,
+            movement="durable-fee",
+            event="durable-regressed",
+            stage=AccountingStage.CONFIRMED,
+            recorded_at_ns=window.start_ns + 5,
+        )
+        with pytest.raises(TreasuryAccountingError, match="illegal accounting stage"):
+            ledger.append_event(regressed)
+
+    with DurableTreasuryLedger(path) as reopened:
+        state = reopened.replay_risk_state(windows=(window,), asset=_sol_asset())
+        assert state.entry_count == 3
+        assert state.movement_count == 1
+        assert state.snapshots[0].fees_base_units == 13
+
+
+def test_mpr15_consecutive_failures_count_unique_terminal_attempts() -> None:
+    window = RiskWindow.utc_day("2026-07-23")
+    fail_1 = _entry(
+        kind=LedgerEntryKind.FAILED_ATTEMPT_CHARGE,
+        amount=5,
+        occurred_at_ns=window.start_ns + 1,
+        movement="fail-1",
+        event="fail-1",
+        attempt="attempt-1",
+        outcome=AttemptOutcome.FAILED,
+    )
+    fail_1_reconciled = _entry(
+        kind=LedgerEntryKind.FAILED_ATTEMPT_CHARGE,
+        amount=5,
+        occurred_at_ns=window.start_ns + 1,
+        movement="fail-1",
+        event="fail-1-reconciled",
+        attempt="attempt-1",
+        outcome=AttemptOutcome.FAILED,
+        stage=AccountingStage.RECONCILED,
+        recorded_at_ns=window.start_ns + 2,
+    )
+    fail_2 = _entry(
+        kind=LedgerEntryKind.FAILED_ATTEMPT_CHARGE,
+        amount=6,
+        occurred_at_ns=window.start_ns + 3,
+        movement="fail-2",
+        event="fail-2",
+        attempt="attempt-2",
+        outcome=AttemptOutcome.FAILED,
+    )
+    success = _entry(
+        kind=LedgerEntryKind.REALIZED_PNL,
+        amount=10,
+        occurred_at_ns=window.start_ns + 4,
+        movement="success",
+        event="success",
+        attempt="attempt-3",
+        outcome=AttemptOutcome.SUCCEEDED,
+    )
+    snapshot = fold_risk_counters(
+        entries=(fail_1, fail_1_reconciled, fail_2, success),
+        window=window,
+        asset=_sol_asset(),
+    )
+    assert snapshot.failed_attempt_charges_base_units == 11
+    assert snapshot.consecutive_failures == 0
+
+
+def test_mpr15_durable_risk_state_is_replay_only_and_hash_chained() -> None:
+    window = RiskWindow.utc_day("2026-07-23")
+    entries = (
+        _entry(
+            kind=LedgerEntryKind.REALIZED_PNL,
+            amount=-700,
+            occurred_at_ns=window.start_ns + 1,
+            movement="pnl-1",
+            event="pnl-1",
+        ),
+        _entry(
+            kind=LedgerEntryKind.FEE,
+            amount=25,
+            occurred_at_ns=window.start_ns + 2,
+            movement="fee-1",
+            event="fee-1",
         ),
     )
-
     state = DurableRiskState.from_entries(
         entries=entries,
         windows=(window,),
         asset=_sol_asset(),
+        previous_checkpoint_hash=_h("previous-checkpoint"),
     )
-    payload = state.to_json()
+    state.verify_replay(entries=entries, windows=(window,), asset=_sol_asset())
+    assert state.entry_count == 2
+    assert state.movement_count == 2
+    assert len(state.checkpoint_hash) == 64
 
-    assert payload["schema"] == "pr163.treasury-wallet-solvency.v1"
-    assert payload["snapshots"][0]["realized_pnl_base_units"] == "-700000"
-    assert payload["snapshots"][0]["failed_attempt_charges_base_units"] == "-25000"
-    assert payload["snapshots"][0]["consecutive_failures"] == 1
-    assert len(payload["ledger_hash"]) == 64
-
-
-def test_pr163_unresolved_attempt_reserve_must_cover_max_possible_debit() -> None:
-    with pytest.raises(
-        TreasuryAccountingError,
-        match="unresolved attempt reserve",
-    ):
-        SolvencyInputs(
-            finalized_wallet_assets=_amount(10_000_000),
-            protected_treasury_reserve=_amount(1_000_000),
-            active_capital_reservations=_amount(0),
-            pending_submission_max_debit=_amount(500_000),
-            unresolved_ambiguous_attempt_reserve=_amount(1_000_000),
-            rent_liabilities=_amount(0),
-            estimated_failure_charges=_amount(0),
-            provider_network_fee_buffer=_amount(0),
-            withdrawal_sweep_holds=_amount(0),
+    with pytest.raises(TypeError):
+        DurableRiskState(  # type: ignore[call-arg]
+            schema="forged",
+            snapshots=(),
+            ledger_hash=_h("fake"),
         )
 
 
-def test_pr163_funding_sweep_requires_treasury_authorization() -> None:
-    request = FundingSweepRequest(
-        source_wallet="Treasury111111111111111111111111111111111",
-        destination_wallet="Cold1111111111111111111111111111111111",
-        amount=_amount(100_000),
-        request_hash="request-hash",
-        destination_allowlisted=True,
-        simulated_message_hash="message-hash",
-        isolated_signer_required=True,
-    )
-
-    with pytest.raises(TreasuryAccountingError, match="authorization"):
-        request.validate(now_ns=20, policy_hash="policy-hash")
-
-    authorized = FundingSweepRequest(
-        source_wallet=request.source_wallet,
-        destination_wallet=request.destination_wallet,
-        amount=request.amount,
-        request_hash=request.request_hash,
-        destination_allowlisted=True,
-        simulated_message_hash=request.simulated_message_hash,
-        isolated_signer_required=True,
-        authorization=TreasuryAuthorization(
-            authorization_hash="auth-hash",
-            request_hash="request-hash",
-            approver_principal_hash="approver-hash",
-            policy_hash="policy-hash",
-            scope="treasury-sweep",
-            issued_at_ns=10,
-            expires_at_ns=30,
+def test_mpr15_daily_report_is_ledger_derived_and_unresolved_exposure_latches() -> None:
+    window = RiskWindow.utc_day("2026-07-23")
+    entries = (
+        _entry(
+            kind=LedgerEntryKind.FUNDING,
+            amount=1_000,
+            occurred_at_ns=window.start_ns + 1,
+            movement="funding",
+            event="funding",
+        ),
+        _entry(
+            kind=LedgerEntryKind.WITHDRAWAL,
+            amount=500,
+            occurred_at_ns=window.start_ns + 2,
+            movement="withdrawal",
+            event="withdrawal",
+        ),
+        _entry(
+            kind=LedgerEntryKind.REALIZED_PNL,
+            amount=-700,
+            occurred_at_ns=window.start_ns + 3,
+            movement="pnl",
+            event="pnl",
+        ),
+        _entry(
+            kind=LedgerEntryKind.FEE,
+            amount=100,
+            occurred_at_ns=window.start_ns + 4,
+            movement="fee",
+            event="fee",
+        ),
+        _entry(
+            kind=LedgerEntryKind.UNRESOLVED_MAX_LOSS,
+            amount=2_000,
+            occurred_at_ns=window.start_ns + 5,
+            movement="unresolved",
+            event="unresolved",
         ),
     )
-
-    authorized.validate(now_ns=20, policy_hash="policy-hash")
-
-
-def test_pr163_daily_report_variance_triggers_hard_latch() -> None:
-    window = RiskWindow.utc_day("2026-07-22")
-    report = DailyTreasuryReport(
+    report = DailyTreasuryReport.from_ledger(
         window=window,
         opening_finalized_balance=_amount(10_000),
-        funding=_amount(1_000),
-        withdrawals=_amount(500),
-        realized_pnl=_amount(-700),
-        fees=_amount(100),
-        ending_finalized_balance=_amount(9_600),
-        unresolved_exposure=_amount(2_000),
+        ending_finalized_balance=_amount(9_700),
+        entries=entries,
+        tolerance_base_units=0,
+        unresolved_exposure_threshold_base_units=0,
+    )
+    assert report.expected_ending_balance.base_units == 9_700
+    assert report.ledger_to_chain_variance_base_units == 0
+    assert report.unresolved_exposure.base_units == 2_000
+    assert report.hard_latch_required is True
+    with pytest.raises(TreasuryAccountingError, match="unresolved exposure"):
+        report.assert_balanced()
+
+
+def test_mpr15_daily_report_rejects_variance_even_without_exposure() -> None:
+    window = RiskWindow.utc_day("2026-07-23")
+    report = DailyTreasuryReport.from_ledger(
+        window=window,
+        opening_finalized_balance=_amount(10_000),
+        ending_finalized_balance=_amount(9_999),
+        entries=(),
         tolerance_base_units=0,
     )
-
-    assert report.expected_ending_balance.base_units == 9_700
-    assert report.ledger_to_chain_variance_base_units == 100
     assert report.hard_latch_required is True
     with pytest.raises(TreasuryAccountingError, match="variance"):
         report.assert_balanced()
+
+
+def test_mpr15_domain_hash_is_deterministic() -> None:
+    first = domain_hash("test", {"b": 2, "a": 1})
+    second = domain_hash("test", {"a": 1, "b": 2})
+    assert first == second

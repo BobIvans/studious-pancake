@@ -1,0 +1,47 @@
+name: PR-200 verification diagnostics
+
+on:
+  push:
+    branches:
+      - pr-200-production-ops-cutover
+
+permissions:
+  contents: read
+
+jobs:
+  capture-verification-tail:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Capture repository verification
+        shell: bash
+        run: |
+          set +e
+          python scripts/verify_repo.py > pr200-verify.log 2>&1
+          status=$?
+          tail -n 400 pr200-verify.log > pr200-verify-tail.log
+          printf '%s\n' "$status" > pr200-exit-status.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr200-verification-diagnostics
+          path: |
+            pr200-verify-tail.log
+            pr200-exit-status.txt
+          if-no-files-found: error
+          retention-days: 1

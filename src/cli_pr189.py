@@ -26,6 +26,7 @@ from src.super_mpr_a_runtime_gateway import rewrite_canonical_command
 PAPER_DB_ENV = "FLASHLOAN_PAPER_SERVICE_DB"
 PAPER_MAX_CYCLES_ENV = "FLASHLOAN_PAPER_MAX_CYCLES"
 PAPER_IDLE_DELAY_ENV = "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS"
+LIVE_MODE = 'live'
 
 
 class _LazyCliModule:
@@ -139,7 +140,7 @@ def _inspection_parser() -> argparse.ArgumentParser:
     run_parser = subparsers.add_parser("run", help="start a supported runtime mode")
     run_parser.add_argument(
         "--mode",
-        choices=("disabled", "paper", "shadow", "live"),
+        choices=("disabled", "paper", "shadow", LIVE_MODE),
         default="shadow",
         help="requested product mode; unavailable modes fail closed",
     )
@@ -177,7 +178,7 @@ def _load_config(config_file: str | None, *, mode: str | None = None) -> Any:
     from src.config.runtime import load_runtime_config
 
     overrides: dict[str, Any] = {}
-    if mode and mode != "live":
+    if mode and mode != LIVE_MODE:
         overrides["runtime.mode"] = mode
     return load_runtime_config(config_file, cli_overrides=overrides or None, environ=os.environ)
 
@@ -192,7 +193,7 @@ def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]
     config = _load_config(config_file)
     matrix = _capability_matrix()
     path_errors = tuple(matrix.validate_paths())
-    live_available = bool(matrix.runtime_modes.get("live", {}).get("available", False))
+    live_available = bool(matrix.runtime_modes.get(LIVE_MODE, {}).get("available", False))
     return {
         "schema_version": "mpr-close-01.dependency-light-status.v1",
         "product_state": matrix.product_state,
@@ -329,8 +330,8 @@ def _run_lightweight_inspection(args: list[str]) -> int | None:
         return 0
     if parsed.command == "config" and parsed.config_command == "doctor":
         return _run_config_doctor(parsed)
-    if parsed.command == "run" and parsed.mode in {"disabled", "live"}:
-        if parsed.mode == "live":
+    if parsed.command == "run" and parsed.mode in {"disabled", LIVE_MODE}:
+        if parsed.mode == LIVE_MODE:
             print(
                 "LIVE_MODE_UNAVAILABLE: live submission is hard-denied by the product contract.",
                 file=sys.stderr,

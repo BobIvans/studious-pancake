@@ -70,6 +70,8 @@ FORBIDDEN_TEXT_MARKERS = (
 )
 
 MAX_CAPTURE_CHARS = 12_000
+PAPER_MAX_CYCLES_ENV = "FLASHLOAN_PAPER_MAX_CYCLES"
+PAPER_IDLE_DELAY_ENV = "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS"
 
 
 @dataclass(frozen=True, slots=True)
@@ -482,15 +484,36 @@ def _run_command(
         if not prior_pythonpath
         else f"{project_root}{os.pathsep}{prior_pythonpath}"
     )
-    completed = subprocess.run(
-        [*base_command, *argv],
-        cwd=project_root,
-        env=env,
-        check=False,
-        timeout=timeout_seconds,
-        text=True,
-        capture_output=True,
-    )
+    if name == "canonical_paper_cycle":
+        env.setdefault(PAPER_MAX_CYCLES_ENV, "1")
+        env.setdefault(PAPER_IDLE_DELAY_ENV, "0")
+    try:
+        completed = subprocess.run(
+            [*base_command, *argv],
+            cwd=project_root,
+            env=env,
+            check=False,
+            timeout=timeout_seconds,
+            text=True,
+            capture_output=True,
+        )
+    except subprocess.TimeoutExpired as exc:
+        stdout = _truncate(exc.stdout if isinstance(exc.stdout, str) else "")
+        stderr = _truncate(exc.stderr if isinstance(exc.stderr, str) else "")
+        timeout_text = f"MPR01_COMMAND_TIMEOUT: {name} exceeded {timeout_seconds} seconds"
+        if stderr:
+            stderr = f"{stderr}\n{timeout_text}"
+        else:
+            stderr = timeout_text
+        return CommandObservation(
+            name=name,
+            argv=argv,
+            exit_code=124,
+            stdout_sha256=_hash_bytes(stdout.encode("utf-8", errors="replace")),
+            stderr_sha256=_hash_bytes(stderr.encode("utf-8", errors="replace")),
+            stdout_text=stdout,
+            stderr_text=stderr,
+        )
     stdout = _truncate(completed.stdout)
     stderr = _truncate(completed.stderr)
     return CommandObservation(

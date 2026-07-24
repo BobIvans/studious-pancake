@@ -41,22 +41,22 @@ jobs:
         run: python -m pytest -q tests/test_mpr_next_01_product_truth_ci_release_hygiene.py
       - name: Run focused product truth verifier
         run: python scripts/verify_mpr_next_01_product_truth.py --json > /tmp/mpr-next-01.json
-      - name: Production debt JSON smoke
+      - name: Closure map JSON smoke
         run: |
-          set +e
-          python scripts/production_debt_audit.py --json > /tmp/production_debt.json
-          audit_status=$?
-          set -e
           python - <<'PY'
           import json
           from pathlib import Path
 
-          payload = json.loads(Path("/tmp/production_debt.json").read_text())
-          required = {"blockers", "paper_ready", "live_ready", "production_ready"}
-          missing = sorted(required - payload.keys())
-          if missing:
-              raise SystemExit(f"production debt payload missing keys: {missing}")
-          if payload.get("production_ready") is True:
-              raise SystemExit("production debt smoke must not promote production readiness")
+          payload = json.loads(
+              Path("src/resources/production_debt_closure_map.json").read_text()
+          )
+          if payload.get("live_enabled") is not False:
+              raise SystemExit("closure map must keep live disabled")
+          if payload.get("production_ready") is not False:
+              raise SystemExit("closure map must not claim production readiness")
+          policy = payload.get("policy", {})
+          if policy.get("offline_validators_do_not_close_blockers") is not True:
+              raise SystemExit("closure map must not close blockers with offline validators")
+          if not payload.get("gates"):
+              raise SystemExit("closure map must contain gates")
           PY
-          echo "production_debt_audit_exit_status=${audit_status}"

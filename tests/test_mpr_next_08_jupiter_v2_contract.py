@@ -11,6 +11,13 @@ from scripts.verify_mpr_next_08_jupiter_v2_contract import (
 )
 
 ROOT = Path(__file__).resolve().parents[1]
+POLICY_PATHS = (
+    "src/mpr_close_03_verifiers.py",
+    "src/provider_protocol_conformance_mpr_next_03.py",
+    "src/providers/conformance/mega_b2.py",
+    "src/providers/protocol_conformance.py",
+    "src/resources/production_debt_pr149.json",
+)
 
 
 def _write(path: Path, content: str) -> None:
@@ -74,6 +81,10 @@ def _quarantine() -> dict[str, object]:
             "/swap/v2/swap",
             "/swap/v2/swap-instructions",
         ],
+        "policy_reference_paths": [
+            {"path": path, "reason": "offline negative contract reference"}
+            for path in POLICY_PATHS
+        ],
         "quarantined_paths": [
             {"boundary": "module_file", "path": "src/legacy_arb_bot.py"},
             {"boundary": "module_file", "path": "src/execution/live_control.py"},
@@ -84,6 +95,22 @@ def _quarantine() -> dict[str, object]:
     }
 
 
+def _mega_b2_source(method: str = "GET") -> str:
+    return (
+        'CURRENT_JUPITER_BUILD_PATH = "/swap/v2/build"\n'
+        "JUPITER_BUILD_REQUIRED_PARAMETERS = ('inputMint', 'outputMint', 'amount', 'taker')\n"
+        "JUPITER_BUILD_METHOD_NOT_GET = 'blocked'\n"
+        "LEGACY_JUPITER_PATHS = ('/swap/v1/quote', '/swap/v2/quote')\n\n"
+        "class HttpRequestSpec:\n"
+        "    def __init__(self, *args):\n"
+        "        self.args = args\n\n"
+        "class JupiterV2BuildAdapter:\n"
+        "    @staticmethod\n"
+        "    def build_request():\n"
+        f"        return HttpRequestSpec('{method}', '/swap/v2/build')\n"
+    )
+
+
 def _write_fixture_repo(
     root: Path,
     *,
@@ -91,6 +118,8 @@ def _write_fixture_repo(
     docs_path: str = "/swap/v2/build",
     active_source: str = "ACTIVE_ENDPOINT = '/swap/v2/build'\n",
     verify_repo_runs_gate: bool = True,
+    mega_b2_method: str = "GET",
+    policy_network_token: str | None = None,
 ) -> None:
     contract_payload = json.dumps(_product_contract(product_paths), sort_keys=True)
     _write(root / "config/product_contract_pr195.json", contract_payload)
@@ -113,6 +142,26 @@ def _write_fixture_repo(
     _write(root / "src/execution/shadow.py", "SHADOW = True\n")
     _write(root / "src/ingest/jupiter_api_client.py", "URL = '/swap/v2/quote'\n")
     _write(root / "src/execution/senders/disabled.py", "SEND = False\n")
+    _write(
+        root / "src/mpr_close_03_verifiers.py",
+        "LEGACY = '/swap/v1/quote'\n" + (policy_network_token or ""),
+    )
+    _write(
+        root / "src/provider_protocol_conformance_mpr_next_03.py",
+        "FORBIDDEN = ('/swap/v1/quote',)\n",
+    )
+    _write(
+        root / "src/providers/conformance/mega_b2.py",
+        _mega_b2_source(mega_b2_method),
+    )
+    _write(
+        root / "src/providers/protocol_conformance.py",
+        "STALE = ('/swap/v2/swap-instructions',)\n",
+    )
+    _write(
+        root / "src/resources/production_debt_pr149.json",
+        json.dumps({"observed": "/swap/v2/quote"}),
+    )
     _write(
         root / "src/resources/production_surface_manifest.json",
         json.dumps(_production_surface(), sort_keys=True),
@@ -137,10 +186,12 @@ def test_mpr_next_08_accepts_current_checkout() -> None:
     assert evidence.blockers == ()
     assert evidence.docs_endpoint == "/swap/v2/build"
     assert evidence.router_endpoint == "/swap/v2/build"
+    assert evidence.mega_b2_method == "GET"
     assert "src/ingest/" in evidence.quarantined_paths
+    assert "src/providers/protocol_conformance.py" in evidence.policy_reference_paths
 
 
-def test_mpr_next_08_allows_legacy_endpoints_only_inside_quarantine(
+def test_mpr_next_08_allows_deprecated_markers_only_in_declared_boundaries(
     tmp_path: Path,
 ) -> None:
     _write_fixture_repo(tmp_path)
@@ -161,6 +212,31 @@ def test_mpr_next_08_rejects_active_legacy_endpoint(tmp_path: Path) -> None:
         blocker.startswith("FORBIDDEN_ACTIVE_JUPITER_ENDPOINT:src/active_runtime.py")
         for blocker in evidence.blockers
     )
+
+
+def test_mpr_next_08_rejects_policy_reference_with_direct_network(
+    tmp_path: Path,
+) -> None:
+    _write_fixture_repo(tmp_path, policy_network_token="import requests\n")
+
+    evidence = verify_mpr_next_08_jupiter_v2_contract(tmp_path)
+
+    assert evidence.accepted is False
+    assert any(
+        blocker.startswith(
+            "POLICY_REFERENCE_DIRECT_NETWORK:src/mpr_close_03_verifiers.py"
+        )
+        for blocker in evidence.blockers
+    )
+
+
+def test_mpr_next_08_rejects_mega_b2_post_contract(tmp_path: Path) -> None:
+    _write_fixture_repo(tmp_path, mega_b2_method="POST")
+
+    evidence = verify_mpr_next_08_jupiter_v2_contract(tmp_path)
+
+    assert evidence.accepted is False
+    assert "MEGA_B2_JUPITER_METHOD_MISMATCH" in evidence.blockers
 
 
 def test_mpr_next_08_rejects_product_contract_path_drift(tmp_path: Path) -> None:

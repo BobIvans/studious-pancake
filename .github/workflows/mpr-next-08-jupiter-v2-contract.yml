@@ -1,0 +1,39 @@
+name: MPR-NEXT-08 Jupiter V2 contract
+
+on:
+  pull_request:
+    paths:
+      - "config/jupiter_endpoint_quarantine.json"
+      - "config/product_contract_pr195.json"
+      - "docs/external_contracts.yaml"
+      - "scripts/verify_mpr_next_08_jupiter_v2_contract.py"
+      - "scripts/verify_repo.py"
+      - "src/**"
+      - "tests/test_mpr_next_08_jupiter_v2_contract.py"
+      - ".github/workflows/mpr-next-08-jupiter-v2-contract.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  jupiter-v2-contract:
+    name: Jupiter V2 contract and quarantine
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13.13"
+      - name: Install runtime and test dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+      - name: Verify Jupiter V2 product truth
+        run: python scripts/verify_mpr_next_08_jupiter_v2_contract.py --json
+      - name: Run MPR-NEXT-08 regression tests
+        run: >-
+          python -m pytest -q
+          tests/test_mpr_next_08_jupiter_v2_contract.py
+          --disable-socket
+          --allow-unix-socket

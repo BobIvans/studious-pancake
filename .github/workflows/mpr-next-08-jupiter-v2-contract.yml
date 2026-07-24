@@ -30,7 +30,22 @@ jobs:
           python -m pip install --requirement requirements.txt
           python -m pip install --requirement requirements-dev.txt
       - name: Verify Jupiter V2 product truth
-        run: python scripts/verify_mpr_next_08_jupiter_v2_contract.py --json
+        id: verify
+        shell: bash
+        run: |
+          set +e
+          python scripts/verify_mpr_next_08_jupiter_v2_contract.py --json > mpr-next-08-evidence.json
+          status=$?
+          cat mpr-next-08-evidence.json
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Upload verifier evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mpr-next-08-evidence
+          path: mpr-next-08-evidence.json
+          if-no-files-found: error
       - name: Run MPR-NEXT-08 regression tests
         run: >-
           python -m pytest -q

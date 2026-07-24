@@ -11,6 +11,28 @@
     "/swap/v2/swap",
     "/swap/v2/swap-instructions"
   ],
+  "policy_reference_paths": [
+    {
+      "path": "src/mpr_close_03_verifiers.py",
+      "reason": "offline conformance verifier rejects deprecated provider contracts"
+    },
+    {
+      "path": "src/provider_protocol_conformance_mpr_next_03.py",
+      "reason": "sender-free provider admission policy enumerates forbidden active paths"
+    },
+    {
+      "path": "src/providers/conformance/mega_b2.py",
+      "reason": "bounded transport contract retains deprecated markers for negative admission checks"
+    },
+    {
+      "path": "src/providers/protocol_conformance.py",
+      "reason": "offline evidence validator rejects deprecated endpoints before promotion"
+    },
+    {
+      "path": "src/resources/production_debt_pr149.json",
+      "reason": "historical debt inventory records deprecated endpoint findings"
+    }
+  ],
   "quarantined_paths": [
     {
       "boundary": "module_file",

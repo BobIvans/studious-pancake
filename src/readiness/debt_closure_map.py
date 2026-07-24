@@ -9,9 +9,10 @@ and a CI-authoritative run.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Mapping, Sequence
+from typing import Any
 import hashlib
 import json
 import re
@@ -297,7 +298,10 @@ class ArchiveDiffReport:
         }
 
 
-def compare_archives(previous_archive: str | Path, current_archive: str | Path) -> ArchiveDiffReport:
+def compare_archives(
+    previous_archive: str | Path,
+    current_archive: str | Path,
+) -> ArchiveDiffReport:
     """Compare two ZIP archives by path, size and SHA-256 content hash."""
 
     previous_path = Path(previous_archive)
@@ -319,7 +323,9 @@ def compare_archives(previous_archive: str | Path, current_archive: str | Path) 
     previous_digest = _hash_json(
         {path: previous[path].to_dict() for path in sorted(previous)}
     )
-    current_digest = _hash_json({path: current[path].to_dict() for path in sorted(current)})
+    current_digest = _hash_json(
+        {path: current[path].to_dict() for path in sorted(current)}
+    )
     return ArchiveDiffReport(
         schema_version=ARCHIVE_DIFF_SCHEMA_VERSION,
         previous_archive=str(previous_path),

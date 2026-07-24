@@ -97,9 +97,9 @@ class CanonicalPaperPlatform:
             outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_message_simulation_digest_mismatch"
         elif candidate.repayment_lamports != candidate.principal_lamports + candidate.flash_fee_lamports:
             outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_repayment_formula_mismatch"
-        elif candidate.rooted_slot > candidate.observed_slot:
-            outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_root_after_observation"
-        elif candidate.observed_slot - candidate.rooted_slot > self.config.max_slot_skew:
+        elif candidate.observed_slot > candidate.rooted_slot:
+            outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_observation_not_rooted"
+        elif candidate.rooted_slot - candidate.observed_slot > self.config.max_slot_skew:
             outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_rooted_slot_skew"
         elif candidate.net_profit_lamports < self.config.min_profit_lamports:
             outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_conservative_profit_below_threshold"

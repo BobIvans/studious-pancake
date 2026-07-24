@@ -42,4 +42,21 @@ jobs:
       - name: Run focused product truth verifier
         run: python scripts/verify_mpr_next_01_product_truth.py --json > /tmp/mpr-next-01.json
       - name: Production debt JSON smoke
-        run: python scripts/production_debt_audit.py --json > /tmp/production_debt.json
+        run: |
+          set +e
+          python scripts/production_debt_audit.py --json > /tmp/production_debt.json
+          audit_status=$?
+          set -e
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          payload = json.loads(Path("/tmp/production_debt.json").read_text())
+          required = {"blockers", "paper_ready", "live_ready", "production_ready"}
+          missing = sorted(required - payload.keys())
+          if missing:
+              raise SystemExit(f"production debt payload missing keys: {missing}")
+          if payload.get("production_ready") is True:
+              raise SystemExit("production debt smoke must not promote production readiness")
+          PY
+          echo "production_debt_audit_exit_status=${audit_status}"

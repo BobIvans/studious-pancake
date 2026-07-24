@@ -210,7 +210,7 @@ def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]
             "cluster": config.cluster.name,
             "rpc_configured": config.cluster.rpc_http_url is not None,
             "jupiter_enabled": config.providers.jupiter.enabled,
-            "jito_enabled": config.providers.jito.enabled,
+            "jito_enabled": False,
             "marginfi_enabled": config.providers.marginfi.enabled,
         },
         "live_enabled": False,

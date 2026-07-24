@@ -6,9 +6,10 @@ on:
       - main
     paths:
       - "src/readiness/**"
+      - "src/resources/debt_closure_map_pr_next_07.json"
       - "scripts/archive_diff_sanity.py"
       - "scripts/verify_debt_closure_authority.py"
-      - "tests/test_mpr_next_07_debt_closure_authority.py"
+      - "tests/test_mpr_next_07_*.py"
       - "docs/roadmap/mpr_next_07_debt_closure_authority.md"
       - ".github/workflows/mpr-next-07-debt-closure-authority.yml"
   push:
@@ -31,8 +32,17 @@ jobs:
         with:
           python-version: "3.13"
       - name: Compile debt closure slice
-        run: python -m compileall -q src/readiness scripts tests/test_mpr_next_07_debt_closure_authority.py
+        run: >-
+          python -m compileall -q
+          src/readiness
+          scripts/archive_diff_sanity.py
+          scripts/verify_debt_closure_authority.py
+          tests/test_mpr_next_07_debt_closure_authority.py
+          tests/test_mpr_next_07_manifest_sync.py
       - name: Run focused MPR-NEXT-07 tests
-        run: python -m pytest -q tests/test_mpr_next_07_debt_closure_authority.py
+        run: >-
+          python -m pytest -q
+          tests/test_mpr_next_07_debt_closure_authority.py
+          tests/test_mpr_next_07_manifest_sync.py
       - name: Inspect static closure map
         run: python scripts/verify_debt_closure_authority.py --json

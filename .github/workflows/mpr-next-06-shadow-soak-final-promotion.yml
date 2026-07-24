@@ -1,0 +1,39 @@
+name: MPR-NEXT-06 shadow soak final promotion
+
+on:
+  pull_request:
+    paths:
+      - src/mpr_next_06_shadow_soak_final_promotion.py
+      - scripts/verify_mpr_next_06_shadow_soak_final_promotion.py
+      - tests/test_mpr_next_06_shadow_soak_final_promotion.py
+      - docs/mpr_next_06_shadow_soak_final_promotion.md
+      - .github/workflows/mpr-next-06-shadow-soak-final-promotion.yml
+
+permissions:
+  contents: read
+
+jobs:
+  shadow-soak-final-promotion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8
+      - name: Setup Python
+        uses: actions/setup-python@e797f83bcb11b83ae66e0230d6156d7c80228e7c
+        with:
+          python-version: '3.13'
+      - name: Install pytest
+        run: python -m pip install pytest==9.0.2
+      - name: Compile MPR-NEXT-06 boundary
+        run: |
+          python -m py_compile \
+            src/mpr_next_06_shadow_soak_final_promotion.py \
+            scripts/verify_mpr_next_06_shadow_soak_final_promotion.py \
+            tests/test_mpr_next_06_shadow_soak_final_promotion.py
+      - name: Run MPR-NEXT-06 verifier
+        run: python scripts/verify_mpr_next_06_shadow_soak_final_promotion.py --strict --json
+      - name: Run focused tests
+        env:
+          PYTHONPATH: .
+        run: python -m pytest -q tests/test_mpr_next_06_shadow_soak_final_promotion.py

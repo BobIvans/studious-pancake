@@ -1,0 +1,165 @@
+{
+  "schema_version": "mpr-next-01.production-debt-closure-map.v1",
+  "live_enabled": false,
+  "production_ready": false,
+  "policy": {
+    "materialized_runtime_evidence_required": true,
+    "offline_validators_do_not_close_blockers": true,
+    "closure_requires_release_manifest_binding": true,
+    "synthetic_or_recorded_fixtures_are_not_production_evidence": true
+  },
+  "gates": [
+    {
+      "gate_id": "MPR-25",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr25_canonical_product_graph_artifact_truth_gate.py",
+      "can_close_blocker_ids": [
+        "runtime.product-state",
+        "packaging.source-wheel-parity",
+        "deployment.image-provenance"
+      ],
+      "required_evidence": [
+        "installed wheel surface manifest",
+        "source/wheel/image/SBOM digests",
+        "reviewed release manifest binding"
+      ]
+    },
+    {
+      "gate_id": "MPR-26",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr26_crash_consistent_durable_authority_gate.py",
+      "can_close_blocker_ids": [
+        "durability.single-truth-cutover",
+        "economics.capital-reservations"
+      ],
+      "required_evidence": [
+        "crash recovery report",
+        "single durable authority migration evidence",
+        "backup and restore proof"
+      ]
+    },
+    {
+      "gate_id": "MPR-27",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr27_provider_routing_quota_integrity_gate.py",
+      "can_close_blocker_ids": [
+        "data.rpc-rooted-quorum",
+        "data.oracle-slot-coherence",
+        "evidence.provider-drift-probes"
+      ],
+      "required_evidence": [
+        "credentialed provider drift artifacts",
+        "durable quota admission evidence",
+        "rooted slot coherence proof"
+      ]
+    },
+    {
+      "gate_id": "MPR-28",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr28_protocol_bound_economic_execution_gate.py",
+      "can_close_blocker_ids": [
+        "execution.exact-simulation-binding",
+        "execution.canonical-transaction-proof",
+        "execution.finalized-settlement-binding",
+        "accounts.lifecycle-rent-wsol"
+      ],
+      "required_evidence": [
+        "exact simulation artifact",
+        "canonical transaction proof",
+        "finalized economic reconciliation artifact"
+      ]
+    },
+    {
+      "gate_id": "MPR-29",
+      "status": "required-missing-runtime-artifact",
+      "can_close_blocker_ids": [
+        "runtime.canonical-vertical-wiring",
+        "evidence.real-shadow-soak",
+        "data.lineage-quarantine",
+        "operations.slo-readiness"
+      ],
+      "required_evidence": [
+        "multi-day non-synthetic shadow soak",
+        "deterministic replay bundle",
+        "latency/error/SLO baseline"
+      ]
+    },
+    {
+      "gate_id": "MPR-30",
+      "status": "required-missing-runtime-artifact",
+      "can_close_blocker_ids": [
+        "security.signer-isolation",
+        "submission.jito-unbundling-protection",
+        "canary.permit-budget-latches",
+        "evidence.finalized-economic-proof"
+      ],
+      "required_evidence": [
+        "isolated signer proof",
+        "Jito lifecycle/finality proof",
+        "durable one-use canary permit proof"
+      ]
+    },
+    {
+      "gate_id": "MPR-31",
+      "status": "implemented-offline-validator",
+      "module_path": "src/release_gate/mpr31_final_promotion_gate.py",
+      "can_close_blocker_ids": [
+        "runtime.product-state",
+        "evidence.real-shadow-soak",
+        "deployment.image-provenance",
+        "canary.second-human-approval"
+      ],
+      "required_evidence": [
+        "signed immutable release bundle",
+        "MPR-25 through MPR-30 artifact references",
+        "independent human review record"
+      ]
+    },
+    {
+      "gate_id": "PR-225",
+      "status": "implemented-offline-validator",
+      "module_path": "src/pr225_secure_provider_plane_gate.py",
+      "can_close_blocker_ids": [
+        "external.jupiter-swap-v2",
+        "external.okx-signed-discovery",
+        "external.openocean-whitelist-discovery",
+        "external.odos-immutable-transaction"
+      ],
+      "required_evidence": [
+        "provider credential policy artifact",
+        "redacted provider conformance fixture",
+        "provider admission decision artifact"
+      ]
+    },
+    {
+      "gate_id": "PR-226",
+      "status": "implemented-offline-validator",
+      "module_path": "src/pr226_deterministic_runtime_dataset_shadow_gate.py",
+      "can_close_blocker_ids": [
+        "runtime.canonical-vertical-wiring",
+        "data.lineage-quarantine",
+        "evidence.real-shadow-soak"
+      ],
+      "required_evidence": [
+        "deterministic dataset lineage artifact",
+        "shadow qualification report",
+        "installed runtime invocation proof"
+      ]
+    },
+    {
+      "gate_id": "PR-228",
+      "status": "implemented-offline-validator",
+      "module_path": "src/pr228_secret_trust_release_gate.py",
+      "can_close_blocker_ids": [
+        "security.secret-incident-drill",
+        "deployment.image-provenance",
+        "operations.slo-readiness"
+      ],
+      "required_evidence": [
+        "secret incident drill artifact",
+        "trust anchor review evidence",
+        "release operator readiness artifact"
+      ]
+    }
+  ]
+}

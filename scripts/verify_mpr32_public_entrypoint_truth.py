@@ -98,9 +98,7 @@ def _load_pyproject(root: Path) -> dict[str, Any]:
     except tomllib.TOMLDecodeError as exc:
         raise Mpr32PublicEntrypointTruthError(f"invalid pyproject.toml: {exc}") from exc
     if not isinstance(value, dict):
-        raise Mpr32PublicEntrypointTruthError(
-            "pyproject.toml must decode to an object"
-        )
+        raise Mpr32PublicEntrypointTruthError("pyproject.toml must decode to an object")
     return value
 
 

@@ -1,0 +1,75 @@
+{
+  "schema_version": "mpr-next-12.persistence-authority-policy.v1",
+  "approved_factories": [
+    "src.database_schema_authority_pr195:DatabaseSchemaAuthority",
+    "src.durability.unified_authority_pr02:UnifiedLifecycleAuthority",
+    "src.durability.mpr19_economic_authority:Mpr19EconomicAuthority",
+    "src.persistence_authority_mpr_next_12:evaluate_persistence_authority"
+  ],
+  "allowed_direct_connects": [
+    {
+      "glob": "tests/**",
+      "classification": "test-fixture",
+      "reason": "test fixtures may create temporary SQLite databases"
+    },
+    {
+      "glob": "scripts/**",
+      "classification": "operator-tooling",
+      "reason": "scripts must be reviewed before promotion but are not runtime authorities"
+    },
+    {
+      "glob": "src/database_schema_authority_pr195.py",
+      "classification": "approved-schema-authority",
+      "reason": "central schema authority owns product database identity"
+    },
+    {
+      "glob": "src/durability/unified_authority_pr02.py",
+      "classification": "approved-lifecycle-authority",
+      "reason": "canonical lifecycle/outbox authority while MPR-NEXT-12 cutover is in progress"
+    },
+    {
+      "glob": "src/durability/mpr19_economic_authority.py",
+      "classification": "approved-economic-authority",
+      "reason": "economic authority fixture retained as an approved cutover target"
+    }
+  ],
+  "quarantined_direct_connects": [
+    {
+      "glob": "src/legacy_arb_bot.py",
+      "classification": "quarantined-legacy-monolith",
+      "reason": "legacy monolith must not be reachable from installed runtime"
+    },
+    {
+      "glob": "src/ingest/**",
+      "classification": "quarantined-legacy-ingest",
+      "reason": "legacy ingest storage must not open DBs in production runtime"
+    },
+    {
+      "glob": "src/submission/**",
+      "classification": "default-off-submission-boundary",
+      "reason": "submission storage remains default-off until MPR-NEXT-10"
+    }
+  ],
+  "blocked_direct_connects": [
+    {
+      "glob": "src/canonical_paper/**",
+      "classification": "active-paper-store-split",
+      "reason": "canonical paper storage must move behind approved persistence authority"
+    },
+    {
+      "glob": "src/observability/**",
+      "classification": "active-observability-store-split",
+      "reason": "observability projections must share the runtime authority boundary"
+    },
+    {
+      "glob": "src/execution/journal.py",
+      "classification": "active-execution-journal-split",
+      "reason": "execution journal must use one migration/backup/recovery authority"
+    },
+    {
+      "glob": "src/providers/jupiter/durable_quota.py",
+      "classification": "provider-quota-bridge-pending",
+      "reason": "durable quota DB must share authority/fencing policy or be explicitly bridged"
+    }
+  ]
+}

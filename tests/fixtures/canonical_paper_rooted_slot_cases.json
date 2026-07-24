@@ -1,0 +1,9 @@
+{
+  "schema_version": "new-mega-pr-03.rooted-slot-cases.v1",
+  "cases": [
+    {"name":"exact-root-boundary","observed_slot":100,"rooted_slot":100,"expected_outcome":"PAPER_ACCEPTED","expected_reason":"paper_candidate_accepted"},
+    {"name":"rooted-within-skew","observed_slot":100,"rooted_slot":108,"expected_outcome":"PAPER_ACCEPTED","expected_reason":"paper_candidate_accepted"},
+    {"name":"observation-not-yet-rooted","observed_slot":101,"rooted_slot":100,"expected_outcome":"PAPER_REJECTED","expected_reason":"rejected_observation_not_rooted"},
+    {"name":"root-too-far-ahead-for-freshness-window","observed_slot":100,"rooted_slot":109,"expected_outcome":"PAPER_REJECTED","expected_reason":"rejected_rooted_slot_skew"}
+  ]
+}

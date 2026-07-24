@@ -53,7 +53,8 @@ def test_pr225_can_resolve_only_its_stable_debt_ids() -> None:
     decision = evaluate_debt_closure_evidence(valid_payload("PR-225"))
 
     assert decision.ok
-    assert decision.resolved_debt_ids == tuple(sorted(GATE_DEBT_MAP["PR-225"].debt_ids))
+    expected = tuple(sorted(GATE_DEBT_MAP["PR-225"].debt_ids))
+    assert decision.resolved_debt_ids == expected
     assert decision.blocked_debt_ids == ()
     assert decision.to_dict()["production_ready"] is False
     assert len(decision.closure_digest) == 64
@@ -89,7 +90,10 @@ def test_source_only_or_synthetic_evidence_is_never_closure_authority() -> None:
 
 def test_gate_cannot_claim_unmapped_debt_id() -> None:
     payload = valid_payload("PR-228")
-    payload["debt_ids"] = [*GATE_DEBT_MAP["PR-228"].debt_ids, "runtime.product-state"]
+    payload["debt_ids"] = [
+        *GATE_DEBT_MAP["PR-228"].debt_ids,
+        "runtime.product-state",
+    ]
 
     decision = evaluate_debt_closure_evidence(payload)
 

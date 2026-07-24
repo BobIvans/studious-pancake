@@ -1,0 +1,6 @@
+All debt closure evidence digests must be lowercase SHA-256 hex strings.
+Required fields:
+- artifact_sha256
+- runtime_command_surface_sha256
+- evidence_sha256
+- freshness_proof_sha256

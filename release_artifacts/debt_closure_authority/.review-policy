@@ -1,0 +1,10 @@
+Debt closure evidence must be reviewed before use.
+
+Minimum review facts:
+- CI-authoritative run reference
+- installed artifact digest
+- runtime command surface digest
+- freshness proof digest
+- replayable evidence digest
+- non-synthetic assertion
+- source-only=false assertion

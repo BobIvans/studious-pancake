@@ -7,6 +7,7 @@ on:
       - "src/cli_pr189.py"
       - "src/canonical_paper/**"
       - "src/resources/paper_recorded_cycle.json"
+      - "tests/fixtures/canonical_paper_rooted_slot_cases.json"
       - "tests/test_mega_pr01_canonical_paper_platform.py"
       - "docs/mega_pr01_canonical_paper_platform.md"
       - ".github/workflows/mega-pr01-canonical-paper-platform.yml"
@@ -48,4 +49,4 @@ jobs:
         run: |
           python -O -m pytest -q \
             tests/test_mega_pr01_canonical_paper_platform.py \
-            -k "message_simulation_mutation or repayment_formula or rooted_slot_skew"
+            -k "message_simulation_mutation or repayment_formula or rooted_slot_admission_matrix"

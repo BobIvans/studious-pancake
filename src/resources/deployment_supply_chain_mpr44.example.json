@@ -1,0 +1,63 @@
+{
+  "schema_version": "mpr44.enforced-deployment-supply-chain.v1",
+  "paper_release_candidate": false,
+  "live_enabled": false,
+  "source_checkout_production_allowed": false,
+  "raw_secret_environment_allowed": false,
+  "network_install_allowed": false,
+  "untrusted_pr_code_can_access_secrets": false,
+  "github_actions_uses": [
+    "actions/checkout@0000000000000000000000000000000000000000",
+    "actions/setup-python@0000000000000000000000000000000000000000"
+  ],
+  "deployment_controls": {
+    "digest_pinned_base_image": false,
+    "offline_wheelhouse_install": false,
+    "no_bind_mounted_source_tree": false,
+    "read_only_root_filesystem": false,
+    "non_root_user": false,
+    "dropped_capabilities": false,
+    "no_new_privileges": false,
+    "deny_by_default_egress": false,
+    "private_management_plane": false,
+    "readiness_probe_uses_ready": false,
+    "startup_probe_declared": false,
+    "liveness_probe_declared": false,
+    "seccomp_profile_present": false,
+    "apparmor_profile_present": false,
+    "explicit_writable_state_mount": false,
+    "source_launchers_absent_from_image": false
+  },
+  "secret_controls": {
+    "secret_references_only": false,
+    "no_plaintext_secret_environment": false,
+    "mounted_secrets_consumed_by_entrypoint": false,
+    "secret_rotation_drill_artifact": false,
+    "secret_redaction_scan_artifact": false
+  },
+  "egress_policy": {
+    "mode": "blocked-until-policy-materialized",
+    "allowed_endpoints": []
+  },
+  "probes": {
+    "readiness_endpoint": "/ready",
+    "liveness_endpoint": "/health",
+    "startup_endpoint": "/startup"
+  },
+  "release_artifacts": [
+    {"id": "source_tree_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "wheel_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "wheelhouse_lock_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "container_image_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "sbom_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "provenance_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "signature_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "capability_manifest_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "config_generation_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "schema_fingerprint_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "deployment_policy_report", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "seccomp_profile_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "apparmor_profile_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false},
+    {"id": "egress_policy_digest", "digest": "sha256:0000000000000000000000000000000000000000000000000000000000000000", "materialized": false, "independently_verified": false}
+  ]
+}

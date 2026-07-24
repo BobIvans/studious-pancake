@@ -1,0 +1,37 @@
+{
+  "active_contract": {
+    "adapter": "src.providers.jupiter.router.JupiterRouterAdapter",
+    "method": "GET",
+    "origin": "https://api.jup.ag",
+    "path": "/swap/v2/build"
+  },
+  "forbidden_endpoint_markers": [
+    "/swap/v1",
+    "/swap/v2/quote",
+    "/swap/v2/swap",
+    "/swap/v2/swap-instructions"
+  ],
+  "quarantined_paths": [
+    {
+      "boundary": "module_file",
+      "path": "src/legacy_arb_bot.py"
+    },
+    {
+      "boundary": "module_file",
+      "path": "src/execution/live_control.py"
+    },
+    {
+      "boundary": "module_file",
+      "path": "src/execution/shadow.py"
+    },
+    {
+      "boundary": "package_prefix",
+      "path": "src/ingest/"
+    },
+    {
+      "boundary": "package_prefix",
+      "path": "src/execution/senders/"
+    }
+  ],
+  "schema_version": "mpr-next-08.jupiter-endpoint-quarantine.v1"
+}

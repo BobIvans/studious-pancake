@@ -20,6 +20,7 @@ PRODUCT_CONTRACT_PATH: Final = "config/product_contract_pr195.json"
 PACKAGED_PRODUCT_CONTRACT_PATH: Final = "src/resources/product_contract_pr195.json"
 EXTERNAL_CONTRACTS_PATH: Final = "docs/external_contracts.yaml"
 ROUTER_PATH: Final = "src/providers/jupiter/router.py"
+MEGA_B2_PATH: Final = "src/providers/conformance/mega_b2.py"
 PRODUCTION_SURFACE_PATH: Final = "src/resources/production_surface_manifest.json"
 QUARANTINE_PATH: Final = "config/jupiter_endpoint_quarantine.json"
 VERIFY_REPO_PATH: Final = "scripts/verify_repo.py"
@@ -42,6 +43,20 @@ EXPECTED_FORBIDDEN_MARKERS: Final = frozenset(
         "/swap/v2/swap-instructions",
     }
 )
+DIRECT_NETWORK_TOKENS: Final = (
+    "import aiohttp",
+    "from aiohttp",
+    "import httpx",
+    "from httpx",
+    "import requests",
+    "from requests",
+    "ClientSession(",
+    "requests.get(",
+    "requests.post(",
+    "httpx.get(",
+    "httpx.post(",
+    "urlopen(",
+)
 
 
 class JupiterV2ContractError(RuntimeError):
@@ -57,7 +72,9 @@ class JupiterV2ContractEvidence:
     product_contract_paths: tuple[str, ...]
     docs_endpoint: str | None
     router_endpoint: str | None
+    mega_b2_method: str | None
     quarantined_paths: tuple[str, ...]
+    policy_reference_paths: tuple[str, ...]
     scanned_active_files: int
 
     def to_dict(self) -> dict[str, object]:
@@ -65,6 +82,7 @@ class JupiterV2ContractEvidence:
         payload["blockers"] = list(self.blockers)
         payload["product_contract_paths"] = list(self.product_contract_paths)
         payload["quarantined_paths"] = list(self.quarantined_paths)
+        payload["policy_reference_paths"] = list(self.policy_reference_paths)
         return payload
 
 
@@ -129,18 +147,15 @@ def _require(condition: bool, blockers: list[str], code: str) -> None:
         blockers.append(code)
 
 
-def _router_endpoint(source: str) -> str | None:
+def _assigned_string(source: str, name: str, source_path: str) -> str | None:
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:
-        raise JupiterV2ContractError(f"invalid Python in {ROUTER_PATH}: {exc}") from exc
+        raise JupiterV2ContractError(f"invalid Python in {source_path}: {exc}") from exc
     for node in tree.body:
         if not isinstance(node, ast.Assign):
             continue
-        if not any(
-            isinstance(target, ast.Name) and target.id == "JUPITER_ROUTER_ENDPOINT"
-            for target in node.targets
-        ):
+        if not any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
             continue
         if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
             return node.value.value
@@ -148,32 +163,9 @@ def _router_endpoint(source: str) -> str | None:
 
 
 def _quarantine_entries(
-    root: Path,
+    payload: dict[str, Any],
     blockers: list[str],
 ) -> tuple[tuple[str, str], ...]:
-    payload = _load_json(root, QUARANTINE_PATH)
-    _require(
-        payload.get("schema_version")
-        == "mpr-next-08.jupiter-endpoint-quarantine.v1",
-        blockers,
-        "QUARANTINE_SCHEMA_MISMATCH",
-    )
-    active_contract = _as_dict(
-        payload.get("active_contract"),
-        blockers,
-        "QUARANTINE_ACTIVE_CONTRACT_MISSING",
-    )
-    _require(
-        active_contract
-        == {
-            "adapter": EXPECTED_ADAPTER,
-            "method": EXPECTED_METHOD,
-            "origin": EXPECTED_ORIGIN,
-            "path": EXPECTED_PATH,
-        },
-        blockers,
-        "QUARANTINE_ACTIVE_CONTRACT_MISMATCH",
-    )
     entries = payload.get("quarantined_paths")
     if not isinstance(entries, list):
         blockers.append("QUARANTINE_PATHS_MISSING")
@@ -195,6 +187,30 @@ def _quarantine_entries(
     return tuple(parsed)
 
 
+def _policy_reference_paths(
+    payload: dict[str, Any],
+    blockers: list[str],
+) -> tuple[str, ...]:
+    entries = payload.get("policy_reference_paths")
+    if not isinstance(entries, list):
+        blockers.append("POLICY_REFERENCE_PATHS_MISSING")
+        return ()
+    parsed: list[str] = []
+    for index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            blockers.append(f"POLICY_REFERENCE_ENTRY_INVALID:{index}")
+            continue
+        path = entry.get("path")
+        reason = entry.get("reason")
+        if not isinstance(path, str) or not isinstance(reason, str) or not reason.strip():
+            blockers.append(f"POLICY_REFERENCE_ENTRY_INVALID:{index}")
+            continue
+        parsed.append(path)
+    if len(parsed) != len(set(parsed)):
+        blockers.append("POLICY_REFERENCE_PATH_DUPLICATED")
+    return tuple(parsed)
+
+
 def _is_quarantined(relative: str, entries: tuple[tuple[str, str], ...]) -> bool:
     for path, boundary in entries:
         if boundary == "module_file" and relative == path:
@@ -204,16 +220,25 @@ def _is_quarantined(relative: str, entries: tuple[tuple[str, str], ...]) -> bool
     return False
 
 
+def _is_exempt(
+    relative: str,
+    quarantine_entries: tuple[tuple[str, str], ...],
+    policy_paths: tuple[str, ...],
+) -> bool:
+    return _is_quarantined(relative, quarantine_entries) or relative in policy_paths
+
+
 def _iter_active_files(
     root: Path,
-    entries: tuple[tuple[str, str], ...],
+    quarantine_entries: tuple[tuple[str, str], ...],
+    policy_paths: tuple[str, ...],
 ) -> tuple[Path, ...]:
     files: dict[str, Path] = {}
     for target in ACTIVE_SCAN_TARGETS:
         candidate = _repo_file(root, target)
         if candidate.is_file():
             relative = candidate.relative_to(root).as_posix()
-            if not _is_quarantined(relative, entries):
+            if not _is_exempt(relative, quarantine_entries, policy_paths):
                 files[relative] = candidate
             continue
         if not candidate.is_dir():
@@ -222,7 +247,7 @@ def _iter_active_files(
             if not path.is_file() or path.suffix not in TEXT_SUFFIXES:
                 continue
             relative = path.relative_to(root).as_posix()
-            if not _is_quarantined(relative, entries):
+            if not _is_exempt(relative, quarantine_entries, policy_paths):
                 files[relative] = path
     return tuple(files[key] for key in sorted(files))
 
@@ -273,6 +298,82 @@ def _validate_quarantine_boundary(
             )
 
 
+def _validate_policy_references(
+    root: Path,
+    policy_paths: tuple[str, ...],
+    forbidden_markers: tuple[str, ...],
+    blockers: list[str],
+) -> None:
+    for relative in policy_paths:
+        path = _repo_file(root, relative)
+        _require(path.is_file(), blockers, f"POLICY_REFERENCE_PATH_MISSING:{relative}")
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        _require(
+            any(marker in text for marker in forbidden_markers),
+            blockers,
+            f"POLICY_REFERENCE_HAS_NO_DEPRECATED_MARKER:{relative}",
+        )
+        if path.suffix == ".py":
+            for token in DIRECT_NETWORK_TOKENS:
+                _require(
+                    token not in text,
+                    blockers,
+                    f"POLICY_REFERENCE_DIRECT_NETWORK:{relative}:{token}",
+                )
+
+
+def _mega_b2_method(source: str) -> str | None:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        raise JupiterV2ContractError(f"invalid Python in {MEGA_B2_PATH}: {exc}") from exc
+    for node in tree.body:
+        if not isinstance(node, ast.ClassDef) or node.name != "JupiterV2BuildAdapter":
+            continue
+        for member in node.body:
+            if not isinstance(member, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                continue
+            if member.name != "build_request":
+                continue
+            for child in ast.walk(member):
+                if not isinstance(child, ast.Call):
+                    continue
+                if not isinstance(child.func, ast.Name) or child.func.id != "HttpRequestSpec":
+                    continue
+                if child.args and isinstance(child.args[0], ast.Constant):
+                    value = child.args[0].value
+                    return value if isinstance(value, str) else None
+    return None
+
+
+def _validate_mega_b2(source: str, blockers: list[str]) -> str | None:
+    method = _mega_b2_method(source)
+    _require(
+        'CURRENT_JUPITER_BUILD_PATH = "/swap/v2/build"' in source,
+        blockers,
+        "MEGA_B2_JUPITER_BUILD_PATH_MISMATCH",
+    )
+    _require(method == EXPECTED_METHOD, blockers, "MEGA_B2_JUPITER_METHOD_MISMATCH")
+    _require(
+        "JUPITER_BUILD_REQUIRED_PARAMETERS" in source,
+        blockers,
+        "MEGA_B2_JUPITER_REQUIRED_PARAMETERS_MISSING",
+    )
+    _require(
+        "JUPITER_BUILD_METHOD_NOT_GET" in source,
+        blockers,
+        "MEGA_B2_ADMISSION_METHOD_GUARD_MISSING",
+    )
+    _require(
+        "quoteResponse" not in source,
+        blockers,
+        "MEGA_B2_LEGACY_QUOTE_RESPONSE_PAYLOAD_PRESENT",
+    )
+    return method
+
+
 def verify_mpr_next_08_jupiter_v2_contract(
     root: str | Path = ROOT,
 ) -> JupiterV2ContractEvidence:
@@ -284,6 +385,7 @@ def verify_mpr_next_08_jupiter_v2_contract(
         PACKAGED_PRODUCT_CONTRACT_PATH,
         EXTERNAL_CONTRACTS_PATH,
         ROUTER_PATH,
+        MEGA_B2_PATH,
         PRODUCTION_SURFACE_PATH,
         QUARANTINE_PATH,
         VERIFY_REPO_PATH,
@@ -371,7 +473,11 @@ def verify_mpr_next_08_jupiter_v2_contract(
     )
 
     router_source = _read_text(repo_root, ROUTER_PATH)
-    router_endpoint = _router_endpoint(router_source)
+    router_endpoint = _assigned_string(
+        router_source,
+        "JUPITER_ROUTER_ENDPOINT",
+        ROUTER_PATH,
+    )
     _require(
         router_endpoint == EXPECTED_PATH,
         blockers,
@@ -384,6 +490,28 @@ def verify_mpr_next_08_jupiter_v2_contract(
     )
 
     quarantine = _load_json(repo_root, QUARANTINE_PATH)
+    _require(
+        quarantine.get("schema_version")
+        == "mpr-next-08.jupiter-endpoint-quarantine.v1",
+        blockers,
+        "QUARANTINE_SCHEMA_MISMATCH",
+    )
+    active_contract = _as_dict(
+        quarantine.get("active_contract"),
+        blockers,
+        "QUARANTINE_ACTIVE_CONTRACT_MISSING",
+    )
+    _require(
+        active_contract
+        == {
+            "adapter": EXPECTED_ADAPTER,
+            "method": EXPECTED_METHOD,
+            "origin": EXPECTED_ORIGIN,
+            "path": EXPECTED_PATH,
+        },
+        blockers,
+        "QUARANTINE_ACTIVE_CONTRACT_MISMATCH",
+    )
     forbidden_markers = _as_string_list(
         quarantine.get("forbidden_endpoint_markers"),
         blockers,
@@ -394,10 +522,24 @@ def verify_mpr_next_08_jupiter_v2_contract(
         blockers,
         "QUARANTINE_FORBIDDEN_MARKERS_MISMATCH",
     )
-    quarantine_entries = _quarantine_entries(repo_root, blockers)
+    quarantine_entries = _quarantine_entries(quarantine, blockers)
+    policy_paths = _policy_reference_paths(quarantine, blockers)
     _validate_quarantine_boundary(repo_root, quarantine_entries, blockers)
+    _validate_policy_references(
+        repo_root,
+        policy_paths,
+        forbidden_markers,
+        blockers,
+    )
 
-    active_files = _iter_active_files(repo_root, quarantine_entries)
+    mega_b2_source = _read_text(repo_root, MEGA_B2_PATH)
+    mega_b2_method = _validate_mega_b2(mega_b2_source, blockers)
+
+    active_files = _iter_active_files(
+        repo_root,
+        quarantine_entries,
+        policy_paths,
+    )
     for path in active_files:
         relative = path.relative_to(repo_root).as_posix()
         try:
@@ -425,7 +567,9 @@ def verify_mpr_next_08_jupiter_v2_contract(
         product_contract_paths=tuple(sorted(product_paths)),
         docs_endpoint=docs_endpoint if isinstance(docs_endpoint, str) else None,
         router_endpoint=router_endpoint,
+        mega_b2_method=mega_b2_method,
         quarantined_paths=tuple(sorted(path for path, _ in quarantine_entries)),
+        policy_reference_paths=tuple(sorted(policy_paths)),
         scanned_active_files=len(active_files),
     )
 

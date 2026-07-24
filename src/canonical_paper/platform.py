@@ -153,12 +153,12 @@ class CanonicalPaperPlatform:
                 PaperOutcome.PAPER_REJECTED,
                 "rejected_repayment_formula_mismatch",
             )
-        elif candidate.rooted_slot > candidate.observed_slot:
+        elif candidate.observed_slot > candidate.rooted_slot:
             outcome, reason = (
                 PaperOutcome.PAPER_REJECTED,
-                "rejected_root_after_observation",
+                "rejected_observation_not_rooted",
             )
-        elif candidate.observed_slot - candidate.rooted_slot > self.config.max_slot_skew:
+        elif candidate.rooted_slot - candidate.observed_slot > self.config.max_slot_skew:
             outcome, reason = PaperOutcome.PAPER_REJECTED, "rejected_rooted_slot_skew"
         elif candidate.net_profit_lamports < self.config.min_profit_lamports:
             outcome, reason = (

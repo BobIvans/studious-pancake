@@ -193,7 +193,6 @@ def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]
     config = _load_config(config_file)
     matrix = _capability_matrix()
     path_errors = tuple(matrix.validate_paths())
-    live_available = bool(matrix.runtime_modes.get(LIVE_MODE, {}).get("available", False))
     return {
         "schema_version": "mpr-close-01.dependency-light-status.v1",
         "product_state": matrix.product_state,
@@ -215,7 +214,7 @@ def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]
             "marginfi_enabled": config.providers.marginfi.enabled,
         },
         "live_enabled": False,
-        "live_available": live_available,
+        "live_available": False,
         "signer_loaded": False,
         "sender_loaded": False,
         "private_key_material_allowed": False,

@@ -195,3 +195,7 @@ src/pr227_exact_money_atomic_evidence.py
 tests/test_pr227_exact_money_atomic_evidence.py
 scripts/verify_mpr32_public_entrypoint_truth.py
 tests/test_mpr32_public_entrypoint_truth.py
+scripts/verify_mpr_next_08_jupiter_v2_contract.py
+src/providers/conformance/mega_b2.py
+tests/test_mpr_next_08_jupiter_v2_contract.py
+tests/test_mega_pr_b2_provider_conformance.py

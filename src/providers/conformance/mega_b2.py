@@ -46,9 +46,7 @@ SECRET_KEY_RE = re.compile(
     r"api[-_]?key|authorization|auth|bearer|token|secret|private[-_]?key",
     re.I,
 )
-SECRET_VALUE_RE = re.compile(
-    r"(?i)(bearer\s+[a-z0-9._~+/=-]+|api[-_]?key=[^&\s]+)"
-)
+SECRET_VALUE_RE = re.compile(r"(?i)(bearer\s+[a-z0-9._~+/=-]+|api[-_]?key=[^&\s]+)")
 HASH_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -360,16 +358,12 @@ def _normalize_jupiter_build_parameters(
             continue
         if isinstance(value, bool):
             normalized[str(name)] = "true" if value else "false"
-        elif name in {"dexes", "excludeDexes"} and isinstance(
-            value, (list, tuple)
-        ):
+        elif name in {"dexes", "excludeDexes"} and isinstance(value, (list, tuple)):
             normalized[str(name)] = ",".join(str(item) for item in value)
         elif isinstance(value, (str, int)):
             normalized[str(name)] = str(value)
         else:
-            raise ProviderConformanceError(
-                f"JUPITER_BUILD_PARAMETER_INVALID:{name}"
-            )
+            raise ProviderConformanceError(f"JUPITER_BUILD_PARAMETER_INVALID:{name}")
     return normalized
 
 
@@ -406,7 +400,10 @@ class JupiterV2BuildAdapter:
         if self.transport is None:
             raise ProviderConformanceError("PROTECTED_TRANSPORT_REQUIRED")
         response = self.transport.request(self.build_request(payload, api_key))
-        if not isinstance(response.body_json, Mapping) or "swapTransaction" in response.body_json:
+        if (
+            not isinstance(response.body_json, Mapping)
+            or "swapTransaction" in response.body_json
+        ):
             raise ProviderConformanceError("JUPITER_BUILD_RESPONSE_NOT_V2_BUILD")
         return response
 
@@ -501,9 +498,7 @@ class ProgramEvidenceProducer:
 
 class ProviderAdmissionController:
     def __init__(self, bundles: list[ExternalEvidenceBundle]) -> None:
-        self.bundles = {
-            str(bundle.contract_pin.provider): bundle for bundle in bundles
-        }
+        self.bundles = {str(bundle.contract_pin.provider): bundle for bundle in bundles}
 
     def require_runtime_port(
         self,
@@ -661,13 +656,9 @@ def main(argv: list[str] | None = None) -> int:
     data = json.loads(args.bundle.read_text(encoding="utf-8"))
     pin = ExternalContractPin(**data["contract_pin"])
     probe = (
-        None
-        if data.get("probe") is None
-        else ProtectedProbeEvidence(**data["probe"])
+        None if data.get("probe") is None else ProtectedProbeEvidence(**data["probe"])
     )
-    ports = tuple(
-        RuntimeEvidencePort(**port) for port in data.get("runtime_ports", [])
-    )
+    ports = tuple(RuntimeEvidencePort(**port) for port in data.get("runtime_ports", []))
     bundle = ExternalEvidenceBundle(
         data["schema_version"],
         pin,

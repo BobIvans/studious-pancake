@@ -155,7 +155,10 @@ def _assigned_string(source: str, name: str, source_path: str) -> str | None:
     for node in tree.body:
         if not isinstance(node, ast.Assign):
             continue
-        if not any(isinstance(target, ast.Name) and target.id == name for target in node.targets):
+        if not any(
+            isinstance(target, ast.Name) and target.id == name
+            for target in node.targets
+        ):
             continue
         if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
             return node.value.value
@@ -202,7 +205,11 @@ def _policy_reference_paths(
             continue
         path = entry.get("path")
         reason = entry.get("reason")
-        if not isinstance(path, str) or not isinstance(reason, str) or not reason.strip():
+        if (
+            not isinstance(path, str)
+            or not isinstance(reason, str)
+            or not reason.strip()
+        ):
             blockers.append(f"POLICY_REFERENCE_ENTRY_INVALID:{index}")
             continue
         parsed.append(path)
@@ -328,7 +335,9 @@ def _mega_b2_method(source: str) -> str | None:
     try:
         tree = ast.parse(source)
     except SyntaxError as exc:
-        raise JupiterV2ContractError(f"invalid Python in {MEGA_B2_PATH}: {exc}") from exc
+        raise JupiterV2ContractError(
+            f"invalid Python in {MEGA_B2_PATH}: {exc}"
+        ) from exc
     for node in tree.body:
         if not isinstance(node, ast.ClassDef) or node.name != "JupiterV2BuildAdapter":
             continue
@@ -340,7 +349,10 @@ def _mega_b2_method(source: str) -> str | None:
             for child in ast.walk(member):
                 if not isinstance(child, ast.Call):
                     continue
-                if not isinstance(child.func, ast.Name) or child.func.id != "HttpRequestSpec":
+                if (
+                    not isinstance(child.func, ast.Name)
+                    or child.func.id != "HttpRequestSpec"
+                ):
                     continue
                 if child.args and isinstance(child.args[0], ast.Constant):
                     value = child.args[0].value
@@ -549,7 +561,9 @@ def verify_mpr_next_08_jupiter_v2_contract(
             continue
         for marker in forbidden_markers:
             if marker in text:
-                blockers.append(f"FORBIDDEN_ACTIVE_JUPITER_ENDPOINT:{relative}:{marker}")
+                blockers.append(
+                    f"FORBIDDEN_ACTIVE_JUPITER_ENDPOINT:{relative}:{marker}"
+                )
 
     verify_repo_text = _read_text(repo_root, VERIFY_REPO_PATH)
     _require(

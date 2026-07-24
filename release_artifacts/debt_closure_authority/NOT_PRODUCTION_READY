@@ -1,0 +1,4 @@
+MPR-NEXT-07 is a fail-closed debt-closure authority.
+
+This directory does not contain production-ready evidence.
+Do not use any artifact here to enable live trading, signer loading, sender loading, or production promotion unless it passes scripts/verify_debt_closure_authority.py and a separate reviewed promotion gate.

@@ -1,0 +1,24 @@
+{
+  "schema_version": "mpr-next-07.debt-closure-evidence-schema.v1",
+  "required_boolean_true": [
+    "gate_ok",
+    "runtime_bound",
+    "installed_artifact_bound",
+    "evidence_fresh",
+    "replayable",
+    "ci_authoritative"
+  ],
+  "required_boolean_false": [
+    "source_only",
+    "synthetic"
+  ],
+  "required_sha256_fields": [
+    "artifact_sha256",
+    "runtime_command_surface_sha256",
+    "evidence_sha256",
+    "freshness_proof_sha256"
+  ],
+  "production_ready": false,
+  "paper_ready": false,
+  "live_ready": false
+}

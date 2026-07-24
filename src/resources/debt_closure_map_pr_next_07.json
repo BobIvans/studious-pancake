@@ -1,0 +1,63 @@
+{
+  "schema_version": "mpr-next-07.debt-closure-map-manifest.v1",
+  "description": "Static reviewed mapping from gate outputs to stable production-debt IDs. Runtime closure still requires src.readiness.debt_closure_map evidence validation.",
+  "gates": {
+    "PR-225": {
+      "evidence_kind": "secure-provider-plane",
+      "debt_ids": [
+        "external.jupiter-swap-v2",
+        "evidence.provider-drift-probes"
+      ]
+    },
+    "PR-226": {
+      "evidence_kind": "deterministic-runtime-dataset-shadow",
+      "debt_ids": [
+        "data.lineage-quarantine",
+        "evidence.real-shadow-soak",
+        "operations.slo-readiness"
+      ]
+    },
+    "PR-228": {
+      "evidence_kind": "secret-trust-release",
+      "debt_ids": [
+        "security.secret-incident-drill",
+        "security.signer-isolation"
+      ]
+    },
+    "MPR-31": {
+      "evidence_kind": "final-production-promotion",
+      "requires_upstream_mprs": [
+        "MPR-25",
+        "MPR-26",
+        "MPR-27",
+        "MPR-28",
+        "MPR-29",
+        "MPR-30"
+      ],
+      "debt_ids": [
+        "runtime.product-state",
+        "runtime.live-entrypoint",
+        "deployment.image-provenance",
+        "canary.permit-budget-latches",
+        "canary.second-human-approval"
+      ]
+    }
+  },
+  "closure_requirements": [
+    "gate_ok",
+    "runtime_bound",
+    "installed_artifact_bound",
+    "evidence_fresh",
+    "replayable",
+    "ci_authoritative",
+    "not_source_only",
+    "not_synthetic",
+    "sha256_artifact_digest",
+    "sha256_runtime_command_surface_digest",
+    "sha256_evidence_digest",
+    "sha256_freshness_proof_digest"
+  ],
+  "production_ready": false,
+  "paper_ready": false,
+  "live_ready": false
+}

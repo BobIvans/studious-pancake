@@ -1,0 +1,3 @@
+Debt closure requires active installed-runtime binding.
+
+A source-only unit test, fixture-only result, or offline module success is not closure authority.

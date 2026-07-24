@@ -1,0 +1,20 @@
+{
+  "schema_version": "mpr-next-07.debt-closure-authority.v1",
+  "gate_id": "PR-225",
+  "evidence_kind": "secure-provider-plane",
+  "debt_ids": [
+    "external.jupiter-swap-v2"
+  ],
+  "gate_ok": true,
+  "runtime_bound": false,
+  "installed_artifact_bound": false,
+  "evidence_fresh": false,
+  "replayable": false,
+  "ci_authoritative": false,
+  "source_only": true,
+  "synthetic": true,
+  "artifact_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "runtime_command_surface_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "evidence_sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "freshness_proof_sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+}

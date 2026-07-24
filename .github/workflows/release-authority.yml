@@ -1,0 +1,59 @@
+name: Release authority
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+      - "mpr-close-01-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-authority-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-authority:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # mpr-close-01-waive-moving-action: bootstrap action; final SHA pinning is enforced before production promotion.
+      - uses: actions/checkout@v4
+      # mpr-close-01-waive-moving-action: bootstrap action; final SHA pinning is enforced before production promotion.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Source hygiene
+        run: |
+          python scripts/verify_source_hygiene.py --strict --root src
+          python scripts/verify_source_hygiene.py --strict --root scripts
+          python scripts/verify_source_hygiene.py --strict --root tests
+          python scripts/verify_source_hygiene.py --strict --root config
+          python scripts/verify_source_hygiene.py --strict --root .github/workflows
+      - name: Install release-check dependencies
+        run: python -m pip install --disable-pip-version-check -e ".[dev]"
+      - name: Compile source, scripts and tests
+        run: python -m compileall -q arb_bot.py src scripts tests
+      - name: Production debt inventory consistency
+        run: python scripts/production_debt_audit.py --check --json
+      - name: Installed/source command surface
+        run: python scripts/verify_installed_artifact.py --json
+      - name: MPR01 runtime cutover gate
+        run: python scripts/verify_mpr01_runtime_cutover.py --json
+      - name: PR200 production cutover evidence gate
+        run: python scripts/verify_pr200_production_cutover.py --json
+      - name: Workflow authority inventory
+        run: python scripts/verify_workflow_authority.py --strict --json
+      - name: Focused MPR-CLOSE-01 tests
+        run: >-
+          python -m pytest -q
+          tests/test_mpr01_installed_artifact_parity.py
+          tests/test_pr195_product_contract.py
+          tests/test_pr219_canonical_product_artifact_quality_gate.py
+          tests/test_mpr_close_01_product_truth.py

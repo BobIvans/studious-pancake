@@ -19,6 +19,13 @@ from src.canonical_paper import (
     RecordingError,
 )
 
+ROOT = Path(__file__).resolve().parents[1]
+ROOTED_SLOT_CASES = json.loads(
+    (ROOT / "tests/fixtures/canonical_paper_rooted_slot_cases.json").read_text(
+        encoding="utf-8"
+    )
+)["cases"]
+
 
 class StepClock:
     def __init__(self, values: list[int]) -> None:
@@ -44,7 +51,7 @@ def _candidate(**overrides: object) -> dict[str, object]:
         "tip_lamports": 0,
         "safety_buffer_lamports": 5_000,
         "observed_slot": 100,
-        "rooted_slot": 98,
+        "rooted_slot": 100,
     }
     payload.update(overrides)
     return payload
@@ -122,13 +129,29 @@ def test_repayment_formula_mismatch_is_rejected(tmp_path: Path) -> None:
     assert report.decisions[0].reason_code == "rejected_repayment_formula_mismatch"
 
 
-def test_rooted_slot_skew_is_rejected(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    "case",
+    ROOTED_SLOT_CASES,
+    ids=[str(case["name"]) for case in ROOTED_SLOT_CASES],
+)
+def test_rooted_slot_admission_matrix(
+    tmp_path: Path,
+    case: dict[str, object],
+) -> None:
     recording = _write_recording(
         tmp_path / "recording.json",
-        [_candidate(observed_slot=100, rooted_slot=1)],
+        [
+            _candidate(
+                observed_slot=case["observed_slot"],
+                rooted_slot=case["rooted_slot"],
+            )
+        ],
     )
     report = _platform(tmp_path, recording).run_once()
-    assert report.decisions[0].reason_code == "rejected_rooted_slot_skew"
+    decision = report.decisions[0]
+
+    assert decision.outcome.value == case["expected_outcome"]
+    assert decision.reason_code == case["expected_reason"]
 
 
 def test_duplicate_candidate_ids_fail_closed_and_are_recorded(tmp_path: Path) -> None:

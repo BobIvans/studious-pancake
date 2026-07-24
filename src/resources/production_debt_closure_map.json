@@ -1,0 +1,85 @@
+{
+  "schema_version": "mpr-next-01.production-debt-closure-map.v1",
+  "product_state": "not-production-ready",
+  "production_ready": false,
+  "live_enabled": false,
+  "reviewed_at": "2026-07-25T00:00:00Z",
+  "policy": {
+    "materialized_runtime_evidence_required": true,
+    "offline_validators_do_not_close_blockers": true,
+    "product_contract_files_are_owned_by_current_main": true,
+    "live_enablement_requires_human_reviewed_release_evidence": true
+  },
+  "gates": [
+    {
+      "gate_id": "MPR-25",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr25_canonical_product_graph_artifact_truth_gate.py",
+      "can_close_blocker_ids": ["packaging.source-wheel-parity", "runtime.product-state"],
+      "required_evidence": ["installed wheel", "runtime image", "surface manifest", "qualification log"]
+    },
+    {
+      "gate_id": "MPR-26",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr26_durable_authority_evidence.py",
+      "can_close_blocker_ids": ["durability.single-truth-cutover", "economics.capital-reservations"],
+      "required_evidence": ["crash drill", "database evidence", "queue recovery proof"]
+    },
+    {
+      "gate_id": "MPR-27",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr27_external_contract_runtime_conformance.py",
+      "can_close_blocker_ids": ["external.solana-v0-rpc", "external.jupiter-swap-v2", "external.helius-webhook-auth"],
+      "required_evidence": ["credentialed provider fixture", "contract drift report", "rooted RPC proof"]
+    },
+    {
+      "gate_id": "MPR-28",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr28_exact_transaction_economic_truth.py",
+      "can_close_blocker_ids": ["execution.exact-simulation-binding", "execution.canonical-transaction-proof", "evidence.finalized-economic-proof"],
+      "required_evidence": ["exact transaction proof", "finalized balance deltas", "fee and rent reconciliation"]
+    },
+    {
+      "gate_id": "MPR-29",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr29_integrated_paper_shadow_runtime.py",
+      "can_close_blocker_ids": ["runtime.canonical-vertical-wiring", "evidence.real-shadow-soak"],
+      "required_evidence": ["integrated paper runtime", "non-synthetic shadow soak", "single composition root"]
+    },
+    {
+      "gate_id": "MPR-30",
+      "status": "implemented-offline-validator",
+      "module_path": "src/mpr30_operations_security_release_evidence.py",
+      "can_close_blocker_ids": ["deployment.image-provenance", "operations.slo-readiness", "security.secret-incident-drill"],
+      "required_evidence": ["SBOM", "image provenance", "SLO baseline", "secret drill"]
+    },
+    {
+      "gate_id": "MPR-31",
+      "status": "implemented-offline-validator",
+      "module_path": "src/release_gate/mpr31_final_promotion_gate.py",
+      "can_close_blocker_ids": ["canary.permit-budget-latches", "canary.second-human-approval", "security.signer-isolation"],
+      "required_evidence": ["permit budget", "second reviewer", "live canary evidence bundle"]
+    },
+    {
+      "gate_id": "PR-225",
+      "status": "implemented-offline-validator",
+      "module_path": "src/pr225_provider_plane_gate.py",
+      "can_close_blocker_ids": ["data.rpc-rooted-quorum", "data.oracle-slot-coherence"],
+      "required_evidence": ["rooted quorum", "provider drift probe", "oracle slot coherence"]
+    },
+    {
+      "gate_id": "PR-226",
+      "status": "implemented-offline-validator",
+      "module_path": "src/pr226_release_evidence_gate.py",
+      "can_close_blocker_ids": ["evidence.provider-drift-probes", "data.lineage-quarantine"],
+      "required_evidence": ["release evidence manifest", "lineage quarantine proof"]
+    },
+    {
+      "gate_id": "PR-228",
+      "status": "implemented-offline-validator",
+      "module_path": "src/pr228_lending_protocol_truth_gate.py",
+      "can_close_blocker_ids": ["external.marginfi-v2", "external.kamino-klend", "lending.kamino-supported-combinations"],
+      "required_evidence": ["MarginFi deployed attestation", "Kamino deployed attestation", "supported market/reserve combinations"]
+    }
+  ]
+}

@@ -89,12 +89,18 @@ def test_documentation_only_blocks():
 
 def test_missing_probe_and_runtime_port_block():
     evidence = bundle()
-    assert "PROTECTED_PROBE_MISSING" in evaluate_admission(
-        type(evidence)(**{**evidence.__dict__, "probe": None})
-    ).reason_codes
-    assert "NO_ACTIVE_RUNTIME_PORT" in evaluate_admission(
-        type(evidence)(**{**evidence.__dict__, "runtime_ports": ()})
-    ).reason_codes
+    assert (
+        "PROTECTED_PROBE_MISSING"
+        in evaluate_admission(
+            type(evidence)(**{**evidence.__dict__, "probe": None})
+        ).reason_codes
+    )
+    assert (
+        "NO_ACTIVE_RUNTIME_PORT"
+        in evaluate_admission(
+            type(evidence)(**{**evidence.__dict__, "runtime_ports": ()})
+        ).reason_codes
+    )
 
 
 def test_expiry_drift_credential_program_and_quorum_revoke():
@@ -143,9 +149,10 @@ def test_jupiter_build_contract_rejects_legacy_payload_and_post_pin():
         3600,
         "shared_quota",
     )
-    assert "JUPITER_BUILD_METHOD_NOT_GET" in evaluate_admission(
-        bundle(pin=post_pin)
-    ).reason_codes
+    assert (
+        "JUPITER_BUILD_METHOD_NOT_GET"
+        in evaluate_admission(bundle(pin=post_pin)).reason_codes
+    )
 
 
 def test_jupiter_rejects_legacy_swap_transaction_response():
@@ -198,22 +205,30 @@ def test_program_observation_and_marginfi_hash_required():
     }
     assert len(ProgramEvidenceProducer.validate_program_observation(observation)) == 64
     contract_pin = pin(ProviderName.MARGINFI, "marginfi-program")
-    assert "DEPLOYED_PROGRAM_OBSERVATION_MISSING" in evaluate_admission(
-        bundle(pin=contract_pin)
-    ).reason_codes
-    assert "DEPLOYED_PROGRAM_OBSERVATION_MISSING" not in evaluate_admission(
-        bundle(pin=contract_pin, observed_program_hash=H)
-    ).reason_codes
+    assert (
+        "DEPLOYED_PROGRAM_OBSERVATION_MISSING"
+        in evaluate_admission(bundle(pin=contract_pin)).reason_codes
+    )
+    assert (
+        "DEPLOYED_PROGRAM_OBSERVATION_MISSING"
+        not in evaluate_admission(
+            bundle(pin=contract_pin, observed_program_hash=H)
+        ).reason_codes
+    )
 
 
 def test_solana_rpc_quorum_required():
     contract_pin = pin(ProviderName.SOLANA_RPC, "https://rpc")
-    assert "RPC_QUORUM_HASH_MISSING" in evaluate_admission(
-        bundle(pin=contract_pin)
-    ).reason_codes
-    assert "RPC_QUORUM_HASH_MISSING" not in evaluate_admission(
-        bundle(pin=contract_pin, rpc_quorum_hash=H)
-    ).reason_codes
+    assert (
+        "RPC_QUORUM_HASH_MISSING"
+        in evaluate_admission(bundle(pin=contract_pin)).reason_codes
+    )
+    assert (
+        "RPC_QUORUM_HASH_MISSING"
+        not in evaluate_admission(
+            bundle(pin=contract_pin, rpc_quorum_hash=H)
+        ).reason_codes
+    )
 
 
 def test_redacted_fixture_removes_secret_values(tmp_path):

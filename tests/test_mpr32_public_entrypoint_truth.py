@@ -40,7 +40,11 @@ def _production_surface_manifest(entrypoints: dict[str, str]) -> dict[str, objec
     }
 
 
-def _authority_map(*, console_script: str = "flashloan-bot", target: str = "src.cli_pr189:main") -> dict[str, object]:
+def _authority_map(
+    *,
+    console_script: str = "flashloan-bot",
+    target: str = "src.cli_pr189:main",
+) -> dict[str, object]:
     return {
         "schema_version": "pr01.authority-map.v1",
         "product_state": "not-production-ready",
@@ -115,7 +119,9 @@ def test_mpr32_public_entrypoint_truth_accepts_current_checkout() -> None:
     assert evidence.production_surface_entrypoints == tuple(sorted(BASE_ENTRYPOINTS))
 
 
-def test_mpr32_public_entrypoint_truth_rejects_public_surface_set_drift(tmp_path: Path) -> None:
+def test_mpr32_public_entrypoint_truth_rejects_public_surface_set_drift(
+    tmp_path: Path,
+) -> None:
     manifest_entrypoints = dict(BASE_ENTRYPOINTS)
     manifest_entrypoints.pop("flashloan-release-evidence")
     _write_fixture_repo(tmp_path, manifest_entrypoints=manifest_entrypoints)
@@ -124,10 +130,15 @@ def test_mpr32_public_entrypoint_truth_rejects_public_surface_set_drift(tmp_path
 
     assert evidence.accepted is False
     assert "PUBLIC_ENTRYPOINT_SET_MISMATCH" in evidence.blockers
-    assert "PUBLIC_ENTRYPOINT_TARGET_MISMATCH:flashloan-release-evidence" in evidence.blockers
+    assert (
+        "PUBLIC_ENTRYPOINT_TARGET_MISMATCH:flashloan-release-evidence"
+        in evidence.blockers
+    )
 
 
-def test_mpr32_public_entrypoint_truth_rejects_authority_supported_entrypoint_drift(tmp_path: Path) -> None:
+def test_mpr32_public_entrypoint_truth_rejects_authority_supported_entrypoint_drift(
+    tmp_path: Path,
+) -> None:
     _write_fixture_repo(tmp_path, authority_console_script="flashloan-checks")
 
     evidence = verify_mpr32_public_entrypoint_truth(tmp_path)
@@ -136,7 +147,9 @@ def test_mpr32_public_entrypoint_truth_rejects_authority_supported_entrypoint_dr
     assert "AUTHORITY_SUPPORTED_ENTRYPOINT_MISMATCH" in evidence.blockers
 
 
-def test_mpr32_public_entrypoint_truth_rejects_missing_verify_repo_wiring(tmp_path: Path) -> None:
+def test_mpr32_public_entrypoint_truth_rejects_missing_verify_repo_wiring(
+    tmp_path: Path,
+) -> None:
     _write_fixture_repo(tmp_path, verify_repo_runs_gate=False)
 
     evidence = verify_mpr32_public_entrypoint_truth(tmp_path)

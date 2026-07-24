@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import replace
+from dataclasses import asdict, replace
 import json
 from pathlib import Path
 
@@ -244,23 +244,11 @@ def test_signed_artifact_payload_is_mpr31_compatible() -> None:
 
 def test_json_decoder_preserves_default_off_contract(tmp_path: Path) -> None:
     bundle = valid_bundle()
-    payload = json.loads(
-        json.dumps(
-            {
-                "schema_version": bundle.schema_version,
-                "command_surface": bundle.command_surface.__dict__,
-                "provider_snapshots": [row.__dict__ for row in bundle.provider_snapshots],
-                "lifecycle_outcomes": [row.__dict__ for row in bundle.lifecycle_outcomes],
-                "slo": bundle.slo.__dict__,
-                "lineage": bundle.lineage.__dict__,
-                "issued_at_ns": bundle.issued_at_ns,
-                "expires_at_ns": bundle.expires_at_ns,
-                "immutable_uri": bundle.immutable_uri,
-                "reviewer_digests": list(bundle.reviewer_digests),
-            },
-            sort_keys=True,
-        )
+    payload = asdict(bundle)
+    payload["command_surface"]["runtime_modes"] = list(
+        payload["command_surface"]["runtime_modes"]
     )
+    payload["reviewer_digests"] = list(payload["reviewer_digests"])
     path = tmp_path / "mpr29.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
 

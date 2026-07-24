@@ -55,7 +55,9 @@ class Mpr32PublicEntrypointTruthEvidence:
         payload = asdict(self)
         payload["blockers"] = list(self.blockers)
         payload["console_scripts"] = list(self.console_scripts)
-        payload["production_surface_entrypoints"] = list(self.production_surface_entrypoints)
+        payload["production_surface_entrypoints"] = list(
+            self.production_surface_entrypoints
+        )
         return payload
 
 
@@ -63,7 +65,9 @@ def _repo_file(root: Path, relative: str) -> Path:
     candidate = (root / relative).resolve()
     resolved_root = root.resolve()
     if candidate == resolved_root or resolved_root not in candidate.parents:
-        raise Mpr32PublicEntrypointTruthError(f"path escapes repository root: {relative}")
+        raise Mpr32PublicEntrypointTruthError(
+            f"path escapes repository root: {relative}"
+        )
     return candidate
 
 
@@ -71,14 +75,18 @@ def _read_bytes(root: Path, relative: str) -> bytes:
     try:
         return _repo_file(root, relative).read_bytes()
     except FileNotFoundError as exc:
-        raise Mpr32PublicEntrypointTruthError(f"required file is missing: {relative}") from exc
+        raise Mpr32PublicEntrypointTruthError(
+            f"required file is missing: {relative}"
+        ) from exc
 
 
 def _load_json(root: Path, relative: str) -> dict[str, Any]:
     try:
         value = json.loads(_read_bytes(root, relative).decode("utf-8"))
     except json.JSONDecodeError as exc:
-        raise Mpr32PublicEntrypointTruthError(f"invalid JSON in {relative}: {exc}") from exc
+        raise Mpr32PublicEntrypointTruthError(
+            f"invalid JSON in {relative}: {exc}"
+        ) from exc
     if not isinstance(value, dict):
         raise Mpr32PublicEntrypointTruthError(f"{relative} must contain a JSON object")
     return value
@@ -90,7 +98,9 @@ def _load_pyproject(root: Path) -> dict[str, Any]:
     except tomllib.TOMLDecodeError as exc:
         raise Mpr32PublicEntrypointTruthError(f"invalid pyproject.toml: {exc}") from exc
     if not isinstance(value, dict):
-        raise Mpr32PublicEntrypointTruthError("pyproject.toml must decode to an object")
+        raise Mpr32PublicEntrypointTruthError(
+            "pyproject.toml must decode to an object"
+        )
     return value
 
 
@@ -107,12 +117,19 @@ def _as_dict(value: object, blockers: list[str], code: str) -> dict[str, Any]:
 
 
 def _project_scripts(pyproject: dict[str, Any], blockers: list[str]) -> dict[str, str]:
-    project = _as_dict(pyproject.get("project"), blockers, "PYPROJECT_PROJECT_SECTION_MISSING")
+    project = _as_dict(
+        pyproject.get("project"),
+        blockers,
+        "PYPROJECT_PROJECT_SECTION_MISSING",
+    )
     scripts = _as_dict(project.get("scripts"), blockers, "PYPROJECT_SCRIPTS_MISSING")
     return {str(key): str(value) for key, value in scripts.items()}
 
 
-def _production_surface_entrypoints(root: Path, blockers: list[str]) -> tuple[dict[str, str], dict[str, Any]]:
+def _production_surface_entrypoints(
+    root: Path,
+    blockers: list[str],
+) -> tuple[dict[str, str], dict[str, Any]]:
     manifest = _load_json(root, PRODUCTION_SURFACE_PATH)
     entrypoints = _as_dict(
         manifest.get("entrypoints"),
@@ -122,7 +139,10 @@ def _production_surface_entrypoints(root: Path, blockers: list[str]) -> tuple[di
     return {str(key): str(value) for key, value in entrypoints.items()}, manifest
 
 
-def _authority_map_supported_entrypoint(root: Path, blockers: list[str]) -> tuple[dict[str, Any], bool]:
+def _authority_map_supported_entrypoint(
+    root: Path,
+    blockers: list[str],
+) -> tuple[dict[str, Any], bool]:
     authority_raw = _read_bytes(root, AUTHORITY_MAP_PATH)
     packaged_raw = _read_bytes(root, PACKAGED_AUTHORITY_MAP_PATH)
     parity = authority_raw == packaged_raw
@@ -144,18 +164,26 @@ def verify_mpr32_public_entrypoint_truth(
     artifact_hashes: dict[str, str] = {}
     for relative in EVIDENCE_PATHS:
         try:
-            artifact_hashes[relative] = hashlib.sha256(_read_bytes(repo_root, relative)).hexdigest()
+            artifact_hashes[relative] = hashlib.sha256(
+                _read_bytes(repo_root, relative)
+            ).hexdigest()
         except Mpr32PublicEntrypointTruthError:
             blockers.append(f"MISSING:{relative}")
 
     pyproject = _load_pyproject(repo_root)
     scripts = _project_scripts(pyproject, blockers)
     surface_entrypoints, manifest = _production_surface_entrypoints(repo_root, blockers)
-    authority_supported, parity = _authority_map_supported_entrypoint(repo_root, blockers)
+    authority_supported, parity = _authority_map_supported_entrypoint(
+        repo_root, blockers
+    )
 
     pyproject_names = set(scripts)
     surface_names = set(surface_entrypoints)
-    _require(pyproject_names == surface_names, blockers, "PUBLIC_ENTRYPOINT_SET_MISMATCH")
+    _require(
+        pyproject_names == surface_names,
+        blockers,
+        "PUBLIC_ENTRYPOINT_SET_MISMATCH",
+    )
 
     for name in sorted(pyproject_names | surface_names):
         _require(

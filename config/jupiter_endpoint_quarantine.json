@@ -17,6 +17,10 @@
       "reason": "offline conformance verifier rejects deprecated provider contracts"
     },
     {
+      "path": "src/mpr_next_01_product_truth_gate.py",
+      "reason": "offline product-truth gate rejects deprecated endpoints in mirrored contracts"
+    },
+    {
       "path": "src/provider_protocol_conformance_mpr_next_03.py",
       "reason": "sender-free provider admission policy enumerates forbidden active paths"
     },

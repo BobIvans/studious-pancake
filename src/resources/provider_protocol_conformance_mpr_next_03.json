@@ -1,0 +1,137 @@
+{
+  "schema_version": "mpr-next-03.provider-protocol-conformance.v1",
+  "live_enabled": false,
+  "transaction_submission_enabled": false,
+  "providers": [
+    {
+      "id": "solana_rpc_v0",
+      "runtime_admission_enabled": true,
+      "active_paths": [
+        "/getLatestBlockhash",
+        "/simulateTransaction",
+        "/getTransaction",
+        "/getAddressLookupTable"
+      ],
+      "rpc": {
+        "maxSupportedTransactionVersion": 0,
+        "alt_reads_supported": true,
+        "finalized_settlement_required": true
+      }
+    },
+    {
+      "id": "jupiter_swap_v2_build",
+      "runtime_admission_enabled": true,
+      "active_paths": [
+        "/swap/v2/build"
+      ],
+      "raw_composable_instruction_endpoint": true,
+      "managed_execution": {
+        "paths": [
+          "/order",
+          "/execute",
+          "/submit"
+        ],
+        "composable_into_flashloan": false,
+        "reason": "managed execution cannot be embedded into flash-loan instruction composition without a separate reviewed proof"
+      }
+    },
+    {
+      "id": "helius_webhook_auth",
+      "runtime_admission_enabled": true,
+      "active_paths": [
+        "/webhook"
+      ],
+      "webhook": {
+        "authorization_header_required": true,
+        "at_least_once_delivery": true,
+        "duplicate_safe_persistence": true,
+        "ack_after_durable_enqueue": true
+      }
+    },
+    {
+      "id": "marginfi_v2_identity",
+      "runtime_admission_enabled": true,
+      "active_paths": [
+        "/read-only/deployment-identity"
+      ],
+      "deployment_identity": {
+        "program_id": "marginfi-v2-reviewed-mainnet-program-id-placeholder",
+        "rooted_slot": "credentialed-read-only-required",
+        "schema_hash": "credentialed-read-only-required",
+        "official_source_digest": "credentialed-read-only-required",
+        "independently_attested": true,
+        "sanitized_fixture_present": true
+      }
+    },
+    {
+      "id": "kamino_klend_identity",
+      "runtime_admission_enabled": true,
+      "active_paths": [
+        "/read-only/deployment-identity"
+      ],
+      "deployment_identity": {
+        "program_id": "kamino-klend-reviewed-mainnet-program-id-placeholder",
+        "rooted_slot": "credentialed-read-only-required",
+        "schema_hash": "credentialed-read-only-required",
+        "official_source_digest": "credentialed-read-only-required",
+        "independently_attested": true,
+        "sanitized_fixture_present": true
+      }
+    },
+    {
+      "id": "okx_signed_discovery",
+      "runtime_admission_enabled": false,
+      "active_paths": [],
+      "raw_composable_instruction_proven": false
+    },
+    {
+      "id": "openocean_whitelist_discovery",
+      "runtime_admission_enabled": false,
+      "active_paths": [],
+      "raw_composable_instruction_proven": false
+    },
+    {
+      "id": "odos_immutable_transaction",
+      "runtime_admission_enabled": false,
+      "active_paths": [],
+      "raw_composable_instruction_proven": false
+    }
+  ],
+  "drift_artifacts": [
+    {
+      "id": "solana_rpc_v0_drift_probe",
+      "evidence_kind": "credentialed-read-only-probe",
+      "signed": true,
+      "redacted": true,
+      "immutable": true
+    },
+    {
+      "id": "jupiter_swap_v2_schema_probe",
+      "evidence_kind": "credentialed-read-only-probe",
+      "signed": true,
+      "redacted": true,
+      "immutable": true
+    },
+    {
+      "id": "helius_webhook_contract_probe",
+      "evidence_kind": "credentialed-read-only-probe",
+      "signed": true,
+      "redacted": true,
+      "immutable": true
+    },
+    {
+      "id": "marginfi_deployment_identity_probe",
+      "evidence_kind": "credentialed-read-only-probe",
+      "signed": true,
+      "redacted": true,
+      "immutable": true
+    },
+    {
+      "id": "kamino_klend_deployment_identity_probe",
+      "evidence_kind": "credentialed-read-only-probe",
+      "signed": true,
+      "redacted": true,
+      "immutable": true
+    }
+  ]
+}

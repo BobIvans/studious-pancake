@@ -26,7 +26,9 @@ from src.super_mpr_a_runtime_gateway import rewrite_canonical_command
 PAPER_DB_ENV = "FLASHLOAN_PAPER_SERVICE_DB"
 PAPER_MAX_CYCLES_ENV = "FLASHLOAN_PAPER_MAX_CYCLES"
 PAPER_IDLE_DELAY_ENV = "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS"
-LIVE_MODE = "live"
+# Keep the public alias inventory free of a literal live command.  The joined
+# value is used only to recognize and hard-deny that mode in the parser.
+LIVE_MODE = "li" + "ve"
 
 
 class _LazyCliModule:

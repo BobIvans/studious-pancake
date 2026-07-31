@@ -15,7 +15,7 @@
     {
       "path": "arb_bot.py",
       "active": false,
-      "disposition": "quarantined-source-alias",
+      "disposition": "quarantined",
       "reason": "owns no dispatch policy and delegates every invocation to src.cli_pr189"
     },
     {

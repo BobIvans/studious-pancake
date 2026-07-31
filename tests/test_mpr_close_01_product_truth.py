@@ -7,6 +7,15 @@ from scripts.verify_workflow_authority import evaluate_workflow_authority
 from src.config.product_contract_pr195 import ProductContract
 
 
+def test_source_alias_has_no_legacy_dispatch_fallback() -> None:
+    source = Path("arb_bot.py").read_text(encoding="utf-8")
+
+    assert 'CANONICAL_MAIN_TARGET = "src.cli_pr189:main"' in source
+    assert "from src.cli_pr189 import main as canonical_main" in source
+    assert "LEGACY_MAIN_TARGET" not in source
+    assert "LEGACY_PR023_COMMANDS" not in source
+
+
 def test_source_hygiene_blocks_generated_artifacts(tmp_path: Path) -> None:
     (tmp_path / "pkg" / "__pycache__").mkdir(parents=True)
     (tmp_path / "pkg" / "__pycache__" / "mod.cpython-313.pyc").write_bytes(b"x")
@@ -47,7 +56,9 @@ def test_workflow_authority_accepts_single_waived_release_gate(tmp_path: Path) -
 
 def test_active_jupiter_product_contract_uses_swap_v2_build() -> None:
     contract = ProductContract.load_default()
-    jupiter = next(item for item in contract.endpoint_contracts if item.provider == "jupiter")
+    jupiter = next(
+        item for item in contract.endpoint_contracts if item.provider == "jupiter"
+    )
 
     assert "/swap/v2/build" in jupiter.paths
     assert "/price/v3" in jupiter.paths

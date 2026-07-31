@@ -101,7 +101,10 @@ def test_below_threshold_is_durable_no_trade_rejection(tmp_path: Path) -> None:
     assert report.outcome is PaperOutcome.PAPER_REJECTED
     assert report.reason_code == "no_candidate_meets_conservative_profit"
     assert report.rejected_count == 1
-    assert report.decisions[0].reason_code == "rejected_conservative_profit_below_threshold"
+    assert (
+        report.decisions[0].reason_code
+        == "rejected_conservative_profit_below_threshold"
+    )
 
 
 def test_message_simulation_mutation_is_rejected(tmp_path: Path) -> None:
@@ -110,7 +113,9 @@ def test_message_simulation_mutation_is_rejected(tmp_path: Path) -> None:
         [_candidate(simulation_message_digest=hashlib.sha256(b"other").hexdigest())],
     )
     report = _platform(tmp_path, recording).run_once()
-    assert report.decisions[0].reason_code == "rejected_message_simulation_digest_mismatch"
+    assert (
+        report.decisions[0].reason_code == "rejected_message_simulation_digest_mismatch"
+    )
 
 
 def test_repayment_formula_mismatch_is_rejected(tmp_path: Path) -> None:
@@ -172,7 +177,9 @@ def test_same_source_and_config_repeated_runs_create_distinct_evidence(
     assert second.run_sequence == first.run_sequence + 1
 
     with sqlite3.connect(tmp_path / "paper.sqlite3") as connection:
-        assert connection.execute("SELECT COUNT(*) FROM paper_cycles").fetchone()[0] == 2
+        assert (
+            connection.execute("SELECT COUNT(*) FROM paper_cycles").fetchone()[0] == 2
+        )
         assert (
             connection.execute(
                 "SELECT COUNT(*) FROM paper_candidate_decisions"
@@ -210,6 +217,6 @@ def test_root_wrapper_and_installed_cli_share_main_target() -> None:
     root = Path("arb_bot.py").read_text()
     installed = Path("pyproject.toml").read_text()
     assert 'CANONICAL_MAIN_TARGET = "src.cli_pr189:main"' in root
-    assert "import_module(module_name)" in root
-    assert "from src.cli_pr189 import" not in root
+    assert "from src.cli_pr189 import main as canonical_main" in root
+    assert "LEGACY_MAIN_TARGET" not in root
     assert 'flashloan-bot = "src.cli_pr189:main"' in installed

@@ -67,12 +67,17 @@ async def test_fixture_or_disabled_strategy_cannot_be_enabled_by_config_flag():
     assert not app.context.strategy_runtime.supervisor.tasks
 
 
-def test_default_startup_reports_no_executable_strategies(capsys):
+def test_default_source_alias_routes_to_canonical_help(capsys):
     rc = arb_bot.main([])
     captured = capsys.readouterr()
-    assert rc == arb_bot.EXIT_NO_EXECUTABLE_STRATEGIES
-    assert "NO_EXECUTABLE_STRATEGIES" in captured.err
-    assert "not-production-ready" in captured.out
+    assert rc == 0
+    assert captured.err == ""
+    assert "flashloan-bot" in captured.out
+    assert "Live" in captured.out
+    assert (
+        "trading, signer loading and sender transports remain unavailable"
+        in captured.out
+    )
 
 
 def test_status_and_capabilities_json_are_stable(capsys):

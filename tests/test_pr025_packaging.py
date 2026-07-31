@@ -149,11 +149,11 @@ def test_dockerfile_is_multistage_non_root_and_uses_health_probe():
     assert "requirements-dev.txt" not in dockerfile
 
 
-def test_legacy_root_entrypoint_is_only_a_compatibility_wrapper():
+def test_quarantined_root_alias_delegates_without_dispatch_policy():
     source = (ROOT / "arb_bot.py").read_text(encoding="utf-8")
 
     assert 'CANONICAL_MAIN_TARGET = "src.cli_pr189:main"' in source
-    assert "import_module(module_name)" in source
     assert "from src.cli import" in source
-    assert "from src.cli_pr189 import" not in source
+    assert "from src.cli_pr189 import main as canonical_main" in source
+    assert "LEGACY_MAIN_TARGET" not in source
     assert len(source.splitlines()) < 45

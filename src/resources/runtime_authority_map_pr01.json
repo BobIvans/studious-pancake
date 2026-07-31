@@ -15,8 +15,8 @@
     {
       "path": "arb_bot.py",
       "active": false,
-      "disposition": "compatibility-wrapper",
-      "reason": "delegates to installed CLI"
+      "disposition": "quarantined-source-alias",
+      "reason": "owns no dispatch policy and delegates every invocation to src.cli_pr189"
     },
     {
       "path": "src.cli",

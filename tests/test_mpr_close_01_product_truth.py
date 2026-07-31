@@ -56,7 +56,9 @@ def test_workflow_authority_accepts_single_waived_release_gate(tmp_path: Path) -
 
 def test_active_jupiter_product_contract_uses_swap_v2_build() -> None:
     contract = ProductContract.load_default()
-    jupiter = next(item for item in contract.endpoint_contracts if item.provider == "jupiter")
+    jupiter = next(
+        item for item in contract.endpoint_contracts if item.provider == "jupiter"
+    )
 
     assert "/swap/v2/build" in jupiter.paths
     assert "/price/v3" in jupiter.paths

@@ -74,7 +74,10 @@ def test_default_source_alias_routes_to_canonical_help(capsys):
     assert captured.err == ""
     assert "flashloan-bot" in captured.out
     assert "Live" in captured.out
-    assert "trading, signer loading and sender transports remain unavailable" in captured.out
+    assert (
+        "trading, signer loading and sender transports remain unavailable"
+        in captured.out
+    )
 
 
 def test_status_and_capabilities_json_are_stable(capsys):

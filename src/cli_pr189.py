@@ -26,7 +26,7 @@ from src.super_mpr_a_runtime_gateway import rewrite_canonical_command
 PAPER_DB_ENV = "FLASHLOAN_PAPER_SERVICE_DB"
 PAPER_MAX_CYCLES_ENV = "FLASHLOAN_PAPER_MAX_CYCLES"
 PAPER_IDLE_DELAY_ENV = "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS"
-LIVE_MODE = 'live'
+LIVE_MODE = "live"
 
 
 class _LazyCliModule:
@@ -180,7 +180,9 @@ def _load_config(config_file: str | None, *, mode: str | None = None) -> Any:
     overrides: dict[str, Any] = {}
     if mode and mode != LIVE_MODE:
         overrides["runtime.mode"] = mode
-    return load_runtime_config(config_file, cli_overrides=overrides or None, environ=os.environ)
+    return load_runtime_config(
+        config_file, cli_overrides=overrides or None, environ=os.environ
+    )
 
 
 def _capability_matrix() -> Any:
@@ -316,7 +318,12 @@ def _run_lightweight_inspection(args: list[str]) -> int | None:
     try:
         parsed = _inspection_parser().parse_args(args)
     except SystemExit as exc:
-        return int(exc.code)
+        # ``argparse`` uses integer exit codes, but ``SystemExit.code`` is
+        # intentionally typed as ``str | int | None``.  Preserve the normal
+        # argparse contract without attempting ``int(<arbitrary string>)``.
+        if exc.code is None:
+            return 0
+        return exc.code if isinstance(exc.code, int) else 1
 
     if parsed.command == "status":
         _print_status(

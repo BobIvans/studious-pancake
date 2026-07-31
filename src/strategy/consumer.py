@@ -18,6 +18,8 @@ from .results import (
     make_result,
 )
 from .tracker import InMemoryOpportunityTracker
+from src.runtime.trusted_time import SystemTrustedTime, TrustedTime
+from .queue import QueueClosed
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,24 +129,29 @@ class OpportunityConsumer:
         tracker: InMemoryOpportunityTracker,
         handler: OpportunityHandler,
         sink: OpportunityResultSink,
+        *, clock: TrustedTime | None = None,
     ) -> None:
         self.queue = queue
         self.registry = registry
         self.tracker = tracker
         self.handler = handler
         self.sink = sink
+        self.clock = clock or SystemTrustedTime()
         self.metrics = OpportunityConsumerMetrics()
         self._task: asyncio.Task | None = None
         self._stopping = False
+        self.ready = False
 
     def start(self) -> None:
         if self._task and not self._task.done():
             raise RuntimeError("opportunity consumer already started")
         self._stopping = False
         self._task = asyncio.create_task(self._run(), name="opportunity-consumer")
+        self.ready = True
 
     async def stop(self) -> None:
         self._stopping = True
+        self.ready = False
         if self._task and not self._task.done():
             self._task.cancel()
             try:
@@ -153,12 +160,20 @@ class OpportunityConsumer:
                 pass
 
     async def _run(self) -> None:
-        while True:
-            opp = await self.queue.get()
-            await self.process_one(opp)
+        try:
+            while True:
+                opp = await self.queue.get(consumer_id="opportunity-consumer")
+                await self.process_one(opp)
+        except QueueClosed:
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self.ready = False
+            raise
 
     async def process_one(self, opp: Opportunity) -> None:
-        started = time.time()
+        started = self.clock.snapshot().utc.timestamp()
         if opp.expires_at <= started:
             await self._record(
                 opp,
@@ -234,7 +249,10 @@ class OpportunityConsumer:
                 {"error_type": type(exc).__name__},
             )
         finally:
-            await self.tracker.terminal(opp.opportunity_id)
+            if any(lease.item_id == opp.opportunity_id for lease in self.queue.leases):
+                await self.queue.acknowledge(opp.opportunity_id, "terminal")
+            else:
+                await self.tracker.terminal(opp.opportunity_id)
 
     async def _record(
         self,

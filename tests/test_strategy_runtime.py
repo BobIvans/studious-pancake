@@ -25,12 +25,12 @@ def opp(name="s", oid=None, ttl=10):
     return Opportunity.create(
         strategy_name=name, opportunity_type="test", detection_slot=1,
         input_mint="A", output_mint="B", proposed_amount_base_units=1,
-        expected_gross_profit=1.0, ttl_seconds=ttl,
+        expected_gross_profit=1, ttl_seconds=ttl,
         metadata={"features": {}},
     ) if oid is None else Opportunity(
         opportunity_id=oid, strategy_name=name, opportunity_type="test", detected_at=time.time(),
         detection_slot=1, input_mint="A", output_mint="B", proposed_amount_base_units=1,
-        expected_gross_profit=1.0, expires_at=time.time()+ttl, metadata={},
+        expected_gross_profit=1, expires_at=time.time()+ttl, metadata={},
     )
 
 
@@ -112,15 +112,16 @@ async def test_duplicate_opportunities_are_deduplicated():
     assert q.qsize() == 1
 
 
-def test_expired_opportunities_are_removed():
+@pytest.mark.asyncio
+async def test_expired_opportunities_are_removed():
     q = OpportunityQueue(10, ConstantRanker())
     expired = Opportunity(
         opportunity_id="expired", strategy_name="s", opportunity_type="t", detected_at=time.time()-2,
         detection_slot=1, input_mint="A", output_mint="B", proposed_amount_base_units=1,
-        expected_gross_profit=1.0, expires_at=time.time()-1, metadata={},
+        expected_gross_profit=1, expires_at=time.time()-1, metadata={},
     )
-    q._heap.append((-1.0, expired.expires_at, expired.opportunity_id, expired)); q._ids.add("expired")
-    assert q.expire() == 1
+    q._heap.append((-1.0, expired.expires_at, 0, expired.opportunity_id, expired)); q._ids.add("expired")
+    assert await q.expire() == 1
     assert q.qsize() == 0
 
 

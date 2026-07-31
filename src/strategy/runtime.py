@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import asyncio, logging
-from contextlib import suppress
+from collections import deque
 
 from .interfaces import StrategyContext, StrategyMode
 from .queue import OpportunityQueue
@@ -12,9 +12,10 @@ logger = logging.getLogger(__name__)
 
 
 class TaskSupervisor:
-    def __init__(self) -> None:
+    def __init__(self, *, exception_capacity: int = 128) -> None:
         self.tasks: set[asyncio.Task] = set()
-        self.exceptions: list[BaseException] = []
+        self.exceptions: deque[BaseException] = deque(maxlen=exception_capacity)
+        self.terminal: deque[tuple[str, str]] = deque(maxlen=exception_capacity)
 
     def create(self, coro, *, name: str) -> asyncio.Task:
         task = asyncio.create_task(coro, name=name)
@@ -25,10 +26,12 @@ class TaskSupervisor:
     def _done(self, task: asyncio.Task) -> None:
         self.tasks.discard(task)
         if task.cancelled():
+            self.terminal.append((task.get_name(), "cancelled"))
             return
         exc = task.exception()
         if exc is not None:
             self.exceptions.append(exc)
+            self.terminal.append((task.get_name(), "failed"))
             logger.exception("supervised_task_failed", exc_info=exc, extra={"task": task.get_name()})
 
     async def shutdown(self) -> None:
@@ -82,13 +85,22 @@ class StrategyRuntime:
         except Exception as exc:
             self.queue.metrics[strategy.name].last_error = str(exc)
             logger.exception("strategy_error", extra={"strategy": strategy.name})
+            self.states[strategy.name] = "failed"
+            self.reasons[strategy.name] = f"{type(exc).__name__}: {exc}"
 
     async def stop(self) -> None:
         await self.supervisor.shutdown()
+        failures = []
         for strategy in self.registry.all():
-            with suppress(Exception):
+            try:
                 await strategy.stop()
                 if self.states.get(strategy.name) == "running":
                     self.states[strategy.name] = "stopped"
                 logger.info("strategy_stop", extra={"strategy": strategy.name})
+            except Exception as exc:
+                self.states[strategy.name] = "stop_failed"
+                self.reasons[strategy.name] = f"{type(exc).__name__}: {exc}"
+                failures.append(exc)
         self._started = False
+        if failures:
+            raise ExceptionGroup("strategy stop failed", failures)

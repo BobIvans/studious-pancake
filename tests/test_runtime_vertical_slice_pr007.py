@@ -31,7 +31,7 @@ def make_opp(name="one", oid="id", profit=1.0, ttl=10):
     return Opportunity(
         strategy_name=name, opportunity_type="fixture", detected_at=now, detection_slot=1,
         input_mint="A", output_mint="B", proposed_amount_base_units=1,
-        expected_gross_profit=profit, expires_at=now + ttl, metadata={}, opportunity_id=oid,
+        expected_gross_profit=int(profit), expires_at=now + ttl, metadata={}, opportunity_id=oid,
     )
 
 

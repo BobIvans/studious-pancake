@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
 from types import MappingProxyType
@@ -45,11 +46,15 @@ class OpportunityResultSink(Protocol):
 
 
 class InMemoryOpportunityResultSink:
-    def __init__(self) -> None:
-        self.results: list[OpportunityResult] = []
+    def __init__(self, *, recent_capacity: int = 1024) -> None:
+        if isinstance(recent_capacity, bool) or not isinstance(recent_capacity, int) or recent_capacity < 1:
+            raise ValueError("recent_capacity must be a positive integer")
+        self.results: deque[OpportunityResult] = deque(maxlen=recent_capacity)
+        self.total_recorded = 0
 
     async def record(self, result: OpportunityResult) -> None:
         self.results.append(result)
+        self.total_recorded += 1
         logger.info("opportunity_terminal", extra={"strategy": result.strategy_name, "status": result.status.value})
 
 

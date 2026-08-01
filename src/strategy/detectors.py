@@ -241,7 +241,8 @@ class CircularArbitrageDetector:
             output_mint=pair.base_mint,
             proposed_amount_base_units=pair.probe_amount_base_units,
             expected_gross_profit=gross_profit,
-            ttl_seconds=pair.ttl_seconds,
+            # Preserve subsecond policy while normalizing once to integer ms.
+            ttl_ms=round(pair.ttl_seconds * 1000),
             metadata=metadata,
             detected_at=now,
         )

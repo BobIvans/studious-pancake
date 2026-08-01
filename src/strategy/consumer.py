@@ -17,7 +17,9 @@ from .results import (
     OpportunityResultStatus,
     make_result,
 )
-from .tracker import InMemoryOpportunityTracker
+from .tracker import InMemoryOpportunityTracker, TrackerState
+from src.runtime.trusted_time import SystemTrustedTime, TrustedTime
+from .queue import QueueClosed
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,24 +129,29 @@ class OpportunityConsumer:
         tracker: InMemoryOpportunityTracker,
         handler: OpportunityHandler,
         sink: OpportunityResultSink,
+        *, clock: TrustedTime | None = None,
     ) -> None:
         self.queue = queue
         self.registry = registry
         self.tracker = tracker
         self.handler = handler
         self.sink = sink
+        self.clock = clock or SystemTrustedTime()
         self.metrics = OpportunityConsumerMetrics()
         self._task: asyncio.Task | None = None
         self._stopping = False
+        self.ready = False
 
     def start(self) -> None:
         if self._task and not self._task.done():
             raise RuntimeError("opportunity consumer already started")
         self._stopping = False
         self._task = asyncio.create_task(self._run(), name="opportunity-consumer")
+        self.ready = True
 
     async def stop(self) -> None:
         self._stopping = True
+        self.ready = False
         if self._task and not self._task.done():
             self._task.cancel()
             try:
@@ -153,65 +160,55 @@ class OpportunityConsumer:
                 pass
 
     async def _run(self) -> None:
-        while True:
-            opp = await self.queue.get()
-            await self.process_one(opp)
+        try:
+            while True:
+                opp = await self.queue.get(consumer_id="opportunity-consumer")
+                await self.process_one(opp)
+        except QueueClosed:
+            return
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            self.ready = False
+            raise
 
     async def process_one(self, opp: Opportunity) -> None:
-        started = time.time()
-        if opp.expires_at <= started:
-            await self._record(
-                opp,
-                StrategyMode.DISABLED,
-                OpportunityResultStatus.REJECTED,
-                "opportunity_expired",
-                started,
-            )
-            return
-        if not await self.tracker.claim(opp.opportunity_id):
+        started = self.clock.snapshot().utc.timestamp()
+        leased = any(lease.item_id == opp.opportunity_id for lease in self.queue.leases)
+        if not leased and not await self.tracker.claim(opp.opportunity_id):
             self.metrics.duplicates += 1
             return
+        terminal = False
         try:
-            strategy = self.registry.get(opp.strategy_name)
-            if strategy is None:
+            if opp.expires_at <= started:
                 await self._record(
                     opp,
                     StrategyMode.DISABLED,
                     OpportunityResultStatus.REJECTED,
-                    "unknown_strategy",
+                    "opportunity_expired",
                     started,
                 )
-            elif strategy.mode is StrategyMode.DISABLED:
-                await self._record(
-                    opp,
-                    strategy.mode,
-                    OpportunityResultStatus.REJECTED,
-                    strategy.disabled_reason or "strategy_disabled",
-                    started,
-                )
-            elif strategy.mode is StrategyMode.LIVE:
-                await self._record(
-                    opp,
-                    strategy.mode,
-                    OpportunityResultStatus.REJECTED,
-                    "live_execution_out_of_scope",
-                    started,
-                )
-            elif strategy.mode is StrategyMode.SHADOW:
-                result = await self.handler.handle(opp, mode=strategy.mode)
-                await self.sink.record(result)
-                if result.status is OpportunityResultStatus.REJECTED:
-                    self.metrics.rejected += 1
-                else:
-                    self.metrics.handled += 1
             else:
-                await self._record(
-                    opp,
-                    StrategyMode.DISABLED,
-                    OpportunityResultStatus.REJECTED,
-                    "invalid_strategy_mode",
-                    started,
-                )
+                strategy = self.registry.get(opp.strategy_name)
+                if strategy is None:
+                    await self._record(opp, StrategyMode.DISABLED, OpportunityResultStatus.REJECTED, "unknown_strategy", started)
+                elif strategy.mode is StrategyMode.DISABLED:
+                    await self._record(opp, strategy.mode, OpportunityResultStatus.REJECTED,
+                                       strategy.disabled_reason or "strategy_disabled", started)
+                elif strategy.mode is StrategyMode.LIVE:
+                    await self._record(opp, strategy.mode, OpportunityResultStatus.REJECTED,
+                                       "live_execution_out_of_scope", started)
+                elif strategy.mode is StrategyMode.SHADOW:
+                    result = await self.handler.handle(opp, mode=strategy.mode)
+                    await self.sink.record(result)
+                    if result.status is OpportunityResultStatus.REJECTED:
+                        self.metrics.rejected += 1
+                    else:
+                        self.metrics.handled += 1
+                else:
+                    await self._record(opp, StrategyMode.DISABLED, OpportunityResultStatus.REJECTED,
+                                       "invalid_strategy_mode", started)
+            terminal = True
         except asyncio.CancelledError:
             self.metrics.cancelled += 1
             await self._record(
@@ -233,8 +230,19 @@ class OpportunityConsumer:
                 started,
                 {"error_type": type(exc).__name__},
             )
+            terminal = True
         finally:
-            await self.tracker.terminal(opp.opportunity_id)
+            if any(lease.item_id == opp.opportunity_id for lease in self.queue.leases):
+                if terminal:
+                    await self.queue.acknowledge(opp.opportunity_id, "terminal")
+                else:
+                    self.ready = False
+                    await self.queue.recover(opp, quarantine=True)
+            else:
+                await self.tracker.terminal(
+                    opp.opportunity_id,
+                    TrackerState.TERMINAL if terminal else TrackerState.QUARANTINED,
+                )
 
     async def _record(
         self,

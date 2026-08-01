@@ -33,6 +33,16 @@ def test_symlink_database_path_is_rejected(tmp_path: Path) -> None:
         DurableLifecycleStore(alias)
 
 
+def test_symlink_parent_component_is_rejected(tmp_path: Path) -> None:
+    target = tmp_path / "real-state"
+    target.mkdir(mode=0o700)
+    alias = tmp_path / "state-alias"
+    alias.symlink_to(target, target_is_directory=True)
+
+    with pytest.raises(UnsupportedTopologyError, match="symlink.*component"):
+        DurableLifecycleStore(alias / "authority.sqlite3")
+
+
 def test_hardlink_database_path_is_rejected(tmp_path: Path) -> None:
     target = tmp_path / "target.sqlite3"
     target.touch(mode=0o600)

@@ -227,6 +227,7 @@ class DurableLifecycleStore:
         if topology != "single-node":
             raise UnsupportedTopologyError("SQLite supports single-node topology only")
         self.path = str(path)
+        self._expected_file_identity: tuple[int, int] | None = None
         self._prepare_secure_path()
         self.clock_ns = clock_ns
         self.machine = ExecutionStateMachine()
@@ -268,6 +269,12 @@ class DurableLifecycleStore:
         parent.mkdir(parents=True, mode=0o700, exist_ok=True)
         if missing:
             parent.chmod(0o700)
+        absolute_parent = parent.absolute()
+        for component in reversed((absolute_parent, *absolute_parent.parents)):
+            if stat.S_ISLNK(component.lstat().st_mode):
+                raise UnsupportedTopologyError(
+                    "symlink durable path component rejected"
+                )
         for component in (parent, path) if path.exists() else (parent,):
             metadata = component.lstat()
             if stat.S_ISLNK(metadata.st_mode):
@@ -289,12 +296,21 @@ class DurableLifecycleStore:
                 )
             if metadata.st_nlink != 1:
                 raise UnsupportedTopologyError("hard-linked durable database rejected")
+            self._expected_file_identity = (metadata.st_dev, metadata.st_ino)
 
     def _revalidate_open_file(self) -> None:
         metadata = Path(self.path).lstat()
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
             self.db.close()
             raise UnsupportedTopologyError("durable database changed during open")
+        actual_identity = (metadata.st_dev, metadata.st_ino)
+        if (
+            self._expected_file_identity is not None
+            and actual_identity != self._expected_file_identity
+        ):
+            self.db.close()
+            raise UnsupportedTopologyError("durable database was replaced during open")
+        self._expected_file_identity = actual_identity
 
     def _secure_sqlite_files(self) -> None:
         """Keep the database and any SQLite-managed sidecars owner-only."""

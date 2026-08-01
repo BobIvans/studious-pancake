@@ -4,10 +4,13 @@ PR-185 hardens the active HTTPX boundary: endpoint URLs are canonicalized,
 credentials in URLs are forbidden, redirects and ambient environment trust are
 disabled, and TLS verification is constructed explicitly.
 """
+
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 import hashlib
 import ipaddress
 import json
@@ -54,6 +57,11 @@ class TransportPolicy:
     max_attempts: int = 2
     backoff_base_seconds: float = 0.1
     max_retry_after_seconds: float = 2.0
+    max_response_bytes: int = 1_048_576
+    max_json_depth: int = 32
+    max_json_nodes: int = 20_000
+    max_container_items: int = 5_000
+    max_string_length: int = 16_384
     allowed_ports: tuple[int, ...] = (443,)
     allow_url_query: bool = False
     allow_private_ip_literals: bool = False
@@ -70,6 +78,15 @@ class TransportPolicy:
             "write_timeout_seconds",
             "pool_timeout_seconds",
             "total_timeout_seconds",
+        ):
+            if getattr(self, field_name) <= 0:
+                raise ValueError(f"{field_name} must be positive")
+        for field_name in (
+            "max_response_bytes",
+            "max_json_depth",
+            "max_json_nodes",
+            "max_container_items",
+            "max_string_length",
         ):
             if getattr(self, field_name) <= 0:
                 raise ValueError(f"{field_name} must be positive")
@@ -206,11 +223,11 @@ class HttpxJsonTransport:
         client: httpx.AsyncClient | None = None,
     ) -> None:
         self.policy = policy or TransportPolicy()
-        self.allowed_hosts = (
-            None
-            if allowed_hosts is None
-            else frozenset(_canonical_hostname(host) for host in allowed_hosts)
+        self.allowed_hosts = frozenset(
+            _canonical_hostname(host) for host in (allowed_hosts or ())
         )
+        if not self.allowed_hosts:
+            raise ValueError("allowed_hosts must be non-empty for network transport")
         self._owns_client = client is None
         timeout = httpx.Timeout(
             connect=self.policy.connect_timeout_seconds,
@@ -226,6 +243,11 @@ class HttpxJsonTransport:
             trust_env=False,
             follow_redirects=False,
         )
+        # Test doubles are supported, but they may not weaken these policies.
+        if getattr(self._client, "_trust_env", True) is not False:
+            raise ValueError("injected client must disable ambient proxy trust")
+        if getattr(self._client, "follow_redirects", True) is not False:
+            raise ValueError("injected client must disable redirects")
 
     async def aclose(self) -> None:
         if self._owns_client:
@@ -262,12 +284,12 @@ class HttpxJsonTransport:
             host,
             allowed=self.policy.allow_private_ip_literals,
         )
-        if self.allowed_hosts is not None and host not in self.allowed_hosts:
-            raise SanitizedTransportError(f"provider host is not allowlisted: {host}")
+        if host not in self.allowed_hosts:
+            raise SanitizedTransportError("provider host is not allowlisted")
 
     @staticmethod
     def _retry_after_seconds(
-        headers: Mapping[str, str], maximum: float
+        headers: Mapping[str, str], maximum: float, *, now: datetime | None = None
     ) -> float | None:
         raw = headers.get("retry-after")
         if raw is None:
@@ -275,7 +297,44 @@ class HttpxJsonTransport:
         try:
             return min(max(float(raw), 0.0), maximum)
         except ValueError:
-            return None
+            try:
+                parsed = parsedate_to_datetime(raw)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=UTC)
+                delay = (parsed - (now or datetime.now(UTC))).total_seconds()
+                return min(max(delay, 0.0), maximum)
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+    def _decode_json(self, body: bytes) -> Any:
+        try:
+            text = body.decode("utf-8", errors="strict")
+            payload = json.loads(
+                text,
+                object_pairs_hook=_unique_object,
+                parse_constant=_reject_json_constant,
+            )
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
+            raise SanitizedTransportError("provider returned invalid JSON") from exc
+        nodes = 0
+        stack: list[tuple[Any, int]] = [(payload, 1)]
+        while stack:
+            value, depth = stack.pop()
+            nodes += 1
+            if nodes > self.policy.max_json_nodes:
+                raise SanitizedTransportError("provider JSON node limit exceeded")
+            if depth > self.policy.max_json_depth:
+                raise SanitizedTransportError("provider JSON depth limit exceeded")
+            if isinstance(value, str) and len(value) > self.policy.max_string_length:
+                raise SanitizedTransportError("provider JSON string limit exceeded")
+            if isinstance(value, (list, dict)):
+                if len(value) > self.policy.max_container_items:
+                    raise SanitizedTransportError(
+                        "provider JSON container limit exceeded"
+                    )
+                children = value.values() if isinstance(value, dict) else value
+                stack.extend((child, depth + 1) for child in children)
+        return payload
 
     async def request(
         self,
@@ -290,7 +349,14 @@ class HttpxJsonTransport:
         safe_target = sanitize_url(url)
         retry_statuses = {429, 500, 502, 503, 504}
 
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self.policy.total_timeout_seconds
         for attempt in range(1, self.policy.max_attempts + 1):
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise SanitizedTransportError(
+                    "provider operation timed out", retryable=True
+                )
             try:
                 response = await asyncio.wait_for(
                     self._client.request(
@@ -300,7 +366,7 @@ class HttpxJsonTransport:
                         params=params,
                         json=json_body,
                     ),
-                    timeout=self.policy.total_timeout_seconds,
+                    timeout=remaining,
                 )
             except asyncio.CancelledError:
                 raise
@@ -310,9 +376,8 @@ class HttpxJsonTransport:
                         f"{method.upper()} {safe_target} timed out",
                         retryable=True,
                     ) from exc
-                await asyncio.sleep(
-                    self.policy.backoff_base_seconds * (2 ** (attempt - 1))
-                )
+                delay = self.policy.backoff_base_seconds * (2 ** (attempt - 1))
+                await _sleep_with_deadline(delay, deadline)
                 continue
             except httpx.TransportError as exc:
                 if attempt == self.policy.max_attempts:
@@ -320,9 +385,8 @@ class HttpxJsonTransport:
                         f"{method.upper()} {safe_target} transport failed",
                         retryable=True,
                     ) from exc
-                await asyncio.sleep(
-                    self.policy.backoff_base_seconds * (2 ** (attempt - 1))
-                )
+                delay = self.policy.backoff_base_seconds * (2 ** (attempt - 1))
+                await _sleep_with_deadline(delay, deadline)
                 continue
 
             response_headers = {
@@ -337,23 +401,64 @@ class HttpxJsonTransport:
                     self.policy.max_retry_after_seconds,
                 )
                 if delay is None:
-                    delay = self.policy.backoff_base_seconds * (
-                        2 ** (attempt - 1)
-                    )
-                await asyncio.sleep(delay)
+                    delay = self.policy.backoff_base_seconds * (2 ** (attempt - 1))
+                await _sleep_with_deadline(delay, deadline)
                 continue
 
-            try:
-                payload = response.json()
-            except (json.JSONDecodeError, ValueError) as exc:
+            content_type = (
+                response_headers.get("content-type", "")
+                .split(";", 1)[0]
+                .strip()
+                .lower()
+            )
+            if content_type not in {
+                "application/json",
+                "application/json-rpc",
+                "application/problem+json",
+            }:
                 raise SanitizedTransportError(
-                    f"{method.upper()} {safe_target} returned non-JSON data",
+                    f"{method.upper()} {safe_target} returned invalid content type",
                     status_code=response.status_code,
                     retryable=False,
-                ) from exc
+                )
+            declared = response_headers.get("content-length")
+            if declared is not None:
+                try:
+                    if int(declared) > self.policy.max_response_bytes:
+                        raise SanitizedTransportError(
+                            "provider response body too large"
+                        )
+                except ValueError as exc:
+                    raise SanitizedTransportError(
+                        "provider content length is invalid"
+                    ) from exc
+            body = response.content
+            if len(body) > self.policy.max_response_bytes:
+                raise SanitizedTransportError("provider response body too large")
+            payload = self._decode_json(body)
             return response.status_code, response_headers, payload
 
         raise AssertionError("transport retry loop exited unexpectedly")
+
+
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON number denied: {value}")
+
+
+async def _sleep_with_deadline(delay: float, deadline: float) -> None:
+    remaining = deadline - asyncio.get_running_loop().time()
+    if remaining <= 0 or delay >= remaining:
+        raise SanitizedTransportError("provider operation timed out", retryable=True)
+    await asyncio.sleep(delay)
 
 
 __all__ = [

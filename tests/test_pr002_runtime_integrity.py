@@ -68,6 +68,7 @@ async def test_get_creates_owned_lease_and_ack_terminalizes():
     clock = Clock(); tracker = InMemoryOpportunityTracker(clock=clock); queue = OpportunityQueue(2, Ranker(), tracker, clock=clock)
     item = opportunity(clock); await queue.put(item); assert await queue.get(consumer_id="consumer-1") == item
     assert queue.leases[0].consumer_id == "consumer-1"
+    assert await tracker.state(item.opportunity_id) is TrackerState.IN_FLIGHT
     await queue.acknowledge(item.opportunity_id, "handled")
     assert not queue.leases and await tracker.state(item.opportunity_id) is TrackerState.TERMINAL
 

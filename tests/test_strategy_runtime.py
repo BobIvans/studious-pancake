@@ -86,15 +86,16 @@ async def test_shadow_strategies_detect_and_enqueue_opportunities():
 
 
 @pytest.mark.asyncio
-async def test_one_strategy_failure_does_not_stop_others():
+async def test_strategy_failure_revokes_readiness_and_cancels_dependents():
     r = StrategyRegistry(); r.register(FailingStrategy("bad")); r.register(OneShotStrategy("good"))
     q = OpportunityQueue(10, ConstantRanker())
     rt = StrategyRuntime(r, q)
     await rt.start()
-    got = await asyncio.wait_for(q.get(), 1)
+    await asyncio.sleep(0)
     await rt.stop()
-    assert got.strategy_name == "good"
     assert q.metrics["bad"].last_error == "boom"
+    assert rt.ready is False
+    assert rt.states["bad"] == "failed"
 
 
 def test_duplicate_registration_fails():

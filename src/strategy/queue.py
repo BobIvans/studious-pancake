@@ -4,7 +4,7 @@ from __future__ import annotations
 import asyncio
 import heapq
 import math
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass
 from enum import StrEnum
 
@@ -61,9 +61,10 @@ class OpportunityQueue:
         self.clock, self.lease_ns = clock or SystemTrustedTime(), lease_ns
         self._heap: list[tuple[float, float, int, str, Opportunity]] = []
         self._ids: set[str] = set(); self._leases: dict[str, InFlightLease] = {}
-        self._generations: dict[str, int] = {}; self._seq = 0
+        self._retry_generations: dict[str, int] = {}; self._seq = 0
         self._cv = asyncio.Condition(); self.state = QueueState.OPEN
         self.metrics: defaultdict[str, StrategyQueueMetrics] = defaultdict(StrategyQueueMetrics)
+        self.expiry_events: deque[tuple[str, str]] = deque(maxlen=maxsize)
 
     def qsize(self) -> int: return len(self._heap)
     @property
@@ -100,7 +101,12 @@ class OpportunityQueue:
                 await self._expire_locked()
                 if self._heap:
                     _, _, _, oid, opp = heapq.heappop(self._heap); self._ids.discard(oid)
-                    generation = self._generations.get(oid, 0) + 1; self._generations[oid] = generation
+                    generation = self._retry_generations.pop(oid, 0) + 1
+                    if self.tracker is not None and not await self.tracker.claim(oid, generation):
+                        # The lifecycle authority must agree before ownership is handed off.
+                        self.state = QueueState.FAILED
+                        self._cv.notify_all()
+                        raise RuntimeError("queue item could not be atomically claimed")
                     acquired = self.clock.snapshot().monotonic_ns
                     self._leases[oid] = InFlightLease(oid, consumer_id, generation, acquired, acquired + self.lease_ns, 2)
                     return opp
@@ -112,6 +118,7 @@ class OpportunityQueue:
             lease = self._leases.pop(item_id, None)
             if lease is None: raise ValueError("item has no active lease")
             if self.tracker: await self.tracker.terminal(item_id)
+            self._retry_generations.pop(item_id, None)
             self._cv.notify_all()
 
     async def recover(self, item: Opportunity, *, quarantine: bool = False) -> None:
@@ -123,6 +130,7 @@ class OpportunityQueue:
             elif item.expires_at <= self.clock.snapshot().utc.timestamp():
                 if self.tracker: await self.tracker.terminal(item.opportunity_id, TrackerState.EXPIRED)
             else:
+                self._retry_generations[item.opportunity_id] = lease.generation
                 heapq.heappush(self._heap, (0.0, item.expires_at, self._seq, item.opportunity_id, item)); self._seq += 1; self._ids.add(item.opportunity_id)
             self._cv.notify_all()
 
@@ -136,6 +144,7 @@ class OpportunityQueue:
                 count += 1; oid, opp = item[3], item[4]; self._ids.discard(oid)
                 if self.tracker: await self.tracker.terminal(oid, TrackerState.EXPIRED)
                 m = self.metrics[opp.strategy_name]; m.expired += 1; m.last_event = "expired"
+                self.expiry_events.append((oid, "expired"))
             else: keep.append(item)
         if count: self._heap = keep; heapq.heapify(self._heap); self._cv.notify_all()
         return count
@@ -157,5 +166,6 @@ class OpportunityQueue:
             for _, _, _, oid, _ in self._heap:
                 if self.tracker: await self.tracker.terminal(oid, TrackerState.QUARANTINED)
             self._heap.clear(); self._ids.clear()
+            self._retry_generations.clear()
             self.state = QueueState.CLOSED if not self._leases else QueueState.FAILED
             self._cv.notify_all(); return unresolved

@@ -51,6 +51,12 @@ MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+MPR_NEXT_08_JUPITER_V2_CONTRACT_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_mpr_next_08_jupiter_v2_contract.py",
+    "--json",
+]
+
 PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr200_production_cutover.py",
@@ -113,6 +119,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr136_rooted_rpc_quorum.py",
         "tests/test_pr140_data_lineage_quarantine.py",
         "tests/test_pr194_trusted_foundation.py",
+        "tests/test_mpr_next_08_jupiter_v2_contract.py",
         "tests/test_pr195_durable_webhook_intake.py",
         "tests/test_pr200_production_cutover.py",
         "tests/test_pr195_durable_kernel_v3.py",
@@ -190,6 +197,7 @@ def main() -> int:
     run(VERIFY_PR194_REQUIRED_CONTROLS_COMMAND)
     run(PR194_TRUSTED_FOUNDATION_COMMAND)
     run(MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND)
+    run(MPR_NEXT_08_JUPITER_V2_CONTRACT_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
 

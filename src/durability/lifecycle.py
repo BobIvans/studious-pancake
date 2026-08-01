@@ -333,7 +333,7 @@ class DurableLifecycleStore:
                 candidate.chmod(0o600)
 
     def _verify_pragma_policy(self, busy_timeout_ms: int) -> None:
-        expected = {
+        expected: dict[str, int | str] = {
             "foreign_keys": 1,
             "synchronous": 2,
             "trusted_schema": 0,

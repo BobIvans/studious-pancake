@@ -5,7 +5,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 import hashlib
 import json
-import math
 import time
 from typing import Any
 
@@ -242,8 +241,8 @@ class CircularArbitrageDetector:
             output_mint=pair.base_mint,
             proposed_amount_base_units=pair.probe_amount_base_units,
             expected_gross_profit=gross_profit,
-            # Normalize legacy second-valued configuration once at production.
-            ttl_seconds=math.ceil(pair.ttl_seconds),
+            # Preserve subsecond policy while normalizing once to integer ms.
+            ttl_ms=round(pair.ttl_seconds * 1000),
             metadata=metadata,
             detected_at=now,
         )

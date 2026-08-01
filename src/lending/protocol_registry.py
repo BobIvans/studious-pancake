@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from hashlib import sha256
 import json
 from pathlib import Path
+import re
 from typing import Any, Mapping
 
 
@@ -59,6 +60,19 @@ class GenesisBoundProtocolRegistry:
             raise ProtocolRegistryError("unsupported registry schema")
         self.cluster = _text(payload.get("cluster"), "cluster")
         self.genesis_hash = _text(payload.get("genesis_hash"), "genesis_hash")
+        identities = payload.get("platform_identities")
+        required_identities = {
+            "system_program",
+            "spl_token_program",
+            "token_2022_program",
+            "wrapped_sol_mint",
+            "address_lookup_table_program",
+        }
+        if not isinstance(identities, dict) or set(identities) != required_identities:
+            raise ProtocolRegistryError("incomplete platform identity registry")
+        self.platform_identities = {
+            key: _pubkey(value, key) for key, value in identities.items()
+        }
         protocols = payload.get("protocols")
         if not isinstance(protocols, dict) or not protocols:
             raise ProtocolRegistryError("protocol registry must not be empty")
@@ -111,6 +125,8 @@ class GenesisBoundProtocolRegistry:
             if actual != item["sha256"]:
                 blockers.append("ARTIFACT_DIGEST_MISMATCH")
             material.append((relative, actual))
+        if status == "supported" and not material:
+            blockers.append("JSON_DECLARATION_WITHOUT_MATERIALIZED_EVIDENCE")
         mandatory = (
             "program_id",
             "programdata_account",
@@ -119,7 +135,7 @@ class GenesisBoundProtocolRegistry:
         )
         if any(not raw[field] for field in mandatory):
             blockers.append("DEPLOYED_IDENTITY_EVIDENCE_MISSING")
-        if raw["human_review"] is not True:
+        if type(raw["human_review"]) is not bool or raw["human_review"] is not True:
             blockers.append("HUMAN_REVIEW_MISSING")
         digest = sha256(
             json.dumps(
@@ -146,3 +162,12 @@ def _text_tuple(value: object, field: str) -> tuple[str, ...]:
     ):
         raise ProtocolRegistryError(f"{field} must be a text list")
     return tuple(value)
+
+
+_BASE58_RE = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
+
+
+def _pubkey(value: object, field: str) -> str:
+    if not isinstance(value, str) or _BASE58_RE.fullmatch(value) is None:
+        raise ProtocolRegistryError(f"{field} must be a canonical base58 public key")
+    return value

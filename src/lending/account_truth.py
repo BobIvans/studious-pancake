@@ -6,11 +6,14 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import Iterable
 
-TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-TOKEN_2022_PROGRAM = "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-NATIVE_SOL = "11111111111111111111111111111111"
-WSOL_MINT = "So11111111111111111111111111111111111111112"
-ALT_PROGRAM = "AddressLookupTab1e1111111111111111111111111"
+from src.lending.protocol_registry import GenesisBoundProtocolRegistry
+
+_IDENTITIES = GenesisBoundProtocolRegistry.packaged().platform_identities
+TOKEN_PROGRAM = _IDENTITIES["spl_token_program"]
+TOKEN_2022_PROGRAM = _IDENTITIES["token_2022_program"]
+NATIVE_SOL = _IDENTITIES["system_program"]
+WSOL_MINT = _IDENTITIES["wrapped_sol_mint"]
+ALT_PROGRAM = _IDENTITIES["address_lookup_table_program"]
 U64_MAX = 2**64 - 1
 
 

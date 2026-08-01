@@ -2,6 +2,13 @@
   "schema_version": "pr005.protocol-account-registry.v1",
   "cluster": "mainnet-beta",
   "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "platform_identities": {
+    "system_program": "11111111111111111111111111111111",
+    "spl_token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "token_2022_program": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+    "wrapped_sol_mint": "So11111111111111111111111111111111111111112",
+    "address_lookup_table_program": "AddressLookupTab1e1111111111111111111111111"
+  },
   "protocols": {
     "marginfi": {
       "program_id": null,

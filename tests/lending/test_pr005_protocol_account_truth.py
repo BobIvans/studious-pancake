@@ -22,7 +22,12 @@ from src.oracle.coherence import (
     RootedStateEvidence,
     require_coherent,
 )
-from src.strategy.admission import AdmissionError, AdmissionEvidence, admit_sender_free
+from src.strategy.admission import (
+    AdmissionError,
+    AdmissionEvidence,
+    PersistentOpportunityLedger,
+    admit_sender_free,
+)
 
 GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 
@@ -42,6 +47,33 @@ def test_unqualified_protocols_remain_named_and_blocked():
         ).read()
     )
     assert combos["combinations"] == []
+
+
+def test_json_declaration_alone_cannot_claim_protocol_support(tmp_path):
+    packaged = GenesisBoundProtocolRegistry.packaged()
+    payload = json.loads(
+        open(
+            "src/resources/contracts/protocol/protocol_account_registry.json",
+            encoding="utf-8",
+        ).read()
+    )
+    entry = payload["protocols"]["marginfi"]
+    entry.update(
+        status="supported",
+        program_id="11111111111111111111111111111111",
+        programdata_account="11111111111111111111111111111111",
+        idl_layout_version="v1",
+        source_commit_build_hash="a" * 64,
+        human_review=True,
+        blockers=[],
+        expires_at_slot=2,
+    )
+    registry = GenesisBoundProtocolRegistry(payload, root=tmp_path)
+    result = registry.qualify(
+        "marginfi", genesis_hash=packaged.genesis_hash, current_slot=1
+    )
+    assert not result.executable
+    assert "JSON_DECLARATION_WITHOUT_MATERIALIZED_EVIDENCE" in result.blockers
 
 
 def test_token_2022_is_fail_closed_and_native_sol_is_not_wsol():
@@ -167,3 +199,13 @@ def test_amount_and_strategy_admission_are_fail_closed():
             identity_parts=identity,
             evidence=_evidence(quota_reserved=False),
         )
+
+
+def test_opportunity_reservation_survives_restart(tmp_path):
+    path = tmp_path / "admissions.sqlite"
+    first = PersistentOpportunityLedger(path)
+    assert first.reserve_once("a" * 64, admitted_at_ns=1)
+    first.close()
+    reopened = PersistentOpportunityLedger(path)
+    assert not reopened.reserve_once("a" * 64, admitted_at_ns=2)
+    reopened.close()

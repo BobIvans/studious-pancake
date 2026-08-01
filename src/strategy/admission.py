@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from hashlib import sha256
 import json
+from pathlib import Path
+import sqlite3
 from typing import Mapping
 
 DISCOVERY_ONLY = frozenset({"okx", "openocean", "odos"})
@@ -27,6 +29,34 @@ class AdmissionEvidence:
     economic_preconditions: bool
     durable_reservation: bool
     model_or_research_origin: bool = False
+
+
+class PersistentOpportunityLedger:
+    """Crash-safe, insert-once admission identity authority."""
+
+    def __init__(self, path: str | Path) -> None:
+        self._db = sqlite3.connect(str(path), isolation_level=None)
+        self._db.execute("PRAGMA trusted_schema=OFF")
+        self._db.execute(
+            "CREATE TABLE IF NOT EXISTS pr005_admissions ("
+            "opportunity_id TEXT PRIMARY KEY, admitted_at_ns INTEGER NOT NULL)"
+        )
+
+    def close(self) -> None:
+        self._db.close()
+
+    def reserve_once(self, opportunity_id: str, *, admitted_at_ns: int) -> bool:
+        if type(admitted_at_ns) is not int or admitted_at_ns <= 0:
+            raise AdmissionError("admitted_at_ns must be a positive integer")
+        try:
+            with self._db:
+                self._db.execute(
+                    "INSERT INTO pr005_admissions VALUES (?, ?)",
+                    (opportunity_id, admitted_at_ns),
+                )
+        except sqlite3.IntegrityError:
+            return False
+        return True
 
 
 def admit_sender_free(

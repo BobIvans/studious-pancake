@@ -1,0 +1,43 @@
+{
+  "schema_version": "pr005.protocol-account-registry.v1",
+  "cluster": "mainnet-beta",
+  "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+  "protocols": {
+    "marginfi": {
+      "program_id": null,
+      "loader_type": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "programdata_account": null,
+      "upgrade_authority": null,
+      "idl_layout_version": null,
+      "source_commit_build_hash": null,
+      "identities": {"group": null, "banks": []},
+      "mints": [],
+      "token_program": null,
+      "validity_generation": "pr005-unqualified-2026-08-01",
+      "expires_at_slot": 0,
+      "provenance": "No current rooted deployed vectors or reviewed artifacts were available in-repository.",
+      "human_review": false,
+      "artifacts": [],
+      "status": "fixture_only_blocked",
+      "blockers": ["ROOTED_ACCOUNT_VECTORS_MISSING", "FLASHLOAN_META_VECTOR_MISSING", "TOKEN_2022_PROOF_MISSING", "IDL_SOURCE_REVIEW_MISSING"]
+    },
+    "kamino": {
+      "program_id": null,
+      "loader_type": "BPFLoaderUpgradeab1e11111111111111111111111",
+      "programdata_account": null,
+      "upgrade_authority": null,
+      "idl_layout_version": null,
+      "source_commit_build_hash": null,
+      "identities": {"markets": [], "reserves": []},
+      "mints": [],
+      "token_program": null,
+      "validity_generation": "pr005-unqualified-2026-08-01",
+      "expires_at_slot": 0,
+      "provenance": "No current rooted deployed vectors or reviewed combinations were available in-repository.",
+      "human_review": false,
+      "artifacts": [],
+      "status": "fixture_only_blocked",
+      "blockers": ["ROOTED_ACCOUNT_VECTORS_MISSING", "REVIEWED_COMBINATIONS_EMPTY", "IDL_SOURCE_REVIEW_MISSING"]
+    }
+  }
+}

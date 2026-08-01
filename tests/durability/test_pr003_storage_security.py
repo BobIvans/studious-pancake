@@ -42,6 +42,24 @@ def test_hardlink_database_path_is_rejected(tmp_path: Path) -> None:
         DurableLifecycleStore(alias)
 
 
+def test_existing_database_in_writable_parent_is_rejected(tmp_path: Path) -> None:
+    state = tmp_path / "unsafe-state"
+    state.mkdir(mode=0o700)
+    database = state / "authority.sqlite3"
+    database.touch(mode=0o600)
+    state.chmod(0o770)
+
+    with pytest.raises(UnsupportedTopologyError, match="group/world writable"):
+        DurableLifecycleStore(database)
+
+
+def test_sqlite_sidecars_are_owner_only(tmp_path: Path) -> None:
+    database = tmp_path / "private-state" / "authority.sqlite3"
+    with DurableLifecycleStore(database):
+        sidecars = [Path(f"{database}{suffix}") for suffix in ("-wal", "-shm")]
+        assert all(path.stat().st_mode & 0o777 == 0o600 for path in sidecars)
+
+
 def test_restore_validates_staged_copy_without_destroying_destination(
     tmp_path: Path,
 ) -> None:

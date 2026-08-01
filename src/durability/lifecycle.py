@@ -251,6 +251,7 @@ class DurableLifecycleStore:
         self._verify_pragma_policy(busy_timeout_ms)
         self._migrate()
         self.integrity_check()
+        self._secure_sqlite_files()
 
     def _prepare_secure_path(self) -> None:
         """Reject path substitution and create private state storage.
@@ -273,6 +274,13 @@ class DurableLifecycleStore:
                 raise UnsupportedTopologyError("symlink durable path rejected")
             if metadata.st_uid != os.getuid() or metadata.st_gid != os.getgid():
                 raise UnsupportedTopologyError("durable path owner mismatch")
+        parent_metadata = parent.lstat()
+        if not stat.S_ISDIR(parent_metadata.st_mode):
+            raise UnsupportedTopologyError("durable state parent must be a directory")
+        if parent_metadata.st_mode & 0o022:
+            raise UnsupportedTopologyError(
+                "durable state parent is group/world writable"
+            )
         if path.exists():
             metadata = path.lstat()
             if not stat.S_ISREG(metadata.st_mode):
@@ -281,16 +289,32 @@ class DurableLifecycleStore:
                 )
             if metadata.st_nlink != 1:
                 raise UnsupportedTopologyError("hard-linked durable database rejected")
-        elif parent.stat().st_mode & 0o022:
-            raise UnsupportedTopologyError(
-                "durable state parent is group/world writable"
-            )
 
     def _revalidate_open_file(self) -> None:
         metadata = Path(self.path).lstat()
         if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
             self.db.close()
             raise UnsupportedTopologyError("durable database changed during open")
+
+    def _secure_sqlite_files(self) -> None:
+        """Keep the database and any SQLite-managed sidecars owner-only."""
+        if self.path == ":memory:":
+            return
+        for suffix in ("", "-wal", "-shm"):
+            candidate = Path(f"{self.path}{suffix}")
+            if candidate.exists():
+                metadata = candidate.lstat()
+                if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
+                    self.db.close()
+                    raise UnsupportedTopologyError(
+                        "SQLite database sidecar is not a private regular file"
+                    )
+                if metadata.st_uid != os.getuid() or metadata.st_gid != os.getgid():
+                    self.db.close()
+                    raise UnsupportedTopologyError(
+                        "SQLite database sidecar owner mismatch"
+                    )
+                candidate.chmod(0o600)
 
     def _verify_pragma_policy(self, busy_timeout_ms: int) -> None:
         expected = {

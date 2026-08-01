@@ -34,7 +34,8 @@ def require_coherent(
     current_root: int,
 ) -> str:
     required = {"reserve", "oracle", "mint", "alt", "blockhash", "protocol"}
-    if {x.kind for x in evidence} != required:
+    kinds = tuple(x.kind for x in evidence)
+    if len(evidence) != len(required) or set(kinds) != required:
         raise CoherenceError("incomplete state evidence set")
     if any(x.min_context_slot is None for x in evidence):
         raise CoherenceError("missing minContextSlot")

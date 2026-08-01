@@ -13,6 +13,8 @@ from pathlib import Path
 import re
 from typing import Any, Mapping
 
+from solders.pubkey import Pubkey
+
 
 class ProtocolRegistryError(ValueError):
     pass
@@ -135,6 +137,8 @@ class GenesisBoundProtocolRegistry:
         )
         if any(not raw[field] for field in mandatory):
             blockers.append("DEPLOYED_IDENTITY_EVIDENCE_MISSING")
+        if status == "supported":
+            blockers.extend(_supported_entry_blockers(raw))
         if type(raw["human_review"]) is not bool or raw["human_review"] is not True:
             blockers.append("HUMAN_REVIEW_MISSING")
         digest = sha256(
@@ -164,10 +168,61 @@ def _text_tuple(value: object, field: str) -> tuple[str, ...]:
     return tuple(value)
 
 
-_BASE58_RE = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _pubkey(value: object, field: str) -> str:
-    if not isinstance(value, str) or _BASE58_RE.fullmatch(value) is None:
+    if not isinstance(value, str):
         raise ProtocolRegistryError(f"{field} must be a canonical base58 public key")
+    try:
+        Pubkey.from_string(value)
+    except ValueError as exc:
+        raise ProtocolRegistryError(
+            f"{field} must be a canonical base58 public key"
+        ) from exc
     return value
+
+
+def _supported_entry_blockers(raw: Mapping[str, Any]) -> tuple[str, ...]:
+    """Validate every production-relevant field, never mere truthiness."""
+
+    blockers: list[str] = []
+    for field in ("program_id", "programdata_account"):
+        try:
+            _pubkey(raw.get(field), field)
+        except ProtocolRegistryError:
+            blockers.append(f"INVALID_{field.upper()}")
+    if raw.get("loader_type") not in {
+        "BPFLoaderUpgradeab1e11111111111111111111111",
+        "BPFLoader2111111111111111111111111111111111",
+    }:
+        blockers.append("INVALID_LOADER_TYPE")
+    authority = raw.get("upgrade_authority")
+    if authority is not None:
+        try:
+            _pubkey(authority, "upgrade_authority")
+        except ProtocolRegistryError:
+            blockers.append("INVALID_UPGRADE_AUTHORITY")
+    for field in ("idl_layout_version", "validity_generation", "provenance"):
+        if not isinstance(raw.get(field), str) or not raw[field].strip():
+            blockers.append(f"INVALID_{field.upper()}")
+    if not isinstance(
+        raw.get("source_commit_build_hash"), str
+    ) or not _SHA256_RE.fullmatch(raw["source_commit_build_hash"]):
+        blockers.append("INVALID_SOURCE_COMMIT_BUILD_HASH")
+    if not isinstance(raw.get("identities"), dict) or not raw["identities"]:
+        blockers.append("INVALID_PROTOCOL_IDENTITIES")
+    if not isinstance(raw.get("mints"), list) or not raw["mints"]:
+        blockers.append("INVALID_MINTS")
+    else:
+        for mint in raw["mints"]:
+            try:
+                _pubkey(mint, "mint")
+            except ProtocolRegistryError:
+                blockers.append("INVALID_MINTS")
+                break
+    try:
+        _pubkey(raw.get("token_program"), "token_program")
+    except ProtocolRegistryError:
+        blockers.append("INVALID_TOKEN_PROGRAM")
+    return tuple(blockers)

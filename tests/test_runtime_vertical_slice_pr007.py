@@ -16,7 +16,7 @@ from src.strategy.registry import StrategyRegistry
 from src.strategy.results import InMemoryOpportunityResultSink, OpportunityResultStatus
 from src.strategy.runtime import StrategyRuntime
 from src.strategy.strategies import BaseDetectionStrategy
-from src.strategy.tracker import InMemoryOpportunityTracker
+from src.strategy.tracker import InMemoryOpportunityTracker, TrackerState
 
 pytestmark = pytest.mark.unit
 
@@ -31,7 +31,7 @@ def make_opp(name="one", oid="id", profit=1.0, ttl=10):
     return Opportunity(
         strategy_name=name, opportunity_type="fixture", detected_at=now, detection_slot=1,
         input_mint="A", output_mint="B", proposed_amount_base_units=1,
-        expected_gross_profit=profit, expires_at=now + ttl, metadata={}, opportunity_id=oid,
+        expected_gross_profit=int(profit), expires_at=now + ttl, metadata={}, opportunity_id=oid,
     )
 
 
@@ -125,9 +125,9 @@ async def test_lifecycle_dedupes_inflight_and_terminal_duplicates():
     a = make_opp(oid="same"); b = make_opp(oid="same")
     assert await q.put(a) is True
     got = await q.get()
-    assert await tracker.claim(got.opportunity_id) is True
+    assert await tracker.state(got.opportunity_id) is TrackerState.IN_FLIGHT
     assert await q.put(b) is False
-    await tracker.terminal(got.opportunity_id)
+    await q.acknowledge(got.opportunity_id, "handled")
     assert await q.put(b) is False
     await c.process_one(make_opp(oid="new"))
     assert len(sink.results) == 1

@@ -74,6 +74,8 @@ def test_json_declaration_alone_cannot_claim_protocol_support(tmp_path):
     )
     assert not result.executable
     assert "JSON_DECLARATION_WITHOUT_MATERIALIZED_EVIDENCE" in result.blockers
+    assert "INVALID_MINTS" in result.blockers
+    assert "INVALID_TOKEN_PROGRAM" in result.blockers
 
 
 def test_token_2022_is_fail_closed_and_native_sol_is_not_wsol():
@@ -125,6 +127,12 @@ def test_cross_slot_policy_rejects_stale_mixed_and_unrooted_evidence():
             require_coherent(values, policy=policy, current_root=101)
     with pytest.raises(CoherenceError, match="stale"):
         require_coherent(_states(), policy=policy, current_root=200)
+    with pytest.raises(CoherenceError, match="incomplete"):
+        require_coherent(
+            _states() + (replace(_states()[0], endpoint_identity="endpoint-extra"),),
+            policy=policy,
+            current_root=101,
+        )
 
 
 def test_discovery_is_bounded_and_provider_order_independent():
@@ -136,6 +144,13 @@ def test_discovery_is_bounded_and_provider_order_independent():
         tokens=("C", "A", "B"), amounts=(1, 2), providers=("a", "z"), limits=limits
     )
     assert one == two and len(one) == 5
+    directed = bounded_requests(
+        tokens=("A", "B"), amounts=(1,), providers=("a",), limits=limits
+    )
+    assert {(item.input_asset, item.output_asset) for item in directed} == {
+        ("A", "B"),
+        ("B", "A"),
+    }
     with pytest.raises(ValueError, match="bound"):
         bounded_requests(
             tokens=tuple(str(i) for i in range(17)),
@@ -184,6 +199,10 @@ def test_amount_and_strategy_admission_are_fail_closed():
     with pytest.raises(AdmissionError, match="discovery-only"):
         admit_sender_free(
             provider="odos", amount=1, identity_parts=identity, evidence=_evidence()
+        )
+    with pytest.raises(AdmissionError, match="discovery-only"):
+        admit_sender_free(
+            provider="okx_dex", amount=1, identity_parts=identity, evidence=_evidence()
         )
     with pytest.raises(AdmissionError, match="advisory"):
         admit_sender_free(

@@ -9,7 +9,7 @@ from pathlib import Path
 import sqlite3
 from typing import Mapping
 
-DISCOVERY_ONLY = frozenset({"okx", "openocean", "odos"})
+DISCOVERY_ONLY = frozenset({"okx", "okx_dex", "openocean", "odos"})
 
 
 class AdmissionError(ValueError):

@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from hashlib import sha256
 from typing import Iterable
 
+from solders.pubkey import Pubkey
+
 from src.lending.protocol_registry import GenesisBoundProtocolRegistry
 
 _IDENTITIES = GenesisBoundProtocolRegistry.packaged().platform_identities
@@ -83,11 +85,9 @@ class AltEvidence:
 
 
 def _pubkey(value: str) -> None:
-    # Strict alphabet/length validation without accepting user-controlled delimiters.
-    alphabet = set("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
-    if (
-        not isinstance(value, str)
-        or not 32 <= len(value) <= 44
-        or set(value) - alphabet
-    ):
+    if not isinstance(value, str):
         raise AccountTruthError("malformed pubkey")
+    try:
+        Pubkey.from_string(value)
+    except ValueError as exc:
+        raise AccountTruthError("malformed pubkey") from exc

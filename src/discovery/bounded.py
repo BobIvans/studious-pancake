@@ -1,7 +1,7 @@
 """Deterministic discovery fanout with one shared cycle budget."""
 
 from dataclasses import dataclass
-from itertools import combinations
+from itertools import permutations
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,7 +57,7 @@ def bounded_requests(
         raise ValueError("discovery input exceeds configured bound")
     if any(type(x) is not int or x <= 0 or x > 2**64 - 1 for x in clean_amounts):
         raise ValueError("invalid discovery amount")
-    pairs = tuple(combinations(clean_tokens, 2))
+    pairs = tuple(permutations(clean_tokens, 2))
     if len(pairs) > limits.max_pairs:
         raise ValueError("pair fanout exceeds configured bound")
     result: list[DiscoveryRequest] = []

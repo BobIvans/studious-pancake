@@ -133,7 +133,7 @@ class InMemoryOpportunityTracker:
         for key in expired:
             self._states.pop(key, None)
         while len(self._states) > self.capacity:
-            key = next(
+            terminal_key = next(
                 (
                     k
                     for k, v in self._states.items()
@@ -141,6 +141,6 @@ class InMemoryOpportunityTracker:
                 ),
                 None,
             )
-            if key is None:
+            if terminal_key is None:
                 break
-            self._states.pop(key)
+            self._states.pop(terminal_key)

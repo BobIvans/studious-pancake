@@ -1,0 +1,21 @@
+{
+  "schema_id": "mpr-sys-01.rooted-runtime-policy.v1",
+  "allow_token_2022": false,
+  "supported_token_2022_extensions": [],
+  "maximum_transfer_fee_bps": 0,
+  "allowed_transfer_hook_programs": [],
+  "maximum_oracle_confidence_bps": 100,
+  "maximum_oracle_divergence_bps": 150,
+  "maximum_oracle_staleness_slots": 32,
+  "maximum_lst_withdrawal_delay_slots": 432000,
+  "maximum_validator_concentration_bps": 3300,
+  "minimum_redemption_liquidity_atomic": 1,
+  "external_required_programs": [
+    "marginfi",
+    "kamino",
+    "jupiter",
+    "raydium",
+    "orca",
+    "meteora"
+  ]
+}

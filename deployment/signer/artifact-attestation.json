@@ -1,0 +1,10 @@
+{
+  "artifact_digest": null,
+  "artifact_signature": null,
+  "base_image_digest": null,
+  "blocker": "SIGNER_IMAGE_BASE_DIGEST_BUILD_DIGEST_OR_SIGNATURE_MISSING",
+  "canary_allowed": false,
+  "isolated_keystore_attestation": null,
+  "schema_version": "pr009.signer-attestation.v1",
+  "signer_allowed": false
+}

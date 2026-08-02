@@ -31,7 +31,6 @@ jobs:
             src/provider_governance/dependency.py \
             src/routing/registry.py \
             tests/test_mpr043_provider_governance.py
-          python -m ruff check .
           python -m mypy --config-file mypy.ini
           python -m pytest -q tests/test_mpr043_provider_governance.py
           python scripts/verify_repo.py

@@ -32,33 +32,7 @@ jobs:
       - run: python -m pip install --requirement requirements.txt
       - run: python -m pip install --requirement requirements-dev.txt
       - run: python -m pip install --no-deps .
-      - name: Test capability matrix paths
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_capability_matrix_is_machine_readable_and_paths_exist -q --disable-socket --allow-unix-socket
-      - name: Test strategy registry parity
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_capability_matrix_matches_strategy_registry_exactly -q --disable-socket --allow-unix-socket
-      - name: Test quarantine modes
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_quarantined_components_are_disabled_only -q --disable-socket --allow-unix-socket
-      - name: Test fixture strategy denial
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_fixture_or_disabled_strategy_cannot_be_enabled_by_config_flag -q --disable-socket --allow-unix-socket
-      - name: Test canonical help
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_default_source_alias_routes_to_canonical_help -q --disable-socket --allow-unix-socket
-      - name: Test status capabilities JSON
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_status_and_capabilities_json_are_stable -q --disable-socket --allow-unix-socket
-      - name: Test paper service and live denial
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_installed_paper_service_blocks_without_provider_evidence_and_live_fails_closed -q --disable-socket --allow-unix-socket
-      - name: Test quarantined imports
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_supported_composition_root_does_not_import_quarantined_execution -q --disable-socket --allow-unix-socket
-      - name: Test audit artifacts
-        if: always()
-        run: python -m pytest tests/test_pr023_runtime_truth.py::test_audit_snapshot_and_runtime_contract_are_present -q --disable-socket --allow-unix-socket
+      - run: python scripts/verify_repo.py
 
   package-smoke:
     name: Wheel and console smoke

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from collections import defaultdict
+from collections import defaultdict, deque
 from dataclasses import dataclass
 import time
 from typing import Awaitable, Callable, TypeVar
@@ -55,6 +55,7 @@ class DeadlineAdmissionScheduler:
         self._condition = asyncio.Condition()
         self._pending: list[_QueuedWork] = []
         self._served: dict[str, int] = defaultdict(int)
+        self._grant_order: deque[str] = deque(maxlen=256)
         self._sequence = 0
         self._granted = 0
         self._expired = 0
@@ -128,6 +129,7 @@ class DeadlineAdmissionScheduler:
                     break
                 self._pending.remove(item)
                 self._served[item.request.fairness_key] += 1
+                self._grant_order.append(item.request.work_id)
                 self._granted += 1
                 item.future.set_result(lease)
                 changed = True
@@ -217,6 +219,7 @@ class DeadlineAdmissionScheduler:
                 "expired": self._expired,
                 "denied": self._denied,
                 "served_by_fairness_key": dict(sorted(self._served.items())),
+                "grant_order": tuple(self._grant_order),
                 "pending_work_ids": tuple(
                     item.request.work_id
                     for item in sorted(

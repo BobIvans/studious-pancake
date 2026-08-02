@@ -214,12 +214,8 @@ class RuntimeTruthPolicy:
                 payload["allowed_transfer_hook_programs"]
             ),
             maximum_oracle_confidence_bps=payload["maximum_oracle_confidence_bps"],
-            maximum_oracle_divergence_bps=payload[
-                "maximum_oracle_divergence_bps"
-            ],
-            maximum_oracle_staleness_slots=payload[
-                "maximum_oracle_staleness_slots"
-            ],
+            maximum_oracle_divergence_bps=payload["maximum_oracle_divergence_bps"],
+            maximum_oracle_staleness_slots=payload["maximum_oracle_staleness_slots"],
             maximum_lst_withdrawal_delay_slots=payload[
                 "maximum_lst_withdrawal_delay_slots"
             ],
@@ -266,9 +262,7 @@ class AssetVenueAdmission:
             raise RootedTruthError("admission is blocked")
 
 
-def _decision(
-    domain: str, reasons: list[str], payload: object
-) -> AdmissionDecision:
+def _decision(domain: str, reasons: list[str], payload: object) -> AdmissionDecision:
     state = AdmissionState.ADMITTED if not reasons else AdmissionState.BLOCKED
     return AdmissionDecision(
         state=state,
@@ -321,15 +315,9 @@ def evaluate_mint(
             reasons.append("LST_REDEMPTION_UNAVAILABLE")
         if lst.withdrawal_delay_slots > policy.maximum_lst_withdrawal_delay_slots:
             reasons.append("LST_WITHDRAWAL_DELAY")
-        if (
-            lst.validator_concentration_bps
-            > policy.maximum_validator_concentration_bps
-        ):
+        if lst.validator_concentration_bps > policy.maximum_validator_concentration_bps:
             reasons.append("LST_CONCENTRATION")
-        if (
-            lst.redemption_liquidity_atomic
-            < policy.minimum_redemption_liquidity_atomic
-        ):
+        if lst.redemption_liquidity_atomic < policy.minimum_redemption_liquidity_atomic:
             reasons.append("LST_LIQUIDITY")
     return _decision(
         "mint-admission-decision",

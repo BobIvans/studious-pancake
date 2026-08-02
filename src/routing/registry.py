@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Any, Mapping
+from typing import Any, Mapping, Protocol
 
 from src.provider_governance import (
     AdmissionRequest,
@@ -19,7 +19,6 @@ from src.providers.jupiter.quota import (
     JupiterQuotaPurpose,
 )
 
-from .adapters import ProviderAdapter
 from .clients import (
     JupiterRouterAdapter,
     OdosAdapter,
@@ -34,9 +33,11 @@ from .models import (
     MinimumOutputState,
     NonSelectionReason,
     NormalizedQuote,
+    ProviderCapabilities,
     ProviderFailure,
     ProviderFailureReason,
     ProviderRole,
+    ProviderStatus,
     QuoteRequest,
 )
 from .transport import Transport
@@ -48,6 +49,24 @@ _PROVIDER_CONTRACT_NAMES = {
     "openocean": "openocean",
     "odos": "odos",
 }
+
+
+class DiscoveryProvider(Protocol):
+    """Structural contract consumed by the discovery registry.
+
+    Provider-specific fields such as Jupiter quota state are intentionally not
+    part of the shared contract and are accessed through guarded local values.
+    """
+
+    provider_id: str
+    capabilities: ProviderCapabilities
+    circuit: Any
+
+    def startup_state(self) -> dict[str, str]: ...
+
+    def status(self) -> ProviderStatus: ...
+
+    async def request_quote(self, request: QuoteRequest) -> NormalizedQuote: ...
 
 
 def _load_default_contract_registry() -> Any | None:
@@ -93,7 +112,7 @@ def _materialize_admission_failure(
     )
 
 
-def _bind_contract_admission(adapter: ProviderAdapter, registry: Any) -> None:
+def _bind_contract_admission(adapter: DiscoveryProvider, registry: Any) -> None:
     provider = _PROVIDER_CONTRACT_NAMES[adapter.provider_id]
     entries = tuple(registry.provider(provider))
     if len(entries) != 1:
@@ -144,7 +163,7 @@ class CandidateSelection:
 class ProviderRegistry:
     def __init__(
         self,
-        adapters: tuple[ProviderAdapter, ...],
+        adapters: tuple[DiscoveryProvider, ...],
         *,
         governance: ProviderGovernance | None = None,
     ) -> None:
@@ -164,7 +183,7 @@ class ProviderRegistry:
         contract_registry: Any = _LOAD_DEFAULT_CONTRACT_REGISTRY,
         governance: ProviderGovernance | None = None,
     ) -> "ProviderRegistry":
-        adapters = (
+        adapters: tuple[DiscoveryProvider, ...] = (
             JupiterRouterAdapter(
                 api_key=env.get("JUPITER_API_KEY"),
                 require_api_key=False,
@@ -209,7 +228,7 @@ class ProviderRegistry:
             rows.append(row)
         return tuple(rows)
 
-    def enabled_adapters(self) -> tuple[ProviderAdapter, ...]:
+    def enabled_adapters(self) -> tuple[DiscoveryProvider, ...]:
         return tuple(
             adapter
             for adapter in self.adapters
@@ -233,7 +252,7 @@ class DiscoveryPlane:
 
     async def _call_provider(
         self,
-        adapter: ProviderAdapter,
+        adapter: DiscoveryProvider,
         request: QuoteRequest,
     ) -> NormalizedQuote | ProviderFailure:
         governance = self.registry.governance
@@ -275,16 +294,16 @@ class DiscoveryPlane:
 
     async def _invoke_provider(
         self,
-        adapter: ProviderAdapter,
+        adapter: DiscoveryProvider,
         request: QuoteRequest,
     ) -> NormalizedQuote | ProviderFailure:
+        quota = getattr(adapter, "quota", None)
         if adapter.provider_id == "jupiter_router" and getattr(
             adapter, "api_key", None
         ):
-            quota = getattr(adapter, "quota", None)
             if quota is None:
                 quota = JupiterQuotaManager()
-                adapter.quota = quota
+                setattr(adapter, "quota", quota)
             try:
                 reservation = await quota.reserve(
                     JupiterQuotaPurpose.DISCOVERY,
@@ -318,9 +337,9 @@ class DiscoveryPlane:
             if (
                 adapter.provider_id == "jupiter_router"
                 and exc.status_code == 429
-                and getattr(adapter, "quota", None) is not None
+                and quota is not None
             ):
-                adapter.quota.record_http_429()
+                quota.record_http_429()
             return ProviderFailure(
                 provider=adapter.provider_id,
                 reason=exc.reason,

@@ -27,7 +27,22 @@ jobs:
           echo 'dff30beed0412a614674afc8ea0b2231e0e44a3c34caf3247e3438a3b8423691  /tmp/mpr042.tar.gz' | sha256sum --check -
           tar -xzf /tmp/mpr042.tar.gz
           python apply_mpr042.py
-          sed -i 's/partition=f"leg:{leg}:{quote.provider}",/partition=f"leg:{leg}:{quote.provider}:{offset}",/' src/runtime_discovery_coordinator.py
+          python - <<'PY'
+          from pathlib import Path
+
+          path = Path("src/runtime_discovery_coordinator.py")
+          text = path.read_text(encoding="utf-8")
+          old = 'partition=f"leg:{leg}:{quote.provider}",'
+          new = (
+              'partition=(' '\n'
+              '                            f"leg:{leg}:{quote.provider}:"' '\n'
+              '                            f"{quote.external_id}:{quote.raw_response_hash}"' '\n'
+              '                        ),'
+          )
+          if text.count(old) != 1:
+              raise SystemExit(f"expected one cursor partition target, found {text.count(old)}")
+          path.write_text(text.replace(old, new, 1), encoding="utf-8")
+          PY
           mv MPR-042.md docs/MPR-042_WATERMARKED_MARKET_TRUTH.md
           python -m pip install --requirement requirements.txt
           python -m pip install --requirement requirements-dev.txt

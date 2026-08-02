@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "src/execution_truth/**"
+      - "src/resources/schema_registry.json"
       - "scripts/verify_mpr_sys_02_execution_truth.py"
       - "tests/execution_truth/**"
       - "docs/roadmap/mpr_sys_02_execution_truth_durable_state.md"
@@ -36,6 +37,13 @@ jobs:
       - name: Compile execution-truth surface
         run: |
           python -m compileall -q \
+            src/execution_truth \
+            scripts/verify_mpr_sys_02_execution_truth.py \
+            tests/execution_truth
+
+      - name: Check formatting
+        run: |
+          python -m black --check --diff \
             src/execution_truth \
             scripts/verify_mpr_sys_02_execution_truth.py \
             tests/execution_truth

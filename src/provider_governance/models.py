@@ -67,6 +67,15 @@ class ProviderGovernanceError(ValueError):
 
 
 class ProviderAdmissionError(RuntimeError):
+    """Typed fail-closed admission denial.
+
+    ``governance_error_kind`` and ``failure_reason`` are plain immutable values
+    so routing can preserve the denial across module reloads or installed/source
+    import aliases without relying solely on Python class identity.
+    """
+
+    governance_error_kind = "provider_admission"
+
     def __init__(
         self,
         provider_id: str,
@@ -75,6 +84,7 @@ class ProviderAdmissionError(RuntimeError):
         *,
         retryable: bool,
         retry_at: float | None = None,
+        failure_reason: str | None = None,
     ) -> None:
         super().__init__(f"{provider_id}: {code.value}: {detail}")
         self.provider_id = provider_id
@@ -82,6 +92,7 @@ class ProviderAdmissionError(RuntimeError):
         self.detail = detail
         self.retryable = retryable
         self.retry_at = retry_at
+        self.failure_reason = failure_reason
 
 
 def _positive_int(value: int, label: str) -> int:

@@ -109,10 +109,33 @@ def _fixture() -> ExecutionTruthBundle:
     )
 
 
+def _registered_schema_ids() -> set[str]:
+    payload = json.loads(
+        (ROOT / "src/resources/schema_registry.json").read_text(encoding="utf-8")
+    )
+    schemas = payload.get("schemas", [])
+    if not isinstance(schemas, list):
+        return set()
+    return {
+        str(item.get("schema_id"))
+        for item in schemas
+        if isinstance(item, dict) and item.get("schema_id")
+    }
+
+
 def build_evidence() -> dict[str, object]:
     errors: list[str] = []
     if ROOTED_TRUTH_SCHEMA_ID != "mpr-sys-01.rooted-runtime-truth.v1":
         errors.append("MPR-SYS-01 rooted-truth schema identity drifted")
+
+    required_schema_ids = {
+        EXECUTION_TRUTH_SCHEMA_ID,
+        EXECUTION_TRUTH_EVIDENCE_SCHEMA_ID,
+    }
+    missing_schema_ids = sorted(required_schema_ids - _registered_schema_ids())
+    if missing_schema_ids:
+        errors.append(f"unregistered execution-truth schemas: {missing_schema_ids!r}")
+
     for owner in (
         CandidateTruthBinding,
         PR206DurableStateStore,
@@ -132,6 +155,7 @@ def build_evidence() -> dict[str, object]:
         "contract_schema": EXECUTION_TRUTH_SCHEMA_ID,
         "accepted": not errors,
         "repository_contract_passed": not errors,
+        "registered_schema_ids": sorted(required_schema_ids),
         "rooted_truth_owner": "src.rooted_truth.CandidateTruthBinding",
         "durable_state_owner": "src.pr206_durable_state.PR206DurableStateStore",
         "exact_economics_owner": (

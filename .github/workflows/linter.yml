@@ -32,21 +32,23 @@ jobs:
       - run: python -m pip install --requirement requirements.txt
       - run: python -m pip install --requirement requirements-dev.txt
       - run: python -m pip install --no-deps .
-      - name: Prefix 051-052
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix 051-053
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix 051-054
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix 051-055
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py tests/test_decision_quota_replay.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix 051-056
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py tests/test_decision_quota_replay.py tests/test_decision_split.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix 051-057
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py tests/test_decision_quota_replay.py tests/test_decision_split.py tests/test_import_smoke.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix 051-058
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py tests/test_decision_quota_replay.py tests/test_decision_split.py tests/test_import_smoke.py tests/test_jito_bundle_handler.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix 051-059
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py tests/test_decision_quota_replay.py tests/test_decision_split.py tests/test_import_smoke.py tests/test_jito_bundle_handler.py tests/test_launcher_startup_smoke.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix 051-060
-        run: python -m pytest tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py tests/test_decision_quota_replay.py tests/test_decision_split.py tests/test_import_smoke.py tests/test_jito_bundle_handler.py tests/test_launcher_startup_smoke.py tests/test_liquidation_adapters.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test atomic sender-free execution
+        run: python -m pytest tests/test_atomic_sender_free_execution.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test B1 provider protocol readiness
+        run: python -m pytest tests/test_b1_provider_protocol_readiness.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test B2 Helius delivery plane
+        run: python -m pytest tests/test_b2_helius_delivery_plane.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test D2 release soak artifacts
+        run: python -m pytest tests/test_d2_release_soak_artifacts.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision calibration
+        run: python -m pytest tests/test_decision_calibration.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision dataset
+        run: python -m pytest tests/test_decision_dataset.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision isolation
+        run: python -m pytest tests/test_decision_isolation.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision leakage
+        run: python -m pytest tests/test_decision_leakage.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision model
+        run: python -m pytest tests/test_decision_model.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision quota replay
+        run: python -m pytest tests/test_decision_quota_replay.py -m "not live and not manual" --disable-socket --allow-unix-socket -q

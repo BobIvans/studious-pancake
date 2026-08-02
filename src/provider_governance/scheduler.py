@@ -71,8 +71,7 @@ class DeadlineAdmissionScheduler:
             item.sequence,
         )
 
-    async def _dispatch_locked(self) -> None:
-        now = self.clock()
+    def _expire_pending_locked(self, now: float) -> None:
         for item in tuple(self._pending):
             if item.future.done():
                 self._pending.remove(item)
@@ -87,35 +86,55 @@ class DeadlineAdmissionScheduler:
                     AdmissionCode.DEADLINE_EXPIRED,
                     "work expired while waiting for provider admission",
                     retryable=False,
+                    failure_reason="timeout",
                 )
             )
 
-        for item in sorted(
-            tuple(self._pending), key=lambda queued: self._sort_key(queued, now)
-        ):
-            if item.future.done() or item not in self._pending:
-                continue
-            try:
-                manifest = self.authority.entitlement(item.request.provider_id)
-                await self.dependencies.assert_admissible(
-                    item.request.provider_id,
-                    manifest.generation,
-                    item.request.operation,
-                )
-                lease = await self.authority.reserve(item.request)
-            except ProviderAdmissionError as exc:
-                if exc.retryable and (
-                    exc.retry_at is None or exc.retry_at < item.request.deadline_at
-                ):
+    async def _dispatch_locked(self) -> None:
+        """Dispatch one state-changing item at a time and re-rank the queue.
+
+        Recomputing after every grant is necessary because `_served` is part of
+        the ordering key. A one-shot sorted snapshot could otherwise grant two
+        available slots to the same tenant before an unserved tenant.
+        """
+
+        while True:
+            now = self.clock()
+            self._expire_pending_locked(now)
+            changed = False
+            for item in sorted(
+                tuple(self._pending),
+                key=lambda queued: self._sort_key(queued, now),
+            ):
+                if item.future.done() or item not in self._pending:
                     continue
+                try:
+                    manifest = self.authority.entitlement(item.request.provider_id)
+                    await self.dependencies.assert_admissible(
+                        item.request.provider_id,
+                        manifest.generation,
+                        item.request.operation,
+                    )
+                    lease = await self.authority.reserve(item.request)
+                except ProviderAdmissionError as exc:
+                    if exc.retryable and (
+                        exc.retry_at is None
+                        or exc.retry_at < item.request.deadline_at
+                    ):
+                        continue
+                    self._pending.remove(item)
+                    self._denied += 1
+                    item.future.set_exception(exc)
+                    changed = True
+                    break
                 self._pending.remove(item)
-                self._denied += 1
-                item.future.set_exception(exc)
-                continue
-            self._pending.remove(item)
-            self._served[item.request.fairness_key] += 1
-            self._granted += 1
-            item.future.set_result(lease)
+                self._served[item.request.fairness_key] += 1
+                self._granted += 1
+                item.future.set_result(lease)
+                changed = True
+                break
+            if not changed:
+                return
 
     async def acquire(self, request: AdmissionRequest) -> ProviderLease:
         loop = asyncio.get_running_loop()
@@ -127,6 +146,7 @@ class DeadlineAdmissionScheduler:
                     AdmissionCode.DEADLINE_EXPIRED,
                     "work deadline elapsed before queue admission",
                     retryable=False,
+                    failure_reason="timeout",
                 )
             if len(self._pending) >= self.max_queue_size:
                 raise ProviderAdmissionError(
@@ -134,6 +154,7 @@ class DeadlineAdmissionScheduler:
                     AdmissionCode.QUEUE_FULL,
                     "provider admission queue is full",
                     retryable=True,
+                    failure_reason="rate_limited",
                 )
             self._sequence += 1
             queued = _QueuedWork(

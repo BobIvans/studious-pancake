@@ -95,9 +95,7 @@ class BlockhashLease:
     ) -> None:
         integer(current_block_height, "current_block_height")
         if registry_generation != self.registry_generation:
-            raise RootedTruthError(
-                "blockhash belongs to another registry generation"
-            )
+            raise RootedTruthError("blockhash belongs to another registry generation")
         if current_block_height > self.last_valid_block_height:
             raise RootedTruthError("blockhash expired by lastValidBlockHeight")
         if not rpc_reports_valid:

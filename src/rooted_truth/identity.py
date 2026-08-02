@@ -14,10 +14,21 @@ from src.config.chain_registry import (
 from .common import RootedTruthError, digest, integer, sha256, text
 
 
+def _validated_loader_id(value: str | None) -> str | None:
+    """Return a real loader pubkey, never reinterpret a human-readable label."""
+
+    if not value:
+        return None
+    try:
+        return validate_pubkey(value, field="loader_id")
+    except ValueError:
+        return None
+
+
 @dataclass(frozen=True, slots=True)
 class ProgramDeployment:
     program_id: str
-    loader_id: str
+    loader_id: str | None
     programdata_address: str | None
     deployment_slot: int
     upgrade_authority: str | None
@@ -30,7 +41,8 @@ class ProgramDeployment:
 
     def __post_init__(self) -> None:
         validate_pubkey(self.program_id, field="program_id")
-        validate_pubkey(self.loader_id, field="loader_id")
+        if self.loader_id:
+            validate_pubkey(self.loader_id, field="loader_id")
         if self.programdata_address:
             validate_pubkey(self.programdata_address, field="programdata_address")
         if self.upgrade_authority:
@@ -48,6 +60,8 @@ class ProgramDeployment:
             "revoked",
         }:
             raise RootedTruthError("invalid deployment state")
+        if self.state == "rooted-attested" and not self.loader_id:
+            raise RootedTruthError("rooted-attested deployment requires a loader pubkey")
         if self.expires_at_slot is not None:
             integer(self.expires_at_slot, "expires_at_slot", positive=True)
 
@@ -154,7 +168,7 @@ class DeployedIdentityRegistry:
             programs.append(
                 ProgramDeployment(
                     program_id=entry.address,
-                    loader_id=entry.owner or entry.address,
+                    loader_id=_validated_loader_id(entry.owner),
                     programdata_address=None,
                     deployment_slot=0,
                     upgrade_authority=None,

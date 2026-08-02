@@ -155,6 +155,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     try:
         parsed = _parser().parse_args(args_list)
         context = BootstrapContext.capture(args_list, command="flashloan-bot.run")
+
+        # Preserve the public fail-closed CLI contract independently of host
+        # qualification. Live execution is unavailable on every platform, so a
+        # platform-admission blocker must never mask the canonical exit code and
+        # diagnostic expected by callers and release gates.
+        if parsed.mode == "live":
+            print("LIVE_MODE_UNAVAILABLE", file=sys.stderr)
+            return EXIT_MODE_UNAVAILABLE
+
         command = CommandCapabilityManifest.load().evaluate("flashloan-bot.run")
         platform = qualify_platform(
             context.platform_identity,
@@ -165,9 +174,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         if blockers and parsed.mode != "disabled":
             print("RUNTIME_ADMISSION_BLOCKED:" + ",".join(blockers), file=sys.stderr)
             return EXIT_ADMISSION_BLOCKED
-        if parsed.mode == "live":
-            print("LIVE_MODE_UNAVAILABLE", file=sys.stderr)
-            return EXIT_MODE_UNAVAILABLE
         if parsed.mode == "disabled":
             print(json.dumps({"admitted": True, "mode": "disabled"}, sort_keys=True))
             return 0

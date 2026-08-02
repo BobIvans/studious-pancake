@@ -263,10 +263,15 @@ class ProviderGovernance:
         provider_id: str,
         reason: str,
         *,
+        status_code: int | None = None,
         retry_after_seconds: float | None = None,
     ) -> None:
         manifest = self.entitlement(provider_id)
-        kind = _FAILURE_KIND_BY_VALUE.get(reason, DependencyFailureKind.UNKNOWN)
+        kind = (
+            DependencyFailureKind.AUTH
+            if reason == "http_error" and status_code in {401, 403}
+            else _FAILURE_KIND_BY_VALUE.get(reason, DependencyFailureKind.UNKNOWN)
+        )
         await self.dependencies.record_failure(
             provider_id,
             manifest.generation,

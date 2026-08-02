@@ -33,8 +33,7 @@ def _bundle() -> ExecutionTruthBundle:
         admission_hash=_digest("c"),
         root_slot=100,
     )
-    plan = PlanRef(
-        plan_hash=_digest("d"),
+    plan = PlanRef.create(
         candidate_truth_hash=rooted.candidate_truth_hash,
         principal_lamports=1_000,
         expires_block_height=500,
@@ -104,6 +103,16 @@ def test_valid_execution_truth_bundle_is_sender_free_and_not_production_ready() 
     assert report["production_ready"] is False
 
 
+def test_plan_hash_is_bound_to_authoritative_economic_contents() -> None:
+    bundle = _bundle()
+
+    with pytest.raises(
+        ExecutionTruthError,
+        match="PLAN_HASH_CONTENT_MISMATCH",
+    ):
+        replace(bundle.plan, principal_lamports=1_001)
+
+
 @pytest.mark.parametrize(
     ("field", "replacement"),
     (
@@ -120,7 +129,11 @@ def test_cross_stage_digest_mutation_fails_closed(
 ) -> None:
     bundle = _bundle()
     if field == "candidate":
-        plan = replace(bundle.plan, candidate_truth_hash=replacement)
+        plan = PlanRef.create(
+            candidate_truth_hash=replacement,
+            principal_lamports=bundle.plan.principal_lamports,
+            expires_block_height=bundle.plan.expires_block_height,
+        )
         with pytest.raises(
             ExecutionTruthError,
             match="PLAN_CANDIDATE_MISMATCH",
@@ -172,6 +185,21 @@ def test_reconciliation_requires_exact_integer_arithmetic() -> None:
             bundle.reconciliation,
             conservative_surplus_lamports=121,
         )
+
+
+def test_reconciliation_fee_must_equal_exact_simulation_fee() -> None:
+    bundle = _bundle()
+    reconciliation = replace(
+        bundle.reconciliation,
+        network_fee_lamports=4,
+        conservative_surplus_lamports=121,
+    )
+
+    with pytest.raises(
+        ExecutionTruthError,
+        match="RECONCILIATION_SIMULATION_FEE_MISMATCH",
+    ):
+        replace(bundle, reconciliation=reconciliation)
 
 
 def test_success_requires_positive_conservative_surplus() -> None:
@@ -246,6 +274,33 @@ def test_terminal_state_is_immutable() -> None:
         )
 
 
+def test_precompile_cancellation_can_terminate_and_release_reservation() -> None:
+    bundle = _bundle()
+    planned = DurableAttemptRef(
+        attempt_id="cancel-before-compile",
+        generation=1,
+        lifecycle_revision=2,
+        stage=ExecutionStage.PLANNED,
+        terminal_state=TerminalState.NONE,
+        writer_fence=7,
+        event_head_hash=_digest("4"),
+        idempotency_hash=_digest("5"),
+        reservation_hash=_digest("6"),
+        candidate_truth_hash=bundle.rooted.candidate_truth_hash,
+        plan_hash=bundle.plan.plan_hash,
+    )
+    cancelled = replace(
+        planned,
+        lifecycle_revision=3,
+        stage=ExecutionStage.TERMINAL,
+        terminal_state=TerminalState.CANCELLED,
+    )
+
+    validate_transition(planned, cancelled)
+    assert cancelled.message_hash is None
+    assert cancelled.terminal_state is TerminalState.CANCELLED
+
+
 def test_unknown_post_simulation_effect_is_quarantined_as_ambiguous() -> None:
     bundle = _bundle()
     simulated = replace(
@@ -269,13 +324,9 @@ def test_post_compile_cancelled_terminal_is_rejected() -> None:
         match="POST_COMPILE_CANCELLATION_IS_AMBIGUOUS",
     ):
         replace(
-            bundle,
-            durable=replace(
-                bundle.durable,
-                terminal_state=TerminalState.CANCELLED,
-                reconciliation_hash=None,
-            ),
-            reconciliation=None,
+            bundle.durable,
+            terminal_state=TerminalState.CANCELLED,
+            reconciliation_hash=None,
         )
 
 

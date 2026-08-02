@@ -29,24 +29,16 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
-      - run: python -m pip install --requirement requirements.txt
-      - run: python -m pip install --requirement requirements-dev.txt
-      - run: python -m pip install --no-deps .
-      - name: Prefix actual 051-052
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix actual 051-053
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py tests/test_b2_helius_delivery_plane.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix actual 051-054
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py tests/test_b2_helius_delivery_plane.py tests/test_d2_release_soak_artifacts.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix actual 051-055
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py tests/test_b2_helius_delivery_plane.py tests/test_d2_release_soak_artifacts.py tests/test_decision_calibration.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix actual 051-056
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py tests/test_b2_helius_delivery_plane.py tests/test_d2_release_soak_artifacts.py tests/test_decision_calibration.py tests/test_decision_dataset.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix actual 051-057
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py tests/test_b2_helius_delivery_plane.py tests/test_d2_release_soak_artifacts.py tests/test_decision_calibration.py tests/test_decision_dataset.py tests/test_decision_isolation.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix actual 051-058
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py tests/test_b2_helius_delivery_plane.py tests/test_d2_release_soak_artifacts.py tests/test_decision_calibration.py tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix actual 051-059
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py tests/test_b2_helius_delivery_plane.py tests/test_d2_release_soak_artifacts.py tests/test_decision_calibration.py tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Prefix actual 051-060
-        run: python -m pytest tests/test_atomic_sender_free_execution.py tests/test_b1_provider_protocol_readiness.py tests/test_b2_helius_delivery_plane.py tests/test_d2_release_soak_artifacts.py tests/test_decision_calibration.py tests/test_decision_dataset.py tests/test_decision_isolation.py tests/test_decision_leakage.py tests/test_decision_model.py tests/test_decision_quota_replay.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - run: python -m pip install -q --requirement requirements.txt
+      - run: python -m pip install -q --requirement requirements-dev.txt
+      - run: python -m pip install -q --no-deps .
+      - name: Run first 50 offline test files quietly
+        run: |
+          mapfile -t files < <(find tests -type f -name 'test_*.py' -print | sort | sed -n '1,50p')
+          python -m pytest "${files[@]}" -m "not live and not manual" --disable-socket --allow-unix-socket -q >/tmp/first50.log
+      - name: Report source-tree mutations
+        run: |
+          echo 'BEGIN_DIRTY_PATHS'
+          git status --porcelain
+          echo 'END_DIRTY_PATHS'
+          test -z "$(git status --porcelain)"

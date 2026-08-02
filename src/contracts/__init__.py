@@ -1,5 +1,21 @@
 """Canonical structured-boundary contracts."""
 
-from .registry import SchemaRecord, SchemaRegistry, SchemaRegistryError
+from .registry import (
+    PayloadLimits,
+    PayloadValidationError,
+    SchemaNotRegisteredError,
+    SchemaRecord,
+    SchemaRegistry,
+    SchemaRegistryError,
+    get_schema_registry,
+)
 
-__all__ = ["SchemaRecord", "SchemaRegistry", "SchemaRegistryError"]
+__all__ = [
+    "PayloadLimits",
+    "PayloadValidationError",
+    "SchemaNotRegisteredError",
+    "SchemaRecord",
+    "SchemaRegistry",
+    "SchemaRegistryError",
+    "get_schema_registry",
+]

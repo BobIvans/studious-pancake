@@ -92,10 +92,10 @@ async def test_scheduler_reranks_fairness_after_each_grant() -> None:
         await authority.mark_issued(lease)
         await authority.complete(lease)
 
-    order: list[str] = []
+    completed: list[str] = []
 
     async def record(label: str) -> None:
-        order.append(label)
+        completed.append(label)
 
     tasks = (
         asyncio.create_task(
@@ -120,8 +120,12 @@ async def test_scheduler_reranks_fairness_after_each_grant() -> None:
     await asyncio.sleep(0.01)
     clock.advance(61.0)
     await asyncio.gather(*tasks)
+    snapshot = await scheduler.snapshot()
 
-    assert order == ["a-1", "b-1", "a-2"]
+    # Coroutine execution order is controlled by the event loop; the scheduler's
+    # bounded grant audit is the deterministic authority for admission order.
+    assert set(completed) == {"a-1", "a-2", "b-1"}
+    assert snapshot["grant_order"][-3:] == ("a-1", "b-1", "a-2")
 
 
 @dataclass

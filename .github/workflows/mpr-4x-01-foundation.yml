@@ -1,0 +1,97 @@
+name: MPR-4X-01 architecture foundation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/contracts/**"
+      - "src/config/canonical.py"
+      - "src/policy_governance_pr143.py"
+      - "src/release/identity.py"
+      - "src/resources/schema_registry.json"
+      - "src/resources/architecture_reachability.json"
+      - "src/resources/production_surface_manifest.json"
+      - "scripts/verify_mpr_4x_01_foundation.py"
+      - "scripts/verify_repo.py"
+      - "tests/architecture/test_mpr_4x_01_foundation.py"
+      - ".github/workflows/mpr-4x-01-foundation.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  foundation:
+    runs-on: ubuntu-24.04
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+      KAMINO_LIQUIDATION_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+          cache: pip
+      - run: python -m pip install --quiet --requirement requirements.txt
+      - run: python -m pip install --quiet --requirement requirements-dev.txt
+      - run: python -m pip install --quiet --no-deps .
+      - name: Compile foundation
+        run: |
+          python -m py_compile \
+            src/contracts/__init__.py \
+            src/contracts/registry.py \
+            src/contracts/reachability.py \
+            src/config/canonical.py \
+            src/policy_governance_pr143.py \
+            src/release/identity.py \
+            scripts/verify_mpr_4x_01_foundation.py \
+            tests/architecture/test_mpr_4x_01_foundation.py
+      - name: Black formatting
+        run: |
+          python -m black --diff --check \
+            src/contracts/__init__.py \
+            src/contracts/registry.py \
+            src/contracts/reachability.py \
+            src/config/canonical.py \
+            src/policy_governance_pr143.py \
+            src/release/identity.py \
+            scripts/verify_mpr_4x_01_foundation.py \
+            tests/architecture/test_mpr_4x_01_foundation.py
+      - name: Focused architecture and release tests
+        run: |
+          python -m pytest -q \
+            tests/architecture/test_mpr_4x_01_foundation.py \
+            tests/architecture/test_mpr_td_01_closure.py \
+            tests/release/test_mpr_td_04_release.py \
+            tests/test_pr143_policy_governance.py \
+            --disable-socket --allow-unix-socket
+      - name: Materialize foundation evidence
+        run: python scripts/verify_mpr_4x_01_foundation.py --json
+      - name: Build and inspect wheel
+        run: |
+          rm -rf dist build
+          python -m build --wheel --no-isolation --outdir dist
+          python - <<'PY'
+          from pathlib import Path
+          import zipfile
+
+          wheel = next(Path("dist").glob("*.whl"))
+          required = {
+              "src/contracts/__init__.py",
+              "src/contracts/registry.py",
+              "src/contracts/reachability.py",
+              "src/config/canonical.py",
+              "src/policy_governance_pr143.py",
+              "src/release/identity.py",
+              "src/resources/schema_registry.json",
+              "src/resources/architecture_reachability.json",
+          }
+          with zipfile.ZipFile(wheel) as archive:
+              members = set(archive.namelist())
+          missing = sorted(required - members)
+          if missing:
+              raise SystemExit(f"missing MPR-4X-01 wheel members: {missing}")
+          PY

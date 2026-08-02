@@ -1,0 +1,23 @@
+{
+  "queries": [
+    {
+      "database_role": "qualification",
+      "expected_index": "sqlite_autoindex_events_1",
+      "forbid_full_scan": true,
+      "maximum_rows_touched": 1,
+      "owner": "persistence.operational",
+      "query_id": "qualification-event-by-id",
+      "sql": "SELECT payload FROM events WHERE event_id = ?"
+    },
+    {
+      "database_role": "qualification",
+      "expected_index": "idx_events_created_ns",
+      "forbid_full_scan": true,
+      "maximum_rows_touched": 100,
+      "owner": "persistence.operational",
+      "query_id": "qualification-event-by-created",
+      "sql": "SELECT event_id FROM events WHERE created_ns >= ? ORDER BY created_ns LIMIT ?"
+    }
+  ],
+  "schema_id": "mpr-td-03.sqlite-query-catalog.v1"
+}

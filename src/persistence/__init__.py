@@ -1,4 +1,4 @@
-"""Owned persistence boundaries for deadline-sensitive async runtimes."""
+"""Owned persistence boundaries and canonical operational helpers."""
 
 from .async_writer_pr200 import (
     AsyncPersistenceWriter,
@@ -10,6 +10,7 @@ from .async_writer_pr200 import (
     PersistenceState,
     PersistenceWorkClass,
 )
+from .operational import SQLiteOperationalPolicy, connect_operational
 
 __all__ = [
     "AsyncPersistenceWriter",
@@ -20,4 +21,6 @@ __all__ = [
     "PersistenceResult",
     "PersistenceState",
     "PersistenceWorkClass",
+    "SQLiteOperationalPolicy",
+    "connect_operational",
 ]

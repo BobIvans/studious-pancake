@@ -189,7 +189,9 @@ async def test_generation_and_spend_limits_fail_closed() -> None:
 
 
 @pytest.mark.asyncio
-async def test_replaced_generation_fences_unissued_lease_before_provider_contact() -> None:
+async def test_replaced_generation_fences_unissued_lease_before_provider_contact() -> (
+    None
+):
     clock = FakeClock()
     first = entitlement(reserve=0)
     authority = ProviderSpendAuthority(

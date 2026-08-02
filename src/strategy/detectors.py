@@ -8,7 +8,7 @@ import json
 import time
 from typing import Any
 
-from src.market.snapshots import MarketQuoteSnapshot, SnapshotSet
+from src.market.snapshots import MarketObservationV2, ObservationBatch
 
 from .domain import Opportunity
 
@@ -55,8 +55,8 @@ class DetectionRejection:
 
 @dataclass(frozen=True, slots=True)
 class _RouteCandidate:
-    first: MarketQuoteSnapshot
-    second: MarketQuoteSnapshot
+    first: MarketObservationV2
+    second: MarketObservationV2
     intermediate_amount: int
     final_amount: int
 
@@ -75,13 +75,28 @@ class CircularArbitrageDetector:
 
     def detect(
         self,
-        snapshots: SnapshotSet,
+        snapshots: ObservationBatch,
         *,
         now: float | None = None,
     ) -> tuple[Opportunity, ...]:
         observed_at = time.time() if now is None else now
         opportunities: list[Opportunity] = []
         self.last_rejections = {}
+        if not snapshots.admissible:
+            self.last_rejections = {
+                pair.pair_id: DetectionRejection(
+                    pair.pair_id,
+                    "observation_batch_incomplete",
+                    {
+                        "batch_id": snapshots.batch_id,
+                        "completeness": snapshots.completeness.value,
+                        "watermark": snapshots.watermark.identity,
+                        "degraded_reasons": list(snapshots.degraded_reasons),
+                    },
+                )
+                for pair in self.pairs
+            }
+            return ()
         for pair in self.pairs:
             candidate = self._best_candidate(pair, snapshots, now=observed_at)
             if candidate is None:
@@ -116,7 +131,7 @@ class CircularArbitrageDetector:
     def _best_candidate(
         self,
         pair: DetectorPair,
-        snapshots: SnapshotSet,
+        snapshots: ObservationBatch,
         *,
         now: float,
     ) -> _RouteCandidate | None:
@@ -248,13 +263,15 @@ class CircularArbitrageDetector:
         )
 
     @staticmethod
-    def _route_leg_metadata(snapshot: MarketQuoteSnapshot) -> dict[str, Any]:
+    def _route_leg_metadata(snapshot: MarketObservationV2) -> dict[str, Any]:
         return {
             "provider": snapshot.provider,
             "input_mint": snapshot.input_mint,
             "output_mint": snapshot.output_mint,
             "in_amount": snapshot.in_amount,
             "out_amount": snapshot.out_amount,
+            "expected_output": snapshot.expected_output,
+            "guaranteed_output": snapshot.guaranteed_output,
             "slot": snapshot.slot,
             "commitment": snapshot.commitment,
             "observed_at": snapshot.observed_at,

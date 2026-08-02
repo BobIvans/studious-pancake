@@ -204,3 +204,8 @@ src/routing/clients.py
 src/routing/registry.py
 src/providers/jupiter/__init__.py
 tests/routing/test_mpr041_canonical_semantics.py
+src/market/__init__.py
+src/market/observations.py
+src/market/streams.py
+src/market/cache.py
+tests/test_mpr042_market_truth.py

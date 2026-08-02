@@ -9,7 +9,15 @@ import time
 from typing import Any, Sequence
 from uuid import uuid4
 
-from src.market.snapshots import MarketQuoteSnapshot, SnapshotSet
+from src.market.snapshots import (
+    CompletenessPolicy,
+    CompletenessState,
+    MarketObservationV2,
+    ObservationBatch,
+    ObservationGeneration,
+    ObservationWatermark,
+    SourceCursor,
+)
 from src.providers.jupiter.quota import JupiterQuotaManager
 from src.routing.models import DiscoveryBatch, QuoteRequest
 from src.strategy.detectors import CircularArbitrageDetector
@@ -105,23 +113,66 @@ class RuntimeDiscoveryCoordinator:
             snapshot for result in pair_results for snapshot in result.snapshots
         )
         snapshots, duplicate_snapshots = self._deduplicate_snapshots(all_snapshots)
-        snapshot_set = SnapshotSet(snapshots)
-        detected = self._detector.detect(snapshot_set, now=float(self._clock()))
-        opportunities, duplicate_candidates = self._deduplicate_candidates(detected)
-        dropped_backpressure = max(0, len(opportunities) - self.universe.max_candidates)
-        opportunities = opportunities[: self.universe.max_candidates]
-
         completed_required = tuple(
             result.pair_id
             for result in pair_results
             if result.required and result.complete
         )
+        required_sources = tuple(f"pair:{pair_id}" for pair_id in required)
+        batch_cursors = tuple(
+            snapshot.cursor
+            for snapshot in snapshots
+            if snapshot.cursor is not None
+            and snapshot.cursor.source in required_sources
+        )
+        if batch_cursors:
+            minimum_slot = min(cursor.slot for cursor in batch_cursors)
+            maximum_slot = max(cursor.slot for cursor in batch_cursors)
+        else:
+            batch_cursors = tuple(
+                SourceCursor(source, "missing", 0, 0) for source in required_sources
+            )
+            minimum_slot = 0
+            maximum_slot = 0
+        watermark = ObservationWatermark(
+            cursors=batch_cursors,
+            minimum_slot=minimum_slot,
+            maximum_slot=maximum_slot,
+            reconnect_epoch=0,
+        )
+        completeness_policy = CompletenessPolicy(
+            policy_id=f"mpr042.discovery-cycle:{cycle_id}",
+            required_sources=required_sources,
+            max_slot_skew=max(
+                item.pair.max_slot_skew for item in self.universe.pairs if item.required
+            ),
+            minimum_observations=max(1, len(required_sources) * 2),
+        )
+        cycle_succeeded = set(completed_required) == set(required)
+        snapshot_set = ObservationBatch(
+            snapshots,
+            batch_id=cycle_id,
+            watermark=watermark,
+            policy=completeness_policy,
+            completeness=(
+                CompletenessState.COMPLETE
+                if cycle_succeeded
+                else CompletenessState.BLOCKED
+            ),
+            degraded_reasons=(
+                () if cycle_succeeded else ("required_discovery_incomplete",)
+            ),
+            published_at=float(self._clock()),
+        )
+        detected = self._detector.detect(snapshot_set, now=float(self._clock()))
+        opportunities, duplicate_candidates = self._deduplicate_candidates(detected)
+        dropped_backpressure = max(0, len(opportunities) - self.universe.max_candidates)
+        opportunities = opportunities[: self.universe.max_candidates]
         provider_failures: dict[str, int] = {}
         for result in pair_results:
             degraded.extend(result.degraded_reasons)
             for provider, count in result.provider_failures.items():
                 provider_failures[provider] = provider_failures.get(provider, 0) + count
-        cycle_succeeded = set(completed_required) == set(required)
         terminal_reason = (
             "discovery_cycle_completed"
             if cycle_succeeded
@@ -190,7 +241,7 @@ class RuntimeDiscoveryCoordinator:
                 degraded_reasons=tuple(degraded),
             )
 
-        second_snapshots: list[MarketQuoteSnapshot] = []
+        second_snapshots: list[MarketObservationV2] = []
         requests_attempted = 1
         batches_completed = 1
         requested_second_amounts: set[int] = set()
@@ -250,10 +301,10 @@ class RuntimeDiscoveryCoordinator:
         pair_id: str,
         leg: int,
         batch: DiscoveryBatch,
-    ) -> tuple[MarketQuoteSnapshot, ...]:
+    ) -> tuple[MarketObservationV2, ...]:
         now = datetime.now(timezone.utc)
-        snapshots: list[MarketQuoteSnapshot] = []
-        for quote in batch.quotes:
+        snapshots: list[MarketObservationV2] = []
+        for offset, quote in enumerate(batch.quotes):
             if quote.context_slot is None or not quote.is_fresh(now):
                 continue
             labels = tuple(
@@ -277,12 +328,13 @@ class RuntimeDiscoveryCoordinator:
                 )
             )
             snapshots.append(
-                MarketQuoteSnapshot(
+                MarketObservationV2(
                     provider=quote.provider,
                     input_mint=quote.input_mint,
                     output_mint=quote.output_mint,
-                    in_amount=quote.input_amount,
-                    out_amount=quote.expected_output,
+                    input_amount=quote.input_amount,
+                    expected_output=quote.expected_output,
+                    guaranteed_output=quote.guaranteed_output,
                     slot=quote.context_slot,
                     observed_at=quote.received_at.timestamp(),
                     source=(
@@ -306,6 +358,32 @@ class RuntimeDiscoveryCoordinator:
                         if quote.provider_timestamp is not None
                         else None
                     ),
+                    root_slot=(
+                        quote.context_slot if self.commitment == "finalized" else None
+                    ),
+                    generation=ObservationGeneration(
+                        genesis_hash="solana-mainnet-beta",
+                        provider_generation=(
+                            quote.provenance.schema_version_pin
+                            if quote.provenance is not None
+                            else quote.provider
+                        ),
+                        asset_generation=(
+                            f"decimals:{quote.input_decimals}:{quote.output_decimals}"
+                        ),
+                        policy_generation=f"commitment:{self.commitment}",
+                        code_generation="mpr042.market-observation.v2",
+                    ),
+                    cursor=SourceCursor(
+                        source=f"pair:{pair_id}",
+                        partition=(
+                            f"leg:{leg}:{quote.provider}:"
+                            f"{quote.external_id}:{quote.raw_response_hash}"
+                        ),
+                        offset=offset,
+                        slot=quote.context_slot,
+                        reconnect_epoch=0,
+                    ),
                 )
             )
         return tuple(snapshots)
@@ -317,9 +395,9 @@ class RuntimeDiscoveryCoordinator:
 
     @staticmethod
     def _deduplicate_snapshots(
-        snapshots: Sequence[MarketQuoteSnapshot],
-    ) -> tuple[tuple[MarketQuoteSnapshot, ...], int]:
-        unique: list[MarketQuoteSnapshot] = []
+        snapshots: Sequence[MarketObservationV2],
+    ) -> tuple[tuple[MarketObservationV2, ...], int]:
+        unique: list[MarketObservationV2] = []
         seen: set[tuple[Any, ...]] = set()
         for snapshot in snapshots:
             key = (
@@ -390,4 +468,4 @@ class RuntimeDiscoveryCoordinator:
             candidates_created=0,
             degraded_reasons=degraded_reasons,
         )
-        return RuntimeDiscoveryReport((), SnapshotSet(), evidence)
+        return RuntimeDiscoveryReport((), ObservationBatch(), evidence)

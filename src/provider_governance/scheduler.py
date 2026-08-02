@@ -92,50 +92,44 @@ class DeadlineAdmissionScheduler:
             )
 
     async def _dispatch_locked(self) -> None:
-        """Dispatch one state-changing item at a time and re-rank the queue.
+        """Dispatch at most one state-changing item per condition turn.
 
-        Recomputing after every grant is necessary because `_served` is part of
-        the ordering key. A one-shot sorted snapshot could otherwise grant two
-        available slots to the same tenant before an unserved tenant.
+        The next caller re-ranks the remaining queue after `_served` changes.
+        Granting a whole sorted snapshot before awakened tasks can run would
+        preserve lease order but violate observable operation-start fairness.
         """
 
-        while True:
-            now = self.clock()
-            self._expire_pending_locked(now)
-            changed = False
-            for item in sorted(
-                tuple(self._pending),
-                key=lambda queued: self._sort_key(queued, now),
-            ):
-                if item.future.done() or item not in self._pending:
+        now = self.clock()
+        self._expire_pending_locked(now)
+        for item in sorted(
+            tuple(self._pending),
+            key=lambda queued: self._sort_key(queued, now),
+        ):
+            if item.future.done() or item not in self._pending:
+                continue
+            try:
+                manifest = self.authority.entitlement(item.request.provider_id)
+                await self.dependencies.assert_admissible(
+                    item.request.provider_id,
+                    manifest.generation,
+                    item.request.operation,
+                )
+                lease = await self.authority.reserve(item.request)
+            except ProviderAdmissionError as exc:
+                if exc.retryable and (
+                    exc.retry_at is None or exc.retry_at < item.request.deadline_at
+                ):
                     continue
-                try:
-                    manifest = self.authority.entitlement(item.request.provider_id)
-                    await self.dependencies.assert_admissible(
-                        item.request.provider_id,
-                        manifest.generation,
-                        item.request.operation,
-                    )
-                    lease = await self.authority.reserve(item.request)
-                except ProviderAdmissionError as exc:
-                    if exc.retryable and (
-                        exc.retry_at is None or exc.retry_at < item.request.deadline_at
-                    ):
-                        continue
-                    self._pending.remove(item)
-                    self._denied += 1
-                    item.future.set_exception(exc)
-                    changed = True
-                    break
                 self._pending.remove(item)
-                self._served[item.request.fairness_key] += 1
-                self._grant_order.append(item.request.work_id)
-                self._granted += 1
-                item.future.set_result(lease)
-                changed = True
-                break
-            if not changed:
+                self._denied += 1
+                item.future.set_exception(exc)
                 return
+            self._pending.remove(item)
+            self._served[item.request.fairness_key] += 1
+            self._grant_order.append(item.request.work_id)
+            self._granted += 1
+            item.future.set_result(lease)
+            return
 
     async def acquire(self, request: AdmissionRequest) -> ProviderLease:
         loop = asyncio.get_running_loop()

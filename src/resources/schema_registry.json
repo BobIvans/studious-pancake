@@ -133,6 +133,42 @@
       "schema_id": "attack-surface-manifest.v1",
       "status": "active",
       "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "runtime-contract",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.rooted_truth",
+      "schema_id": "mpr-sys-01.rooted-runtime-truth.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_sys_01_rooted_truth",
+      "schema_id": "mpr-sys-01.rooted-runtime-truth-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "security-policy",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.rooted_truth",
+      "schema_id": "mpr-sys-01.rooted-runtime-policy.v1",
+      "status": "active",
+      "unknown_fields": "reject"
     }
   ]
 }

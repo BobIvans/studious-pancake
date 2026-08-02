@@ -36,19 +36,28 @@ jobs:
         run: python -m pip check
       - name: Run quality gate
         run: python scripts/quality_gate.py --with-dependency-audit
-      - name: Verify authority and packaging contracts
-        run: |
-          python scripts/validate_authority_map.py
-          python scripts/package_smoke.py
-          python scripts/verify_pr194_required_controls.py
-          python scripts/verify_pr194_trusted_foundation.py --json
-          python scripts/verify_mpr32_public_entrypoint_truth.py --json
-          python scripts/verify_pr200_production_cutover.py --json
-          python scripts/verify_pr206_durable_state.py --json
-          python scripts/verify_mpr_td_01_canonical_surface.py --json
-          python scripts/verify_mpr_td_02_failure_verification.py --json
-          python scripts/verify_mpr_td_03_capacity_storage.py --json
-          python scripts/verify_mpr_td_04_upgrade_security.py --json
+      - name: Verify authority map
+        run: python scripts/validate_authority_map.py
+      - name: Verify package smoke after authority map
+        run: python scripts/package_smoke.py
+      - name: Verify PR194 required controls
+        run: python scripts/verify_pr194_required_controls.py
+      - name: Verify PR194 trusted foundation
+        run: python scripts/verify_pr194_trusted_foundation.py --json
+      - name: Verify MPR32 public entrypoint truth
+        run: python scripts/verify_mpr32_public_entrypoint_truth.py --json
+      - name: Verify PR200 production cutover
+        run: python scripts/verify_pr200_production_cutover.py --json
+      - name: Verify PR206 durable state
+        run: python scripts/verify_pr206_durable_state.py --json
+      - name: Verify MPR-TD-01 canonical surface
+        run: python scripts/verify_mpr_td_01_canonical_surface.py --json
+      - name: Verify MPR-TD-02 failure verification
+        run: python scripts/verify_mpr_td_02_failure_verification.py --json
+      - name: Verify MPR-TD-03 capacity storage
+        run: python scripts/verify_mpr_td_03_capacity_storage.py --json
+      - name: Verify MPR-TD-04 upgrade security
+        run: python scripts/verify_mpr_td_04_upgrade_security.py --json
       - name: Compile repository
         run: python -m compileall -q arb_bot.py src scripts tests
       - name: Verify status entrypoint

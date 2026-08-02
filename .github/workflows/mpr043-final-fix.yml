@@ -7,6 +7,7 @@ on:
       - "src/routing/registry.py"
       - "src/routing/registry.pyi"
       - "tests/test_mpr043_provider_governance.py"
+      - "tests/test_mpr_sys_03_review_regressions.py"
       - "docs/MPR-043_DEPENDENCY_ENTITLEMENT_SCHEDULER.md"
       - "config/format_targets.txt"
       - ".github/workflows/mpr043-final-fix.yml"
@@ -40,14 +41,16 @@ jobs:
           python -m compileall -q \
             src/provider_governance \
             src/routing/registry.py \
-            tests/test_mpr043_provider_governance.py
+            tests/test_mpr043_provider_governance.py \
+            tests/test_mpr_sys_03_review_regressions.py
 
       - name: Check formatting
         run: |
           python -m black --check --diff \
             src/provider_governance \
             src/routing/registry.py \
-            tests/test_mpr043_provider_governance.py
+            tests/test_mpr043_provider_governance.py \
+            tests/test_mpr_sys_03_review_regressions.py
 
       - name: Check focused typing
         run: |
@@ -63,6 +66,7 @@ jobs:
         run: |
           python -m pytest -q \
             tests/test_mpr043_provider_governance.py \
+            tests/test_mpr_sys_03_review_regressions.py \
             tests/routing/test_mpr041_canonical_semantics.py \
             tests/test_pr056_runtime_discovery.py \
             --disable-socket --allow-unix-socket

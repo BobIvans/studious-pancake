@@ -105,7 +105,10 @@ class DeadlineAdmissionScheduler:
                 )
                 lease = await self.authority.reserve(item.request)
             except ProviderAdmissionError as exc:
-                if exc.retryable:
+                if exc.retryable and (
+                    exc.retry_at is None
+                    or exc.retry_at < item.request.deadline_at
+                ):
                     continue
                 self._pending.remove(item)
                 self._denied += 1

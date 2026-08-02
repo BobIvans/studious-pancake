@@ -39,9 +39,9 @@ class _LeaseRecord:
 
 
 class ProviderSpendAuthority:
-    """Owns provider request, cost, spend and concurrency reservations.
+    """Own provider request, cost, spend and concurrency reservations.
 
-    Capacity is reserved before work is issued.  Once a lease is marked issued,
+    Capacity is reserved before work is issued. Once a lease is marked issued,
     cancellation or provider failure still consumes the reservation because the
     external side effect may already have happened.
     """
@@ -57,8 +57,6 @@ class ProviderSpendAuthority:
             raise ProviderGovernanceError(
                 "at least one provider entitlement is required"
             )
-        if len(entitlements) != len(set(entitlements)):
-            raise ProviderGovernanceError("provider entitlement ids must be unique")
         for provider_id, manifest in entitlements.items():
             if provider_id != manifest.provider_id:
                 raise ProviderGovernanceError(
@@ -84,6 +82,7 @@ class ProviderSpendAuthority:
                 AdmissionCode.MANIFEST_MISSING,
                 "provider has no entitlement manifest",
                 retryable=False,
+                failure_reason="disabled",
             ) from exc
 
     def entitlements(self) -> tuple[ProviderEntitlement, ...]:
@@ -93,8 +92,9 @@ class ProviderSpendAuthority:
         """Install a reviewed generation for future reservations.
 
         Existing issued leases retain their original generation and complete
-        against the capacity they reserved.  Unissued leases are invalidated on
-        the next authority operation.
+        against the capacity they reserved. Unissued leases are generation-
+        fenced immediately before issue and cannot contact a provider after a
+        manifest replacement.
         """
 
         self._entitlements[manifest.provider_id] = manifest
@@ -112,7 +112,7 @@ class ProviderSpendAuthority:
             return
         if state.active_leases:
             # Active work is generation-bound and cannot be erased by a clock
-            # boundary.  The next window begins after the final active lease.
+            # boundary. The next window begins after the final active lease.
             return
         state.started_at = now
         state.reserved_requests = 0
@@ -156,6 +156,7 @@ class ProviderSpendAuthority:
         *,
         retryable: bool,
         retry_at: float | None = None,
+        failure_reason: str | None = None,
     ) -> ProviderAdmissionError:
         return ProviderAdmissionError(
             manifest.provider_id,
@@ -163,6 +164,7 @@ class ProviderSpendAuthority:
             detail,
             retryable=retryable,
             retry_at=retry_at,
+            failure_reason=failure_reason,
         )
 
     async def reserve(self, request: AdmissionRequest) -> ProviderLease:
@@ -179,6 +181,7 @@ class ProviderSpendAuthority:
                     AdmissionCode.MANIFEST_EXPIRED,
                     "provider entitlement manifest has expired",
                     retryable=False,
+                    failure_reason="disabled",
                 )
             if (
                 request.expected_generation is not None
@@ -189,6 +192,7 @@ class ProviderSpendAuthority:
                     AdmissionCode.GENERATION_MISMATCH,
                     "work was built for a different entitlement generation",
                     retryable=False,
+                    failure_reason="disabled",
                 )
             if request.operation not in manifest.allowed_operations:
                 raise self._deny(
@@ -196,6 +200,7 @@ class ProviderSpendAuthority:
                     AdmissionCode.OPERATION_NOT_ENTITLED,
                     f"{request.operation.value} is not allowed by the manifest",
                     retryable=False,
+                    failure_reason="disabled",
                 )
             if request.deadline_at <= now:
                 raise self._deny(
@@ -203,6 +208,7 @@ class ProviderSpendAuthority:
                     AdmissionCode.DEADLINE_EXPIRED,
                     "work deadline elapsed before reservation",
                     retryable=False,
+                    failure_reason="timeout",
                 )
 
             state = self._windows[manifest.provider_id]
@@ -214,6 +220,7 @@ class ProviderSpendAuthority:
                     AdmissionCode.CONCURRENCY_EXHAUSTED,
                     "provider concurrency entitlement is exhausted",
                     retryable=True,
+                    failure_reason="rate_limited",
                 )
 
             is_finalization = request.operation is ProviderOperation.FINALIZATION
@@ -241,6 +248,7 @@ class ProviderSpendAuthority:
                     "provider request window has no admissible capacity",
                     retryable=True,
                     retry_at=retry_at,
+                    failure_reason="rate_limited",
                 )
             if occupied_cost + request.estimated_cost_units > cost_cap:
                 code = (
@@ -254,6 +262,7 @@ class ProviderSpendAuthority:
                     "provider cost-unit window has no admissible capacity",
                     retryable=True,
                     retry_at=retry_at,
+                    failure_reason="rate_limited",
                 )
             if request.estimated_spend_micros:
                 if (
@@ -272,6 +281,7 @@ class ProviderSpendAuthority:
                         "provider monetary spend limit has no admissible capacity",
                         retryable=True,
                         retry_at=retry_at,
+                        failure_reason="rate_limited",
                     )
 
             lease = ProviderLease(
@@ -314,6 +324,22 @@ class ProviderSpendAuthority:
                     AdmissionCode.LEASE_STATE_INVALID,
                     f"cannot issue lease in state {record.state.value}",
                     retryable=False,
+                    failure_reason="disabled",
+                )
+            current = self.entitlement(lease.provider_id)
+            if (
+                lease.entitlement_generation != current.generation
+                or lease.manifest_sha256 != current.manifest_sha256
+            ):
+                state = self._windows[lease.provider_id]
+                self._release_reserved(state, lease)
+                record.state = LeaseState.RELEASED
+                raise ProviderAdmissionError(
+                    lease.provider_id,
+                    AdmissionCode.GENERATION_MISMATCH,
+                    "reserved work belongs to a replaced entitlement manifest",
+                    retryable=False,
+                    failure_reason="disabled",
                 )
             if lease.expires_at <= self.clock():
                 state = self._windows[lease.provider_id]
@@ -324,6 +350,7 @@ class ProviderSpendAuthority:
                     AdmissionCode.DEADLINE_EXPIRED,
                     "provider lease expired before issue",
                     retryable=False,
+                    failure_reason="timeout",
                 )
             record.state = LeaseState.ISSUED
 
@@ -336,7 +363,7 @@ class ProviderSpendAuthority:
     ) -> None:
         async with self._lock:
             record = self._record(lease)
-            if record.state not in (LeaseState.RESERVED, LeaseState.ISSUED):
+            if record.state is not LeaseState.ISSUED:
                 raise ProviderGovernanceError(
                     f"cannot complete lease in state {record.state.value}"
                 )
@@ -374,7 +401,7 @@ class ProviderSpendAuthority:
     async def release(self, lease: ProviderLease) -> None:
         async with self._lock:
             record = self._record(lease)
-            if record.state is LeaseState.RELEASED:
+            if record.state in (LeaseState.RELEASED, LeaseState.EXPIRED):
                 return
             if record.state is not LeaseState.RESERVED:
                 raise ProviderGovernanceError(

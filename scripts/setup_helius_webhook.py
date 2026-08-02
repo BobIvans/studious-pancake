@@ -1,178 +1,104 @@
 #!/usr/bin/env python3
-"""
-Helius Webhook Setup Script
+"""Create or discover a production-compatible Helius webhook."""
 
-Creates a webhook for Sanctum LST arbitrage monitoring.
-"""
+from __future__ import annotations
 
 import json
-import requests
 import os
+from pathlib import Path
+import sys
+from typing import Any
+
 from dotenv import load_dotenv
+
+from src.external_contracts.helius_webhooks import (
+    HeliusWebhookClient,
+    HeliusWebhookContractError,
+    extract_webhook_id,
+    sanitize_webhook_payload,
+)
 from src.ingest.webhook_config import WebhookConfig
 
-# Load environment variables
 load_dotenv()
 
-def check_existing_webhooks(api_key: str):
-    """Check for existing LST arbitrage webhooks."""
-    url = f"https://api.helius.xyz/v0/webhooks?api-key={api_key}"
+WEBHOOK_IDS_FILE = Path("helius_webhook_ids.txt")
+WEBHOOK_CONFIG_FILE = Path("helius_webhook_config.json")
 
-    try:
-        response = requests.get(url)
-        if response.status_code in (200, 201):
-            webhooks = response.json()
-            existing_lst_webhooks = []
 
-            for webhook in webhooks:
-                addresses = set(webhook.get("accountAddresses", []))
-                lst_addresses = set(WebhookConfig.LST_ADDRESSES)
+def check_existing_webhooks(
+    client: HeliusWebhookClient,
+) -> list[dict[str, Any]]:
+    """Return existing webhooks that cover all configured LST addresses."""
 
-                if lst_addresses.issubset(addresses):
-                    existing_lst_webhooks.append({
-                        "id": webhook.get("webhookId"),
-                        "url": webhook.get("webhookURL"),
-                        "addresses": len(addresses)
-                    })
+    expected = set(WebhookConfig.LST_ADDRESSES)
+    matches: list[dict[str, Any]] = []
+    for webhook in client.list_webhooks():
+        addresses = set(webhook.get("accountAddresses", []))
+        if expected.issubset(addresses):
+            matches.append(
+                {
+                    "id": extract_webhook_id(webhook),
+                    "url": webhook.get("webhookURL"),
+                    "addresses": len(addresses),
+                }
+            )
+    return matches
 
-            return existing_lst_webhooks
-        else:
-            print(f"⚠️ Could not check existing webhooks: {response.status_code}")
-            return []
 
-    except Exception as e:
-        print(f"⚠️ Error checking existing webhooks: {e}")
-        return []
+def create_helius_webhook() -> str:
+    """Create a Helius webhook or return an exact existing match."""
 
-def create_helius_webhook():
-    """Create Helius webhook for LST arbitrage monitoring."""
+    api_key = os.getenv("HELIUS_API_KEY", "").strip()
+    client = HeliusWebhookClient(api_key)
+    payload = sanitize_webhook_payload(
+        WebhookConfig.get_webhook_config(), require_auth_header=True
+    )
 
-    # Helius API endpoint
-    api_key = os.getenv("HELIUS_API_KEY")
-    if not api_key:
-        print("❌ HELIUS_API_KEY not found in .env file")
-        return
-
-    # Check for existing webhooks
-    print("🔍 Checking for existing LST webhooks...")
-    existing_webhooks = check_existing_webhooks(api_key)
-
-    if existing_webhooks:
-        print(f"✅ Found {len(existing_webhooks)} existing LST webhooks:")
-        for webhook in existing_webhooks:
-            print(f"  🆔 {webhook['id']} -> {webhook['url']} ({webhook['addresses']} addresses)")
-
-        # Check if we have all configured webhooks
-        existing_ids = {w['id'] for w in existing_webhooks}
-        configured_ids = set(WebhookConfig.WEBHOOK_IDS)
-
-        if existing_ids == configured_ids:
-            print("✅ All configured webhooks are active!")
-            return WebhookConfig.WEBHOOK_IDS[0]  # Return first ID
-        else:
-            print("⚠️ Webhook configuration mismatch. Some webhooks may need recreation.")
-
-    url = f"https://api.helius.xyz/v0/webhooks?api-key={api_key}"
-
-    # Use configuration from WebhookConfig
-    webhook_data = WebhookConfig.get_webhook_config()
-
-    # Fix 76: Sanitize webhook payload — strip internal keys that Helius rejects with HTTP 400
-    sanitized_data = {
-        "webhookURL": webhook_data["webhookURL"],
-        "webhookType": webhook_data["webhookType"],
-        "transactionTypes": webhook_data["transactionTypes"],
-        "accountAddresses": webhook_data["accountAddresses"],
-    }
-    if "txnStatus" in webhook_data:
-        sanitized_data["txnStatus"] = webhook_data["txnStatus"]
-    if "accountFilters" in webhook_data:
-        sanitized_data["accountFilters"] = webhook_data["accountFilters"]
-    if "authHeader" in webhook_data:
-        sanitized_data["authHeader"] = webhook_data["authHeader"]
-
-    print("🚀 Creating Helius webhook...")
-    print(f"📡 URL: {sanitized_data['webhookURL']}")
-    
-    # ── Tunnel Latency Warning ───────────────────────────────────────
-    webhook_url = sanitized_data['webhookURL']
-    if 'trycloudflare.com' in webhook_url or 'ngrok' in webhook_url or 'localhost' in webhook_url:
-        print("⚠️  WARNING: Tunnel/redirect URL detected!")
-        print("   Туннели (Cloudflare/ngrok) добавляют 400ms+ задержки, что критично для Jito-аукционов.")
-        print("   Рекомендуется использовать прямой IP сервера:")
-        print("   WEBHOOK_URL=http://<PUBLIC_IP>:3000/webhook")
-        print("   Сервер уже слушает 0.0.0.0:3000 — не требуется никаких дополнительных настроек.")
-        print()
-    print(f"🎯 Monitoring {len(sanitized_data['accountAddresses'])} LST addresses")
-    print(f"📊 Transaction types: {', '.join(sanitized_data['transactionTypes'])}")
-
-    try:
-        response = requests.post(url, json=sanitized_data, headers={
-            "Content-Type": "application/json"
-        })
-
-        if response.status_code in (200, 201):
-            result = response.json()
-            webhook_id = result.get("webhookId")
-
-            print("✅ Webhook created successfully!")
-            print(f"🆔 Webhook ID: {webhook_id}")
-
-            # Save webhook ID to existing IDs file
-            current_ids = []
-            if os.path.exists("helius_webhook_ids.txt"):
-                with open("helius_webhook_ids.txt", "r") as f:
-                    current_ids = [line.strip() for line in f if line.strip()]
-
-            if webhook_id not in current_ids:
-                current_ids.append(webhook_id)
-                with open("helius_webhook_ids.txt", "w") as f:
-                    f.write("\n".join(current_ids))
-
-            # Save full configuration
-            with open("helius_webhook_config.json", "w") as f:
-                json.dump(webhook_data, f, indent=2)
-
-            print("📁 IDs saved to helius_webhook_ids.txt")
-            print("📁 Configuration saved to helius_webhook_config.json")
-
+    existing = check_existing_webhooks(client)
+    for webhook in existing:
+        if webhook["url"] == payload["webhookURL"]:
+            webhook_id = str(webhook["id"])
+            print(f"Using existing webhook: {webhook_id}")
             return webhook_id
 
-        else:
-            print(f"❌ Error creating webhook: {response.status_code}")
-            print(response.text)
-            return None
+    result = client.create_webhook(payload)
+    webhook_id = extract_webhook_id(result)
+    _record_webhook(webhook_id, payload)
+    print(f"Created webhook: {webhook_id}")
+    return webhook_id
 
-    except Exception as e:
-        print(f"❌ Error: {e}")
-        return None
+
+def _record_webhook(webhook_id: str, payload: dict[str, Any]) -> None:
+    current_ids: list[str] = []
+    if WEBHOOK_IDS_FILE.is_file():
+        current_ids = [
+            line.strip()
+            for line in WEBHOOK_IDS_FILE.read_text(encoding="utf-8").splitlines()
+            if line.strip()
+        ]
+    if webhook_id not in current_ids:
+        current_ids.append(webhook_id)
+    WEBHOOK_IDS_FILE.write_text(
+        "\n".join(current_ids) + "\n", encoding="utf-8"
+    )
+
+    redacted = dict(payload)
+    if "authHeader" in redacted:
+        redacted["authHeader"] = "<redacted>"
+    WEBHOOK_CONFIG_FILE.write_text(
+        json.dumps(redacted, indent=2, sort_keys=True), encoding="utf-8"
+    )
+
+
+def main() -> int:
+    try:
+        webhook_id = create_helius_webhook()
+    except (HeliusWebhookContractError, OSError) as exc:
+        print(f"Setup failed: {exc}", file=sys.stderr)
+        return 1
+    print(f"Primary webhook ID: {webhook_id}")
+    return 0
+
 
 if __name__ == "__main__":
-    print("🎯 Helius LST Arbitrage Webhook Setup")
-    print("=" * 50)
-    print(f"📊 Monitoring {len(WebhookConfig.LST_ADDRESSES)} addresses:")
-    for addr in WebhookConfig.LST_ADDRESSES:
-        name = {
-            "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn": "JitoSOL",
-            "mSoLzYCxHdYgdzU16g5QSh3i5K3z3KZK7ytfqcJm7So": "mSOL",
-            "bSo13r4TkiE4KumL71LsHTPpL2euBYLFx6h9HP3piy1": "bSOL",
-            "5oVNBeEEQvYi1cX3ir8Dx5n1P7pdxydbGF2X4TxVusJm": "INF",
-            "stkitrT1Uoy18Dk1fTrgPw8W6MVzoCfYoAFT4MLsmhq": "Sanctum Router"
-        }.get(addr, addr[:8])
-        print(f"  • {name}: {addr}")
-    print()
-    print(f"🔗 Expected webhook IDs: {len(WebhookConfig.WEBHOOK_IDS)}")
-    for i, wid in enumerate(WebhookConfig.WEBHOOK_IDS, 1):
-        print(f"  {i}. {wid}")
-    print()
-
-    webhook_id = create_helius_webhook()
-    if webhook_id:
-        print("\n🎉 Setup complete!")
-        print("✅ Your webhooks are ready to receive LST arbitrage signals.")
-        print(f"🆔 Primary webhook ID: {webhook_id}")
-        print(f"🎛️ Management IDs: {', '.join(WebhookConfig.MANAGEMENT_IDS)}")
-        print("\n💡 Use 'python manage_webhooks.py' to check webhook status.")
-    else:
-        print("\n❌ Setup failed. Please check your configuration.")
-        print("💡 Make sure HELIUS_API_KEY is set in your .env file.")
+    raise SystemExit(main())

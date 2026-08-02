@@ -17,6 +17,7 @@ from src.errors import (  # noqa: E402
     Ambiguity,
     ErrorEnvelope,
     FailureCategory,
+    ResultState,
     UnknownReasonCode,
     reason,
 )
@@ -44,8 +45,28 @@ def build_evidence() -> dict[str, object]:
     codes = [str(item["reason_code"]) for item in registry.get("reason_codes", [])]
     if not codes or len(codes) != len(set(codes)):
         errors.append("reason-code registry is empty or contains duplicates")
-    for code in codes:
-        reason(code)
+    exercised_codes: list[str] = []
+    for index, code in enumerate(codes):
+        definition = reason(code)
+        try:
+            payload = ErrorEnvelope(
+                code,
+                f"correlation-{index}",
+                f"operation-{index}",
+            ).to_dict()
+            json.dumps(payload, allow_nan=False, sort_keys=True)
+        except (TypeError, ValueError) as exc:
+            errors.append(f"reason code {code} failed envelope serialization: {exc}")
+            continue
+        if payload["reason_code"] != code:
+            errors.append(f"reason code {code} serialized as another code")
+            continue
+        if payload["category"] != definition.category.value:
+            errors.append(f"reason code {code} serialized with wrong category")
+            continue
+        exercised_codes.append(code)
+    if len(exercised_codes) != len(codes):
+        errors.append("not every reason code crossed the envelope boundary")
     try:
         reason("UNREGISTERED_REASON")
     except UnknownReasonCode:
@@ -102,7 +123,8 @@ def build_evidence() -> dict[str, object]:
         "schema_version": "mpr-td-02.failure-verification-evidence.v1",
         "accepted": not errors,
         "active_reason_code_count": len(codes),
-        "exercised_reason_code_count": len(codes),
+        "exercised_reason_code_count": len(exercised_codes),
+        "exercised_reason_codes": exercised_codes,
         "unknown_reason_code_rejected": unknown_rejected,
         "typed_retry_allowed": retry.allowed,
         "ambiguous_retry_denied": not ambiguous.allowed,

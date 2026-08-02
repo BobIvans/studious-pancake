@@ -27,6 +27,18 @@
       "unknown_fields": "reject"
     },
     {
+      "boundary_class": "operator-output",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.cli_entrypoint",
+      "schema_id": "mpr-close-01.dependency-light-status.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
       "boundary_class": "configuration",
       "canonical_encoding": "canonical-json-v1",
       "compatibility": "exact-byte-identity",

@@ -14,6 +14,10 @@ def test_canonical_surface_and_registry_are_accepted() -> None:
 def test_schema_registry_rejects_unknown_schema() -> None:
     registry = SchemaRegistry.load_default()
     assert "failure.reason-code-registry.v1" in registry.active_ids
+    assert (
+        registry.require("mpr-close-01.dependency-light-status.v1").owner_module
+        == "src.cli_entrypoint"
+    )
     try:
         registry.require("unknown.schema.v1")
     except SchemaRegistryError:

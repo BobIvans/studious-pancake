@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import hashlib
-import json
 import math
 from collections.abc import Mapping, Sequence
 from enum import Enum
 from typing import Any
 
 from pydantic import BaseModel
+
+from src.kernel import canonical_json_bytes as _kernel_canonical_json_bytes
 
 
 class CanonicalizationError(ValueError):
@@ -29,7 +30,7 @@ def to_json_value(value: Any) -> Any:
     if isinstance(value, float):
         if not math.isfinite(value):
             raise CanonicalizationError("non-finite numbers are forbidden")
-        return value
+        return format(value, ".17g")
     if isinstance(value, Mapping):
         result: dict[str, Any] = {}
         for key, item in value.items():
@@ -53,8 +54,7 @@ def canonical_envelope(
     serialization_version: str = "pr190.canonical-json.v1",
 ) -> dict[str, Any]:
     if not all(
-        isinstance(item, str) and item
-        for item in (domain, schema_version, environment)
+        isinstance(item, str) and item for item in (domain, schema_version, environment)
     ):
         raise CanonicalizationError(
             "domain, schema_version and environment are required"
@@ -68,15 +68,14 @@ def canonical_envelope(
     }
 
 
-def canonical_json_bytes(payload: Any, **envelope: str) -> bytes:
+def canonical_config_json_bytes(payload: Any, **envelope: str) -> bytes:
+    """Normalize configuration values, then use the kernel JSON encoder."""
+
     wrapped = canonical_envelope(payload, **envelope)
-    return json.dumps(
-        wrapped,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-        allow_nan=False,
-    ).encode("utf-8")
+    return _kernel_canonical_json_bytes(wrapped)
+
+
+canonical_json_bytes = canonical_config_json_bytes
 
 
 def canonical_digest(payload: Any, **envelope: str) -> str:
@@ -85,6 +84,7 @@ def canonical_digest(payload: Any, **envelope: str) -> str:
 
 __all__ = [
     "CanonicalizationError",
+    "canonical_config_json_bytes",
     "canonical_digest",
     "canonical_envelope",
     "canonical_json_bytes",

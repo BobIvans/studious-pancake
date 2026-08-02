@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 import sys
-from typing import Any
+from typing import Any, cast
 
 from src import cli_entrypoint as _impl
 
@@ -52,8 +52,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         return runtime_adapter.main(args)
     _impl.automation_cli_pr189 = automation_cli_pr189
-    _impl.legacy_cli = (
-        _LegacyBootstrapAdapter(legacy_cli) if default_owners else legacy_cli
+    _impl.legacy_cli = cast(
+        Any,
+        _LegacyBootstrapAdapter(legacy_cli) if default_owners else legacy_cli,
     )
     return _impl.main(args)
 

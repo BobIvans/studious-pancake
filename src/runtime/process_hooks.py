@@ -6,7 +6,7 @@ import asyncio
 import logging
 import signal
 from types import FrameType
-from typing import Callable, Iterable
+from typing import Any, Callable, Iterable
 
 
 class LoggingHandlerOwner:
@@ -56,7 +56,9 @@ class AsyncSignalHandlerOwner:
     ) -> None:
         self.callback = callback
         self.signals = tuple(signals)
-        self._previous: dict[signal.Signals, signal.Handlers] = {}
+        # ``signal.getsignal`` may return enum sentinels or an arbitrary callable;
+        # preserving that exact opaque value is required for faithful restoration.
+        self._previous: dict[signal.Signals, Any] = {}
         self._loop: asyncio.AbstractEventLoop | None = None
         self._installed = False
 

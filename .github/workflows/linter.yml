@@ -32,23 +32,23 @@ jobs:
       - run: python -m pip install --requirement requirements.txt
       - run: python -m pip install --requirement requirements-dev.txt
       - run: python -m pip install --no-deps .
-      - name: Offline tests 051-060
-        run: |
-          mapfile -t files < <(find tests -type f -name 'test_*.py' -print | sort | sed -n '51,60p')
-          python -m pytest "${files[@]}" -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Offline tests 061-070
-        run: |
-          mapfile -t files < <(find tests -type f -name 'test_*.py' -print | sort | sed -n '61,70p')
-          python -m pytest "${files[@]}" -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Offline tests 071-080
-        run: |
-          mapfile -t files < <(find tests -type f -name 'test_*.py' -print | sort | sed -n '71,80p')
-          python -m pytest "${files[@]}" -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Offline tests 081-090
-        run: |
-          mapfile -t files < <(find tests -type f -name 'test_*.py' -print | sort | sed -n '81,90p')
-          python -m pytest "${files[@]}" -m "not live and not manual" --disable-socket --allow-unix-socket -q
-      - name: Offline tests 091-100
-        run: |
-          mapfile -t files < <(find tests -type f -name 'test_*.py' -print | sort | sed -n '91,100p')
-          python -m pytest "${files[@]}" -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision dataset
+        run: python -m pytest tests/test_decision_dataset.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision isolation
+        run: python -m pytest tests/test_decision_isolation.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision leakage
+        run: python -m pytest tests/test_decision_leakage.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision model
+        run: python -m pytest tests/test_decision_model.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision quota replay
+        run: python -m pytest tests/test_decision_quota_replay.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test decision split
+        run: python -m pytest tests/test_decision_split.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test import smoke
+        run: python -m pytest tests/test_import_smoke.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test Jito bundle handler
+        run: python -m pytest tests/test_jito_bundle_handler.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test launcher startup smoke
+        run: python -m pytest tests/test_launcher_startup_smoke.py -m "not live and not manual" --disable-socket --allow-unix-socket -q
+      - name: Test liquidation adapters
+        run: python -m pytest tests/test_liquidation_adapters.py -m "not live and not manual" --disable-socket --allow-unix-socket -q

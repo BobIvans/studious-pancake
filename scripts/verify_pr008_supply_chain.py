@@ -28,6 +28,7 @@ def verify(root: Path) -> dict[str, object]:
     errors: list[str] = []
     docker = (root / "Dockerfile").read_text()
     lock = (root / "requirements.lock").read_text()
+    dev_lock = (root / "requirements-dev.lock").read_text()
     requirements = (root / "requirements.txt").read_text().lower()
     for alias in ("httpx2", "httpcore2", "jsonalias"):
         if re.search(rf"(?m)^{alias}==", requirements):
@@ -39,9 +40,16 @@ def verify(root: Path) -> dict[str, object]:
             errors.append(f"Dockerfile missing offline-wheel control: {token}")
     if "COPY src ./src" in docker.split(" AS runtime", 1)[-1]:
         errors.append("runtime image contains source checkout")
-    pins = [line for line in lock.splitlines() if "==" in line and not line.startswith("#")]
-    if not pins or len(HASH.findall(lock)) < len(pins):
-        errors.append("lock entries are not fully hash constrained")
+    for name, locked in (("runtime", lock), ("development", dev_lock)):
+        pins = [
+            line
+            for line in locked.splitlines()
+            if "==" in line and not line.lstrip().startswith("#")
+        ]
+        if not pins or len(HASH.findall(locked)) < len(pins):
+            errors.append(f"{name} lock entries are not fully hash constrained")
+        if name == "development" and "click==" not in locked:
+            errors.append("development lock omits resolved transitive dependency click")
     workflow = evaluate_workflow_authority(root, strict=True)
     errors.extend(workflow.violations)
     try:
@@ -52,7 +60,7 @@ def verify(root: Path) -> dict[str, object]:
     if "runtime.env" in compose or "internal: true" not in compose:
         errors.append("compose must omit raw env files and deny default egress")
     artifacts = {p.relative_to(root).as_posix(): sha(p) for p in (
-        root / "Dockerfile", root / "requirements.lock",
+        root / "Dockerfile", root / "requirements.lock", root / "requirements-dev.lock",
         root / "deploy/production/docker-compose.sandbox.yml",
         root / "deploy/production/seccomp-runtime.json",
         root / "deploy/production/apparmor-flashloan-bot",

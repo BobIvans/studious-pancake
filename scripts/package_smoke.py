@@ -155,19 +155,48 @@ def main() -> int:
             "Scripts/python.exe" if os.name == "nt" else "bin/python"
         )
         bin_dir = python.parent
+        wheelhouse = temporary / "wheelhouse"
+        wheelhouse.mkdir()
+        _run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "download",
+                "--require-hashes",
+                "--only-binary=:all:",
+                "--dest",
+                str(wheelhouse),
+                "-r",
+                str(source / "requirements.lock"),
+            ],
+            cwd=temporary,
+        )
         _run(
             [
                 str(python),
                 "-m",
                 "pip",
                 "install",
+                "--no-index",
+                "--require-hashes",
+                "--find-links",
+                str(wheelhouse),
                 "-r",
-                str(source / "requirements.txt"),
+                str(source / "requirements.lock"),
             ],
             cwd=temporary,
         )
         _run(
-            [str(python), "-m", "pip", "install", "--no-deps", str(wheel)],
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                "--no-index",
+                "--no-deps",
+                str(wheel),
+            ],
             cwd=temporary,
         )
         _run([str(python), "-m", "pip", "check"], cwd=temporary)

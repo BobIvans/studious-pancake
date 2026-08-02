@@ -12,11 +12,11 @@
         "service",
         "dev"
       ],
-      "sha256": "87e1db9e6d9857cab1c8e505ddad1ba1e30e300e8a46a375f9ab2986db3bca6a"
+      "sha256": "92ac27093fb562ed71c71d54b8d55da4b8a2f7f94869d7f8c31291d029d71a23"
     },
     "requirements.txt": {
       "extras": [],
-      "sha256": "f0e97f61a87fcd4b53e7c16945228b9b55758b7ea9d6def8c3fcb32a075d3785"
+      "sha256": "ad22ca82defbf1fa39059a8c2f371717e41bcdc606143618b567297bd085342a"
     }
   },
   "platforms": [
@@ -24,9 +24,17 @@
     "macos"
   ],
   "python": "3.13",
+  "resolved_locks": {
+    "requirements-dev.lock": {
+      "sha256": "34a45dbfe8f1d3516311aad7da76834aed153914a53fcac42f15aa17615b8515"
+    },
+    "requirements.lock": {
+      "sha256": "11d788259e864bdca9a670a1caad7c3b2d77a500db6fe999a0d8a6dfa7c62adc"
+    }
+  },
   "resolver": {
-    "name": "uv",
-    "version": "0.10.0"
+    "name": "pip-tools",
+    "version": "7.5.2"
   },
   "schema_version": "pr025.requirements-lock.v1",
   "source": "pyproject.toml"

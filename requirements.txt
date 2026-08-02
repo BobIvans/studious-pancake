@@ -15,8 +15,8 @@ brotli==1.2.0
 cachetools==7.0.5
 certifi==2026.6.17
 charset-normalizer==3.4.9
-construct-typing==0.6.2
-construct==2.10.68
+construct-typing==0.7.0
+construct==2.10.70
 frozenlist==1.8.0
 h11==0.16.0
 h2==4.3.0

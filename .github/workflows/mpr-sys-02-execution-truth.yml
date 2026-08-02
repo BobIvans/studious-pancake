@@ -1,0 +1,62 @@
+name: MPR-SYS-02 execution truth and durable state
+
+on:
+  pull_request:
+    paths:
+      - "src/execution_truth/**"
+      - "src/resources/schema_registry.json"
+      - "scripts/verify_mpr_sys_02_execution_truth.py"
+      - "tests/execution_truth/**"
+      - "docs/roadmap/mpr_sys_02_execution_truth_durable_state.md"
+      - ".github/workflows/mpr-sys-02-execution-truth.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  execution-truth:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+
+      - name: Compile execution-truth surface
+        run: |
+          python -m compileall -q \
+            src/execution_truth \
+            scripts/verify_mpr_sys_02_execution_truth.py \
+            tests/execution_truth
+
+      - name: Check formatting
+        run: |
+          python -m black --check --diff \
+            src/execution_truth \
+            scripts/verify_mpr_sys_02_execution_truth.py \
+            tests/execution_truth
+
+      - name: Run execution-truth tests
+        env:
+          PAPER_TRADING_ONLY: "true"
+          LIVE_TRADING_ENABLED: "false"
+          JITO_ENABLED: "false"
+        run: |
+          python -m pytest \
+            tests/execution_truth \
+            -q --disable-socket --allow-unix-socket
+
+      - name: Materialize execution-truth evidence
+        run: python scripts/verify_mpr_sys_02_execution_truth.py --json

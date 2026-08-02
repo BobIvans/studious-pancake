@@ -26,7 +26,9 @@ def test_source_hygiene_blocks_generated_artifacts(tmp_path: Path) -> None:
     assert any(item.path.endswith(".pyc") for item in report.violations)
 
 
-def test_workflow_authority_accepts_single_waived_release_gate(tmp_path: Path) -> None:
+def test_workflow_authority_rejects_waivers_and_legacy_moving_actions(
+    tmp_path: Path,
+) -> None:
     workflows = tmp_path / ".github" / "workflows"
     workflows.mkdir(parents=True)
     (workflows / "release-authority.yml").write_text(
@@ -49,7 +51,8 @@ def test_workflow_authority_accepts_single_waived_release_gate(tmp_path: Path) -
 
     report = evaluate_workflow_authority(tmp_path, strict=True)
 
-    assert report.ok is True
+    assert report.ok is False
+    assert len(report.violations) == 2
     assert report.authority_workflows == (".github/workflows/release-authority.yml",)
     assert report.legacy_workflows == (".github/workflows/legacy-pr-gate.yml",)
 

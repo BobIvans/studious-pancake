@@ -109,7 +109,10 @@ def test_optional_lock_profiles_are_explicit_and_hashed():
         (ROOT / "config/requirements-lock.json").read_text(encoding="utf-8")
     )
     assert manifest["python"] == "3.13"
-    assert manifest["resolver"] == {"name": "uv", "version": "0.10.0"}
+    assert manifest["resolver"] == {"name": "pip-tools", "version": "7.5.2"}
+    for filename, details in manifest["resolved_locks"].items():
+        digest = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
+        assert digest == details["sha256"]
     for filename, details in manifest["locks"].items():
         digest = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
         assert digest == details["sha256"]
@@ -136,7 +139,8 @@ def test_repository_and_packaged_capability_registries_match():
 
 def test_dockerfile_is_multistage_non_root_and_uses_health_probe():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    assert dockerfile.count("FROM ${PYTHON_IMAGE}") == 2
+    assert dockerfile.count("FROM python:3.13.13-slim-bookworm@sha256:") == 3
+    assert "ARG PYTHON_IMAGE" not in dockerfile
     assert "python:3.13.13-slim-bookworm" in dockerfile
     assert "USER 10001:10001" in dockerfile
     assert 'CMD ["flashloan-bot-healthcheck", "--url", ' in dockerfile

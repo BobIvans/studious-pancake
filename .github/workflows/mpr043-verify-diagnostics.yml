@@ -6,6 +6,7 @@ on:
       - mpr-043-dependency-entitlement-scheduler
     paths:
       - .github/workflows/mpr043-verify-diagnostics.yml
+  pull_request:
 
 permissions:
   contents: read

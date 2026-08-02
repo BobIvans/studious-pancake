@@ -1,0 +1,10 @@
+{
+  "schema_id": "mpr-td-02.verification-baseline.v1",
+  "base_sha": "f837394449b3921c8f502543aaf3f2694274093a",
+  "workflow_count": 87,
+  "test_module_count": 384,
+  "property_framework": null,
+  "mutation_framework": null,
+  "installed_wheel_path": "scripts/package_smoke.py",
+  "flake_behavior": "no authoritative profile"
+}

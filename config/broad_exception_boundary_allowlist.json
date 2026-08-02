@@ -1,0 +1,6 @@
+{
+  "schema_id": "mpr-td-02.broad-exception-allowlist.v1",
+  "boundaries": [
+    {"module":"src.errors.supervision","callable":"supervise","justification":"installed top-level conversion boundary","owner":"runtime","allowed_conversion":"INTERNAL_INVARIANT_UNKNOWN","review_milestone":"MPR-TD-03","tests":["tests/errors/test_failures.py::test_supervision"]}
+  ]
+}

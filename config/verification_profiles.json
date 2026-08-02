@@ -1,0 +1,41 @@
+{
+  "schema_id": "mpr-td-02.verification-profiles.v1",
+  "profiles": {
+    "fast_pr": {
+      "command": "python -m pytest tests/errors -q",
+      "network": "disabled",
+      "credentials": "forbidden",
+      "artifacts": [
+        "pytest.xml"
+      ],
+      "timeout_seconds": 300,
+      "parallelization": "none",
+      "owner": "verification",
+      "blocking": true
+    },
+    "full_offline": {
+      "command": "python -m pytest -q --disable-socket --allow-unix-socket",
+      "network": "disabled",
+      "credentials": "forbidden",
+      "artifacts": [
+        "pytest.xml"
+      ],
+      "timeout_seconds": 3600,
+      "parallelization": "manifest",
+      "owner": "verification",
+      "blocking": true
+    },
+    "installed_wheel": {
+      "command": "python scripts/package_smoke.py",
+      "network": "disabled",
+      "credentials": "forbidden",
+      "artifacts": [
+        "wheel.sha256"
+      ],
+      "timeout_seconds": 600,
+      "parallelization": "none",
+      "owner": "packaging",
+      "blocking": true
+    }
+  }
+}

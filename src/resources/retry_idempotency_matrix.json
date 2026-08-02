@@ -1,0 +1,180 @@
+{
+  "schema_id": "failure.retry-idempotency-matrix.v1",
+  "operations": [
+    {
+      "operation_class": "safe_read",
+      "operation_identity": "safe_read:canonical-id",
+      "idempotency_key_source": "canonical input hash",
+      "retries_allowed": true,
+      "retryable_categories": [
+        "provider_transient",
+        "persistence_conflict"
+      ],
+      "maximum_attempts": 3,
+      "total_retry_budget_ms": 2000,
+      "backoff_policy": "bounded_exponential",
+      "jitter_policy": "deterministic_seeded",
+      "deadline_interaction": "remaining absolute budget",
+      "persistence_requirement": false,
+      "duplicate_suppression": "unique operation identity",
+      "ambiguity_handling": "fail closed",
+      "terminal_result": "failed",
+      "safe_observability_fields": [
+        "operation_id",
+        "attempt"
+      ]
+    },
+    {
+      "operation_class": "idempotent_build",
+      "operation_identity": "idempotent_build:canonical-id",
+      "idempotency_key_source": "canonical input hash",
+      "retries_allowed": true,
+      "retryable_categories": [
+        "provider_transient",
+        "persistence_conflict"
+      ],
+      "maximum_attempts": 3,
+      "total_retry_budget_ms": 2000,
+      "backoff_policy": "bounded_exponential",
+      "jitter_policy": "deterministic_seeded",
+      "deadline_interaction": "remaining absolute budget",
+      "persistence_requirement": false,
+      "duplicate_suppression": "unique operation identity",
+      "ambiguity_handling": "fail closed",
+      "terminal_result": "failed",
+      "safe_observability_fields": [
+        "operation_id",
+        "attempt"
+      ]
+    },
+    {
+      "operation_class": "durable_claim",
+      "operation_identity": "durable_claim:canonical-id",
+      "idempotency_key_source": "canonical input hash",
+      "retries_allowed": true,
+      "retryable_categories": [
+        "provider_transient",
+        "persistence_conflict"
+      ],
+      "maximum_attempts": 3,
+      "total_retry_budget_ms": 2000,
+      "backoff_policy": "bounded_exponential",
+      "jitter_policy": "deterministic_seeded",
+      "deadline_interaction": "remaining absolute budget",
+      "persistence_requirement": true,
+      "duplicate_suppression": "unique operation identity",
+      "ambiguity_handling": "fail closed",
+      "terminal_result": "failed",
+      "safe_observability_fields": [
+        "operation_id",
+        "attempt"
+      ]
+    },
+    {
+      "operation_class": "durable_commit",
+      "operation_identity": "durable_commit:canonical-id",
+      "idempotency_key_source": "canonical input hash",
+      "retries_allowed": true,
+      "retryable_categories": [
+        "provider_transient",
+        "persistence_conflict"
+      ],
+      "maximum_attempts": 3,
+      "total_retry_budget_ms": 2000,
+      "backoff_policy": "bounded_exponential",
+      "jitter_policy": "deterministic_seeded",
+      "deadline_interaction": "remaining absolute budget",
+      "persistence_requirement": true,
+      "duplicate_suppression": "unique operation identity",
+      "ambiguity_handling": "fail closed",
+      "terminal_result": "failed",
+      "safe_observability_fields": [
+        "operation_id",
+        "attempt"
+      ]
+    },
+    {
+      "operation_class": "non_idempotent_submission",
+      "operation_identity": "non_idempotent_submission:canonical-id",
+      "idempotency_key_source": "explicit operator/reconciliation identity",
+      "retries_allowed": false,
+      "retryable_categories": [],
+      "maximum_attempts": 1,
+      "total_retry_budget_ms": 0,
+      "backoff_policy": "none",
+      "jitter_policy": "deterministic_seeded",
+      "deadline_interaction": "remaining absolute budget",
+      "persistence_requirement": true,
+      "duplicate_suppression": "unique operation identity",
+      "ambiguity_handling": "quarantine and reconcile",
+      "terminal_result": "ambiguous",
+      "safe_observability_fields": [
+        "operation_id",
+        "attempt"
+      ]
+    },
+    {
+      "operation_class": "ambiguous_settlement",
+      "operation_identity": "ambiguous_settlement:canonical-id",
+      "idempotency_key_source": "explicit operator/reconciliation identity",
+      "retries_allowed": false,
+      "retryable_categories": [],
+      "maximum_attempts": 1,
+      "total_retry_budget_ms": 0,
+      "backoff_policy": "none",
+      "jitter_policy": "deterministic_seeded",
+      "deadline_interaction": "remaining absolute budget",
+      "persistence_requirement": true,
+      "duplicate_suppression": "unique operation identity",
+      "ambiguity_handling": "quarantine and reconcile",
+      "terminal_result": "ambiguous",
+      "safe_observability_fields": [
+        "operation_id",
+        "attempt"
+      ]
+    },
+    {
+      "operation_class": "cleanup",
+      "operation_identity": "cleanup:canonical-id",
+      "idempotency_key_source": "canonical input hash",
+      "retries_allowed": true,
+      "retryable_categories": [
+        "provider_transient",
+        "persistence_conflict"
+      ],
+      "maximum_attempts": 3,
+      "total_retry_budget_ms": 2000,
+      "backoff_policy": "bounded_exponential",
+      "jitter_policy": "deterministic_seeded",
+      "deadline_interaction": "remaining absolute budget",
+      "persistence_requirement": false,
+      "duplicate_suppression": "unique operation identity",
+      "ambiguity_handling": "fail closed",
+      "terminal_result": "failed",
+      "safe_observability_fields": [
+        "operation_id",
+        "attempt"
+      ]
+    },
+    {
+      "operation_class": "operator_action",
+      "operation_identity": "operator_action:canonical-id",
+      "idempotency_key_source": "explicit operator/reconciliation identity",
+      "retries_allowed": false,
+      "retryable_categories": [],
+      "maximum_attempts": 1,
+      "total_retry_budget_ms": 0,
+      "backoff_policy": "none",
+      "jitter_policy": "deterministic_seeded",
+      "deadline_interaction": "remaining absolute budget",
+      "persistence_requirement": false,
+      "duplicate_suppression": "unique operation identity",
+      "ambiguity_handling": "fail closed",
+      "terminal_result": "failed",
+      "safe_observability_fields": [
+        "operation_id",
+        "attempt"
+      ]
+    }
+  ]
+}

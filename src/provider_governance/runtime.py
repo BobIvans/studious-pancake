@@ -169,6 +169,7 @@ _FAILURE_KIND_BY_VALUE = {
     "http_error": DependencyFailureKind.TRANSPORT,
     "invalid_schema": DependencyFailureKind.INVALID_SCHEMA,
     "disabled": DependencyFailureKind.DISABLED,
+    "auth": DependencyFailureKind.AUTH,
     "cancelled": DependencyFailureKind.CANCELLED,
 }
 
@@ -211,6 +212,9 @@ class ProviderGovernance:
         env: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> "ProviderGovernance":
+        provider_ids = tuple(getattr(adapter, "provider_id", None) for adapter in adapters)
+        if len(provider_ids) != len(set(provider_ids)):
+            raise ProviderGovernanceError("provider adapters must have unique IDs")
         active_env = {} if env is None else env
         manifests = {
             adapter.provider_id: entitlement_for_adapter(adapter, active_env)
@@ -242,9 +246,17 @@ class ProviderGovernance:
     ) -> T:
         return await self.scheduler.execute(request, operation)
 
-    async def record_success(self, provider_id: str) -> None:
+    async def record_success(
+        self,
+        provider_id: str,
+        operation: ProviderOperation = ProviderOperation.DISCOVERY,
+    ) -> None:
         manifest = self.entitlement(provider_id)
-        await self.dependencies.record_success(provider_id, manifest.generation)
+        await self.dependencies.record_success(
+            provider_id,
+            manifest.generation,
+            operation,
+        )
 
     async def record_failure(
         self,

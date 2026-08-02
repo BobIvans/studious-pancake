@@ -266,7 +266,11 @@ class DiscoveryPlane:
                 ProviderOperation.DISCOVERY,
             )
         else:
-            await governance.record_failure(adapter.provider_id, result.reason.value)
+            await governance.record_failure(
+                adapter.provider_id,
+                result.reason.value,
+                status_code=result.status_code,
+            )
         return result
 
     async def _invoke_provider(

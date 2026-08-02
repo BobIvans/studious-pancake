@@ -1,0 +1,22 @@
+{
+  "SPDXID": "SPDXRef-DOCUMENT",
+  "spdxVersion": "SPDX-2.3",
+  "dataLicense": "CC0-1.0",
+  "name": "studious-pancake-isolated-signer-source-sbom",
+  "documentNamespace": "https://studious-pancake.invalid/spdx/pr009/unsigned-source",
+  "creationInfo": {
+    "creators": ["Tool: repository-maintained-pr009-manifest"],
+    "created": "2026-08-02T00:00:00Z"
+  },
+  "packages": [
+    {
+      "SPDXID": "SPDXRef-Package-isolated-signer",
+      "name": "studious-pancake-isolated-signer",
+      "versionInfo": "0.1.0.dev0",
+      "downloadLocation": "NOASSERTION",
+      "filesAnalyzed": false,
+      "licenseConcluded": "NOASSERTION",
+      "licenseDeclared": "NOASSERTION"
+    }
+  ]
+}

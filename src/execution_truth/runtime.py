@@ -71,6 +71,34 @@ class PlanRef:
         _digest(self.candidate_truth_hash, "candidate_truth_hash")
         _positive_int(self.principal_lamports, "principal_lamports")
         _positive_int(self.expires_block_height, "expires_block_height")
+        expected = compute_plan_hash(
+            candidate_truth_hash=self.candidate_truth_hash,
+            principal_lamports=self.principal_lamports,
+            expires_block_height=self.expires_block_height,
+        )
+        if self.plan_hash != expected:
+            raise ExecutionTruthError("MPR_SYS_02_PLAN_HASH_CONTENT_MISMATCH")
+
+    @classmethod
+    def create(
+        cls,
+        *,
+        candidate_truth_hash: str,
+        principal_lamports: int,
+        expires_block_height: int,
+    ) -> PlanRef:
+        """Construct a plan reference whose digest is derived from its contents."""
+
+        return cls(
+            plan_hash=compute_plan_hash(
+                candidate_truth_hash=candidate_truth_hash,
+                principal_lamports=principal_lamports,
+                expires_block_height=expires_block_height,
+            ),
+            candidate_truth_hash=candidate_truth_hash,
+            principal_lamports=principal_lamports,
+            expires_block_height=expires_block_height,
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -202,51 +230,76 @@ class DurableAttemptRef:
         self._validate_stage_fields()
 
     def _validate_stage_fields(self) -> None:
+        self._validate_evidence_prefix()
         if self.stage is ExecutionStage.TERMINAL:
-            required = (
+            self._validate_terminal_fields()
+            return
+
+        if self.terminal_state is not TerminalState.NONE:
+            raise ExecutionTruthError("MPR_SYS_02_NON_TERMINAL_HAS_OUTCOME")
+        required_by_stage = (
+            (ExecutionStage.PLANNED, self.plan_hash, "plan_hash"),
+            (ExecutionStage.COMPILED, self.message_hash, "message_hash"),
+            (ExecutionStage.SIMULATED, self.simulation_hash, "simulation_hash"),
+            (
+                ExecutionStage.RECONCILED,
+                self.reconciliation_hash,
+                "reconciliation_hash",
+            ),
+        )
+        for minimum, value, name in required_by_stage:
+            if self.stage >= minimum and value is None:
+                raise ExecutionTruthError(f"MPR_SYS_02_STAGE_REQUIRES_{name.upper()}")
+
+    def _validate_evidence_prefix(self) -> None:
+        if self.message_hash is not None and self.plan_hash is None:
+            raise ExecutionTruthError("MPR_SYS_02_MESSAGE_REQUIRES_PLAN")
+        if self.simulation_hash is not None and self.message_hash is None:
+            raise ExecutionTruthError("MPR_SYS_02_SIMULATION_REQUIRES_MESSAGE")
+        if self.reconciliation_hash is not None and self.simulation_hash is None:
+            raise ExecutionTruthError("MPR_SYS_02_RECONCILIATION_REQUIRES_SIMULATION")
+
+    def _validate_terminal_fields(self) -> None:
+        if self.terminal_state is TerminalState.NONE:
+            raise ExecutionTruthError("MPR_SYS_02_TERMINAL_OUTCOME_REQUIRED")
+        if self.terminal_state is TerminalState.SUCCESS:
+            for value, name in (
                 (self.plan_hash, "plan_hash"),
                 (self.message_hash, "message_hash"),
                 (self.simulation_hash, "simulation_hash"),
-            )
-        else:
-            required_by_stage = (
-                (ExecutionStage.PLANNED, self.plan_hash, "plan_hash"),
-                (ExecutionStage.COMPILED, self.message_hash, "message_hash"),
-                (
-                    ExecutionStage.SIMULATED,
-                    self.simulation_hash,
-                    "simulation_hash",
-                ),
-                (
-                    ExecutionStage.RECONCILED,
-                    self.reconciliation_hash,
-                    "reconciliation_hash",
-                ),
-            )
-            required = tuple(
-                (value, name)
-                for minimum, value, name in required_by_stage
-                if self.stage >= minimum
-            )
-        for value, name in required:
-            if value is None:
-                raise ExecutionTruthError(f"MPR_SYS_02_STAGE_REQUIRES_{name.upper()}")
-        if self.stage is ExecutionStage.TERMINAL:
-            if self.terminal_state is TerminalState.NONE:
-                raise ExecutionTruthError("MPR_SYS_02_TERMINAL_OUTCOME_REQUIRED")
-        elif self.terminal_state is not TerminalState.NONE:
-            raise ExecutionTruthError("MPR_SYS_02_NON_TERMINAL_HAS_OUTCOME")
-        if self.terminal_state is TerminalState.SUCCESS:
-            if self.reconciliation_hash is None:
-                raise ExecutionTruthError("MPR_SYS_02_SUCCESS_REQUIRES_RECONCILIATION")
+                (self.reconciliation_hash, "reconciliation_hash"),
+            ):
+                if value is None:
+                    raise ExecutionTruthError(
+                        f"MPR_SYS_02_SUCCESS_REQUIRES_{name.upper()}"
+                    )
             if self.ambiguity_quarantined:
                 raise ExecutionTruthError("MPR_SYS_02_SUCCESS_CANNOT_BE_AMBIGUOUS")
-        if self.terminal_state is TerminalState.AMBIGUOUS:
+        elif self.terminal_state is TerminalState.AMBIGUOUS:
+            if self.message_hash is None:
+                raise ExecutionTruthError(
+                    "MPR_SYS_02_AMBIGUITY_REQUIRES_COMPILED_MESSAGE"
+                )
             if not self.ambiguity_quarantined:
                 raise ExecutionTruthError(
                     "MPR_SYS_02_AMBIGUITY_MUST_QUARANTINE_CAPITAL"
                 )
-        elif self.ambiguity_quarantined:
+        elif self.terminal_state is TerminalState.CANCELLED:
+            if any(
+                value is not None
+                for value in (
+                    self.message_hash,
+                    self.simulation_hash,
+                    self.reconciliation_hash,
+                )
+            ):
+                raise ExecutionTruthError(
+                    "MPR_SYS_02_POST_COMPILE_CANCELLATION_IS_AMBIGUOUS"
+                )
+        if (
+            self.terminal_state is not TerminalState.AMBIGUOUS
+            and self.ambiguity_quarantined
+        ):
             raise ExecutionTruthError(
                 "MPR_SYS_02_QUARANTINE_REQUIRES_AMBIGUOUS_OUTCOME"
             )
@@ -315,6 +368,10 @@ class ExecutionTruthBundle:
                 raise ExecutionTruthError(
                     "MPR_SYS_02_RECONCILIATION_PRINCIPAL_MISMATCH"
                 )
+            if self.reconciliation.network_fee_lamports != self.simulation.fee_lamports:
+                raise ExecutionTruthError(
+                    "MPR_SYS_02_RECONCILIATION_SIMULATION_FEE_MISMATCH"
+                )
             if (
                 self.durable.reconciliation_hash
                 != self.reconciliation.reconciliation_hash
@@ -351,6 +408,27 @@ class ExecutionTruthBundle:
     @property
     def bundle_hash(self) -> str:
         return _hash_json(asdict(self))
+
+
+def compute_plan_hash(
+    *,
+    candidate_truth_hash: str,
+    principal_lamports: int,
+    expires_block_height: int,
+) -> str:
+    """Derive the plan digest from every authoritative PlanRef field."""
+
+    _digest(candidate_truth_hash, "candidate_truth_hash")
+    _positive_int(principal_lamports, "principal_lamports")
+    _positive_int(expires_block_height, "expires_block_height")
+    return _hash_json(
+        {
+            "schema_version": EXECUTION_TRUTH_SCHEMA_ID,
+            "candidate_truth_hash": candidate_truth_hash,
+            "principal_lamports": principal_lamports,
+            "expires_block_height": expires_block_height,
+        }
+    )
 
 
 def validate_transition(
@@ -507,6 +585,7 @@ __all__ = [
     "RootedCandidateRef",
     "SimulationRef",
     "TerminalState",
+    "compute_plan_hash",
     "evaluate_bundle",
     "terminalize_ambiguous",
     "validate_transition",

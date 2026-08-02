@@ -58,7 +58,8 @@ def _provider_prefix(provider_id: str) -> str:
 
 
 def _role_value(adapter: Any) -> str:
-    return str(getattr(getattr(adapter, "capabilities", None), "role", "disabled").value)
+    role = getattr(getattr(adapter, "capabilities", None), "role", "disabled")
+    return str(getattr(role, "value", role))
 
 
 def _generation(adapter: Any) -> str:
@@ -263,9 +264,7 @@ class ProviderGovernance:
         retry_after_seconds: float | None = None,
     ) -> None:
         manifest = self.entitlement(provider_id)
-        kind = _FAILURE_KIND_BY_VALUE.get(
-            reason, DependencyFailureKind.UNKNOWN
-        )
+        kind = _FAILURE_KIND_BY_VALUE.get(reason, DependencyFailureKind.UNKNOWN)
         await self.dependencies.record_failure(
             provider_id,
             manifest.generation,

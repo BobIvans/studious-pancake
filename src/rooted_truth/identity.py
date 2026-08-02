@@ -61,7 +61,9 @@ class ProgramDeployment:
         }:
             raise RootedTruthError("invalid deployment state")
         if self.state == "rooted-attested" and not self.loader_id:
-            raise RootedTruthError("rooted-attested deployment requires a loader pubkey")
+            raise RootedTruthError(
+                "rooted-attested deployment requires a loader pubkey"
+            )
         if self.expires_at_slot is not None:
             integer(self.expires_at_slot, "expires_at_slot", positive=True)
 
@@ -176,7 +178,11 @@ class DeployedIdentityRegistry:
                     layout_sha256=identity,
                     evidence_sha256=identity,
                     rooted_slot=0,
-                    state="pinned-static" if entry.immutable else "blocked-unverified",
+                    state=(
+                        "pinned-static"
+                        if entry.immutable
+                        else "blocked-unverified"
+                    ),
                 )
             )
         program_tuple = tuple(programs)

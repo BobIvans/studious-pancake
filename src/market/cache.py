@@ -80,7 +80,7 @@ class GenerationBoundCache:
         self._clock = clock
         self._entries: OrderedDict[str, DerivedCacheEntry] = OrderedDict()
         self._bytes = 0
-        self._inflight: dict[str, asyncio.Task[Any]] = {}
+        self._inflight: dict[str, asyncio.Future[Any]] = {}
         self._lock = asyncio.Lock()
 
     @staticmethod
@@ -171,7 +171,7 @@ class GenerationBoundCache:
                 return cached
             task = self._inflight.get(identity)
             if task is None:
-                task = asyncio.create_task(factory())
+                task = asyncio.ensure_future(factory())
                 self._inflight[identity] = task
         try:
             result = await asyncio.shield(task)

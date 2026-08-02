@@ -152,6 +152,26 @@ def test_reconnect_blocks_until_every_required_source_is_backfilled(
     assert DurableCursorStore(tmp_path / "cursors.json").load()
 
 
+def test_restart_requires_explicit_backfill_even_with_durable_cursors(
+    tmp_path: Path,
+) -> None:
+    store = DurableCursorStore(tmp_path / "cursors.json")
+    fanout = FanoutMatrix({"circular": ("jupiter", "okx")})
+    original = WatermarkedObservationBuffer(fanout=fanout, cursor_store=store)
+    original.ingest(_observation(source="jupiter"))
+    original.ingest(_observation(source="okx"))
+    original.mark_backfill_complete("jupiter")
+    original.mark_backfill_complete("okx")
+    assert original.publish("circular", minimum_observations=2).admissible
+
+    restarted = WatermarkedObservationBuffer(fanout=fanout, cursor_store=store)
+    blocked = restarted.publish("circular", minimum_observations=2)
+
+    assert blocked.completeness is CompletenessState.BLOCKED
+    assert "backfill_pending:jupiter" in blocked.degraded_reasons
+    assert "backfill_pending:okx" in blocked.degraded_reasons
+
+
 def test_duplicate_is_dropped_and_reordered_cursor_fails_closed() -> None:
     buffer = WatermarkedObservationBuffer(
         fanout=FanoutMatrix({"circular": ("jupiter",)})

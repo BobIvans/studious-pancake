@@ -600,7 +600,7 @@ class MarketSnapshotSource(Protocol):
 
 class RecordedSnapshotSource:
     def __init__(self, quotes: Iterable[MarketObservationV2] = ()) -> None:
-        self._batch = SnapshotSet(quotes)
+        self._batch: ObservationBatch = SnapshotSet(quotes)
 
     async def latest(self) -> ObservationBatch:
         return self._batch

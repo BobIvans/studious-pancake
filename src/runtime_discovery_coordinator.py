@@ -143,7 +143,9 @@ class RuntimeDiscoveryCoordinator:
         completeness_policy = CompletenessPolicy(
             policy_id=f"mpr042.discovery-cycle:{cycle_id}",
             required_sources=required_sources,
-            max_slot_skew=max(0, maximum_slot - minimum_slot),
+            max_slot_skew=max(
+                item.pair.max_slot_skew for item in self.universe.pairs if item.required
+            ),
             minimum_observations=max(1, len(required_sources) * 2),
         )
         cycle_succeeded = set(completed_required) == set(required)

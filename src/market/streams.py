@@ -109,9 +109,9 @@ class WatermarkedObservationBuffer:
             (cursor.reconnect_epoch for cursor in self._cursors.values()), default=0
         )
         self._observations: dict[str, MarketObservationV2] = {}
-        self._backfill_complete: set[str] = {
-            cursor.source for cursor in self._cursors.values()
-        }
+        # Persisted cursors prove resume position, not source completeness.
+        # A restarted process must explicitly finish backfill before publish.
+        self._backfill_complete: set[str] = set()
 
     @property
     def reconnect_epoch(self) -> int:

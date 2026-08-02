@@ -1,0 +1,16 @@
+{
+  "schema_id": "mpr-td-02.fuzz-targets.v1",
+  "targets": [
+    {
+      "target_id": "failure-envelope",
+      "owner": "errors",
+      "input_limit_bytes": 4096,
+      "cpu_seconds": 5,
+      "memory_mb": 128,
+      "corpus": "tests/fuzz/corpus",
+      "replay": "pytest seed",
+      "profile": "scheduled_drift",
+      "network": false
+    }
+  ]
+}

@@ -213,9 +213,7 @@ class RuntimeTruthPolicy:
             allowed_transfer_hook_programs=frozenset(
                 payload["allowed_transfer_hook_programs"]
             ),
-            maximum_oracle_confidence_bps=payload[
-                "maximum_oracle_confidence_bps"
-            ],
+            maximum_oracle_confidence_bps=payload["maximum_oracle_confidence_bps"],
             maximum_oracle_divergence_bps=payload[
                 "maximum_oracle_divergence_bps"
             ],
@@ -231,9 +229,7 @@ class RuntimeTruthPolicy:
             minimum_redemption_liquidity_atomic=payload[
                 "minimum_redemption_liquidity_atomic"
             ],
-            external_required_programs=tuple(
-                payload["external_required_programs"]
-            ),
+            external_required_programs=tuple(payload["external_required_programs"]),
         )
 
 
@@ -271,9 +267,7 @@ class AssetVenueAdmission:
 
 
 def _decision(
-    domain: str,
-    reasons: list[str],
-    payload: object,
+    domain: str, reasons: list[str], payload: object
 ) -> AdmissionDecision:
     state = AdmissionState.ADMITTED if not reasons else AdmissionState.BLOCKED
     return AdmissionDecision(
@@ -325,10 +319,7 @@ def evaluate_mint(
             reasons.append("LST_EVIDENCE_INVALID")
         if not lst.redeemable or lst.protocol_paused:
             reasons.append("LST_REDEMPTION_UNAVAILABLE")
-        if (
-            lst.withdrawal_delay_slots
-            > policy.maximum_lst_withdrawal_delay_slots
-        ):
+        if lst.withdrawal_delay_slots > policy.maximum_lst_withdrawal_delay_slots:
             reasons.append("LST_WITHDRAWAL_DELAY")
         if (
             lst.validator_concentration_bps
@@ -370,10 +361,7 @@ def evaluate_pool(
         reasons.append("ORACLE_ID_MISMATCH")
     if current_root_slot > snapshot.expires_at_slot:
         reasons.append("POOL_EVIDENCE_EXPIRED")
-    if (
-        current_root_slot - oracle.observed_slot
-        > policy.maximum_oracle_staleness_slots
-    ):
+    if current_root_slot - oracle.observed_slot > policy.maximum_oracle_staleness_slots:
         reasons.append("ORACLE_STALE")
     if oracle.confidence_bps > policy.maximum_oracle_confidence_bps:
         reasons.append("ORACLE_CONFIDENCE_UNACCEPTABLE")

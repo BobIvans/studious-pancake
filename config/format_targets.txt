@@ -195,4 +195,12 @@ src/pr227_exact_money_atomic_evidence.py
 tests/test_pr227_exact_money_atomic_evidence.py
 scripts/verify_mpr32_public_entrypoint_truth.py
 tests/test_mpr32_public_entrypoint_truth.py
-src/cli_pr189.py
+src/routing/__init__.py
+src/routing/dimensions.py
+src/routing/models.py
+src/routing/route_graph.py
+src/routing/adapters.py
+src/routing/clients.py
+src/routing/registry.py
+src/providers/jupiter/__init__.py
+tests/routing/test_mpr041_canonical_semantics.py

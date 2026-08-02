@@ -4,6 +4,7 @@ The older ``adapters`` module remains the normalization compatibility layer.
 These clients add one shared transport, bounded calls, strict network-response
 validation and typed failure reporting without creating another execution path.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -17,6 +18,7 @@ from .adapters import (
     OkxDexAdapter as _OkxNormalizer,
     OpenOceanAdapter as _OpenOceanNormalizer,
 )
+from .dimensions import exact_non_negative_int, serialize_provider_bps
 from .models import (
     NormalizedQuote,
     ProviderFailureReason,
@@ -79,10 +81,7 @@ def _instruction(value: Any, label: str) -> None:
 def _slot(value: Any) -> int | None:
     if value is None:
         return None
-    result = int(value)
-    if result < 0:
-        raise ValueError("context slot cannot be negative")
-    return result
+    return exact_non_negative_int(value, "context_slot")
 
 
 def _correlation(provider: str, sources: tuple[str, ...]) -> tuple[str, ...]:
@@ -223,7 +222,7 @@ class _NetworkClientMixin:
         *,
         sources: tuple[str, ...],
         context_slot: int | None,
-        fees: tuple[QuoteFee, ...] = (),
+        fees: tuple[QuoteFee, ...] | None = None,
     ) -> NormalizedQuote:
         correlation = _correlation(self.provider_id, sources)
         response_hash = raw_hash(payload)
@@ -233,7 +232,7 @@ class _NetworkClientMixin:
             output_decimals=request.output_decimals,
             context_slot=context_slot,
             correlation_labels=correlation,
-            fees=fees,
+            fees=quote.fees if fees is None else fees,
             provenance=QuoteProvenance(
                 provider=self.provider_id,
                 endpoint=self.endpoint,
@@ -242,6 +241,8 @@ class _NetworkClientMixin:
                 provider_request_id=quote.external_id,
                 context_slot=context_slot,
                 correlation_labels=correlation,
+                request_fingerprint=request.fingerprint,
+                raw_field_paths=("provider_response",),
             ),
         )
 
@@ -274,7 +275,9 @@ class JupiterRouterAdapter(_NetworkClientMixin, _JupiterNormalizer):
             "outputMint": request.output_mint,
             "amount": str(request.amount_base_units),
             "taker": request.user_wallet,
-            "slippageBps": str(request.slippage_bps),
+            "slippageBps": serialize_provider_bps(
+                self.provider_id, "slippageBps", request.slippage
+            ),
         }
 
     @staticmethod
@@ -315,25 +318,13 @@ class JupiterRouterAdapter(_NetworkClientMixin, _JupiterNormalizer):
             self._validate_artifacts(payload)
             quote = self.normalize_build(request, payload)
             context_slot = _slot(payload.get("contextSlot"))
-            fee = payload.get("platformFee")
-            fees = (
-                (
-                    QuoteFee(
-                        "platform",
-                        rate=str(fee),
-                        source_field="platformFee",
-                    ),
-                )
-                if fee is not None
-                else ()
-            )
             result = self._enrich(
                 quote,
                 request,
                 payload,
                 sources=quote.dex_sources,
                 context_slot=context_slot,
-                fees=fees,
+                fees=quote.fees,
             )
         except (TypeError, ValueError, KeyError) as exc:
             self.circuit.record_failure()
@@ -368,16 +359,11 @@ class OkxDexAdapter(_NetworkClientMixin, _OkxNormalizer):
             data = data[0] if isinstance(data, list) else data
             data = _mapping(data, "data")
             router = _mapping(data.get("routerResult"), "routerResult")
-            if (
-                router.get("minReceiveAmount") is not None
-                and not isinstance(router.get("tx"), dict)
+            if router.get("minReceiveAmount") is not None and not isinstance(
+                router.get("tx"), dict
             ):
-                router["tx"] = {
-                    "minReceiveAmount": router["minReceiveAmount"]
-                }
-            instructions = _sequence(
-                data.get("instructionLists"), "instructionLists"
-            )
+                router["tx"] = {"minReceiveAmount": router["minReceiveAmount"]}
+            instructions = _sequence(data.get("instructionLists"), "instructionLists")
             if not instructions:
                 raise ValueError("instructionLists cannot be empty")
             for index, instruction in enumerate(instructions):
@@ -388,27 +374,14 @@ class OkxDexAdapter(_NetworkClientMixin, _OkxNormalizer):
             ):
                 require_base58(address, "lookup table address")
             quote = self.normalize(request, payload)
-            context_slot = _slot(
-                data.get("contextSlot") or router.get("contextSlot")
-            )
-            fee = router.get("tradeFee") or router.get("estimateGasFee")
+            context_slot = _slot(data.get("contextSlot") or router.get("contextSlot"))
             result = self._enrich(
                 quote,
                 request,
                 payload,
                 sources=quote.dex_sources,
                 context_slot=context_slot,
-                fees=(
-                    (
-                        QuoteFee(
-                            "provider",
-                            rate=str(fee),
-                            source_field="tradeFee/estimateGasFee",
-                        ),
-                    )
-                    if fee is not None
-                    else ()
-                ),
+                fees=quote.fees,
             )
         except (TypeError, ValueError, KeyError, AssertionError) as exc:
             self.circuit.record_failure()
@@ -433,7 +406,9 @@ class OpenOceanAdapter(_NetworkClientMixin, _OpenOceanNormalizer):
                 "inTokenAddress": request.input_mint,
                 "outTokenAddress": request.output_mint,
                 "amountDecimals": str(request.amount_base_units),
-                "slippage": str(request.slippage_bps / 100),
+                "slippage": serialize_provider_bps(
+                    self.provider_id, "slippage", request.slippage
+                ),
                 "account": request.user_wallet,
             },
         )
@@ -446,13 +421,7 @@ class OpenOceanAdapter(_NetworkClientMixin, _OpenOceanNormalizer):
                 payload,
                 sources=quote.dex_sources,
                 context_slot=_slot(data.get("contextSlot")),
-                fees=(
-                    QuoteFee(
-                        "provider",
-                        rate=quote.provider_fee,
-                        source_field="fee",
-                    ),
-                ),
+                fees=quote.fees,
             )
         except (TypeError, ValueError, KeyError) as exc:
             self.circuit.record_failure()

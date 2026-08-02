@@ -1,4 +1,5 @@
 """Provider registry and failure-isolated discovery orchestration."""
+
 from __future__ import annotations
 
 import asyncio
@@ -23,6 +24,7 @@ from .clients import (
 from .models import (
     DiscoveryBatch,
     DiscoveryResult,
+    EchoProofState,
     MinimumOutputState,
     NonSelectionReason,
     NormalizedQuote,
@@ -186,9 +188,8 @@ class DiscoveryPlane:
         adapter: ProviderAdapter,
         request: QuoteRequest,
     ) -> NormalizedQuote | ProviderFailure:
-        if (
-            adapter.provider_id == "jupiter_router"
-            and getattr(adapter, "api_key", None)
+        if adapter.provider_id == "jupiter_router" and getattr(
+            adapter, "api_key", None
         ):
             quota = getattr(adapter, "quota", None)
             if quota is None:
@@ -297,6 +298,15 @@ class RouteDiscoveryService:
             discovery.append(quote)
             if quote.minimum_output_state is not MinimumOutputState.PROVEN:
                 reasons[quote.external_id] = NonSelectionReason.UNPROVEN_MIN_OUTPUT
+                continue
+            if quote.route_graph is None:
+                reasons[quote.external_id] = NonSelectionReason.INVALID_ROUTE_GRAPH
+                continue
+            if (
+                quote.capabilities.admits_raw_instructions()
+                and quote.response_echo_state is not EchoProofState.PROVEN
+            ):
+                reasons[quote.external_id] = NonSelectionReason.UNPROVEN_RESPONSE_ECHO
                 continue
             if (
                 not quote.capabilities.admits_raw_instructions()

@@ -62,6 +62,37 @@ def _enum_value(value: Any) -> str:
     return str(getattr(value, "value", value))
 
 
+def _materialize_admission_failure(
+    provider_id: str,
+    exc: RuntimeError,
+) -> ProviderFailure | None:
+    """Preserve admission reason across reload/import class aliases."""
+
+    if not (
+        isinstance(exc, ProviderAdmissionError)
+        or getattr(exc, "governance_error_kind", None) == "provider_admission"
+    ):
+        return None
+    retryable = bool(getattr(exc, "retryable", False))
+    raw_reason = getattr(exc, "failure_reason", None)
+    try:
+        reason = ProviderFailureReason(raw_reason)
+    except (TypeError, ValueError):
+        reason = (
+            ProviderFailureReason.RATE_LIMITED
+            if retryable
+            else ProviderFailureReason.DISABLED
+        )
+    code = _enum_value(getattr(exc, "code", "unknown"))
+    detail = str(getattr(exc, "detail", str(exc)))
+    return ProviderFailure(
+        provider=provider_id,
+        reason=reason,
+        retryable=retryable,
+        detail=f"admission:{code}:{detail}",
+    )
+
+
 def _bind_contract_admission(adapter: ProviderAdapter, registry: Any) -> None:
     provider = _PROVIDER_CONTRACT_NAMES[adapter.provider_id]
     entries = tuple(registry.provider(provider))
@@ -208,7 +239,7 @@ class DiscoveryPlane:
         governance = self.registry.governance
         manifest = governance.entitlement(adapter.provider_id)
         admission = AdmissionRequest(
-            work_id=(f"discovery:{request.fingerprint}:{adapter.provider_id}"),
+            work_id=f"discovery:{request.fingerprint}:{adapter.provider_id}",
             provider_id=adapter.provider_id,
             operation=ProviderOperation.DISCOVERY,
             request_fingerprint=request.fingerprint,
@@ -224,19 +255,16 @@ class DiscoveryPlane:
                 admission,
                 lambda: self._invoke_provider(adapter, request),
             )
-        except ProviderAdmissionError as exc:
-            return ProviderFailure(
-                provider=adapter.provider_id,
-                reason=(
-                    ProviderFailureReason.RATE_LIMITED
-                    if exc.retryable
-                    else ProviderFailureReason.DISABLED
-                ),
-                retryable=exc.retryable,
-                detail=f"admission:{exc.code.value}:{exc.detail}",
-            )
+        except RuntimeError as exc:
+            failure = _materialize_admission_failure(adapter.provider_id, exc)
+            if failure is None:
+                raise
+            return failure
         if isinstance(result, NormalizedQuote):
-            await governance.record_success(adapter.provider_id)
+            await governance.record_success(
+                adapter.provider_id,
+                ProviderOperation.DISCOVERY,
+            )
         else:
             await governance.record_failure(adapter.provider_id, result.reason.value)
         return result

@@ -353,6 +353,10 @@ def _run_lightweight_inspection(args: list[str]) -> int | None:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(argv) if argv is not None else sys.argv[1:]
+    if args and args[0] == "shadow-soak":
+        from src.paper_shadow.cli import main as shadow_soak_main
+
+        return shadow_soak_main(args[1:])
     rewritten_super_mpr_a = _rewrite_super_mpr_a_command(args)
     if rewritten_super_mpr_a is not None:
         args = rewritten_super_mpr_a

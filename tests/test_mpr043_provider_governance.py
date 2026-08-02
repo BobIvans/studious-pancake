@@ -31,7 +31,6 @@ from src.routing.models import (
 )
 from src.routing.registry import DiscoveryPlane, ProviderRegistry
 
-
 SOL = "So11111111111111111111111111111111111111112"
 USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 WALLET = "11111111111111111111111111111111"
@@ -180,13 +179,9 @@ async def test_generation_and_spend_limits_fail_closed() -> None:
         )
     assert mismatch.value.code is AdmissionCode.GENERATION_MISMATCH
 
-    lease = await authority.reserve(
-        request_for(clock, work_id="spend-1", spend=80)
-    )
+    lease = await authority.reserve(request_for(clock, work_id="spend-1", spend=80))
     with pytest.raises(ProviderAdmissionError) as exhausted:
-        await authority.reserve(
-            request_for(clock, work_id="spend-2", spend=30)
-        )
+        await authority.reserve(request_for(clock, work_id="spend-2", spend=30))
     assert exhausted.value.code is AdmissionCode.SPEND_LIMIT_EXHAUSTED
     await authority.release(lease)
 

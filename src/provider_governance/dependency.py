@@ -204,9 +204,7 @@ class DependencyController:
                 retry_at=None,
             )
 
-    async def snapshot(
-        self, provider_id: str, generation: str
-    ) -> DependencySnapshot:
+    async def snapshot(self, provider_id: str, generation: str) -> DependencySnapshot:
         async with self._lock:
             state = self._state_for_generation(provider_id, generation)
             if (

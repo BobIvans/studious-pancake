@@ -54,7 +54,9 @@ class ProviderSpendAuthority:
         wall_clock: Callable[[], float] = time.time,
     ) -> None:
         if not entitlements:
-            raise ProviderGovernanceError("at least one provider entitlement is required")
+            raise ProviderGovernanceError(
+                "at least one provider entitlement is required"
+            )
         if len(entitlements) != len(set(entitlements)):
             raise ProviderGovernanceError("provider entitlement ids must be unique")
         for provider_id, manifest in entitlements.items():
@@ -85,9 +87,7 @@ class ProviderSpendAuthority:
             ) from exc
 
     def entitlements(self) -> tuple[ProviderEntitlement, ...]:
-        return tuple(
-            self._entitlements[key] for key in sorted(self._entitlements)
-        )
+        return tuple(self._entitlements[key] for key in sorted(self._entitlements))
 
     def replace_entitlement(self, manifest: ProviderEntitlement) -> None:
         """Install a reviewed generation for future reservations.
@@ -127,12 +127,15 @@ class ProviderSpendAuthority:
         state.reserved_cost_units -= lease.estimated_cost_units
         state.reserved_spend_micros -= lease.estimated_spend_micros
         state.active_leases -= 1
-        if min(
-            state.reserved_requests,
-            state.reserved_cost_units,
-            state.reserved_spend_micros,
-            state.active_leases,
-        ) < 0:
+        if (
+            min(
+                state.reserved_requests,
+                state.reserved_cost_units,
+                state.reserved_spend_micros,
+                state.active_leases,
+            )
+            < 0
+        ):
             raise ProviderGovernanceError("provider authority counters underflowed")
 
     def _expire_unissued_locked(self, now: float) -> None:
@@ -225,14 +228,11 @@ class ProviderSpendAuthority:
 
             occupied_requests = state.reserved_requests + state.committed_requests
             occupied_cost = state.reserved_cost_units + state.committed_cost_units
-            occupied_spend = (
-                state.reserved_spend_micros + state.committed_spend_micros
-            )
+            occupied_spend = state.reserved_spend_micros + state.committed_spend_micros
             if occupied_requests + 1 > request_cap:
                 code = (
                     AdmissionCode.FINALIZATION_RESERVE_PROTECTED
-                    if not is_finalization
-                    and request_cap < manifest.request_limit
+                    if not is_finalization and request_cap < manifest.request_limit
                     else AdmissionCode.REQUEST_QUOTA_EXHAUSTED
                 )
                 raise self._deny(
@@ -245,8 +245,7 @@ class ProviderSpendAuthority:
             if occupied_cost + request.estimated_cost_units > cost_cap:
                 code = (
                     AdmissionCode.FINALIZATION_RESERVE_PROTECTED
-                    if not is_finalization
-                    and cost_cap < manifest.cost_unit_limit
+                    if not is_finalization and cost_cap < manifest.cost_unit_limit
                     else AdmissionCode.COST_QUOTA_EXHAUSTED
                 )
                 raise self._deny(
@@ -257,7 +256,10 @@ class ProviderSpendAuthority:
                     retry_at=retry_at,
                 )
             if request.estimated_spend_micros:
-                if spend_cap == 0 or occupied_spend + request.estimated_spend_micros > spend_cap:
+                if (
+                    spend_cap == 0
+                    or occupied_spend + request.estimated_spend_micros > spend_cap
+                ):
                     code = (
                         AdmissionCode.FINALIZATION_RESERVE_PROTECTED
                         if not is_finalization
@@ -281,9 +283,7 @@ class ProviderSpendAuthority:
                 entitlement_generation=manifest.generation,
                 manifest_sha256=manifest.manifest_sha256,
                 reserved_at=now,
-                expires_at=min(
-                    request.deadline_at, now + request.lease_ttl_seconds
-                ),
+                expires_at=min(request.deadline_at, now + request.lease_ttl_seconds),
                 estimated_cost_units=request.estimated_cost_units,
                 estimated_spend_micros=request.estimated_spend_micros,
             )
@@ -353,7 +353,9 @@ class ProviderSpendAuthority:
             if type(cost) is not int or cost < 0:
                 raise ProviderGovernanceError("actual_cost_units must be non-negative")
             if type(spend) is not int or spend < 0:
-                raise ProviderGovernanceError("actual_spend_micros must be non-negative")
+                raise ProviderGovernanceError(
+                    "actual_spend_micros must be non-negative"
+                )
             if cost > lease.estimated_cost_units:
                 raise ProviderGovernanceError(
                     "actual cost exceeded the reservation upper bound"

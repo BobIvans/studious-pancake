@@ -16,7 +16,6 @@ from .models import (
 )
 from .scheduler import DeadlineAdmissionScheduler
 
-
 T = TypeVar("T")
 
 
@@ -52,8 +51,7 @@ def _env_float(
 
 def _provider_prefix(provider_id: str) -> str:
     return "PROVIDER_" + "".join(
-        character if character.isalnum() else "_"
-        for character in provider_id.upper()
+        character if character.isalnum() else "_" for character in provider_id.upper()
     )
 
 
@@ -81,30 +79,22 @@ def entitlement_for_adapter(
     prefix = _provider_prefix(provider_id)
     quota = getattr(adapter, "quota", None)
     limiter = getattr(adapter, "limiter", None)
-    default_limit = int(
-        getattr(quota, "limit", getattr(limiter, "max_calls", 60))
-    )
+    default_limit = int(getattr(quota, "limit", getattr(limiter, "max_calls", 60)))
     default_window = float(
         getattr(quota, "window", getattr(limiter, "window_seconds", 60.0))
     )
-    request_limit = _env_int(
-        env, f"{prefix}_REQUEST_LIMIT", default_limit, minimum=1
-    )
+    request_limit = _env_int(env, f"{prefix}_REQUEST_LIMIT", default_limit, minimum=1)
     window_seconds = _env_float(
         env, f"{prefix}_WINDOW_SECONDS", default_window, minimum=0.001
     )
-    cost_limit = _env_int(
-        env, f"{prefix}_COST_UNIT_LIMIT", request_limit, minimum=1
-    )
+    cost_limit = _env_int(env, f"{prefix}_COST_UNIT_LIMIT", request_limit, minimum=1)
     max_concurrency = _env_int(
         env,
         f"{prefix}_MAX_CONCURRENCY",
         1 if provider_id == "jupiter_router" else 2,
         minimum=1,
     )
-    spend_limit = _env_int(
-        env, f"{prefix}_SPEND_LIMIT_MICROS", 0, minimum=0
-    )
+    spend_limit = _env_int(env, f"{prefix}_SPEND_LIMIT_MICROS", 0, minimum=0)
     role = _role_value(adapter)
     operations = {
         ProviderOperation.DISCOVERY,
@@ -274,9 +264,7 @@ class ProviderGovernance:
 
     async def snapshot(self, provider_id: str) -> dict[str, object]:
         manifest = self.entitlement(provider_id)
-        dependency = await self.dependencies.snapshot(
-            provider_id, manifest.generation
-        )
+        dependency = await self.dependencies.snapshot(provider_id, manifest.generation)
         spend = await self.authority.snapshot(provider_id)
         return spend | {
             "dependency_mode": dependency.mode.value,

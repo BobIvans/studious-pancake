@@ -209,3 +209,10 @@ src/market/observations.py
 src/market/streams.py
 src/market/cache.py
 tests/test_mpr042_market_truth.py
+src/provider_governance/__init__.py
+src/provider_governance/models.py
+src/provider_governance/authority.py
+src/provider_governance/dependency.py
+src/provider_governance/scheduler.py
+src/provider_governance/runtime.py
+tests/test_mpr043_provider_governance.py

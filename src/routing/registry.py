@@ -7,6 +7,12 @@ from dataclasses import dataclass, replace
 from datetime import datetime
 from typing import Any, Mapping
 
+from src.provider_governance import (
+    AdmissionRequest,
+    ProviderAdmissionError,
+    ProviderGovernance,
+    ProviderOperation,
+)
 from src.providers.jupiter.quota import (
     JupiterQuotaError,
     JupiterQuotaManager,
@@ -105,11 +111,17 @@ class CandidateSelection:
 
 
 class ProviderRegistry:
-    def __init__(self, adapters: tuple[ProviderAdapter, ...]):
+    def __init__(
+        self,
+        adapters: tuple[ProviderAdapter, ...],
+        *,
+        governance: ProviderGovernance | None = None,
+    ) -> None:
         provider_ids = [adapter.provider_id for adapter in adapters]
         if len(provider_ids) != len(set(provider_ids)):
             raise ValueError("provider registry contains duplicate provider IDs")
         self.adapters = adapters
+        self.governance = governance or ProviderGovernance.from_adapters(adapters, {})
 
     @classmethod
     def from_env(
@@ -119,6 +131,7 @@ class ProviderRegistry:
         transport: Transport | None = None,
         jupiter_quota: JupiterQuotaManager | None = None,
         contract_registry: Any = _LOAD_DEFAULT_CONTRACT_REGISTRY,
+        governance: ProviderGovernance | None = None,
     ) -> "ProviderRegistry":
         adapters = (
             JupiterRouterAdapter(
@@ -147,7 +160,10 @@ class ProviderRegistry:
         if active_contract_registry is not None:
             for adapter in adapters:
                 _bind_contract_admission(adapter, active_contract_registry)
-        return cls(adapters)
+        return cls(
+            adapters,
+            governance=governance or ProviderGovernance.from_adapters(adapters, env),
+        )
 
     def startup_report(self) -> tuple[dict[str, str], ...]:
         rows: list[dict[str, str]] = []
@@ -158,6 +174,7 @@ class ProviderRegistry:
                 and row["state"] != "disabled_missing_credentials"
             ):
                 row["state"] = "disabled_contract"
+            row.update(self.governance.startup_state(adapter.provider_id))
             rows.append(row)
         return tuple(rows)
 
@@ -184,6 +201,47 @@ class DiscoveryPlane:
         self.provider_timeout_seconds = provider_timeout_seconds
 
     async def _call_provider(
+        self,
+        adapter: ProviderAdapter,
+        request: QuoteRequest,
+    ) -> NormalizedQuote | ProviderFailure:
+        governance = self.registry.governance
+        manifest = governance.entitlement(adapter.provider_id)
+        admission = AdmissionRequest(
+            work_id=(f"discovery:{request.fingerprint}:{adapter.provider_id}"),
+            provider_id=adapter.provider_id,
+            operation=ProviderOperation.DISCOVERY,
+            request_fingerprint=request.fingerprint,
+            fairness_key=request.fingerprint,
+            deadline_at=governance.clock() + self.provider_timeout_seconds,
+            expected_generation=manifest.generation,
+            estimated_cost_units=1,
+            estimated_spend_micros=0,
+            lease_ttl_seconds=self.provider_timeout_seconds,
+        )
+        try:
+            result = await governance.execute(
+                admission,
+                lambda: self._invoke_provider(adapter, request),
+            )
+        except ProviderAdmissionError as exc:
+            return ProviderFailure(
+                provider=adapter.provider_id,
+                reason=(
+                    ProviderFailureReason.RATE_LIMITED
+                    if exc.retryable
+                    else ProviderFailureReason.DISABLED
+                ),
+                retryable=exc.retryable,
+                detail=f"admission:{exc.code.value}:{exc.detail}",
+            )
+        if isinstance(result, NormalizedQuote):
+            await governance.record_success(adapter.provider_id)
+        else:
+            await governance.record_failure(adapter.provider_id, result.reason.value)
+        return result
+
+    async def _invoke_provider(
         self,
         adapter: ProviderAdapter,
         request: QuoteRequest,

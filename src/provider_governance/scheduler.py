@@ -6,7 +6,7 @@ import asyncio
 from collections import defaultdict
 from dataclasses import dataclass
 import time
-from typing import Awaitable, Callable, Generic, TypeVar
+from typing import Awaitable, Callable, TypeVar
 
 from .authority import ProviderSpendAuthority
 from .dependency import DependencyController
@@ -16,7 +16,6 @@ from .models import (
     ProviderAdmissionError,
     ProviderLease,
 )
-
 
 T = TypeVar("T")
 
@@ -106,8 +105,7 @@ class DeadlineAdmissionScheduler:
                 lease = await self.authority.reserve(item.request)
             except ProviderAdmissionError as exc:
                 if exc.retryable and (
-                    exc.retry_at is None
-                    or exc.retry_at < item.request.deadline_at
+                    exc.retry_at is None or exc.retry_at < item.request.deadline_at
                 ):
                     continue
                 self._pending.remove(item)

@@ -127,12 +127,16 @@ class ProviderEntitlement:
             raise ProviderGovernanceError("provider_id is required")
         if not isinstance(self.generation, str) or not self.generation:
             raise ProviderGovernanceError("generation is required")
-        operations = frozenset(ProviderOperation(item) for item in self.allowed_operations)
+        operations = frozenset(
+            ProviderOperation(item) for item in self.allowed_operations
+        )
         if not operations:
             raise ProviderGovernanceError("allowed_operations cannot be empty")
         object.__setattr__(self, "allowed_operations", operations)
         object.__setattr__(
-            self, "window_seconds", _positive_float(self.window_seconds, "window_seconds")
+            self,
+            "window_seconds",
+            _positive_float(self.window_seconds, "window_seconds"),
         )
         _positive_int(self.request_limit, "request_limit")
         _positive_int(self.cost_unit_limit, "cost_unit_limit")
@@ -167,21 +171,22 @@ class ProviderEntitlement:
             raise ProviderGovernanceError(
                 "finalization spend reserve must be smaller than spend limit"
             )
-        if any(
-            value > 0
-            for value in (
-                self.finalization_reserve_requests,
-                self.finalization_reserve_cost_units,
-                self.finalization_reserve_spend_micros,
+        if (
+            any(
+                value > 0
+                for value in (
+                    self.finalization_reserve_requests,
+                    self.finalization_reserve_cost_units,
+                    self.finalization_reserve_spend_micros,
+                )
             )
-        ) and ProviderOperation.FINALIZATION not in operations:
+            and ProviderOperation.FINALIZATION not in operations
+        ):
             raise ProviderGovernanceError(
                 "finalization reserves require FINALIZATION entitlement"
             )
         if self.expires_at_epoch_seconds is not None:
-            _positive_int(
-                self.expires_at_epoch_seconds, "expires_at_epoch_seconds"
-            )
+            _positive_int(self.expires_at_epoch_seconds, "expires_at_epoch_seconds")
         if not isinstance(self.source_ref, str) or not self.source_ref:
             raise ProviderGovernanceError("source_ref is required")
         payload = {

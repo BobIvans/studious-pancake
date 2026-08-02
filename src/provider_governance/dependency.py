@@ -17,12 +17,27 @@ from .models import (
 )
 
 
+def _provider_failure_reason(reason: str) -> str | None:
+    raw = reason.rsplit(":", 1)[-1]
+    return {
+        "rate_limited": "rate_limited",
+        "quota": "rate_limited",
+        "circuit_open": "circuit_open",
+        "timeout": "timeout",
+        "transport": "transport",
+        "invalid_schema": "invalid_schema",
+        "disabled": "disabled",
+        "auth": "disabled",
+    }.get(raw)
+
+
 class DependencyController:
-    """Owns provider degraded/cooldown/disabled transitions.
+    """Own provider degraded/cooldown/disabled transitions.
 
     Degraded providers may still serve discovery, backfill and health probes, but
     refinement/finalization remain fail-closed until a successful generation-
-    bound probe recovers the dependency.
+    bound health probe recovers the dependency. Ordinary discovery success does
+    not silently re-enable dangerous operations.
     """
 
     def __init__(
@@ -97,6 +112,7 @@ class DependencyController:
                     AdmissionCode.DEPENDENCY_DISABLED,
                     state.reason,
                     retryable=False,
+                    failure_reason=_provider_failure_reason(state.reason),
                 )
             if state.mode is DependencyMode.COOLDOWN:
                 if operation is ProviderOperation.HEALTH_PROBE:
@@ -107,6 +123,7 @@ class DependencyController:
                     state.reason,
                     retryable=True,
                     retry_at=state.retry_at,
+                    failure_reason=_provider_failure_reason(state.reason),
                 )
             if state.mode is DependencyMode.DEGRADED and operation in {
                 ProviderOperation.REFINEMENT,
@@ -117,18 +134,42 @@ class DependencyController:
                     AdmissionCode.DEGRADED_OPERATION_DENIED,
                     state.reason,
                     retryable=True,
+                    failure_reason=_provider_failure_reason(state.reason),
                 )
 
-    async def record_success(self, provider_id: str, generation: str) -> None:
+    async def record_success(
+        self,
+        provider_id: str,
+        generation: str,
+        operation: ProviderOperation = ProviderOperation.DISCOVERY,
+    ) -> None:
+        """Record success without bypassing probe-required recovery.
+
+        A health probe may restore the current generation. A normal operation
+        resets counters only while the dependency is already active; discovery
+        or backfill success in degraded mode does not re-enable refinement or
+        finalization.
+        """
+
         async with self._lock:
-            self._states[provider_id] = DependencySnapshot(
-                provider_id=provider_id,
-                generation=generation,
-                mode=DependencyMode.ACTIVE,
-                consecutive_failures=0,
-                reason="generation_bound_probe_succeeded",
-                retry_at=None,
-            )
+            state = self._state_for_generation(provider_id, generation)
+            if operation is ProviderOperation.HEALTH_PROBE:
+                self._states[provider_id] = DependencySnapshot(
+                    provider_id=provider_id,
+                    generation=generation,
+                    mode=DependencyMode.ACTIVE,
+                    consecutive_failures=0,
+                    reason="generation_bound_probe_succeeded",
+                    retry_at=None,
+                )
+                return
+            if state.mode is DependencyMode.ACTIVE:
+                self._states[provider_id] = replace(
+                    state,
+                    consecutive_failures=0,
+                    reason=f"operation_succeeded:{operation.value}",
+                    retry_at=None,
+                )
 
     async def record_failure(
         self,

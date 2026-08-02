@@ -212,7 +212,9 @@ class ProviderGovernance:
         env: Mapping[str, str] | None = None,
         **kwargs: Any,
     ) -> "ProviderGovernance":
-        provider_ids = tuple(getattr(adapter, "provider_id", None) for adapter in adapters)
+        provider_ids = tuple(
+            getattr(adapter, "provider_id", None) for adapter in adapters
+        )
         if len(provider_ids) != len(set(provider_ids)):
             raise ProviderGovernanceError("provider adapters must have unique IDs")
         active_env = {} if env is None else env

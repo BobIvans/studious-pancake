@@ -1,0 +1,28 @@
+{
+  "schema_version": "mpr41.trusted-provider-data-plane.v1",
+  "mpr_id": "MPR-41",
+  "evidence_kind": "trusted-provider-data-plane",
+  "default_off": true,
+  "requires_one_transport_authority": true,
+  "requires_durable_webhook_ack": true,
+  "requires_provider_provenance": true,
+  "requires_ambient_proxy_disabled": true,
+  "requires_strict_json_decoding": true,
+  "requires_durable_quota_and_retry_state": true,
+  "forbidden_runtime_claims": [
+    "source_only",
+    "live_enabled",
+    "signer_loaded",
+    "sender_loaded",
+    "jito_settlement_authority"
+  ],
+  "network_bypass_rules": [
+    "MPR41_DIRECT_AIOHTTP_CLIENT",
+    "MPR41_DIRECT_HTTPX_CLIENT",
+    "MPR41_DIRECT_REQUESTS_CALL",
+    "MPR41_DIRECT_URLLIB_CALL",
+    "MPR41_DIRECT_SOCKET_CONNECT",
+    "MPR41_AMBIENT_PROXY_TRUST"
+  ],
+  "production_ready": false
+}

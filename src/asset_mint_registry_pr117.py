@@ -13,17 +13,12 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Mapping, Sequence
 
-from src.config.chain_registry import (
-    TOKEN_2022_PROGRAM_ADDRESS,
-    TOKEN_PROGRAM_ADDRESS,
-)
-
 PR117_SCHEMA_VERSION = "pr117.asset-mint-registry.v1"
 PR117_RESULT_SCHEMA_VERSION = "pr117.asset-mint-registry-result.v1"
 PR117_DEFAULT_REGISTRY_PATH = "src/resources/asset_mint_registry_pr117.json"
 PR117_DEFAULT_UNIVERSE_PATH = "src/resources/discovery_universe.json"
-LEGACY_SPL_TOKEN_PROGRAM_ID = TOKEN_PROGRAM_ADDRESS
-TOKEN_2022_PROGRAM_ID = TOKEN_2022_PROGRAM_ADDRESS
+LEGACY_SPL_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+TOKEN_2022_PROGRAM_ID = "TokenzQdBNbLqP5VEhdkAS6EPFJmNchboJLH2e2UrfW"
 
 _BASE58_RE = re.compile(r"^[1-9A-HJ-NP-Za-km-z]{32,44}$")
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
@@ -225,14 +220,13 @@ def _require_evidence(
         return
     evidence = _mapping(value, f"{kind.lower()}_evidence")
     reviewed = _string(evidence, "status") == "reviewed" and bool(
-        (_optional_string(eividence, "reviewer") or "").strip()
+        (_optional_string(evidence, "reviewer") or "").strip()
     )
     if not reviewed:
         execution_blockers.append(f"PR117_{kind}_EVIDENCE_NOT_REVIEWED:{symbol}")
-    slot = _optional_int(evidence, "slot")
-    if slot is None or slot <= 0:
+    if _optional_int(evidence, "slot") is None or _optional_int(evidence, "slot") <= 0:
         execution_blockers.append(f"PR117_{kind}_EVIDENCE_SLOT_MISSING:{symbol}")
-    sha256 = _optional_string(eividence, "sha256")
+    sha256 = _optional_string(evidence, "sha256")
     if sha256 is None or not _valid_sha256(sha256):
         execution_blockers.append(f"PR117_{kind}_EVIDENCE_HASH_INVALID:{symbol}")
 

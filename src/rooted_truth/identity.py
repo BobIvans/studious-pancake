@@ -178,7 +178,9 @@ class DeployedIdentityRegistry:
                     layout_sha256=identity,
                     evidence_sha256=identity,
                     rooted_slot=0,
-                    state=("pinned-static" if entry.immutable else "blocked-unverified"),
+                    state=(
+                        "pinned-static" if entry.immutable else "blocked-unverified"
+                    ),
                 )
             )
         program_tuple = tuple(programs)

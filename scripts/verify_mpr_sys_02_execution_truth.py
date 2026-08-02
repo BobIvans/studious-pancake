@@ -48,8 +48,7 @@ def _fixture() -> ExecutionTruthBundle:
         admission_hash=_digest("c"),
         root_slot=100,
     )
-    plan = PlanRef(
-        plan_hash=_digest("d"),
+    plan = PlanRef.create(
         candidate_truth_hash=rooted.candidate_truth_hash,
         principal_lamports=1_000,
         expires_block_height=500,

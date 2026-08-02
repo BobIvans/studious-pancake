@@ -1,0 +1,135 @@
+{
+  "schema_version": "mpr-rp-01.command-capabilities.v1",
+  "commands": {
+    "flashloan-bot": {
+      "dependencies": [
+        {
+          "module": "src.cli_entrypoint",
+          "symbol": "main",
+          "class": "mandatory_feature"
+        },
+        {
+          "module": "src.runtime.bootstrap",
+          "symbol": "BootstrapContext",
+          "class": "mandatory_safety_authority"
+        }
+      ]
+    },
+    "flashloan-bot-healthcheck": {
+      "dependencies": [
+        {
+          "module": "src.container_runtime",
+          "symbol": "healthcheck_main",
+          "class": "mandatory_feature"
+        },
+        {
+          "module": "src.observability.management_plane_pr170",
+          "symbol": "read_signed_state_snapshot",
+          "class": "mandatory_safety_authority"
+        }
+      ]
+    },
+    "flashloan-bot.run": {
+      "dependencies": [
+        {
+          "module": "src.runtime.platform_identity",
+          "symbol": "qualify_current_platform",
+          "class": "mandatory_safety_authority"
+        },
+        {
+          "module": "src.cli",
+          "symbol": "main",
+          "class": "mandatory_feature"
+        }
+      ]
+    },
+    "flashloan-bot.status": {
+      "dependencies": [
+        {
+          "module": "src.capabilities",
+          "symbol": "CapabilityMatrix",
+          "class": "mandatory_safety_authority"
+        },
+        {
+          "module": "src.config.runtime",
+          "symbol": "load_runtime_config",
+          "class": "mandatory_feature"
+        }
+      ]
+    },
+    "flashloan-bot.transaction-build": {
+      "dependencies": [
+        {
+          "module": "solders.pubkey",
+          "symbol": "Pubkey",
+          "class": "mandatory_safety_authority",
+          "probe": "src.runtime.platform_identity:probe_solders_known_answers"
+        },
+        {
+          "module": "solders.transaction",
+          "symbol": "VersionedTransaction",
+          "class": "mandatory_feature"
+        },
+        {
+          "module": "solana",
+          "class": "mandatory_feature"
+        }
+      ]
+    },
+    "flashloan-checks": {
+      "dependencies": [
+        {
+          "module": "src.automation_cli_pr189",
+          "symbol": "main",
+          "class": "mandatory_feature"
+        }
+      ]
+    },
+    "flashloan-contracts": {
+      "dependencies": [
+        {
+          "module": "src.external_contracts.cli_pr189",
+          "symbol": "main",
+          "class": "mandatory_feature"
+        },
+        {
+          "module": "src.external_contracts.registry",
+          "symbol": "ExternalContractRegistry",
+          "class": "mandatory_safety_authority"
+        }
+      ]
+    },
+    "flashloan-external-resources": {
+      "dependencies": [
+        {
+          "module": "src.external_resources.cli",
+          "symbol": "main",
+          "class": "mandatory_feature"
+        },
+        {
+          "module": "sqlite3",
+          "class": "mandatory_safety_authority"
+        },
+        {
+          "module": "httpx",
+          "class": "optional_non_authoritative_enhancement"
+        }
+      ]
+    },
+    "flashloan-release-evidence": {
+      "dependencies": [
+        {
+          "module": "src.release_gate.materialized_evidence",
+          "symbol": "main",
+          "class": "mandatory_feature"
+        },
+        {
+          "module": "solders.keypair",
+          "symbol": "Keypair",
+          "class": "mandatory_safety_authority",
+          "probe": "src.runtime.platform_identity:probe_solders_known_answers"
+        }
+      ]
+    }
+  }
+}

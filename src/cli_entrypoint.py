@@ -19,7 +19,11 @@ from importlib import import_module
 import json
 import os
 import sys
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
+
+from src.runtime.bootstrap import BootstrapContext
+from src.runtime.command_capabilities import CommandCapabilityManifest
+from src.runtime.platform_identity import load_platform_policy, qualify_platform
 
 from src.super_mpr_a_runtime_gateway import rewrite_canonical_command
 
@@ -37,9 +41,13 @@ class _LazyCliModule:
     def __init__(self, module_name: str) -> None:
         self._module_name = module_name
 
-    def main(self, argv: Sequence[str] | None = None) -> int:
+    def main(
+        self,
+        argv: Sequence[str] | None = None,
+        **kwargs: Any,
+    ) -> int:
         module = import_module(self._module_name)
-        return int(module.main(argv))
+        return int(module.main(argv, **kwargs))
 
 
 # MPR-CLOSE-24/SUPER-MPR-A tests monkeypatch these module-level attributes
@@ -89,11 +97,16 @@ def _is_run_mode_paper(args: list[str]) -> bool:
     return _requested_run_mode(args) == "paper"
 
 
-def _consume_legacy_paper_args(args: list[str]) -> list[str]:
-    """Map old paper CLI flags to the active durable paper service contract."""
+def _consume_legacy_paper_args(
+    args: list[str],
+    *,
+    environment_overrides: dict[str, str] | None = None,
+) -> list[str]:
+    """Translate legacy paper flags without mutating process-global environment."""
 
     if not _is_run_mode_paper(args):
         return args
+    overrides = environment_overrides if environment_overrides is not None else {}
     forwarded: list[str] = []
     legacy_smoke = False
     index = 0
@@ -101,12 +114,12 @@ def _consume_legacy_paper_args(args: list[str]) -> list[str]:
         item = args[index]
         if item == "--db-path":
             if index + 1 < len(args):
-                os.environ[PAPER_DB_ENV] = args[index + 1]
+                overrides[PAPER_DB_ENV] = args[index + 1]
                 legacy_smoke = True
                 index += 2
                 continue
         elif item.startswith("--db-path="):
-            os.environ[PAPER_DB_ENV] = item.partition("=")[2]
+            overrides[PAPER_DB_ENV] = item.partition("=")[2]
             legacy_smoke = True
             index += 1
             continue
@@ -119,8 +132,8 @@ def _consume_legacy_paper_args(args: list[str]) -> list[str]:
         forwarded.append(item)
         index += 1
     if legacy_smoke:
-        os.environ.setdefault(PAPER_MAX_CYCLES_ENV, "1")
-        os.environ.setdefault(PAPER_IDLE_DELAY_ENV, "0")
+        overrides.setdefault(PAPER_MAX_CYCLES_ENV, "1")
+        overrides.setdefault(PAPER_IDLE_DELAY_ENV, "0")
     return forwarded
 
 
@@ -163,6 +176,32 @@ def _inspection_parser() -> argparse.ArgumentParser:
     )
     capabilities_parser.add_argument("--json", action="store_true", dest="as_json")
 
+    admission_parser = subparsers.add_parser(
+        "runtime-admission",
+        help="materialize platform and command dependency admission evidence",
+    )
+    admission_parser.add_argument(
+        "--command",
+        dest="capability_command",
+        default="flashloan-bot.status",
+        choices=(
+            "flashloan-bot",
+            "flashloan-bot-healthcheck",
+            "flashloan-bot.status",
+            "flashloan-bot.run",
+            "flashloan-bot.transaction-build",
+            "flashloan-checks",
+            "flashloan-contracts",
+            "flashloan-external-resources",
+            "flashloan-release-evidence",
+        ),
+    )
+    admission_parser.add_argument(
+        "--mode", choices=("disabled", "paper", "shadow"), default="disabled"
+    )
+    admission_parser.add_argument("--native-known-answers", action="store_true")
+    admission_parser.add_argument("--json", action="store_true", dest="as_json")
+
     config_parser = subparsers.add_parser(
         "config", help="inspect or validate immutable runtime configuration"
     )
@@ -176,14 +215,24 @@ def _inspection_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def _load_config(config_file: str | None, *, mode: str | None = None) -> Any:
+def _load_config(
+    config_file: str | None,
+    *,
+    mode: str | None = None,
+    bootstrap_context: BootstrapContext | None = None,
+) -> Any:
     from src.config.runtime import load_runtime_config
 
     overrides: dict[str, Any] = {}
     if mode and mode != LIVE_MODE:
         overrides["runtime.mode"] = mode
+    environ: Mapping[str, str] = (
+        bootstrap_context.environment
+        if bootstrap_context is not None
+        else dict(os.environ)
+    )
     return load_runtime_config(
-        config_file, cli_overrides=overrides or None, environ=os.environ
+        config_file, cli_overrides=overrides or None, environ=environ
     )
 
 
@@ -193,10 +242,25 @@ def _capability_matrix() -> Any:
     return CapabilityMatrix.load_default()
 
 
-def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]:
-    config = _load_config(config_file)
+def _inspection_status_payload(
+    config_file: str | None = None,
+    *,
+    bootstrap_context: BootstrapContext | None = None,
+) -> dict[str, Any]:
+    context = bootstrap_context or BootstrapContext.capture(
+        ("status",), command="flashloan-bot.status"
+    )
+    config = _load_config(config_file, bootstrap_context=context)
     matrix = _capability_matrix()
     path_errors = tuple(matrix.validate_paths())
+    command_admission = CommandCapabilityManifest.load().evaluate(
+        "flashloan-bot.status"
+    )
+    platform_admission = qualify_platform(
+        context.platform_identity,
+        requested_mode="disabled",
+        policy=load_platform_policy(),
+    )
     return {
         "schema_version": "mpr-close-01.dependency-light-status.v1",
         "product_state": matrix.product_state,
@@ -222,6 +286,13 @@ def _inspection_status_payload(config_file: str | None = None) -> dict[str, Any]
         "signer_loaded": False,
         "sender_loaded": False,
         "private_key_material_allowed": False,
+        "bootstrap": {
+            "fingerprint": context.fingerprint,
+            "working_root": str(context.working_root),
+            "invocation_id": context.invocation_id,
+        },
+        "platform_admission": platform_admission.to_dict(),
+        "command_admission": command_admission.to_dict(),
     }
 
 
@@ -256,15 +327,22 @@ def _print_capabilities(*, as_json: bool) -> None:
         )
 
 
-def _run_config_doctor(args: argparse.Namespace) -> int:
+def _run_config_doctor(
+    args: argparse.Namespace,
+    *,
+    bootstrap_context: BootstrapContext | None = None,
+) -> int:
     from src.config.doctor import run_config_doctor
 
-    config = _load_config(args.config_file)
+    context = bootstrap_context or BootstrapContext.capture(
+        ("config", "doctor"), command="flashloan-bot.config.doctor"
+    )
+    config = _load_config(args.config_file, bootstrap_context=context)
     report = run_config_doctor(
         config,
         online=args.online,
         check_secrets=args.check_secrets,
-        environ=os.environ,
+        environ=context.environment,
     )
     if args.as_json:
         print(json.dumps(report.to_dict(), indent=2, sort_keys=True))
@@ -278,8 +356,14 @@ def _run_config_doctor(args: argparse.Namespace) -> int:
     return 0 if report.ok else 2
 
 
-def _run_disabled_or_dry_mode(args: argparse.Namespace) -> int:
-    payload = _inspection_status_payload(args.config_file)
+def _run_disabled_or_dry_mode(
+    args: argparse.Namespace,
+    *,
+    bootstrap_context: BootstrapContext | None = None,
+) -> int:
+    payload = _inspection_status_payload(
+        args.config_file, bootstrap_context=bootstrap_context
+    )
     if args.as_json:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
@@ -305,14 +389,24 @@ def _inspection_command_name(args: list[str]) -> str | None:
     return None
 
 
-def _run_lightweight_inspection(args: list[str]) -> int | None:
+def _run_lightweight_inspection(
+    args: list[str],
+    *,
+    bootstrap_context: BootstrapContext | None = None,
+) -> int | None:
     """Handle commands that must not import heavy runtime modules before dispatch."""
 
     command_name = _inspection_command_name(args)
     if not args or command_name in {"--help", "-h"}:
         _inspection_parser().print_help()
         return 0
-    if command_name not in {"status", "capabilities", "config", "run"}:
+    if command_name not in {
+        "status",
+        "capabilities",
+        "runtime-admission",
+        "config",
+        "run",
+    }:
         return None
     if command_name == "run" and _requested_run_mode(args) == "paper":
         return None
@@ -329,56 +423,105 @@ def _run_lightweight_inspection(args: list[str]) -> int | None:
 
     if parsed.command == "status":
         _print_status(
-            _inspection_status_payload(parsed.config_file),
+            _inspection_status_payload(
+                parsed.config_file, bootstrap_context=bootstrap_context
+            ),
             as_json=parsed.as_json,
         )
         return 0
     if parsed.command == "capabilities":
         _print_capabilities(as_json=parsed.as_json)
         return 0
+    if parsed.command == "runtime-admission":
+        context = bootstrap_context or BootstrapContext.capture(
+            args, command=parsed.command
+        )
+        command_report = CommandCapabilityManifest.load().evaluate(
+            parsed.capability_command
+        )
+        platform_report = qualify_platform(
+            context.platform_identity,
+            requested_mode=parsed.mode,
+            policy=load_platform_policy(),
+            run_native_known_answers=parsed.native_known_answers,
+        )
+        payload = {
+            "schema_version": "mpr-rp-01.runtime-admission-bundle.v1",
+            "bootstrap_sha256": context.fingerprint,
+            "platform": platform_report.to_dict(),
+            "command": command_report.to_dict(),
+            "admitted": platform_report.admitted and command_report.admitted,
+        }
+        print(json.dumps(payload, indent=2, sort_keys=True))
+        return 0 if payload["admitted"] else 5
     if parsed.command == "config" and parsed.config_command == "doctor":
-        return _run_config_doctor(parsed)
+        return _run_config_doctor(parsed, bootstrap_context=bootstrap_context)
     if parsed.command == "run" and parsed.mode in {"disabled", LIVE_MODE}:
         if parsed.mode == LIVE_MODE:
             print(
-                "LIVE_MODE_UNAVAILABLE: live submission is hard-denied by the product contract.",
+                "LIVE_MODE_UNAVAILABLE: live submission is hard-denied by the "
+                "product contract.",
                 file=sys.stderr,
             )
             return 4
-        return _run_disabled_or_dry_mode(parsed)
+        return _run_disabled_or_dry_mode(
+            parsed, bootstrap_context=bootstrap_context
+        )
     if parsed.command == "run" and parsed.dry_run and parsed.mode != "paper":
-        return _run_disabled_or_dry_mode(parsed)
+        return _run_disabled_or_dry_mode(
+            parsed, bootstrap_context=bootstrap_context
+        )
     return None
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = list(argv) if argv is not None else sys.argv[1:]
-    if args and args[0] == "shadow-soak":
-        from src.paper_shadow.cli import main as shadow_soak_main
+    command = _inspection_command_name(args) or "flashloan-bot.run"
+    context = BootstrapContext.capture(args, command=command)
+    correlation_token = context.activate_correlation()
+    try:
+        if args and args[0] == "shadow-soak":
+            from src.paper_shadow.cli import main as shadow_soak_main
 
-        return shadow_soak_main(args[1:])
-    rewritten_super_mpr_a = _rewrite_super_mpr_a_command(args)
-    if rewritten_super_mpr_a is not None:
-        args = rewritten_super_mpr_a
+            return shadow_soak_main(args[1:])
+        rewritten_super_mpr_a = _rewrite_super_mpr_a_command(args)
+        if rewritten_super_mpr_a is not None:
+            args = rewritten_super_mpr_a
 
-    inspection_exit = _run_lightweight_inspection(args)
-    if inspection_exit is not None:
-        return inspection_exit
+        inspection_exit = _run_lightweight_inspection(
+            args, bootstrap_context=context
+        )
+        if inspection_exit is not None:
+            return inspection_exit
 
-    if args and args[0] == "checks":
-        return automation_cli_pr189.main(args[1:])
-    if args and args[0] == "paper-vertical":
-        return automation_cli_pr189.main(args)
-    if args and args[0] == "readiness":
-        return automation_cli_pr189.main(["production-debt", *args[1:]])
-    if args and args[0] == "release-soak":
-        return automation_cli_pr189.main(args)
+        if args and args[0] == "checks":
+            return automation_cli_pr189.main(args[1:])
+        if args and args[0] == "paper-vertical":
+            return automation_cli_pr189.main(args)
+        if args and args[0] == "readiness":
+            return automation_cli_pr189.main(["production-debt", *args[1:]])
+        if args and args[0] == "release-soak":
+            return automation_cli_pr189.main(args)
 
-    rewritten = _rewrite_legacy_preflight(args)
-    if rewritten is not None:
-        return automation_cli_pr189.main(rewritten)
+        rewritten = _rewrite_legacy_preflight(args)
+        if rewritten is not None:
+            return automation_cli_pr189.main(rewritten)
 
-    return legacy_cli.main(_consume_legacy_paper_args(args))
+        environment_overrides: dict[str, str] = {}
+        forwarded = _consume_legacy_paper_args(
+            args, environment_overrides=environment_overrides
+        )
+        delegated_context = context.with_environment_overrides(environment_overrides)
+        if isinstance(legacy_cli, _LazyCliModule):
+            return legacy_cli.main(
+                forwarded, bootstrap_context=delegated_context
+            )
+        # Compatibility with tests/downstream monkeypatches that provide a
+        # one-argument module-shaped fake.  The real installed path always
+        # receives the immutable bootstrap context.
+        return legacy_cli.main(forwarded)
+    finally:
+        BootstrapContext.reset_correlation(correlation_token)
 
 
 if __name__ == "__main__":

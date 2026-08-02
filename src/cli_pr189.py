@@ -1,12 +1,14 @@
 """Compatibility alias for the semantic :mod:`src.cli_entrypoint` owner.
 
-The installed console script may continue to target this module for compatibility,
-but all dispatch policy and runtime behavior live in ``src.cli_entrypoint``.
+The installed console script continues to target this module.  Active ``run``
+commands pass through the immutable MPR-RP runtime adapter; inspection and
+operational aliases remain owned by :mod:`src.cli_entrypoint`.
 """
 
 from __future__ import annotations
 
 from collections.abc import Sequence
+import sys
 
 from src import cli_entrypoint as _impl
 
@@ -25,11 +27,20 @@ PAPER_IDLE_DELAY_ENV = _impl.PAPER_IDLE_DELAY_ENV
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    """Delegate to the semantic owner while preserving monkeypatch compatibility."""
+    """Dispatch active runtime through immutable admission, otherwise delegate."""
 
+    args = list(argv) if argv is not None else sys.argv[1:]
+    default_owners = (
+        automation_cli_pr189 is _impl.automation_cli_pr189
+        and legacy_cli is _impl.legacy_cli
+    )
+    if default_owners and "run" in args:
+        from src.runtime import runtime_entrypoint as runtime_adapter
+
+        return runtime_adapter.main(args)
     _impl.automation_cli_pr189 = automation_cli_pr189
     _impl.legacy_cli = legacy_cli
-    return _impl.main(argv)
+    return _impl.main(args)
 
 
 if __name__ == "__main__":

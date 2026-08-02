@@ -88,9 +88,7 @@ async def test_scheduler_reranks_fairness_after_each_grant() -> None:
 
     # Exhaust the first window without changing the scheduler's fairness counts.
     for index in range(3):
-        lease = await authority.reserve(
-            _request(clock, f"seed-{index}", "seed")
-        )
+        lease = await authority.reserve(_request(clock, f"seed-{index}", "seed"))
         await authority.mark_issued(lease)
         await authority.complete(lease)
 

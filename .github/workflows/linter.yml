@@ -32,25 +32,94 @@ jobs:
       - run: python -m pip install --requirement requirements.txt
       - run: python -m pip install --requirement requirements-dev.txt
       - run: python -m pip install --no-deps .
-      - name: Diagnose critical lint
+      - name: Diagnose dependency consistency
+        continue-on-error: true
+        run: python -m pip check
+      - name: Diagnose dependency vulnerabilities
+        continue-on-error: true
+        run: python -m pip_audit -r requirements.txt --strict --progress-spinner off
+      - name: Diagnose authority map
+        continue-on-error: true
+        run: python scripts/validate_authority_map.py
+      - name: Diagnose package smoke
+        continue-on-error: true
+        run: python scripts/package_smoke.py
+      - name: Diagnose PR194 required controls
+        continue-on-error: true
+        run: python scripts/verify_pr194_required_controls.py
+      - name: Diagnose PR194 trusted foundation
+        continue-on-error: true
+        run: python scripts/verify_pr194_trusted_foundation.py --json
+      - name: Diagnose MPR32 public entrypoint truth
+        continue-on-error: true
+        run: python scripts/verify_mpr32_public_entrypoint_truth.py --json
+      - name: Diagnose PR200 production cutover
+        continue-on-error: true
+        run: python scripts/verify_pr200_production_cutover.py --json
+      - name: Diagnose PR206 durable state
+        continue-on-error: true
+        run: python scripts/verify_pr206_durable_state.py --json
+      - name: Diagnose MPR-TD-01 canonical surface
+        continue-on-error: true
+        run: python scripts/verify_mpr_td_01_canonical_surface.py --json
+      - name: Diagnose MPR-TD-02 failure verification
+        continue-on-error: true
+        run: python scripts/verify_mpr_td_02_failure_verification.py --json
+      - name: Diagnose MPR-TD-03 capacity storage
+        continue-on-error: true
+        run: python scripts/verify_mpr_td_03_capacity_storage.py --json
+      - name: Diagnose MPR-TD-04 upgrade security
+        continue-on-error: true
+        run: python scripts/verify_mpr_td_04_upgrade_security.py --json
+      - name: Diagnose compileall
+        continue-on-error: true
+        run: python -m compileall -q arb_bot.py src scripts tests
+      - name: Diagnose status entrypoint
+        continue-on-error: true
+        run: python arb_bot.py status --json
+      - name: Diagnose capabilities entrypoint
+        continue-on-error: true
+        run: python arb_bot.py capabilities --json
+      - name: Diagnose curated regression suite
         continue-on-error: true
         run: >-
-          python -m flake8 arb_bot.py src scripts tests
-          --count --select=E9,F63,F7,F82 --show-source --statistics
-      - name: Diagnose formatting
+          python -m pytest
+          tests/test_pr01_authority_map.py
+          tests/test_pr023_runtime_truth.py
+          tests/test_launcher_startup_smoke.py
+          tests/test_import_smoke.py
+          tests/test_quality_quarantine.py
+          tests/test_pr087_package_boundary.py
+          tests/test_pr101_marginfi_complete_protocol_evidence.py
+          tests/test_pr106_canonical_sender_lifecycle_disabled.py
+          tests/test_pr115_simulation_owned_economic_proof.py
+          tests/test_pr116_coherent_marginfi_snapshot_oracle.py
+          tests/test_pr121_single_durable_lifecycle_truth.py
+          tests/test_pr120_secret_resolver_config_jito.py
+          tests/test_pr125_lst_governance_policy.py
+          tests/test_pr136_rooted_rpc_quorum.py
+          tests/test_pr140_data_lineage_quarantine.py
+          tests/test_pr194_trusted_foundation.py
+          tests/test_pr195_durable_webhook_intake.py
+          tests/test_pr200_production_cutover.py
+          tests/test_pr195_durable_kernel_v3.py
+          tests/test_pr206_durable_state.py
+          -q --disable-socket --allow-unix-socket
+      - name: Restore source tree after diagnostics
+        run: |
+          git reset --hard HEAD
+          git clean -fd
+      - name: Diagnose full offline test suite
         continue-on-error: true
         run: >-
-          python -m black --check
-          $(grep -vE '^\s*(#|$)' config/format_targets.txt)
-      - name: Diagnose typing
-        continue-on-error: true
-        run: python -m mypy --config-file mypy.ini
-      - name: Diagnose security scan
-        continue-on-error: true
-        run: >-
-          python -m bandit -r arb_bot.py src scripts
-          -x src/legacy_arb_bot.py,tests -lll -iii -q
-      - run: python scripts/verify_repo.py
+          python -m pytest -m "not live and not manual"
+          --disable-socket --allow-unix-socket -q
+      - name: Restore source tree before verifier
+        run: |
+          git reset --hard HEAD
+          git clean -fd
+      - name: Run repository verification
+        run: python scripts/verify_repo.py
 
   package-smoke:
     name: Wheel and console smoke

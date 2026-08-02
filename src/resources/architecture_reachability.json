@@ -1,0 +1,39 @@
+{
+  "authority": {
+    "canonical_json": "src.kernel.canonical_json",
+    "hashing": "src.kernel.hashing",
+    "production_surface": "src.production_surface",
+    "schema_registry": "src.contracts.registry"
+  },
+  "canonical_modules": [
+    "src.cli_entrypoint",
+    "src.contracts.reachability",
+    "src.contracts.registry",
+    "src.kernel.canonical_json",
+    "src.kernel.hashing",
+    "src.persistence.operational",
+    "src.production_surface",
+    "src.release.identity"
+  ],
+  "compatibility_aliases": [
+    {
+      "max_lines": 80,
+      "module": "src.cli_pr189",
+      "target": "src.cli_entrypoint"
+    }
+  ],
+  "default_classification": "installed-support",
+  "production_ready": false,
+  "quarantined_modules": [
+    "src.legacy_arb_bot",
+    "src.execution.live_control",
+    "src.execution.shadow",
+    "src.ingest",
+    "src.execution.senders",
+    "src.pr198_sender_free_qualification_v3",
+    "src.pr199_live_boundary_canary_gate",
+    "src.production_operations_pr199",
+    "src.production_cutover_pr200"
+  ],
+  "schema_id": "mpr-4x-01.architecture-reachability.v1"
+}

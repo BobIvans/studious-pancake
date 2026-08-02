@@ -63,10 +63,27 @@ PR206_DURABLE_STATE_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
-MPR_TD_04_UPGRADE_SECURITY_COMMAND: Final[list[str]] = [
-    sys.executable,
-    "scripts/verify_mpr_td_04_upgrade_security.py",
-    "--json",
+MPR_TD_COMMANDS: Final[list[list[str]]] = [
+    [
+        sys.executable,
+        "scripts/verify_mpr_td_01_canonical_surface.py",
+        "--json",
+    ],
+    [
+        sys.executable,
+        "scripts/verify_mpr_td_02_failure_verification.py",
+        "--json",
+    ],
+    [
+        sys.executable,
+        "scripts/verify_mpr_td_03_capacity_storage.py",
+        "--json",
+    ],
+    [
+        sys.executable,
+        "scripts/verify_mpr_td_04_upgrade_security.py",
+        "--json",
+    ],
 ]
 
 # Public by design: tests inspect the final offline pytest command.
@@ -198,7 +215,8 @@ def main() -> int:
     run(MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
-    run(MPR_TD_04_UPGRADE_SECURITY_COMMAND)
+    for command in MPR_TD_COMMANDS:
+        run(command)
 
     for command in COMMANDS[1:]:
         run(command)

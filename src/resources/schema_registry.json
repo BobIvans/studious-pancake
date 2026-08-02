@@ -1,0 +1,126 @@
+{
+  "dialect": "https://json-schema.org/draft/2020-12/schema",
+  "schema_id": "canonical.schema-registry.v1",
+  "schemas": [
+    {
+      "boundary_class": "configuration",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.capabilities",
+      "schema_id": "pr023.capabilities.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "operator-output",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.cli_entrypoint",
+      "schema_id": "pr023.runtime-status.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "configuration",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.errors.codes",
+      "schema_id": "failure.reason-code-registry.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "configuration",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.errors.retry",
+      "schema_id": "failure.retry-idempotency-matrix.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_td_01_canonical_surface",
+      "schema_id": "mpr-td-01.canonical-surface-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_td_02_failure_verification",
+      "schema_id": "mpr-td-02.failure-verification-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_td_03_capacity_storage",
+      "schema_id": "mpr-td-03.capacity-storage-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_td_04_upgrade_security",
+      "schema_id": "mpr-td-04.upgrade-security-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "release",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.release.identity",
+      "schema_id": "release-generation-identity.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "security-policy",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.security",
+      "schema_id": "attack-surface-manifest.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    }
+  ]
+}

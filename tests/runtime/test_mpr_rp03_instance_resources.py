@@ -66,6 +66,7 @@ def test_cleanup_refuses_to_delete_replaced_generation_lock(tmp_path: Path) -> N
     assert manifest.lock_path.exists()
 
 
+@pytest.mark.enable_socket
 def test_partial_socket_acquisition_rolls_back_lock(tmp_path: Path) -> None:
     guard = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     guard.bind(("127.0.0.1", 0))

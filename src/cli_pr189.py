@@ -18,6 +18,7 @@ automation_cli_pr189 = _impl.automation_cli_pr189
 legacy_cli = _impl.legacy_cli
 _DEFAULT_AUTOMATION_CLI = automation_cli_pr189
 _DEFAULT_LEGACY_CLI = legacy_cli
+_DEFAULT_LEGACY_MAIN = legacy_cli.main
 LIVE_MODE = _impl.LIVE_MODE
 PAPER_DB_ENV = _impl.PAPER_DB_ENV
 PAPER_MAX_CYCLES_ENV = _impl.PAPER_MAX_CYCLES_ENV
@@ -46,6 +47,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     default_owners = (
         automation_cli_pr189 is _DEFAULT_AUTOMATION_CLI
         and legacy_cli is _DEFAULT_LEGACY_CLI
+        and legacy_cli.main is _DEFAULT_LEGACY_MAIN
     )
     if default_owners and "run" in args:
         from src.runtime import runtime_entrypoint as runtime_adapter

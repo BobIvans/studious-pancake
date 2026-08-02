@@ -6,6 +6,7 @@ from pathlib import Path
 import pytest
 
 from src.config.chain_registry import (
+    ADDRESS_LOOKUP_TABLE_PROGRAM_ADDRESS,
     ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
     COMPUTE_BUDGET_PROGRAM_ADDRESS,
     NATIVE_SOL_MINT_ADDRESS,
@@ -28,6 +29,7 @@ def test_registry_contains_only_canonical_platform_constants() -> None:
         "token_2022_program": TOKEN_2022_PROGRAM_ADDRESS,
         "associated_token_program": ASSOCIATED_TOKEN_PROGRAM_ADDRESS,
         "compute_budget_program": COMPUTE_BUDGET_PROGRAM_ADDRESS,
+        "address_lookup_table_program": ADDRESS_LOOKUP_TABLE_PROGRAM_ADDRESS,
         "native_sol_mint": NATIVE_SOL_MINT_ADDRESS,
     }
 

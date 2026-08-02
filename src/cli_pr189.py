@@ -36,7 +36,7 @@ class _LegacyBootstrapAdapter:
     def __init__(self, delegate: Any) -> None:
         self._delegate = delegate
 
-    def main(self, argv: Sequence[str] | None = None) -> int:
+    def main(self, argv: Sequence[str] | None = None, **_: object) -> int:
         return int(self._delegate.main(argv))
 
 
@@ -54,11 +54,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
         return runtime_adapter.main(args)
     _impl.automation_cli_pr189 = automation_cli_pr189
-    setattr(
-        _impl,
-        "legacy_cli",
-        _LegacyBootstrapAdapter(legacy_cli) if default_owners else legacy_cli,
-    )
+    setattr(_impl, "legacy_cli", _LegacyBootstrapAdapter(legacy_cli))
     return _impl.main(args)
 
 

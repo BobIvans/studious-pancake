@@ -14,7 +14,11 @@ def replace_once(path: str, old: str, new: str) -> None:
 
 replace_once(
     "src/market/observations.py",
+    "class RecordedSnapshotSource:\n"
+    "    def __init__(self, quotes: Iterable[MarketObservationV2] = ()) -> None:\n"
     "        self._batch = SnapshotSet(quotes)\n",
+    "class RecordedSnapshotSource:\n"
+    "    def __init__(self, quotes: Iterable[MarketObservationV2] = ()) -> None:\n"
     "        self._batch: ObservationBatch = SnapshotSet(quotes)\n",
 )
 

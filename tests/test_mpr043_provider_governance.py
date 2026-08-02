@@ -15,19 +15,21 @@ from src.provider_governance import (
     ProviderAdmissionError,
     ProviderEntitlement,
     ProviderGovernance,
+    ProviderGovernanceError,
     ProviderOperation,
     ProviderSpendAuthority,
 )
 from src.routing.models import (
+    AuthKind,
     ExecutionArtifactKind,
     ProviderCapabilities,
     ProviderCapability,
+    ProviderFailure,
     ProviderFailureReason,
     ProviderHealth,
     ProviderRole,
     ProviderStatus,
     QuoteRequest,
-    AuthKind,
 )
 from src.routing.registry import DiscoveryPlane, ProviderRegistry
 
@@ -187,6 +189,57 @@ async def test_generation_and_spend_limits_fail_closed() -> None:
 
 
 @pytest.mark.asyncio
+async def test_replaced_generation_fences_unissued_lease_before_provider_contact() -> None:
+    clock = FakeClock()
+    first = entitlement(reserve=0)
+    authority = ProviderSpendAuthority(
+        {first.provider_id: first}, clock=clock, wall_clock=clock
+    )
+    lease = await authority.reserve(request_for(clock, work_id="generation-fence"))
+
+    authority.replace_entitlement(entitlement(generation="generation-2", reserve=0))
+
+    with pytest.raises(ProviderAdmissionError) as mismatch:
+        await authority.mark_issued(lease)
+    assert mismatch.value.code is AdmissionCode.GENERATION_MISMATCH
+    await authority.release(lease)
+    snapshot = await authority.snapshot("provider-a")
+    assert snapshot["active_leases"] == 0
+    assert snapshot["committed_requests"] == 0
+
+
+@pytest.mark.asyncio
+async def test_expired_unissued_lease_cleanup_does_not_mask_deadline_failure() -> None:
+    clock = FakeClock()
+    manifest = entitlement(reserve=0)
+    authority = ProviderSpendAuthority(
+        {manifest.provider_id: manifest}, clock=clock, wall_clock=clock
+    )
+    lease = await authority.reserve(request_for(clock, work_id="lease-expired"))
+    clock.advance(11.0)
+
+    with pytest.raises(ProviderAdmissionError) as expired:
+        await authority.mark_issued(lease)
+    assert expired.value.code is AdmissionCode.DEADLINE_EXPIRED
+    await authority.release(lease)
+    assert (await authority.snapshot("provider-a"))["active_leases"] == 0
+
+
+@pytest.mark.asyncio
+async def test_reserved_lease_cannot_be_committed_without_issue() -> None:
+    clock = FakeClock()
+    manifest = entitlement(reserve=0)
+    authority = ProviderSpendAuthority(
+        {manifest.provider_id: manifest}, clock=clock, wall_clock=clock
+    )
+    lease = await authority.reserve(request_for(clock, work_id="not-issued"))
+
+    with pytest.raises(ProviderGovernanceError, match="reserved"):
+        await authority.complete(lease)
+    await authority.release(lease)
+
+
+@pytest.mark.asyncio
 async def test_issued_cancellation_is_committed_not_released() -> None:
     clock = FakeClock()
     manifest = entitlement(request_limit=10, cost_limit=10, reserve=0)
@@ -217,7 +270,7 @@ async def test_issued_cancellation_is_committed_not_released() -> None:
 
 
 @pytest.mark.asyncio
-async def test_dependency_modes_gate_dangerous_operations() -> None:
+async def test_dependency_modes_require_health_probe_for_recovery() -> None:
     clock = FakeClock()
     controller = DependencyController(
         clock=clock, transient_failure_threshold=2, cooldown_seconds=5.0
@@ -237,6 +290,13 @@ async def test_dependency_modes_gate_dangerous_operations() -> None:
         )
     assert finalization.value.code is AdmissionCode.DEGRADED_OPERATION_DENIED
 
+    await controller.record_success(
+        "provider-a", "generation-1", ProviderOperation.DISCOVERY
+    )
+    assert (
+        await controller.snapshot("provider-a", "generation-1")
+    ).mode is DependencyMode.DEGRADED
+
     await controller.record_failure(
         "provider-a", "generation-1", DependencyFailureKind.TIMEOUT
     )
@@ -249,7 +309,9 @@ async def test_dependency_modes_gate_dangerous_operations() -> None:
     await controller.assert_admissible(
         "provider-a", "generation-1", ProviderOperation.DISCOVERY
     )
-    await controller.record_success("provider-a", "generation-1")
+    await controller.record_success(
+        "provider-a", "generation-1", ProviderOperation.HEALTH_PROBE
+    )
     assert (
         await controller.snapshot("provider-a", "generation-1")
     ).mode is DependencyMode.ACTIVE
@@ -262,6 +324,7 @@ async def test_dependency_modes_gate_dangerous_operations() -> None:
             "provider-a", "generation-1", ProviderOperation.DISCOVERY
         )
     assert disabled.value.code is AdmissionCode.DEPENDENCY_DISABLED
+    assert disabled.value.failure_reason == "invalid_schema"
     await controller.assert_admissible(
         "provider-a", "generation-1", ProviderOperation.HEALTH_PROBE
     )
@@ -405,6 +468,53 @@ class DeniedAdapter:
     async def request_quote(self, _: QuoteRequest):
         self.calls += 1
         raise AssertionError("admission-denied provider must not be called")
+
+
+class CircuitOpenAdapter(DeniedAdapter):
+    provider_id = "circuit_provider"
+    capabilities = ProviderCapabilities(
+        provider_id=provider_id,
+        schema_version_pin="circuit-provider@test",
+        quote=True,
+        artifact_kind=ExecutionArtifactKind.NONE,
+        exact_in=True,
+        exact_out=False,
+        legacy_spl=True,
+        token_2022=False,
+        native_sol=True,
+        wsol=True,
+        jito_compatible=False,
+        exposes_accounts=False,
+        exposes_alts=False,
+        quote_ttl_seconds=5,
+        rate_limit_policy="test",
+        auth_kind=AuthKind.NONE,
+        role=ProviderRole.DISCOVERY_ONLY,
+        admission_reason="test circuit adapter",
+    )
+
+    async def request_quote(self, _: QuoteRequest):
+        self.calls += 1
+        return ProviderFailure(
+            provider=self.provider_id,
+            reason=ProviderFailureReason.CIRCUIT_OPEN,
+            retryable=True,
+            detail="probe failed",
+        )
+
+
+@pytest.mark.asyncio
+async def test_cooldown_preserves_circuit_reason_without_second_call() -> None:
+    adapter = CircuitOpenAdapter()
+    registry = ProviderRegistry((adapter,))
+    plane = DiscoveryPlane(registry, provider_timeout_seconds=0.1)
+
+    first = await plane.discover(quote_request())
+    second = await plane.discover(quote_request())
+
+    assert first.failures[0].reason is ProviderFailureReason.CIRCUIT_OPEN
+    assert second.failures[0].reason is ProviderFailureReason.CIRCUIT_OPEN
+    assert adapter.calls == 1
 
 
 @pytest.mark.asyncio

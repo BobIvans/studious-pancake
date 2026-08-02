@@ -62,8 +62,7 @@ class RootedRuntimeTruth:
         if self.admission.pool.registry_generation != self.registry.generation:
             raise RootedTruthError("pool uses a mixed registry generation")
         if any(
-            item.registry_generation != self.registry.generation
-            for item in self.alts
+            item.registry_generation != self.registry.generation for item in self.alts
         ):
             raise RootedTruthError("ALT uses a mixed registry generation")
 

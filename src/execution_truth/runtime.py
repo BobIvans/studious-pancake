@@ -230,9 +230,7 @@ class DurableAttemptRef:
             )
         for value, name in required:
             if value is None:
-                raise ExecutionTruthError(
-                    f"MPR_SYS_02_STAGE_REQUIRES_{name.upper()}"
-                )
+                raise ExecutionTruthError(f"MPR_SYS_02_STAGE_REQUIRES_{name.upper()}")
         if self.stage is ExecutionStage.TERMINAL:
             if self.terminal_state is TerminalState.NONE:
                 raise ExecutionTruthError("MPR_SYS_02_TERMINAL_OUTCOME_REQUIRED")
@@ -240,13 +238,9 @@ class DurableAttemptRef:
             raise ExecutionTruthError("MPR_SYS_02_NON_TERMINAL_HAS_OUTCOME")
         if self.terminal_state is TerminalState.SUCCESS:
             if self.reconciliation_hash is None:
-                raise ExecutionTruthError(
-                    "MPR_SYS_02_SUCCESS_REQUIRES_RECONCILIATION"
-                )
+                raise ExecutionTruthError("MPR_SYS_02_SUCCESS_REQUIRES_RECONCILIATION")
             if self.ambiguity_quarantined:
-                raise ExecutionTruthError(
-                    "MPR_SYS_02_SUCCESS_CANNOT_BE_AMBIGUOUS"
-                )
+                raise ExecutionTruthError("MPR_SYS_02_SUCCESS_CANNOT_BE_AMBIGUOUS")
         if self.terminal_state is TerminalState.AMBIGUOUS:
             if not self.ambiguity_quarantined:
                 raise ExecutionTruthError(
@@ -283,9 +277,7 @@ class ExecutionTruthBundle:
             self.reconciliation,
             ReconciliationRef,
         ):
-            raise ExecutionTruthError(
-                "MPR_SYS_02_RECONCILIATION_REFERENCE_REQUIRED"
-            )
+            raise ExecutionTruthError("MPR_SYS_02_RECONCILIATION_REFERENCE_REQUIRED")
         _strict_bool(self.sender_free, "sender_free")
         _strict_bool(self.live_enabled, "live_enabled")
         if not self.sender_free or self.live_enabled:
@@ -303,9 +295,7 @@ class ExecutionTruthBundle:
         if self.simulation.message_hash != self.compiled.message_hash:
             raise ExecutionTruthError("MPR_SYS_02_SIMULATION_MESSAGE_MISMATCH")
         if self.simulation.context_slot < self.rooted.root_slot:
-            raise ExecutionTruthError(
-                "MPR_SYS_02_SIMULATION_PRECEDES_ROOTED_CANDIDATE"
-            )
+            raise ExecutionTruthError("MPR_SYS_02_SIMULATION_PRECEDES_ROOTED_CANDIDATE")
         if self.durable.candidate_truth_hash != self.rooted.candidate_truth_hash:
             raise ExecutionTruthError("MPR_SYS_02_DURABLE_CANDIDATE_MISMATCH")
         if self.durable.plan_hash != self.plan.plan_hash:
@@ -320,17 +310,16 @@ class ExecutionTruthBundle:
                     "MPR_SYS_02_RECONCILIATION_SIMULATION_MISMATCH"
                 )
             if self.reconciliation.message_hash != self.compiled.message_hash:
-                raise ExecutionTruthError(
-                    "MPR_SYS_02_RECONCILIATION_MESSAGE_MISMATCH"
-                )
+                raise ExecutionTruthError("MPR_SYS_02_RECONCILIATION_MESSAGE_MISMATCH")
             if self.reconciliation.principal_lamports != self.plan.principal_lamports:
                 raise ExecutionTruthError(
                     "MPR_SYS_02_RECONCILIATION_PRINCIPAL_MISMATCH"
                 )
-            if self.durable.reconciliation_hash != self.reconciliation.reconciliation_hash:
-                raise ExecutionTruthError(
-                    "MPR_SYS_02_DURABLE_RECONCILIATION_MISMATCH"
-                )
+            if (
+                self.durable.reconciliation_hash
+                != self.reconciliation.reconciliation_hash
+            ):
+                raise ExecutionTruthError("MPR_SYS_02_DURABLE_RECONCILIATION_MISMATCH")
         elif self.durable.reconciliation_hash is not None:
             raise ExecutionTruthError(
                 "MPR_SYS_02_DURABLE_RECONCILIATION_WITHOUT_EVIDENCE"

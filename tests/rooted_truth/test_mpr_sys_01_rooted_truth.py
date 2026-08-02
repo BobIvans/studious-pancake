@@ -31,7 +31,11 @@ GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 
 
 def digest(label: str) -> str:
-    return domain_sha256(domain="mpr-sys-01-test", schema_id="fixture.v1", payload=label.encode())
+    return domain_sha256(
+        domain="mpr-sys-01-test",
+        schema_id="fixture.v1",
+        payload=label.encode(),
+    )
 
 
 def build_truth() -> RootedRuntimeTruth:
@@ -40,7 +44,7 @@ def build_truth() -> RootedRuntimeTruth:
         ChainRegistry.load_default(),
         cluster="mainnet-beta",
         genesis_hash=GENESIS,
-        external_blockers=tuple(policy.external_required_programs),
+        external_blockers=policy.external_required_programs,
     )
     fork = ForkContext(
         cluster="mainnet-beta",

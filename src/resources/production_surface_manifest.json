@@ -83,7 +83,7 @@
     {
       "category": "external_resource_ownership",
       "entrypoint": "flashloan-external-resources",
-      "id": "MPR_RP_EXTERNAL_RESOURCE_CONTROL_PLANE",
+      "id": "PR194_EXTERNAL_RESOURCE_CONTROL_PLANE",
       "module": "src.external_resources.cli",
       "wheel_member": "src/external_resources/cli.py"
     },

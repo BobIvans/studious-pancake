@@ -110,6 +110,24 @@
       "id": "PR194_PR206_DURABLE_STATE_AUTHORITY",
       "module": "src.pr206_durable_state",
       "wheel_member": "src/pr206_durable_state.py"
+    },
+    {
+      "category": "schema_authority",
+      "id": "PR194_MPR4X01_SCHEMA_AUTHORITY",
+      "module": "src.contracts.registry",
+      "wheel_member": "src/contracts/registry.py"
+    },
+    {
+      "category": "architecture_reachability",
+      "id": "PR194_MPR4X01_ARCHITECTURE_REACHABILITY",
+      "module": "src.contracts.reachability",
+      "wheel_member": "src/contracts/reachability.py"
+    },
+    {
+      "category": "release_identity",
+      "id": "PR194_MPR4X01_RELEASE_IDENTITY",
+      "module": "src.release.identity",
+      "wheel_member": "src/release/identity.py"
     }
   ],
   "required_wheel_members": [
@@ -119,13 +137,19 @@
     "src/cli.py",
     "src/cli_pr189.py",
     "src/container_runtime.py",
+    "src/contracts/__init__.py",
+    "src/contracts/reachability.py",
+    "src/contracts/registry.py",
     "src/external_contracts/cli_pr189.py",
     "src/pr206_durable_state.py",
     "src/production_surface.py",
+    "src/release/identity.py",
     "src/release_gate/materialized_evidence.py",
+    "src/resources/architecture_reachability.json",
     "src/resources/capabilities.json",
     "src/resources/production_surface_manifest.json",
-    "src/resources/runtime_authority_map.json"
+    "src/resources/runtime_authority_map.json",
+    "src/resources/schema_registry.json"
   ],
   "runtime": {
     "live_trading_enabled": false,

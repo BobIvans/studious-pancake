@@ -6,11 +6,13 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import sys
 from typing import Final
 
 ROOT: Final = Path(__file__).resolve().parents[1]
+GENERATED_DIRECTORIES: Final[tuple[str, ...]] = ("build", "dist")
 
 SAFE_ENV: Final = {
     "PAPER_TRADING_ONLY": "true",
@@ -60,6 +62,12 @@ PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
 PR206_DURABLE_STATE_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr206_durable_state.py",
+    "--json",
+]
+
+MPR_4X_01_FOUNDATION_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_mpr_4x_01_foundation.py",
     "--json",
 ]
 
@@ -120,6 +128,7 @@ COMMANDS: Final[list[list[str]]] = [
         sys.executable,
         "-m",
         "pytest",
+        "tests/architecture/test_mpr_4x_01_foundation.py",
         "tests/test_pr01_authority_map.py",
         "tests/test_pr023_runtime_truth.py",
         "tests/test_launcher_startup_smoke.py",
@@ -175,8 +184,15 @@ def run(command: list[str]) -> None:
         raise SystemExit(completed.returncode)
 
 
+def remove_generated_artifacts() -> None:
+    """Remove only known package-build outputs created by verification."""
+
+    for directory in GENERATED_DIRECTORIES:
+        shutil.rmtree(ROOT / directory, ignore_errors=True)
+
+
 def ensure_clean_source_tree() -> None:
-    """Fail if repository verification leaves generated files behind."""
+    """Fail if repository verification leaves unexpected files behind."""
     if not (ROOT / ".git").is_dir():
         return
     completed = subprocess.run(
@@ -215,12 +231,14 @@ def main() -> int:
     run(MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
+    run(MPR_4X_01_FOUNDATION_COMMAND)
     for command in MPR_TD_COMMANDS:
         run(command)
 
     for command in COMMANDS[1:]:
         run(command)
 
+    remove_generated_artifacts()
     ensure_clean_source_tree()
 
     print(

@@ -30,6 +30,15 @@ PAPER_IDLE_DELAY_ENV = _impl.PAPER_IDLE_DELAY_ENV
 # rewritten_super_mpr_a
 
 
+def _callable_identity(value: Any) -> Any:
+    """Return the stable function behind a possibly bound method."""
+
+    return getattr(value, "__func__", value)
+
+
+_DEFAULT_LEGACY_MAIN_IDENTITY = _callable_identity(_DEFAULT_LEGACY_MAIN)
+
+
 class _LegacyBootstrapAdapter:
     """Prevent immutable bootstrap metadata from leaking into old signatures."""
 
@@ -47,15 +56,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     default_owners = (
         automation_cli_pr189 is _DEFAULT_AUTOMATION_CLI
         and legacy_cli is _DEFAULT_LEGACY_CLI
-        and legacy_cli.main is _DEFAULT_LEGACY_MAIN
+        and _callable_identity(legacy_cli.main) is _DEFAULT_LEGACY_MAIN_IDENTITY
     )
     if default_owners and "run" in args:
         from src.runtime import runtime_entrypoint as runtime_adapter
 
         return runtime_adapter.main(args)
+
+    previous_automation = _impl.automation_cli_pr189
+    previous_legacy = _impl.legacy_cli
     _impl.automation_cli_pr189 = automation_cli_pr189
     setattr(_impl, "legacy_cli", _LegacyBootstrapAdapter(legacy_cli))
-    return _impl.main(args)
+    try:
+        return _impl.main(args)
+    finally:
+        _impl.automation_cli_pr189 = previous_automation
+        setattr(_impl, "legacy_cli", previous_legacy)
 
 
 if __name__ == "__main__":

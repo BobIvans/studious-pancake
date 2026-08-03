@@ -26,6 +26,7 @@
     "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
     "flashloan-checks": "src.automation_cli_pr189:main",
     "flashloan-contracts": "src.external_contracts.cli_pr189:main",
+    "flashloan-external-resources": "src.external_resources.cli:main",
     "flashloan-release-evidence": "src.release_gate.materialized_evidence:main"
   },
   "forbidden": {
@@ -78,6 +79,13 @@
       "id": "PR194_EXTERNAL_CONTRACTS_ENTRYPOINT",
       "module": "src.external_contracts.cli_pr189",
       "wheel_member": "src/external_contracts/cli_pr189.py"
+    },
+    {
+      "category": "external_resource_ownership",
+      "entrypoint": "flashloan-external-resources",
+      "id": "PR194_EXTERNAL_RESOURCE_CONTROL_PLANE",
+      "module": "src.external_resources.cli",
+      "wheel_member": "src/external_resources/cli.py"
     },
     {
       "category": "inspection_checks",
@@ -141,6 +149,7 @@
     "src/contracts/reachability.py",
     "src/contracts/registry.py",
     "src/external_contracts/cli_pr189.py",
+    "src/external_resources/cli.py",
     "src/pr206_durable_state.py",
     "src/production_surface.py",
     "src/release/identity.py",

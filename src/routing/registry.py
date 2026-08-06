@@ -5,15 +5,20 @@ from __future__ import annotations
 import asyncio
 from dataclasses import dataclass, replace
 from datetime import datetime
-from typing import Any, Mapping
+from typing import Any, Mapping, Protocol
 
+from src.provider_governance import (
+    AdmissionRequest,
+    ProviderAdmissionError,
+    ProviderGovernance,
+    ProviderOperation,
+)
 from src.providers.jupiter.quota import (
     JupiterQuotaError,
     JupiterQuotaManager,
     JupiterQuotaPurpose,
 )
 
-from .adapters import ProviderAdapter
 from .clients import (
     JupiterRouterAdapter,
     OdosAdapter,
@@ -28,9 +33,11 @@ from .models import (
     MinimumOutputState,
     NonSelectionReason,
     NormalizedQuote,
+    ProviderCapabilities,
     ProviderFailure,
     ProviderFailureReason,
     ProviderRole,
+    ProviderStatus,
     QuoteRequest,
 )
 from .transport import Transport
@@ -42,6 +49,24 @@ _PROVIDER_CONTRACT_NAMES = {
     "openocean": "openocean",
     "odos": "odos",
 }
+
+
+class DiscoveryProvider(Protocol):
+    """Structural contract consumed by the discovery registry.
+
+    Provider-specific fields such as Jupiter quota state are intentionally not
+    part of the shared contract and are accessed through guarded local values.
+    """
+
+    provider_id: str
+    capabilities: ProviderCapabilities
+    circuit: Any
+
+    def startup_state(self) -> dict[str, str]: ...
+
+    def status(self) -> ProviderStatus: ...
+
+    async def request_quote(self, request: QuoteRequest) -> NormalizedQuote: ...
 
 
 def _load_default_contract_registry() -> Any | None:
@@ -56,7 +81,38 @@ def _enum_value(value: Any) -> str:
     return str(getattr(value, "value", value))
 
 
-def _bind_contract_admission(adapter: ProviderAdapter, registry: Any) -> None:
+def _materialize_admission_failure(
+    provider_id: str,
+    exc: RuntimeError,
+) -> ProviderFailure | None:
+    """Preserve admission reason across reload/import class aliases."""
+
+    if not (
+        isinstance(exc, ProviderAdmissionError)
+        or getattr(exc, "governance_error_kind", None) == "provider_admission"
+    ):
+        return None
+    retryable = bool(getattr(exc, "retryable", False))
+    raw_reason = getattr(exc, "failure_reason", None)
+    try:
+        reason = ProviderFailureReason(raw_reason)
+    except (TypeError, ValueError):
+        reason = (
+            ProviderFailureReason.RATE_LIMITED
+            if retryable
+            else ProviderFailureReason.DISABLED
+        )
+    code = _enum_value(getattr(exc, "code", "unknown"))
+    detail = str(getattr(exc, "detail", str(exc)))
+    return ProviderFailure(
+        provider=provider_id,
+        reason=reason,
+        retryable=retryable,
+        detail=f"admission:{code}:{detail}",
+    )
+
+
+def _bind_contract_admission(adapter: DiscoveryProvider, registry: Any) -> None:
     provider = _PROVIDER_CONTRACT_NAMES[adapter.provider_id]
     entries = tuple(registry.provider(provider))
     if len(entries) != 1:
@@ -105,11 +161,17 @@ class CandidateSelection:
 
 
 class ProviderRegistry:
-    def __init__(self, adapters: tuple[ProviderAdapter, ...]):
+    def __init__(
+        self,
+        adapters: tuple[DiscoveryProvider, ...],
+        *,
+        governance: ProviderGovernance | None = None,
+    ) -> None:
         provider_ids = [adapter.provider_id for adapter in adapters]
         if len(provider_ids) != len(set(provider_ids)):
             raise ValueError("provider registry contains duplicate provider IDs")
         self.adapters = adapters
+        self.governance = governance or ProviderGovernance.from_adapters(adapters, {})
 
     @classmethod
     def from_env(
@@ -119,8 +181,9 @@ class ProviderRegistry:
         transport: Transport | None = None,
         jupiter_quota: JupiterQuotaManager | None = None,
         contract_registry: Any = _LOAD_DEFAULT_CONTRACT_REGISTRY,
+        governance: ProviderGovernance | None = None,
     ) -> "ProviderRegistry":
-        adapters = (
+        adapters: tuple[DiscoveryProvider, ...] = (
             JupiterRouterAdapter(
                 api_key=env.get("JUPITER_API_KEY"),
                 require_api_key=False,
@@ -147,7 +210,10 @@ class ProviderRegistry:
         if active_contract_registry is not None:
             for adapter in adapters:
                 _bind_contract_admission(adapter, active_contract_registry)
-        return cls(adapters)
+        return cls(
+            adapters,
+            governance=governance or ProviderGovernance.from_adapters(adapters, env),
+        )
 
     def startup_report(self) -> tuple[dict[str, str], ...]:
         rows: list[dict[str, str]] = []
@@ -158,10 +224,11 @@ class ProviderRegistry:
                 and row["state"] != "disabled_missing_credentials"
             ):
                 row["state"] = "disabled_contract"
+            row.update(self.governance.startup_state(adapter.provider_id))
             rows.append(row)
         return tuple(rows)
 
-    def enabled_adapters(self) -> tuple[ProviderAdapter, ...]:
+    def enabled_adapters(self) -> tuple[DiscoveryProvider, ...]:
         return tuple(
             adapter
             for adapter in self.adapters
@@ -185,16 +252,58 @@ class DiscoveryPlane:
 
     async def _call_provider(
         self,
-        adapter: ProviderAdapter,
+        adapter: DiscoveryProvider,
         request: QuoteRequest,
     ) -> NormalizedQuote | ProviderFailure:
+        governance = self.registry.governance
+        manifest = governance.entitlement(adapter.provider_id)
+        admission = AdmissionRequest(
+            work_id=f"discovery:{request.fingerprint}:{adapter.provider_id}",
+            provider_id=adapter.provider_id,
+            operation=ProviderOperation.DISCOVERY,
+            request_fingerprint=request.fingerprint,
+            fairness_key=request.fingerprint,
+            deadline_at=governance.clock() + self.provider_timeout_seconds,
+            expected_generation=manifest.generation,
+            estimated_cost_units=1,
+            estimated_spend_micros=0,
+            lease_ttl_seconds=self.provider_timeout_seconds,
+        )
+        try:
+            result = await governance.execute(
+                admission,
+                lambda: self._invoke_provider(adapter, request),
+            )
+        except RuntimeError as exc:
+            failure = _materialize_admission_failure(adapter.provider_id, exc)
+            if failure is None:
+                raise
+            return failure
+        if isinstance(result, NormalizedQuote):
+            await governance.record_success(
+                adapter.provider_id,
+                ProviderOperation.DISCOVERY,
+            )
+        else:
+            await governance.record_failure(
+                adapter.provider_id,
+                result.reason.value,
+                status_code=result.status_code,
+            )
+        return result
+
+    async def _invoke_provider(
+        self,
+        adapter: DiscoveryProvider,
+        request: QuoteRequest,
+    ) -> NormalizedQuote | ProviderFailure:
+        quota = getattr(adapter, "quota", None)
         if adapter.provider_id == "jupiter_router" and getattr(
             adapter, "api_key", None
         ):
-            quota = getattr(adapter, "quota", None)
             if quota is None:
                 quota = JupiterQuotaManager()
-                adapter.quota = quota
+                setattr(adapter, "quota", quota)
             try:
                 reservation = await quota.reserve(
                     JupiterQuotaPurpose.DISCOVERY,
@@ -228,9 +337,9 @@ class DiscoveryPlane:
             if (
                 adapter.provider_id == "jupiter_router"
                 and exc.status_code == 429
-                and getattr(adapter, "quota", None) is not None
+                and quota is not None
             ):
-                adapter.quota.record_http_429()
+                quota.record_http_429()
             return ProviderFailure(
                 provider=adapter.provider_id,
                 reason=exc.reason,

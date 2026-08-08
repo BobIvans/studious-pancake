@@ -239,8 +239,7 @@ class HumanInterventionLedger:
         self._ensure_schema()
 
     def _ensure_schema(self) -> None:
-        self.db.executescript(
-            """
+        self.db.executescript("""
             CREATE TABLE IF NOT EXISTS pr2_human_intervention_permits(
               permit_hash TEXT PRIMARY KEY,
               request_hash TEXT NOT NULL,
@@ -260,8 +259,7 @@ class HumanInterventionLedger:
             );
             CREATE INDEX IF NOT EXISTS idx_pr2_intervention_subject
               ON pr2_human_intervention_permits(subject_type, subject_id);
-            """
-        )
+            """)
 
     def issue(
         self,

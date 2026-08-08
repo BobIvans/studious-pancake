@@ -9,6 +9,7 @@
     "src.cli_entrypoint",
     "src.contracts.reachability",
     "src.contracts.registry",
+    "src.human_intervention",
     "src.kernel.canonical_json",
     "src.kernel.hashing",
     "src.persistence.operational",

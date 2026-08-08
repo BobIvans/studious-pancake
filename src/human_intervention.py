@@ -392,8 +392,6 @@ def _require_sha256(value: str, field_name: str) -> str:
 def _jsonable(value: object) -> object:
     if isinstance(value, StrEnum):
         return value.value
-    if hasattr(value, "__dataclass_fields__"):
-        return {key: _jsonable(item) for key, item in asdict(value).items()}
     if isinstance(value, Mapping):
         return {str(key): _jsonable(item) for key, item in value.items()}
     if isinstance(value, (tuple, list)):

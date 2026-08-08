@@ -1,7 +1,7 @@
 # Generated for PR-025 dependency boundary checks.
 # Keep runtime, analytics, data, and development profiles explicit.
 aiohappyeyeballs==2.7.1
-aiohttp==3.14.1
+aiohttp==3.14.3
 aiohttp-socks==0.11.0
 aiolimiter==1.1.0
 aiosignal==1.4.0
@@ -25,7 +25,7 @@ fastapi==0.139.2
 flake8==7.3.0
 frozenlist==1.8.0
 h11==0.16.0
-h2==4.3.0
+h2==4.4.1
 hpack==4.2.0
 httpcore==1.0.9
 httptools==0.8.0

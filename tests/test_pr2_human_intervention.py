@@ -116,9 +116,7 @@ def _request(
 
 
 def test_pr2_dual_human_evidence_creates_sender_free_permit() -> None:
-    permit = evaluate_human_intervention(
-        _request(), current_utc="2026-08-08T20:05:00Z"
-    )
+    permit = evaluate_human_intervention(_request(), current_utc="2026-08-08T20:05:00Z")
 
     assert permit.action is InterventionAction.CLEAR_SAFETY_LATCH
     assert permit.operator_ids == ("human:alice", "human:bob")

@@ -71,6 +71,12 @@ MPR_4X_01_FOUNDATION_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+PR2_HUMAN_INTERVENTION_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr2_human_intervention.py",
+    "--json",
+]
+
 MPR_TD_COMMANDS: Final[list[list[str]]] = [
     [
         sys.executable,
@@ -149,6 +155,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr200_production_cutover.py",
         "tests/test_pr195_durable_kernel_v3.py",
         "tests/test_pr206_durable_state.py",
+        "tests/test_pr2_human_intervention.py",
         "-q",
         "--disable-socket",
         "--allow-unix-socket",
@@ -232,6 +239,7 @@ def main() -> int:
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
     run(MPR_4X_01_FOUNDATION_COMMAND)
+    run(PR2_HUMAN_INTERVENTION_COMMAND)
     for command in MPR_TD_COMMANDS:
         run(command)
 

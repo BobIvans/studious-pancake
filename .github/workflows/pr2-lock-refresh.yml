@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - codex/pr-2-human-intervention-closure
+  pull_request:
+
+concurrency:
+  group: pr2-lock-refresh
+  cancel-in-progress: true
 
 permissions:
   contents: write

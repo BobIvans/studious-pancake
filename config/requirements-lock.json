@@ -12,11 +12,11 @@
         "service",
         "dev"
       ],
-      "sha256": "92ac27093fb562ed71c71d54b8d55da4b8a2f7f94869d7f8c31291d029d71a23"
+      "sha256": "386cd3703c31e5036f4d358603355b1161aaed01b7f84527760360cb8b87410b"
     },
     "requirements.txt": {
       "extras": [],
-      "sha256": "ad22ca82defbf1fa39059a8c2f371717e41bcdc606143618b567297bd085342a"
+      "sha256": "9260d70794e881bf84c1c80e5adbebb05217809551f1dc3c261dd215d29876f7"
     }
   },
   "platforms": [
@@ -26,10 +26,10 @@
   "python": "3.13",
   "resolved_locks": {
     "requirements-dev.lock": {
-      "sha256": "34a45dbfe8f1d3516311aad7da76834aed153914a53fcac42f15aa17615b8515"
+      "sha256": "73af5ace810f242230b8cf44db5135d079f721105c4d15c2bfa5f6a4a3f3401a"
     },
     "requirements.lock": {
-      "sha256": "11d788259e864bdca9a670a1caad7c3b2d77a500db6fe999a0d8a6dfa7c62adc"
+      "sha256": "cfa24fc66b102a09a5189a27abea6b972de09a0c4aa835305c9f3c5ae4f14b97"
     }
   },
   "resolver": {

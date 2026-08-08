@@ -1,9 +1,6 @@
 name: PR-2 lock refresh
 
 on:
-  push:
-    branches:
-      - codex/pr-2-human-intervention-closure
   pull_request:
 
 concurrency:

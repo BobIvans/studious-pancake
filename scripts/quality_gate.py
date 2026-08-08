@@ -75,7 +75,16 @@ def main() -> int:
     )
 
     format_targets = _manifest_paths(ROOT / "config/format_targets.txt")
-    _run([sys.executable, "-m", "black", "--check", *format_targets])
+    _run(
+        [
+            sys.executable,
+            "-m",
+            "black",
+            "--check",
+            "--diff",
+            *format_targets,
+        ]
+    )
     _run([sys.executable, "-m", "mypy", "--config-file", "mypy.ini"])
 
     # Existing medium/low findings are triaged for PR-043. PR-024 makes any

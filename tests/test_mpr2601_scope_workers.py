@@ -242,3 +242,35 @@ async def test_restart_after_interrupted_drain_blocks_new_cycle(tmp_path):
         )
     finally:
         reopened.close()
+
+
+@pytest.mark.asyncio
+async def test_installed_runtime_honors_configured_drain_timeout(owner, monkeypatch):
+    from src.runtime import runtime_entrypoint as runtime
+    from src.runtime.bootstrap import BootstrapContext
+
+    runner = service(owner)
+    captured = []
+    original = runtime.RepeatedInstalledPaperService
+
+    def supervisor(cycle_runner, config, **kwargs):
+        captured.append(config)
+        return original(cycle_runner, config, **kwargs)
+
+    monkeypatch.setattr(runtime, "RepeatedInstalledPaperService", supervisor)
+    monkeypatch.setattr(
+        runtime, "build_installed_durable_paper_service", lambda *a, **k: runner
+    )
+    context = BootstrapContext.capture(
+        ["run", "--mode", "paper"],
+        command="flashloan-bot.run",
+        environ={"FLASHLOAN_SHUTDOWN_DRAIN_TIMEOUT_MS": "17"},
+    )
+    assert (
+        await runtime._run_paper(
+            context, config_file=None, db_path=None, as_json=True, legacy_smoke=True
+        )
+        == runtime.EXIT_ADMISSION_BLOCKED
+    )
+    assert captured[0].shutdown_timeout_seconds == 0.017
+    assert runner._closed

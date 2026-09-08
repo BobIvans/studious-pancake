@@ -6,6 +6,7 @@ from collections.abc import Callable, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import wraps
 import hashlib
 import json
 import os
@@ -15,6 +16,7 @@ import stat
 import sqlite3
 import time
 from threading import RLock
+from typing import cast
 from uuid import uuid4
 
 from src.execution.models import ExecutionState
@@ -24,6 +26,73 @@ from src.observability.redaction import REDACTION_VERSION, sanitized_with_stats
 MIGRATION_VERSION = 41
 SCHEMA_NAME = "pr041.durable-lifecycle.v1"
 ZERO_HASH = "0" * 64
+
+
+def _serialized_sqlite_call(method):
+    """Keep a shared-connection reader outside another thread's transaction."""
+
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        with self._operation_lock:
+            return method(self, *args, **kwargs)
+
+    return call
+
+
+class _SerializedCursor(sqlite3.Cursor):
+    @property
+    def _operation_lock(self):
+        return cast(_SerializedConnection, self.connection)._operation_lock
+
+    execute = _serialized_sqlite_call(sqlite3.Cursor.execute)
+    executemany = _serialized_sqlite_call(sqlite3.Cursor.executemany)
+    executescript = _serialized_sqlite_call(sqlite3.Cursor.executescript)
+    fetchone = _serialized_sqlite_call(sqlite3.Cursor.fetchone)
+    fetchmany = _serialized_sqlite_call(sqlite3.Cursor.fetchmany)
+    fetchall = _serialized_sqlite_call(sqlite3.Cursor.fetchall)
+    __next__ = _serialized_sqlite_call(sqlite3.Cursor.__next__)
+    close = _serialized_sqlite_call(sqlite3.Cursor.close)
+
+
+class _SerializedConnection(sqlite3.Connection):
+    """The lifecycle owner's connection; no separate database or read authority."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._operation_lock = RLock()
+
+    @_serialized_sqlite_call
+    def cursor(self):
+        return super().cursor(_SerializedCursor)
+
+    def execute(self, *args, **kwargs):
+        return self.cursor().execute(*args, **kwargs)
+
+    def executemany(self, *args, **kwargs):
+        return self.cursor().executemany(*args, **kwargs)
+
+    def executescript(self, *args, **kwargs):
+        return self.cursor().executescript(*args, **kwargs)
+
+    def __enter__(self):
+        self._operation_lock.acquire()
+        try:
+            return super().__enter__()
+        except BaseException:
+            self._operation_lock.release()
+            raise
+
+    def __exit__(self, *args):
+        try:
+            return super().__exit__(*args)
+        finally:
+            self._operation_lock.release()
+
+    commit = _serialized_sqlite_call(sqlite3.Connection.commit)
+    rollback = _serialized_sqlite_call(sqlite3.Connection.rollback)
+    close = _serialized_sqlite_call(sqlite3.Connection.close)
+    backup = _serialized_sqlite_call(sqlite3.Connection.backup)
+
 
 PRE_SUBMISSION = frozenset(
     {
@@ -231,7 +300,6 @@ class DurableLifecycleStore:
     ) -> None:
         if topology != "single-node":
             raise UnsupportedTopologyError("SQLite supports single-node topology only")
-        self._writer_lock = RLock()
         self._transaction_depth = 0
         self.path = str(path)
         self._expected_file_identity: tuple[int, int] | None = None
@@ -243,7 +311,9 @@ class DurableLifecycleStore:
             isolation_level=None,
             timeout=busy_timeout_ms / 1000,
             check_same_thread=False,
+            factory=_SerializedConnection,
         )
+        self._writer_lock = self.db._operation_lock
         self.db.row_factory = sqlite3.Row
         for pragma in (
             f"PRAGMA busy_timeout={busy_timeout_ms}",

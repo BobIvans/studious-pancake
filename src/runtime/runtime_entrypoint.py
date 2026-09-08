@@ -128,7 +128,9 @@ async def _run_paper(
     )
     stop = asyncio.Event()
     supervisor_config = RepeatedPaperServiceConfig(
-        max_cycles=(maximum or None), idle_delay_seconds=delay
+        max_cycles=(maximum or None),
+        idle_delay_seconds=delay,
+        shutdown_timeout_seconds=config.shutdown_drain_timeout_seconds,
     )
     owner = AsyncSignalHandlerOwner(stop.set)
     service = build_installed_durable_paper_service(

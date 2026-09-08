@@ -90,6 +90,36 @@ def test_restart_replays_same_decision_without_second_effect(tmp_path):
             assert store.count_rows(table) == 1
 
 
+@pytest.mark.parametrize("surface", ["store", "connection", "cursor", "iteration"])
+def test_shared_connection_reader_cannot_observe_rolled_back_attempt(surface):
+    started = Event()
+    with DurableLifecycleStore(":memory:") as store:
+
+        def read():
+            started.set()
+            if surface == "store":
+                return store.get_attempt(_key("uncommitted").attempt_id)
+            cursor = store.db.cursor() if surface == "cursor" else store.db
+            result = cursor.execute("SELECT * FROM durable_attempts")
+            if surface == "iteration":
+                return next(iter(result), None)
+            return result.fetchone()
+
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            with pytest.raises(RuntimeError, match="rollback"):
+                with store.write_transaction():
+                    store.create_attempt(
+                        _key("uncommitted"), idempotency_key="uncommitted"
+                    )
+                    pending = pool.submit(read)
+                    assert started.wait(5)
+                    with pytest.raises(TimeoutError):
+                        pending.result(timeout=0.1)
+                    raise RuntimeError("rollback")
+            assert pending.result(timeout=5) is None
+        assert store.count_rows("durable_attempts") == 0
+
+
 @pytest.mark.parametrize(
     "field", ["wallet", "amount", "message", "generation", "policy"]
 )

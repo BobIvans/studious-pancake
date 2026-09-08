@@ -224,3 +224,51 @@ def test_writer_contention_is_bounded_and_writes_nothing(tmp_path):
                     AttemptKey("busy", "a" * 64, 1), idempotency_key="busy"
                 )
         assert second.count_rows("durable_attempts") == 0
+
+
+@pytest.mark.parametrize("committed", [False, True])
+def test_process_exit_during_terminal_projection_reopens_atomically(
+    tmp_path, committed
+):
+    path = tmp_path / "terminal-crash.db"
+    code = """
+import os, sys
+from src.durability.unified_authority_pr02 import UnifiedLifecycleAuthority
+from tests.test_pr02_unified_lifecycle_authority import FakeTimeAuthority, begin_cycle, digest
+from tests.test_mpr2601_terminal_recovery import terminal
+owner = UnifiedLifecycleAuthority(sys.argv[1], release_digest=digest('release'),
+    policy_bundle_hash=digest('policy'), time_authority=FakeTimeAuthority())
+fence = begin_cycle(owner)
+if sys.argv[2] == 'False':
+    original = owner._write_a3_projection
+    def die(*args, **kwargs):
+        original(*args, **kwargs)
+        os._exit(73)
+    owner._write_a3_projection = die
+terminal(owner, fence)
+os._exit(73)
+"""
+    result = subprocess.run(
+        [sys.executable, "-c", code, str(path), str(committed)],
+        cwd=Path(__file__).resolve().parents[1],
+        timeout=20,
+    )
+    assert result.returncode == 73
+    with UnifiedLifecycleAuthority(
+        path,
+        release_digest=digest("release"),
+        policy_bundle_hash=digest("policy"),
+        time_authority=FakeTimeAuthority(),
+    ) as reopened:
+        for table in (
+            "pr02_terminal_records",
+            "pr02_outbox_event",
+            "pr02_outbox_delivery",
+            "a3_paper_service_cycles",
+            "a3_paper_service_outbox",
+        ):
+            assert reopened.db.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[
+                0
+            ] == int(committed)
+        recovery = reopened.recovery_summary()[0]
+        assert (recovery["recovery_action"] == "terminal_exactly_once") == committed

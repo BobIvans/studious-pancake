@@ -195,3 +195,50 @@ async def test_shutdown_drains_one_inflight_cycle_with_bounded_timeout(owner):
     runner.close()
     with pytest.raises(RuntimeError, match="CLOSED"):
         await runner.run_once()
+
+
+@pytest.mark.asyncio
+async def test_restart_after_interrupted_drain_blocks_new_cycle(tmp_path):
+    from tests.test_pr02_unified_lifecycle_authority import authority
+
+    first, _ = authority(tmp_path)
+    started = asyncio.Event()
+
+    async def blocked(*args):
+        started.set()
+        await asyncio.Event().wait()
+
+    runner = service(first, blocked)
+    stop = asyncio.Event()
+    supervisor = RepeatedInstalledPaperService(
+        runner, RepeatedPaperServiceConfig(shutdown_timeout_seconds=0.01)
+    )
+    task = asyncio.create_task(supervisor.run(stop))
+    await started.wait()
+    stop.set()
+    assert (await task).stop_reason is RepeatedPaperServiceStopReason.DRAIN_TIMEOUT
+    runner.close()
+    first.close()
+    reopened, _ = authority(tmp_path)
+    try:
+        restarted = service(reopened)
+        with pytest.raises(RuntimeError, match="UNRESOLVED"):
+            await restarted.run_once()
+        assert not restarted.ready_for_next_cycle
+        assert (
+            reopened.db.execute("SELECT COUNT(*) FROM pr02_intents").fetchone()[0] == 1
+        )
+        assert (
+            reopened.db.execute(
+                "SELECT COUNT(*) FROM pr02_terminal_records"
+            ).fetchone()[0]
+            == 0
+        )
+        assert (
+            reopened.db.execute(
+                "SELECT COUNT(*) FROM durable_time_incidents"
+            ).fetchone()[0]
+            >= 1
+        )
+    finally:
+        reopened.close()

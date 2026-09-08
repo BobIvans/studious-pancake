@@ -12,7 +12,7 @@
         "service",
         "dev"
       ],
-      "sha256": "6aac7d863667125f1dbfcac349cfb801038c12d56ebbc36b41886dc0cc64e97d"
+      "sha256": "df9367e1192fa831a1f1f04f022265442755b9eb601b47180bf9819e3fc03ddd"
     },
     "requirements.txt": {
       "extras": [],
@@ -26,7 +26,7 @@
   "python": "3.13",
   "resolved_locks": {
     "requirements-dev.lock": {
-      "sha256": "df4c7828a882a2820787e4a4d826ed73bad03f131f8c606119b254f3f68a5eed"
+      "sha256": "d90aa0da85323aa867b1b23b66ec57890b92e0e0a25809f904ef0f8251b35f8e"
     },
     "requirements.lock": {
       "sha256": "bb29ac92c572518260e7996856b71fed7d00b89eb099feb512e52597bf617b96"
@@ -34,7 +34,7 @@
   },
   "resolver": {
     "name": "uv",
-    "version": "0.10.0"
+    "version": "0.11.15"
   },
   "schema_version": "pr025.requirements-lock.v1",
   "source": "pyproject.toml"

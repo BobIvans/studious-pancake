@@ -110,7 +110,7 @@ def test_optional_lock_profiles_are_explicit_and_hashed():
         (ROOT / "config/requirements-lock.json").read_text(encoding="utf-8")
     )
     assert manifest["python"] == "3.13"
-    assert manifest["resolver"] == {"name": "uv", "version": "0.10.0"}
+    assert manifest["resolver"] == {"name": "uv", "version": "0.11.15"}
     for filename, details in manifest["resolved_locks"].items():
         digest = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
         assert digest == details["sha256"]

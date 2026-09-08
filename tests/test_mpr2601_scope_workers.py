@@ -100,6 +100,26 @@ def service(owner, runtime=None):
 
 
 @pytest.mark.asyncio
+async def test_critical_worker_exception_closes_readiness(owner):
+    async def failed(*args):
+        raise RuntimeError("controlled critical worker death")
+
+    runner = service(owner, failed)
+    with pytest.raises(RuntimeError, match="critical worker death"):
+        await runner.run_once()
+    assert not runner.ready_for_next_cycle
+    assert not runner.incident_recording_failed
+    assert (
+        owner.db.execute("SELECT COUNT(*) FROM durable_time_incidents").fetchone()[0]
+        == 1
+    )
+    assert (
+        owner.db.execute("SELECT COUNT(*) FROM pr02_terminal_records").fetchone()[0]
+        == 0
+    )
+
+
+@pytest.mark.asyncio
 async def test_worker_cancellation_closes_readiness_and_records_incident(owner):
     started = asyncio.Event()
 

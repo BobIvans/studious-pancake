@@ -265,33 +265,49 @@ def main(argv: Sequence[str] | None = None) -> int:
             ),
         )
 
-    resolved_locks = {}
-    for source, output in (
-        (runtime_lock, ROOT / "requirements.lock"),
-        (dev_lock, ROOT / "requirements-dev.lock"),
-    ):
-        subprocess.run(
-            [
-                uv,
-                "pip",
-                "compile",
-                str(source),
-                "--python-version",
-                "3.13",
-                "--python-platform",
-                "linux",
-                "--generate-hashes",
-                "--no-header",
-                "--no-annotate",
-                "--no-emit-index-url",
-                "--no-emit-find-links",
-                "--output-file",
-                str(output),
-            ],
-            cwd=ROOT,
-            check=True,
+    with tempfile.TemporaryDirectory(prefix="pr025-installed-lock-") as temp_dir:
+        runtime_input = Path(temp_dir) / "runtime-build.in"
+        metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+        # The existing offline container builds the wheel in its runtime venv.
+        # Its hash-verified wheelhouse must include the declared build and service profiles.
+        build_service = (
+            metadata["build-system"]["requires"]
+            + metadata["project"]["optional-dependencies"]["service"]
         )
-        resolved_locks[output.name] = {"sha256": _sha256(output)}
+        runtime_input.write_text(
+            runtime_lock.read_text(encoding="utf-8") + "\n".join(build_service) + "\n",
+            encoding="utf-8",
+            newline="\n",
+        )
+        resolved_locks = {}
+        for source, output in (
+            (runtime_input, ROOT / "requirements.lock"),
+            (dev_lock, ROOT / "requirements-dev.lock"),
+        ):
+            subprocess.run(
+                [
+                    uv,
+                    "pip",
+                    "compile",
+                    str(source),
+                    "--python-version",
+                    "3.13",
+                    "--python-platform",
+                    "linux",
+                    "--constraint",
+                    str(dev_lock),
+                    "--generate-hashes",
+                    "--no-header",
+                    "--no-annotate",
+                    "--no-emit-index-url",
+                    "--no-emit-find-links",
+                    "--output-file",
+                    str(output),
+                ],
+                cwd=ROOT,
+                check=True,
+            )
+            resolved_locks[output.name] = {"sha256": _sha256(output)}
 
     manifest = {
         "schema_version": "pr025.requirements-lock.v1",

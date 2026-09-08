@@ -126,6 +126,20 @@ def test_development_lock_is_exact_and_honors_direct_pins():
     assert development["types-pyyaml"] == direct["types-pyyaml"]
 
 
+def test_declared_profiles_do_not_promote_transitive_dependencies():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
+    runtime = {
+        _canonical_name(PIN_RE.match(pin).group(1)) for pin in project["dependencies"]
+    }
+    assert _pins(ROOT / "requirements.txt") == runtime
+    assert _pins(ROOT / "requirements-dev.txt") == set(_project_direct_pins())
+    assert "uvicorn[standard]==0.38.0" in (ROOT / "requirements-dev.txt").read_text()
+    # Resolved artifacts retain every native/transitive dependency for hash
+    # installation and audit; profile projection must not erase them.
+    for name in ("solders", "jsonalias", "httpx2", "httpcore2"):
+        assert name + "==" in (ROOT / "requirements.lock").read_text()
+
+
 def test_repository_and_packaged_capability_registries_match():
     repository = json.loads(
         (ROOT / "config/capabilities.json").read_text(encoding="utf-8")

@@ -97,6 +97,7 @@ jobs:
                               '--output', str(archive),
                               '7c76d53bbed85b429b5d615d19496b7b72db6961'], check=True)
               subprocess.run(['tar', '-xf', str(archive), '-C', str(baseline)], check=True)
+              shutil.copyfile(source / 'tests/__init__.py', baseline / 'tests/__init__.py')
               shutil.copyfile(source / 'tests/test_mpr2601_durable_atomicity.py',
                               baseline / 'tests/test_mpr2601_durable_atomicity.py')
               result = subprocess.run([

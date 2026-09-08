@@ -17,8 +17,12 @@ from src.durability.unified_authority_pr02 import (
 )
 from src.economics.durable_reservations import DurableCapitalCoordinator
 from src.execution.models import ExecutionState
-from test_pr02_unified_lifecycle_authority import FakeTimeAuthority, begin_cycle, digest
-from test_pr057_durable_capital_reservations import _policy
+from tests.test_pr02_unified_lifecycle_authority import (
+    FakeTimeAuthority,
+    begin_cycle,
+    digest,
+)
+from tests.test_pr057_durable_capital_reservations import _policy
 
 
 @pytest.fixture(params=["memory", "file"])

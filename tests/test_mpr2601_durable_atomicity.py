@@ -10,7 +10,7 @@ import pytest
 from src.durability import DurableLifecycleError, DurableLifecycleStore
 from src.economics.capital import CapitalEngineError
 from src.economics.durable_reservations import DurableCapitalCoordinator
-from test_pr057_durable_capital_reservations import (
+from tests.test_pr057_durable_capital_reservations import (
     _candidate,
     _key,
     _policy,

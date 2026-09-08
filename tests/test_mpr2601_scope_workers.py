@@ -18,10 +18,15 @@ from src.paper_shadow.repeated_service_pr04 import (
     RepeatedPaperServiceConfig,
     RepeatedPaperServiceStopReason,
 )
-from test_mpr2601_durable_atomicity import reserve
-from test_mpr2601_terminal_recovery import owner, terminal
-from test_pr02_unified_lifecycle_authority import begin_cycle, digest
-from test_pr057_durable_capital_reservations import _snapshot, _candidate, _key, _policy
+from tests.test_mpr2601_durable_atomicity import reserve
+from tests.test_mpr2601_terminal_recovery import owner, terminal
+from tests.test_pr02_unified_lifecycle_authority import begin_cycle, digest
+from tests.test_pr057_durable_capital_reservations import (
+    _snapshot,
+    _candidate,
+    _key,
+    _policy,
+)
 
 
 @pytest.mark.parametrize(
@@ -105,18 +110,16 @@ async def test_critical_worker_exception_closes_readiness(owner):
         raise RuntimeError("controlled critical worker death")
 
     runner = service(owner, failed)
-    with pytest.raises(RuntimeError, match="critical worker death"):
-        await runner.run_once()
+    report = await runner.run_once()
+    assert report.status.value == "INDETERMINATE"
+    assert not report.ready_for_next_cycle
     assert not runner.ready_for_next_cycle
     assert not runner.incident_recording_failed
-    assert (
-        owner.db.execute("SELECT COUNT(*) FROM durable_time_incidents").fetchone()[0]
-        == 1
-    )
-    assert (
-        owner.db.execute("SELECT COUNT(*) FROM pr02_terminal_records").fetchone()[0]
-        == 0
-    )
+    terminal = owner.db.execute(
+        "SELECT reason_code FROM pr02_terminal_records"
+    ).fetchone()
+    assert terminal[0] == "blocked_a3_runtime_cycle_failed_RuntimeError"
+    assert owner.db.execute("SELECT COUNT(*) FROM pr02_outbox_event").fetchone()[0] == 1
 
 
 @pytest.mark.asyncio

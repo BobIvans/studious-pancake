@@ -4,7 +4,7 @@
       "extras": [
         "analytics"
       ],
-      "sha256": "ad30061154862ff07efd791bfa46986b7d8e8cc794e895ed2628fdddec9f2b2b"
+      "sha256": "6fd90b4eb82b53e77411bb0b9da14105c69a8b6401a1d63d90a2919ad13aca4b"
     },
     "requirements-dev.txt": {
       "extras": [
@@ -12,11 +12,11 @@
         "service",
         "dev"
       ],
-      "sha256": "0d58b4bcea16f0742b6cdb7791895aead09202a45d1bdd7d31711e93be390f87"
+      "sha256": "6aac7d863667125f1dbfcac349cfb801038c12d56ebbc36b41886dc0cc64e97d"
     },
     "requirements.txt": {
       "extras": [],
-      "sha256": "edb879ef1c36be907d7144603e37731d3d31b3d28f411d85f4274af453ee7475"
+      "sha256": "d48d6277464253c7121504fcf0faca1f358e16868787bd51b67f20675dfdd453"
     }
   },
   "platforms": [

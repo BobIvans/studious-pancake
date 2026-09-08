@@ -5,7 +5,9 @@ The public runtime and analytics profiles are compiled directly from the project
 metadata. The service and developer extras are compiled independently and then
 merged with the two public profiles. Splitting the large developer resolution
 keeps the process bounded on slow package indexes while preserving a single
-source of truth in ``pyproject.toml``.
+source of truth in ``pyproject.toml``. The .txt profiles contain declared
+dependencies; the .lock artifacts resolve all transitives with hashes and are
+the inputs to offline installation and vulnerability audit.
 """
 
 from __future__ import annotations
@@ -65,6 +67,7 @@ def _run_compile(
         "linux",
         "--no-header",
         "--no-annotate",
+        "--no-deps",
         "--no-emit-index-url",
         "--no-emit-find-links",
         "--output-file",
@@ -111,7 +114,7 @@ def _parse_pins(path: Path) -> dict[str, str]:
         if match is None:
             raise SystemExit(f"unexpected non-exact requirement in {path}: {line}")
         name, version, suffix = match.groups()
-        pins[_canonical_name(name)] = f"{name}=={version}{suffix}"
+        pins[_canonical_name(name)] = line.rstrip(" " + chr(92))
     return pins
 
 
@@ -134,7 +137,7 @@ def _direct_versions(project: dict[str, object]) -> dict[str, str]:
                 f"all PR-025 direct dependencies must be exact pins: {value}"
             )
         name, version, suffix = match.groups()
-        direct[_canonical_name(name)] = f"{name}=={version}{suffix}"
+        direct[_canonical_name(name)] = value
     return direct
 
 
@@ -211,7 +214,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         constraints = temporary / "existing-pins.txt"
         direct = _direct_versions(project)
         retained = []
-        for name, pin in _parse_pins(dev_lock).items():
+        for name, pin in _parse_pins(ROOT / "requirements-dev.lock").items():
             if (
                 name not in direct
                 or direct[name].split(";")[0].strip().lower() == pin.lower()

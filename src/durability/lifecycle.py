@@ -91,10 +91,13 @@ class AttemptKey:
     generation: int
 
     def __post_init__(self) -> None:
-        if not self.logical_opportunity_id or not self.plan_hash:
-            raise ValueError("opportunity and plan hash are required")
-        if self.generation < 1:
-            raise ValueError("generation must be positive")
+        if any(
+            not isinstance(value, str) or not value.strip()
+            for value in (self.logical_opportunity_id, self.plan_hash)
+        ):
+            raise ValueError("opportunity and plan hash must be nonblank strings")
+        if type(self.generation) is not int or self.generation < 1:
+            raise ValueError("generation must be a positive integer")
 
     @property
     def attempt_id(self) -> str:
@@ -731,7 +734,7 @@ class DurableLifecycleStore:
             raise ValueError("resource, owner and positive ttl are required")
         now = self.clock_ns()
         expires = now + ttl_ns
-        with self.db:
+        with self.write_transaction():
             row = self.db.execute(
                 "SELECT * FROM durable_leases WHERE resource_key=?",
                 (resource_key,),
@@ -777,7 +780,7 @@ class DurableLifecycleStore:
         release_reservation: bool = False,
     ) -> DurableAttempt:
         now = self.clock_ns()
-        with self.db:
+        with self.write_transaction():
             self._verify_lease(lease, f"attempt:{attempt_id}")
             row = self.db.execute(
                 "SELECT * FROM durable_attempts WHERE attempt_id=?",
@@ -857,7 +860,7 @@ class DurableLifecycleStore:
             raise ValueError("message_hash must be sha256 hex")
         int(message_hash, 16)
         now = self.clock_ns()
-        with self.db:
+        with self.write_transaction():
             self._verify_lease(lease, f"attempt:{attempt_id}")
             row = self.db.execute(
                 "SELECT * FROM durable_attempts WHERE attempt_id=?",
@@ -974,7 +977,7 @@ class DurableLifecycleStore:
         reason: str = "RECOVERY_PRE_SUBMISSION_RELEASED",
     ) -> bool:
         now = self.clock_ns()
-        with self.db:
+        with self.write_transaction():
             self._verify_lease(lease, f"attempt:{attempt_id}")
             row = self.db.execute(
                 "SELECT * FROM durable_attempts WHERE attempt_id=?",
@@ -1064,7 +1067,7 @@ class DurableLifecycleStore:
         )
         claimed_until = now + lease_ns
         output = []
-        with self.db:
+        with self.write_transaction():
             rows = self.db.execute(
                 "SELECT * FROM durable_outbox WHERE topic=? "
                 "AND status='pending' AND available_at_ns<=? AND "
@@ -1105,7 +1108,7 @@ class DurableLifecycleStore:
         *,
         owner_id: str,
     ) -> bool:
-        with self.db:
+        with self.write_transaction():
             cur = self.db.execute(
                 "UPDATE durable_outbox SET status='completed',"
                 "completed_at_ns=?,claimed_until_ns=NULL WHERE outbox_id=? "
@@ -1120,7 +1123,7 @@ class DurableLifecycleStore:
             return cur.rowcount == 1
 
     def record_retention_eligibility(self, *, cutoff_ns: int) -> int:
-        with self.db:
+        with self.write_transaction():
             cur = self.db.execute(
                 "INSERT OR IGNORE INTO retention_ledger(target_type,target_id,"
                 "action,cutoff_ns,created_at_ns) SELECT 'attempt',attempt_id,"
@@ -1132,7 +1135,7 @@ class DurableLifecycleStore:
 
     def purge_completed_outbox(self, *, cutoff_ns: int) -> int:
         now = self.clock_ns()
-        with self.db:
+        with self.write_transaction():
             rows = self.db.execute(
                 "SELECT outbox_id FROM durable_outbox WHERE "
                 "status='completed' AND completed_at_ns<?",
@@ -1169,6 +1172,11 @@ class DurableLifecycleStore:
                 (attempt["attempt_id"],),
             ).fetchall()
             for row in rows:
+                if (
+                    hashlib.sha256(row["payload_json"].encode()).hexdigest()
+                    != row["payload_digest"]
+                ):
+                    raise CorruptJournalError("audit payload digest mismatch")
                 if int(row["sequence_no"]) != sequence:
                     raise CorruptJournalError("audit sequence gap")
                 expected = self._chain(

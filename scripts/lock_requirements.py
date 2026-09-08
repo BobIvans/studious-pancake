@@ -41,7 +41,7 @@ def _uv_version(uv: str) -> str:
         [uv, "--version"], check=True, capture_output=True, text=True
     )
     parts = result.stdout.strip().split()
-    return parts[-1] if parts else ""
+    return parts[1] if len(parts) >= 2 and parts[0] == "uv" else ""
 
 
 def _run_compile(
@@ -51,6 +51,7 @@ def _run_compile(
     *,
     extras: Iterable[str] = (),
     upgrade: bool,
+    constraints: Path | None = None,
 ) -> None:
     output.unlink(missing_ok=True)
     command = [
@@ -60,6 +61,10 @@ def _run_compile(
         str(source),
         "--python-version",
         "3.13",
+        "--python-platform",
+        "linux",
+        "--no-header",
+        "--no-annotate",
         "--no-emit-index-url",
         "--no-emit-find-links",
         "--output-file",
@@ -67,6 +72,8 @@ def _run_compile(
     ]
     if upgrade:
         command.append("--upgrade")
+    elif constraints is not None:
+        command.extend(("--constraint", str(constraints)))
     for extra in extras:
         command.extend(("--extra", extra))
     print(f"$ {' '.join(command)}", flush=True)
@@ -167,6 +174,7 @@ def _write_merged_dev_lock(
     output.write_text(
         "\n".join(header + [merged[name] for name in sorted(merged)]) + "\n",
         encoding="utf-8",
+        newline="\n",
     )
 
 
@@ -200,6 +208,16 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     with tempfile.TemporaryDirectory(prefix="pr025-lock-") as temp_dir:
         temporary = Path(temp_dir)
+        constraints = temporary / "existing-pins.txt"
+        direct = _direct_versions(project)
+        retained = []
+        for name, pin in _parse_pins(dev_lock).items():
+            if (
+                name not in direct
+                or direct[name].split(";")[0].strip().lower() == pin.lower()
+            ):
+                retained.append(pin)
+        constraints.write_text("\n".join(retained) + "\n", encoding="utf-8")
         service_input = temporary / "service.in"
         developer_input = temporary / "dev.in"
         service_lock = temporary / "service.txt"
@@ -212,6 +230,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             ROOT / "pyproject.toml",
             runtime_lock,
             upgrade=args.upgrade,
+            constraints=constraints,
         )
         _run_compile(
             uv,
@@ -219,9 +238,22 @@ def main(argv: Sequence[str] | None = None) -> int:
             analytics_lock,
             extras=("analytics",),
             upgrade=args.upgrade,
+            constraints=constraints,
         )
-        _run_compile(uv, service_input, service_lock, upgrade=args.upgrade)
-        _run_compile(uv, developer_input, developer_lock, upgrade=args.upgrade)
+        _run_compile(
+            uv,
+            service_input,
+            service_lock,
+            upgrade=args.upgrade,
+            constraints=constraints,
+        )
+        _run_compile(
+            uv,
+            developer_input,
+            developer_lock,
+            upgrade=args.upgrade,
+            constraints=constraints,
+        )
         _write_merged_dev_lock(
             dev_lock,
             project=project,
@@ -233,11 +265,40 @@ def main(argv: Sequence[str] | None = None) -> int:
             ),
         )
 
+    resolved_locks = {}
+    for source, output in (
+        (runtime_lock, ROOT / "requirements.lock"),
+        (dev_lock, ROOT / "requirements-dev.lock"),
+    ):
+        subprocess.run(
+            [
+                uv,
+                "pip",
+                "compile",
+                str(source),
+                "--python-version",
+                "3.13",
+                "--python-platform",
+                "linux",
+                "--generate-hashes",
+                "--no-header",
+                "--no-annotate",
+                "--no-emit-index-url",
+                "--no-emit-find-links",
+                "--output-file",
+                str(output),
+            ],
+            cwd=ROOT,
+            check=True,
+        )
+        resolved_locks[output.name] = {"sha256": _sha256(output)}
+
     manifest = {
         "schema_version": "pr025.requirements-lock.v1",
         "python": "3.13",
         "platforms": ["linux", "macos"],
         "resolver": {"name": "uv", "version": actual_version},
+        "resolved_locks": resolved_locks,
         "source": "pyproject.toml",
         "locks": {
             "requirements.txt": {
@@ -255,7 +316,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         },
     }
     (ROOT / "config/requirements-lock.json").write_text(
-        json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(manifest, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
     return 0
 

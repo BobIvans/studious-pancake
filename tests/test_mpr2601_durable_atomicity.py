@@ -79,7 +79,7 @@ def test_restart_replays_same_decision_without_second_effect(tmp_path):
     with DurableLifecycleStore(path) as store:
         first = reserve(store)
     with DurableLifecycleStore(path) as store:
-        replay = reserve(store)
+        replay = reserve(store, wallet_snapshot=first.wallet_snapshot)
         assert replay == first
         for table in (
             "durable_attempts",
@@ -95,9 +95,9 @@ def test_restart_replays_same_decision_without_second_effect(tmp_path):
 )
 def test_semantic_drift_is_rejected_without_writes(field):
     with DurableLifecycleStore(":memory:") as store:
-        reserve(store)
+        first = reserve(store)
         candidate = _candidate("first", peak_rent_lamports=4_000_000)
-        snapshot = _snapshot(16_000_000)
+        snapshot = first.wallet_snapshot
         key = _key("first")
         policy = _policy()
         if field == "wallet":

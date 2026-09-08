@@ -236,6 +236,41 @@ def main() -> int:
             cwd=temporary,
             env=clean_env,
         )
+        _run(
+            [
+                str(python),
+                "-I",
+                "-c",
+                """
+from pathlib import Path
+import json
+import subprocess
+import sys
+import src.runtime_authority as authority
+import src.runtime_authority_pr01 as alias
+assert 'site-packages' in str(Path(authority.__file__).resolve())
+assert alias.SemanticCommandIdentity is authority.SemanticCommandIdentity
+assert authority.evaluate_runtime_authority_map().accepted
+resource = Path(authority.__file__).parent / 'resources/runtime_authority.json'
+original = resource.read_bytes()
+try:
+    changed = json.loads(original)
+    changed['unregistered_control_override'] = True
+    resource.write_text(json.dumps(changed), encoding='utf-8')
+    result = subprocess.run([sys.executable, '-I', '-c',
+        'from src.runtime.runtime_entrypoint import main; raise SystemExit(main(["run", "--mode", "paper"]))'],
+        capture_output=True, text=True, timeout=30)
+    assert result.returncode == 5, result
+    assert 'RUNTIME_AUTHORITY_INVALID' in result.stderr, result.stderr
+    assert not Path('.runtime').exists()
+finally:
+    resource.write_bytes(original)
+print('MPR-2601 installed contract, alias and tampered admission passed')
+""",
+            ],
+            cwd=temporary,
+            env=clean_env,
+        )
         if status["supported_entrypoint"] != "flashloan-bot":
             raise SystemExit("installed CLI reports an unexpected supported entrypoint")
         if capabilities["schema_version"] != "pr023.capabilities.v1":

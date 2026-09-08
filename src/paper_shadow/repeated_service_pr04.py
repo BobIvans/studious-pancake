@@ -32,6 +32,7 @@ class RepeatedPaperServiceStopReason(StrEnum):
     SIGNALLED = "signalled"
     MAX_CYCLES = "max_cycles"
     CYCLE_NOT_READY = "cycle_not_ready"
+    DRAIN_TIMEOUT = "drain_timeout"
 
 
 class UnsafePaperServiceReportError(RuntimeError):
@@ -45,10 +46,13 @@ class RepeatedPaperServiceConfig:
     max_cycles: int | None = None
     idle_delay_seconds: float = 0.25
     stop_when_not_ready: bool = True
+    shutdown_timeout_seconds: float = 5.0
 
     def __post_init__(self) -> None:
         if self.max_cycles is not None and self.max_cycles <= 0:
             raise ValueError("max_cycles must be positive or None")
+        if not 0 < self.shutdown_timeout_seconds < float("inf"):
+            raise ValueError("shutdown_timeout_seconds must be finite and positive")
         if self.idle_delay_seconds < 0:
             raise ValueError("idle_delay_seconds must be non-negative")
 
@@ -141,7 +145,10 @@ class RepeatedInstalledPaperService:
                     stop_reason = RepeatedPaperServiceStopReason.MAX_CYCLES
                     break
 
-                report = await self.cycle_runner.run_once()
+                report = await self._run_cycle_until_stop(stop_event)
+                if report is None:
+                    stop_reason = RepeatedPaperServiceStopReason.DRAIN_TIMEOUT
+                    break
                 _assert_sender_free(report)
                 reports.append(report)
                 if self.on_report is not None:
@@ -166,6 +173,42 @@ class RepeatedInstalledPaperService:
                 started_at_ns=started_at_ns,
                 completed_at_ns=self.clock_ns(),
             )
+
+    async def _run_cycle_until_stop(self, stop_event: asyncio.Event):
+        # The existing sequential supervisor has capacity one: no producer queue
+        # or second cycle can accumulate behind an inflight durable operation.
+        cycle = asyncio.create_task(self.cycle_runner.run_once())
+        stopped = asyncio.create_task(stop_event.wait())
+        try:
+            done, _ = await asyncio.wait(
+                (cycle, stopped), return_when=asyncio.FIRST_COMPLETED
+            )
+            if cycle in done:
+                return cycle.result()
+            done, _ = await asyncio.wait(
+                (cycle,), timeout=self.config.shutdown_timeout_seconds
+            )
+            if cycle in done:
+                return cycle.result()
+            cycle.cancel()
+            done, _ = await asyncio.wait(
+                (cycle,), timeout=self.config.shutdown_timeout_seconds
+            )
+            if not done:
+                raise RuntimeError("PR04_WORKER_DID_NOT_STOP")
+            # Consume cancellation/exception without changing durable effects.
+            await asyncio.gather(cycle, return_exceptions=True)
+            return None
+        finally:
+            stopped.cancel()
+            if not cycle.done():
+                cycle.cancel()
+                await asyncio.wait(
+                    (cycle,), timeout=self.config.shutdown_timeout_seconds
+                )
+            await asyncio.gather(stopped, return_exceptions=True)
+            if cycle.done() and not cycle.cancelled():
+                cycle.exception()
 
     def _max_cycles_reached(
         self,

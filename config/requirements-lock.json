@@ -4,7 +4,7 @@
       "extras": [
         "analytics"
       ],
-      "sha256": "2a5c4cce090c24c1437e46274559a8e47ee6c4f4e72cb074ac7d1edacd8b14fd"
+      "sha256": "ad30061154862ff07efd791bfa46986b7d8e8cc794e895ed2628fdddec9f2b2b"
     },
     "requirements-dev.txt": {
       "extras": [
@@ -12,11 +12,11 @@
         "service",
         "dev"
       ],
-      "sha256": "92ac27093fb562ed71c71d54b8d55da4b8a2f7f94869d7f8c31291d029d71a23"
+      "sha256": "0d58b4bcea16f0742b6cdb7791895aead09202a45d1bdd7d31711e93be390f87"
     },
     "requirements.txt": {
       "extras": [],
-      "sha256": "ad22ca82defbf1fa39059a8c2f371717e41bcdc606143618b567297bd085342a"
+      "sha256": "edb879ef1c36be907d7144603e37731d3d31b3d28f411d85f4274af453ee7475"
     }
   },
   "platforms": [
@@ -26,15 +26,15 @@
   "python": "3.13",
   "resolved_locks": {
     "requirements-dev.lock": {
-      "sha256": "34a45dbfe8f1d3516311aad7da76834aed153914a53fcac42f15aa17615b8515"
+      "sha256": "df4c7828a882a2820787e4a4d826ed73bad03f131f8c606119b254f3f68a5eed"
     },
     "requirements.lock": {
-      "sha256": "11d788259e864bdca9a670a1caad7c3b2d77a500db6fe999a0d8a6dfa7c62adc"
+      "sha256": "f6e82daa696ae77b963f67ccd2bdfeff9e125465640f7e7cca3006a38a8f30ea"
     }
   },
   "resolver": {
-    "name": "pip-tools",
-    "version": "7.5.2"
+    "name": "uv",
+    "version": "0.10.0"
   },
   "schema_version": "pr025.requirements-lock.v1",
   "source": "pyproject.toml"

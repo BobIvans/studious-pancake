@@ -41,9 +41,10 @@ class WalletBalanceSnapshot:
     context_slot: int | None
     source: str = "rpc.getBalance"
     captured_at_ns: int | None = None
+    cluster_genesis: str | None = None
 
     def __post_init__(self) -> None:
-        if not self.wallet_pubkey:
+        if not isinstance(self.wallet_pubkey, str) or not self.wallet_pubkey.strip():
             raise CapitalEngineError("wallet_pubkey is required")
         _strict_lamports(self.native_lamports, field="native_lamports")
         if self.context_slot is not None:
@@ -54,7 +55,12 @@ class WalletBalanceSnapshot:
                 field="captured_at_ns",
                 upper=2**63 - 1,
             )
-        if not self.source:
+        if self.cluster_genesis is not None and (
+            not isinstance(self.cluster_genesis, str)
+            or not self.cluster_genesis.strip()
+        ):
+            raise CapitalEngineError("cluster_genesis must be nonblank text")
+        if not isinstance(self.source, str) or not self.source.strip():
             raise CapitalEngineError("balance snapshot source is required")
 
     def to_json(self) -> dict[str, object]:
@@ -64,6 +70,7 @@ class WalletBalanceSnapshot:
             "context_slot": self.context_slot,
             "source": self.source,
             "captured_at_ns": self.captured_at_ns,
+            "cluster_genesis": self.cluster_genesis,
         }
 
 
@@ -117,18 +124,49 @@ class DurableCapitalCoordinator:
         store: DurableLifecycleStore,
         policy: CapitalPolicy,
         owner_id: str = "capital-coordinator",
+        max_snapshot_age_ns: int = 30_000_000_000,
     ) -> None:
         if not owner_id:
             raise CapitalEngineError("owner_id is required")
         self.store = store
         self.policy = policy
         self.owner_id = owner_id
+        if type(max_snapshot_age_ns) is not int or max_snapshot_age_ns <= 0:
+            raise CapitalEngineError("max_snapshot_age_ns must be positive")
+        self.max_snapshot_age_ns = max_snapshot_age_ns
 
     @staticmethod
     def _excluded_attempt_ids(
         exclude_attempt_ids: Iterable[str] | None,
     ) -> frozenset[str]:
         return frozenset(exclude_attempt_ids or ())
+
+    def _active_attempts(self) -> tuple[DurableAttempt, ...]:
+        """Include frozen terminal commitments; terminal status is not release."""
+        self.store.integrity_check()
+        rows = self.store.db.execute(
+            "SELECT a.* FROM durable_attempts a LEFT JOIN durable_reservations r "
+            "ON r.attempt_id=a.attempt_id WHERE r.state='active' OR a.reservation_state='active' "
+            "ORDER BY a.created_at_ns,a.attempt_id"
+        ).fetchall()
+        attempts = []
+        for row in rows:
+            reservation = self.store.db.execute(
+                "SELECT * FROM durable_reservations WHERE attempt_id=?",
+                (row["attempt_id"],),
+            ).fetchone()
+            if (
+                reservation is None
+                or reservation["state"] != row["reservation_state"]
+                or reservation["amount_lamports"] != row["reserved_lamports"]
+                or reservation["reservation_id"] != row["reservation_id"]
+            ):
+                raise CapitalEngineError("DURABLE_RESERVATION_INCONSISTENT")
+            attempt = self.store.get_attempt(row["attempt_id"])
+            if attempt is None:
+                raise CapitalEngineError("DURABLE_RESERVATION_INCONSISTENT")
+            attempts.append(attempt)
+        return tuple(attempts)
 
     def active_durable_reserved_lamports(
         self,
@@ -137,10 +175,9 @@ class DurableCapitalCoordinator:
     ) -> int:
         excluded = self._excluded_attempt_ids(exclude_attempt_ids)
         return sum(
-            decision.attempt.reserved_lamports
-            for decision in self.store.scan_startup_recovery()
-            if decision.reservation_active
-            and decision.attempt.attempt_id not in excluded
+            a.reserved_lamports
+            for a in self._active_attempts()
+            if a.attempt_id not in excluded
         )
 
     def recovery_attempt_ids(
@@ -150,11 +187,67 @@ class DurableCapitalCoordinator:
     ) -> tuple[str, ...]:
         excluded = self._excluded_attempt_ids(exclude_attempt_ids)
         return tuple(
-            decision.attempt.attempt_id
-            for decision in self.store.scan_startup_recovery()
-            if decision.reservation_active
-            and decision.attempt.attempt_id not in excluded
+            a.attempt_id
+            for a in self._active_attempts()
+            if a.attempt_id not in excluded
         )
+
+    def _creation_payload(self, attempt_id: str) -> dict[str, Any]:
+        row = self.store.db.execute(
+            "SELECT payload_json FROM durable_events WHERE attempt_id=? "
+            "AND event_type='attempt_created' AND sequence_no=0",
+            (attempt_id,),
+        ).fetchone()
+        if row is None:
+            raise CapitalEngineError("DURABLE_RESERVATION_LINEAGE_MISSING")
+        return json.loads(row["payload_json"])
+
+    def _validate_snapshot(self, snapshot: WalletBalanceSnapshot) -> None:
+        if (
+            snapshot.cluster_genesis is None
+            or snapshot.captured_at_ns is None
+            or snapshot.context_slot is None
+        ):
+            raise CapitalEngineError("WALLET_SNAPSHOT_SCOPE_OR_TIME_UNKNOWN")
+        age = self.store.clock_ns() - snapshot.captured_at_ns
+        if not 0 <= age <= self.max_snapshot_age_ns:
+            raise CapitalEngineError("WALLET_SNAPSHOT_STALE")
+        identity_table = self.store.db.execute(
+            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='database_identity_pr195'"
+        ).fetchone()
+        if identity_table:
+            identity = self.store.db.execute(
+                "SELECT cluster_genesis FROM database_identity_pr195 WHERE singleton=1"
+            ).fetchone()
+            if identity is None or identity[0] != snapshot.cluster_genesis:
+                raise CapitalEngineError("WALLET_SNAPSHOT_CLUSTER_MISMATCH")
+        # Context slot is the existing snapshot generation; do not invent a
+        # second authoritative counter. Check all historical reservations too.
+        rows = self.store.db.execute(
+            "SELECT r.attempt_id,r.state,r.updated_at_ns FROM durable_reservations r"
+        ).fetchall()
+        for row in rows:
+            prior = self._creation_payload(row["attempt_id"]).get("wallet_snapshot")
+            if not isinstance(prior, dict) or not prior.get("cluster_genesis"):
+                raise CapitalEngineError("DURABLE_RESERVATION_SCOPE_UNKNOWN")
+            if (prior.get("wallet_pubkey"), prior.get("cluster_genesis")) != (
+                snapshot.wallet_pubkey,
+                snapshot.cluster_genesis,
+            ):
+                continue
+            slot = prior.get("context_slot")
+            if type(slot) is not int or snapshot.context_slot < slot:
+                raise CapitalEngineError("WALLET_SNAPSHOT_GENERATION_STALE")
+            if (
+                snapshot.context_slot == slot
+                and int(prior["native_lamports"]) != snapshot.native_lamports
+            ):
+                raise CapitalEngineError("WALLET_SNAPSHOT_BALANCE_CONFLICT")
+            if row["state"] == "consumed" and (
+                snapshot.context_slot <= slot
+                or snapshot.captured_at_ns <= row["updated_at_ns"]
+            ):
+                raise CapitalEngineError("WALLET_SNAPSHOT_PREDATES_SETTLEMENT")
 
     def _ledger_for_snapshot(
         self,
@@ -162,12 +255,21 @@ class DurableCapitalCoordinator:
         *,
         exclude_attempt_ids: Iterable[str] | None = None,
     ) -> tuple[AtomicCapitalLedger, int, tuple[str, ...]]:
-        active_reserved = self.active_durable_reserved_lamports(
-            exclude_attempt_ids=exclude_attempt_ids
-        )
-        recovery_ids = self.recovery_attempt_ids(
-            exclude_attempt_ids=exclude_attempt_ids
-        )
+        self._validate_snapshot(wallet_snapshot)
+        excluded = self._excluded_attempt_ids(exclude_attempt_ids)
+        selected = []
+        for attempt in self._active_attempts():
+            payload = self._creation_payload(attempt.attempt_id)
+            scope = payload.get("wallet_snapshot")
+            if not isinstance(scope, dict) or not scope.get("cluster_genesis"):
+                raise CapitalEngineError("DURABLE_RESERVATION_SCOPE_UNKNOWN")
+            if (scope.get("wallet_pubkey"), scope.get("cluster_genesis")) == (
+                wallet_snapshot.wallet_pubkey,
+                wallet_snapshot.cluster_genesis,
+            ) and attempt.attempt_id not in excluded:
+                selected.append(attempt)
+        active_reserved = sum(a.reserved_lamports for a in selected)
+        recovery_ids = tuple(a.attempt_id for a in selected)
         effective_wallet = max(0, wallet_snapshot.native_lamports - active_reserved)
         return (
             AtomicCapitalLedger(
@@ -248,6 +350,7 @@ class DurableCapitalCoordinator:
             ),
         )
         with self.store.write_transaction():
+            self.store.integrity_check()
             event = self.store.db.execute(
                 "SELECT * FROM durable_events WHERE idempotency_key=?",
                 (idempotency_key,),

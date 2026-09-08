@@ -11,8 +11,9 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from enum import StrEnum
 from importlib import resources
-import json
 from typing import Any, Mapping
+
+from src.contracts.registry import SchemaRegistryError, get_schema_registry, _load_json
 
 from src.kernel import canonical_json_bytes, domain_sha256
 
@@ -75,9 +76,22 @@ class SemanticCommandIdentity:
 
     def __post_init__(self) -> None:
         AttemptGeneration(self.attempt_generation)
-        for field, value in asdict(self).items():
-            if isinstance(value, str) and not value:
-                raise RuntimeAuthorityError(f"{field} is required")
+        for field in (
+            "attempt_id",
+            "candidate_id",
+            "reservation_id",
+            "policy_bundle_hash",
+            "payload_hash",
+        ):
+            value = getattr(self, field)
+            if not isinstance(value, str) or not value.strip():
+                raise RuntimeAuthorityError(f"{field} must be a nonblank string")
+        try:
+            get_schema_registry().validate_payload(
+                "mpr-4x-02.semantic-command.v1", asdict(self)
+            )
+        except SchemaRegistryError as exc:
+            raise RuntimeAuthorityError(str(exc)) from exc
 
     def digest(self) -> str:
         return domain_sha256(
@@ -94,8 +108,8 @@ class SemanticIdempotencyLedger:
         self._seen: dict[str, str] = {}
 
     def record(self, idempotency_key: str, identity: SemanticCommandIdentity) -> bool:
-        if not idempotency_key:
-            raise RuntimeAuthorityError("idempotency_key is required")
+        if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+            raise RuntimeAuthorityError("idempotency_key must be a nonblank string")
         digest = identity.digest()
         previous = self._seen.get(idempotency_key)
         if previous is None:
@@ -157,7 +171,11 @@ class RuntimeAuthorityReport:
 
 def load_default_authority_map() -> dict[str, Any]:
     path = resources.files("src.resources").joinpath("runtime_authority.json")
-    value = json.loads(path.read_text(encoding="utf-8"))
+    try:
+        value = _load_json(path.read_text(encoding="utf-8"))
+        get_schema_registry().validate_payload(RUNTIME_AUTHORITY_SCHEMA, value)
+    except (OSError, SchemaRegistryError) as exc:
+        raise RuntimeAuthorityError("runtime authority resource invalid") from exc
     if not isinstance(value, dict):
         raise RuntimeAuthorityError("runtime authority map must be an object")
     return value
@@ -166,8 +184,17 @@ def load_default_authority_map() -> dict[str, Any]:
 def evaluate_runtime_authority_map(
     payload: Mapping[str, Any] | None = None,
 ) -> RuntimeAuthorityReport:
-    data = dict(payload or load_default_authority_map())
+    if payload is None:
+        data = load_default_authority_map()
+    elif isinstance(payload, Mapping):
+        data = dict(payload)
+    else:
+        raise RuntimeAuthorityError("runtime authority map must be an object")
     blockers: list[str] = []
+    try:
+        get_schema_registry().validate_payload(RUNTIME_AUTHORITY_SCHEMA, data)
+    except SchemaRegistryError:
+        blockers.append("RUNTIME_AUTHORITY_SCHEMA_INVALID")
 
     if data.get("schema_version") != RUNTIME_AUTHORITY_SCHEMA:
         blockers.append("RUNTIME_AUTHORITY_SCHEMA_INVALID")
@@ -176,7 +203,10 @@ def evaluate_runtime_authority_map(
     observed_root = _root_name(root)
     if root.get("entrypoint") != EXPECTED_ENTRYPOINT:
         blockers.append("CANONICAL_ENTRYPOINT_MISMATCH")
-    if root.get("module") != EXPECTED_MODULE or root.get("callable") != EXPECTED_CALLABLE:
+    if (
+        root.get("module") != EXPECTED_MODULE
+        or root.get("callable") != EXPECTED_CALLABLE
+    ):
         blockers.append("CANONICAL_MODULE_MISMATCH")
     if root.get("package_script") != EXPECTED_PACKAGE_SCRIPT:
         blockers.append("PACKAGE_SCRIPT_MISMATCH")
@@ -201,9 +231,7 @@ def evaluate_runtime_authority_map(
             "quarantined",
             "removed-from-package",
         }:
-            blockers.append(
-                f"ALTERNATE_RUNTIME_DISPOSITION_INVALID:{item.get('path')}"
-            )
+            blockers.append(f"ALTERNATE_RUNTIME_DISPOSITION_INVALID:{item.get('path')}")
 
     sensitive_writes = _object_list(data, "sensitive_writes", blockers)
     required = set(SENSITIVE_WRITE_INVARIANTS)
@@ -216,9 +244,7 @@ def evaluate_runtime_authority_map(
                 f"{item.get('surface')}:{sorted(missing)}"
             )
         if item.get("single_transaction") is not True:
-            blockers.append(
-                f"SENSITIVE_WRITE_NOT_TRANSACTIONAL:{item.get('surface')}"
-            )
+            blockers.append(f"SENSITIVE_WRITE_NOT_TRANSACTIONAL:{item.get('surface')}")
 
     terminal = _mapping(data, "terminal_policy", blockers)
     if terminal.get("irreversible") is not True:
@@ -304,9 +330,7 @@ def _object_list(
     return tuple(output)
 
 
-def _strings(
-    data: Mapping[str, Any], key: str, blockers: list[str]
-) -> tuple[str, ...]:
+def _strings(data: Mapping[str, Any], key: str, blockers: list[str]) -> tuple[str, ...]:
     value = data.get(key)
     if not isinstance(value, list) or any(
         not isinstance(item, str) or not item for item in value

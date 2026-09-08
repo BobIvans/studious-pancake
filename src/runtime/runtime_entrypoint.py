@@ -118,31 +118,40 @@ async def _run_paper(
     selected_db = db_path or environment.get(
         "FLASHLOAN_PAPER_SERVICE_DB", ".runtime/paper-service.sqlite3"
     )
-    service = build_installed_durable_paper_service(
-        config,
-        db_path=context.resolve_path(selected_db),
+    maximum = (
+        1 if legacy_smoke else _integer(environment, "FLASHLOAN_PAPER_MAX_CYCLES", "0")
     )
-    maximum = 1 if legacy_smoke else _integer(
-        environment, "FLASHLOAN_PAPER_MAX_CYCLES", "0"
-    )
-    delay = 0.0 if legacy_smoke else _float(
-        environment, "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25"
+    delay = (
+        0.0
+        if legacy_smoke
+        else _float(environment, "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25")
     )
     stop = asyncio.Event()
-    owner = AsyncSignalHandlerOwner(stop.set).install()
-    supervisor = RepeatedInstalledPaperService(
-        service,
-        RepeatedPaperServiceConfig(
-            max_cycles=(maximum or None),
-            idle_delay_seconds=delay,
-        ),
-        on_report=lambda report: _print_report(report, as_json=as_json),
+    supervisor_config = RepeatedPaperServiceConfig(
+        max_cycles=(maximum or None),
+        idle_delay_seconds=delay,
+        shutdown_timeout_seconds=config.shutdown_drain_timeout_seconds,
+    )
+    owner = AsyncSignalHandlerOwner(stop.set)
+    service = build_installed_durable_paper_service(
+        config, db_path=context.resolve_path(selected_db)
     )
     try:
+        owner.install()
+        supervisor = RepeatedInstalledPaperService(
+            service,
+            supervisor_config,
+            on_report=lambda report: _print_report(report, as_json=as_json),
+        )
         summary = await supervisor.run(stop)
+        if summary.stop_reason.value == "drain_timeout":
+            return 7
         return _exit_code(summary.final_report)
     finally:
-        owner.restore()
+        try:
+            owner.restore()
+        finally:
+            service.close()
 
 
 def handles(argv: Sequence[str]) -> bool:
@@ -163,6 +172,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         if parsed.mode == "live":
             print("LIVE_MODE_UNAVAILABLE", file=sys.stderr)
             return EXIT_MODE_UNAVAILABLE
+
+        from src.runtime_authority import (
+            RuntimeAuthorityError,
+            evaluate_runtime_authority_map,
+        )
+
+        try:
+            contract = evaluate_runtime_authority_map()
+        except RuntimeAuthorityError:
+            print(
+                "RUNTIME_ADMISSION_BLOCKED:RUNTIME_AUTHORITY_INVALID", file=sys.stderr
+            )
+            return EXIT_ADMISSION_BLOCKED
+        if not contract.accepted:
+            print(
+                "RUNTIME_ADMISSION_BLOCKED:" + ",".join(contract.blockers),
+                file=sys.stderr,
+            )
+            return EXIT_ADMISSION_BLOCKED
 
         command = CommandCapabilityManifest.load().evaluate("flashloan-bot.run")
         platform = qualify_platform(

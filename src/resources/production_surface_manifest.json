@@ -157,8 +157,11 @@
     "src/resources/architecture_reachability.json",
     "src/resources/capabilities.json",
     "src/resources/production_surface_manifest.json",
+    "src/resources/runtime_authority.json",
     "src/resources/runtime_authority_map.json",
-    "src/resources/schema_registry.json"
+    "src/resources/schema_registry.json",
+    "src/runtime_authority.py",
+    "src/runtime_authority_pr01.py"
   ],
   "runtime": {
     "live_trading_enabled": false,

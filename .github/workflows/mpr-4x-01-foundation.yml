@@ -5,6 +5,13 @@ on:
     branches:
       - main
     paths:
+      - "src/runtime_authority*.py"
+      - "src/runtime/runtime_entrypoint.py"
+      - "src/durability/**"
+      - "src/economics/durable_reservations.py"
+      - "src/resources/runtime_authority.json"
+      - "tests/test_mpr2601*.py"
+      - "scripts/verify_mpr_4x_02_runtime_authority.py"
       - "src/contracts/**"
       - "src/config/canonical.py"
       - "src/policy_governance_pr143.py"
@@ -70,6 +77,40 @@ jobs:
             --disable-socket --allow-unix-socket
       - name: Materialize foundation evidence
         run: python scripts/verify_mpr_4x_01_foundation.py --json
+      - name: Runtime authority and durable reservation regressions
+        run: python scripts/verify_mpr_4x_02_runtime_authority.py
+      - name: Reproduce pre-fix two-connection capital race
+        run: |
+          git fetch --depth=1 origin 7c76d53bbed85b429b5d615d19496b7b72db6961
+          python - <<'PY'
+          from pathlib import Path
+          import shutil
+          import subprocess
+          import sys
+          import tempfile
+
+          source = Path.cwd()
+          with tempfile.TemporaryDirectory() as directory:
+              baseline = Path(directory)
+              archive = baseline / 'baseline.tar'
+              subprocess.run(['git', 'archive', '--format=tar',
+                              '--output', str(archive),
+                              '7c76d53bbed85b429b5d615d19496b7b72db6961'], check=True)
+              subprocess.run(['tar', '-xf', str(archive), '-C', str(baseline)], check=True)
+              shutil.copyfile(source / 'tests/__init__.py', baseline / 'tests/__init__.py')
+              shutil.copyfile(source / 'tests/test_mpr2601_durable_atomicity.py',
+                              baseline / 'tests/test_mpr2601_durable_atomicity.py')
+              result = subprocess.run([
+                  sys.executable, '-m', 'pytest', '-q', '--disable-socket',
+                  '--allow-unix-socket',
+                  'tests/test_mpr2601_durable_atomicity.py::test_two_connections_cannot_both_spend_same_balance',
+              ], cwd=baseline, capture_output=True, text=True, timeout=60)
+              print(result.stdout)
+              print(result.stderr)
+              if result.returncode != 1 or 'assert 2 == 1' not in result.stdout:
+                  raise SystemExit('Baseline did not reproduce the expected double admission')
+              print('BASELINE_REPRODUCED: two admitted; current-head regression above requires one')
+          PY
       - name: Build and inspect wheel
         run: |
           rm -rf dist build

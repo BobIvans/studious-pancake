@@ -201,8 +201,17 @@ class InstalledDurablePaperService:
             cluster_genesis=_cluster_genesis(config),
         )
         self._owns_authority = authority is None
+        self._closed = False
+        self._run_lock = asyncio.Lock()
+        self.ready_for_next_cycle = False
+        self.incident_recording_failed = False
+        self._active_intent_id: str | None = None
 
     def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self.ready_for_next_cycle = False
         if self._owns_authority:
             self.authority.close()
 
@@ -213,6 +222,37 @@ class InstalledDurablePaperService:
         self.close()
 
     async def run_once(self) -> InstalledDurablePaperServiceReport:
+        if self._closed or self._run_lock.locked():
+            raise RuntimeError("A3_SERVICE_CLOSED_OR_ALREADY_RUNNING")
+        async with self._run_lock:
+            self.ready_for_next_cycle = False
+            self._active_intent_id = None
+            try:
+                report = await self._run_once()
+                self.ready_for_next_cycle = report.ready_for_next_cycle
+                return report
+            except BaseException as exc:
+                self.ready_for_next_cycle = False
+                reason = (
+                    "A3_CYCLE_CANCELLED"
+                    if isinstance(exc, asyncio.CancelledError)
+                    else "A3_WORKER_FAILED"
+                )
+                try:
+                    self.authority.record_runtime_incident(
+                        reason, self._active_intent_id
+                    )
+                except Exception:
+                    self.incident_recording_failed = True
+                raise
+
+    async def _run_once(self) -> InstalledDurablePaperServiceReport:
+        if any(
+            row["intent_kind"] == "paper_cycle"
+            and row["recovery_action"] != "terminal_exactly_once"
+            for row in self.authority.recovery_summary()
+        ):
+            raise RuntimeError("A3_UNRESOLVED_DURABLE_INTENT")
         sequence = self.authority.next_cycle_sequence(self.config.run_id)
         cycle_id = self._cycle_id(sequence)
         fence = self.authority.begin_cycle_intent(
@@ -221,6 +261,7 @@ class InstalledDurablePaperService:
             config_fingerprint=_safe_config_fingerprint(self.runtime_config),
             source_surface=self.config.source_surface,
         )
+        self._active_intent_id = fence.intent_id
         try:
             batch = self.batch_source()
         except Exception as exc:

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
+from functools import wraps
 import hashlib
 import json
 import os
@@ -13,6 +15,8 @@ import shutil
 import stat
 import sqlite3
 import time
+from threading import RLock
+from typing import cast
 from uuid import uuid4
 
 from src.execution.models import ExecutionState
@@ -22,6 +26,73 @@ from src.observability.redaction import REDACTION_VERSION, sanitized_with_stats
 MIGRATION_VERSION = 41
 SCHEMA_NAME = "pr041.durable-lifecycle.v1"
 ZERO_HASH = "0" * 64
+
+
+def _serialized_sqlite_call(method):
+    """Keep a shared-connection reader outside another thread's transaction."""
+
+    @wraps(method)
+    def call(self, *args, **kwargs):
+        with self._operation_lock:
+            return method(self, *args, **kwargs)
+
+    return call
+
+
+class _SerializedCursor(sqlite3.Cursor):
+    @property
+    def _operation_lock(self):
+        return cast(_SerializedConnection, self.connection)._operation_lock
+
+    execute = _serialized_sqlite_call(sqlite3.Cursor.execute)
+    executemany = _serialized_sqlite_call(sqlite3.Cursor.executemany)
+    executescript = _serialized_sqlite_call(sqlite3.Cursor.executescript)
+    fetchone = _serialized_sqlite_call(sqlite3.Cursor.fetchone)
+    fetchmany = _serialized_sqlite_call(sqlite3.Cursor.fetchmany)
+    fetchall = _serialized_sqlite_call(sqlite3.Cursor.fetchall)
+    __next__ = _serialized_sqlite_call(sqlite3.Cursor.__next__)
+    close = _serialized_sqlite_call(sqlite3.Cursor.close)
+
+
+class _SerializedConnection(sqlite3.Connection):
+    """The lifecycle owner's connection; no separate database or read authority."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._operation_lock = RLock()
+
+    @_serialized_sqlite_call
+    def cursor(self):
+        return super().cursor(_SerializedCursor)
+
+    def execute(self, *args, **kwargs):
+        return self.cursor().execute(*args, **kwargs)
+
+    def executemany(self, *args, **kwargs):
+        return self.cursor().executemany(*args, **kwargs)
+
+    def executescript(self, *args, **kwargs):
+        return self.cursor().executescript(*args, **kwargs)
+
+    def __enter__(self):
+        self._operation_lock.acquire()
+        try:
+            return super().__enter__()
+        except BaseException:
+            self._operation_lock.release()
+            raise
+
+    def __exit__(self, *args):
+        try:
+            return super().__exit__(*args)
+        finally:
+            self._operation_lock.release()
+
+    commit = _serialized_sqlite_call(sqlite3.Connection.commit)
+    rollback = _serialized_sqlite_call(sqlite3.Connection.rollback)
+    close = _serialized_sqlite_call(sqlite3.Connection.close)
+    backup = _serialized_sqlite_call(sqlite3.Connection.backup)
+
 
 PRE_SUBMISSION = frozenset(
     {
@@ -89,10 +160,13 @@ class AttemptKey:
     generation: int
 
     def __post_init__(self) -> None:
-        if not self.logical_opportunity_id or not self.plan_hash:
-            raise ValueError("opportunity and plan hash are required")
-        if self.generation < 1:
-            raise ValueError("generation must be positive")
+        if any(
+            not isinstance(value, str) or not value.strip()
+            for value in (self.logical_opportunity_id, self.plan_hash)
+        ):
+            raise ValueError("opportunity and plan hash must be nonblank strings")
+        if type(self.generation) is not int or self.generation < 1:
+            raise ValueError("generation must be a positive integer")
 
     @property
     def attempt_id(self) -> str:
@@ -226,6 +300,7 @@ class DurableLifecycleStore:
     ) -> None:
         if topology != "single-node":
             raise UnsupportedTopologyError("SQLite supports single-node topology only")
+        self._transaction_depth = 0
         self.path = str(path)
         self._expected_file_identity: tuple[int, int] | None = None
         self._prepare_secure_path()
@@ -236,7 +311,9 @@ class DurableLifecycleStore:
             isolation_level=None,
             timeout=busy_timeout_ms / 1000,
             check_same_thread=False,
+            factory=_SerializedConnection,
         )
+        self._writer_lock = self.db._operation_lock
         self.db.row_factory = sqlite3.Row
         for pragma in (
             f"PRAGMA busy_timeout={busy_timeout_ms}",
@@ -580,6 +657,41 @@ class DurableLifecycleStore:
         ).fetchone()
         return self._attempt(row) if row else None
 
+    @contextmanager
+    def write_transaction(self):
+        """Own a bounded SQLite writer transaction, including nested operations.
+
+        BEGIN IMMEDIATE serializes independent connections before any balance
+        read. The per-connection lock only prevents threads from sharing this
+        connection's transaction. Nested operations use savepoints and cannot
+        commit their caller's work. Cancellation rolls back like other failures.
+        """
+        with self._writer_lock:
+            outer = self._transaction_depth == 0
+            savepoint = f"lifecycle_write_{self._transaction_depth}"
+            if outer:
+                if self.db.in_transaction:
+                    raise DurableLifecycleError("unmanaged caller transaction")
+                self.db.execute("BEGIN IMMEDIATE")
+            else:
+                self.db.execute(f"SAVEPOINT {savepoint}")
+            self._transaction_depth += 1
+            try:
+                yield self.db
+                if outer:
+                    self.db.commit()
+                else:
+                    self.db.execute(f"RELEASE SAVEPOINT {savepoint}")
+            except BaseException:
+                if outer:
+                    self.db.rollback()
+                else:
+                    self.db.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                    self.db.execute(f"RELEASE SAVEPOINT {savepoint}")
+                raise
+            finally:
+                self._transaction_depth -= 1
+
     def create_attempt(
         self,
         key: AttemptKey,
@@ -591,22 +703,40 @@ class DurableLifecycleStore:
         reserved_lamports: int = 0,
         payload: Mapping[str, object] | None = None,
     ) -> DurableAttempt:
+        if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+            raise ValueError("idempotency_key must be a nonblank string")
+        if type(reserved_lamports) is not int:
+            raise ValueError("reserved_lamports must be an integer")
         if reserved_lamports < 0 or bool(reservation_id) != bool(candidate_id):
             raise ValueError("invalid reservation fields")
         if reserved_lamports and not reservation_id:
             raise ValueError("positive reservation requires an id")
         now, attempt_id = self.clock_ns(), key.attempt_id
-        with self.db:
+        with self.write_transaction():
             row = self.db.execute(
                 "SELECT * FROM durable_attempts WHERE attempt_id=?",
                 (attempt_id,),
             ).fetchone()
             if row:
                 event = self.db.execute(
-                    "SELECT attempt_id FROM durable_events " "WHERE idempotency_key=?",
+                    "SELECT * FROM durable_events WHERE idempotency_key=?",
                     (idempotency_key,),
                 ).fetchone()
                 if event and event["attempt_id"] == attempt_id:
+                    reservation = self.db.execute(
+                        "SELECT candidate_id FROM durable_reservations WHERE attempt_id=?",
+                        (attempt_id,),
+                    ).fetchone()
+                    if (
+                        event["event_type"] != "attempt_created"
+                        or event["to_state"] != state.value
+                        or event["payload_digest"] != self._payload(payload)[1]
+                        or row["reservation_id"] != reservation_id
+                        or row["reserved_lamports"] != reserved_lamports
+                        or (reservation["candidate_id"] if reservation else None)
+                        != candidate_id
+                    ):
+                        raise DurableLifecycleError("IDEMPOTENCY_SEMANTIC_CONFLICT")
                     return self._attempt(row)
                 raise DurableLifecycleError("attempt already exists")
             rstate = ReservationState.ACTIVE.value if reservation_id else None
@@ -674,7 +804,7 @@ class DurableLifecycleStore:
             raise ValueError("resource, owner and positive ttl are required")
         now = self.clock_ns()
         expires = now + ttl_ns
-        with self.db:
+        with self.write_transaction():
             row = self.db.execute(
                 "SELECT * FROM durable_leases WHERE resource_key=?",
                 (resource_key,),
@@ -720,7 +850,7 @@ class DurableLifecycleStore:
         release_reservation: bool = False,
     ) -> DurableAttempt:
         now = self.clock_ns()
-        with self.db:
+        with self.write_transaction():
             self._verify_lease(lease, f"attempt:{attempt_id}")
             row = self.db.execute(
                 "SELECT * FROM durable_attempts WHERE attempt_id=?",
@@ -800,7 +930,7 @@ class DurableLifecycleStore:
             raise ValueError("message_hash must be sha256 hex")
         int(message_hash, 16)
         now = self.clock_ns()
-        with self.db:
+        with self.write_transaction():
             self._verify_lease(lease, f"attempt:{attempt_id}")
             row = self.db.execute(
                 "SELECT * FROM durable_attempts WHERE attempt_id=?",
@@ -917,7 +1047,7 @@ class DurableLifecycleStore:
         reason: str = "RECOVERY_PRE_SUBMISSION_RELEASED",
     ) -> bool:
         now = self.clock_ns()
-        with self.db:
+        with self.write_transaction():
             self._verify_lease(lease, f"attempt:{attempt_id}")
             row = self.db.execute(
                 "SELECT * FROM durable_attempts WHERE attempt_id=?",
@@ -1007,7 +1137,7 @@ class DurableLifecycleStore:
         )
         claimed_until = now + lease_ns
         output = []
-        with self.db:
+        with self.write_transaction():
             rows = self.db.execute(
                 "SELECT * FROM durable_outbox WHERE topic=? "
                 "AND status='pending' AND available_at_ns<=? AND "
@@ -1048,7 +1178,7 @@ class DurableLifecycleStore:
         *,
         owner_id: str,
     ) -> bool:
-        with self.db:
+        with self.write_transaction():
             cur = self.db.execute(
                 "UPDATE durable_outbox SET status='completed',"
                 "completed_at_ns=?,claimed_until_ns=NULL WHERE outbox_id=? "
@@ -1063,7 +1193,7 @@ class DurableLifecycleStore:
             return cur.rowcount == 1
 
     def record_retention_eligibility(self, *, cutoff_ns: int) -> int:
-        with self.db:
+        with self.write_transaction():
             cur = self.db.execute(
                 "INSERT OR IGNORE INTO retention_ledger(target_type,target_id,"
                 "action,cutoff_ns,created_at_ns) SELECT 'attempt',attempt_id,"
@@ -1075,7 +1205,7 @@ class DurableLifecycleStore:
 
     def purge_completed_outbox(self, *, cutoff_ns: int) -> int:
         now = self.clock_ns()
-        with self.db:
+        with self.write_transaction():
             rows = self.db.execute(
                 "SELECT outbox_id FROM durable_outbox WHERE "
                 "status='completed' AND completed_at_ns<?",
@@ -1112,6 +1242,11 @@ class DurableLifecycleStore:
                 (attempt["attempt_id"],),
             ).fetchall()
             for row in rows:
+                if (
+                    hashlib.sha256(row["payload_json"].encode()).hexdigest()
+                    != row["payload_digest"]
+                ):
+                    raise CorruptJournalError("audit payload digest mismatch")
                 if int(row["sequence_no"]) != sequence:
                     raise CorruptJournalError("audit sequence gap")
                 expected = self._chain(

@@ -209,3 +209,6 @@ src/market/observations.py
 src/market/streams.py
 src/market/cache.py
 tests/test_mpr042_market_truth.py
+src/human_intervention.py
+scripts/verify_pr2_human_intervention.py
+tests/test_pr2_human_intervention.py

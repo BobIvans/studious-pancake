@@ -16,7 +16,7 @@ classifiers = [
   "Topic :: Office/Business :: Financial :: Investment",
 ]
 dependencies = [
-  "aiohttp==3.14.1",
+  "aiohttp==3.14.3",
   "aiohttp-socks==0.11.0",
   "aiolimiter==1.1.0",
   "aiosqlite==0.20.0",

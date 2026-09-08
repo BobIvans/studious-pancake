@@ -122,11 +122,13 @@ async def _run_paper(
         config,
         db_path=context.resolve_path(selected_db),
     )
-    maximum = 1 if legacy_smoke else _integer(
-        environment, "FLASHLOAN_PAPER_MAX_CYCLES", "0"
+    maximum = (
+        1 if legacy_smoke else _integer(environment, "FLASHLOAN_PAPER_MAX_CYCLES", "0")
     )
-    delay = 0.0 if legacy_smoke else _float(
-        environment, "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25"
+    delay = (
+        0.0
+        if legacy_smoke
+        else _float(environment, "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25")
     )
     stop = asyncio.Event()
     owner = AsyncSignalHandlerOwner(stop.set).install()
@@ -163,6 +165,25 @@ def main(argv: Sequence[str] | None = None) -> int:
         if parsed.mode == "live":
             print("LIVE_MODE_UNAVAILABLE", file=sys.stderr)
             return EXIT_MODE_UNAVAILABLE
+
+        from src.runtime_authority import (
+            RuntimeAuthorityError,
+            evaluate_runtime_authority_map,
+        )
+
+        try:
+            contract = evaluate_runtime_authority_map()
+        except RuntimeAuthorityError:
+            print(
+                "RUNTIME_ADMISSION_BLOCKED:RUNTIME_AUTHORITY_INVALID", file=sys.stderr
+            )
+            return EXIT_ADMISSION_BLOCKED
+        if not contract.accepted:
+            print(
+                "RUNTIME_ADMISSION_BLOCKED:" + ",".join(contract.blockers),
+                file=sys.stderr,
+            )
+            return EXIT_ADMISSION_BLOCKED
 
         command = CommandCapabilityManifest.load().evaluate("flashloan-bot.run")
         platform = qualify_platform(

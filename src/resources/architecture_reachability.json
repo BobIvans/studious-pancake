@@ -13,13 +13,19 @@
     "src.kernel.hashing",
     "src.persistence.operational",
     "src.production_surface",
-    "src.release.identity"
+    "src.release.identity",
+    "src.runtime_authority"
   ],
   "compatibility_aliases": [
     {
       "max_lines": 80,
       "module": "src.cli_pr189",
       "target": "src.cli_entrypoint"
+    },
+    {
+      "module": "src.runtime_authority_pr01",
+      "target": "src.runtime_authority",
+      "max_lines": 80
     }
   ],
   "default_classification": "installed-support",

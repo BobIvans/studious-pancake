@@ -9,7 +9,8 @@ wallet balance snapshot and already-compiled/estimated candidate economics.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
+import json
 from typing import Any
 
 from src.durability import (
@@ -28,6 +29,7 @@ from src.economics.capital import (
     _strict_lamports,
 )
 from src.execution.models import ExecutionState
+from src.kernel import canonical_json_bytes, domain_sha256
 
 
 @dataclass(frozen=True, slots=True)
@@ -230,55 +232,92 @@ class DurableCapitalCoordinator:
         attempt_key: AttemptKey,
         idempotency_key: str,
     ) -> DurableCapitalReservationResult:
-        """Evaluate, reserve in-memory, then persist the lifecycle attempt.
-
-        If persistence fails after the PR-032 ledger admits the candidate, the
-        temporary in-process reservation is released before the exception is
-        re-raised.  The resulting durable attempt owns the reservation id used by
-        future recovery scans.
-        """
-
-        ledger, active_reserved, recovery_ids = self._ledger_for_snapshot(
-            wallet_snapshot
+        """Compare and persist under the lifecycle store's SQLite writer lock."""
+        if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+            raise CapitalEngineError("idempotency_key must be a nonblank string")
+        request_hash = domain_sha256(
+            domain="durable-capital-request",
+            schema_id="pr057.capital-request.v1",
+            payload=canonical_json_bytes(
+                {
+                    "attempt": asdict(attempt_key),
+                    "candidate": asdict(candidate),
+                    "policy": asdict(self.policy),
+                    "wallet_snapshot": wallet_snapshot.to_json(),
+                }
+            ),
         )
-        decision = ledger.reserve(candidate)
-        if not decision.allowed or decision.reservation_id is None:
+        with self.store.write_transaction():
+            event = self.store.db.execute(
+                "SELECT * FROM durable_events WHERE idempotency_key=?",
+                (idempotency_key,),
+            ).fetchone()
+            if event is not None:
+                payload = json.loads(event["payload_json"])
+                if (
+                    event["attempt_id"] != attempt_key.attempt_id
+                    or event["event_type"] != "attempt_created"
+                    or payload.get("capital_request_hash") != request_hash
+                ):
+                    raise CapitalEngineError("IDEMPOTENCY_SEMANTIC_CONFLICT")
+                attempt = self.store.get_attempt(attempt_key.attempt_id)
+                if attempt is None:
+                    raise CapitalEngineError("replay attempt missing")
+                saved = payload["capital_decision"]
+                decision = CapitalDecision(
+                    allowed=saved["allowed"],
+                    reason=NoTradeReason(saved["reason"]),
+                    candidate_id=saved["candidate_id"],
+                    available_native_lamports=int(saved["available_native_lamports"]),
+                    required_native_lamports=int(saved["required_native_lamports"]),
+                    conservative_net_profit_lamports=int(
+                        saved["conservative_net_profit_lamports"]
+                    ),
+                    policy_fingerprint=saved["policy_fingerprint"],
+                    reservation_id=saved["reservation_id"],
+                )
+                return DurableCapitalReservationResult(
+                    decision=decision,
+                    wallet_snapshot=wallet_snapshot,
+                    active_durable_reserved_lamports=int(
+                        payload["active_durable_reserved_lamports"]
+                    ),
+                    attempt=attempt,
+                    recovery_attempt_ids=tuple(payload["recovery_attempt_ids"]),
+                )
+            ledger, active_reserved, recovery_ids = self._ledger_for_snapshot(
+                wallet_snapshot
+            )
+            decision = ledger.evaluate(candidate)
+            if decision.allowed:
+                decision = replace(decision, reservation_id="capres-" + request_hash)
+                attempt = self.store.create_attempt(
+                    attempt_key,
+                    idempotency_key=idempotency_key,
+                    state=ExecutionState.PLANNED,
+                    reservation_id=decision.reservation_id,
+                    candidate_id=candidate.candidate_id,
+                    reserved_lamports=decision.required_native_lamports,
+                    payload={
+                        "pr": "PR-057",
+                        "capital_request_hash": request_hash,
+                        "candidate_id": candidate.candidate_id,
+                        "capital_decision": decision.to_json(),
+                        "wallet_snapshot": wallet_snapshot.to_json(),
+                        "message_hash": candidate.message_hash,
+                        "active_durable_reserved_lamports": str(active_reserved),
+                        "recovery_attempt_ids": list(recovery_ids),
+                    },
+                )
+            else:
+                attempt = None
             return DurableCapitalReservationResult(
                 decision=decision,
                 wallet_snapshot=wallet_snapshot,
                 active_durable_reserved_lamports=active_reserved,
+                attempt=attempt,
                 recovery_attempt_ids=recovery_ids,
             )
-
-        try:
-            attempt = self.store.create_attempt(
-                attempt_key,
-                idempotency_key=idempotency_key,
-                state=ExecutionState.PLANNED,
-                reservation_id=decision.reservation_id,
-                candidate_id=candidate.candidate_id,
-                reserved_lamports=decision.required_native_lamports,
-                payload={
-                    "pr": "PR-057",
-                    "candidate_id": candidate.candidate_id,
-                    "capital_decision": decision.to_json(),
-                    "wallet_snapshot": wallet_snapshot.to_json(),
-                    "message_hash": candidate.message_hash,
-                    "active_durable_reserved_lamports": str(active_reserved),
-                    "recovery_attempt_ids": list(recovery_ids),
-                },
-            )
-        except Exception:
-            ledger.release(decision.reservation_id)
-            raise
-
-        return DurableCapitalReservationResult(
-            decision=decision,
-            wallet_snapshot=wallet_snapshot,
-            active_durable_reserved_lamports=active_reserved,
-            attempt=attempt,
-            recovery_attempt_ids=recovery_ids,
-        )
 
     def release_pre_submission_reservation(
         self,

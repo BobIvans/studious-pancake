@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from enum import StrEnum
 import hashlib
@@ -13,6 +14,7 @@ import shutil
 import stat
 import sqlite3
 import time
+from threading import RLock
 from uuid import uuid4
 
 from src.execution.models import ExecutionState
@@ -226,6 +228,8 @@ class DurableLifecycleStore:
     ) -> None:
         if topology != "single-node":
             raise UnsupportedTopologyError("SQLite supports single-node topology only")
+        self._writer_lock = RLock()
+        self._transaction_depth = 0
         self.path = str(path)
         self._expected_file_identity: tuple[int, int] | None = None
         self._prepare_secure_path()
@@ -580,6 +584,41 @@ class DurableLifecycleStore:
         ).fetchone()
         return self._attempt(row) if row else None
 
+    @contextmanager
+    def write_transaction(self):
+        """Own a bounded SQLite writer transaction, including nested operations.
+
+        BEGIN IMMEDIATE serializes independent connections before any balance
+        read. The per-connection lock only prevents threads from sharing this
+        connection's transaction. Nested operations use savepoints and cannot
+        commit their caller's work. Cancellation rolls back like other failures.
+        """
+        with self._writer_lock:
+            outer = self._transaction_depth == 0
+            savepoint = f"lifecycle_write_{self._transaction_depth}"
+            if outer:
+                if self.db.in_transaction:
+                    raise DurableLifecycleError("unmanaged caller transaction")
+                self.db.execute("BEGIN IMMEDIATE")
+            else:
+                self.db.execute(f"SAVEPOINT {savepoint}")
+            self._transaction_depth += 1
+            try:
+                yield self.db
+                if outer:
+                    self.db.commit()
+                else:
+                    self.db.execute(f"RELEASE SAVEPOINT {savepoint}")
+            except BaseException:
+                if outer:
+                    self.db.rollback()
+                else:
+                    self.db.execute(f"ROLLBACK TO SAVEPOINT {savepoint}")
+                    self.db.execute(f"RELEASE SAVEPOINT {savepoint}")
+                raise
+            finally:
+                self._transaction_depth -= 1
+
     def create_attempt(
         self,
         key: AttemptKey,
@@ -591,22 +630,40 @@ class DurableLifecycleStore:
         reserved_lamports: int = 0,
         payload: Mapping[str, object] | None = None,
     ) -> DurableAttempt:
+        if not isinstance(idempotency_key, str) or not idempotency_key.strip():
+            raise ValueError("idempotency_key must be a nonblank string")
+        if type(reserved_lamports) is not int:
+            raise ValueError("reserved_lamports must be an integer")
         if reserved_lamports < 0 or bool(reservation_id) != bool(candidate_id):
             raise ValueError("invalid reservation fields")
         if reserved_lamports and not reservation_id:
             raise ValueError("positive reservation requires an id")
         now, attempt_id = self.clock_ns(), key.attempt_id
-        with self.db:
+        with self.write_transaction():
             row = self.db.execute(
                 "SELECT * FROM durable_attempts WHERE attempt_id=?",
                 (attempt_id,),
             ).fetchone()
             if row:
                 event = self.db.execute(
-                    "SELECT attempt_id FROM durable_events " "WHERE idempotency_key=?",
+                    "SELECT * FROM durable_events WHERE idempotency_key=?",
                     (idempotency_key,),
                 ).fetchone()
                 if event and event["attempt_id"] == attempt_id:
+                    reservation = self.db.execute(
+                        "SELECT candidate_id FROM durable_reservations WHERE attempt_id=?",
+                        (attempt_id,),
+                    ).fetchone()
+                    if (
+                        event["event_type"] != "attempt_created"
+                        or event["to_state"] != state.value
+                        or event["payload_digest"] != self._payload(payload)[1]
+                        or row["reservation_id"] != reservation_id
+                        or row["reserved_lamports"] != reserved_lamports
+                        or (reservation["candidate_id"] if reservation else None)
+                        != candidate_id
+                    ):
+                        raise DurableLifecycleError("IDEMPOTENCY_SEMANTIC_CONFLICT")
                     return self._attempt(row)
                 raise DurableLifecycleError("attempt already exists")
             rstate = ReservationState.ACTIVE.value if reservation_id else None

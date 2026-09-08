@@ -5,6 +5,13 @@ on:
     branches:
       - main
     paths:
+      - "src/runtime_authority*.py"
+      - "src/runtime/runtime_entrypoint.py"
+      - "src/durability/**"
+      - "src/economics/durable_reservations.py"
+      - "src/resources/runtime_authority.json"
+      - "tests/test_mpr2601*.py"
+      - "scripts/verify_mpr_4x_02_runtime_authority.py"
       - "src/contracts/**"
       - "src/config/canonical.py"
       - "src/policy_governance_pr143.py"
@@ -70,6 +77,8 @@ jobs:
             --disable-socket --allow-unix-socket
       - name: Materialize foundation evidence
         run: python scripts/verify_mpr_4x_01_foundation.py --json
+      - name: Runtime authority and durable reservation regressions
+        run: python scripts/verify_mpr_4x_02_runtime_authority.py
       - name: Build and inspect wheel
         run: |
           rm -rf dist build

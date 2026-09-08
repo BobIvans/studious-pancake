@@ -232,6 +232,7 @@ def main() -> int:
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
     run(MPR_4X_01_FOUNDATION_COMMAND)
+    run([sys.executable, "scripts/verify_mpr_4x_02_runtime_authority.py"])
     for command in MPR_TD_COMMANDS:
         run(command)
 

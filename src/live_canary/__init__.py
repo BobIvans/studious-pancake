@@ -1,4 +1,4 @@
-"""Roadmap PR-046 limited-live canary admission boundary."""
+"""Canonical limited-live canary admission boundary."""
 
 from .controller import LimitedLiveCanaryController
 from .models import (
@@ -22,6 +22,17 @@ from .models import (
     ReviewedShadowEvidence,
     RuntimeSafetySnapshot,
 )
+from .mpr2609 import (
+    CanaryAdmissionBundle,
+    CanaryBudget,
+    DurableCanaryAuthority,
+    DurableCanaryMode,
+    DurableLatch,
+    HumanPermit,
+    MPR2609Error,
+    PrerequisiteIdentity,
+    prerequisite_digest_map,
+)
 from .observability import canary_dependency_status
 
 __all__ = [
@@ -29,21 +40,30 @@ __all__ = [
     "AdmissionDecision",
     "AdmissionReason",
     "ArmingReceipt",
+    "CanaryAdmissionBundle",
+    "CanaryBudget",
     "CanaryCandidate",
     "CanaryControlError",
     "CanaryEvent",
     "CanaryMode",
     "CanaryPolicy",
     "CanaryReport",
+    "DurableCanaryAuthority",
+    "DurableCanaryMode",
+    "DurableLatch",
+    "HumanPermit",
     "LatchCode",
     "LimitedLiveCanaryController",
+    "MPR2609Error",
     "OPERATOR_ACKNOWLEDGEMENT",
     "OperatorAcknowledgement",
     "OperatorIdentity",
     "OutstandingSubmission",
+    "PrerequisiteIdentity",
     "ReconciliationResult",
     "ReconciliationStatus",
     "ReviewedShadowEvidence",
     "RuntimeSafetySnapshot",
     "canary_dependency_status",
+    "prerequisite_digest_map",
 ]

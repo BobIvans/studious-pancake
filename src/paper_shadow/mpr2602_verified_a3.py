@@ -2,13 +2,21 @@
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from pathlib import Path
 import time
 
 from src.config.runtime import RuntimeConfig
-from src.durability.unified_authority_pr02 import UnifiedAuthorityError, UnifiedLifecycleAuthority
-from src.paper_shadow.a2_exact_attempt_runtime import A2PaperOutcomeStatus
+from src.durability.unified_authority_pr02 import (
+    AuthorityFence,
+    UnifiedAuthorityError,
+    UnifiedLifecycleAuthority,
+)
+from src.paper_shadow.a2_exact_attempt_runtime import (
+    A2PaperOutcomeStatus,
+    ExactAttemptRuntimeRecord,
+    FailureStage,
+)
 from src.paper_shadow.durable_service_a3 import (
     A3RuntimeCycle,
     ExactAttemptBatchSource,
@@ -18,6 +26,39 @@ from src.paper_shadow.durable_service_a3 import (
 from src.paper_shadow.mpr2602_completion import verify_committed_paper_success
 
 A3_UNVERIFIED_PAPER_TERMINAL = "blocked_a3_verified_attempt_terminal_missing"
+
+
+def _record_from_projection(payload: Mapping[str, object]) -> ExactAttemptRuntimeRecord:
+    return ExactAttemptRuntimeRecord(
+        item_index=int(payload["item_index"]),
+        attempt_generation=int(payload["attempt_generation"]),
+        status=A2PaperOutcomeStatus(str(payload["status"])),
+        reason_code=str(payload["reason_code"]),
+        failure_stage=FailureStage(str(payload["failure_stage"])),
+        provider_evidence_hash=str(payload["provider_evidence_hash"]),
+        result_hash=str(payload["result_hash"]),
+        exact_request_hash=str(payload["exact_request_hash"]),
+        operation_id=str(payload["operation_id"]),
+        producer_identity=str(payload["producer_identity"]),
+        attempt_id=(
+            None if payload.get("attempt_id") is None else str(payload["attempt_id"])
+        ),
+        message_hash=(
+            None if payload.get("message_hash") is None else str(payload["message_hash"])
+        ),
+        planner_digest=(
+            None
+            if payload.get("planner_digest") is None
+            else str(payload["planner_digest"])
+        ),
+        reconciliation_hash=(
+            None
+            if payload.get("reconciliation_hash") is None
+            else str(payload["reconciliation_hash"])
+        ),
+        sender_imported=bool(payload.get("sender_imported", False)),
+        submission_allowed=bool(payload.get("submission_allowed", False)),
+    )
 
 
 class VerifiedTerminalInstalledPaperService(InstalledDurablePaperService):
@@ -32,7 +73,8 @@ class VerifiedTerminalInstalledPaperService(InstalledDurablePaperService):
         success = tuple(
             record
             for record in report.records
-            if record.get("status") == A2PaperOutcomeStatus.RECONCILED_PAPER_SUCCESS.value
+            if record.get("status")
+            == A2PaperOutcomeStatus.RECONCILED_PAPER_SUCCESS.value
         )
         if not success:
             return self._indeterminate_report(
@@ -40,26 +82,18 @@ class VerifiedTerminalInstalledPaperService(InstalledDurablePaperService):
             )
         try:
             for record_payload in success:
-                attempt_id = str(record_payload.get("attempt_id") or "")
-                generation = int(record_payload.get("attempt_generation") or 0)
+                source = _record_from_projection(record_payload)
+                if source.attempt_id is None:
+                    raise UnifiedAuthorityError(
+                        "MPR2602_A3_TERMINAL_ATTEMPT_ID_MISSING"
+                    )
                 row = self.authority.db.execute(
                     "SELECT * FROM pr02_intents WHERE intent_kind='paper_attempt' "
                     "AND attempt_id=? AND attempt_generation=?",
-                    (attempt_id, generation),
+                    (source.attempt_id, source.attempt_generation),
                 ).fetchone()
                 if row is None:
                     raise UnifiedAuthorityError("MPR2602_A3_TERMINAL_INTENT_MISSING")
-                # Reuse the canonical A2 record from the runtime report rather than
-                # trusting the JSON compatibility projection.
-                source = next(
-                    item
-                    for item in getattr(report, "records", ())
-                    if item.attempt_id == attempt_id
-                    and item.attempt_generation == generation
-                    and item.status is A2PaperOutcomeStatus.RECONCILED_PAPER_SUCCESS
-                )
-                from src.durability.unified_authority_pr02 import AuthorityFence
-
                 fence = AuthorityFence(
                     intent_id=str(row["intent_id"]),
                     owner_id=str(row["owner_id"]),
@@ -73,7 +107,7 @@ class VerifiedTerminalInstalledPaperService(InstalledDurablePaperService):
                     replayed=True,
                 )
                 verify_committed_paper_success(self.authority, fence, source)
-        except (KeyError, StopIteration, TypeError, ValueError, UnifiedAuthorityError):
+        except (KeyError, TypeError, ValueError, UnifiedAuthorityError):
             return self._indeterminate_report(
                 cycle_id, sequence, batch.evidence, A3_UNVERIFIED_PAPER_TERMINAL
             )

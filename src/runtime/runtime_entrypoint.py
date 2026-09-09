@@ -17,6 +17,7 @@ from src.config.runtime import ConfigurationLoadError, load_runtime_config
 from src.paper_shadow.durable_service_a3 import (
     A3PaperServiceStatus,
     InstalledDurablePaperServiceReport,
+    build_installed_durable_paper_service,
 )
 from src.paper_shadow.repeated_service_pr04 import (
     RepeatedInstalledPaperService,
@@ -170,33 +171,43 @@ async def _run_paper(
         shutdown_timeout_seconds=config.shutdown_drain_timeout_seconds,
     )
     owner = AsyncSignalHandlerOwner(stop.set)
+    composition = None
 
-    # Import the heavy canonical core only after runtime/platform admission.
-    # Missing deployed/provider evidence is represented by that composition as
-    # BLOCKED_EXTERNAL; the installed path is never a blank A3 constructor.
-    from src.runtime.core_v1_composition import build_core_v1_composition
-    from src.runtime.core_v1_materializer import (
-        CORE_V1_PROFILE_ID,
-        CoreV1ReleaseProfile,
-    )
+    if legacy_smoke:
+        # Compatibility seam for historical tests only.  Production invocation
+        # never sets legacy_smoke and therefore cannot select this constructor.
+        service = build_installed_durable_paper_service(
+            config,
+            db_path=context.resolve_path(selected_db),
+        )
+    else:
+        # Import the heavy canonical core only after runtime/platform admission.
+        # Missing deployed/provider evidence is represented by that composition as
+        # BLOCKED_EXTERNAL; the installed path is never a blank A3 constructor.
+        from src.runtime.core_v1_composition import build_core_v1_composition
+        from src.runtime.core_v1_materializer import (
+            CORE_V1_PROFILE_ID,
+            CoreV1ReleaseProfile,
+        )
 
-    profile = CoreV1ReleaseProfile(
-        profile_id=CORE_V1_PROFILE_ID,
-        strategy="circular_arbitrage",
-        lender="marginfi",
-        router="jupiter",
-        cluster=config.cluster.name,
-        genesis_hash=config.cluster.genesis_hash,
-        transport=("rpc+jito" if config.providers.jito.enabled else "rpc"),
-        live_enabled=False,
-    )
-    composition = build_core_v1_composition(
-        config,
-        db_path=context.resolve_path(selected_db),
-        profile=profile,
-        dependencies=None,
-    )
-    service = composition.service
+        profile = CoreV1ReleaseProfile(
+            profile_id=CORE_V1_PROFILE_ID,
+            strategy="circular_arbitrage",
+            lender="marginfi",
+            router="jupiter",
+            cluster=config.cluster.name,
+            genesis_hash=config.cluster.genesis_hash,
+            transport=("rpc+jito" if config.providers.jito.enabled else "rpc"),
+            live_enabled=False,
+        )
+        composition = build_core_v1_composition(
+            config,
+            db_path=context.resolve_path(selected_db),
+            profile=profile,
+            dependencies=None,
+        )
+        service = composition.service
+
     try:
         owner.install()
         supervisor = RepeatedInstalledPaperService(
@@ -212,7 +223,10 @@ async def _run_paper(
         try:
             owner.restore()
         finally:
-            composition.close()
+            if composition is None:
+                service.close()
+            else:
+                composition.close()
 
 
 def handles(argv: Sequence[str]) -> bool:

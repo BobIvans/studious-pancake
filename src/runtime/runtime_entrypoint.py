@@ -53,6 +53,17 @@ def _parser() -> argparse.ArgumentParser:
     )
     run.add_argument("--db-path")
     run.add_argument("--json", action="store_true", dest="as_json")
+    lifecycle = run.add_mutually_exclusive_group()
+    lifecycle.add_argument(
+        "--once",
+        action="store_true",
+        help="run exactly one paper cycle and exit",
+    )
+    lifecycle.add_argument(
+        "--max-cycles",
+        type=int,
+        help="run at most N paper cycles; 0 means continuous",
+    )
     return parser
 
 
@@ -101,13 +112,30 @@ def _exit_code(report: InstalledDurablePaperServiceReport | None) -> int:
     return 7
 
 
+def _resolve_max_cycles(
+    environment: dict[str, str],
+    *,
+    once: bool,
+    max_cycles: int | None,
+) -> int:
+    if once:
+        return 1
+    if max_cycles is not None:
+        if max_cycles < 0:
+            raise ConfigurationLoadError("--max-cycles must be non-negative")
+        return max_cycles
+    return _integer(environment, "FLASHLOAN_PAPER_MAX_CYCLES", "0")
+
+
 async def _run_paper(
     context: BootstrapContext,
     *,
     config_file: str | None,
     db_path: str | None,
     as_json: bool,
-    legacy_smoke: bool,
+    legacy_smoke: bool = False,
+    once: bool = False,
+    max_cycles: int | None = None,
 ) -> int:
     environment = dict(context.environment)
     config = load_runtime_config(
@@ -118,12 +146,18 @@ async def _run_paper(
     selected_db = db_path or environment.get(
         "FLASHLOAN_PAPER_SERVICE_DB", ".runtime/paper-service.sqlite3"
     )
-    maximum = (
-        1 if legacy_smoke else _integer(environment, "FLASHLOAN_PAPER_MAX_CYCLES", "0")
+    # ``legacy_smoke`` remains an internal compatibility hook for existing tests
+    # and callers, but installed CLI behavior is controlled only by explicit
+    # lifecycle flags. Representation (--json) and state location (--db-path)
+    # must never change how long the service runs.
+    maximum = _resolve_max_cycles(
+        environment,
+        once=(once or legacy_smoke),
+        max_cycles=max_cycles,
     )
     delay = (
         0.0
-        if legacy_smoke
+        if (once or legacy_smoke)
         else _float(environment, "FLASHLOAN_PAPER_IDLE_DELAY_SECONDS", "0.25")
     )
     stop = asyncio.Event()
@@ -206,14 +240,14 @@ def main(argv: Sequence[str] | None = None) -> int:
             print(json.dumps({"admitted": True, "mode": "disabled"}, sort_keys=True))
             return 0
         if parsed.mode == "paper":
-            legacy_smoke = parsed.db_path is not None or parsed.as_json
             return asyncio.run(
                 _run_paper(
                     context,
                     config_file=parsed.config_file,
                     db_path=parsed.db_path,
                     as_json=parsed.as_json,
-                    legacy_smoke=legacy_smoke,
+                    once=parsed.once,
+                    max_cycles=parsed.max_cycles,
                 )
             )
 

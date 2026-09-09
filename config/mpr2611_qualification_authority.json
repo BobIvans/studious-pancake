@@ -1,0 +1,69 @@
+{
+  "schema_version": "mpr-2611.qualification-authority-map.v1",
+  "source_baseline": "68788d7f7f7da8a2e03b170f93c48af7421ee805",
+  "final_release_owner": "MPR-2612",
+  "release_claim_allowed": false,
+  "live_enabled": false,
+  "authorities": {
+    "qualification_plan": "src/qualification_pr176.py",
+    "executed_qualification": "scripts/qualify_release.py",
+    "evidence_validation": "src/production_qualification.py",
+    "debt_closure_projection": "scripts/qualify_release.py",
+    "release_review_eligibility": "scripts/qualify_release.py",
+    "qualification_verifier": "scripts/verify_mpr2611_production_qualification.py",
+    "repeated_run_verifier": "scripts/run_mpr2611_clean_qualification.py"
+  },
+  "compatibility_helpers": [
+    "src/qualification_pr186.py"
+  ],
+  "mpr2611_owned_paths": [
+    "config/mpr2611_qualification_authority.json",
+    "docs/mpr2611/qualification_handoff.md",
+    "scripts/run_mpr2611_clean_qualification.py",
+    "scripts/verify_mpr2611_production_qualification.py",
+    "src/production_qualification.py",
+    "tests/test_mpr2611_production_qualification.py",
+    "tests/test_mpr2611_qualification_authority.py"
+  ],
+  "parallel_owners": {
+    "MPR-2607": {
+      "pr": 477,
+      "head": "00e634dd230ff6955cd11fe7bc0257cb95e9d3a5",
+      "paths": [
+        "docs/mpr2607_residual_shadow_qualification.md",
+        "src/shadow_soak/campaign_evidence.py",
+        "tests/test_mpr2607_campaign_evidence_residuals.py"
+      ]
+    },
+    "MPR-2608": {
+      "pr": 479,
+      "head": "aaedbc3dfaaa640317b5f746b7711b7649f5f6f9",
+      "paths": [
+        "docs/mpr2608/implementation_status.md",
+        "isolated_signer_service/src/flashloan_isolated_signer/mpr2608.py",
+        "tests/test_mpr2608_isolated_signer_submission.py"
+      ]
+    },
+    "MPR-2609": {
+      "pr": 480,
+      "head": "7f0633eafdd12bf4e4f4b88986a62ac743d482f7",
+      "paths": [
+        "docs/mpr2609/implementation_status.md",
+        "src/live_canary/__init__.py",
+        "src/live_canary/mpr2609.py",
+        "tests/test_mpr2609_durable_canary_authority.py"
+      ]
+    },
+    "MPR-2610": {
+      "pr": 481,
+      "head": "0810bde47684931ccfa0f497d3ad4c2380b6b0af",
+      "paths": [
+        "docs/mpr2610_finalized_economic_ledger.md",
+        "src/execution/finalized_economic_ledger.py",
+        "src/execution/finalized_settlement_pr138.py",
+        "tests/execution/test_mpr2610_finalized_economic_ledger.py",
+        "tests/execution/test_pr138_finalized_settlement.py"
+      ]
+    }
+  }
+}

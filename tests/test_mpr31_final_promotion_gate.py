@@ -1,267 +1,411 @@
 from __future__ import annotations
 
-import pytest
+from dataclasses import asdict
+import hashlib
+import json
 
 from src.release_gate.mpr31_final_promotion_gate import (
-    ALLOWED_DEPENDENCY_KINDS,
     FinalPromotionBundle,
     ImmutableArchiveEvidence,
-    MPR31Error,
     MPR31FinalPromotionGate,
+    MPR2611Qualification,
+    MPR2612FinalReleaseGate,
     OperatorCommandEvidence,
     PromotionStatus,
-    REQUIRED_UPSTREAM_MPRS,
+    ReleaseApproval,
+    ReleaseProposal,
+    ReleaseState,
     RootedTreasuryEvidence,
     SignedEvidenceArtifact,
     TinyCanaryProposal,
     UpstreamMprEvidence,
 )
 
-DIGEST = "a" * 64
-SIG = "b" * 64
-REVIEWER_1 = "c" * 64
-REVIEWER_2 = "d" * 64
-NOW_NS = 1_000_000
-
-_KIND_BY_MPR = {
-    "MPR-25": "artifact-truth",
-    "MPR-26": "durable-authority",
-    "MPR-27": "rooted-provider-plane",
-    "MPR-28": "exact-economic-execution",
-    "MPR-29": "continuous-paper-shadow-soak",
-    "MPR-30": "cryptographic-submission-boundary",
-}
+D = "a" * 64
+D2 = "b" * 64
+D3 = "c" * 64
+NOW = 1_000_000
 
 
-def artifact(kind: str, *, issued_at_ns: int = 1, expires_at_ns: int = 2_000_000) -> SignedEvidenceArtifact:
-    return SignedEvidenceArtifact(
-        kind=kind,
-        digest=DIGEST,
-        signature_digest=SIG,
-        reviewer_digests=(REVIEWER_1, REVIEWER_2),
-        issued_at_ns=issued_at_ns,
-        expires_at_ns=expires_at_ns,
-        size_bytes=128,
-        immutable_uri="s3://immutable-release-evidence/mpr31.json",
-    )
+def _sha(value: object) -> str:
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
 
 
-def upstream() -> tuple[UpstreamMprEvidence, ...]:
-    return tuple(
-        UpstreamMprEvidence(mpr_id=mpr_id, artifact=artifact(kind))
-        for mpr_id, kind in _KIND_BY_MPR.items()
-    )
-
-
-def valid_bundle(**overrides: object) -> FinalPromotionBundle:
+def qualification(**overrides: object) -> MPR2611Qualification:
     data: dict[str, object] = {
-        "source_digest": DIGEST,
-        "wheel_digest": DIGEST,
-        "image_digest": DIGEST,
-        "config_digest": DIGEST,
-        "policy_digest": DIGEST,
-        "upstream_mprs": upstream(),
-        "treasury": RootedTreasuryEvidence(
-            wallet_balance_root_digest=DIGEST,
-            token_inventory_root_digest=DIGEST,
-            provider_quorum_digest=DIGEST,
-            policy_generation_digest=DIGEST,
-            unresolved_exposure_lamports=0,
-            rolling_loss_lamports=0,
-            daily_loss_lamports=0,
-            hard_latch_active=False,
-        ),
-        "archive": ImmutableArchiveEvidence(
-            exported_segment_digest=DIGEST,
-            remote_receipt_quorum_digest=DIGEST,
-            immutable_object_digest=DIGEST,
-            signed_head_digest=DIGEST,
-            retention_policy_digest=DIGEST,
-            replay_verified=True,
-        ),
-        "operator_command": OperatorCommandEvidence(
-            principal_digest=DIGEST,
-            role_session_digest=DIGEST,
-            command_digest=DIGEST,
-            command_signature_digest=DIGEST,
-            mfa_freshness_digest=DIGEST,
-            not_before_ns=1,
-            expires_at_ns=2_000_000,
-        ),
-        "canary": TinyCanaryProposal(
-            manual_transaction_count=1,
-            max_canary_loss_lamports=10,
-            rollback_plan_digest=DIGEST,
-            post_canary_review_required=True,
-            live_expansion_requested=False,
-        ),
-        "now_ns": NOW_NS,
-        "live_runtime_requested": False,
+        "schema_version": "mpr-2611.production-qualification.v1",
+        "release_id": "release-A",
+        "source_commit": D,
+        "source_tree_digest": D,
+        "wheel_digest": D,
+        "runtime_image_digest": D,
+        "signer_image_digest": D,
+        "config_generation_digest": D,
+        "policy_generation_digest": D,
+        "production_debt_digest": D,
+        "runtime_authority_digest": D,
+        "dependency_closure_digest": D,
+        "sbom_provenance_digest": D,
+        "platform_matrix_digest": D,
+        "predecessor_evidence_digest": D,
+        "qualification_semantic_digest": D,
+        "production_qualification_passed": True,
+        "eligible_for_release_review": True,
+        "release_claim_allowed": False,
+        "live_enabled": False,
+        "unresolved_p0_blockers": 0,
     }
     data.update(overrides)
-    return FinalPromotionBundle(**data)
+    digest_payload = dict(data)
+    digest_payload.pop("qualification_semantic_digest")
+    data["qualification_semantic_digest"] = _sha(digest_payload)
+    return MPR2611Qualification(**data)
 
 
-def test_ready_bundle_only_authorizes_default_off_one_manual_canary() -> None:
-    decision = MPR31FinalPromotionGate().evaluate(valid_bundle())
+def proposal(
+    q: MPR2611Qualification,
+    **overrides: object,
+) -> ReleaseProposal:
+    data: dict[str, object] = {
+        "release_id": q.release_id,
+        "source_commit": q.source_commit,
+        "source_tree_digest": q.source_tree_digest,
+        "wheel_digest": q.wheel_digest,
+        "runtime_image_digest": q.runtime_image_digest,
+        "signer_image_digest": q.signer_image_digest,
+        "config_generation_digest": q.config_generation_digest,
+        "policy_generation_digest": q.policy_generation_digest,
+        "qualification_digest": q.qualification_semantic_digest,
+        "runtime_authority_digest": q.runtime_authority_digest,
+        "production_surface_digest": D,
+        "production_debt_digest": q.production_debt_digest,
+        "sbom_provenance_digest": q.sbom_provenance_digest,
+        "platform_matrix_digest": q.platform_matrix_digest,
+        "rollback_target_generation": 0,
+        "created_at_ns": 1,
+        "not_before_ns": 2,
+        "expires_at_ns": 2_000_000,
+        "proposer_principal": "human-proposer",
+        "proposal_nonce": "nonce-1",
+    }
+    data.update(overrides)
+    return ReleaseProposal(**data)
 
-    assert decision.status is PromotionStatus.READY_DEFAULT_OFF
-    assert decision.ready
-    assert decision.canary_authorized_default_off
-    assert decision.reason_codes == ("MPR31_READY_FOR_ONE_MANUAL_CANARY_DEFAULT_OFF",)
-    assert len(decision.bundle_hash) == 64
+
+def approval(
+    p: ReleaseProposal,
+    q: MPR2611Qualification,
+    principal: str,
+    key: str,
+    **overrides: object,
+) -> ReleaseApproval:
+    data: dict[str, object] = {
+        "principal_id": principal,
+        "public_key_id": key,
+        "role": "release-reviewer",
+        "release_id": p.release_id,
+        "proposal_digest": p.proposal_digest,
+        "qualification_digest": q.qualification_semantic_digest,
+        "issued_at_ns": 1,
+        "not_before_ns": 2,
+        "expires_at_ns": 2_000_000,
+        "signature": "cryptographic-signature-fixture",
+    }
+    data.update(overrides)
+    return ReleaseApproval(**data)
 
 
-def test_missing_mpr25_to_mpr30_blocks_promotion() -> None:
-    decision = MPR31FinalPromotionGate().evaluate(valid_bundle(upstream_mprs=()))
-
-    assert decision.status is PromotionStatus.BLOCKED
-    assert not decision.canary_authorized_default_off
-    assert {f"MPR31_MISSING_UPSTREAM:{mpr}" for mpr in REQUIRED_UPSTREAM_MPRS} <= set(decision.reason_codes)
-
-
-def test_upstream_evidence_must_be_fresh_and_not_future_dated() -> None:
-    expired = UpstreamMprEvidence("MPR-25", artifact("artifact-truth", expires_at_ns=NOW_NS))
-    future = UpstreamMprEvidence("MPR-26", artifact("durable-authority", issued_at_ns=NOW_NS + 1))
-    remaining = tuple(item for item in upstream() if item.mpr_id not in {"MPR-25", "MPR-26"})
-
-    decision = MPR31FinalPromotionGate().evaluate(valid_bundle(upstream_mprs=(expired, future, *remaining)))
-
-    assert "MPR31_UPSTREAM_EXPIRED:MPR-25" in decision.reason_codes
-    assert "MPR31_UPSTREAM_NOT_YET_VALID:MPR-26" in decision.reason_codes
-    assert decision.status is PromotionStatus.BLOCKED
-
-
-def test_unsigned_or_self_declared_evidence_is_rejected_at_constructor() -> None:
-    with pytest.raises(MPR31Error, match="signature_digest"):
-        SignedEvidenceArtifact(
-            kind="artifact-truth",
-            digest=DIGEST,
-            signature_digest="not-a-digest",
-            reviewer_digests=(REVIEWER_1,),
-            issued_at_ns=1,
-            expires_at_ns=2,
-            size_bytes=1,
-            immutable_uri="s3://immutable/evidence.json",
+def gate(*, signature_ok: bool = True) -> MPR2612FinalReleaseGate:
+    def verify_signature(
+        item: ReleaseApproval,
+        payload: bytes,
+    ) -> bool:
+        return (
+            signature_ok
+            and bool(payload)
+            and item.signature.startswith("cryptographic-")
         )
-    with pytest.raises(MPR31Error, match="MPR31_DUPLICATE_REVIEWER_DIGEST"):
-        SignedEvidenceArtifact(
-            kind="artifact-truth",
-            digest=DIGEST,
-            signature_digest=SIG,
-            reviewer_digests=(REVIEWER_1, REVIEWER_1),
-            issued_at_ns=1,
-            expires_at_ns=2,
-            size_bytes=1,
-            immutable_uri="s3://immutable/evidence.json",
+
+    def resolve_principal(item: ReleaseApproval) -> str | None:
+        if item.principal_id.startswith("human-"):
+            return item.principal_id
+        return None
+
+    return MPR2612FinalReleaseGate(
+        qualification_verifier=(lambda item: item.production_qualification_passed),
+        signature_verifier=verify_signature,
+        trust_resolver=resolve_principal,
+    )
+
+
+def valid_release() -> tuple[
+    MPR2611Qualification,
+    ReleaseProposal,
+    tuple[ReleaseApproval, ...],
+]:
+    q = qualification()
+    p = proposal(q)
+    approvals = (
+        approval(p, q, "human-one", "key-one"),
+        approval(p, q, "human-two", "key-two"),
+    )
+    return q, p, approvals
+
+
+def test_successful_release_is_production_ready_but_live_stays_default_off() -> None:
+    q, p, approvals = valid_release()
+    decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
+    assert decision.allowed is True
+    assert decision.state is ReleaseState.RELEASED_PRODUCTION_DEFAULT_OFF
+    assert decision.production_ready is True
+    assert decision.release_claim_allowed is True
+    assert decision.product_state == "production-ready-default-off"
+    assert decision.live_enabled is False
+    assert decision.unrestricted_live_allowed is False
+    assert decision.automatic_scale_up_allowed is False
+
+
+def test_t2612_001_digest_only_forgery_cannot_release() -> None:
+    q, p, approvals = valid_release()
+    forged = tuple(
+        ReleaseApproval(**(asdict(item) | {"signature": D})) for item in approvals
+    )
+
+    decision = gate().evaluate(q, p, forged, now_ns=NOW)
+
+    assert decision.allowed is False
+    assert "BLOCKED_SIGNATURE_AUTHENTICITY" in decision.reason_codes
+
+
+def test_same_human_or_same_public_key_cannot_satisfy_two_human_review() -> None:
+    q = qualification()
+    p = proposal(q)
+    same_human = (
+        approval(p, q, "human-one", "key-one"),
+        approval(p, q, "human-one", "key-two"),
+    )
+    same_human_result = gate().evaluate(
+        q,
+        p,
+        same_human,
+        now_ns=NOW,
+    )
+    assert "BLOCKED_DISTINCT_HUMAN_REVIEW" in same_human_result.reason_codes
+
+    same_key = (
+        approval(p, q, "human-one", "key-one"),
+        approval(p, q, "human-two", "key-one"),
+    )
+    same_key_result = gate().evaluate(
+        q,
+        p,
+        same_key,
+        now_ns=NOW,
+    )
+    assert "BLOCKED_DISTINCT_HUMAN_REVIEW" in same_key_result.reason_codes
+
+
+def test_bot_or_untrusted_reviewer_does_not_count_as_human() -> None:
+    q = qualification()
+    p = proposal(q)
+    approvals = (
+        approval(p, q, "human-one", "key-one"),
+        approval(p, q, "ci-bot", "key-two"),
+    )
+
+    decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
+    assert decision.allowed is False
+    assert "BLOCKED_REVIEWER_IDENTITY" in decision.reason_codes
+    assert "BLOCKED_HUMAN_APPROVALS" in decision.reason_codes
+
+
+def test_qualification_for_release_a_cannot_release_b() -> None:
+    q = qualification()
+    p = proposal(q, release_id="release-B")
+    approvals = (
+        approval(p, q, "human-one", "key-one"),
+        approval(p, q, "human-two", "key-two"),
+    )
+
+    decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
+    assert "BLOCKED_RELEASE_ID_MISMATCH" in decision.reason_codes
+
+
+def test_artifact_or_policy_mutation_after_qualification_blocks() -> None:
+    q = qualification()
+    p = proposal(
+        q,
+        runtime_image_digest=D2,
+        policy_generation_digest=D3,
+    )
+    approvals = (
+        approval(p, q, "human-one", "key-one"),
+        approval(p, q, "human-two", "key-two"),
+    )
+
+    decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
+    assert "BLOCKED_RUNTIME_IMAGE_MISMATCH" in decision.reason_codes
+    assert "BLOCKED_POLICY_GENERATION_MISMATCH" in decision.reason_codes
+
+
+def test_stale_or_wrong_proposal_approval_fails_closed() -> None:
+    q = qualification()
+    p = proposal(q)
+    bad = (
+        approval(
+            p,
+            q,
+            "human-one",
+            "key-one",
+            expires_at_ns=NOW,
+        ),
+        approval(
+            p,
+            q,
+            "human-two",
+            "key-two",
+            proposal_digest=D2,
+        ),
+    )
+
+    decision = gate().evaluate(q, p, bad, now_ns=NOW)
+
+    assert "BLOCKED_APPROVAL_EXPIRED" in decision.reason_codes
+    assert "BLOCKED_APPROVAL_WRONG_PROPOSAL" in decision.reason_codes
+
+
+def test_qualification_cannot_self_grant_release_or_live() -> None:
+    q = qualification(
+        release_claim_allowed=True,
+        live_enabled=True,
+    )
+    p = proposal(q)
+    approvals = (
+        approval(p, q, "human-one", "key-one"),
+        approval(p, q, "human-two", "key-two"),
+    )
+
+    decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
+    assert "BLOCKED_QUALIFICATION_PRIVILEGE_ESCALATION" in decision.reason_codes
+
+
+def test_proposal_cannot_request_live_unlimited_or_auto_scale() -> None:
+    q = qualification()
+    p = proposal(
+        q,
+        live_enabled=True,
+        unrestricted_live_allowed=True,
+        automatic_scale_up_allowed=True,
+    )
+    approvals = (
+        approval(p, q, "human-one", "key-one"),
+        approval(p, q, "human-two", "key-two"),
+    )
+
+    decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
+    assert decision.allowed is False
+    assert "BLOCKED_AUTOMATIC_LIVE_REQUEST" in decision.reason_codes
+
+
+def test_hard_safety_latch_blocks_release() -> None:
+    q, p, approvals = valid_release()
+
+    decision = gate().evaluate(
+        q,
+        p,
+        approvals,
+        now_ns=NOW,
+        hard_safety_latch_active=True,
+    )
+
+    assert decision.allowed is False
+    assert "BLOCKED_HARD_SAFETY_LATCH" in decision.reason_codes
+
+
+def test_historical_mpr31_structural_gate_is_no_longer_release_authority() -> None:
+    kinds = {
+        "MPR-25": "artifact-truth",
+        "MPR-26": "durable-authority",
+        "MPR-27": "rooted-provider-plane",
+        "MPR-28": "exact-economic-execution",
+        "MPR-29": "continuous-paper-shadow-soak",
+        "MPR-30": "cryptographic-submission-boundary",
+    }
+    upstream = tuple(
+        UpstreamMprEvidence(
+            mpr,
+            SignedEvidenceArtifact(
+                kind=kind,
+                digest=D,
+                signature_digest=D,
+                reviewer_digests=(D2,),
+                issued_at_ns=1,
+                expires_at_ns=2_000_000,
+                size_bytes=1,
+                immutable_uri="memory://fake",
+            ),
         )
-
-
-def test_treasury_loss_exposure_and_latch_block_promotion() -> None:
-    treasury = RootedTreasuryEvidence(
-        wallet_balance_root_digest=DIGEST,
-        token_inventory_root_digest=DIGEST,
-        provider_quorum_digest=DIGEST,
-        policy_generation_digest=DIGEST,
-        unresolved_exposure_lamports=1,
-        rolling_loss_lamports=11,
-        daily_loss_lamports=12,
-        hard_latch_active=True,
+        for mpr, kind in kinds.items()
     )
-    decision = MPR31FinalPromotionGate().evaluate(valid_bundle(treasury=treasury))
-
-    assert {
-        "MPR31_HARD_LATCH_ACTIVE",
-        "MPR31_UNRESOLVED_EXPOSURE",
-        "MPR31_DAILY_LOSS_EXCEEDS_CANARY_LIMIT",
-        "MPR31_ROLLING_LOSS_EXCEEDS_CANARY_LIMIT",
-    } <= set(decision.reason_codes)
-    assert decision.status is PromotionStatus.BLOCKED
-
-
-def test_archive_replay_must_be_verified_from_immutable_receipts() -> None:
-    archive = ImmutableArchiveEvidence(
-        exported_segment_digest=DIGEST,
-        remote_receipt_quorum_digest=DIGEST,
-        immutable_object_digest=DIGEST,
-        signed_head_digest=DIGEST,
-        retention_policy_digest=DIGEST,
-        replay_verified=False,
-    )
-
-    decision = MPR31FinalPromotionGate().evaluate(valid_bundle(archive=archive))
-
-    assert decision.status is PromotionStatus.BLOCKED
-    assert "MPR31_ARCHIVE_REPLAY_NOT_VERIFIED" in decision.reason_codes
-
-
-def test_operator_command_window_is_enforced() -> None:
-    future_command = OperatorCommandEvidence(
-        principal_digest=DIGEST,
-        role_session_digest=DIGEST,
-        command_digest=DIGEST,
-        command_signature_digest=DIGEST,
-        mfa_freshness_digest=DIGEST,
-        not_before_ns=NOW_NS + 1,
-        expires_at_ns=NOW_NS + 100,
-    )
-    expired_command = OperatorCommandEvidence(
-        principal_digest=DIGEST,
-        role_session_digest=DIGEST,
-        command_digest=DIGEST,
-        command_signature_digest=DIGEST,
-        mfa_freshness_digest=DIGEST,
-        not_before_ns=1,
-        expires_at_ns=NOW_NS,
+    bundle = FinalPromotionBundle(
+        source_digest=D,
+        wheel_digest=D,
+        image_digest=D,
+        config_digest=D,
+        policy_digest=D,
+        upstream_mprs=upstream,
+        treasury=RootedTreasuryEvidence(
+            D,
+            D,
+            D,
+            D,
+            0,
+            0,
+            0,
+            False,
+        ),
+        archive=ImmutableArchiveEvidence(
+            D,
+            D,
+            D,
+            D,
+            D,
+            True,
+        ),
+        operator_command=OperatorCommandEvidence(
+            D,
+            D,
+            D,
+            D,
+            D,
+            1,
+            2_000_000,
+        ),
+        canary=TinyCanaryProposal(
+            1,
+            1,
+            D,
+            True,
+            False,
+        ),
+        now_ns=NOW,
     )
 
-    assert "MPR31_OPERATOR_COMMAND_NOT_YET_VALID" in MPR31FinalPromotionGate().evaluate(
-        valid_bundle(operator_command=future_command)
-    ).reason_codes
-    assert "MPR31_OPERATOR_COMMAND_EXPIRED" in MPR31FinalPromotionGate().evaluate(
-        valid_bundle(operator_command=expired_command)
-    ).reason_codes
-
-
-def test_canary_expansion_and_multiple_transactions_are_forbidden() -> None:
-    canary = TinyCanaryProposal(
-        manual_transaction_count=2,
-        max_canary_loss_lamports=10,
-        rollback_plan_digest=DIGEST,
-        post_canary_review_required=False,
-        live_expansion_requested=True,
-    )
-    decision = MPR31FinalPromotionGate().evaluate(valid_bundle(canary=canary))
+    decision = MPR31FinalPromotionGate().evaluate(bundle)
 
     assert decision.status is PromotionStatus.BLOCKED
-    assert {
-        "MPR31_CANARY_EXPANSION_FORBIDDEN",
-        "MPR31_CANARY_MUST_BE_ONE_MANUAL_TRANSACTION",
-        "MPR31_POST_CANARY_REVIEW_REQUIRED",
-    } <= set(decision.reason_codes)
-
-
-def test_live_runtime_requested_blocks_even_valid_evidence() -> None:
-    decision = MPR31FinalPromotionGate().evaluate(valid_bundle(live_runtime_requested=True))
-
-    assert decision.status is PromotionStatus.BLOCKED
-    assert "MPR31_LIVE_RUNTIME_MUST_REMAIN_DEFAULT_OFF" in decision.reason_codes
-
-
-def test_unknown_dependency_kind_and_mpr_are_rejected() -> None:
-    assert "artifact-truth" in ALLOWED_DEPENDENCY_KINDS
-    with pytest.raises(MPR31Error, match="MPR31_UNKNOWN_UPSTREAM_MPR"):
-        UpstreamMprEvidence("MPR-99", artifact("artifact-truth"))
-    with pytest.raises(MPR31Error, match="MPR31_UNKNOWN_UPSTREAM_EVIDENCE_KIND"):
-        UpstreamMprEvidence("MPR-25", artifact("caller-declared-claim"))
-
-
-def test_bool_is_not_accepted_as_integer_identity() -> None:
-    with pytest.raises(MPR31Error, match="manual_transaction_count"):
-        TinyCanaryProposal(
-            manual_transaction_count=True,
-            max_canary_loss_lamports=10,
-            rollback_plan_digest=DIGEST,
-            post_canary_review_required=True,
-            live_expansion_requested=False,
-        )
+    assert decision.ready is False
+    assert decision.canary_authorized_default_off is False
+    assert "MPR2612_CANONICAL_RELEASE_GATE_REQUIRED" in decision.reason_codes

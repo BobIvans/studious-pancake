@@ -4,8 +4,6 @@ from dataclasses import asdict
 import hashlib
 import json
 
-import pytest
-
 from src.release_gate.mpr31_final_promotion_gate import (
     FinalPromotionBundle,
     ImmutableArchiveEvidence,
@@ -30,9 +28,13 @@ NOW = 1_000_000
 
 
 def _sha(value: object) -> str:
-    return hashlib.sha256(
-        json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode()
-    ).hexdigest()
+    encoded = json.dumps(
+        value,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=True,
+    ).encode()
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def qualification(**overrides: object) -> MPR2611Qualification:
@@ -66,7 +68,10 @@ def qualification(**overrides: object) -> MPR2611Qualification:
     return MPR2611Qualification(**data)
 
 
-def proposal(q: MPR2611Qualification, **overrides: object) -> ReleaseProposal:
+def proposal(
+    q: MPR2611Qualification,
+    **overrides: object,
+) -> ReleaseProposal:
     data: dict[str, object] = {
         "release_id": q.release_id,
         "source_commit": q.source_commit,
@@ -93,7 +98,13 @@ def proposal(q: MPR2611Qualification, **overrides: object) -> ReleaseProposal:
     return ReleaseProposal(**data)
 
 
-def approval(p: ReleaseProposal, q: MPR2611Qualification, principal: str, key: str, **overrides: object) -> ReleaseApproval:
+def approval(
+    p: ReleaseProposal,
+    q: MPR2611Qualification,
+    principal: str,
+    key: str,
+    **overrides: object,
+) -> ReleaseApproval:
     data: dict[str, object] = {
         "principal_id": principal,
         "public_key_id": key,
@@ -111,14 +122,35 @@ def approval(p: ReleaseProposal, q: MPR2611Qualification, principal: str, key: s
 
 
 def gate(*, signature_ok: bool = True) -> MPR2612FinalReleaseGate:
+    def verify_signature(
+        item: ReleaseApproval,
+        payload: bytes,
+    ) -> bool:
+        return (
+            signature_ok
+            and bool(payload)
+            and item.signature.startswith("cryptographic-")
+        )
+
+    def resolve_principal(item: ReleaseApproval) -> str | None:
+        if item.principal_id.startswith("human-"):
+            return item.principal_id
+        return None
+
     return MPR2612FinalReleaseGate(
-        qualification_verifier=lambda q: q.production_qualification_passed,
-        signature_verifier=lambda approval, payload: signature_ok and bool(payload) and approval.signature.startswith("cryptographic-"),
-        trust_resolver=lambda approval: approval.principal_id if approval.principal_id.startswith("human-") else None,
+        qualification_verifier=(
+            lambda item: item.production_qualification_passed
+        ),
+        signature_verifier=verify_signature,
+        trust_resolver=resolve_principal,
     )
 
 
-def valid_release():
+def valid_release() -> tuple[
+    MPR2611Qualification,
+    ReleaseProposal,
+    tuple[ReleaseApproval, ...],
+]:
     q = qualification()
     p = proposal(q)
     approvals = (
@@ -131,6 +163,7 @@ def valid_release():
 def test_successful_release_is_production_ready_but_live_stays_default_off() -> None:
     q, p, approvals = valid_release()
     decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
     assert decision.allowed is True
     assert decision.state is ReleaseState.RELEASED_PRODUCTION_DEFAULT_OFF
     assert decision.production_ready is True
@@ -144,9 +177,12 @@ def test_successful_release_is_production_ready_but_live_stays_default_off() -> 
 def test_t2612_001_digest_only_forgery_cannot_release() -> None:
     q, p, approvals = valid_release()
     forged = tuple(
-        ReleaseApproval(**(asdict(item) | {"signature": D})) for item in approvals
+        ReleaseApproval(**(asdict(item) | {"signature": D}))
+        for item in approvals
     )
+
     decision = gate().evaluate(q, p, forged, now_ns=NOW)
+
     assert decision.allowed is False
     assert "BLOCKED_SIGNATURE_AUTHENTICITY" in decision.reason_codes
 
@@ -158,12 +194,25 @@ def test_same_human_or_same_public_key_cannot_satisfy_two_human_review() -> None
         approval(p, q, "human-one", "key-one"),
         approval(p, q, "human-one", "key-two"),
     )
-    assert "BLOCKED_DISTINCT_HUMAN_REVIEW" in gate().evaluate(q, p, same_human, now_ns=NOW).reason_codes
+    same_human_result = gate().evaluate(
+        q,
+        p,
+        same_human,
+        now_ns=NOW,
+    )
+    assert "BLOCKED_DISTINCT_HUMAN_REVIEW" in same_human_result.reason_codes
+
     same_key = (
         approval(p, q, "human-one", "key-one"),
         approval(p, q, "human-two", "key-one"),
     )
-    assert "BLOCKED_DISTINCT_HUMAN_REVIEW" in gate().evaluate(q, p, same_key, now_ns=NOW).reason_codes
+    same_key_result = gate().evaluate(
+        q,
+        p,
+        same_key,
+        now_ns=NOW,
+    )
+    assert "BLOCKED_DISTINCT_HUMAN_REVIEW" in same_key_result.reason_codes
 
 
 def test_bot_or_untrusted_reviewer_does_not_count_as_human() -> None:
@@ -173,7 +222,9 @@ def test_bot_or_untrusted_reviewer_does_not_count_as_human() -> None:
         approval(p, q, "human-one", "key-one"),
         approval(p, q, "ci-bot", "key-two"),
     )
+
     decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
     assert decision.allowed is False
     assert "BLOCKED_REVIEWER_IDENTITY" in decision.reason_codes
     assert "BLOCKED_HUMAN_APPROVALS" in decision.reason_codes
@@ -186,18 +237,26 @@ def test_qualification_for_release_a_cannot_release_b() -> None:
         approval(p, q, "human-one", "key-one"),
         approval(p, q, "human-two", "key-two"),
     )
+
     decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
     assert "BLOCKED_RELEASE_ID_MISMATCH" in decision.reason_codes
 
 
 def test_artifact_or_policy_mutation_after_qualification_blocks() -> None:
     q = qualification()
-    p = proposal(q, runtime_image_digest=D2, policy_generation_digest=D3)
+    p = proposal(
+        q,
+        runtime_image_digest=D2,
+        policy_generation_digest=D3,
+    )
     approvals = (
         approval(p, q, "human-one", "key-one"),
         approval(p, q, "human-two", "key-two"),
     )
+
     decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
     assert "BLOCKED_RUNTIME_IMAGE_MISMATCH" in decision.reason_codes
     assert "BLOCKED_POLICY_GENERATION_MISMATCH" in decision.reason_codes
 
@@ -206,77 +265,153 @@ def test_stale_or_wrong_proposal_approval_fails_closed() -> None:
     q = qualification()
     p = proposal(q)
     bad = (
-        approval(p, q, "human-one", "key-one", expires_at_ns=NOW),
-        approval(p, q, "human-two", "key-two", proposal_digest=D2),
+        approval(
+            p,
+            q,
+            "human-one",
+            "key-one",
+            expires_at_ns=NOW,
+        ),
+        approval(
+            p,
+            q,
+            "human-two",
+            "key-two",
+            proposal_digest=D2,
+        ),
     )
+
     decision = gate().evaluate(q, p, bad, now_ns=NOW)
+
     assert "BLOCKED_APPROVAL_EXPIRED" in decision.reason_codes
     assert "BLOCKED_APPROVAL_WRONG_PROPOSAL" in decision.reason_codes
 
 
 def test_qualification_cannot_self_grant_release_or_live() -> None:
-    q = qualification(release_claim_allowed=True, live_enabled=True)
+    q = qualification(
+        release_claim_allowed=True,
+        live_enabled=True,
+    )
     p = proposal(q)
     approvals = (
         approval(p, q, "human-one", "key-one"),
         approval(p, q, "human-two", "key-two"),
     )
+
     decision = gate().evaluate(q, p, approvals, now_ns=NOW)
-    assert "BLOCKED_QUALIFICATION_PRIVILEGE_ESCALATION" in decision.reason_codes
+
+    assert (
+        "BLOCKED_QUALIFICATION_PRIVILEGE_ESCALATION"
+        in decision.reason_codes
+    )
 
 
 def test_proposal_cannot_request_live_unlimited_or_auto_scale() -> None:
     q = qualification()
-    p = proposal(q, live_enabled=True, unrestricted_live_allowed=True, automatic_scale_up_allowed=True)
+    p = proposal(
+        q,
+        live_enabled=True,
+        unrestricted_live_allowed=True,
+        automatic_scale_up_allowed=True,
+    )
     approvals = (
         approval(p, q, "human-one", "key-one"),
         approval(p, q, "human-two", "key-two"),
     )
+
     decision = gate().evaluate(q, p, approvals, now_ns=NOW)
+
     assert decision.allowed is False
     assert "BLOCKED_AUTOMATIC_LIVE_REQUEST" in decision.reason_codes
 
 
 def test_hard_safety_latch_blocks_release() -> None:
     q, p, approvals = valid_release()
-    decision = gate().evaluate(q, p, approvals, now_ns=NOW, hard_safety_latch_active=True)
+
+    decision = gate().evaluate(
+        q,
+        p,
+        approvals,
+        now_ns=NOW,
+        hard_safety_latch_active=True,
+    )
+
     assert decision.allowed is False
     assert "BLOCKED_HARD_SAFETY_LATCH" in decision.reason_codes
 
 
 def test_historical_mpr31_structural_gate_is_no_longer_release_authority() -> None:
-    artifact = SignedEvidenceArtifact(
-        kind="artifact-truth", digest=D, signature_digest=D,
-        reviewer_digests=(D2,), issued_at_ns=1, expires_at_ns=2_000_000,
-        size_bytes=1, immutable_uri="memory://fake",
-    )
+    kinds = {
+        "MPR-25": "artifact-truth",
+        "MPR-26": "durable-authority",
+        "MPR-27": "rooted-provider-plane",
+        "MPR-28": "exact-economic-execution",
+        "MPR-29": "continuous-paper-shadow-soak",
+        "MPR-30": "cryptographic-submission-boundary",
+    }
     upstream = tuple(
-        UpstreamMprEvidence(mpr, SignedEvidenceArtifact(
-            kind=kind, digest=D, signature_digest=D, reviewer_digests=(D2,),
-            issued_at_ns=1, expires_at_ns=2_000_000, size_bytes=1,
-            immutable_uri="memory://fake",
-        ))
-        for mpr, kind in {
-            "MPR-25": "artifact-truth",
-            "MPR-26": "durable-authority",
-            "MPR-27": "rooted-provider-plane",
-            "MPR-28": "exact-economic-execution",
-            "MPR-29": "continuous-paper-shadow-soak",
-            "MPR-30": "cryptographic-submission-boundary",
-        }.items()
+        UpstreamMprEvidence(
+            mpr,
+            SignedEvidenceArtifact(
+                kind=kind,
+                digest=D,
+                signature_digest=D,
+                reviewer_digests=(D2,),
+                issued_at_ns=1,
+                expires_at_ns=2_000_000,
+                size_bytes=1,
+                immutable_uri="memory://fake",
+            ),
+        )
+        for mpr, kind in kinds.items()
     )
     bundle = FinalPromotionBundle(
-        source_digest=D, wheel_digest=D, image_digest=D, config_digest=D, policy_digest=D,
+        source_digest=D,
+        wheel_digest=D,
+        image_digest=D,
+        config_digest=D,
+        policy_digest=D,
         upstream_mprs=upstream,
-        treasury=RootedTreasuryEvidence(D, D, D, D, 0, 0, 0, False),
-        archive=ImmutableArchiveEvidence(D, D, D, D, D, True),
-        operator_command=OperatorCommandEvidence(D, D, D, D, D, 1, 2_000_000),
-        canary=TinyCanaryProposal(1, 1, D, True, False),
+        treasury=RootedTreasuryEvidence(
+            D,
+            D,
+            D,
+            D,
+            0,
+            0,
+            0,
+            False,
+        ),
+        archive=ImmutableArchiveEvidence(
+            D,
+            D,
+            D,
+            D,
+            D,
+            True,
+        ),
+        operator_command=OperatorCommandEvidence(
+            D,
+            D,
+            D,
+            D,
+            D,
+            1,
+            2_000_000,
+        ),
+        canary=TinyCanaryProposal(
+            1,
+            1,
+            D,
+            True,
+            False,
+        ),
         now_ns=NOW,
     )
+
     decision = MPR31FinalPromotionGate().evaluate(bundle)
+
     assert decision.status is PromotionStatus.BLOCKED
     assert decision.ready is False
     assert decision.canary_authorized_default_off is False
     assert "MPR2612_CANONICAL_RELEASE_GATE_REQUIRED" in decision.reason_codes
-    assert artifact.signature_digest == D

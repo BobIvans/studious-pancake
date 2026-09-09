@@ -44,7 +44,7 @@ jobs:
           tests/test_core_v1_composition.py
       - name: Format closure surfaces
         run: >-
-          python -m black --check
+          python -m black --diff --check
           src/runtime/core_v1_composition.py
           src/runtime/core_v1_materializer.py
           src/runtime/runtime_entrypoint.py

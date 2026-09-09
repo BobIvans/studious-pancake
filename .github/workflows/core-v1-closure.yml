@@ -9,7 +9,7 @@ on:
       - "src/production_debt_profiles.py"
       - "config/release_profiles/core-marginfi-jupiter-v1.json"
       - "scripts/verify_core_v1_closure.py"
-      - "tests/test_core_v1_closure.py"
+      - "tests/test_core_v1_*.py"
       - "docs/core-v1-closure.md"
       - ".github/workflows/core-v1-closure.yml"
   workflow_dispatch:
@@ -41,6 +41,7 @@ jobs:
           src/production_debt_profiles.py
           scripts/verify_core_v1_closure.py
           tests/test_core_v1_closure.py
+          tests/test_core_v1_composition.py
       - name: Format closure surfaces
         run: >-
           python -m black --check
@@ -51,10 +52,12 @@ jobs:
           src/production_debt_profiles.py
           scripts/verify_core_v1_closure.py
           tests/test_core_v1_closure.py
+          tests/test_core_v1_composition.py
       - name: Focused core closure regressions
         run: >-
           python -m pytest -q
           tests/test_core_v1_closure.py
+          tests/test_core_v1_composition.py
           tests/test_mpr2602_durable_completion.py
           tests/execution/test_mpr2610_finalized_economic_ledger.py
           tests/test_mpr2613_guarded_operations.py

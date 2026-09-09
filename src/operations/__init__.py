@@ -1,5 +1,27 @@
-"""Operator readiness and operational evidence gates."""
+"""Operator readiness and guarded production operations."""
 
+from .mpr2613_guarded_operations import (
+    AcceptedReleaseIdentity,
+    AdmissionDecision,
+    AdmissionDenied,
+    CurrentAdmissionFacts,
+    GuardedOperationsError,
+    IntegrationBlocked,
+    MonetaryCaps,
+    OperatingEnvelope,
+    OperatingState,
+    ResourceCaps,
+    SLOBudget,
+    ScaleTier,
+    StateTransitionDenied,
+    evaluate_current_admission,
+    initialize_scope,
+    install_guarded_operations_schema,
+    persist_envelope,
+    recommended_downshift,
+    record_slo_budget,
+    transition_state,
+)
 from .operator_readiness import (
     BackupRestoreEvidence,
     LifecycleRecoveryEvidence,
@@ -14,14 +36,34 @@ from .operator_readiness import (
 )
 
 __all__ = [
+    "AcceptedReleaseIdentity",
+    "AdmissionDecision",
+    "AdmissionDenied",
     "BackupRestoreEvidence",
+    "CurrentAdmissionFacts",
+    "GuardedOperationsError",
+    "IntegrationBlocked",
     "LifecycleRecoveryEvidence",
+    "MonetaryCaps",
+    "OperatingEnvelope",
+    "OperatingState",
     "OperatorReadinessBlocker",
     "OperatorReadinessGate",
     "OperatorReadinessResult",
     "OperatorRuntimeEvidence",
+    "ResourceCaps",
+    "SLOBudget",
+    "ScaleTier",
     "StageMetricEvidence",
+    "StateTransitionDenied",
     "TraceStageEvidence",
     "build_operator_evidence_from_status",
+    "evaluate_current_admission",
+    "initialize_scope",
+    "install_guarded_operations_schema",
+    "persist_envelope",
+    "recommended_downshift",
+    "record_slo_budget",
     "sha256_json",
+    "transition_state",
 ]

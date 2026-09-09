@@ -70,6 +70,8 @@ if "site-packages" not in str(Path(identity.__file__).resolve()):
     raise RuntimeError("NOT_AN_INSTALLED_WHEEL")
 if code != 5 or report["status"] != "BLOCKED":
     raise RuntimeError("DEFAULT_SERVICE_DID_NOT_FAIL_CLOSED")
+if report.get("terminal_reason") != "BLOCKED_EXTERNAL":
+    raise RuntimeError("DEFAULT_SERVICE_DID_NOT_REPORT_BLOCKED_EXTERNAL")
 for field in ("sender_imported", "submission_allowed", "live_enabled"):
     if report.get(field) is not False:
         raise RuntimeError("UNSAFE_DEFAULT:" + field)
@@ -90,8 +92,7 @@ output = {
     "network_attempts": network_attempts,
     "forbidden_import_attempts": import_attempts,
     "loaded_forbidden_modules": loaded_forbidden,
-    "requested_BLOCKED_EXTERNAL_observed": report["terminal_reason"]
-    == "BLOCKED_EXTERNAL",
+    "requested_BLOCKED_EXTERNAL_observed": True,
     "full_mpr2602_completion_claimed": False,
     "live_readiness_claimed": False,
 }

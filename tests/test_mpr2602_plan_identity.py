@@ -4,13 +4,17 @@ from __future__ import annotations
 
 import base64
 from dataclasses import replace
+import math
 
 import pytest
 
 from src.durability import AttemptKey
 from src.durability.unified_authority_pr02 import UnifiedAuthorityError
+from src.kernel import canonical_json_bytes
+from src.kernel.canonical_json import CanonicalJsonError
 from src.paper_shadow.mpr2602_runtime import (
     _prepared_plan_hash,
+    _semantic_value,
     begin_prepared_attempt_intent,
     validate_prepared_plan_hash,
 )
@@ -151,7 +155,9 @@ def test_unified_authority_replays_identical_plan_and_rejects_semantic_drift(
         attempt = store.lifecycle.create_attempt(
             AttemptKey("mpr2602-source-vertical", digest("pre-reserve-plan"), 1),
             idempotency_key="mpr2602-plan-identity-create",
+            reservation_id="mpr2602-plan-identity-reservation",
             candidate_id="mpr2602-source-vertical",
+            reserved_lamports=123,
         )
         first, plan_hash = begin_prepared_attempt_intent(
             store,
@@ -188,3 +194,44 @@ def test_unified_authority_replays_identical_plan_and_rejects_semantic_drift(
         )
     finally:
         store.close()
+
+
+@pytest.mark.parametrize(
+    "value", [0.0, -0.0, 0.1, math.nextafter(1.0, 2.0), 1e300, 5e-324]
+)
+def test_finite_float_metadata_is_lossless_and_canonical_json_safe(value):
+    encoded = _semantic_value(value)
+    assert encoded == {"__float_hex__": value.hex()}
+    assert float.fromhex(encoded["__float_hex__"]).hex() == value.hex()
+    assert canonical_json_bytes(encoded)
+    # Identity adaptation must not weaken the global integer-only format.
+    with pytest.raises(CanonicalJsonError, match="floating-point values are forbidden"):
+        canonical_json_bytes({"value": value})
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), -float("inf")])
+def test_nonfinite_plan_metadata_remains_fail_closed(value):
+    candidate = _candidate()
+    leg = replace(candidate.request.leg_a, route_plan=({"impact": value},))
+    with pytest.raises(ValueError, match="MPR2602_NONFINITE_PLAN_VALUE"):
+        _prepared_plan_hash(_with_leg_a(candidate, leg))
+
+
+def test_adjacent_float_route_metadata_cannot_reuse_plan_identity():
+    candidate = _candidate()
+    leg = replace(candidate.request.leg_a, route_plan=({"impact": 0.1},))
+    changed = replace(leg, route_plan=({"impact": math.nextafter(0.1, 1.0)},))
+    assert _prepared_plan_hash(_with_leg_a(candidate, leg)) != _prepared_plan_hash(
+        _with_leg_a(candidate, changed)
+    )
+
+
+def test_float_identity_cannot_alias_integer_string_or_mapping():
+    encoded = _semantic_value(1.0)
+    for other in (1, "0x1.0000000000000p+0", {"__float_hex__": 1.0.hex()}):
+        assert canonical_json_bytes(encoded) != canonical_json_bytes(
+            _semantic_value(other)
+        )
+    assert canonical_json_bytes(_semantic_value(0.0)) != canonical_json_bytes(
+        _semantic_value(-0.0)
+    )

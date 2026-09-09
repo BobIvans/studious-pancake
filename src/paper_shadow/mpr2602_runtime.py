@@ -120,7 +120,12 @@ def _semantic_value(value: Any) -> Any:
     if isinstance(value, float):
         if not math.isfinite(value):
             raise ValueError("MPR2602_NONFINITE_PLAN_VALUE")
-        return value
+        # Existing provider models carry finite float metadata. Bind its exact
+        # binary value without allowing floats into the shared canonical JSON
+        # format, rounding to integers, or dropping execution-relevant fields.
+        # Mapping values are separately tagged below, so callers cannot spoof
+        # this scalar encoding with a dictionary containing the same key.
+        return {"__float_hex__": value.hex()}
     if isinstance(value, Enum):
         return {
             "__enum__": f"{type(value).__module__}.{type(value).__qualname__}",

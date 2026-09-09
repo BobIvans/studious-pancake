@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
-from typing import Callable, Protocol, Sequence
+from typing import Protocol, Sequence
 
 from src.config.runtime import RuntimeConfig, RuntimeMode
 from src.durability import AttemptKey
@@ -23,11 +23,10 @@ from src.paper_shadow.durable_service_a3 import (
     A3ProviderEvidenceState,
 )
 from src.paper_shadow.exact_attempt_pr152 import (
+    CandidateFactory,
     ExactAttemptRequest,
     ProviderExecutionEvidence,
 )
-from src.paper_shadow.atomic_vertical import AtomicVerticalCandidate
-from src.planning.atomic_marginfi_jupiter import CapitalReservationEvidence
 
 CORE_V1_PROFILE_ID = "core-marginfi-jupiter-v1"
 CORE_V1_SCHEMA = "core-v1.exact-attempt-materialization.v1"
@@ -91,12 +90,6 @@ class CoreV1ReleaseProfile:
             raise ValueError("CORE_V1_CLUSTER_IDENTITY_REQUIRED")
 
 
-class CoreV1CandidateFactory(Protocol):
-    def __call__(
-        self, reservation: CapitalReservationEvidence
-    ) -> AtomicVerticalCandidate: ...
-
-
 @dataclass(frozen=True, slots=True)
 class CoreV1AttemptDraft:
     """Complete non-live inputs from one admitted discovery/provider observation."""
@@ -112,7 +105,7 @@ class CoreV1AttemptDraft:
     wallet_snapshot: WalletBalanceSnapshot
     provider_evidence: ProviderExecutionEvidence
     discovery_slot: int
-    candidate_factory: Callable[[CapitalReservationEvidence], AtomicVerticalCandidate]
+    candidate_factory: CandidateFactory
 
     def __post_init__(self) -> None:
         if self.profile_id != CORE_V1_PROFILE_ID:

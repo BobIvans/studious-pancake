@@ -7,7 +7,8 @@ call the fence immediately before each future use.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from datetime import datetime
 from enum import StrEnum
 import hashlib
 import json
@@ -17,7 +18,7 @@ import sqlite3
 import time
 from typing import Callable
 
-from src.config.credential_lifecycle import CredentialState, SecretHandle, SecretLifecycleError
+from src.config.credential_lifecycle import CredentialState, SecretHandle
 from src.security.trust_anchors import (
     SignedEnvelope,
     TrustAnchorRegistry,
@@ -69,8 +70,10 @@ class CredentialVersion:
         _nonnegative_int(self.issued_at_ns, "issued_at_ns")
         _nonnegative_int(self.not_before_ns, "not_before_ns")
         _positive_int(self.expires_at_ns, "expires_at_ns")
-        if self.not_before_ns < self.issued_at_ns or self.expires_at_ns <= self.not_before_ns:
-            raise ValueError("invalid credential validity window")
+        if self.not_before_ns < self.issued_at_ns:
+            raise ValueError("not_before_ns precedes issued_at_ns")
+        if self.expires_at_ns <= self.not_before_ns:
+            raise ValueError("credential validity window is empty")
 
 
 @dataclass(frozen=True, slots=True)
@@ -145,11 +148,7 @@ class CredentialFence:
 
 
 class DurableCredentialAuthority:
-    """Single durable metadata authority for current credential generations.
-
-    Secret bytes are deliberately absent. Mutations use BEGIN IMMEDIATE so
-    competing writers cannot both win a preferred-generation cutover.
-    """
+    """Durable metadata authority for credential generation and revocation."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = str(path)
@@ -265,54 +264,85 @@ class DurableCredentialAuthority:
         _sha256(validation_sha256, "validation_sha256")
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            row = self._row(conn, secret_id, version)
-            if CredentialState(row["state"]) not in {CredentialState.STAGED, CredentialState.VALIDATED}:
+            try:
+                row = self._row(conn, secret_id, version)
+                state = CredentialState(row["state"])
+                if state not in {CredentialState.STAGED, CredentialState.VALIDATED}:
+                    raise CredentialRotationError("only staged credential can be validated")
+                conn.execute(
+                    """
+                    UPDATE mpr2618_versions
+                    SET state=?, validation_sha256=?
+                    WHERE secret_id=? AND version=?
+                    """,
+                    (
+                        CredentialState.VALIDATED.value,
+                        validation_sha256,
+                        secret_id,
+                        version,
+                    ),
+                )
+                conn.execute(
+                    """
+                    UPDATE mpr2618_secret_heads
+                    SET updated_at_ns=? WHERE secret_id=?
+                    """,
+                    (now_ns, secret_id),
+                )
+                conn.execute("COMMIT")
+            except BaseException:
                 conn.execute("ROLLBACK")
-                raise CredentialRotationError("only staged credential can be validated")
-            conn.execute(
-                "UPDATE mpr2618_versions SET state=?, validation_sha256=? WHERE secret_id=? AND version=?",
-                (CredentialState.VALIDATED.value, validation_sha256, secret_id, version),
-            )
-            conn.execute("UPDATE mpr2618_secret_heads SET updated_at_ns=? WHERE secret_id=?", (now_ns, secret_id))
-            conn.execute("COMMIT")
+                raise
 
     def activate_initial(self, *, secret_id: str, version: str, now_ns: int) -> None:
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
-            head = self._head(conn, secret_id)
-            if head["preferred_version"] is not None:
+            try:
+                head = self._head(conn, secret_id)
+                if head["preferred_version"] is not None:
+                    raise CredentialRotationError("preferred credential already exists")
+                row = self._row(conn, secret_id, version)
+                self._assert_activatable(row, now_ns)
+                conn.execute(
+                    """
+                    UPDATE mpr2618_versions SET state=?
+                    WHERE secret_id=? AND version=?
+                    """,
+                    (CredentialState.ACTIVE.value, secret_id, version),
+                )
+                conn.execute(
+                    """
+                    UPDATE mpr2618_secret_heads
+                    SET preferred_version=?, rotation_epoch=1,
+                        revision=revision+1, updated_at_ns=?
+                    WHERE secret_id=?
+                    """,
+                    (version, now_ns, secret_id),
+                )
+                conn.execute("COMMIT")
+            except BaseException:
                 conn.execute("ROLLBACK")
-                raise CredentialRotationError("preferred credential already exists")
-            row = self._row(conn, secret_id, version)
-            self._assert_activatable(row, now_ns)
-            conn.execute(
-                "UPDATE mpr2618_versions SET state=? WHERE secret_id=? AND version=?",
-                (CredentialState.ACTIVE.value, secret_id, version),
-            )
-            conn.execute(
-                """
-                UPDATE mpr2618_secret_heads
-                SET preferred_version=?, rotation_epoch=1, revision=revision+1, updated_at_ns=?
-                WHERE secret_id=?
-                """,
-                (version, now_ns, secret_id),
-            )
-            conn.execute("COMMIT")
+                raise
 
     def rotate(self, plan: RotationPlan, *, now_ns: int) -> RotationReceipt:
         with self._connect() as conn:
             conn.execute("BEGIN IMMEDIATE")
             try:
                 replay = conn.execute(
-                    "SELECT semantic_hash, receipt_json FROM mpr2618_rotations WHERE rotation_id=?",
+                    """
+                    SELECT semantic_hash, receipt_json
+                    FROM mpr2618_rotations WHERE rotation_id=?
+                    """,
                     (plan.rotation_id,),
                 ).fetchone()
                 if replay is not None:
                     if replay["semantic_hash"] != plan.semantic_hash:
                         raise CredentialRotationError("rotation_id semantic conflict")
-                    receipt = RotationReceipt(**json.loads(replay["receipt_json"]))
+                    payload = json.loads(replay["receipt_json"])
+                    receipt = RotationReceipt(**payload)
                     conn.execute("COMMIT")
                     return receipt
+
                 head = self._head(conn, plan.secret_id)
                 if head["preferred_version"] != plan.expected_current_version:
                     raise CredentialRotationError("stale expected current credential")
@@ -326,19 +356,34 @@ class DurableCredentialAuthority:
                 overlap_until = plan.allowed_overlap_until_ns
                 if overlap_until is not None and overlap_until <= now_ns:
                     raise CredentialRotationError("overlap window already expired")
+
                 next_rotation = int(head["rotation_epoch"]) + 1
                 conn.execute(
-                    "UPDATE mpr2618_versions SET state=?, overlap_until_ns=? WHERE secret_id=? AND version=?",
-                    (CredentialState.RETIRING.value, overlap_until, plan.secret_id, old["version"]),
+                    """
+                    UPDATE mpr2618_versions
+                    SET state=?, overlap_until_ns=?
+                    WHERE secret_id=? AND version=?
+                    """,
+                    (
+                        CredentialState.RETIRING.value,
+                        overlap_until,
+                        plan.secret_id,
+                        old["version"],
+                    ),
                 )
                 conn.execute(
-                    "UPDATE mpr2618_versions SET state=?, overlap_until_ns=NULL WHERE secret_id=? AND version=?",
+                    """
+                    UPDATE mpr2618_versions
+                    SET state=?, overlap_until_ns=NULL
+                    WHERE secret_id=? AND version=?
+                    """,
                     (CredentialState.ACTIVE.value, plan.secret_id, new["version"]),
                 )
                 conn.execute(
                     """
                     UPDATE mpr2618_secret_heads
-                    SET preferred_version=?, rotation_epoch=?, revision=revision+1, updated_at_ns=?
+                    SET preferred_version=?, rotation_epoch=?, revision=revision+1,
+                        updated_at_ns=?
                     WHERE secret_id=?
                     """,
                     (new["version"], next_rotation, now_ns, plan.secret_id),
@@ -354,8 +399,16 @@ class DurableCredentialAuthority:
                     committed_at_ns=now_ns,
                 )
                 conn.execute(
-                    "INSERT INTO mpr2618_rotations(rotation_id, semantic_hash, receipt_json) VALUES(?, ?, ?)",
-                    (plan.rotation_id, plan.semantic_hash, json.dumps(_dataclass_dict(receipt), sort_keys=True)),
+                    """
+                    INSERT INTO mpr2618_rotations(
+                        rotation_id, semantic_hash, receipt_json
+                    ) VALUES(?, ?, ?)
+                    """,
+                    (
+                        plan.rotation_id,
+                        plan.semantic_hash,
+                        json.dumps(asdict(receipt), sort_keys=True),
+                    ),
                 )
                 conn.execute("COMMIT")
                 return receipt
@@ -386,30 +439,43 @@ class DurableCredentialAuthority:
             conn.execute("BEGIN IMMEDIATE")
             try:
                 replay = conn.execute(
-                    "SELECT semantic_hash, receipt_json FROM mpr2618_revocations WHERE incident_id=?",
+                    """
+                    SELECT semantic_hash, receipt_json
+                    FROM mpr2618_revocations WHERE incident_id=?
+                    """,
                     (incident_id,),
                 ).fetchone()
                 if replay is not None:
                     if replay["semantic_hash"] != semantic_hash:
                         raise CredentialRotationError("incident_id semantic conflict")
-                    receipt = RevocationReceipt(**json.loads(replay["receipt_json"]))
+                    payload = json.loads(replay["receipt_json"])
+                    payload["reason"] = RotationReason(payload["reason"])
+                    receipt = RevocationReceipt(**payload)
                     conn.execute("COMMIT")
                     return receipt
+
                 head = self._head(conn, secret_id)
                 row = self._row(conn, secret_id, version)
-                state = CredentialState(row["state"])
-                if state is CredentialState.DESTROYED:
+                if CredentialState(row["state"]) is CredentialState.DESTROYED:
                     raise CredentialRotationError("destroyed credential cannot be revoked")
                 next_revocation = int(head["revocation_epoch"]) + 1
                 conn.execute(
-                    "UPDATE mpr2618_versions SET state=? WHERE secret_id=? AND version=?",
+                    """
+                    UPDATE mpr2618_versions SET state=?
+                    WHERE secret_id=? AND version=?
+                    """,
                     (CredentialState.REVOKED.value, secret_id, version),
                 )
-                preferred = None if head["preferred_version"] == version else head["preferred_version"]
+                preferred = (
+                    None
+                    if head["preferred_version"] == version
+                    else head["preferred_version"]
+                )
                 conn.execute(
                     """
                     UPDATE mpr2618_secret_heads
-                    SET preferred_version=?, revocation_epoch=?, revision=revision+1, updated_at_ns=?
+                    SET preferred_version=?, revocation_epoch=?,
+                        revision=revision+1, updated_at_ns=?
                     WHERE secret_id=?
                     """,
                     (preferred, next_revocation, now_ns, secret_id),
@@ -424,10 +490,14 @@ class DurableCredentialAuthority:
                     committed_at_ns=now_ns,
                     semantic_hash=semantic_hash,
                 )
-                payload = _dataclass_dict(receipt)
+                payload = asdict(receipt)
                 payload["reason"] = reason.value
                 conn.execute(
-                    "INSERT INTO mpr2618_revocations(incident_id, semantic_hash, receipt_json) VALUES(?, ?, ?)",
+                    """
+                    INSERT INTO mpr2618_revocations(
+                        incident_id, semantic_hash, receipt_json
+                    ) VALUES(?, ?, ?)
+                    """,
                     (incident_id, semantic_hash, json.dumps(payload, sort_keys=True)),
                 )
                 conn.execute("COMMIT")
@@ -467,19 +537,25 @@ class DurableCredentialAuthority:
                 raise CredentialRotationError("REVOKED_CURRENT_GENERATION")
             if int(row["generation"]) != fence.generation:
                 raise CredentialRotationError("STALE_CREDENTIAL_GENERATION")
-            self._assert_allowed_use(head, row, fence.consumer_id, fence.usage_scope, now_ns)
+            self._assert_allowed_use(
+                head,
+                row,
+                fence.consumer_id,
+                fence.usage_scope,
+                now_ns,
+            )
 
     def snapshot(self, secret_id: str) -> dict[str, object]:
         with self._connect() as conn:
             head = dict(self._head(conn, secret_id))
-            versions = [
-                dict(row)
-                for row in conn.execute(
-                    "SELECT * FROM mpr2618_versions WHERE secret_id=? ORDER BY generation, version",
-                    (secret_id,),
-                ).fetchall()
-            ]
-            return {"head": head, "versions": versions}
+            rows = conn.execute(
+                """
+                SELECT * FROM mpr2618_versions
+                WHERE secret_id=? ORDER BY generation, version
+                """,
+                (secret_id,),
+            ).fetchall()
+            return {"head": head, "versions": [dict(row) for row in rows]}
 
     def _assert_allowed_use(
         self,
@@ -489,13 +565,12 @@ class DurableCredentialAuthority:
         usage_scope: str,
         now_ns: int,
     ) -> None:
-        state = CredentialState(row["state"])
         if row["consumer_id"] != consumer_id or row["usage_scope"] != usage_scope:
             raise CredentialRotationError("credential consumer/scope mismatch")
         if not int(row["not_before_ns"]) <= now_ns < int(row["expires_at_ns"]):
             raise CredentialRotationError("credential outside validity window")
-        preferred = head["preferred_version"]
-        if state is CredentialState.ACTIVE and preferred == row["version"]:
+        state = CredentialState(row["state"])
+        if state is CredentialState.ACTIVE and head["preferred_version"] == row["version"]:
             return
         if state is CredentialState.RETIRING:
             overlap = row["overlap_until_ns"]
@@ -514,15 +589,26 @@ class DurableCredentialAuthority:
 
     @staticmethod
     def _head(conn: sqlite3.Connection, secret_id: str) -> sqlite3.Row:
-        row = conn.execute("SELECT * FROM mpr2618_secret_heads WHERE secret_id=?", (secret_id,)).fetchone()
+        row = conn.execute(
+            "SELECT * FROM mpr2618_secret_heads WHERE secret_id=?",
+            (secret_id,),
+        ).fetchone()
         if row is None:
             raise CredentialRotationError("unknown secret_id")
         return row
 
     @staticmethod
-    def _row(conn: sqlite3.Connection, secret_id: str, version: str) -> sqlite3.Row:
+    def _row(
+        conn: sqlite3.Connection,
+        secret_id: str,
+        version: str,
+    ) -> sqlite3.Row:
         row = conn.execute(
-            "SELECT * FROM mpr2618_versions WHERE secret_id=? AND version=?", (secret_id, version)
+            """
+            SELECT * FROM mpr2618_versions
+            WHERE secret_id=? AND version=?
+            """,
+            (secret_id, version),
         ).fetchone()
         if row is None:
             raise CredentialRotationError("unknown credential version")
@@ -530,7 +616,7 @@ class DurableCredentialAuthority:
 
 
 class FencedSecretHandle:
-    """Supported MPR-2618 handle: every reveal rechecks durable revocation state."""
+    """Secret handle whose every supported reveal rechecks durable fencing."""
 
     def __init__(
         self,
@@ -546,7 +632,10 @@ class FencedSecretHandle:
         self._clock_ns = clock_ns
 
     def reveal(self) -> str:
-        self._authority.assert_current_use(self._fence, now_ns=self._clock_ns())
+        self._authority.assert_current_use(
+            self._fence,
+            now_ns=self._clock_ns(),
+        )
         return self._handle.reveal()
 
     def revoke(self) -> None:
@@ -568,7 +657,7 @@ class TrustGenerationFence:
 
 
 class DurableTrustGenerationAuthority:
-    """Durable current trust-registry generation pointer and revocation epoch."""
+    """Durable current trust-registry generation and revocation epoch."""
 
     def __init__(self, path: str | Path) -> None:
         self.path = str(path)
@@ -585,34 +674,61 @@ class DurableTrustGenerationAuthority:
                 """
             )
 
-    def publish(self, *, generation: str, revocation_epoch: int, now_ns: int) -> None:
+    def publish(
+        self,
+        *,
+        generation: str,
+        revocation_epoch: int,
+        now_ns: int,
+    ) -> None:
         _identifier(generation, "generation")
         _nonnegative_int(revocation_epoch, "revocation_epoch")
         with sqlite3.connect(self.path, isolation_level=None, timeout=5) as conn:
             conn.execute("BEGIN IMMEDIATE")
-            row = conn.execute("SELECT * FROM mpr2618_trust_head WHERE singleton=1").fetchone()
-            if row is None:
-                conn.execute(
-                    "INSERT INTO mpr2618_trust_head VALUES(1, ?, ?, 1, ?)",
-                    (generation, revocation_epoch, now_ns),
-                )
-            else:
-                current_generation, current_epoch = str(row[1]), int(row[2])
-                if revocation_epoch < current_epoch:
-                    conn.execute("ROLLBACK")
-                    raise CredentialRotationError("trust revocation epoch regression")
-                if generation == current_generation and revocation_epoch == current_epoch:
-                    conn.execute("COMMIT")
-                    return
-                conn.execute(
-                    "UPDATE mpr2618_trust_head SET generation=?, revocation_epoch=?, revision=revision+1, updated_at_ns=? WHERE singleton=1",
-                    (generation, revocation_epoch, now_ns),
-                )
-            conn.execute("COMMIT")
+            try:
+                row = conn.execute(
+                    "SELECT * FROM mpr2618_trust_head WHERE singleton=1"
+                ).fetchone()
+                if row is None:
+                    conn.execute(
+                        "INSERT INTO mpr2618_trust_head VALUES(1, ?, ?, 1, ?)",
+                        (generation, revocation_epoch, now_ns),
+                    )
+                else:
+                    current_generation = str(row[1])
+                    current_epoch = int(row[2])
+                    if revocation_epoch < current_epoch:
+                        raise CredentialRotationError(
+                            "trust revocation epoch regression"
+                        )
+                    if (
+                        generation == current_generation
+                        and revocation_epoch == current_epoch
+                    ):
+                        conn.execute("COMMIT")
+                        return
+                    conn.execute(
+                        """
+                        UPDATE mpr2618_trust_head
+                        SET generation=?, revocation_epoch=?, revision=revision+1,
+                            updated_at_ns=?
+                        WHERE singleton=1
+                        """,
+                        (generation, revocation_epoch, now_ns),
+                    )
+                conn.execute("COMMIT")
+            except BaseException:
+                conn.execute("ROLLBACK")
+                raise
 
     def current_fence(self) -> TrustGenerationFence:
         with sqlite3.connect(self.path) as conn:
-            row = conn.execute("SELECT generation, revocation_epoch FROM mpr2618_trust_head WHERE singleton=1").fetchone()
+            row = conn.execute(
+                """
+                SELECT generation, revocation_epoch
+                FROM mpr2618_trust_head WHERE singleton=1
+                """
+            ).fetchone()
             if row is None:
                 raise CredentialRotationError("trust generation not published")
             return TrustGenerationFence(str(row[0]), int(row[1]))
@@ -624,7 +740,7 @@ class DurableTrustGenerationAuthority:
         envelope: SignedEnvelope,
         payload: bytes,
         usage: TrustUsage,
-        evaluated_at,
+        evaluated_at: datetime,
         expected_domain: str,
         expected_environment: str,
     ) -> TrustVerificationResult:
@@ -662,16 +778,18 @@ def _nonnegative_int(value: int, label: str) -> None:
 
 
 def _hash_json(payload: object) -> str:
-    return hashlib.sha256(
-        json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
-    ).hexdigest()
+    encoded = json.dumps(
+        payload,
+        sort_keys=True,
+        separators=(",", ":"),
+        ensure_ascii=False,
+    ).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
-def _dataclass_dict(value: object) -> dict[str, object]:
-    return {name: getattr(value, name) for name in value.__dataclass_fields__}
-
-
-def _version_semantics(value: sqlite3.Row | CredentialVersion) -> tuple[object, ...]:
+def _version_semantics(
+    value: sqlite3.Row | CredentialVersion,
+) -> tuple[object, ...]:
     names = (
         "secret_id",
         "version",
@@ -686,7 +804,12 @@ def _version_semantics(value: sqlite3.Row | CredentialVersion) -> tuple[object, 
         "supersedes_version",
     )
     if isinstance(value, CredentialVersion):
-        return tuple(getattr(value, name).value if name == "state" else getattr(value, name) for name in names)
+        return tuple(
+            getattr(value, name).value
+            if name == "state"
+            else getattr(value, name)
+            for name in names
+        )
     return tuple(value[name] for name in names)
 
 

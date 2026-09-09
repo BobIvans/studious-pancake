@@ -35,6 +35,13 @@ def _approval(principal: str, key: str) -> ReleaseApproval:
     )
 
 
+def _approvals() -> tuple[ReleaseApproval, ...]:
+    return (
+        _approval("human-one", "key-one"),
+        _approval("human-two", "key-two"),
+    )
+
+
 def _decision() -> FinalReleaseDecision:
     return FinalReleaseDecision(
         state=ReleaseState.RELEASED_PRODUCTION_DEFAULT_OFF,
@@ -67,30 +74,40 @@ def durable(tmp_path):
     lifecycle.close()
 
 
-def _qualify(lifecycle, authority) -> None:
+def _qualify(lifecycle, authority, *, expected_revision: int = 0) -> None:
     with lifecycle.db:
         lifecycle.db.execute("BEGIN IMMEDIATE")
         authority.qualify_default_off(
             release_id="release-A",
             qualification_digest=D2,
-            expected_revision=0,
+            expected_revision=expected_revision,
         )
 
 
-def _promote(lifecycle, authority):
+def _promote(
+    lifecycle,
+    authority,
+    *,
+    expected_generation: int = 0,
+    expected_revision: int = 1,
+):
     with lifecycle.db:
         lifecycle.db.execute("BEGIN IMMEDIATE")
         return authority.promote(
             _decision(),
-            (_approval("human-one", "key-one"), _approval("human-two", "key-two")),
-            expected_generation=0,
-            expected_revision=1,
+            _approvals(),
+            expected_generation=expected_generation,
+            expected_revision=expected_revision,
         )
 
 
 def test_promotion_requires_caller_owned_transaction(durable) -> None:
-    lifecycle, authority = durable
-    with pytest.raises(DurableReleaseError, match="CALLER_TRANSACTION_REQUIRED"):
+    _lifecycle, authority = durable
+
+    with pytest.raises(
+        DurableReleaseError,
+        match="CALLER_TRANSACTION_REQUIRED",
+    ):
         authority.qualify_default_off(
             release_id="release-A",
             qualification_digest=D2,
@@ -98,7 +115,9 @@ def test_promotion_requires_caller_owned_transaction(durable) -> None:
         )
 
 
-def test_atomic_promotion_increments_generation_once_and_stays_default_off(durable) -> None:
+def test_atomic_promotion_increments_generation_once_and_stays_default_off(
+    durable,
+) -> None:
     lifecycle, authority = durable
     _qualify(lifecycle, authority)
     receipt = _promote(lifecycle, authority)
@@ -120,7 +139,7 @@ def test_crash_before_commit_leaves_release_unpromoted(durable) -> None:
     lifecycle.db.execute("BEGIN IMMEDIATE")
     authority.promote(
         _decision(),
-        (_approval("human-one", "key-one"), _approval("human-two", "key-two")),
+        _approvals(),
         expected_generation=0,
         expected_revision=1,
     )
@@ -131,7 +150,9 @@ def test_crash_before_commit_leaves_release_unpromoted(durable) -> None:
     assert state["release_generation"] == 0
 
 
-def test_exact_post_commit_replay_returns_same_receipt_without_increment(durable) -> None:
+def test_exact_post_commit_replay_returns_same_receipt_without_increment(
+    durable,
+) -> None:
     lifecycle, authority = durable
     _qualify(lifecycle, authority)
     first = _promote(lifecycle, authority)
@@ -140,7 +161,7 @@ def test_exact_post_commit_replay_returns_same_receipt_without_increment(durable
         lifecycle.db.execute("BEGIN IMMEDIATE")
         replay = authority.promote(
             _decision(),
-            (_approval("human-one", "key-one"), _approval("human-two", "key-two")),
+            _approvals(),
             expected_generation=0,
             expected_revision=1,
         )
@@ -156,15 +177,22 @@ def test_consumed_approval_cannot_promote_another_generation(durable) -> None:
 
     with lifecycle.db:
         lifecycle.db.execute("BEGIN IMMEDIATE")
-        authority.suspend(reason_code="safety", expected_revision=2)
-    with pytest.raises(DurableReleaseError):
-        with lifecycle.db:
-            lifecycle.db.execute("BEGIN IMMEDIATE")
-            authority.qualify_default_off(
-                release_id="release-A",
-                qualification_digest=D2,
-                expected_revision=3,
-            )
+        authority.suspend(
+            reason_code="safety",
+            expected_revision=2,
+        )
+
+    _qualify(lifecycle, authority, expected_revision=3)
+    with pytest.raises(
+        DurableReleaseError,
+        match="APPROVAL_ALREADY_CONSUMED",
+    ):
+        _promote(
+            lifecycle,
+            authority,
+            expected_generation=1,
+            expected_revision=4,
+        )
 
 
 def test_receipt_is_immutable_and_independently_recomputed(durable) -> None:
@@ -174,7 +202,10 @@ def test_receipt_is_immutable_and_independently_recomputed(durable) -> None:
 
     reread = authority.read_receipt(receipt.receipt_digest)
     assert reread.verify()
-    with pytest.raises(sqlite3.IntegrityError, match="MPR2612_IMMUTABLE_RECEIPT"):
+    with pytest.raises(
+        sqlite3.IntegrityError,
+        match="MPR2612_IMMUTABLE_RECEIPT",
+    ):
         with lifecycle.db:
             lifecycle.db.execute(
                 "UPDATE mpr2612_release_receipt SET live_enabled=0 "
@@ -190,24 +221,33 @@ def test_suspend_never_auto_rearms_after_restart(durable) -> None:
 
     with lifecycle.db:
         lifecycle.db.execute("BEGIN IMMEDIATE")
-        authority.suspend(reason_code="hard-latch", expected_revision=2)
+        authority.suspend(
+            reason_code="hard-latch",
+            expected_revision=2,
+        )
 
     assert authority.state()["state"] == ReleaseState.RELEASE_SUSPENDED.value
     reopened = MPR2612DurableReleaseAuthority(lifecycle.db)
     assert reopened.state()["state"] == ReleaseState.RELEASE_SUSPENDED.value
 
 
-def test_revoke_is_terminal_and_rollback_requires_known_receipt(durable) -> None:
+def test_revoke_is_terminal_and_rollback_cannot_resurrect(durable) -> None:
     lifecycle, authority = durable
     _qualify(lifecycle, authority)
     receipt = _promote(lifecycle, authority)
 
     with lifecycle.db:
         lifecycle.db.execute("BEGIN IMMEDIATE")
-        authority.revoke(reason_code="operator-revoke", expected_revision=2)
+        authority.revoke(
+            reason_code="operator-revoke",
+            expected_revision=2,
+        )
     assert authority.state()["state"] == ReleaseState.RELEASE_REVOKED.value
 
-    with pytest.raises(DurableReleaseError, match="TERMINAL_RELEASE_STATE"):
+    with pytest.raises(
+        DurableReleaseError,
+        match="TERMINAL_RELEASE_STATE",
+    ):
         with lifecycle.db:
             lifecycle.db.execute("BEGIN IMMEDIATE")
             authority.rollback(

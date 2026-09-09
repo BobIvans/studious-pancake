@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import asyncio
+from dataclasses import replace
 import json
 
 import pytest
 
+from src.config.runtime import load_runtime_config
 from src.paper_shadow.a2_exact_attempt_runtime import (
     A2PaperOutcomeStatus,
     ExactAttemptRuntimeItem,
@@ -72,7 +74,6 @@ async def test_positive_wsol_completion_is_atomic_and_restart_replay_has_no_rpc(
         assert rpc.calls == 2
         assert _scalar(store, "SELECT COUNT(*) FROM pr02_terminal_records") == 1
         assert _scalar(store, "SELECT COUNT(*) FROM pr02_outbox_event") == 1
-        # Reserve/intent lookups are idempotent; terminal replay itself adds nothing.
         assert store.db.total_changes == before_changes
     finally:
         store.close()
@@ -91,16 +92,13 @@ async def test_changed_prepared_semantics_cannot_reuse_completed_terminal(tmp_pa
 
         def changed_factory(reservation):
             candidate = original_factory(reservation)
-            from dataclasses import replace
-
             leg = replace(candidate.request.leg_a, route_plan=({"label": "drift"},))
             return replace(candidate, request=replace(candidate.request, leg_a=leg))
 
-        from dataclasses import replace
-
         changed_request = replace(request, candidate_factory=changed_factory)
-        with pytest.raises(Exception, match="IMMUTABILITY|AUTHORITY_CONFLICT"):
-            await runtime("cycle-2", (_item(changed_request),))
+        changed = await runtime("cycle-2", (_item(changed_request),))
+        assert changed.status is A2PaperOutcomeStatus.BLOCKED
+        assert changed.records[-1].reason_code == "MPR2602_PREPARED_AUTHORITY_CONFLICT"
         assert rpc.calls == 2
         assert _scalar(store, "SELECT COUNT(*) FROM pr02_terminal_records") == 1
     finally:
@@ -119,9 +117,7 @@ async def test_verified_a3_accepts_real_terminal_and_rejects_forged_success(tmp_
     )
     item = _item(request)
     service = VerifiedTerminalInstalledPaperService(
-        orchestrator.runtime_config if hasattr(orchestrator, "runtime_config") else __import__(
-            "src.config.runtime", fromlist=["load_runtime_config"]
-        ).load_runtime_config(),
+        load_runtime_config(),
         InstalledPaperServiceConfig(
             db_path=tmp_path / "paper-service.sqlite3", run_id="mpr2602-complete"
         ),
@@ -138,8 +134,9 @@ async def test_verified_a3_accepts_real_terminal_and_rejects_forged_success(tmp_
         service.close()
         store.close()
 
-    # A success label without a durable attempt terminal is never sufficient.
-    store2, _orchestrator2, request2, _rpc2, _holder2 = _attempt(tmp_path / "forged")
+    store2, _orchestrator2, request2, _rpc2, _holder2 = _attempt(
+        tmp_path / "forged"
+    )
     evidence2 = A3ProviderEvidenceState(
         provider_evidence_hash=request2.provider_evidence.evidence_hash,
         ready=True,
@@ -154,7 +151,7 @@ async def test_verified_a3_accepts_real_terminal_and_rejects_forged_success(tmp_
         )
 
     service2 = VerifiedTerminalInstalledPaperService(
-        __import__("src.config.runtime", fromlist=["load_runtime_config"]).load_runtime_config(),
+        load_runtime_config(),
         InstalledPaperServiceConfig(
             db_path=tmp_path / "forged" / "paper-service.sqlite3",
             run_id="mpr2602-forged",

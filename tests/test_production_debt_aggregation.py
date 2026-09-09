@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import replace
 import json
 from pathlib import Path
 import subprocess
@@ -40,14 +41,30 @@ def test_default_report_is_fail_closed_and_observes_real_repo_debt() -> None:
     assert report.live_ready is False
     assert report.observed["product_state"] == "not-production-ready"
     assert report.observed["live_mode_available"] is False
-    assert report.observed["source_wheel_parity"] is False
+    assert report.observed["source_wheel_parity"] is True
     assert report.observed["kamino_supported_combinations"] == 0
 
     blockers = {item["id"]: item for item in report.blockers}
-    assert "packaging.source-wheel-parity" in blockers
+    assert "packaging.source-wheel-parity" not in blockers
     assert "lending.kamino-supported-combinations" in blockers
     assert "runtime.live-entrypoint" in blockers
-    assert blockers["packaging.source-wheel-parity"]["severity"] == "P0"
+
+
+def test_inventory_resolved_status_without_verifier_remains_blocked() -> None:
+    inventory = ProductionDebtInventory.load_default()
+    target = next(item for item in inventory.items if item.observed_contract_id is None and item.id not in {
+        "runtime.product-state",
+        "runtime.live-entrypoint",
+        "packaging.source-wheel-parity",
+        "lending.kamino-supported-combinations",
+    })
+    modified = replace(target, status=DebtStatus.RESOLVED.value)
+    items = tuple(modified if item.id == target.id else item for item in inventory.items)
+    reviewed = replace(inventory, items=items)
+
+    report = evaluate_production_debt(repo_root=ROOT, inventory=reviewed)
+    blocker = next(item for item in report.blockers if item["id"] == target.id)
+    assert blocker["observed_reason"] == "resolved-status-without-verifier"
 
 
 def test_external_review_manifest_pins_solana_helius_and_kamino() -> None:

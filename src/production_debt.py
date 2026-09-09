@@ -182,24 +182,27 @@ def evaluate_production_debt(
         if item.observed_contract_id and item.observed_contract_id not in contracts
     )
 
-    blockers = tuple(
-        {
-            "id": item.id,
-            "batch": item.batch,
-            "severity": item.severity,
-            "status": item.status,
-            "title": item.title,
-            "surface": item.surface,
-            "blocks_paper": item.blocks_paper,
-            "blocks_live": item.blocks_live,
-            "observed_reason": _reason(item, matrix, parity, excludes, kamino_count, contracts),
-            "required_actions": list(item.required_actions),
-            "evidence_refs": list(item.evidence_refs),
-        }
-        for item in reviewed.items
-        if item.status != "resolved"
-        or _reason(item, matrix, parity, excludes, kamino_count, contracts) is not None
-    )
+    blockers_list: list[dict[str, Any]] = []
+    for item in reviewed.items:
+        reason = _reason(item, matrix, parity, kamino_count, contracts)
+        if reason is None:
+            continue
+        blockers_list.append(
+            {
+                "id": item.id,
+                "batch": item.batch,
+                "severity": item.severity,
+                "status": item.status,
+                "title": item.title,
+                "surface": item.surface,
+                "blocks_paper": item.blocks_paper,
+                "blocks_live": item.blocks_live,
+                "observed_reason": reason,
+                "required_actions": list(item.required_actions),
+                "evidence_refs": list(item.evidence_refs),
+            }
+        )
+    blockers = tuple(blockers_list)
     paper_ready = not errors and not any(row["blocks_paper"] for row in blockers)
     live_ready = not errors and not any(row["blocks_live"] for row in blockers)
     production_ready = (
@@ -278,27 +281,33 @@ def _reason(
     item: DebtItem,
     matrix: CapabilityMatrix,
     parity: bool,
-    excludes: tuple[str, ...],
     kamino_count: int,
     contracts: dict[str, dict[str, Any]],
-) -> str:
+) -> str | None:
+    """Return a current verifier failure, never trust inventory status as proof."""
     if item.id == "runtime.product-state":
+        if matrix.product_state == "production-ready":
+            return None
         return f"product_state={matrix.product_state}"
     if item.id == "runtime.live-entrypoint":
-        return f"runtime_modes.live.available={bool(matrix.runtime_modes['live'].get('available'))}"
-    if item.id == "packaging.source-wheel-parity" and not parity:
-        return "source package excludes ingest/sender surfaces" if excludes else "installed wheel lacks safe ingest/sender surfaces"
-    if item.id == "lending.kamino-supported-combinations" and not kamino_count:
-        return "kamino supported combinations registry is empty"
+        available = bool(matrix.runtime_modes["live"].get("available"))
+        return None if available else "runtime_modes.live.available=False"
+    if item.id == "packaging.source-wheel-parity":
+        return None if parity else "production package surface violates semantic manifest"
+    if item.id == "lending.kamino-supported-combinations":
+        return None if kamino_count else "kamino supported combinations registry is empty"
     if item.observed_contract_id:
         contract = contracts.get(item.observed_contract_id)
         if contract is None:
             return f"missing contract={item.observed_contract_id}"
-        if not contract["execution_allowed"]:
-            return (
-                f"contract={item.observed_contract_id};status={contract['status']};"
-                f"promotion={contract['promotion_state']};execution_allowed=false"
-            )
+        if contract["execution_allowed"]:
+            return None
+        return (
+            f"contract={item.observed_contract_id};status={contract['status']};"
+            f"promotion={contract['promotion_state']};execution_allowed=false"
+        )
+    if item.status == DebtStatus.RESOLVED.value:
+        return "resolved-status-without-verifier"
     return "inventory-not-resolved"
 
 
@@ -311,9 +320,28 @@ def _package_excludes(path: Path) -> tuple[str, ...]:
 
 
 def _source_wheel_parity(root: Path, excludes: tuple[str, ...], metadata: bool) -> bool:
-    if metadata:
-        return not any(value in excludes for value in ("src.ingest*", "src.execution.senders*"))
-    return (root / "src" / "ingest").is_dir() and (root / "src" / "execution" / "senders").is_dir()
+    """Verify the declared production surface, including intentional quarantine."""
+    if not metadata:
+        return False
+    expected_excludes = {"src.ingest*", "src.execution.senders*"}
+    if not expected_excludes.issubset(set(excludes)):
+        return False
+    manifest_path = root / "src" / "resources" / "production_surface_manifest.json"
+    if not manifest_path.is_file():
+        return False
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    if manifest.get("schema_version") != "pr194.production-surface.v1":
+        return False
+    forbidden = manifest.get("forbidden")
+    if not isinstance(forbidden, dict):
+        return False
+    prefixes = forbidden.get("package_prefixes")
+    if not isinstance(prefixes, list):
+        return False
+    return {"src/ingest/", "src/execution/senders/"}.issubset(set(prefixes))
 
 
 def _kamino_count(root: Path) -> int:

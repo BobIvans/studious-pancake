@@ -40,47 +40,42 @@ def _apply_qualification_overlay(
     payload: dict[str, Any],
     qualification: dict[str, Any] | None,
 ) -> dict[str, Any]:
+    """Attach legacy qualification metadata without granting readiness.
+
+    The optional qualification file is user-controlled input.  Until a trusted,
+    release-bound verifier owns provenance, freshness, revocation and artifact
+    identity checks, it may explain claimed resolutions but must not delete a
+    canonical blocker or promote paper/live/production readiness.
+    """
+
     if not qualification:
         return payload
 
-    resolved = qualification.get("debt_resolution", {})
-    blockers = []
-    resolved_ids: list[str] = []
-    for blocker in payload.get("blockers", []):
-        if resolved.get(blocker["id"], {}).get("resolved") is True:
-            resolved_ids.append(blocker["id"])
-            continue
-        blockers.append(blocker)
+    claimed = qualification.get("debt_resolution", {})
+    claimed_ids = sorted(
+        blocker["id"]
+        for blocker in payload.get("blockers", [])
+        if claimed.get(blocker["id"], {}).get("resolved") is True
+    )
 
     payload = dict(payload)
-    payload["blockers"] = blockers
-    payload["resolved_by_release_qualification"] = sorted(resolved_ids)
+    payload["claimed_resolved_by_release_qualification"] = claimed_ids
+    payload["resolved_by_release_qualification"] = []
     payload["qualification"] = {
         "path": qualification.get("_resolved_path"),
         "release_id": qualification.get("release_id"),
         "qualified": bool(qualification.get("qualified")),
         "promotion_state": qualification.get("promotion_state"),
         "missing_artifacts": list(qualification.get("missing_artifacts", [])),
+        "authoritative": False,
+        "reason": "untrusted legacy qualification metadata cannot change canonical readiness",
     }
 
-    consistency_errors = list(payload.get("consistency_errors", []))
-    payload["paper_ready"] = not consistency_errors and not any(
-        row.get("blocks_paper") for row in blockers
-    )
-    payload["live_ready"] = not consistency_errors and not any(
-        row.get("blocks_live") for row in blockers
-    )
     observed = dict(payload.get("observed", {}))
     observed["qualification_path"] = qualification.get("_resolved_path")
     observed["qualification_release_id"] = qualification.get("release_id")
+    observed["qualification_authoritative"] = False
     payload["observed"] = observed
-    payload["production_ready"] = (
-        bool(qualification.get("qualified"))
-        and payload["paper_ready"]
-        and payload["live_ready"]
-        and qualification.get("product_state") == "production-ready"
-        and bool(qualification.get("live_mode_available"))
-    )
     return payload
 
 
@@ -184,7 +179,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument(
         "--qualification",
         default=".runtime/release-qualification.json",
-        help="optional MPR-CLOSE-06 release qualification overlay",
+        help="optional legacy MPR-CLOSE-06 qualification metadata; never grants readiness",
     )
     parser.add_argument(
         "--super-mpr-b-evidence",

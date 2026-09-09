@@ -271,6 +271,21 @@ print('MPR-2601 installed contract, alias and tampered admission passed')
             cwd=temporary,
             env=clean_env,
         )
+        # Exercise the actual installed A3 entrypoint, not only inspection
+        # commands. The probe traps attempted forbidden imports and network
+        # effects before admission; it reports the real external blocker.
+        _run(
+            [
+                str(python),
+                "-I",
+                "-c",
+                (ROOT / "scripts/mpr2602_installed_default_probe.py").read_text(
+                    encoding="utf-8"
+                ),
+            ],
+            cwd=temporary,
+            env=clean_env,
+        )
         if status["supported_entrypoint"] != "flashloan-bot":
             raise SystemExit("installed CLI reports an unexpected supported entrypoint")
         if capabilities["schema_version"] != "pr023.capabilities.v1":

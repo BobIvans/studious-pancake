@@ -251,3 +251,10 @@ tests/test_mpr_sys_03_review_regressions.py
 src/paper_shadow/exact_attempt_pr152.py
 tests/test_mpr2602_exact_attempt_raw_boundary.py
 tests/test_pr152_exact_sender_free_attempt.py
+src/paper_shadow/mpr2602_runtime.py
+tests/test_mpr2602_plan_identity.py
+tests/test_mpr2602_prepared_exact_attempt.py
+tests/test_mpr2602_semantic_identity_adversarial.py
+scripts/mpr2602_installed_default_probe.py
+tests/test_mpr2602_installed_import_boundary.py
+src/execution/__init__.py

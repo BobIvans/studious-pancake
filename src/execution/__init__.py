@@ -53,15 +53,6 @@ from .v0_hardening import (
     plan_fingerprint,
 )
 from .state_machine import ExecutionStateMachine
-from .transaction_simulator import (
-    CompilerDiagnostics,
-    CanonicalSimulator,
-    SimulationRequest,
-    TransactionSimulator,
-    get_fee_for_message,
-    parse_simulation_response,
-    simulate_exact,
-)
 from .exact_simulation import (
     BlockhashValidityEvidence,
     ExactSimulationError,
@@ -86,14 +77,30 @@ from .state_evidence_pr115 import (
     build_pr115_simulation_owned_economic_proof,
 )
 from .journal import InMemoryExecutionJournal, MIGRATION_VERSION, SQLiteAttemptJournal
-from .lifecycle import SubmissionEnvelope, TransactionLifecycleService
-from .live_gate import LiveSubmissionGate
 from .reconciliation import (
     ReconciliationEvidence,
     ReconciliationOutcome,
     classify_reconciliation,
 )
 from .tip_validation import validate_exactly_one_tip
+
+# Compatibility exports remain available when explicitly requested, but their
+# historical modules must not be imported by sender-free model/decoder users.
+# transaction_simulator attempts to import quarantined execution.shadow;
+# lifecycle/live_gate are not part of installed paper admission.
+_COMPATIBILITY_LAZY_EXPORTS = {
+    "CompilerDiagnostics": "src.execution.transaction_simulator",
+    "CanonicalSimulator": "src.execution.transaction_simulator",
+    "SimulationRequest": "src.execution.transaction_simulator",
+    "TransactionSimulator": "src.execution.transaction_simulator",
+    "get_fee_for_message": "src.execution.transaction_simulator",
+    "parse_simulation_response": "src.execution.transaction_simulator",
+    "simulate_exact": "src.execution.transaction_simulator",
+    "SubmissionEnvelope": "src.execution.lifecycle",
+    "TransactionLifecycleService": "src.execution.lifecycle",
+    "LiveSubmissionGate": "src.execution.live_gate",
+}
+
 
 _PR191_LAZY_EXPORTS = frozenset(
     {
@@ -115,6 +122,9 @@ def __getattr__(name: str) -> Any:
     installed CLI smoke even though normal paper execution never uses that surface.
     """
 
+    if name in _COMPATIBILITY_LAZY_EXPORTS:
+        module = importlib.import_module(_COMPATIBILITY_LAZY_EXPORTS[name])
+        return getattr(module, name)
     if name in _PR191_LAZY_EXPORTS:
         module = importlib.import_module("src.execution.immutable_accounting_pr191")
         return getattr(module, name)

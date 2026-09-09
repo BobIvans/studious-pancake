@@ -20,6 +20,7 @@ from src.paper_shadow.exact_attempt_pr152 import (
     ExactPaperAttemptOrchestrator,
     ExactAttemptStatus,
 )
+from tests.test_mpr2602_prepared_exact_attempt import _attempt
 from tests.test_pr152_exact_sender_free_attempt import (
     _request,
     FakeCoordinator,
@@ -167,18 +168,31 @@ def test_raw_candidate_rejects_snapshot_policy_and_unit_drift(change):
 )
 async def test_unqualified_or_negative_cross_asset_result_never_reaches_handoff(
     qualification,
+    tmp_path,
 ):
-    class BoundaryVertical(FakeVertical):
-        async def run(self, candidate):
-            result = await super().run(candidate)
-            result.qualification = qualification
-            return result
+    store, orchestrator, request, rpc, _holder = _attempt(tmp_path)
+    production_vertical = orchestrator.vertical
 
-    orchestrator = _orchestrator(BoundaryVertical())
-    request = replace(_request(), candidate_factory=lambda reservation: _raw())
-    result = await orchestrator.run(request)
-    assert result.status is ExactAttemptStatus.VERTICAL_BLOCKED
-    assert result.reservation_released
+    class BoundaryVertical:
+        async def run(self, candidate):
+            result = await production_vertical.run(candidate)
+            return replace(result, qualification=qualification)
+
+    orchestrator.vertical = BoundaryVertical()
+    try:
+        result = await orchestrator.run(request)
+        # Prove the qualification boundary ran, rather than passing because an
+        # unrelated reservation/authority check rejected an incomplete fake.
+        assert rpc.calls == 2
+        assert result.status is ExactAttemptStatus.VERTICAL_BLOCKED
+        assert result.blockers == ("PR152_VERTICAL_VALUEERROR",)
+        assert result.reservation_released
+        assert (
+            store.db.execute("SELECT COUNT(*) FROM pr02_terminal_records").fetchone()[0]
+            == 1
+        )
+    finally:
+        store.close()
 
 
 @pytest.mark.asyncio
@@ -196,23 +210,38 @@ async def test_positive_qualification_boundary_checks_provenance_without_claimin
 
 
 @pytest.mark.asyncio
-async def test_raw_boundary_runs_vertical_failure_and_releases_without_leaking_error():
-    class FailingVertical(FakeVertical):
+async def test_raw_boundary_runs_vertical_failure_and_releases_without_leaking_error(
+    tmp_path,
+):
+    class FailingVertical:
         calls = 0
 
         async def run(self, candidate):
             self.calls += 1
             raise RuntimeError("fixture private diagnostic")
 
+    store, orchestrator, request, rpc, _holder = _attempt(tmp_path)
     vertical = FailingVertical()
-    orchestrator = _orchestrator(vertical)
-    result = await orchestrator.run(
-        replace(_request(), candidate_factory=lambda reservation: _raw())
-    )
-    assert vertical.calls == 1
-    assert result.status is ExactAttemptStatus.VERTICAL_BLOCKED
-    assert result.reservation_released
-    assert "private" not in repr(result.blockers)
+    orchestrator.vertical = vertical
+    try:
+        result = await orchestrator.run(request)
+        assert vertical.calls == 1
+        assert rpc.calls == 0
+        assert result.status is ExactAttemptStatus.VERTICAL_BLOCKED
+        assert result.blockers == ("PR152_VERTICAL_RUNTIMEERROR",)
+        assert result.reservation_released
+        assert result.prepared_plan_hash is not None
+        assert "private" not in repr(result.blockers)
+        assert (
+            store.db.execute("SELECT COUNT(*) FROM pr02_terminal_records").fetchone()[0]
+            == 1
+        )
+        assert (
+            store.db.execute("SELECT COUNT(*) FROM pr02_outbox_event").fetchone()[0]
+            == 1
+        )
+    finally:
+        store.close()
 
 
 @pytest.mark.asyncio

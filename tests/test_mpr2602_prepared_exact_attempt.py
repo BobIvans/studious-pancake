@@ -11,6 +11,7 @@ import base64
 import copy
 from dataclasses import replace
 import json
+import re
 
 import pytest
 from solders.pubkey import Pubkey
@@ -26,8 +27,11 @@ from src.execution.economic_reconciliation.mega_pr02_proof import (
     ConservativeAssetQuote,
     ConservativeValuationSnapshot,
 )
+from src.execution.state_evidence_pr115 import PR115StateEvidenceError
 from src.execution.exact_simulation import ExactSimulationFinalizer
 from src.paper_shadow.atomic_vertical import (
+    AtomicVerticalError,
+    AtomicVerticalRejectionCode,
     AtomicPlannerSimulationReconciliationVertical,
 )
 from src.paper_shadow.exact_attempt_pr152 import (
@@ -171,9 +175,7 @@ def _wsol_vertical():
                 result = copy.deepcopy(result)
                 result["value"]["accounts"] = [
                     _wsol_account(address, account)
-                    for address, account in zip(
-                        monitored, result["value"]["accounts"]
-                    )
+                    for address, account in zip(monitored, result["value"]["accounts"])
                 ]
                 if self.mutate is not None:
                     self.mutate()
@@ -262,7 +264,9 @@ def _scalar(store, sql):
 
 
 @pytest.mark.asyncio
-async def test_real_exact_attempt_binds_prepared_plan_before_qualified_handoff(tmp_path):
+async def test_real_exact_attempt_binds_prepared_plan_before_qualified_handoff(
+    tmp_path,
+):
     store, orchestrator, request, rpc, holder = _attempt(tmp_path)
     try:
         result = await orchestrator.run(request)
@@ -296,9 +300,7 @@ async def test_prepared_replay_and_drift_do_not_repeat_rpc_or_release_owner(tmp_
         first = await orchestrator.run(request)
         assert first.ready, first.blockers
         replay = await orchestrator.run(request)
-        assert replay.blockers == (
-            "MPR2602_PREPARED_REPLAY_REQUIRES_RECONCILIATION",
-        )
+        assert replay.blockers == ("MPR2602_PREPARED_REPLAY_REQUIRES_RECONCILIATION",)
         assert not replay.reservation_released
         original_factory = request.candidate_factory
 
@@ -335,7 +337,9 @@ async def test_mutation_during_real_simulation_commits_one_atomic_rejection(tmp_
     try:
 
         def mutate():
-            holder["candidate"].request.leg_a.route_plan[0]["label"] = "changed-in-flight"
+            holder["candidate"].request.leg_a.route_plan[0][
+                "label"
+            ] = "changed-in-flight"
             mutated.append(True)
 
         rpc.mutate = mutate
@@ -361,7 +365,9 @@ async def test_mutation_during_real_simulation_commits_one_atomic_rejection(tmp_
 
 @pytest.mark.asyncio
 async def test_raw_attempt_without_shared_authority_cannot_simulate(tmp_path):
-    store, orchestrator, request, rpc, _holder = _attempt(tmp_path, with_authority=False)
+    store, orchestrator, request, rpc, _holder = _attempt(
+        tmp_path, with_authority=False
+    )
     try:
         result = await orchestrator.run(request)
         assert result.status is ExactAttemptStatus.VERTICAL_BLOCKED
@@ -389,8 +395,12 @@ async def test_native_principal_rejects_unbacked_or_changed_rent(address, damage
         data[113:121] = (RENT + 1).to_bytes(8, "little")
         account["lamports"] += 1
     account["data"] = [base64.b64encode(data).decode(), "base64"]
-    with pytest.raises(ValueError, match="wsol_|vault_configuration_changed"):
+    with pytest.raises(AtomicVerticalError) as raised:
         await vertical.run(replace(candidate, pre_state_accounts=tuple(states)))
+    assert raised.value.code is AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH
+    cause = raised.value.__cause__
+    assert isinstance(cause, PR115StateEvidenceError)
+    assert re.search("wsol_|vault_configuration_changed", str(cause))
 
 
 @pytest.mark.asyncio
@@ -399,8 +409,12 @@ async def test_non_native_vault_rent_change_is_still_rejected():
     states = copy.deepcopy(list(candidate.pre_state_accounts))
     index = _monitored(vertical, candidate).index(RAW_VAULT)
     states[index]["lamports"] += 1
-    with pytest.raises(ValueError, match="unsupported_protocol_rent_change"):
+    with pytest.raises(AtomicVerticalError) as raised:
         await vertical.run(replace(candidate, pre_state_accounts=tuple(states)))
+    assert raised.value.code is AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH
+    cause = raised.value.__cause__
+    assert isinstance(cause, PR115StateEvidenceError)
+    assert str(cause) == "marginfi_unsupported_protocol_rent_change"
 
 
 @pytest.mark.asyncio

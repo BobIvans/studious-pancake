@@ -228,7 +228,7 @@ def test_adjacent_float_route_metadata_cannot_reuse_plan_identity():
 
 def test_float_identity_cannot_alias_integer_string_or_mapping():
     encoded = _semantic_value(1.0)
-    for other in (1, "0x1.0000000000000p+0", {"__float_hex__": 1.0.hex()}):
+    for other in (1, "0x1.0000000000000p+0", {"__float_hex__": (1.0).hex()}):
         assert canonical_json_bytes(encoded) != canonical_json_bytes(
             _semantic_value(other)
         )

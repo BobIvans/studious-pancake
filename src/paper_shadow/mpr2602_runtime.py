@@ -1,14 +1,10 @@
 """MPR-2602 sender-free prepared-plan identity helpers.
 
-This module deliberately does not sign, submit, fund, or activate live trading.
-It owns one narrow invariant: a durable terminal/replay identity must cover every
-execution-relevant semantic input of an ``AtomicVerticalCandidate``.  A previous
-terminal must therefore not be reusable after a route, instruction bucket, ALT,
-raw-state, decoder-policy, account, fee, tip, or settlement mutation.
-
-Acquisition-only timestamps are excluded so semantically identical provider
-material can replay deterministically.  Expiry, slot, blockhash, amount, policy,
-and other execution semantics remain bound.
+Every execution-semantic dataclass field is bound by default. Only the explicit
+acquisition timestamp allowlist is omitted; slots, expiry and policies remain
+bound. Opaque objects are rejected rather than hashed from incomplete public
+state. Schema v2 deliberately cannot reuse v1 attempt intents or terminals.
+This module never signs, submits, funds, or activates live trading.
 """
 
 from __future__ import annotations
@@ -19,7 +15,13 @@ from enum import Enum
 import hashlib
 import math
 from pathlib import Path
+import re
 from typing import Any
+
+from solders.address_lookup_table_account import AddressLookupTableAccount
+from solders.hash import Hash
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
 
 from src.durability.unified_authority_pr02 import (
     AuthorityFence,
@@ -28,11 +30,9 @@ from src.durability.unified_authority_pr02 import (
 from src.kernel import canonical_json_bytes
 from src.paper_shadow.atomic_vertical import AtomicVerticalCandidate
 
-MPR2602_PREPARED_PLAN_SCHEMA = "mpr2602.prepared-plan-identity.v1"
+MPR2602_PREPARED_PLAN_SCHEMA = "mpr2602.prepared-plan-identity.v2"
 
-# These fields describe when otherwise identical material was acquired.  They
-# are intentionally not part of deterministic terminal replay identity.  Do
-# not add expiry/deadline/slot fields here: those change executability.
+# Do not add expiry, deadline, slot or policy fields: they change executability.
 _ACQUISITION_ONLY_FIELDS = frozenset(
     {
         "received_at",
@@ -45,14 +45,13 @@ _ACQUISITION_ONLY_FIELDS = frozenset(
 
 
 def _prepared_plan_hash(candidate: AtomicVerticalCandidate) -> str:
-    """Return the canonical execution-semantic identity for ``candidate``.
+    """Bind the complete candidate, rejecting opaque execution semantics.
 
-    The serializer is intentionally recursive rather than maintaining a second
-    hand-written shadow schema.  Every dataclass field is bound by default, so a
-    newly added execution field cannot silently reuse an old terminal.  Only the
-    small acquisition-only allowlist above is omitted.
+    Dataclass fields are included recursively, including private fields. New
+    fields therefore enter the identity automatically. Arbitrary callables,
+    objects with __dict__, and unregistered slot objects have no sufficiently
+    defined semantic encoding and are rejected before an intent or RPC effect.
     """
-
     if not isinstance(candidate, AtomicVerticalCandidate):
         raise TypeError("MPR2602_PREPARED_PLAN_CANDIDATE_REQUIRED")
     payload = {
@@ -66,14 +65,11 @@ def validate_prepared_plan_hash(
     candidate: AtomicVerticalCandidate,
     expected_hash: str,
 ) -> str:
-    """Fail closed if durable/replay identity does not match the prepared plan."""
-
-    if not isinstance(expected_hash, str) or len(expected_hash) != 64:
+    """Fail closed unless both the digest representation and semantics match."""
+    if not isinstance(expected_hash, str) or not re.fullmatch(
+        r"[0-9a-f]{64}", expected_hash
+    ):
         raise ValueError("MPR2602_PREPARED_PLAN_HASH_INVALID")
-    try:
-        int(expected_hash, 16)
-    except ValueError as exc:
-        raise ValueError("MPR2602_PREPARED_PLAN_HASH_INVALID") from exc
     actual = _prepared_plan_hash(candidate)
     if actual != expected_hash:
         raise ValueError("MPR2602_PREPARED_PLAN_IDENTITY_MISMATCH")
@@ -87,15 +83,11 @@ def begin_prepared_attempt_intent(
     attempt_generation: int,
     candidate: AtomicVerticalCandidate,
 ) -> tuple[AuthorityFence, str]:
-    """Bind the complete prepared plan to the accepted PR-02 attempt authority.
+    """Bind complete prepared semantics to the existing durable PR-02 owner.
 
-    ``UnifiedLifecycleAuthority.begin_attempt_intent`` already owns durable
-    semantic replay.  Supplying the prepared-plan hash as its request payload
-    means the same attempt/generation may replay only with identical execution
-    semantics.  A changed route/ALT/decoder/raw state/etc. therefore conflicts
-    before a caller is allowed to repeat an external simulation or other effect.
+    A changed plan or schema conflicts before simulation. Historical v1 records
+    are never relabelled, rewritten, or silently accepted as v2 evidence.
     """
-
     if not isinstance(authority, UnifiedLifecycleAuthority):
         raise TypeError("MPR2602_UNIFIED_AUTHORITY_REQUIRED")
     plan_hash = _prepared_plan_hash(candidate)
@@ -115,47 +107,53 @@ def begin_prepared_attempt_intent(
 
 
 def _semantic_value(value: Any) -> Any:
-    if value is None or isinstance(value, (str, bool, int)):
-        return value
-    if isinstance(value, float):
-        if not math.isfinite(value):
-            raise ValueError("MPR2602_NONFINITE_PLAN_VALUE")
-        # Existing provider models carry finite float metadata. Bind its exact
-        # binary value without allowing floats into the shared canonical JSON
-        # format, rounding to integers, or dropping execution-relevant fields.
-        # Mapping values are separately tagged below, so callers cannot spoof
-        # this scalar encoding with a dictionary containing the same key.
-        return {"__float_hex__": value.hex()}
+    # StrEnum and IntEnum must precede their scalar base classes. The policy's
+    # enum type is part of its identity, not merely the underlying scalar value.
     if isinstance(value, Enum):
         return {
             "__enum__": f"{type(value).__module__}.{type(value).__qualname__}",
             "value": _semantic_value(value.value),
         }
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, float):
+        if not math.isfinite(value):
+            raise ValueError("MPR2602_NONFINITE_PLAN_VALUE")
+        # Exact binary metadata without weakening integer-only canonical JSON.
+        return {"__float_hex__": value.hex()}
     if isinstance(value, (bytes, bytearray, memoryview)):
         return {"__bytes_hex__": bytes(value).hex()}
     if isinstance(value, Path):
         return {"__path__": str(value)}
 
-    # solders Instruction / AccountMeta need privilege-preserving encoding.
-    if _looks_like_instruction(value):
+    # Concrete SDK types, not duck-typed objects that may hide extra semantics.
+    if isinstance(value, Instruction):
         return {
             "__instruction__": f"{type(value).__module__}.{type(value).__qualname__}",
             "program_id": str(value.program_id),
             "accounts": [_semantic_account_meta(item) for item in value.accounts],
             "data": bytes(value.data).hex(),
         }
-    if _looks_like_account_meta(value):
-        return _semantic_account_meta(value)
+    if isinstance(value, AccountMeta):
+        return {"__account_meta__": _semantic_account_meta(value)}
+    if isinstance(value, AddressLookupTableAccount):
+        return {
+            "__lookup_table_account__": {
+                "key": str(value.key),
+                "addresses": [str(address) for address in value.addresses],
+            }
+        }
 
     if is_dataclass(value) and not isinstance(value, type):
-        encoded: dict[str, Any] = {
-            "__type__": f"{type(value).__module__}.{type(value).__qualname__}"
+        encoded_fields = {
+            field.name: _semantic_value(getattr(value, field.name))
+            for field in fields(value)
+            if field.name not in _ACQUISITION_ONLY_FIELDS
         }
-        for field in fields(value):
-            if field.name in _ACQUISITION_ONLY_FIELDS:
-                continue
-            encoded[field.name] = _semantic_value(getattr(value, field.name))
-        return encoded
+        return {
+            "__dataclass__": f"{type(value).__module__}.{type(value).__qualname__}",
+            "fields": encoded_fields,
+        }
 
     if isinstance(value, Mapping):
         encoded_items = [
@@ -173,48 +171,12 @@ def _semantic_value(value: Any) -> Any:
     if isinstance(value, Sequence):
         return [_semantic_value(item) for item in value]
 
-    # Pubkey, Hash, Signature and other solders value objects have stable string
-    # forms.  Instructions/metas were handled above so privileges are not lost.
-    if type(value).__module__.startswith("solders."):
+    # Only concrete immutable SDK scalars have an approved string encoding.
+    # In particular, signing keys and arbitrary solders objects are not allowed.
+    if isinstance(value, (Pubkey, Hash)):
         return {
             "__solders__": f"{type(value).__module__}.{type(value).__qualname__}",
             "value": str(value),
-        }
-
-    # A small fail-closed structural fallback supports immutable repository value
-    # objects that use slots instead of dataclasses.  Callables/private caches are
-    # never serialized into execution identity.
-    slot_names = getattr(type(value), "__slots__", ())
-    if isinstance(slot_names, str):
-        slot_names = (slot_names,)
-    public_slots = tuple(
-        name
-        for name in slot_names
-        if isinstance(name, str)
-        and not name.startswith("_")
-        and name not in _ACQUISITION_ONLY_FIELDS
-        and hasattr(value, name)
-    )
-    if public_slots:
-        return {
-            "__type__": f"{type(value).__module__}.{type(value).__qualname__}",
-            "slots": {
-                name: _semantic_value(getattr(value, name)) for name in public_slots
-            },
-        }
-
-    state = getattr(value, "__dict__", None)
-    if isinstance(state, Mapping):
-        public_state = {
-            str(key): item
-            for key, item in state.items()
-            if not str(key).startswith("_")
-            and str(key) not in _ACQUISITION_ONLY_FIELDS
-            and not callable(item)
-        }
-        return {
-            "__type__": f"{type(value).__module__}.{type(value).__qualname__}",
-            "state": _semantic_value(public_state),
         }
 
     raise TypeError(
@@ -224,31 +186,22 @@ def _semantic_value(value: Any) -> Any:
 
 
 def _semantic_mapping_key(value: Any) -> Any:
-    if value is None or isinstance(value, (str, bool, int)):
-        return value
     if isinstance(value, Enum):
         return _semantic_value(value)
-    if type(value).__module__.startswith("solders."):
-        return str(value)
+    if value is None or isinstance(value, (str, bool, int)):
+        return value
+    if isinstance(value, (Pubkey, Hash)):
+        # Preserve key type: a Pubkey and its string representation can both be
+        # present in a mapping, and must not collide or depend on insertion order.
+        return _semantic_value(value)
     raise TypeError("MPR2602_UNSUPPORTED_PLAN_MAPPING_KEY")
 
 
-def _looks_like_instruction(value: Any) -> bool:
-    return all(hasattr(value, name) for name in ("program_id", "accounts", "data"))
-
-
-def _looks_like_account_meta(value: Any) -> bool:
-    return all(
-        hasattr(value, name)
-        for name in ("pubkey", "is_signer", "is_writable")
-    )
-
-
-def _semantic_account_meta(value: Any) -> dict[str, Any]:
+def _semantic_account_meta(value: AccountMeta) -> dict[str, Any]:
     return {
         "pubkey": str(value.pubkey),
-        "is_signer": bool(value.is_signer),
-        "is_writable": bool(value.is_writable),
+        "is_signer": value.is_signer,
+        "is_writable": value.is_writable,
     }
 
 

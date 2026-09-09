@@ -91,9 +91,10 @@ def apply_clear_and_authorize_recovery(
     """Consume one permit and clear one exact latch atomically.
 
     ``target.subject_id`` is the exact PR-195 latch id and
-    ``target.subject_hash`` must equal its current evidence hash.  This provides
-    occurrence-style ABA protection for the current schema: reopening the same
-    named latch with different evidence invalidates the old authorization.
+    ``target.subject_hash`` must equal its current evidence hash.  The target's
+    release/config hashes must also still equal the currently active durable
+    PR-195 generation at the linearization point.  Reopening the same named
+    latch or changing release/config therefore invalidates stale authorization.
     """
 
     if permit.action is not InterventionAction.CLEAR_SAFETY_LATCH:
@@ -111,8 +112,6 @@ def apply_clear_and_authorize_recovery(
 
     db.execute("BEGIN IMMEDIATE")
     try:
-        # Exact duplicate receipt is checked only after validating the permit's
-        # durable semantic binding through consume_in_transaction.
         replayed = ledger.consume_in_transaction(
             permit,
             action=InterventionAction.CLEAR_SAFETY_LATCH,
@@ -141,6 +140,20 @@ def apply_clear_and_authorize_recovery(
                 replayed=True,
             )
 
+        active_generation = db.execute(
+            """
+            SELECT generation_hash,release_hash
+            FROM pr195_config_generations
+            WHERE active=1
+            """
+        ).fetchone()
+        if active_generation is None:
+            raise RecoveryTargetConflict("MPR2603_ACTIVE_CONFIG_MISSING")
+        if str(active_generation[0]) != target.config_hash:
+            raise RecoveryTargetConflict("MPR2603_ACTIVE_CONFIG_CHANGED")
+        if str(active_generation[1]) != target.release_hash:
+            raise RecoveryTargetConflict("MPR2603_ACTIVE_RELEASE_CHANGED")
+
         latch = db.execute(
             "SELECT active,evidence_hash FROM pr195_latches WHERE latch_id=?",
             (target.subject_id,),
@@ -152,9 +165,6 @@ def apply_clear_and_authorize_recovery(
         if str(latch[1]) != target.subject_hash:
             raise RecoveryTargetConflict("MPR2603_LATCH_OCCURRENCE_CHANGED")
 
-        # Do not call CanonicalControlPlaneStore.clear_latch(): that method owns
-        # its own sqlite context manager.  The supported MPR-2603 consumer keeps
-        # permit + mutation + receipt/outbox under this one transaction.
         cur = db.execute(
             """
             UPDATE pr195_latches

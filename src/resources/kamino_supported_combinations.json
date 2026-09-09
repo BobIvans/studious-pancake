@@ -1,4 +1,48 @@
 {
   "schema_version": "pr050.kamino-supported-combinations.v1",
-  "combinations": []
+  "combinations": [],
+  "mpr2615": {
+    "schema_version": "mpr2615.controlled-lender-expansion.v1",
+    "scope_status": "NEW_PROPOSED_EXTENSION",
+    "predecessor_2614": "RESERVED_PREDECESSOR_UNOBSERVED",
+    "first_v1_profile": "circular_arbitrage+marginfi+jupiter",
+    "capabilities": [
+      {
+        "capability_id": "kamino_klend",
+        "profile": "circular_arbitrage+kamino-klend+jupiter",
+        "status": "research",
+        "combination_ids": [],
+        "blockers": [
+          "DEPLOYED_COMBINATION_EVIDENCE_MISSING",
+          "FLASH_BORROW_REPAY_ABI_NOT_RELEASE_BOUND",
+          "REAL_SHADOW_EVIDENCE_MISSING",
+          "CANARY_NOT_AUTHORIZED"
+        ]
+      },
+      {
+        "capability_id": "save_main_pool",
+        "profile": "circular_arbitrage+save-main-pool+jupiter",
+        "status": "unsupported",
+        "pool_scope": "main_pool",
+        "combination_ids": [],
+        "blockers": [
+          "POOL_SPECIFIC_PROTOCOL_QUALIFICATION_MISSING",
+          "FLASHLOAN_ABI_QUALIFICATION_MISSING",
+          "DEPLOYMENT_EVIDENCE_MISSING"
+        ]
+      },
+      {
+        "capability_id": "save_permissionless_pools",
+        "profile": "circular_arbitrage+save-permissionless-pool+jupiter",
+        "status": "unsupported",
+        "pool_scope": "permissionless_pool_specific",
+        "combination_ids": [],
+        "blockers": [
+          "POOL_SPECIFIC_QUALIFICATION_REQUIRED",
+          "POOL_OWNER_AND_RISK_REVIEW_REQUIRED",
+          "FLASHLOAN_ABI_QUALIFICATION_MISSING"
+        ]
+      }
+    ]
+  }
 }

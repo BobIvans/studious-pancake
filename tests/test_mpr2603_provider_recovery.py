@@ -5,6 +5,7 @@ import sqlite3
 
 import pytest
 
+import src.mpr2603_provider_recovery as recovery_module
 from src.mpr2603_human_recovery import install_human_recovery_schema
 from src.mpr2603_provider_recovery import (
     ProviderRecoveryBinding,
@@ -57,13 +58,7 @@ def test_authorized_probe_recovers_disabled_exact_generation() -> None:
     db = _db()
     _bind(db)
     controller = DependencyController()
-    asyncio.run(
-        controller.record_failure(
-            "jupiter",
-            "g1",
-            DependencyFailureKind.AUTH,
-        )
-    )
+    asyncio.run(controller.record_failure("jupiter", "g1", DependencyFailureKind.AUTH))
     assert controller.peek("jupiter", "g1").mode is DependencyMode.DISABLED
     observed: list[tuple[str, str, bool]] = []
 
@@ -88,21 +83,73 @@ def test_authorized_probe_recovers_disabled_exact_generation() -> None:
         "SELECT status FROM mpr2603_recovery_intents WHERE intent_id='recovery-1'"
     ).fetchone() == ("completed",)
     assert db.execute(
+        "SELECT status FROM mpr2603_provider_recovery_bindings WHERE intent_id='recovery-1'"
+    ).fetchone() == ("recovered",)
+    assert db.execute(
         "SELECT outcome FROM mpr2603_provider_recovery_attempts"
     ).fetchall() == [("succeeded",)]
+
+
+def test_completion_is_durable_before_activation_and_replay_does_not_reprobe(monkeypatch) -> None:
+    db = _db()
+    _bind(db)
+    controller = DependencyController()
+    asyncio.run(controller.record_failure("jupiter", "g1", DependencyFailureKind.AUTH))
+    calls = 0
+
+    async def probe(_provider_id: str, _generation: str) -> bool:
+        nonlocal calls
+        calls += 1
+        return True
+
+    original = recovery_module._record_authorized_probe_success
+
+    async def crash_before_activation(*_args, **_kwargs) -> None:
+        raise RuntimeError("synthetic activation crash")
+
+    monkeypatch.setattr(recovery_module, "_record_authorized_probe_success", crash_before_activation)
+    with pytest.raises(RuntimeError, match="activation crash"):
+        asyncio.run(
+            run_authorized_recovery_probe(
+                db,
+                controller=controller,
+                intent_id="recovery-1",
+                current_utc="2026-09-09T12:01:00Z",
+                probe=probe,
+            )
+        )
+
+    assert controller.peek("jupiter", "g1").mode is DependencyMode.DISABLED
+    assert db.execute(
+        "SELECT status FROM mpr2603_recovery_intents WHERE intent_id='recovery-1'"
+    ).fetchone() == ("completed",)
+    assert db.execute(
+        "SELECT status FROM mpr2603_provider_recovery_bindings WHERE intent_id='recovery-1'"
+    ).fetchone() == ("recovered",)
+    assert db.execute(
+        "SELECT outcome FROM mpr2603_provider_recovery_attempts"
+    ).fetchone() == ("succeeded",)
+
+    monkeypatch.setattr(recovery_module, "_record_authorized_probe_success", original)
+    result = asyncio.run(
+        run_authorized_recovery_probe(
+            db,
+            controller=controller,
+            intent_id="recovery-1",
+            current_utc="2026-09-09T12:02:00Z",
+            probe=probe,
+        )
+    )
+    assert result.recovered is True
+    assert controller.peek("jupiter", "g1").mode is DependencyMode.ACTIVE
+    assert calls == 1
 
 
 def test_failed_probe_is_accounted_and_does_not_recover() -> None:
     db = _db()
     _bind(db)
     controller = DependencyController()
-    asyncio.run(
-        controller.record_failure(
-            "jupiter",
-            "g1",
-            DependencyFailureKind.AUTH,
-        )
-    )
+    asyncio.run(controller.record_failure("jupiter", "g1", DependencyFailureKind.AUTH))
 
     async def probe(_provider_id: str, _generation: str) -> bool:
         return False
@@ -157,6 +204,9 @@ def test_attempt_budget_and_deadline_fail_closed_without_probe() -> None:
             )
         )
     assert calls == 1
+    assert db.execute(
+        "SELECT status FROM mpr2603_recovery_intents WHERE intent_id='recovery-1'"
+    ).fetchone() == ("blocked",)
 
     db2 = _db()
     _bind(db2)
@@ -171,6 +221,9 @@ def test_attempt_budget_and_deadline_fail_closed_without_probe() -> None:
             )
         )
     assert calls == 1
+    assert db2.execute(
+        "SELECT status FROM mpr2603_recovery_intents WHERE intent_id='recovery-1'"
+    ).fetchone() == ("blocked",)
 
 
 def test_generation_change_denies_before_external_probe() -> None:

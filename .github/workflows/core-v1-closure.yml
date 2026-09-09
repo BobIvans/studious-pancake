@@ -31,6 +31,17 @@ jobs:
           python -m pip download --require-hashes --only-binary=:all: -r requirements-dev.lock -d "$RUNNER_TEMP/wheelhouse"
           python -m pip install --no-index --require-hashes --find-links "$RUNNER_TEMP/wheelhouse" -r requirements-dev.lock
           python -m pip install --no-index --no-deps --no-build-isolation .
+      - name: Installed wheel core import closure
+        run: |
+          cd "$RUNNER_TEMP"
+          env -u PYTHONPATH python - <<'PY'
+          import src.execution.core_v1_finalized_settlement
+          import src.production_debt_profiles
+          import src.runtime.core_v1_composition
+          import src.runtime.core_v1_materializer
+          import src.runtime.runtime_entrypoint
+          print("installed core-v1 imports: ok")
+          PY
       - name: Compile closure surfaces
         run: >-
           python -m compileall -q
@@ -44,7 +55,7 @@ jobs:
           tests/test_core_v1_composition.py
       - name: Format closure surfaces
         run: >-
-          python -m black --diff --check
+          python -m black --check
           src/runtime/core_v1_composition.py
           src/runtime/core_v1_materializer.py
           src/runtime/runtime_entrypoint.py

@@ -105,7 +105,7 @@ def test_installed_paper_service_blocks_without_provider_evidence_and_live_fails
     captured = capsys.readouterr()
     assert "INSTALLED_PAPER_SERVICE" in captured.out
     assert "status=BLOCKED" in captured.out
-    assert "reason=blocked_a3_b3_provider_evidence_missing" in captured.out
+    assert "reason=BLOCKED_EXTERNAL" in captured.out
     assert f"db={db_path}" in captured.out
     assert db_path.is_file()
 

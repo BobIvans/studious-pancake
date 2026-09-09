@@ -28,10 +28,18 @@ from src.paper_shadow.mpr2602_completion import verify_committed_paper_success
 A3_UNVERIFIED_PAPER_TERMINAL = "blocked_a3_verified_attempt_terminal_missing"
 
 
+def _projection_int(value: object, label: str) -> int:
+    if type(value) is not int:
+        raise ValueError(f"{label} must be a non-bool integer")
+    return value
+
+
 def _record_from_projection(payload: Mapping[str, object]) -> ExactAttemptRuntimeRecord:
     return ExactAttemptRuntimeRecord(
-        item_index=int(payload["item_index"]),
-        attempt_generation=int(payload["attempt_generation"]),
+        item_index=_projection_int(payload["item_index"], "item_index"),
+        attempt_generation=_projection_int(
+            payload["attempt_generation"], "attempt_generation"
+        ),
         status=A2PaperOutcomeStatus(str(payload["status"])),
         reason_code=str(payload["reason_code"]),
         failure_stage=FailureStage(str(payload["failure_stage"])),

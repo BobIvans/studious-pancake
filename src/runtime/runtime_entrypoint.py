@@ -17,7 +17,6 @@ from src.config.runtime import ConfigurationLoadError, load_runtime_config
 from src.paper_shadow.durable_service_a3 import (
     A3PaperServiceStatus,
     InstalledDurablePaperServiceReport,
-    build_installed_durable_paper_service,
 )
 from src.paper_shadow.repeated_service_pr04 import (
     RepeatedInstalledPaperService,
@@ -40,7 +39,7 @@ _SUCCESS = frozenset(
     }
 )
 
-_INSTALLED_EXTERNAL_BLOCKER = "blocked_a3_b3_provider_evidence_missing"
+_INSTALLED_EXTERNAL_BLOCKER = "CORE_V1_BLOCKED_EXTERNAL"
 _INSTALLED_EXTERNAL_REASON = "BLOCKED_EXTERNAL"
 
 
@@ -154,10 +153,6 @@ async def _run_paper(
     selected_db = db_path or environment.get(
         "FLASHLOAN_PAPER_SERVICE_DB", ".runtime/paper-service.sqlite3"
     )
-    # ``legacy_smoke`` remains an internal compatibility hook for existing tests
-    # and callers, but installed CLI behavior is controlled only by explicit
-    # lifecycle flags. Representation (--json) and state location (--db-path)
-    # must never change how long the service runs.
     maximum = _resolve_max_cycles(
         environment,
         once=(once or legacy_smoke),
@@ -175,9 +170,33 @@ async def _run_paper(
         shutdown_timeout_seconds=config.shutdown_drain_timeout_seconds,
     )
     owner = AsyncSignalHandlerOwner(stop.set)
-    service = build_installed_durable_paper_service(
-        config, db_path=context.resolve_path(selected_db)
+
+    # Import the heavy canonical core only after runtime/platform admission.
+    # Missing deployed/provider evidence is represented by that composition as
+    # BLOCKED_EXTERNAL; the installed path is never a blank A3 constructor.
+    from src.runtime.core_v1_composition import build_core_v1_composition
+    from src.runtime.core_v1_materializer import (
+        CORE_V1_PROFILE_ID,
+        CoreV1ReleaseProfile,
     )
+
+    profile = CoreV1ReleaseProfile(
+        profile_id=CORE_V1_PROFILE_ID,
+        strategy="circular_arbitrage",
+        lender="marginfi",
+        router="jupiter",
+        cluster=config.cluster.name,
+        genesis_hash=config.cluster.genesis_hash,
+        transport=("rpc+jito" if config.providers.jito.enabled else "rpc"),
+        live_enabled=False,
+    )
+    composition = build_core_v1_composition(
+        config,
+        db_path=context.resolve_path(selected_db),
+        profile=profile,
+        dependencies=None,
+    )
+    service = composition.service
     try:
         owner.install()
         supervisor = RepeatedInstalledPaperService(
@@ -193,7 +212,7 @@ async def _run_paper(
         try:
             owner.restore()
         finally:
-            service.close()
+            composition.close()
 
 
 def handles(argv: Sequence[str]) -> bool:
@@ -207,10 +226,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         parsed = _parser().parse_args(args_list)
         context = BootstrapContext.capture(args_list, command="flashloan-bot.run")
 
-        # Preserve the public fail-closed CLI contract independently of host
-        # qualification. Live execution is unavailable on every platform, so a
-        # platform-admission blocker must never mask the canonical exit code and
-        # diagnostic expected by callers and release gates.
         if parsed.mode == "live":
             print("LIVE_MODE_UNAVAILABLE", file=sys.stderr)
             return EXIT_MODE_UNAVAILABLE
@@ -259,8 +274,6 @@ def main(argv: Sequence[str] | None = None) -> int:
                 )
             )
 
-        # Existing shadow execution remains its semantic owner's responsibility;
-        # admission has already completed before importing the heavy runtime.
         from src import cli as active_cli
 
         return int(active_cli.main(args_list))

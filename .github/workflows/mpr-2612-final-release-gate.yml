@@ -44,7 +44,7 @@ jobs:
             tests/test_mpr2612_durable_release.py
       - name: Format final release surfaces
         run: |
-          python -m black --check \
+          python -m black --check --diff \
             src/release_gate/mpr31_final_promotion_gate.py \
             src/release_gate/mpr2612_durable_release.py \
             tests/test_mpr31_final_promotion_gate.py \

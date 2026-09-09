@@ -44,7 +44,9 @@ def _item(request):
 
 
 @pytest.mark.asyncio
-async def test_positive_wsol_completion_is_atomic_and_restart_replay_has_no_rpc(tmp_path):
+async def test_positive_wsol_completion_is_atomic_and_restart_replay_has_no_rpc(
+    tmp_path,
+):
     store, orchestrator, request, rpc, _holder = _attempt(tmp_path)
     runtime = DurableCompletedExactAttemptRuntime(
         orchestrator=orchestrator, authority=store
@@ -134,9 +136,7 @@ async def test_verified_a3_accepts_real_terminal_and_rejects_forged_success(tmp_
         service.close()
         store.close()
 
-    store2, _orchestrator2, request2, _rpc2, _holder2 = _attempt(
-        tmp_path / "forged"
-    )
+    store2, _orchestrator2, request2, _rpc2, _holder2 = _attempt(tmp_path / "forged")
     evidence2 = A3ProviderEvidenceState(
         provider_evidence_hash=request2.provider_evidence.evidence_hash,
         ready=True,

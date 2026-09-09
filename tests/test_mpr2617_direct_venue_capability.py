@@ -134,7 +134,9 @@ def _cap(
         "account_layout_version": "gen-1",
         "instruction_family": "whirlpool-swap-exact-in",
         "quote_math_version": "orca-core-reviewed-generation",
-        "evidence_sha256": SHA_A,
+        "evidence_sha256": SHA_D,
+        "instruction_data_sha256": SHA_A,
+        "instruction_accounts_sha256": SHA_B,
         "state": state,
         "expires_at_unix": 2_000_000_000,
     }
@@ -152,8 +154,8 @@ def _leg(capability: VenueCapability, **overrides: object) -> DirectRouteLeg:
         "amount_in": 1_000_000,
         "guaranteed_min_out": 990_000,
         "evidence_generation": capability.deployment_generation,
-        "instruction_data_sha256": capability.evidence_sha256,
-        "instruction_accounts_sha256": SHA_B,
+        "instruction_data_sha256": capability.instruction_data_sha256,
+        "instruction_accounts_sha256": capability.instruction_accounts_sha256,
     }
     values.update(overrides)
     return DirectRouteLeg(**values)
@@ -291,6 +293,7 @@ def test_second_leg_input_is_backed_by_first_guaranteed_output() -> None:
         input_mint=MINT_B,
         output_mint=MINT_A,
         evidence_sha256=SHA_C,
+        instruction_data_sha256=SHA_C,
     )
     registry = VenueCapabilityRegistry((first, second))
     result = qualify_route(
@@ -325,8 +328,17 @@ def test_capability_evidence_or_generation_mutation_invalidates_route() -> None:
         now_unix=1,
         allowed_combinations=frozenset({(VenueFamily.ORCA_WHIRLPOOLS,)}),
     )
-    assert "LEG_0_INSTRUCTION_EVIDENCE_MISMATCH" in result.blockers
+    assert "LEG_0_INSTRUCTION_DATA_MISMATCH" in result.blockers
     assert "LEG_0_GENERATION_MISMATCH" in result.blockers
+
+    account_result = qualify_route(
+        (_leg(cap, instruction_accounts_sha256=SHA_C),),
+        registry,
+        mode=RouteMode.SHADOW,
+        now_unix=1,
+        allowed_combinations=frozenset({(VenueFamily.ORCA_WHIRLPOOLS,)}),
+    )
+    assert "LEG_0_INSTRUCTION_ACCOUNTS_MISMATCH" in account_result.blockers
 
 
 def test_production_mode_never_enables_live_from_this_gate() -> None:

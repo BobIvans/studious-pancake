@@ -21,6 +21,10 @@ import math
 from pathlib import Path
 from typing import Any
 
+from src.durability.unified_authority_pr02 import (
+    AuthorityFence,
+    UnifiedLifecycleAuthority,
+)
 from src.kernel import canonical_json_bytes
 from src.paper_shadow.atomic_vertical import AtomicVerticalCandidate
 
@@ -74,6 +78,40 @@ def validate_prepared_plan_hash(
     if actual != expected_hash:
         raise ValueError("MPR2602_PREPARED_PLAN_IDENTITY_MISMATCH")
     return actual
+
+
+def begin_prepared_attempt_intent(
+    authority: UnifiedLifecycleAuthority,
+    *,
+    attempt_id: str,
+    attempt_generation: int,
+    candidate: AtomicVerticalCandidate,
+) -> tuple[AuthorityFence, str]:
+    """Bind the complete prepared plan to the accepted PR-02 attempt authority.
+
+    ``UnifiedLifecycleAuthority.begin_attempt_intent`` already owns durable
+    semantic replay.  Supplying the prepared-plan hash as its request payload
+    means the same attempt/generation may replay only with identical execution
+    semantics.  A changed route/ALT/decoder/raw state/etc. therefore conflicts
+    before a caller is allowed to repeat an external simulation or other effect.
+    """
+
+    if not isinstance(authority, UnifiedLifecycleAuthority):
+        raise TypeError("MPR2602_UNIFIED_AUTHORITY_REQUIRED")
+    plan_hash = _prepared_plan_hash(candidate)
+    opportunity_id = str(getattr(candidate.request, "opportunity_id", ""))
+    if not opportunity_id.strip():
+        raise ValueError("MPR2602_OPPORTUNITY_ID_REQUIRED")
+    fence = authority.begin_attempt_intent(
+        attempt_id=attempt_id,
+        attempt_generation=attempt_generation,
+        request_payload={
+            "schema": MPR2602_PREPARED_PLAN_SCHEMA,
+            "opportunity_id": opportunity_id,
+            "prepared_plan_hash": plan_hash,
+        },
+    )
+    return fence, plan_hash
 
 
 def _semantic_value(value: Any) -> Any:
@@ -212,5 +250,6 @@ def _semantic_account_meta(value: Any) -> dict[str, Any]:
 __all__ = [
     "MPR2602_PREPARED_PLAN_SCHEMA",
     "_prepared_plan_hash",
+    "begin_prepared_attempt_intent",
     "validate_prepared_plan_hash",
 ]

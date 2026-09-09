@@ -123,9 +123,9 @@ class MPR2612DurableReleaseAuthority:
         ).fetchone()
         if row is None:
             self.db.execute(
-                "INSERT INTO mpr2612_release_state(" 
-                "singleton,release_generation,state,revision,live_enabled," 
-                "unrestricted_live_allowed,automatic_scale_up_allowed) " 
+                "INSERT INTO mpr2612_release_state("
+                "singleton,release_generation,state,revision,live_enabled,"
+                "unrestricted_live_allowed,automatic_scale_up_allowed) "
                 "VALUES(1,0,?,0,0,0,0)",
                 (ReleaseState.UNQUALIFIED.value,),
             )

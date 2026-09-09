@@ -84,9 +84,7 @@ class SignedEvidenceArtifact:
 
     @property
     def artifact_hash(self) -> str:
-        return _hash_json(
-            _public_payload(self) | {"schema": MPR31_SCHEMA_VERSION}
-        )
+        return _hash_json(_public_payload(self) | {"schema": MPR31_SCHEMA_VERSION})
 
 
 @dataclass(frozen=True, slots=True)
@@ -372,11 +370,7 @@ class ReleaseProposal:
         _strict_non_negative_int(self.created_at_ns, "created_at_ns")
         _strict_non_negative_int(self.not_before_ns, "not_before_ns")
         _strict_non_negative_int(self.expires_at_ns, "expires_at_ns")
-        if not (
-            self.created_at_ns
-            <= self.not_before_ns
-            < self.expires_at_ns
-        ):
+        if not (self.created_at_ns <= self.not_before_ns < self.expires_at_ns):
             raise MPR31Error("MPR2612_INVALID_PROPOSAL_WINDOW")
         _require_text(self.proposer_principal, "proposer_principal")
         _require_text(self.proposal_nonce, "proposal_nonce")
@@ -418,11 +412,7 @@ class ReleaseApproval:
         _digest(self.qualification_digest, "qualification_digest")
         for name in ("issued_at_ns", "not_before_ns", "expires_at_ns"):
             _strict_non_negative_int(getattr(self, name), name)
-        if not (
-            self.issued_at_ns
-            <= self.not_before_ns
-            < self.expires_at_ns
-        ):
+        if not (self.issued_at_ns <= self.not_before_ns < self.expires_at_ns):
             raise MPR31Error("MPR2612_INVALID_APPROVAL_WINDOW")
 
     def signed_payload(self) -> bytes:
@@ -527,11 +517,7 @@ class MPR2612FinalReleaseGate:
             qualification_digest=qualification.qualification_semantic_digest,
             production_ready=allowed,
             release_claim_allowed=allowed,
-            product_state=(
-                TARGET_PRODUCT_STATE
-                if allowed
-                else "not-production-ready"
-            ),
+            product_state=(TARGET_PRODUCT_STATE if allowed else "not-production-ready"),
             live_enabled=False,
             unrestricted_live_allowed=False,
             automatic_scale_up_allowed=False,
@@ -544,10 +530,7 @@ class MPR2612FinalReleaseGate:
     ) -> None:
         if not qualification.schema_version.lower().startswith("mpr-2611"):
             reasons.append("BLOCKED_QUALIFICATION_SCHEMA")
-        if (
-            qualification.semantic_digest
-            != qualification.qualification_semantic_digest
-        ):
+        if qualification.semantic_digest != qualification.qualification_semantic_digest:
             reasons.append("BLOCKED_QUALIFICATION_DIGEST")
         if not self.qualification_verifier(qualification):
             reasons.append("BLOCKED_QUALIFICATION_VERIFIER")
@@ -646,10 +629,7 @@ class MPR2612FinalReleaseGate:
         hard_safety_latch_active: bool,
         reasons: list[str],
     ) -> None:
-        if (
-            proposal.requested_state
-            is not ReleaseState.RELEASED_PRODUCTION_DEFAULT_OFF
-        ):
+        if proposal.requested_state is not ReleaseState.RELEASED_PRODUCTION_DEFAULT_OFF:
             reasons.append("BLOCKED_INVALID_TARGET_STATE")
         if (
             proposal.live_enabled
@@ -740,11 +720,25 @@ class MPR31FinalPromotionGate:
 def _public_payload(value: object) -> dict[str, Any]:
     if not is_dataclass(value):
         raise TypeError("expected dataclass payload")
-    result: dict[str, Any] = {}
-    for field in fields(value):
-        item = getattr(value, field.name)
-        result[field.name] = item.value if isinstance(item, StrEnum) else item
-    return result
+    return {
+        field.name: _canonical_value(getattr(value, field.name))
+        for field in fields(value)
+    }
+
+
+def _canonical_value(value: object) -> Any:
+    if isinstance(value, StrEnum):
+        return value.value
+    if is_dataclass(value):
+        return {
+            field.name: _canonical_value(getattr(value, field.name))
+            for field in fields(value)
+        }
+    if isinstance(value, (tuple, list)):
+        return [_canonical_value(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _canonical_value(item) for key, item in value.items()}
+    return value
 
 
 def _canonical_json(value: object) -> str:

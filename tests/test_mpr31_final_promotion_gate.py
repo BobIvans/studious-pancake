@@ -138,9 +138,7 @@ def gate(*, signature_ok: bool = True) -> MPR2612FinalReleaseGate:
         return None
 
     return MPR2612FinalReleaseGate(
-        qualification_verifier=(
-            lambda item: item.production_qualification_passed
-        ),
+        qualification_verifier=(lambda item: item.production_qualification_passed),
         signature_verifier=verify_signature,
         trust_resolver=resolve_principal,
     )
@@ -177,8 +175,7 @@ def test_successful_release_is_production_ready_but_live_stays_default_off() -> 
 def test_t2612_001_digest_only_forgery_cannot_release() -> None:
     q, p, approvals = valid_release()
     forged = tuple(
-        ReleaseApproval(**(asdict(item) | {"signature": D}))
-        for item in approvals
+        ReleaseApproval(**(asdict(item) | {"signature": D})) for item in approvals
     )
 
     decision = gate().evaluate(q, p, forged, now_ns=NOW)
@@ -300,10 +297,7 @@ def test_qualification_cannot_self_grant_release_or_live() -> None:
 
     decision = gate().evaluate(q, p, approvals, now_ns=NOW)
 
-    assert (
-        "BLOCKED_QUALIFICATION_PRIVILEGE_ESCALATION"
-        in decision.reason_codes
-    )
+    assert "BLOCKED_QUALIFICATION_PRIVILEGE_ESCALATION" in decision.reason_codes
 
 
 def test_proposal_cannot_request_live_unlimited_or_auto_scale() -> None:

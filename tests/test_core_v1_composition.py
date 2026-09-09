@@ -59,7 +59,9 @@ def test_blocked_installed_composition_reuses_one_authority(tmp_path) -> None:
 
 
 @pytest.mark.asyncio
-async def test_empty_exact_cycle_is_no_trade_without_rpc_or_reservation(tmp_path) -> None:
+async def test_empty_exact_cycle_is_no_trade_without_rpc_or_reservation(
+    tmp_path,
+) -> None:
     config = load_runtime_config(cli_overrides={"runtime.mode": "paper"})
     composition = build_core_v1_composition(
         config,

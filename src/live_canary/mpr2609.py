@@ -457,9 +457,7 @@ class DurableCanaryAuthority:
             ),
         )
         if cursor.rowcount != 1:
-            raise MPR2609Error(
-                "stale writer fence while consuming one-shot admission"
-            )
+            raise MPR2609Error("stale writer fence while consuming one-shot admission")
         self._event(
             bundle.attempt_generation,
             "admitted",
@@ -506,11 +504,7 @@ class DurableCanaryAuthority:
         cumulative_loss = _state_int(state, "cumulative_loss_lamports")
         if realized_pnl_lamports < 0:
             cumulative_loss += -realized_pnl_lamports
-        failures = (
-            0
-            if success
-            else _state_int(state, "consecutive_failures") + 1
-        )
+        failures = 0 if success else _state_int(state, "consecutive_failures") + 1
         latch: DurableLatch | None = None
         if cumulative_loss >= max_cumulative_loss_lamports:
             latch = DurableLatch.POLICY_DRIFT

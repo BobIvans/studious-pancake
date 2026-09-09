@@ -146,7 +146,13 @@ async def run_authorized_recovery_probe(
     current_utc: str,
     probe: Probe,
 ) -> ProviderRecoveryResult:
-    """Execute exactly one durably-accounted, generation-bound health probe."""
+    """Execute exactly one durably-accounted, generation-bound health probe.
+
+    A successful physical probe is persisted as completed before the dependency
+    is allowed to become ACTIVE.  If the process dies after that durable commit
+    but before activation, an exact replay reconciles the existing completed
+    record without issuing a second physical probe.
+    """
 
     now = _parse_utc(current_utc)
     db.execute("BEGIN IMMEDIATE")
@@ -167,8 +173,15 @@ async def run_authorized_recovery_probe(
         attempt_count = int(row[4])
         status = str(row[5])
         if status == "recovered":
-            snapshot = controller.peek(provider_id, generation)
+            parent = db.execute(
+                "SELECT status FROM mpr2603_recovery_intents WHERE intent_id=?",
+                (intent_id,),
+            ).fetchone()
+            if parent is None or str(parent[0]) != "completed":
+                raise ProviderRecoveryError("MPR2603_RECOVERY_COMPLETION_DIVERGED")
             db.execute("COMMIT")
+            await _record_authorized_probe_success(controller, provider_id, generation)
+            snapshot = controller.peek(provider_id, generation)
             return ProviderRecoveryResult(
                 intent_id,
                 provider_id,
@@ -181,20 +194,11 @@ async def run_authorized_recovery_probe(
         if status != "pending":
             raise ProviderRecoveryError("MPR2603_RECOVERY_NOT_PENDING")
         if now >= deadline:
-            db.execute(
-                "UPDATE mpr2603_provider_recovery_bindings "
-                "SET status='blocked',last_reason='deadline_expired' WHERE intent_id=?",
-                (intent_id,),
-            )
+            _block_recovery_in_transaction(db, intent_id, "deadline_expired")
             db.execute("COMMIT")
             raise ProviderRecoveryError("MPR2603_RECOVERY_DEADLINE_EXPIRED")
         if attempt_count >= max_attempts:
-            db.execute(
-                "UPDATE mpr2603_provider_recovery_bindings "
-                "SET status='blocked',last_reason='attempt_budget_exhausted' "
-                "WHERE intent_id=?",
-                (intent_id,),
-            )
+            _block_recovery_in_transaction(db, intent_id, "attempt_budget_exhausted")
             db.execute("COMMIT")
             raise ProviderRecoveryError("MPR2603_RECOVERY_ATTEMPTS_EXHAUSTED")
 
@@ -222,10 +226,6 @@ async def run_authorized_recovery_probe(
         db.execute("COMMIT")
 
     try:
-        # A disabled dependency deliberately rejects ordinary operations in the
-        # existing controller. The MPR-2603 permit is the narrow authority that
-        # allows exactly HEALTH_PROBE for the bound generation; no other
-        # operation bypasses DependencyController.assert_admissible().
         snapshot = controller.peek(provider_id, generation)
         if snapshot.mode is not DependencyMode.DISABLED:
             await controller.assert_admissible(
@@ -246,8 +246,9 @@ async def run_authorized_recovery_probe(
         raise
 
     if succeeded:
-        await _record_authorized_probe_success(controller, provider_id, generation)
-        snapshot = controller.peek(provider_id, generation)
+        # Persist the proof/result first.  This creates a safe false-negative
+        # crash window (completed but still disabled), never an unsafe ACTIVE
+        # provider without a durable completed recovery lineage.
         _finish_attempt(
             db,
             intent_id=intent_id,
@@ -257,6 +258,8 @@ async def run_authorized_recovery_probe(
             reason="generation_bound_probe_succeeded",
             recovered=True,
         )
+        await _record_authorized_probe_success(controller, provider_id, generation)
+        snapshot = controller.peek(provider_id, generation)
         return ProviderRecoveryResult(
             intent_id,
             provider_id,
@@ -290,6 +293,33 @@ async def run_authorized_recovery_probe(
         snapshot.mode.value,
         "health_probe_failed",
     )
+
+
+def _block_recovery_in_transaction(
+    db: sqlite3.Connection,
+    intent_id: str,
+    reason: str,
+) -> None:
+    binding = db.execute(
+        """
+        UPDATE mpr2603_provider_recovery_bindings
+        SET status='blocked',last_reason=?
+        WHERE intent_id=? AND status='pending'
+        """,
+        (reason, intent_id),
+    )
+    if binding.rowcount != 1:
+        raise ProviderRecoveryError("MPR2603_RECOVERY_BLOCK_CONFLICT")
+    parent = db.execute(
+        """
+        UPDATE mpr2603_recovery_intents
+        SET status='blocked'
+        WHERE intent_id=? AND status='recovery_pending'
+        """,
+        (intent_id,),
+    )
+    if parent.rowcount != 1:
+        raise ProviderRecoveryError("MPR2603_RECOVERY_INTENT_CHANGED")
 
 
 async def _record_authorized_probe_success(
@@ -349,17 +379,20 @@ def _finish_attempt(
                 "MPR2603_RECOVERY_ATTEMPT_COMPLETION_CONFLICT"
             )
         if recovered:
-            db.execute(
+            binding = db.execute(
                 "UPDATE mpr2603_provider_recovery_bindings "
-                "SET status='recovered',last_reason=? WHERE intent_id=?",
+                "SET status='recovered',last_reason=? "
+                "WHERE intent_id=? AND status='pending'",
                 (reason, intent_id),
             )
-            cur = db.execute(
+            if binding.rowcount != 1:
+                raise ProviderRecoveryError("MPR2603_RECOVERY_BINDING_CHANGED")
+            parent = db.execute(
                 "UPDATE mpr2603_recovery_intents SET status='completed' "
                 "WHERE intent_id=? AND status='recovery_pending'",
                 (intent_id,),
             )
-            if cur.rowcount != 1:
+            if parent.rowcount != 1:
                 raise ProviderRecoveryError("MPR2603_RECOVERY_INTENT_CHANGED")
         else:
             db.execute(

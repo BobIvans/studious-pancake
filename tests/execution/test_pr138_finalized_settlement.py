@@ -102,8 +102,7 @@ def test_pr138_unknown_status_latches_manual_review(status: str | None) -> None:
     assert decision.economically_successful is False
 
 
-def test_pr138_finalized_actual_success_requires_identity_repayment_and_positive_net(
-) -> None:
+def test_pr138_finalized_actual_success_requires_identity_repayment_and_positive_net() -> None:
     decision = classify_finalized_actual_settlement(
         _evidence(),
         expected_message_hash=HASH_A,

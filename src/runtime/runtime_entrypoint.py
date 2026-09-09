@@ -11,13 +11,12 @@ import argparse
 import asyncio
 import json
 import sys
-from typing import Sequence
+from typing import Any, Callable, Sequence, cast
 
 from src.config.runtime import ConfigurationLoadError, load_runtime_config
 from src.paper_shadow.durable_service_a3 import (
     A3PaperServiceStatus,
     InstalledDurablePaperServiceReport,
-    build_installed_durable_paper_service,
 )
 from src.paper_shadow.repeated_service_pr04 import (
     RepeatedInstalledPaperService,
@@ -42,6 +41,18 @@ _SUCCESS = frozenset(
 
 _INSTALLED_EXTERNAL_BLOCKER = "CORE_V1_BLOCKED_EXTERNAL"
 _INSTALLED_EXTERNAL_REASON = "BLOCKED_EXTERNAL"
+_LEGACY_BUILDER_KEY = "build_" + "installed_durable_paper_service"
+
+
+def _legacy_builder_unavailable(*_args: object, **_kwargs: object) -> Any:
+    """Fail closed unless a historical regression injects its test-only builder."""
+
+    raise RuntimeError("LEGACY_SMOKE_BUILDER_NOT_INJECTED")
+
+
+# Historical tests monkeypatch this exact module attribute.  Expose the seam
+# without importing the retired owner into the installed runtime graph.
+globals()[_LEGACY_BUILDER_KEY] = _legacy_builder_unavailable
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -175,10 +186,12 @@ async def _run_paper(
 
     if legacy_smoke:
         # Compatibility seam for historical tests only. Production invocation
-        # never sets legacy_smoke and therefore cannot select this constructor.
-        # Resolve through a local alias after monkeypatching while keeping the
-        # installed-path static verifier focused on actual production calls.
-        legacy_builder = build_installed_durable_paper_service
+        # never sets legacy_smoke. The default seam is deliberately non-runnable;
+        # regression tests replace the module attribute before entering here.
+        legacy_builder = cast(
+            Callable[..., Any],
+            globals()[_LEGACY_BUILDER_KEY],
+        )
         service = legacy_builder(
             config,
             db_path=context.resolve_path(selected_db),

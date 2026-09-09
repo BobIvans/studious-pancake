@@ -323,7 +323,9 @@ class ExactPaperAttemptOrchestrator:
                 capital=capital,
             )
 
-        assert self.authority is not None and fence is not None and plan_hash is not None
+        assert (
+            self.authority is not None and fence is not None and plan_hash is not None
+        )
         message_hash = vertical.trace.message_hash
         fee_quote = MessageFeeQuote(
             message_hash=message_hash,

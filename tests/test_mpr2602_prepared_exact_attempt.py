@@ -27,7 +27,9 @@ from src.execution.economic_reconciliation.mega_pr02_proof import (
     ConservativeValuationSnapshot,
 )
 from src.execution.exact_simulation import ExactSimulationFinalizer
-from src.paper_shadow.atomic_vertical import AtomicPlannerSimulationReconciliationVertical
+from src.paper_shadow.atomic_vertical import (
+    AtomicPlannerSimulationReconciliationVertical,
+)
 from src.paper_shadow.exact_attempt_pr152 import (
     ExactAttemptRequest,
     ExactAttemptStatus,
@@ -80,10 +82,14 @@ def _wsol_account(address, account):
     return account
 
 
+def _monitored(vertical, candidate):
+    plan = vertical.planner.plan(candidate.request)
+    return (RAW_PAYER, *(str(k) for k in plan.transaction_plan.monitored_accounts))
+
+
 def _wsol_vertical():
     original, candidate, original_rpc = offline_vertical_fixture()
-    plan = original.planner.plan(candidate.request)
-    monitored = (RAW_PAYER, *(str(k) for k in plan.transaction_plan.monitored_accounts))
+    monitored = _monitored(original, candidate)
     pre = {
         address: _wsol_account(address, account)
         for address, account in zip(monitored, candidate.pre_state_accounts)
@@ -95,10 +101,24 @@ def _wsol_vertical():
             values = []
             for address in addresses:
                 if address == pin.program_id:
-                    values.append(RpcAccount(address, pin.raw["program_owner"], b"", executable=True))
+                    values.append(
+                        RpcAccount(
+                            address,
+                            pin.raw["program_owner"],
+                            b"",
+                            executable=True,
+                        )
+                    )
                 else:
                     raw = pre[address]
-                    values.append(RpcAccount(address, raw["owner"], base64.b64decode(raw["data"][0]), raw["lamports"]))
+                    values.append(
+                        RpcAccount(
+                            address,
+                            raw["owner"],
+                            base64.b64decode(raw["data"][0]),
+                            raw["lamports"],
+                        )
+                    )
             return 22, tuple(values)
 
     snapshot = MarginfiAccountReader(pin, Accounts(), clock=lambda: 1000.0).read(
@@ -134,7 +154,9 @@ def _wsol_vertical():
                 ConservativeAssetQuote(NATIVE_SOL_ASSET, 1, "d" * 64, 22),
                 ConservativeAssetQuote(bridge, 1, "e" * 64, 22),
             ),
-            22, 2, 0,
+            22,
+            2,
+            0,
         ),
     )
 
@@ -149,7 +171,9 @@ def _wsol_vertical():
                 result = copy.deepcopy(result)
                 result["value"]["accounts"] = [
                     _wsol_account(address, account)
-                    for address, account in zip(monitored, result["value"]["accounts"])
+                    for address, account in zip(
+                        monitored, result["value"]["accounts"]
+                    )
                 ]
                 if self.mutate is not None:
                     self.mutate()
@@ -158,7 +182,9 @@ def _wsol_vertical():
     rpc = Rpc()
     vertical = AtomicPlannerSimulationReconciliationVertical(
         AtomicMarginfiJupiterPlanner(
-            MarginfiFlashLoanProvider(pin), original.planner._policy, clock=lambda: 1000.0
+            MarginfiFlashLoanProvider(pin),
+            original.planner._policy,
+            clock=lambda: 1000.0,
         ),
         ExactSimulationFinalizer(rpc),
     )
@@ -180,12 +206,17 @@ def _attempt(tmp_path, *, with_authority=True):
     holder = {}
 
     def factory(reservation):
-        prepared = replace(candidate, request=replace(candidate.request, capital=reservation))
+        prepared = replace(
+            candidate,
+            request=replace(candidate.request, capital=reservation),
+        )
         holder["candidate"] = prepared
         return prepared
 
     request = ExactAttemptRequest(
-        attempt_key=AttemptKey(candidate.request.opportunity_id, digest("wsol-seed"), 1),
+        attempt_key=AttemptKey(
+            candidate.request.opportunity_id, digest("wsol-seed"), 1
+        ),
         capital_candidate=CapitalCandidate(
             candidate_id=candidate.request.opportunity_id,
             guaranteed_min_out_lamports=21125,
@@ -205,7 +236,11 @@ def _attempt(tmp_path, *, with_authority=True):
             candidate.request.jupiter_contract_pin,
             provenance.marginfi_pin_hash,
             candidate.request.marginfi_snapshot.state_fingerprint,
-            22, clock.utc_ns, clock.utc_ns + 10000, True, True,
+            22,
+            clock.utc_ns,
+            clock.utc_ns + 10000,
+            True,
+            True,
         ),
         discovery_slot=22,
         candidate_factory=factory,
@@ -222,6 +257,10 @@ def _attempt(tmp_path, *, with_authority=True):
     return store, orchestrator, request, rpc, holder
 
 
+def _scalar(store, sql):
+    return store.db.execute(sql).fetchone()[0]
+
+
 @pytest.mark.asyncio
 async def test_real_exact_attempt_binds_prepared_plan_before_qualified_handoff(tmp_path):
     store, orchestrator, request, rpc, holder = _attempt(tmp_path)
@@ -233,12 +272,19 @@ async def test_real_exact_attempt_binds_prepared_plan_before_qualified_handoff(t
         assert result.vertical.qualification.quote_net == 15000
         assert result.exact_fee.accepted
         validate_prepared_plan_hash(holder["candidate"], result.prepared_plan_hash)
-        payload = json.loads(store.db.execute("SELECT payload_json FROM pr02_intents WHERE intent_kind='paper_attempt'").fetchone()[0])
+        payload = json.loads(
+            _scalar(
+                store,
+                "SELECT payload_json FROM pr02_intents "
+                "WHERE intent_kind='paper_attempt'",
+            )
+        )
         assert payload["prepared_plan_hash"] == result.prepared_plan_hash
-        assert result.result_hash != replace(result, prepared_plan_hash="f" * 64).result_hash
+        changed = replace(result, prepared_plan_hash="f" * 64)
+        assert result.result_hash != changed.result_hash
         assert not result.sender_imported and not result.submission_allowed
         # A qualified exact handoff is deliberately not a committed success.
-        assert store.db.execute("SELECT COUNT(*) FROM pr02_terminal_records").fetchone()[0] == 0
+        assert _scalar(store, "SELECT COUNT(*) FROM pr02_terminal_records") == 0
     finally:
         store.close()
 
@@ -250,21 +296,34 @@ async def test_prepared_replay_and_drift_do_not_repeat_rpc_or_release_owner(tmp_
         first = await orchestrator.run(request)
         assert first.ready, first.blockers
         replay = await orchestrator.run(request)
-        assert replay.blockers == ("MPR2602_PREPARED_REPLAY_REQUIRES_RECONCILIATION",)
+        assert replay.blockers == (
+            "MPR2602_PREPARED_REPLAY_REQUIRES_RECONCILIATION",
+        )
         assert not replay.reservation_released
         original_factory = request.candidate_factory
 
         def changed_factory(reservation):
             prepared = original_factory(reservation)
-            leg = replace(prepared.request.leg_a, route_plan=({"label": "changed-route"},))
+            leg = replace(
+                prepared.request.leg_a,
+                route_plan=({"label": "changed-route"},),
+            )
             return replace(prepared, request=replace(prepared.request, leg_a=leg))
 
-        changed = await orchestrator.run(replace(request, candidate_factory=changed_factory))
+        changed = await orchestrator.run(
+            replace(request, candidate_factory=changed_factory)
+        )
         assert changed.blockers == ("MPR2602_PREPARED_AUTHORITY_CONFLICT",)
         assert not changed.reservation_released
         assert rpc.calls == 2
-        assert store.db.execute("SELECT state FROM durable_reservations").fetchone()[0] == "active"
-        assert store.db.execute("SELECT COUNT(*) FROM pr02_intents WHERE intent_kind='paper_attempt'").fetchone()[0] == 1
+        assert _scalar(store, "SELECT state FROM durable_reservations") == "active"
+        assert (
+            _scalar(
+                store,
+                "SELECT COUNT(*) FROM pr02_intents WHERE intent_kind='paper_attempt'",
+            )
+            == 1
+        )
     finally:
         store.close()
 
@@ -274,6 +333,7 @@ async def test_mutation_during_real_simulation_commits_one_atomic_rejection(tmp_
     store, orchestrator, request, rpc, holder = _attempt(tmp_path)
     mutated = []
     try:
+
         def mutate():
             holder["candidate"].request.leg_a.route_plan[0]["label"] = "changed-in-flight"
             mutated.append(True)
@@ -285,9 +345,16 @@ async def test_mutation_during_real_simulation_commits_one_atomic_rejection(tmp_
         assert result.reservation_released
         assert result.prepared_plan_hash
         assert result.exact_fee is None
-        assert store.db.execute("SELECT state FROM durable_reservations").fetchone()[0] == "released"
-        assert store.db.execute("SELECT COUNT(*) FROM pr02_terminal_records").fetchone()[0] == 1
-        assert store.db.execute("SELECT COUNT(*) FROM pr02_outbox_event WHERE topic='paper.attempt.terminal'").fetchone()[0] == 1
+        assert _scalar(store, "SELECT state FROM durable_reservations") == "released"
+        assert _scalar(store, "SELECT COUNT(*) FROM pr02_terminal_records") == 1
+        assert (
+            _scalar(
+                store,
+                "SELECT COUNT(*) FROM pr02_outbox_event "
+                "WHERE topic='paper.attempt.terminal'",
+            )
+            == 1
+        )
     finally:
         store.close()
 
@@ -300,6 +367,81 @@ async def test_raw_attempt_without_shared_authority_cannot_simulate(tmp_path):
         assert result.status is ExactAttemptStatus.VERTICAL_BLOCKED
         assert result.reservation_released
         assert rpc.calls == 0
-        assert store.db.execute("SELECT COUNT(*) FROM pr02_intents").fetchone()[0] == 0
+        assert _scalar(store, "SELECT COUNT(*) FROM pr02_intents") == 0
+    finally:
+        store.close()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("address", [RAW_VAULT, WALLET_TOKEN])
+@pytest.mark.parametrize("damage", ["lamports", "native_option", "rent"])
+async def test_native_principal_rejects_unbacked_or_changed_rent(address, damage):
+    vertical, candidate, _rpc = _wsol_vertical()
+    states = copy.deepcopy(list(candidate.pre_state_accounts))
+    index = _monitored(vertical, candidate).index(address)
+    account = states[index]
+    data = bytearray(base64.b64decode(account["data"][0]))
+    if damage == "lamports":
+        account["lamports"] += 1
+    elif damage == "native_option":
+        data[109:113] = bytes(4)
+    else:
+        data[113:121] = (RENT + 1).to_bytes(8, "little")
+        account["lamports"] += 1
+    account["data"] = [base64.b64encode(data).decode(), "base64"]
+    with pytest.raises(ValueError, match="wsol_|vault_configuration_changed"):
+        await vertical.run(replace(candidate, pre_state_accounts=tuple(states)))
+
+
+@pytest.mark.asyncio
+async def test_non_native_vault_rent_change_is_still_rejected():
+    vertical, candidate, _rpc = offline_vertical_fixture()
+    states = copy.deepcopy(list(candidate.pre_state_accounts))
+    index = _monitored(vertical, candidate).index(RAW_VAULT)
+    states[index]["lamports"] += 1
+    with pytest.raises(ValueError, match="unsupported_protocol_rent_change"):
+        await vertical.run(replace(candidate, pre_state_accounts=tuple(states)))
+
+
+@pytest.mark.asyncio
+async def test_final_fee_denial_has_one_atomic_terminal_and_release(tmp_path):
+    store, original, request, rpc, _holder = _attempt(tmp_path)
+    try:
+        orchestrator = ExactPaperAttemptOrchestrator(
+            coordinator=DurableCapitalCoordinator(
+                store=store.lifecycle,
+                policy=CapitalPolicy(
+                    protected_reserve_lamports=0,
+                    minimum_net_profit_lamports=19000,
+                    contingency_lamports=0,
+                ),
+            ),
+            vertical=original.vertical,
+            clock_ns=original.clock_ns,
+            authority=store,
+        )
+        request = replace(
+            request,
+            capital_candidate=replace(
+                request.capital_candidate,
+                native_costs=NativeCostBreakdown(base_network_fee_lamports=1),
+            ),
+        )
+        result = await orchestrator.run(request)
+        assert rpc.calls == 2
+        assert result.status is ExactAttemptStatus.FINAL_FEE_BLOCKED
+        assert result.reservation_released
+        assert result.prepared_plan_hash
+        assert not result.exact_fee.accepted
+        assert _scalar(store, "SELECT state FROM durable_reservations") == "released"
+        assert _scalar(store, "SELECT COUNT(*) FROM pr02_terminal_records") == 1
+        assert (
+            _scalar(
+                store,
+                "SELECT COUNT(*) FROM pr02_outbox_event "
+                "WHERE topic='paper.attempt.terminal'",
+            )
+            == 1
+        )
     finally:
         store.close()

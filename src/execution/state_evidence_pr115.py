@@ -19,7 +19,7 @@ from typing import Any, cast
 from .exact_simulation import ExactSimulationReport
 
 PR115_SCHEMA_VERSION = "pr115.simulation-owned-economic-proof.v2"
-PR115_DECODER_VERSION = "pr115.decoder.native-legacy-spl-marginfi-d4c70.v2"
+PR115_DECODER_VERSION = "pr115.decoder.native-legacy-spl-marginfi-d4c70-wsol.v3"
 SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
 SPL_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 TOKEN_2022_PROGRAM_ID = "TokenzQdBNbLqP5VEhdkAS6EPw1N1qEHxZC6kzNRQdB"
@@ -28,6 +28,7 @@ SPL_TOKEN_MINT_OFFSET = 0
 SPL_TOKEN_OWNER_OFFSET = 32
 SPL_TOKEN_AMOUNT_OFFSET = 64
 SPL_TOKEN_AMOUNT_LEN = 8
+_LEGACY_WSOL_MINT = "So11111111111111111111111111111111111111112"
 
 
 class PR115StateEvidenceError(ValueError):
@@ -360,7 +361,16 @@ def build_pr115_simulation_owned_economic_proof(
                 raise PR115StateEvidenceError(
                     PR115StateEvidenceCode.UNSUPPORTED_ACCOUNT_OWNER
                 )
-            token_deltas.append(_token_delta(pre, post))
+            token_delta = _token_delta(pre, post)
+            if (
+                repayment is not None
+                and repayment.mint == _LEGACY_WSOL_MINT
+                and token_delta.mint == _LEGACY_WSOL_MINT
+            ):
+                # The native-principal profile must prove wallet backing too;
+                # checking only the protocol vault could admit fictional profit.
+                _validate_wsol_backing(pre, post)
+            token_deltas.append(token_delta)
         elif post.owner == TOKEN_2022_PROGRAM_ID:
             raise PR115StateEvidenceError(PR115StateEvidenceCode.UNSUPPORTED_TOKEN_2022)
         elif (
@@ -467,7 +477,11 @@ def _decode_marginfi_repayment(
         "missing_account",
     )
     require(
-        all(pre[address].lamports == post[address].lamports for address in addresses),
+        all(
+            pre[address].lamports == post[address].lamports
+            for address in addresses
+            if address != context.vault
+        ),
         "unsupported_protocol_rent_change",
     )
 
@@ -589,6 +603,14 @@ def _decode_marginfi_repayment(
             ),
             "unsupported_vault_layout",
         )
+        if bank.mint == _LEGACY_WSOL_MINT:
+            require(bank.mint_decimals == 9, "native_mint_decimals_mismatch")
+            _validate_wsol_backing(pre[context.vault], post[context.vault])
+        else:
+            require(
+                pre[context.vault].lamports == post[context.vault].lamports,
+                "unsupported_protocol_rent_change",
+            )
         fee = ceil_i80f48_product(context.principal, bank.origination_fee_raw_i80f48)
         require(vaults[0].amount >= context.principal, "insufficient_vault_principal")
         require(vaults[1].amount - vaults[0].amount >= fee, "vault_fee_not_returned")
@@ -619,6 +641,41 @@ def _decode_marginfi_repayment(
         0,
         0,
     )
+
+
+def _validate_wsol_backing(
+    pre: PR115RawAccountSnapshot,
+    post: PR115RawAccountSnapshot,
+) -> None:
+    """Admit only stable, initialized, synchronized legacy native accounts.
+
+    WSOL token transfers move backing lamports, not the rent reserve. Donation,
+    unsynchronized balance, rent mutation, close/create and Token-2022 semantics
+    are outside this narrow first-cycle profile and remain fail closed.
+    """
+
+    from solders.pubkey import Pubkey
+
+    raw = (_decode_snapshot_data(pre), _decode_snapshot_data(post))
+    native_mint = bytes(Pubkey.from_string(_LEGACY_WSOL_MINT))
+    if any(
+        state.owner != SPL_TOKEN_PROGRAM_ID
+        or len(data) != SPL_TOKEN_ACCOUNT_LEN
+        or data[:32] != native_mint
+        or data[108] != 1
+        or int.from_bytes(data[109:113], "little") != 1
+        for state, data in zip((pre, post), raw)
+    ):
+        raise PR115StateEvidenceError("wsol_native_layout_invalid")
+    if raw[0][109:121] != raw[1][109:121]:
+        raise PR115StateEvidenceError("wsol_rent_reserve_changed")
+    for state, data in zip((pre, post), raw):
+        reserve = int.from_bytes(data[113:121], "little")
+        amount = int.from_bytes(data[64:72], "little")
+        if not (0 < reserve <= state.lamports < 2**64):
+            raise PR115StateEvidenceError("wsol_backing_invalid")
+        if state.lamports != reserve + amount:
+            raise PR115StateEvidenceError("wsol_backing_invalid")
 
 
 def _validate_expected_hashes(

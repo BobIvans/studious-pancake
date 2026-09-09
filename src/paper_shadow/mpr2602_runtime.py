@@ -166,9 +166,9 @@ def _semantic_value(value: Any) -> Any:
         return {"__mapping__": encoded_items}
 
     if isinstance(value, Set):
-        encoded = [_semantic_value(item) for item in value]
-        encoded.sort(key=canonical_json_bytes)
-        return {"__set__": encoded}
+        encoded_set = [_semantic_value(item) for item in value]
+        encoded_set.sort(key=canonical_json_bytes)
+        return {"__set__": encoded_set}
 
     if isinstance(value, Sequence):
         return [_semantic_value(item) for item in value]

@@ -11,7 +11,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from src.config.runtime import RuntimeConfig
 from src.durability.unified_authority_pr02 import UnifiedLifecycleAuthority
@@ -208,14 +208,17 @@ def build_core_v1_composition(
     if dependencies is None:
         # Even a blocked installed profile is physically composed through the
         # canonical production classes.  Its batch source prevents any RPC or
-        # capital effect until real external evidence is admitted.
+        # capital effect until real external evidence is admitted.  The cast is
+        # type-only: this blocked provider is never invoked and cannot satisfy
+        # admitted execution conformance on its own.
         pin = load_marginfi_contract_pin()
         marginfi = MarginfiFlashLoanProvider(pin)
+        blocked_marginfi = cast(VerifiedMarginfiProviderPort, marginfi)
         allowed_program_ids = tuple(
             dict.fromkeys((*config.allowlist.program_ids, pin.program_id))
         )
         planner = AtomicMarginfiJupiterPlanner(
-            marginfi,
+            blocked_marginfi,
             AtomicPlannerPolicy(allowed_program_ids=allowed_program_ids),
         )
         simulator = ExactSimulationFinalizer(

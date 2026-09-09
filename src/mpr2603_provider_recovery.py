@@ -1,7 +1,7 @@
 """Bounded MPR-2603 recovery consumer over the existing provider authority.
 
 This module does not create a second dependency controller, limiter, scheduler,
-or network client.  It binds an already-committed MPR-2603 recovery intent to a
+or network client. It binds an already-committed MPR-2603 recovery intent to a
 specific provider generation, durably accounts each physical probe attempt,
 executes the caller-supplied governed probe outside the SQLite writer lock, and
 lets the existing :class:`DependencyController` own the resulting state.
@@ -9,7 +9,7 @@ lets the existing :class:`DependencyController` own the resulting state.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from datetime import datetime, timezone
 import sqlite3
 from typing import Awaitable, Callable
@@ -97,11 +97,7 @@ def bind_provider_recovery(
     db: sqlite3.Connection,
     binding: ProviderRecoveryBinding,
 ) -> None:
-    """Bind an existing atomic recovery intent to exact provider scope.
-
-    The caller owns the transaction.  The referenced intent must still be the
-    ``recovery_pending`` intent emitted by the human mutation boundary.
-    """
+    """Bind an existing atomic recovery intent to exact provider scope."""
 
     row = db.execute(
         "SELECT status FROM mpr2603_recovery_intents WHERE intent_id=?",
@@ -150,13 +146,7 @@ async def run_authorized_recovery_probe(
     current_utc: str,
     probe: Probe,
 ) -> ProviderRecoveryResult:
-    """Execute exactly one durably-accounted governed health probe.
-
-    Claim/accounting occurs before the external await.  Therefore cancellation,
-    timeout, or process death after claim never refunds an attempt.  The probe
-    is outside the SQLite writer lock.  A positive probe only recovers the exact
-    bound generation and never widens any trading/live capability.
-    """
+    """Execute exactly one durably-accounted, generation-bound health probe."""
 
     now = _parse_utc(current_utc)
     db.execute("BEGIN IMMEDIATE")
@@ -232,11 +222,17 @@ async def run_authorized_recovery_probe(
         db.execute("COMMIT")
 
     try:
-        await controller.assert_admissible(
-            provider_id,
-            generation,
-            ProviderOperation.HEALTH_PROBE,
-        )
+        # A disabled dependency deliberately rejects ordinary operations in the
+        # existing controller. The MPR-2603 permit is the narrow authority that
+        # allows exactly HEALTH_PROBE for the bound generation; no other
+        # operation bypasses DependencyController.assert_admissible().
+        snapshot = controller.peek(provider_id, generation)
+        if snapshot.mode is not DependencyMode.DISABLED:
+            await controller.assert_admissible(
+                provider_id,
+                generation,
+                ProviderOperation.HEALTH_PROBE,
+            )
         succeeded = bool(await probe(provider_id, generation))
     except BaseException:
         _finish_attempt(
@@ -301,13 +297,7 @@ async def _record_authorized_probe_success(
     provider_id: str,
     generation: str,
 ) -> None:
-    """Use the existing controller state owner for authorized disabled recovery.
-
-    ``DependencyController.record_success`` intentionally refuses to recover a
-    DISABLED dependency without a human authority.  This adapter is that narrow
-    authority: it reuses the controller's own lock/persistence boundary and
-    changes only the same exact generation after the MPR-2603 permit path.
-    """
+    """Recover only the exact generation through the existing controller owner."""
 
     snapshot = controller.peek(provider_id, generation)
     if snapshot.generation != generation:
@@ -355,18 +345,22 @@ def _finish_attempt(
             (current_utc, outcome, reason, intent_id, attempt_number),
         )
         if cur.rowcount != 1:
-            raise ProviderRecoveryError("MPR2603_RECOVERY_ATTEMPT_COMPLETION_CONFLICT")
+            raise ProviderRecoveryError(
+                "MPR2603_RECOVERY_ATTEMPT_COMPLETION_CONFLICT"
+            )
         if recovered:
             db.execute(
                 "UPDATE mpr2603_provider_recovery_bindings "
                 "SET status='recovered',last_reason=? WHERE intent_id=?",
                 (reason, intent_id),
             )
-            db.execute(
-                "UPDATE mpr2603_recovery_intents SET status='completed' WHERE intent_id=? "
-                "AND status='recovery_pending'",
+            cur = db.execute(
+                "UPDATE mpr2603_recovery_intents SET status='completed' "
+                "WHERE intent_id=? AND status='recovery_pending'",
                 (intent_id,),
             )
+            if cur.rowcount != 1:
+                raise ProviderRecoveryError("MPR2603_RECOVERY_INTENT_CHANGED")
         else:
             db.execute(
                 "UPDATE mpr2603_provider_recovery_bindings SET last_reason=? "

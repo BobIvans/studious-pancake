@@ -18,8 +18,14 @@ from src.durability import AttemptKey
 from src.economics.capital import CapitalCandidate
 from src.economics.durable_reservations import WalletBalanceSnapshot
 from src.paper_shadow.a2_exact_attempt_runtime import ExactAttemptRuntimeItem
-from src.paper_shadow.durable_service_a3 import A3ExactAttemptBatch, A3ProviderEvidenceState
-from src.paper_shadow.exact_attempt_pr152 import ExactAttemptRequest, ProviderExecutionEvidence
+from src.paper_shadow.durable_service_a3 import (
+    A3ExactAttemptBatch,
+    A3ProviderEvidenceState,
+)
+from src.paper_shadow.exact_attempt_pr152 import (
+    ExactAttemptRequest,
+    ProviderExecutionEvidence,
+)
 from src.paper_shadow.atomic_vertical import AtomicVerticalCandidate
 from src.planning.atomic_marginfi_jupiter import CapitalReservationEvidence
 
@@ -260,7 +266,9 @@ class CoreV1MaterializedBatchSource:
         if len(drafts) > self.max_items:
             reason = "CORE_V1_BATCH_LIMIT_EXCEEDED"
             return A3ExactAttemptBatch(
-                A3ProviderEvidenceState(_hash_json({"reason": reason}), False, (reason,))
+                A3ProviderEvidenceState(
+                    _hash_json({"reason": reason}), False, (reason,)
+                )
             )
         if not drafts:
             # An admitted, healthy producer with zero opportunities is NO_TRADE.

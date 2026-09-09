@@ -201,10 +201,12 @@ class SSHOperatorVerifier:
         *,
         signature: bytes,
         current_utc: str,
-        required_roles: frozenset[str] | None = None,
+        required_roles: frozenset[str],
     ) -> VerifiedApproval:
         if not signature or len(signature) > 32 * 1024:
             raise OperatorVerificationError("signature missing or too large")
+        if not required_roles:
+            raise OperatorVerificationError("MPR2603_REQUIRED_ROLE_POLICY_MISSING")
         if decision.trust_epoch != self.registry.trust_epoch:
             raise OperatorVerificationError("MPR2603_TRUST_EPOCH_CHANGED")
         principal = self.registry.by_principal(decision.principal_id)
@@ -212,7 +214,7 @@ class SSHOperatorVerifier:
             raise OperatorVerificationError("MPR2603_PRINCIPAL_REVOKED")
         if principal.credential_id != decision.credential_id:
             raise OperatorVerificationError("MPR2603_CREDENTIAL_MISMATCH")
-        if required_roles and not required_roles.intersection(principal.roles):
+        if not required_roles.intersection(principal.roles):
             raise OperatorVerificationError("MPR2603_REQUIRED_ROLE_MISSING")
         now = _parse_utc(current_utc)
         signed_at = _parse_utc(decision.signed_at_utc)

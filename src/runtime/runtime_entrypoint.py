@@ -40,6 +40,9 @@ _SUCCESS = frozenset(
     }
 )
 
+_INSTALLED_EXTERNAL_BLOCKER = "blocked_a3_b3_provider_evidence_missing"
+_INSTALLED_EXTERNAL_REASON = "BLOCKED_EXTERNAL"
+
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(add_help=False)
@@ -80,6 +83,11 @@ def _float(environment: dict[str, str], name: str, default: str) -> float:
 
 def _print_report(report: InstalledDurablePaperServiceReport, *, as_json: bool) -> None:
     payload = report.to_dict()
+    if (
+        report.source_surface == "installed-cli"
+        and payload.get("terminal_reason") == _INSTALLED_EXTERNAL_BLOCKER
+    ):
+        payload["terminal_reason"] = _INSTALLED_EXTERNAL_REASON
     if as_json:
         print(json.dumps(payload, sort_keys=True))
         return

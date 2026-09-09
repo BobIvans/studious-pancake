@@ -709,6 +709,252 @@
           }
         }
       }
+    },
+    {
+      "boundary_class": "configuration",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 65536,
+      "max_depth": 12,
+      "max_integer_abs": 9007199254740991,
+      "max_list_items": 64,
+      "max_nodes": 10000,
+      "max_string_length": 2048,
+      "owner_module": "src.provider_governance.profile",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "connections": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "credential": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "env_name": {
+                          "pattern": "^[A-Z][A-Z0-9_]{0,127}$",
+                          "type": "string"
+                        },
+                        "generation": {
+                          "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                          "type": "string"
+                        },
+                        "ref": {
+                          "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ref",
+                        "generation",
+                        "env_name"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "endpoint": {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                "entitlement": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "cost_unit_limit": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "expires_at_epoch_seconds": {
+                          "maximum": 9999999999,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "generation": {
+                          "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                          "type": "string"
+                        },
+                        "max_concurrency": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "operations": {
+                          "items": {
+                            "enum": [
+                              "discovery",
+                              "refinement",
+                              "finalization",
+                              "backfill",
+                              "health_probe"
+                            ],
+                            "type": "string"
+                          },
+                          "maxItems": 32,
+                          "minItems": 1,
+                          "type": "array",
+                          "uniqueItems": true
+                        },
+                        "request_limit": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "spend_limit_micros": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "spend_window_seconds": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "window_seconds": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "generation",
+                        "operations",
+                        "window_seconds",
+                        "request_limit",
+                        "cost_unit_limit",
+                        "spend_limit_micros",
+                        "max_concurrency",
+                        "expires_at_epoch_seconds",
+                        "spend_window_seconds"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                },
+                "http_methods": {
+                  "items": {
+                    "enum": [
+                      "GET",
+                      "POST"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "kind": {
+                  "enum": [
+                    "outbound_rest",
+                    "outbound_rpc",
+                    "inbound_webhook"
+                  ]
+                },
+                "provider_id": {
+                  "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                  "type": "string"
+                },
+                "query_parameters": {
+                  "items": {
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "quota_pool_ref": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "review_ref": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "reviewed": {
+                  "type": "boolean"
+                },
+                "rpc_methods": {
+                  "items": {
+                    "enum": [
+                      "simulateTransaction",
+                      "getMultipleAccounts",
+                      "getLatestBlockhash",
+                      "isBlockhashValid",
+                      "getBlockHeight",
+                      "getFeeForMessage",
+                      "getGenesisHash",
+                      "getSlot",
+                      "getTransaction"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array",
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "provider_id",
+                "kind",
+                "enabled",
+                "reviewed",
+                "review_ref",
+                "endpoint",
+                "credential",
+                "entitlement",
+                "http_methods",
+                "rpc_methods",
+                "query_parameters",
+                "quota_pool_ref"
+              ],
+              "type": "object"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "mpr2602.connections.v1"
+          }
+        },
+        "required": [
+          "schema_version",
+          "connections"
+        ],
+        "type": "object"
+      },
+      "schema_id": "mpr2602.connections.v1",
+      "status": "active",
+      "unknown_fields": "reject",
+      "validation_mode": "json-schema"
     }
   ]
 }

@@ -9,10 +9,16 @@ therefore remains fail-closed instead of being fabricated from discovery data.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+import asyncio
+from collections import OrderedDict
+from dataclasses import dataclass, field, fields
+import hashlib
+import json
+import math
+import time
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Any, Mapping, Protocol, cast
+from typing import Any, Callable, Mapping, Protocol, cast
 
 from src.paper_shadow.atomic_vertical import (
     AtomicPlannerSimulationReconciliationVertical,
@@ -33,6 +39,8 @@ class AtomicRuntimeStageErrorCode(StrEnum):
     INVALID_PROVIDER_PIN = "pr075_invalid_provider_pin"
     WRONG_STAGE_ORDER = "pr075_wrong_stage_order"
     MESSAGE_HASH_DRIFT = "pr075_message_hash_drift"
+    CACHE_EXPIRED = "pr075_cache_expired"
+    CAPACITY_EXCEEDED = "pr075_capacity_exceeded"
 
 
 class AtomicRuntimeStageError(RuntimeError):
@@ -114,6 +122,10 @@ class AtomicVerticalStageRecord:
 
     inputs: AtomicVerticalRuntimeInputs
     result: AtomicVerticalResult
+    identity: str = ""
+    started_at_monotonic: float = 0.0
+    finished_at_monotonic: float = 0.0
+    expires_at_monotonic: float = 0.0
 
 
 class AtomicVerticalRuntimeStageSuite:
@@ -130,10 +142,24 @@ class AtomicVerticalRuntimeStageSuite:
         *,
         adapter: AtomicVerticalCandidateAdapter,
         vertical: AtomicPlannerSimulationReconciliationVertical,
+        generation: str = "default",
+        max_records: int = 128,
+        max_age_seconds: float = 30.0,
+        monotonic: Callable[[], float] = time.monotonic,
     ) -> None:
         self.adapter = adapter
         self.vertical = vertical
-        self._records: dict[str, AtomicVerticalStageRecord] = {}
+        if not generation or isinstance(max_records, bool) or max_records < 1:
+            raise ValueError("generation and positive cache capacity required")
+        if not math.isfinite(max_age_seconds) or max_age_seconds <= 0:
+            raise ValueError("positive finite cache retention required")
+        self.generation = generation
+        self.max_records = max_records
+        self.max_age_seconds = max_age_seconds
+        self._monotonic = monotonic
+        self._records: OrderedDict[str, AtomicVerticalStageRecord] = OrderedDict()
+        self._lock = asyncio.Lock()
+        self._waiting = 0
 
     def stage_handlers(self) -> dict[PaperShadowStageName, PaperShadowStage]:
         """Return handlers that can be passed to ``PaperShadowRunner``."""
@@ -152,6 +178,7 @@ class AtomicVerticalRuntimeStageSuite:
         record = await self._ensure_record(context)
         return {
             "schema_version": "pr075.atomic-runtime-stage.capital-sizing.v1",
+            **self._execution_metadata(record, projection=False),
             "capital_reservation_id": record.inputs.capital_reservation_id,
             "durable_trace_id": record.inputs.durable_trace_id,
             "account_evidence_hash": record.inputs.account_evidence_hash,
@@ -168,6 +195,7 @@ class AtomicVerticalRuntimeStageSuite:
         trace = record.result.trace
         return {
             "schema_version": "pr075.atomic-runtime-stage.planner.v1",
+            **self._execution_metadata(record),
             "opportunity_id": trace.opportunity_id,
             "planner_digest": trace.planner_digest,
             "sequence_fingerprint": trace.sequence_fingerprint,
@@ -192,6 +220,7 @@ class AtomicVerticalRuntimeStageSuite:
         diagnostics = compiled.diagnostics
         return {
             "schema_version": "pr075.atomic-runtime-stage.compiler.v1",
+            **self._execution_metadata(record),
             "message_hash": trace.message_hash,
             "compiled_message_hash": compiled.message_hash,
             "wire_size": diagnostics.wire_size,
@@ -221,6 +250,7 @@ class AtomicVerticalRuntimeStageSuite:
         )
         return {
             "schema_version": "pr075.atomic-runtime-stage.final-simulation.v1",
+            **self._execution_metadata(record),
             "message_hash": trace.message_hash,
             "provisional_response_hash": trace.provisional_response_hash,
             "final_response_hash": trace.final_response_hash,
@@ -252,6 +282,7 @@ class AtomicVerticalRuntimeStageSuite:
         )
         return {
             "schema_version": "pr075.atomic-runtime-stage.reconciliation.v1",
+            **self._execution_metadata(record),
             "message_hash": trace.message_hash,
             "reconciliation_hash": trace.reconciliation_hash,
             "reconciliation_status": trace.reconciliation_status,
@@ -266,13 +297,107 @@ class AtomicVerticalRuntimeStageSuite:
     async def _ensure_record(
         self, context: PaperShadowStageContext
     ) -> AtomicVerticalStageRecord:
-        key = context.opportunity.opportunity_id
-        if key not in self._records:
-            inputs = self.adapter.build(context)
-            result = await self.vertical.run(inputs.candidate)
-            self._validate_result(inputs, result)
-            self._records[key] = AtomicVerticalStageRecord(inputs=inputs, result=result)
-        return self._records[key]
+        key = self._cache_identity(context)
+        if self._waiting >= self.max_records:
+            raise AtomicRuntimeStageError(
+                AtomicRuntimeStageErrorCode.CAPACITY_EXCEEDED,
+                "atomic adapter capacity reached",
+            )
+        self._waiting += 1
+        try:
+            # This compatibility suite intentionally serializes vertical work;
+            # it owns no background tasks or second durable runtime.
+            async with self._lock:
+                now = self._monotonic()
+                for identity, cached_record in tuple(self._records.items()):
+                    if now >= cached_record.expires_at_monotonic:
+                        del self._records[identity]
+                record = self._records.get(key)
+                if context.stage is not PaperShadowStageName.CAPITAL_SIZING:
+                    prior = context.previous_outputs.get(
+                        PaperShadowStageName.CAPITAL_SIZING.value, {}
+                    )
+                    if record is None or prior.get("atomic_execution_identity") != key:
+                        raise AtomicRuntimeStageError(
+                            AtomicRuntimeStageErrorCode.CACHE_EXPIRED,
+                            "atomic execution expired or context changed; restart the candidate",
+                        )
+                if record is None:
+                    started = self._monotonic()
+                    inputs = self.adapter.build(context)
+                    result = await self.vertical.run(inputs.candidate)
+                    self._validate_result(inputs, result)
+                    finished = self._monotonic()
+                    retention = min(
+                        self.max_age_seconds,
+                        context.opportunity.expires_at
+                        - context.opportunity.detected_at,
+                    )
+                    if finished < started or finished >= started + retention:
+                        raise AtomicRuntimeStageError(
+                            AtomicRuntimeStageErrorCode.CACHE_EXPIRED,
+                            "atomic execution exceeded its retention budget",
+                        )
+                    record = AtomicVerticalStageRecord(
+                        inputs, result, key, started, finished, started + retention
+                    )
+                    while len(self._records) >= self.max_records:
+                        self._records.popitem(last=False)
+                    self._records[key] = record
+                else:
+                    self._records.move_to_end(key)
+                return record
+        finally:
+            self._waiting -= 1
+
+    def _cache_identity(self, context: PaperShadowStageContext) -> str:
+        owned_stages = {stage.value for stage in self.stage_handlers()}
+        payload = {
+            "generation": self.generation,
+            "run_id": context.run_id,
+            "opportunity": {
+                item.name: getattr(context.opportunity, item.name)
+                for item in fields(context.opportunity)
+            },
+            "upstream": {
+                name: output
+                for name, output in context.previous_outputs.items()
+                if name not in owned_stages
+            },
+        }
+
+        def plain(value: Any) -> Any:
+            if isinstance(value, Mapping):
+                return {key: plain(item) for key, item in value.items()}
+            if isinstance(value, (tuple, list)):
+                return [plain(item) for item in value]
+            return value
+
+        try:
+            encoded = json.dumps(
+                plain(payload), sort_keys=True, separators=(",", ":"), allow_nan=False
+            ).encode()
+        except (ValueError, TypeError) as exc:
+            raise AtomicRuntimeStageError(
+                AtomicRuntimeStageErrorCode.MISSING_RUNTIME_INPUTS,
+                "context has no canonical semantic identity",
+            ) from exc
+        return hashlib.sha256(encoded).hexdigest()
+
+    @staticmethod
+    def _execution_metadata(
+        record: AtomicVerticalStageRecord, *, projection: bool = True
+    ) -> dict[str, Any]:
+        out: dict[str, Any] = {
+            "atomic_execution_identity": record.identity,
+            "execution_scope": "full_atomic_vertical",
+            "stage_output_is_projection": projection,
+        }
+        if not projection:
+            out["full_vertical_duration_seconds"] = (
+                record.finished_at_monotonic - record.started_at_monotonic
+            )
+        return out
 
     def _validate_result(
         self,

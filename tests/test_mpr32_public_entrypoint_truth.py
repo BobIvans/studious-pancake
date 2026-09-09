@@ -13,6 +13,7 @@ BASE_ENTRYPOINTS = {
     "flashloan-bot": "src.cli_pr189:main",
     "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
     "flashloan-checks": "src.automation_cli_pr189:main",
+    "flashloan-connections": "src.provider_governance.cli:main",
     "flashloan-contracts": "src.external_contracts.cli_pr189:main",
     "flashloan-external-resources": "src.external_resources.cli:main",
     "flashloan-release-evidence": "src.release_gate.materialized_evidence:main",

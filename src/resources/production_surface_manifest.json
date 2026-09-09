@@ -25,6 +25,7 @@
     "flashloan-bot": "src.cli_pr189:main",
     "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
     "flashloan-checks": "src.automation_cli_pr189:main",
+    "flashloan-connections": "src.provider_governance.cli:main",
     "flashloan-contracts": "src.external_contracts.cli_pr189:main",
     "flashloan-external-resources": "src.external_resources.cli:main",
     "flashloan-release-evidence": "src.release_gate.materialized_evidence:main"
@@ -136,6 +137,19 @@
       "id": "PR194_MPR4X01_RELEASE_IDENTITY",
       "module": "src.release.identity",
       "wheel_member": "src/release/identity.py"
+    },
+    {
+      "category": "external_connection_configuration",
+      "entrypoint": "flashloan-connections",
+      "id": "PR194_MPR2602_OFFLINE_CONNECTION_PROFILE_CLI",
+      "module": "src.provider_governance.cli",
+      "wheel_member": "src/provider_governance/cli.py"
+    },
+    {
+      "category": "external_connection_configuration",
+      "id": "PR194_MPR2602_CONNECTION_PROFILE_LOADER",
+      "module": "src.provider_governance.profile",
+      "wheel_member": "src/provider_governance/profile.py"
     }
   ],
   "required_wheel_members": [
@@ -152,6 +166,8 @@
     "src/external_resources/cli.py",
     "src/pr206_durable_state.py",
     "src/production_surface.py",
+    "src/provider_governance/cli.py",
+    "src/provider_governance/profile.py",
     "src/release/identity.py",
     "src/release_gate/materialized_evidence.py",
     "src/resources/architecture_reachability.json",

@@ -184,3 +184,16 @@ def test_mpr2610_nonfinalized_and_unproven_repayment_quarantine() -> None:
         "FINALIZED_EVIDENCE_REQUIRED",
         "MARGINFI_REPAYMENT_NOT_PROVEN",
     }
+
+
+def test_mpr2610_reordered_postings_replay_to_same_ledger_hash() -> None:
+    fee = _posting("a-fee", SOL_ASSET_ID, -5_000, PostingKind.NETWORK_FEE)
+    gain = _posting("b-gain", "spl:USDC:6", 30_000, PostingKind.STRATEGY_ASSET_DELTA)
+
+    first = classify_finalized_economics(_input(fee, gain))
+    replay = classify_finalized_economics(_input(gain, fee))
+
+    assert first.outcome is FinalizedEconomicOutcome.FINALIZED_REALIZED_PARTIAL
+    assert replay.outcome is first.outcome
+    assert replay.per_asset_delta == first.per_asset_delta
+    assert replay.ledger_hash == first.ledger_hash

@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from tests.provider_governance_fixtures import reviewed_registry, reviewed_manifests
 
 from src.providers.jupiter.quota import JupiterQuotaManager
 from src.routing.clients import JupiterRouterAdapter
@@ -62,7 +63,7 @@ async def test_jupiter_discovery_uses_shared_pr031_quota() -> None:
         transport=transport,
         jupiter_quota=quota,
     )
-    plane = DiscoveryPlane(ProviderRegistry((adapter,)))
+    plane = DiscoveryPlane(reviewed_registry((adapter,)))
 
     first = await plane.discover(request())
     second = await plane.discover(request())

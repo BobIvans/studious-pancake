@@ -2,6 +2,7 @@ from __future__ import annotations
 from dataclasses import replace
 from datetime import datetime, timezone, timedelta
 import pytest
+from tests.provider_governance_fixtures import reviewed_registry, reviewed_manifests
 from src.routing import *
 from src.routing.adapters import OkxAuth
 from src.routing.limiter import FakeClock
@@ -24,7 +25,9 @@ def test_capability_boundary_blocks_assembled_and_quote_only():
 
 
 def test_registry_roles_and_missing_credentials_are_isolated():
-    report = ProviderRegistry.from_env({}).startup_report()
+    report = ProviderRegistry.from_env(
+        {}, reviewed_entitlements=reviewed_manifests()
+    ).startup_report()
     states = {r["provider"]: r["state"] for r in report}
     assert states == {
         "jupiter_router": "ready",
@@ -131,7 +134,7 @@ def test_openocean_missing_key_limiter_unknown_fee_and_dedupe():
         route_provenance=jup.route_provenance,
         artifact_kind=ExecutionArtifactKind.NONE,
     )
-    res = RouteDiscoveryService(ProviderRegistry(())).classify(
+    res = RouteDiscoveryService(reviewed_registry(())).classify(
         (jup, oo2), now=clock.now()
     )
     assert (
@@ -167,7 +170,7 @@ def test_okx_normalization_is_discovery_only_until_promotion_gate():
     }
     q = adapter.normalize(req(), payload)
     assert q.artifact_kind is ExecutionArtifactKind.RAW_INSTRUCTIONS
-    res = RouteDiscoveryService(ProviderRegistry(())).classify((q,))
+    res = RouteDiscoveryService(reviewed_registry(())).classify((q,))
     assert (
         not res.executable_candidates
         and res.non_selection_reasons[q.external_id]
@@ -232,7 +235,7 @@ def test_selection_uses_conservative_net_not_raw_out():
             "requestId": "b",
         },
     )
-    sel = RouteDiscoveryService(ProviderRegistry(())).select_executable(
+    sel = RouteDiscoveryService(reviewed_registry(())).select_executable(
         (replace(a, conservative_net_result=10), replace(b, conservative_net_result=20))
     )
     assert sel.selected.external_id == "b"

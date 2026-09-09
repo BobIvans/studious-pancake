@@ -328,13 +328,20 @@ class UnifiedLifecycleAuthority:
                 release_id=self.release_digest,
                 legacy_migrations_sha256=legacy_digest,
             )
+            base_migration = self.db.execute(
+                "SELECT applied_schema_sha256 FROM migration_ledger_pr195 "
+                "WHERE migration_id=?",
+                (PR02_SCHEMA_VERSION,),
+            ).fetchone()
             authority.append_migration(
                 self.db,
                 migration_id=PR02_SCHEMA_VERSION,
                 from_epoch=0,
                 to_epoch=PR02_DATABASE_EPOCH,
                 script_sha256=hashlib.sha256(_SCHEMA.encode()).hexdigest(),
-                applied_schema_sha256=manifest.sha256,
+                applied_schema_sha256=(
+                    manifest.sha256 if base_migration is None else base_migration[0]
+                ),
                 release_id=self.release_digest,
                 fence=fence,
             )
@@ -349,6 +356,46 @@ class UnifiedLifecycleAuthority:
             raise UnifiedAuthorityError(str(exc)) from exc
         if identity.product_id != PR02_PRODUCT_ID:
             raise UnifiedAuthorityError("PR02_FOREIGN_DATABASE_PRODUCT")
+
+    def install_provider_governance_schema(self) -> None:
+        """Provider obligations share this product, connection and migration owner."""
+        statements = (
+            "CREATE TABLE pr02_provider_state (pool TEXT PRIMARY KEY, "
+            "revision INTEGER NOT NULL CHECK(revision>=0), payload TEXT NOT NULL, "
+            "payload_hash TEXT NOT NULL)",
+            "CREATE TABLE pr02_provider_attempts (attempt_id TEXT PRIMARY KEY, "
+            "pool TEXT NOT NULL REFERENCES pr02_provider_state(pool), "
+            "semantic_hash TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN "
+            "('reserved','issued','completed','released','expired','outcome_unknown')), "
+            "payload TEXT NOT NULL, completion_hash TEXT)",
+            "CREATE INDEX pr02_provider_attempts_pool ON pr02_provider_attempts(pool,state)",
+        )
+        with self.lifecycle.write_transaction():
+            manifest = canonical_schema_manifest(self.db)
+            authority = DatabaseSchemaAuthority(
+                DatabaseProductSpec(
+                    product_id=PR02_PRODUCT_ID,
+                    schema_family=PR02_SCHEMA_VERSION,
+                    application_schema_version=PR02_APPLICATION_SCHEMA_VERSION,
+                    current_epoch=PR02_DATABASE_EPOCH,
+                    reader_min_epoch=PR02_DATABASE_EPOCH,
+                    reader_max_epoch=PR02_DATABASE_EPOCH,
+                    writer_min_epoch=PR02_DATABASE_EPOCH,
+                    writer_max_epoch=PR02_DATABASE_EPOCH,
+                    expected_schema_manifest_sha256=manifest.sha256,
+                ),
+                now_utc_ns=lambda: self._snapshot().utc_ns,
+            )
+            authority.apply_additive_migration(
+                self.db,
+                migration_id="mpr2602.provider-obligations.v1",
+                statements=statements,
+                owner_id=self.owner_id + ":provider-migration",
+                release_id=self.release_digest,
+                environment=self.environment,
+                cluster_genesis=self.cluster_genesis,
+                legacy_migrations_sha256=self._legacy_migrations_digest(),
+            )
 
     def _legacy_migrations_digest(self) -> str:
         rows = self.db.execute(

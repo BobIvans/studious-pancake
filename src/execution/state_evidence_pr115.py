@@ -10,7 +10,7 @@ from __future__ import annotations
 import base64
 import binascii
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from enum import StrEnum
 import hashlib
 import json
@@ -18,8 +18,8 @@ from typing import Any, cast
 
 from .exact_simulation import ExactSimulationReport
 
-PR115_SCHEMA_VERSION = "pr115.simulation-owned-economic-proof.v1"
-PR115_DECODER_VERSION = "pr115.decoder.native-and-legacy-spl.v1"
+PR115_SCHEMA_VERSION = "pr115.simulation-owned-economic-proof.v2"
+PR115_DECODER_VERSION = "pr115.decoder.native-legacy-spl-marginfi-d4c70.v2"
 SYSTEM_PROGRAM_ID = "11111111111111111111111111111111"
 SPL_TOKEN_PROGRAM_ID = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 TOKEN_2022_PROGRAM_ID = "TokenzQdBNbLqP5VEhdkAS6EPw1N1qEHxZC6kzNRQdB"
@@ -52,6 +52,65 @@ class PR115StateEvidenceCode(StrEnum):
 
 
 @dataclass(frozen=True, slots=True)
+class PR115MarginfiDecodePolicy:
+    """Planner-bound first-cycle context; source-derived offline scope only."""
+
+    source_commit: str
+    layout_sha256: str
+    margin_account: str
+    group: str
+    authority: str
+    bank: str
+    vault: str
+    principal: int
+
+
+@dataclass(frozen=True, slots=True)
+class PR115MarginfiRepaymentState:
+    """Narrow raw-state invariants, requiring separate atomic-message proof.
+
+    Zero shares and vault movement alone do not prove borrow/swap execution.
+    This is not deployed protocol qualification or realized settlement.
+    """
+
+    source_commit: str
+    layout_sha256: str
+    margin_account: str
+    bank: str
+    vault: str
+    mint: str
+    principal: int
+    conservative_fee_amount: int
+    pre_flags: int
+    post_flags: int
+    post_target_asset_shares: int
+    post_target_liability_shares: int
+    pre_vault_amount: int
+    post_vault_amount: int
+    pre_margin_raw_hash: str
+    post_margin_raw_hash: str
+    pre_bank_raw_hash: str
+    post_bank_raw_hash: str
+    program_id: str
+    token_program: str
+    mint_decimals: int
+    pre_target_asset_shares: int
+    pre_target_liability_shares: int
+
+
+@dataclass(frozen=True, slots=True)
+class PR115ReadonlyAccountBinding:
+    """Approved non-economic input retained byte-for-byte across simulation.
+
+    This preserves raw oracle inputs, not an oracle price interpretation.
+    """
+
+    address: str
+    owner: str
+    raw_sha256: str
+
+
+@dataclass(frozen=True, slots=True)
 class PR115DecodePolicy:
     """Strict decoder policy for simulation-owned evidence."""
 
@@ -60,6 +119,8 @@ class PR115DecodePolicy:
     allow_token_2022_accounts: bool = False
     allow_marginfi_accounts: bool = False
     max_account_data_bytes: int = 4096
+    marginfi: PR115MarginfiDecodePolicy | None = None
+    readonly_accounts: tuple[PR115ReadonlyAccountBinding, ...] = ()
 
     def __post_init__(self) -> None:
         if self.max_account_data_bytes <= 0:
@@ -128,6 +189,8 @@ class PR115TokenAccountDelta:
     delta_amount: int
     pre_raw_hash: str
     post_raw_hash: str
+    mint: str = ""
+    authority: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -139,6 +202,8 @@ class PR115TokenAccountDelta:
             "delta_amount": self.delta_amount,
             "pre_raw_hash": self.pre_raw_hash,
             "post_raw_hash": self.post_raw_hash,
+            "mint": self.mint,
+            "authority": self.authority,
         }
 
 
@@ -161,6 +226,7 @@ class PR115SimulationOwnedEconomicProof:
     raw_evidence_hash: str
     native_deltas: tuple[PR115NativeLamportDelta, ...]
     token_deltas: tuple[PR115TokenAccountDelta, ...]
+    marginfi_repayment: PR115MarginfiRepaymentState | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -179,6 +245,11 @@ class PR115SimulationOwnedEconomicProof:
             "raw_evidence_hash": self.raw_evidence_hash,
             "native_deltas": [item.to_dict() for item in self.native_deltas],
             "token_deltas": [item.to_dict() for item in self.token_deltas],
+            "marginfi_repayment": (
+                None
+                if self.marginfi_repayment is None
+                else asdict(self.marginfi_repayment)
+            ),
         }
 
 
@@ -257,6 +328,25 @@ def build_pr115_simulation_owned_economic_proof(
         for index, (address, account) in enumerate(zip(addresses, post_state_accounts))
     )
     _validate_expected_hashes(expected_post_account_hashes, post_snapshots)
+    readonly = {item.address: item for item in active_policy.readonly_accounts}
+    if len(readonly) != len(active_policy.readonly_accounts):
+        raise PR115StateEvidenceError("duplicate_readonly_account")
+    if not set(readonly).issubset(addresses):
+        raise PR115StateEvidenceError("missing_readonly_account")
+    for pre, post in zip(pre_snapshots, post_snapshots):
+        binding = readonly.get(post.address)
+        if binding is not None and not (
+            pre.owner == post.owner == binding.owner
+            and pre.raw_hash == post.raw_hash == binding.raw_sha256
+        ):
+            raise PR115StateEvidenceError("readonly_account_changed")
+    repayment = (
+        None
+        if active_policy.marginfi is None
+        else _decode_marginfi_repayment(
+            pre_snapshots, post_snapshots, active_policy.marginfi
+        )
+    )
 
     native_deltas: list[PR115NativeLamportDelta] = []
     token_deltas: list[PR115TokenAccountDelta] = []
@@ -273,6 +363,19 @@ def build_pr115_simulation_owned_economic_proof(
             token_deltas.append(_token_delta(pre, post))
         elif post.owner == TOKEN_2022_PROGRAM_ID:
             raise PR115StateEvidenceError(PR115StateEvidenceCode.UNSUPPORTED_TOKEN_2022)
+        elif (
+            repayment is not None
+            and active_policy.marginfi is not None
+            and post.address
+            in {
+                active_policy.marginfi.margin_account,
+                active_policy.marginfi.bank,
+                active_policy.marginfi.group,
+            }
+        ):
+            pass  # Already decoded and identity checked by the narrow protocol owner.
+        elif post.address in readonly:
+            pass  # Exact raw preservation, never interpreted as money or price.
         else:
             raise PR115StateEvidenceError(
                 PR115StateEvidenceCode.UNSUPPORTED_ACCOUNT_OWNER
@@ -292,6 +395,7 @@ def build_pr115_simulation_owned_economic_proof(
             "post_root_slot": post_root_slot,
             "min_context_slot": min_context_slot,
             "decoder_version": PR115_DECODER_VERSION,
+            "marginfi_repayment": None if repayment is None else asdict(repayment),
         }
     )
     return PR115SimulationOwnedEconomicProof(
@@ -310,6 +414,210 @@ def build_pr115_simulation_owned_economic_proof(
         raw_evidence_hash=raw_evidence_hash,
         native_deltas=tuple(native_deltas),
         token_deltas=tuple(token_deltas),
+        marginfi_repayment=repayment,
+    )
+
+
+def _decode_marginfi_repayment(
+    before: Sequence[PR115RawAccountSnapshot],
+    after: Sequence[PR115RawAccountSnapshot],
+    context: PR115MarginfiDecodePolicy,
+) -> PR115MarginfiRepaymentState:
+    from solders.pubkey import Pubkey
+    from src.providers.marginfi.accounts import (
+        MARGINFI_SHARES_SOURCE_COMMIT,
+        RpcAccount,
+        decode_marginfi_balance_shares,
+    )
+    from src.providers.marginfi.errors import MarginfiRejection
+    from src.providers.marginfi.layouts import (
+        decode_margin_account,
+        decode_bank,
+        decode_group,
+        decode_token_account,
+        ceil_i80f48_product,
+    )
+    from src.providers.marginfi.pin import load_marginfi_contract_pin
+
+    def require(condition: bool, reason: str) -> None:
+        if not condition:
+            raise PR115StateEvidenceError("marginfi_" + reason)
+
+    require(
+        type(context.principal) is int and 0 < context.principal < 2**64,
+        "principal_invalid",
+    )
+    pin = load_marginfi_contract_pin()
+    require(
+        context.source_commit == pin.source_commit == MARGINFI_SHARES_SOURCE_COMMIT,
+        "source_mismatch",
+    )
+    require(context.layout_sha256 == _hash_json(pin.raw), "layout_mismatch")
+    addresses = (context.margin_account, context.bank, context.group, context.vault)
+    require(len(set(addresses)) == 4, "address_alias")
+    try:
+        for address in (*addresses, context.authority):
+            Pubkey.from_string(address)
+    except ValueError as exc:
+        raise PR115StateEvidenceError("marginfi_address_invalid") from exc
+    pre = {item.address: item for item in before}
+    post = {item.address: item for item in after}
+    require(
+        all(address in pre and address in post for address in addresses),
+        "missing_account",
+    )
+    require(
+        all(pre[address].lamports == post[address].lamports for address in addresses),
+        "unsupported_protocol_rent_change",
+    )
+
+    def account(snapshot: PR115RawAccountSnapshot) -> RpcAccount:
+        return RpcAccount(
+            snapshot.address,
+            snapshot.owner,
+            _decode_snapshot_data(snapshot),
+            snapshot.lamports,
+            snapshot.executable,
+        )
+
+    try:
+        margins = [
+            decode_margin_account(account(states[context.margin_account]), pin)
+            for states in (pre, post)
+        ]
+        balances = [
+            decode_marginfi_balance_shares(account(states[context.margin_account]), pin)
+            for states in (pre, post)
+        ]
+        banks = [
+            decode_bank(account(states[context.bank]), pin, bank_address=context.bank)
+            for states in (pre, post)
+        ]
+        # No wall-clock expiry inference: a set pause bit is unsupported here.
+        require(
+            all(
+                _decode_snapshot_data(states[context.group])[8 + 248] & 1 == 0
+                for states in (pre, post)
+            ),
+            "group_paused",
+        )
+        groups = [
+            decode_group(account(states[context.group]), pin, now_timestamp=0)
+            for states in (pre, post)
+        ]
+        require(not any(group.paused for group in groups), "group_paused")
+        require(
+            pre[context.group].data_hash == post[context.group].data_hash,
+            "group_changed",
+        )
+        for margin in margins:
+            require(
+                margin.group == context.group and margin.authority == context.authority,
+                "margin_identity_mismatch",
+            )
+            require(margin.account_flags == 0, "unsafe_account_flags")
+        require(
+            context.bank not in margins[0].active_balances, "preexisting_target_balance"
+        )
+        for positions in balances:
+            for position in positions:
+                if position.bank == context.bank:
+                    require(
+                        position.asset_shares == position.liability_shares == 0,
+                        "target_shares_not_cleared",
+                    )
+        unrelated = [
+            {
+                position.bank: position.raw
+                for position in positions
+                if position.active and position.bank != context.bank
+            }
+            for positions in balances
+        ]
+        require(unrelated[0] == unrelated[1], "unrelated_position_changed")
+        require(banks[0] == banks[1], "bank_configuration_changed")
+        bank = banks[0]
+        require(
+            bank.group == context.group and bank.liquidity_vault == context.vault,
+            "bank_identity_mismatch",
+        )
+        require(
+            bank.operational_state == 1 and bank.token_program == SPL_TOKEN_PROGRAM_ID,
+            "unsupported_bank",
+        )
+        # Bank share values at body offsets 72/88, repr(C) source d4c70c84.
+        values = []
+        for states in (pre, post):
+            data = _decode_snapshot_data(states[context.bank])
+            values.append(
+                tuple(
+                    int.from_bytes(
+                        data[8 + offset : 8 + offset + 16], "little", signed=True
+                    )
+                    for offset in (72, 88)
+                )
+            )
+        require(
+            values[0] == values[1] and all(value > 0 for value in values[0]),
+            "invalid_bank_share_values",
+        )
+        vaults = [
+            decode_token_account(
+                account(states[context.vault]),
+                token_program=bank.token_program,
+                expected_mint=bank.mint,
+            )
+            for states in (pre, post)
+        ]
+        require(
+            all(vault.authority == bank.liquidity_vault_authority for vault in vaults),
+            "vault_authority_mismatch",
+        )
+        vault_bytes = [
+            _decode_snapshot_data(states[context.vault]) for states in (pre, post)
+        ]
+        require(
+            vault_bytes[0][:64] + vault_bytes[0][72:]
+            == vault_bytes[1][:64] + vault_bytes[1][72:],
+            "vault_configuration_changed",
+        )
+        require(
+            all(
+                len(_decode_snapshot_data(states[context.vault])) == 165
+                and _decode_snapshot_data(states[context.vault])[108] == 1
+                for states in (pre, post)
+            ),
+            "unsupported_vault_layout",
+        )
+        fee = ceil_i80f48_product(context.principal, bank.origination_fee_raw_i80f48)
+        require(vaults[0].amount >= context.principal, "insufficient_vault_principal")
+        require(vaults[1].amount - vaults[0].amount >= fee, "vault_fee_not_returned")
+    except MarginfiRejection as exc:
+        raise PR115StateEvidenceError("marginfi_decode_rejected: " + str(exc)) from exc
+    return PR115MarginfiRepaymentState(
+        context.source_commit,
+        context.layout_sha256,
+        context.margin_account,
+        context.bank,
+        context.vault,
+        bank.mint,
+        context.principal,
+        fee,
+        margins[0].account_flags,
+        margins[1].account_flags,
+        0,
+        0,
+        vaults[0].amount,
+        vaults[1].amount,
+        pre[context.margin_account].raw_hash,
+        post[context.margin_account].raw_hash,
+        pre[context.bank].raw_hash,
+        post[context.bank].raw_hash,
+        pin.program_id,
+        bank.token_program,
+        bank.mint_decimals,
+        0,
+        0,
     )
 
 
@@ -421,6 +729,8 @@ def _token_delta(
     amount_end = SPL_TOKEN_AMOUNT_OFFSET + SPL_TOKEN_AMOUNT_LEN
     pre_amount = int.from_bytes(pre_bytes[amount_start:amount_end], "little")
     post_amount = int.from_bytes(post_bytes[amount_start:amount_end], "little")
+    from solders.pubkey import Pubkey
+
     return PR115TokenAccountDelta(
         address=post.address,
         mint_hash=_hash_bytes(post_mint),
@@ -430,6 +740,8 @@ def _token_delta(
         delta_amount=post_amount - pre_amount,
         pre_raw_hash=pre.raw_hash,
         post_raw_hash=post.raw_hash,
+        mint=str(Pubkey.from_bytes(post_mint)),
+        authority=str(Pubkey.from_bytes(post_owner)),
     )
 
 
@@ -445,7 +757,7 @@ def _decode_snapshot_data(snapshot: PR115RawAccountSnapshot) -> bytes:
 def _decode_account_data(value: Any) -> tuple[str, bytes]:
     if value in (None, ""):
         return "", b""
-    if isinstance(value, list) and len(value) == 2 and value[1] == "base64":
+    if isinstance(value, (list, tuple)) and len(value) == 2 and value[1] == "base64":
         encoded = value[0]
     elif isinstance(value, str):
         encoded = value
@@ -514,16 +826,26 @@ def _hash_json(value: Any) -> str:
             separators=(",", ":"),
             ensure_ascii=False,
             allow_nan=False,
+            default=lambda item: (
+                dict(item) if isinstance(item, Mapping) else _invalid_json(item)
+            ),
         ).encode("utf-8")
     except (TypeError, ValueError) as exc:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT) from exc
     return hashlib.sha256(payload).hexdigest()
 
 
+def _invalid_json(value: Any) -> Any:
+    raise TypeError("unsupported raw evidence JSON value")
+
+
 __all__ = [
     "PR115_DECODER_VERSION",
     "PR115_SCHEMA_VERSION",
     "PR115DecodePolicy",
+    "PR115MarginfiDecodePolicy",
+    "PR115MarginfiRepaymentState",
+    "PR115ReadonlyAccountBinding",
     "PR115NativeLamportDelta",
     "PR115RawAccountSnapshot",
     "PR115SimulationOwnedEconomicProof",

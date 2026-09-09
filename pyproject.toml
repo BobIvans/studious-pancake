@@ -78,6 +78,7 @@ dev = [
 ]
 
 [project.scripts]
+flashloan-connections = "src.provider_governance.cli:main"
 flashloan-bot = "src.cli_pr189:main"
 flashloan-bot-healthcheck = "src.container_runtime:healthcheck_main"
 flashloan-contracts = "src.external_contracts.cli_pr189:main"

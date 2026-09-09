@@ -19,6 +19,71 @@ from .layouts import (
 )
 from .pin import MarginfiContractPin
 
+MARGINFI_SHARES_SOURCE_COMMIT = "d4c70c84f8a9692405a2c32cbd7095bb1fe3f428"
+
+
+@dataclass(frozen=True, slots=True)
+class MarginfiBalanceShares:
+    """Raw signed Q80.48 shares from the pinned 104-byte Balance structure."""
+
+    index: int
+    active: bool
+    bank: str
+    asset_shares: int
+    liability_shares: int
+    raw: bytes
+
+
+def decode_marginfi_balance_shares(
+    account: RpcAccount, pin: MarginfiContractPin
+) -> tuple[MarginfiBalanceShares, ...]:
+    """Extend the existing account decoder for the explicitly pinned layout.
+
+    Source: type-crate/src/types/user_account.rs at d4c70c84, repr(C)
+    Balance fields: asset_shares at 40, liability_shares at 56, size 104.
+    These are source-derived offsets, not an SDK/deployment attestation.
+    """
+    if pin.source_commit != MARGINFI_SHARES_SOURCE_COMMIT:
+        raise MarginfiRejection(
+            MarginfiRejectionCode.PIN_MISMATCH, "unsupported shares source"
+        )
+    decode_margin_account(account, pin)
+    offsets = pin.raw["account_layouts"]["marginfi_account"]["offsets"]
+    required = dict(
+        lending_account=64,
+        balance_size=104,
+        balance_count=16,
+        balance_active=0,
+        balance_bank=1,
+        account_flags=1792,
+    )
+    if any(offsets.get(key) != value for key, value in required.items()):
+        raise MarginfiRejection(
+            MarginfiRejectionCode.PIN_MISMATCH, "unsupported shares layout"
+        )
+    result = []
+    for index in range(16):
+        start = 8 + 64 + index * 104
+        raw = account.data[start : start + 104]
+        assets = int.from_bytes(raw[40:56], "little", signed=True)
+        liabilities = int.from_bytes(raw[56:72], "little", signed=True)
+        if assets < 0 or liabilities < 0 or (raw[0] == 0 and (assets or liabilities)):
+            raise MarginfiRejection(
+                MarginfiRejectionCode.ACCOUNT_STATE_INVALID,
+                "negative or inactive nonzero balance shares",
+            )
+        result.append(
+            MarginfiBalanceShares(
+                index,
+                raw[0] != 0,
+                str(Pubkey.from_bytes(raw[1:33])),
+                assets,
+                liabilities,
+                raw,
+            )
+        )
+    return tuple(result)
+
 
 @dataclass(frozen=True, slots=True)
 class RpcAccount:
@@ -60,9 +125,7 @@ class BankSnapshot:
 
     @property
     def requires_mint_account(self) -> bool:
-        return self.token_program == (
-            "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
-        )
+        return self.token_program == ("TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb")
 
 
 @dataclass(frozen=True, slots=True)

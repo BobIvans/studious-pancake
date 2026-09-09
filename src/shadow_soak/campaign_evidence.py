@@ -1,10 +1,9 @@
 """MPR-2607 residual shadow-soak evidence qualification.
 
-This module is deliberately consumer-only.  It does not start a campaign, poll
+This module is deliberately consumer-only. It does not start a campaign, poll
 providers, sign, submit, mutate lifecycle state, or create a second readiness
-authority.  It independently derives campaign coverage and outcome uniqueness
-from already-produced evidence and can be composed with the existing PR-079
-real shadow-soak evaluator.
+authority. It independently derives campaign coverage and outcome uniqueness
+from already-produced evidence and composes with the existing PR-079 evaluator.
 """
 
 from __future__ import annotations
@@ -206,6 +205,8 @@ def evaluate_campaign_evidence(
     evidence: CampaignEvidence,
     policy: CampaignPolicy,
 ) -> CampaignQualification:
+    """Recompute coverage/count claims without trusting summary timestamps/counts."""
+
     blockers: list[str] = []
     warnings: list[str] = []
 
@@ -218,9 +219,9 @@ def evaluate_campaign_evidence(
         if interval.evidence_class is EvidenceClass.REAL_SHADOW_READ_ONLY
         and interval.kind is IntervalKind.ELIGIBLE
     ]
-    merged = _merge_intervals(real_intervals, policy.maximum_gap_seconds)
-    eligible_seconds = sum(_seconds(start, end) for start, end in merged)
-    longest = max((_seconds(start, end) for start, end in merged), default=0)
+    union = _merge_overlaps(real_intervals)
+    eligible_seconds = sum(_seconds(start, end) for start, end in union)
+    longest = _longest_continuous_window(union, policy.maximum_gap_seconds)
 
     if evidence.intervals:
         first = min(item.started_at for item in evidence.intervals)
@@ -244,7 +245,9 @@ def evaluate_campaign_evidence(
     if evidence.claimed_unique_terminal_outcomes != unique_terminal:
         blockers.append("CLAIMED_TERMINAL_COUNT_MISMATCH")
     if evidence.replay_executions:
-        warnings.append(f"REPLAY_EXECUTIONS_EXCLUDED_FROM_REAL_DURATION:{evidence.replay_executions}")
+        warnings.append(
+            f"REPLAY_EXECUTIONS_EXCLUDED_FROM_REAL_DURATION:{evidence.replay_executions}"
+        )
     if duplicate_terminal:
         warnings.append(f"DUPLICATE_TERMINAL_DELIVERIES:{duplicate_terminal}")
 
@@ -270,7 +273,7 @@ def evaluate_real_shadow_soak_residual(
     campaign_policy: CampaignPolicy,
     thresholds: ShadowSoakThresholds | None = None,
 ) -> ResidualRealSoakQualification:
-    """Compose MPR-2607 residual checks with the existing PR-079 consumer."""
+    """Compose residual checks with PR-079 without creating another live gate."""
 
     existing = evaluate_real_shadow_soak(package, thresholds)
     residual = evaluate_campaign_evidence(campaign_evidence, campaign_policy)
@@ -292,9 +295,8 @@ def evaluate_real_shadow_soak_residual(
     )
 
 
-def _merge_intervals(
+def _merge_overlaps(
     intervals: Iterable[CoverageInterval],
-    maximum_gap_seconds: int,
 ) -> tuple[tuple[datetime, datetime], ...]:
     ordered = sorted(
         ((item.started_at, item.ended_at) for item in intervals),
@@ -305,12 +307,29 @@ def _merge_intervals(
     merged: list[tuple[datetime, datetime]] = [ordered[0]]
     for start, end in ordered[1:]:
         prior_start, prior_end = merged[-1]
-        gap = (start - prior_end).total_seconds()
-        if gap <= maximum_gap_seconds:
+        if start <= prior_end:
             merged[-1] = (prior_start, max(prior_end, end))
         else:
             merged.append((start, end))
     return tuple(merged)
+
+
+def _longest_continuous_window(
+    union: Sequence[tuple[datetime, datetime]],
+    maximum_gap_seconds: int,
+) -> int:
+    if not union:
+        return 0
+    window_start, window_end = union[0]
+    longest = _seconds(window_start, window_end)
+    for start, end in union[1:]:
+        gap = _seconds(window_end, start)
+        if gap <= maximum_gap_seconds:
+            window_end = end
+        else:
+            longest = max(longest, _seconds(window_start, window_end))
+            window_start, window_end = start, end
+    return max(longest, _seconds(window_start, window_end))
 
 
 def _outcome_counts(

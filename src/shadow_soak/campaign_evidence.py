@@ -15,7 +15,7 @@ import hashlib
 import json
 from typing import Iterable, Mapping, Sequence
 
-from src.shadow_soak.evidence import ShadowSoakThresholds
+from src.shadow_soak.evidence import MINIMUM_SOAK_SECONDS, ShadowSoakThresholds
 from src.shadow_soak.real_soak import (
     RealShadowSoakPackage,
     RealShadowSoakReadiness,
@@ -232,7 +232,7 @@ def evaluate_campaign_evidence(
     gap_seconds = max(0, calendar_span - eligible_seconds)
 
     unique_terminal, duplicate_terminal, conflicts = _outcome_counts(evidence.outcomes)
-    blockers.extend(f"OUTCOME_ID_SEMANTIC_CONFLICT:{value}" for value in conflicts)
+    blockers.extend(conflicts)
 
     if eligible_seconds < policy.minimum_eligible_seconds:
         blockers.append("ELIGIBLE_DURATION_BELOW_POLICY")
@@ -276,7 +276,20 @@ def evaluate_real_shadow_soak_residual(
     """Compose residual checks with PR-079 without creating another live gate."""
 
     existing = evaluate_real_shadow_soak(package, thresholds)
-    residual = evaluate_campaign_evidence(campaign_evidence, campaign_policy)
+    minimum_duration = max(
+        MINIMUM_SOAK_SECONDS,
+        campaign_policy.minimum_eligible_seconds,
+        thresholds.min_duration_seconds if thresholds is not None else 0,
+    )
+    effective_policy = CampaignPolicy(
+        minimum_eligible_seconds=minimum_duration,
+        maximum_gap_seconds=campaign_policy.maximum_gap_seconds,
+        minimum_terminal_samples=max(
+            campaign_policy.minimum_terminal_samples,
+            package.minimum_sample_threshold,
+        ),
+    )
+    residual = evaluate_campaign_evidence(campaign_evidence, effective_policy)
     blockers = list(existing.blockers)
     blockers.extend(f"MPR2607:{reason}" for reason in residual.blockers)
 
@@ -284,6 +297,17 @@ def evaluate_real_shadow_soak_residual(
         blockers.append("MPR2607:CAMPAIGN_RUN_ID_MISMATCH")
     if package.soak.code_commit != campaign_evidence.source_commit.lower():
         blockers.append("MPR2607:SOURCE_COMMIT_MISMATCH")
+
+    for interval in campaign_evidence.intervals:
+        if (
+            interval.evidence_class is EvidenceClass.REAL_SHADOW_READ_ONLY
+            and interval.kind is IntervalKind.ELIGIBLE
+            and (
+                interval.started_at < package.soak.started_at
+                or interval.ended_at > package.soak.ended_at
+            )
+        ):
+            blockers.append(f"MPR2607:INTERVAL_OUTSIDE_SOAK_WINDOW:{interval.segment_id}")
 
     unique_blockers = tuple(dict.fromkeys(blockers))
     return ResidualRealSoakQualification(
@@ -323,8 +347,8 @@ def _longest_continuous_window(
     window_start, window_end = union[0]
     longest = _seconds(window_start, window_end)
     for start, end in union[1:]:
-        gap = _seconds(window_end, start)
-        if gap <= maximum_gap_seconds:
+        gap_seconds = (start - window_end).total_seconds()
+        if gap_seconds <= maximum_gap_seconds:
             window_end = end
         else:
             longest = max(longest, _seconds(window_start, window_end))
@@ -335,20 +359,54 @@ def _longest_continuous_window(
 def _outcome_counts(
     outcomes: Sequence[OutcomeRecord],
 ) -> tuple[int, int, tuple[str, ...]]:
-    terminal_by_id: dict[str, str] = {}
+    by_outcome_id: dict[str, tuple[str, tuple[str, str, str]]] = {}
+    by_lineage: dict[tuple[str, str, str], tuple[str, str]] = {}
     duplicate = 0
     conflicts: list[str] = []
+
     for outcome in outcomes:
         if not outcome.terminal:
             continue
-        existing = terminal_by_id.get(outcome.outcome_id)
-        if existing is None:
-            terminal_by_id[outcome.outcome_id] = outcome.semantic_sha256
-        elif existing == outcome.semantic_sha256:
-            duplicate += 1
+        lineage = (
+            outcome.source_observation_id,
+            outcome.logical_cycle_id,
+            outcome.provider_attempt_id,
+        )
+
+        prior_id = by_outcome_id.get(outcome.outcome_id)
+        if prior_id is not None:
+            prior_semantic, prior_lineage = prior_id
+            if prior_semantic != outcome.semantic_sha256:
+                conflicts.append(f"OUTCOME_ID_SEMANTIC_CONFLICT:{outcome.outcome_id}")
+            elif prior_lineage != lineage:
+                conflicts.append(f"OUTCOME_ID_LINEAGE_CONFLICT:{outcome.outcome_id}")
+
+        prior_lineage_value = by_lineage.get(lineage)
+        if prior_lineage_value is None:
+            by_lineage[lineage] = (outcome.outcome_id, outcome.semantic_sha256)
         else:
-            conflicts.append(outcome.outcome_id)
-    return len(terminal_by_id), duplicate, tuple(dict.fromkeys(conflicts))
+            prior_outcome_id, prior_semantic = prior_lineage_value
+            if prior_semantic == outcome.semantic_sha256:
+                duplicate += 1
+            else:
+                conflicts.append(
+                    "OUTCOME_LINEAGE_SEMANTIC_CONFLICT:"
+                    f"{outcome.source_observation_id}:"
+                    f"{outcome.logical_cycle_id}:"
+                    f"{outcome.provider_attempt_id}"
+                )
+            if prior_outcome_id != outcome.outcome_id:
+                by_outcome_id.setdefault(
+                    outcome.outcome_id,
+                    (outcome.semantic_sha256, lineage),
+                )
+
+        by_outcome_id.setdefault(
+            outcome.outcome_id,
+            (outcome.semantic_sha256, lineage),
+        )
+
+    return len(by_lineage), duplicate, tuple(dict.fromkeys(conflicts))
 
 
 def _seconds(start: datetime, end: datetime) -> int:

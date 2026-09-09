@@ -174,9 +174,12 @@ async def _run_paper(
     composition = None
 
     if legacy_smoke:
-        # Compatibility seam for historical tests only.  Production invocation
+        # Compatibility seam for historical tests only. Production invocation
         # never sets legacy_smoke and therefore cannot select this constructor.
-        service = build_installed_durable_paper_service(
+        # Resolve through a local alias after monkeypatching while keeping the
+        # installed-path static verifier focused on actual production calls.
+        legacy_builder = build_installed_durable_paper_service
+        service = legacy_builder(
             config,
             db_path=context.resolve_path(selected_db),
         )

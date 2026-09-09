@@ -3,7 +3,8 @@
 
 Default invocation preserves the legacy PR-186 dry-run qualification plan contract.
 Pass ``--execute --profile production`` to run the MPR-CLOSE-06 release bundle
-materialization flow.
+materialization flow. MPR-2611 strengthens this composition point so critical
+production evidence is semantically accepted before it can resolve debt.
 """
 
 from __future__ import annotations
@@ -235,7 +236,15 @@ def _load_json(path: Path) -> dict[str, Any]:
     return json.loads(path.read_text(encoding="utf-8"))
 
 
-def collect_release_artifacts(root: Path) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+def collect_release_artifacts(
+    root: Path,
+    *,
+    source_commit: str | None = None,
+    release_id: str | None = None,
+) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
+    _bootstrap_repo_imports()
+    from src.production_qualification import SEMANTIC_ARTIFACTS, validate_semantic_evidence
+
     artifacts: list[dict[str, Any]] = []
     by_id: dict[str, dict[str, Any]] = {}
     for artifact_id, candidates in REQUIRED_ARTIFACTS.items():
@@ -246,16 +255,40 @@ def collect_release_artifacts(root: Path) -> tuple[list[dict[str, Any]], dict[st
                 "status": "missing",
                 "path": None,
                 "sha256": None,
+                "semantic_sha256": None,
                 "size_bytes": None,
+                "validation": None,
             }
         else:
+            raw_sha = _sha256_file(matched)
             record = {
                 "id": artifact_id,
                 "status": "present",
                 "path": matched.relative_to(root).as_posix(),
-                "sha256": _sha256_file(matched),
+                "sha256": raw_sha,
+                "semantic_sha256": raw_sha,
                 "size_bytes": matched.stat().st_size,
+                "validation": None,
             }
+            if artifact_id in SEMANTIC_ARTIFACTS:
+                if source_commit is None or release_id is None:
+                    record["status"] = "invalid"
+                    record["semantic_sha256"] = None
+                    record["validation"] = {
+                        "accepted": False,
+                        "reason_codes": ["SEMANTIC_VALIDATION_CONTEXT_MISSING"],
+                    }
+                else:
+                    validation = validate_semantic_evidence(
+                        matched,
+                        artifact_id=artifact_id,
+                        source_commit=source_commit,
+                        release_id=release_id,
+                    )
+                    record["validation"] = validation.to_dict()
+                    record["semantic_sha256"] = validation.semantic_sha256
+                    if not validation.accepted:
+                        record["status"] = "invalid"
         artifacts.append(record)
         by_id[artifact_id] = record
     return artifacts, by_id
@@ -273,7 +306,9 @@ def resolve_debt_items(
         item_id = item["id"]
         required = DEBT_REQUIREMENTS.get(item_id, ())
         missing = [
-            artifact_id for artifact_id in required if artifacts.get(artifact_id, {}).get("status") != "present"
+            artifact_id
+            for artifact_id in required
+            if artifacts.get(artifact_id, {}).get("status") != "present"
         ]
         notes: list[str] = []
         resolved = not missing
@@ -290,16 +325,16 @@ def resolve_debt_items(
             if not live_mode_available:
                 notes.append("live_mode_available=false")
         if missing:
-            notes.append("missing_artifacts=" + ",".join(sorted(missing)))
+            notes.append("missing_or_invalid_artifacts=" + ",".join(sorted(missing)))
         resolutions[item_id] = {
             "resolved": resolved,
             "required_artifacts": list(required),
             "evidence_digests": [
-                artifacts[artifact_id]["sha256"]
+                artifacts[artifact_id].get("semantic_sha256")
                 for artifact_id in required
                 if artifacts.get(artifact_id, {}).get("status") == "present"
             ],
-            "notes": notes or ["evidence-materialized"],
+            "notes": notes or ["semantic-evidence-accepted"],
         }
     return resolutions
 
@@ -311,6 +346,7 @@ def build_release_bundle(
     output_path: Path,
     profile: str,
 ) -> dict[str, Any]:
+    _bootstrap_repo_imports()
     from scripts.verify_pr200_production_cutover import validate_manifest
 
     capabilities = _load_json(root / "src" / "resources" / "capabilities.json")
@@ -318,6 +354,7 @@ def build_release_bundle(
     runtime_authority = _load_json(root / "config" / "runtime_authority_map.json")
     cutover_manifest = _load_json(root / "config" / "production_cutover_manifest.json")
     pr200 = validate_manifest(cutover_manifest)
+    source_commit = _git_head_commit(root)
 
     bundle_dir = root / "release_artifacts" / "final" / release_id
     bundle_dir.mkdir(parents=True, exist_ok=True)
@@ -331,7 +368,11 @@ def build_release_bundle(
     }
     _atomic_write(bundle_dir / "human_review_manifest.json", human_review)
 
-    artifacts, artifacts_by_id = collect_release_artifacts(root)
+    artifacts, artifacts_by_id = collect_release_artifacts(
+        root,
+        source_commit=source_commit,
+        release_id=release_id,
+    )
     review_path = bundle_dir / "human_review_manifest.json"
     artifacts.append(
         {
@@ -339,7 +380,9 @@ def build_release_bundle(
             "status": "present",
             "path": review_path.relative_to(root).as_posix(),
             "sha256": _sha256_file(review_path),
+            "semantic_sha256": _sha256_bytes(_canonical_json(human_review)),
             "size_bytes": review_path.stat().st_size,
+            "validation": {"accepted": False, "reason_codes": ["PENDING_HUMAN_REVIEW"]},
         }
     )
 
@@ -359,16 +402,16 @@ def build_release_bundle(
         "release_id": release_id,
         "profile": profile,
         "produced_at": _utc_now(),
-        "source_commit": _git_head_commit(root),
+        "source_commit": source_commit,
         "product_state": product_state,
         "live_mode_available": live_mode_available,
         "pr200_cutover": pr200,
         "artifacts": artifacts,
-        "runtime_authority_map_digest": _sha256_bytes(
-            _canonical_json(runtime_authority)
-        ),
+        "runtime_authority_map_digest": _sha256_bytes(_canonical_json(runtime_authority)),
         "production_debt_inventory_digest": _sha256_bytes(_canonical_json(inventory)),
         "debt_resolution": debt_resolution,
+        "release_claim_allowed": False,
+        "live_enabled": False,
     }
     bundle_manifest_path = bundle_dir / "bundle_manifest.json"
     _atomic_write(bundle_manifest_path, bundle_manifest)
@@ -380,7 +423,10 @@ def build_release_bundle(
         item_id for item_id, info in debt_resolution.items() if not info["resolved"]
     )
     missing_artifacts = sorted(
-        artifact["id"] for artifact in artifacts if artifact["status"] != "present"
+        artifact["id"] for artifact in artifacts if artifact["status"] == "missing"
+    )
+    invalid_artifacts = sorted(
+        artifact["id"] for artifact in artifacts if artifact["status"] == "invalid"
     )
     qualification = {
         "schema_version": SCHEMA_VERSION,
@@ -390,17 +436,30 @@ def build_release_bundle(
         "bundle_path": bundle_dir.relative_to(root).as_posix(),
         "bundle_manifest_path": bundle_manifest_path.relative_to(root).as_posix(),
         "bundle_manifest_sha256": _sha256_file(bundle_manifest_path),
-        "source_commit": _git_head_commit(root),
+        "source_commit": source_commit,
         "product_state": product_state,
         "live_mode_available": live_mode_available,
         "promotion_state": (
             "blocked_pending_evidence"
-            if missing_artifacts or unresolved_items or not pr200["accepted"]
-            else "qualified"
+            if missing_artifacts or invalid_artifacts or unresolved_items or not pr200["accepted"]
+            else "qualified_for_release_review"
         ),
-        "qualified": not missing_artifacts and not unresolved_items and pr200["accepted"],
+        "qualified": not missing_artifacts
+        and not invalid_artifacts
+        and not unresolved_items
+        and pr200["accepted"],
+        "production_qualification_passed": not missing_artifacts
+        and not invalid_artifacts
+        and not unresolved_items
+        and pr200["accepted"],
+        "eligible_for_release_review": not missing_artifacts
+        and not invalid_artifacts
+        and not unresolved_items
+        and pr200["accepted"],
         "release_claim_allowed": False,
+        "live_enabled": False,
         "missing_artifacts": missing_artifacts,
+        "invalid_artifacts": invalid_artifacts,
         "resolved_debt_items": resolved_items,
         "open_debt_items": unresolved_items,
         "debt_resolution": debt_resolution,
@@ -453,7 +512,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             payload = {
                 "schema_version": SCHEMA_VERSION,
                 "qualified": False,
+                "production_qualification_passed": False,
+                "eligible_for_release_review": False,
                 "release_claim_allowed": False,
+                "live_enabled": False,
                 "reason_codes": ["unsupported_profile_selection"],
                 "selected_profiles": list(selected_profiles),
             }
@@ -473,7 +535,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         payload = {
             "schema_version": SCHEMA_VERSION,
             "qualified": False,
+            "production_qualification_passed": False,
+            "eligible_for_release_review": False,
             "release_claim_allowed": False,
+            "live_enabled": False,
             "error_type": type(exc).__name__,
             "reason": str(exc),
         }

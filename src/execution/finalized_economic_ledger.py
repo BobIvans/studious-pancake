@@ -259,6 +259,7 @@ def _result(
     blockers: Iterable[str],
 ) -> FinalizedEconomicLedger:
     blocker_tuple = tuple(blockers)
+    canonical_postings = sorted(value.postings, key=lambda posting: posting.posting_id)
     body = {
         "schema_version": MPR2610_SCHEMA_VERSION,
         "lineage": value.lineage.to_dict(),
@@ -266,7 +267,7 @@ def _result(
         "economically_successful": successful,
         "per_asset_delta": list(deltas),
         "blockers": list(blocker_tuple),
-        "postings": [posting.to_dict() for posting in value.postings],
+        "postings": [posting.to_dict() for posting in canonical_postings],
     }
     return FinalizedEconomicLedger(
         schema_version=MPR2610_SCHEMA_VERSION,

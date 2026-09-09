@@ -1,0 +1,120 @@
+{
+  "schema": "mpr2606.pilot-mutants.v1",
+  "base_sha": "68788d7f7f7da8a2e03b170f93c48af7421ee805",
+  "timeout_seconds": 60,
+  "existing_tests": [
+    "tests/execution_truth/test_mpr_sys_02_execution_truth.py",
+    "tests/errors/test_failures.py",
+    "tests/errors/test_mpr_td_02_verifier.py"
+  ],
+  "mutants": [
+    {
+      "id": "T01",
+      "path": "src/execution_truth/runtime.py",
+      "expected_git_blob_sha1": "c6737033499cf1e28276983997b290f96d129047",
+      "anchor": "if not self.simulation.successful or self.reconciliation is None:",
+      "replacement": "if self.reconciliation is None:",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_success_requires_successful_simulation_directly",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_success_requires_successful_simulation_directly"]
+    },
+    {
+      "id": "T02",
+      "path": "src/execution_truth/runtime.py",
+      "expected_git_blob_sha1": "c6737033499cf1e28276983997b290f96d129047",
+      "anchor": "if self.compiled.last_valid_block_height > self.plan.expires_block_height:",
+      "replacement": "if False:",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_message_expiry_boundary",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_message_expiry_boundary"]
+    },
+    {
+      "id": "T03",
+      "path": "src/execution_truth/runtime.py",
+      "expected_git_blob_sha1": "c6737033499cf1e28276983997b290f96d129047",
+      "anchor": "if self.simulation.context_slot < self.rooted.root_slot:",
+      "replacement": "if False:",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_simulation_root_slot_boundary",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_simulation_root_slot_boundary"]
+    },
+    {
+      "id": "T04",
+      "path": "src/execution_truth/runtime.py",
+      "expected_git_blob_sha1": "c6737033499cf1e28276983997b290f96d129047",
+      "anchor": "if self.durable.candidate_truth_hash != self.rooted.candidate_truth_hash:",
+      "replacement": "if False:",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_durable_candidate_identity_is_bound",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_durable_candidate_identity_is_bound"]
+    },
+    {
+      "id": "T05",
+      "path": "src/execution_truth/runtime.py",
+      "expected_git_blob_sha1": "c6737033499cf1e28276983997b290f96d129047",
+      "anchor": "if previous.generation != current.generation:",
+      "replacement": "if False:",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_transition_generation_is_immutable",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_transition_generation_is_immutable"]
+    },
+    {
+      "id": "T06",
+      "path": "src/execution_truth/runtime.py",
+      "expected_git_blob_sha1": "c6737033499cf1e28276983997b290f96d129047",
+      "anchor": "if self.reconciliation.conservative_surplus_lamports <= 0:",
+      "replacement": "if self.reconciliation.conservative_surplus_lamports < 0:",
+      "witness": "tests/execution_truth/test_mpr_sys_02_execution_truth.py::test_success_requires_positive_conservative_surplus",
+      "tests": ["tests/execution_truth/test_mpr_sys_02_execution_truth.py::test_success_requires_positive_conservative_surplus"]
+    },
+    {
+      "id": "T07",
+      "path": "src/execution_truth/runtime.py",
+      "expected_git_blob_sha1": "c6737033499cf1e28276983997b290f96d129047",
+      "anchor": "if previous.stage is ExecutionStage.TERMINAL:",
+      "replacement": "if False:",
+      "witness": "tests/execution_truth/test_mpr_sys_02_execution_truth.py::test_terminal_state_is_immutable",
+      "tests": ["tests/execution_truth/test_mpr_sys_02_execution_truth.py::test_terminal_state_is_immutable"]
+    },
+    {
+      "id": "R08",
+      "path": "src/errors/retry.py",
+      "expected_git_blob_sha1": "fbf5bbb695df588925dfba6de70a2e2c9665a52a",
+      "anchor": "remaining_seconds>0",
+      "replacement": "remaining_seconds>=0",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_retry_remaining_time_boundary",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_retry_remaining_time_boundary"]
+    },
+    {
+      "id": "R09",
+      "path": "src/errors/retry.py",
+      "expected_git_blob_sha1": "fbf5bbb695df588925dfba6de70a2e2c9665a52a",
+      "anchor": "attempt<row['maximum_attempts']",
+      "replacement": "attempt<=row['maximum_attempts']",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_retry_attempt_limit_boundary",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_retry_attempt_limit_boundary"]
+    },
+    {
+      "id": "D10",
+      "path": "src/errors/deadline.py",
+      "expected_git_blob_sha1": "313d62caec8501ca4ed68e5f47ae23d6fe38a3eb",
+      "anchor": "Deadline(min(self.expires_at,self._clock()+max(0.0,maximum_seconds)),self._clock)",
+      "replacement": "Deadline(max(self.expires_at,self._clock()+max(0.0,maximum_seconds)),self._clock)",
+      "witness": "tests/errors/test_failures.py::test_deadline_child",
+      "tests": ["tests/errors/test_failures.py::test_deadline_child"]
+    },
+    {
+      "id": "D11",
+      "path": "src/errors/deadline.py",
+      "expected_git_blob_sha1": "313d62caec8501ca4ed68e5f47ae23d6fe38a3eb",
+      "anchor": "self.remaining<=0",
+      "replacement": "self.remaining<0",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_deadline_expired_boundary",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_deadline_expired_boundary"]
+    },
+    {
+      "id": "T12",
+      "path": "src/execution_truth/runtime.py",
+      "expected_git_blob_sha1": "c6737033499cf1e28276983997b290f96d129047",
+      "anchor": "if isinstance(value, bool) or not isinstance(value, int):",
+      "replacement": "if not isinstance(value, int):",
+      "witness": "tests/assurance2606/test_safety_mutation_regressions.py::test_plan_ref_rejects_bool_with_matching_hash",
+      "tests": ["tests/assurance2606/test_safety_mutation_regressions.py::test_plan_ref_rejects_bool_with_matching_hash"]
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "schema": "mpr2606.scope-observations.v1",
+  "observed_at": "2026-09-09T05:47:00+03:00",
+  "base": {
+    "branch": "main",
+    "sha": "68788d7f7f7da8a2e03b170f93c48af7421ee805"
+  },
+  "predecessors": {
+    "mpr2601": {
+      "state": "merged",
+      "pr": 472,
+      "ownership": "runtime/lifecycle/capital authority; read/test only"
+    },
+    "mpr2602": {
+      "state": "open_draft_checkpoint",
+      "pr": 473,
+      "branch": "codex/mpr-2602-flashloan-vertical",
+      "head": "f9cb2632c376839042199fefcf9255f64364031d",
+      "ownership": "provider governance and sender-free provider/execution integration"
+    },
+    "mpr2603": {
+      "state": "open_draft_checkpoint",
+      "pr": 474,
+      "branch": "codex/mpr-2603-human-control",
+      "ownership": "human intervention and recovery authorization boundary",
+      "semantic_overlap_with_mpr2606": "none observed"
+    },
+    "mpr2604": {
+      "state": "open_checkpoint",
+      "pr": 475,
+      "ownership": "production closure/release integration",
+      "semantic_overlap_with_mpr2606": "consumer of assurance evidence only"
+    },
+    "mpr2605": {
+      "state": "branch_observed_no_commits",
+      "branch": "codex/mpr-2605-protocol-qualification",
+      "head_equals_main": true,
+      "ownership": "reserved until actual diff or handoff is observable"
+    }
+  },
+  "mpr2606": {
+    "branch": "codex/mpr-2606-test-strength",
+    "allowed_paths": [
+      "tools/mpr2606/**",
+      "tests/assurance2606/**",
+      "docs/assurance2606/**"
+    ],
+    "production_changes_allowed": false,
+    "ownership_clearance": "unresolved",
+    "merge_condition": "re-check mpr2605 semantic scope and any later predecessor heads before merge"
+  }
+}

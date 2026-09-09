@@ -21,6 +21,7 @@ from src.paper_shadow.a2_exact_attempt_runtime import ExactAttemptRuntimeItem
 from src.paper_shadow.durable_service_a3 import A3ExactAttemptBatch, A3ProviderEvidenceState
 from src.paper_shadow.exact_attempt_pr152 import ExactAttemptRequest, ProviderExecutionEvidence
 from src.paper_shadow.atomic_vertical import AtomicVerticalCandidate
+from src.planning.atomic_marginfi_jupiter import CapitalReservationEvidence
 
 CORE_V1_PROFILE_ID = "core-marginfi-jupiter-v1"
 CORE_V1_SCHEMA = "core-v1.exact-attempt-materialization.v1"
@@ -85,7 +86,9 @@ class CoreV1ReleaseProfile:
 
 
 class CoreV1CandidateFactory(Protocol):
-    def __call__(self, reservation: object) -> AtomicVerticalCandidate: ...
+    def __call__(
+        self, reservation: CapitalReservationEvidence
+    ) -> AtomicVerticalCandidate: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,7 +106,7 @@ class CoreV1AttemptDraft:
     wallet_snapshot: WalletBalanceSnapshot
     provider_evidence: ProviderExecutionEvidence
     discovery_slot: int
-    candidate_factory: Callable[[object], AtomicVerticalCandidate]
+    candidate_factory: Callable[[CapitalReservationEvidence], AtomicVerticalCandidate]
 
     def __post_init__(self) -> None:
         if self.profile_id != CORE_V1_PROFILE_ID:
@@ -260,6 +263,7 @@ class CoreV1MaterializedBatchSource:
                 A3ProviderEvidenceState(_hash_json({"reason": reason}), False, (reason,))
             )
         if not drafts:
+            # An admitted, healthy producer with zero opportunities is NO_TRADE.
             evidence_hash = _hash_json(
                 {
                     "schema": CORE_V1_SCHEMA,

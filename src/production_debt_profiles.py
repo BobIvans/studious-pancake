@@ -180,7 +180,9 @@ def evaluate_core_v1_profile_debt(
     profile_path: str | Path | None = None,
     global_report: ProductionDebtReport | None = None,
 ) -> CoreV1ProfileDebtReport:
-    root = Path(repo_root).resolve() if repo_root else Path(__file__).resolve().parents[1]
+    root = (
+        Path(repo_root).resolve() if repo_root else Path(__file__).resolve().parents[1]
+    )
     selected_profile = (
         Path(profile_path)
         if profile_path is not None

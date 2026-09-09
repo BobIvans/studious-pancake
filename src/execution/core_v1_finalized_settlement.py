@@ -90,7 +90,7 @@ class DecodedCoreV1FinalizedEvidence:
             raise ValueError("attempt/signature identity required")
         _strict_int(self.attempt_generation, "attempt_generation", minimum=1)
         _strict_int(self.finalized_slot, "finalized_slot", minimum=0)
-        for label, value in (
+        for hash_label, hash_value in (
             ("message_hash", self.message_hash),
             ("signed_transaction_digest", self.signed_transaction_digest),
             ("release_hash", self.release_hash),
@@ -99,7 +99,7 @@ class DecodedCoreV1FinalizedEvidence:
             ("cluster_genesis_hash", self.cluster_genesis_hash),
             ("raw_evidence_hash", self.raw_evidence_hash),
         ):
-            _sha256(value, label)
+            _sha256(hash_value, hash_label)
         if not self.confirmation_status.strip():
             raise ValueError("confirmation_status required")
         pairs = (
@@ -110,13 +110,13 @@ class DecodedCoreV1FinalizedEvidence:
                 "MarginFi liability",
             ),
         )
-        for left, right, label in pairs:
+        for left, right, pair_label in pairs:
             if (left is None) != (right is None):
-                raise ValueError(f"{label} must be paired")
+                raise ValueError(f"{pair_label} must be paired")
             if left is not None:
-                _strict_int(left, f"{label}.pre", minimum=0)
-                _strict_int(right, f"{label}.post", minimum=0)
-        for label, value in (
+                _strict_int(left, f"{pair_label}.pre", minimum=0)
+                _strict_int(right, f"{pair_label}.post", minimum=0)
+        for amount_label, amount_value in (
             ("meta_fee_lamports", self.meta_fee_lamports),
             (
                 "marginfi_required_repayment",
@@ -127,8 +127,8 @@ class DecodedCoreV1FinalizedEvidence:
                 self.marginfi_observed_repayment_base_units,
             ),
         ):
-            if value is not None:
-                _strict_int(value, label, minimum=0)
+            if amount_value is not None:
+                _strict_int(amount_value, amount_label, minimum=0)
         if any(not isinstance(item, str) or not item for item in self.decode_blockers):
             raise ValueError("decode blockers must be non-empty strings")
 

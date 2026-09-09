@@ -7,6 +7,7 @@ import pytest
 from src.execution.finalized_settlement_pr138 import (
     FinalizedTransactionEvidence,
     PR138SettlementError,
+    SettlementComparison,
     SettlementOutcome,
     SettlementPhase,
     assert_economic_success_requires_finalized_actual,
@@ -52,6 +53,17 @@ def _evidence(**overrides: object) -> FinalizedTransactionEvidence:
     return FinalizedTransactionEvidence(**kwargs)
 
 
+def _comparison(actual_net_lamports: int | None) -> SettlementComparison:
+    return SettlementComparison(
+        predicted_fee_lamports=5_000,
+        simulated_fee_lamports=5_000,
+        actual_fee_lamports=5_000,
+        predicted_net_lamports=1,
+        simulated_net_lamports=1,
+        actual_net_lamports=actual_net_lamports,
+    )
+
+
 @pytest.mark.parametrize("status", ["processed", "confirmed", "finalized"])
 def test_pr138_status_observation_is_never_economic_success(status: str) -> None:
     decision = classify_transaction_status_observation(
@@ -90,11 +102,12 @@ def test_pr138_unknown_status_latches_manual_review(status: str | None) -> None:
     assert decision.economically_successful is False
 
 
-def test_pr138_finalized_actual_success_requires_identity_and_repayment() -> None:
+def test_pr138_finalized_actual_success_requires_identity_repayment_and_positive_net() -> None:
     decision = classify_finalized_actual_settlement(
         _evidence(),
         expected_message_hash=HASH_A,
         expected_signature=SIGNATURE,
+        comparison=_comparison(1),
     )
 
     assert decision.phase == SettlementPhase.RECONCILED
@@ -110,6 +123,7 @@ def test_pr138_finalized_meta_error_is_reconciled_failure_not_success() -> None:
     decision = classify_finalized_actual_settlement(
         _evidence(meta_err={"InstructionError": [0, "Custom"]}),
         expected_message_hash=HASH_A,
+        comparison=_comparison(10),
     )
 
     assert decision.phase == SettlementPhase.RECONCILED
@@ -117,6 +131,43 @@ def test_pr138_finalized_meta_error_is_reconciled_failure_not_success() -> None:
     assert decision.durable_state is ExecutionState.RECONCILED_FAILURE
     assert decision.economically_successful is False
     assert "FINALIZED_TRANSACTION_META_ERR" in decision.blockers
+
+
+@pytest.mark.parametrize(
+    ("actual_net", "expected_outcome", "blocker"),
+    [
+        (None, SettlementOutcome.INDETERMINATE_MANUAL_REVIEW, "FINALIZED_ACTUAL_NET_REQUIRED"),
+        (-1, SettlementOutcome.RECONCILED_FAILURE, "FINALIZED_ACTUAL_NET_NEGATIVE"),
+        (0, SettlementOutcome.RECONCILED_FAILURE, "FINALIZED_ACTUAL_NET_ZERO"),
+    ],
+)
+def test_pr138_finalized_nonpositive_or_missing_actual_net_never_succeeds(
+    actual_net: int | None,
+    expected_outcome: SettlementOutcome,
+    blocker: str,
+) -> None:
+    decision = classify_finalized_actual_settlement(
+        _evidence(),
+        expected_message_hash=HASH_A,
+        expected_signature=SIGNATURE,
+        comparison=_comparison(actual_net),
+    )
+
+    assert decision.economically_successful is False
+    assert decision.outcome is expected_outcome
+    assert blocker in decision.blockers
+
+
+def test_pr138_missing_comparison_never_succeeds() -> None:
+    decision = classify_finalized_actual_settlement(
+        _evidence(),
+        expected_message_hash=HASH_A,
+        expected_signature=SIGNATURE,
+    )
+
+    assert decision.economically_successful is False
+    assert decision.outcome is SettlementOutcome.INDETERMINATE_MANUAL_REVIEW
+    assert "FINALIZED_ACTUAL_NET_REQUIRED" in decision.blockers
 
 
 @pytest.mark.parametrize(
@@ -136,6 +187,7 @@ def test_pr138_conflicting_or_incomplete_actuals_latch_manual_review(
         _evidence(**overrides),
         expected_message_hash=HASH_A,
         expected_signature=SIGNATURE,
+        comparison=_comparison(1),
     )
 
     assert decision.phase == SettlementPhase.INDETERMINATE_MANUAL_REVIEW

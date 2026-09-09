@@ -71,7 +71,11 @@ def permit(p: PrerequisiteIdentity, b: CanaryBudget) -> HumanPermit:
     )
 
 
-def bundle(generation: int, p: PrerequisiteIdentity, b: CanaryBudget) -> CanaryAdmissionBundle:
+def bundle(
+    generation: int,
+    p: PrerequisiteIdentity,
+    b: CanaryBudget,
+) -> CanaryAdmissionBundle:
     return CanaryAdmissionBundle(
         attempt_id="attempt-1",
         attempt_generation=generation,
@@ -95,17 +99,17 @@ def bundle(generation: int, p: PrerequisiteIdentity, b: CanaryBudget) -> CanaryA
 
 def authority() -> tuple[sqlite3.Connection, DurableCanaryAuthority]:
     db = sqlite3.connect(":memory:")
-    a = DurableCanaryAuthority(db)
-    a.install_schema()
-    return db, a
+    canary = DurableCanaryAuthority(db)
+    canary.install_schema()
+    return db, canary
 
 
 def test_default_is_shadow_and_not_armed() -> None:
-    _, a = authority()
-    assert a.status()["mode"] == DurableCanaryMode.SHADOW.value
+    _, canary = authority()
+    assert canary.status()["mode"] == DurableCanaryMode.SHADOW.value
     p, b = prerequisites(), budget()
     with pytest.raises(MPR2609Error, match="not armed"):
-        a.admit_one_shot(
+        canary.admit_one_shot(
             bundle=bundle(1, p, b),
             now_ms=200,
             current_block_height=100,
@@ -129,19 +133,24 @@ def test_dual_human_identity_is_mandatory() -> None:
 
 
 def test_one_arm_allows_exactly_one_admission() -> None:
-    _, a = authority()
+    _, canary = authority()
     p, b = prerequisites(), budget()
-    generation = a.arm(prerequisites=p, budget=b, permit=permit(p, b), now_ms=200)
-    digest = a.admit_one_shot(
+    generation = canary.arm(
+        prerequisites=p,
+        budget=b,
+        permit=permit(p, b),
+        now_ms=200,
+    )
+    digest = canary.admit_one_shot(
         bundle=bundle(generation, p, b),
         now_ms=300,
         current_block_height=100,
         min_blockheight_margin=2,
     )
     assert len(digest) == 64
-    assert a.status()["mode"] == DurableCanaryMode.SUBMISSION_OUTSTANDING.value
+    assert canary.status()["mode"] == DurableCanaryMode.SUBMISSION_OUTSTANDING.value
     with pytest.raises(MPR2609Error):
-        a.admit_one_shot(
+        canary.admit_one_shot(
             bundle=bundle(generation, p, b),
             now_ms=301,
             current_block_height=100,
@@ -152,11 +161,16 @@ def test_one_arm_allows_exactly_one_admission() -> None:
 def test_restart_preserves_consumed_and_outstanding_state(tmp_path) -> None:
     path = tmp_path / "canary.sqlite"
     db = sqlite3.connect(path)
-    a = DurableCanaryAuthority(db)
-    a.install_schema()
+    canary = DurableCanaryAuthority(db)
+    canary.install_schema()
     p, b = prerequisites(), budget()
-    generation = a.arm(prerequisites=p, budget=b, permit=permit(p, b), now_ms=200)
-    a.admit_one_shot(
+    generation = canary.arm(
+        prerequisites=p,
+        budget=b,
+        permit=permit(p, b),
+        now_ms=200,
+    )
+    canary.admit_one_shot(
         bundle=bundle(generation, p, b),
         now_ms=300,
         current_block_height=100,
@@ -174,32 +188,47 @@ def test_restart_preserves_consumed_and_outstanding_state(tmp_path) -> None:
 
 
 def test_unknown_outcome_is_sticky_and_blocks_rearm() -> None:
-    _, a = authority()
+    _, canary = authority()
     p, b = prerequisites(), budget()
-    generation = a.arm(prerequisites=p, budget=b, permit=permit(p, b), now_ms=200)
-    a.admit_one_shot(
+    generation = canary.arm(
+        prerequisites=p,
+        budget=b,
+        permit=permit(p, b),
+        now_ms=200,
+    )
+    canary.admit_one_shot(
         bundle=bundle(generation, p, b),
         now_ms=300,
         current_block_height=100,
         min_blockheight_margin=2,
     )
-    a.mark_unknown(attempt_id="attempt-1")
-    assert a.status()["mode"] == DurableCanaryMode.LATCHED.value
+    canary.mark_unknown(attempt_id="attempt-1")
+    assert canary.status()["mode"] == DurableCanaryMode.LATCHED.value
     with pytest.raises(MPR2609Error, match="blocks arming"):
-        a.arm(prerequisites=p, budget=b, permit=permit(p, b), now_ms=400)
+        canary.arm(
+            prerequisites=p,
+            budget=b,
+            permit=permit(p, b),
+            now_ms=400,
+        )
 
 
 def test_terminal_success_returns_to_shadow_without_auto_rearm() -> None:
-    _, a = authority()
+    _, canary = authority()
     p, b = prerequisites(), budget()
-    generation = a.arm(prerequisites=p, budget=b, permit=permit(p, b), now_ms=200)
-    a.admit_one_shot(
+    generation = canary.arm(
+        prerequisites=p,
+        budget=b,
+        permit=permit(p, b),
+        now_ms=200,
+    )
+    canary.admit_one_shot(
         bundle=bundle(generation, p, b),
         now_ms=300,
         current_block_height=100,
         min_blockheight_margin=2,
     )
-    a.finalize(
+    canary.finalize(
         attempt_id="attempt-1",
         realized_pnl_lamports=1,
         success=True,
@@ -207,11 +236,11 @@ def test_terminal_success_returns_to_shadow_without_auto_rearm() -> None:
         max_cumulative_loss_lamports=10,
         max_consecutive_failures=2,
     )
-    state = a.status()
+    state = canary.status()
     assert state["mode"] == DurableCanaryMode.SHADOW.value
     assert state["outstanding_attempt_id"] is None
     with pytest.raises(MPR2609Error, match="not armed"):
-        a.admit_one_shot(
+        canary.admit_one_shot(
             bundle=bundle(generation, p, b),
             now_ms=400,
             current_block_height=100,
@@ -220,31 +249,70 @@ def test_terminal_success_returns_to_shadow_without_auto_rearm() -> None:
 
 
 def test_blockheight_margin_fails_closed_before_consumption() -> None:
-    _, a = authority()
+    _, canary = authority()
     p, b = prerequisites(), budget()
-    generation = a.arm(prerequisites=p, budget=b, permit=permit(p, b), now_ms=200)
+    generation = canary.arm(
+        prerequisites=p,
+        budget=b,
+        permit=permit(p, b),
+        now_ms=200,
+    )
     with pytest.raises(MPR2609Error, match="blockheight safety"):
-        a.admit_one_shot(
+        canary.admit_one_shot(
             bundle=bundle(generation, p, b),
             now_ms=300,
             current_block_height=119,
             min_blockheight_margin=2,
         )
-    assert a.status()["consumed_admission_digest"] is None
+    assert canary.status()["consumed_admission_digest"] is None
 
 
 def test_rollback_revokes_generation_but_preserves_outstanding() -> None:
-    _, a = authority()
+    _, canary = authority()
     p, b = prerequisites(), budget()
-    generation = a.arm(prerequisites=p, budget=b, permit=permit(p, b), now_ms=200)
-    a.admit_one_shot(
+    generation = canary.arm(
+        prerequisites=p,
+        budget=b,
+        permit=permit(p, b),
+        now_ms=200,
+    )
+    canary.admit_one_shot(
         bundle=bundle(generation, p, b),
         now_ms=300,
         current_block_height=100,
         min_blockheight_margin=2,
     )
-    next_generation = a.rollback_to_shadow()
-    state = a.status()
+    next_generation = canary.rollback_to_shadow()
+    state = canary.status()
     assert next_generation == generation + 1
     assert state["outstanding_attempt_id"] == "attempt-1"
     assert state["mode"] == DurableCanaryMode.SHADOW.value
+
+
+def test_schema_installation_preserves_caller_transaction() -> None:
+    db = sqlite3.connect(":memory:")
+    db.execute("BEGIN IMMEDIATE")
+    assert db.in_transaction
+    canary = DurableCanaryAuthority(db)
+    canary.install_schema()
+    assert db.in_transaction
+    db.rollback()
+    row = db.execute(
+        "SELECT name FROM sqlite_master WHERE name='mpr2609_canary_control'"
+    ).fetchone()
+    assert row is None
+
+
+def test_corrupt_integer_state_fails_closed() -> None:
+    db, canary = authority()
+    db.execute(
+        "UPDATE mpr2609_canary_control SET generation='corrupt' WHERE singleton=1"
+    )
+    p, b = prerequisites(), budget()
+    with pytest.raises(MPR2609Error, match="durable state generation"):
+        canary.arm(
+            prerequisites=p,
+            budget=b,
+            permit=permit(p, b),
+            now_ms=200,
+        )

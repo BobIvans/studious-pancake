@@ -102,7 +102,8 @@ def test_pr138_unknown_status_latches_manual_review(status: str | None) -> None:
     assert decision.economically_successful is False
 
 
-def test_pr138_finalized_actual_success_requires_identity_repayment_and_positive_net() -> None:
+def test_pr138_finalized_actual_success_requires_identity_repayment_and_positive_net(
+) -> None:
     decision = classify_finalized_actual_settlement(
         _evidence(),
         expected_message_hash=HASH_A,
@@ -136,7 +137,11 @@ def test_pr138_finalized_meta_error_is_reconciled_failure_not_success() -> None:
 @pytest.mark.parametrize(
     ("actual_net", "expected_outcome", "blocker"),
     [
-        (None, SettlementOutcome.INDETERMINATE_MANUAL_REVIEW, "FINALIZED_ACTUAL_NET_REQUIRED"),
+        (
+            None,
+            SettlementOutcome.INDETERMINATE_MANUAL_REVIEW,
+            "FINALIZED_ACTUAL_NET_REQUIRED",
+        ),
         (-1, SettlementOutcome.RECONCILED_FAILURE, "FINALIZED_ACTUAL_NET_NEGATIVE"),
         (0, SettlementOutcome.RECONCILED_FAILURE, "FINALIZED_ACTUAL_NET_ZERO"),
     ],

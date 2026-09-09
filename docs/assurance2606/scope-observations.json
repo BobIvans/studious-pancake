@@ -1,52 +1,43 @@
 {
   "schema": "mpr2606.scope-observations.v1",
-  "observed_at": "2026-09-09T05:47:00+03:00",
+  "observed_at": "2026-09-09T15:18:00+03:00",
   "base": {
     "branch": "main",
     "sha": "68788d7f7f7da8a2e03b170f93c48af7421ee805"
   },
-  "predecessors": {
-    "mpr2601": {
-      "state": "merged",
-      "pr": 472,
-      "ownership": "runtime/lifecycle/capital authority; read/test only"
-    },
-    "mpr2602": {
-      "state": "open_draft_checkpoint",
-      "pr": 473,
-      "branch": "codex/mpr-2602-flashloan-vertical",
-      "head": "f9cb2632c376839042199fefcf9255f64364031d",
-      "ownership": "provider governance and sender-free provider/execution integration"
-    },
-    "mpr2603": {
-      "state": "open_draft_checkpoint",
-      "pr": 474,
-      "branch": "codex/mpr-2603-human-control",
-      "ownership": "human intervention and recovery authorization boundary",
-      "semantic_overlap_with_mpr2606": "none observed"
-    },
-    "mpr2604": {
-      "state": "open_checkpoint",
-      "pr": 475,
-      "ownership": "production closure/release integration",
-      "semantic_overlap_with_mpr2606": "consumer of assurance evidence only"
-    },
-    "mpr2605": {
-      "state": "branch_observed_no_commits",
-      "branch": "codex/mpr-2605-protocol-qualification",
-      "head_equals_main": true,
-      "ownership": "reserved until actual diff or handoff is observable"
-    }
+  "parallel_chain": {
+    "mpr2602": {"pr": 473, "scope": "provider governance / sender-free vertical"},
+    "mpr2603": {"pr": 474, "scope": "human intervention / recovery authorization"},
+    "mpr2604": {"pr": 475, "scope": "production closure / readiness truth / packaging"},
+    "mpr2605": {"pr": 476, "scope": "Jupiter protocol qualification residuals"},
+    "mpr2607": {"pr": 477, "scope": "shadow-soak evidence residuals"},
+    "mpr2608": {"pr": 479, "scope": "isolated signer / submission boundary"},
+    "mpr2609": {"pr": 480, "scope": "limited-live canary authority"},
+    "mpr2610": {"pr": 481, "scope": "finalized economic ledger / realized PnL"},
+    "mpr2611": {"pr": 482, "scope": "production qualification / evidence authenticity"}
   },
+  "cross_pr_evidence": [
+    "PR #476 explicitly names PR #478 as the owner of test-strength scope and states it does not recreate that authority.",
+    "PR #479 explicitly names PR #478 as the mutation/test-strength assurance owner.",
+    "No current PR in #473-#482 declares ownership of a competing mutation runner or tools/mpr2606/tests/assurance2606/docs/assurance2606 paths."
+  ],
   "mpr2606": {
+    "pr": 478,
     "branch": "codex/mpr-2606-test-strength",
+    "ownership": "developer-only mutation/test-strength assurance",
     "allowed_paths": [
       "tools/mpr2606/**",
       "tests/assurance2606/**",
       "docs/assurance2606/**"
     ],
     "production_changes_allowed": false,
-    "ownership_clearance": "unresolved",
-    "merge_condition": "re-check mpr2605 semantic scope and any later predecessor heads before merge"
+    "semantic_overlap": "none observed in current #473-#482 parallel chain",
+    "ownership_clearance": "clear_for_scoped_merge_at_observation",
+    "merge_condition": "re-run normal GitHub review/CI on the final head; if a new parallel mutation owner appears before merge, re-check semantic ownership instead of duplicating it"
+  },
+  "limits": {
+    "clearance_is_snapshot": true,
+    "full_program_completion_claimed": false,
+    "live_or_production_readiness_claimed": false
   }
 }

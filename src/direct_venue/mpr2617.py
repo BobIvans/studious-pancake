@@ -199,6 +199,8 @@ class VenueCapability:
     instruction_family: str
     quote_math_version: str
     evidence_sha256: str
+    instruction_data_sha256: str
+    instruction_accounts_sha256: str
     state: CapabilityState
     expires_at_unix: int
     revoked: bool = False
@@ -226,6 +228,8 @@ class VenueCapability:
             raise DirectVenueError("route direction must use distinct mints")
         _sha256(self.genesis_sha256, "genesis_sha256")
         _sha256(self.evidence_sha256, "evidence_sha256")
+        _sha256(self.instruction_data_sha256, "instruction_data_sha256")
+        _sha256(self.instruction_accounts_sha256, "instruction_accounts_sha256")
         _positive_int(self.expires_at_unix, "expires_at_unix")
         if not isinstance(self.revoked, bool):
             raise DirectVenueError("revoked must be bool")
@@ -399,8 +403,10 @@ def qualify_route(
             or capability.output_mint != leg.output_mint
         ):
             blockers.append(f"LEG_{index}_DIRECTION_MISMATCH")
-        if capability.evidence_sha256 != leg.instruction_data_sha256:
-            blockers.append(f"LEG_{index}_INSTRUCTION_EVIDENCE_MISMATCH")
+        if capability.instruction_data_sha256 != leg.instruction_data_sha256:
+            blockers.append(f"LEG_{index}_INSTRUCTION_DATA_MISMATCH")
+        if capability.instruction_accounts_sha256 != leg.instruction_accounts_sha256:
+            blockers.append(f"LEG_{index}_INSTRUCTION_ACCOUNTS_MISMATCH")
         if capability.deployment_generation != leg.evidence_generation:
             blockers.append(f"LEG_{index}_GENERATION_MISMATCH")
 
@@ -457,6 +463,8 @@ def build_orca_capability(
         instruction_family="whirlpool-swap-exact-in",
         quote_math_version=proof.quote_math_version,
         evidence_sha256=evidence_sha,
+        instruction_data_sha256=proof.instruction_data_sha256,
+        instruction_accounts_sha256=proof.expected_instruction_accounts_sha256,
         state=CapabilityState.OFFLINE_VERIFIED,
         expires_at_unix=expires_at_unix,
     )

@@ -1,0 +1,45 @@
+name: MPR-NEXT-09 continuous shadow soak
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/release_gate/mpr29_continuous_shadow_soak.py"
+      - "src/resources/mpr29_continuous_shadow_soak_contract.json"
+      - "scripts/verify_mpr29_continuous_shadow_soak.py"
+      - "tests/test_mpr29_continuous_shadow_soak.py"
+      - "docs/roadmap/mpr_next_09_continuous_shadow_soak.md"
+      - ".github/workflows/mpr-next-09-continuous-shadow-soak.yml"
+  push:
+    branches:
+      - "mpr-next-09-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  continuous-shadow-soak:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      # mpr-next-09-waive-moving-action: SHA pinning is handled by MPR-NEXT-13.
+      - uses: actions/checkout@v4
+      # mpr-next-09-waive-moving-action: SHA pinning is handled by MPR-NEXT-13.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+      - name: Install focused test dependencies
+        run: python -m pip install --disable-pip-version-check -e ".[dev]"
+      - name: Compile MPR-NEXT-09 slice
+        run: >-
+          python -m compileall -q
+          src/release_gate/mpr29_continuous_shadow_soak.py
+          scripts/verify_mpr29_continuous_shadow_soak.py
+          tests/test_mpr29_continuous_shadow_soak.py
+      - name: Run focused MPR-NEXT-09 tests
+        run: python -m pytest -q tests/test_mpr29_continuous_shadow_soak.py
+      - name: Inspect default-off MPR-29 contract
+        run: python scripts/verify_mpr29_continuous_shadow_soak.py --json

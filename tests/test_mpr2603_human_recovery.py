@@ -5,7 +5,11 @@ import hashlib
 
 import pytest
 
-from src.canonical_control_plane_pr195 import CanonicalControlPlaneStore, ManualTrustedClock
+from src.canonical_control_plane_pr195 import (
+    CanonicalControlPlaneStore,
+    ConfigGeneration,
+    ManualTrustedClock,
+)
 from src.human_intervention import (
     HumanInterventionLedger,
     HumanInterventionRequest,
@@ -35,8 +39,6 @@ def _store(tmp_path) -> CanonicalControlPlaneStore:
 
 
 def _request(target: InterventionTarget, *, start: str = "2026-09-09T02:00:00Z") -> HumanInterventionRequest:
-    # request_hash deliberately excludes approvals, so verified signatures can
-    # be produced over immutable request bytes before approvals are attached.
     placeholder = _h("placeholder-request")
     base = HumanInterventionRequest(
         action=InterventionAction.CLEAR_SAFETY_LATCH,
@@ -72,6 +74,19 @@ def _request(target: InterventionTarget, *, start: str = "2026-09-09T02:00:00Z")
     request_hash = base.request_hash
     approvals = tuple(replace(a, request_hash=request_hash) for a in base.approvals)
     return replace(base, approvals=approvals)
+
+
+def _activate_target_config(store: CanonicalControlPlaneStore, target: InterventionTarget) -> None:
+    store.record_config_generation(
+        ConfigGeneration(
+            generation_hash=target.config_hash,
+            release_hash=target.release_hash,
+            policy_hash=_h("policy"),
+            approved_by="test-fixture",
+            evidence_hash=_h("config-evidence"),
+            active=True,
+        )
+    )
 
 
 def _issue(store: CanonicalControlPlaneStore, request: HumanInterventionRequest):
@@ -135,6 +150,7 @@ def test_mpr2603_atomic_clear_consumes_permit_and_creates_pending_intent(tmp_pat
             _h("release"),
             _h("config"),
         )
+        _activate_target_config(store, target)
         permit = _issue(store, _request(target))
 
         receipt = apply_clear_and_authorize_recovery(
@@ -169,8 +185,8 @@ def test_mpr2603_failure_rolls_back_permit_consumption(tmp_path) -> None:
         target = InterventionTarget(
             "pr195-latch", "provider-auth:jupiter", latch_hash, _h("evidence"), _h("release"), _h("config")
         )
+        _activate_target_config(store, target)
         permit = _issue(store, _request(target))
-        # Change the exact occurrence after authorization.
         store.db.execute(
             "UPDATE pr195_latches SET evidence_hash=? WHERE latch_id=?",
             (_h("new-occurrence"), target.subject_id),
@@ -196,6 +212,48 @@ def test_mpr2603_failure_rolls_back_permit_consumption(tmp_path) -> None:
         assert store.db.execute("SELECT COUNT(*) FROM mpr2603_recovery_intents").fetchone()[0] == 0
 
 
+def test_mpr2603_release_or_config_drift_denies_and_rolls_back(tmp_path) -> None:
+    with _store(tmp_path) as store:
+        install_human_recovery_schema(store.db)
+        latch_hash = store.open_latch(
+            latch_id="provider-auth:jupiter",
+            reason_code="AUTH_FAILURE",
+            evidence={"provider": "jupiter", "generation": 7},
+        )
+        target = InterventionTarget(
+            "pr195-latch", "provider-auth:jupiter", latch_hash, _h("evidence"), _h("release"), _h("config")
+        )
+        _activate_target_config(store, target)
+        permit = _issue(store, _request(target))
+        store.record_config_generation(
+            ConfigGeneration(
+                generation_hash=_h("new-config"),
+                release_hash=_h("new-release"),
+                policy_hash=_h("policy-2"),
+                approved_by="test-fixture",
+                evidence_hash=_h("config-evidence-2"),
+                active=True,
+            )
+        )
+
+        with pytest.raises(RecoveryTargetConflict, match="ACTIVE_CONFIG_CHANGED"):
+            apply_clear_and_authorize_recovery(
+                store.db,
+                permit=permit,
+                target=target,
+                current_utc="2026-09-09T02:02:00Z",
+                current_trust_epoch=_h("trust-epoch-1"),
+                idempotency_key="apply-drift",
+            )
+        assert store.db.execute(
+            "SELECT consumed_at_utc FROM mpr2603_human_permits WHERE permit_hash=?",
+            (permit.permit_hash,),
+        ).fetchone()[0] is None
+        assert store.db.execute(
+            "SELECT active FROM pr195_latches WHERE latch_id=?", (target.subject_id,)
+        ).fetchone()[0] == 1
+
+
 def test_mpr2603_exact_replay_returns_receipt_but_semantic_change_conflicts(tmp_path) -> None:
     with _store(tmp_path) as store:
         install_human_recovery_schema(store.db)
@@ -207,6 +265,7 @@ def test_mpr2603_exact_replay_returns_receipt_but_semantic_change_conflicts(tmp_
         target = InterventionTarget(
             "pr195-latch", "provider-auth:jupiter", latch_hash, _h("evidence"), _h("release"), _h("config")
         )
+        _activate_target_config(store, target)
         permit = _issue(store, _request(target))
         first = apply_clear_and_authorize_recovery(
             store.db,

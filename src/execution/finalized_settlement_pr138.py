@@ -211,7 +211,7 @@ def classify_finalized_actual_settlement(
 
     PR-138 historically treated finalized + no meta.err + repayment as economic
     success even when the supplied actual net was absent, zero or negative.
-    MPR-2610 closes that false-positive boundary.  This compatibility function
+    MPR-2610 closes that false-positive boundary. This compatibility function
     now requires an explicit positive actual net before it may return economic
     success; the full MPR-2610 ledger independently recomputes economics from
     decoded finalized postings and must not trust this comparison as authority.
@@ -363,7 +363,10 @@ def _validate_evidence(evidence: FinalizedTransactionEvidence) -> None:
     if evidence.return_data_hash is not None:
         _require_hash(evidence.return_data_hash, "return_data_hash")
     if evidence.finalized_account_state_hash is not None:
-        _require_hash(evidence.finalized_account_state_hash, "finalized_account_state_hash")
+        _require_hash(
+            evidence.finalized_account_state_hash,
+            "finalized_account_state_hash",
+        )
     if evidence.confirmation_status.strip().lower() not in {
         "processed",
         "confirmed",
@@ -373,8 +376,14 @@ def _validate_evidence(evidence: FinalizedTransactionEvidence) -> None:
 
     _require_nonnegative_int(evidence.finalized_slot, "finalized_slot")
     _require_nonnegative_int(evidence.fee_lamports, "fee_lamports")
-    _require_nonnegative_int(evidence.actual_network_fee_lamports, "actual_network_fee_lamports")
-    _require_nonnegative_int(evidence.actual_priority_fee_lamports, "actual_priority_fee_lamports")
+    _require_nonnegative_int(
+        evidence.actual_network_fee_lamports,
+        "actual_network_fee_lamports",
+    )
+    _require_nonnegative_int(
+        evidence.actual_priority_fee_lamports,
+        "actual_priority_fee_lamports",
+    )
     _require_nonnegative_int(evidence.actual_tip_lamports, "actual_tip_lamports")
     _require_nonnegative_int(evidence.actual_rent_lamports, "actual_rent_lamports")
     _require_nonnegative_int(
@@ -382,10 +391,15 @@ def _validate_evidence(evidence: FinalizedTransactionEvidence) -> None:
         "actual_token_transfer_fee_lamports",
     )
     if evidence.compute_units_consumed is not None:
-        _require_nonnegative_int(evidence.compute_units_consumed, "compute_units_consumed")
+        _require_nonnegative_int(
+            evidence.compute_units_consumed,
+            "compute_units_consumed",
+        )
 
 
-def _comparison_to_dict(comparison: SettlementComparison | None) -> dict[str, Any] | None:
+def _comparison_to_dict(
+    comparison: SettlementComparison | None,
+) -> dict[str, Any] | None:
     if comparison is None:
         return None
     return comparison.to_dict()

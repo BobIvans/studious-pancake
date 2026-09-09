@@ -207,7 +207,15 @@ def classify_finalized_actual_settlement(
     require_marginfi_repayment: bool = True,
     comparison: SettlementComparison | None = None,
 ) -> FinalizedSettlementDecision:
-    """Classify finalized actual evidence into a terminal economic outcome."""
+    """Classify finalized actual evidence into a terminal economic outcome.
+
+    PR-138 historically treated finalized + no meta.err + repayment as economic
+    success even when the supplied actual net was absent, zero or negative.
+    MPR-2610 closes that false-positive boundary.  This compatibility function
+    now requires an explicit positive actual net before it may return economic
+    success; the full MPR-2610 ledger independently recomputes economics from
+    decoded finalized postings and must not trust this comparison as authority.
+    """
 
     _validate_evidence(evidence)
     _require_hash(expected_message_hash, "expected_message_hash")
@@ -215,9 +223,8 @@ def classify_finalized_actual_settlement(
     warnings: list[str] = []
     confirmation_status = evidence.confirmation_status.strip().lower()
 
-    if expected_signature is not None:
-        if evidence.signature != expected_signature:
-            blockers.append("SIGNATURE_MISMATCH")
+    if expected_signature is not None and evidence.signature != expected_signature:
+        blockers.append("SIGNATURE_MISMATCH")
     if confirmation_status != FINALIZED_COMMITMENT:
         blockers.append("FINALIZED_GET_TRANSACTION_REQUIRED")
     if evidence.transaction_message_hash != expected_message_hash:
@@ -257,6 +264,36 @@ def classify_finalized_actual_settlement(
             economically_successful=False,
             evidence_hash=evidence_hash,
             blockers=("FINALIZED_TRANSACTION_META_ERR",),
+            warnings=tuple(warnings),
+            comparison=comparison,
+        )
+
+    if comparison is None or comparison.actual_net_lamports is None:
+        return _decision(
+            phase=SettlementPhase.INDETERMINATE_MANUAL_REVIEW,
+            outcome=SettlementOutcome.INDETERMINATE_MANUAL_REVIEW,
+            durable_state=ExecutionState.AMBIGUOUS_MANUAL_REVIEW,
+            economically_successful=False,
+            evidence_hash=evidence_hash,
+            blockers=("FINALIZED_ACTUAL_NET_REQUIRED",),
+            warnings=tuple(warnings),
+            comparison=comparison,
+        )
+
+    _require_signed_int(comparison.actual_net_lamports, "actual_net_lamports")
+    if comparison.actual_net_lamports <= 0:
+        blocker = (
+            "FINALIZED_ACTUAL_NET_ZERO"
+            if comparison.actual_net_lamports == 0
+            else "FINALIZED_ACTUAL_NET_NEGATIVE"
+        )
+        return _decision(
+            phase=SettlementPhase.RECONCILED,
+            outcome=SettlementOutcome.RECONCILED_FAILURE,
+            durable_state=ExecutionState.RECONCILED_FAILURE,
+            economically_successful=False,
+            evidence_hash=evidence_hash,
+            blockers=(blocker,),
             warnings=tuple(warnings),
             comparison=comparison,
         )
@@ -326,10 +363,7 @@ def _validate_evidence(evidence: FinalizedTransactionEvidence) -> None:
     if evidence.return_data_hash is not None:
         _require_hash(evidence.return_data_hash, "return_data_hash")
     if evidence.finalized_account_state_hash is not None:
-        _require_hash(
-            evidence.finalized_account_state_hash,
-            "finalized_account_state_hash",
-        )
+        _require_hash(evidence.finalized_account_state_hash, "finalized_account_state_hash")
     if evidence.confirmation_status.strip().lower() not in {
         "processed",
         "confirmed",
@@ -339,14 +373,8 @@ def _validate_evidence(evidence: FinalizedTransactionEvidence) -> None:
 
     _require_nonnegative_int(evidence.finalized_slot, "finalized_slot")
     _require_nonnegative_int(evidence.fee_lamports, "fee_lamports")
-    _require_nonnegative_int(
-        evidence.actual_network_fee_lamports,
-        "actual_network_fee_lamports",
-    )
-    _require_nonnegative_int(
-        evidence.actual_priority_fee_lamports,
-        "actual_priority_fee_lamports",
-    )
+    _require_nonnegative_int(evidence.actual_network_fee_lamports, "actual_network_fee_lamports")
+    _require_nonnegative_int(evidence.actual_priority_fee_lamports, "actual_priority_fee_lamports")
     _require_nonnegative_int(evidence.actual_tip_lamports, "actual_tip_lamports")
     _require_nonnegative_int(evidence.actual_rent_lamports, "actual_rent_lamports")
     _require_nonnegative_int(
@@ -354,15 +382,10 @@ def _validate_evidence(evidence: FinalizedTransactionEvidence) -> None:
         "actual_token_transfer_fee_lamports",
     )
     if evidence.compute_units_consumed is not None:
-        _require_nonnegative_int(
-            evidence.compute_units_consumed,
-            "compute_units_consumed",
-        )
+        _require_nonnegative_int(evidence.compute_units_consumed, "compute_units_consumed")
 
 
-def _comparison_to_dict(
-    comparison: SettlementComparison | None,
-) -> dict[str, Any] | None:
+def _comparison_to_dict(comparison: SettlementComparison | None) -> dict[str, Any] | None:
     if comparison is None:
         return None
     return comparison.to_dict()
@@ -385,6 +408,11 @@ def _require_hash(value: object, label: str) -> None:
 def _require_nonnegative_int(value: object, label: str) -> None:
     if not isinstance(value, int) or isinstance(value, bool) or value < 0:
         raise PR138SettlementError(f"{label} must be a non-negative integer")
+
+
+def _require_signed_int(value: object, label: str) -> None:
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise PR138SettlementError(f"{label} must be an integer")
 
 
 def _hash_json(value: Any) -> str:

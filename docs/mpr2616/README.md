@@ -5,19 +5,22 @@ MPR-2616 handoff without fabricating a distributed coordinator.
 
 ## Ownership / collision map
 
-Observed at implementation start on 2026-09-09:
+Observed and rechecked on 2026-09-09:
 
 | Workstream | Observed state | Semantic owner | MPR-2616 treatment |
 |---|---|---|---|
 | MPR-2612 | branch exists, identical to current `main` | final release gate reserved | no release authority created |
-| MPR-2613 | branch exists, one new `src/operations/mpr2613_guarded_operations.py` file | guarded production operations | no overlap; no operations controller copied |
-| MPR-2614 | no public branch/PR observed | continuous conformance sentinel reserved | consumed only through optional conformance lease digest |
-| MPR-2615 | no public branch/PR observed | **RESERVED unknown parallel scope** | no claim that 2615 is absent; re-check before merge |
+| MPR-2613 | branch ahead by one file, `src/operations/mpr2613_guarded_operations.py` | guarded production operations | no overlap; no operations controller copied |
+| MPR-2614 | branch `codex/mpr-2614-continuous-production-conformance` observed | continuous production conformance sentinel | consumed only through conformance lease/evidence identity; no sentinel duplicated |
+| MPR-2615 | branch `codex/mpr-2615-controlled-multi-lender-expansion`, four changed paths | controlled multi-lender expansion | no HA/DR/leader/failover overlap observed |
 | PR-165 | accepted main offline HA/DR evidence contract | shape/policy evidence | kept intact; cannot by itself qualify executable HA |
 | MPR-RP-03 | accepted same-host local-resource lease | local resource ownership | explicitly rejected as cross-host fencing proof |
 | MPR-2608 | signer/submission owner | signer/sender effect boundary | 2616 exposes fence assertions; does not implement signer API |
 | MPR-2609 | canary authority | one-shot live/canary authorization | fresh authorization remains mandatory after takeover |
 | MPR-2603 | human intervention owner | takeover/failback approval | 2616 consumes a canonical receipt digest; no second approval format |
+
+The machine-readable snapshot is `config/mpr2616_scope.json` and records
+`ownership_clearance=clear_for_scoped_merge_at_observation`.
 
 ## What this slice adds
 

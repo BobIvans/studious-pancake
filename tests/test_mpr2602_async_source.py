@@ -2,6 +2,10 @@
 
 import asyncio
 import pytest
+from src.paper_shadow.a2_exact_attempt_runtime import (
+    A2PaperOutcomeStatus,
+    ExactAttemptRuntimeReport,
+)
 
 from src.config.runtime import load_runtime_config
 from src.durability.unified_authority_pr02 import UnifiedLifecycleAuthority
@@ -103,3 +107,27 @@ async def test_cancellation_during_source_does_not_fabricate_terminal(authority)
         == 0
     )
     assert service.recovery_state()
+
+
+@pytest.mark.parametrize(
+    "status",
+    [
+        A2PaperOutcomeStatus.EXACT_ATTEMPT_READY_FOR_HANDOFF,
+        A2PaperOutcomeStatus.DURABLE_PAPER_OUTCOME_COMMITTED,
+    ],
+)
+async def test_unverified_handoff_cannot_become_a3_success(authority, status):
+    # Isolated negative projection test, not a qualified provider/attempt trace.
+    async def runtime(cycle_id, items):
+        return ExactAttemptRuntimeReport(cycle_id, status, "fixture_label", ())
+
+    service = InstalledDurablePaperService(
+        load_runtime_config(),
+        authority=authority,
+        runtime_cycle=runtime,
+    )
+    batch = A3ExactAttemptBatch(A3ProviderEvidenceState("c" * 64, False, ("fixture",)))
+    report = await service._run_a2_cycle("negative-projection", 1, batch)
+    assert report.status is A3PaperServiceStatus.INDETERMINATE
+    assert report.terminal_reason == "blocked_a3_verified_attempt_terminal_missing"
+    assert not report.ready_for_next_cycle

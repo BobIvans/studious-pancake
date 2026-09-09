@@ -248,3 +248,6 @@ tests/test_mpr2602_raw_economics.py
 tests/test_mpr2602_raw_state_integration.py
 tests/test_mpr2602_stage_cache.py
 tests/test_mpr_sys_03_review_regressions.py
+src/paper_shadow/exact_attempt_pr152.py
+tests/test_mpr2602_exact_attempt_raw_boundary.py
+tests/test_pr152_exact_sender_free_attempt.py

@@ -27,7 +27,15 @@ from src.economics.exact_fee_workflow import (
     ExactFeeCapitalWorkflow,
     candidate_with_exact_message_fee,
 )
-from src.paper_shadow.atomic_vertical import AtomicVerticalCandidate, AtomicVerticalResult
+from src.paper_shadow.atomic_vertical import (
+    AtomicVerticalCandidate,
+    AtomicVerticalResult,
+)
+from src.execution.economic_reconciliation.mega_pr02_proof import (
+    EconomicProofQualification,
+    QualificationStatus,
+)
+from src.execution.economic_reconciliation.models import ReconciliationStatus
 from src.planning.atomic_marginfi_jupiter import CapitalReservationEvidence
 
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -42,7 +50,9 @@ class ExactAttemptStatus(StrEnum):
 
 
 class AtomicVerticalPort(Protocol):
-    def run(self, candidate: AtomicVerticalCandidate) -> Awaitable[AtomicVerticalResult]: ...
+    def run(
+        self, candidate: AtomicVerticalCandidate
+    ) -> Awaitable[AtomicVerticalResult]: ...
 
 
 class CandidateFactory(Protocol):
@@ -116,7 +126,10 @@ class ExactAttemptRequest:
     final_fee_idempotency_key: str
 
     def __post_init__(self) -> None:
-        if self.attempt_key.logical_opportunity_id != self.capital_candidate.candidate_id:
+        if (
+            self.attempt_key.logical_opportunity_id
+            != self.capital_candidate.candidate_id
+        ):
             raise ValueError("attempt and capital candidate identities differ")
         if not all(
             (
@@ -219,7 +232,7 @@ class ExactPaperAttemptOrchestrator:
             candidate = request.candidate_factory(reservation)
             self._validate_candidate(candidate, request)
             vertical = await self.vertical.run(candidate)
-            self._validate_vertical(vertical, request)
+            self._validate_vertical(vertical, request, candidate)
         except Exception as exc:
             released = self._release(request, attempt_id, "PR152_VERTICAL_FAILED")
             return ExactAttemptResult(
@@ -282,12 +295,59 @@ class ExactPaperAttemptOrchestrator:
             raise ValueError("candidate identity mismatch")
         if planner.jupiter_contract_pin != evidence.jupiter_contract_pin:
             raise ValueError("Jupiter contract pin mismatch")
-        if evidence.account_snapshot_hash not in candidate.decoded_account_hashes:
-            raise ValueError("account snapshot is not simulation-bound")
+        if getattr(candidate, "pre_state_accounts", None) is None:
+            # Historical observation candidates remain representable, but they
+            # cannot be promoted into a qualified production paper handoff.
+            raise ValueError("legacy observations are unqualified for durable handoff")
+        if not candidate.pre_state_accounts:
+            raise ValueError("raw candidate requires account evidence")
+        if (
+            candidate.decoded_account_hashes
+            or candidate.native_observations
+            or candidate.token_observations
+            or candidate.marginfi_observation is not None
+        ):
+            raise ValueError("raw candidate cannot carry caller economics")
+        snapshot = planner.marginfi_snapshot
+        if evidence.account_snapshot_hash != snapshot.state_fingerprint:
+            raise ValueError("provider snapshot fingerprint mismatch")
+        if (
+            type(candidate.pre_state_slot) is not int
+            or candidate.pre_state_slot != snapshot.slot
+            or candidate.pre_state_slot < request.discovery_slot
+            or evidence.rooted_slot < candidate.pre_state_slot
+        ):
+            raise ValueError("raw snapshot context mismatch")
+        policy = candidate.decode_policy
+        if policy is None or policy.marginfi is None:
+            raise ValueError("raw MarginFi decoding policy required")
+        marginfi = policy.marginfi
+        if (
+            marginfi.margin_account != snapshot.margin_account.address
+            or marginfi.group != snapshot.group
+            or marginfi.authority != str(planner.payer)
+            or marginfi.authority != snapshot.margin_account.authority
+            or marginfi.bank != snapshot.bank.address
+            or marginfi.vault != snapshot.bank.liquidity_vault
+            or marginfi.principal != planner.borrow_amount
+        ):
+            raise ValueError("raw decoder policy differs from planner snapshot")
+        if (
+            snapshot.bank.mint != "So11111111111111111111111111111111111111112"
+            or snapshot.bank.mint_decimals != 9
+            or snapshot.bank.token_program
+            != "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+            or planner.borrow_amount
+            != request.capital_candidate.requested_flash_loan_lamports
+            or str(planner.payer) != request.wallet_snapshot.wallet_pubkey
+        ):
+            raise ValueError("raw capital principal requires exact native WSOL units")
 
     @staticmethod
     def _validate_vertical(
-        vertical: AtomicVerticalResult, request: ExactAttemptRequest
+        vertical: AtomicVerticalResult,
+        request: ExactAttemptRequest,
+        candidate: AtomicVerticalCandidate,
     ) -> None:
         provenance = vertical.planner_result.provenance
         evidence = request.provider_evidence
@@ -297,8 +357,32 @@ class ExactPaperAttemptOrchestrator:
             raise ValueError("final MarginFi provenance mismatch")
         if vertical.trace.opportunity_id != request.capital_candidate.candidate_id:
             raise ValueError("vertical opportunity identity mismatch")
+        qualification = vertical.qualification
+        if (
+            not isinstance(qualification, EconomicProofQualification)
+            or qualification.qualified is not True
+            or qualification.status is not QualificationStatus.QUALIFIED_PROFIT
+            or qualification.report_status is not ReconciliationStatus.PROVEN_PROFIT
+            or type(qualification.quote_net) is not int
+            or qualification.quote_net <= 0
+            or qualification.quote_net < qualification.min_profit_quote_units
+        ):
+            raise ValueError("raw conservative economic qualification not admitted")
+        if (
+            vertical.evidence_origin != "decoder_owned_offline"
+            or not isinstance(vertical.raw_evidence_hash, str)
+            or not _SHA256.fullmatch(vertical.raw_evidence_hash)
+            or candidate.valuation is None
+            or candidate.marginfi_registry is None
+            or qualification.valuation_hash != candidate.valuation.valuation_hash
+            or qualification.registry_hash != candidate.marginfi_registry.registry_hash
+            or qualification.report_status != vertical.reconciliation.status
+        ):
+            raise ValueError("raw economic qualification provenance mismatch")
 
-    def _release(self, request: ExactAttemptRequest, attempt_id: str, reason: str) -> bool:
+    def _release(
+        self, request: ExactAttemptRequest, attempt_id: str, reason: str
+    ) -> bool:
         return self.coordinator.release_pre_submission_reservation(
             attempt_id,
             idempotency_key=request.release_idempotency_key,

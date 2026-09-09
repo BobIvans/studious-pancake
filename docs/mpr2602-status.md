@@ -26,13 +26,17 @@ not external qualification.
 - Compiler rebinding of MarginFi instruction indices after compute-budget
   insertion; default-deny instruction checks; bounded stage cache identity.
 - Awaitable A3 batch source with a shared cycle deadline.
+- PR152 raw snapshot/decoder binding, native/WSOL principal-unit checks and
+  positive conservative qualification before handoff. Legacy observation-only
+  candidates cannot become qualified handoffs. Unverified A2 handoff labels
+  remain indeterminate at the A3 boundary.
 - Production planner/compiler/finalizer/decoder tests using isolated source
   vectors. `SOURCE_VECTOR_OFFLINE` does not satisfy deployed conformance.
 
 ## Outstanding completion gates
 
 The concrete Discovery/detector producer, native-unit-safe durable capital
-integration, raw-evidence PR152 admission, accepted attempt terminal/outbox
+integration, positive qualified WSOL PR152 execution, accepted attempt terminal/outbox
 commit and installed A3 positive-path replay are not yet complete. The legacy
 handoff status must not be relabelled as a durable successful outcome.
 

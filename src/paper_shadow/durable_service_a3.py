@@ -390,6 +390,19 @@ class InstalledDurablePaperService:
                 batch.evidence,
                 f"blocked_a3_runtime_cycle_failed_{type(exc).__name__}",
             )
+        if not isinstance(a2_report, ExactAttemptRuntimeReport) or a2_report.status in {
+            A2PaperOutcomeStatus.EXACT_ATTEMPT_READY_FOR_HANDOFF,
+            A2PaperOutcomeStatus.DURABLE_PAPER_OUTCOME_COMMITTED,
+        }:
+            # A handoff or a generic commit label does not carry the verified
+            # terminal outcome required by this projection. Preserve uncertainty
+            # until the accepted durable outcome consumer completes that work.
+            return self._indeterminate_report(
+                cycle_id,
+                sequence,
+                batch.evidence,
+                "blocked_a3_verified_attempt_terminal_missing",
+            )
         return InstalledDurablePaperServiceReport(
             cycle_id=cycle_id,
             status=_status_from_a2(a2_report.status),

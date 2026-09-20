@@ -1,0 +1,57 @@
+{
+  "agg_id": "AGG-11",
+  "title": "Independent EVM and Sui execution models",
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "UNQUALIFIED",
+  "live_enabled": false,
+  "prerequisite_blockers": [
+    "AGG11_PREREQUISITE_AGG01_NOT_ACCEPTED",
+    "AGG11_PREREQUISITE_AGG04_NOT_ACCEPTED"
+  ],
+  "external_blockers": [
+    "UP_EVM_RESEARCH_QUEUE_NOT_IMPORT_READY",
+    "UP_SUI_RESEARCH_QUEUE_NOT_IMPORT_READY",
+    "EVM_DEPLOYMENTS_ABI_LICENSE_CONFORMANCE_NOT_PINNED",
+    "SUI_PACKAGES_INTERFACES_LICENSE_CONFORMANCE_NOT_PINNED"
+  ],
+  "primary_nf": [
+    "NF-257",
+    "NF-258",
+    "NF-259",
+    "NF-260",
+    "NF-261",
+    "NF-262",
+    "NF-263",
+    "NF-264",
+    "NF-265",
+    "NF-266",
+    "NF-267",
+    "NF-268",
+    "NF-271"
+  ],
+  "work_packages": {
+    "CHAIN-01": [
+      "NF-257",
+      "NF-258",
+      "NF-259"
+    ],
+    "CHAIN-02": [
+      "NF-260",
+      "NF-261",
+      "NF-262",
+      "NF-263"
+    ],
+    "CHAIN-03": [
+      "NF-264"
+    ],
+    "CHAIN-04": [
+      "NF-265",
+      "NF-266",
+      "NF-267",
+      "NF-268"
+    ],
+    "CHAIN-06": [
+      "NF-271"
+    ]
+  }
+}

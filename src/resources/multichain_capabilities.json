@@ -1,0 +1,740 @@
+{
+  "schema_version": "agg11.chain-capabilities.v1",
+  "chains": [
+    {
+      "chain_key": "solana-mainnet",
+      "dialect": "solana",
+      "network_id": "mainnet-beta",
+      "native_asset": "SOL",
+      "atomic_boundary": "transaction",
+      "finality_model": "solana-commitment",
+      "genesis_fingerprint": null,
+      "blockers": [
+        "OWNED_BY_EXISTING_SOLANA_RUNTIME"
+      ]
+    },
+    {
+      "chain_key": "ethereum-mainnet",
+      "dialect": "evm",
+      "network_id": "1",
+      "native_asset": "ETH",
+      "atomic_boundary": "transaction-callback",
+      "finality_model": "head-safe-finalized",
+      "genesis_fingerprint": null,
+      "blockers": [
+        "GENESIS_NOT_PINNED",
+        "DEPLOYMENTS_NOT_QUALIFIED"
+      ]
+    },
+    {
+      "chain_key": "base-mainnet",
+      "dialect": "evm",
+      "network_id": "8453",
+      "native_asset": "ETH",
+      "atomic_boundary": "transaction-callback",
+      "finality_model": "l2-plus-l1-finality",
+      "genesis_fingerprint": null,
+      "blockers": [
+        "GENESIS_NOT_PINNED",
+        "DEPLOYMENTS_NOT_QUALIFIED"
+      ]
+    },
+    {
+      "chain_key": "arbitrum-one",
+      "dialect": "evm",
+      "network_id": "42161",
+      "native_asset": "ETH",
+      "atomic_boundary": "transaction-callback",
+      "finality_model": "l2-plus-l1-finality",
+      "genesis_fingerprint": null,
+      "blockers": [
+        "GENESIS_NOT_PINNED",
+        "DEPLOYMENTS_NOT_QUALIFIED"
+      ]
+    },
+    {
+      "chain_key": "bnb-mainnet",
+      "dialect": "evm",
+      "network_id": "56",
+      "native_asset": "BNB",
+      "atomic_boundary": "transaction-callback",
+      "finality_model": "block-finality",
+      "genesis_fingerprint": null,
+      "blockers": [
+        "GENESIS_NOT_PINNED",
+        "DEPLOYMENTS_NOT_QUALIFIED"
+      ]
+    },
+    {
+      "chain_key": "polygon-mainnet",
+      "dialect": "evm",
+      "network_id": "137",
+      "native_asset": "POL",
+      "atomic_boundary": "transaction-callback",
+      "finality_model": "checkpoint-finality",
+      "genesis_fingerprint": null,
+      "blockers": [
+        "GENESIS_NOT_PINNED",
+        "DEPLOYMENTS_NOT_QUALIFIED"
+      ]
+    },
+    {
+      "chain_key": "optimism-mainnet",
+      "dialect": "evm",
+      "network_id": "10",
+      "native_asset": "ETH",
+      "atomic_boundary": "transaction-callback",
+      "finality_model": "l2-plus-l1-finality",
+      "genesis_fingerprint": null,
+      "blockers": [
+        "GENESIS_NOT_PINNED",
+        "DEPLOYMENTS_NOT_QUALIFIED"
+      ]
+    },
+    {
+      "chain_key": "sui-mainnet",
+      "dialect": "sui",
+      "network_id": "sui-mainnet",
+      "native_asset": "SUI",
+      "atomic_boundary": "programmable-transaction-block",
+      "finality_model": "checkpoint-object-version",
+      "genesis_fingerprint": null,
+      "blockers": [
+        "GENESIS_NOT_PINNED",
+        "PACKAGES_NOT_QUALIFIED"
+      ]
+    }
+  ],
+  "capabilities": [
+    {
+      "capability_id": "ethereum-mainnet:aave",
+      "protocol": "aave",
+      "chain_key": "ethereum-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "ethereum-mainnet:morpho",
+      "protocol": "morpho",
+      "chain_key": "ethereum-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "ethereum-mainnet:dodo",
+      "protocol": "dodo",
+      "chain_key": "ethereum-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "ethereum-mainnet:flash-mint",
+      "protocol": "flash-mint",
+      "chain_key": "ethereum-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "ethereum-mainnet:net-settlement",
+      "protocol": "net-settlement",
+      "chain_key": "ethereum-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "base-mainnet:aave",
+      "protocol": "aave",
+      "chain_key": "base-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "base-mainnet:morpho",
+      "protocol": "morpho",
+      "chain_key": "base-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "base-mainnet:dodo",
+      "protocol": "dodo",
+      "chain_key": "base-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "base-mainnet:flash-mint",
+      "protocol": "flash-mint",
+      "chain_key": "base-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "base-mainnet:net-settlement",
+      "protocol": "net-settlement",
+      "chain_key": "base-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "arbitrum-one:aave",
+      "protocol": "aave",
+      "chain_key": "arbitrum-one",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "arbitrum-one:morpho",
+      "protocol": "morpho",
+      "chain_key": "arbitrum-one",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "arbitrum-one:dodo",
+      "protocol": "dodo",
+      "chain_key": "arbitrum-one",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "arbitrum-one:flash-mint",
+      "protocol": "flash-mint",
+      "chain_key": "arbitrum-one",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "arbitrum-one:net-settlement",
+      "protocol": "net-settlement",
+      "chain_key": "arbitrum-one",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "bnb-mainnet:aave",
+      "protocol": "aave",
+      "chain_key": "bnb-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "bnb-mainnet:morpho",
+      "protocol": "morpho",
+      "chain_key": "bnb-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "bnb-mainnet:dodo",
+      "protocol": "dodo",
+      "chain_key": "bnb-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "bnb-mainnet:flash-mint",
+      "protocol": "flash-mint",
+      "chain_key": "bnb-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "bnb-mainnet:net-settlement",
+      "protocol": "net-settlement",
+      "chain_key": "bnb-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "polygon-mainnet:aave",
+      "protocol": "aave",
+      "chain_key": "polygon-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "polygon-mainnet:morpho",
+      "protocol": "morpho",
+      "chain_key": "polygon-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "polygon-mainnet:dodo",
+      "protocol": "dodo",
+      "chain_key": "polygon-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "polygon-mainnet:flash-mint",
+      "protocol": "flash-mint",
+      "chain_key": "polygon-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "polygon-mainnet:net-settlement",
+      "protocol": "net-settlement",
+      "chain_key": "polygon-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "optimism-mainnet:aave",
+      "protocol": "aave",
+      "chain_key": "optimism-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "optimism-mainnet:morpho",
+      "protocol": "morpho",
+      "chain_key": "optimism-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "optimism-mainnet:dodo",
+      "protocol": "dodo",
+      "chain_key": "optimism-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "optimism-mainnet:flash-mint",
+      "protocol": "flash-mint",
+      "chain_key": "optimism-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "optimism-mainnet:net-settlement",
+      "protocol": "net-settlement",
+      "chain_key": "optimism-mainnet",
+      "dialect": "evm",
+      "status": "implemented_offline",
+      "blockers": [
+        "DEPLOYMENT_NOT_PINNED",
+        "ABI_OR_INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "sui-mainnet:deepbook",
+      "protocol": "deepbook",
+      "chain_key": "sui-mainnet",
+      "dialect": "sui",
+      "status": "implemented_offline",
+      "blockers": [
+        "PACKAGE_NOT_PINNED",
+        "INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "sui-mainnet:cetus",
+      "protocol": "cetus",
+      "chain_key": "sui-mainnet",
+      "dialect": "sui",
+      "status": "implemented_offline",
+      "blockers": [
+        "PACKAGE_NOT_PINNED",
+        "INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "sui-mainnet:navi",
+      "protocol": "navi",
+      "chain_key": "sui-mainnet",
+      "dialect": "sui",
+      "status": "implemented_offline",
+      "blockers": [
+        "PACKAGE_NOT_PINNED",
+        "INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "sui-mainnet:scallop",
+      "protocol": "scallop",
+      "chain_key": "sui-mainnet",
+      "dialect": "sui",
+      "status": "implemented_offline",
+      "blockers": [
+        "PACKAGE_NOT_PINNED",
+        "INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    },
+    {
+      "capability_id": "sui-mainnet:bucket",
+      "protocol": "bucket",
+      "chain_key": "sui-mainnet",
+      "dialect": "sui",
+      "status": "implemented_offline",
+      "blockers": [
+        "PACKAGE_NOT_PINNED",
+        "INTERFACE_NOT_PINNED",
+        "EXTERNAL_CONFORMANCE_MISSING"
+      ],
+      "allowed_effects": [
+        "local_build_test",
+        "read_network",
+        "simulate_network"
+      ],
+      "deployment": null
+    }
+  ]
+}

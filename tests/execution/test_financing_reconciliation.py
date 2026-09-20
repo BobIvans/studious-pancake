@@ -6,6 +6,7 @@ from types import SimpleNamespace
 import pytest
 
 from src.execution.economic_reconciliation import (
+    AssetKey,
     EconomicReconciler,
     FeeEvidence,
     NATIVE_SOL_ASSET,
@@ -103,7 +104,7 @@ def test_marginfi_and_generic_financing_cannot_be_supplied_together() -> None:
 
 
 def test_generic_vertical_rejects_non_settlement_inventory_loss() -> None:
-    other_asset = type(NATIVE_SOL_ASSET)("other-mint", "other-program", 6)
+    other_asset = AssetKey("other-mint", "other-program", 6)
     provenance = SimpleNamespace(
         jupiter_contract_pin=SHA_A,
         financing_lender="jupiter-lend",

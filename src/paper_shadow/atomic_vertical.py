@@ -99,6 +99,10 @@ class AtomicVerticalCandidate:
     approved_assets: tuple[AssetKey, ...] = ()
     valuation: ConservativeValuationSnapshot | None = None
     marginfi_registry: MarginfiRegistrySnapshot | None = None
+    financing_pre_state_accounts: tuple[Mapping[str, Any] | None, ...] | None = None
+    financing_pre_state_slot: int | None = None
+    attempt_id: str | None = None
+    attempt_generation: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

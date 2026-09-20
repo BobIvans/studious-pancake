@@ -216,10 +216,89 @@ def prepare_rent_loan(
     )
 
 
+def _meta_matches(
+    meta: AccountMeta,
+    *,
+    pubkey: Pubkey | None = None,
+    signer: bool,
+    writable: bool,
+) -> bool:
+    if pubkey is not None and meta.pubkey != pubkey:
+        return False
+    return meta.is_signer is signer and meta.is_writable is writable
+
+
+def _validate_instruction_shape(
+    instruction: Instruction,
+    discriminator: int,
+) -> None:
+    accounts = tuple(instruction.accounts)
+    if discriminator == BORROW_DISCRIMINATOR:
+        valid = (
+            len(accounts) == 3
+            and _meta_matches(
+                accounts[0],
+                pubkey=SLUMLORD_PDA,
+                signer=False,
+                writable=True,
+            )
+            and _meta_matches(
+                accounts[1],
+                signer=False,
+                writable=True,
+            )
+            and _meta_matches(
+                accounts[2],
+                pubkey=INSTRUCTIONS_SYSVAR_ID,
+                signer=False,
+                writable=False,
+            )
+        )
+    elif discriminator == REPAY_DISCRIMINATOR:
+        valid = (
+            len(accounts) == 3
+            and _meta_matches(
+                accounts[0],
+                pubkey=SLUMLORD_PDA,
+                signer=False,
+                writable=True,
+            )
+            and _meta_matches(
+                accounts[1],
+                signer=True,
+                writable=True,
+            )
+            and _meta_matches(
+                accounts[2],
+                pubkey=SYSTEM_PROGRAM_ID,
+                signer=False,
+                writable=False,
+            )
+        )
+    elif discriminator == CHECK_REPAID_DISCRIMINATOR:
+        valid = (
+            len(accounts) == 1
+            and _meta_matches(
+                accounts[0],
+                pubkey=SLUMLORD_PDA,
+                signer=False,
+                writable=True,
+            )
+        )
+    else:
+        valid = False
+
+    if not valid:
+        raise SlumlordAdapterError(
+            SlumlordRejectionCode.ORDER_INVARIANT,
+            "Slumlord instruction accounts or privileges differ from pinned ABI",
+        )
+
+
 def validate_slumlord_order(
     instructions: Sequence[Instruction],
 ) -> SlumlordOrderCertificate:
-    """Require one Borrow -> Repay -> later top-level CheckRepaid sequence."""
+    """Require ABI-valid Borrow -> Repay -> later top-level CheckRepaid."""
 
     borrow: list[int] = []
     repay: list[int] = []
@@ -229,10 +308,13 @@ def validate_slumlord_order(
             continue
         data = bytes(instruction.data)
         if data == bytes((BORROW_DISCRIMINATOR,)):
+            _validate_instruction_shape(instruction, BORROW_DISCRIMINATOR)
             borrow.append(index)
         elif data == bytes((REPAY_DISCRIMINATOR,)):
+            _validate_instruction_shape(instruction, REPAY_DISCRIMINATOR)
             repay.append(index)
         elif data == bytes((CHECK_REPAID_DISCRIMINATOR,)):
+            _validate_instruction_shape(instruction, CHECK_REPAID_DISCRIMINATOR)
             check.append(index)
 
     if len(borrow) != 1 or len(repay) != 1 or len(check) != 1:

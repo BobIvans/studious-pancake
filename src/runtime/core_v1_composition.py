@@ -7,7 +7,7 @@ and replay owners.  It never imports a sender or signer and never enables live.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import json
 from pathlib import Path
@@ -23,8 +23,10 @@ from src.execution.exact_simulation import (
 )
 from src.execution.models import RpcClient
 from src.lending.financing import FinancingEvidence, FinancingPort
+from src.lending.financing_planner_adapter import FinancingPlannerProviderAdapter
 from src.paper_shadow.atomic_vertical import (
     AtomicPlannerSimulationReconciliationVertical,
+    FinancingRepaymentDecoder,
 )
 from src.paper_shadow.durable_service_a3 import (
     A3ExactAttemptBatch,
@@ -53,6 +55,7 @@ from src.runtime.core_v1_materializer import (
 CORE_V1_COMPOSITION_SCHEMA = "core-v1.installed-composition.v1"
 CORE_V1_OWNER_ID = "core-v1-installed-marginfi-jupiter"
 CORE_V1_LENDER_ADAPTER_REQUIRED = "CORE_V1_LENDER_ADAPTER_REQUIRED"
+CORE_V1_FINANCING_DECODER_REQUIRED = "CORE_V1_FINANCING_DECODER_REQUIRED"
 
 
 def _hash_json(value: object) -> str:
@@ -85,6 +88,7 @@ class CoreV1Dependencies:
     simulation_policy: ExactSimulationPolicy | None = None
     financing_port: FinancingPort | None = None
     financing_evidence: FinancingEvidence | None = None
+    financing_repayment_decoder: FinancingRepaymentDecoder | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.release_id, str) or not self.release_id.strip():
@@ -120,6 +124,17 @@ class CoreV1Dependencies:
                 raise ValueError("CORE_V1_FINANCING_GENERATION_MISMATCH")
         if self.financing_evidence is not None and self.financing_port is None:
             raise ValueError("CORE_V1_FINANCING_PORT_REQUIRED")
+        if self.financing_repayment_decoder is not None:
+            if self.financing_evidence is None:
+                raise ValueError("CORE_V1_FINANCING_EVIDENCE_REQUIRED")
+            decoder = self.financing_repayment_decoder
+            if (
+                decoder.lender_id != self.financing_evidence.lender_id
+                or decoder.program_id != self.financing_evidence.program_id
+                or decoder.deployment_generation
+                != self.financing_evidence.deployment_generation
+            ):
+                raise ValueError("CORE_V1_FINANCING_DECODER_IDENTITY_MISMATCH")
         if not callable(getattr(self.rpc, "call", None)):
             raise ValueError("CORE_V1_GOVERNED_RPC_REQUIRED")
 
@@ -273,12 +288,17 @@ def build_core_v1_composition(
 
     if dependencies is None:
         if not _is_legacy_marginfi_profile(profile):
+        if (
+            dependencies.financing_port is None
+            or dependencies.financing_evidence is None
+        ):
+            reason = f"CORE_V1_FINANCING_PORT_REQUIRED:{profile.lender}"
             service = _build_generic_blocked_service(
                 config,
                 db_path=db_path,
                 profile=profile,
                 authority=authority,
-                reason=CORE_V1_BLOCKED_EXTERNAL,
+                reason=reason,
             )
             return CoreV1Composition(
                 profile=profile,
@@ -292,39 +312,95 @@ def build_core_v1_composition(
                 runtime_cycle=None,
                 materializer=None,
                 admitted=False,
-                blockers=(CORE_V1_BLOCKED_EXTERNAL,),
+                blockers=(reason,),
             )
-        pin = load_marginfi_contract_pin()
-        marginfi = MarginfiFlashLoanProvider(pin)
-        blocked_marginfi = cast(VerifiedMarginfiProviderPort, marginfi)
-        allowed_program_ids = tuple(
-            dict.fromkeys((*config.allowlist.program_ids, pin.program_id))
-        )
-        planner = AtomicMarginfiJupiterPlanner(
-            blocked_marginfi,
-            AtomicPlannerPolicy(allowed_program_ids=allowed_program_ids),
-        )
-        simulator = ExactSimulationFinalizer(
-            _BlockedRpcClient(),
-            policy=ExactSimulationPolicy(commitment=config.cluster.commitment.value),
-        )
-        vertical = AtomicPlannerSimulationReconciliationVertical(planner, simulator)
-        orchestrator = ExactPaperAttemptOrchestrator(
-            coordinator=capital,
-            vertical=vertical,
-            authority=authority,
-        )
-        runtime_cycle = DurableCompletedExactAttemptRuntime(
-            orchestrator=orchestrator,
-            authority=authority,
-        )
-        service = build_verified_terminal_paper_service(
-            config,
-            db_path=Path(db_path),
-            batch_source=_BlockedBatchSource(profile, CORE_V1_BLOCKED_EXTERNAL),
-            runtime_cycle=runtime_cycle,
-            authority=authority,
-        )
+        evidence = dependencies.financing_evidence
+        if evidence.lender_id != profile.lender:
+            authority.close()
+            raise ValueError("CORE_V1_FINANCING_LENDER_MISMATCH")
+        if evidence.deployment_generation != profile.profile_generation:
+            authority.close()
+            raise ValueError("CORE_V1_FINANCING_GENERATION_MISMATCH")
+        decoder = dependencies.financing_repayment_decoder
+        if decoder is None:
+            reason = f"{CORE_V1_FINANCING_DECODER_REQUIRED}:{profile.lender}"
+            service = _build_generic_blocked_service(
+                config,
+                db_path=db_path,
+                profile=profile,
+                authority=authority,
+                reason=reason,
+            )
+            return CoreV1Composition(
+                profile=profile,
+                authority=authority,
+                capital=capital,
+                service=service,
+                planner=None,
+                simulator=None,
+                vertical=None,
+                orchestrator=None,
+                runtime_cycle=None,
+                materializer=None,
+                admitted=False,
+                blockers=(reason,),
+            )
+        try:
+            materializer = CoreV1AttemptMaterializer(
+                config,
+                profile,
+                release_id=dependencies.release_id,
+                policy_bundle_hash=dependencies.policy_bundle_hash,
+            )
+            batch_source = CoreV1MaterializedBatchSource(
+                materializer,
+                dependencies.draft_source,
+            )
+            provider = FinancingPlannerProviderAdapter(
+                dependencies.financing_port,
+                evidence,
+            )
+            allowed = tuple(
+                dict.fromkeys(
+                    (*dependencies.planner_policy.allowed_program_ids, evidence.program_id)
+                )
+            )
+            planner_policy = replace(
+                dependencies.planner_policy,
+                allowed_program_ids=allowed,
+            )
+            planner = AtomicMarginfiJupiterPlanner(
+                cast(VerifiedMarginfiProviderPort, provider),
+                planner_policy,
+            )
+            simulator = ExactSimulationFinalizer(
+                dependencies.rpc,
+                policy=dependencies.simulation_policy,
+            )
+            vertical = AtomicPlannerSimulationReconciliationVertical(
+                planner,
+                simulator,
+                financing_decoder=decoder,
+            )
+            orchestrator = ExactPaperAttemptOrchestrator(
+                coordinator=capital,
+                vertical=vertical,
+                authority=authority,
+            )
+            runtime_cycle = DurableCompletedExactAttemptRuntime(
+                orchestrator=orchestrator,
+                authority=authority,
+            )
+            service = build_verified_terminal_paper_service(
+                config,
+                db_path=Path(db_path),
+                batch_source=batch_source,
+                runtime_cycle=runtime_cycle,
+                authority=authority,
+            )
+        except BaseException:
+            authority.close()
+            raise
         return CoreV1Composition(
             profile=profile,
             authority=authority,
@@ -335,46 +411,9 @@ def build_core_v1_composition(
             vertical=vertical,
             orchestrator=orchestrator,
             runtime_cycle=runtime_cycle,
-            materializer=None,
-            admitted=False,
-            blockers=(CORE_V1_BLOCKED_EXTERNAL,),
-        )
-
-    if not _is_legacy_marginfi_profile(profile):
-        reason = f"{CORE_V1_LENDER_ADAPTER_REQUIRED}:{profile.lender}"
-        if (
-            dependencies.financing_port is None
-            or dependencies.financing_evidence is None
-        ):
-            reason = f"CORE_V1_FINANCING_PORT_REQUIRED:{profile.lender}"
-        else:
-            if dependencies.financing_evidence.lender_id != profile.lender:
-                raise ValueError("CORE_V1_FINANCING_LENDER_MISMATCH")
-            if (
-                dependencies.financing_evidence.deployment_generation
-                != profile.profile_generation
-            ):
-                raise ValueError("CORE_V1_FINANCING_GENERATION_MISMATCH")
-        service = _build_generic_blocked_service(
-            config,
-            db_path=db_path,
-            profile=profile,
-            authority=authority,
-            reason=reason,
-        )
-        return CoreV1Composition(
-            profile=profile,
-            authority=authority,
-            capital=capital,
-            service=service,
-            planner=None,
-            simulator=None,
-            vertical=None,
-            orchestrator=None,
-            runtime_cycle=None,
-            materializer=None,
-            admitted=False,
-            blockers=(reason,),
+            materializer=materializer,
+            admitted=True,
+            blockers=(),
         )
 
     if dependencies.marginfi_provider is None:
@@ -439,6 +478,7 @@ def build_core_v1_composition(
 
 __all__ = [
     "CORE_V1_COMPOSITION_SCHEMA",
+    "CORE_V1_FINANCING_DECODER_REQUIRED",
     "CORE_V1_LENDER_ADAPTER_REQUIRED",
     "CORE_V1_OWNER_ID",
     "CoreV1Composition",

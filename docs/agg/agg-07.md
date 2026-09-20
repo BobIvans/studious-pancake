@@ -1,6 +1,6 @@
 # AGG-07 — liquidations, lenders and rate markets
 
-Base: `main@0c4f216a62d62b20f6fb4ec4bbd0548cea58df65`
+Base: `main@a52bbd11338e3c9092cd871227d2279450b928a3`
 
 Branch: `codex/agg-20260920-07`
 

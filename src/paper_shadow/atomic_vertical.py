@@ -222,7 +222,32 @@ class AtomicPlannerSimulationReconciliationVertical:
                     "generic financing decoder must own all economic observations",
                 )
             decoded_financing = self.financing_decoder.decode(finalized, candidate)
-            financing = decoded_financing.evidence.financing
+            decoded = decoded_financing.evidence
+            report = finalized.report
+            if (
+                decoded.expected_message_hash != message_hash
+                or decoded.simulated_message_hash != message_hash
+                or decoded.simulation_slot != report.final.slot
+                or decoded.snapshot_slot != report.final.slot
+                or decoded.min_context_slot != report.min_context_slot
+                or decoded.response_hash != report.final.response_hash
+                or decoded.logs_hash != report.final.logs_hash
+                or decoded.settlement_asset != candidate.settlement_asset
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "financing decoder evidence is not bound to exact finalized simulation",
+                )
+            planned_snapshot = candidate.request.financing_snapshot
+            if (
+                planned_snapshot is None
+                or planned_snapshot.asset_id != candidate.settlement_asset.stable_id()
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "decoded settlement asset differs from planned financing asset",
+                )
+            financing = decoded.financing
             if financing is None:
                 raise AtomicVerticalError(
                     AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
@@ -245,6 +270,10 @@ class AtomicPlannerSimulationReconciliationVertical:
                 or provenance.financing_obligation_digest is None
                 or primary.obligation_digest
                 != provenance.financing_obligation_digest
+                or candidate.attempt_id is None
+                or primary.attempt_id != candidate.attempt_id
+                or candidate.attempt_generation is None
+                or primary.attempt_generation != candidate.attempt_generation
             ):
                 raise AtomicVerticalError(
                     AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
@@ -261,6 +290,8 @@ class AtomicPlannerSimulationReconciliationVertical:
             }
             if actual_aux != expected_aux or any(
                 item.message_hash != message_hash
+                or item.attempt_id != candidate.attempt_id
+                or item.attempt_generation != candidate.attempt_generation
                 for item in financing.auxiliary
             ):
                 raise AtomicVerticalError(

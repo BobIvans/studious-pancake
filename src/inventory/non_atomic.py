@@ -200,7 +200,7 @@ _ALLOWED_STATUS_TRANSITIONS: dict[OrderStatus, frozenset[OrderStatus]] = {
             OrderStatus.REJECTED,
         }
     ),
-    OrderStatus.CANCELED: frozenset(),
+    OrderStatus.CANCELED: frozenset({OrderStatus.UNKNOWN}),
     OrderStatus.FILLED: frozenset(),
     OrderStatus.REJECTED: frozenset(),
 }

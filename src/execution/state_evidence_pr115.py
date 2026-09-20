@@ -112,6 +112,19 @@ class PR115ReadonlyAccountBinding:
 
 
 @dataclass(frozen=True, slots=True)
+class PR115OpaqueMutableAccountBinding:
+    """Protocol-owned mutable state retained as raw evidence, never PnL.
+
+    The binding admits only an exact address/owner pair. The account may change
+    across simulation, but those bytes/lamports are not interpreted as wallet
+    profit, token balance, price, or permission.
+    """
+
+    address: str
+    owner: str
+
+
+@dataclass(frozen=True, slots=True)
 class PR115DecodePolicy:
     """Strict decoder policy for simulation-owned evidence."""
 
@@ -122,6 +135,7 @@ class PR115DecodePolicy:
     max_account_data_bytes: int = 4096
     marginfi: PR115MarginfiDecodePolicy | None = None
     readonly_accounts: tuple[PR115ReadonlyAccountBinding, ...] = ()
+    opaque_mutable_accounts: tuple[PR115OpaqueMutableAccountBinding, ...] = ()
 
     def __post_init__(self) -> None:
         if self.max_account_data_bytes <= 0:
@@ -334,6 +348,15 @@ def build_pr115_simulation_owned_economic_proof(
         raise PR115StateEvidenceError("duplicate_readonly_account")
     if not set(readonly).issubset(addresses):
         raise PR115StateEvidenceError("missing_readonly_account")
+    opaque_mutable = {
+        item.address: item for item in active_policy.opaque_mutable_accounts
+    }
+    if len(opaque_mutable) != len(active_policy.opaque_mutable_accounts):
+        raise PR115StateEvidenceError("duplicate_opaque_mutable_account")
+    if not set(opaque_mutable).issubset(addresses):
+        raise PR115StateEvidenceError("missing_opaque_mutable_account")
+    if set(readonly).intersection(opaque_mutable):
+        raise PR115StateEvidenceError("account_cannot_be_readonly_and_mutable")
     for pre, post in zip(pre_snapshots, post_snapshots):
         binding = readonly.get(post.address)
         if binding is not None and not (
@@ -341,6 +364,11 @@ def build_pr115_simulation_owned_economic_proof(
             and pre.raw_hash == post.raw_hash == binding.raw_sha256
         ):
             raise PR115StateEvidenceError("readonly_account_changed")
+        mutable = opaque_mutable.get(post.address)
+        if mutable is not None and not (
+            pre.owner == post.owner == mutable.owner
+        ):
+            raise PR115StateEvidenceError("opaque_mutable_owner_changed")
     repayment = (
         None
         if active_policy.marginfi is None
@@ -386,6 +414,8 @@ def build_pr115_simulation_owned_economic_proof(
             pass  # Already decoded and identity checked by the narrow protocol owner.
         elif post.address in readonly:
             pass  # Exact raw preservation, never interpreted as money or price.
+        elif post.address in opaque_mutable:
+            pass  # Raw mutation is bound by hashes but never interpreted as economics.
         else:
             raise PR115StateEvidenceError(
                 PR115StateEvidenceCode.UNSUPPORTED_ACCOUNT_OWNER
@@ -901,6 +931,7 @@ __all__ = [
     "PR115_SCHEMA_VERSION",
     "PR115DecodePolicy",
     "PR115MarginfiDecodePolicy",
+    "PR115OpaqueMutableAccountBinding",
     "PR115MarginfiRepaymentState",
     "PR115ReadonlyAccountBinding",
     "PR115NativeLamportDelta",

@@ -96,8 +96,11 @@ class CoreV1ReleaseProfile:
         )
         if not all(expected):
             raise ValueError("CORE_V1_PROFILE_SCOPE_MISMATCH")
-        if self.profile_id == CORE_V1_PROFILE_ID and self.lender != "marginfi":
-            raise ValueError("CORE_V1_LEGACY_PROFILE_LENDER_MISMATCH")
+        if self.profile_id == CORE_V1_PROFILE_ID:
+            if self.lender != "marginfi":
+                raise ValueError("CORE_V1_LEGACY_PROFILE_LENDER_MISMATCH")
+            if self.profile_generation != 1:
+                raise ValueError("CORE_V1_LEGACY_PROFILE_GENERATION_MISMATCH")
         if not self.cluster.strip() or not self.genesis_hash.strip():
             raise ValueError("CORE_V1_CLUSTER_IDENTITY_REQUIRED")
 
@@ -217,7 +220,7 @@ class CoreV1AttemptMaterializer:
                 deployment_generation=self.profile.profile_generation,
                 evidence=draft.financing_evidence,
             )
-        elif self.profile.lender != "marginfi":
+        elif self.profile.lender != "marginfi" or self.profile.profile_generation != 1:
             raise ValueError("CORE_V1_FINANCING_EVIDENCE_REQUIRED")
         if draft.release_id != self.release_id:
             raise ValueError("CORE_V1_RELEASE_DRIFT")

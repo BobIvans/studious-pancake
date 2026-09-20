@@ -262,3 +262,28 @@ def test_agg13_inventory_qualification_is_scope_bound_and_no_live() -> None:
     )
     assert complete.qualified is True
     assert complete.live_authorized is False
+
+
+def test_agg13_canceled_order_returns_to_unknown_if_exchange_reports_late_fill(
+    tmp_path,
+) -> None:
+    with DurableInventoryLedger(tmp_path / "inventory.sqlite3") as ledger:
+        ledger.register_order(_intent())
+        ledger.acknowledge_order(
+            client_order_id="client-1",
+            exchange_order_id="ex-1",
+            observed_at_ns=200,
+        )
+        ledger.mark_status(
+            client_order_id="client-1",
+            status=OrderStatus.CANCELED,
+            observed_at_ns=250,
+        )
+        reconciled = ledger.reconcile_exchange_state(
+            client_order_id="client-1",
+            exchange_status=OrderStatus.CANCELED,
+            exchange_cumulative_filled_base_units=1,
+            observed_at_ns=300,
+        )
+        assert reconciled.status is OrderStatus.UNKNOWN
+        assert ledger.recovery_plan("client-1").exposure_open is True

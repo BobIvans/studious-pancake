@@ -66,6 +66,12 @@ def verify_super08() -> dict[str, Any]:
         blockers.append("SUPER08_PRODUCT_NF_COVERAGE_MISSING")
     elif any(row.get("owner") != "PRODUCT-01" for row in product_rows.values()):
         blockers.append("SUPER08_PRODUCT_PRIMARY_OWNER_MISMATCH")
+    allowed_product_statuses = {"IMPLEMENTED_OFFLINE", "MERGED_CODE"}
+    if product_rows and any(
+        row.get("implementation_status") not in allowed_product_statuses
+        for row in product_rows.values()
+    ):
+        blockers.append("SUPER08_PRODUCT_IMPLEMENTATION_INCOMPLETE")
 
     if raw.get("live_enabled") is not False:
         blockers.append("SUPER08_AGG14_LIVE_DEFAULT_NOT_FALSE")

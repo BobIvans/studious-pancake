@@ -4,6 +4,8 @@ SUPER-08 closes the code-level overlap of W2-22 (PRODUCT-01 / PR-148) and
 W2-23 (RELEASE-01 / PR-150) without creating a second product engine or release
 authority.
 
+Implementation base: `main@27875850a88edf102c904e31955e0df8b78b13b4`.
+
 ## Reused merged owners
 
 - AGG-14 / PR #509 owns PRODUCT-01 NF-318…NF-322 in `src.research`.

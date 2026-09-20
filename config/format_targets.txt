@@ -258,3 +258,7 @@ tests/test_mpr2602_semantic_identity_adversarial.py
 scripts/mpr2602_installed_default_probe.py
 tests/test_mpr2602_installed_import_boundary.py
 src/execution/__init__.py
+scripts/verify_mpr_next_08_jupiter_v2_contract.py
+src/providers/conformance/mega_b2.py
+tests/test_mpr_next_08_jupiter_v2_contract.py
+tests/test_mega_pr_b2_provider_conformance.py

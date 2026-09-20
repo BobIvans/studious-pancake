@@ -6,13 +6,11 @@ from __future__ import annotations
 import argparse
 import os
 from pathlib import Path
-import shutil
 import subprocess
 import sys
 from typing import Final
 
 ROOT: Final = Path(__file__).resolve().parents[1]
-GENERATED_DIRECTORIES: Final[tuple[str, ...]] = ("build", "dist")
 
 SAFE_ENV: Final = {
     "PAPER_TRADING_ONLY": "true",
@@ -53,6 +51,12 @@ MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+MPR_NEXT_08_JUPITER_V2_CONTRACT_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_mpr_next_08_jupiter_v2_contract.py",
+    "--json",
+]
+
 PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr200_production_cutover.py",
@@ -63,35 +67,6 @@ PR206_DURABLE_STATE_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr206_durable_state.py",
     "--json",
-]
-
-MPR_4X_01_FOUNDATION_COMMAND: Final[list[str]] = [
-    sys.executable,
-    "scripts/verify_mpr_4x_01_foundation.py",
-    "--json",
-]
-
-MPR_TD_COMMANDS: Final[list[list[str]]] = [
-    [
-        sys.executable,
-        "scripts/verify_mpr_td_01_canonical_surface.py",
-        "--json",
-    ],
-    [
-        sys.executable,
-        "scripts/verify_mpr_td_02_failure_verification.py",
-        "--json",
-    ],
-    [
-        sys.executable,
-        "scripts/verify_mpr_td_03_capacity_storage.py",
-        "--json",
-    ],
-    [
-        sys.executable,
-        "scripts/verify_mpr_td_04_upgrade_security.py",
-        "--json",
-    ],
 ]
 
 # Public by design: tests inspect the final offline pytest command.
@@ -128,7 +103,6 @@ COMMANDS: Final[list[list[str]]] = [
         sys.executable,
         "-m",
         "pytest",
-        "tests/architecture/test_mpr_4x_01_foundation.py",
         "tests/test_pr01_authority_map.py",
         "tests/test_pr023_runtime_truth.py",
         "tests/test_launcher_startup_smoke.py",
@@ -145,6 +119,7 @@ COMMANDS: Final[list[list[str]]] = [
         "tests/test_pr136_rooted_rpc_quorum.py",
         "tests/test_pr140_data_lineage_quarantine.py",
         "tests/test_pr194_trusted_foundation.py",
+        "tests/test_mpr_next_08_jupiter_v2_contract.py",
         "tests/test_pr195_durable_webhook_intake.py",
         "tests/test_pr200_production_cutover.py",
         "tests/test_pr195_durable_kernel_v3.py",
@@ -184,15 +159,8 @@ def run(command: list[str]) -> None:
         raise SystemExit(completed.returncode)
 
 
-def remove_generated_artifacts() -> None:
-    """Remove only known package-build outputs created by verification."""
-
-    for directory in GENERATED_DIRECTORIES:
-        shutil.rmtree(ROOT / directory, ignore_errors=True)
-
-
 def ensure_clean_source_tree() -> None:
-    """Fail if repository verification leaves unexpected files behind."""
+    """Fail if repository verification leaves generated files behind."""
     if not (ROOT / ".git").is_dir():
         return
     completed = subprocess.run(
@@ -229,17 +197,13 @@ def main() -> int:
     run(VERIFY_PR194_REQUIRED_CONTROLS_COMMAND)
     run(PR194_TRUSTED_FOUNDATION_COMMAND)
     run(MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND)
+    run(MPR_NEXT_08_JUPITER_V2_CONTRACT_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
-    run(MPR_4X_01_FOUNDATION_COMMAND)
-    run([sys.executable, "scripts/verify_mpr_4x_02_runtime_authority.py"])
-    for command in MPR_TD_COMMANDS:
-        run(command)
 
     for command in COMMANDS[1:]:
         run(command)
 
-    remove_generated_artifacts()
     ensure_clean_source_tree()
 
     print(

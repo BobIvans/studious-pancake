@@ -92,3 +92,11 @@ def test_super07_rejects_per_child_disposition_corruption() -> None:
         "PR-134:CHILD_MAPPING_MISMATCH:qualification_status"
         in result["errors"]
     )
+
+
+def test_super07_rejects_source_pr_range_drift() -> None:
+    broken = deepcopy(payload())
+    broken["source_pr_range"] = "PR-001..PR-999"
+    result = api()["verify_payload"](broken, root=ROOT)
+    assert result["ok"] is False
+    assert "SOURCE_PR_RANGE_MISMATCH" in result["errors"]

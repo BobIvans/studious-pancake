@@ -990,7 +990,7 @@ def _route_blockers(
             blockers.append(f"LEG_{index}_DIALECT_MISMATCH")
         if index:
             prev = legs[index - 1]
-            if prev.output_asset.identity != leg.input_asset.identity:
+            if prev.output_asset != leg.input_asset:
                 blockers.append(
                     f"LEG_{index}_ASSET_CONTINUITY_BROKEN"
                 )
@@ -1000,8 +1000,7 @@ def _route_blockers(
                 )
     if (
         require_cycle
-        and legs[0].input_asset.identity
-        != legs[-1].output_asset.identity
+        and legs[0].input_asset != legs[-1].output_asset
     ):
         blockers.append("ROUTE_NOT_CLOSED")
     seen: dict[str, RouteLeg] = {}

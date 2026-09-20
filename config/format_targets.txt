@@ -267,3 +267,10 @@ src/execution/financing_evidence.py
 src/release_gate/agg01_foundation.py
 tests/test_agg01_foundation.py
 tests/test_agg01_financing_contracts.py
+src/agg02/historical_membership.py
+src/agg02/transaction_formats.py
+scripts/verify_super01.py
+tests/test_super01_closure.py
+tests/test_super01_transaction_formats.py
+src/agg02/__init__.py
+src/agg02/storage.py

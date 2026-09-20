@@ -307,7 +307,9 @@ def inspect_dependency_closure(
         importable_packages=tuple(sorted(set(required).intersection(importable))),
         non_importable_packages=tuple(sorted(non_importable)),
         global_site_packages=global_site_packages,
-        interpreter_executable=str(Path(interpreter_executable or sys.executable).resolve()),
+        interpreter_executable=str(
+            Path(interpreter_executable or sys.executable).resolve()
+        ),
     )
 
 
@@ -321,7 +323,9 @@ def _installed_versions(required: Sequence[str]) -> dict[str, str]:
     return output
 
 
-def _importable_packages(required: Sequence[str], *, root: Path | None = None) -> set[str]:
+def _importable_packages(
+    required: Sequence[str], *, root: Path | None = None
+) -> set[str]:
     output: set[str] = set()
     resolved_root = root.resolve() if root is not None else None
     for name in required:
@@ -333,7 +337,11 @@ def _importable_packages(required: Sequence[str], *, root: Path | None = None) -
         if found is None:
             continue
         origin = getattr(found, "origin", None)
-        if resolved_root is not None and origin not in (None, "built-in", "frozen"):
+        if (
+            resolved_root is not None
+            and isinstance(origin, str)
+            and origin not in ("built-in", "frozen")
+        ):
             try:
                 Path(origin).resolve().relative_to(resolved_root)
             except (OSError, ValueError):
@@ -378,18 +386,28 @@ def parse_pyproject_requirement_names(raw: bytes) -> set[str]:
     if project is not None and not isinstance(project, dict):
         raise ValueError("pyproject [project] must be a table")
     if isinstance(project, dict):
-        names.update(_parse_requirement_array(project.get("dependencies", []), "project.dependencies"))
+        names.update(
+            _parse_requirement_array(
+                project.get("dependencies", []), "project.dependencies"
+            )
+        )
         optional = project.get("optional-dependencies", {})
         if optional is not None and not isinstance(optional, dict):
             raise ValueError("project.optional-dependencies must be a table")
         if isinstance(optional, dict):
             for group, values in optional.items():
-                names.update(_parse_requirement_array(values, f"project.optional-dependencies.{group}"))
+                names.update(
+                    _parse_requirement_array(
+                        values, f"project.optional-dependencies.{group}"
+                    )
+                )
     build = document.get("build-system", {})
     if build is not None and not isinstance(build, dict):
         raise ValueError("pyproject [build-system] must be a table")
     if isinstance(build, dict):
-        names.update(_parse_requirement_array(build.get("requires", []), "build-system.requires"))
+        names.update(
+            _parse_requirement_array(build.get("requires", []), "build-system.requires")
+        )
     return names
 
 
@@ -412,7 +430,9 @@ def parse_requirement_names(text: str) -> set[str]:
         if line.startswith(("-e", "--editable")):
             raise ValueError(f"editable requirement forbidden at line {line_no}")
         if line.startswith("-"):
-            raise ValueError(f"unsupported requirements directive at line {line_no}: {line}")
+            raise ValueError(
+                f"unsupported requirements directive at line {line_no}: {line}"
+            )
         if " #" in line:
             line = line.split(" #", 1)[0].rstrip()
         try:
@@ -424,13 +444,17 @@ def parse_requirement_names(text: str) -> set[str]:
 
 def parse_requirement_name(requirement: str) -> str:
     value = requirement.strip()
-    if not value or " @ " in value or value.startswith(("git+", "http://", "https://", "file:")):
+    if (
+        not value
+        or " @ " in value
+        or value.startswith(("git+", "http://", "https://", "file:"))
+    ):
         raise ValueError(f"unsupported requirement syntax: {requirement!r}")
     match = _REQUIREMENT_NAME.match(value)
     if match is None:
         raise ValueError(f"missing distribution name: {requirement!r}")
     name = match.group(0)
-    remainder = value[match.end():]
+    remainder = value[match.end() :]
     if remainder.startswith("["):
         end = remainder.find("]")
         if end < 0:

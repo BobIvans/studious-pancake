@@ -17,6 +17,7 @@ from pathlib import Path
 from typing import Any
 
 from src.production_debt import ProductionDebtReport, evaluate_production_debt
+from src.lending.financing import FINANCING_CONTRACT_VERSION
 from src.runtime.core_v1_materializer import CORE_V1_PROFILE_ID
 
 PROFILE_SCHEMA = "core-v1.release-profile.v1"
@@ -83,6 +84,8 @@ class CoreV1ReleaseProfile:
     unrestricted_live_allowed: bool
     automatic_scale_up_allowed: bool
     executed_canary_required_for_default_off_review: bool
+    profile_generation: int = 1
+    financing_contract_version: str = FINANCING_CONTRACT_VERSION
 
     @classmethod
     def load(cls, path: str | Path) -> "CoreV1ReleaseProfile":
@@ -109,25 +112,33 @@ class CoreV1ReleaseProfile:
             executed_canary_required_for_default_off_review=_bool(
                 raw, "executed_canary_required_for_default_off_review"
             ),
+            profile_generation=int(raw.get("profile_generation", 1)),
+            financing_contract_version=str(
+                raw.get("financing_contract_version", FINANCING_CONTRACT_VERSION)
+            ),
         )
         profile.validate()
         return profile
 
     def validate(self) -> None:
         expected = (
-            self.profile_id == CORE_V1_PROFILE_ID,
+            bool(self.profile_id.strip()),
             self.release_class == "production-ready-default-off",
             self.strategy == "circular_arbitrage",
-            self.lender == "marginfi",
+            bool(self.lender.strip()),
             self.router == "jupiter",
             self.submission_transport in {"rpc", "rpc+jito"},
             not self.live_enabled,
             not self.unrestricted_live_allowed,
             not self.automatic_scale_up_allowed,
             not self.executed_canary_required_for_default_off_review,
+            type(self.profile_generation) is int and self.profile_generation >= 1,
+            self.financing_contract_version == FINANCING_CONTRACT_VERSION,
         )
         if not all(expected):
             raise ValueError("CORE_V1_PROFILE_SCOPE_INVALID")
+        if self.profile_id == CORE_V1_PROFILE_ID and self.lender != "marginfi":
+            raise ValueError("CORE_V1_LEGACY_PROFILE_LENDER_MISMATCH")
         if not self.cluster_name or not self.genesis_hash:
             raise ValueError("CORE_V1_PROFILE_CLUSTER_IDENTITY_REQUIRED")
 
@@ -193,6 +204,8 @@ def evaluate_core_v1_profile_debt(
     code = inspect_core_v1_code(root)
 
     irrelevant = set(ALWAYS_IRRELEVANT_CORE_V1)
+    if profile.lender != "marginfi":
+        irrelevant.add("external.marginfi-v2")
     if profile.submission_transport == "rpc":
         irrelevant.update(
             {"external.jito-low-latency", "submission.jito-unbundling-protection"}
@@ -203,6 +216,24 @@ def evaluate_core_v1_profile_debt(
     implementation: list[dict[str, Any]] = []
     external: list[dict[str, Any]] = []
     ignored: list[str] = []
+    if profile.lender != "marginfi":
+        implementation.append(
+            {
+                "id": "runtime.financing-adapter",
+                "status": "blocked",
+                "lender": profile.lender,
+                "reason": "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED",
+            }
+        )
+        external.append(
+            {
+                "id": "evidence.financing-deployment",
+                "status": "blocked",
+                "lender": profile.lender,
+                "profile_generation": profile.profile_generation,
+                "reason": "CORE_V1_FINANCING_EVIDENCE_NOT_QUALIFIED",
+            }
+        )
     for blocker in report.blockers:
         debt_id = str(blocker.get("id", ""))
         if debt_id in irrelevant:

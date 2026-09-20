@@ -294,3 +294,43 @@ def test_revision_cannot_change_market_or_effective_identity() -> None:
             dataset_revision=2,
             knowledge_cutoff_ms=300,
         )
+
+
+def test_survivorship_audit_resolves_post_cutoff_revisions() -> None:
+    initial = _fact(
+        "market-active",
+        "market",
+        MarketLifecycleState.ACTIVE,
+        100,
+        100,
+    )
+    manifest = select_universe_as_known(
+        (initial,),
+        experiment_time_ms=150,
+        knowledge_cutoff_ms=150,
+        dataset_revision=1,
+    )
+    closed = _fact(
+        "market-close",
+        "market",
+        MarketLifecycleState.CLOSED,
+        200,
+        220,
+        revision=1,
+    )
+    corrected = _fact(
+        "market-close-r2",
+        "market",
+        MarketLifecycleState.ACTIVE,
+        200,
+        230,
+        revision=2,
+        supersedes_event_id="market-close",
+    )
+    audit = audit_universe_survivorship(
+        manifest,
+        (initial, closed, corrected),
+        result_market_ids=("market",),
+    )
+    assert audit.later_closed == ()
+    assert audit.later_migrated == ()

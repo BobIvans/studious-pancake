@@ -1138,10 +1138,20 @@ def _sui_object_blockers(
                     f"SUI_OBJECT_{index}_LIQUIDITY_RESET"
                 )
         seen[transition.object_id] = transition
-    for resource_id in dict.fromkeys(required_resource_ids):
-        if resource_id not in seen:
+    required = tuple(required_resource_ids)
+    if len(transitions) < len(required):
+        blockers.append("SUI_SHARED_RESOURCE_TRANSITION_COUNT_MISMATCH")
+    for access_index, resource_id in enumerate(required):
+        if access_index >= len(transitions):
             blockers.append(
-                f"SUI_SHARED_RESOURCE_TRANSITION_MISSING:{resource_id}"
+                "SUI_SHARED_RESOURCE_TRANSITION_MISSING:"
+                f"{access_index}:{resource_id}"
+            )
+            continue
+        if transitions[access_index].object_id != resource_id:
+            blockers.append(
+                "SUI_SHARED_RESOURCE_TRANSITION_SEQUENCE_MISMATCH:"
+                f"{access_index}:{resource_id}"
             )
     return blockers
 

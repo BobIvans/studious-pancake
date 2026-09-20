@@ -131,6 +131,8 @@ def decode_versioned_transaction_envelope(
         decoded = decoder(raw)
     except Exception as exc:
         raise Agg02Error("SUPER01_MALFORMED_ENVELOPE") from exc
+    if not isinstance(decoded, Mapping):
+        raise Agg02Error("SUPER01_RESPONSE_SCHEMA_MISMATCH")
 
     signatures_raw = decoded.get("signatures")
     accounts_raw = decoded.get("account_keys")

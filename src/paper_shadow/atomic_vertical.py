@@ -104,6 +104,7 @@ class FinancingRepaymentDecoder(Protocol):
     lender_id: str
     program_id: str
     deployment_generation: int
+    auxiliary_identities: tuple[tuple[str, str, int], ...]
 
     def decode(
         self,

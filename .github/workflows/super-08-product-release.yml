@@ -48,7 +48,7 @@ jobs:
           tests/test_super08_product_release.py
       - name: Format SUPER-08 surfaces
         run: >-
-          python -m black --check
+          python -m black --diff --check
           src/release_gate/agg15_release_handoff.py
           scripts/verify_super08_product_release.py
           tests/test_agg15_release_handoff.py

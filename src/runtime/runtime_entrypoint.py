@@ -238,7 +238,11 @@ async def _run_paper(
         )
 
         profile = _select_core_v1_profile(config, environment)
-        resolution = resolve_installed_core_v1_dependencies(profile, environment)
+        resolution = resolve_installed_core_v1_dependencies(
+            profile,
+            environment,
+            config=config,
+        )
         composition = build_core_v1_composition(
             config,
             db_path=context.resolve_path(selected_db),

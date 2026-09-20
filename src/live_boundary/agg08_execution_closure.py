@@ -97,6 +97,10 @@ class ExecutionProfile:
             ("required_financing_ids", self.required_financing_ids),
         ):
             _nonempty_unique(values, label)
+        if not set(AGG08_REQUIRED_FINANCING).issubset(
+            set(self.required_financing_ids)
+        ):
+            raise Agg08Error("AGG08_GLOBAL_FINANCING_REQUIREMENT_REMOVED")
         _positive_int(self.max_principal_base_units, "max_principal_base_units")
         _positive_int(self.max_native_debit_lamports, "max_native_debit_lamports")
         _nonnegative_int(self.max_tip_lamports, "max_tip_lamports")
@@ -199,6 +203,7 @@ class FreshExecutionEvidence:
     program_ids: tuple[str, ...]
     financing_ids: tuple[str, ...]
     route_id: str
+    candidate_hash: str
     plan_hash: str
     state_frame_hash: str
     message_hash: str
@@ -227,6 +232,7 @@ class FreshExecutionEvidence:
             ("policy_hash", self.policy_hash),
             ("risk_budget_hash", self.risk_budget_hash),
             ("cluster_genesis_hash", self.cluster_genesis_hash),
+            ("candidate_hash", self.candidate_hash),
             ("plan_hash", self.plan_hash),
             ("state_frame_hash", self.state_frame_hash),
             ("message_hash", self.message_hash),
@@ -260,6 +266,22 @@ class FreshExecutionEvidence:
 
 
 @dataclass(frozen=True, slots=True)
+class CanaryReservationEvidence:
+    """Identity captured from the existing canary reservation owner."""
+
+    attempt_id: str
+    message_hash: str
+    candidate_hash: str
+    reserved_at_ms: int
+
+    def __post_init__(self) -> None:
+        _safe_id(self.attempt_id, "attempt_id")
+        _sha256(self.message_hash, "message_hash")
+        _sha256(self.candidate_hash, "candidate_hash")
+        _nonnegative_int(self.reserved_at_ms, "reserved_at_ms")
+
+
+@dataclass(frozen=True, slots=True)
 class PreSignAdmission:
     schema_version: str
     accepted: bool
@@ -267,6 +289,8 @@ class PreSignAdmission:
     profile_hash: str
     permit_hash: str
     message_hash: str
+    evaluated_at_ms: int
+    expires_at_ms: int
     blockers: tuple[str, ...]
     effect_gate_enabled: bool
 
@@ -280,6 +304,8 @@ class PreSignAdmission:
                 "profile_hash": self.profile_hash,
                 "permit_hash": self.permit_hash,
                 "message_hash": self.message_hash,
+                "evaluated_at_ms": self.evaluated_at_ms,
+                "expires_at_ms": self.expires_at_ms,
                 "blockers": self.blockers,
                 "effect_gate_enabled": self.effect_gate_enabled,
             }
@@ -304,6 +330,7 @@ class Agg08ExecutionGate:
         permit: ReviewedPermit,
         signer_boundary: IsolatedSignerBoundaryEvidence,
         canary_report: CanaryReport,
+        canary_reservation: CanaryReservationEvidence,
         evidence: FreshExecutionEvidence,
         now_ms: int,
     ) -> PreSignAdmission:
@@ -395,8 +422,26 @@ class Agg08ExecutionGate:
             blockers.append("AGG08_AI_AUTHORITY_FORBIDDEN")
         if canary_report.active_latches:
             blockers.append("AGG08_ACTIVE_KILL_OR_RISK_LATCH")
-        if canary_report.outstanding_attempt_id != permit.attempt_id:
-            blockers.append("AGG08_DURABLE_RESERVATION_NOT_BOUND")
+        if canary_report.outstanding_attempt_id != canary_reservation.attempt_id:
+            blockers.append("AGG08_CANARY_REPORT_RESERVATION_MISMATCH")
+        for actual, expected, code in (
+            (
+                canary_reservation.attempt_id,
+                permit.attempt_id,
+                "AGG08_RESERVATION_ATTEMPT_MISMATCH",
+            ),
+            (
+                canary_reservation.message_hash,
+                evidence.message_hash,
+                "AGG08_RESERVATION_MESSAGE_MISMATCH",
+            ),
+            (
+                canary_reservation.candidate_hash,
+                evidence.candidate_hash,
+                "AGG08_RESERVATION_CANDIDATE_MISMATCH",
+            ),
+        ):
+            _mismatch(blockers, actual, expected, code)
         _mismatch(
             blockers,
             canary_report.policy_hash,
@@ -527,6 +572,14 @@ class Agg08ExecutionGate:
             blockers.append("AGG08_TOTAL_RESERVATIONS_EXCEED_BALANCE")
 
         unique = tuple(dict.fromkeys(blockers))
+        arm_expiry = canary_report.armed_until_ms or 0
+        admission_expiry = min(
+            profile.expires_at_ms,
+            authorization.expires_at_ms,
+            permit.expires_at_ms,
+            evidence.expires_at_ms,
+            arm_expiry,
+        )
         return PreSignAdmission(
             schema_version=AGG08_SCHEMA_VERSION,
             accepted=not unique,
@@ -534,6 +587,8 @@ class Agg08ExecutionGate:
             profile_hash=profile.profile_hash,
             permit_hash=permit.permit_hash,
             message_hash=evidence.message_hash,
+            evaluated_at_ms=now_ms,
+            expires_at_ms=admission_expiry,
             blockers=unique,
             effect_gate_enabled=self.effect_gate_enabled,
         )
@@ -545,14 +600,20 @@ def build_submission_permit_request(
     reviewed_permit: ReviewedPermit,
     signed_payload: SignedPayload,
     exact_simulation_hash: str,
+    now_ms: int,
     expires_at_ns: int,
     last_valid_block_height: int,
     min_context_slot: int,
 ) -> PermitRequest:
     """Bind signed bytes to the existing one-time submission permit contract."""
 
+    _nonnegative_int(now_ms, "now_ms")
     if not admission.accepted:
         raise Agg08Error("AGG08_PRE_SIGN_ADMISSION_REQUIRED")
+    if admission.evaluated_at_ms != now_ms:
+        raise Agg08Error("AGG08_EFFECT_REVALIDATION_REQUIRED")
+    if now_ms >= admission.expires_at_ms:
+        raise Agg08Error("AGG08_ADMISSION_EXPIRED")
     if admission.permit_hash != reviewed_permit.permit_hash:
         raise Agg08Error("AGG08_REVIEWED_PERMIT_CHANGED_AFTER_ADMISSION")
     if admission.message_hash != signed_payload.primary_message_hash:
@@ -560,6 +621,11 @@ def build_submission_permit_request(
     if exact_simulation_hash != admission.message_hash:
         raise Agg08Error("AGG08_POST_SIGN_SIMULATION_MISMATCH")
     transport = _submission_transport(reviewed_permit.transport)
+    if (
+        transport is TransportKind.JITO_BUNDLE
+        and len(signed_payload.message_hashes) != 1
+    ):
+        raise Agg08Error("AGG08_MULTI_TX_BUNDLE_REQUIRES_SEPARATE_REVIEW")
     if transport in {TransportKind.JITO_SINGLE, TransportKind.JITO_BUNDLE}:
         tip = signed_payload.tip_evidence
         if tip is None or tip.lamports != reviewed_permit.tip_lamports:
@@ -568,6 +634,8 @@ def build_submission_permit_request(
         raise Agg08Error("AGG08_RPC_PAYLOAD_MUST_NOT_CARRY_JITO_TIP")
     if expires_at_ns > reviewed_permit.expires_at_ms * 1_000_000:
         raise Agg08Error("AGG08_SUBMISSION_PERMIT_OUTLIVES_REVIEW")
+    if expires_at_ns > admission.expires_at_ms * 1_000_000:
+        raise Agg08Error("AGG08_SUBMISSION_PERMIT_OUTLIVES_ADMISSION")
     return permit_request_from_payload(
         attempt_id=reviewed_permit.attempt_id,
         transport=transport,
@@ -756,6 +824,7 @@ __all__ = [
     "Agg08Error",
     "Agg08ExecutionGate",
     "AuthorizationRecord",
+    "CanaryReservationEvidence",
     "CoverageRow",
     "CoverageStatus",
     "ExecutionProfile",

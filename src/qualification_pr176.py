@@ -333,7 +333,11 @@ def _importable_packages(required: Sequence[str], *, root: Path | None = None) -
         if found is None:
             continue
         origin = getattr(found, "origin", None)
-        if resolved_root is not None and origin not in (None, "built-in", "frozen"):
+        if (
+            resolved_root is not None
+            and isinstance(origin, str)
+            and origin not in ("built-in", "frozen")
+        ):
             try:
                 Path(origin).resolve().relative_to(resolved_root)
             except (OSError, ValueError):

@@ -833,3 +833,515 @@ def build_agg04_evidence_package(
         limitations=limitations,
     )
 
+AGG04_REJECTION_CODES = frozenset(
+    {
+        "STALE_OR_GAP",
+        "INVALID_ASSET",
+        "MISSING_ACCOUNTS",
+        "FEES",
+        "LIQUIDITY",
+        "BUILD_SIZE",
+        "GUARD",
+        "SIMULATION_ERROR",
+        "UNQUALIFIED_LENDER",
+        "QUOTA_LIMIT",
+        "AUTHORIZATION",
+        "UNSAMPLED",
+        "UNKNOWN",
+    }
+)
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04AnomalyObservation:
+    """Raw anomaly registration before filtering/ranking."""
+
+    observation_id: str
+    frame_sha256: str
+    feature_set_sha256: str
+    source_sha256: str
+    decision_time_ns: int
+    sampled: bool = True
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self, "observation_id", _agg04_text(self.observation_id, "observation_id")
+        )
+        for field in ("frame_sha256", "feature_set_sha256", "source_sha256"):
+            object.__setattr__(self, field, _agg04_digest(getattr(self, field), field))
+        _agg04_int(self.decision_time_ns, "decision_time_ns")
+        if not isinstance(self.sampled, bool):
+            raise ValueError("sampled must be bool")
+
+    @property
+    def observation_sha256(self) -> str:
+        return _agg04_hash_payload(
+            {
+                "observation_id": self.observation_id,
+                "frame_sha256": self.frame_sha256,
+                "feature_set_sha256": self.feature_set_sha256,
+                "source_sha256": self.source_sha256,
+                "decision_time_ns": self.decision_time_ns,
+                "sampled": self.sampled,
+            }
+        )
+
+
+def validate_agg04_rejection_code(value: str | None) -> str | None:
+    if value is None:
+        return None
+    code = _agg04_text(value, "rejection_code").upper()
+    if code not in AGG04_REJECTION_CODES:
+        raise ValueError("unsupported AGG-04 rejection_code")
+    return code
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04SurvivalObservation:
+    """Interval/right-censored lifetime evidence for one exact variant."""
+
+    variant_id: str
+    last_positive_ms: int | None
+    first_negative_ms: int | None
+    positive_at_horizon: bool
+    right_censored: bool
+    interval_censored: bool
+    unknown_probe_count: int
+    horizon_ms: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "variant_id", _agg04_text(self.variant_id, "variant_id"))
+        for field in ("last_positive_ms", "first_negative_ms"):
+            value = getattr(self, field)
+            if value is not None:
+                _agg04_int(value, field)
+        _agg04_int(self.unknown_probe_count, "unknown_probe_count")
+        _agg04_int(self.horizon_ms, "horizon_ms", minimum=1)
+        if not isinstance(self.positive_at_horizon, bool):
+            raise ValueError("positive_at_horizon must be bool")
+        if not isinstance(self.right_censored, bool):
+            raise ValueError("right_censored must be bool")
+        if not isinstance(self.interval_censored, bool):
+            raise ValueError("interval_censored must be bool")
+        if (
+            self.last_positive_ms is not None
+            and self.first_negative_ms is not None
+            and self.first_negative_ms <= self.last_positive_ms
+        ):
+            raise ValueError("first negative must occur after last positive")
+
+
+def build_agg04_survival_observation(
+    *,
+    variant: AGG04VariantEvidence,
+    probes: tuple[AGG04ProbeEvidence, ...],
+    horizon_ms: int,
+) -> AGG04SurvivalObservation:
+    """Classify probes without inventing continuous profitability between probes."""
+
+    _agg04_int(horizon_ms, "horizon_ms", minimum=1)
+    related: list[AGG04ProbeEvidence] = []
+    for probe in probes:
+        if probe.variant_id != variant.variant_id:
+            continue
+        if probe.message_sha256 != variant.message_sha256:
+            raise ValueError("probe/message generation mismatch")
+        related.append(probe)
+    related.sort(key=lambda item: item.elapsed_ms)
+
+    positives = [item.elapsed_ms for item in related if item.positive is True]
+    last_positive = max(positives) if positives else None
+    later_negatives = [
+        item.elapsed_ms
+        for item in related
+        if item.positive is False
+        and last_positive is not None
+        and item.elapsed_ms > last_positive
+    ]
+    first_negative = min(later_negatives) if later_negatives else None
+    positive_at_horizon = any(
+        item.positive is True and item.elapsed_ms > horizon_ms for item in related
+    )
+    right_censored = bool(positives) and first_negative is None
+    interval_censored = last_positive is not None and first_negative is not None
+
+    return AGG04SurvivalObservation(
+        variant_id=variant.variant_id,
+        last_positive_ms=last_positive,
+        first_negative_ms=first_negative,
+        positive_at_horizon=positive_at_horizon,
+        right_censored=right_censored,
+        interval_censored=interval_censored,
+        unknown_probe_count=sum(item.positive is None for item in related),
+        horizon_ms=horizon_ms,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04SelectionBiasReport:
+    """Selection observability; it never claims unbiasedness when propensity is unknown."""
+
+    tested_hypotheses: int
+    sampled_episode_ids: tuple[str, ...]
+    known_propensity_episode_ids: tuple[str, ...]
+    correction_method: str | None
+
+    def __post_init__(self) -> None:
+        _agg04_int(self.tested_hypotheses, "tested_hypotheses", minimum=1)
+        sampled = _agg04_unique(tuple(self.sampled_episode_ids), "sampled_episode_id")
+        known = _agg04_unique(
+            tuple(self.known_propensity_episode_ids), "known_propensity_episode_id"
+        )
+        if not set(known) <= set(sampled):
+            raise ValueError("known propensity episodes must be sampled")
+        if self.correction_method is not None:
+            object.__setattr__(
+                self,
+                "correction_method",
+                _agg04_text(self.correction_method, "correction_method"),
+            )
+        object.__setattr__(self, "sampled_episode_ids", sampled)
+        object.__setattr__(self, "known_propensity_episode_ids", known)
+
+    @property
+    def unknown_propensity_episode_ids(self) -> tuple[str, ...]:
+        return tuple(
+            sorted(set(self.sampled_episode_ids) - set(self.known_propensity_episode_ids))
+        )
+
+    @property
+    def unbiased_claim_allowed(self) -> bool:
+        return (
+            not self.unknown_propensity_episode_ids
+            and self.correction_method is not None
+            and self.tested_hypotheses >= 1
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04ClassStatistics:
+    """Integer-only independent-episode net summary."""
+
+    episode_count: int
+    known_net_episode_count: int
+    positive_net_episode_count: int
+    negative_net_episode_count: int
+    zero_net_episode_count: int
+    unknown_net_episode_count: int
+    total_net_atomic: int
+    minimum_net_atomic: int | None
+    maximum_net_atomic: int | None
+    selection_policy_sha256: str
+
+    def __post_init__(self) -> None:
+        for field in (
+            "episode_count",
+            "known_net_episode_count",
+            "positive_net_episode_count",
+            "negative_net_episode_count",
+            "zero_net_episode_count",
+            "unknown_net_episode_count",
+        ):
+            _agg04_int(getattr(self, field), field)
+        if (
+            self.known_net_episode_count + self.unknown_net_episode_count
+            != self.episode_count
+        ):
+            raise ValueError("class statistics episode accounting mismatch")
+        if (
+            self.positive_net_episode_count
+            + self.negative_net_episode_count
+            + self.zero_net_episode_count
+            != self.known_net_episode_count
+        ):
+            raise ValueError("known net sign accounting mismatch")
+        if isinstance(self.total_net_atomic, bool) or not isinstance(
+            self.total_net_atomic, int
+        ):
+            raise ValueError("total_net_atomic must be integer")
+        for field in ("minimum_net_atomic", "maximum_net_atomic"):
+            value = getattr(self, field)
+            if value is not None and (
+                isinstance(value, bool) or not isinstance(value, int)
+            ):
+                raise ValueError(f"{field} must be integer or null")
+        object.__setattr__(
+            self,
+            "selection_policy_sha256",
+            _agg04_digest(self.selection_policy_sha256, "selection_policy_sha256"),
+        )
+
+    @property
+    def mean_net_ratio(self) -> tuple[int, int] | None:
+        if self.known_net_episode_count == 0:
+            return None
+        return (self.total_net_atomic, self.known_net_episode_count)
+
+
+def compute_agg04_class_statistics(
+    *,
+    variants: tuple[AGG04VariantEvidence, ...],
+    selected_variant_ids: tuple[str, ...],
+    selection_policy_sha256: str,
+) -> AGG04ClassStatistics:
+    """Summarize exactly one preselected variant per independent episode."""
+
+    by_id = {item.variant_id: item for item in variants}
+    if len(by_id) != len(variants):
+        raise ValueError("duplicate variant_id")
+    selected = _agg04_unique(tuple(selected_variant_ids), "selected_variant_id")
+    chosen: list[AGG04VariantEvidence] = []
+    seen_episodes: set[str] = set()
+    for variant_id in selected:
+        variant = by_id.get(variant_id)
+        if variant is None:
+            raise ValueError("selected variant is unknown")
+        if variant.episode_id in seen_episodes:
+            raise ValueError("class statistics cannot cherry-pick two variants per episode")
+        seen_episodes.add(variant.episode_id)
+        chosen.append(variant)
+
+    known = [
+        item.conservative_net_atomic
+        for item in chosen
+        if item.conservative_net_atomic is not None
+    ]
+    positive = sum(value > 0 for value in known)
+    negative = sum(value < 0 for value in known)
+    zero = sum(value == 0 for value in known)
+    return AGG04ClassStatistics(
+        episode_count=len(chosen),
+        known_net_episode_count=len(known),
+        positive_net_episode_count=positive,
+        negative_net_episode_count=negative,
+        zero_net_episode_count=zero,
+        unknown_net_episode_count=len(chosen) - len(known),
+        total_net_atomic=sum(known),
+        minimum_net_atomic=min(known) if known else None,
+        maximum_net_atomic=max(known) if known else None,
+        selection_policy_sha256=selection_policy_sha256,
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04PairedEpisodeResult:
+    episode_id: str
+    baseline_net_atomic: int | None
+    challenger_net_atomic: int | None
+    baseline_resource_cost_atomic: int
+    challenger_resource_cost_atomic: int
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "episode_id", _agg04_text(self.episode_id, "episode_id"))
+        for field in ("baseline_net_atomic", "challenger_net_atomic"):
+            value = getattr(self, field)
+            if value is not None and (
+                isinstance(value, bool) or not isinstance(value, int)
+            ):
+                raise ValueError(f"{field} must be integer or null")
+        for field in (
+            "baseline_resource_cost_atomic",
+            "challenger_resource_cost_atomic",
+        ):
+            _agg04_int(getattr(self, field), field)
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04PairedComparison:
+    paired_episode_count: int
+    unknown_episode_count: int
+    challenger_incremental_net_atomic: int
+    improved_episode_count: int
+    degraded_episode_count: int
+    tied_episode_count: int
+
+    def __post_init__(self) -> None:
+        for field in (
+            "paired_episode_count",
+            "unknown_episode_count",
+            "improved_episode_count",
+            "degraded_episode_count",
+            "tied_episode_count",
+        ):
+            _agg04_int(getattr(self, field), field)
+        if (
+            self.improved_episode_count
+            + self.degraded_episode_count
+            + self.tied_episode_count
+            != self.paired_episode_count
+        ):
+            raise ValueError("paired comparison accounting mismatch")
+        if isinstance(self.challenger_incremental_net_atomic, bool) or not isinstance(
+            self.challenger_incremental_net_atomic, int
+        ):
+            raise ValueError("challenger_incremental_net_atomic must be integer")
+
+
+def compare_agg04_baselines(
+    rows: tuple[AGG04PairedEpisodeResult, ...],
+) -> AGG04PairedComparison:
+    """Paired comparison with explicit resource cost and unknown episodes."""
+
+    seen: set[str] = set()
+    deltas: list[int] = []
+    unknown = 0
+    for row in rows:
+        if row.episode_id in seen:
+            raise ValueError("duplicate paired episode")
+        seen.add(row.episode_id)
+        if row.baseline_net_atomic is None or row.challenger_net_atomic is None:
+            unknown += 1
+            continue
+        baseline = row.baseline_net_atomic - row.baseline_resource_cost_atomic
+        challenger = row.challenger_net_atomic - row.challenger_resource_cost_atomic
+        deltas.append(challenger - baseline)
+    return AGG04PairedComparison(
+        paired_episode_count=len(deltas),
+        unknown_episode_count=unknown,
+        challenger_incremental_net_atomic=sum(deltas),
+        improved_episode_count=sum(value > 0 for value in deltas),
+        degraded_episode_count=sum(value < 0 for value in deltas),
+        tied_episode_count=sum(value == 0 for value in deltas),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04DelayStressSample:
+    """Counterfactual delay outcome; never mislabeled as an observed market outcome."""
+
+    episode_id: str
+    latency_ms: int
+    profitable_after_delay: bool | None
+    state_evidence_sha256: str
+    counterfactual: bool = True
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "episode_id", _agg04_text(self.episode_id, "episode_id"))
+        _agg04_int(self.latency_ms, "latency_ms")
+        object.__setattr__(
+            self,
+            "state_evidence_sha256",
+            _agg04_digest(self.state_evidence_sha256, "state_evidence_sha256"),
+        )
+        if self.profitable_after_delay is not None and not isinstance(
+            self.profitable_after_delay, bool
+        ):
+            raise ValueError("profitable_after_delay must be bool or null")
+        if self.counterfactual is not True:
+            raise ValueError("delay stress samples must remain counterfactual")
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04DelayStressReport:
+    sample_count: int
+    positive_count: int
+    negative_count: int
+    unknown_count: int
+    maximum_latency_ms: int | None
+
+    def __post_init__(self) -> None:
+        for field in ("sample_count", "positive_count", "negative_count", "unknown_count"):
+            _agg04_int(getattr(self, field), field)
+        if self.positive_count + self.negative_count + self.unknown_count != self.sample_count:
+            raise ValueError("delay stress accounting mismatch")
+        if self.maximum_latency_ms is not None:
+            _agg04_int(self.maximum_latency_ms, "maximum_latency_ms")
+
+
+def summarize_agg04_delay_stress(
+    samples: tuple[AGG04DelayStressSample, ...],
+) -> AGG04DelayStressReport:
+    return AGG04DelayStressReport(
+        sample_count=len(samples),
+        positive_count=sum(item.profitable_after_delay is True for item in samples),
+        negative_count=sum(item.profitable_after_delay is False for item in samples),
+        unknown_count=sum(item.profitable_after_delay is None for item in samples),
+        maximum_latency_ms=max((item.latency_ms for item in samples), default=None),
+    )
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04RegressionCase:
+    bug_class: str
+    fixture_sha256: str
+    expected_stage: str
+    expected_code: str
+    source_program_generation: str
+
+    def __post_init__(self) -> None:
+        for field in (
+            "bug_class",
+            "expected_stage",
+            "expected_code",
+            "source_program_generation",
+        ):
+            object.__setattr__(self, field, _agg04_text(getattr(self, field), field))
+        object.__setattr__(
+            self, "fixture_sha256", _agg04_digest(self.fixture_sha256, "fixture_sha256")
+        )
+
+    @property
+    def regression_sha256(self) -> str:
+        return _agg04_hash_payload(
+            {
+                "bug_class": self.bug_class,
+                "fixture_sha256": self.fixture_sha256,
+                "expected_stage": self.expected_stage,
+                "expected_code": self.expected_code,
+                "source_program_generation": self.source_program_generation,
+            }
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class AGG04DemotionTransition:
+    prior_verdict_sha256: str
+    trigger: str
+    affected_scope: tuple[str, ...]
+    requalification_required: bool = True
+    live_enabled: bool = False
+    automatic_rearm_allowed: bool = False
+
+    def __post_init__(self) -> None:
+        object.__setattr__(
+            self,
+            "prior_verdict_sha256",
+            _agg04_digest(self.prior_verdict_sha256, "prior_verdict_sha256"),
+        )
+        object.__setattr__(self, "trigger", _agg04_text(self.trigger, "trigger"))
+        scope = _agg04_unique(tuple(self.affected_scope), "affected_scope")
+        if not scope:
+            raise ValueError("demotion scope cannot be empty")
+        object.__setattr__(self, "affected_scope", scope)
+        if not self.requalification_required:
+            raise ValueError("demotion must require requalification")
+        if self.live_enabled or self.automatic_rearm_allowed:
+            raise ValueError("demotion cannot arm live execution")
+
+
+def build_agg04_dashboard(
+    *,
+    funnel: AGG04FunnelReport,
+    verdict: AGG04QualificationVerdict,
+    unresolved_reason_codes: tuple[str, ...] = (),
+) -> dict[str, Any]:
+    """Machine-readable dashboard projection; no demo rows or inferred zeroes."""
+
+    unresolved = _agg04_unique(
+        tuple(unresolved_reason_codes), "unresolved_reason_code"
+    )
+    return {
+        "schema_version": AGG04_SCHEMA,
+        "campaign_id": verdict.campaign_id,
+        "profile_id": verdict.profile_id,
+        "status": verdict.status,
+        "counts": dict(funnel.counts),
+        "reason_codes": list(verdict.reason_codes),
+        "unresolved_reason_codes": list(unresolved),
+        "live_enabled": False,
+        "release_claim_allowed": False,
+        "production_ready": False,
+        "funnel_sha256": funnel.funnel_sha256,
+        "verdict_sha256": verdict.verdict_sha256,
+    }
+

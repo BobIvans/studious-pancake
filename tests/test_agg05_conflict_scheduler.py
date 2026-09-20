@@ -70,6 +70,7 @@ def test_shared_pool_conflicts_even_with_different_workers() -> None:
         reservation_port=port,
         max_in_flight=4,
         clock_ns=lambda: 100,
+        lease_clock_ns=lambda: 100,
     )
     first = scheduler.admit(_intent("a", pools=("pool-x",)))
     second = scheduler.admit(
@@ -90,6 +91,7 @@ def test_slumlord_pda_is_one_shared_economic_resource() -> None:
         reservation_port=port,
         max_in_flight=4,
         clock_ns=lambda: 100,
+        lease_clock_ns=lambda: 100,
     )
     assert scheduler.admit(_intent("a", economic=("slumlord:pda",))).admitted
     decision = scheduler.admit(
@@ -108,6 +110,7 @@ def test_backpressure_and_duplicate_are_explicit() -> None:
         reservation_port=port,
         max_in_flight=1,
         clock_ns=lambda: 100,
+        lease_clock_ns=lambda: 100,
     )
     assert scheduler.admit(_intent("a")).admitted
     duplicate = scheduler.admit(_intent("a"))
@@ -126,6 +129,7 @@ def test_reservation_denial_never_becomes_active() -> None:
         reservation_port=port,
         max_in_flight=2,
         clock_ns=lambda: 100,
+        lease_clock_ns=lambda: 100,
     )
     decision = scheduler.admit(_intent("a"))
     assert decision.reason is SchedulerRejectReason.RESERVATION_DENIED
@@ -137,7 +141,8 @@ def test_expired_worker_fence_is_rejected() -> None:
     scheduler = ConflictAwareScheduler(
         reservation_port=port,
         max_in_flight=2,
-        clock_ns=lambda: 500,
+        clock_ns=lambda: 100,
+        lease_clock_ns=lambda: 500,
     )
     fence = WorkerFence("old-worker", 1, 1, 499)
     decision = scheduler.admit(_intent("a", fence=fence))
@@ -150,6 +155,7 @@ def test_zombie_worker_cannot_complete_newer_fence() -> None:
         reservation_port=port,
         max_in_flight=2,
         clock_ns=lambda: 100,
+        lease_clock_ns=lambda: 100,
     )
     current = _fence("worker-a", 2)
     assert scheduler.admit(_intent("a", fence=current)).admitted
@@ -164,6 +170,7 @@ def test_completion_releases_canonical_reservation_before_reuse() -> None:
         reservation_port=port,
         max_in_flight=2,
         clock_ns=lambda: 100,
+        lease_clock_ns=lambda: 100,
     )
     fence = _fence()
     assert scheduler.admit(_intent("a", pools=("pool-x",), fence=fence)).admitted
@@ -191,3 +198,36 @@ def test_route_footprint_adapter_reuses_existing_shape() -> None:
     assert result.pools == ("pool-a",)
     assert result.writable_accounts == ("account-a",)
     assert result.economic_resources == ("reserve-a",)
+
+
+def test_completion_after_deadline_is_released_as_expired() -> None:
+    port = FakeReservationPort()
+    deadline_now = [100]
+    scheduler = ConflictAwareScheduler(
+        reservation_port=port,
+        max_in_flight=2,
+        clock_ns=lambda: deadline_now[0],
+        lease_clock_ns=lambda: 100,
+    )
+    fence = _fence()
+    assert scheduler.admit(_intent("a", fence=fence)).admitted
+    deadline_now[0] = 9_001
+
+    assert scheduler.complete("a", worker_fence=fence) is False
+    assert port.releases == [("a", SchedulerRejectReason.DEADLINE_EXPIRED.value)]
+    assert scheduler.snapshot().active_work_ids == ()
+
+
+def test_durable_lease_expiry_uses_wall_clock_not_deadline_clock() -> None:
+    port = FakeReservationPort()
+    scheduler = ConflictAwareScheduler(
+        reservation_port=port,
+        max_in_flight=2,
+        clock_ns=lambda: 100,
+        lease_clock_ns=lambda: 20_000,
+    )
+    fence = WorkerFence("worker-a", 1, 1, 10_000)
+
+    decision = scheduler.admit(_intent("a", fence=fence))
+
+    assert decision.reason is SchedulerRejectReason.STALE_WORKER_FENCE

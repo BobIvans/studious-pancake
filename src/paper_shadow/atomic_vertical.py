@@ -40,7 +40,7 @@ from src.execution.economic_reconciliation import (
     TokenObservation,
     evidence_from_exact_simulation,
 )
-from src.execution.financing_evidence import RepaymentDecision
+from src.execution.financing_evidence import FinancingRepaymentBundle
 from src.execution.exact_simulation import (
     ExactSimulationFinalizer,
     FinalizedSimulation,
@@ -109,7 +109,7 @@ class FinancingRepaymentDecoder(Protocol):
         self,
         finalized: FinalizedSimulation,
         candidate: AtomicVerticalCandidate,
-    ) -> RepaymentDecision: ...
+    ) -> FinancingRepaymentBundle: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -195,19 +195,37 @@ class AtomicPlannerSimulationReconciliationVertical:
                 )
             financing_repayment = self.financing_decoder.decode(finalized, candidate)
             provenance = planner_result.provenance
+            primary = financing_repayment.primary
             expected_program = provenance.financing_program_id
             expected_generation = provenance.financing_deployment_generation
             if (
-                financing_repayment.lender_id != provenance.financing_lender
+                primary.lender_id != provenance.financing_lender
                 or expected_program is None
-                or financing_repayment.program_id != expected_program
+                or primary.program_id != expected_program
                 or expected_generation is None
-                or financing_repayment.deployment_generation != expected_generation
-                or financing_repayment.message_hash != message_hash
+                or primary.deployment_generation != expected_generation
+                or primary.message_hash != message_hash
             ):
                 raise AtomicVerticalError(
                     AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
-                    "financing decoder output is not bound to planner/message identity",
+                    "primary financing decoder output is not bound to plan identity",
+                )
+            expected_aux = set(provenance.auxiliary_financing_identities)
+            actual_aux = {
+                (
+                    item.lender_id,
+                    item.program_id,
+                    item.deployment_generation,
+                )
+                for item in financing_repayment.auxiliary
+            }
+            if actual_aux != expected_aux or any(
+                item.message_hash != message_hash
+                for item in financing_repayment.auxiliary
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "auxiliary financing decoder output is not bound to plan identity",
                 )
 
         try:

@@ -6,15 +6,20 @@ owners. Он не становится вторым release authority: productio
 
 ## Current base and dependency truth
 
-Clean rebase base:
+AGG-15 code был merged как PR #503, merge commit
+`991f961bc41fd2af95b878969d6a9fe3afe9ea87`.
 
-`main@baedd8c0697c0bf789e582dab8acf5bbc113c123`.
+Post-AGG dependency reconciliation выполнен против
+`main@27875850a88edf102c904e31955e0df8b78b13b4`.
+На этом baseline все AGG-01…AGG-15 имеют canonical merge receipts, включая
+AGG-08. Поэтому historical merge-order inversions больше не являются текущими
+missing-dependency blockers.
 
-На этом base код AGG-14/RND-04 уже слит через PR #509, но остаётся
-offline/default-off и operationally UNQUALIFIED. AGG-09/OPS-03 ещё не принят
-как merged operational prerequisite. Поэтому merge этого PR означает
-code-level availability AGG-15 audit contracts, а не full-target completion,
-external qualification, production promotion или live admission.
+Это не означает full-target operational completion. AGG-15 остаётся fail-closed
+до реальных profile-scoped evidence: lender deployment/decoder qualification,
+AGG-04 exact campaign на текущей generation, LIVE-03 landing evidence, AGG-09
+operational soak/recovery и прочих REQUIRED NF blockers. Структурное наличие
+всех 15 merge receipts отделено от external qualification.
 
 ## NF-324…NF-328
 
@@ -90,6 +95,8 @@ admission. В этот PR не добавляется новый daemon manager 
 
 Focused code evidence:
 
+- `config/agg_merge_receipts.json` — canonical merge/dependency receipts;
+- `src/release_gate/agg_debt_closure.py` — historical-order/current-dependency audit;
 - `src/release_gate/agg15_release_handoff.py`;
 - `tests/test_agg15_release_handoff.py`;
 - installed `flashloan-checks release-handoff` command;

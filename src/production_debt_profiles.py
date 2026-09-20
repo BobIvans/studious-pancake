@@ -216,6 +216,24 @@ def evaluate_core_v1_profile_debt(
     implementation: list[dict[str, Any]] = []
     external: list[dict[str, Any]] = []
     ignored: list[str] = []
+    if profile.lender != "marginfi":
+        implementation.append(
+            {
+                "id": "runtime.financing-adapter",
+                "status": "blocked",
+                "lender": profile.lender,
+                "reason": "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED",
+            }
+        )
+        external.append(
+            {
+                "id": "evidence.financing-deployment",
+                "status": "blocked",
+                "lender": profile.lender,
+                "profile_generation": profile.profile_generation,
+                "reason": "CORE_V1_FINANCING_EVIDENCE_NOT_QUALIFIED",
+            }
+        )
     for blocker in report.blockers:
         debt_id = str(blocker.get("id", ""))
         if debt_id in irrelevant:

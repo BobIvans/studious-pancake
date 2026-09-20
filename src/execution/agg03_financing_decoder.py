@@ -226,6 +226,18 @@ class JupiterLendSlumlordRepaymentDecoder:
             raise ValueError("FINANCING_POST_STATE_REQUIRED")
 
         addresses = tuple(report.monitored_accounts)
+        writable_accounts = {
+            str(meta.pubkey)
+            for instruction in finalized.compiled.instructions
+            for meta in instruction.accounts
+            if meta.is_writable
+        }
+        missing_writable = sorted(writable_accounts.difference(addresses))
+        if missing_writable:
+            raise ValueError(
+                "FINANCING_WRITABLE_ACCOUNT_NOT_MONITORED:"
+                + ",".join(missing_writable)
+            )
         expected_pre_state_hash = request.provider_account_snapshot_hash
         if (
             expected_pre_state_hash is None
@@ -425,6 +437,20 @@ class JupiterLendSlumlordRepaymentDecoder:
                 opaque_mutable_accounts=tuple(opaque),
             ),
         )
+        decoded_economic_accounts = {
+            item.address for item in proof.native_deltas
+        } | {item.address for item in proof.token_deltas}
+        missing_economic = sorted(
+            address
+            for address in writable_accounts
+            if _owner(pre[address]) in {SYSTEM_PROGRAM_ID, SPL_TOKEN_PROGRAM_ID}
+            and address not in decoded_economic_accounts
+        )
+        if missing_economic:
+            raise ValueError(
+                "FINANCING_WRITABLE_ECONOMIC_ACCOUNT_NOT_DECODED:"
+                + ",".join(missing_economic)
+            )
 
         assets = {
             (asset.mint, asset.token_program): asset

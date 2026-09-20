@@ -163,6 +163,22 @@ EXPECTED_CHILD_MAP = {
         "test_paths": ("tests/test_agg13_inventory_platform.py",),
     },
 }
+EXPECTED_DISPOSITIONS = {
+    child_id: {
+        "implementation_status": (
+            "VERIFIED"
+            if child_id in {"PR-136", "PR-137", "PR-139"}
+            else "SATISFIED_BY_EXISTING"
+        ),
+        "qualification_status": (
+            "RESEARCH_ONLY"
+            if child_id in {"PR-134", "PR-144"}
+            else "UNQUALIFIED"
+        ),
+    }
+    for child_id in EXPECTED_CHILDREN
+}
+
 EXPECTED_BLOCKERS = frozenset(
     {
         "SUPER07_EXTERNAL_DATA_ENTITLEMENTS_UNQUALIFIED",
@@ -229,10 +245,28 @@ def verify_payload(
                     actual = tuple(actual)
                 if actual != expected[key]:
                     errors.append(f"{child_id}:CHILD_MAPPING_MISMATCH:{key}")
-        if child.get("implementation_status") not in ALLOWED_IMPLEMENTATION:
+        implementation_status = child.get("implementation_status")
+        qualification_status = child.get("qualification_status")
+        if implementation_status not in ALLOWED_IMPLEMENTATION:
             errors.append(f"{child_id}:IMPLEMENTATION_STATUS_INVALID")
-        if child.get("qualification_status") not in ALLOWED_QUALIFICATION:
+        if qualification_status not in ALLOWED_QUALIFICATION:
             errors.append(f"{child_id}:QUALIFICATION_STATUS_INVALID")
+        expected_disposition = EXPECTED_DISPOSITIONS.get(str(child_id))
+        if expected_disposition is not None:
+            if (
+                implementation_status
+                != expected_disposition["implementation_status"]
+            ):
+                errors.append(
+                    f"{child_id}:CHILD_MAPPING_MISMATCH:implementation_status"
+                )
+            if (
+                qualification_status
+                != expected_disposition["qualification_status"]
+            ):
+                errors.append(
+                    f"{child_id}:CHILD_MAPPING_MISMATCH:qualification_status"
+                )
         nf = child.get("primary_nf")
         if not isinstance(nf, list) or not nf:
             errors.append(f"{child.get('source_pr_id')}:PRIMARY_NF_REQUIRED")

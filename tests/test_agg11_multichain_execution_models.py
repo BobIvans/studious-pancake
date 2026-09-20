@@ -11,9 +11,12 @@ from src.multichain import (
     AssetRef,
     CetusFinancingAdapter,
     CetusFlashKind,
+    CapabilityStatus,
+    ChainCapability,
     ChainCapabilityRegistry,
     ChainDialect,
     ChainEvidence,
+    ChainIdentity,
     DeepBookFinancingAdapter,
     DeploymentRef,
     DodoFinancingAdapter,
@@ -483,3 +486,115 @@ def test_deployment_evidence_digest_is_content_bound() -> None:
     assert len(digest) == 64
     assert digest != deployment.artifact_digest
     assert deployment_evidence_digest(replace(deployment, version="test-v2")) != digest
+
+
+def test_external_effect_requires_operationally_pinned_chain() -> None:
+    chain = ChainIdentity(
+        chain_key="base-test",
+        dialect=ChainDialect.EVM,
+        network_id="8453",
+        native_asset="ETH",
+        atomic_boundary="transaction-callback",
+        finality_model="l2-plus-l1-finality",
+        genesis_fingerprint=None,
+        blockers=(),
+    )
+    deployment = _deployment("aave", "base-test")
+    capability = ChainCapability(
+        capability_id="base-test:aave",
+        protocol="aave",
+        chain_key="base-test",
+        dialect=ChainDialect.EVM,
+        status=CapabilityStatus.EXTERNALLY_QUALIFIED,
+        blockers=(),
+        allowed_effects=(Effect.SEND,),
+        deployment=deployment,
+    )
+    registry = ChainCapabilityRegistry((chain,), (capability,))
+
+    assert capability.externally_executable is True
+    with pytest.raises(MultiChainError, match="CHAIN_NOT_OPERATIONALLY_PINNED"):
+        registry.require_effect("base-test:aave", Effect.SEND)
+
+
+def test_registry_rejects_deployment_chain_or_protocol_mismatch() -> None:
+    chain = ChainIdentity(
+        chain_key="base-test",
+        dialect=ChainDialect.EVM,
+        network_id="8453",
+        native_asset="ETH",
+        atomic_boundary="transaction-callback",
+        finality_model="l2-plus-l1-finality",
+        genesis_fingerprint="fixture-genesis",
+        blockers=(),
+    )
+    wrong_chain = ChainCapability(
+        capability_id="base-test:aave",
+        protocol="aave",
+        chain_key="base-test",
+        dialect=ChainDialect.EVM,
+        status=CapabilityStatus.EXTERNALLY_QUALIFIED,
+        blockers=(),
+        allowed_effects=(Effect.SEND,),
+        deployment=_deployment("aave", "ethereum-mainnet"),
+    )
+    with pytest.raises(MultiChainError, match="CAPABILITY_DEPLOYMENT_MISMATCH"):
+        ChainCapabilityRegistry((chain,), (wrong_chain,))
+
+    wrong_protocol = replace(
+        wrong_chain,
+        deployment=_deployment("morpho", "base-test"),
+    )
+    with pytest.raises(MultiChainError, match="CAPABILITY_DEPLOYMENT_MISMATCH"):
+        ChainCapabilityRegistry((chain,), (wrong_protocol,))
+
+
+def test_evm_flash_obligation_rejects_cross_chain_asset() -> None:
+    principal = ExactAssetAmount(_asset("ethereum-mainnet", "USDC"), 100)
+    with pytest.raises(MultiChainError, match="EVM_DEBT_CHAIN_MISMATCH"):
+        AaveFinancingAdapter.prepare(
+            evidence=_evm_evidence("aave"),
+            mode=AaveFlashMode.SIMPLE,
+            receiver=ADDR_B,
+            initiator=ADDR_B,
+            expected_initiator=ADDR_B,
+            principals=(principal,),
+            premium_bps=0,
+            reserve_caps={"USDC": 100},
+        )
+
+
+def test_sui_duplicate_obligation_ids_are_rejected() -> None:
+    principal = ExactAssetAmount(_asset("sui-mainnet", "SUI"), 100)
+    debt = SuiHotPotatoObligation(
+        obligation_id="loan-1",
+        protocol="cetus",
+        principal=principal,
+        repayment_units=101,
+        receipt_type="cetus::flash_loan::Receipt",
+        deployment=_deployment("cetus", "sui-mainnet"),
+    )
+    with pytest.raises(MultiChainError, match="SUI_DUPLICATE_OBLIGATION_ID"):
+        SuiPtbPlan(
+            chain_key="sui-mainnet",
+            checkpoint=100,
+            gas_object_id=OBJ_A,
+            gas_object_version=7,
+            gas_budget_mist=100,
+            operations=(SuiPtbOperation("borrow", PKG),),
+            obligations=(debt, debt),
+            shared_object_ids=(OBJ_B,),
+        )
+
+
+def test_sui_obligation_rejects_cross_chain_asset() -> None:
+    principal = ExactAssetAmount(_asset("base-mainnet", "USDC"), 100)
+    with pytest.raises(MultiChainError, match="SUI_OBLIGATION_CHAIN_MISMATCH"):
+        SuiHotPotatoObligation(
+            obligation_id="loan-cross-chain",
+            protocol="cetus",
+            principal=principal,
+            repayment_units=101,
+            receipt_type="cetus::flash_loan::Receipt",
+            deployment=_deployment("cetus", "sui-mainnet"),
+        )

@@ -59,14 +59,15 @@ def test_pr194_forbidden_member_detection_is_manifest_driven() -> None:
     ]
 
 
-def test_pr194_docker_build_copies_setup_py_before_install() -> None:
+def test_pr194_docker_build_copies_package_contract_before_offline_wheel() -> None:
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert (
-        "COPY requirements.txt pyproject.toml setup.py README.md arb_bot.py ./"
+        "COPY requirements.lock pyproject.toml setup.py README.md arb_bot.py ./"
         in dockerfile
     )
-    assert "pip install --no-deps --no-build-isolation ." in dockerfile
+    assert "pip wheel --no-index --no-deps --no-build-isolation" in dockerfile
+    assert "pip install --no-index --no-deps /reviewed-wheel/*.whl" in dockerfile
 
 
 def test_pr194_package_and_image_smoke_use_manifest_authority() -> None:

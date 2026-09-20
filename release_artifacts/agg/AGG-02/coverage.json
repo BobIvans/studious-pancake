@@ -1,0 +1,46 @@
+{
+  "schema_version": "agg02.coverage.v1",
+  "aggregate_id": "AGG-02",
+  "base_sha": "0c4f216a62d62b20f6fb4ec4bbd0548cea58df65",
+  "implementation_status": "IN_PROGRESS",
+  "operational_status": "UNQUALIFIED",
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "work_packages": {
+    "SOURCE-01": {
+      "code": "IMPLEMENTED_OFFLINE_WITH_REUSED_OWNER",
+      "external_evidence": "BLOCKED_OR_NOT_COLLECTED"
+    },
+    "DATA-01": {
+      "code": "IMPLEMENTED_OFFLINE",
+      "external_evidence": "NOT_REQUIRED_FOR_CORE_CONTRACTS"
+    },
+    "DATA-02": {
+      "code": "IMPLEMENTED_OFFLINE_OPTIONAL_ANALYTICS",
+      "external_evidence": "SCALE_BACKUP_CAMPAIGN_NOT_RUN"
+    },
+    "DATA-03": {
+      "code": "REUSES_EXISTING_COLLECTOR_OWNERS",
+      "external_evidence": "REAL_FLEET_NOT_RUN"
+    },
+    "DATA-04": {
+      "code": "REUSES_EXISTING_DATA_PLANE_PLUS_NEW_SURFACES",
+      "external_evidence": "REAL_SURFACES_NOT_CAPTURED"
+    },
+    "CAPITAL-01": {
+      "code": "IMPLEMENTED_READ_ONLY",
+      "external_evidence": "REAL_WALLET_RESERVE_SNAPSHOT_NOT_COLLECTED"
+    },
+    "MARKET-01": {
+      "code": "IMPLEMENTED_OFFLINE",
+      "external_evidence": "REAL_MARKET_FRAME_NOT_CAPTURED"
+    }
+  },
+  "external_blockers_are_not_counted_as_success": true,
+  "notes": [
+    "This artifact describes code/evidence disposition, not 57/57 operational completion.",
+    "Existing quota/capital/data-plane authorities are reused rather than duplicated.",
+    "No live transaction or funds movement is authorized by this artifact."
+  ]
+}

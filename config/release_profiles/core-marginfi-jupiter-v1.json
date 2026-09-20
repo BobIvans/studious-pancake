@@ -1,0 +1,68 @@
+{
+  "schema_version": "core-v1.release-profile.v1",
+  "profile_id": "core-marginfi-jupiter-v1",
+  "release_class": "production-ready-default-off",
+  "cluster": {
+    "name": "mainnet-beta",
+    "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+  },
+  "strategy": "circular_arbitrage",
+  "lender": "marginfi",
+  "router": "jupiter",
+  "submission_transport": "rpc",
+  "required_data_producers": [
+    "governed-solana-rpc",
+    "jupiter-v2",
+    "marginfi-rooted-state"
+  ],
+  "optional_data_producers": [
+    "helius-webhook",
+    "okx",
+    "openocean",
+    "odos"
+  ],
+  "assets": [
+    {
+      "symbol": "SOL",
+      "mint": "native:SOL",
+      "token_program": "native"
+    },
+    {
+      "symbol": "wSOL",
+      "mint": "So11111111111111111111111111111111111111112",
+      "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    },
+    {
+      "symbol": "USDC",
+      "mint": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+      "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    }
+  ],
+  "required_evidence_classes": [
+    "installed-core-v1-composition",
+    "rooted-provider-and-account-evidence",
+    "marginfi-deployment-conformance",
+    "jupiter-contract-conformance",
+    "exact-final-message-simulation",
+    "raw-economic-reconciliation",
+    "durable-paper-terminal-replay",
+    "real-shadow-soak",
+    "provider-drift-probes",
+    "installed-wheel-image-provenance"
+  ],
+  "optional_default_off_capabilities": [
+    "kamino",
+    "save",
+    "direct-venues",
+    "orderbooks",
+    "liquidation",
+    "lst",
+    "stable-peg-clmm-dlmm",
+    "jito",
+    "cross-chain"
+  ],
+  "live_enabled": false,
+  "unrestricted_live_allowed": false,
+  "automatic_scale_up_allowed": false,
+  "executed_canary_required_for_default_off_review": false
+}

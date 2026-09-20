@@ -1,0 +1,19 @@
+{
+  "schema_id": "mpr-td-02.mutation-policy.v1",
+  "target_modules": [
+    "src.errors.retry",
+    "src.errors.codes",
+    "src.errors.deadline",
+    "src.errors.ambiguity"
+  ],
+  "minimum_score": 100,
+  "mandatory_killed": [
+    "unknown-code",
+    "ambiguous-retry",
+    "expired-deadline"
+  ],
+  "maximum_surviving_critical": 0,
+  "owner": "verification",
+  "profile": "full_offline",
+  "artifact": "artifacts/mutation.json"
+}

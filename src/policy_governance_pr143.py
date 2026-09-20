@@ -17,6 +17,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
+from src.kernel import canonical_json_bytes as _kernel_canonical_json_bytes
+
 
 class PolicyGovernanceError(ValueError):
     """Raised when policy/evidence material is unsafe or non-canonical."""
@@ -381,21 +383,14 @@ class AtomicPolicyActivator:
         return rolled_back
 
 
-def canonical_json_bytes(value: Any) -> bytes:
-    """Encode a JCS-compatible, security-safe JSON subset.
-
-    Binary floats are rejected. Integers outside interoperable JSON range are
-    represented as tagged decimal strings so cross-language implementations do
-    not round money/slot values.
-    """
+def canonical_policy_json_bytes(value: Any) -> bytes:
+    """Normalize policy values, then use the kernel canonical JSON encoder."""
 
     normalized = _normalize_canonical(value)
-    return json.dumps(
-        normalized,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
+    return _kernel_canonical_json_bytes(normalized)
+
+
+canonical_json_bytes = canonical_policy_json_bytes
 
 
 def parse_json_no_duplicate_keys(raw: str) -> Any:
@@ -459,11 +454,16 @@ def classify_field(key: str) -> DataClassification:
         return DataClassification.SECRET
     if _SENSITIVE_KEY_RE.search(key):
         return DataClassification.SENSITIVE
-    if key.endswith("_pubkey") or key.endswith("_program_id") or key in {
-        "mint",
-        "owner",
-        "program_id",
-    }:
+    if (
+        key.endswith("_pubkey")
+        or key.endswith("_program_id")
+        or key
+        in {
+            "mint",
+            "owner",
+            "program_id",
+        }
+    ):
         return DataClassification.PUBLIC_CHAIN_IDENTIFIER
     return DataClassification.OPERATIONAL
 
@@ -572,7 +572,9 @@ def _normalize_canonical(value: Any) -> Any:
         normalized: dict[str, Any] = {}
         for key, item in value.items():
             if not isinstance(key, str):
-                raise PolicyGovernanceError("canonical JSON object keys must be strings")
+                raise PolicyGovernanceError(
+                    "canonical JSON object keys must be strings"
+                )
             if key in normalized:
                 raise PolicyGovernanceError(f"duplicate canonical key: {key}")
             normalized[key] = _normalize_canonical(item)
@@ -632,6 +634,7 @@ __all__ = [
     "assert_no_hot_env_decision",
     "assert_no_raw_exception_persistence",
     "canonical_json_bytes",
+    "canonical_policy_json_bytes",
     "classify_field",
     "domain_hash",
     "fingerprint_secret_locator",

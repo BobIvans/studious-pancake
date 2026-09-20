@@ -25,7 +25,9 @@
     "flashloan-bot": "src.cli_pr189:main",
     "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
     "flashloan-checks": "src.automation_cli_pr189:main",
+    "flashloan-connections": "src.provider_governance.cli:main",
     "flashloan-contracts": "src.external_contracts.cli_pr189:main",
+    "flashloan-external-resources": "src.external_resources.cli:main",
     "flashloan-release-evidence": "src.release_gate.materialized_evidence:main"
   },
   "forbidden": {
@@ -80,6 +82,13 @@
       "wheel_member": "src/external_contracts/cli_pr189.py"
     },
     {
+      "category": "external_resource_ownership",
+      "entrypoint": "flashloan-external-resources",
+      "id": "PR194_EXTERNAL_RESOURCE_CONTROL_PLANE",
+      "module": "src.external_resources.cli",
+      "wheel_member": "src/external_resources/cli.py"
+    },
+    {
       "category": "inspection_checks",
       "entrypoint": "flashloan-checks",
       "id": "PR194_CHECKS_ENTRYPOINT",
@@ -110,6 +119,37 @@
       "id": "PR194_PR206_DURABLE_STATE_AUTHORITY",
       "module": "src.pr206_durable_state",
       "wheel_member": "src/pr206_durable_state.py"
+    },
+    {
+      "category": "schema_authority",
+      "id": "PR194_MPR4X01_SCHEMA_AUTHORITY",
+      "module": "src.contracts.registry",
+      "wheel_member": "src/contracts/registry.py"
+    },
+    {
+      "category": "architecture_reachability",
+      "id": "PR194_MPR4X01_ARCHITECTURE_REACHABILITY",
+      "module": "src.contracts.reachability",
+      "wheel_member": "src/contracts/reachability.py"
+    },
+    {
+      "category": "release_identity",
+      "id": "PR194_MPR4X01_RELEASE_IDENTITY",
+      "module": "src.release.identity",
+      "wheel_member": "src/release/identity.py"
+    },
+    {
+      "category": "external_connection_configuration",
+      "entrypoint": "flashloan-connections",
+      "id": "PR194_MPR2602_OFFLINE_CONNECTION_PROFILE_CLI",
+      "module": "src.provider_governance.cli",
+      "wheel_member": "src/provider_governance/cli.py"
+    },
+    {
+      "category": "external_connection_configuration",
+      "id": "PR194_MPR2602_CONNECTION_PROFILE_LOADER",
+      "module": "src.provider_governance.profile",
+      "wheel_member": "src/provider_governance/profile.py"
     }
   ],
   "required_wheel_members": [
@@ -119,13 +159,25 @@
     "src/cli.py",
     "src/cli_pr189.py",
     "src/container_runtime.py",
+    "src/contracts/__init__.py",
+    "src/contracts/reachability.py",
+    "src/contracts/registry.py",
     "src/external_contracts/cli_pr189.py",
+    "src/external_resources/cli.py",
     "src/pr206_durable_state.py",
     "src/production_surface.py",
+    "src/provider_governance/cli.py",
+    "src/provider_governance/profile.py",
+    "src/release/identity.py",
     "src/release_gate/materialized_evidence.py",
+    "src/resources/architecture_reachability.json",
     "src/resources/capabilities.json",
     "src/resources/production_surface_manifest.json",
-    "src/resources/runtime_authority_map.json"
+    "src/resources/runtime_authority.json",
+    "src/resources/runtime_authority_map.json",
+    "src/resources/schema_registry.json",
+    "src/runtime_authority.py",
+    "src/runtime_authority_pr01.py"
   ],
   "runtime": {
     "live_trading_enabled": false,

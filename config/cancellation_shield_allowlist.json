@@ -1,0 +1,1 @@
+{"schema_id":"mpr-td-02.cancellation-shield-allowlist.v1","regions":[{"module":"src.persistence.async_writer_pr200","callable":"AsyncSQLiteWriter._finish_commit","durable_invariant":"unknown commit outcome is resolved at a bounded consistency boundary","maximum_duration_ms":5000,"owner":"persistence","tests":["tests/test_async_writer_pr200.py"]}]}

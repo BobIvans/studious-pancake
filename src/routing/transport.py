@@ -4,13 +4,19 @@ PR-185 hardens the active HTTPX boundary: endpoint URLs are canonicalized,
 credentials in URLs are forbidden, redirects and ambient environment trust are
 disabled, and TLS verification is constructed explicitly.
 """
+
 from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass
+from datetime import UTC, datetime
+from email.utils import parsedate_to_datetime
 import hashlib
 import ipaddress
 import json
+import math
+import zlib
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 import ssl
 from typing import Any, Mapping, Protocol
@@ -54,6 +60,12 @@ class TransportPolicy:
     max_attempts: int = 2
     backoff_base_seconds: float = 0.1
     max_retry_after_seconds: float = 2.0
+    max_wire_bytes: int = 1_048_576
+    max_response_bytes: int = 1_048_576
+    max_json_depth: int = 32
+    max_json_nodes: int = 20_000
+    max_container_items: int = 5_000
+    max_string_length: int = 16_384
     allowed_ports: tuple[int, ...] = (443,)
     allow_url_query: bool = False
     allow_private_ip_literals: bool = False
@@ -70,6 +82,16 @@ class TransportPolicy:
             "write_timeout_seconds",
             "pool_timeout_seconds",
             "total_timeout_seconds",
+        ):
+            if getattr(self, field_name) <= 0:
+                raise ValueError(f"{field_name} must be positive")
+        for field_name in (
+            "max_wire_bytes",
+            "max_response_bytes",
+            "max_json_depth",
+            "max_json_nodes",
+            "max_container_items",
+            "max_string_length",
         ):
             if getattr(self, field_name) <= 0:
                 raise ValueError(f"{field_name} must be positive")
@@ -204,13 +226,19 @@ class HttpxJsonTransport:
         policy: TransportPolicy | None = None,
         allowed_hosts: frozenset[str] | None = None,
         client: httpx.AsyncClient | None = None,
+        attempt_guard: Callable[[httpx.Request, int], Awaitable[Any]] | None = None,
+        attempt_result: (
+            Callable[[Any, int | None, bool], Awaitable[None]] | None
+        ) = None,
     ) -> None:
         self.policy = policy or TransportPolicy()
-        self.allowed_hosts = (
-            None
-            if allowed_hosts is None
-            else frozenset(_canonical_hostname(host) for host in allowed_hosts)
+        self.attempt_guard = attempt_guard
+        self.attempt_result = attempt_result
+        self.allowed_hosts = frozenset(
+            _canonical_hostname(host) for host in (allowed_hosts or ())
         )
+        if not self.allowed_hosts:
+            raise ValueError("allowed_hosts must be non-empty for network transport")
         self._owns_client = client is None
         timeout = httpx.Timeout(
             connect=self.policy.connect_timeout_seconds,
@@ -226,6 +254,11 @@ class HttpxJsonTransport:
             trust_env=False,
             follow_redirects=False,
         )
+        # Test doubles are supported, but they may not weaken these policies.
+        if getattr(self._client, "_trust_env", True) is not False:
+            raise ValueError("injected client must disable ambient proxy trust")
+        if getattr(self._client, "follow_redirects", True) is not False:
+            raise ValueError("injected client must disable redirects")
 
     async def aclose(self) -> None:
         if self._owns_client:
@@ -262,12 +295,12 @@ class HttpxJsonTransport:
             host,
             allowed=self.policy.allow_private_ip_literals,
         )
-        if self.allowed_hosts is not None and host not in self.allowed_hosts:
-            raise SanitizedTransportError(f"provider host is not allowlisted: {host}")
+        if host not in self.allowed_hosts:
+            raise SanitizedTransportError("provider host is not allowlisted")
 
     @staticmethod
     def _retry_after_seconds(
-        headers: Mapping[str, str], maximum: float
+        headers: Mapping[str, str], maximum: float, *, now: datetime | None = None
     ) -> float | None:
         raw = headers.get("retry-after")
         if raw is None:
@@ -275,7 +308,176 @@ class HttpxJsonTransport:
         try:
             return min(max(float(raw), 0.0), maximum)
         except ValueError:
-            return None
+            try:
+                parsed = parsedate_to_datetime(raw)
+                if parsed.tzinfo is None:
+                    parsed = parsed.replace(tzinfo=UTC)
+                delay = (parsed - (now or datetime.now(UTC))).total_seconds()
+                return min(max(delay, 0.0), maximum)
+            except (TypeError, ValueError, OverflowError):
+                return None
+
+    def _decode_json(self, body: bytes) -> Any:
+        try:
+            text = body.decode("utf-8", errors="strict")
+            self._preflight_json(text)
+            payload = json.loads(
+                text,
+                object_pairs_hook=_unique_object,
+                parse_constant=_reject_json_constant,
+            )
+        except (UnicodeDecodeError, json.JSONDecodeError, ValueError, RecursionError):
+            raise SanitizedTransportError("provider returned invalid JSON") from None
+        nodes = 0
+        stack: list[tuple[Any, int]] = [(payload, 1)]
+        while stack:
+            value, depth = stack.pop()
+            nodes += 1
+            if nodes > self.policy.max_json_nodes:
+                raise SanitizedTransportError("provider JSON node limit exceeded")
+            if depth > self.policy.max_json_depth:
+                raise SanitizedTransportError("provider JSON depth limit exceeded")
+            if isinstance(value, float) and not math.isfinite(value):
+                raise SanitizedTransportError("provider returned invalid JSON")
+            if isinstance(value, str) and len(value) > self.policy.max_string_length:
+                raise SanitizedTransportError("provider JSON string limit exceeded")
+            if isinstance(value, (list, dict)):
+                if len(value) > self.policy.max_container_items:
+                    raise SanitizedTransportError(
+                        "provider JSON container limit exceeded"
+                    )
+                children = value.values() if isinstance(value, dict) else value
+                stack.extend((child, depth + 1) for child in children)
+        return payload
+
+    def _preflight_json(self, text: str) -> None:
+        # Bound parser recursion and token allocation before json.loads. Strings
+        # are counted in source characters, conservatively including escapes.
+        depth = 0
+        in_string = escaped = False
+        string_size = tokens = 0
+        containers: list[int] = []
+        for char in text:
+            if in_string:
+                if char == '"' and not escaped:
+                    in_string = False
+                else:
+                    string_size += 1
+                    if string_size > self.policy.max_string_length:
+                        raise SanitizedTransportError(
+                            "provider JSON string limit exceeded"
+                        )
+                if char == "\\" and not escaped:
+                    escaped = True
+                else:
+                    escaped = False
+                continue
+            if char == '"':
+                in_string = True
+                string_size = 0
+                tokens += 1
+            elif char in "[{":
+                depth += 1
+                tokens += 1
+                containers.append(1)
+                if depth >= self.policy.max_json_depth:
+                    raise SanitizedTransportError("provider JSON depth limit exceeded")
+            elif char in "]}":
+                depth -= 1
+                if containers:
+                    containers.pop()
+            elif char == "," and containers:
+                containers[-1] += 1
+                tokens += 1
+                if containers[-1] > self.policy.max_container_items:
+                    raise SanitizedTransportError(
+                        "provider JSON container limit exceeded"
+                    )
+            if tokens > self.policy.max_json_nodes * 2:
+                raise SanitizedTransportError("provider JSON node limit exceeded")
+
+    async def _read_bounded(self, response: httpx.Response) -> bytes:
+        declared = response.headers.get("content-length")
+        if declared is not None:
+            if not declared.isascii() or not declared.isdecimal():
+                raise SanitizedTransportError("provider content length is invalid")
+            if len(declared) > 20 or int(declared) > min(
+                self.policy.max_wire_bytes, self.policy.max_response_bytes
+            ):
+                raise SanitizedTransportError("provider response body too large")
+        encoding = response.headers.get("content-encoding", "identity").lower().strip()
+        if encoding not in {"identity", "gzip", "deflate"}:
+            raise SanitizedTransportError("provider content encoding is unsupported")
+        decoder = (
+            None
+            if encoding == "identity"
+            else zlib.decompressobj(31 if encoding == "gzip" else 15)
+        )
+        output = bytearray()
+        wire_bytes = 0
+
+        # HTTPX MockTransport may return already consumed in-memory content.
+        # Production send(stream=True) always uses the raw stream below.
+        async def chunks():
+            if response.is_stream_consumed:
+                yield response.content
+            else:
+                async for chunk in response.aiter_raw():
+                    yield chunk
+
+        try:
+            async for chunk in chunks():
+                wire_bytes += len(chunk)
+                if wire_bytes > self.policy.max_wire_bytes:
+                    raise SanitizedTransportError(
+                        "provider response wire body too large"
+                    )
+                budget = self.policy.max_response_bytes - len(output)
+                decoded = decoder.decompress(chunk, budget + 1) if decoder else chunk
+                if len(decoded) > budget or (decoder and decoder.unconsumed_tail):
+                    raise SanitizedTransportError("provider response body too large")
+                output.extend(decoded)
+            if decoder and (not decoder.eof or decoder.unused_data):
+                raise SanitizedTransportError("provider compressed body is invalid")
+        except zlib.error:
+            raise SanitizedTransportError(
+                "provider compressed body is invalid"
+            ) from None
+        return bytes(output)
+
+    async def _physical_attempt(
+        self, request: httpx.Request, attempt: int
+    ) -> tuple[int, dict[str, str], bytes]:
+        context = (
+            await self.attempt_guard(request, attempt) if self.attempt_guard else None
+        )
+        status = None
+        response = None
+        try:
+            response = await self._client.send(
+                request, stream=True, follow_redirects=False
+            )
+            status = response.status_code
+            response_headers = {
+                key.lower(): value for key, value in response.headers.items()
+            }
+            if 300 <= status < 400:
+                raise SanitizedTransportError(
+                    "provider redirect is denied", status_code=status
+                )
+            try:
+                body = await self._read_bounded(response)
+            except SanitizedTransportError as exc:
+                exc.status_code = status
+                raise
+            return status, response_headers, body
+        finally:
+            try:
+                if response is not None:
+                    await response.aclose()
+            finally:
+                if self.attempt_result is not None:
+                    await self.attempt_result(context, status, status is None)
 
     async def request(
         self,
@@ -287,73 +489,89 @@ class HttpxJsonTransport:
         json_body: dict[str, Any] | None = None,
     ) -> tuple[int, dict[str, str], Any]:
         self._validate_url(url)
-        safe_target = sanitize_url(url)
         retry_statuses = {429, 500, 502, 503, 504}
-
+        loop = asyncio.get_running_loop()
+        deadline = loop.time() + self.policy.total_timeout_seconds
         for attempt in range(1, self.policy.max_attempts + 1):
-            try:
-                response = await asyncio.wait_for(
-                    self._client.request(
-                        method,
-                        url,
-                        headers=headers,
-                        params=params,
-                        json=json_body,
-                    ),
-                    timeout=self.policy.total_timeout_seconds,
+            remaining = deadline - loop.time()
+            if remaining <= 0:
+                raise SanitizedTransportError(
+                    "provider operation timed out", retryable=True
                 )
+            try:
+                async with asyncio.timeout(remaining):
+                    request = self._client.build_request(
+                        method, url, headers=headers, params=params, json=json_body
+                    )
+                    status, response_headers, body = await self._physical_attempt(
+                        request, attempt
+                    )
             except asyncio.CancelledError:
                 raise
-            except (asyncio.TimeoutError, httpx.TimeoutException) as exc:
+            except (asyncio.TimeoutError, httpx.TransportError):
                 if attempt == self.policy.max_attempts:
                     raise SanitizedTransportError(
-                        f"{method.upper()} {safe_target} timed out",
+                        "provider operation timed out or transport failed",
                         retryable=True,
-                    ) from exc
-                await asyncio.sleep(
-                    self.policy.backoff_base_seconds * (2 ** (attempt - 1))
+                    ) from None
+                await _sleep_with_deadline(
+                    self.policy.backoff_base_seconds * (2 ** (attempt - 1)), deadline
                 )
                 continue
-            except httpx.TransportError as exc:
-                if attempt == self.policy.max_attempts:
-                    raise SanitizedTransportError(
-                        f"{method.upper()} {safe_target} transport failed",
-                        retryable=True,
-                    ) from exc
-                await asyncio.sleep(
-                    self.policy.backoff_base_seconds * (2 ** (attempt - 1))
-                )
-                continue
-
-            response_headers = {
-                key.lower(): value for key, value in response.headers.items()
-            }
-            if (
-                response.status_code in retry_statuses
-                and attempt < self.policy.max_attempts
-            ):
+            if status in retry_statuses and attempt < self.policy.max_attempts:
                 delay = self._retry_after_seconds(
-                    response_headers,
-                    self.policy.max_retry_after_seconds,
+                    response_headers, self.policy.max_retry_after_seconds
                 )
-                if delay is None:
-                    delay = self.policy.backoff_base_seconds * (
-                        2 ** (attempt - 1)
-                    )
-                await asyncio.sleep(delay)
+                await _sleep_with_deadline(
+                    (
+                        delay
+                        if delay is not None
+                        else self.policy.backoff_base_seconds * (2 ** (attempt - 1))
+                    ),
+                    deadline,
+                )
                 continue
-
-            try:
-                payload = response.json()
-            except (json.JSONDecodeError, ValueError) as exc:
+            content_type = (
+                response_headers.get("content-type", "")
+                .split(";", 1)[0]
+                .strip()
+                .lower()
+            )
+            if content_type not in {
+                "application/json",
+                "application/json-rpc",
+                "application/problem+json",
+            }:
                 raise SanitizedTransportError(
-                    f"{method.upper()} {safe_target} returned non-JSON data",
-                    status_code=response.status_code,
-                    retryable=False,
-                ) from exc
-            return response.status_code, response_headers, payload
-
+                    "provider returned invalid content type", status_code=status
+                )
+            try:
+                payload = self._decode_json(body)
+            except SanitizedTransportError as exc:
+                exc.status_code = status
+                raise
+            return status, response_headers, payload
         raise AssertionError("transport retry loop exited unexpectedly")
+
+
+def _unique_object(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
+    result: dict[str, Any] = {}
+    for key, value in pairs:
+        if key in result:
+            raise ValueError("duplicate JSON object key")
+        result[key] = value
+    return result
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON number denied: {value}")
+
+
+async def _sleep_with_deadline(delay: float, deadline: float) -> None:
+    remaining = deadline - asyncio.get_running_loop().time()
+    if remaining <= 0 or delay >= remaining:
+        raise SanitizedTransportError("provider operation timed out", retryable=True)
+    await asyncio.sleep(delay)
 
 
 __all__ = [

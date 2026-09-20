@@ -7,7 +7,7 @@ from importlib import resources
 import json
 from typing import Any, Mapping, Protocol
 
-from src.market.snapshots import MarketQuoteSnapshot, SnapshotSet
+from src.market.snapshots import MarketObservationV2, ObservationBatch
 from src.routing.models import DiscoveryBatch, QuoteRequest
 from src.strategy.detectors import DetectorPair
 from src.strategy.domain import Opportunity
@@ -159,7 +159,7 @@ class RuntimeDiscoveryEvidence:
 @dataclass(frozen=True, slots=True)
 class RuntimeDiscoveryReport:
     opportunities: tuple[Opportunity, ...]
-    snapshots: SnapshotSet
+    snapshots: ObservationBatch
     evidence: RuntimeDiscoveryEvidence
 
 
@@ -167,7 +167,7 @@ class RuntimeDiscoveryReport:
 class _PairCycleResult:
     pair_id: str
     required: bool
-    snapshots: tuple[MarketQuoteSnapshot, ...]
+    snapshots: tuple[MarketObservationV2, ...]
     requests_attempted: int
     batches_completed: int
     complete: bool

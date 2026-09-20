@@ -1,9 +1,9 @@
 """PR-176/PR-186 hermetic qualification plan contract.
 
-The plan is descriptive only.  Dependency closure is based on the selected
-interpreter's installed distributions and import probes, not package names found
-in requirements files.  Only an executed PR-186 verdict may authorize a release
-claim.
+The plan is descriptive only. Dependency closure is based on the selected
+interpreter's installed distributions and import probes, not arbitrary package-
+looking strings found in project metadata. Only an executed PR-186 verdict may
+authorize a release claim.
 """
 
 from __future__ import annotations
@@ -14,12 +14,16 @@ from importlib import metadata, util
 import json
 import platform
 from pathlib import Path
+import re
 import sys
+import tomllib
 from typing import Any, Iterable, Mapping, Sequence
 
 PR176_SCHEMA = "pr176.hermetic-qualification.v2"
 MANDATORY_PROFILES = ("core", "paper")
 REQUIRED_COLLECTION_PACKAGES = ("aiolimiter", "pytest", "solders")
+_REQUIREMENT_NAME = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*")
+_NORMALISE_RUN = re.compile(r"[-_.]+")
 
 
 @dataclass(frozen=True, slots=True)
@@ -267,9 +271,12 @@ def inspect_dependency_closure(
         if not path.exists():
             lock_hashes[key] = "missing"
             continue
-        text = path.read_text(encoding="utf-8")
-        lock_hashes[key] = sha256_text(text)
-        declared.update(parse_requirement_names(text))
+        raw = path.read_bytes()
+        lock_hashes[key] = hashlib.sha256(raw).hexdigest()
+        if path.name == "pyproject.toml":
+            declared.update(parse_pyproject_requirement_names(raw))
+        else:
+            declared.update(parse_requirement_names(raw.decode("utf-8")))
 
     required = tuple(sorted(set(map(normalise_package_name, required_packages))))
     versions = (
@@ -281,7 +288,7 @@ def inspect_dependency_closure(
         }
     )
     importable = (
-        _importable_packages(required)
+        _importable_packages(required, root=root)
         if importable_packages is None
         else set(map(normalise_package_name, importable_packages))
     )
@@ -314,16 +321,26 @@ def _installed_versions(required: Sequence[str]) -> dict[str, str]:
     return output
 
 
-def _importable_packages(required: Sequence[str]) -> set[str]:
+def _importable_packages(required: Sequence[str], *, root: Path | None = None) -> set[str]:
     output: set[str] = set()
+    resolved_root = root.resolve() if root is not None else None
     for name in required:
         module_name = name.replace("-", "_")
         try:
             found = util.find_spec(module_name)
         except (ImportError, AttributeError, ValueError):
             found = None
-        if found is not None:
-            output.add(name)
+        if found is None:
+            continue
+        origin = getattr(found, "origin", None)
+        if resolved_root is not None and origin not in (None, "built-in", "frozen"):
+            try:
+                Path(origin).resolve().relative_to(resolved_root)
+            except (OSError, ValueError):
+                pass
+            else:
+                continue
+        output.add(name)
     return output
 
 
@@ -347,23 +364,89 @@ def sha256_text(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 
-def parse_requirement_names(text: str) -> set[str]:
+def parse_pyproject_requirement_names(raw: bytes) -> set[str]:
+    """Return only dependency declarations from a standards-parsed pyproject.
+
+    Project metadata, scripts, package discovery and tool configuration are
+    deliberately ignored. Malformed TOML or malformed dependency entries fail
+    closed with ValueError/TOMLDecodeError.
+    """
+
+    document = tomllib.loads(raw.decode("utf-8"))
     names: set[str] = set()
-    for raw in text.splitlines():
-        line = raw.strip().strip(",").strip('"').strip("'")
-        if not line or line.startswith("#") or line.startswith("[") or line.startswith("-"):
-            continue
-        for sep in ("==", ">=", "<=", "~=", "!=", ">", "<", ";", "["):
-            if sep in line:
-                line = line.split(sep, 1)[0]
-        normalized = normalise_package_name(line.strip())
-        if normalized:
-            names.add(normalized)
+    project = document.get("project", {})
+    if project is not None and not isinstance(project, dict):
+        raise ValueError("pyproject [project] must be a table")
+    if isinstance(project, dict):
+        names.update(_parse_requirement_array(project.get("dependencies", []), "project.dependencies"))
+        optional = project.get("optional-dependencies", {})
+        if optional is not None and not isinstance(optional, dict):
+            raise ValueError("project.optional-dependencies must be a table")
+        if isinstance(optional, dict):
+            for group, values in optional.items():
+                names.update(_parse_requirement_array(values, f"project.optional-dependencies.{group}"))
+    build = document.get("build-system", {})
+    if build is not None and not isinstance(build, dict):
+        raise ValueError("pyproject [build-system] must be a table")
+    if isinstance(build, dict):
+        names.update(_parse_requirement_array(build.get("requires", []), "build-system.requires"))
     return names
 
 
+def _parse_requirement_array(value: object, field: str) -> set[str]:
+    if value is None:
+        return set()
+    if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+        raise ValueError(f"{field} must be an array of requirement strings")
+    return {parse_requirement_name(item) for item in value}
+
+
+def parse_requirement_names(text: str) -> set[str]:
+    """Parse a strict requirements-file subset and fail closed on ambiguity."""
+
+    names: set[str] = set()
+    for line_no, raw in enumerate(text.splitlines(), start=1):
+        line = raw.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith(("-e", "--editable")):
+            raise ValueError(f"editable requirement forbidden at line {line_no}")
+        if line.startswith("-"):
+            raise ValueError(f"unsupported requirements directive at line {line_no}: {line}")
+        if " #" in line:
+            line = line.split(" #", 1)[0].rstrip()
+        try:
+            names.add(parse_requirement_name(line))
+        except ValueError as exc:
+            raise ValueError(f"invalid requirement at line {line_no}: {exc}") from exc
+    return names
+
+
+def parse_requirement_name(requirement: str) -> str:
+    value = requirement.strip()
+    if not value or " @ " in value or value.startswith(("git+", "http://", "https://", "file:")):
+        raise ValueError(f"unsupported requirement syntax: {requirement!r}")
+    match = _REQUIREMENT_NAME.match(value)
+    if match is None:
+        raise ValueError(f"missing distribution name: {requirement!r}")
+    name = match.group(0)
+    remainder = value[match.end():]
+    if remainder.startswith("["):
+        end = remainder.find("]")
+        if end < 0:
+            raise ValueError(f"unterminated extras: {requirement!r}")
+        extras = remainder[1:end]
+        if not extras or any(not part.strip() for part in extras.split(",")):
+            raise ValueError(f"invalid extras: {requirement!r}")
+        remainder = remainder[end + 1 :]
+    remainder = remainder.strip()
+    if remainder and remainder[0] not in "<>=!~;":
+        raise ValueError(f"unsupported requirement suffix: {requirement!r}")
+    return normalise_package_name(name)
+
+
 def normalise_package_name(name: str) -> str:
-    return name.strip().lower().replace("_", "-")
+    return _NORMALISE_RUN.sub("-", name.strip().lower())
 
 
 def _relative_name(root: Path, path: Path) -> str:

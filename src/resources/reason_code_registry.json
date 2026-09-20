@@ -1,0 +1,245 @@
+{
+  "schema_id": "failure.reason-code-registry.v1",
+  "reason_codes": [
+    {
+      "reason_code": "CONFIGURATION_FAILURE",
+      "owner": "errors",
+      "category": "configuration",
+      "safe_message": "configuration failure",
+      "severity": "warning",
+      "retry_class": "never",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "CONTRACT_FAILURE",
+      "owner": "errors",
+      "category": "contract",
+      "safe_message": "contract failure",
+      "severity": "warning",
+      "retry_class": "never",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "PROVIDER_TRANSIENT_TIMEOUT",
+      "owner": "errors",
+      "category": "provider_transient",
+      "safe_message": "provider transient failure",
+      "severity": "warning",
+      "retry_class": "bounded_safe_read",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "PROVIDER_PERMANENT_FAILURE",
+      "owner": "errors",
+      "category": "provider_permanent",
+      "safe_message": "provider permanent failure",
+      "severity": "warning",
+      "retry_class": "never",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "STALE_DATA_FAILURE",
+      "owner": "errors",
+      "category": "stale_data",
+      "safe_message": "stale data failure",
+      "severity": "warning",
+      "retry_class": "never",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "DEADLINE_FAILURE",
+      "owner": "errors",
+      "category": "deadline",
+      "safe_message": "deadline failure",
+      "severity": "warning",
+      "retry_class": "never",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "OVERLOAD_FAILURE",
+      "owner": "errors",
+      "category": "overload",
+      "safe_message": "overload failure",
+      "severity": "warning",
+      "retry_class": "never",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "PERSISTENCE_CONFLICT_FAILURE",
+      "owner": "errors",
+      "category": "persistence_conflict",
+      "safe_message": "persistence conflict failure",
+      "severity": "warning",
+      "retry_class": "idempotent",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "ECONOMIC_REJECTION_FAILURE",
+      "owner": "errors",
+      "category": "economic_rejection",
+      "safe_message": "economic rejection failure",
+      "severity": "warning",
+      "retry_class": "never",
+      "readiness_impact": "degraded",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "SECURITY_FAILURE",
+      "owner": "errors",
+      "category": "security",
+      "safe_message": "security failure",
+      "severity": "critical",
+      "retry_class": "never",
+      "readiness_impact": "blocked",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "SUBMISSION_OUTCOME_AMBIGUOUS",
+      "owner": "errors",
+      "category": "submission_ambiguity",
+      "safe_message": "submission ambiguity failure",
+      "severity": "critical",
+      "retry_class": "reconcile_only",
+      "readiness_impact": "blocked",
+      "debt_impact": "none",
+      "ambiguity": "possible_effect",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    },
+    {
+      "reason_code": "INTERNAL_INVARIANT_UNKNOWN",
+      "owner": "errors",
+      "category": "internal_invariant",
+      "safe_message": "internal invariant failure",
+      "severity": "critical",
+      "retry_class": "never",
+      "readiness_impact": "blocked",
+      "debt_impact": "none",
+      "ambiguity": "none",
+      "introduced_version": "0.27.0",
+      "compatibility_policy": "retain while referenced",
+      "replacement_code": null,
+      "safe_context_fields": [
+        "provider_id",
+        "operation_id",
+        "deadline_remaining_ms"
+      ],
+      "status": "active"
+    }
+  ]
+}

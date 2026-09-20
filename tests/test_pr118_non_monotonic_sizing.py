@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
 
 import pytest
 
@@ -49,6 +50,8 @@ def _snapshot() -> WalletBalanceSnapshot:
         wallet_pubkey="wallet111111111111111111111111111111111111",
         native_lamports=10_000_000,
         context_slot=123,
+        captured_at_ns=time.time_ns(),
+        cluster_genesis="mainnet-beta",
     )
 
 

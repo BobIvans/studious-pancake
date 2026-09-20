@@ -1,0 +1,42 @@
+{
+  "schema_id": "release-upgrade-policy.v1",
+  "sender_free": true,
+  "live_enabled": false,
+  "required_identity_fields": [
+    "source_sha",
+    "wheel_sha256",
+    "schema_registry_sha256",
+    "config_identity",
+    "provider_registry_sha256",
+    "capability_manifest_sha256",
+    "production_surface_sha256",
+    "runtime_authority_sha256",
+    "dependency_lock_sha256",
+    "migration_set_sha256"
+  ],
+  "handoff_phases": [
+    "preflight",
+    "admission_stopped",
+    "drained",
+    "backed_up",
+    "migrated",
+    "activated",
+    "verified",
+    "resumed"
+  ],
+  "rollback_classes": [
+    "code_only",
+    "configuration",
+    "schema_compatible",
+    "forward_recovery_only",
+    "forbidden"
+  ],
+  "requirements": {
+    "immutable_previous_artifact": true,
+    "verified_backup": true,
+    "generation_fencing": true,
+    "expand_contract_migrations": true,
+    "stale_worker_denial": true,
+    "sender_free": true
+  }
+}

@@ -35,12 +35,6 @@ services:
         source: evidence-log
         target: /var/log/flashloan-bot
         read_only: false
-    secrets:
-      - source: runtime_env
-        target: runtime.env
-        uid: "10001"
-        gid: "10001"
-        mode: 0400
     environment:
       PAPER_TRADING_ONLY: "true"
       LIVE_TRADING_ENABLED: "false"
@@ -64,10 +58,6 @@ services:
     networks:
       - runtime-egress
 
-secrets:
-  runtime_env:
-    file: ./deploy/production/runtime.env.example
-
 volumes:
   lifecycle-db:
   evidence-log:
@@ -75,6 +65,8 @@ volumes:
 networks:
   runtime-egress:
     driver: bridge
-    internal: false
+    # Paper/shadow qualification is deny-by-default. Reviewed endpoint egress
+    # must be supplied by the orchestrator policy, never by this container.
+    internal: true
     driver_opts:
       com.docker.network.bridge.name: flashloan-egress

@@ -116,11 +116,10 @@ def evaluate_workflow_authority(root: Path, *, strict: bool = False) -> Workflow
     if len(authority) > 1:
         violations.append("more than one workflow claims release authority")
 
-    authority_set = set(authority)
     for item in uses:
-        if item.workflow in authority_set and not item.pinned_full_sha and not item.waived:
+        if not item.value.startswith("./") and not item.pinned_full_sha:
             violations.append(
-                f"{item.workflow}:{item.line} uses moving action {item.value!r} without waiver"
+                f"{item.workflow}:{item.line} uses moving external action {item.value!r}"
             )
 
     return WorkflowReport(

@@ -328,13 +328,20 @@ class UnifiedLifecycleAuthority:
                 release_id=self.release_digest,
                 legacy_migrations_sha256=legacy_digest,
             )
+            base_migration = self.db.execute(
+                "SELECT applied_schema_sha256 FROM migration_ledger_pr195 "
+                "WHERE migration_id=?",
+                (PR02_SCHEMA_VERSION,),
+            ).fetchone()
             authority.append_migration(
                 self.db,
                 migration_id=PR02_SCHEMA_VERSION,
                 from_epoch=0,
                 to_epoch=PR02_DATABASE_EPOCH,
                 script_sha256=hashlib.sha256(_SCHEMA.encode()).hexdigest(),
-                applied_schema_sha256=manifest.sha256,
+                applied_schema_sha256=(
+                    manifest.sha256 if base_migration is None else base_migration[0]
+                ),
                 release_id=self.release_digest,
                 fence=fence,
             )
@@ -349,6 +356,46 @@ class UnifiedLifecycleAuthority:
             raise UnifiedAuthorityError(str(exc)) from exc
         if identity.product_id != PR02_PRODUCT_ID:
             raise UnifiedAuthorityError("PR02_FOREIGN_DATABASE_PRODUCT")
+
+    def install_provider_governance_schema(self) -> None:
+        """Provider obligations share this product, connection and migration owner."""
+        statements = (
+            "CREATE TABLE pr02_provider_state (pool TEXT PRIMARY KEY, "
+            "revision INTEGER NOT NULL CHECK(revision>=0), payload TEXT NOT NULL, "
+            "payload_hash TEXT NOT NULL)",
+            "CREATE TABLE pr02_provider_attempts (attempt_id TEXT PRIMARY KEY, "
+            "pool TEXT NOT NULL REFERENCES pr02_provider_state(pool), "
+            "semantic_hash TEXT NOT NULL, state TEXT NOT NULL CHECK(state IN "
+            "('reserved','issued','completed','released','expired','outcome_unknown')), "
+            "payload TEXT NOT NULL, completion_hash TEXT)",
+            "CREATE INDEX pr02_provider_attempts_pool ON pr02_provider_attempts(pool,state)",
+        )
+        with self.lifecycle.write_transaction():
+            manifest = canonical_schema_manifest(self.db)
+            authority = DatabaseSchemaAuthority(
+                DatabaseProductSpec(
+                    product_id=PR02_PRODUCT_ID,
+                    schema_family=PR02_SCHEMA_VERSION,
+                    application_schema_version=PR02_APPLICATION_SCHEMA_VERSION,
+                    current_epoch=PR02_DATABASE_EPOCH,
+                    reader_min_epoch=PR02_DATABASE_EPOCH,
+                    reader_max_epoch=PR02_DATABASE_EPOCH,
+                    writer_min_epoch=PR02_DATABASE_EPOCH,
+                    writer_max_epoch=PR02_DATABASE_EPOCH,
+                    expected_schema_manifest_sha256=manifest.sha256,
+                ),
+                now_utc_ns=lambda: self._snapshot().utc_ns,
+            )
+            authority.apply_additive_migration(
+                self.db,
+                migration_id="mpr2602.provider-obligations.v1",
+                statements=statements,
+                owner_id=self.owner_id + ":provider-migration",
+                release_id=self.release_digest,
+                environment=self.environment,
+                cluster_genesis=self.cluster_genesis,
+                legacy_migrations_sha256=self._legacy_migrations_digest(),
+            )
 
     def _legacy_migrations_digest(self) -> str:
         rows = self.db.execute(
@@ -417,7 +464,10 @@ class UnifiedLifecycleAuthority:
         request_payload: Mapping[str, object],
     ) -> AuthorityFence:
         _digest(attempt_id, "attempt_id")
-        if isinstance(attempt_generation, bool) or attempt_generation < 1:
+        if (
+            type(attempt_generation) is not int
+            or not 1 <= attempt_generation <= 2**63 - 1
+        ):
             raise ValueError("attempt_generation must be positive")
         source_identity = _hash_json(
             {
@@ -447,78 +497,103 @@ class UnifiedLifecycleAuthority:
         provider_evidence_hash: str | None = None,
         connection: sqlite3.Connection | None = None,
     ) -> AuthorityFence:
-        db = connection or self.db
-        now = self._snapshot()
-        payload_json = _canonical_json(payload)
-        payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
-        intent_id = _hash_json(
-            {
-                "schema": PR02_SCHEMA_VERSION,
-                "kind": kind.value,
-                "source_identity": source_identity,
-                "release_digest": self.release_digest,
-                "policy_bundle_hash": self.policy_bundle_hash,
-            }
-        )
-        existing = db.execute(
-            "SELECT * FROM pr02_intents WHERE intent_id=?", (intent_id,)
-        ).fetchone()
-        if existing is not None:
-            expected = (
-                payload_hash,
-                self.release_digest,
-                self.policy_bundle_hash,
-                kind.value,
+        with self.lifecycle.write_transaction():
+            if connection is not None and connection is not self.db:
+                raise UnifiedAuthorityError("PR02_FOREIGN_TRANSACTION_CONNECTION")
+            db = self.db
+            now = self._snapshot()
+            payload_json = _canonical_json(payload)
+            payload_hash = hashlib.sha256(payload_json.encode()).hexdigest()
+            intent_id = _hash_json(
+                {
+                    "schema": PR02_SCHEMA_VERSION,
+                    "kind": kind.value,
+                    "source_identity": source_identity,
+                    "release_digest": self.release_digest,
+                    "policy_bundle_hash": self.policy_bundle_hash,
+                }
             )
-            actual = (
-                str(existing["payload_hash"]),
-                str(existing["release_digest"]),
-                str(existing["policy_bundle_hash"]),
-                str(existing["intent_kind"]),
-            )
-            if actual != expected:
+            if kind is IntentKind.PAPER_ATTEMPT:
+                prior = db.execute(
+                    "SELECT intent_id FROM pr02_intents WHERE intent_kind=? "
+                    "AND attempt_id=? AND attempt_generation=?",
+                    (kind.value, attempt_id, attempt_generation),
+                ).fetchone()
+            else:
+                prior = db.execute(
+                    "SELECT intent_id FROM pr02_intents WHERE intent_kind=? "
+                    "AND run_id=? AND sequence=?",
+                    (kind.value, run_id, sequence),
+                ).fetchone()
+            if prior is not None and prior["intent_id"] != intent_id:
                 raise UnifiedAuthorityError("PR02_INTENT_IMMUTABILITY_CONFLICT")
-            return _fence_from_row(existing, replayed=True)
-        db.execute(
-            "INSERT INTO pr02_intents("
-            "intent_id,intent_kind,source_identity,run_id,sequence,attempt_id,"
-            "attempt_generation,provider_evidence_hash,release_digest,"
-            "policy_bundle_hash,payload_json,payload_hash,status,owner_id,"
-            "fencing_token,boot_id,process_generation,issued_utc_ns,"
-            "expires_utc_ns,issued_monotonic_ns,expires_monotonic_ns,terminal_id,"
-            "created_utc_ns,updated_utc_ns) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"
-            "?,?,?,?,?,NULL,?,?)",
-            (
-                intent_id,
-                kind.value,
-                source_identity,
-                run_id,
-                sequence,
-                attempt_id,
-                attempt_generation,
-                provider_evidence_hash,
-                self.release_digest,
-                self.policy_bundle_hash,
-                payload_json,
-                payload_hash,
-                IntentStatus.RECORDED.value,
-                self.owner_id,
-                1,
-                now.boot_id,
-                now.process_generation,
-                now.utc_ns,
-                now.utc_ns + self.lease_ttl_ns,
-                now.monotonic_ns,
-                now.monotonic_ns + self.lease_ttl_ns,
-                now.utc_ns,
-                now.utc_ns,
-            ),
-        )
-        row = db.execute(
-            "SELECT * FROM pr02_intents WHERE intent_id=?", (intent_id,)
-        ).fetchone()
-        assert row is not None
-        return _fence_from_row(row, replayed=False)
+            existing = db.execute(
+                "SELECT * FROM pr02_intents WHERE intent_id=?", (intent_id,)
+            ).fetchone()
+            if existing is not None:
+                expected = (
+                    payload_hash,
+                    self.release_digest,
+                    self.policy_bundle_hash,
+                    kind.value,
+                )
+                actual = (
+                    str(existing["payload_hash"]),
+                    str(existing["release_digest"]),
+                    str(existing["policy_bundle_hash"]),
+                    str(existing["intent_kind"]),
+                )
+                if actual != expected:
+                    raise UnifiedAuthorityError("PR02_INTENT_IMMUTABILITY_CONFLICT")
+                if existing["terminal_id"] is None and (
+                    existing["owner_id"] != self.owner_id
+                    or existing["boot_id"] != now.boot_id
+                    or existing["process_generation"] != now.process_generation
+                    or now.monotonic_ns >= existing["expires_monotonic_ns"]
+                    or now.utc_ns >= existing["expires_utc_ns"]
+                ):
+                    raise UnifiedAuthorityError("PR02_INTENT_REQUIRES_RECONCILIATION")
+                return _fence_from_row(existing, replayed=True)
+            db.execute(
+                "INSERT INTO pr02_intents("
+                "intent_id,intent_kind,source_identity,run_id,sequence,attempt_id,"
+                "attempt_generation,provider_evidence_hash,release_digest,"
+                "policy_bundle_hash,payload_json,payload_hash,status,owner_id,"
+                "fencing_token,boot_id,process_generation,issued_utc_ns,"
+                "expires_utc_ns,issued_monotonic_ns,expires_monotonic_ns,terminal_id,"
+                "created_utc_ns,updated_utc_ns) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,"
+                "?,?,?,?,?,NULL,?,?)",
+                (
+                    intent_id,
+                    kind.value,
+                    source_identity,
+                    run_id,
+                    sequence,
+                    attempt_id,
+                    attempt_generation,
+                    provider_evidence_hash,
+                    self.release_digest,
+                    self.policy_bundle_hash,
+                    payload_json,
+                    payload_hash,
+                    IntentStatus.RECORDED.value,
+                    self.owner_id,
+                    1,
+                    now.boot_id,
+                    now.process_generation,
+                    now.utc_ns,
+                    now.utc_ns + self.lease_ttl_ns,
+                    now.monotonic_ns,
+                    now.monotonic_ns + self.lease_ttl_ns,
+                    now.utc_ns,
+                    now.utc_ns,
+                ),
+            )
+            row = db.execute(
+                "SELECT * FROM pr02_intents WHERE intent_id=?", (intent_id,)
+            ).fetchone()
+            assert row is not None
+            return _fence_from_row(row, replayed=False)
 
     def bind_provider_evidence(
         self,
@@ -528,7 +603,7 @@ class UnifiedLifecycleAuthority:
     ) -> AuthorityFence:
         _digest(provider_evidence_hash, "provider_evidence_hash")
         now = self._snapshot()
-        with self.db:
+        with self.lifecycle.write_transaction():
             row = self._verify_fence(self.db, fence, now)
             current = row["provider_evidence_hash"]
             if current is not None and str(current) != provider_evidence_hash:
@@ -576,8 +651,8 @@ class UnifiedLifecycleAuthority:
             }
         )
         now = self._snapshot()
-        with self.db:
-            row = self._verify_fence(self.db, fence, now)
+        with self.lifecycle.write_transaction():
+            row = self._verify_fence(self.db, fence, now, allow_terminal_replay=True)
             if str(row["intent_kind"]) != IntentKind.PAPER_CYCLE.value:
                 raise UnifiedAuthorityError("PR02_WRONG_INTENT_KIND")
             bound = row["provider_evidence_hash"]
@@ -596,6 +671,15 @@ class UnifiedLifecycleAuthority:
                 reservation_state=ReservationTerminalState.NOT_APPLICABLE,
                 topic="paper.service.cycle_recorded",
             )
+            if commit.replayed:
+                projection = self.db.execute(
+                    "SELECT 1 FROM a3_paper_service_cycles c JOIN a3_paper_service_outbox o "
+                    "ON o.cycle_id=c.cycle_id WHERE c.cycle_id=?",
+                    (row["source_identity"],),
+                ).fetchone()
+                if projection is None:
+                    raise UnifiedAuthorityError("PR02_TERMINAL_PROJECTION_INCONSISTENT")
+                return commit
             self._write_a3_projection(
                 self.db,
                 row=row,
@@ -626,8 +710,8 @@ class UnifiedLifecycleAuthority:
     ) -> TerminalCommit:
         _digest(report_hash, "report_hash")
         now = self._snapshot()
-        with self.db:
-            row = self._verify_fence(self.db, fence, now)
+        with self.lifecycle.write_transaction():
+            row = self._verify_fence(self.db, fence, now, allow_terminal_replay=True)
             if str(row["intent_kind"]) != IntentKind.PAPER_ATTEMPT.value:
                 raise UnifiedAuthorityError("PR02_WRONG_INTENT_KIND")
             attempt_id = str(row["attempt_id"] or "")
@@ -643,6 +727,12 @@ class UnifiedLifecycleAuthority:
                 (row["intent_id"],),
             ).fetchone()
             if existing_terminal is not None:
+                if (
+                    str(attempt["state"]) != target_state.value
+                    or str(existing_terminal["reservation_terminal_state"])
+                    != reservation_terminal_state.value
+                ):
+                    raise UnifiedAuthorityError("PR02_TERMINAL_IMMUTABILITY_CONFLICT")
                 return self._insert_terminal_and_outbox(
                     self.db,
                     row=row,
@@ -782,15 +872,30 @@ class UnifiedLifecycleAuthority:
             (row["intent_id"],),
         ).fetchone()
         if existing is not None:
-            expected = (terminal_id, outcome, report_hash, payload_hash)
+            expected = (
+                terminal_id,
+                outcome,
+                report_hash,
+                payload_hash,
+                reason_code,
+                reservation_state.value,
+            )
             actual = (
                 str(existing["terminal_id"]),
                 str(existing["outcome"]),
                 str(existing["report_hash"]),
                 str(existing["payload_hash"]),
+                str(existing["reason_code"]),
+                str(existing["reservation_terminal_state"]),
             )
             if actual != expected:
                 raise UnifiedAuthorityError("PR02_TERMINAL_IMMUTABILITY_CONFLICT")
+            outbox = db.execute(
+                "SELECT event_id FROM pr02_outbox_event WHERE intent_id=?",
+                (row["intent_id"],),
+            ).fetchone()
+            if outbox is None or outbox["event_id"] != event_id:
+                raise UnifiedAuthorityError("PR02_TERMINAL_OUTBOX_INCONSISTENT")
             return TerminalCommit(
                 terminal_id,
                 str(row["intent_id"]),
@@ -930,27 +1035,41 @@ class UnifiedLifecycleAuthority:
         db: sqlite3.Connection,
         fence: AuthorityFence,
         now: TimeSnapshot,
+        *,
+        allow_terminal_replay: bool = False,
     ) -> sqlite3.Row:
         row = db.execute(
             "SELECT * FROM pr02_intents WHERE intent_id=?", (fence.intent_id,)
         ).fetchone()
         if row is None:
             raise UnifiedAuthorityError("PR02_INTENT_NOT_FOUND")
+        terminal_replay = allow_terminal_replay and row["terminal_id"] is not None
         valid = (
             str(row["owner_id"]) == fence.owner_id
+            and (terminal_replay or fence.owner_id == self.owner_id)
             and int(row["fencing_token"]) == fence.fencing_token
-            and str(row["boot_id"]) == fence.boot_id == now.boot_id
-            and int(row["process_generation"])
-            == fence.process_generation
-            == now.process_generation
+            and str(row["boot_id"]) == fence.boot_id
+            and int(row["process_generation"]) == fence.process_generation
+            and (
+                terminal_replay
+                or (
+                    fence.boot_id == now.boot_id
+                    and fence.process_generation == now.process_generation
+                )
+            )
             and str(row["release_digest"])
             == fence.release_digest
             == self.release_digest
             and str(row["policy_bundle_hash"])
             == fence.policy_bundle_hash
             == self.policy_bundle_hash
-            and now.utc_ns < int(row["expires_utc_ns"])
-            and now.monotonic_ns < int(row["expires_monotonic_ns"])
+            and (
+                terminal_replay
+                or (
+                    now.utc_ns < int(row["expires_utc_ns"])
+                    and now.monotonic_ns < int(row["expires_monotonic_ns"])
+                )
+            )
         )
         if not valid:
             raise UnifiedAuthorityError("PR02_OWNER_FENCE_LEASE_OR_POLICY_MISMATCH")
@@ -969,7 +1088,7 @@ class UnifiedLifecycleAuthority:
         if evidence_hash is not None:
             _digest(evidence_hash, "evidence_hash")
         now = self._snapshot()
-        with self.db:
+        with self.lifecycle.write_transaction():
             self._verify_fence(self.db, fence, now)
             dead_letter_id = _hash_json(
                 {
@@ -1001,6 +1120,22 @@ class UnifiedLifecycleAuthority:
             )
             return dead_letter_id
 
+    def record_runtime_incident(
+        self, reason: str, intent_id: str | None = None
+    ) -> None:
+        """Record worker/cancellation diagnostics without changing a committed effect."""
+        with self.lifecycle.write_transaction():
+            now = self._snapshot()
+            self.lifecycle._record_time_incident(
+                reason,
+                now,
+                resource_key=intent_id,
+                evidence={
+                    "owner_id": self.owner_id,
+                    "source": "installed-paper-service",
+                },
+            )
+
     def recovery_summary(self) -> tuple[dict[str, object], ...]:
         now = self._snapshot()
         rows = self.db.execute(
@@ -1019,7 +1154,16 @@ class UnifiedLifecycleAuthority:
                 and now.monotonic_ns < int(row["expires_monotonic_ns"])
             )
             if row["terminal_id"] is not None:
-                action = "terminal_exactly_once"
+                terminal = self.db.execute(
+                    "SELECT 1 FROM pr02_terminal_records t JOIN pr02_outbox_event o "
+                    "ON o.intent_id=t.intent_id WHERE t.terminal_id=? AND t.intent_id=?",
+                    (row["terminal_id"], row["intent_id"]),
+                ).fetchone()
+                action = (
+                    "terminal_exactly_once"
+                    if terminal
+                    else "quarantine_inconsistent_terminal"
+                )
             elif live:
                 action = "resume_owned_intent"
             else:

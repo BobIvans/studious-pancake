@@ -25,12 +25,12 @@ def opp(name="s", oid=None, ttl=10):
     return Opportunity.create(
         strategy_name=name, opportunity_type="test", detection_slot=1,
         input_mint="A", output_mint="B", proposed_amount_base_units=1,
-        expected_gross_profit=1.0, ttl_seconds=ttl,
+        expected_gross_profit=1, ttl_seconds=ttl,
         metadata={"features": {}},
     ) if oid is None else Opportunity(
         opportunity_id=oid, strategy_name=name, opportunity_type="test", detected_at=time.time(),
         detection_slot=1, input_mint="A", output_mint="B", proposed_amount_base_units=1,
-        expected_gross_profit=1.0, expires_at=time.time()+ttl, metadata={},
+        expected_gross_profit=1, expires_at=time.time()+ttl, metadata={},
     )
 
 
@@ -86,15 +86,16 @@ async def test_shadow_strategies_detect_and_enqueue_opportunities():
 
 
 @pytest.mark.asyncio
-async def test_one_strategy_failure_does_not_stop_others():
+async def test_strategy_failure_revokes_readiness_and_cancels_dependents():
     r = StrategyRegistry(); r.register(FailingStrategy("bad")); r.register(OneShotStrategy("good"))
     q = OpportunityQueue(10, ConstantRanker())
     rt = StrategyRuntime(r, q)
     await rt.start()
-    got = await asyncio.wait_for(q.get(), 1)
+    await asyncio.sleep(0)
     await rt.stop()
-    assert got.strategy_name == "good"
     assert q.metrics["bad"].last_error == "boom"
+    assert rt.ready is False
+    assert rt.states["bad"] == "failed"
 
 
 def test_duplicate_registration_fails():
@@ -112,15 +113,16 @@ async def test_duplicate_opportunities_are_deduplicated():
     assert q.qsize() == 1
 
 
-def test_expired_opportunities_are_removed():
+@pytest.mark.asyncio
+async def test_expired_opportunities_are_removed():
     q = OpportunityQueue(10, ConstantRanker())
     expired = Opportunity(
         opportunity_id="expired", strategy_name="s", opportunity_type="t", detected_at=time.time()-2,
         detection_slot=1, input_mint="A", output_mint="B", proposed_amount_base_units=1,
-        expected_gross_profit=1.0, expires_at=time.time()-1, metadata={},
+        expected_gross_profit=1, expires_at=time.time()-1, metadata={},
     )
-    q._heap.append((-1.0, expired.expires_at, expired.opportunity_id, expired)); q._ids.add("expired")
-    assert q.expire() == 1
+    q._heap.append((-1.0, expired.expires_at, 0, expired.opportunity_id, expired)); q._ids.add("expired")
+    assert await q.expire() == 1
     assert q.qsize() == 0
 
 

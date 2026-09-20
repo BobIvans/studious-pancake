@@ -1,0 +1,10 @@
+{
+  "allowPrivilegeEscalation": false,
+  "readOnlyRootFilesystem": true,
+  "runAsGroup": 65532,
+  "runAsNonRoot": true,
+  "runAsUser": 65532,
+  "seccompProfile": "RuntimeDefault",
+  "writableMounts": [],
+  "schema_version": "pr009.signer-filesystem-policy.v1"
+}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 import hashlib
 import json
 from pathlib import Path
@@ -111,10 +111,82 @@ class DatabaseSchemaAuthority:
         self.spec = spec
         self._now_utc_ns = now_utc_ns
 
+    def apply_additive_migration(
+        self,
+        conn: sqlite3.Connection,
+        *,
+        migration_id: str,
+        statements: tuple[str, ...],
+        owner_id: str,
+        release_id: str,
+        environment: str,
+        cluster_genesis: str,
+        legacy_migrations_sha256: str,
+    ) -> None:
+        """Apply a same-epoch extension inside the caller's writer transaction.
+
+        No executescript: an interrupted extension must roll back both DDL and
+        identity/ledger changes. The caller retains transaction ownership.
+        """
+        if not conn.in_transaction:
+            raise DatabaseSchemaAuthorityError(
+                "DATABASE_MIGRATION_TRANSACTION_REQUIRED"
+            )
+        if not statements or any(
+            re.match(r"\ACREATE\s+(?:UNIQUE\s+)?(?:TABLE|INDEX)\s+", sql, re.I) is None
+            for sql in statements
+        ):
+            raise DatabaseSchemaAuthorityError("DATABASE_MIGRATION_ADDITIVE_ONLY")
+        script_hash = _digest(statements)
+        self.verify_runtime(
+            conn,
+            environment=environment,
+            cluster_genesis=cluster_genesis,
+            legacy_migrations_sha256=legacy_migrations_sha256,
+        )
+        existing = conn.execute(
+            f"SELECT script_sha256 FROM {MIGRATION_LEDGER_TABLE} WHERE migration_id=?",
+            (migration_id,),
+        ).fetchone()
+        if existing is not None:
+            if existing[0] != script_hash:
+                raise DatabaseSchemaAuthorityError("DATABASE_MIGRATION_SCRIPT_MISMATCH")
+            return
+        fence = self.acquire_fence(
+            conn, owner_id=owner_id, expected_epoch=self.spec.current_epoch
+        )
+        for statement in statements:
+            conn.execute(statement)
+        manifest = canonical_schema_manifest(conn)
+        conn.execute(
+            f"UPDATE {IDENTITY_TABLE} SET expected_schema_manifest_sha256=? WHERE singleton=1",
+            (manifest.sha256,),
+        )
+        updated = DatabaseSchemaAuthority(
+            replace(self.spec, expected_schema_manifest_sha256=manifest.sha256),
+            now_utc_ns=self._now_utc_ns,
+        )
+        updated.append_migration(
+            conn,
+            migration_id=migration_id,
+            from_epoch=self.spec.current_epoch,
+            to_epoch=self.spec.current_epoch,
+            script_sha256=script_hash,
+            applied_schema_sha256=manifest.sha256,
+            release_id=release_id,
+            fence=fence,
+        )
+        updated.release_fence(conn, fence)
+        updated.verify_runtime(
+            conn,
+            environment=environment,
+            cluster_genesis=cluster_genesis,
+            legacy_migrations_sha256=legacy_migrations_sha256,
+        )
+
     @staticmethod
     def install_authority_schema(conn: sqlite3.Connection) -> None:
-        conn.executescript(
-            f"""
+        conn.executescript(f"""
             CREATE TABLE IF NOT EXISTS {IDENTITY_TABLE}(
                 singleton INTEGER PRIMARY KEY CHECK(singleton=1),
                 database_uuid TEXT NOT NULL UNIQUE,
@@ -153,8 +225,7 @@ class DatabaseSchemaAuthority:
                 lease_expires_utc_ns INTEGER NOT NULL,
                 expected_epoch INTEGER NOT NULL
             );
-            """
-        )
+            """)
 
     def acquire_fence(
         self,
@@ -202,9 +273,7 @@ class DatabaseSchemaAuthority:
         )
         return MigrationFence(owner_id, token, expires, expected_epoch)
 
-    def release_fence(
-        self, conn: sqlite3.Connection, fence: MigrationFence
-    ) -> None:
+    def release_fence(self, conn: sqlite3.Connection, fence: MigrationFence) -> None:
         cursor = conn.execute(
             f"""
             UPDATE {MIGRATION_FENCE_TABLE} SET lease_expires_utc_ns=0
@@ -234,9 +303,10 @@ class DatabaseSchemaAuthority:
                     f"DATABASE_IDENTITY_{name.upper()}_INVALID"
                 )
         _require_sha256(legacy_migrations_sha256, "legacy_migrations_sha256")
-        if conn.execute(
-            f"SELECT 1 FROM {IDENTITY_TABLE} WHERE singleton=1"
-        ).fetchone() is None:
+        if (
+            conn.execute(f"SELECT 1 FROM {IDENTITY_TABLE} WHERE singleton=1").fetchone()
+            is None
+        ):
             values = (
                 uuid.uuid4().hex,
                 self.spec.product_id,
@@ -331,9 +401,7 @@ class DatabaseSchemaAuthority:
                 "DATABASE_MIGRATION_EPOCH_CONTRACT_INVALID"
             )
         if not release_id.strip():
-            raise DatabaseSchemaAuthorityError(
-                "DATABASE_MIGRATION_RELEASE_ID_INVALID"
-            )
+            raise DatabaseSchemaAuthorityError("DATABASE_MIGRATION_RELEASE_ID_INVALID")
         _require_sha256(script_sha256, "script_sha256")
         _require_sha256(applied_schema_sha256, "applied_schema_sha256")
         self.assert_fence(conn, fence)
@@ -392,9 +460,7 @@ class DatabaseSchemaAuthority:
         )
         return entry_hash
 
-    def assert_fence(
-        self, conn: sqlite3.Connection, fence: MigrationFence
-    ) -> None:
+    def assert_fence(self, conn: sqlite3.Connection, fence: MigrationFence) -> None:
         row = conn.execute(
             f"SELECT * FROM {MIGRATION_FENCE_TABLE} WHERE singleton=1"
         ).fetchone()
@@ -447,20 +513,20 @@ class DatabaseSchemaAuthority:
         final_epoch: int | None = None
         for expected_sequence, row in enumerate(rows, start=1):
             if int(row["sequence"]) != expected_sequence:
-                raise DatabaseSchemaAuthorityError(
-                    "DATABASE_MIGRATION_SEQUENCE_GAP"
-                )
+                raise DatabaseSchemaAuthorityError("DATABASE_MIGRATION_SEQUENCE_GAP")
             payload = {
-                key: int(row[key])
-                if key
-                in {
-                    "sequence",
-                    "from_epoch",
-                    "to_epoch",
-                    "fencing_token",
-                    "applied_at_utc_ns",
-                }
-                else str(row[key])
+                key: (
+                    int(row[key])
+                    if key
+                    in {
+                        "sequence",
+                        "from_epoch",
+                        "to_epoch",
+                        "fencing_token",
+                        "applied_at_utc_ns",
+                    }
+                    else str(row[key])
+                )
                 for key in (
                     "sequence",
                     "migration_id",
@@ -475,13 +541,9 @@ class DatabaseSchemaAuthority:
                 )
             }
             if payload["previous_entry_hash"] != previous:
-                raise DatabaseSchemaAuthorityError(
-                    "DATABASE_MIGRATION_CHAIN_BROKEN"
-                )
+                raise DatabaseSchemaAuthorityError("DATABASE_MIGRATION_CHAIN_BROKEN")
             if _digest(payload) != str(row["entry_hash"]):
-                raise DatabaseSchemaAuthorityError(
-                    "DATABASE_MIGRATION_ENTRY_TAMPERED"
-                )
+                raise DatabaseSchemaAuthorityError("DATABASE_MIGRATION_ENTRY_TAMPERED")
             previous = str(row["entry_hash"])
             final_epoch = int(row["to_epoch"])
         if expected_epoch is not None and final_epoch != expected_epoch:
@@ -491,14 +553,12 @@ class DatabaseSchemaAuthority:
 
 
 def canonical_schema_manifest(conn: sqlite3.Connection) -> SchemaManifest:
-    rows = conn.execute(
-        """
+    rows = conn.execute("""
         SELECT type,name,tbl_name,sql FROM sqlite_master
         WHERE type IN ('table','index','trigger','view')
           AND name NOT LIKE 'sqlite_%'
         ORDER BY type,name
-        """
-    ).fetchall()
+        """).fetchall()
     objects = tuple(
         {
             "type": str(row["type"]),
@@ -512,26 +572,22 @@ def canonical_schema_manifest(conn: sqlite3.Connection) -> SchemaManifest:
 
 
 def existing_schema_objects(conn: sqlite3.Connection) -> frozenset[str]:
-    rows = conn.execute(
-        """
+    rows = conn.execute("""
         SELECT name FROM sqlite_master
         WHERE type IN ('table','index','trigger','view')
           AND name NOT LIKE 'sqlite_%'
-        """
-    ).fetchall()
+        """).fetchall()
     return frozenset(str(row["name"]) for row in rows)
 
 
 def schema_migrations_digest(conn: sqlite3.Connection) -> str:
     exists = conn.execute(
-        "SELECT 1 FROM sqlite_master "
-        "WHERE type='table' AND name='schema_migrations'"
+        "SELECT 1 FROM sqlite_master " "WHERE type='table' AND name='schema_migrations'"
     ).fetchone()
     if exists is None:
         return _digest(())
     columns = {
-        str(row["name"])
-        for row in conn.execute("PRAGMA table_info(schema_migrations)")
+        str(row["name"]) for row in conn.execute("PRAGMA table_info(schema_migrations)")
     }
     selected = ["version"] + [
         name
@@ -559,9 +615,7 @@ def _identity_from_row(row: sqlite3.Row) -> DatabaseIdentity:
         reader_max_epoch=int(row["reader_max_epoch"]),
         writer_min_epoch=int(row["writer_min_epoch"]),
         writer_max_epoch=int(row["writer_max_epoch"]),
-        expected_schema_manifest_sha256=str(
-            row["expected_schema_manifest_sha256"]
-        ),
+        expected_schema_manifest_sha256=str(row["expected_schema_manifest_sha256"]),
         legacy_migrations_sha256=str(row["legacy_migrations_sha256"]),
     )
 

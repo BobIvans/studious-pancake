@@ -1,0 +1,30 @@
+{
+  "profiles": {
+    "ci_smoke": {
+      "blocking": true,
+      "credentials": "forbidden",
+      "maximum_backup_seconds": 10.0,
+      "maximum_database_bytes": 16777216,
+      "maximum_indexed_query_p95_ms": 250.0,
+      "minimum_insert_rows_per_second": 50.0,
+      "network": false,
+      "payload_bytes": 128,
+      "qualification_scope": "installed-offline-ci-smoke",
+      "rows": 750
+    },
+    "production_nominal": {
+      "blocking": false,
+      "credentials": "forbidden",
+      "evidence_required": true,
+      "maximum_backup_seconds": null,
+      "maximum_database_bytes": null,
+      "maximum_indexed_query_p95_ms": null,
+      "minimum_insert_rows_per_second": null,
+      "network": false,
+      "payload_bytes": 1024,
+      "qualification_scope": "external-production-profile",
+      "rows": 1000000
+    }
+  },
+  "schema_id": "mpr-td-03.capacity-profiles.v1"
+}

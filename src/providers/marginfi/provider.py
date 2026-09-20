@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import hashlib
+import json
 import struct
 from typing import Sequence
 
@@ -15,6 +16,95 @@ from .errors import MarginfiRejection, MarginfiRejectionCode
 from .layouts import ceil_i80f48_product
 from .pin import MarginfiContractPin
 from .risk import MarginfiRiskAccountResolver
+
+
+@dataclass(frozen=True, slots=True)
+class MarginfiSourceVectorEvidence:
+    """Reproducible offline vector comparison, never deployment admission.
+
+    Hashes must come from independent source-derived instruction fixtures in
+    start/borrow/repay/end order. Matching them admits local preparation and
+    simulation only; it does not set execution_conformance_verified.
+    """
+
+    source_commit: str
+    layout_sha256: str
+    snapshot_fingerprint: str
+    borrow_amount: int
+    destination: str
+    repayment_source: str
+    instruction_hashes: tuple[str, str, str, str]
+
+    @property
+    def evidence_hash(self) -> str:
+        return hashlib.sha256(
+            json.dumps(asdict(self), sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+
+    def validate_context(
+        self,
+        pin: MarginfiContractPin,
+        snapshot: MarginfiSnapshot,
+        amount: int,
+        destination: str,
+        repayment_source: str,
+    ) -> None:
+        from .accounts import MARGINFI_SHARES_SOURCE_COMMIT
+
+        layout_hash = hashlib.sha256(
+            json.dumps(pin.raw, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        if (
+            self.source_commit != pin.source_commit
+            or self.source_commit != MARGINFI_SHARES_SOURCE_COMMIT
+            or self.layout_sha256 != layout_hash
+            or self.snapshot_fingerprint != snapshot.state_fingerprint
+            or self.borrow_amount != amount
+            or self.destination != destination
+            or self.repayment_source != repayment_source
+        ):
+            raise ValueError("offline MarginFi source vector context mismatch")
+        if (
+            not isinstance(self.instruction_hashes, tuple)
+            or len(self.instruction_hashes) != 4
+        ):
+            raise ValueError(
+                "four immutable offline instruction vector hashes required"
+            )
+        for digest in (
+            self.layout_sha256,
+            self.snapshot_fingerprint,
+            *self.instruction_hashes,
+        ):
+            if len(digest) != 64 or any(
+                char not in "0123456789abcdef" for char in digest
+            ):
+                raise ValueError("offline vector digest is malformed")
+
+    def validate_bracket(
+        self, pin: MarginfiContractPin, instructions: Sequence[Instruction]
+    ) -> None:
+        selected = tuple(
+            ix for ix in instructions if str(ix.program_id) == pin.program_id
+        )
+        names = (
+            "lending_account_start_flashloan",
+            "lending_account_borrow",
+            "lending_account_repay",
+            "lending_account_end_flashloan",
+        )
+        if len(selected) != 4 or any(
+            ix.data[:8] != pin.ix_discriminator(name)
+            for ix, name in zip(selected, names)
+        ):
+            raise ValueError(
+                "offline MarginFi bracket differs from source vector shape"
+            )
+        if (
+            tuple(hashlib.sha256(bytes(ix)).hexdigest() for ix in selected)
+            != self.instruction_hashes
+        ):
+            raise ValueError("offline MarginFi instruction vector mismatch")
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,9 +191,7 @@ class MarginfiFlashLoanProvider:
         fee = ceil_i80f48_product(
             amount,
             snapshot.bank.origination_fee_raw_i80f48,
-            fractional_bits=int(
-                self.pin.raw["constants"]["i80f48_fractional_bits"]
-            ),
+            fractional_bits=int(self.pin.raw["constants"]["i80f48_fractional_bits"]),
         )
         required = amount + fee
         if min_final_balance < required + safety_surplus:
@@ -200,8 +288,7 @@ class MarginfiFlashLoanProvider:
             b"".join(
                 bytes(ix.program_id)
                 + b"".join(
-                    bytes(meta.pubkey)
-                    + bytes((meta.is_signer, meta.is_writable))
+                    bytes(meta.pubkey) + bytes((meta.is_signer, meta.is_writable))
                     for meta in ix.accounts
                 )
                 + bytes(ix.data)
@@ -261,8 +348,7 @@ class MarginfiFlashLoanProvider:
         if bank.requires_mint_account:
             accounts.append(AccountMeta(Pubkey.from_string(bank.mint), False, False))
         accounts.extend(
-            AccountMeta(Pubkey.from_string(key), False, False)
-            for key in risk_accounts
+            AccountMeta(Pubkey.from_string(key), False, False) for key in risk_accounts
         )
         return Instruction(
             Pubkey.from_string(self.pin.program_id),
@@ -287,9 +373,8 @@ class MarginfiFlashLoanProvider:
         if bank.requires_mint_account:
             accounts.append(AccountMeta(Pubkey.from_string(bank.mint), False, False))
         # Upstream takes Option<bool>; Borsh Some(true) is tag=1, value=1.
-        data = (
-            self.pin.ix_discriminator("lending_account_repay")
-            + struct.pack("<QBB", amount, 1, 1)
+        data = self.pin.ix_discriminator("lending_account_repay") + struct.pack(
+            "<QBB", amount, 1, 1
         )
         return Instruction(Pubkey.from_string(self.pin.program_id), data, accounts)
 
@@ -311,8 +396,7 @@ class MarginfiFlashLoanProvider:
             ),
         ]
         accounts.extend(
-            AccountMeta(Pubkey.from_string(key), False, False)
-            for key in risk_accounts
+            AccountMeta(Pubkey.from_string(key), False, False) for key in risk_accounts
         )
         return Instruction(
             Pubkey.from_string(self.pin.program_id),

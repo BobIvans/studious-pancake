@@ -14,8 +14,21 @@ pre-send stages without mutating the final simulated message.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+import json
 from enum import Enum
+from typing import Mapping, Any
+from src.kernel import canonical_json_bytes
+from src.execution.state_evidence_pr115 import PR115DecodePolicy
+from src.execution.economic_reconciliation.exact_adapter import (
+    evidence_from_raw_simulation,
+)
+from src.execution.economic_reconciliation.mega_pr02_proof import (
+    ConservativeValuationSnapshot,
+    MarginfiRegistrySnapshot,
+    RawStateEconomicProofAuthority,
+    EconomicProofQualification,
+)
 
 from src.execution.economic_reconciliation import (
     AssetKey,
@@ -78,6 +91,12 @@ class AtomicVerticalCandidate:
     required_accounts: tuple[str, ...] = ()
     tip_lamports: int = 0
     protocol_fees: tuple[AssetQuantity, ...] = ()
+    pre_state_accounts: tuple[Mapping[str, Any] | None, ...] | None = None
+    pre_state_slot: int | None = None
+    decode_policy: PR115DecodePolicy | None = None
+    approved_assets: tuple[AssetKey, ...] = ()
+    valuation: ConservativeValuationSnapshot | None = None
+    marginfi_registry: MarginfiRegistrySnapshot | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -110,6 +129,9 @@ class AtomicVerticalResult:
     finalized: FinalizedSimulation
     reconciliation: ReconciliationReport
     trace: AtomicVerticalTrace
+    qualification: EconomicProofQualification | None = None
+    raw_evidence_hash: str | None = None
+    evidence_origin: str = "legacy_observations_unqualified"
 
 
 class AtomicPlannerSimulationReconciliationVertical:
@@ -127,6 +149,12 @@ class AtomicPlannerSimulationReconciliationVertical:
         self.reconciler = reconciler or EconomicReconciler()
 
     async def run(self, candidate: AtomicVerticalCandidate) -> AtomicVerticalResult:
+        if candidate.pre_state_accounts is not None:
+            self._validate_raw_context(candidate)
+            raw = canonical_json_bytes(candidate.pre_state_accounts)
+            if len(raw) > self.simulator.policy.max_raw_account_evidence_bytes:
+                raise ValueError("pre-state evidence exceeds bound")
+            candidate = replace(candidate, pre_state_accounts=tuple(json.loads(raw)))
         planner_result = self.planner.plan(candidate.request)
         finalized = await self.simulator.finalize(
             planner_result.transaction_plan,
@@ -144,17 +172,44 @@ class AtomicPlannerSimulationReconciliationVertical:
         )
 
         try:
-            evidence = evidence_from_exact_simulation(
-                finalized,
-                settlement_asset=candidate.settlement_asset,
-                native=candidate.native_observations,
-                tokens=candidate.token_observations,
-                marginfi=candidate.marginfi_observation,
-                decoded_account_hashes=candidate.decoded_account_hashes,
-                required_accounts=candidate.required_accounts,
-                tip_lamports=candidate.tip_lamports,
-                protocol_fees=candidate.protocol_fees,
-            )
+            raw_state = None
+            raw_hash = None
+            if candidate.pre_state_accounts is not None:
+                if (
+                    candidate.native_observations
+                    or candidate.token_observations
+                    or candidate.marginfi_observation is not None
+                    or candidate.decoded_account_hashes
+                    or candidate.protocol_fees
+                    or candidate.tip_lamports
+                ):
+                    raise ValueError(
+                        "caller observations cannot override decoder-owned economics"
+                    )
+                if candidate.decode_policy is None or candidate.pre_state_slot is None:
+                    raise ValueError("raw decoder context missing")
+                evidence, raw_state, raw_hash = evidence_from_raw_simulation(
+                    finalized,
+                    pre_state_accounts=candidate.pre_state_accounts,
+                    pre_state_slot=candidate.pre_state_slot,
+                    policy=candidate.decode_policy,
+                    settlement_asset=candidate.settlement_asset,
+                    assets=candidate.approved_assets,
+                    payer=str(candidate.request.payer),
+                    principal=candidate.request.borrow_amount,
+                )
+            else:
+                evidence = evidence_from_exact_simulation(
+                    finalized,
+                    settlement_asset=candidate.settlement_asset,
+                    native=candidate.native_observations,
+                    tokens=candidate.token_observations,
+                    marginfi=candidate.marginfi_observation,
+                    decoded_account_hashes=candidate.decoded_account_hashes,
+                    required_accounts=candidate.required_accounts,
+                    tip_lamports=candidate.tip_lamports,
+                    protocol_fees=candidate.protocol_fees,
+                )
         except ValueError as exc:
             raise AtomicVerticalError(
                 AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
@@ -163,6 +218,20 @@ class AtomicPlannerSimulationReconciliationVertical:
             ) from exc
 
         reconciliation = self.reconciler.reconcile(evidence)
+        qualification = None
+        if raw_state is not None:
+            if candidate.valuation is None or candidate.marginfi_registry is None:
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.RECONCILIATION_INCOMPLETE,
+                    "approved valuation and registry required for raw economic qualification",
+                )
+            qualification = RawStateEconomicProofAuthority().qualify(
+                evidence=evidence,
+                report=reconciliation,
+                raw_state=raw_state,
+                registry=candidate.marginfi_registry,
+                valuation=candidate.valuation,
+            )
         self._ensure_message_immutable(
             finalized=finalized,
             reconciliation=reconciliation,
@@ -205,7 +274,43 @@ class AtomicPlannerSimulationReconciliationVertical:
             finalized=finalized,
             reconciliation=reconciliation,
             trace=trace,
+            qualification=qualification,
+            raw_evidence_hash=raw_hash,
+            evidence_origin=(
+                "decoder_owned_offline"
+                if raw_state is not None
+                else "legacy_observations_unqualified"
+            ),
         )
+
+    @staticmethod
+    def _validate_raw_context(candidate: AtomicVerticalCandidate) -> None:
+        """Bind the raw decoder's scope to the same snapshot used by the planner."""
+        policy = candidate.decode_policy
+        if policy is None or policy.marginfi is None:
+            raise ValueError("raw MarginFi decoder context required")
+        context = policy.marginfi
+        request = candidate.request
+        snapshot = request.marginfi_snapshot
+        if (
+            context.margin_account != str(snapshot.margin_account.address)
+            or context.group != str(snapshot.group)
+            or context.group != str(snapshot.margin_account.group)
+            or context.group != str(snapshot.bank.group)
+            or context.authority != str(snapshot.margin_account.authority)
+            or context.authority != str(request.payer)
+            or context.bank != str(snapshot.bank.address)
+            or context.vault != str(snapshot.bank.liquidity_vault)
+            or context.principal != request.borrow_amount
+            or candidate.pre_state_slot != snapshot.slot
+        ):
+            raise ValueError("raw decoder and planner snapshot differ")
+        vectors = request.marginfi_source_vectors
+        if vectors is not None and (
+            context.source_commit != vectors.source_commit
+            or context.layout_sha256 != vectors.layout_sha256
+        ):
+            raise ValueError("raw decoder and planner source vectors differ")
 
     def _ensure_message_immutable(
         self,

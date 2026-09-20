@@ -4,7 +4,7 @@
       "extras": [
         "analytics"
       ],
-      "sha256": "2a5c4cce090c24c1437e46274559a8e47ee6c4f4e72cb074ac7d1edacd8b14fd"
+      "sha256": "6fd90b4eb82b53e77411bb0b9da14105c69a8b6401a1d63d90a2919ad13aca4b"
     },
     "requirements-dev.txt": {
       "extras": [
@@ -12,11 +12,11 @@
         "service",
         "dev"
       ],
-      "sha256": "87e1db9e6d9857cab1c8e505ddad1ba1e30e300e8a46a375f9ab2986db3bca6a"
+      "sha256": "df9367e1192fa831a1f1f04f022265442755b9eb601b47180bf9819e3fc03ddd"
     },
     "requirements.txt": {
       "extras": [],
-      "sha256": "f0e97f61a87fcd4b53e7c16945228b9b55758b7ea9d6def8c3fcb32a075d3785"
+      "sha256": "d48d6277464253c7121504fcf0faca1f358e16868787bd51b67f20675dfdd453"
     }
   },
   "platforms": [
@@ -24,9 +24,17 @@
     "macos"
   ],
   "python": "3.13",
+  "resolved_locks": {
+    "requirements-dev.lock": {
+      "sha256": "d90aa0da85323aa867b1b23b66ec57890b92e0e0a25809f904ef0f8251b35f8e"
+    },
+    "requirements.lock": {
+      "sha256": "bb29ac92c572518260e7996856b71fed7d00b89eb099feb512e52597bf617b96"
+    }
+  },
   "resolver": {
     "name": "uv",
-    "version": "0.10.0"
+    "version": "0.11.15"
   },
   "schema_version": "pr025.requirements-lock.v1",
   "source": "pyproject.toml"

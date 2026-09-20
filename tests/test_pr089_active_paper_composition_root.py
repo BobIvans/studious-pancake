@@ -145,7 +145,7 @@ def _opportunity() -> Opportunity:
         input_mint="So11111111111111111111111111111111111111112",
         output_mint="EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
         proposed_amount_base_units=1_000,
-        expected_gross_profit=0.01,
+        expected_gross_profit=10,
         ttl_seconds=30.0,
         detected_at=1_750_000_000.0,
         metadata={"source": "pr089-fixture"},

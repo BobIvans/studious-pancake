@@ -1,0 +1,11 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: isolated-signer-deny-all
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/name: studious-pancake-isolated-signer
+  policyTypes: [Ingress, Egress]
+  ingress: []
+  egress: []

@@ -10,10 +10,12 @@ from __future__ import annotations
 
 import asyncio
 import base64
+from collections.abc import Mapping
 from dataclasses import dataclass, replace
 from enum import Enum
 import hashlib
 import json
+from types import MappingProxyType
 from typing import Any, Sequence
 
 from .canonical_domain import (
@@ -91,6 +93,7 @@ class ExactSimulationPolicy:
     max_loaded_accounts_data_size: int = 64 * 1024 * 1024
     max_log_bytes: int = 256 * 1024
     rpc_timeout_seconds: float = 10.0
+    max_raw_account_evidence_bytes: int = 4 * 1024 * 1024
 
     def __post_init__(self) -> None:
         if self.commitment not in {"processed", "confirmed", "finalized"}:
@@ -119,6 +122,12 @@ class ExactSimulationPolicy:
             raise ValueError("log byte limit must be positive")
         if self.rpc_timeout_seconds <= 0:
             raise ValueError("RPC timeout must be positive")
+        if (
+            isinstance(self.max_raw_account_evidence_bytes, bool)
+            or not isinstance(self.max_raw_account_evidence_bytes, int)
+            or self.max_raw_account_evidence_bytes <= 0
+        ):
+            raise ValueError("raw account evidence byte limit must be positive")
 
 
 @dataclass(frozen=True, slots=True)
@@ -132,6 +141,19 @@ class RpcSimulationEvidence:
     units_consumed: int
     loaded_accounts_data_size: int | None
     returned_account_hashes: tuple[str, ...]
+    # Canonical JSON strings are an immutable, serializable raw evidence owner.
+    # None preserves compatibility with legacy hash-only reports; PR115 rejects
+    # those reports rather than treating their absent raw state as zero balances.
+    returned_account_json: tuple[str, ...] | None = None
+
+    @property
+    def returned_accounts(self) -> tuple[Mapping[str, Any] | None, ...] | None:
+        """Read-only snapshots detached from both RPC and consumer mutation."""
+        if self.returned_account_json is None:
+            return None
+        return tuple(
+            _freeze_json(json.loads(item)) for item in self.returned_account_json
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -654,6 +676,9 @@ class ExactSimulationFinalizer:
                 },
             )
 
+        raw_accounts = _bounded_account_json(
+            accounts_value, self.policy.max_raw_account_evidence_bytes
+        )
         return RpcSimulationEvidence(
             message_hash=compiled.message_hash,
             response_hash=_hash_json(result_dict),
@@ -662,8 +687,10 @@ class ExactSimulationFinalizer:
             units_consumed=units,
             loaded_accounts_data_size=loaded_size,
             returned_account_hashes=tuple(
-                _hash_json(account) for account in accounts_value
+                hashlib.sha256(account.encode("utf-8")).hexdigest()
+                for account in raw_accounts
             ),
+            returned_account_json=raw_accounts,
         )
 
     async def _get_fee(self, compiled: CompiledTransaction) -> tuple[int, int]:
@@ -820,6 +847,64 @@ def _error_text(error: Any) -> str:
         ).lower()
     except (TypeError, ValueError):
         return type(error).__name__.lower()
+
+
+def _freeze_json(value: Any) -> Any:
+    if isinstance(value, dict):
+        return MappingProxyType(
+            {key: _freeze_json(item) for key, item in value.items()}
+        )
+    if isinstance(value, list):
+        return tuple(_freeze_json(item) for item in value)
+    return value
+
+
+def _bounded_account_json(accounts: list[Any], byte_limit: int) -> tuple[str, ...]:
+    """Bound retained bytes independently of RPC's loadedAccountsDataSize claim."""
+    encoder = json.JSONEncoder(
+        sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
+    )
+    total = 0
+    snapshots: list[str] = []
+    try:
+        for account in accounts:
+            if account is not None and not isinstance(account, dict):
+                raise TypeError("raw account must be an object or null")
+            _validate_json_depth(account)
+            chunks: list[str] = []
+            for chunk in encoder.iterencode(account):
+                total += len(chunk.encode("utf-8"))
+                if total > byte_limit:
+                    raise ExactSimulationError(
+                        ExactSimulationErrorCode.LOADED_ACCOUNT_BYTES_EXCEEDED,
+                        FailureDisposition.FATAL,
+                        "raw account evidence byte limit exceeded",
+                        {"limit": byte_limit},
+                    )
+                chunks.append(chunk)
+            snapshots.append("".join(chunks))
+    except (TypeError, ValueError, RecursionError) as exc:
+        raise ExactSimulationError(
+            ExactSimulationErrorCode.MALFORMED_RPC_RESPONSE,
+            FailureDisposition.RETRYABLE,
+            "raw account evidence is not canonical JSON",
+        ) from exc
+    return tuple(snapshots)
+
+
+def _validate_json_depth(value: Any, depth: int = 0) -> None:
+    # Solana account objects are shallow. Bound nesting before either canonical
+    # serialization or reconstruction, including malicious cyclic fixture input.
+    if depth > 32:
+        raise ValueError("raw account evidence nesting exceeds limit")
+    if isinstance(value, dict):
+        for key, item in value.items():
+            if not isinstance(key, str):
+                raise TypeError("raw account JSON key must be a string")
+            _validate_json_depth(item, depth + 1)
+    elif isinstance(value, (list, tuple)):
+        for item in value:
+            _validate_json_depth(item, depth + 1)
 
 
 def _hash_json(value: Any) -> str:

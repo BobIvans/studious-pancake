@@ -1,0 +1,29 @@
+{
+  "schema_id": "mpr-sys-01.identity-consumers.v1",
+  "canonical_owner": "src.config.chain_registry",
+  "rooted_runtime_owner": "src.rooted_truth",
+  "migrated_consumers": [],
+  "pending_consumer_migrations": [
+    "src.asset_mint_registry_pr117",
+    "src.lst_governance_pr125",
+    "src.simulation_cpi_pr137",
+    "src.execution.state_evidence_pr115",
+    "src.pr208_rooted_protocol_provider_attestation"
+  ],
+  "package_excluded_prefixes": [
+    "src.ingest"
+  ],
+  "quarantined_compatibility_modules": [
+    "src.legacy_arb_bot"
+  ],
+  "resource_mirrors": [
+    "config.chain_registry.json",
+    "src.resources.chain_registry.json"
+  ],
+  "external_evidence_blockers": [
+    "rooted MarginFi deployment attestation",
+    "rooted Kamino deployment attestation",
+    "rooted Jupiter deployment/contract attestation",
+    "rooted Raydium/Orca/Meteora venue attestations"
+  ]
+}

@@ -29,7 +29,16 @@ from src.providers.jupiter.router import (
     JupiterInstructionBundle,
     JupiterRawInstruction,
 )
-
+from src.providers.marginfi.provider import (
+    MarginfiFlashLoanProvider,
+    MarginfiSourceVectorEvidence,
+)
+from src.planning.instruction_firewall import (
+    InstructionFirewallError,
+    InstructionFirewallPolicy,
+    InstructionFirewallReason,
+    validate_jupiter_instruction_bundle,
+)
 
 PLANNER_VERSION = "pr034.atomic-marginfi-jupiter.v1"
 
@@ -43,9 +52,7 @@ class AtomicPlannerRejectionCode(str, Enum):
     ROUTE_CHAIN_MISMATCH = "PR034_ROUTE_CHAIN_MISMATCH"
     GUARANTEED_INPUT_GAP = "PR034_GUARANTEED_INPUT_GAP"
     REPAYMENT_NOT_COVERED = "PR034_REPAYMENT_NOT_COVERED"
-    PROVIDER_COMPUTE_BUDGET_FORBIDDEN = (
-        "PR034_PROVIDER_COMPUTE_BUDGET_FORBIDDEN"
-    )
+    PROVIDER_COMPUTE_BUDGET_FORBIDDEN = "PR034_PROVIDER_COMPUTE_BUDGET_FORBIDDEN"
     PROVIDER_TIP_FORBIDDEN = "PR034_PROVIDER_TIP_FORBIDDEN"
     UNSUPPORTED_PROGRAM = "PR034_UNSUPPORTED_PROGRAM"
     UNEXPECTED_SIGNER = "PR034_UNEXPECTED_SIGNER"
@@ -184,6 +191,7 @@ class AtomicPlannerRequest:
     oracle_slot: int | None = None
     safety_surplus: int = 0
     monitored_accounts: tuple[Pubkey, ...] = ()
+    marginfi_source_vectors: MarginfiSourceVectorEvidence | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -207,6 +215,8 @@ class AtomicPlannerProvenance:
     required_repayment: int
     lookup_table_addresses: tuple[str, ...]
     min_context_slot: int
+    marginfi_conformance_scope: str = "execution-conformance"
+    marginfi_source_vector_hash: str | None = None
 
     @property
     def digest(self) -> str:
@@ -230,6 +240,8 @@ class AtomicPlannerProvenance:
             "required_repayment": self.required_repayment,
             "lookup_table_addresses": self.lookup_table_addresses,
             "min_context_slot": self.min_context_slot,
+            "marginfi_conformance_scope": self.marginfi_conformance_scope,
+            "marginfi_source_vector_hash": self.marginfi_source_vector_hash,
         }
         return _sha256_json(payload)
 
@@ -268,8 +280,8 @@ class AtomicMarginfiJupiterPlanner:
         self._validate_build_freshness(request.leg_a)
         self._validate_build_freshness(request.leg_b)
         bank_mint = self._validate_route_chain(request)
-        self._validate_provider_owned_instructions(request.leg_a)
-        self._validate_provider_owned_instructions(request.leg_b)
+        self._validate_provider_owned_instructions(request.leg_a, request.payer)
+        self._validate_provider_owned_instructions(request.leg_b, request.payer)
 
         try:
             prepared = self._marginfi.prepare(
@@ -356,6 +368,21 @@ class AtomicMarginfiJupiterPlanner:
             cleanup=cleanup,
         )
         self._validate_final_instructions(final_instructions, request.payer)
+        if request.marginfi_source_vectors is not None:
+            if not isinstance(self._marginfi, MarginfiFlashLoanProvider):
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.MARGINFI_CONFORMANCE_REQUIRED,
+                    "offline source vectors require actual provider",
+                )
+            try:
+                request.marginfi_source_vectors.validate_bracket(
+                    self._marginfi.pin, final_instructions
+                )
+            except ValueError as exc:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.MARGINFI_CONFORMANCE_REQUIRED,
+                    "offline source vector comparison failed",
+                ) from exc
 
         if len(final_instructions) > self._policy.max_total_instructions:
             raise AtomicPlannerError(
@@ -415,9 +442,7 @@ class AtomicMarginfiJupiterPlanner:
         )
 
         marginfi_pin_hash = str(getattr(prepared, "pin_hash", ""))
-        marginfi_state_fingerprint = str(
-            getattr(prepared, "state_fingerprint", "")
-        )
+        marginfi_state_fingerprint = str(getattr(prepared, "state_fingerprint", ""))
         if not _is_sha256(marginfi_pin_hash) or not _is_sha256(
             marginfi_state_fingerprint
         ):
@@ -426,13 +451,9 @@ class AtomicMarginfiJupiterPlanner:
                 "MarginFi prepared plan lacks pinned SHA-256 provenance",
             )
 
-        sequence_fingerprint = str(
-            getattr(finalized, "sequence_fingerprint", "")
-        )
+        sequence_fingerprint = str(getattr(finalized, "sequence_fingerprint", ""))
         if not _is_sha256(sequence_fingerprint):
-            sequence_fingerprint = _instruction_sequence_fingerprint(
-                final_instructions
-            )
+            sequence_fingerprint = _instruction_sequence_fingerprint(final_instructions)
 
         provenance = AtomicPlannerProvenance(
             planner_version=PLANNER_VERSION,
@@ -454,6 +475,16 @@ class AtomicMarginfiJupiterPlanner:
             required_repayment=required_repayment,
             lookup_table_addresses=tuple(str(value) for value in lookup_tables),
             min_context_slot=transaction_plan.min_context_slot,
+            marginfi_conformance_scope=(
+                "SOURCE_VECTOR_OFFLINE"
+                if request.marginfi_source_vectors is not None
+                else "execution-conformance"
+            ),
+            marginfi_source_vector_hash=(
+                None
+                if request.marginfi_source_vectors is None
+                else request.marginfi_source_vectors.evidence_hash
+            ),
         )
         return AtomicPlannerResult(
             transaction_plan=transaction_plan,
@@ -496,7 +527,32 @@ class AtomicMarginfiJupiterPlanner:
             )
 
     def _require_contract_admission(self, request: AtomicPlannerRequest) -> None:
-        if getattr(self._marginfi, "execution_conformance_verified", False) is not True:
+        if request.marginfi_source_vectors is not None:
+            if not isinstance(
+                self._marginfi, MarginfiFlashLoanProvider
+            ) or not isinstance(
+                request.marginfi_source_vectors, MarginfiSourceVectorEvidence
+            ):
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.MARGINFI_CONFORMANCE_REQUIRED,
+                    "offline vectors require the actual source-pinned provider",
+                )
+            try:
+                request.marginfi_source_vectors.validate_context(
+                    self._marginfi.pin,
+                    request.marginfi_snapshot,
+                    request.borrow_amount,
+                    str(request.destination_token_account),
+                    str(request.repayment_source_token_account),
+                )
+            except ValueError as exc:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.MARGINFI_CONFORMANCE_REQUIRED,
+                    "offline source vector context rejected",
+                ) from exc
+        elif (
+            getattr(self._marginfi, "execution_conformance_verified", False) is not True
+        ):
             raise AtomicPlannerError(
                 AtomicPlannerRejectionCode.MARGINFI_CONFORMANCE_REQUIRED,
                 "MarginFi provider has not passed PR-028 conformance",
@@ -585,14 +641,13 @@ class AtomicMarginfiJupiterPlanner:
                 "second-leg guarantee is below principal plus safety surplus",
                 details={
                     "guaranteed_final_out": b.other_amount_threshold,
-                    "minimum_required": request.borrow_amount
-                    + request.safety_surplus,
+                    "minimum_required": request.borrow_amount + request.safety_surplus,
                 },
             )
         return bank_mint
 
     def _validate_provider_owned_instructions(
-        self, bundle: JupiterInstructionBundle
+        self, bundle: JupiterInstructionBundle, payer: Pubkey
     ) -> None:
         if bundle.compute_unit_price_instructions:
             raise AtomicPlannerError(
@@ -604,6 +659,21 @@ class AtomicMarginfiJupiterPlanner:
                 AtomicPlannerRejectionCode.PROVIDER_TIP_FORBIDDEN,
                 "tip policy is compiler/sender-owned",
             )
+        try:
+            validate_jupiter_instruction_bundle(
+                bundle,
+                InstructionFirewallPolicy(
+                    payer=str(payer),
+                    reviewed_program_ids=self._policy.allowed_program_ids,
+                ),
+            )
+        except InstructionFirewallError as exc:
+            code = (
+                AtomicPlannerRejectionCode.UNEXPECTED_SIGNER
+                if exc.reason is InstructionFirewallReason.UNEXPECTED_SIGNER
+                else AtomicPlannerRejectionCode.UNSUPPORTED_PROGRAM
+            )
+            raise AtomicPlannerError(code, str(exc), details=exc.details) from exc
 
     def _validate_exact_sequence(
         self,
@@ -709,9 +779,7 @@ class AtomicMarginfiJupiterPlanner:
             ) from exc
         return lookup_tables, required
 
-    def _monitored_accounts(
-        self, request: AtomicPlannerRequest
-    ) -> tuple[Pubkey, ...]:
+    def _monitored_accounts(self, request: AtomicPlannerRequest) -> tuple[Pubkey, ...]:
         try:
             snapshot_values = (
                 request.marginfi_snapshot.margin_account.address,

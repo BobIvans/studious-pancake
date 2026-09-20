@@ -1,0 +1,19 @@
+#include <tunables/global>
+profile flashloan-bot-runtime flags=(attach_disconnected,mediate_deleted) {
+  #include <abstractions/base>
+  #include <abstractions/python>
+  network inet stream,
+  network inet6 stream,
+  deny network raw,
+  deny ptrace,
+  deny mount,
+  deny /proc/** wklx,
+  deny /sys/** wklx,
+  /opt/venv/** rix,
+  /usr/** rix,
+  /etc/ssl/** r,
+  /tmp/** rw,
+  /run/flashloan-bot/** rwk,
+  /var/lib/flashloan-bot/** rwk,
+  /var/log/flashloan-bot/** rwk,
+}

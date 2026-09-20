@@ -1,0 +1,95 @@
+{
+  "schema_version": "mpr2602.connections.v1",
+  "connections": [
+    {
+      "provider_id": "helius_rpc",
+      "kind": "outbound_rpc",
+      "enabled": false,
+      "reviewed": false,
+      "review_ref": null,
+      "endpoint": "https://replace-after-review.invalid/",
+      "credential": {
+        "ref": "replace-with-credential-reference",
+        "generation": "replace-with-generation",
+        "env_name": "HELIUS_API_KEY"
+      },
+      "entitlement": null,
+      "http_methods": [],
+      "rpc_methods": [],
+      "query_parameters": [],
+      "quota_pool_ref": null
+    },
+    {
+      "provider_id": "jupiter_router",
+      "kind": "outbound_rest",
+      "enabled": false,
+      "reviewed": false,
+      "review_ref": null,
+      "endpoint": "https://replace-after-review.invalid/",
+      "credential": {
+        "ref": "replace-with-credential-reference",
+        "generation": "replace-with-generation",
+        "env_name": "JUPITER_API_KEY"
+      },
+      "entitlement": null,
+      "http_methods": [],
+      "rpc_methods": [],
+      "query_parameters": [],
+      "quota_pool_ref": null
+    },
+    {
+      "provider_id": "new_provider",
+      "kind": "outbound_rest",
+      "enabled": false,
+      "reviewed": false,
+      "review_ref": null,
+      "endpoint": "https://replace-after-review.invalid/",
+      "credential": {
+        "ref": "replace-with-credential-reference",
+        "generation": "replace-with-generation",
+        "env_name": "NEW_PROVIDER_API_KEY"
+      },
+      "entitlement": null,
+      "http_methods": [],
+      "rpc_methods": [],
+      "query_parameters": [],
+      "quota_pool_ref": null
+    },
+    {
+      "provider_id": "solana_rpc",
+      "kind": "outbound_rpc",
+      "enabled": false,
+      "reviewed": false,
+      "review_ref": null,
+      "endpoint": "https://replace-after-review.invalid/",
+      "credential": {
+        "ref": "replace-with-credential-reference",
+        "generation": "replace-with-generation",
+        "env_name": "SOLANA_RPC_API_KEY"
+      },
+      "entitlement": null,
+      "http_methods": [],
+      "rpc_methods": [],
+      "query_parameters": [],
+      "quota_pool_ref": null
+    },
+    {
+      "provider_id": "helius_webhook",
+      "kind": "inbound_webhook",
+      "enabled": false,
+      "reviewed": false,
+      "review_ref": null,
+      "endpoint": "https://replace-after-review.invalid/",
+      "credential": {
+        "ref": "replace-with-credential-reference",
+        "generation": "replace-with-generation",
+        "env_name": "HELIUS_WEBHOOK_AUTH_TOKEN"
+      },
+      "entitlement": null,
+      "http_methods": [],
+      "rpc_methods": [],
+      "query_parameters": [],
+      "quota_pool_ref": null
+    }
+  ]
+}

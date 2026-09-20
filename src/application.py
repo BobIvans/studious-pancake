@@ -3,6 +3,7 @@
 PR-023 intentionally keeps this runtime inspection/shadow-safe. Legacy execution
 modules are not imported here and live mode remains fail-closed.
 """
+
 from __future__ import annotations
 
 import asyncio
@@ -144,18 +145,26 @@ class ArbitrageApplication:
         self._started = True
 
     async def stop(self) -> None:
-        await self.context.strategy_runtime.stop()
+        stop_error: BaseException | None = None
         try:
-            await asyncio.wait_for(
-                self._drain_queue(),
-                timeout=self.context.shutdown_drain_timeout_seconds,
-            )
-        except asyncio.TimeoutError:
-            while self.context.opportunity_queue.qsize():
-                opportunity = await self.context.opportunity_queue.get()
-                await self.context.consumer.process_one(opportunity)
-        await self.context.consumer.stop()
-        self._started = False
+            await self.context.strategy_runtime.stop()
+        except BaseException as exc:
+            # Preserve the strategy failure, but never let it bypass ownership
+            # cleanup for the queue and consumer.
+            stop_error = exc
+        try:
+            try:
+                await asyncio.wait_for(
+                    self._drain_queue(),
+                    timeout=self.context.shutdown_drain_timeout_seconds,
+                )
+            except asyncio.TimeoutError as exc:
+                stop_error = stop_error or exc
+        finally:
+            await self.context.consumer.stop()
+            self._started = False
+        if stop_error is not None:
+            raise stop_error
 
     async def _drain_queue(self) -> None:
         while self.context.opportunity_queue.qsize():

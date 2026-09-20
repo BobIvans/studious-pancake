@@ -50,6 +50,14 @@
       "immutable": true
     },
     {
+      "id": "address_lookup_table_program",
+      "kind": "program",
+      "address": "AddressLookupTab1e1111111111111111111111111",
+      "clusters": ["mainnet-beta", "devnet", "testnet", "localnet"],
+      "source": "https://solana.com/developers/guides/advanced/lookup-tables",
+      "immutable": true
+    },
+    {
       "id": "native_sol_mint",
       "kind": "mint",
       "address": "So11111111111111111111111111111111111111112",

@@ -34,7 +34,9 @@ def test_new_mega_pr01_rejects_second_active_runtime_surface() -> None:
     report = evaluate_runtime_authority_map(payload)
 
     assert report.accepted is False
-    assert any(blocker.startswith("ALTERNATE_RUNTIME_ACTIVE") for blocker in report.blockers)
+    assert any(
+        blocker.startswith("ALTERNATE_RUNTIME_ACTIVE") for blocker in report.blockers
+    )
 
 
 def test_new_mega_pr01_requires_sensitive_writes_to_bind_fence_and_payload() -> None:
@@ -44,7 +46,9 @@ def test_new_mega_pr01_requires_sensitive_writes_to_bind_fence_and_payload() -> 
     report = evaluate_runtime_authority_map(payload)
 
     assert report.accepted is False
-    assert any("SENSITIVE_WRITE_INVARIANTS_MISSING" in blocker for blocker in report.blockers)
+    assert any(
+        "SENSITIVE_WRITE_INVARIANTS_MISSING" in blocker for blocker in report.blockers
+    )
 
 
 def test_new_mega_pr01_attempt_generation_is_positive() -> None:
@@ -60,24 +64,24 @@ def test_new_mega_pr01_semantic_idempotency_rejects_drift() -> None:
         attempt_generation=1,
         candidate_id="candidate-a",
         reservation_id="reservation-a",
-        policy_bundle_hash="policy-a",
-        payload_hash="payload-a",
+        policy_bundle_hash="a" * 64,
+        payload_hash="b" * 64,
     )
     replay = SemanticCommandIdentity(
         attempt_id="attempt-1",
         attempt_generation=1,
         candidate_id="candidate-a",
         reservation_id="reservation-a",
-        policy_bundle_hash="policy-a",
-        payload_hash="payload-a",
+        policy_bundle_hash="a" * 64,
+        payload_hash="b" * 64,
     )
     drift = SemanticCommandIdentity(
         attempt_id="attempt-1",
         attempt_generation=1,
         candidate_id="candidate-b",
         reservation_id="reservation-a",
-        policy_bundle_hash="policy-a",
-        payload_hash="payload-a",
+        policy_bundle_hash="a" * 64,
+        payload_hash="b" * 64,
     )
 
     assert ledger.record("idem-1", first) is False

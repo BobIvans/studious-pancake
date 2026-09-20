@@ -9,9 +9,16 @@ from typing import cast
 import pytest
 
 from src.durability import AttemptKey
-from src.economics.capital import CapitalCandidate, NativeCostBreakdown
+from src.economics.capital import CapitalCandidate, NativeCostBreakdown, MessageFeeQuote
+from src.economics.exact_fee_workflow import (
+    ExactFeeCapitalWorkflow,
+    candidate_with_exact_message_fee,
+)
 from src.economics.durable_reservations import WalletBalanceSnapshot
-from src.paper_shadow.atomic_vertical import AtomicVerticalCandidate, AtomicVerticalResult
+from src.paper_shadow.atomic_vertical import (
+    AtomicVerticalCandidate,
+    AtomicVerticalResult,
+)
 from src.paper_shadow.exact_attempt_pr152 import (
     ExactAttemptRequest,
     ExactAttemptStatus,
@@ -74,14 +81,18 @@ class FakeCoordinator:
             recovery_attempt_ids=(),
         )
 
-    def evaluate_for_attempt(self, candidate: CapitalCandidate, **kwargs: object) -> object:
+    def evaluate_for_attempt(
+        self, candidate: CapitalCandidate, **kwargs: object
+    ) -> object:
         required = candidate.native_costs.base_network_fee_lamports
         return SimpleNamespace(
             decision=FakeDecision(required_native_lamports=required),
             attempt=self.attempt,
         )
 
-    def release_pre_submission_reservation(self, *args: object, **kwargs: object) -> bool:
+    def release_pre_submission_reservation(
+        self, *args: object, **kwargs: object
+    ) -> bool:
         self.released = True
         return True
 
@@ -105,9 +116,7 @@ class FakeVertical:
                         marginfi_pin_hash=SHA_B,
                     )
                 ),
-                finalized=SimpleNamespace(
-                    report=SimpleNamespace(fee_context_slot=101)
-                ),
+                finalized=SimpleNamespace(report=SimpleNamespace(fee_context_slot=101)),
                 trace=SimpleNamespace(
                     opportunity_id="opportunity-1",
                     planner_digest="d" * 64,
@@ -175,7 +184,9 @@ def _request(*, expires_at_ns: int = 2_000) -> ExactAttemptRequest:
 
 
 @pytest.mark.asyncio
-async def test_pr152_ready_attempt_binds_reservation_message_fee_and_reconciliation() -> None:
+async def test_pr152_legacy_observations_are_unqualified_and_release_reservation() -> (
+    None
+):
     coordinator = FakeCoordinator()
     result = await ExactPaperAttemptOrchestrator(
         coordinator=cast(object, coordinator),
@@ -183,9 +194,9 @@ async def test_pr152_ready_attempt_binds_reservation_message_fee_and_reconciliat
         clock_ns=lambda: 1_500,
     ).run(_request())
 
-    assert result.status is ExactAttemptStatus.READY_FOR_DURABLE_PAPER
-    assert result.message_hash == "f" * 64
-    assert result.reconciliation_hash == "e" * 64
+    assert result.status is ExactAttemptStatus.VERTICAL_BLOCKED
+    assert result.reservation_released is True
+    assert result.message_hash is None
     assert result.sender_imported is False
     assert result.submission_allowed is False
     assert len(result.result_hash) == 64
@@ -206,7 +217,7 @@ async def test_pr152_expired_provider_evidence_blocks_before_reservation() -> No
 
 
 @pytest.mark.asyncio
-async def test_pr152_vertical_failure_releases_reserved_capital() -> None:
+async def test_pr152_unqualified_candidate_failure_releases_reserved_capital() -> None:
     coordinator = FakeCoordinator()
     result = await ExactPaperAttemptOrchestrator(
         coordinator=cast(object, coordinator),
@@ -220,22 +231,32 @@ async def test_pr152_vertical_failure_releases_reserved_capital() -> None:
     assert "secret-shaped" not in repr(result.blockers)
 
 
-@pytest.mark.asyncio
-async def test_pr152_final_fee_above_reservation_releases_capital() -> None:
+@pytest.mark.parametrize("fee,accepted", [(5_000, True), (10_000, False)])
+def test_pr152_isolated_exact_fee_workflow_preserves_reserved_budget(
+    fee, accepted
+) -> None:
+    """Fee boundary coverage; this does not claim a qualified vertical handoff."""
     coordinator = FakeCoordinator()
-    result = await ExactPaperAttemptOrchestrator(
-        coordinator=cast(object, coordinator),
-        vertical=FakeVertical(fee_lamports=10_000),
-        clock_ns=lambda: 1_500,
-    ).run(_request())
-
-    assert result.status is ExactAttemptStatus.FINAL_FEE_BLOCKED
-    assert result.reservation_released is True
-    assert coordinator.released is True
+    candidate = candidate_with_exact_message_fee(
+        _capital(),
+        MessageFeeQuote("f" * 64, fee, 101),
+        expected_message_hash="f" * 64,
+    )
+    result = ExactFeeCapitalWorkflow(coordinator).finalize_reserved_attempt(
+        attempt_id=coordinator.attempt.attempt_id,
+        finalized_candidate=candidate,
+        wallet_snapshot=_request().wallet_snapshot,
+        idempotency_key="fee-1",
+    )
+    assert result.accepted is accepted
+    assert result.released is (not accepted)
+    assert coordinator.released is (not accepted)
 
 
 @pytest.mark.asyncio
-async def test_pr152_final_provider_pin_mismatch_fails_closed() -> None:
+async def test_pr152_legacy_unqualified_candidate_cannot_reach_final_pin_check() -> (
+    None
+):
     coordinator = FakeCoordinator()
     result = await ExactPaperAttemptOrchestrator(
         coordinator=cast(object, coordinator),
@@ -248,9 +269,7 @@ async def test_pr152_final_provider_pin_mismatch_fails_closed() -> None:
 
 
 def test_pr152_module_has_no_signer_or_sender_imports() -> None:
-    source = Path("src/paper_shadow/exact_attempt_pr152.py").read_text(
-        encoding="utf-8"
-    )
+    source = Path("src/paper_shadow/exact_attempt_pr152.py").read_text(encoding="utf-8")
     tree = ast.parse(source)
     imports = {
         alias.name

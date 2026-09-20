@@ -150,7 +150,7 @@ class ClockSafeDurableLifecycleStore(LegacyDurableLifecycleStore):
         now = self._ownership_snapshot(resource_key)
         expires_monotonic = now.monotonic_ns + ttl_ns
         expires_utc = now.utc_ns + ttl_ns
-        with self.db:
+        with self.write_transaction():
             row = self.db.execute(
                 "SELECT l.*,d.boot_id,d.process_generation,"
                 "d.expires_monotonic_ns FROM durable_leases AS l "
@@ -168,8 +168,7 @@ class ClockSafeDurableLifecycleStore(LegacyDurableLifecycleStore):
                 if domain_present:
                     same_domain = (
                         str(row["boot_id"]) == now.boot_id
-                        and int(row["process_generation"])
-                        == now.process_generation
+                        and int(row["process_generation"]) == now.process_generation
                     )
                     live = same_domain and (
                         int(row["expires_monotonic_ns"]) > now.monotonic_ns
@@ -265,7 +264,7 @@ class ClockSafeDurableLifecycleStore(LegacyDurableLifecycleStore):
         until_monotonic = now.monotonic_ns + lease_ns
         until_utc = now.utc_ns + lease_ns
         output: list[OutboxItem] = []
-        with self.db:
+        with self.write_transaction():
             rows = self.db.execute(
                 "SELECT * FROM durable_outbox WHERE topic=? "
                 "AND status='pending' AND available_at_ns<=? "
@@ -342,10 +341,9 @@ class ClockSafeDurableLifecycleStore(LegacyDurableLifecycleStore):
         owner_id: str,
     ) -> bool:
         now = self._ownership_snapshot(f"outbox-item:{item.outbox_id}")
-        with self.db:
+        with self.write_transaction():
             claim = self.db.execute(
-                "SELECT * FROM durable_outbox_claim_time_domains "
-                "WHERE outbox_id=?",
+                "SELECT * FROM durable_outbox_claim_time_domains " "WHERE outbox_id=?",
                 (item.outbox_id,),
             ).fetchone()
             if claim is None:

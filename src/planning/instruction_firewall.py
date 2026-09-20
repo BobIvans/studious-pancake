@@ -55,6 +55,7 @@ class InstructionFirewallReason(StrEnum):
     SYSTEM_TRANSFER_FORBIDDEN = "pr114_system_transfer_forbidden"
     ASSOCIATED_TOKEN_SCHEMA = "pr114_associated_token_schema"
     PROVIDER_COMPUTE_OR_TIP = "pr114_provider_compute_or_tip"
+    UNSUPPORTED_PROGRAM = "pr114_unsupported_program"
 
 
 class InstructionFirewallError(ValueError):
@@ -78,6 +79,7 @@ class InstructionFirewallPolicy:
     allowed_system_tags: tuple[int, ...] = ()
     jupiter_program_ids: tuple[str, ...] = ()
     forbidden_wallet_owned_accounts: tuple[str, ...] = field(default_factory=tuple)
+    reviewed_program_ids: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         values = (
@@ -85,6 +87,7 @@ class InstructionFirewallPolicy:
             *self.allowed_payer_signers,
             *self.jupiter_program_ids,
             *self.forbidden_wallet_owned_accounts,
+            *self.reviewed_program_ids,
         )
         for value in values:
             _parse_pubkey(value)
@@ -117,7 +120,9 @@ def validate_jupiter_instruction_bundle(
             "provider-owned compute budget and tip instructions are forbidden",
         )
 
-    cleanup = () if bundle.cleanup_instruction is None else (bundle.cleanup_instruction,)
+    cleanup = (
+        () if bundle.cleanup_instruction is None else (bundle.cleanup_instruction,)
+    )
     buckets = (
         (InstructionRole.SETUP, bundle.setup_instructions),
         (InstructionRole.OTHER, bundle.other_instructions),
@@ -232,7 +237,12 @@ def _semantic_class(
         return _ata_semantics(data, role=role, index=index)
     if program_id in policy.jupiter_program_ids:
         return "jupiter-pinned-program"
-    return "opaque-provider-program"
+    if program_id in policy.reviewed_program_ids:
+        return "explicitly-reviewed-provider-program"
+    raise InstructionFirewallError(
+        InstructionFirewallReason.UNSUPPORTED_PROGRAM,
+        "provider program is outside the explicit reviewed policy",
+    )
 
 
 def _token_semantics(data: bytes, *, role: InstructionRole, index: int) -> str:
@@ -249,7 +259,14 @@ def _token_semantics(data: bytes, *, role: InstructionRole, index: int) -> str:
             "token authority/delegate/mint/burn/close instruction is forbidden",
             details={"role": role.value, "index": index, "tag": tag},
         )
-    return f"token-tag-{tag}"
+    # Bare transfer/sync/initialization cannot establish the token account's
+    # ownership, mint, destination or lifecycle. A dedicated lifecycle adapter
+    # must supply that proof; a program allowlist is not sufficient.
+    raise InstructionFirewallError(
+        InstructionFirewallReason.DANGEROUS_TOKEN_INSTRUCTION,
+        "standalone token instruction has no approved account/lifecycle contract",
+        details={"role": role.value, "index": index, "tag": tag},
+    )
 
 
 def _system_semantics(
@@ -276,13 +293,16 @@ def _system_semantics(
 
 
 def _ata_semantics(data: bytes, *, role: InstructionRole, index: int) -> str:
-    if len(data) > 1:
+    if data not in (b"", b"\x00", b"\x01"):
         raise InstructionFirewallError(
             InstructionFirewallReason.ASSOCIATED_TOKEN_SCHEMA,
             "ATA instruction data has an unsupported discriminator shape",
             details={"role": role.value, "index": index},
         )
-    return "associated-token-create"
+    raise InstructionFirewallError(
+        InstructionFirewallReason.ASSOCIATED_TOKEN_SCHEMA,
+        "ATA creation requires an approved account and rent lifecycle contract",
+    )
 
 
 __all__ = [

@@ -1,0 +1,48 @@
+{
+  "schema": "mpr2616.scope.v1",
+  "observed_main": "d23f82e20d10345926742352739b1a6ca3f7a859",
+  "mpr2612": {
+    "branch": "codex/mpr-2612-final-release-gate",
+    "state": "identical_to_main",
+    "owner": "final_release_gate_reserved"
+  },
+  "mpr2613": {
+    "branch": "codex/mpr-2613-guarded-production-operations",
+    "state": "ahead_by_1",
+    "paths": ["src/operations/mpr2613_guarded_operations.py"],
+    "owner": "guarded_production_operations"
+  },
+  "mpr2614": {
+    "branch": "codex/mpr-2614-continuous-production-conformance",
+    "state": "observed_ahead_of_main",
+    "owned_path": "src/operations/mpr2614_continuous_conformance.py",
+    "owner": "continuous_production_conformance_sentinel",
+    "semantic_overlap_with_mpr2616": "consumer_dependency_only"
+  },
+  "mpr2615": {
+    "branch": "codex/mpr-2615-controlled-multi-lender-expansion",
+    "state": "observed_ahead_by_4",
+    "paths": [
+      "docs/mpr2615-controlled-multi-lender-expansion.md",
+      "src/lending/controlled_expansion.py",
+      "src/resources/kamino_supported_combinations.json",
+      "tests/lending/test_mpr2615_controlled_expansion.py"
+    ],
+    "owner": "controlled_multi_lender_expansion",
+    "semantic_overlap_with_mpr2616": "none_observed"
+  },
+  "mpr2616": {
+    "owner": "executable_single_active_ha_dr_fenced_failover_residual",
+    "paths": [
+      "src/ha_dr/mpr2616.py",
+      "tests/test_mpr2616_executable_ha_dr.py",
+      "docs/mpr2616/README.md",
+      "config/mpr2616_scope.json"
+    ],
+    "ownership_clearance": "clear_for_scoped_merge_at_observation",
+    "production_distributed_backend_materialized": false,
+    "default_post_takeover_state": "ACTIVE_DEFAULT_OFF",
+    "live_enabled": false,
+    "automatic_scale_up": false
+  }
+}

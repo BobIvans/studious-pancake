@@ -42,9 +42,10 @@
     "stop_grace_period": "30s"
   },
   "secrets": {
-    "secret_mount_required": true,
+    "secret_mount_required_when_credentials_are_enabled": true,
+    "raw_runtime_environment_forbidden": true,
     "forbid_plaintext_environment_secrets": true,
-    "runtime_env_secret_target": "runtime.env"
+    "accepted_reference_schemes": ["file", "fd", "ipc", "key-service", "secret-manager"]
   },
   "network": {
     "egress_policy_required": true,

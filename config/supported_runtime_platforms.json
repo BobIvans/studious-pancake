@@ -1,0 +1,43 @@
+{
+  "schema_version": "mpr-rp-01.supported-runtime-platforms.v1",
+  "default_policy": "deny",
+  "native_distributions": ["solders", "solana", "orjson", "brotli", "uvloop"],
+  "platforms": [
+    {
+      "id": "linux-x86_64-glibc-cp313",
+      "system": "Linux",
+      "machines": ["x86_64", "amd64"],
+      "libc": ["glibc"],
+      "python_abi": "cp313",
+      "event_loops": ["asyncio", "uvloop"],
+      "allowed_modes": ["disabled", "paper", "shadow"]
+    },
+    {
+      "id": "linux-aarch64-glibc-cp313",
+      "system": "Linux",
+      "machines": ["aarch64", "arm64"],
+      "libc": ["glibc"],
+      "python_abi": "cp313",
+      "event_loops": ["asyncio", "uvloop"],
+      "allowed_modes": ["disabled", "paper", "shadow"]
+    },
+    {
+      "id": "macos-universal-cp313-paper",
+      "system": "Darwin",
+      "machines": ["x86_64", "arm64"],
+      "libc": ["libSystem"],
+      "python_abi": "cp313",
+      "event_loops": ["asyncio"],
+      "allowed_modes": ["disabled", "paper"]
+    },
+    {
+      "id": "windows-x86_64-cp313-paper",
+      "system": "Windows",
+      "machines": ["amd64", "x86_64"],
+      "libc": ["msvcrt"],
+      "python_abi": "cp313",
+      "event_loops": ["asyncio"],
+      "allowed_modes": ["disabled", "paper"]
+    }
+  ]
+}

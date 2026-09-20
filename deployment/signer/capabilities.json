@@ -1,0 +1,13 @@
+{
+  "artifact": "studious-pancake-isolated-signer",
+  "build_transactions": false,
+  "direct_provider_access": false,
+  "direct_rpc_access": false,
+  "general_application_imports": false,
+  "key_backends": [],
+  "network_egress": [],
+  "private_key_loader": false,
+  "runtime_submission_enabled": false,
+  "schema_version": "pr009.signer-capabilities.v1",
+  "status_only": true
+}

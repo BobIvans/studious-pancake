@@ -61,6 +61,8 @@ def test_pyproject_is_the_single_typed_package_contract():
         "flashloan-bot-healthcheck": "src.container_runtime:healthcheck_main",
         "flashloan-contracts": "src.external_contracts.cli_pr189:main",
         "flashloan-checks": "src.automation_cli_pr189:main",
+        "flashloan-connections": "src.provider_governance.cli:main",
+        "flashloan-external-resources": "src.external_resources.cli:main",
         "flashloan-release-evidence": "src.release_gate.materialized_evidence:main",
     }
     assert set(project["optional-dependencies"]) == {"analytics", "service", "dev"}
@@ -109,7 +111,10 @@ def test_optional_lock_profiles_are_explicit_and_hashed():
         (ROOT / "config/requirements-lock.json").read_text(encoding="utf-8")
     )
     assert manifest["python"] == "3.13"
-    assert manifest["resolver"] == {"name": "uv", "version": "0.10.0"}
+    assert manifest["resolver"] == {"name": "uv", "version": "0.11.15"}
+    for filename, details in manifest["resolved_locks"].items():
+        digest = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
+        assert digest == details["sha256"]
     for filename, details in manifest["locks"].items():
         digest = hashlib.sha256((ROOT / filename).read_bytes()).hexdigest()
         assert digest == details["sha256"]
@@ -120,6 +125,20 @@ def test_development_lock_is_exact_and_honors_direct_pins():
     direct = _project_direct_pins()
     assert development["uv"] == direct["uv"]
     assert development["types-pyyaml"] == direct["types-pyyaml"]
+
+
+def test_declared_profiles_do_not_promote_transitive_dependencies():
+    project = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]
+    runtime = {
+        _canonical_name(PIN_RE.match(pin).group(1)) for pin in project["dependencies"]
+    }
+    assert _pins(ROOT / "requirements.txt") == runtime
+    assert _pins(ROOT / "requirements-dev.txt") == set(_project_direct_pins())
+    assert "uvicorn[standard]==0.38.0" in (ROOT / "requirements-dev.txt").read_text()
+    # Resolved artifacts retain every native/transitive dependency for hash
+    # installation and audit; profile projection must not erase them.
+    for name in ("solders", "jsonalias", "httpx2", "httpcore2"):
+        assert name + "==" in (ROOT / "requirements.lock").read_text()
 
 
 def test_repository_and_packaged_capability_registries_match():
@@ -136,7 +155,8 @@ def test_repository_and_packaged_capability_registries_match():
 
 def test_dockerfile_is_multistage_non_root_and_uses_health_probe():
     dockerfile = (ROOT / "Dockerfile").read_text(encoding="utf-8")
-    assert dockerfile.count("FROM ${PYTHON_IMAGE}") == 2
+    assert dockerfile.count("FROM python:3.13.13-slim-bookworm@sha256:") == 3
+    assert "ARG PYTHON_IMAGE" not in dockerfile
     assert "python:3.13.13-slim-bookworm" in dockerfile
     assert "USER 10001:10001" in dockerfile
     assert 'CMD ["flashloan-bot-healthcheck", "--url", ' in dockerfile
@@ -149,11 +169,11 @@ def test_dockerfile_is_multistage_non_root_and_uses_health_probe():
     assert "requirements-dev.txt" not in dockerfile
 
 
-def test_legacy_root_entrypoint_is_only_a_compatibility_wrapper():
+def test_quarantined_root_alias_delegates_without_dispatch_policy():
     source = (ROOT / "arb_bot.py").read_text(encoding="utf-8")
 
     assert 'CANONICAL_MAIN_TARGET = "src.cli_pr189:main"' in source
-    assert "import_module(module_name)" in source
     assert "from src.cli import" in source
-    assert "from src.cli_pr189 import" not in source
+    assert "from src.cli_pr189 import main as canonical_main" in source
+    assert "LEGACY_MAIN_TARGET" not in source
     assert len(source.splitlines()) < 45

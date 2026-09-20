@@ -1,0 +1,960 @@
+{
+  "authority": {
+    "canonical_json_module": "src.kernel.canonical_json",
+    "hash_module": "src.kernel.hashing",
+    "module": "src.contracts.registry",
+    "resource": "src/resources/schema_registry.json"
+  },
+  "dialect": "https://json-schema.org/draft/2020-12/schema",
+  "schema_id": "canonical.schema-registry.v1",
+  "schemas": [
+    {
+      "boundary_class": "configuration",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.capabilities",
+      "schema_id": "pr023.capabilities.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "operator-output",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.cli_entrypoint",
+      "schema_id": "pr023.runtime-status.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "operator-output",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.cli_entrypoint",
+      "schema_id": "mpr-close-01.dependency-light-status.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "configuration",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.errors.codes",
+      "schema_id": "failure.reason-code-registry.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "configuration",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.errors.retry",
+      "schema_id": "failure.retry-idempotency-matrix.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_td_01_canonical_surface",
+      "schema_id": "mpr-td-01.canonical-surface-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_td_02_failure_verification",
+      "schema_id": "mpr-td-02.failure-verification-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_td_03_capacity_storage",
+      "schema_id": "mpr-td-03.capacity-storage-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_td_04_upgrade_security",
+      "schema_id": "mpr-td-04.upgrade-security-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "release",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.release.identity",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "capability_manifest_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "config_identity": {
+            "maxLength": 256,
+            "minLength": 1,
+            "type": "string"
+          },
+          "dependency_lock_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "image_digest": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "pattern": "^sha256:[0-9a-f]{64}$",
+                "type": "string"
+              }
+            ]
+          },
+          "migration_set_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "production_surface_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "provider_registry_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "runtime_authority_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "schema_id": {
+            "const": "release-generation-identity.v1"
+          },
+          "schema_registry_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          },
+          "source_sha": {
+            "pattern": "^[0-9a-f]{40}$",
+            "type": "string"
+          },
+          "wheel_sha256": {
+            "pattern": "^[0-9a-f]{64}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "schema_id",
+          "source_sha",
+          "wheel_sha256",
+          "image_digest",
+          "schema_registry_sha256",
+          "config_identity",
+          "provider_registry_sha256",
+          "capability_manifest_sha256",
+          "production_surface_sha256",
+          "runtime_authority_sha256",
+          "dependency_lock_sha256",
+          "migration_set_sha256"
+        ],
+        "type": "object"
+      },
+      "schema_id": "release-generation-identity.v1",
+      "status": "active",
+      "unknown_fields": "reject",
+      "validation_mode": "json-schema"
+    },
+    {
+      "boundary_class": "security-policy",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.security",
+      "schema_id": "attack-surface-manifest.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "runtime-contract",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.rooted_truth",
+      "schema_id": "mpr-sys-01.rooted-runtime-truth.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_sys_01_rooted_truth",
+      "schema_id": "mpr-sys-01.rooted-runtime-truth-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "security-policy",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.rooted_truth",
+      "schema_id": "mpr-sys-01.rooted-runtime-policy.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "runtime-contract",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.execution_truth",
+      "schema_id": "mpr-sys-02.execution-truth.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "evidence",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "backward-readable",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "scripts.verify_mpr_sys_02_execution_truth",
+      "schema_id": "mpr-sys-02.execution-truth-evidence.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "boundary_class": "architecture",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.contracts.reachability",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "authority": {
+            "additionalProperties": false,
+            "properties": {
+              "canonical_json": {
+                "const": "src.kernel.canonical_json"
+              },
+              "hashing": {
+                "const": "src.kernel.hashing"
+              },
+              "production_surface": {
+                "const": "src.production_surface"
+              },
+              "schema_registry": {
+                "const": "src.contracts.registry"
+              }
+            },
+            "required": [
+              "schema_registry",
+              "canonical_json",
+              "hashing",
+              "production_surface"
+            ],
+            "type": "object"
+          },
+          "canonical_modules": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array",
+            "uniqueItems": true
+          },
+          "compatibility_aliases": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "max_lines": {
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                "module": {
+                  "minLength": 1,
+                  "type": "string"
+                },
+                "target": {
+                  "minLength": 1,
+                  "type": "string"
+                }
+              },
+              "required": [
+                "module",
+                "target",
+                "max_lines"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "default_classification": {
+            "const": "installed-support"
+          },
+          "production_ready": {
+            "const": false
+          },
+          "quarantined_modules": {
+            "items": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
+          "schema_id": {
+            "const": "mpr-4x-01.architecture-reachability.v1"
+          }
+        },
+        "required": [
+          "schema_id",
+          "authority",
+          "canonical_modules",
+          "compatibility_aliases",
+          "quarantined_modules",
+          "default_classification",
+          "production_ready"
+        ],
+        "type": "object"
+      },
+      "schema_id": "mpr-4x-01.architecture-reachability.v1",
+      "status": "active",
+      "unknown_fields": "reject",
+      "validation_mode": "json-schema"
+    },
+    {
+      "boundary_class": "architecture",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 1048576,
+      "max_depth": 32,
+      "max_nodes": 100000,
+      "owner_module": "src.production_surface",
+      "schema_id": "pr194.production-surface.v1",
+      "status": "active",
+      "unknown_fields": "reject"
+    },
+    {
+      "schema_id": "mpr-4x-02.runtime-authority.v1",
+      "owner_module": "src.runtime_authority",
+      "boundary_class": "configuration",
+      "compatibility": "exact-byte-identity",
+      "unknown_fields": "reject",
+      "canonical_encoding": "canonical-json-v1",
+      "max_bytes": 65536,
+      "max_depth": 16,
+      "max_nodes": 4096,
+      "max_list_items": 128,
+      "max_string_length": 4096,
+      "max_integer_abs": 9223372036854775807,
+      "status": "active",
+      "validation_mode": "json-schema",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "schema_version",
+          "active_composition_root",
+          "lifecycle_authority",
+          "capital_authority",
+          "alternate_runtime_surfaces",
+          "sensitive_writes",
+          "terminal_policy",
+          "capital_reservation_policy",
+          "worker_supervision"
+        ],
+        "properties": {
+          "schema_version": {
+            "const": "mpr-4x-02.runtime-authority.v1"
+          },
+          "active_composition_root": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "entrypoint",
+              "module",
+              "callable",
+              "package_script",
+              "paper_service",
+              "sender_free",
+              "live_enabled"
+            ],
+            "properties": {
+              "entrypoint": {
+                "const": "flashloan-bot"
+              },
+              "module": {
+                "const": "src.cli_pr189"
+              },
+              "callable": {
+                "const": "main"
+              },
+              "package_script": {
+                "const": "src.cli_pr189:main"
+              },
+              "paper_service": {
+                "const": "src.paper_shadow.durable_service_a3:build_installed_durable_paper_service"
+              },
+              "sender_free": {
+                "const": true
+              },
+              "live_enabled": {
+                "const": false
+              }
+            }
+          },
+          "lifecycle_authority": {
+            "const": "src.durability.unified_authority_pr02:UnifiedLifecycleAuthority"
+          },
+          "capital_authority": {
+            "const": "src.economics.durable_reservations:DurableCapitalCoordinator"
+          },
+          "alternate_runtime_surfaces": {
+            "const": [
+              {
+                "path": "arb_bot.py",
+                "active": false,
+                "disposition": "quarantined",
+                "reason": "owns no dispatch policy and delegates every invocation to src.cli_pr189"
+              },
+              {
+                "path": "src.cli",
+                "active": false,
+                "disposition": "compatibility-wrapper",
+                "reason": "legacy command surface behind src.cli_pr189"
+              },
+              {
+                "path": "src.legacy_arb_bot",
+                "active": false,
+                "disposition": "quarantined",
+                "reason": "legacy source-checkout execution surface"
+              },
+              {
+                "path": "src.ingest.execution_router",
+                "active": false,
+                "disposition": "removed-from-package",
+                "reason": "legacy execution router excluded from production wheel"
+              },
+              {
+                "path": "src.execution.senders",
+                "active": false,
+                "disposition": "removed-from-package",
+                "reason": "sender package excluded from production wheel"
+              }
+            ]
+          },
+          "sensitive_writes": {
+            "const": [
+              {
+                "surface": "pr02_intents",
+                "single_transaction": true,
+                "invariants": [
+                  "owner_id",
+                  "fencing_token",
+                  "lease_generation",
+                  "boot_id",
+                  "process_generation",
+                  "payload_hash"
+                ]
+              },
+              {
+                "surface": "pr02_terminal_records+pr02_outbox_event",
+                "single_transaction": true,
+                "invariants": [
+                  "owner_id",
+                  "fencing_token",
+                  "lease_generation",
+                  "boot_id",
+                  "process_generation",
+                  "payload_hash"
+                ]
+              },
+              {
+                "surface": "durable_capital_reservations",
+                "single_transaction": true,
+                "invariants": [
+                  "owner_id",
+                  "fencing_token",
+                  "lease_generation",
+                  "boot_id",
+                  "process_generation",
+                  "payload_hash"
+                ]
+              },
+              {
+                "surface": "a3_paper_service_cycles+a3_paper_service_outbox",
+                "single_transaction": true,
+                "invariants": [
+                  "owner_id",
+                  "fencing_token",
+                  "lease_generation",
+                  "boot_id",
+                  "process_generation",
+                  "payload_hash"
+                ]
+              }
+            ]
+          },
+          "terminal_policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "irreversible",
+              "terminal_and_outbox_same_transaction",
+              "terminal_visibility_after_result_commit_only",
+              "sql_triggers_required"
+            ],
+            "properties": {
+              "irreversible": {
+                "const": true
+              },
+              "terminal_and_outbox_same_transaction": {
+                "const": true
+              },
+              "terminal_visibility_after_result_commit_only": {
+                "const": true
+              },
+              "sql_triggers_required": {
+                "const": true
+              }
+            }
+          },
+          "capital_reservation_policy": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "compare_balance_and_reserve_same_transaction",
+              "global_unique_reservation_id",
+              "restart_reconciliation_required",
+              "release_on_terminal_reject_or_expiry",
+              "reservation_id_bindings"
+            ],
+            "properties": {
+              "compare_balance_and_reserve_same_transaction": {
+                "const": true
+              },
+              "global_unique_reservation_id": {
+                "const": true
+              },
+              "restart_reconciliation_required": {
+                "const": true
+              },
+              "release_on_terminal_reject_or_expiry": {
+                "const": true
+              },
+              "reservation_id_bindings": {
+                "const": [
+                  "attempt_id",
+                  "attempt_generation",
+                  "candidate_id",
+                  "message_hash",
+                  "policy_bundle_hash"
+                ]
+              }
+            }
+          },
+          "worker_supervision": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "critical_worker_death_closes_readiness",
+              "bounded_queues_required",
+              "incident_record_required",
+              "shutdown_order"
+            ],
+            "properties": {
+              "critical_worker_death_closes_readiness": {
+                "const": true
+              },
+              "bounded_queues_required": {
+                "const": true
+              },
+              "incident_record_required": {
+                "const": true
+              },
+              "shutdown_order": {
+                "const": [
+                  "stop_intake",
+                  "cancel_producers",
+                  "drain_bounded_queue",
+                  "persist_terminal_and_outbox",
+                  "close_database"
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "schema_id": "mpr-4x-02.semantic-command.v1",
+      "owner_module": "src.runtime_authority",
+      "boundary_class": "configuration",
+      "compatibility": "exact-byte-identity",
+      "unknown_fields": "reject",
+      "canonical_encoding": "canonical-json-v1",
+      "max_bytes": 65536,
+      "max_depth": 16,
+      "max_nodes": 4096,
+      "max_list_items": 128,
+      "max_string_length": 4096,
+      "max_integer_abs": 9223372036854775807,
+      "status": "active",
+      "validation_mode": "json-schema",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "attempt_id",
+          "candidate_id",
+          "reservation_id",
+          "policy_bundle_hash",
+          "payload_hash",
+          "attempt_generation"
+        ],
+        "properties": {
+          "attempt_id": {
+            "type": "string",
+            "pattern": "\\S",
+            "minLength": 1
+          },
+          "candidate_id": {
+            "type": "string",
+            "pattern": "\\S",
+            "minLength": 1
+          },
+          "reservation_id": {
+            "type": "string",
+            "pattern": "\\S",
+            "minLength": 1
+          },
+          "policy_bundle_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "payload_hash": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "minLength": 64,
+            "maxLength": 64
+          },
+          "attempt_generation": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9223372036854775807
+          }
+        }
+      }
+    },
+    {
+      "boundary_class": "configuration",
+      "canonical_encoding": "canonical-json-v1",
+      "compatibility": "exact-byte-identity",
+      "max_bytes": 65536,
+      "max_depth": 12,
+      "max_integer_abs": 9007199254740991,
+      "max_list_items": 64,
+      "max_nodes": 10000,
+      "max_string_length": 2048,
+      "owner_module": "src.provider_governance.profile",
+      "schema": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "connections": {
+            "items": {
+              "additionalProperties": false,
+              "properties": {
+                "credential": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "env_name": {
+                          "pattern": "^[A-Z][A-Z0-9_]{0,127}$",
+                          "type": "string"
+                        },
+                        "generation": {
+                          "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                          "type": "string"
+                        },
+                        "ref": {
+                          "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "ref",
+                        "generation",
+                        "env_name"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                },
+                "enabled": {
+                  "type": "boolean"
+                },
+                "endpoint": {
+                  "maxLength": 2048,
+                  "type": "string"
+                },
+                "entitlement": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "additionalProperties": false,
+                      "properties": {
+                        "cost_unit_limit": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "expires_at_epoch_seconds": {
+                          "maximum": 9999999999,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "generation": {
+                          "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                          "type": "string"
+                        },
+                        "max_concurrency": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "operations": {
+                          "items": {
+                            "enum": [
+                              "discovery",
+                              "refinement",
+                              "finalization",
+                              "backfill",
+                              "health_probe"
+                            ],
+                            "type": "string"
+                          },
+                          "maxItems": 32,
+                          "minItems": 1,
+                          "type": "array",
+                          "uniqueItems": true
+                        },
+                        "request_limit": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "spend_limit_micros": {
+                          "maximum": 9007199254740991,
+                          "minimum": 0,
+                          "type": "integer"
+                        },
+                        "spend_window_seconds": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        },
+                        "window_seconds": {
+                          "maximum": 9007199254740991,
+                          "minimum": 1,
+                          "type": "integer"
+                        }
+                      },
+                      "required": [
+                        "generation",
+                        "operations",
+                        "window_seconds",
+                        "request_limit",
+                        "cost_unit_limit",
+                        "spend_limit_micros",
+                        "max_concurrency",
+                        "expires_at_epoch_seconds",
+                        "spend_window_seconds"
+                      ],
+                      "type": "object"
+                    }
+                  ]
+                },
+                "http_methods": {
+                  "items": {
+                    "enum": [
+                      "GET",
+                      "POST"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "kind": {
+                  "enum": [
+                    "outbound_rest",
+                    "outbound_rpc",
+                    "inbound_webhook"
+                  ]
+                },
+                "provider_id": {
+                  "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                  "type": "string"
+                },
+                "query_parameters": {
+                  "items": {
+                    "maxLength": 128,
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array",
+                  "uniqueItems": true
+                },
+                "quota_pool_ref": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "review_ref": {
+                  "anyOf": [
+                    {
+                      "type": "null"
+                    },
+                    {
+                      "pattern": "^[a-zA-Z0-9_.:/-]{1,128}$",
+                      "type": "string"
+                    }
+                  ]
+                },
+                "reviewed": {
+                  "type": "boolean"
+                },
+                "rpc_methods": {
+                  "items": {
+                    "enum": [
+                      "simulateTransaction",
+                      "getMultipleAccounts",
+                      "getLatestBlockhash",
+                      "isBlockhashValid",
+                      "getBlockHeight",
+                      "getFeeForMessage",
+                      "getGenesisHash",
+                      "getSlot",
+                      "getTransaction"
+                    ],
+                    "type": "string"
+                  },
+                  "maxItems": 32,
+                  "type": "array",
+                  "uniqueItems": true
+                }
+              },
+              "required": [
+                "provider_id",
+                "kind",
+                "enabled",
+                "reviewed",
+                "review_ref",
+                "endpoint",
+                "credential",
+                "entitlement",
+                "http_methods",
+                "rpc_methods",
+                "query_parameters",
+                "quota_pool_ref"
+              ],
+              "type": "object"
+            },
+            "maxItems": 64,
+            "type": "array"
+          },
+          "schema_version": {
+            "const": "mpr2602.connections.v1"
+          }
+        },
+        "required": [
+          "schema_version",
+          "connections"
+        ],
+        "type": "object"
+      },
+      "schema_id": "mpr2602.connections.v1",
+      "status": "active",
+      "unknown_fields": "reject",
+      "validation_mode": "json-schema"
+    }
+  ]
+}

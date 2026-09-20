@@ -1,0 +1,23 @@
+{
+  "schema_version": "mpr2602.connections.v1",
+  "connections": [
+    {
+      "provider_id": "new_provider",
+      "kind": "outbound_rest",
+      "enabled": false,
+      "reviewed": false,
+      "review_ref": null,
+      "endpoint": "https://replace-after-review.invalid/",
+      "credential": {
+        "ref": "replace-with-credential-reference",
+        "generation": "replace-with-generation",
+        "env_name": "NEW_PROVIDER_API_KEY"
+      },
+      "entitlement": null,
+      "http_methods": [],
+      "rpc_methods": [],
+      "query_parameters": [],
+      "quota_pool_ref": null
+    }
+  ]
+}

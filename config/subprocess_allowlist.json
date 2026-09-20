@@ -1,0 +1,12 @@
+{
+  "schema_id": "mpr-td-04.subprocess-allowlist.v1",
+  "production_entries": [],
+  "policy": {
+    "shell": false,
+    "inherit_environment": false,
+    "untrusted_executable": false,
+    "unbounded_output": false,
+    "secret_arguments": false
+  },
+  "note": "No new production subprocess capability is authorized by MPR-TD-04. Existing operational scripts remain outside this allowlist until individually migrated."
+}

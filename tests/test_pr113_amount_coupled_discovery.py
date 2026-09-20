@@ -154,7 +154,7 @@ class MultiFirstLegPlane:
             (
                 _normalized_quote(
                     request,
-                    output=request.amount_base_units + 1,
+                    output=request.amount_base_units + 2,
                     suffix=f"second-{request.amount_base_units}",
                 ),
             ),
@@ -253,7 +253,7 @@ async def test_coordinator_requests_second_leg_for_each_exact_first_output() -> 
     assert report.evidence.cycle_succeeded is True
     assert report.evidence.requests_attempted == 3
     second_amounts = [request.amount_base_units for request in plane.calls[1:]]
-    assert second_amounts == [110, 120]
+    assert second_amounts == [109, 119]
     assert len(report.opportunities) == 1
     route = report.opportunities[0].metadata["route"]
     assert (

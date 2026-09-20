@@ -1,0 +1,11 @@
+{
+  "schema_id": "mpr-td-02.cancellation-inventory.v1",
+  "base_sha": "f837394449b3921c8f502543aaf3f2694274093a",
+  "shielded_regions": [
+    {
+      "module": "src.persistence.async_writer_pr200",
+      "line": 199,
+      "status": "requires review"
+    }
+  ]
+}

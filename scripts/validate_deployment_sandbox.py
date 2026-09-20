@@ -50,8 +50,7 @@ REQUIRED_COMPOSE_TOKENS = (
     "mem_limit: 768m",
     'cpus: "1.0"',
     "ulimits:",
-    "secrets:",
-    "runtime.env",
+    "internal: true",
     "healthcheck:",
     'PAPER_TRADING_ONLY: "true"',
     'LIVE_TRADING_ENABLED: "false"',
@@ -148,7 +147,10 @@ def validate_policy(policy: dict[str, Any]) -> None:
     )
 
     secrets = _dict(policy, "secrets")
-    _require(secrets.get("secret_mount_required") is True, "secret mount required")
+    _require(
+        secrets.get("raw_runtime_environment_forbidden") is True,
+        "raw runtime environment files must be forbidden",
+    )
     _require(
         secrets.get("forbid_plaintext_environment_secrets") is True,
         "plaintext environment secrets must be forbidden",

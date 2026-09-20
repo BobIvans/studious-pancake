@@ -26,6 +26,14 @@ from src.economics.exact_fee_workflow import (
     ExactFeeCapitalWorkflow,
     candidate_with_exact_message_fee,
 )
+from src.economics.exact_amounts import (
+    AmountDomain,
+    AssetIdentity,
+    AtomicAmount,
+    CanonicalAssetRegistry,
+    ExactAmountError,
+    NativeSemantics,
+)
 from src.economics.non_monotonic_sizing import (
     PR118AssetAmount,
     PR118CostComponentKind,
@@ -42,6 +50,9 @@ from src.economics.non_monotonic_sizing import (
 )
 
 __all__ = [
+    "AmountDomain",
+    "AssetIdentity",
+    "AtomicAmount",
     "AtomicCapitalLedger",
     "BoundedAmountSearchResult",
     "CapitalCandidate",
@@ -50,13 +61,16 @@ __all__ = [
     "CapitalLedgerSnapshot",
     "CapitalPolicy",
     "CapitalReservation",
+    "CanonicalAssetRegistry",
     "DurableCapitalCoordinator",
     "DurableCapitalReservationResult",
     "ExactFeeCapitalResult",
     "ExactFeeCapitalStatus",
     "ExactFeeCapitalWorkflow",
+    "ExactAmountError",
     "MessageFeeQuote",
     "NativeCostBreakdown",
+    "NativeSemantics",
     "NoTradeReason",
     "PR118AssetAmount",
     "PR118CostComponentKind",

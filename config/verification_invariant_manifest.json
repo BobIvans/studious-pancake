@@ -1,0 +1,80 @@
+{
+  "schema_id": "mpr-td-02.invariants.v1",
+  "invariants": [
+    {
+      "invariant_id": "FAIL-001",
+      "priority": "P0",
+      "owner": "errors",
+      "description": "Every registered reason code fails closed and is exercised",
+      "production_modules": [
+        "src.errors"
+      ],
+      "related_schemas": [],
+      "related_reason_codes": [
+        "INTERNAL_INVARIANT_UNKNOWN"
+      ],
+      "state_transitions": [],
+      "failure_modes": [
+        "fail open"
+      ],
+      "test_ids": [
+        "tests/errors/test_failures.py"
+      ],
+      "test_profile": "fast_pr",
+      "required_artifact": "pytest.xml",
+      "current_status": "mapped",
+      "blocker": null,
+      "review_date": "2026-11-02"
+    },
+    {
+      "invariant_id": "SAFE-001",
+      "priority": "P0",
+      "owner": "errors",
+      "description": "Sender-free and live-mode denial remain enforced",
+      "production_modules": [
+        "src.errors"
+      ],
+      "related_schemas": [],
+      "related_reason_codes": [
+        "INTERNAL_INVARIANT_UNKNOWN"
+      ],
+      "state_transitions": [],
+      "failure_modes": [
+        "fail open"
+      ],
+      "test_ids": [
+        "tests/errors/test_failures.py"
+      ],
+      "test_profile": "fast_pr",
+      "required_artifact": "pytest.xml",
+      "current_status": "mapped",
+      "blocker": null,
+      "review_date": "2026-11-02"
+    },
+    {
+      "invariant_id": "CANCEL-001",
+      "priority": "P0",
+      "owner": "errors",
+      "description": "Cancellation propagates separately",
+      "production_modules": [
+        "src.errors"
+      ],
+      "related_schemas": [],
+      "related_reason_codes": [
+        "INTERNAL_INVARIANT_UNKNOWN"
+      ],
+      "state_transitions": [],
+      "failure_modes": [
+        "fail open"
+      ],
+      "test_ids": [
+        "tests/errors/test_failures.py"
+      ],
+      "test_profile": "fast_pr",
+      "required_artifact": "pytest.xml",
+      "current_status": "mapped",
+      "blocker": null,
+      "review_date": "2026-11-02"
+    }
+  ]
+}

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import time
 
 from src.durability import AttemptKey, DurableLifecycleStore, ReservationState
 from src.economics.capital import (
@@ -33,7 +34,8 @@ def _snapshot(native_lamports: int = 20_000_000) -> WalletBalanceSnapshot:
         wallet_pubkey="wallet111111111111111111111111111111111111",
         native_lamports=native_lamports,
         context_slot=123_456,
-        captured_at_ns=1_000_000_000,
+        captured_at_ns=time.time_ns(),
+        cluster_genesis="mainnet-beta",
     )
 
 

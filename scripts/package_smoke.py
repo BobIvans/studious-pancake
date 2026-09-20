@@ -155,19 +155,48 @@ def main() -> int:
             "Scripts/python.exe" if os.name == "nt" else "bin/python"
         )
         bin_dir = python.parent
+        wheelhouse = temporary / "wheelhouse"
+        wheelhouse.mkdir()
+        _run(
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "download",
+                "--require-hashes",
+                "--only-binary=:all:",
+                "--dest",
+                str(wheelhouse),
+                "-r",
+                str(source / "requirements.lock"),
+            ],
+            cwd=temporary,
+        )
         _run(
             [
                 str(python),
                 "-m",
                 "pip",
                 "install",
+                "--no-index",
+                "--require-hashes",
+                "--find-links",
+                str(wheelhouse),
                 "-r",
-                str(source / "requirements.txt"),
+                str(source / "requirements.lock"),
             ],
             cwd=temporary,
         )
         _run(
-            [str(python), "-m", "pip", "install", "--no-deps", str(wheel)],
+            [
+                str(python),
+                "-m",
+                "pip",
+                "install",
+                "--no-index",
+                "--no-deps",
+                str(wheel),
+            ],
             cwd=temporary,
         )
         _run([str(python), "-m", "pip", "check"], cwd=temporary)
@@ -204,6 +233,56 @@ def main() -> int:
         )
         authority = _load_installed_authority(
             python,
+            cwd=temporary,
+            env=clean_env,
+        )
+        _run(
+            [
+                str(python),
+                "-I",
+                "-c",
+                """
+from pathlib import Path
+import json
+import subprocess
+import sys
+import src.runtime_authority as authority
+import src.runtime_authority_pr01 as alias
+assert 'site-packages' in str(Path(authority.__file__).resolve())
+assert alias.SemanticCommandIdentity is authority.SemanticCommandIdentity
+assert authority.evaluate_runtime_authority_map().accepted
+resource = Path(authority.__file__).parent / 'resources/runtime_authority.json'
+original = resource.read_bytes()
+try:
+    changed = json.loads(original)
+    changed['unregistered_control_override'] = True
+    resource.write_text(json.dumps(changed), encoding='utf-8')
+    result = subprocess.run([sys.executable, '-I', '-c',
+        'from src.runtime.runtime_entrypoint import main; raise SystemExit(main(["run", "--mode", "paper"]))'],
+        capture_output=True, text=True, timeout=30)
+    assert result.returncode == 5, result
+    assert 'RUNTIME_AUTHORITY_INVALID' in result.stderr, result.stderr
+    assert not Path('.runtime').exists()
+finally:
+    resource.write_bytes(original)
+print('MPR-2601 installed contract, alias and tampered admission passed')
+""",
+            ],
+            cwd=temporary,
+            env=clean_env,
+        )
+        # Exercise the actual installed A3 entrypoint, not only inspection
+        # commands. The probe traps attempted forbidden imports and network
+        # effects before admission; it reports the real external blocker.
+        _run(
+            [
+                str(python),
+                "-I",
+                "-c",
+                (ROOT / "scripts/mpr2602_installed_default_probe.py").read_text(
+                    encoding="utf-8"
+                ),
+            ],
             cwd=temporary,
             env=clean_env,
         )

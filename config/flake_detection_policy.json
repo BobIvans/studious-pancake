@@ -1,0 +1,8 @@
+{
+  "schema_id": "mpr-td-02.flake-policy.v1",
+  "repetitions": 10,
+  "seed_env": "MPR_TD_02_SEED",
+  "automatic_retry": false,
+  "known_flakes": [],
+  "artifact": "artifacts/flake.json"
+}

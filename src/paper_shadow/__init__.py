@@ -125,3 +125,8 @@ __all__ = [
     "paper_shadow_stage_blocked",
     "run_exact_attempt_runtime_cycle",
 ]
+
+# PR-007 operational contracts are additive to the installed runtime graph.
+from src.paper_shadow.service import DataLineage, PromotionState, RuntimeMode
+
+__all__ += ["DataLineage", "PromotionState", "RuntimeMode"]

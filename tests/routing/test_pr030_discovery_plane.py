@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+from tests.provider_governance_fixtures import reviewed_registry, reviewed_manifests
 
 from src.routing.clients import (
     JupiterRouterAdapter,
@@ -27,7 +28,6 @@ from src.routing.registry import (
     RouteDiscoveryService,
 )
 from src.routing.transport import redact_headers, sanitize_url
-
 
 SOL = "So11111111111111111111111111111111111111112"
 USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
@@ -93,7 +93,7 @@ async def test_four_providers_share_one_candidate_schema() -> None:
             OdosAdapter.endpoint: (200, {}, FIXTURES["odos"]),
         }
     )
-    registry = ProviderRegistry(
+    registry = reviewed_registry(
         (
             JupiterRouterAdapter(api_key="jup-secret", transport=transport),
             OkxDexAdapter(
@@ -123,14 +123,15 @@ async def test_four_providers_share_one_candidate_schema() -> None:
     assert all(quote.correlation_labels for quote in batch.quotes)
 
     classification = RouteDiscoveryService(registry).classify(batch.quotes)
-    assert tuple(
-        quote.provider for quote in classification.executable_candidates
-    ) == ("jupiter_router",)
-    assert next(
-        quote
-        for quote in batch.quotes
-        if quote.provider == "openocean"
-    ).minimum_output_state is MinimumOutputState.UNPROVEN
+    assert tuple(quote.provider for quote in classification.executable_candidates) == (
+        "jupiter_router",
+    )
+    assert (
+        next(
+            quote for quote in batch.quotes if quote.provider == "openocean"
+        ).minimum_output_state
+        is MinimumOutputState.UNPROVEN
+    )
 
 
 @pytest.mark.asyncio
@@ -143,7 +144,7 @@ async def test_provider_failure_isolated_and_unknown_schema_fails_closed() -> No
             OdosAdapter.endpoint: (200, {}, FIXTURES["odos"]),
         }
     )
-    registry = ProviderRegistry(
+    registry = reviewed_registry(
         (
             JupiterRouterAdapter(api_key="jup-secret", transport=transport),
             OdosAdapter(transport=transport),
@@ -160,10 +161,10 @@ async def test_provider_failure_isolated_and_unknown_schema_fails_closed() -> No
 
 @pytest.mark.asyncio
 async def test_missing_credentials_disable_only_affected_providers() -> None:
-    transport = RecordedTransport(
-        {OdosAdapter.endpoint: (200, {}, FIXTURES["odos"])}
+    transport = RecordedTransport({OdosAdapter.endpoint: (200, {}, FIXTURES["odos"])})
+    registry = ProviderRegistry.from_env(
+        {}, transport=transport, reviewed_entitlements=reviewed_manifests()
     )
-    registry = ProviderRegistry.from_env({}, transport=transport)
 
     report = {row["provider"]: row for row in registry.startup_report()}
     assert report["jupiter_router"]["state"] == "ready"
@@ -184,7 +185,7 @@ async def test_cancellation_is_not_converted_to_provider_failure() -> None:
             await asyncio.Event().wait()
 
     plane = DiscoveryPlane(
-        ProviderRegistry((OdosAdapter(transport=BlockingTransport()),)),
+        reviewed_registry((OdosAdapter(transport=BlockingTransport()),)),
         provider_timeout_seconds=60,
     )
     task = asyncio.create_task(plane.discover(request()))
@@ -215,9 +216,10 @@ def test_capability_taxonomy_keeps_non_jupiter_out_of_planner() -> None:
 
 
 def test_secrets_and_query_values_are_redacted_from_diagnostics() -> None:
-    assert sanitize_url(
-        "https://api.example.test/path?apiKey=secret&amount=10"
-    ) == "https://api.example.test/path"
+    assert (
+        sanitize_url("https://api.example.test/path?apiKey=secret&amount=10")
+        == "https://api.example.test/path"
+    )
     redacted = redact_headers(
         {
             "x-api-key": "secret",
@@ -233,7 +235,7 @@ def test_secrets_and_query_values_are_redacted_from_diagnostics() -> None:
 def test_stale_quote_is_discovery_visible_but_not_executable() -> None:
     adapter = JupiterRouterAdapter()
     quote = adapter.normalize_build(request(), FIXTURES["jupiter"])
-    service = RouteDiscoveryService(ProviderRegistry((adapter,)))
+    service = RouteDiscoveryService(reviewed_registry((adapter,)))
     result = service.classify(
         (quote,),
         now=quote.expires_at + timedelta(seconds=1),
@@ -267,9 +269,7 @@ def test_external_contract_registry_is_authoritative() -> None:
                 ("quote", "composable-instructions"),
             ),
             "okx": Contract("okx.solana", "discovery-only", ("quote",)),
-            "openocean": Contract(
-                "openocean.solana", "discovery-only", ("quote",)
-            ),
+            "openocean": Contract("openocean.solana", "discovery-only", ("quote",)),
             "odos": Contract(
                 "odos.solana",
                 "discovery-only",
@@ -291,8 +291,7 @@ def test_external_contract_registry_is_authoritative() -> None:
         contract_registry=Registry(),
     )
     roles = {
-        adapter.provider_id: adapter.capabilities.role
-        for adapter in registry.adapters
+        adapter.provider_id: adapter.capabilities.role for adapter in registry.adapters
     }
     assert roles == {
         "jupiter_router": ProviderRole.EXECUTABLE,

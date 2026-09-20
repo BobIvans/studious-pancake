@@ -73,13 +73,17 @@ def _package(
         assets=("treasury", "signing-authority", "release-artifact"),
         trust_boundaries=("provider-boundary", "signer-ipc", "deployment-control"),
         security_invariants=tuple(sorted(REQUIRED_SECURITY_INVARIANTS)),
-        evidence=evidence
-        if evidence is not None
-        else tuple(_evidence(kind) for kind in REQUIRED_EVIDENCE_KINDS),
+        evidence=(
+            evidence
+            if evidence is not None
+            else tuple(_evidence(kind) for kind in REQUIRED_EVIDENCE_KINDS)
+        ),
         risk_register=risks,
-        signoffs=signoffs
-        if signoffs is not None
-        else tuple(_signoff(role) for role in REQUIRED_SIGNOFF_ROLES),
+        signoffs=(
+            signoffs
+            if signoffs is not None
+            else tuple(_signoff(role) for role in REQUIRED_SIGNOFF_ROLES)
+        ),
     )
 
 
@@ -134,7 +138,7 @@ def test_pr169_blocks_unresolved_high_risk_even_with_other_green_evidence() -> N
         mitigation="keep live disabled",
         blast_radius="meaningful funds",
         acceptance_authority="risk-committee",
-        accepted_until=_NOW + timedelta(days=3),
+        accepted_until=datetime.now(timezone.utc) + timedelta(days=3),
     )
 
     result = evaluate_independent_launch_certification(_package(risks=(risk,)))

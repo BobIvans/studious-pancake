@@ -1,0 +1,13 @@
+{
+  "entries": [
+    {
+      "callable": "connect_operational",
+      "database_role": "qualification",
+      "module": "src.persistence.operational",
+      "owner": "persistence",
+      "reason": "canonical role-based operational factory",
+      "test": "tests/operations/test_mpr_td_03_operational.py"
+    }
+  ],
+  "schema_id": "mpr-td-03.sqlite-connection-allowlist.v1"
+}

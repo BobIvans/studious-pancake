@@ -12,6 +12,7 @@ from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import StrEnum
 import hashlib
+import inspect
 import json
 from pathlib import Path
 import time
@@ -166,7 +167,9 @@ class InstalledDurablePaperServiceReport:
         }
 
 
-ExactAttemptBatchSource = Callable[[], A3ExactAttemptBatch]
+ExactAttemptBatchSource = Callable[
+    [], A3ExactAttemptBatch | Awaitable[A3ExactAttemptBatch]
+]
 A3RuntimeCycle = Callable[[str, Sequence[object]], Awaitable[ExactAttemptRuntimeReport]]
 
 
@@ -201,8 +204,17 @@ class InstalledDurablePaperService:
             cluster_genesis=_cluster_genesis(config),
         )
         self._owns_authority = authority is None
+        self._closed = False
+        self._run_lock = asyncio.Lock()
+        self.ready_for_next_cycle = False
+        self.incident_recording_failed = False
+        self._active_intent_id: str | None = None
 
     def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        self.ready_for_next_cycle = False
         if self._owns_authority:
             self.authority.close()
 
@@ -213,6 +225,37 @@ class InstalledDurablePaperService:
         self.close()
 
     async def run_once(self) -> InstalledDurablePaperServiceReport:
+        if self._closed or self._run_lock.locked():
+            raise RuntimeError("A3_SERVICE_CLOSED_OR_ALREADY_RUNNING")
+        async with self._run_lock:
+            self.ready_for_next_cycle = False
+            self._active_intent_id = None
+            try:
+                report = await self._run_once()
+                self.ready_for_next_cycle = report.ready_for_next_cycle
+                return report
+            except BaseException as exc:
+                self.ready_for_next_cycle = False
+                reason = (
+                    "A3_CYCLE_CANCELLED"
+                    if isinstance(exc, asyncio.CancelledError)
+                    else "A3_WORKER_FAILED"
+                )
+                try:
+                    self.authority.record_runtime_incident(
+                        reason, self._active_intent_id
+                    )
+                except Exception:
+                    self.incident_recording_failed = True
+                raise
+
+    async def _run_once(self) -> InstalledDurablePaperServiceReport:
+        if any(
+            row["intent_kind"] == "paper_cycle"
+            and row["recovery_action"] != "terminal_exactly_once"
+            for row in self.authority.recovery_summary()
+        ):
+            raise RuntimeError("A3_UNRESOLVED_DURABLE_INTENT")
         sequence = self.authority.next_cycle_sequence(self.config.run_id)
         cycle_id = self._cycle_id(sequence)
         fence = self.authority.begin_cycle_intent(
@@ -221,8 +264,18 @@ class InstalledDurablePaperService:
             config_fingerprint=_safe_config_fingerprint(self.runtime_config),
             source_surface=self.config.source_surface,
         )
+        self._active_intent_id = fence.intent_id
+        deadline = (
+            asyncio.get_running_loop().time() + self.config.cycle_deadline_seconds
+        )
         try:
             batch = self.batch_source()
+            if inspect.isawaitable(batch):
+                batch = await asyncio.wait_for(
+                    batch, timeout=self.config.cycle_deadline_seconds
+                )
+            if not isinstance(batch, A3ExactAttemptBatch):
+                raise TypeError("A3 source must return an exact-attempt batch")
         except Exception as exc:
             report = self._indeterminate_report(
                 cycle_id,
@@ -242,7 +295,10 @@ class InstalledDurablePaperService:
             fence,
             provider_evidence_hash=batch.evidence.provider_evidence_hash,
         )
-        report = await self._report_for_batch(cycle_id, sequence, batch)
+        remaining = deadline - asyncio.get_running_loop().time()
+        report = await self._report_for_batch(
+            cycle_id, sequence, batch, remaining=remaining
+        )
         self._commit(fence, report)
         return report
 
@@ -278,6 +334,8 @@ class InstalledDurablePaperService:
         cycle_id: str,
         sequence: int,
         batch: A3ExactAttemptBatch,
+        *,
+        remaining: float | None = None,
     ) -> InstalledDurablePaperServiceReport:
         if batch.evidence.blockers:
             return self._blocked_report(
@@ -293,20 +351,30 @@ class InstalledDurablePaperService:
                 batch.evidence,
                 A3_RUNTIME_UNWIRED,
             )
-        return await self._run_a2_cycle(cycle_id, sequence, batch)
+        if remaining is not None and remaining <= 0:
+            return self._blocked_report(
+                cycle_id, sequence, batch.evidence, A3_RUNTIME_TIMEOUT
+            )
+        return await self._run_a2_cycle(cycle_id, sequence, batch, remaining=remaining)
 
     async def _run_a2_cycle(
         self,
         cycle_id: str,
         sequence: int,
         batch: A3ExactAttemptBatch,
+        *,
+        remaining: float | None = None,
     ) -> InstalledDurablePaperServiceReport:
         assert self.runtime_cycle is not None
         try:
             operation = self.runtime_cycle(cycle_id, tuple(batch.items))
             a2_report = await asyncio.wait_for(
                 operation,
-                timeout=self.config.cycle_deadline_seconds,
+                timeout=(
+                    self.config.cycle_deadline_seconds
+                    if remaining is None
+                    else remaining
+                ),
             )
         except TimeoutError:
             return self._blocked_report(
@@ -321,6 +389,19 @@ class InstalledDurablePaperService:
                 sequence,
                 batch.evidence,
                 f"blocked_a3_runtime_cycle_failed_{type(exc).__name__}",
+            )
+        if not isinstance(a2_report, ExactAttemptRuntimeReport) or a2_report.status in {
+            A2PaperOutcomeStatus.EXACT_ATTEMPT_READY_FOR_HANDOFF,
+            A2PaperOutcomeStatus.DURABLE_PAPER_OUTCOME_COMMITTED,
+        }:
+            # A handoff or a generic commit label does not carry the verified
+            # terminal outcome required by this projection. Preserve uncertainty
+            # until the accepted durable outcome consumer completes that work.
+            return self._indeterminate_report(
+                cycle_id,
+                sequence,
+                batch.evidence,
+                "blocked_a3_verified_attempt_terminal_missing",
             )
         return InstalledDurablePaperServiceReport(
             cycle_id=cycle_id,

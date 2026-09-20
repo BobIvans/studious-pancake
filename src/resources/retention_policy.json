@@ -1,0 +1,19 @@
+{
+  "classes": [
+    {
+      "data_class": "qualification-temporary",
+      "deletion_eligible": true,
+      "owner": "verification",
+      "preserve_digest": false,
+      "retention": "ephemeral-test-run"
+    },
+    {
+      "data_class": "release-evidence",
+      "deletion_eligible": false,
+      "owner": "release",
+      "preserve_digest": true,
+      "retention": "permanent-while-referenced"
+    }
+  ],
+  "schema_id": "mpr-td-03.retention-policy.v1"
+}

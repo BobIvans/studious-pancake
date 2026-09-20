@@ -1,0 +1,41 @@
+{
+  "schema_id": "filesystem-root-registry.v1",
+  "roots": [
+    {
+      "root_id": "runtime-state",
+      "owner": "persistence",
+      "path_source": "env:FLASHLOAN_STATE_ROOT",
+      "default_path": "/var/lib/flashloan-bot",
+      "read": true,
+      "write": true,
+      "symlinks": "deny",
+      "special_files": "deny",
+      "maximum_file_bytes": 10737418240,
+      "security_classification": "durable-state"
+    },
+    {
+      "root_id": "runtime-backup",
+      "owner": "persistence",
+      "path_source": "env:FLASHLOAN_BACKUP_ROOT",
+      "default_path": "/var/lib/flashloan-bot/backups",
+      "read": true,
+      "write": true,
+      "symlinks": "deny",
+      "special_files": "deny",
+      "maximum_file_bytes": 21474836480,
+      "security_classification": "recovery-artifact"
+    },
+    {
+      "root_id": "runtime-temp",
+      "owner": "runtime",
+      "path_source": "env:FLASHLOAN_TEMP_ROOT",
+      "default_path": "/tmp/flashloan-bot",
+      "read": true,
+      "write": true,
+      "symlinks": "deny",
+      "special_files": "deny",
+      "maximum_file_bytes": 1073741824,
+      "security_classification": "ephemeral"
+    }
+  ]
+}

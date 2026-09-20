@@ -171,6 +171,8 @@ class TransactionCompiler:
                 "MessageV0.try_compile failed",
             ) from exc
 
+        self._validate_compiled_instructions(message, instructions, lookup_tables)
+
         signer_count = message.header.num_required_signatures
         signer_keys = tuple(message.account_keys[:signer_count])
         if not signer_keys or signer_keys[0] != plan.payer:
@@ -409,7 +411,8 @@ class TransactionCompiler:
             out.append(set_compute_unit_limit(cb.unit_limit))
         if cb.micro_lamports_per_cu is not None:
             out.append(set_compute_unit_price(cb.micro_lamports_per_cu))
-        out.extend(planned.instruction for planned in plan.instructions)
+        application = tuple(planned.instruction for planned in plan.instructions)
+        out.extend(self._rebind_marginfi_indices(application, len(out)))
         if plan.tip_policy.lamports > 0:
             out.append(
                 transfer(
@@ -421,6 +424,106 @@ class TransactionCompiler:
                 ),
             )
         return tuple(out)
+
+    @staticmethod
+    def _rebind_marginfi_indices(
+        instructions: tuple[Instruction, ...],
+        prefix_count: int,
+    ) -> tuple[Instruction, ...]:
+        # Only this exact packaged protocol is understood. The index supplied by
+        # its planner is relative to the application sequence, before CU insertion.
+        from src.providers.marginfi.pin import load_marginfi_contract_pin
+
+        pin = load_marginfi_contract_pin()
+        program = Pubkey.from_string(pin.program_id)
+        start_tag = pin.ix_discriminator("lending_account_start_flashloan")
+        end_tag = pin.ix_discriminator("lending_account_end_flashloan")
+        starts = [
+            i
+            for i, ix in enumerate(instructions)
+            if ix.program_id == program and bytes(ix.data).startswith(start_tag)
+        ]
+        ends = [
+            i
+            for i, ix in enumerate(instructions)
+            if ix.program_id == program and bytes(ix.data).startswith(end_tag)
+        ]
+        if not starts and not ends:
+            return instructions
+
+        def reject() -> None:
+            raise TransactionCompileError(
+                ExecutionErrorCode.INVALID_PLAN,
+                "invalid pinned MarginFi flashloan boundary",
+            )
+
+        if len(starts) != 1 or len(ends) != 1:
+            reject()
+        start_index, end_index = starts[0], ends[0]
+        start, end = instructions[start_index], instructions[end_index]
+        if (
+            start_index >= end_index
+            or len(start.data) != 16
+            or len(end.data) != 8
+            or int.from_bytes(start.data[8:], "little") != end_index
+            or len(start.accounts) != 3
+            or len(end.accounts) < 2
+        ):
+            reject()
+        if (
+            start.accounts[0].pubkey != end.accounts[0].pubkey
+            or start.accounts[1].pubkey != end.accounts[1].pubkey
+            or not start.accounts[0].is_writable
+            or not end.accounts[0].is_writable
+            or start.accounts[0].is_signer
+            or end.accounts[0].is_signer
+            or not start.accounts[1].is_signer
+            or not end.accounts[1].is_signer
+            or start.accounts[2].pubkey
+            != Pubkey.from_string(pin.raw["programs"]["instructions_sysvar"])
+            or start.accounts[2].is_writable
+            or start.accounts[2].is_signer
+        ):
+            reject()
+        rebound = list(instructions)
+        rebound[start_index] = Instruction(
+            program,
+            start_tag + (end_index + prefix_count).to_bytes(8, "little"),
+            start.accounts,
+        )
+        return tuple(rebound)
+
+    @staticmethod
+    def _validate_compiled_instructions(
+        message: MessageV0,
+        instructions: tuple[Instruction, ...],
+        lookup_tables: tuple[ResolvedAddressLookupTable, ...],
+    ) -> None:
+        # Resolve the actual v0 ordering: all static keys, then all writable
+        # lookups, then all readonly lookups (not per-table interleaving).
+        tables = {table.address: table.addresses for table in lookup_tables}
+        keys = list(message.account_keys)
+        for writable in (True, False):
+            for lookup in message.address_table_lookups:
+                indices = (
+                    lookup.writable_indexes if writable else lookup.readonly_indexes
+                )
+                keys.extend(tables[lookup.account_key][i] for i in indices)
+        if len(message.instructions) != len(instructions):
+            raise TransactionCompileError(
+                ExecutionErrorCode.INVALID_PLAN, "compiled instruction count changed"
+            )
+        for actual, expected in zip(message.instructions, instructions):
+            if (
+                keys[actual.program_id_index] != expected.program_id
+                or bytes(actual.data) != bytes(expected.data)
+                or tuple(keys[i] for i in actual.accounts)
+                != tuple(meta.pubkey for meta in expected.accounts)
+            ):
+                raise TransactionCompileError(
+                    ExecutionErrorCode.INVALID_PLAN,
+                    "compiled instruction identity changed",
+                )
 
     def _round_trip(
         self,
@@ -453,7 +556,9 @@ class TransactionCompiler:
             lookup_writable_count=lookup_writable_count,
             lookup_readonly_count=lookup_readonly_count,
             total_resolved_account_count=(
-                len(message.account_keys) + lookup_writable_count + lookup_readonly_count
+                len(message.account_keys)
+                + lookup_writable_count
+                + lookup_readonly_count
             ),
             used_alt_pubkeys=tuple(alt.address for alt in lookup_tables),
         )
@@ -465,5 +570,7 @@ def sign_fully(
 ) -> SignedTransaction:
     """Sign a compiled transaction with the exact required signer set."""
 
-    max_size = max(len(compiled.serialized_transaction), SOLANA_WIRE_TRANSACTION_LIMIT_BYTES)
+    max_size = max(
+        len(compiled.serialized_transaction), SOLANA_WIRE_TRANSACTION_LIMIT_BYTES
+    )
     return TransactionCompiler(max_size=max_size).sign_fully(compiled, signers)

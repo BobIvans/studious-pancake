@@ -224,6 +224,7 @@ class AtomicPlannerProvenance:
     marginfi_source_vector_hash: str | None = None
     financing_lender: str = "marginfi"
     financing_program_id: str | None = None
+    financing_deployment_generation: int | None = None
 
     @property
     def digest(self) -> str:
@@ -251,6 +252,7 @@ class AtomicPlannerProvenance:
             "marginfi_source_vector_hash": self.marginfi_source_vector_hash,
             "financing_lender": self.financing_lender,
             "financing_program_id": self.financing_program_id,
+            "financing_deployment_generation": self.financing_deployment_generation,
         }
         return _sha256_json(payload)
 
@@ -501,6 +503,11 @@ class AtomicMarginfiJupiterPlanner:
             financing_program_id=(
                 str(getattr(self._marginfi, "program_id"))
                 if getattr(self._marginfi, "program_id", None) is not None
+                else None
+            ),
+            financing_deployment_generation=(
+                int(getattr(self._marginfi, "deployment_generation"))
+                if getattr(self._marginfi, "deployment_generation", None) is not None
                 else None
             ),
         )

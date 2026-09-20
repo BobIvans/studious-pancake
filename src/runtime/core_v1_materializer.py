@@ -268,6 +268,24 @@ class CoreV1DraftSource(Protocol):
     def __call__(self) -> Sequence[CoreV1AttemptDraft]: ...
 
 
+def _batch_profile_identity(profile: object) -> tuple[str, int, str]:
+    profile_id = getattr(profile, "profile_id", None)
+    if not isinstance(profile_id, str) or not profile_id.strip():
+        raise ValueError("CORE_V1_BATCH_PROFILE_IDENTITY_REQUIRED")
+    generation = getattr(profile, "profile_generation", None)
+    lender = getattr(profile, "lender", None)
+    if profile_id == CORE_V1_PROFILE_ID:
+        if generation is None:
+            generation = 1
+        if lender is None:
+            lender = "marginfi"
+    if type(generation) is not int or generation < 1:
+        raise ValueError("CORE_V1_BATCH_PROFILE_GENERATION_REQUIRED")
+    if not isinstance(lender, str) or not lender.strip():
+        raise ValueError("CORE_V1_BATCH_LENDER_REQUIRED")
+    return profile_id, generation, lender
+
+
 class CoreV1MaterializedBatchSource:
     """A3 source that emits exact items only; no raw handoff may pass through."""
 
@@ -300,13 +318,16 @@ class CoreV1MaterializedBatchSource:
                     _hash_json({"reason": reason}), False, (reason,)
                 )
             )
+        profile_id, profile_generation, lender = _batch_profile_identity(
+            self.materializer.profile
+        )
         if not drafts:
             evidence_hash = _hash_json(
                 {
                     "schema": CORE_V1_SCHEMA,
-                    "profile_id": self.materializer.profile.profile_id,
-                    "profile_generation": self.materializer.profile.profile_generation,
-                    "lender": self.materializer.profile.lender,
+                    "profile_id": profile_id,
+                    "profile_generation": profile_generation,
+                    "lender": lender,
                     "release_id": self.materializer.release_id,
                     "items": [],
                 }
@@ -325,9 +346,9 @@ class CoreV1MaterializedBatchSource:
         evidence_hash = _hash_json(
             {
                 "schema": CORE_V1_SCHEMA,
-                "profile_id": self.materializer.profile.profile_id,
-                "profile_generation": self.materializer.profile.profile_generation,
-                "lender": self.materializer.profile.lender,
+                "profile_id": profile_id,
+                "profile_generation": profile_generation,
+                "lender": lender,
                 "release_id": self.materializer.release_id,
                 "materializations": [
                     draft.materialization_hash for draft in drafts

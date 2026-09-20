@@ -7,9 +7,12 @@ MPR-2613 guarded operations, MPR-2616 HA/DR, MPR-2618 credential rotation,
 PR-077/PR-201 observability/readiness и MPR-2614 continuous conformance.
 Новый ledger, signer, sender, submission authority или live OMS не создаётся.
 
-Base при старте: `0c4f216a62d62b20f6fb4ec4bbd0548cea58df65`.
-Перед PR ветка rebased на актуальный `main` `693afe31c4cb5d2aa63b84c7aa40c88b115e3c0b`.
-Ветка: `codex/agg-20260920-09`.
+Исторический base при старте: `0c4f216a62d62b20f6fb4ec4bbd0548cea58df65`.
+AGG-09 был merged как PR #505, merge commit
+`5d1d8177c933221dcb31baf0753924c4f32e3313`.
+Post-AGG reconciliation выполнен против
+`main@27875850a88edf102c904e31955e0df8b78b13b4`, где AGG-04, AGG-05 и
+AGG-08 уже имеют canonical merge receipts.
 
 ## Work packages
 
@@ -58,13 +61,24 @@ Base при старте: `0c4f216a62d62b20f6fb4ec4bbd0548cea58df65`.
 
 ## Current disposition
 
-Кодовые контракты AGG-09 могут быть merged default-off, но operational acceptance всего
-пакета не заявляется на основании этого PR. На стартовом main отсутствуют принятые результаты
-AGG-04/AGG-05/AGG-08 текущей серии; OPS-01 full acceptance также зависит от LIVE-03 evidence.
-Реальный operational soak NF-254 нельзя заменить synthetic duration/PnL.
+Кодовый пакет AGG-09 уже merged и все его package prerequisites (AGG-04,
+AGG-05, AGG-08) присутствуют в текущем reconciliation baseline. Исторические
+"prerequisite not on starting main" больше не являются текущими blockers.
 
-`implementation_status`: `IMPLEMENTED_OFFLINE` после passing code gates.
-`operational_status`: `BLOCKED` до реальных prerequisite/evidence gates.
+`implementation_status`: `MERGED_CODE`.
+`operational_status`: `BLOCKED`.
+
+Оставшиеся blockers являются evidence/operations, а не отсутствующими AGG PR:
+
+- реальные LIVE-03 landing/finalized labels для выбранного exact profile;
+- predeclared operational soak NF-254 с busy/quiet windows и incident accounting;
+- production cross-host coordinator/signer recovery evidence;
+- измеренный workload/scale evidence;
+- новая post-merge qualification generation, связывающая source/wheel/config/data/
+  financing deployment и release artifacts.
+
+Synthetic duration/PnL, старые branch-head результаты и сам факт merge не закрывают
+эти требования.
 
 ## Focused verification
 

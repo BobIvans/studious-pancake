@@ -246,6 +246,7 @@ class ConflictAwareScheduler:
         reservation_port: ReservationPort,
         max_in_flight: int,
         clock_ns: Callable[[], int] = time.monotonic_ns,
+        lease_clock_ns: Callable[[], int] = time.time_ns,
     ) -> None:
         if (
             isinstance(max_in_flight, bool)
@@ -255,18 +256,20 @@ class ConflictAwareScheduler:
             raise ValueError("max_in_flight must be a positive integer")
         self._reservation_port = reservation_port
         self._max_in_flight = max_in_flight
-        self._clock_ns = clock_ns
+        self._deadline_clock_ns = clock_ns
+        self._lease_clock_ns = lease_clock_ns
         self._lock = RLock()
         self._active: dict[str, tuple[ScheduledIntent, ReservationReceipt]] = {}
         self._counters = _Counters()
 
     def admit(self, intent: ScheduledIntent) -> ScheduleDecision:
-        now = self._clock_ns()
+        deadline_now = self._deadline_clock_ns()
+        lease_now = self._lease_clock_ns()
         with self._lock:
-            if intent.deadline_ns <= now:
+            if intent.deadline_ns <= deadline_now:
                 self._counters.deadline += 1
                 return self._reject(intent, SchedulerRejectReason.DEADLINE_EXPIRED)
-            if intent.worker_fence.expires_at_ns <= now:
+            if intent.worker_fence.expires_at_ns <= lease_now:
                 self._counters.fence += 1
                 return self._reject(intent, SchedulerRejectReason.STALE_WORKER_FENCE)
             if intent.work_id in self._active:
@@ -332,19 +335,31 @@ class ConflictAwareScheduler:
             intent, receipt = active
             if worker_fence != intent.worker_fence:
                 raise StaleWorkerFence("worker fence no longer owns scheduled work")
-            if worker_fence.expires_at_ns <= self._clock_ns():
+            if worker_fence.expires_at_ns <= self._lease_clock_ns():
                 raise StaleWorkerFence("worker fence expired before completion")
+            if intent.deadline_ns <= self._deadline_clock_ns():
+                self._reservation_port.release(
+                    receipt,
+                    reason=SchedulerRejectReason.DEADLINE_EXPIRED.value,
+                )
+                self._active.pop(work_id)
+                self._counters.deadline += 1
+                return False
             self._reservation_port.release(receipt, reason=reason)
             self._active.pop(work_id)
             return True
 
     def reap_expired(self) -> tuple[str, ...]:
-        now = self._clock_ns()
+        deadline_now = self._deadline_clock_ns()
+        lease_now = self._lease_clock_ns()
         released: list[str] = []
         with self._lock:
             for work_id in sorted(tuple(self._active)):
                 intent, receipt = self._active[work_id]
-                if intent.deadline_ns > now and intent.worker_fence.expires_at_ns > now:
+                if (
+                    intent.deadline_ns > deadline_now
+                    and intent.worker_fence.expires_at_ns > lease_now
+                ):
                     continue
                 self._reservation_port.release(receipt, reason="expired_or_fenced")
                 self._active.pop(work_id)

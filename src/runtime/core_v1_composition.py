@@ -191,6 +191,14 @@ async def _blocked_runtime_cycle(_cycle_id: str, _items: tuple[object, ...]):
     raise RuntimeError(CORE_V1_LENDER_ADAPTER_REQUIRED)
 
 
+def _is_legacy_marginfi_profile(profile: CoreV1ReleaseProfile) -> bool:
+    return (
+        profile.profile_id == "core-marginfi-jupiter-v1"
+        and profile.lender == "marginfi"
+        and profile.profile_generation == 1
+    )
+
+
 def _build_generic_blocked_service(
     config: RuntimeConfig,
     *,
@@ -264,7 +272,7 @@ def build_core_v1_composition(
     )
 
     if dependencies is None:
-        if profile.lender != "marginfi":
+        if not _is_legacy_marginfi_profile(profile):
             service = _build_generic_blocked_service(
                 config,
                 db_path=db_path,
@@ -332,7 +340,7 @@ def build_core_v1_composition(
             blockers=(CORE_V1_BLOCKED_EXTERNAL,),
         )
 
-    if profile.lender != "marginfi":
+    if not _is_legacy_marginfi_profile(profile):
         reason = f"{CORE_V1_LENDER_ADAPTER_REQUIRED}:{profile.lender}"
         if (
             dependencies.financing_port is None

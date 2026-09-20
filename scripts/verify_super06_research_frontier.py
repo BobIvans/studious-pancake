@@ -75,10 +75,13 @@ EXPECTED_SOURCE_BLOBS: Mapping[str, str] = {
     "src/decision/agg10.py": "8e2c777a53efe2716229b67609d44bcc66278c7c",
     "tests/test_agg10_intelligence.py": "8569fb519b504ed6ad99e7ebda5f3136771d7d3b",
     "release_artifacts/agg/AGG-10/coverage.json": "90fef936d66d4d2b53b78211cd115b1bd77260e3",
+    "src/research/__init__.py": "3f7a07dcd951c3a16b84fd528d8d1581d70b569f",
+    "src/research/common.py": "94ee1554d5fb9becb6769cd37fdd4b403c617ae1",
     "src/research/evidence.py": "bfbdc1d883070c3b9db2f3e41c8f81ec002fc960",
     "src/research/promotion.py": "6e2212ba777c16317b5f1e890c87a24830fd4fe2",
     "src/research/benchmarks.py": "f7fe5c4e99fd665564700999db6b2ace49a344cc",
     "src/research/verifiability.py": "e6ffc3131540ba59f6e7c76a919b61fd0287a070",
+    "src/research/product.py": "8970ceaa0d0f9c0bbb5b341920fc07cdcd946a7b",
     "tests/test_agg14_research_system.py": "df28cf5c9f6f5c6ed3c706187b4e8ea3c00d150c",
     "config/agg14_research_coverage.json": "51b968bfadfac0712c93ab14c8273e958392c08a",
 }

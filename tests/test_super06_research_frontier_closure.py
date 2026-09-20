@@ -38,7 +38,7 @@ def test_super06_closure_verifier_accepts_current_canonical_owners() -> None:
     assert result["nf_count"] == 34
     assert result["live_enabled"] is False
     assert result["product_scope_included"] is False
-    assert result["pinned_source_blob_count"] == 9
+    assert result["pinned_source_blob_count"] == 12
 
 
 def test_super06_exact_child_and_nf_scope_has_no_product_inflation() -> None:
@@ -130,4 +130,10 @@ def test_super06_pins_checked_out_canonical_source_blobs(tmp_path: Path) -> None
     mutated = tmp_path / "src/decision/agg10.py"
     mutated.write_bytes(mutated.read_bytes() + b"\n# provenance mutation\n")
     with pytest.raises(ValueError, match="SUPER06_SOURCE_BLOB_MISMATCH:src/decision/agg10.py"):
+        validate_pinned_source_blobs(tmp_path)
+
+    mutated.write_bytes((ROOT / "src/decision/agg10.py").read_bytes())
+    common = tmp_path / "src/research/common.py"
+    common.write_bytes(common.read_bytes() + b"\n# shared-helper mutation\n")
+    with pytest.raises(ValueError, match="SUPER06_SOURCE_BLOB_MISMATCH:src/research/common.py"):
         validate_pinned_source_blobs(tmp_path)

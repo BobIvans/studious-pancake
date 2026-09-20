@@ -142,6 +142,60 @@ class StateValidator:
         return delta, locked, refunded
 
     def repayment(self, evidence: ReconciliationEvidence) -> RepaymentProof:
+        financing = evidence.financing
+        if financing is not None:
+            borrowed = financing.debt_before_base_units
+            required = financing.required_repayment_base_units
+            observed = financing.observed_repayment_base_units
+            if not financing.proven:
+                return RepaymentProof(
+                    False,
+                    borrowed,
+                    required,
+                    observed,
+                    max(0, required - borrowed),
+                    ReconciliationReason.REPAYMENT_NOT_PROVEN,
+                )
+            if financing.message_hash != evidence.expected_message_hash:
+                return RepaymentProof(
+                    False,
+                    borrowed,
+                    required,
+                    observed,
+                    max(0, required - borrowed),
+                    ReconciliationReason.FINANCING_MESSAGE_MISMATCH,
+                )
+            if financing.asset_id != evidence.settlement_asset.stable_id():
+                return RepaymentProof(
+                    False,
+                    borrowed,
+                    required,
+                    observed,
+                    max(0, required - borrowed),
+                    ReconciliationReason.FINANCING_ASSET_MISMATCH,
+                )
+            if (
+                borrowed <= 0
+                or required < borrowed
+                or financing.debt_after_base_units != 0
+                or observed < required
+            ):
+                return RepaymentProof(
+                    False,
+                    borrowed,
+                    required,
+                    observed,
+                    max(0, required - borrowed),
+                    ReconciliationReason.FINANCING_EVIDENCE_INVALID,
+                )
+            return RepaymentProof(
+                True,
+                borrowed,
+                required,
+                observed,
+                required - borrowed,
+            )
+
         item = evidence.marginfi
         if item is None:
             return RepaymentProof(

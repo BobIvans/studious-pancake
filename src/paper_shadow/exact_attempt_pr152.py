@@ -468,10 +468,10 @@ class ExactPaperAttemptOrchestrator:
                 raise ValueError("generic financing snapshot required")
             if candidate.financing_pre_state_accounts is None:
                 raise ValueError("generic financing raw pre-state required")
-            observed_snapshot_hash = hashlib.sha256(
-                canonical_json_bytes(candidate.financing_pre_state_accounts)
-            ).hexdigest()
-            if evidence.account_snapshot_hash != observed_snapshot_hash:
+            if (
+                planner.provider_account_snapshot_hash
+                != evidence.account_snapshot_hash
+            ):
                 raise ValueError("provider snapshot fingerprint mismatch")
             if (
                 snapshot.slot < request.discovery_slot

@@ -27,6 +27,7 @@ from src.lending.financing import (
 from src.lending.jupiter_lend import (
     JUPITER_LEND_FLASHLOAN_PROGRAM_ID,
     JupiterLendFlashloanAccounts,
+    JupiterLendFlashloanAdminState,
     build_flashloan_borrow_instruction,
     build_flashloan_payback_instruction,
     validate_jupiter_lend_order,
@@ -75,6 +76,7 @@ def _sequence_hash(instructions: Sequence[Instruction]) -> str:
 @dataclass(frozen=True, slots=True)
 class JupiterLendFinancingSnapshot:
     accounts: JupiterLendFlashloanAccounts
+    admin_state: JupiterLendFlashloanAdminState
     asset_id: str
     available_liquidity_base_units: int
     required_repayment_base_units: int
@@ -91,6 +93,16 @@ class JupiterLendFinancingSnapshot:
         _nonnegative(self.slot, "slot")
         _sha(self.evidence_sha256, "evidence_sha256")
         _sha(self.state_fingerprint, "state_fingerprint")
+        if not self.admin_state.status:
+            raise FinancingContractError("JUPITER_LEND_PROTOCOL_PAUSED")
+        if self.admin_state.is_flashloan_active:
+            raise FinancingContractError("JUPITER_LEND_FLASHLOAN_ALREADY_ACTIVE")
+        if self.admin_state.active_flashloan_amount != 0:
+            raise FinancingContractError("JUPITER_LEND_ACTIVE_AMOUNT_NOT_ZERO")
+        if self.admin_state.flashloan_fee != 0:
+            raise FinancingContractError("JUPITER_LEND_NONZERO_FEE_UNQUALIFIED")
+        if self.admin_state.liquidity_program != self.accounts.liquidity_program:
+            raise FinancingContractError("JUPITER_LEND_LIQUIDITY_PROGRAM_MISMATCH")
         if len(set(self.monitored_accounts)) != len(self.monitored_accounts):
             raise FinancingContractError("duplicate monitored account")
 

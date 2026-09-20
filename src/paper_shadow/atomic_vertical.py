@@ -36,6 +36,7 @@ from src.execution.economic_reconciliation import (
     EconomicReconciler,
     MarginfiRepaymentObservation,
     NativeObservation,
+    ReconciliationEvidence,
     ReconciliationReport,
     TokenObservation,
     evidence_from_exact_simulation,
@@ -100,6 +101,19 @@ class AtomicVerticalCandidate:
     marginfi_registry: MarginfiRegistrySnapshot | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class DecodedFinancingEconomics:
+    evidence: ReconciliationEvidence
+    evidence_hash: str
+
+    def __post_init__(self) -> None:
+        if (
+            len(self.evidence_hash) != 64
+            or any(ch not in "0123456789abcdef" for ch in self.evidence_hash)
+        ):
+            raise ValueError("financing decoded evidence hash must be sha256")
+
+
 class FinancingRepaymentDecoder(Protocol):
     lender_id: str
     program_id: str
@@ -110,7 +124,7 @@ class FinancingRepaymentDecoder(Protocol):
         self,
         finalized: FinalizedSimulation,
         candidate: AtomicVerticalCandidate,
-    ) -> FinancingRepaymentBundle: ...
+    ) -> DecodedFinancingEconomics: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,16 +201,31 @@ class AtomicPlannerSimulationReconciliationVertical:
             serialized_submission_message=serialized_message,
         )
 
-        financing_repayment = None
+        decoded_financing: DecodedFinancingEconomics | None = None
         if self.financing_decoder is not None:
-            if candidate.pre_state_accounts is not None:
+            if (
+                candidate.pre_state_accounts is not None
+                or candidate.native_observations
+                or candidate.token_observations
+                or candidate.marginfi_observation is not None
+                or candidate.decoded_account_hashes
+                or candidate.decode_policy is not None
+                or candidate.valuation is not None
+                or candidate.marginfi_registry is not None
+            ):
                 raise AtomicVerticalError(
                     AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
-                    "generic financing decoder cannot reuse MarginFi raw-state policy",
+                    "generic financing decoder must own all economic observations",
                 )
-            financing_repayment = self.financing_decoder.decode(finalized, candidate)
+            decoded_financing = self.financing_decoder.decode(finalized, candidate)
+            financing = decoded_financing.evidence.financing
+            if financing is None:
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "financing decoder omitted financing repayment bundle",
+                )
             provenance = planner_result.provenance
-            primary = financing_repayment.primary
+            primary = financing.primary
             expected_program = provenance.financing_program_id
             expected_generation = provenance.financing_deployment_generation
             if (
@@ -206,10 +235,16 @@ class AtomicPlannerSimulationReconciliationVertical:
                 or expected_generation is None
                 or primary.deployment_generation != expected_generation
                 or primary.message_hash != message_hash
+                or primary.debt_before_base_units != provenance.borrow_amount
+                or primary.required_repayment_base_units
+                != provenance.required_repayment
+                or provenance.financing_obligation_digest is None
+                or primary.obligation_digest
+                != provenance.financing_obligation_digest
             ):
                 raise AtomicVerticalError(
                     AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
-                    "primary financing decoder output is not bound to plan identity",
+                    "primary financing economics differ from planned obligation",
                 )
             expected_aux = set(provenance.auxiliary_financing_identities)
             actual_aux = {
@@ -218,11 +253,11 @@ class AtomicPlannerSimulationReconciliationVertical:
                     item.program_id,
                     item.deployment_generation,
                 )
-                for item in financing_repayment.auxiliary
+                for item in financing.auxiliary
             }
             if actual_aux != expected_aux or any(
                 item.message_hash != message_hash
-                for item in financing_repayment.auxiliary
+                for item in financing.auxiliary
             ):
                 raise AtomicVerticalError(
                     AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
@@ -232,7 +267,10 @@ class AtomicPlannerSimulationReconciliationVertical:
         try:
             raw_state = None
             raw_hash = None
-            if candidate.pre_state_accounts is not None:
+            if decoded_financing is not None:
+                evidence = decoded_financing.evidence
+                raw_hash = decoded_financing.evidence_hash
+            elif candidate.pre_state_accounts is not None:
                 if (
                     candidate.native_observations
                     or candidate.token_observations
@@ -264,10 +302,9 @@ class AtomicPlannerSimulationReconciliationVertical:
                     tokens=candidate.token_observations,
                     marginfi=candidate.marginfi_observation,
                     decoded_account_hashes=candidate.decoded_account_hashes,
-                    required_accounts=candidate.required_accounts,
+                    required_accounts=evidence.required_accounts,
                     tip_lamports=candidate.tip_lamports,
                     protocol_fees=candidate.protocol_fees,
-                    financing=financing_repayment,
                 )
         except ValueError as exc:
             raise AtomicVerticalError(
@@ -336,9 +373,13 @@ class AtomicPlannerSimulationReconciliationVertical:
             qualification=qualification,
             raw_evidence_hash=raw_hash,
             evidence_origin=(
-                "decoder_owned_offline"
-                if raw_state is not None
-                else "legacy_observations_unqualified"
+                "financing_decoder_owned"
+                if decoded_financing is not None
+                else (
+                    "decoder_owned_offline"
+                    if raw_state is not None
+                    else "legacy_observations_unqualified"
+                )
             ),
         )
 
@@ -404,5 +445,6 @@ __all__ = [
     "AtomicVerticalRejectionCode",
     "AtomicVerticalResult",
     "AtomicVerticalTrace",
+    "DecodedFinancingEconomics",
     "FinancingRepaymentDecoder",
 ]

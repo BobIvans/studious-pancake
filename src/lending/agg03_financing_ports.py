@@ -103,8 +103,14 @@ class JupiterLendFinancingSnapshot:
             raise FinancingContractError("JUPITER_LEND_NONZERO_FEE_UNQUALIFIED")
         if self.admin_state.liquidity_program != self.accounts.liquidity_program:
             raise FinancingContractError("JUPITER_LEND_LIQUIDITY_PROGRAM_MISMATCH")
-        if len(set(self.monitored_accounts)) != len(self.monitored_accounts):
-            raise FinancingContractError("duplicate monitored account")
+        required = str(self.accounts.flashloan_admin)
+        normalized = tuple(dict.fromkeys((*self.monitored_accounts, required)))
+        object.__setattr__(self, "monitored_accounts", normalized)
+
+
+    @property
+    def required_monitored_accounts(self) -> tuple[str, ...]:
+        return (str(self.accounts.flashloan_admin),)
 
 
 @dataclass(frozen=True, slots=True)
@@ -116,6 +122,11 @@ class SlumlordFinancingSnapshot:
     def __post_init__(self) -> None:
         _sha(self.evidence_sha256, "evidence_sha256")
         _sha(self.state_fingerprint, "state_fingerprint")
+
+
+    @property
+    def required_monitored_accounts(self) -> tuple[str, ...]:
+        return (str(SLUMLORD_PDA),)
 
 
 class JupiterLendFinancingPort:

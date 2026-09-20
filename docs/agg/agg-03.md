@@ -1,25 +1,28 @@
 # AGG-03 — Jupiter Lend, Slumlord и installed paper pipeline
 
-Статус этого change-set: **IN_PROGRESS / IMPLEMENTED_OFFLINE**.
+Статус после post-AGG reconciliation: **MERGED_CODE / operationally BLOCKED**.
 
-Этот PR является независимой, mergeable частью AGG-03. Он не объявляет весь
-AGG-03 завершённым и не меняет operational/live status.
+Исторический AGG-03 PR #495 был source-level/default-off tranche. Текущий
+reconciliation закрывает его code-integration debt поверх merged AGG-01…15,
+не меняя operational/live status.
 
 ## Base и effect boundary
 
-- base: main at 0c4f216a62d62b20f6fb4ec4bbd0548cea58df65
-- branch: codex/agg-20260920-03
-- effect scope: LOCAL_BUILD_TEST only for the new adapters
+- historical implementation base: main at 0c4f216a62d62b20f6fb4ec4bbd0548cea58df65
+- AGG-03 merge commit: 693afe31c4cb5d2aa63b84c7aa40c88b115e3c0b
+- reconciliation input main: 27875850a88edf102c904e31955e0df8b78b13b4
+- effect scope: DEFAULT_OFF_NO_SIGN_NO_SEND
 - SIGN: отсутствует
 - SEND: отсутствует
 - live activation: отсутствует
 
-На base installed paper path по-прежнему создаёт
-CoreV1ReleaseProfile(lender="marginfi") и передаёт dependencies=None.
-Это не изменяется данным PR, потому что canonical planner, exact-attempt
-provider evidence и raw economic reconciliation всё ещё содержат MarginFi-
-specific contracts. Подмена только runtime resolver без миграции этих owners
-создала бы второй, недоказанный путь.
+Исторический tranche не менял installed path. После AGG-01 и этого
+post-merge closure lender-neutral FinancingPort теперь подключается к тому же
+canonical planner/simulator/orchestrator/lifecycle/capital path. Jupiter Lend
+является PRIMARY obligation, Slumlord — RENT obligation; оба входят в одну
+immutable final-message sequence. Generic repayment проверяется только после
+exact final simulation через lender-specific decoder. Legacy MarginFi остаётся
+отдельным generation-1 profile и не переименовывается.
 
 ## Реализовано
 
@@ -100,37 +103,51 @@ Package integrity/license для npm helper не объявляются пров
 | NF-155..158, NF-167 | BLOCKED | canonical installed planner/request/economic evidence remain MarginFi-specific |
 | NF-160..162 | EXISTING/PARTIAL | existing firewall retained; financing-specific full-message proof not yet integrated |
 
-## Exact blockers before AGG-03 can be COMPLETE
+## Current closure and remaining qualification blockers
 
-1. **AGG03_GENERIC_FINANCING_SEAM_MISSING** — CoreV1Dependencies,
-   AtomicPlannerRequest/Planner provenance, ProviderExecutionEvidence and raw
-   reconciliation still encode MarginFi as the financing authority.
-2. **AGG03_PREREQUISITE_EQUIVALENCE_UNPROVEN** — AGG-01 and AGG-02 are required
-   package dependencies by the master plan, but current main contains no merged
-   AGG-01/AGG-02 identities. Existing historical owners must be reconciled before
-   migration rather than duplicated.
-3. **AGG03_JUPITER_LEND_RUNTIME_STATE_UNQUALIFIED** — the public IDL is pinned,
-   but reserve/liquidity/rate-model/vault account closure, live fee/status
-   evidence and package-integrity decision are not yet bound to the installed
-   runtime.
-4. **AGG03_SLUM_DEPLOYMENT_UNQUALIFIED** — pinned source is sufficient for
-   source-level builders, not for deployed executable hash, current PDA balance,
-   account owner observation or network compatibility.
-5. **AGG03_FULL_MESSAGE_COMPATIBILITY_UNPROVEN** — Slumlord CheckRepaid and
-   Jupiter Lend payback constraints require exact final-message proof; guessing
-   an order is forbidden.
-6. **AGG03_ACCOUNT_LIFECYCLE_NOT_INTEGRATED** — ATA/WSOL/rent prefix solvency,
-   shared Slumlord resource reservation and protected-inventory proof are not
-   wired into canonical owners.
+Закрытый code debt:
+
+1. AGG-01 и AGG-02 имеют canonical merge receipts; historical prerequisite
+   inversion сохранён только как audit fact.
+2. `FinancingPort` имеет concrete Jupiter Lend PRIMARY и Slumlord RENT
+   adapters поверх pinned source contracts.
+3. Canonical atomic planner принимает lender-neutral PRIMARY financing и
+   auxiliary Slumlord rent financing в одной immutable sequence:
+   `rent borrow → setup → primary borrow → swaps → primary repay → cleanup →
+   rent repay → CheckRepaid`.
+4. Provider evidence и planner provenance связаны с lender/program/deployment
+   generation.
+5. Economic reconciliation принимает primary + auxiliary repayment bundle,
+   но только из post-simulation lender decoder.
+6. CORE-V1 composition может собрать generic path без второй lifecycle/capital/
+   planner authority при наличии qualified primary evidence, rent evidence и
+   repayment decoder.
+
+Оставшиеся blockers являются external qualification, а не отсутствующим
+code seam:
+
+- **AGG03_JUPITER_LEND_RUNTIME_STATE_UNQUALIFIED** — нужен текущий deployment/
+  reserve/liquidity/rate-model/vault evidence и qualified repayment decoder.
+- **AGG03_SLUM_DEPLOYMENT_UNQUALIFIED** — нужен deployed executable/PDA owner/
+  balance evidence на выбранной generation.
+- **AGG03_LOADED_STATE_FULL_MESSAGE_UNQUALIFIED** — нужны loaded-state/fork
+  vectors для полного Jupiter + Slumlord + route message.
+- **AGG03_ACCOUNT_LIFECYCLE_EVIDENCE_MISSING** — ATA/WSOL/rent prefix solvency
+  и protected-inventory behavior должны быть подтверждены exact campaign
+  evidence, а не только code tests.
+
+Эти blockers не должны превращаться в `production_ready` от одного CI pass.
 
 ## Next resume
 
 RESUME
 AGG_ID: AGG-03
-branch: codex/agg-20260920-03
-base_sha: 0c4f216a62d62b20f6fb4ec4bbd0548cea58df65
-implementation_status: IMPLEMENTED_OFFLINE for Slumlord/Jupiter-Lend low-level adapters; AGG-03 overall IN_PROGRESS
-operational_status: UNQUALIFIED
-completed evidence: source pins, unsigned builders, state/order checks, focused tests
-next concrete change: migrate the canonical financing request/evidence seam in the AGG-01 compatible owner, then supply a verified installed dependency resolver instead of dependencies=None
-do not: create a second runtime/planner/ledger, fake provider evidence, enable live, sign or send
+merge_commit: 693afe31c4cb5d2aa63b84c7aa40c88b115e3c0b
+reconciliation_input_main: 27875850a88edf102c904e31955e0df8b78b13b4
+implementation_status: MERGED_CODE with lender-neutral PRIMARY+RENT composition
+operational_status: BLOCKED
+completed code evidence: pinned adapters, FinancingPort bridges, one-message planner
+composition, post-simulation repayment bundle, fail-closed exact identities
+remaining evidence: Jupiter Lend deployed state/decoder, Slumlord deployment/PDA,
+loaded-state full-message vectors, lifecycle/rent campaign evidence
+do not: fake provider evidence, relabel MarginFi, enable live, sign or send

@@ -248,9 +248,10 @@ def test_super01_verifier_maps_all_children_without_claiming_live() -> None:
     assert evidence["nf_count"] == 88
     assert evidence["operational_qualified"] is False
     assert evidence["live_enabled"] is False
-    assert "SUPER01_V1_PROVIDER_SDK_CODEC_NOT_QUALIFIED" in evidence[
-        "operational_blockers"
-    ]
+    assert (
+        "SUPER01_V1_PROVIDER_SDK_CODEC_NOT_QUALIFIED"
+        in evidence["operational_blockers"]
+    )
 
 
 def test_revision_must_reference_known_prior_fact() -> None:

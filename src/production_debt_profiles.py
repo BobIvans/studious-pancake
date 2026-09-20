@@ -202,6 +202,7 @@ def evaluate_core_v1_profile_debt(
     profile = CoreV1ReleaseProfile.load(selected_profile)
     report = global_report or evaluate_production_debt(repo_root=root)
     code = inspect_core_v1_code(root)
+    composition = _text(root / "src/runtime/core_v1_composition.py")
 
     irrelevant = set(ALWAYS_IRRELEVANT_CORE_V1)
     if profile.lender != "marginfi":

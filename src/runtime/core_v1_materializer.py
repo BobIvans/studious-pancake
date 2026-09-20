@@ -233,6 +233,13 @@ class CoreV1AttemptMaterializer:
             and draft.wallet_snapshot.wallet_pubkey != self.config.wallet.public_key
         ):
             raise ValueError("CORE_V1_WALLET_IDENTITY_MISMATCH")
+        if self.profile.lender != "marginfi":
+            if draft.provider_evidence.financing_lender != self.profile.lender:
+                raise ValueError("CORE_V1_PROVIDER_FINANCING_LENDER_MISMATCH")
+            if draft.provider_evidence.financing_program_hash is None:
+                raise ValueError("CORE_V1_PROVIDER_FINANCING_PROGRAM_HASH_REQUIRED")
+        elif draft.provider_evidence.financing_lender is not None:
+            raise ValueError("CORE_V1_LEGACY_PROVIDER_FINANCING_IDENTITY_FORBIDDEN")
         blockers = draft.provider_evidence.blockers(
             now_ns=(
                 draft.wallet_snapshot.captured_at_ns

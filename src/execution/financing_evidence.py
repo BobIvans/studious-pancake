@@ -72,9 +72,7 @@ class FinancingRepaymentEvidence:
     def __post_init__(self) -> None:
         _text(self.attempt_id, "attempt_id")
         if type(self.attempt_generation) is not int or self.attempt_generation < 1:
-            raise FinancingEvidenceError(
-                "attempt_generation must be positive integer"
-            )
+            raise FinancingEvidenceError("attempt_generation must be positive integer")
         _sha(self.message_hash, "message_hash")
         for value, label in (
             (self.lender_id, "lender_id"),

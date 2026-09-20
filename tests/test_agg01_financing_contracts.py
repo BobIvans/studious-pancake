@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -17,6 +18,9 @@ from src.lending.financing import (
     FinancingRole,
     validate_financing_binding,
 )
+from src.lending.jupiter_lend import JUPITER_LEND_FLASHLOAN_PROGRAM_ID
+from src.lending.slumlord import SLUMLORD_PROGRAM_ID
+from src.production_debt_profiles import evaluate_core_v1_profile_debt
 from src.runtime.core_v1_composition import build_core_v1_composition
 from src.runtime.core_v1_materializer import (
     CORE_V1_BLOCKED_EXTERNAL,
@@ -121,6 +125,7 @@ def test_new_lender_profile_reuses_authority_but_has_no_marginfi_planner(
 
 class _Validator:
     lender_id = "jupiter-lend"
+    program_id = "program"
     deployment_generation = 2
     decoder_identity = "jupiter-lend-decoder-v1"
 
@@ -154,6 +159,18 @@ def test_generic_repayment_requires_exact_decoder() -> None:
     assert decision.reason == "FINANCING_DECODER_REQUIRED"
 
 
+class _WrongProgramValidator(_Validator):
+    program_id = "other-program"
+
+
+def test_generic_repayment_rejects_wrong_financing_program() -> None:
+    decision = validate_financing_repayment(
+        _repayment(), (_WrongProgramValidator(),)
+    )
+    assert decision.proven is False
+    assert decision.reason == "FINANCING_PROGRAM_MISMATCH"
+
+
 def test_protocol_decoder_can_prove_and_bind_finalized_evidence() -> None:
     decision = validate_financing_repayment(_repayment(), (_Validator(),))
     assert decision.proven is True
@@ -165,3 +182,85 @@ def test_protocol_decoder_can_prove_and_bind_finalized_evidence() -> None:
         repayment=decision,
     )
     assert len(finalized.digest) == 64
+
+def test_non_marginfi_profile_cannot_qualify_before_composition_adapter(
+    tmp_path: Path,
+) -> None:
+    root = Path(".").resolve()
+    payload = json.loads(
+        (root / "config/release_profiles/core-marginfi-jupiter-v1.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    payload["profile_id"] = "core-jupiter-lend-jupiter-v1"
+    payload["lender"] = "jupiter-lend"
+    payload["profile_generation"] = 2
+    profile_path = tmp_path / "jupiter-lend-profile.json"
+    profile_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    report = evaluate_core_v1_profile_debt(
+        repo_root=root,
+        profile_path=profile_path,
+    )
+    reasons = {
+        str(item.get("reason", ""))
+        for item in report.implementation_blockers
+        + report.external_or_review_blockers
+    }
+    assert "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED" in reasons
+    assert "CORE_V1_FINANCING_EVIDENCE_NOT_QUALIFIED" in reasons
+    assert report.paper_qualified is False
+    assert report.eligible_for_production_default_off_review is False
+
+
+@pytest.mark.parametrize(
+    ("lender_id", "program_id", "role", "asset_id"),
+    (
+        (
+            "jupiter-lend",
+            str(JUPITER_LEND_FLASHLOAN_PROGRAM_ID),
+            FinancingRole.PRIMARY,
+            "spl:USDC:6",
+        ),
+        (
+            "slumlord",
+            str(SLUMLORD_PROGRAM_ID),
+            FinancingRole.RENT,
+            "sol:lamports",
+        ),
+    ),
+)
+def test_agg03_program_identities_fit_agg01_financing_binding(
+    lender_id: str,
+    program_id: str,
+    role: FinancingRole,
+    asset_id: str,
+) -> None:
+    evidence = FinancingEvidence(
+        lender_id=lender_id,
+        program_id=program_id,
+        deployment_generation=1,
+        evidence_sha256=SHA_A,
+        decoder_identity=f"{lender_id}-decoder-v1",
+        decoder_generation=1,
+    )
+    obligation = FinancingObligation(
+        obligation_id=f"{lender_id}-obligation",
+        role=role,
+        lender_id=lender_id,
+        program_id=program_id,
+        deployment_generation=1,
+        asset_id=asset_id,
+        principal_base_units=100,
+        required_repayment_base_units=100,
+        evidence_sha256=SHA_A,
+        repayment_destination="verified-destination",
+        instruction_constraints_sha256=SHA_B,
+    )
+    assert validate_financing_binding(
+        lender_id=lender_id,
+        deployment_generation=1,
+        evidence=evidence,
+        obligations=(obligation,),
+    ) == (obligation,)
+

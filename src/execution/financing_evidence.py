@@ -54,6 +54,9 @@ def _digest(payload: object) -> str:
 
 @dataclass(frozen=True, slots=True)
 class FinancingRepaymentEvidence:
+    attempt_id: str
+    attempt_generation: int
+    message_hash: str
     lender_id: str
     program_id: str
     deployment_generation: int
@@ -67,6 +70,12 @@ class FinancingRepaymentEvidence:
     observed_repayment_base_units: int
 
     def __post_init__(self) -> None:
+        _text(self.attempt_id, "attempt_id")
+        if type(self.attempt_generation) is not int or self.attempt_generation < 1:
+            raise FinancingEvidenceError(
+                "attempt_generation must be positive integer"
+            )
+        _sha(self.message_hash, "message_hash")
         for value, label in (
             (self.lender_id, "lender_id"),
             (self.program_id, "program_id"),
@@ -95,6 +104,9 @@ class FinancingRepaymentEvidence:
     def digest(self) -> str:
         return _digest(
             {
+                "attempt_id": self.attempt_id,
+                "attempt_generation": self.attempt_generation,
+                "message_hash": self.message_hash,
                 "lender_id": self.lender_id,
                 "program_id": self.program_id,
                 "deployment_generation": self.deployment_generation,
@@ -113,6 +125,9 @@ class FinancingRepaymentEvidence:
 @dataclass(frozen=True, slots=True)
 class RepaymentDecision:
     proven: bool
+    attempt_id: str
+    attempt_generation: int
+    message_hash: str
     lender_id: str
     program_id: str
     deployment_generation: int
@@ -144,6 +159,9 @@ def validate_financing_repayment(
     if len(decoder_matches) != 1:
         return RepaymentDecision(
             False,
+            evidence.attempt_id,
+            evidence.attempt_generation,
+            evidence.message_hash,
             evidence.lender_id,
             evidence.program_id,
             evidence.deployment_generation,
@@ -155,6 +173,9 @@ def validate_financing_repayment(
     if validator.program_id != evidence.program_id:
         return RepaymentDecision(
             False,
+            evidence.attempt_id,
+            evidence.attempt_generation,
+            evidence.message_hash,
             evidence.lender_id,
             evidence.program_id,
             evidence.deployment_generation,
@@ -165,6 +186,9 @@ def validate_financing_repayment(
     if not validator.validate(evidence):
         return RepaymentDecision(
             False,
+            evidence.attempt_id,
+            evidence.attempt_generation,
+            evidence.message_hash,
             evidence.lender_id,
             evidence.program_id,
             evidence.deployment_generation,
@@ -174,6 +198,9 @@ def validate_financing_repayment(
         )
     return RepaymentDecision(
         True,
+        evidence.attempt_id,
+        evidence.attempt_generation,
+        evidence.message_hash,
         evidence.lender_id,
         evidence.program_id,
         evidence.deployment_generation,
@@ -199,6 +226,12 @@ class FinalizedFinancingEvidence:
         _uint(self.finalized_slot, "finalized_slot")
         if not self.repayment.proven:
             raise FinancingEvidenceError("FINALIZED_FINANCING_REPAYMENT_NOT_PROVEN")
+        if self.repayment.attempt_id != self.attempt_id:
+            raise FinancingEvidenceError("FINALIZED_FINANCING_ATTEMPT_MISMATCH")
+        if self.repayment.attempt_generation != self.attempt_generation:
+            raise FinancingEvidenceError("FINALIZED_FINANCING_GENERATION_MISMATCH")
+        if self.repayment.message_hash != self.message_hash:
+            raise FinancingEvidenceError("FINALIZED_FINANCING_MESSAGE_MISMATCH")
 
     @property
     def digest(self) -> str:
@@ -209,6 +242,9 @@ class FinalizedFinancingEvidence:
                 "message_hash": self.message_hash,
                 "finalized_slot": self.finalized_slot,
                 "repayment_evidence_digest": self.repayment.evidence_digest,
+                "repayment_attempt_id": self.repayment.attempt_id,
+                "repayment_attempt_generation": self.repayment.attempt_generation,
+                "repayment_message_hash": self.repayment.message_hash,
                 "lender_id": self.repayment.lender_id,
                 "program_id": self.repayment.program_id,
                 "deployment_generation": self.repayment.deployment_generation,

@@ -217,6 +217,8 @@ def test_clmm_exact_tick_arrays_reference_and_orca_license():
             loaded_arrays=("ta-1",),
             fee_ppm=0,
             evidence=evidence(),
+            market_id="pool-1",
+            direction="a-to-b",
             amount_in=750,
             now=200,
             reference_out=1_375,

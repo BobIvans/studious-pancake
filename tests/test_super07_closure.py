@@ -72,3 +72,23 @@ def test_super07_requires_exact_operational_blockers() -> None:
     duplicate["blockers"].append(duplicate["blockers"][0])
     result = api()["verify_payload"](duplicate, root=ROOT)
     assert "OPERATIONAL_BLOCKER_DUPLICATE" in result["errors"]
+
+
+def test_super07_rejects_per_child_disposition_corruption() -> None:
+    broken = deepcopy(payload())
+    broken["children"][7]["implementation_status"] = "SATISFIED_BY_EXISTING"
+    result = api()["verify_payload"](broken, root=ROOT)
+    assert result["ok"] is False
+    assert (
+        "PR-136:CHILD_MAPPING_MISMATCH:implementation_status"
+        in result["errors"]
+    )
+
+    research = deepcopy(payload())
+    research["children"][5]["qualification_status"] = "UNQUALIFIED"
+    result = api()["verify_payload"](research, root=ROOT)
+    assert result["ok"] is False
+    assert (
+        "PR-134:CHILD_MAPPING_MISMATCH:qualification_status"
+        in result["errors"]
+    )

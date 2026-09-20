@@ -161,6 +161,7 @@ def test_nf272_evm_cycle_requires_state_continuity_and_gas() -> None:
         7,
         True,
         True,
+        1,
     )
     assert qualify_evm_cycle(good).admitted
 
@@ -190,6 +191,18 @@ def test_nf272_evm_cycle_requires_state_continuity_and_gas() -> None:
     losing_decision = qualify_evm_cycle(losing)
     assert "EVM_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in losing_decision.blockers
     assert "EVM_CONSERVATIVE_NET_NONPOSITIVE" in losing_decision.blockers
+
+    gas_dominated = replace(
+        good,
+        gas_cost_base_units=20,
+        conservative_net_base_units=1,
+    )
+    gas_dominated_decision = qualify_evm_cycle(gas_dominated)
+    assert "EVM_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in gas_dominated_decision.blockers
+    assert "EVM_CONSERVATIVE_NET_NONPOSITIVE" in gas_dominated_decision.blockers
+
+    gas_unproven = replace(good, gas_cost_base_units=None)
+    assert "EVM_GAS_COST_UNPROVEN" in qualify_evm_cycle(gas_unproven).blockers
 
     decimal_mismatch = replace(
         good,
@@ -603,6 +616,8 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
             2,
             1000,
             900,
+            H1,
+            H2,
         ),
         SuiObjectTransition(
             "0x1",
@@ -610,6 +625,8 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
             3,
             900,
             850,
+            H2,
+            H3,
         ),
     )
     good = SuiCycleEvidence(
@@ -621,7 +638,8 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
         50,
         40,
         5,
-        5,
+        4,
+        1,
     )
     assert qualify_sui_book(good).admitted
 
@@ -680,6 +698,8 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
                 4,
                 850,
                 800,
+                H3,
+                H4,
             ),
         ),
     )
@@ -700,6 +720,28 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
     losing_decision = qualify_sui_book(losing)
     assert "SUI_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in losing_decision.blockers
     assert "SUI_CONSERVATIVE_NET_NONPOSITIVE" in losing_decision.blockers
+
+    gas_dominated = replace(
+        good,
+        gas_cost_base_units=20,
+        conservative_net_base_units=1,
+    )
+    gas_dominated_decision = qualify_sui_book(gas_dominated)
+    assert "SUI_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in gas_dominated_decision.blockers
+    assert "SUI_CONSERVATIVE_NET_NONPOSITIVE" in gas_dominated_decision.blockers
+
+    gas_unproven = replace(good, gas_cost_base_units=None)
+    assert "SUI_GAS_COST_UNPROVEN" in qualify_sui_book(gas_unproven).blockers
+
+    unrelated_state = replace(
+        good,
+        object_transitions=(
+            replace(transitions[0], state_after_sha256=H4),
+            transitions[1],
+        ),
+    )
+    unrelated_decision = qualify_sui_book(unrelated_state)
+    assert "SUI_OBJECT_0_STATE_AFTER_MISMATCH" in unrelated_decision.blockers
 
 
 def test_nf287_sui_fee_chooses_best_net_not_highest_bid() -> None:

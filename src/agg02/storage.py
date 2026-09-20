@@ -342,3 +342,57 @@ class AnalyticalDatasetPublisher:
             raise Agg02Error("AGG02_DATASET_MISSING")
         if hashlib.sha256(path.read_bytes()).hexdigest() != manifest.sha256:
             raise Agg02Error("AGG02_DATASET_CHECKSUM_MISMATCH")
+
+
+class DatasetReplayReader:
+    """Checksum/schema-bound analytical replay with optional as-known cutoff."""
+
+    @staticmethod
+    def read(
+        manifest: DatasetManifest,
+        *,
+        expected_schema_version: str | None = None,
+        max_available_at_ms: int | None = None,
+    ) -> tuple[dict[str, object], ...]:
+        AnalyticalDatasetPublisher.verify(manifest)
+        if (
+            expected_schema_version is not None
+            and manifest.schema_version != expected_schema_version
+        ):
+            raise Agg02Error("AGG02_REPLAY_SCHEMA_MISMATCH")
+        if max_available_at_ms is not None and (
+            type(max_available_at_ms) is not int or max_available_at_ms < 0
+        ):
+            raise Agg02Error("AGG02_REPLAY_CUTOFF_INVALID")
+        try:
+            import pyarrow.parquet as pq
+        except ImportError as exc:
+            raise Agg02Error("AGG02_ANALYTICS_EXTRA_REQUIRED") from exc
+
+        rows = tuple(dict(row) for row in pq.read_table(manifest.path).to_pylist())
+        if len(rows) != manifest.row_count:
+            raise Agg02Error("AGG02_REPLAY_ROW_COUNT_MISMATCH")
+        available_values = [
+            value
+            for row in rows
+            if (
+                isinstance((value := row.get("available_at_ms")), int)
+                and not isinstance(value, bool)
+            )
+        ]
+        if available_values and (
+            min(available_values) != manifest.min_available_at_ms
+            or max(available_values) != manifest.max_available_at_ms
+        ):
+            raise Agg02Error("AGG02_REPLAY_AVAILABILITY_RANGE_MISMATCH")
+        if max_available_at_ms is None:
+            return rows
+
+        selected: list[dict[str, object]] = []
+        for row in rows:
+            available_at = row.get("available_at_ms")
+            if not isinstance(available_at, int) or isinstance(available_at, bool):
+                raise Agg02Error("AGG02_REPLAY_AVAILABLE_AT_REQUIRED")
+            if available_at <= max_available_at_ms:
+                selected.append(row)
+        return tuple(selected)

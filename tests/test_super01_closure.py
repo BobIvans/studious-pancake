@@ -296,6 +296,88 @@ def test_revision_cannot_change_market_or_effective_identity() -> None:
         )
 
 
+def test_superseding_revision_must_strictly_increase() -> None:
+    original = _fact(
+        "original",
+        "market",
+        MarketLifecycleState.ACTIVE,
+        100,
+        100,
+        revision=2,
+    )
+    stale_correction = _fact(
+        "stale-correction",
+        "market",
+        MarketLifecycleState.UNKNOWN,
+        100,
+        150,
+        revision=1,
+        supersedes_event_id="original",
+    )
+    with pytest.raises(
+        Agg02Error,
+        match="SUPER01_SUPERSESSION_REVISION_NOT_INCREASING",
+    ):
+        materialize_market_membership(
+            (original, stale_correction),
+            dataset_revision=2,
+            knowledge_cutoff_ms=200,
+        )
+
+
+def test_survivorship_audit_includes_known_future_lifecycle_changes() -> None:
+    active_a = _fact(
+        "a-active",
+        "a",
+        MarketLifecycleState.ACTIVE,
+        100,
+        100,
+    )
+    active_b = _fact(
+        "b-active",
+        "b",
+        MarketLifecycleState.ACTIVE,
+        100,
+        100,
+    )
+    known_future_close = _fact(
+        "a-close",
+        "a",
+        MarketLifecycleState.CLOSED,
+        200,
+        120,
+    )
+    known_future_migration = _fact(
+        "b-migrate",
+        "b",
+        MarketLifecycleState.MIGRATED,
+        220,
+        130,
+        related_market_id="b-v2",
+    )
+    facts = (
+        active_a,
+        active_b,
+        known_future_close,
+        known_future_migration,
+    )
+    manifest = select_universe_as_known(
+        facts,
+        experiment_time_ms=150,
+        knowledge_cutoff_ms=150,
+        dataset_revision=1,
+    )
+    assert manifest.included_market_ids == ("a", "b")
+
+    audit = audit_universe_survivorship(
+        manifest,
+        facts,
+        result_market_ids=("a", "b"),
+    )
+    assert audit.later_closed == ("a",)
+    assert audit.later_migrated == ("b",)
+
+
 def test_survivorship_audit_resolves_post_cutoff_revisions() -> None:
     initial = _fact(
         "market-active",

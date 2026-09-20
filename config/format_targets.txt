@@ -267,3 +267,7 @@ src/execution/financing_evidence.py
 src/release_gate/agg01_foundation.py
 tests/test_agg01_foundation.py
 tests/test_agg01_financing_contracts.py
+src/cross_chain/agg12.py
+tests/test_agg12_multichain_qualification.py
+scripts/verify_super07_closure.py
+tests/test_super07_closure.py

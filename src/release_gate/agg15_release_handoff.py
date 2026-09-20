@@ -31,7 +31,9 @@ EXTENSION_SCOPE_ROWS = (
     *((f"NF-{index:03d}", "FORMAT-02", "PR-078") for index in range(349, 353)),
 )
 EXTENSION_NF_OWNERS = {nf_id: owner for nf_id, owner, _ in EXTENSION_SCOPE_ROWS}
-EXTENSION_SOURCE_PRS = {nf_id: source_pr for nf_id, _, source_pr in EXTENSION_SCOPE_ROWS}
+EXTENSION_SOURCE_PRS = {
+    nf_id: source_pr for nf_id, _, source_pr in EXTENSION_SCOPE_ROWS
+}
 CANONICAL_PRODUCT_OWNER = "src.research.product"
 CANONICAL_PRODUCT_ACCOUNTING_OWNER = "RevenueAttributionLedger"
 EXPECTED_EVOLUTION_STAGES = (

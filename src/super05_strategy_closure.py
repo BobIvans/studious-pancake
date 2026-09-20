@@ -282,7 +282,9 @@ def _validate_artifacts(
             errors.append(f"SUPER05_ARTIFACT_MISSING:{agg_id}")
             continue
         primary = payload.get("primary_nf")
-        if not isinstance(primary, list) or not all(isinstance(item, str) for item in primary):
+        if not isinstance(primary, list) or not all(
+            isinstance(item, str) for item in primary
+        ):
             errors.append(f"SUPER05_ARTIFACT_PRIMARY_NF_INVALID:{agg_id}")
             continue
         absent = sorted(required - set(primary))

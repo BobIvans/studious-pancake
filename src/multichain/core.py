@@ -212,6 +212,14 @@ class ChainCapabilityRegistry:
                     "CAPABILITY_CHAIN_MISMATCH",
                     "capability chain/dialect mismatch",
                 )
+            if capability.deployment is not None and (
+                capability.deployment.chain_key != capability.chain_key
+                or capability.deployment.protocol != capability.protocol
+            ):
+                raise MultiChainError(
+                    "CAPABILITY_DEPLOYMENT_MISMATCH",
+                    "deployment chain/protocol does not match capability",
+                )
         self.chains = chains
         self.capabilities = capabilities
         self._chain = known
@@ -309,12 +317,20 @@ class ChainCapabilityRegistry:
                 f"{effect.value} is not allowed",
                 stage="authorization",
             )
-        if effect in {Effect.SIGN, Effect.SEND} and not capability.externally_executable:
-            raise MultiChainError(
-                "CAPABILITY_NOT_OPERATIONALLY_QUALIFIED",
-                f"{capability_id} remains default-off",
-                stage="authorization",
-            )
+        if effect in {Effect.SIGN, Effect.SEND}:
+            chain = self.chain(capability.chain_key)
+            if not chain.operationally_pinned:
+                raise MultiChainError(
+                    "CHAIN_NOT_OPERATIONALLY_PINNED",
+                    f"{capability.chain_key} is not pinned for external effects",
+                    stage="authorization",
+                )
+            if not capability.externally_executable:
+                raise MultiChainError(
+                    "CAPABILITY_NOT_OPERATIONALLY_QUALIFIED",
+                    f"{capability_id} remains default-off",
+                    stage="authorization",
+                )
         return capability
 
     @property

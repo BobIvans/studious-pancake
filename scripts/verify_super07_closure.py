@@ -205,6 +205,8 @@ def verify_payload(
         errors.append("SUPER_ID_MISMATCH")
     if tuple(payload.get("w2_packages", ())) != EXPECTED_W2:
         errors.append("W2_PACKAGE_SET_MISMATCH")
+    if payload.get("source_pr_range") != "PR-129..PR-144":
+        errors.append("SOURCE_PR_RANGE_MISMATCH")
     if payload.get("live_enabled") is not False:
         errors.append("LIVE_MUST_REMAIN_DISABLED")
     if payload.get("operational_qualified") is not False:

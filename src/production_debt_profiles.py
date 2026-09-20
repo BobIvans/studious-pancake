@@ -216,7 +216,12 @@ def evaluate_core_v1_profile_debt(
     implementation: list[dict[str, Any]] = []
     external: list[dict[str, Any]] = []
     ignored: list[str] = []
-    if profile.lender != "marginfi":
+    legacy_marginfi_profile = (
+        profile.profile_id == CORE_V1_PROFILE_ID
+        and profile.lender == "marginfi"
+        and profile.profile_generation == 1
+    )
+    if not legacy_marginfi_profile:
         implementation.append(
             {
                 "id": "runtime.financing-adapter",

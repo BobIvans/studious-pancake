@@ -53,7 +53,7 @@ def _pin(
 
 
 def _passing_differential():
-    return run_differential_tests((DifferentialCase("v1", SHA_A, SHA_A),))
+    return run_differential_tests((DifferentialCase("v1", SHA_A, SHA_A, SHA_A),))
 
 
 def test_campaign_keeps_slumlord_required_and_marginfi_paused() -> None:
@@ -163,11 +163,27 @@ def test_unknown_license_or_hidden_effects_reject_reuse() -> None:
 
 def test_differential_mismatch_is_not_hidden() -> None:
     with pytest.raises(Agg01ContractError, match="differential"):
-        run_differential_tests((DifferentialCase("v1", SHA_A, SHA_B),))
+        run_differential_tests((DifferentialCase("v1", SHA_A, SHA_A, SHA_B),))
 
 
 def test_reuse_admission_binds_the_exact_vector_set() -> None:
     vectors = VectorSet((ConformanceVector("v2", SHA_A, SHA_A),))
+    with pytest.raises(Agg01ContractError, match="does not bind vector set"):
+        build_reuse_admission(
+            upstream=_pin(),
+            license=LicenseDecision(True, "MIT OR Apache-2.0", True, None),
+            vectors=vectors,
+            differential=_passing_differential(),
+            supply_chain=SupplyChainReview(True, False, False, False),
+            boundary=BoundaryADR(BoundaryMode.PORT_DIFF, True, False, False),
+            adapter=AdapterContract(
+                "slumlord", ("state",), ("unsigned_ix",), True, False, 1
+            ),
+        )
+
+
+def test_reuse_admission_binds_vector_input_digest() -> None:
+    vectors = VectorSet((ConformanceVector("v1", SHA_B, SHA_A),))
     with pytest.raises(Agg01ContractError, match="does not bind vector set"):
         build_reuse_admission(
             upstream=_pin(),

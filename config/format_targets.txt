@@ -267,3 +267,5 @@ src/execution/financing_evidence.py
 src/release_gate/agg01_foundation.py
 tests/test_agg01_foundation.py
 tests/test_agg01_financing_contracts.py
+src/lending/agg03_financing_ports.py
+tests/lending/test_agg03_financing_ports.py

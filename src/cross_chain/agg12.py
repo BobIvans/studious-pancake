@@ -70,7 +70,7 @@ class ChainAsset:
     def identity(self) -> str:
         return (
             f"{self.dialect.value}:{self.chain_id}:"
-            f"{self.identifier}:{self.generation}"
+            f"{self.identifier}:{self.decimals}:{self.generation}"
         )
 
 
@@ -410,10 +410,21 @@ def qualify_evm_cycle(evidence: EvmCycleEvidence) -> AdmissionDecision:
         "approval_cost_base_units",
     )
     _nonnegative(evidence.flash_fee_base_units, "flash_fee_base_units")
-    net = strict_int(
+    claimed_net = strict_int(
         evidence.conservative_net_base_units,
         field="conservative_net_base_units",
     )
+    route_bound = claimed_net
+    if evidence.legs:
+        route_bound = (
+            evidence.legs[-1].guaranteed_out
+            - evidence.legs[0].amount_in
+            - evidence.approval_cost_base_units
+            - evidence.flash_fee_base_units
+        )
+        if claimed_net > route_bound:
+            blockers.append("EVM_CLAIMED_NET_EXCEEDS_ROUTE_BOUND")
+    net = min(claimed_net, route_bound)
     if evidence.funded_gas_units < evidence.required_gas_units:
         blockers.append("EVM_GAS_NOT_FUNDED")
     if net <= 0:
@@ -822,15 +833,34 @@ def qualify_sui_book(evidence: SuiCycleEvidence) -> AdmissionDecision:
         evidence.taker_fee_base_units,
         "taker_fee_base_units",
     )
-    net = strict_int(
+    claimed_net = strict_int(
         evidence.conservative_net_base_units,
         field="conservative_net_base_units",
     )
+    route_bound = claimed_net
+    if evidence.route_legs:
+        if evidence.route_legs[0].amount_in != evidence.borrowed_units:
+            blockers.append("SUI_BORROW_ROUTE_INPUT_MISMATCH")
+        route_bound = (
+            evidence.route_legs[-1].guaranteed_out
+            - evidence.returned_units
+            - evidence.taker_fee_base_units
+        )
+        if claimed_net > route_bound:
+            blockers.append("SUI_CLAIMED_NET_EXCEEDS_ROUTE_BOUND")
+    net = min(claimed_net, route_bound)
     if evidence.returned_units < evidence.borrowed_units:
         blockers.append("SUI_BORROW_NOT_REPAID")
     if evidence.gas_budget_units < evidence.required_gas_units:
         blockers.append("SUI_GAS_NOT_FUNDED")
-    blockers.extend(_sui_object_blockers(evidence.object_transitions))
+    blockers.extend(
+        _sui_object_blockers(
+            evidence.object_transitions,
+            required_resource_ids=tuple(
+                leg.shared_resource_id for leg in evidence.route_legs
+            ),
+        )
+    )
     if net <= 0:
         blockers.append("SUI_CONSERVATIVE_NET_NONPOSITIVE")
     return _decision("NF-286", evidence, blockers, net)
@@ -888,6 +918,7 @@ def choose_sui_gas_option(
         "NF-287",
         {
             "options": normalized,
+            "fee_rule_active": fee_rule_active,
             "deployment_generation": deployment_generation,
             "fee_rule_generation": fee_rule_generation,
         },
@@ -1058,6 +1089,8 @@ def _lending_aware_blockers(
         _nonnegative(getattr(evidence, name), name)
     if evidence.requested_units > evidence.borrow_capacity_units:
         blockers.append(f"{prefix}_CAPACITY_EXCEEDED")
+    if evidence.repay_base_units < evidence.requested_units:
+        blockers.append(f"{prefix}_REPAYMENT_BELOW_BORROW")
     if evidence.residual_debt_units:
         blockers.append(f"{prefix}_RESIDUAL_DEBT")
     return blockers
@@ -1065,8 +1098,12 @@ def _lending_aware_blockers(
 
 def _sui_object_blockers(
     transitions: Sequence[SuiObjectTransition],
+    *,
+    required_resource_ids: Sequence[str] = (),
 ) -> list[str]:
     blockers: list[str] = []
+    if required_resource_ids and not transitions:
+        blockers.append("SUI_OBJECT_TRANSITIONS_MISSING")
     seen: dict[str, SuiObjectTransition] = {}
     for index, transition in enumerate(transitions):
         _text(transition.object_id, "object_id")
@@ -1101,6 +1138,11 @@ def _sui_object_blockers(
                     f"SUI_OBJECT_{index}_LIQUIDITY_RESET"
                 )
         seen[transition.object_id] = transition
+    for resource_id in dict.fromkeys(required_resource_ids):
+        if resource_id not in seen:
+            blockers.append(
+                f"SUI_SHARED_RESOURCE_TRANSITION_MISSING:{resource_id}"
+            )
     return blockers
 
 

@@ -302,7 +302,7 @@ class AtomicPlannerSimulationReconciliationVertical:
                     tokens=candidate.token_observations,
                     marginfi=candidate.marginfi_observation,
                     decoded_account_hashes=candidate.decoded_account_hashes,
-                    required_accounts=evidence.required_accounts,
+                    required_accounts=candidate.required_accounts,
                     tip_lamports=candidate.tip_lamports,
                     protocol_fees=candidate.protocol_fees,
                 )

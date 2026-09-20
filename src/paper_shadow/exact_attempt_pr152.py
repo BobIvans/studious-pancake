@@ -83,6 +83,7 @@ class ProviderExecutionEvidence:
     jupiter_execution_allowed: bool
     marginfi_execution_allowed: bool
     financing_lender: str | None = None
+    financing_program_id: str | None = None
     financing_program_hash: str | None = None
     financing_execution_allowed: bool | None = None
 
@@ -98,6 +99,11 @@ class ProviderExecutionEvidence:
             if not self.financing_lender.strip():
                 raise ValueError("financing_lender must not be blank")
             if (
+                not isinstance(self.financing_program_id, str)
+                or not self.financing_program_id.strip()
+            ):
+                raise ValueError("financing_program_id must be non-blank")
+            if (
                 self.financing_program_hash is None
                 or not _SHA256.fullmatch(self.financing_program_hash)
             ):
@@ -107,7 +113,8 @@ class ProviderExecutionEvidence:
             if type(self.financing_execution_allowed) is not bool:
                 raise ValueError("financing_execution_allowed must be boolean")
         elif (
-            self.financing_program_hash is not None
+            self.financing_program_id is not None
+            or self.financing_program_hash is not None
             or self.financing_execution_allowed is not None
         ):
             raise ValueError("generic financing evidence requires financing_lender")
@@ -144,6 +151,7 @@ class ProviderExecutionEvidence:
                 "jupiter_execution_allowed": self.jupiter_execution_allowed,
                 "marginfi_execution_allowed": self.marginfi_execution_allowed,
                 "financing_lender": self.financing_lender,
+                "financing_program_id": self.financing_program_id,
                 "financing_program_hash": self.financing_program_hash,
                 "financing_execution_allowed": self.financing_execution_allowed,
             }
@@ -561,6 +569,8 @@ class ExactPaperAttemptOrchestrator:
         if evidence.financing_lender is not None:
             if (
                 provenance.financing_lender != evidence.financing_lender
+                or provenance.financing_program_id is None
+                or provenance.financing_program_id != evidence.financing_program_id
                 or provenance.financing_evidence_hash is None
                 or provenance.financing_evidence_hash
                 != evidence.financing_program_hash

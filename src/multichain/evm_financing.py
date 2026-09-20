@@ -77,6 +77,12 @@ class EvmFlashObligation:
                 "PROTOCOL_DEPLOYMENT_MISMATCH",
                 "obligation deployment protocol differs",
             )
+        for debt in self.debts:
+            if debt.principal.asset.chain_key != self.deployment.chain_key:
+                raise MultiChainError(
+                    "EVM_DEBT_CHAIN_MISMATCH",
+                    "debt asset belongs to another chain",
+                )
 
     def require_callback(self, sender: str) -> None:
         if _address(sender, "callback_sender") != _address(

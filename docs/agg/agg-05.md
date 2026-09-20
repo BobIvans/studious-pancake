@@ -52,15 +52,15 @@ the best evaluated single-path baseline.
 
 ## Dependency truth
 
-The master plan names AGG-02 and AGG-04 as package dependencies. At branch creation:
+The master plan names AGG-02 and AGG-04 as package dependencies. Historical
+branch creation preceded their accepted receipts; post-AGG reconciliation against
+`main@27875850a88edf102c904e31955e0df8b78b13b4` confirms both are now merged.
+That historical inversion remains audit evidence, not a current dependency blocker.
 
-- `codex/agg-20260920-02` exists but is identical to `main`;
-- no AGG-04 branch/PR was observed.
-
-Therefore this PR may establish merge-safe, default-off AGG-05 code contracts, but
-it does not claim external qualification of AGG-02/04 data/state/campaign evidence.
-Operational status remains UNQUALIFIED until those prerequisites and downstream
-qualification evidence exist.
+AGG-05 implementation status is `MERGED_CODE`. Operational qualification remains
+scope/evidence-bound: shared-budget behavior, exact simulation and any multi-send
+promotion must be requalified on the selected release generation. Merge does not
+authorize live execution.
 
 ## Verification
 

@@ -34,8 +34,10 @@ from src.providers.marginfi.provider import (
     MarginfiSourceVectorEvidence,
 )
 from src.lending.financing_planner_adapter import (
+    AuxiliaryFinancingPlannerAdapter,
     FinancingPlannerProviderAdapter,
     FinancingPlannerSnapshot,
+    PreparedAuxiliaryFinancingLoan,
 )
 from src.planning.instruction_firewall import (
     InstructionFirewallError,
@@ -197,6 +199,8 @@ class AtomicPlannerRequest:
     monitored_accounts: tuple[Pubkey, ...] = ()
     marginfi_source_vectors: MarginfiSourceVectorEvidence | None = None
     financing_snapshot: FinancingPlannerSnapshot | None = None
+    rent_financing_snapshot: FinancingPlannerSnapshot | None = None
+    rent_borrow_amount: int = 0
 
 
 @dataclass(frozen=True, slots=True)
@@ -225,6 +229,7 @@ class AtomicPlannerProvenance:
     financing_lender: str = "marginfi"
     financing_program_id: str | None = None
     financing_deployment_generation: int | None = None
+    auxiliary_financing_identities: tuple[tuple[str, str, int], ...] = ()
 
     @property
     def digest(self) -> str:
@@ -253,6 +258,7 @@ class AtomicPlannerProvenance:
             "financing_lender": self.financing_lender,
             "financing_program_id": self.financing_program_id,
             "financing_deployment_generation": self.financing_deployment_generation,
+            "auxiliary_financing_identities": self.auxiliary_financing_identities,
         }
         return _sha256_json(payload)
 
@@ -278,8 +284,10 @@ class AtomicMarginfiJupiterPlanner:
         policy: AtomicPlannerPolicy,
         *,
         clock: Callable[[], float] = time.time,
+        auxiliary_financing_provider: AuxiliaryFinancingPlannerAdapter | None = None,
     ) -> None:
         self._marginfi = marginfi_provider
+        self._auxiliary_financing = auxiliary_financing_provider
         self._policy = policy
         self._clock = clock
         self._allowed_program_ids = frozenset(policy.allowed_program_ids)
@@ -311,6 +319,38 @@ class AtomicMarginfiJupiterPlanner:
                 "MarginFi prepare rejected the candidate",
                 details={"exception_type": type(exc).__name__},
             ) from exc
+
+        rent_prepared: PreparedAuxiliaryFinancingLoan | None = None
+        if self._auxiliary_financing is not None:
+            if not isinstance(self._marginfi, FinancingPlannerProviderAdapter):
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.INVALID_REQUEST,
+                    "auxiliary financing requires lender-neutral primary financing",
+                )
+            if request.rent_financing_snapshot is None or request.rent_borrow_amount <= 0:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.INVALID_REQUEST,
+                    "rent financing snapshot and positive amount are required",
+                )
+            try:
+                rent_prepared = self._auxiliary_financing.prepare(
+                    snapshot=request.rent_financing_snapshot,
+                    amount=request.rent_borrow_amount,
+                    destination_account=str(request.payer),
+                    repayment_source_account=str(request.payer),
+                    min_final_balance=request.rent_borrow_amount,
+                )
+            except Exception as exc:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.MARGINFI_PROVIDER_REJECTED,
+                    "auxiliary financing prepare rejected the candidate",
+                    details={"exception_type": type(exc).__name__},
+                ) from exc
+        elif request.rent_financing_snapshot is not None or request.rent_borrow_amount:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.INVALID_REQUEST,
+                "rent financing inputs require an auxiliary financing provider",
+            )
 
         required_repayment = _positive_int(
             getattr(prepared, "required_repayment", None),
@@ -348,6 +388,7 @@ class AtomicMarginfiJupiterPlanner:
         )
 
         immutable_sequence = (
+            *((rent_prepared.borrow_instruction,) if rent_prepared else ()),
             *pre_flash_setup,
             prepared.borrow_instruction,
             *leg_a_other,
@@ -356,6 +397,7 @@ class AtomicMarginfiJupiterPlanner:
             leg_b_swap,
             prepared.repay_instruction,
             *cleanup,
+            *(rent_prepared.repay_instructions if rent_prepared else ()),
         )
 
         try:
@@ -368,6 +410,23 @@ class AtomicMarginfiJupiterPlanner:
             ) from exc
 
         final_instructions = tuple(finalized.instructions)
+        if rent_prepared is not None:
+            try:
+                auxiliary_finalized = self._auxiliary_financing.finalize(
+                    rent_prepared,
+                    final_instructions,
+                )
+            except Exception as exc:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.MARGINFI_PROVIDER_REJECTED,
+                    "auxiliary financing finalize rejected the immutable sequence",
+                    details={"exception_type": type(exc).__name__},
+                ) from exc
+            if tuple(auxiliary_finalized.instructions) != final_instructions:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.SEQUENCE_INVARIANT,
+                    "auxiliary financing changed the immutable sequence",
+                )
         self._validate_exact_sequence(
             finalized=finalized,
             prepared=prepared,
@@ -377,6 +436,7 @@ class AtomicMarginfiJupiterPlanner:
             leg_b_other=leg_b_other,
             leg_b_swap=leg_b_swap,
             cleanup=cleanup,
+            rent_prepared=rent_prepared,
         )
         self._validate_final_instructions(final_instructions, request.payer)
         if request.marginfi_source_vectors is not None:
@@ -419,6 +479,7 @@ class AtomicMarginfiJupiterPlanner:
             leg_b_other=leg_b_other,
             leg_b_swap=leg_b_swap,
             cleanup=cleanup,
+            rent_prepared=rent_prepared,
         )
 
         provider_snapshot = self._provider_snapshot(request)
@@ -431,6 +492,14 @@ class AtomicMarginfiJupiterPlanner:
             "prepared.min_context_slot",
         )
         market_state_slot = max(snapshot_slot, prepared_min_context_slot)
+        if rent_prepared is not None:
+            market_state_slot = max(
+                market_state_slot,
+                _positive_int(
+                    rent_prepared.min_context_slot,
+                    "rent_prepared.min_context_slot",
+                ),
+            )
         oracle_slot = request.oracle_slot
         if oracle_slot is not None and oracle_slot <= 0:
             raise AtomicPlannerError(
@@ -510,6 +579,15 @@ class AtomicMarginfiJupiterPlanner:
                 if getattr(self._marginfi, "deployment_generation", None) is not None
                 else None
             ),
+            auxiliary_financing_identities=(
+                (
+                    self._auxiliary_financing.lender_id,
+                    self._auxiliary_financing.program_id,
+                    self._auxiliary_financing.deployment_generation,
+                ),
+            )
+            if self._auxiliary_financing is not None
+            else (),
         )
         return AtomicPlannerResult(
             transaction_plan=transaction_plan,

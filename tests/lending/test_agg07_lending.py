@@ -26,7 +26,6 @@ from src.lending.controlled_expansion import (
     QualifiedLenderCandidate,
 )
 
-
 H1 = "1" * 64
 H2 = "2" * 64
 H3 = "3" * 64

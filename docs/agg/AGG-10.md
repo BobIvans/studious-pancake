@@ -45,11 +45,12 @@ live execution, or trade away a mandatory safety query to save quota.
 ## Dependency disposition
 
 The master plan lists AGG-02, AGG-04 and AGG-05 as whole-package dependencies.
-At the base commit used for this PR those aggregate branches are not merged into
-`main`. Therefore this PR only lands the independent offline/default-off layer;
-its operational status remains **UNQUALIFIED** and downstream adapters must bind
-real campaign, episode, simulation and LIVE-03 evidence when those owners are
-available.
+The synchronized base now contains the merged AGG-02 code/evidence slice (and
+AGG-03 financing work), but AGG-04 and AGG-05 are not yet accepted in this base.
+Therefore this PR lands the independently valid offline/default-off intelligence
+layer while its operational status remains **UNQUALIFIED**. Downstream adapters
+must bind real campaign, episode, simulation and LIVE-03 evidence from the
+canonical owners as those prerequisite packages become accepted.
 
 ## Verification
 

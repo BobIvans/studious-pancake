@@ -104,6 +104,11 @@ class SuiHotPotatoObligation:
                 "SUI_PROTOCOL_DEPLOYMENT_MISMATCH",
                 "obligation deployment mismatch",
             )
+        if self.principal.asset.chain_key != self.deployment.chain_key:
+            raise MultiChainError(
+                "SUI_OBLIGATION_CHAIN_MISMATCH",
+                "obligation asset belongs to another chain",
+            )
 
 
 @dataclass(frozen=True, slots=True)
@@ -137,6 +142,12 @@ class SuiPtbPlan:
         _uint(self.gas_budget_mist, "gas_budget_mist", bits=256)
         if not self.operations:
             raise MultiChainError("SUI_OPERATIONS_REQUIRED", "PTB needs operations")
+        obligation_ids = [item.obligation_id for item in self.obligations]
+        if len(obligation_ids) != len(set(obligation_ids)):
+            raise MultiChainError(
+                "SUI_DUPLICATE_OBLIGATION_ID",
+                "each hot-potato obligation needs a unique identity",
+            )
 
 
 class SuiPtbAdapter:

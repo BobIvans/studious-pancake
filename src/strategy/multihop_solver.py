@@ -199,7 +199,10 @@ def search_bounded_cycles(
         used_pools: frozenset[str],
     ) -> None:
         nonlocal expansions, exhausted
-        if exhausted or len(routes) >= max_routes:
+        if exhausted:
+            return
+        if len(routes) >= max_routes:
+            exhausted = True
             return
         if len(path) >= max_hops:
             return
@@ -223,6 +226,9 @@ def search_bounded_cycles(
                         if identity not in identities:
                             identities.add(identity)
                             routes.append(route)
+                            if len(routes) >= max_routes:
+                                exhausted = True
+                                return
                 continue
             walk(next_asset, candidate_path, frozenset(next_pools))
             if exhausted or len(routes) >= max_routes:

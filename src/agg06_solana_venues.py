@@ -1,4 +1,5 @@
 """AGG-06 sender-free Solana venue/arbitrage qualification seam."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

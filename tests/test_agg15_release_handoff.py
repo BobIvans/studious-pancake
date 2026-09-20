@@ -340,7 +340,6 @@ def test_explicit_coverage_blocker_prevents_completion_and_is_propagated() -> No
     assert report.eligible_for_canonical_release_review is False
 
 
-
 def test_legacy_328_row_manifest_is_incomplete_under_v2_target() -> None:
     rows = tuple(_record(index) for index in range(1, 329))
 
@@ -397,7 +396,9 @@ def test_product_boundary_is_required_but_does_not_grant_execution() -> None:
         "remote_product_mutation_performed",
     ),
 )
-def test_product_boundary_rejects_authority_or_accounting_conflation(field: str) -> None:
+def test_product_boundary_rejects_authority_or_accounting_conflation(
+    field: str,
+) -> None:
     manifest = _complete_manifest()
     product = manifest["product_boundary"]
     assert isinstance(product, dict)

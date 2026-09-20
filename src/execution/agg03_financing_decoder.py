@@ -102,6 +102,15 @@ def _lamports(raw: Mapping[str, Any]) -> int:
     return value
 
 
+def _token_amount(raw: Mapping[str, Any]) -> int:
+    if _owner(raw) != SPL_TOKEN_PROGRAM_ID:
+        raise ValueError("FINANCING_TOKEN_OWNER_MISMATCH")
+    data = decode_pr115_account_data(raw.get("data"))
+    if len(data) != 165 or data[108] != 1:
+        raise ValueError("FINANCING_TOKEN_ACCOUNT_LAYOUT_INVALID")
+    return int.from_bytes(data[64:72], "little")
+
+
 @dataclass(frozen=True, slots=True)
 class _ExactValidator:
     lender_id: str
@@ -212,6 +221,18 @@ class JupiterLendSlumlordRepaymentDecoder:
             or post_admin.flashloan_fee != 0
         ):
             raise ValueError("JUPITER_LEND_FLASHLOAN_STATE_NOT_CLOSED")
+        if pre_admin != primary_protocol.admin_state:
+            raise ValueError("JUPITER_LEND_PRE_STATE_DIFFERS_FROM_PLANNER_SNAPSHOT")
+
+        reserve_address = str(
+            primary_protocol.accounts.flashloan_token_reserves_liquidity
+        )
+        if reserve_address not in pre or reserve_address not in post:
+            raise ValueError("JUPITER_LEND_RESERVE_NOT_MONITORED")
+        reserve_before = _token_amount(pre[reserve_address])
+        reserve_after = _token_amount(post[reserve_address])
+        if reserve_after < reserve_before:
+            raise ValueError("JUPITER_LEND_RESERVE_NOT_REPAID")
 
         pre_rent = SlumlordReserveState(
             address=SLUMLORD_PDA,
@@ -233,6 +254,13 @@ class JupiterLendSlumlordRepaymentDecoder:
             or post_rent.lamports != pre_rent.lamports
         ):
             raise ValueError("SLUMLORD_RENT_OBLIGATION_NOT_CLOSED")
+        if (
+            pre_rent.lamports != rent_protocol.reserve.lamports
+            or pre_rent.data != rent_protocol.reserve.data
+            or pre_rent.owner != rent_protocol.reserve.owner
+            or pre_rent.address != rent_protocol.reserve.address
+        ):
+            raise ValueError("SLUMLORD_PRE_STATE_DIFFERS_FROM_PLANNER_SNAPSHOT")
 
         primary_prepared = self.primary_port.prepare(
             snapshot=primary_protocol,
@@ -276,6 +304,8 @@ class JupiterLendSlumlordRepaymentDecoder:
             ),
             observed_repayment_base_units=(
                 primary_prepared.obligation.required_repayment_base_units
+                if reserve_after >= reserve_before
+                else 0
             ),
             role=FinancingRole.PRIMARY,
         )

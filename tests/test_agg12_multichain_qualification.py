@@ -744,6 +744,34 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
     assert "SUI_OBJECT_0_STATE_AFTER_MISMATCH" in unrelated_decision.blockers
 
 
+    unchanged_snapshots = replace(
+        good,
+        route_legs=(
+            replace(legs[0], state_after_sha256=H1),
+            replace(
+                legs[1],
+                state_before_sha256=H1,
+                state_after_sha256=H1,
+            ),
+        ),
+        object_transitions=(
+            replace(
+                transitions[0],
+                state_before_sha256=H1,
+                state_after_sha256=H1,
+            ),
+            replace(
+                transitions[1],
+                state_before_sha256=H1,
+                state_after_sha256=H1,
+            ),
+        ),
+    )
+    unchanged_decision = qualify_sui_book(unchanged_snapshots)
+    assert "SUI_OBJECT_0_STATE_NOT_ADVANCED" in unchanged_decision.blockers
+    assert "SUI_OBJECT_1_STATE_NOT_ADVANCED" in unchanged_decision.blockers
+
+
 def test_nf287_sui_fee_chooses_best_net_not_highest_bid() -> None:
     low = GasBidOption(10, 5, 2, 30)
     high = GasBidOption(100, 25, 2, 35)

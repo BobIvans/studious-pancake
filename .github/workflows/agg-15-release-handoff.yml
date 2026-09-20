@@ -1,0 +1,68 @@
+name: AGG-15 release handoff
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/release_gate/agg15_release_handoff.py"
+      - "src/automation_cli_pr189.py"
+      - "tests/test_agg15_release_handoff.py"
+      - "docs/agg/agg-15.md"
+      - ".github/workflows/agg-15-release-handoff.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agg-15-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  LIVE_TRADING_ENABLED: "false"
+  PAPER_TRADING_ONLY: "true"
+
+jobs:
+  release-handoff:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.13"
+          cache: pip
+      - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Compile AGG-15 surfaces
+        run: |
+          python -m compileall -q \
+            src/release_gate/agg15_release_handoff.py \
+            src/automation_cli_pr189.py \
+            tests/test_agg15_release_handoff.py
+      - name: Format AGG-15 surfaces
+        run: |
+          python -m black --check --diff \
+            src/release_gate/agg15_release_handoff.py \
+            src/automation_cli_pr189.py \
+            tests/test_agg15_release_handoff.py
+      - name: Run AGG-15 regressions
+        run: |
+          python -m pytest -q \
+            tests/test_agg15_release_handoff.py \
+            tests/test_mpr2612_durable_release.py
+      - name: Prove AGG-15 cannot promote or enable live
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          source = Path("src/release_gate/agg15_release_handoff.py").read_text()
+          assert "production_ready: bool = False" in source
+          assert "release_claim_allowed: bool = False" in source
+          assert "live_enabled: bool = False" in source
+          assert "automatic_scale_up_allowed: bool = False" in source
+          assert "AGG15_LIVE_DEFAULT_FORBIDDEN" in source
+          assert "AGG15_AUTO_SCALE_FORBIDDEN" in source
+          print("AGG-15 remains a default-off audit/handoff layer")
+          PY

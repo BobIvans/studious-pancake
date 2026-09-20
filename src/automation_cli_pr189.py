@@ -48,6 +48,10 @@ def _parser() -> argparse.ArgumentParser:
     qualification.add_argument("--verdict", required=True)
     qualification.add_argument("--attestation-key-file", required=True)
 
+    handoff = commands.add_parser("release-handoff")
+    handoff.add_argument("mode", choices=("inspect", "check"))
+    handoff.add_argument("--manifest", required=True)
+
     return parser
 
 
@@ -62,15 +66,12 @@ def _reason_codes_from_blockers(blockers: Any) -> tuple[str, ...]:
             values.append(blocker)
         elif isinstance(blocker, Mapping):
             value = (
-                blocker.get("reason_code")
-                or blocker.get("id")
-                or blocker.get("code")
+                blocker.get("reason_code") or blocker.get("id") or blocker.get("code")
             )
             values.append(str(value or "PR189_BLOCKED"))
         else:
-            value = (
-                getattr(blocker, "reason_code", None)
-                or getattr(blocker, "id", None)
+            value = getattr(blocker, "reason_code", None) or getattr(
+                blocker, "id", None
             )
             values.append(str(value or "PR189_BLOCKED"))
     return tuple(dict.fromkeys(values))
@@ -274,6 +275,29 @@ def evaluate_qualification_verdict(
     )
 
 
+def evaluate_release_handoff_command(
+    mode: CommandMode,
+    manifest: str,
+) -> CommandResult:
+    from src.release_gate.agg15_release_handoff import (
+        evaluate_release_handoff_file,
+    )
+
+    report = evaluate_release_handoff_file(manifest)
+    payload = report.to_dict()
+    reasons = tuple(report.blockers)
+    ready = bool(report.scoped_release_handoff_ready and not reasons)
+    if not ready and not reasons:
+        reasons = ("AGG15_RELEASE_HANDOFF_BLOCKED",)
+    return result(
+        command="release-handoff",
+        mode=mode,
+        ready=ready,
+        reason_codes=reasons,
+        details=payload,
+    )
+
+
 def _evaluate(args: argparse.Namespace) -> CommandResult:
     mode = _mode(args.mode)
     if args.command == "paper-vertical":
@@ -294,6 +318,8 @@ def _evaluate(args: argparse.Namespace) -> CommandResult:
             args.verdict,
             args.attestation_key_file,
         )
+    if args.command == "release-handoff":
+        return evaluate_release_handoff_command(mode, args.manifest)
     raise ValueError("unsupported PR-189 command")
 
 

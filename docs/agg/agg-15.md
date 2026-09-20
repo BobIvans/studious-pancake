@@ -18,8 +18,22 @@ external qualification, production promotion или live admission.
 
 ## NF-324…NF-328
 
+SUPER-08 extends the same canonical audit target through NF-352.  NF-329…352
+are not new AGG-15 ownership: they retain their primary owners from the
+PR-073…078 continuation crosswalk:
+
+- NF-329…332 → TREASURY-01 / PR-073;
+- NF-333…336 → BATCH-01 / PR-074;
+- NF-337…340 → UNIVERSE-01 / PR-075;
+- NF-341…344 → ALT-01 / PR-076;
+- NF-345…348 → FORMAT-01 / PR-077;
+- NF-349…352 → FORMAT-02 / PR-078.
+
+The release-handoff schema is therefore v2. A legacy 328-row v1 manifest is not
+silently promoted into current full-target evidence.
+
 - **NF-324 / full_coverage_audit** — canonical manifest обязан содержать ровно
-  NF-001…NF-328 без duplicate IDs. `mapped=328` считается только структурным
+  NF-001…NF-352 без duplicate IDs. `mapped=352` считается только структурным
   покрытием. Completion считается лишь для строк с implementation status,
   test refs и evidence refs; `MERGED_CODE` дополнительно требует merge commit.
 - **NF-325 / full_integrated_campaign** — campaign evidence должно принадлежать
@@ -53,7 +67,7 @@ manifest неполный или selected profile не qualified.
 
 ```json
 {
-  "schema_version": "agg15.release-handoff.v1",
+  "schema_version": "agg15.release-handoff.v2",
   "release_id": "immutable-release-id",
   "source_commit": "40-or-64-hex-git-object-id",
   "coverage": [],
@@ -61,6 +75,7 @@ manifest неполный или selected profile не qualified.
   "integrated_campaign": null,
   "operator_handoff": null,
   "continuous_evolution": null,
+  "product_boundary": null,
   "live_enabled": false,
   "automatic_scale_up_allowed": false
 }
@@ -97,3 +112,21 @@ Focused code evidence:
 
 Rollback — revert isolated AGG-15 commits. Он не удаляет lifecycle/release rows,
 не переоткрывает settled/unknown attempts и не включает live.
+
+
+## SUPER-08 product boundary
+
+W2-22 / PRODUCT-01 remains owned by the already merged AGG-14 research/product
+package. RELEASE-01 only consumes explicit evidence that product accounting and
+execution authority remain separated. A v2 handoff therefore includes
+`product_boundary` evidence binding the existing product owner and
+`RevenueAttributionLedger` while proving:
+
+- service/grant/rebate revenue is not arbitrage PnL;
+- client funds are not trading capital;
+- the product planning surface cannot sign or submit;
+- this audit does not perform remote product/service mutation.
+
+These checks do not externally qualify Kora, a keeper customer, a data product,
+or a grant. Their external blockers remain explicit and do not become trading
+permissions.

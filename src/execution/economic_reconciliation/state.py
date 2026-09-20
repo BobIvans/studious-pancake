@@ -144,56 +144,93 @@ class StateValidator:
     def repayment(self, evidence: ReconciliationEvidence) -> RepaymentProof:
         financing = evidence.financing
         if financing is not None:
-            borrowed = financing.debt_before_base_units
-            required = financing.required_repayment_base_units
-            observed = financing.observed_repayment_base_units
-            if not financing.proven:
+            primary = financing.primary
+            decisions = (primary, *financing.auxiliary)
+            for decision in decisions:
+                borrowed = decision.debt_before_base_units
+                required = decision.required_repayment_base_units
+                observed = decision.observed_repayment_base_units
+                if not decision.proven:
+                    return RepaymentProof(
+                        False,
+                        primary.debt_before_base_units,
+                        primary.required_repayment_base_units,
+                        primary.observed_repayment_base_units,
+                        max(
+                            0,
+                            primary.required_repayment_base_units
+                            - primary.debt_before_base_units,
+                        ),
+                        ReconciliationReason.REPAYMENT_NOT_PROVEN,
+                    )
+                if decision.message_hash != evidence.expected_message_hash:
+                    return RepaymentProof(
+                        False,
+                        primary.debt_before_base_units,
+                        primary.required_repayment_base_units,
+                        primary.observed_repayment_base_units,
+                        max(
+                            0,
+                            primary.required_repayment_base_units
+                            - primary.debt_before_base_units,
+                        ),
+                        ReconciliationReason.FINANCING_MESSAGE_MISMATCH,
+                    )
+                if (
+                    borrowed <= 0
+                    or required < borrowed
+                    or decision.debt_after_base_units != 0
+                    or observed < required
+                ):
+                    return RepaymentProof(
+                        False,
+                        primary.debt_before_base_units,
+                        primary.required_repayment_base_units,
+                        primary.observed_repayment_base_units,
+                        max(
+                            0,
+                            primary.required_repayment_base_units
+                            - primary.debt_before_base_units,
+                        ),
+                        ReconciliationReason.FINANCING_EVIDENCE_INVALID,
+                    )
+            if primary.asset_id != evidence.settlement_asset.stable_id():
                 return RepaymentProof(
                     False,
-                    borrowed,
-                    required,
-                    observed,
-                    max(0, required - borrowed),
-                    ReconciliationReason.REPAYMENT_NOT_PROVEN,
-                )
-            if financing.message_hash != evidence.expected_message_hash:
-                return RepaymentProof(
-                    False,
-                    borrowed,
-                    required,
-                    observed,
-                    max(0, required - borrowed),
-                    ReconciliationReason.FINANCING_MESSAGE_MISMATCH,
-                )
-            if financing.asset_id != evidence.settlement_asset.stable_id():
-                return RepaymentProof(
-                    False,
-                    borrowed,
-                    required,
-                    observed,
-                    max(0, required - borrowed),
+                    primary.debt_before_base_units,
+                    primary.required_repayment_base_units,
+                    primary.observed_repayment_base_units,
+                    max(
+                        0,
+                        primary.required_repayment_base_units
+                        - primary.debt_before_base_units,
+                    ),
                     ReconciliationReason.FINANCING_ASSET_MISMATCH,
                 )
-            if (
-                borrowed <= 0
-                or required < borrowed
-                or financing.debt_after_base_units != 0
-                or observed < required
-            ):
-                return RepaymentProof(
-                    False,
-                    borrowed,
-                    required,
-                    observed,
-                    max(0, required - borrowed),
-                    ReconciliationReason.FINANCING_EVIDENCE_INVALID,
-                )
+            for auxiliary in financing.auxiliary:
+                if (
+                    auxiliary.required_repayment_base_units
+                    != auxiliary.debt_before_base_units
+                ):
+                    return RepaymentProof(
+                        False,
+                        primary.debt_before_base_units,
+                        primary.required_repayment_base_units,
+                        primary.observed_repayment_base_units,
+                        max(
+                            0,
+                            primary.required_repayment_base_units
+                            - primary.debt_before_base_units,
+                        ),
+                        ReconciliationReason.FINANCING_EVIDENCE_INVALID,
+                    )
             return RepaymentProof(
                 True,
-                borrowed,
-                required,
-                observed,
-                required - borrowed,
+                primary.debt_before_base_units,
+                primary.required_repayment_base_units,
+                primary.observed_repayment_base_units,
+                primary.required_repayment_base_units
+                - primary.debt_before_base_units,
             )
 
         item = evidence.marginfi

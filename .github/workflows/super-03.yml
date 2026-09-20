@@ -45,7 +45,7 @@ jobs:
           tests/test_super03_venue_qualification.py
       - name: Format SUPER-03 surfaces
         run: >-
-          python -m black --check
+          python -m black --diff --check
           src/direct_venue/super03.py
           tests/test_super03_venue_qualification.py
       - name: Focused SUPER-03 and owner regressions

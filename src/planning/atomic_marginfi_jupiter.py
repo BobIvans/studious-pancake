@@ -588,7 +588,7 @@ class AtomicMarginfiJupiterPlanner:
                 else None
             ),
             financing_evidence_hash=(
-                marginfi_pin_hash
+                self._marginfi.evidence_sha256
                 if isinstance(self._marginfi, FinancingPlannerProviderAdapter)
                 else None
             ),

@@ -1,105 +1,61 @@
 # AGG-09 — эксплуатация, восстановление и выпуск проверенных профилей
 
-## Scope
+## Current dependency truth
 
-AGG-09 реализован как default-off operational evidence layer поверх существующих владельцев:
-MPR-2613 guarded operations, MPR-2616 HA/DR, MPR-2618 credential rotation,
-PR-077/PR-201 observability/readiness и MPR-2614 continuous conformance.
-Новый ledger, signer, sender, submission authority или live OMS не создаётся.
+AGG-09 code was merged in PR #505 before all master-DAG prerequisites were
+merged. That historical order is preserved as evidence, not treated as current
+dependency state.
 
-Исторический base при старте: `0c4f216a62d62b20f6fb4ec4bbd0548cea58df65`.
-AGG-09 был merged как PR #505, merge commit
-`5d1d8177c933221dcb31baf0753924c4f32e3313`.
-Post-AGG reconciliation выполнен против
-`main@27875850a88edf102c904e31955e0df8b78b13b4`, где AGG-04, AGG-05 и
-AGG-08 уже имеют canonical merge receipts.
+Current reconciliation baseline: `main@27875850a88edf102c904e31955e0df8b78b13b4`.
 
-## Work packages
+Now merged:
 
-### OPS-01
+- AGG-04 / qualification framework — PR #497;
+- AGG-05 / parallel scheduler and bounded search — PR #498;
+- AGG-08 / isolated signing/submission/finalized settlement closure — PR #504.
 
-`src/operations/agg09_ops01.py` связывает NF-240/243/244/245/246:
+Therefore the old blockers “AGG-04/05/08 prerequisite not on starting main” are
+obsolete and must not appear in current readiness output.
 
-- portfolio budget считает только owned equity и агрегирует reservations, unknown exposure,
-  worst-failure exposure и provider spend по общему asset cap;
-- collateral, lender capacity и client capital не становятся equity;
-- recovery использует MPR-2616 `RestoreEvidence`/`CoordinatorCapabilities`, требует новый
-  fence generation и quarantine unknown dispatches;
-- production HA квалифицируется отдельно от безопасного default-off restore;
-- security conformance требует endpoint/SSRF/DNS/TLS/redirect/input/archive/filesystem
-  hardening evidence от существующих transport/filesystem owners;
-- credential recovery не допускает rollback rotation/revocation epochs или resurrection
-  revoked versions.
+## Code state
 
-### OPS-02
+AGG-09 continues to reuse the existing owners:
 
-`src/operations/agg09_ops02.py` связывает NF-247/248/249/250:
+- MPR-2613 guarded operations;
+- MPR-2616 HA/DR and fencing;
+- MPR-2618 credential rotation;
+- PR-077/PR-201 observability/readiness;
+- MPR-2614 continuous conformance.
 
-- p50/p95/p99, gaps, dropped work, quota, errors, stalled state и unresolved reconciliation;
-- process liveness не повышает market readiness;
-- operator actions ограничены inspect/pause/resume-shadow/stop и делегируются в
-  MPR-2613 durable state/audit owner;
-- отсутствует команда перехода в ACTIVE/live;
-- performance change допускается только при том же semantic hash и измеримом tail uplift;
-- data-platform scale обязан сохранять replay, identity, cursor, quota и economic authorities.
+It does not create a second ledger, signer, sender, lifecycle authority or live
+OMS. Code merge remains default-off.
 
-### OPS-03
+## Remaining operational qualification blockers
 
-`src/operations/agg09_ops03.py` связывает NF-251/252/253/254/255/256:
+The following are **not code-order debt** and cannot be closed by synthetic CI:
 
-- CI matrix не превращает blocked/not-authorized network/live suites в pass;
-- release artifact связывает exact source/tree/wheel/image/lock/SBOM/NOTICE/config/policy;
-- MPR-2614 continuous conformance перенесён из stacked PR #492 в достижимый `main`-path;
-- soak требует заранее объявленной длительности, busy/quiet windows, restart/failover drills,
-  полного incident accounting и точного ledger recovery;
-- capital progression всегда manual: measured blocker + fee reserve + canary + explicit approval;
-- production-readiness verdict fail-closed требует AGG-04, AGG-05, AGG-08, LIVE-03,
-  OPS-01/02, CI, release, current conformance lease, soak и известные rights/reserves.
+1. **AGG09_LIVE03_OBSERVED_LANDING_EVIDENCE_MISSING** — AGG-08 code can produce
+   finalized-only labels, but no real sent/finalized campaign is claimed here.
+2. **AGG09_REAL_OPERATIONAL_SOAK_MISSING** — NF-254 requires a predeclared real
+   soak with busy/quiet windows, incidents, restart/failover and exact recovery.
+3. **AGG09_CROSS_HOST_RECOVERY_EVIDENCE_MISSING** — production coordinator /
+   signer failover requires external host/service evidence.
+4. **AGG09_REAL_WORKLOAD_PERFORMANCE_EVIDENCE_MISSING** — p50/p95/p99,
+   backpressure, gaps, dropped work and quotas must come from a real scoped
+   workload.
+5. **AGG09_CURRENT_PROFILE_CAMPAIGN_REQUIRED** — AGG-03/04 evidence must be
+   regenerated for the exact merged source, wheel, profile, lender deployment,
+   config and data generations after the tech-debt closure.
 
-Даже положительный verdict остаётся `qualified-default-off`; `live_enabled=false` и
-`automatic_scale_up_allowed=false`.
+A future positive verdict remains `qualified-default-off`; it does not imply
+live authorization or automatic capital growth.
 
-## Current disposition
+## Status
 
-Кодовый пакет AGG-09 уже merged и все его package prerequisites (AGG-04,
-AGG-05, AGG-08) присутствуют в текущем reconciliation baseline. Исторические
-"prerequisite not on starting main" больше не являются текущими blockers.
+- implementation: **MERGED_CODE**
+- operational: **BLOCKED**
+- live_enabled: **false**
+- automatic_scale_up_allowed: **false**
 
-`implementation_status`: `MERGED_CODE`.
-`operational_status`: `BLOCKED`.
-
-Оставшиеся blockers являются evidence/operations, а не отсутствующими AGG PR:
-
-- реальные LIVE-03 landing/finalized labels для выбранного exact profile;
-- predeclared operational soak NF-254 с busy/quiet windows и incident accounting;
-- production cross-host coordinator/signer recovery evidence;
-- измеренный workload/scale evidence;
-- новая post-merge qualification generation, связывающая source/wheel/config/data/
-  financing deployment и release artifacts.
-
-Synthetic duration/PnL, старые branch-head результаты и сам факт merge не закрывают
-эти требования.
-
-## Focused verification
-
-```bash
-python -m pytest \
-  tests/test_agg09_ops01.py \
-  tests/test_agg09_ops02.py \
-  tests/test_mpr2614_continuous_conformance.py \
-  tests/test_agg09_ops03.py \
-  tests/test_mpr2613_guarded_operations.py \
-  tests/test_mpr2616_executable_ha_dr.py \
-  tests/test_mpr2618_credential_trust_rotation.py \
-  tests/security/test_mpr_td_04_security.py
-python -m compileall -q src/operations/agg09_ops01.py src/operations/agg09_ops02.py \
-  src/operations/agg09_ops03.py src/operations/mpr2614_continuous_conformance.py
-```
-
-Repository-wide `verify` and package smoke remain required before merge.
-
-## Rollback
-
-Revert the AGG-09 PR. No migration rewrites existing MPR-2613/2616/2618 durable state.
-Removing the evidence/composition layer must not delete settled or unknown attempts,
-reservations, revocation history or recovery evidence.
+The machine-readable current blocker set is maintained in
+`release_artifacts/agg/AGG-09/coverage.json`.

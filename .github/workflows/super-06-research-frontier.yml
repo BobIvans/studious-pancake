@@ -1,0 +1,41 @@
+name: SUPER-06 research frontier closure
+
+on:
+  pull_request:
+    paths:
+      - "release_artifacts/super/SUPER-06/**"
+      - "scripts/verify_super06_research_frontier.py"
+      - "tests/test_super06_research_frontier_closure.py"
+      - "release_artifacts/agg/AGG-10/coverage.json"
+      - "config/agg14_research_coverage.json"
+      - "src/decision/agg10.py"
+      - "src/research/**"
+      - ".github/workflows/super-06-research-frontier.yml"
+
+permissions:
+  contents: read
+
+env:
+  PAPER_TRADING_ONLY: "true"
+  LIVE_TRADING_ENABLED: "false"
+  JITO_ENABLED: "false"
+  KAMINO_LIQUIDATION_ENABLED: "false"
+
+jobs:
+  verify:
+    name: SUPER-06 closure
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.13"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - run: python -m pip install --requirement requirements.txt
+      - run: python -m pip install --requirement requirements-dev.txt
+      - run: python -m compileall -q scripts/verify_super06_research_frontier.py tests/test_super06_research_frontier_closure.py
+      - run: python scripts/verify_super06_research_frontier.py --json
+      - run: python -m pytest tests/test_super06_research_frontier_closure.py tests/test_agg10_intelligence.py tests/test_agg14_research_system.py -q --disable-socket --allow-unix-socket

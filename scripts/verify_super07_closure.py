@@ -295,12 +295,12 @@ def verify_payload(
     if not isinstance(blockers, list) or not blockers:
         errors.append("OPERATIONAL_BLOCKERS_REQUIRED")
     else:
-        normalized_blockers = tuple(str(item).strip() for item in blockers)
-        if any(not item for item in normalized_blockers):
+        literal_blockers = tuple(str(item) for item in blockers)
+        if any(not item for item in literal_blockers):
             errors.append("OPERATIONAL_BLOCKER_EMPTY")
-        if len(normalized_blockers) != len(set(normalized_blockers)):
+        if len(literal_blockers) != len(set(literal_blockers)):
             errors.append("OPERATIONAL_BLOCKER_DUPLICATE")
-        if frozenset(normalized_blockers) != EXPECTED_BLOCKERS:
+        if frozenset(literal_blockers) != EXPECTED_BLOCKERS:
             errors.append("OPERATIONAL_BLOCKER_SET_MISMATCH")
 
     return {

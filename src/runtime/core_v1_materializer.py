@@ -236,10 +236,17 @@ class CoreV1AttemptMaterializer:
         if self.profile.lender != "marginfi":
             if draft.provider_evidence.financing_lender != self.profile.lender:
                 raise ValueError("CORE_V1_PROVIDER_FINANCING_LENDER_MISMATCH")
+            if draft.provider_evidence.financing_program_id is None:
+                raise ValueError("CORE_V1_PROVIDER_FINANCING_PROGRAM_ID_REQUIRED")
             if draft.provider_evidence.financing_program_hash is None:
                 raise ValueError("CORE_V1_PROVIDER_FINANCING_PROGRAM_HASH_REQUIRED")
             if draft.financing_evidence is None:
                 raise ValueError("CORE_V1_FINANCING_EVIDENCE_REQUIRED")
+            if (
+                draft.provider_evidence.financing_program_id
+                != draft.financing_evidence.program_id
+            ):
+                raise ValueError("CORE_V1_PROVIDER_FINANCING_PROGRAM_ID_MISMATCH")
             if (
                 draft.provider_evidence.financing_program_hash
                 != draft.financing_evidence.evidence_sha256

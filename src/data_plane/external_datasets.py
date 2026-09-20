@@ -108,25 +108,19 @@ class ExternalMarketRecord:
     gap_before: bool = False
 
     def __post_init__(self) -> None:
-        for field, value in (
-            ("source_id", self.source_id),
-            ("product", self.product),
-            ("market_scope", self.market_scope),
-            ("instrument_id", self.instrument_id),
-            ("decoder_version", self.decoder_version),
-            ("cursor_partition", self.cursor_partition),
-        ):
-            _require_id(value, field)
-        for field, value in (
-            ("event_time_ms", self.event_time_ms),
-            ("received_at_ms", self.received_at_ms),
-            ("available_at_ms", self.available_at_ms),
-            ("cursor_offset", self.cursor_offset),
-            ("reconnect_epoch", self.reconnect_epoch),
-            ("revision", self.revision),
-            ("uncertainty_ms", self.uncertainty_ms),
-        ):
-            _require_nonnegative_int(value, field)
+        _require_id(self.source_id, "source_id")
+        _require_id(self.product, "product")
+        _require_id(self.market_scope, "market_scope")
+        _require_id(self.instrument_id, "instrument_id")
+        _require_id(self.decoder_version, "decoder_version")
+        _require_id(self.cursor_partition, "cursor_partition")
+        _require_nonnegative_int(self.event_time_ms, "event_time_ms")
+        _require_nonnegative_int(self.received_at_ms, "received_at_ms")
+        _require_nonnegative_int(self.available_at_ms, "available_at_ms")
+        _require_nonnegative_int(self.cursor_offset, "cursor_offset")
+        _require_nonnegative_int(self.reconnect_epoch, "reconnect_epoch")
+        _require_nonnegative_int(self.revision, "revision")
+        _require_nonnegative_int(self.uncertainty_ms, "uncertainty_ms")
         if self.available_at_ms < self.received_at_ms:
             raise ExternalDatasetError("AGG13_AVAILABLE_BEFORE_RECEIVE")
         if self.source_sequence is not None:
@@ -136,9 +130,9 @@ class ExternalMarketRecord:
             raise ExternalDatasetError("AGG13_INVALID_GAP_FLAG")
         if not self.fields:
             raise ExternalDatasetError("AGG13_EMPTY_OBSERVATION_FIELDS")
-        for key, value in self.fields.items():
-            _require_id(key, "field_name")
-            _require_scalar(value, key)
+        for field_name, field_value in self.fields.items():
+            _require_id(field_name, "field_name")
+            _require_scalar(field_value, field_name)
         for key, unit in self.units.items():
             _require_id(key, "unit_field")
             _require_id(unit, "unit")

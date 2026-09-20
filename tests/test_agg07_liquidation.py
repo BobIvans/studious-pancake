@@ -20,7 +20,6 @@ from src.liquidation.models import (
     RiskConfigSnapshot,
 )
 
-
 H1 = "1" * 64
 H2 = "2" * 64
 H3 = "3" * 64

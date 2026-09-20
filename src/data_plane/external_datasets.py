@@ -1,9 +1,9 @@
-"""AGG-13 bounded external-dataset contracts.
+"""AGG-13 external-market adapters over the accepted AGG-02 data plane.
 
-The module normalizes already-observed public/authorized market data.  It does not
-open sockets, load credentials, submit orders, or infer trading authorization from
-market-data access.  Quota ownership remains with the repository provider-plane
-authority and is represented here by a narrow reservation protocol.
+AGG-02 owns causal envelopes, source entitlements, shared quota authority, raw
+journaling and point-in-time state.  This module only adds the external-market
+semantics required by DATA-05.  It never opens sockets, loads credentials, places
+orders, or upgrades market-data access into trading authorization.
 """
 
 from __future__ import annotations
@@ -11,18 +11,25 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from enum import StrEnum
-import hashlib
-import json
 import re
-from typing import Protocol
 
-AGG13_DATASET_SCHEMA = "agg13.external-dataset.v1"
+from src.agg02 import (
+    BudgetDimension,
+    RawEventEnvelope,
+    SourceBudgetAuthority,
+    SourceBudgetReservation,
+    SourceRegistryEntry,
+    StateRecord,
+    canonical_hash,
+)
+
+AGG13_DATASET_SCHEMA = "agg13.external-dataset.v2"
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 _SAFE_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:/@+-]{0,191}$")
 
 
 class ExternalDatasetError(ValueError):
-    """Fail-closed external-data validation error with a stable reason code."""
+    """Fail-closed AGG-13 adapter validation with a stable reason code."""
 
     def __init__(self, reason_code: str, message: str | None = None) -> None:
         self.reason_code = reason_code
@@ -39,70 +46,27 @@ class DatasetKind(StrEnum):
 Scalar = str | int | bool | None
 
 
-class QuotaReservationLike(Protocol):
-    provider: str
-    reservation_id: str
-
-
-class QuotaAuthorityLike(Protocol):
-    def reserve(
-        self,
-        *,
-        provider: str,
-        key_fingerprint: str,
-        now_ms: int,
-        limit: int,
-        bucket_span_ms: int,
-        units: int = 1,
-    ) -> QuotaReservationLike: ...
-
-
 @dataclass(frozen=True, slots=True)
-class SourceEntitlement:
-    provider: str
+class ExternalUsePolicy:
+    """DATA-05 rights that complement, rather than replace, AGG-02 entitlements."""
+
     product: str
     terms_sha256: str
-    credential_fingerprint: str
-    expires_at_ms: int | None
-    storage_allowed: bool
     redistribution_allowed: bool
     trading_authorized: bool = False
     trading_scope_sha256: str | None = None
 
     def __post_init__(self) -> None:
-        _require_id(self.provider, "provider")
         _require_id(self.product, "product")
         _require_sha256(self.terms_sha256, "terms_sha256")
-        _require_sha256(self.credential_fingerprint, "credential_fingerprint")
-        if self.expires_at_ms is not None and self.expires_at_ms <= 0:
-            raise ExternalDatasetError("AGG13_INVALID_ENTITLEMENT_EXPIRY")
         if self.trading_scope_sha256 is not None:
             _require_sha256(self.trading_scope_sha256, "trading_scope_sha256")
         if self.trading_authorized and self.trading_scope_sha256 is None:
             raise ExternalDatasetError("AGG13_TRADING_SCOPE_EVIDENCE_REQUIRED")
 
-    def assert_active(self, *, now_ms: int) -> None:
-        _require_nonnegative_int(now_ms, "now_ms")
-        if self.expires_at_ms is not None and now_ms >= self.expires_at_ms:
-            raise ExternalDatasetError("AGG13_SOURCE_ENTITLEMENT_EXPIRED")
-
     def assert_execution_access(self) -> None:
         if not self.trading_authorized or self.trading_scope_sha256 is None:
             raise ExternalDatasetError("AGG13_MARKET_DATA_NOT_TRADING_AUTHORIZATION")
-
-
-@dataclass(frozen=True, slots=True)
-class SourceLease:
-    provider: str
-    reservation_id: str
-    reserved_units: int
-    observed_at_ms: int
-
-    def __post_init__(self) -> None:
-        _require_id(self.provider, "provider")
-        _require_sha256(self.reservation_id, "reservation_id")
-        _require_positive_int(self.reserved_units, "reserved_units")
-        _require_nonnegative_int(self.observed_at_ms, "observed_at_ms")
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,31 +84,56 @@ class BoundedInterval:
 
 
 @dataclass(frozen=True, slots=True)
-class ExternalObservation:
-    source: str
+class ExternalMarketRecord:
+    """Normalized external-market observation before AGG-02 materialization."""
+
+    source_id: str
     product: str
     dataset_kind: DatasetKind
+    market_scope: str
     instrument_id: str
     event_time_ms: int
+    received_at_ms: int
     available_at_ms: int
+    decoder_version: str
+    cursor_partition: str
+    cursor_offset: int
+    reconnect_epoch: int
     revision: int
     payload_sha256: str
     fields: Mapping[str, Scalar]
     units: Mapping[str, str]
-    sequence: str | None = None
+    source_sequence: int | None = None
+    uncertainty_ms: int = 0
+    gap_before: bool = False
 
     def __post_init__(self) -> None:
-        _require_id(self.source, "source")
-        _require_id(self.product, "product")
-        _require_id(self.instrument_id, "instrument_id")
-        _require_nonnegative_int(self.event_time_ms, "event_time_ms")
-        _require_nonnegative_int(self.available_at_ms, "available_at_ms")
-        _require_nonnegative_int(self.revision, "revision")
+        for field, value in (
+            ("source_id", self.source_id),
+            ("product", self.product),
+            ("market_scope", self.market_scope),
+            ("instrument_id", self.instrument_id),
+            ("decoder_version", self.decoder_version),
+            ("cursor_partition", self.cursor_partition),
+        ):
+            _require_id(value, field)
+        for field, value in (
+            ("event_time_ms", self.event_time_ms),
+            ("received_at_ms", self.received_at_ms),
+            ("available_at_ms", self.available_at_ms),
+            ("cursor_offset", self.cursor_offset),
+            ("reconnect_epoch", self.reconnect_epoch),
+            ("revision", self.revision),
+            ("uncertainty_ms", self.uncertainty_ms),
+        ):
+            _require_nonnegative_int(value, field)
+        if self.available_at_ms < self.received_at_ms:
+            raise ExternalDatasetError("AGG13_AVAILABLE_BEFORE_RECEIVE")
+        if self.source_sequence is not None:
+            _require_nonnegative_int(self.source_sequence, "source_sequence")
         _require_sha256(self.payload_sha256, "payload_sha256")
-        if self.available_at_ms < self.event_time_ms:
-            raise ExternalDatasetError("AGG13_AVAILABLE_BEFORE_EVENT_TIME")
-        if self.sequence is not None:
-            _require_id(self.sequence, "sequence")
+        if not isinstance(self.gap_before, bool):
+            raise ExternalDatasetError("AGG13_INVALID_GAP_FLAG")
         if not self.fields:
             raise ExternalDatasetError("AGG13_EMPTY_OBSERVATION_FIELDS")
         for key, value in self.fields.items():
@@ -153,100 +142,147 @@ class ExternalObservation:
         for key, unit in self.units.items():
             _require_id(key, "unit_field")
             _require_id(unit, "unit")
-        unknown_units = set(self.units).difference(self.fields)
-        if unknown_units:
+        if set(self.units).difference(self.fields):
             raise ExternalDatasetError("AGG13_UNIT_WITHOUT_FIELD")
 
     @property
     def identity(self) -> str:
-        return _hash_payload(
-            "agg13/external-observation",
-            {
-                "source": self.source,
-                "product": self.product,
-                "dataset_kind": self.dataset_kind.value,
-                "instrument_id": self.instrument_id,
-                "event_time_ms": self.event_time_ms,
-                "available_at_ms": self.available_at_ms,
-                "revision": self.revision,
-                "payload_sha256": self.payload_sha256,
-                "fields": dict(self.fields),
-                "units": dict(self.units),
-                "sequence": self.sequence,
-            },
+        return canonical_hash(self._identity_payload())
+
+    def _identity_payload(self) -> dict[str, object]:
+        return {
+            "schema_version": AGG13_DATASET_SCHEMA,
+            "source_id": self.source_id,
+            "product": self.product,
+            "dataset_kind": self.dataset_kind.value,
+            "market_scope": self.market_scope,
+            "instrument_id": self.instrument_id,
+            "event_time_ms": self.event_time_ms,
+            "received_at_ms": self.received_at_ms,
+            "available_at_ms": self.available_at_ms,
+            "decoder_version": self.decoder_version,
+            "cursor_partition": self.cursor_partition,
+            "cursor_offset": self.cursor_offset,
+            "reconnect_epoch": self.reconnect_epoch,
+            "revision": self.revision,
+            "payload_sha256": self.payload_sha256,
+            "fields": dict(self.fields),
+            "units": dict(self.units),
+            "source_sequence": self.source_sequence,
+            "uncertainty_ms": self.uncertainty_ms,
+            "gap_before": self.gap_before,
+        }
+
+    def to_raw_envelope(self) -> RawEventEnvelope:
+        """Bind the record to the canonical AGG-02 causal envelope."""
+
+        return RawEventEnvelope(
+            event_id=self.identity,
+            source_id=self.source_id,
+            chain_id=self.market_scope,
+            payload_sha256=self.payload_sha256,
+            received_at_ms=self.received_at_ms,
+            available_at_ms=self.available_at_ms,
+            decoder_version=self.decoder_version,
+            cursor_source=self.source_id,
+            cursor_partition=self.cursor_partition,
+            cursor_offset=self.cursor_offset,
+            reconnect_epoch=self.reconnect_epoch,
+            slot=None,
+            commitment=f"external-{self.dataset_kind.value}",
+            source_event_time_ms=self.event_time_ms,
+            source_sequence=self.source_sequence,
+            uncertainty_ms=self.uncertainty_ms,
+            gap_before=self.gap_before,
+        )
+
+    def to_state_record(self) -> StateRecord:
+        """Project external data into the accepted AGG-02 as-of state contract."""
+
+        payload = {
+            "schema_version": AGG13_DATASET_SCHEMA,
+            "record_id": self.identity,
+            "dataset_kind": self.dataset_kind.value,
+            "market_scope": self.market_scope,
+            "instrument_id": self.instrument_id,
+            "event_time_ms": self.event_time_ms,
+            "revision": self.revision,
+            "fields": dict(self.fields),
+            "units": dict(self.units),
+        }
+        return StateRecord.from_mapping(
+            dependency_id=(
+                f"external:{self.source_id}:{self.product}:{self.instrument_id}"
+            ),
+            generation=f"{self.decoder_version}:revision-{self.revision}",
+            available_at_ms=self.available_at_ms,
+            payload=payload,
+            slot=None,
+            quarantined=False,
+            gap_affected=self.gap_before,
         )
 
 
 @dataclass(frozen=True, slots=True)
 class NormalizedExternalDataset:
     schema_version: str
-    provider: str
+    source_id: str
     product: str
-    entitlement_terms_sha256: str
-    lease_reservation_id: str
+    terms_sha256: str
+    source_budget_reservation_hash: str
     record_ids: tuple[str, ...]
     dataset_kinds: tuple[DatasetKind, ...]
     first_available_at_ms: int
     last_available_at_ms: int
+    state_records: tuple[StateRecord, ...]
     manifest_sha256: str
-    storage_allowed: bool
     redistribution_allowed: bool
     trading_authorized: bool
 
 
-def reserve_source_budget(
+def reserve_external_budget(
     *,
-    authority: QuotaAuthorityLike,
-    entitlement: SourceEntitlement,
+    authority: SourceBudgetAuthority,
+    source: SourceRegistryEntry,
+    key_fingerprint: str,
     now_ms: int,
-    limit: int,
-    bucket_span_ms: int,
-    units: int,
-) -> SourceLease:
-    """Reserve source quota through the already-authoritative provider plane."""
+    dimensions: Sequence[BudgetDimension],
+) -> SourceBudgetReservation:
+    """Delegate DATA-05 quota consumption to the accepted AGG-02 authority."""
 
-    entitlement.assert_active(now_ms=now_ms)
-    reservation = authority.reserve(
-        provider=entitlement.provider,
-        key_fingerprint=entitlement.credential_fingerprint,
+    return authority.reserve(
+        source=source,
+        key_fingerprint=key_fingerprint,
         now_ms=now_ms,
-        limit=limit,
-        bucket_span_ms=bucket_span_ms,
-        units=units,
-    )
-    if reservation.provider != entitlement.provider:
-        raise ExternalDatasetError("AGG13_QUOTA_PROVIDER_MISMATCH")
-    _require_sha256(reservation.reservation_id, "reservation_id")
-    return SourceLease(
-        provider=entitlement.provider,
-        reservation_id=reservation.reservation_id,
-        reserved_units=units,
-        observed_at_ms=now_ms,
+        dimensions=dimensions,
     )
 
 
 def normalize_external_dataset(
     *,
-    entitlement: SourceEntitlement,
-    lease: SourceLease,
+    source: SourceRegistryEntry,
+    policy: ExternalUsePolicy,
+    reservation: SourceBudgetReservation,
     interval: BoundedInterval,
-    records: Sequence[ExternalObservation],
+    records: Sequence[ExternalMarketRecord],
     now_ms: int,
 ) -> NormalizedExternalDataset:
-    """Normalize one bounded capture without upgrading evidence or access rights."""
+    """Build an AGG-02-backed DATA-05 dataset without inventing access or freshness."""
 
-    entitlement.assert_active(now_ms=now_ms)
-    if lease.provider != entitlement.provider:
-        raise ExternalDatasetError("AGG13_SOURCE_LEASE_PROVIDER_MISMATCH")
+    source.assert_usable(now_ms=now_ms)
+    if not source.storage_allowed:
+        raise ExternalDatasetError("AGG13_SOURCE_STORAGE_NOT_ALLOWED")
+    if reservation.source_id != source.source_id:
+        raise ExternalDatasetError("AGG13_SOURCE_BUDGET_MISMATCH")
     if len(records) > interval.max_records:
         raise ExternalDatasetError("AGG13_DATASET_RECORD_LIMIT_EXCEEDED")
     if not records:
         raise ExternalDatasetError("AGG13_EMPTY_DATASET")
 
     seen: set[str] = set()
-    kinds: set[DatasetKind] = set()
+    ordered: list[ExternalMarketRecord] = []
     for record in records:
-        if record.source != entitlement.provider or record.product != entitlement.product:
+        if record.source_id != source.source_id or record.product != policy.product:
             raise ExternalDatasetError("AGG13_RECORD_SOURCE_PRODUCT_MISMATCH")
         if not (
             interval.start_available_at_ms
@@ -258,47 +294,41 @@ def normalize_external_dataset(
         if record_id in seen:
             raise ExternalDatasetError("AGG13_DUPLICATE_OBSERVATION")
         seen.add(record_id)
-        kinds.add(record.dataset_kind)
+        ordered.append(record)
 
-    ordered = sorted(records, key=lambda item: (item.available_at_ms, item.identity))
-    ordered_ids = tuple(item.identity for item in ordered)
-    ordered_kinds = tuple(sorted(kinds, key=lambda item: item.value))
+    ordered.sort(key=lambda item: (item.available_at_ms, item.identity))
+    state_records = tuple(item.to_state_record() for item in ordered)
+    kinds = tuple(sorted({item.dataset_kind for item in ordered}, key=lambda x: x.value))
+    record_ids = tuple(item.identity for item in ordered)
     manifest_payload = {
         "schema_version": AGG13_DATASET_SCHEMA,
-        "provider": entitlement.provider,
-        "product": entitlement.product,
-        "terms_sha256": entitlement.terms_sha256,
-        "lease_reservation_id": lease.reservation_id,
-        "record_ids": ordered_ids,
-        "dataset_kinds": [item.value for item in ordered_kinds],
+        "source_id": source.source_id,
+        "product": policy.product,
+        "terms_sha256": policy.terms_sha256,
+        "source_budget_reservation_hash": reservation.reservation_hash,
+        "record_ids": record_ids,
+        "dataset_kinds": [item.value for item in kinds],
         "first_available_at_ms": ordered[0].available_at_ms,
         "last_available_at_ms": ordered[-1].available_at_ms,
-        "storage_allowed": entitlement.storage_allowed,
-        "redistribution_allowed": entitlement.redistribution_allowed,
-        "trading_authorized": entitlement.trading_authorized,
+        "state_record_hashes": [item.value_sha256 for item in state_records],
+        "redistribution_allowed": policy.redistribution_allowed,
+        "trading_authorized": policy.trading_authorized,
     }
     return NormalizedExternalDataset(
         schema_version=AGG13_DATASET_SCHEMA,
-        provider=entitlement.provider,
-        product=entitlement.product,
-        entitlement_terms_sha256=entitlement.terms_sha256,
-        lease_reservation_id=lease.reservation_id,
-        record_ids=ordered_ids,
-        dataset_kinds=ordered_kinds,
+        source_id=source.source_id,
+        product=policy.product,
+        terms_sha256=policy.terms_sha256,
+        source_budget_reservation_hash=reservation.reservation_hash,
+        record_ids=record_ids,
+        dataset_kinds=kinds,
         first_available_at_ms=ordered[0].available_at_ms,
         last_available_at_ms=ordered[-1].available_at_ms,
-        manifest_sha256=_hash_payload("agg13/external-dataset", manifest_payload),
-        storage_allowed=entitlement.storage_allowed,
-        redistribution_allowed=entitlement.redistribution_allowed,
-        trading_authorized=entitlement.trading_authorized,
+        state_records=state_records,
+        manifest_sha256=canonical_hash(manifest_payload),
+        redistribution_allowed=policy.redistribution_allowed,
+        trading_authorized=policy.trading_authorized,
     )
-
-
-def _hash_payload(domain: str, payload: Mapping[str, object]) -> str:
-    raw = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
-    return hashlib.sha256(
-        domain.encode("utf-8") + b"\0" + raw.encode("utf-8")
-    ).hexdigest()
 
 
 def _require_scalar(value: Scalar, field: str) -> None:

@@ -258,3 +258,8 @@ tests/test_mpr2602_semantic_identity_adversarial.py
 scripts/mpr2602_installed_default_probe.py
 tests/test_mpr2602_installed_import_boundary.py
 src/execution/__init__.py
+src/lending/financing.py
+src/execution/financing_evidence.py
+src/release_gate/agg01_foundation.py
+tests/test_agg01_foundation.py
+tests/test_agg01_financing_contracts.py

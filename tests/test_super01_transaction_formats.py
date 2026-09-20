@@ -82,6 +82,23 @@ def test_malformed_decoder_output_and_expired_capability_fail_closed() -> None:
     def malformed(_raw: bytes) -> dict[str, object]:
         return {"signatures": [], "instruction_count": "two"}
 
+    def not_a_mapping(_raw: bytes) -> object:
+        return None
+
+    with pytest.raises(Agg02Error, match="SUPER01_RESPONSE_SCHEMA_MISMATCH"):
+        decode_versioned_transaction_envelope(
+            b"wire",
+            declared_format=TransactionFormat.V1,
+            capability=capability,
+            now_ms=200,
+            decoder_registry={
+                TransactionFormat.V1: (
+                    "not-a-mapping",
+                    not_a_mapping,  # type: ignore[arg-type]
+                )
+            },
+        )
+
     with pytest.raises(Agg02Error, match="SUPER01_RESPONSE_SCHEMA_MISMATCH"):
         decode_versioned_transaction_envelope(
             b"wire",

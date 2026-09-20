@@ -167,8 +167,8 @@
     {
       "id": "NF-179",
       "work_package": "QUAL-02",
-      "status": "PARTIAL_AGG04",
-      "evidence": "Variant evidence carries machine-readable rejection_code; the full stable rejection ontology remains a follow-up."
+      "status": "IMPLEMENTED_AGG04",
+      "evidence": "Stable AGG04 rejection codes are validated; unknown codes fail closed."
     },
     {
       "id": "NF-180",
@@ -179,14 +179,14 @@
     {
       "id": "NF-181",
       "work_package": "QUAL-03",
-      "status": "PARTIAL_AGG04",
-      "evidence": "Funnel treats null probes as unknown and requires actual elapsed horizon; detailed censoring intervals remain a follow-up."
+      "status": "IMPLEMENTED_AGG04",
+      "evidence": "Survival evidence records last-positive/first-negative, right/interval censoring, unknown probes and strict elapsed horizon."
     },
     {
       "id": "NF-182",
       "work_package": "QUAL-03",
-      "status": "BLOCKED_CODE_GAP",
-      "evidence": "Counterfactual latency/state replay is not implemented by this merge."
+      "status": "PARTIAL_AGG04",
+      "evidence": "Counterfactual delay-stress samples preserve latency and unknown outcomes; protocol state evolution replay still requires captured state harness."
     },
     {
       "id": "NF-183",
@@ -203,20 +203,20 @@
     {
       "id": "NF-185",
       "work_package": "QUAL-03",
-      "status": "BLOCKED_CODE_GAP",
-      "evidence": "Selection-propensity and multiple-hypothesis correction report is not implemented by this merge."
+      "status": "PARTIAL_AGG04",
+      "evidence": "SelectionBiasReport records tested hypotheses and unknown inclusion propensity; correction math remains policy-owned rather than invented here."
     },
     {
       "id": "NF-186",
       "work_package": "QUAL-03",
-      "status": "BLOCKED_CODE_GAP",
-      "evidence": "Independent-episode class distribution/tail statistics are not implemented by this merge."
+      "status": "PARTIAL_AGG04",
+      "evidence": "Independent-episode integer net statistics are implemented; distributional confidence/tail estimators require campaign data."
     },
     {
       "id": "NF-187",
       "work_package": "QUAL-03",
-      "status": "BLOCKED_CODE_GAP",
-      "evidence": "Paired source/algorithm baseline comparison is not implemented by this merge."
+      "status": "IMPLEMENTED_AGG04",
+      "evidence": "Paired baseline/challenger comparison uses identical episode IDs and explicit resource costs, preserving unknown rows."
     },
     {
       "id": "NF-188",
@@ -233,8 +233,8 @@
     {
       "id": "NF-190",
       "work_package": "QUAL-03",
-      "status": "PARTIAL_AGG04",
-      "evidence": "Machine-readable funnel/verdict are available; a dedicated campaign dashboard is not added."
+      "status": "IMPLEMENTED_AGG04",
+      "evidence": "Machine-readable dashboard projection exposes funnel, blockers and fail-closed readiness without demo rows."
     },
     {
       "id": "NF-191",
@@ -245,8 +245,8 @@
     {
       "id": "NF-192",
       "work_package": "QUAL-03",
-      "status": "PARTIAL_EXISTING",
-      "evidence": "Existing continuous conformance/release paths can demote; AGG-04-specific renewal transition remains follow-up."
+      "status": "IMPLEMENTED_AGG04",
+      "evidence": "Demotion transition invalidates exact scope, requires requalification and forbids auto rearm/live."
     },
     {
       "id": "NF-193",

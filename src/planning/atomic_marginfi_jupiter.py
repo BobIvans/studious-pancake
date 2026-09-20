@@ -33,6 +33,10 @@ from src.providers.marginfi.provider import (
     MarginfiFlashLoanProvider,
     MarginfiSourceVectorEvidence,
 )
+from src.lending.financing_planner_adapter import (
+    FinancingPlannerProviderAdapter,
+    FinancingPlannerSnapshot,
+)
 from src.planning.instruction_firewall import (
     InstructionFirewallError,
     InstructionFirewallPolicy,
@@ -192,6 +196,7 @@ class AtomicPlannerRequest:
     safety_surplus: int = 0
     monitored_accounts: tuple[Pubkey, ...] = ()
     marginfi_source_vectors: MarginfiSourceVectorEvidence | None = None
+    financing_snapshot: FinancingPlannerSnapshot | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -217,6 +222,8 @@ class AtomicPlannerProvenance:
     min_context_slot: int
     marginfi_conformance_scope: str = "execution-conformance"
     marginfi_source_vector_hash: str | None = None
+    financing_lender: str = "marginfi"
+    financing_program_id: str | None = None
 
     @property
     def digest(self) -> str:
@@ -242,6 +249,8 @@ class AtomicPlannerProvenance:
             "min_context_slot": self.min_context_slot,
             "marginfi_conformance_scope": self.marginfi_conformance_scope,
             "marginfi_source_vector_hash": self.marginfi_source_vector_hash,
+            "financing_lender": self.financing_lender,
+            "financing_program_id": self.financing_program_id,
         }
         return _sha256_json(payload)
 
@@ -285,7 +294,7 @@ class AtomicMarginfiJupiterPlanner:
 
         try:
             prepared = self._marginfi.prepare(
-                snapshot=request.marginfi_snapshot,
+                snapshot=self._provider_snapshot(request),
                 amount=request.borrow_amount,
                 destination_token_account=str(request.destination_token_account),
                 repayment_source_token_account=str(
@@ -410,9 +419,10 @@ class AtomicMarginfiJupiterPlanner:
             cleanup=cleanup,
         )
 
+        provider_snapshot = self._provider_snapshot(request)
         snapshot_slot = _positive_int(
-            getattr(request.marginfi_snapshot, "slot", None),
-            "marginfi_snapshot.slot",
+            getattr(provider_snapshot, "slot", None),
+            "provider_snapshot.slot",
         )
         prepared_min_context_slot = _positive_int(
             getattr(prepared, "min_context_slot", None),
@@ -485,6 +495,14 @@ class AtomicMarginfiJupiterPlanner:
                 if request.marginfi_source_vectors is None
                 else request.marginfi_source_vectors.evidence_hash
             ),
+            financing_lender=str(
+                getattr(self._marginfi, "lender_id", "marginfi")
+            ),
+            financing_program_id=(
+                str(getattr(self._marginfi, "program_id"))
+                if getattr(self._marginfi, "program_id", None) is not None
+                else None
+            ),
         )
         return AtomicPlannerResult(
             transaction_plan=transaction_plan,
@@ -496,6 +514,16 @@ class AtomicMarginfiJupiterPlanner:
             flash_end_index=int(finalized.end_index),
             cleanup_count=len(cleanup),
         )
+
+    def _provider_snapshot(self, request: AtomicPlannerRequest) -> Any:
+        if isinstance(self._marginfi, FinancingPlannerProviderAdapter):
+            if request.financing_snapshot is None:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.INVALID_REQUEST,
+                    "financing_snapshot is required for lender-neutral financing",
+                )
+            return request.financing_snapshot
+        return request.marginfi_snapshot
 
     def _validate_request(self, request: AtomicPlannerRequest) -> None:
         if not request.opportunity_id.strip():
@@ -576,16 +604,27 @@ class AtomicMarginfiJupiterPlanner:
             )
 
     def _validate_route_chain(self, request: AtomicPlannerRequest) -> str:
-        try:
-            bank = request.marginfi_snapshot.bank
-            bank_mint = str(bank.mint)
-            available_liquidity = int(bank.available_liquidity)
-            authority = str(request.marginfi_snapshot.margin_account.authority)
-        except Exception as exc:
-            raise AtomicPlannerError(
-                AtomicPlannerRejectionCode.INVALID_REQUEST,
-                "MarginFi snapshot is missing required bank/account fields",
-            ) from exc
+        if isinstance(self._marginfi, FinancingPlannerProviderAdapter):
+            snapshot = request.financing_snapshot
+            if snapshot is None:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.INVALID_REQUEST,
+                    "financing_snapshot is required",
+                )
+            bank_mint = snapshot.asset_mint
+            available_liquidity = snapshot.available_liquidity_base_units
+            authority = snapshot.payer
+        else:
+            try:
+                bank = request.marginfi_snapshot.bank
+                bank_mint = str(bank.mint)
+                available_liquidity = int(bank.available_liquidity)
+                authority = str(request.marginfi_snapshot.margin_account.authority)
+            except Exception as exc:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.INVALID_REQUEST,
+                    "MarginFi snapshot is missing required bank/account fields",
+                ) from exc
 
         if authority != str(request.payer):
             raise AtomicPlannerError(
@@ -690,6 +729,34 @@ class AtomicMarginfiJupiterPlanner:
         final = tuple(finalized.instructions)
         start_index = int(finalized.start_index)
         end_index = int(finalized.end_index)
+        if not getattr(self._marginfi, "uses_flashloan_bookends", True):
+            expected = (
+                *pre_flash_setup,
+                prepared.borrow_instruction,
+                *leg_a_other,
+                leg_a_swap,
+                *leg_b_other,
+                leg_b_swap,
+                prepared.repay_instruction,
+                *cleanup,
+            )
+            expected_start = len(pre_flash_setup)
+            expected_end = len(expected) - len(cleanup) - 1
+            if (
+                final != expected
+                or start_index != expected_start
+                or end_index != expected_end
+            ):
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.SEQUENCE_INVARIANT,
+                    "generic financing sequence differs from immutable order",
+                )
+            if int(finalized.required_repayment) != int(prepared.required_repayment):
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.SEQUENCE_INVARIANT,
+                    "finalized repayment differs from prepared repayment",
+                )
+            return
         if (
             start_index != len(pre_flash_setup)
             or end_index != len(final) - 1
@@ -780,6 +847,30 @@ class AtomicMarginfiJupiterPlanner:
         return lookup_tables, required
 
     def _monitored_accounts(self, request: AtomicPlannerRequest) -> tuple[Pubkey, ...]:
+        if isinstance(self._marginfi, FinancingPlannerProviderAdapter):
+            snapshot = request.financing_snapshot
+            if snapshot is None:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.INVALID_REQUEST,
+                    "financing_snapshot is required",
+                )
+            try:
+                snapshot_pubkeys = tuple(
+                    Pubkey.from_string(value) for value in snapshot.monitored_accounts
+                )
+            except Exception as exc:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.INVALID_REQUEST,
+                    "financing monitored-account provenance is invalid",
+                ) from exc
+            return _dedupe_pubkeys(
+                (
+                    *request.monitored_accounts,
+                    *snapshot_pubkeys,
+                    request.destination_token_account,
+                    request.repayment_source_token_account,
+                )
+            )
         try:
             snapshot_values = (
                 request.marginfi_snapshot.margin_account.address,
@@ -820,6 +911,48 @@ class AtomicMarginfiJupiterPlanner:
         start_index = int(finalized.start_index)
         end_index = int(finalized.end_index)
         specs: list[tuple[Instruction, str, str]] = []
+        if not getattr(self._marginfi, "uses_flashloan_bookends", True):
+            specs.extend(
+                (instruction, "jupiter_setup", f"setup_{index}")
+                for index, instruction in enumerate(pre_flash_setup)
+            )
+            specs.append(
+                (
+                    prepared.borrow_instruction,
+                    "financing_borrow",
+                    "financing_flash_borrow",
+                )
+            )
+            specs.extend(
+                (instruction, "jupiter_other", f"leg_a_other_{index}")
+                for index, instruction in enumerate(leg_a_other)
+            )
+            specs.append((leg_a_swap, "jupiter_swap", "jupiter_leg_a"))
+            specs.extend(
+                (instruction, "jupiter_other", f"leg_b_other_{index}")
+                for index, instruction in enumerate(leg_b_other)
+            )
+            specs.append((leg_b_swap, "jupiter_swap", "jupiter_leg_b"))
+            specs.append(
+                (
+                    prepared.repay_instruction,
+                    "financing_repay",
+                    "financing_flash_repay",
+                )
+            )
+            specs.extend(
+                (instruction, "jupiter_cleanup", f"cleanup_{index}")
+                for index, instruction in enumerate(cleanup)
+            )
+            if tuple(instruction for instruction, _, _ in specs) != final:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.SEQUENCE_INVARIANT,
+                    "generic planned metadata does not match final sequence",
+                )
+            return tuple(
+                PlannedInstruction(instruction=instruction, role=role, name=name)
+                for instruction, role, name in specs
+            )
         specs.extend(
             (instruction, "jupiter_setup", f"setup_{index}")
             for index, instruction in enumerate(pre_flash_setup)

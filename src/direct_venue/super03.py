@@ -14,7 +14,7 @@ import json
 import re
 from typing import Iterable, Mapping
 
-from src.direct_venue.mpr2617 import CapabilityState, VenueCapability, VenueFamily
+from src.direct_venue.mpr2617 import (\n    CapabilityState,\n    DirectRouteLeg,\n    VenueCapability,\n    VenueFamily,\n)
 from src.strategies.stable_peg.math import LiquidityBand, ceil_div, traverse_bands_exact
 
 
@@ -232,6 +232,8 @@ class VenueConformanceResult:
     status: ConformanceStatus
     blockers: tuple[str, ...]
     evidence_sha256: str
+    amount_in: int
+    guaranteed_min_out: int
     capability: VenueCapability | None
     live_enabled: bool = False
 
@@ -266,6 +268,8 @@ def qualify_cpmm_offline(
             "reference_vector_sha256": quote.reference_vector_sha256,
         },
         blockers=blockers,
+        amount_in=quote.amount_in,
+        guaranteed_min_out=min(local_out, quote.reference_amount_out),
         expires_at_unix=expires_at_unix,
         quote_math_version="super03-cpmm-integer-v1",
         instruction_family="raydium-cpmm-swap-exact-in",
@@ -313,6 +317,8 @@ def qualify_band_venue_offline(
             "reference_vector_sha256": quote.reference_vector_sha256,
         },
         blockers=blockers,
+        amount_in=quote.amount_in,
+        guaranteed_min_out=min(local_out, quote.reference_amount_out),
         expires_at_unix=expires_at_unix,
         quote_math_version="super03-decoded-band-v1",
         instruction_family=(
@@ -526,10 +532,14 @@ def _finish(
     instruction: InstructionConformance,
     quote_payload: Mapping[str, object],
     blockers: list[str],
+    amount_in: int,
+    guaranteed_min_out: int,
     expires_at_unix: int,
     quote_math_version: str,
     instruction_family: str,
 ) -> VenueConformanceResult:
+    _positive_int(amount_in, "amount_in")
+    _nonnegative_int(guaranteed_min_out, "guaranteed_min_out")
     _positive_int(expires_at_unix, "expires_at_unix")
     unique = tuple(dict.fromkeys(blockers))
     payload = {
@@ -566,6 +576,8 @@ def _finish(
             ConformanceStatus.BLOCKED_EXTERNAL,
             unique,
             evidence_sha,
+            amount_in,
+            guaranteed_min_out,
             None,
             False,
         )
@@ -583,7 +595,9 @@ def _finish(
         deployment_generation=identity.deployment_generation,
         account_layout_version=identity.account_layout_version,
         instruction_family=instruction_family,
-        quote_math_version=quote_math_version,
+        quote_math_version=(
+            f"{quote_math_version}:amount={amount_in}:evidence={evidence_sha[:16]}"
+        ),
         evidence_sha256=evidence_sha,
         instruction_data_sha256=instruction.instruction_data_sha256,
         instruction_accounts_sha256=instruction.instruction_accounts_sha256,
@@ -594,8 +608,34 @@ def _finish(
         ConformanceStatus.OFFLINE_VERIFIED,
         (),
         evidence_sha,
+        amount_in,
+        guaranteed_min_out,
         capability,
         False,
+    )
+
+
+def build_amount_bound_leg(result: VenueConformanceResult) -> DirectRouteLeg:
+    """Build the only supported MPR-2617 leg from one exact conformance vector."""
+    if (
+        result.status is not ConformanceStatus.OFFLINE_VERIFIED
+        or result.capability is None
+    ):
+        raise Super03Error("blocked conformance result cannot build a route leg")
+    if result.guaranteed_min_out <= 0:
+        raise Super03Error("amount-bound route leg requires positive guaranteed output")
+    capability = result.capability
+    return DirectRouteLeg(
+        venue=capability.venue,
+        capability_hash=capability.capability_hash,
+        pool_or_market=capability.pool_or_market,
+        input_mint=capability.input_mint,
+        output_mint=capability.output_mint,
+        amount_in=result.amount_in,
+        guaranteed_min_out=result.guaranteed_min_out,
+        evidence_generation=capability.deployment_generation,
+        instruction_data_sha256=capability.instruction_data_sha256,
+        instruction_accounts_sha256=capability.instruction_accounts_sha256,
     )
 
 
@@ -666,6 +706,7 @@ __all__ = [
     "UpstreamAdmission",
     "VenueConformanceResult",
     "VenueIdentityEvidence",
+    "build_amount_bound_leg",
     "build_fixed_workload_benchmark",
     "qualify_band_venue_offline",
     "qualify_cpmm_offline",

@@ -58,8 +58,35 @@ from src.paper_shadow.atomic_vertical import (
 from src.execution.exact_simulation import FinalizedSimulation
 
 
+_DECODER_CLOSURE_PATHS = (
+    "src/execution/agg03_financing_decoder.py",
+    "src/execution/financing_evidence.py",
+    "src/execution/state_evidence_pr115.py",
+    "src/execution/economic_reconciliation/exact_adapter.py",
+    "src/execution/economic_reconciliation/engine.py",
+    "src/execution/economic_reconciliation/models.py",
+    "src/execution/economic_reconciliation/state.py",
+    "src/lending/agg03_financing_ports.py",
+    "src/lending/financing.py",
+    "src/lending/financing_planner_adapter.py",
+    "src/lending/jupiter_lend.py",
+    "src/lending/slumlord.py",
+)
+
+
 def decoder_artifact_sha256() -> str:
-    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
+    """Hash the deterministic installed decoder dependency closure."""
+
+    root = Path(__file__).resolve().parents[2]
+    digest = hashlib.sha256()
+    for relative in _DECODER_CLOSURE_PATHS:
+        path = root / relative
+        raw = path.read_bytes()
+        digest.update(relative.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(len(raw).to_bytes(8, "little"))
+        digest.update(hashlib.sha256(raw).digest())
+    return digest.hexdigest()
 
 
 def _hash(value: object) -> str:

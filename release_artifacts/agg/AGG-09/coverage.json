@@ -16,8 +16,8 @@
       ],
       "owner": "src/operations/agg09_ops01.py",
       "blockers": [
-        "LIVE-03 evidence required for full operational acceptance",
-        "production cross-host coordinator/signer recovery require external evidence"
+        "AGG09_LIVE03_OBSERVED_LANDING_EVIDENCE_MISSING",
+        "AGG09_CROSS_HOST_RECOVERY_EVIDENCE_MISSING"
       ]
     },
     "OPS-02": {
@@ -29,7 +29,7 @@
       ],
       "owner": "src/operations/agg09_ops02.py",
       "blockers": [
-        "real workload/scale evidence is external to code tests"
+        "AGG09_REAL_WORKLOAD_PERFORMANCE_EVIDENCE_MISSING"
       ]
     },
     "OPS-03": {
@@ -43,9 +43,9 @@
       ],
       "owner": "src/operations/agg09_ops03.py",
       "blockers": [
-        "LIVE-03 real landing evidence for the selected exact profile is absent",
-        "real predeclared operational soak is absent",
-        "post-merge release/profile qualification must be regenerated on one exact generation"
+        "AGG09_LIVE03_OBSERVED_LANDING_EVIDENCE_MISSING",
+        "AGG09_REAL_OPERATIONAL_SOAK_MISSING",
+        "AGG09_CURRENT_PROFILE_CAMPAIGN_REQUIRED"
       ]
     }
   },
@@ -70,6 +70,11 @@
   "reconciliation_input_main": "27875850a88edf102c904e31955e0df8b78b13b4",
   "merge_commit": "5d1d8177c933221dcb31baf0753924c4f32e3313",
   "prerequisite_receipts": {
+    "AGG-04": "b26c6a05c0646fb839f49f537fc21acbd863455c",
+    "AGG-05": "1eef148ae77459f9974754b6b911ab31b461c851",
+    "AGG-08": "27875850a88edf102c904e31955e0df8b78b13b4"
+  },
+  "resolved_dependency_receipts": {
     "AGG-04": "b26c6a05c0646fb839f49f537fc21acbd863455c",
     "AGG-05": "1eef148ae77459f9974754b6b911ab31b461c851",
     "AGG-08": "27875850a88edf102c904e31955e0df8b78b13b4"

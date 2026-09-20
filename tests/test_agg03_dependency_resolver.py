@@ -5,6 +5,8 @@ from pathlib import Path
 
 import pytest
 
+from src.config.runtime import load_runtime_config
+from src.execution.agg03_financing_decoder import decoder_artifact_sha256
 from src.lending.jupiter_lend import JUPITER_LEND_FLASHLOAN_PROGRAM_ID
 from src.lending.slumlord import SLUMLORD_PROGRAM_ID
 from src.runtime.core_v1_dependency_resolver import (
@@ -43,6 +45,7 @@ def _manifest(*, primary_program: str | None = None) -> dict[str, object]:
             "evidence_sha256": SHA_A,
             "decoder_identity": "jupiter-lend-decoder-v1",
             "decoder_generation": 1,
+            "qualified": True,
         },
         "rent": {
             "lender_id": "slumlord",
@@ -51,9 +54,12 @@ def _manifest(*, primary_program: str | None = None) -> dict[str, object]:
             "evidence_sha256": SHA_B,
             "decoder_identity": "slumlord-decoder-v1",
             "decoder_generation": 1,
+            "qualified": True,
         },
+        "release_id": "agg03-installed-profile-v1",
+        "policy_bundle_hash": SHA_C,
         "repayment_decoder": {
-            "artifact_sha256": SHA_C,
+            "artifact_sha256": decoder_artifact_sha256(),
             "qualified": True,
         },
     }
@@ -80,19 +86,62 @@ def test_manifest_rejects_wrong_primary_program(tmp_path: Path) -> None:
         )
 
 
-def test_valid_manifest_reaches_explicit_static_decoder_blocker(tmp_path: Path) -> None:
+def test_valid_manifest_reaches_static_installed_dependencies(tmp_path: Path) -> None:
     path = _write(tmp_path, _manifest())
+    config = load_runtime_config(
+        cli_overrides={
+            "runtime.mode": "paper",
+            "providers.jupiter.enabled": True,
+        }
+    )
+    resolution = resolve_installed_core_v1_dependencies(
+        _profile(),
+        {MANIFEST_ENV: str(path)},
+        config=config,
+    )
+    assert resolution.dependencies is not None
+    assert resolution.blocker == "CORE_V1_PROVIDER_DRAFT_SOURCE_EXTERNAL"
+    assert resolution.dependencies.financing_port is not None
+    assert resolution.dependencies.rent_financing_port is not None
+    assert resolution.dependencies.financing_repayment_decoder is not None
+    assert resolution.manifest_sha256 is not None
+    assert len(resolution.manifest_sha256) == 64
+
+
+def test_decoder_artifact_mismatch_is_rejected(tmp_path: Path) -> None:
+    payload = _manifest()
+    decoder = dict(payload["repayment_decoder"])
+    decoder["artifact_sha256"] = SHA_A
+    payload["repayment_decoder"] = decoder
+    path = _write(tmp_path, payload)
+    config = load_runtime_config(
+        cli_overrides={
+            "runtime.mode": "paper",
+            "providers.jupiter.enabled": True,
+        }
+    )
+    with pytest.raises(ValueError, match="DECODER_ARTIFACT_MISMATCH"):
+        resolve_installed_core_v1_dependencies(
+            _profile(),
+            {MANIFEST_ENV: str(path)},
+            config=config,
+        )
+
+
+def test_unqualified_primary_deployment_stays_blocked(tmp_path: Path) -> None:
+    payload = _manifest()
+    primary = dict(payload["primary"])
+    primary["qualified"] = False
+    payload["primary"] = primary
+    path = _write(tmp_path, payload)
     resolution = resolve_installed_core_v1_dependencies(
         _profile(),
         {MANIFEST_ENV: str(path)},
     )
-    assert resolution.dependencies is None
     assert (
         resolution.blocker
-        == "CORE_V1_FINANCING_REPAYMENT_DECODER_IMPLEMENTATION_REQUIRED"
+        == "CORE_V1_PRIMARY_FINANCING_DEPLOYMENT_NOT_QUALIFIED"
     )
-    assert resolution.manifest_sha256 is not None
-    assert len(resolution.manifest_sha256) == 64
 
 
 def test_unqualified_decoder_evidence_stays_blocked(tmp_path: Path) -> None:

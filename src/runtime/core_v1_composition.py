@@ -300,6 +300,7 @@ def build_core_v1_composition(
     db_path: str | Path,
     profile: CoreV1ReleaseProfile,
     dependencies: CoreV1Dependencies | None = None,
+    external_blocker: str | None = None,
 ) -> CoreV1Composition:
     """Build exactly one sender-free installed core graph."""
 
@@ -352,7 +353,7 @@ def build_core_v1_composition(
                 profile=profile,
                 authority=authority,
                 capital=capital,
-                reason=CORE_V1_BLOCKED_EXTERNAL,
+                reason=external_blocker or CORE_V1_BLOCKED_EXTERNAL,
             )
         pin = load_marginfi_contract_pin()
         marginfi = MarginfiFlashLoanProvider(pin)

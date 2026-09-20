@@ -10,6 +10,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import hashlib
 import json
+from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 from src.execution.economic_reconciliation.exact_adapter import (
@@ -54,6 +55,10 @@ from src.paper_shadow.atomic_vertical import (
     DecodedFinancingEconomics,
 )
 from src.execution.exact_simulation import FinalizedSimulation
+
+
+def decoder_artifact_sha256() -> str:
+    return hashlib.sha256(Path(__file__).read_bytes()).hexdigest()
 
 
 def _hash(value: object) -> str:
@@ -422,4 +427,7 @@ class JupiterLendSlumlordRepaymentDecoder:
         )
 
 
-__all__ = ["JupiterLendSlumlordRepaymentDecoder"]
+__all__ = [
+    "JupiterLendSlumlordRepaymentDecoder",
+    "decoder_artifact_sha256",
+]

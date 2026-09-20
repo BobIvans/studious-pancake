@@ -130,3 +130,4 @@ def test_failed_format_read_records_gap_and_forbids_silent_checkpoint_advance() 
     assert gap.checkpoint_advance_allowed is False
     assert gap.requested_start == 100
     assert gap.requested_end == 110
+

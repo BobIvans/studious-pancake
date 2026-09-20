@@ -42,6 +42,8 @@ _SUCCESS = frozenset(
 _INSTALLED_EXTERNAL_BLOCKER = "CORE_V1_BLOCKED_EXTERNAL"
 _INSTALLED_EXTERNAL_REASON = "BLOCKED_EXTERNAL"
 _LEGACY_BUILDER_KEY = "build_" + "installed_durable_paper_service"
+CORE_JUPITER_LEND_PROFILE_ID = "core-jupiter-lend-jupiter-v1"
+CORE_V1_PROFILE_ENV = "FLASHLOAN_CORE_V1_PROFILE_ID"
 
 
 def _legacy_builder_unavailable(*_args: object, **_kwargs: object) -> Any:
@@ -146,6 +148,36 @@ def _resolve_max_cycles(
     return _integer(environment, "FLASHLOAN_PAPER_MAX_CYCLES", "0")
 
 
+def _select_core_v1_profile(config, environment: dict[str, str]):
+    from src.runtime.core_v1_materializer import (
+        CORE_V1_PROFILE_ID,
+        CoreV1ReleaseProfile,
+    )
+
+    profile_id = environment.get(CORE_V1_PROFILE_ENV, CORE_V1_PROFILE_ID).strip()
+    if profile_id == CORE_V1_PROFILE_ID:
+        lender = "marginfi"
+        generation = 1
+    elif profile_id == CORE_JUPITER_LEND_PROFILE_ID:
+        lender = "jupiter-lend"
+        generation = 1
+    else:
+        raise ConfigurationLoadError(
+            f"{CORE_V1_PROFILE_ENV} selects unsupported profile {profile_id!r}"
+        )
+    return CoreV1ReleaseProfile(
+        profile_id=profile_id,
+        strategy="circular_arbitrage",
+        lender=lender,
+        router="jupiter",
+        cluster=config.cluster.name,
+        genesis_hash=config.cluster.genesis_hash,
+        transport=("rpc+jito" if config.providers.jito.enabled else "rpc"),
+        live_enabled=False,
+        profile_generation=generation,
+    )
+
+
 async def _run_paper(
     context: BootstrapContext,
     *,
@@ -201,21 +233,8 @@ async def _run_paper(
         # Missing deployed/provider evidence is represented by that composition as
         # BLOCKED_EXTERNAL; the installed path is never a blank A3 constructor.
         from src.runtime.core_v1_composition import build_core_v1_composition
-        from src.runtime.core_v1_materializer import (
-            CORE_V1_PROFILE_ID,
-            CoreV1ReleaseProfile,
-        )
 
-        profile = CoreV1ReleaseProfile(
-            profile_id=CORE_V1_PROFILE_ID,
-            strategy="circular_arbitrage",
-            lender="marginfi",
-            router="jupiter",
-            cluster=config.cluster.name,
-            genesis_hash=config.cluster.genesis_hash,
-            transport=("rpc+jito" if config.providers.jito.enabled else "rpc"),
-            live_enabled=False,
-        )
+        profile = _select_core_v1_profile(config, environment)
         composition = build_core_v1_composition(
             config,
             db_path=context.resolve_path(selected_db),

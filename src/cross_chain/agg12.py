@@ -1153,6 +1153,13 @@ def _sui_object_blockers(
                 transition.state_after_sha256,
                 "state_after_sha256",
             )
+        if (
+            transition.state_before_sha256 is not None
+            and transition.state_after_sha256 is not None
+            and transition.state_before_sha256
+            == transition.state_after_sha256
+        ):
+            blockers.append(f"SUI_OBJECT_{index}_STATE_NOT_ADVANCED")
         if transition.after_version <= transition.before_version:
             blockers.append(
                 f"SUI_OBJECT_{index}_VERSION_NOT_ADVANCED"

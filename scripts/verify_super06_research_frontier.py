@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 import re
@@ -21,6 +22,7 @@ EXPECTED_CHILDREN: Mapping[str, tuple[str, ...]] = {
 EXPECTED_NF = frozenset(nf for values in EXPECTED_CHILDREN.values() for nf in values)
 EXCLUDED_PRODUCT_NF = frozenset(f"NF-{n:03d}" for n in range(318, 323))
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
+
 EXPECTED_RECEIPTS: Mapping[str, tuple[int, str]] = {
     "AGG-10": (500, "de483bc3084a87d2b3f34830bdecf94ea0e4e63d"),
     "AGG-14": (509, "baedd8c0697c0bf789e582dab8acf5bbc113c123"),
@@ -31,12 +33,99 @@ EXPECTED_RECEIPTS: Mapping[str, tuple[int, str]] = {
     "AGG-01": (501, "670ed70a3b3be199ece5d5f6cba29ee1709d4c55"),
 }
 
+EXPECTED_CHILD_METADATA: Mapping[str, Mapping[str, object]] = {
+    "PR-123": {
+        "package": "W2-16", "scope": "ML-01", "owner": "src/decision/agg10.py",
+        "test": "tests/test_agg10_intelligence.py",
+        "evidence": "release_artifacts/agg/AGG-10/coverage.json", "merged_by_pr": 500,
+    },
+    "PR-124": {
+        "package": "W2-16", "scope": "ML-02", "owner": "src/decision/agg10.py",
+        "test": "tests/test_agg10_intelligence.py",
+        "evidence": "release_artifacts/agg/AGG-10/coverage.json", "merged_by_pr": 500,
+    },
+    "PR-125": {
+        "package": "W2-16", "scope": "ML-03", "owner": "src/decision/agg10.py",
+        "test": "tests/test_agg10_intelligence.py",
+        "evidence": "release_artifacts/agg/AGG-10/coverage.json", "merged_by_pr": 500,
+    },
+    "PR-145": {
+        "package": "W2-16", "scope": "RND-01", "owner": "src/research/evidence.py",
+        "test": "tests/test_agg14_research_system.py",
+        "evidence": "config/agg14_research_coverage.json", "merged_by_pr": 509,
+    },
+    "PR-149": {
+        "package": "W2-16", "scope": "RND-04", "owner": "src/research/promotion.py",
+        "test": "tests/test_agg14_research_system.py",
+        "evidence": "config/agg14_research_coverage.json", "merged_by_pr": 509,
+    },
+    "PR-146": {
+        "package": "W2-21", "scope": "RND-02", "owner": "src/research/benchmarks.py",
+        "test": "tests/test_agg14_research_system.py",
+        "evidence": "config/agg14_research_coverage.json", "merged_by_pr": 509,
+    },
+    "PR-147": {
+        "package": "W2-21", "scope": "RND-03", "owner": "src/research/verifiability.py",
+        "test": "tests/test_agg14_research_system.py",
+        "evidence": "config/agg14_research_coverage.json", "merged_by_pr": 509,
+    },
+}
+
+EXPECTED_SOURCE_BLOBS: Mapping[str, str] = {
+    "src/decision/agg10.py": "8e2c777a53efe2716229b67609d44bcc66278c7c",
+    "tests/test_agg10_intelligence.py": "8569fb519b504ed6ad99e7ebda5f3136771d7d3b",
+    "release_artifacts/agg/AGG-10/coverage.json": "90fef936d66d4d2b53b78211cd115b1bd77260e3",
+    "src/research/evidence.py": "bfbdc1d883070c3b9db2f3e41c8f81ec002fc960",
+    "src/research/promotion.py": "6e2212ba777c16317b5f1e890c87a24830fd4fe2",
+    "src/research/benchmarks.py": "f7fe5c4e99fd665564700999db6b2ace49a344cc",
+    "src/research/verifiability.py": "e6ffc3131540ba59f6e7c76a919b61fd0287a070",
+    "tests/test_agg14_research_system.py": "df28cf5c9f6f5c6ed3c706187b4e8ea3c00d150c",
+    "config/agg14_research_coverage.json": "51b968bfadfac0712c93ab14c8273e958392c08a",
+}
+
+EXPECTED_BLOCKERS = frozenset({
+    "SUPER06_NF223_ACTUAL_LIVE03_SENT_ATTEMPT_LABELS_NOT_ATTESTED",
+    "SUPER06_DEFENSIVE_TOOL_CORPUS_NOT_EXTERNALLY_QUALIFIED",
+    "SUPER06_QUBO_HARDWARE_EXPERIMENT_NOT_RUN",
+    "SUPER06_QUANTUM_MODEL_HOLDOUT_EXPERIMENT_NOT_RUN",
+    "SUPER06_ACCELERATOR_HARDWARE_BENCHMARK_NOT_RUN",
+    "SUPER06_FEDERATED_USE_CASE_AND_PARTICIPANT_CONSENT_NOT_PROVISIONED",
+    "SUPER06_ZK_USE_CASE_AND_PROOF_SYSTEM_NOT_PINNED",
+})
+
+EXPECTED_AGG14_BLOCKERS: Mapping[str, tuple[str, ...]] = {
+    "NF-312": ("DEFENSIVE_TOOL_CORPUS_NOT_EXTERNALLY_QUALIFIED",),
+    "NF-313": ("QUBO_HARDWARE_EXPERIMENT_NOT_RUN",),
+    "NF-314": ("QUANTUM_MODEL_HOLDOUT_EXPERIMENT_NOT_RUN",),
+    "NF-315": ("ACCELERATOR_HARDWARE_BENCHMARK_NOT_RUN",),
+    "NF-316": ("FEDERATED_USE_CASE_AND_PARTICIPANT_CONSENT_NOT_PROVISIONED",),
+    "NF-317": ("ZK_USE_CASE_AND_PROOF_SYSTEM_NOT_PINNED",),
+}
+
 
 def _load(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"OBJECT_REQUIRED:{path}")
     return payload
+
+
+def _git_blob_sha(path: Path) -> str:
+    try:
+        data = path.read_bytes()
+    except OSError as exc:
+        raise ValueError(f"SUPER06_PINNED_SOURCE_MISSING:{path}") from exc
+    header = f"blob {len(data)}\0".encode("ascii")
+    return hashlib.sha1(header + data, usedforsecurity=False).hexdigest()
+
+
+def validate_pinned_source_blobs(root: Path) -> None:
+    for relative, expected_sha in EXPECTED_SOURCE_BLOBS.items():
+        observed = _git_blob_sha(root / relative)
+        if observed != expected_sha:
+            raise ValueError(
+                f"SUPER06_SOURCE_BLOB_MISMATCH:{relative}:{observed}:{expected_sha}"
+            )
 
 
 def validate_super_payload(payload: Mapping[str, Any]) -> None:
@@ -77,9 +166,15 @@ def validate_super_payload(payload: Mapping[str, Any]) -> None:
 
     if set(by_child) != set(EXPECTED_CHILDREN):
         raise ValueError("SUPER06_CHILD_SCOPE_MISMATCH")
-    for child, expected in EXPECTED_CHILDREN.items():
-        if tuple(by_child[child]["nf"]) != expected:
+    for child, expected_nf in EXPECTED_CHILDREN.items():
+        row = by_child[child]
+        if tuple(row["nf"]) != expected_nf:
             raise ValueError(f"SUPER06_CHILD_NF_SCOPE_MISMATCH:{child}")
+        expected_metadata = EXPECTED_CHILD_METADATA[child]
+        for key, expected_value in expected_metadata.items():
+            if row.get(key) != expected_value:
+                raise ValueError(f"SUPER06_CHILD_METADATA_MISMATCH:{child}:{key}")
+
     if len(all_nf) != len(set(all_nf)):
         raise ValueError("SUPER06_DUPLICATE_PRIMARY_NF")
     if frozenset(all_nf) != EXPECTED_NF or payload.get("primary_nf_count") != len(EXPECTED_NF):
@@ -108,11 +203,15 @@ def validate_super_payload(payload: Mapping[str, Any]) -> None:
         raise ValueError("SUPER06_SOURCE_RECEIPT_MISMATCH")
 
     blockers = payload.get("blockers")
-    if not isinstance(blockers, list) or not blockers:
-        raise ValueError("SUPER06_BLOCKERS_MUST_REMAIN_EXPLICIT")
+    if not isinstance(blockers, list) or any(not isinstance(item, str) for item in blockers):
+        raise ValueError("SUPER06_BLOCKERS_INVALID")
+    if frozenset(blockers) != EXPECTED_BLOCKERS or len(blockers) != len(EXPECTED_BLOCKERS):
+        raise ValueError("SUPER06_BLOCKER_SET_MISMATCH")
 
 
 def validate_source_artifacts(root: Path, payload: Mapping[str, Any]) -> None:
+    validate_pinned_source_blobs(root)
+
     agg10 = _load(root / "release_artifacts/agg/AGG-10/coverage.json")
     agg14 = _load(root / "config/agg14_research_coverage.json")
 
@@ -124,6 +223,15 @@ def validate_source_artifacts(root: Path, payload: Mapping[str, Any]) -> None:
     expected_ml = {f"NF-{n:03d}" for n in range(216, 239)}
     if not expected_ml <= agg10_nf:
         raise ValueError("SUPER06_AGG10_ML_COVERAGE_MISSING")
+    agg10_blockers = agg10.get("blockers")
+    if not isinstance(agg10_blockers, list) or not any(
+        isinstance(item, str)
+        and "NF-223" in item
+        and "LIVE-03" in item
+        and "sent-attempt" in item
+        for item in agg10_blockers
+    ):
+        raise ValueError("SUPER06_AGG10_NF223_SOURCE_BLOCKER_MISSING")
 
     rows = agg14.get("nf")
     if not isinstance(rows, list):
@@ -141,12 +249,15 @@ def validate_source_artifacts(root: Path, payload: Mapping[str, Any]) -> None:
             raise ValueError(f"SUPER06_AGG14_IMPLEMENTATION_MISMATCH:{nf}")
         if row.get("operational_status") != "UNQUALIFIED":
             raise ValueError(f"SUPER06_AGG14_OPERATIONAL_MISMATCH:{nf}")
+    for nf, expected_blockers in EXPECTED_AGG14_BLOCKERS.items():
+        if tuple(agg14_rows[nf].get("blockers", ())) != expected_blockers:
+            raise ValueError(f"SUPER06_AGG14_SOURCE_BLOCKER_MISMATCH:{nf}")
 
-    for child in payload["children"]:
+    for child, expected_metadata in EXPECTED_CHILD_METADATA.items():
         for key in ("owner", "test", "evidence"):
-            value = child.get(key)
+            value = expected_metadata[key]
             if not isinstance(value, str) or not (root / value).is_file():
-                raise ValueError(f"SUPER06_MISSING_EVIDENCE_PATH:{child.get('source_pr')}:{key}")
+                raise ValueError(f"SUPER06_MISSING_EVIDENCE_PATH:{child}:{key}")
 
 
 def verify(root: Path) -> dict[str, Any]:
@@ -164,6 +275,7 @@ def verify(root: Path) -> dict[str, Any]:
         "live_enabled": False,
         "product_scope_included": False,
         "blocker_count": len(payload["blockers"]),
+        "pinned_source_blob_count": len(EXPECTED_SOURCE_BLOBS),
     }
 
 

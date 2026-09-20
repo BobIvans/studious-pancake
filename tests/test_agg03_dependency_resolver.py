@@ -4,9 +4,17 @@ import json
 from pathlib import Path
 
 import pytest
+from solders.instruction import AccountMeta, Instruction
+from solders.pubkey import Pubkey
 
 from src.config.runtime import load_runtime_config
-from src.execution.agg03_financing_decoder import decoder_artifact_sha256
+from src.execution.agg03_financing_decoder import (
+    DECODER_CLOSURE_PATHS,
+    decoder_artifact_sha256,
+    financing_pre_state_sha256,
+    require_financing_pre_state_commitment,
+    validate_financing_writable_coverage,
+)
 from src.lending.jupiter_lend import JUPITER_LEND_FLASHLOAN_PROGRAM_ID
 from src.lending.slumlord import SLUMLORD_PROGRAM_ID
 from src.runtime.core_v1_dependency_resolver import (
@@ -202,3 +210,48 @@ def test_unqualified_decoder_evidence_stays_blocked(tmp_path: Path) -> None:
         resolution.blocker
         == "CORE_V1_FINANCING_REPAYMENT_DECODER_NOT_QUALIFIED"
     )
+
+
+def test_financing_pre_state_commitment_binds_addresses_and_raw_accounts() -> None:
+    address = str(Pubkey.new_unique())
+    accounts = (
+        {
+            "owner": str(Pubkey.new_unique()),
+            "lamports": 123,
+            "data": ["AA==", "base64"],
+            "executable": False,
+            "rentEpoch": 0,
+        },
+    )
+    digest = financing_pre_state_sha256((address,), accounts)
+    require_financing_pre_state_commitment(digest, (address,), accounts)
+    with pytest.raises(ValueError, match="PRE_STATE_HASH_MISMATCH"):
+        require_financing_pre_state_commitment(SHA_A, (address,), accounts)
+    assert digest != financing_pre_state_sha256((str(Pubkey.new_unique()),), accounts)
+
+
+def test_writable_financing_accounts_must_be_monitored() -> None:
+    writable = Pubkey.new_unique()
+    instruction = Instruction(
+        Pubkey.new_unique(),
+        b"x",
+        [AccountMeta(writable, False, True)],
+    )
+    with pytest.raises(ValueError, match="WRITABLE_ACCOUNT_NOT_MONITORED"):
+        validate_financing_writable_coverage((), (instruction,))
+    assert validate_financing_writable_coverage(
+        (str(writable),),
+        (instruction,),
+    ) == (str(writable),)
+
+
+def test_decoder_artifact_digest_covers_transitive_closure(tmp_path: Path) -> None:
+    for relative in DECODER_CLOSURE_PATHS:
+        path = tmp_path / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(relative, encoding="utf-8")
+    before = decoder_artifact_sha256(tmp_path)
+    changed = tmp_path / DECODER_CLOSURE_PATHS[-1]
+    changed.write_text("changed", encoding="utf-8")
+    after = decoder_artifact_sha256(tmp_path)
+    assert before != after

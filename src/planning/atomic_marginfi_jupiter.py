@@ -232,6 +232,9 @@ class AtomicPlannerProvenance:
     financing_evidence_hash: str | None = None
     financing_obligation_digest: str | None = None
     auxiliary_financing_identities: tuple[tuple[str, str, int], ...] = ()
+    auxiliary_financing_obligations: tuple[
+        tuple[str, str, int, str, int, int], ...
+    ] = ()
 
     @property
     def digest(self) -> str:
@@ -263,6 +266,7 @@ class AtomicPlannerProvenance:
             "financing_evidence_hash": self.financing_evidence_hash,
             "financing_obligation_digest": self.financing_obligation_digest,
             "auxiliary_financing_identities": self.auxiliary_financing_identities,
+            "auxiliary_financing_obligations": self.auxiliary_financing_obligations,
         }
         return _sha256_json(payload)
 
@@ -601,6 +605,18 @@ class AtomicMarginfiJupiterPlanner:
                 ),
             )
             if self._auxiliary_financing is not None
+            else (),
+            auxiliary_financing_obligations=(
+                (
+                    self._auxiliary_financing.lender_id,
+                    self._auxiliary_financing.program_id,
+                    self._auxiliary_financing.deployment_generation,
+                    rent_prepared.obligation_digest,
+                    request.rent_borrow_amount,
+                    rent_prepared.required_repayment,
+                ),
+            )
+            if self._auxiliary_financing is not None and rent_prepared is not None
             else (),
         )
         return AtomicPlannerResult(

@@ -483,7 +483,10 @@ class AtomicMarginfiJupiterPlanner:
             request.leg_a.addresses_by_lookup_table_address,
             request.leg_b.addresses_by_lookup_table_address,
         )
-        monitored_accounts = self._monitored_accounts(request)
+        monitored_accounts = self._monitored_accounts(
+            request,
+            final_instructions,
+        )
         planned_instructions = self._planned_instructions(
             finalized=finalized,
             prepared=prepared,
@@ -981,7 +984,11 @@ class AtomicMarginfiJupiterPlanner:
             ) from exc
         return lookup_tables, required
 
-    def _monitored_accounts(self, request: AtomicPlannerRequest) -> tuple[Pubkey, ...]:
+    def _monitored_accounts(
+        self,
+        request: AtomicPlannerRequest,
+        final_instructions: Sequence[Instruction],
+    ) -> tuple[Pubkey, ...]:
         if isinstance(self._marginfi, FinancingPlannerProviderAdapter):
             snapshot = request.financing_snapshot
             if snapshot is None:
@@ -1010,11 +1017,18 @@ class AtomicMarginfiJupiterPlanner:
                         AtomicPlannerRejectionCode.INVALID_REQUEST,
                         "rent financing monitored-account provenance is invalid",
                     ) from exc
+            writable_accounts = tuple(
+                meta.pubkey
+                for instruction in final_instructions
+                for meta in instruction.accounts
+                if meta.is_writable
+            )
             return _dedupe_pubkeys(
                 (
                     *request.monitored_accounts,
                     *snapshot_pubkeys,
                     *rent_pubkeys,
+                    *writable_accounts,
                     request.payer,
                     request.destination_token_account,
                     request.repayment_source_token_account,

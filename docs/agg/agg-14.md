@@ -115,3 +115,15 @@ Revert the AGG-14 commits or remove the default-off \`src.research\` package and
 coverage artifact. No ledger migration, signer state, remote resource, account,
 transaction or live-mode rollback is required because this change performs none
 of those effects.
+
+## Post-merge reconciliation
+
+The implementation base shown at the top is historical. AGG-14 is merged
+through PR #509 / `baedd8c0697c0bf789e582dab8acf5bbc113c123`. AGG-01,
+AGG-04, AGG-09 and AGG-10 now all have merge receipts, so the package DAG is
+structurally satisfied.
+
+That does not promote research/product experiments. Hardware, FL/ZK, Kora,
+customer, grant/bounty and other externally observed experiments retain their
+existing `UNQUALIFIED` blockers, and RND-04 still permits only
+`scoped-integration-review`.

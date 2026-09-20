@@ -300,18 +300,26 @@ def _validate_artifacts(
 
     agg06 = payloads.get("AGG-06", {})
     agg07 = payloads.get("AGG-07", {})
+    agg10 = payloads.get("AGG-10", {})
 
-    if agg06.get("operational_status") != "QUALIFIED":
+    agg06_qualified = agg06.get("operational_status") in {
+        "QUALIFIED",
+        "EXTERNALLY_QUALIFIED_FOR_PROFILE",
+    }
+    if not agg06_qualified:
         blockers.append("SUPER05_AGG06_OPERATIONAL_EVIDENCE_UNQUALIFIED")
-    for item in agg06.get("mandatory_external_evidence", ()):
-        if isinstance(item, str):
-            blockers.append("SUPER05_AGG06_EXTERNAL:" + item)
+        for item in agg06.get("mandatory_external_evidence", ()):
+            if isinstance(item, str):
+                blockers.append("SUPER05_AGG06_EXTERNAL:" + item)
 
     if agg07.get("operational_status") != "QUALIFIED":
         blockers.append("SUPER05_AGG07_OPERATIONAL_EVIDENCE_UNQUALIFIED")
-    for item in agg07.get("external_blockers", ()):
-        if isinstance(item, str):
-            blockers.append("SUPER05_AGG07_EXTERNAL:" + item)
+        for item in agg07.get("external_blockers", ()):
+            if isinstance(item, str):
+                blockers.append("SUPER05_AGG07_EXTERNAL:" + item)
+
+    if agg10.get("operational_status") != "QUALIFIED":
+        blockers.append("SUPER05_AGG10_OPERATIONAL_EVIDENCE_UNQUALIFIED")
 
 
 def _validate_orderbook_runtime(errors: list[str], blockers: list[str]) -> None:

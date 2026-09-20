@@ -222,22 +222,40 @@ def evaluate_core_v1_profile_debt(
         and profile.profile_generation == 1
     )
     if not legacy_marginfi_profile:
-        implementation.append(
-            {
-                "id": "runtime.financing-adapter",
-                "status": "blocked",
-                "lender": profile.lender,
-                "reason": "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED",
-            }
+        generic_composed = all(
+            token in composition
+            for token in (
+                "FinancingPlannerProviderAdapter",
+                "financing_repayment_decoder",
+                "CORE_V1_FINANCING_DECODER_REQUIRED",
+            )
         )
-        external.append(
-            {
-                "id": "evidence.financing-deployment",
-                "status": "blocked",
-                "lender": profile.lender,
-                "profile_generation": profile.profile_generation,
-                "reason": "CORE_V1_FINANCING_EVIDENCE_NOT_QUALIFIED",
-            }
+        if not generic_composed:
+            implementation.append(
+                {
+                    "id": "runtime.financing-adapter",
+                    "status": "blocked",
+                    "lender": profile.lender,
+                    "reason": "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED",
+                }
+            )
+        external.extend(
+            (
+                {
+                    "id": "evidence.financing-deployment",
+                    "status": "blocked",
+                    "lender": profile.lender,
+                    "profile_generation": profile.profile_generation,
+                    "reason": "CORE_V1_FINANCING_EVIDENCE_NOT_QUALIFIED",
+                },
+                {
+                    "id": "evidence.financing-repayment-decoder",
+                    "status": "blocked",
+                    "lender": profile.lender,
+                    "profile_generation": profile.profile_generation,
+                    "reason": "CORE_V1_FINANCING_REPAYMENT_DECODER_NOT_QUALIFIED",
+                },
+            )
         )
     for blocker in report.blockers:
         debt_id = str(blocker.get("id", ""))

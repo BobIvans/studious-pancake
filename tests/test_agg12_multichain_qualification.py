@@ -634,6 +634,26 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
         in incomplete_decision.blockers
     )
 
+    surplus_objects = replace(
+        good,
+        object_transitions=(
+            transitions[0],
+            transitions[1],
+            SuiObjectTransition(
+                "0x1",
+                3,
+                4,
+                850,
+                800,
+            ),
+        ),
+    )
+    surplus_decision = qualify_sui_book(surplus_objects)
+    assert (
+        "SUI_SHARED_RESOURCE_TRANSITION_COUNT_MISMATCH"
+        in surplus_decision.blockers
+    )
+
     losing = replace(
         good,
         route_legs=(

@@ -440,6 +440,46 @@ class ExactPaperAttemptOrchestrator:
             raise ValueError("candidate identity mismatch")
         if planner.jupiter_contract_pin != evidence.jupiter_contract_pin:
             raise ValueError("Jupiter contract pin mismatch")
+        if evidence.financing_lender is not None:
+            if (
+                candidate.pre_state_accounts is not None
+                or candidate.decoded_account_hashes
+                or candidate.native_observations
+                or candidate.token_observations
+                or candidate.marginfi_observation is not None
+                or candidate.decode_policy is not None
+                or candidate.valuation is not None
+                or candidate.marginfi_registry is not None
+            ):
+                raise ValueError(
+                    "generic financing candidate must use decoder-owned economics"
+                )
+            snapshot = planner.financing_snapshot
+            if snapshot is None:
+                raise ValueError("generic financing snapshot required")
+            if evidence.account_snapshot_hash != snapshot.state_fingerprint:
+                raise ValueError("provider snapshot fingerprint mismatch")
+            if (
+                snapshot.slot < request.discovery_slot
+                or evidence.rooted_slot < snapshot.slot
+            ):
+                raise ValueError("generic financing snapshot context mismatch")
+            if (
+                snapshot.asset_mint
+                != "So11111111111111111111111111111111111111112"
+                or planner.borrow_amount
+                != request.capital_candidate.requested_flash_loan_lamports
+                or str(planner.payer) != request.wallet_snapshot.wallet_pubkey
+            ):
+                raise ValueError(
+                    "generic capital principal requires exact native WSOL units"
+                )
+            if (
+                planner.rent_financing_snapshot is None
+                or planner.rent_borrow_amount <= 0
+            ):
+                raise ValueError("rent financing snapshot and amount required")
+            return
         if getattr(candidate, "pre_state_accounts", None) is None:
             # Historical observation candidates remain representable, but they
             # cannot be promoted into a qualified production paper handoff.
@@ -498,6 +538,32 @@ class ExactPaperAttemptOrchestrator:
         evidence = request.provider_evidence
         if provenance.jupiter_contract_pin != evidence.jupiter_contract_pin:
             raise ValueError("final Jupiter provenance mismatch")
+        if evidence.financing_lender is not None:
+            if (
+                provenance.financing_lender != evidence.financing_lender
+                or provenance.financing_evidence_hash is None
+                or provenance.financing_evidence_hash
+                != evidence.financing_program_hash
+            ):
+                raise ValueError("final financing provenance mismatch")
+            if vertical.trace.opportunity_id != request.capital_candidate.candidate_id:
+                raise ValueError("vertical opportunity identity mismatch")
+            if (
+                vertical.qualification is not None
+                or vertical.evidence_origin != "financing_decoder_owned"
+                or not isinstance(vertical.raw_evidence_hash, str)
+                or not _SHA256.fullmatch(vertical.raw_evidence_hash)
+                or vertical.reconciliation.complete is not True
+                or vertical.reconciliation.status
+                is not ReconciliationStatus.PROVEN_PROFIT
+                or vertical.reconciliation.repayment.proven is not True
+                or type(vertical.reconciliation.settlement_net) is not int
+                or vertical.reconciliation.settlement_net <= 0
+            ):
+                raise ValueError(
+                    "generic financing economic qualification not admitted"
+                )
+            return
         if provenance.marginfi_pin_hash != evidence.marginfi_program_hash:
             raise ValueError("final MarginFi provenance mismatch")
         if vertical.trace.opportunity_id != request.capital_candidate.candidate_id:

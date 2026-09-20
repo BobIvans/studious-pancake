@@ -57,6 +57,17 @@ MPR_NEXT_08_JUPITER_V2_CONTRACT_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+SUPER01_CLOSURE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_super01.py",
+    "--json",
+]
+
+SUPER05_STRATEGY_CLOSURE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_super05_strategy_closure.py",
+]
+
 PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr200_production_cutover.py",
@@ -67,11 +78,6 @@ PR206_DURABLE_STATE_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr206_durable_state.py",
     "--json",
-]
-
-SUPER05_STRATEGY_CLOSURE_COMMAND: Final[list[str]] = [
-    sys.executable,
-    "scripts/verify_super05_strategy_closure.py",
 ]
 
 # Public by design: tests inspect the final offline pytest command.
@@ -203,9 +209,10 @@ def main() -> int:
     run(PR194_TRUSTED_FOUNDATION_COMMAND)
     run(MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND)
     run(MPR_NEXT_08_JUPITER_V2_CONTRACT_COMMAND)
+    run(SUPER01_CLOSURE_COMMAND)
+    run(SUPER05_STRATEGY_CLOSURE_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
-    run(SUPER05_STRATEGY_CLOSURE_COMMAND)
 
     for command in COMMANDS[1:]:
         run(command)

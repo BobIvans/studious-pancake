@@ -1,0 +1,190 @@
+{
+  "schema": "super06.research-frontier-closure.v1",
+  "super_id": "SUPER-06",
+  "source_packages": [
+    "W2-16",
+    "W2-21"
+  ],
+  "base_sha": "27875850a88edf102c904e31955e0df8b78b13b4",
+  "implementation_status": "VERIFIED",
+  "operational_status": "UNQUALIFIED",
+  "activation_status": "DEFAULT_OFF",
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "production_ready": false,
+  "source_receipts": [
+    {
+      "name": "AGG-10",
+      "pr": 500,
+      "merge_sha": "de483bc3084a87d2b3f34830bdecf94ea0e4e63d"
+    },
+    {
+      "name": "AGG-14",
+      "pr": 509,
+      "merge_sha": "baedd8c0697c0bf789e582dab8acf5bbc113c123"
+    },
+    {
+      "name": "AGG-09",
+      "pr": 505,
+      "merge_sha": "5d1d8177c933221dcb31baf0753924c4f32e3313"
+    },
+    {
+      "name": "AGG-05",
+      "pr": 498,
+      "merge_sha": "1eef148ae77459f9974754b6b911ab31b461c851"
+    },
+    {
+      "name": "AGG-04",
+      "pr": 497,
+      "merge_sha": "b26c6a05c0646fb839f49f537fc21acbd863455c"
+    },
+    {
+      "name": "AGG-02",
+      "pr": 496,
+      "merge_sha": "a52bbd11338e3c9092cd871227d2279450b928a3"
+    },
+    {
+      "name": "AGG-01",
+      "pr": 501,
+      "merge_sha": "670ed70a3b3be199ece5d5f6cba29ee1709d4c55"
+    }
+  ],
+  "children": [
+    {
+      "source_pr": "PR-123",
+      "package": "W2-16",
+      "scope": "ML-01",
+      "nf": [
+        "NF-216",
+        "NF-217",
+        "NF-218",
+        "NF-219",
+        "NF-220",
+        "NF-221",
+        "NF-230",
+        "NF-232"
+      ],
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "src/decision/agg10.py",
+      "test": "tests/test_agg10_intelligence.py",
+      "evidence": "release_artifacts/agg/AGG-10/coverage.json",
+      "merged_by_pr": 500
+    },
+    {
+      "source_pr": "PR-124",
+      "package": "W2-16",
+      "scope": "ML-02",
+      "nf": [
+        "NF-222",
+        "NF-223",
+        "NF-224",
+        "NF-225",
+        "NF-226",
+        "NF-227",
+        "NF-228",
+        "NF-229",
+        "NF-231",
+        "NF-238"
+      ],
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "src/decision/agg10.py",
+      "test": "tests/test_agg10_intelligence.py",
+      "evidence": "release_artifacts/agg/AGG-10/coverage.json",
+      "merged_by_pr": 500
+    },
+    {
+      "source_pr": "PR-125",
+      "package": "W2-16",
+      "scope": "ML-03",
+      "nf": [
+        "NF-233",
+        "NF-234",
+        "NF-235",
+        "NF-236",
+        "NF-237"
+      ],
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "src/decision/agg10.py",
+      "test": "tests/test_agg10_intelligence.py",
+      "evidence": "release_artifacts/agg/AGG-10/coverage.json",
+      "merged_by_pr": 500
+    },
+    {
+      "source_pr": "PR-145",
+      "package": "W2-16",
+      "scope": "RND-01",
+      "nf": [
+        "NF-308",
+        "NF-309",
+        "NF-310",
+        "NF-311",
+        "NF-312"
+      ],
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "src/research/evidence.py",
+      "test": "tests/test_agg14_research_system.py",
+      "evidence": "config/agg14_research_coverage.json",
+      "merged_by_pr": 509
+    },
+    {
+      "source_pr": "PR-149",
+      "package": "W2-16",
+      "scope": "RND-04",
+      "nf": [
+        "NF-323"
+      ],
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "src/research/promotion.py",
+      "test": "tests/test_agg14_research_system.py",
+      "evidence": "config/agg14_research_coverage.json",
+      "merged_by_pr": 509
+    },
+    {
+      "source_pr": "PR-146",
+      "package": "W2-21",
+      "scope": "RND-02",
+      "nf": [
+        "NF-313",
+        "NF-314",
+        "NF-315"
+      ],
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "src/research/benchmarks.py",
+      "test": "tests/test_agg14_research_system.py",
+      "evidence": "config/agg14_research_coverage.json",
+      "merged_by_pr": 509
+    },
+    {
+      "source_pr": "PR-147",
+      "package": "W2-21",
+      "scope": "RND-03",
+      "nf": [
+        "NF-316",
+        "NF-317"
+      ],
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "src/research/verifiability.py",
+      "test": "tests/test_agg14_research_system.py",
+      "evidence": "config/agg14_research_coverage.json",
+      "merged_by_pr": 509
+    }
+  ],
+  "primary_nf_count": 34,
+  "excluded_adjacent_nf": [
+    "NF-318",
+    "NF-319",
+    "NF-320",
+    "NF-321",
+    "NF-322"
+  ],
+  "blockers": [
+    "SUPER06_NF223_ACTUAL_LIVE03_SENT_ATTEMPT_LABELS_NOT_ATTESTED",
+    "SUPER06_DEFENSIVE_TOOL_CORPUS_NOT_EXTERNALLY_QUALIFIED",
+    "SUPER06_QUBO_HARDWARE_EXPERIMENT_NOT_RUN",
+    "SUPER06_QUANTUM_MODEL_HOLDOUT_EXPERIMENT_NOT_RUN",
+    "SUPER06_ACCELERATOR_HARDWARE_BENCHMARK_NOT_RUN",
+    "SUPER06_FEDERATED_USE_CASE_AND_PARTICIPANT_CONSENT_NOT_PROVISIONED",
+    "SUPER06_ZK_USE_CASE_AND_PROOF_SYSTEM_NOT_PINNED"
+  ]
+}

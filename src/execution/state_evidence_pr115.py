@@ -841,6 +841,12 @@ def _decode_snapshot_data(snapshot: PR115RawAccountSnapshot) -> bytes:
         raise PR115StateEvidenceError(PR115StateEvidenceCode.MALFORMED_ACCOUNT) from exc
 
 
+def decode_pr115_account_data(value: Any) -> bytes:
+    """Decode the same strict base64 account-data forms used by PR-115."""
+
+    return _decode_account_data(value)[1]
+
+
 def _decode_account_data(value: Any) -> tuple[str, bytes]:
     if value in (None, ""):
         return "", b""
@@ -944,5 +950,6 @@ __all__ = [
     "SYSTEM_PROGRAM_ID",
     "TOKEN_2022_PROGRAM_ID",
     "build_pr115_proof_from_report",
+    "decode_pr115_account_data",
     "build_pr115_simulation_owned_economic_proof",
 ]

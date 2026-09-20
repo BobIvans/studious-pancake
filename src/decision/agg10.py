@@ -1241,11 +1241,13 @@ class ValueOfInformationPolicy:
             raise ValueError(
                 "research optimization may not drop mandatory safety queries"
             )
+        mandatory_cost = sum(item.cost_units for item in mandatory)
+        optional_budget = remaining_budget - mandatory_cost
         optional = [
             item
             for item in candidates
             if not item.mandatory_safety
-            and item.cost_units <= remaining_budget
+            and item.cost_units <= optional_budget
         ]
         if not optional:
             return None

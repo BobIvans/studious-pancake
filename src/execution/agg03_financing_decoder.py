@@ -231,7 +231,12 @@ class JupiterLendSlumlordRepaymentDecoder:
             raise ValueError("JUPITER_LEND_RESERVE_NOT_MONITORED")
         reserve_before = _token_amount(pre[reserve_address])
         reserve_after = _token_amount(post[reserve_address])
-        if reserve_after < reserve_before:
+        if reserve_before < request.borrow_amount:
+            raise ValueError("JUPITER_LEND_RESERVE_BELOW_PRINCIPAL")
+        primary_observed_repayment = reserve_after - (
+            reserve_before - request.borrow_amount
+        )
+        if primary_observed_repayment < request.borrow_amount:
             raise ValueError("JUPITER_LEND_RESERVE_NOT_REPAID")
 
         pre_rent = SlumlordReserveState(
@@ -248,11 +253,14 @@ class JupiterLendSlumlordRepaymentDecoder:
             data=decode_pr115_account_data(post[rent_address].get("data")),
             slot=report.final.slot,
         )
-        if (
-            pre_rent.loan_active
-            or post_rent.loan_active
-            or post_rent.lamports != pre_rent.lamports
-        ):
+        if pre_rent.loan_active or post_rent.loan_active:
+            raise ValueError("SLUMLORD_RENT_OBLIGATION_NOT_CLOSED")
+        if pre_rent.lamports < request.rent_borrow_amount:
+            raise ValueError("SLUMLORD_RESERVE_BELOW_PRINCIPAL")
+        rent_observed_repayment = post_rent.lamports - (
+            pre_rent.lamports - request.rent_borrow_amount
+        )
+        if rent_observed_repayment < request.rent_borrow_amount:
             raise ValueError("SLUMLORD_RENT_OBLIGATION_NOT_CLOSED")
         if (
             pre_rent.lamports != rent_protocol.reserve.lamports
@@ -302,11 +310,7 @@ class JupiterLendSlumlordRepaymentDecoder:
             required_repayment_base_units=(
                 primary_prepared.obligation.required_repayment_base_units
             ),
-            observed_repayment_base_units=(
-                primary_prepared.obligation.required_repayment_base_units
-                if reserve_after >= reserve_before
-                else 0
-            ),
+            observed_repayment_base_units=primary_observed_repayment,
             role=FinancingRole.PRIMARY,
         )
         rent_raw = FinancingRepaymentEvidence(
@@ -325,9 +329,7 @@ class JupiterLendSlumlordRepaymentDecoder:
             required_repayment_base_units=(
                 rent_prepared.obligation.required_repayment_base_units
             ),
-            observed_repayment_base_units=(
-                rent_prepared.obligation.required_repayment_base_units
-            ),
+            observed_repayment_base_units=rent_observed_repayment,
             role=FinancingRole.RENT,
         )
         primary_decision = validate_financing_repayment(

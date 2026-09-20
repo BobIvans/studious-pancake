@@ -1,0 +1,103 @@
+{
+  "schema_version": "super-03.coverage.v1",
+  "super_id": "SUPER-03",
+  "base_sha": "27875850a88edf102c904e31955e0df8b78b13b4",
+  "packages": ["W2-06", "W2-07", "W2-08"],
+  "source_prs": ["PR-098", "PR-099", "PR-100", "PR-101", "PR-102", "PR-103", "PR-104", "PR-105", "PR-106", "PR-107"],
+  "implementation_status": "IMPLEMENTED_OFFLINE_PARTIAL",
+  "operational_status": "BLOCKED_EXTERNAL",
+  "live_enabled": false,
+  "release_claim_allowed": false,
+  "production_ready": false,
+  "children": [
+    {
+      "source_pr": "PR-098",
+      "package": "W2-06",
+      "primary_nf": ["NF-116"],
+      "status": "IMPLEMENTED_OFFLINE_BLOCKED_EXTERNAL",
+      "owner": "src/direct_venue/mpr2617.py + src/direct_venue/super03.py",
+      "evidence": "Integer CPMM transfer-fee/fee vector plus independent quote/instruction/deployment/license admission; current deployed Raydium vector is not fabricated."
+    },
+    {
+      "source_pr": "PR-099",
+      "package": "W2-06",
+      "primary_nf": ["NF-117"],
+      "status": "IMPLEMENTED_OFFLINE_BLOCKED_EXTERNAL",
+      "owner": "src/direct_venue/mpr2617.py + src/direct_venue/super03.py",
+      "evidence": "Decoded-band CLMM conformance requires complete arrays, dynamic fee evidence and independent reference parity."
+    },
+    {
+      "source_pr": "PR-100",
+      "package": "W2-06",
+      "primary_nf": [],
+      "related_nf": ["NF-117"],
+      "status": "SATISFIED_BY_EXISTING_BLOCKED_EXTERNAL",
+      "owner": "src/direct_venue/mpr2617.py",
+      "evidence": "Existing Orca capability boundary already requires reviewed source/license, rooted pool/vault/tick arrays, quote parity and instruction parity; no concrete pool is promoted by SUPER-03."
+    },
+    {
+      "source_pr": "PR-101",
+      "package": "W2-06",
+      "primary_nf": ["NF-118"],
+      "status": "IMPLEMENTED_OFFLINE_BLOCKED_EXTERNAL",
+      "owner": "src/direct_venue/mpr2617.py + src/direct_venue/super03.py",
+      "evidence": "Decoded-bin DLMM conformance rejects partial consumed input, incomplete bins, unverified dynamic fee and reference mismatch."
+    },
+    {
+      "source_pr": "PR-102",
+      "package": "W2-07",
+      "primary_nf": ["NF-124", "NF-126", "NF-127", "NF-131", "NF-132", "NF-133", "NF-134", "NF-137", "NF-174"],
+      "status": "PARTIAL_WITH_SUPER03_CLOSURE",
+      "owner": "src/production_qualification.py + src/strategy/multihop_solver.py + src/direct_venue/super03.py",
+      "evidence": "AGG-04/05 provide bounded cycle search, exact-evaluator boundary and qualification; SUPER-03 adds generation/adapter/policy/amount cache identity and equal-denominator fixed-workload benchmark. Protocol-specific mutable-state replay and full multi-family pass remain external/integration blockers."
+    },
+    {
+      "source_pr": "PR-103",
+      "package": "W2-07",
+      "primary_nf": ["NF-175", "NF-176", "NF-177", "NF-178", "NF-179", "NF-183"],
+      "status": "SATISFIED_BY_EXISTING_PARTIAL",
+      "owner": "src/production_qualification.py",
+      "evidence": "AGG-04 freezes policy, separates episodes/variants, binds exact message identity, validates rejection ontology and nested funnel counts; all-anomaly durable collection remains dependent on upstream data/runtime closure."
+    },
+    {
+      "source_pr": "PR-104",
+      "package": "W2-07",
+      "primary_nf": ["NF-180", "NF-181", "NF-182", "NF-184", "NF-185", "NF-186", "NF-187", "NF-188", "NF-189", "NF-190", "NF-191", "NF-192", "NF-193"],
+      "status": "SATISFIED_BY_EXISTING_PARTIAL",
+      "owner": "src/production_qualification.py",
+      "evidence": "AGG-04 implements strict horizon/censoring, disjoint temporal split, scoped verdict, content-addressed evidence and demotion; campaign data, state-evolution replay and full historical scenario evidence remain honest residuals."
+    },
+    {
+      "source_pr": "PR-105",
+      "package": "W2-08",
+      "primary_nf": ["NF-239", "NF-241", "NF-242"],
+      "status": "SATISFIED_BY_EXISTING",
+      "owner": "src/strategy/conflict_scheduler.py",
+      "evidence": "Merged AGG-05 owns conflict-aware workers, fencing, shared reservations and backpressure."
+    },
+    {
+      "source_pr": "PR-106",
+      "package": "W2-08",
+      "primary_nf": ["NF-125", "NF-129", "NF-130", "NF-135"],
+      "status": "SATISFIED_BY_EXISTING",
+      "owner": "src/strategy/multihop_solver.py",
+      "evidence": "Merged AGG-05 owns bounded 2-5 hop search, explicit budget exhaustion, exact resource-aware evaluation and bounded fee/tip selection."
+    },
+    {
+      "source_pr": "PR-107",
+      "package": "W2-08",
+      "primary_nf": ["NF-128", "NF-136"],
+      "status": "SATISFIED_BY_EXISTING",
+      "owner": "src/economics/split_flow.py",
+      "evidence": "Merged AGG-05 owns bounded discrete split allocation with shared-state replay, conservation, resource limits and dominance check versus single path."
+    }
+  ],
+  "external_blockers": [
+    "RAYDIUM_CURRENT_DEPLOYMENT_AND_GOLDEN_VECTORS_NOT_ATTESTED",
+    "RAYDIUM_REUSE_LICENSE_DECISION_MUST_BIND_EXACT_PIN",
+    "ORCA_CONCRETE_POOL_LICENSE_AND_DEPLOYED_CONFORMANCE_NOT_ATTESTED",
+    "METEORA_CURRENT_DEPLOYMENT_BIN_DYNAMIC_FEE_AND_CONSUMED_INPUT_VECTORS_NOT_ATTESTED",
+    "PROTOCOL_SPECIFIC_SHARED_STATE_EVOLUTION_REPLAY_INCOMPLETE",
+    "FULL_MULTI_FAMILY_PAPER_CAMPAIGN_NOT_MEASURED"
+  ]
+}

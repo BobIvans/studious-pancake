@@ -32,6 +32,8 @@ EXTENSION_SCOPE_ROWS = (
 )
 EXTENSION_NF_OWNERS = {nf_id: owner for nf_id, owner, _ in EXTENSION_SCOPE_ROWS}
 EXTENSION_SOURCE_PRS = {nf_id: source_pr for nf_id, _, source_pr in EXTENSION_SCOPE_ROWS}
+CANONICAL_PRODUCT_OWNER = "src.research.product"
+CANONICAL_PRODUCT_ACCOUNTING_OWNER = "RevenueAttributionLedger"
 EXPECTED_EVOLUTION_STAGES = (
     "record",
     "analyse",
@@ -342,7 +344,12 @@ class ProductBoundary:
 
     @property
     def ready(self) -> bool:
-        return self.service_accounting_separate and bool(self.evidence_refs)
+        return (
+            self.product_owner == CANONICAL_PRODUCT_OWNER
+            and self.accounting_owner == CANONICAL_PRODUCT_ACCOUNTING_OWNER
+            and self.service_accounting_separate
+            and bool(self.evidence_refs)
+        )
 
 
 @dataclass(frozen=True, slots=True)

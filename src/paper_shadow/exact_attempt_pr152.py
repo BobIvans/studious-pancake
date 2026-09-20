@@ -465,7 +465,12 @@ class ExactPaperAttemptOrchestrator:
             snapshot = planner.financing_snapshot
             if snapshot is None:
                 raise ValueError("generic financing snapshot required")
-            if evidence.account_snapshot_hash != snapshot.state_fingerprint:
+            protocol_snapshot = snapshot.protocol_snapshot
+            state_fingerprint = getattr(protocol_snapshot, "state_fingerprint", None)
+            if (
+                not isinstance(state_fingerprint, str)
+                or evidence.account_snapshot_hash != state_fingerprint
+            ):
                 raise ValueError("provider snapshot fingerprint mismatch")
             if (
                 snapshot.slot < request.discovery_slot

@@ -14,7 +14,8 @@ from src.direct_venue.super03 import (
     Super03Error,
     UpstreamAdmission,
     VenueIdentityEvidence,
-    build_amount_bound_leg,\n    build_fixed_workload_benchmark,
+    build_amount_bound_leg,
+    build_fixed_workload_benchmark,
     qualify_band_venue_offline,
     qualify_cpmm_offline,
 )

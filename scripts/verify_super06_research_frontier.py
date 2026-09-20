@@ -21,6 +21,15 @@ EXPECTED_CHILDREN: Mapping[str, tuple[str, ...]] = {
 EXPECTED_NF = frozenset(nf for values in EXPECTED_CHILDREN.values() for nf in values)
 EXCLUDED_PRODUCT_NF = frozenset(f"NF-{n:03d}" for n in range(318, 323))
 _SHA40 = re.compile(r"^[0-9a-f]{40}$")
+EXPECTED_RECEIPTS: Mapping[str, tuple[int, str]] = {
+    "AGG-10": (500, "de483bc3084a87d2b3f34830bdecf94ea0e4e63d"),
+    "AGG-14": (509, "baedd8c0697c0bf789e582dab8acf5bbc113c123"),
+    "AGG-09": (505, "5d1d8177c933221dcb31baf0753924c4f32e3313"),
+    "AGG-05": (498, "1eef148ae77459f9974754b6b911ab31b461c851"),
+    "AGG-04": (497, "b26c6a05c0646fb839f49f537fc21acbd863455c"),
+    "AGG-02": (496, "a52bbd11338e3c9092cd871227d2279450b928a3"),
+    "AGG-01": (501, "670ed70a3b3be199ece5d5f6cba29ee1709d4c55"),
+}
 
 
 def _load(path: Path) -> dict[str, Any]:
@@ -83,9 +92,20 @@ def validate_super_payload(payload: Mapping[str, Any]) -> None:
     receipts = payload.get("source_receipts")
     if not isinstance(receipts, list) or not receipts:
         raise ValueError("SUPER06_SOURCE_RECEIPTS_MISSING")
+    observed_receipts: dict[str, tuple[int, str]] = {}
     for receipt in receipts:
         if not isinstance(receipt, dict) or not _SHA40.fullmatch(str(receipt.get("merge_sha", ""))):
             raise ValueError("SUPER06_SOURCE_RECEIPT_INVALID")
+        name = receipt.get("name")
+        pr = receipt.get("pr")
+        sha = receipt.get("merge_sha")
+        if not isinstance(name, str) or type(pr) is not int or not isinstance(sha, str):
+            raise ValueError("SUPER06_SOURCE_RECEIPT_INVALID")
+        if name in observed_receipts:
+            raise ValueError("SUPER06_SOURCE_RECEIPT_DUPLICATE")
+        observed_receipts[name] = (pr, sha)
+    if observed_receipts != dict(EXPECTED_RECEIPTS):
+        raise ValueError("SUPER06_SOURCE_RECEIPT_MISMATCH")
 
     blockers = payload.get("blockers")
     if not isinstance(blockers, list) or not blockers:

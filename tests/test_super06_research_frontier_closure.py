@@ -10,6 +10,7 @@ from scripts.verify_super06_research_frontier import (
     EXCLUDED_PRODUCT_NF,
     EXPECTED_CHILDREN,
     EXPECTED_NF,
+    EXPECTED_RECEIPTS,
     validate_super_payload,
     verify,
 )
@@ -74,3 +75,17 @@ def test_super06_requires_explicit_operational_blockers() -> None:
     mutated["blockers"] = []
     with pytest.raises(ValueError, match="SUPER06_BLOCKERS_MUST_REMAIN_EXPLICIT"):
         validate_super_payload(mutated)
+
+
+def test_super06_rejects_wrong_merged_source_receipt() -> None:
+    payload = _payload()
+    mutated = copy.deepcopy(payload)
+    mutated["source_receipts"][0]["merge_sha"] = "0" * 40
+    with pytest.raises(ValueError, match="SUPER06_SOURCE_RECEIPT_MISMATCH"):
+        validate_super_payload(mutated)
+
+    observed = {
+        row["name"]: (row["pr"], row["merge_sha"])
+        for row in payload["source_receipts"]
+    }
+    assert observed == dict(EXPECTED_RECEIPTS)

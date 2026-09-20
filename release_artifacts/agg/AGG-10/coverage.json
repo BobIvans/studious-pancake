@@ -1,0 +1,58 @@
+{
+  "agg_id": "AGG-10",
+  "schema_version": "agg10-coverage/v1",
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "UNQUALIFIED",
+  "live_enabled": false,
+  "work_packages": [
+    "MARKET-02",
+    "MEV-01",
+    "ML-01",
+    "ML-02",
+    "ML-03"
+  ],
+  "primary_nf": [
+    "NF-081",
+    "NF-090",
+    "NF-095",
+    "NF-152",
+    "NF-154",
+    "NF-216",
+    "NF-217",
+    "NF-218",
+    "NF-219",
+    "NF-220",
+    "NF-221",
+    "NF-222",
+    "NF-223",
+    "NF-224",
+    "NF-225",
+    "NF-226",
+    "NF-227",
+    "NF-228",
+    "NF-229",
+    "NF-230",
+    "NF-231",
+    "NF-232",
+    "NF-233",
+    "NF-234",
+    "NF-235",
+    "NF-236",
+    "NF-237",
+    "NF-238"
+  ],
+  "nf_count": 28,
+  "implementation": "src/decision/agg10.py",
+  "tests": "tests/test_agg10_intelligence.py",
+  "blockers": [
+    "AGG-04/AGG-05 aggregate operational evidence is not merged into this base; AGG-02 code is present but qualification remains scoped",
+    "NF-223 remains blocked until actual LIVE-03 sent-attempt labels exist"
+  ],
+  "authority_boundary": {
+    "sign": false,
+    "send": false,
+    "remote_change": false,
+    "model_can_change_risk_limits": false,
+    "model_can_grant_live": false
+  }
+}

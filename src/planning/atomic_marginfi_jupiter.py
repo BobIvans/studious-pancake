@@ -229,6 +229,8 @@ class AtomicPlannerProvenance:
     financing_lender: str = "marginfi"
     financing_program_id: str | None = None
     financing_deployment_generation: int | None = None
+    financing_evidence_hash: str | None = None
+    financing_obligation_digest: str | None = None
     auxiliary_financing_identities: tuple[tuple[str, str, int], ...] = ()
 
     @property
@@ -258,6 +260,8 @@ class AtomicPlannerProvenance:
             "financing_lender": self.financing_lender,
             "financing_program_id": self.financing_program_id,
             "financing_deployment_generation": self.financing_deployment_generation,
+            "financing_evidence_hash": self.financing_evidence_hash,
+            "financing_obligation_digest": self.financing_obligation_digest,
             "auxiliary_financing_identities": self.auxiliary_financing_identities,
         }
         return _sha256_json(payload)
@@ -577,6 +581,16 @@ class AtomicMarginfiJupiterPlanner:
             financing_deployment_generation=(
                 int(getattr(self._marginfi, "deployment_generation"))
                 if getattr(self._marginfi, "deployment_generation", None) is not None
+                else None
+            ),
+            financing_evidence_hash=(
+                marginfi_pin_hash
+                if isinstance(self._marginfi, FinancingPlannerProviderAdapter)
+                else None
+            ),
+            financing_obligation_digest=(
+                str(getattr(prepared, "obligation_digest"))
+                if getattr(prepared, "obligation_digest", None) is not None
                 else None
             ),
             auxiliary_financing_identities=(

@@ -15,6 +15,7 @@ from src.live_boundary.agg08_execution_closure import (
     Agg08Error,
     Agg08ExecutionGate,
     AuthorizationRecord,
+    CanaryReservationEvidence,
     CoverageStatus,
     ExecutionProfile,
     FreshExecutionEvidence,
@@ -158,6 +159,17 @@ def _report(profile: ExecutionProfile, **overrides: object) -> CanaryReport:
     return CanaryReport(**values)  # type: ignore[arg-type]
 
 
+def _reservation(**overrides: object) -> CanaryReservationEvidence:
+    values: dict[str, object] = {
+        "attempt_id": "attempt-agg08",
+        "message_hash": G,
+        "candidate_hash": C,
+        "reserved_at_ms": NOW - 200,
+    }
+    values.update(overrides)
+    return CanaryReservationEvidence(**values)  # type: ignore[arg-type]
+
+
 def _fresh(profile: ExecutionProfile, **overrides: object) -> FreshExecutionEvidence:
     values: dict[str, object] = {
         "attempt_id": "attempt-agg08",
@@ -173,6 +185,7 @@ def _fresh(profile: ExecutionProfile, **overrides: object) -> FreshExecutionEvid
         "program_ids": ("program-jupiter", "program-slumlord"),
         "financing_ids": ("jupiter_lend", "slumlord"),
         "route_id": "rpc-main",
+        "candidate_hash": C,
         "plan_hash": F,
         "state_frame_hash": A,
         "message_hash": G,
@@ -206,6 +219,7 @@ def _admit(
         permit=_permit(profile),
         signer_boundary=_signer(profile),
         canary_report=_report(profile),
+        canary_reservation=_reservation(),
         evidence=_fresh(profile, **fresh),
         now_ms=NOW,
     )
@@ -263,6 +277,46 @@ def test_slumlord_is_a_required_financing_dependency() -> None:
     assert blocker in decision.blockers
 
 
+def test_global_slumlord_requirement_cannot_be_removed() -> None:
+    with pytest.raises(
+        Agg08Error,
+        match="AGG08_GLOBAL_FINANCING_REQUIREMENT_REMOVED",
+    ):
+        _profile(
+            financing_ids=("jupiter_lend",),
+            required_financing_ids=("jupiter_lend",),
+        )
+
+
+def test_canary_reservation_is_bound_to_message_and_candidate() -> None:
+    profile = _profile()
+    gate = Agg08ExecutionGate(effect_gate_enabled=True)
+
+    message_mismatch = gate.admit_pre_sign(
+        profile=profile,
+        authorization=_auth(profile),
+        permit=_permit(profile),
+        signer_boundary=_signer(profile),
+        canary_report=_report(profile),
+        canary_reservation=_reservation(message_hash=H),
+        evidence=_fresh(profile),
+        now_ms=NOW,
+    )
+    assert "AGG08_RESERVATION_MESSAGE_MISMATCH" in message_mismatch.blockers
+
+    candidate_mismatch = gate.admit_pre_sign(
+        profile=profile,
+        authorization=_auth(profile),
+        permit=_permit(profile),
+        signer_boundary=_signer(profile),
+        canary_report=_report(profile),
+        canary_reservation=_reservation(candidate_hash=H),
+        evidence=_fresh(profile),
+        now_ms=NOW,
+    )
+    assert "AGG08_RESERVATION_CANDIDATE_MISMATCH" in candidate_mismatch.blockers
+
+
 def test_expired_canary_arm_is_rejected() -> None:
     profile = _profile()
     decision = Agg08ExecutionGate(effect_gate_enabled=True).admit_pre_sign(
@@ -271,6 +325,7 @@ def test_expired_canary_arm_is_rejected() -> None:
         permit=_permit(profile),
         signer_boundary=_signer(profile),
         canary_report=_report(profile, armed_until_ms=NOW),
+        canary_reservation=_reservation(),
         evidence=_fresh(profile),
         now_ms=NOW,
     )
@@ -309,6 +364,7 @@ def test_post_sign_bridge_reuses_submission_permit_contract() -> None:
         reviewed_permit=reviewed,
         signed_payload=payload,  # type: ignore[arg-type]
         exact_simulation_hash=G,
+        now_ms=NOW,
         expires_at_ns=(NOW + 10_000) * 1_000_000,
         last_valid_block_height=123,
         min_context_slot=100,
@@ -316,6 +372,82 @@ def test_post_sign_bridge_reuses_submission_permit_contract() -> None:
     assert request.transport is TransportKind.RPC
     assert request.message_hash == G
     assert request.expected_signatures == (SIG,)
+
+
+def test_post_sign_bridge_rejects_expired_admission() -> None:
+    profile = _profile()
+    reviewed = _permit(profile)
+    decision = _admit(gate_enabled=True, profile=profile)
+    payload = _FakeSignedPayload(
+        primary_message_hash=G,
+        payload_digest=A,
+        message_hashes=(G,),
+        transaction_digests=(B,),
+        signatures=(SIG,),
+    )
+    with pytest.raises(Agg08Error, match="AGG08_ADMISSION_EXPIRED"):
+        build_submission_permit_request(
+            admission=decision,
+            reviewed_permit=reviewed,
+            signed_payload=payload,  # type: ignore[arg-type]
+            exact_simulation_hash=G,
+            now_ms=decision.expires_at_ms,
+            expires_at_ns=decision.expires_at_ms * 1_000_000,
+            last_valid_block_height=123,
+            min_context_slot=100,
+        )
+
+
+def test_multi_transaction_jito_bundle_requires_separate_review() -> None:
+    profile = _profile(
+        transport=TransportKind.JITO_BUNDLE,
+        route_ids=("jito-main",),
+        max_tip_lamports=1_000,
+    )
+    reviewed = _permit(
+        profile,
+        transport=ReviewedTransportKind.JITO_BUNDLE,
+        tip_lamports=100,
+    )
+    evidence = _fresh(
+        profile,
+        route_id="jito-main",
+        tip_lamports=100,
+    )
+    decision = Agg08ExecutionGate(effect_gate_enabled=True).admit_pre_sign(
+        profile=profile,
+        authorization=_auth(profile),
+        permit=reviewed,
+        signer_boundary=_signer(profile),
+        canary_report=_report(profile),
+        canary_reservation=_reservation(),
+        evidence=evidence,
+        now_ms=NOW,
+    )
+    assert decision.accepted is True
+
+    payload = _FakeSignedPayload(
+        primary_message_hash=G,
+        payload_digest=A,
+        message_hashes=(G, H),
+        transaction_digests=(B, C),
+        signatures=(SIG, "6" * 88),
+        tip_evidence=_FakeTip(lamports=100, evidence_hash=D),
+    )
+    with pytest.raises(
+        Agg08Error,
+        match="AGG08_MULTI_TX_BUNDLE_REQUIRES_SEPARATE_REVIEW",
+    ):
+        build_submission_permit_request(
+            admission=decision,
+            reviewed_permit=reviewed,
+            signed_payload=payload,  # type: ignore[arg-type]
+            exact_simulation_hash=G,
+            now_ms=NOW,
+            expires_at_ns=(NOW + 10_000) * 1_000_000,
+            last_valid_block_height=123,
+            min_context_slot=100,
+        )
 
 
 def _commit(outcome: FinalizedEconomicOutcome) -> CoreV1FinalizedCommit:

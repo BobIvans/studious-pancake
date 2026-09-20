@@ -1139,7 +1139,7 @@ def _sui_object_blockers(
                 )
         seen[transition.object_id] = transition
     required = tuple(required_resource_ids)
-    if len(transitions) < len(required):
+    if len(transitions) != len(required):
         blockers.append("SUI_SHARED_RESOURCE_TRANSITION_COUNT_MISMATCH")
     for access_index, resource_id in enumerate(required):
         if access_index >= len(transitions):

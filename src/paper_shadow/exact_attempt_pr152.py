@@ -479,7 +479,27 @@ class ExactPaperAttemptOrchestrator:
                 or planner.rent_borrow_amount <= 0
             ):
                 raise ValueError("rent financing snapshot and amount required")
+            if planner.rent_financing_snapshot.slot != snapshot.slot:
+                raise ValueError("primary and rent financing snapshots differ in slot")
+            if (
+                candidate.financing_pre_state_accounts is None
+                or not candidate.financing_pre_state_accounts
+                or candidate.financing_pre_state_slot != snapshot.slot
+            ):
+                raise ValueError("generic financing raw pre-state required")
+            if (
+                candidate.attempt_id != request.attempt_key.attempt_id
+                or candidate.attempt_generation != request.attempt_key.generation
+            ):
+                raise ValueError("generic financing attempt identity mismatch")
             return
+        if (
+            candidate.financing_pre_state_accounts is not None
+            or candidate.financing_pre_state_slot is not None
+            or candidate.attempt_id is not None
+            or candidate.attempt_generation is not None
+        ):
+            raise ValueError("legacy MarginFi candidate cannot carry generic financing state")
         if getattr(candidate, "pre_state_accounts", None) is None:
             # Historical observation candidates remain representable, but they
             # cannot be promoted into a qualified production paper handoff.

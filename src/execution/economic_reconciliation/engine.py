@@ -69,7 +69,11 @@ class EconomicReconciler:
                     False,
                     {},
                     repayment,
-                    "MarginFi repayment invariant was not proven from state",
+                    (
+                        "financing repayment invariant was not proven from state"
+                        if evidence.financing is not None
+                        else "MarginFi repayment invariant was not proven from state"
+                    ),
                 )
             if evidence.settlement_asset not in deltas:
                 raise RejectedEvidence(

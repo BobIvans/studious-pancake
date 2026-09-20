@@ -34,7 +34,7 @@ jobs:
           python -m py_compile             src/liquidation/agg07.py             src/lending/agg07.py             tests/test_agg07_liquidation.py             tests/lending/test_agg07_lending.py
       - name: Format AGG-07 surfaces
         run: |
-          python -m black --check             src/liquidation/agg07.py             src/lending/agg07.py             tests/test_agg07_liquidation.py             tests/lending/test_agg07_lending.py
+          python -m black --diff --check             src/liquidation/agg07.py             src/lending/agg07.py             tests/test_agg07_liquidation.py             tests/lending/test_agg07_lending.py
       - name: Focused AGG-07 regressions
         env:
           PAPER_TRADING_ONLY: "true"

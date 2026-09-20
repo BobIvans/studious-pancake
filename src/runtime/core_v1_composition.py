@@ -23,7 +23,10 @@ from src.execution.exact_simulation import (
 )
 from src.execution.models import RpcClient
 from src.lending.financing import FinancingEvidence, FinancingPort
-from src.lending.financing_planner_adapter import FinancingPlannerProviderAdapter
+from src.lending.financing_planner_adapter import (
+    AuxiliaryFinancingPlannerAdapter,
+    FinancingPlannerProviderAdapter,
+)
 from src.paper_shadow.atomic_vertical import (
     AtomicPlannerSimulationReconciliationVertical,
     FinancingRepaymentDecoder,
@@ -89,6 +92,8 @@ class CoreV1Dependencies:
     financing_port: FinancingPort | None = None
     financing_evidence: FinancingEvidence | None = None
     financing_repayment_decoder: FinancingRepaymentDecoder | None = None
+    rent_financing_port: FinancingPort | None = None
+    rent_financing_evidence: FinancingEvidence | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.release_id, str) or not self.release_id.strip():
@@ -124,6 +129,10 @@ class CoreV1Dependencies:
                 raise ValueError("CORE_V1_FINANCING_GENERATION_MISMATCH")
         if self.financing_evidence is not None and self.financing_port is None:
             raise ValueError("CORE_V1_FINANCING_PORT_REQUIRED")
+        if self.rent_financing_evidence is not None and self.rent_financing_port is None:
+            raise ValueError("CORE_V1_RENT_FINANCING_PORT_REQUIRED")
+        if self.rent_financing_port is not None and self.rent_financing_evidence is None:
+            raise ValueError("CORE_V1_RENT_FINANCING_EVIDENCE_REQUIRED")
         if self.financing_repayment_decoder is not None:
             if self.financing_evidence is None:
                 raise ValueError("CORE_V1_FINANCING_EVIDENCE_REQUIRED")
@@ -135,6 +144,17 @@ class CoreV1Dependencies:
                 != self.financing_evidence.deployment_generation
             ):
                 raise ValueError("CORE_V1_FINANCING_DECODER_IDENTITY_MISMATCH")
+            expected_aux = ()
+            if self.rent_financing_evidence is not None:
+                expected_aux = (
+                    (
+                        self.rent_financing_evidence.lender_id,
+                        self.rent_financing_evidence.program_id,
+                        self.rent_financing_evidence.deployment_generation,
+                    ),
+                )
+            if tuple(decoder.auxiliary_identities) != expected_aux:
+                raise ValueError("CORE_V1_FINANCING_DECODER_AUXILIARY_MISMATCH")
         if not callable(getattr(self.rpc, "call", None)):
             raise ValueError("CORE_V1_GOVERNED_RPC_REQUIRED")
 
@@ -291,6 +311,8 @@ def build_core_v1_composition(
         if (
             dependencies.financing_port is None
             or dependencies.financing_evidence is None
+            or dependencies.rent_financing_port is None
+            or dependencies.rent_financing_evidence is None
         ):
             reason = f"CORE_V1_FINANCING_PORT_REQUIRED:{profile.lender}"
             service = _build_generic_blocked_service(
@@ -360,9 +382,20 @@ def build_core_v1_composition(
                 dependencies.financing_port,
                 evidence,
             )
+            rent_evidence = dependencies.rent_financing_evidence
+            assert dependencies.rent_financing_port is not None
+            assert rent_evidence is not None
+            rent_provider = AuxiliaryFinancingPlannerAdapter(
+                dependencies.rent_financing_port,
+                rent_evidence,
+            )
             allowed = tuple(
                 dict.fromkeys(
-                    (*dependencies.planner_policy.allowed_program_ids, evidence.program_id)
+                    (
+                        *dependencies.planner_policy.allowed_program_ids,
+                        evidence.program_id,
+                        rent_evidence.program_id,
+                    )
                 )
             )
             planner_policy = replace(
@@ -372,6 +405,7 @@ def build_core_v1_composition(
             planner = AtomicMarginfiJupiterPlanner(
                 cast(VerifiedMarginfiProviderPort, provider),
                 planner_policy,
+                auxiliary_financing_provider=rent_provider,
             )
             simulator = ExactSimulationFinalizer(
                 dependencies.rpc,

@@ -1,0 +1,46 @@
+name: AGG-14 research system
+
+on:
+  pull_request:
+    paths:
+      - "src/research/**"
+      - "tests/test_agg14_research_system.py"
+      - "scripts/verify_agg14_research.py"
+      - "config/agg14_research_coverage.json"
+      - "docs/agg/agg-14.md"
+      - ".github/workflows/agg-14-research-system.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "src/research/**"
+      - "tests/test_agg14_research_system.py"
+      - "scripts/verify_agg14_research.py"
+      - "config/agg14_research_coverage.json"
+      - "docs/agg/agg-14.md"
+      - ".github/workflows/agg-14-research-system.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  focused:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install focused test dependency
+        run: python -m pip install pytest==9.0.3
+      - name: Compile AGG-14 surfaces
+        run: python -m compileall -q src/research tests/test_agg14_research_system.py scripts/verify_agg14_research.py
+      - name: Focused tests
+        env:
+          PAPER_TRADING_ONLY: "true"
+          LIVE_TRADING_ENABLED: "false"
+          JITO_ENABLED: "false"
+        run: python -m pytest tests/test_agg14_research_system.py -q
+      - name: Verify exact coverage and effect boundary
+        run: python scripts/verify_agg14_research.py --json

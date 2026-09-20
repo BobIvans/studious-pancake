@@ -34,11 +34,7 @@ class TransactionReadCapabilityReport:
     expires_at_ms: int
 
     def __post_init__(self) -> None:
-        if (
-            not self.provider_id
-            or not self.chain_identity
-            or not self.sdk_identity
-        ):
+        if not self.provider_id or not self.chain_identity or not self.sdk_identity:
             raise Agg02Error("SUPER01_TRANSACTION_CAPABILITY_IDENTITY_REQUIRED")
         if len(self.supported_formats) != len(set(self.supported_formats)):
             raise Agg02Error("SUPER01_TRANSACTION_FORMAT_DUPLICATED")
@@ -230,11 +226,7 @@ class FormatCoverageGap:
             or self.requested_end < self.requested_start
         ):
             raise Agg02Error("SUPER01_INVALID_FORMAT_GAP_RANGE")
-        if (
-            not self.provider_id
-            or not self.chain_identity
-            or not self.failure_code
-        ):
+        if not self.provider_id or not self.chain_identity or not self.failure_code:
             raise Agg02Error("SUPER01_INVALID_FORMAT_GAP")
         if (
             len(self.evidence_sha256) != 64

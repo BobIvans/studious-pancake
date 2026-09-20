@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import replace
+from types import SimpleNamespace
+
+import pytest
 
 from src.execution.economic_reconciliation import (
     EconomicReconciler,
@@ -13,6 +16,7 @@ from src.execution.economic_reconciliation import (
     ReconciliationStatus,
 )
 from src.execution.financing_evidence import FinancingRepaymentBundle, RepaymentDecision
+from src.paper_shadow.exact_attempt_pr152 import ExactPaperAttemptOrchestrator
 from src.lending.financing import FinancingRole
 
 SHA_A = "a" * 64
@@ -96,3 +100,49 @@ def test_marginfi_and_generic_financing_cannot_be_supplied_together() -> None:
     # The model-level invariant is covered without fabricating MarginFi state:
     # ReconciliationEvidence only permits one authoritative repayment owner.
     assert _evidence(_decision()).marginfi is None
+
+
+def test_generic_vertical_rejects_non_settlement_inventory_loss() -> None:
+    other_asset = type(NATIVE_SOL_ASSET)("other-mint", "other-program", 6)
+    provenance = SimpleNamespace(
+        jupiter_contract_pin=SHA_A,
+        financing_lender="jupiter-lend",
+        financing_program_id="program",
+        financing_evidence_hash=SHA_B,
+    )
+    vertical = SimpleNamespace(
+        planner_result=SimpleNamespace(provenance=provenance),
+        trace=SimpleNamespace(opportunity_id="candidate-1"),
+        qualification=None,
+        evidence_origin="financing_decoder_owned",
+        raw_evidence_hash=SHA_A,
+        reconciliation=SimpleNamespace(
+            complete=True,
+            status=ReconciliationStatus.PROVEN_PROFIT,
+            repayment=SimpleNamespace(proven=True),
+            settlement_net=10,
+            settlement_asset=NATIVE_SOL_ASSET,
+            breakdowns=(
+                SimpleNamespace(asset=NATIVE_SOL_ASSET, net=10),
+                SimpleNamespace(asset=other_asset, net=-1),
+            ),
+        ),
+    )
+    request = SimpleNamespace(
+        provider_evidence=SimpleNamespace(
+            jupiter_contract_pin=SHA_A,
+            financing_lender="jupiter-lend",
+            financing_program_id="program",
+            financing_program_hash=SHA_B,
+        ),
+        capital_candidate=SimpleNamespace(candidate_id="candidate-1"),
+    )
+    with pytest.raises(
+        ValueError,
+        match="generic financing economic qualification not admitted",
+    ):
+        ExactPaperAttemptOrchestrator._validate_vertical(
+            vertical,
+            request,
+            SimpleNamespace(),
+        )

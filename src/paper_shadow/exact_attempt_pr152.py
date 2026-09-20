@@ -82,6 +82,9 @@ class ProviderExecutionEvidence:
     expires_at_ns: int
     jupiter_execution_allowed: bool
     marginfi_execution_allowed: bool
+    financing_lender: str | None = None
+    financing_program_hash: str | None = None
+    financing_execution_allowed: bool | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -91,6 +94,23 @@ class ProviderExecutionEvidence:
         ):
             if not _SHA256.fullmatch(getattr(self, name)):
                 raise ValueError(f"{name} must be a lowercase sha256 digest")
+        if self.financing_lender is not None:
+            if not self.financing_lender.strip():
+                raise ValueError("financing_lender must not be blank")
+            if (
+                self.financing_program_hash is None
+                or not _SHA256.fullmatch(self.financing_program_hash)
+            ):
+                raise ValueError(
+                    "financing_program_hash must be a lowercase sha256 digest"
+                )
+            if type(self.financing_execution_allowed) is not bool:
+                raise ValueError("financing_execution_allowed must be boolean")
+        elif (
+            self.financing_program_hash is not None
+            or self.financing_execution_allowed is not None
+        ):
+            raise ValueError("generic financing evidence requires financing_lender")
         if min(self.rooted_slot, self.captured_at_ns, self.expires_at_ns) < 0:
             raise ValueError("slot and timestamps must be non-negative")
         if self.expires_at_ns <= self.captured_at_ns:
@@ -100,8 +120,11 @@ class ProviderExecutionEvidence:
         blockers: list[str] = []
         if not self.jupiter_execution_allowed:
             blockers.append("PR152_JUPITER_EXECUTION_NOT_ALLOWED")
-        if not self.marginfi_execution_allowed:
-            blockers.append("PR152_MARGINFI_EXECUTION_NOT_ALLOWED")
+        if self.financing_lender is None:
+            if not self.marginfi_execution_allowed:
+                blockers.append("PR152_MARGINFI_EXECUTION_NOT_ALLOWED")
+        elif self.financing_execution_allowed is not True:
+            blockers.append("PR152_FINANCING_EXECUTION_NOT_ALLOWED")
         if now_ns > self.expires_at_ns:
             blockers.append("PR152_PROVIDER_EVIDENCE_EXPIRED")
         if self.rooted_slot < discovery_slot:
@@ -120,6 +143,9 @@ class ProviderExecutionEvidence:
                 "expires_at_ns": self.expires_at_ns,
                 "jupiter_execution_allowed": self.jupiter_execution_allowed,
                 "marginfi_execution_allowed": self.marginfi_execution_allowed,
+                "financing_lender": self.financing_lender,
+                "financing_program_hash": self.financing_program_hash,
+                "financing_execution_allowed": self.financing_execution_allowed,
             }
         )
 

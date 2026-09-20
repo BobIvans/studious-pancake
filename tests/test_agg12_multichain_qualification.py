@@ -620,6 +620,20 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
         for blocker in missing_decision.blockers
     )
 
+    incomplete_objects = replace(
+        good,
+        object_transitions=(transitions[0],),
+    )
+    incomplete_decision = qualify_sui_book(incomplete_objects)
+    assert (
+        "SUI_SHARED_RESOURCE_TRANSITION_COUNT_MISMATCH"
+        in incomplete_decision.blockers
+    )
+    assert (
+        "SUI_SHARED_RESOURCE_TRANSITION_MISSING:1:0x1"
+        in incomplete_decision.blockers
+    )
+
     losing = replace(
         good,
         route_legs=(

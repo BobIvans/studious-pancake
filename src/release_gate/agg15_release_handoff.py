@@ -450,11 +450,7 @@ def evaluate_release_handoff(payload: Mapping[str, Any]) -> ReleaseHandoffReport
         and evolution.ready
     )
     full_ready = scoped_ready and coverage.full_target_code_complete
-    review_ready = (
-        scoped_ready
-        and canonical_release_receipt_present
-        and not blockers
-    )
+    review_ready = scoped_ready and canonical_release_receipt_present and not blockers
     if scoped_ready and not canonical_release_receipt_present:
         blockers.append("AGG15_CANONICAL_RELEASE_RECEIPT_REQUIRED")
 

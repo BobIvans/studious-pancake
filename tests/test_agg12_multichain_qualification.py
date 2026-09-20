@@ -179,6 +179,39 @@ def test_nf272_evm_cycle_requires_state_continuity_and_gas() -> None:
     assert "LEG_1_SHARED_RESOURCE_STATE_RESET" in decision.blockers
     assert "EVM_GAS_NOT_FUNDED" in decision.blockers
 
+    losing = replace(
+        good,
+        legs=(
+            legs[0],
+            replace(legs[1], guaranteed_out=1),
+        ),
+        conservative_net_base_units=7,
+    )
+    losing_decision = qualify_evm_cycle(losing)
+    assert "EVM_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in losing_decision.blockers
+    assert "EVM_CONSERVATIVE_NET_NONPOSITIVE" in losing_decision.blockers
+
+    decimal_mismatch = replace(
+        good,
+        legs=(
+            legs[0],
+            replace(
+                legs[1],
+                input_asset=ChainAsset(
+                    "chain-a",
+                    ChainDialect.EVM,
+                    "B",
+                    6,
+                    "g1",
+                ),
+            ),
+        ),
+    )
+    assert (
+        "LEG_1_ASSET_CONTINUITY_BROKEN"
+        in qualify_evm_cycle(decimal_mismatch).blockers
+    )
+
 
 def collateral(mechanism: str) -> CollateralFirstEvidence:
     return CollateralFirstEvidence(
@@ -272,7 +305,14 @@ def test_nf277_eulerswap_checks_capacity_and_repayment() -> None:
     )
     decision = qualify_eulerswap(bad)
     assert "EULERSWAP_CAPACITY_EXCEEDED" in decision.blockers
+    assert "EULERSWAP_REPAYMENT_BELOW_BORROW" in decision.blockers
     assert "EULERSWAP_RESIDUAL_DEBT" in decision.blockers
+
+    underpaid = replace(good, repay_base_units=0)
+    assert (
+        "EULERSWAP_REPAYMENT_BELOW_BORROW"
+        in qualify_eulerswap(underpaid).blockers
+    )
 
 
 def test_nf278_erc4626_preview_does_not_override_capacity() -> None:
@@ -507,7 +547,7 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
             "USDC",
             before=H1,
             after=H2,
-            shared="book",
+            shared="0x1",
             dialect=ChainDialect.SUI,
             family="deepbook",
         ),
@@ -516,7 +556,7 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
             "SUI",
             before=H2,
             after=H3,
-            shared="book",
+            shared="0x1",
             dialect=ChainDialect.SUI,
             family="cetus",
         ),
@@ -546,7 +586,7 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
         50,
         40,
         5,
-        10,
+        5,
     )
     assert qualify_sui_book(good).admitted
 
@@ -572,6 +612,26 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
     assert "SUI_BORROW_NOT_REPAID" in decision.blockers
     assert "SUI_GAS_NOT_FUNDED" in decision.blockers
 
+    missing_objects = replace(good, object_transitions=())
+    missing_decision = qualify_sui_book(missing_objects)
+    assert "SUI_OBJECT_TRANSITIONS_MISSING" in missing_decision.blockers
+    assert any(
+        blocker.startswith("SUI_SHARED_RESOURCE_TRANSITION_MISSING:")
+        for blocker in missing_decision.blockers
+    )
+
+    losing = replace(
+        good,
+        route_legs=(
+            legs[0],
+            replace(legs[1], guaranteed_out=90),
+        ),
+        conservative_net_base_units=5,
+    )
+    losing_decision = qualify_sui_book(losing)
+    assert "SUI_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in losing_decision.blockers
+    assert "SUI_CONSERVATIVE_NET_NONPOSITIVE" in losing_decision.blockers
+
 
 def test_nf287_sui_fee_chooses_best_net_not_highest_bid() -> None:
     low = GasBidOption(10, 5, 2, 30)
@@ -596,6 +656,23 @@ def test_nf287_sui_fee_chooses_best_net_not_highest_bid() -> None:
     assert (
         "SUI_FEE_RULE_GENERATION_STALE"
         in stale.decision.blockers
+    )
+
+    active_single = choose_sui_gas_option(
+        (low,),
+        fee_rule_active=True,
+        deployment_generation="g1",
+        fee_rule_generation="g1",
+    )
+    inactive_single = choose_sui_gas_option(
+        (low,),
+        fee_rule_active=False,
+        deployment_generation="g1",
+        fee_rule_generation="g1",
+    )
+    assert (
+        active_single.decision.evidence_digest
+        != inactive_single.decision.evidence_digest
     )
 
 

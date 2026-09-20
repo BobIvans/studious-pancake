@@ -201,6 +201,7 @@ class AtomicPlannerRequest:
     financing_snapshot: FinancingPlannerSnapshot | None = None
     rent_financing_snapshot: FinancingPlannerSnapshot | None = None
     rent_borrow_amount: int = 0
+    provider_account_snapshot_hash: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -235,6 +236,7 @@ class AtomicPlannerProvenance:
     auxiliary_financing_obligations: tuple[
         tuple[str, str, int, str, int, int], ...
     ] = ()
+    provider_account_snapshot_hash: str | None = None
 
     @property
     def digest(self) -> str:
@@ -267,6 +269,7 @@ class AtomicPlannerProvenance:
             "financing_obligation_digest": self.financing_obligation_digest,
             "auxiliary_financing_identities": self.auxiliary_financing_identities,
             "auxiliary_financing_obligations": self.auxiliary_financing_obligations,
+            "provider_account_snapshot_hash": self.provider_account_snapshot_hash,
         }
         return _sha256_json(payload)
 
@@ -615,6 +618,7 @@ class AtomicMarginfiJupiterPlanner:
             )
             if self._auxiliary_financing is not None
             else (),
+            provider_account_snapshot_hash=request.provider_account_snapshot_hash,
             auxiliary_financing_obligations=(
                 (
                     self._auxiliary_financing.lender_id,
@@ -677,6 +681,15 @@ class AtomicMarginfiJupiterPlanner:
                 AtomicPlannerRejectionCode.INVALID_REQUEST,
                 "discovery_slot must be positive",
             )
+        if isinstance(self._marginfi, FinancingPlannerProviderAdapter):
+            if (
+                request.provider_account_snapshot_hash is None
+                or not _is_sha256(request.provider_account_snapshot_hash)
+            ):
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.INVALID_REQUEST,
+                    "provider_account_snapshot_hash is required for generic financing",
+                )
 
     def _require_contract_admission(self, request: AtomicPlannerRequest) -> None:
         if request.marginfi_source_vectors is not None:

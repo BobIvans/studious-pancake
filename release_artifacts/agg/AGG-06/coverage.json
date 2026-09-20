@@ -1,0 +1,54 @@
+{
+  "schema_version": "agg06.solana-venue-expansion.v1",
+  "agg_id": "AGG-06",
+  "base_sha": "693afe31c4cb5d2aa63b84c7aa40c88b115e3c0b",
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "UNQUALIFIED",
+  "live_enabled": false,
+  "primary_nf": [
+    "NF-070",
+    "NF-073",
+    "NF-117",
+    "NF-119",
+    "NF-120",
+    "NF-121",
+    "NF-122",
+    "NF-138",
+    "NF-139",
+    "NF-140",
+    "NF-141",
+    "NF-142",
+    "NF-143",
+    "NF-151",
+    "NF-153"
+  ],
+  "work_packages": [
+    "VENUE-02",
+    "VENUE-03",
+    "BOOK-01",
+    "BOOK-02",
+    "BOOK-03",
+    "LST-01",
+    "DYNAMIC-01",
+    "DYNAMIC-02"
+  ],
+  "prerequisites_at_branch_cut": {
+    "AGG-01": false,
+    "AGG-02": false,
+    "AGG-04": false,
+    "AGG-05": false
+  },
+  "mandatory_external_evidence": [
+    "current program/deployment identity",
+    "exact upstream artifact/license decision",
+    "independent amount-bound conformance vectors",
+    "recorded or loaded-state family evidence",
+    "family-specific qualification verdict"
+  ],
+  "safety": {
+    "signer_allowed": false,
+    "submission_allowed": false,
+    "remote_mutation_allowed": false,
+    "production_ready_claim": false
+  }
+}

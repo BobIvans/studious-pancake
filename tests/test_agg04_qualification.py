@@ -74,12 +74,18 @@ def variant(
     message: str = SHA_D,
     simulated: bool = True,
     net: int | None = 7,
+    lender_id: str = "marginfi",
+    asset_ids: tuple[str, ...] = ("SOL", "USDC"),
+    venue_ids: tuple[str, ...] = ("jupiter",),
+    rejection_code: str | None = None,
 ) -> AGG04VariantEvidence:
     return AGG04VariantEvidence(
         episode_id=episode_id,
         variant_id=variant_id,
         amount_atomic=100,
-        lender_id="marginfi",
+        lender_id=lender_id,
+        asset_ids=asset_ids,
+        venue_ids=venue_ids,
         route_sha256=SHA_A,
         frame_sha256=SHA_B,
         cost_sha256=SHA_C,
@@ -87,6 +93,7 @@ def variant(
         evidence_kind="simulated",
         simulated=simulated,
         conservative_net_atomic=net,
+        rejection_code=rejection_code,
     )
 
 
@@ -431,4 +438,110 @@ def test_dashboard_and_demotion_remain_fail_closed() -> None:
     assert transition.requalification_required
     assert not transition.live_enabled
     assert not transition.automatic_rearm_allowed
+
+def test_frozen_horizon_mismatch_blocks_qualification() -> None:
+    p = policy()
+    f = build_agg04_funnel(
+        episodes=(episode("e1", "o1"),),
+        variants=(variant(episode_id="e1", variant_id="v1"),),
+        probes=(probe("v1", elapsed_ms=2, positive=True),),
+        survival_horizon_ms=1,
+    )
+    verdict = qualify_agg04_campaign(
+        policy=p,
+        funnel=f,
+        temporal_split=split("e1"),
+        as_of_ns=500,
+    )
+    assert verdict.status == AGG04_INSUFFICIENT_EVIDENCE
+    assert "SURVIVAL_HORIZON_POLICY_MISMATCH" in verdict.reason_codes
+
+
+def test_out_of_scope_variant_cannot_qualify_frozen_campaign() -> None:
+    p = policy()
+    f = build_agg04_funnel(
+        episodes=(episode("e1", "o1"),),
+        variants=(
+            variant(
+                episode_id="e1",
+                variant_id="v1",
+                lender_id="unknown-lender",
+                venue_ids=("unknown-venue",),
+            ),
+        ),
+        probes=(probe("v1", elapsed_ms=700, positive=True),),
+        survival_horizon_ms=p.survival_horizon_ms,
+    )
+    verdict = qualify_agg04_campaign(
+        policy=p,
+        funnel=f,
+        temporal_split=split("e1"),
+        as_of_ns=500,
+    )
+    assert verdict.status == AGG04_INSUFFICIENT_EVIDENCE
+    assert "LENDER_OUTSIDE_FROZEN_SCOPE" in verdict.reason_codes
+    assert "VENUE_OUTSIDE_FROZEN_SCOPE" in verdict.reason_codes
+
+
+def test_rejected_variant_never_enters_simulated_horizon_or_positive_cohorts() -> None:
+    p = policy()
+    f = build_agg04_funnel(
+        episodes=(episode("e1", "o1"),),
+        variants=(
+            variant(
+                episode_id="e1",
+                variant_id="v1",
+                simulated=True,
+                net=100,
+                rejection_code="GUARD",
+            ),
+        ),
+        probes=(probe("v1", elapsed_ms=700, positive=True),),
+        survival_horizon_ms=p.survival_horizon_ms,
+    )
+    assert f.counts == {"A": 1, "E": 1, "C": 1, "S": 0, "H": 0, "N": 0}
+
+
+def test_verdict_counts_are_immutable_after_evidence_hashing() -> None:
+    p = policy()
+    f = build_agg04_funnel(
+        episodes=(episode("e1", "o1"),),
+        variants=(variant(episode_id="e1", variant_id="v1"),),
+        probes=(probe("v1", elapsed_ms=700, positive=True),),
+        survival_horizon_ms=p.survival_horizon_ms,
+    )
+    verdict = qualify_agg04_campaign(
+        policy=p,
+        funnel=f,
+        temporal_split=split("e1"),
+        as_of_ns=500,
+    )
+    before = verdict.verdict_sha256
+    with pytest.raises(TypeError):
+        verdict.counts["N"] = 999
+    assert verdict.verdict_sha256 == before
+
+
+def test_dashboard_rejects_mixed_funnel_and_verdict_evidence() -> None:
+    p = policy()
+    good = build_agg04_funnel(
+        episodes=(episode("e1", "o1"),),
+        variants=(variant(episode_id="e1", variant_id="v1"),),
+        probes=(probe("v1", elapsed_ms=700, positive=True),),
+        survival_horizon_ms=p.survival_horizon_ms,
+    )
+    verdict = qualify_agg04_campaign(
+        policy=p,
+        funnel=good,
+        temporal_split=split("e1"),
+        as_of_ns=500,
+    )
+    other = build_agg04_funnel(
+        episodes=(episode("e1", "different-observation"),),
+        variants=(variant(episode_id="e1", variant_id="v1"),),
+        probes=(probe("v1", elapsed_ms=700, positive=True),),
+        survival_horizon_ms=p.survival_horizon_ms,
+    )
+    with pytest.raises(ValueError, match="funnel/verdict mismatch"):
+        build_agg04_dashboard(funnel=other, verdict=verdict)
 

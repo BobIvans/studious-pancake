@@ -415,11 +415,20 @@ def audit_universe_survivorship(
         raise Agg02Error("SUPER01_MANIFEST_FACTS_MISMATCH")
 
     included_set = set(included)
+    latest_revision = max(
+        (fact.revision for fact in fact_tuple),
+        default=manifest.dataset_revision,
+    )
+    resolved_all = _selected_facts(
+        fact_tuple,
+        dataset_revision=max(manifest.dataset_revision, latest_revision),
+        knowledge_cutoff_ms=None,
+    )
     later_closed = tuple(
         sorted(
             {
                 fact.market_id
-                for fact in fact_tuple
+                for fact in resolved_all
                 if fact.market_id in included_set
                 and fact.observed_at_ms > manifest.knowledge_cutoff_ms
                 and fact.state is MarketLifecycleState.CLOSED
@@ -430,7 +439,7 @@ def audit_universe_survivorship(
         sorted(
             {
                 fact.market_id
-                for fact in fact_tuple
+                for fact in resolved_all
                 if fact.market_id in included_set
                 and fact.observed_at_ms > manifest.knowledge_cutoff_ms
                 and fact.state is MarketLifecycleState.MIGRATED

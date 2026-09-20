@@ -281,3 +281,5 @@ src/runtime/core_v1_materializer.py
 src/production_debt_profiles.py
 src/runtime/runtime_entrypoint.py
 tests/test_agg03_installed_profile_selection.py
+src/runtime/core_v1_dependency_resolver.py
+tests/test_agg03_dependency_resolver.py

@@ -128,6 +128,7 @@ class RepaymentDecision:
     program_id: str
     deployment_generation: int
     decoder_identity: str
+    obligation_digest: str
     asset_id: str
     debt_before_base_units: int
     debt_after_base_units: int
@@ -162,6 +163,7 @@ def _decision(
         program_id=evidence.program_id,
         deployment_generation=evidence.deployment_generation,
         decoder_identity=evidence.decoder_identity,
+        obligation_digest=evidence.obligation_digest,
         asset_id=evidence.asset_id,
         debt_before_base_units=evidence.debt_before_base_units,
         debt_after_base_units=evidence.debt_after_base_units,

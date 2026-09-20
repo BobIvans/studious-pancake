@@ -52,6 +52,10 @@ def _pin(
     )
 
 
+def _passing_differential():
+    return run_differential_tests((DifferentialCase("v1", SHA_A, SHA_A),))
+
+
 def test_campaign_keeps_slumlord_required_and_marginfi_paused() -> None:
     campaign, index = open_campaign(
         repo_full_name="BobIvans/studious-pancake",
@@ -124,6 +128,7 @@ def test_verified_reuse_requires_license_vectors_and_safe_boundary() -> None:
         upstream=_pin(),
         license=LicenseDecision(True, "MIT OR Apache-2.0", True, None),
         vectors=vectors,
+        differential=_passing_differential(),
         supply_chain=SupplyChainReview(True, False, False, False),
         boundary=BoundaryADR(BoundaryMode.PORT_DIFF, True, False, False),
         adapter=AdapterContract(
@@ -138,6 +143,7 @@ def test_unknown_license_or_hidden_effects_reject_reuse() -> None:
     common = dict(
         upstream=_pin(),
         vectors=vectors,
+        differential=_passing_differential(),
         boundary=BoundaryADR(BoundaryMode.WRAP, True, False, False),
         adapter=AdapterContract(
             "adapter", ("state",), ("out",), True, False, 1
@@ -160,6 +166,22 @@ def test_unknown_license_or_hidden_effects_reject_reuse() -> None:
 def test_differential_mismatch_is_not_hidden() -> None:
     with pytest.raises(Agg01ContractError, match="differential"):
         run_differential_tests((DifferentialCase("v1", SHA_A, SHA_B),))
+
+
+def test_reuse_admission_binds_the_exact_vector_set() -> None:
+    vectors = VectorSet((ConformanceVector("v2", SHA_A, SHA_A),))
+    with pytest.raises(Agg01ContractError, match="does not bind vector set"):
+        build_reuse_admission(
+            upstream=_pin(),
+            license=LicenseDecision(True, "MIT OR Apache-2.0", True, None),
+            vectors=vectors,
+            differential=_passing_differential(),
+            supply_chain=SupplyChainReview(True, False, False, False),
+            boundary=BoundaryADR(BoundaryMode.PORT_DIFF, True, False, False),
+            adapter=AdapterContract(
+                "slumlord", ("state",), ("unsigned_ix",), True, False, 1
+            ),
+        )
 
 
 def test_upstream_drift_and_unreachable_source_require_requalification() -> None:

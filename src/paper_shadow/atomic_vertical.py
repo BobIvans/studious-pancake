@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 import json
 from enum import Enum
-from typing import Mapping, Any
+from typing import Mapping, Any, Protocol
 from src.kernel import canonical_json_bytes
 from src.execution.state_evidence_pr115 import PR115DecodePolicy
 from src.execution.economic_reconciliation.exact_adapter import (
@@ -40,6 +40,7 @@ from src.execution.economic_reconciliation import (
     TokenObservation,
     evidence_from_exact_simulation,
 )
+from src.execution.financing_evidence import RepaymentDecision
 from src.execution.exact_simulation import (
     ExactSimulationFinalizer,
     FinalizedSimulation,
@@ -99,6 +100,18 @@ class AtomicVerticalCandidate:
     marginfi_registry: MarginfiRegistrySnapshot | None = None
 
 
+class FinancingRepaymentDecoder(Protocol):
+    lender_id: str
+    program_id: str
+    deployment_generation: int
+
+    def decode(
+        self,
+        finalized: FinalizedSimulation,
+        candidate: AtomicVerticalCandidate,
+    ) -> RepaymentDecision: ...
+
+
 @dataclass(frozen=True, slots=True)
 class AtomicVerticalTrace:
     """Stable review evidence for planner -> simulation -> reconciliation."""
@@ -143,10 +156,12 @@ class AtomicPlannerSimulationReconciliationVertical:
         simulator: ExactSimulationFinalizer,
         *,
         reconciler: EconomicReconciler | None = None,
+        financing_decoder: FinancingRepaymentDecoder | None = None,
     ) -> None:
         self.planner = planner
         self.simulator = simulator
         self.reconciler = reconciler or EconomicReconciler()
+        self.financing_decoder = financing_decoder
 
     async def run(self, candidate: AtomicVerticalCandidate) -> AtomicVerticalResult:
         if candidate.pre_state_accounts is not None:
@@ -170,6 +185,30 @@ class AtomicPlannerSimulationReconciliationVertical:
             submission_message_hash=message_hash,
             serialized_submission_message=serialized_message,
         )
+
+        financing_repayment = None
+        if self.financing_decoder is not None:
+            if candidate.pre_state_accounts is not None:
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "generic financing decoder cannot reuse MarginFi raw-state policy",
+                )
+            financing_repayment = self.financing_decoder.decode(finalized, candidate)
+            provenance = planner_result.provenance
+            expected_program = provenance.financing_program_id
+            expected_generation = provenance.financing_deployment_generation
+            if (
+                financing_repayment.lender_id != provenance.financing_lender
+                or expected_program is None
+                or financing_repayment.program_id != expected_program
+                or expected_generation is None
+                or financing_repayment.deployment_generation != expected_generation
+                or financing_repayment.message_hash != message_hash
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "financing decoder output is not bound to planner/message identity",
+                )
 
         try:
             raw_state = None
@@ -209,6 +248,7 @@ class AtomicPlannerSimulationReconciliationVertical:
                     required_accounts=candidate.required_accounts,
                     tip_lamports=candidate.tip_lamports,
                     protocol_fees=candidate.protocol_fees,
+                    financing=financing_repayment,
                 )
         except ValueError as exc:
             raise AtomicVerticalError(
@@ -345,4 +385,5 @@ __all__ = [
     "AtomicVerticalRejectionCode",
     "AtomicVerticalResult",
     "AtomicVerticalTrace",
+    "FinancingRepaymentDecoder",
 ]

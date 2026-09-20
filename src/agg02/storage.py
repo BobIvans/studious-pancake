@@ -320,12 +320,11 @@ class AnalyticalDatasetPublisher:
         pq.write_table(table, temporary)
         digest = hashlib.sha256(temporary.read_bytes()).hexdigest()
         os.replace(temporary, path)
-        available_values = [
-            row.get("available_at_ms")
-            for row in normalized
-            if isinstance(row.get("available_at_ms"), int)
-            and not isinstance(row.get("available_at_ms"), bool)
-        ]
+        available_values: list[int] = []
+        for row in normalized:
+            available_at = row.get("available_at_ms")
+            if isinstance(available_at, int) and not isinstance(available_at, bool):
+                available_values.append(available_at)
         return DatasetManifest(
             dataset_id=dataset_id,
             schema_version=schema_version,

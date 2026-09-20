@@ -566,6 +566,17 @@ def test_value_of_information_keeps_mandatory_safety() -> None:
     assert chosen is not None
     assert chosen.query_id == "a"
 
+    reserved = policy.choose(
+        (
+            QueryCandidate("guard", 0.0, 3, True),
+            QueryCandidate("too-expensive-after-safety", 10.0, 2),
+            QueryCandidate("fits-after-safety", 1.0, 1),
+        ),
+        remaining_budget=4,
+    )
+    assert reserved is not None
+    assert reserved.query_id == "fits-after-safety"
+
 
 def test_world_model_and_stress_are_synthetic() -> None:
     world = MarketWorldModel(

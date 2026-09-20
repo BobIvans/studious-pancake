@@ -103,14 +103,22 @@ class JupiterLendFinancingSnapshot:
             raise FinancingContractError("JUPITER_LEND_NONZERO_FEE_UNQUALIFIED")
         if self.admin_state.liquidity_program != self.accounts.liquidity_program:
             raise FinancingContractError("JUPITER_LEND_LIQUIDITY_PROGRAM_MISMATCH")
-        required = str(self.accounts.flashloan_admin)
-        normalized = tuple(dict.fromkeys((*self.monitored_accounts, required)))
+        required = (
+            str(self.accounts.flashloan_admin),
+            str(self.accounts.signer_borrow_token_account),
+            str(self.accounts.flashloan_token_reserves_liquidity),
+        )
+        normalized = tuple(dict.fromkeys((*self.monitored_accounts, *required)))
         object.__setattr__(self, "monitored_accounts", normalized)
 
 
     @property
     def required_monitored_accounts(self) -> tuple[str, ...]:
-        return (str(self.accounts.flashloan_admin),)
+        return (
+            str(self.accounts.flashloan_admin),
+            str(self.accounts.signer_borrow_token_account),
+            str(self.accounts.flashloan_token_reserves_liquidity),
+        )
 
 
 @dataclass(frozen=True, slots=True)

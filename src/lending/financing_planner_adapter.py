@@ -180,6 +180,7 @@ class PreparedAuxiliaryFinancingLoan:
     borrow_instruction: Instruction
     repay_instructions: tuple[Instruction, ...]
     required_repayment: int
+    obligation_digest: str
     min_context_slot: int
     pin_hash: str
     state_fingerprint: str
@@ -250,6 +251,7 @@ class AuxiliaryFinancingPlannerAdapter:
             borrow_instruction=prepared.borrow_instructions[0],
             repay_instructions=prepared.repay_instructions,
             required_repayment=prepared.obligation.required_repayment_base_units,
+            obligation_digest=prepared.obligation.digest,
             min_context_slot=prepared.min_context_slot,
             pin_hash=self.evidence.digest,
             state_fingerprint=prepared.state_fingerprint,

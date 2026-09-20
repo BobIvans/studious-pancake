@@ -108,3 +108,16 @@ def test_super07_rejects_blocker_identifier_whitespace() -> None:
     result = api()["verify_payload"](broken, root=ROOT)
     assert result["ok"] is False
     assert "OPERATIONAL_BLOCKER_SET_MISMATCH" in result["errors"]
+
+
+def test_super07_requires_w2_packages_array() -> None:
+    broken = deepcopy(payload())
+    broken["w2_packages"] = {
+        "W2-17": True,
+        "W2-18": True,
+        "W2-19": True,
+        "W2-20": True,
+    }
+    result = api()["verify_payload"](broken, root=ROOT)
+    assert result["ok"] is False
+    assert "W2_PACKAGES_ARRAY_REQUIRED" in result["errors"]

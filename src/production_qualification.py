@@ -10,6 +10,7 @@ from dataclasses import dataclass
 import hashlib
 import json
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any, Mapping
 
 MPR2611_SCHEMA = "mpr-2611.production-evidence-validation.v1"
@@ -378,6 +379,8 @@ class AGG04VariantEvidence:
     variant_id: str
     amount_atomic: int
     lender_id: str
+    asset_ids: tuple[str, ...]
+    venue_ids: tuple[str, ...]
     route_sha256: str
     frame_sha256: str
     cost_sha256: str
@@ -391,6 +394,12 @@ class AGG04VariantEvidence:
         object.__setattr__(self, "episode_id", _agg04_text(self.episode_id, "episode_id"))
         object.__setattr__(self, "variant_id", _agg04_text(self.variant_id, "variant_id"))
         object.__setattr__(self, "lender_id", _agg04_text(self.lender_id, "lender_id"))
+        assets = _agg04_unique(tuple(self.asset_ids), "asset_id")
+        venues = _agg04_unique(tuple(self.venue_ids), "venue_id")
+        if not assets or not venues:
+            raise ValueError("variant asset/venue scope cannot be empty")
+        object.__setattr__(self, "asset_ids", assets)
+        object.__setattr__(self, "venue_ids", venues)
         _agg04_int(self.amount_atomic, "amount_atomic", minimum=1)
         for field in ("route_sha256", "frame_sha256", "cost_sha256", "message_sha256"):
             object.__setattr__(self, field, _agg04_digest(getattr(self, field), field))
@@ -420,6 +429,8 @@ class AGG04VariantEvidence:
                 "variant_id": self.variant_id,
                 "amount_atomic": str(self.amount_atomic),
                 "lender_id": self.lender_id,
+                "asset_ids": list(self.asset_ids),
+                "venue_ids": list(self.venue_ids),
                 "route_sha256": self.route_sha256,
                 "frame_sha256": self.frame_sha256,
                 "cost_sha256": self.cost_sha256,
@@ -519,6 +530,10 @@ class AGG04TemporalSplit:
 class AGG04FunnelReport:
     """Nested A/E/C/S/H/N cohorts expressed as episode identity sets."""
 
+    survival_horizon_ms: int
+    asset_ids: tuple[str, ...]
+    venue_ids: tuple[str, ...]
+    lender_ids: tuple[str, ...]
     observation_ids: tuple[str, ...]
     episode_ids: tuple[str, ...]
     candidate_episode_ids: tuple[str, ...]
@@ -527,6 +542,11 @@ class AGG04FunnelReport:
     positive_net_episode_ids: tuple[str, ...]
 
     def __post_init__(self) -> None:
+        _agg04_int(self.survival_horizon_ms, "survival_horizon_ms", minimum=1)
+        for field in ("asset_ids", "venue_ids", "lender_ids"):
+            object.__setattr__(
+                self, field, _agg04_unique(tuple(getattr(self, field)), field)
+            )
         fields_to_normalize = (
             "observation_ids",
             "episode_ids",
@@ -562,6 +582,10 @@ class AGG04FunnelReport:
     def funnel_sha256(self) -> str:
         return _agg04_hash_payload(
             {
+                "survival_horizon_ms": self.survival_horizon_ms,
+                "asset_ids": list(self.asset_ids),
+                "venue_ids": list(self.venue_ids),
+                "lender_ids": list(self.lender_ids),
                 "observation_ids": list(self.observation_ids),
                 "episode_ids": list(self.episode_ids),
                 "candidate_episode_ids": list(self.candidate_episode_ids),
@@ -598,6 +622,9 @@ def build_agg04_funnel(
     variant_by_id: dict[str, AGG04VariantEvidence] = {}
     candidate_episodes: set[str] = set()
     simulated_episodes: set[str] = set()
+    asset_ids: set[str] = set()
+    venue_ids: set[str] = set()
+    lender_ids: set[str] = set()
     for variant in variants:
         if variant.episode_id not in episode_by_id:
             raise ValueError("variant references unknown episode")
@@ -605,7 +632,10 @@ def build_agg04_funnel(
             raise ValueError("duplicate variant_id")
         variant_by_id[variant.variant_id] = variant
         candidate_episodes.add(variant.episode_id)
-        if variant.simulated:
+        asset_ids.update(variant.asset_ids)
+        venue_ids.update(variant.venue_ids)
+        lender_ids.add(variant.lender_id)
+        if variant.simulated and variant.rejection_code is None:
             simulated_episodes.add(variant.episode_id)
 
     horizon_variants: set[str] = set()
@@ -617,6 +647,7 @@ def build_agg04_funnel(
             raise ValueError("probe/message generation mismatch")
         if (
             variant.simulated
+            and variant.rejection_code is None
             and probe.positive is True
             and probe.elapsed_ms > survival_horizon_ms
         ):
@@ -633,6 +664,10 @@ def build_agg04_funnel(
     }
 
     return AGG04FunnelReport(
+        survival_horizon_ms=survival_horizon_ms,
+        asset_ids=tuple(sorted(asset_ids)),
+        venue_ids=tuple(sorted(venue_ids)),
+        lender_ids=tuple(sorted(lender_ids)),
         observation_ids=tuple(observation_ids),
         episode_ids=tuple(episode_by_id),
         candidate_episode_ids=tuple(sorted(candidate_episodes)),
@@ -680,6 +715,13 @@ class AGG04QualificationVerdict:
         object.__setattr__(
             self, "reason_codes", _agg04_unique(tuple(self.reason_codes), "reason_code")
         )
+        normalized_counts: dict[str, int] = {}
+        expected_count_keys = {"A", "E", "C", "S", "H", "N"}
+        if set(self.counts) != expected_count_keys:
+            raise ValueError("counts must contain exactly A/E/C/S/H/N")
+        for key in sorted(expected_count_keys):
+            normalized_counts[key] = _agg04_int(self.counts[key], f"counts.{key}")
+        object.__setattr__(self, "counts", MappingProxyType(normalized_counts))
 
     @property
     def qualified(self) -> bool:
@@ -729,6 +771,14 @@ def qualify_agg04_campaign(
     )
     if not set(funnel.episode_ids) <= split_episode_ids:
         reasons.append("EPISODE_OUTSIDE_FROZEN_SPLIT")
+    if funnel.survival_horizon_ms != policy.survival_horizon_ms:
+        reasons.append("SURVIVAL_HORIZON_POLICY_MISMATCH")
+    if not set(funnel.asset_ids) <= set(policy.allowed_assets):
+        reasons.append("ASSET_OUTSIDE_FROZEN_SCOPE")
+    if not set(funnel.venue_ids) <= set(policy.allowed_venues):
+        reasons.append("VENUE_OUTSIDE_FROZEN_SCOPE")
+    if not set(funnel.lender_ids) <= set(policy.allowed_lenders):
+        reasons.append("LENDER_OUTSIDE_FROZEN_SCOPE")
     for blocker in external_blockers:
         reasons.append(f"EXTERNAL_BLOCKER:{_agg04_text(blocker, 'external_blocker')}")
     counts = funnel.counts
@@ -1329,6 +1379,8 @@ def build_agg04_dashboard(
 ) -> dict[str, Any]:
     """Machine-readable dashboard projection; no demo rows or inferred zeroes."""
 
+    if verdict.funnel_sha256 != funnel.funnel_sha256:
+        raise ValueError("dashboard funnel/verdict mismatch")
     unresolved = _agg04_unique(
         tuple(unresolved_reason_codes), "unresolved_reason_code"
     )

@@ -56,6 +56,7 @@ class JupiterLendRejectionCode(StrEnum):
     INVALID_FIXED_ACCOUNT = "AGG03_JUP_LEND_INVALID_FIXED_ACCOUNT"
     ORDER_INVARIANT = "AGG03_JUP_LEND_ORDER_INVARIANT"
     AMOUNT_MISMATCH = "AGG03_JUP_LEND_AMOUNT_MISMATCH"
+    ACCOUNT_MISMATCH = "AGG03_JUP_LEND_ACCOUNT_MISMATCH"
 
 
 class JupiterLendAdapterError(ValueError):
@@ -94,9 +95,17 @@ class JupiterLendFlashloanAccounts:
                 "flashloan_admin does not match the pinned PDA seed/program",
             )
         expected = (
-            (self.associated_token_program, ASSOCIATED_TOKEN_PROGRAM_ID, "ATA program"),
+            (
+                self.associated_token_program,
+                ASSOCIATED_TOKEN_PROGRAM_ID,
+                "ATA program",
+            ),
             (self.system_program, SYSTEM_PROGRAM_ID, "system program"),
-            (self.instruction_sysvar, INSTRUCTIONS_SYSVAR_ID, "instructions sysvar"),
+            (
+                self.instruction_sysvar,
+                INSTRUCTIONS_SYSVAR_ID,
+                "instructions sysvar",
+            ),
         )
         for actual, required, label in expected:
             if actual != required:
@@ -178,22 +187,47 @@ def _decode_amount(instruction: Instruction, discriminator: bytes) -> int:
     return amount
 
 
+def _account_fingerprint(
+    instruction: Instruction,
+) -> tuple[tuple[Pubkey, bool, bool], ...]:
+    return tuple(
+        (meta.pubkey, meta.is_signer, meta.is_writable)
+        for meta in instruction.accounts
+    )
+
+
 def validate_jupiter_lend_order(
     instructions: Sequence[Instruction],
 ) -> JupiterLendOrderCertificate:
-    """Require exactly one matching Borrow before one matching Payback."""
+    """Require one account-bound Borrow before one matching Payback."""
 
-    borrow: list[tuple[int, int]] = []
-    payback: list[tuple[int, int]] = []
+    borrow: list[tuple[int, int, tuple[tuple[Pubkey, bool, bool], ...]]] = []
+    payback: list[tuple[int, int, tuple[tuple[Pubkey, bool, bool], ...]]] = []
     for index, instruction in enumerate(instructions):
         if instruction.program_id != JUPITER_LEND_FLASHLOAN_PROGRAM_ID:
             continue
         data = bytes(instruction.data)
         if data.startswith(FLASHLOAN_BORROW_DISCRIMINATOR):
-            borrow.append((index, _decode_amount(instruction, FLASHLOAN_BORROW_DISCRIMINATOR)))
+            borrow.append(
+                (
+                    index,
+                    _decode_amount(
+                        instruction,
+                        FLASHLOAN_BORROW_DISCRIMINATOR,
+                    ),
+                    _account_fingerprint(instruction),
+                )
+            )
         elif data.startswith(FLASHLOAN_PAYBACK_DISCRIMINATOR):
             payback.append(
-                (index, _decode_amount(instruction, FLASHLOAN_PAYBACK_DISCRIMINATOR))
+                (
+                    index,
+                    _decode_amount(
+                        instruction,
+                        FLASHLOAN_PAYBACK_DISCRIMINATOR,
+                    ),
+                    _account_fingerprint(instruction),
+                )
             )
 
     if len(borrow) != 1 or len(payback) != 1:
@@ -210,6 +244,11 @@ def validate_jupiter_lend_order(
         raise JupiterLendAdapterError(
             JupiterLendRejectionCode.AMOUNT_MISMATCH,
             "Borrow and Payback amount arguments differ",
+        )
+    if borrow[0][2] != payback[0][2]:
+        raise JupiterLendAdapterError(
+            JupiterLendRejectionCode.ACCOUNT_MISMATCH,
+            "Borrow and Payback must bind the same ordered account metas",
         )
     return JupiterLendOrderCertificate(
         borrow_index=borrow[0][0],

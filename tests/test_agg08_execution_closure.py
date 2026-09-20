@@ -365,7 +365,7 @@ def test_post_sign_bridge_reuses_submission_permit_contract() -> None:
         signed_payload=payload,  # type: ignore[arg-type]
         exact_simulation_hash=G,
         now_ms=NOW,
-        expires_at_ns=(NOW + 10_000) * 1_000_000,
+        expires_at_ns=(NOW + 4_000) * 1_000_000,
         last_valid_block_height=123,
         min_context_slot=100,
     )

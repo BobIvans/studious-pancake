@@ -419,8 +419,14 @@ class AtomicMarginfiJupiterPlanner:
 
         final_instructions = tuple(finalized.instructions)
         if rent_prepared is not None:
+            auxiliary_financing = self._auxiliary_financing
+            if auxiliary_financing is None:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.SEQUENCE_INVARIANT,
+                    "prepared rent financing lost its adapter",
+                )
             try:
-                auxiliary_finalized = self._auxiliary_financing.finalize(
+                auxiliary_finalized = auxiliary_financing.finalize(
                     rent_prepared,
                     final_instructions,
                 )

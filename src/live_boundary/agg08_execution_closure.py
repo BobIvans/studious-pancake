@@ -610,8 +610,6 @@ def build_submission_permit_request(
     _nonnegative_int(now_ms, "now_ms")
     if not admission.accepted:
         raise Agg08Error("AGG08_PRE_SIGN_ADMISSION_REQUIRED")
-    if admission.evaluated_at_ms != now_ms:
-        raise Agg08Error("AGG08_EFFECT_REVALIDATION_REQUIRED")
     if now_ms >= admission.expires_at_ms:
         raise Agg08Error("AGG08_ADMISSION_EXPIRED")
     if admission.permit_hash != reviewed_permit.permit_hash:

@@ -12,7 +12,8 @@ from src.execution.economic_reconciliation import (
     ReconciliationReason,
     ReconciliationStatus,
 )
-from src.execution.financing_evidence import RepaymentDecision
+from src.execution.financing_evidence import FinancingRepaymentBundle, RepaymentDecision
+from src.lending.financing import FinancingRole
 
 SHA_A = "a" * 64
 SHA_B = "b" * 64
@@ -33,6 +34,7 @@ def _decision() -> RepaymentDecision:
         debt_after_base_units=0,
         required_repayment_base_units=101,
         observed_repayment_base_units=101,
+        role=FinancingRole.PRIMARY,
         reason=None,
         evidence_digest=SHA_B,
     )
@@ -60,7 +62,7 @@ def _evidence(decision: RepaymentDecision) -> ReconciliationEvidence:
         fees=FeeEvidence(0, 0, 0),
         marginfi=None,
         required_accounts=("wallet",),
-        financing=decision,
+        financing=FinancingRepaymentBundle(primary=decision),
     )
 
 

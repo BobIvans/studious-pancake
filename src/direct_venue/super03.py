@@ -443,7 +443,9 @@ class BenchmarkObservation:
     def __post_init__(self) -> None:
         _text(self.case_id, "case_id")
         _text(self.state_generation, "state_generation")
-        if not isinstance(self.feasible, bool) or not isinstance(self.positive_net, bool):
+        if not isinstance(self.feasible, bool) or not isinstance(
+            self.positive_net, bool
+        ):
             raise Super03Error("benchmark booleans must be bool")
         if self.exact_net_atomic is not None and (
             isinstance(self.exact_net_atomic, bool)

@@ -44,6 +44,7 @@ from src.lending.agg03_financing_ports import (
     SlumlordFinancingSnapshot,
 )
 from src.lending.financing import FinancingEvidence, FinancingRole
+from src.lending.financing_planner_adapter import FinancingPlannerSnapshot
 from src.lending.jupiter_lend import (
     JUPITER_FLASHLOAN_ADMIN_PDA,
     JUPITER_LEND_FLASHLOAN_PROGRAM_ID,
@@ -150,12 +151,9 @@ class JupiterLendSlumlordRepaymentDecoder:
         request = candidate.request
         primary_snapshot = request.financing_snapshot
         rent_snapshot = request.rent_financing_snapshot
-        if type(primary_snapshot) is not __import__(
-            "src.lending.financing_planner_adapter",
-            fromlist=["FinancingPlannerSnapshot"],
-        ).FinancingPlannerSnapshot:
+        if type(primary_snapshot) is not FinancingPlannerSnapshot:
             raise ValueError("FINANCING_PRIMARY_PLANNER_SNAPSHOT_REQUIRED")
-        if type(rent_snapshot) is not type(primary_snapshot):
+        if type(rent_snapshot) is not FinancingPlannerSnapshot:
             raise ValueError("FINANCING_RENT_PLANNER_SNAPSHOT_REQUIRED")
         if type(primary_snapshot.protocol_snapshot) is not JupiterLendFinancingSnapshot:
             raise ValueError("JUPITER_LEND_SNAPSHOT_REQUIRED")

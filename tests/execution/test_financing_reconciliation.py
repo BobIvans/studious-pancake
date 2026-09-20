@@ -29,6 +29,7 @@ def _decision() -> RepaymentDecision:
         program_id="program",
         deployment_generation=1,
         decoder_identity="decoder-v1",
+        obligation_digest=SHA_A,
         asset_id=NATIVE_SOL_ASSET.stable_id(),
         debt_before_base_units=100,
         debt_after_base_units=0,

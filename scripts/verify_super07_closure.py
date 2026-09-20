@@ -32,6 +32,147 @@ EXPECTED_NF = frozenset(
         "NF-307",
     }
 )
+EXPECTED_CHILD_MAP = {
+    "PR-129": {
+        "w2_id": "W2-17",
+        "scope": "DATA-05",
+        "primary_nf": ("NF-077", "NF-078", "NF-079", "NF-080", "NF-082"),
+        "canonical_owner_paths": ("src/data_plane/external_datasets.py",),
+        "test_paths": ("tests/test_agg13_external_datasets.py",),
+    },
+    "PR-130": {
+        "w2_id": "W2-17",
+        "scope": "CHAIN-01",
+        "primary_nf": ("NF-257", "NF-258", "NF-259"),
+        "canonical_owner_paths": ("src/multichain/core.py",),
+        "test_paths": ("tests/test_agg11_multichain_execution_models.py",),
+    },
+    "PR-131": {
+        "w2_id": "W2-17",
+        "scope": "CHAIN-02",
+        "primary_nf": ("NF-260", "NF-261", "NF-262", "NF-263"),
+        "canonical_owner_paths": ("src/multichain/evm_financing.py",),
+        "test_paths": ("tests/test_agg11_multichain_execution_models.py",),
+    },
+    "PR-132": {
+        "w2_id": "W2-17",
+        "scope": "CHAIN-03",
+        "primary_nf": ("NF-264",),
+        "canonical_owner_paths": ("src/multichain/evm_settlement.py",),
+        "test_paths": ("tests/test_agg11_multichain_execution_models.py",),
+    },
+    "PR-133": {
+        "w2_id": "W2-17",
+        "scope": "CHAIN-04",
+        "primary_nf": ("NF-265", "NF-266", "NF-267", "NF-268"),
+        "canonical_owner_paths": ("src/multichain/sui.py",),
+        "test_paths": ("tests/test_agg11_multichain_execution_models.py",),
+    },
+    "PR-134": {
+        "w2_id": "W2-17",
+        "scope": "CHAIN-05",
+        "primary_nf": ("NF-269", "NF-270"),
+        "canonical_owner_paths": ("src/cross_chain/agg12.py",),
+        "test_paths": ("tests/test_agg12_multichain_qualification.py",),
+    },
+    "PR-135": {
+        "w2_id": "W2-17",
+        "scope": "CHAIN-06",
+        "primary_nf": ("NF-271",),
+        "canonical_owner_paths": ("src/multichain/qualification.py",),
+        "test_paths": ("tests/test_agg11_multichain_execution_models.py",),
+    },
+    "PR-136": {
+        "w2_id": "W2-18",
+        "scope": "EVM-01",
+        "primary_nf": ("NF-272", "NF-273", "NF-274", "NF-275"),
+        "canonical_owner_paths": ("src/cross_chain/agg12.py",),
+        "test_paths": ("tests/test_agg12_multichain_qualification.py",),
+    },
+    "PR-137": {
+        "w2_id": "W2-18",
+        "scope": "EVM-02",
+        "primary_nf": (
+            "NF-276",
+            "NF-277",
+            "NF-278",
+            "NF-279",
+            "NF-280",
+            "NF-282",
+            "NF-283",
+        ),
+        "canonical_owner_paths": ("src/cross_chain/agg12.py",),
+        "test_paths": ("tests/test_agg12_multichain_qualification.py",),
+    },
+    "PR-138": {
+        "w2_id": "W2-18",
+        "scope": "EVM-03",
+        "primary_nf": ("NF-281", "NF-284", "NF-285"),
+        "canonical_owner_paths": ("src/cross_chain/agg12.py",),
+        "test_paths": ("tests/test_agg12_multichain_qualification.py",),
+    },
+    "PR-139": {
+        "w2_id": "W2-18",
+        "scope": "SUI-01",
+        "primary_nf": ("NF-286", "NF-287"),
+        "canonical_owner_paths": (
+            "src/cross_chain/agg12.py",
+            "src/multichain/sui.py",
+        ),
+        "test_paths": (
+            "tests/test_agg12_multichain_qualification.py",
+            "tests/test_agg11_multichain_execution_models.py",
+        ),
+    },
+    "PR-140": {
+        "w2_id": "W2-19",
+        "scope": "INV-01",
+        "primary_nf": ("NF-288", "NF-289", "NF-306", "NF-307"),
+        "canonical_owner_paths": (
+            "src/inventory/non_atomic.py",
+            "src/inventory/research.py",
+        ),
+        "test_paths": ("tests/test_agg13_inventory_platform.py",),
+    },
+    "PR-141": {
+        "w2_id": "W2-19",
+        "scope": "INV-02",
+        "primary_nf": tuple(f"NF-{number:03d}" for number in range(290, 296)),
+        "canonical_owner_paths": ("src/inventory/research.py",),
+        "test_paths": ("tests/test_agg13_inventory_platform.py",),
+    },
+    "PR-142": {
+        "w2_id": "W2-19",
+        "scope": "INV-03",
+        "primary_nf": tuple(f"NF-{number:03d}" for number in range(296, 300)),
+        "canonical_owner_paths": ("src/inventory/research.py",),
+        "test_paths": ("tests/test_agg13_inventory_platform.py",),
+    },
+    "PR-143": {
+        "w2_id": "W2-20",
+        "scope": "INV-04",
+        "primary_nf": ("NF-300", "NF-301", "NF-302"),
+        "canonical_owner_paths": ("src/inventory/research.py",),
+        "test_paths": ("tests/test_agg13_inventory_platform.py",),
+    },
+    "PR-144": {
+        "w2_id": "W2-20",
+        "scope": "INV-05",
+        "primary_nf": ("NF-303", "NF-304", "NF-305"),
+        "canonical_owner_paths": ("src/inventory/research.py",),
+        "test_paths": ("tests/test_agg13_inventory_platform.py",),
+    },
+}
+EXPECTED_BLOCKERS = frozenset(
+    {
+        "SUPER07_EXTERNAL_DATA_ENTITLEMENTS_UNQUALIFIED",
+        "SUPER07_CHAIN_DEPLOYMENT_CONFORMANCE_UNQUALIFIED",
+        "SUPER07_EVM_SUI_LOADED_STATE_CAMPAIGN_NOT_RUN",
+        "SUPER07_EXCHANGE_CONNECTORS_AND_ACTUAL_FILL_RECONCILIATION_MISSING",
+        "SUPER07_INVENTORY_MARGIN_STRESS_CAMPAIGN_NOT_RUN",
+        "SUPER07_RWA_RIGHTS_CUSTODY_SESSION_ACCESS_UNQUALIFIED",
+    }
+)
 ALLOWED_IMPLEMENTATION = {"SATISFIED_BY_EXISTING", "VERIFIED"}
 ALLOWED_QUALIFICATION = {"UNQUALIFIED", "RESEARCH_ONLY"}
 
@@ -71,10 +212,27 @@ def verify_payload(
         if not isinstance(child, Mapping):
             errors.append("CHILD_ENTRY_INVALID")
             continue
+        child_id = child.get("source_pr_id")
+        expected = EXPECTED_CHILD_MAP.get(str(child_id))
+        if expected is None:
+            errors.append(f"{child_id}:CHILD_MAPPING_UNKNOWN")
+        else:
+            for key in (
+                "w2_id",
+                "scope",
+                "primary_nf",
+                "canonical_owner_paths",
+                "test_paths",
+            ):
+                actual = child.get(key)
+                if isinstance(actual, list):
+                    actual = tuple(actual)
+                if actual != expected[key]:
+                    errors.append(f"{child_id}:CHILD_MAPPING_MISMATCH:{key}")
         if child.get("implementation_status") not in ALLOWED_IMPLEMENTATION:
-            errors.append(f"{child.get('source_pr_id')}:IMPLEMENTATION_STATUS_INVALID")
+            errors.append(f"{child_id}:IMPLEMENTATION_STATUS_INVALID")
         if child.get("qualification_status") not in ALLOWED_QUALIFICATION:
-            errors.append(f"{child.get('source_pr_id')}:QUALIFICATION_STATUS_INVALID")
+            errors.append(f"{child_id}:QUALIFICATION_STATUS_INVALID")
         nf = child.get("primary_nf")
         if not isinstance(nf, list) or not nf:
             errors.append(f"{child.get('source_pr_id')}:PRIMARY_NF_REQUIRED")
@@ -100,6 +258,14 @@ def verify_payload(
     blockers = payload.get("blockers")
     if not isinstance(blockers, list) or not blockers:
         errors.append("OPERATIONAL_BLOCKERS_REQUIRED")
+    else:
+        normalized_blockers = tuple(str(item).strip() for item in blockers)
+        if any(not item for item in normalized_blockers):
+            errors.append("OPERATIONAL_BLOCKER_EMPTY")
+        if len(normalized_blockers) != len(set(normalized_blockers)):
+            errors.append("OPERATIONAL_BLOCKER_DUPLICATE")
+        if frozenset(normalized_blockers) != EXPECTED_BLOCKERS:
+            errors.append("OPERATIONAL_BLOCKER_SET_MISMATCH")
 
     return {
         "ok": not errors,

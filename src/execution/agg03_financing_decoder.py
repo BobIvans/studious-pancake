@@ -101,6 +101,23 @@ def _hash(value: object) -> str:
     ).hexdigest()
 
 
+def financing_pre_state_sha256(
+    addresses: Sequence[str],
+    values: Sequence[Mapping[str, Any] | None],
+) -> str:
+    """Commit to the complete ordered raw pre-state set used by the decoder."""
+
+    normalized_addresses = tuple(str(address) for address in addresses)
+    if len(normalized_addresses) != len(values):
+        raise ValueError("FINANCING_ACCOUNT_SET_MISMATCH")
+    return _hash(
+        {
+            "monitored_accounts": normalized_addresses,
+            "accounts": tuple(values),
+        }
+    )
+
+
 def _account_map(
     addresses: Sequence[str],
     values: Sequence[Mapping[str, Any] | None],
@@ -209,6 +226,13 @@ class JupiterLendSlumlordRepaymentDecoder:
             raise ValueError("FINANCING_POST_STATE_REQUIRED")
 
         addresses = tuple(report.monitored_accounts)
+        expected_pre_state_hash = request.provider_account_snapshot_hash
+        if (
+            expected_pre_state_hash is None
+            or financing_pre_state_sha256(addresses, pre_values)
+            != expected_pre_state_hash
+        ):
+            raise ValueError("FINANCING_PRE_STATE_HASH_MISMATCH")
         pre = _account_map(addresses, pre_values)
         post = _account_map(addresses, post_values)
 
@@ -485,6 +509,7 @@ class JupiterLendSlumlordRepaymentDecoder:
 
 
 __all__ = [
+    "financing_pre_state_sha256",
     "JupiterLendSlumlordRepaymentDecoder",
     "decoder_artifact_sha256",
 ]

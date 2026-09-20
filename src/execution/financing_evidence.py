@@ -124,6 +124,11 @@ class RepaymentDecision:
     program_id: str
     deployment_generation: int
     decoder_identity: str
+    asset_id: str
+    debt_before_base_units: int
+    debt_after_base_units: int
+    required_repayment_base_units: int
+    observed_repayment_base_units: int
     reason: str | None
     evidence_digest: str
 
@@ -135,6 +140,31 @@ class FinancingRepaymentValidator(Protocol):
     decoder_identity: str
 
     def validate(self, evidence: FinancingRepaymentEvidence) -> bool: ...
+
+
+def _decision(
+    evidence: FinancingRepaymentEvidence,
+    *,
+    proven: bool,
+    reason: str | None,
+) -> RepaymentDecision:
+    return RepaymentDecision(
+        proven=proven,
+        attempt_id=evidence.attempt_id,
+        attempt_generation=evidence.attempt_generation,
+        message_hash=evidence.message_hash,
+        lender_id=evidence.lender_id,
+        program_id=evidence.program_id,
+        deployment_generation=evidence.deployment_generation,
+        decoder_identity=evidence.decoder_identity,
+        asset_id=evidence.asset_id,
+        debt_before_base_units=evidence.debt_before_base_units,
+        debt_after_base_units=evidence.debt_after_base_units,
+        required_repayment_base_units=evidence.required_repayment_base_units,
+        observed_repayment_base_units=evidence.observed_repayment_base_units,
+        reason=reason,
+        evidence_digest=evidence.digest,
+    )
 
 
 def validate_financing_repayment(
@@ -149,57 +179,25 @@ def validate_financing_repayment(
         and validator.decoder_identity == evidence.decoder_identity
     ]
     if len(decoder_matches) != 1:
-        return RepaymentDecision(
-            False,
-            evidence.attempt_id,
-            evidence.attempt_generation,
-            evidence.message_hash,
-            evidence.lender_id,
-            evidence.program_id,
-            evidence.deployment_generation,
-            evidence.decoder_identity,
-            "FINANCING_DECODER_REQUIRED",
-            evidence.digest,
+        return _decision(
+            evidence,
+            proven=False,
+            reason="FINANCING_DECODER_REQUIRED",
         )
     validator = decoder_matches[0]
     if validator.program_id != evidence.program_id:
-        return RepaymentDecision(
-            False,
-            evidence.attempt_id,
-            evidence.attempt_generation,
-            evidence.message_hash,
-            evidence.lender_id,
-            evidence.program_id,
-            evidence.deployment_generation,
-            evidence.decoder_identity,
-            "FINANCING_PROGRAM_MISMATCH",
-            evidence.digest,
+        return _decision(
+            evidence,
+            proven=False,
+            reason="FINANCING_PROGRAM_MISMATCH",
         )
     if not validator.validate(evidence):
-        return RepaymentDecision(
-            False,
-            evidence.attempt_id,
-            evidence.attempt_generation,
-            evidence.message_hash,
-            evidence.lender_id,
-            evidence.program_id,
-            evidence.deployment_generation,
-            evidence.decoder_identity,
-            "FINANCING_REPAYMENT_NOT_PROVEN",
-            evidence.digest,
+        return _decision(
+            evidence,
+            proven=False,
+            reason="FINANCING_REPAYMENT_NOT_PROVEN",
         )
-    return RepaymentDecision(
-        True,
-        evidence.attempt_id,
-        evidence.attempt_generation,
-        evidence.message_hash,
-        evidence.lender_id,
-        evidence.program_id,
-        evidence.deployment_generation,
-        evidence.decoder_identity,
-        None,
-        evidence.digest,
-    )
+    return _decision(evidence, proven=True, reason=None)
 
 
 @dataclass(frozen=True, slots=True)

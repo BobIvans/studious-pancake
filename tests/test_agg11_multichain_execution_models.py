@@ -45,6 +45,7 @@ from src.multichain import (
     SuiPtbOperation,
     SuiPtbPlan,
     SuiStateFrame,
+    deployment_evidence_digest,
     qualify_chain,
     require_single_chain_atomic_scope,
 )
@@ -473,3 +474,12 @@ def test_chain_qualification_is_scoped_and_never_enables_live() -> None:
     assert verdict.externally_qualified is False
     assert "GENESIS_NOT_PINNED" in verdict.blockers
     assert any("DEPLOYMENT_NOT_PINNED" in item for item in verdict.blockers)
+
+
+def test_deployment_evidence_digest_is_content_bound() -> None:
+    deployment = _deployment("aave")
+    digest = deployment_evidence_digest(deployment)
+
+    assert len(digest) == 64
+    assert digest != deployment.artifact_digest
+    assert deployment_evidence_digest(replace(deployment, version="test-v2")) != digest

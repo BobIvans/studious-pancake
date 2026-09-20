@@ -74,13 +74,10 @@ class FinancingRepaymentEvidence:
         if type(self.attempt_generation) is not int or self.attempt_generation < 1:
             raise FinancingEvidenceError("attempt_generation must be positive integer")
         _sha(self.message_hash, "message_hash")
-        for value, label in (
-            (self.lender_id, "lender_id"),
-            (self.program_id, "program_id"),
-            (self.decoder_identity, "decoder_identity"),
-            (self.asset_id, "asset_id"),
-        ):
-            _text(value, label)
+        _text(self.lender_id, "lender_id")
+        _text(self.program_id, "program_id")
+        _text(self.decoder_identity, "decoder_identity")
+        _text(self.asset_id, "asset_id")
         if (
             type(self.deployment_generation) is not int
             or self.deployment_generation < 1
@@ -90,13 +87,10 @@ class FinancingRepaymentEvidence:
             )
         _sha(self.obligation_digest, "obligation_digest")
         _sha(self.source_evidence_sha256, "source_evidence_sha256")
-        for value, label in (
-            (self.debt_before_base_units, "debt_before_base_units"),
-            (self.debt_after_base_units, "debt_after_base_units"),
-            (self.required_repayment_base_units, "required_repayment_base_units"),
-            (self.observed_repayment_base_units, "observed_repayment_base_units"),
-        ):
-            _uint(value, label)
+        _uint(self.debt_before_base_units, "debt_before_base_units")
+        _uint(self.debt_after_base_units, "debt_after_base_units")
+        _uint(self.required_repayment_base_units, "required_repayment_base_units")
+        _uint(self.observed_repayment_base_units, "observed_repayment_base_units")
 
     @property
     def digest(self) -> str:

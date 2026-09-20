@@ -16,6 +16,7 @@ import time
 from typing import Awaitable, Callable, Protocol
 
 from src.durability import AttemptKey
+from src.kernel import canonical_json_bytes
 from src.durability.unified_authority_pr02 import (
     AuthorityFence,
     ReservationTerminalState,
@@ -465,12 +466,12 @@ class ExactPaperAttemptOrchestrator:
             snapshot = planner.financing_snapshot
             if snapshot is None:
                 raise ValueError("generic financing snapshot required")
-            protocol_snapshot = snapshot.protocol_snapshot
-            state_fingerprint = getattr(protocol_snapshot, "state_fingerprint", None)
-            if (
-                not isinstance(state_fingerprint, str)
-                or evidence.account_snapshot_hash != state_fingerprint
-            ):
+            if candidate.financing_pre_state_accounts is None:
+                raise ValueError("generic financing raw pre-state required")
+            observed_snapshot_hash = hashlib.sha256(
+                canonical_json_bytes(candidate.financing_pre_state_accounts)
+            ).hexdigest()
+            if evidence.account_snapshot_hash != observed_snapshot_hash:
                 raise ValueError("provider snapshot fingerprint mismatch")
             if (
                 snapshot.slot < request.discovery_slot
@@ -594,6 +595,11 @@ class ExactPaperAttemptOrchestrator:
                 or vertical.reconciliation.repayment.proven is not True
                 or type(vertical.reconciliation.settlement_net) is not int
                 or vertical.reconciliation.settlement_net <= 0
+                or any(
+                    item.asset != vertical.reconciliation.settlement_asset
+                    and item.net < 0
+                    for item in vertical.reconciliation.breakdowns
+                )
             ):
                 raise ValueError(
                     "generic financing economic qualification not admitted"

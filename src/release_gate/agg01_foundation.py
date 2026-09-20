@@ -414,8 +414,15 @@ class AdapterContract:
 @dataclass(frozen=True, slots=True)
 class DifferentialCase:
     vector_id: str
+    input_sha256: str
     local_sha256: str
     expected_sha256: str
+
+    def __post_init__(self) -> None:
+        _text(self.vector_id, "vector_id")
+        _sha(self.input_sha256, "input_sha256")
+        _sha(self.local_sha256, "local_sha256")
+        _sha(self.expected_sha256, "expected_sha256")
 
 
 @dataclass(frozen=True, slots=True)
@@ -432,7 +439,12 @@ class DifferentialReport:
     def digest(self) -> str:
         return _digest(
             tuple(
-                (case.vector_id, case.local_sha256, case.expected_sha256)
+                (
+                    case.vector_id,
+                    case.input_sha256,
+                    case.local_sha256,
+                    case.expected_sha256,
+                )
                 for case in self.cases
             )
         )
@@ -457,11 +469,14 @@ class ReuseAdmission:
         if not self.differential.passed:
             raise Agg01ContractError("reuse requires passing differential report")
         expected = tuple(
-            sorted((v.vector_id, v.expected_sha256) for v in self.vectors.vectors)
+            sorted(
+                (v.vector_id, v.input_sha256, v.expected_sha256)
+                for v in self.vectors.vectors
+            )
         )
         observed = tuple(
             sorted(
-                (case.vector_id, case.expected_sha256)
+                (case.vector_id, case.input_sha256, case.expected_sha256)
                 for case in self.differential.cases
             )
         )

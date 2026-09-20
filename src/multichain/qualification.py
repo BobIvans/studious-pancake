@@ -4,11 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import StrEnum
+from hashlib import sha256
+import json
 
 from .core import (
     CapabilityStatus,
     ChainCapabilityRegistry,
     ChainDialect,
+    DeploymentRef,
     MultiChainError,
 )
 
@@ -62,6 +65,23 @@ class ChainQualificationVerdict:
     @property
     def externally_qualified(self) -> bool:
         return self.status is ChainQualificationStatus.EXTERNALLY_QUALIFIED
+
+
+def deployment_evidence_digest(deployment: DeploymentRef) -> str:
+    """Content-bind deployment identity without relying on a mutable registry key."""
+
+    payload = {
+        "protocol": deployment.protocol,
+        "chain_key": deployment.chain_key,
+        "deployment_id": deployment.deployment_id,
+        "version": deployment.version,
+        "interface_digest": deployment.interface_digest,
+        "artifact_digest": deployment.artifact_digest,
+        "generation": deployment.generation,
+    }
+    return sha256(
+        json.dumps(payload, sort_keys=True, separators=(",", ":")).encode()
+    ).hexdigest()
 
 
 def require_single_chain_atomic_scope(chain_keys: tuple[str, ...]) -> str:
@@ -141,7 +161,7 @@ def qualify_chain(
             for blocker in capability.blockers
         )
         if capability.deployment is not None:
-            deployments.append(capability.deployment.digest)
+            deployments.append(deployment_evidence_digest(capability.deployment))
     if not evidence.offline_complete:
         blockers.append("OFFLINE_EVIDENCE_INCOMPLETE")
     if require_operational and not evidence.operational_proof:

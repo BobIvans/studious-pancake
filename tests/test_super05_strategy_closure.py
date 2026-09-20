@@ -60,7 +60,9 @@ def test_current_super05_implementation_closes_offline_but_not_operationally() -
     assert "SUPER05_AGG10_OPERATIONAL_EVIDENCE_UNQUALIFIED" in report.blockers
 
 
-def test_agg06_external_qualified_status_does_not_keep_requirements_as_blockers() -> None:
+def test_agg06_external_qualified_status_does_not_keep_requirements_as_blockers() -> (
+    None
+):
     artifacts = _artifacts()
     agg06 = dict(artifacts["AGG-06"])
     agg06["operational_status"] = "EXTERNALLY_QUALIFIED_FOR_PROFILE"
@@ -89,17 +91,14 @@ def test_agg10_unqualified_status_blocks_super05_operational_qualification() -> 
 def test_missing_existing_owner_evidence_fails_implementation_closure() -> None:
     artifacts = _artifacts()
     agg06 = dict(artifacts["AGG-06"])
-    agg06["primary_nf"] = [
-        item for item in agg06["primary_nf"] if item != "NF-138"
-    ]
+    agg06["primary_nf"] = [item for item in agg06["primary_nf"] if item != "NF-138"]
     artifacts["AGG-06"] = agg06
 
     report = evaluate_super05(artifacts=artifacts)
 
     assert report.implementation_complete is False
     assert any(
-        error == "SUPER05_ARTIFACT_NF_MISSING:AGG-06:NF-138"
-        for error in report.errors
+        error == "SUPER05_ARTIFACT_NF_MISSING:AGG-06:NF-138" for error in report.errors
     )
 
 

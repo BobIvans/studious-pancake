@@ -50,7 +50,9 @@ def test_unqualified_v1_cannot_be_silently_read() -> None:
         )
 
 
-def test_qualified_format_requires_explicit_decoder_and_preserves_raw_identity() -> None:
+def test_qualified_format_requires_explicit_decoder_and_preserves_raw_identity() -> (
+    None
+):
     capability = _capability(TransactionFormat.V1)
     with pytest.raises(Agg02Error, match="SUPER01_SDK_CODEC_UNAVAILABLE"):
         decode_versioned_transaction_envelope(

@@ -289,9 +289,7 @@ def _validate_artifacts(
             continue
         absent = sorted(required - set(primary))
         if absent:
-            errors.append(
-                f"SUPER05_ARTIFACT_NF_MISSING:{agg_id}:" + ",".join(absent)
-            )
+            errors.append(f"SUPER05_ARTIFACT_NF_MISSING:{agg_id}:" + ",".join(absent))
         if payload.get("live_enabled") is not False:
             errors.append(f"SUPER05_ARTIFACT_LIVE_NOT_FALSE:{agg_id}")
         implementation = payload.get("implementation_status")
@@ -352,7 +350,9 @@ def evaluate_super05(
     _validate_symbols(errors)
 
     payloads = (
-        dict(artifacts) if artifacts is not None else _load_artifacts(root or _repo_root())
+        dict(artifacts)
+        if artifacts is not None
+        else _load_artifacts(root or _repo_root())
     )
     _validate_artifacts(payloads, errors, blockers)
     _validate_orderbook_runtime(errors, blockers)

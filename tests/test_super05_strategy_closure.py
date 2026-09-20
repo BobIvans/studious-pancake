@@ -57,6 +57,33 @@ def test_current_super05_implementation_closes_offline_but_not_operationally() -
     assert "SUPER05_ORDERBOOK_RUNTIME_FIXTURE_ONLY" in report.blockers
     assert "SUPER05_AGG06_OPERATIONAL_EVIDENCE_UNQUALIFIED" in report.blockers
     assert "SUPER05_AGG07_OPERATIONAL_EVIDENCE_UNQUALIFIED" in report.blockers
+    assert "SUPER05_AGG10_OPERATIONAL_EVIDENCE_UNQUALIFIED" in report.blockers
+
+
+def test_agg06_external_qualified_status_does_not_keep_requirements_as_blockers() -> None:
+    artifacts = _artifacts()
+    agg06 = dict(artifacts["AGG-06"])
+    agg06["operational_status"] = "EXTERNALLY_QUALIFIED_FOR_PROFILE"
+    artifacts["AGG-06"] = agg06
+
+    report = evaluate_super05(artifacts=artifacts)
+
+    assert "SUPER05_AGG06_OPERATIONAL_EVIDENCE_UNQUALIFIED" not in report.blockers
+    assert not any(
+        blocker.startswith("SUPER05_AGG06_EXTERNAL:") for blocker in report.blockers
+    )
+
+
+def test_agg10_unqualified_status_blocks_super05_operational_qualification() -> None:
+    artifacts = _artifacts()
+    agg10 = dict(artifacts["AGG-10"])
+    agg10["operational_status"] = "UNQUALIFIED"
+    artifacts["AGG-10"] = agg10
+
+    report = evaluate_super05(artifacts=artifacts)
+
+    assert "SUPER05_AGG10_OPERATIONAL_EVIDENCE_UNQUALIFIED" in report.blockers
+    assert report.qualification_complete is False
 
 
 def test_missing_existing_owner_evidence_fails_implementation_closure() -> None:

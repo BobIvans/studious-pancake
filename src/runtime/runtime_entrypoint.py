@@ -233,13 +233,18 @@ async def _run_paper(
         # Missing deployed/provider evidence is represented by that composition as
         # BLOCKED_EXTERNAL; the installed path is never a blank A3 constructor.
         from src.runtime.core_v1_composition import build_core_v1_composition
+        from src.runtime.core_v1_dependency_resolver import (
+            resolve_installed_core_v1_dependencies,
+        )
 
         profile = _select_core_v1_profile(config, environment)
+        resolution = resolve_installed_core_v1_dependencies(profile, environment)
         composition = build_core_v1_composition(
             config,
             db_path=context.resolve_path(selected_db),
             profile=profile,
-            dependencies=None,
+            dependencies=resolution.dependencies,
+            external_blocker=resolution.blocker,
         )
         service = composition.service
 

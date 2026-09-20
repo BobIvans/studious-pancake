@@ -429,12 +429,22 @@ class DifferentialReport:
             case.local_sha256 == case.expected_sha256 for case in self.cases
         )
 
+    @property
+    def digest(self) -> str:
+        return _digest(
+            tuple(
+                (case.vector_id, case.local_sha256, case.expected_sha256)
+                for case in self.cases
+            )
+        )
+
 
 @dataclass(frozen=True, slots=True)
 class ReuseAdmission:
     upstream: UpstreamPin
     license: LicenseDecision
     vectors: VectorSet
+    differential: DifferentialReport
     supply_chain: SupplyChainReview
     boundary: BoundaryADR
     adapter: AdapterContract
@@ -445,6 +455,16 @@ class ReuseAdmission:
             raise Agg01ContractError("reuse requires permitted license")
         if not self.supply_chain.safe:
             raise Agg01ContractError("reuse requires safe supply chain")
+        if not self.differential.passed:
+            raise Agg01ContractError("reuse requires passing differential report")
+        expected = tuple(
+            sorted((v.vector_id, v.expected_sha256) for v in self.vectors.vectors)
+        )
+        observed = tuple(
+            sorted((case.vector_id, case.expected_sha256) for case in self.differential.cases)
+        )
+        if expected != observed:
+            raise Agg01ContractError("differential report does not bind vector set")
         _sha(self.admission_digest, "admission_digest")
 
 
@@ -633,6 +653,7 @@ def build_reuse_admission(
     upstream: UpstreamPin,
     license: LicenseDecision,
     vectors: VectorSet,
+    differential: DifferentialReport,
     supply_chain: SupplyChainReview,
     boundary: BoundaryADR,
     adapter: AdapterContract,
@@ -642,13 +663,21 @@ def build_reuse_admission(
             "upstream": upstream.identity_digest,
             "license": license,
             "vectors": vectors.digest,
+            "differential": differential.digest,
             "supply_chain": supply_chain,
             "boundary": boundary,
             "adapter": adapter,
         }
     )
     return ReuseAdmission(
-        upstream, license, vectors, supply_chain, boundary, adapter, digest
+        upstream,
+        license,
+        vectors,
+        differential,
+        supply_chain,
+        boundary,
+        adapter,
+        digest,
     )
 
 

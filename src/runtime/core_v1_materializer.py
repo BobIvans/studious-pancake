@@ -332,9 +332,7 @@ class CoreV1MaterializedBatchSource:
                     "items": [],
                 }
             )
-            return A3ExactAttemptBatch(
-                A3ProviderEvidenceState(evidence_hash, True), ()
-            )
+            return A3ExactAttemptBatch(A3ProviderEvidenceState(evidence_hash, True), ())
         try:
             items = tuple(self.materializer.materialize(draft) for draft in drafts)
         except (TypeError, ValueError) as exc:
@@ -350,14 +348,10 @@ class CoreV1MaterializedBatchSource:
                 "profile_generation": profile_generation,
                 "lender": lender,
                 "release_id": self.materializer.release_id,
-                "materializations": [
-                    draft.materialization_hash for draft in drafts
-                ],
+                "materializations": [draft.materialization_hash for draft in drafts],
             }
         )
-        return A3ExactAttemptBatch(
-            A3ProviderEvidenceState(evidence_hash, True), items
-        )
+        return A3ExactAttemptBatch(A3ProviderEvidenceState(evidence_hash, True), items)
 
 
 class BlockedCoreV1DraftSource:

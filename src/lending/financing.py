@@ -45,9 +45,7 @@ def _require_sha256(value: str, label: str) -> str:
 
 def _positive_int(value: int, label: str) -> int:
     if type(value) is not int or value <= 0:
-        raise FinancingContractError(
-            f"{label} must be a positive non-bool integer"
-        )
+        raise FinancingContractError(f"{label} must be a positive non-bool integer")
     return value
 
 

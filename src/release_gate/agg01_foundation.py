@@ -360,8 +360,7 @@ class VectorSet:
             raise Agg01ContractError("at least one conformance vector is required")
         return _digest(
             tuple(
-                (v.vector_id, v.input_sha256, v.expected_sha256)
-                for v in self.vectors
+                (v.vector_id, v.input_sha256, v.expected_sha256) for v in self.vectors
             )
         )
 
@@ -461,7 +460,10 @@ class ReuseAdmission:
             sorted((v.vector_id, v.expected_sha256) for v in self.vectors.vectors)
         )
         observed = tuple(
-            sorted((case.vector_id, case.expected_sha256) for case in self.differential.cases)
+            sorted(
+                (case.vector_id, case.expected_sha256)
+                for case in self.differential.cases
+            )
         )
         if expected != observed:
             raise Agg01ContractError("differential report does not bind vector set")
@@ -545,13 +547,9 @@ def freeze_snapshot(
 
 def map_entrypoints(repo_root: str | Path) -> EntrypointTrace:
     root = Path(repo_root)
-    pyproject = tomllib.loads(
-        (root / "pyproject.toml").read_text(encoding="utf-8")
-    )
+    pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
     script = str(pyproject["project"]["scripts"]["flashloan-bot"])
-    runtime = (root / "src/runtime/runtime_entrypoint.py").read_text(
-        encoding="utf-8"
-    )
+    runtime = (root / "src/runtime/runtime_entrypoint.py").read_text(encoding="utf-8")
     return EntrypointTrace(
         "flashloan-bot",
         script.split(":", 1)[0],
@@ -602,12 +600,16 @@ def close_baseline_map(rows: Sequence[CoverageRow]) -> QualificationWorkQueue:
         QualificationWorkItem(
             row.nf_id,
             row.owner,
-            ScopeDisposition.RESEARCH
-            if row.decision is IntegrationDecision.RESEARCH
-            else ScopeDisposition.REQUIRED,
-            "MISSING_IMPLEMENTATION_EVIDENCE"
-            if row.implementation_status is ImplementationStatus.BLOCKED
-            else None,
+            (
+                ScopeDisposition.RESEARCH
+                if row.decision is IntegrationDecision.RESEARCH
+                else ScopeDisposition.REQUIRED
+            ),
+            (
+                "MISSING_IMPLEMENTATION_EVIDENCE"
+                if row.implementation_status is ImplementationStatus.BLOCKED
+                else None
+            ),
         )
         for row in matrix.rows
     ]

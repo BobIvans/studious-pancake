@@ -164,9 +164,7 @@ class _WrongProgramValidator(_Validator):
 
 
 def test_generic_repayment_rejects_wrong_financing_program() -> None:
-    decision = validate_financing_repayment(
-        _repayment(), (_WrongProgramValidator(),)
-    )
+    decision = validate_financing_repayment(_repayment(), (_WrongProgramValidator(),))
     assert decision.proven is False
     assert decision.reason == "FINANCING_PROGRAM_MISMATCH"
 
@@ -182,6 +180,7 @@ def test_protocol_decoder_can_prove_and_bind_finalized_evidence() -> None:
         repayment=decision,
     )
     assert len(finalized.digest) == 64
+
 
 def test_non_marginfi_profile_cannot_qualify_before_composition_adapter(
     tmp_path: Path,
@@ -204,8 +203,7 @@ def test_non_marginfi_profile_cannot_qualify_before_composition_adapter(
     )
     reasons = {
         str(item.get("reason", ""))
-        for item in report.implementation_blockers
-        + report.external_or_review_blockers
+        for item in report.implementation_blockers + report.external_or_review_blockers
     }
     assert "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED" in reasons
     assert "CORE_V1_FINANCING_EVIDENCE_NOT_QUALIFIED" in reasons
@@ -263,4 +261,3 @@ def test_agg03_program_identities_fit_agg01_financing_binding(
         evidence=evidence,
         obligations=(obligation,),
     ) == (obligation,)
-

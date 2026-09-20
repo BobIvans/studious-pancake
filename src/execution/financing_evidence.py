@@ -194,15 +194,11 @@ class FinalizedFinancingEvidence:
     def __post_init__(self) -> None:
         _text(self.attempt_id, "attempt_id")
         if type(self.attempt_generation) is not int or self.attempt_generation < 1:
-            raise FinancingEvidenceError(
-                "attempt_generation must be positive integer"
-            )
+            raise FinancingEvidenceError("attempt_generation must be positive integer")
         _sha(self.message_hash, "message_hash")
         _uint(self.finalized_slot, "finalized_slot")
         if not self.repayment.proven:
-            raise FinancingEvidenceError(
-                "FINALIZED_FINANCING_REPAYMENT_NOT_PROVEN"
-            )
+            raise FinancingEvidenceError("FINALIZED_FINANCING_REPAYMENT_NOT_PROVEN")
 
     @property
     def digest(self) -> str:

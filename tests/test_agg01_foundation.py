@@ -145,9 +145,7 @@ def test_unknown_license_or_hidden_effects_reject_reuse() -> None:
         vectors=vectors,
         differential=_passing_differential(),
         boundary=BoundaryADR(BoundaryMode.WRAP, True, False, False),
-        adapter=AdapterContract(
-            "adapter", ("state",), ("out",), True, False, 1
-        ),
+        adapter=AdapterContract("adapter", ("state",), ("out",), True, False, 1),
     )
     with pytest.raises(Agg01ContractError, match="permitted license"):
         build_reuse_admission(
@@ -185,9 +183,7 @@ def test_reuse_admission_binds_the_exact_vector_set() -> None:
 
 
 def test_upstream_drift_and_unreachable_source_require_requalification() -> None:
-    assert monitor_upstream_drift(
-        _pin(SHA_A), _pin(SHA_B)
-    ).requalification_required
+    assert monitor_upstream_drift(_pin(SHA_A), _pin(SHA_B)).requalification_required
     missing = monitor_upstream_drift(_pin(), None)
     assert missing.source_reachable is False
     assert missing.requalification_required is True

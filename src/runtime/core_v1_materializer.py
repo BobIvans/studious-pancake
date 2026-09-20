@@ -18,6 +18,11 @@ from src.durability import AttemptKey
 from src.economics.capital import CapitalCandidate
 from src.economics.durable_reservations import WalletBalanceSnapshot
 from src.paper_shadow.a2_exact_attempt_runtime import ExactAttemptRuntimeItem
+from src.lending.financing import (
+    FINANCING_CONTRACT_VERSION,
+    FinancingEvidence,
+    validate_financing_binding,
+)
 from src.paper_shadow.durable_service_a3 import (
     A3ExactAttemptBatch,
     A3ProviderEvidenceState,
@@ -29,7 +34,8 @@ from src.paper_shadow.exact_attempt_pr152 import (
 )
 
 CORE_V1_PROFILE_ID = "core-marginfi-jupiter-v1"
-CORE_V1_SCHEMA = "core-v1.exact-attempt-materialization.v1"
+CORE_V1_LEGACY_SCHEMA = "core-v1.exact-attempt-materialization.v1"
+CORE_V1_SCHEMA = "core-v1.exact-attempt-materialization.v2"
 CORE_V1_BLOCKED_EXTERNAL = "CORE_V1_BLOCKED_EXTERNAL"
 
 
@@ -64,7 +70,7 @@ def _require_sha256(value: str, label: str) -> None:
 
 @dataclass(frozen=True, slots=True)
 class CoreV1ReleaseProfile:
-    """Immutable first-release scope; it grants no live capability."""
+    """Immutable lender-bound profile; the historical profile remains exact."""
 
     profile_id: str
     strategy: str
@@ -74,18 +80,27 @@ class CoreV1ReleaseProfile:
     genesis_hash: str
     transport: str
     live_enabled: bool = False
+    profile_generation: int = 1
+    financing_contract_version: str = FINANCING_CONTRACT_VERSION
 
     def __post_init__(self) -> None:
+        if not self.profile_id.strip() or not self.lender.strip():
+            raise ValueError("CORE_V1_PROFILE_IDENTITY_REQUIRED")
         expected = (
-            self.profile_id == CORE_V1_PROFILE_ID,
             self.strategy == "circular_arbitrage",
-            self.lender == "marginfi",
             self.router == "jupiter",
             self.transport in {"rpc", "rpc+jito"},
             self.live_enabled is False,
+            type(self.profile_generation) is int and self.profile_generation >= 1,
+            self.financing_contract_version == FINANCING_CONTRACT_VERSION,
         )
         if not all(expected):
             raise ValueError("CORE_V1_PROFILE_SCOPE_MISMATCH")
+        if self.profile_id == CORE_V1_PROFILE_ID:
+            if self.lender != "marginfi":
+                raise ValueError("CORE_V1_LEGACY_PROFILE_LENDER_MISMATCH")
+            if self.profile_generation != 1:
+                raise ValueError("CORE_V1_LEGACY_PROFILE_GENERATION_MISMATCH")
         if not self.cluster.strip() or not self.genesis_hash.strip():
             raise ValueError("CORE_V1_CLUSTER_IDENTITY_REQUIRED")
 
@@ -106,10 +121,14 @@ class CoreV1AttemptDraft:
     provider_evidence: ProviderExecutionEvidence
     discovery_slot: int
     candidate_factory: CandidateFactory
+    profile_generation: int = 1
+    financing_evidence: FinancingEvidence | None = None
 
     def __post_init__(self) -> None:
-        if self.profile_id != CORE_V1_PROFILE_ID:
-            raise ValueError("CORE_V1_DRAFT_PROFILE_MISMATCH")
+        if not isinstance(self.profile_id, str) or not self.profile_id.strip():
+            raise ValueError("CORE_V1_DRAFT_PROFILE_REQUIRED")
+        if type(self.profile_generation) is not int or self.profile_generation < 1:
+            raise ValueError("profile_generation must be positive integer")
         for label, value in (
             ("release_id", self.release_id),
             ("source_delivery_id", self.source_delivery_id),
@@ -133,6 +152,12 @@ class CoreV1AttemptDraft:
             {
                 "schema": CORE_V1_SCHEMA,
                 "profile_id": self.profile_id,
+                "profile_generation": self.profile_generation,
+                "financing_evidence_digest": (
+                    None
+                    if self.financing_evidence is None
+                    else self.financing_evidence.digest
+                ),
                 "release_id": self.release_id,
                 "policy_bundle_hash": self.policy_bundle_hash,
                 "source_delivery_id": self.source_delivery_id,
@@ -173,7 +198,10 @@ class CoreV1AttemptMaterializer:
             raise ValueError("CORE_V1_GENESIS_MISMATCH")
         if not self.config.providers.jupiter.enabled:
             raise ValueError("CORE_V1_JUPITER_DISABLED")
-        if not self.config.providers.marginfi.enabled:
+        if (
+            self.profile.lender == "marginfi"
+            and not self.config.providers.marginfi.enabled
+        ):
             raise ValueError("CORE_V1_MARGINFI_DISABLED")
         mode = self.config.strategies.circular_arbitrage
         if mode not in {RuntimeMode.PAPER, RuntimeMode.SHADOW}:
@@ -182,6 +210,18 @@ class CoreV1AttemptMaterializer:
     def materialize(self, draft: CoreV1AttemptDraft) -> ExactAttemptRuntimeItem:
         if type(draft) is not CoreV1AttemptDraft:
             raise TypeError("CORE_V1_CANONICAL_DRAFT_REQUIRED")
+        if draft.profile_id != self.profile.profile_id:
+            raise ValueError("CORE_V1_DRAFT_PROFILE_MISMATCH")
+        if draft.profile_generation != self.profile.profile_generation:
+            raise ValueError("CORE_V1_PROFILE_GENERATION_MISMATCH")
+        if draft.financing_evidence is not None:
+            validate_financing_binding(
+                lender_id=self.profile.lender,
+                deployment_generation=self.profile.profile_generation,
+                evidence=draft.financing_evidence,
+            )
+        elif self.profile.lender != "marginfi" or self.profile.profile_generation != 1:
+            raise ValueError("CORE_V1_FINANCING_EVIDENCE_REQUIRED")
         if draft.release_id != self.release_id:
             raise ValueError("CORE_V1_RELEASE_DRIFT")
         if draft.policy_bundle_hash != self.policy_bundle_hash:
@@ -231,6 +271,24 @@ class CoreV1DraftSource(Protocol):
     def __call__(self) -> Sequence[CoreV1AttemptDraft]: ...
 
 
+def _batch_profile_identity(profile: object) -> tuple[str, int, str]:
+    profile_id = getattr(profile, "profile_id", None)
+    if not isinstance(profile_id, str) or not profile_id.strip():
+        raise ValueError("CORE_V1_BATCH_PROFILE_IDENTITY_REQUIRED")
+    generation = getattr(profile, "profile_generation", None)
+    lender = getattr(profile, "lender", None)
+    if profile_id == CORE_V1_PROFILE_ID:
+        if generation is None:
+            generation = 1
+        if lender is None:
+            lender = "marginfi"
+    if type(generation) is not int or generation < 1:
+        raise ValueError("CORE_V1_BATCH_PROFILE_GENERATION_REQUIRED")
+    if not isinstance(lender, str) or not lender.strip():
+        raise ValueError("CORE_V1_BATCH_LENDER_REQUIRED")
+    return profile_id, generation, lender
+
+
 class CoreV1MaterializedBatchSource:
     """A3 source that emits exact items only; no raw handoff may pass through."""
 
@@ -263,12 +321,16 @@ class CoreV1MaterializedBatchSource:
                     _hash_json({"reason": reason}), False, (reason,)
                 )
             )
+        profile_id, profile_generation, lender = _batch_profile_identity(
+            self.materializer.profile
+        )
         if not drafts:
-            # An admitted, healthy producer with zero opportunities is NO_TRADE.
             evidence_hash = _hash_json(
                 {
                     "schema": CORE_V1_SCHEMA,
-                    "profile_id": self.materializer.profile.profile_id,
+                    "profile_id": profile_id,
+                    "profile_generation": profile_generation,
+                    "lender": lender,
                     "release_id": self.materializer.release_id,
                     "items": [],
                 }
@@ -285,7 +347,9 @@ class CoreV1MaterializedBatchSource:
         evidence_hash = _hash_json(
             {
                 "schema": CORE_V1_SCHEMA,
-                "profile_id": self.materializer.profile.profile_id,
+                "profile_id": profile_id,
+                "profile_generation": profile_generation,
+                "lender": lender,
                 "release_id": self.materializer.release_id,
                 "materializations": [draft.materialization_hash for draft in drafts],
             }
@@ -304,6 +368,7 @@ class BlockedCoreV1DraftSource:
 
 __all__ = [
     "CORE_V1_BLOCKED_EXTERNAL",
+    "CORE_V1_LEGACY_SCHEMA",
     "CORE_V1_PROFILE_ID",
     "CoreV1AttemptDraft",
     "CoreV1ExternalBlock",

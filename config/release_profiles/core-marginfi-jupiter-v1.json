@@ -64,5 +64,7 @@
   "live_enabled": false,
   "unrestricted_live_allowed": false,
   "automatic_scale_up_allowed": false,
-  "executed_canary_required_for_default_off_review": false
+  "executed_canary_required_for_default_off_review": false,
+  "profile_generation": 1,
+  "financing_contract_version": "agg01.financing-obligation.v1"
 }

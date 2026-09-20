@@ -22,6 +22,7 @@ from src.execution.exact_simulation import (
     ExactSimulationPolicy,
 )
 from src.execution.models import RpcClient
+from src.lending.financing import FinancingEvidence, FinancingPort
 from src.paper_shadow.atomic_vertical import (
     AtomicPlannerSimulationReconciliationVertical,
 )
@@ -51,6 +52,7 @@ from src.runtime.core_v1_materializer import (
 
 CORE_V1_COMPOSITION_SCHEMA = "core-v1.installed-composition.v1"
 CORE_V1_OWNER_ID = "core-v1-installed-marginfi-jupiter"
+CORE_V1_LENDER_ADAPTER_REQUIRED = "CORE_V1_LENDER_ADAPTER_REQUIRED"
 
 
 def _hash_json(value: object) -> str:
@@ -67,15 +69,22 @@ def _hash_json(value: object) -> str:
 
 @dataclass(frozen=True, slots=True)
 class CoreV1Dependencies:
-    """Externally qualified dependencies needed for an admitted paper cycle."""
+    """Externally qualified dependencies needed for an admitted paper cycle.
+
+    ``marginfi_provider`` remains the compatibility field for the historical
+    profile. ``financing_port``/``financing_evidence`` are the AGG-01
+    lender-neutral seam consumed by later lender adapters.
+    """
 
     release_id: str
     policy_bundle_hash: str
     draft_source: CoreV1DraftSource
     rpc: RpcClient
-    marginfi_provider: VerifiedMarginfiProviderPort
+    marginfi_provider: VerifiedMarginfiProviderPort | None
     planner_policy: AtomicPlannerPolicy
     simulation_policy: ExactSimulationPolicy | None = None
+    financing_port: FinancingPort | None = None
+    financing_evidence: FinancingEvidence | None = None
 
     def __post_init__(self) -> None:
         if not isinstance(self.release_id, str) or not self.release_id.strip():
@@ -89,11 +98,28 @@ class CoreV1Dependencies:
             int(self.policy_bundle_hash, 16)
         except ValueError as exc:
             raise ValueError("CORE_V1_POLICY_BUNDLE_HASH_REQUIRED") from exc
-        if (
+        if self.marginfi_provider is not None and (
             getattr(self.marginfi_provider, "execution_conformance_verified", False)
             is not True
         ):
             raise ValueError("CORE_V1_MARGINFI_EXECUTION_CONFORMANCE_REQUIRED")
+        if self.financing_port is not None:
+            if (
+                getattr(self.financing_port, "execution_conformance_verified", False)
+                is not True
+            ):
+                raise ValueError("CORE_V1_FINANCING_EXECUTION_CONFORMANCE_REQUIRED")
+            if self.financing_evidence is None:
+                raise ValueError("CORE_V1_FINANCING_EVIDENCE_REQUIRED")
+            if self.financing_port.lender_id != self.financing_evidence.lender_id:
+                raise ValueError("CORE_V1_FINANCING_LENDER_MISMATCH")
+            if (
+                self.financing_port.deployment_generation
+                != self.financing_evidence.deployment_generation
+            ):
+                raise ValueError("CORE_V1_FINANCING_GENERATION_MISMATCH")
+        if self.financing_evidence is not None and self.financing_port is None:
+            raise ValueError("CORE_V1_FINANCING_PORT_REQUIRED")
         if not callable(getattr(self.rpc, "call", None)):
             raise ValueError("CORE_V1_GOVERNED_RPC_REQUIRED")
 
@@ -117,6 +143,8 @@ class _BlockedBatchSource:
             {
                 "schema": CORE_V1_COMPOSITION_SCHEMA,
                 "profile_id": self.profile.profile_id,
+                "profile_generation": self.profile.profile_generation,
+                "lender": self.profile.lender,
                 "reason": self.reason,
             }
         )
@@ -159,6 +187,35 @@ class CoreV1Composition:
         self.close()
 
 
+async def _blocked_runtime_cycle(_cycle_id: str, _items: tuple[object, ...]):
+    raise RuntimeError(CORE_V1_LENDER_ADAPTER_REQUIRED)
+
+
+def _is_legacy_marginfi_profile(profile: CoreV1ReleaseProfile) -> bool:
+    return (
+        profile.profile_id == "core-marginfi-jupiter-v1"
+        and profile.lender == "marginfi"
+        and profile.profile_generation == 1
+    )
+
+
+def _build_generic_blocked_service(
+    config: RuntimeConfig,
+    *,
+    db_path: str | Path,
+    profile: CoreV1ReleaseProfile,
+    authority: UnifiedLifecycleAuthority,
+    reason: str,
+) -> VerifiedTerminalInstalledPaperService:
+    return build_verified_terminal_paper_service(
+        config,
+        db_path=Path(db_path),
+        batch_source=_BlockedBatchSource(profile, reason),
+        runtime_cycle=_blocked_runtime_cycle,
+        authority=authority,
+    )
+
+
 def build_core_v1_composition(
     config: RuntimeConfig,
     *,
@@ -178,6 +235,8 @@ def build_core_v1_composition(
         {
             "schema": CORE_V1_COMPOSITION_SCHEMA,
             "profile_id": profile.profile_id,
+            "profile_generation": profile.profile_generation,
+            "lender": profile.lender,
             "release_id": (
                 dependencies.release_id
                 if dependencies is not None
@@ -189,7 +248,14 @@ def build_core_v1_composition(
     policy_hash = (
         dependencies.policy_bundle_hash
         if dependencies is not None
-        else _hash_json({"profile_id": profile.profile_id, "state": "blocked-external"})
+        else _hash_json(
+            {
+                "profile_id": profile.profile_id,
+                "profile_generation": profile.profile_generation,
+                "lender": profile.lender,
+                "state": "blocked-external",
+            }
+        )
     )
     authority = UnifiedLifecycleAuthority(
         Path(db_path),
@@ -206,11 +272,28 @@ def build_core_v1_composition(
     )
 
     if dependencies is None:
-        # Even a blocked installed profile is physically composed through the
-        # canonical production classes.  Its batch source prevents any RPC or
-        # capital effect until real external evidence is admitted.  The cast is
-        # type-only: this blocked provider is never invoked and cannot satisfy
-        # admitted execution conformance on its own.
+        if not _is_legacy_marginfi_profile(profile):
+            service = _build_generic_blocked_service(
+                config,
+                db_path=db_path,
+                profile=profile,
+                authority=authority,
+                reason=CORE_V1_BLOCKED_EXTERNAL,
+            )
+            return CoreV1Composition(
+                profile=profile,
+                authority=authority,
+                capital=capital,
+                service=service,
+                planner=None,
+                simulator=None,
+                vertical=None,
+                orchestrator=None,
+                runtime_cycle=None,
+                materializer=None,
+                admitted=False,
+                blockers=(CORE_V1_BLOCKED_EXTERNAL,),
+            )
         pin = load_marginfi_contract_pin()
         marginfi = MarginfiFlashLoanProvider(pin)
         blocked_marginfi = cast(VerifiedMarginfiProviderPort, marginfi)
@@ -256,6 +339,47 @@ def build_core_v1_composition(
             admitted=False,
             blockers=(CORE_V1_BLOCKED_EXTERNAL,),
         )
+
+    if not _is_legacy_marginfi_profile(profile):
+        reason = f"{CORE_V1_LENDER_ADAPTER_REQUIRED}:{profile.lender}"
+        if (
+            dependencies.financing_port is None
+            or dependencies.financing_evidence is None
+        ):
+            reason = f"CORE_V1_FINANCING_PORT_REQUIRED:{profile.lender}"
+        else:
+            if dependencies.financing_evidence.lender_id != profile.lender:
+                raise ValueError("CORE_V1_FINANCING_LENDER_MISMATCH")
+            if (
+                dependencies.financing_evidence.deployment_generation
+                != profile.profile_generation
+            ):
+                raise ValueError("CORE_V1_FINANCING_GENERATION_MISMATCH")
+        service = _build_generic_blocked_service(
+            config,
+            db_path=db_path,
+            profile=profile,
+            authority=authority,
+            reason=reason,
+        )
+        return CoreV1Composition(
+            profile=profile,
+            authority=authority,
+            capital=capital,
+            service=service,
+            planner=None,
+            simulator=None,
+            vertical=None,
+            orchestrator=None,
+            runtime_cycle=None,
+            materializer=None,
+            admitted=False,
+            blockers=(reason,),
+        )
+
+    if dependencies.marginfi_provider is None:
+        authority.close()
+        raise ValueError("CORE_V1_MARGINFI_PROVIDER_REQUIRED")
 
     try:
         materializer = CoreV1AttemptMaterializer(
@@ -315,6 +439,7 @@ def build_core_v1_composition(
 
 __all__ = [
     "CORE_V1_COMPOSITION_SCHEMA",
+    "CORE_V1_LENDER_ADAPTER_REQUIRED",
     "CORE_V1_OWNER_ID",
     "CoreV1Composition",
     "CoreV1Dependencies",

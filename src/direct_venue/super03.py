@@ -14,7 +14,12 @@ import json
 import re
 from typing import Iterable, Mapping
 
-from src.direct_venue.mpr2617 import (\n    CapabilityState,\n    DirectRouteLeg,\n    VenueCapability,\n    VenueFamily,\n)
+from src.direct_venue.mpr2617 import (
+    CapabilityState,
+    DirectRouteLeg,
+    VenueCapability,
+    VenueFamily,
+)
 from src.strategies.stable_peg.math import LiquidityBand, ceil_div, traverse_bands_exact
 
 

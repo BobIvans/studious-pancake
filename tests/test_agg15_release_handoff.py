@@ -254,7 +254,7 @@ def test_live_or_auto_scale_defaults_are_rejected() -> None:
 def test_research_disposition_does_not_become_fake_completion() -> None:
     rows = [_record(index) for index in range(1, EXPECTED_NF_COUNT + 1)]
     rows[-1] = _record(
-        328,
+        EXPECTED_NF_COUNT,
         disposition=ScopeDisposition.RESEARCH,
     )
 
@@ -262,7 +262,7 @@ def test_research_disposition_does_not_become_fake_completion() -> None:
 
     assert audit.structurally_complete is True
     assert audit.full_target_code_complete is False
-    assert "NF-328" in audit.research_or_deferred_nf_ids
+    assert f"NF-{EXPECTED_NF_COUNT:03d}" in audit.research_or_deferred_nf_ids
     assert audit.evidence_completed_nf_count == 0
 
 
@@ -405,3 +405,18 @@ def test_product_boundary_rejects_authority_or_accounting_conflation(field: str)
 
     with pytest.raises(Agg15AuditError):
         evaluate_release_handoff(manifest)
+
+
+
+def test_product_boundary_rejects_noncanonical_owner_identity() -> None:
+    manifest = _complete_manifest()
+    product = manifest["product_boundary"]
+    assert isinstance(product, dict)
+    product["product_owner"] = "unrelated-module"
+    product["accounting_owner"] = "unrelated-ledger"
+
+    report = evaluate_release_handoff(manifest)
+
+    assert report.product_boundary_ready is False
+    assert report.scoped_release_handoff_ready is False
+    assert "AGG15_PRODUCT_BOUNDARY_INCOMPLETE" in report.blockers

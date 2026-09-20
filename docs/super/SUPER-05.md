@@ -58,6 +58,13 @@ Implementation closure is not operational qualification. The verifier retains:
 3. AGG-07 protocol blockers, including Jupiter-Lend AMM uncertainty,
    Save/Solend source/deployment/license evidence, Exponent production reuse
    permission and deployed Kamino conformance.
+4. AGG-10 must itself have a qualified operational disposition before the
+   aggregate SUPER-05 qualification can become positive.
+
+AGG-06's canonical positive operational state
+`EXTERNALLY_QUALIFIED_FOR_PROFILE` is accepted by the closure verifier.
+Its `mandatory_external_evidence` list is treated as requirements only while
+AGG-06 is unqualified, not as permanent blockers after qualification.
 
 These blockers are not converted to PASS by this PR.
 

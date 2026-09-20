@@ -139,6 +139,9 @@ class _Validator:
 
 def _repayment() -> FinancingRepaymentEvidence:
     return FinancingRepaymentEvidence(
+        attempt_id="attempt-1",
+        attempt_generation=1,
+        message_hash=SHA_A,
         lender_id="jupiter-lend",
         program_id="program",
         deployment_generation=2,
@@ -180,6 +183,56 @@ def test_protocol_decoder_can_prove_and_bind_finalized_evidence() -> None:
         repayment=decision,
     )
     assert len(finalized.digest) == 64
+
+
+def test_finalized_financing_rejects_repayment_from_other_attempt() -> None:
+    decision = validate_financing_repayment(_repayment(), (_Validator(),))
+    assert decision.proven is True
+    with pytest.raises(
+        ValueError,
+        match="FINALIZED_FINANCING_ATTEMPT_MISMATCH",
+    ):
+        FinalizedFinancingEvidence(
+            attempt_id="attempt-2",
+            attempt_generation=1,
+            message_hash=SHA_A,
+            finalized_slot=123,
+            repayment=decision,
+        )
+
+
+def test_finalized_financing_rejects_repayment_from_other_message() -> None:
+    decision = validate_financing_repayment(_repayment(), (_Validator(),))
+    assert decision.proven is True
+    with pytest.raises(
+        ValueError,
+        match="FINALIZED_FINANCING_MESSAGE_MISMATCH",
+    ):
+        FinalizedFinancingEvidence(
+            attempt_id="attempt-1",
+            attempt_generation=1,
+            message_hash=SHA_B,
+            finalized_slot=123,
+            repayment=decision,
+        )
+
+
+def test_legacy_marginfi_profile_rejects_generation_two() -> None:
+    config = load_runtime_config(cli_overrides={"runtime.mode": "paper"})
+    with pytest.raises(
+        ValueError,
+        match="LEGACY_PROFILE_GENERATION_MISMATCH",
+    ):
+        CoreV1ReleaseProfile(
+            profile_id=CORE_V1_PROFILE_ID,
+            strategy="circular_arbitrage",
+            lender="marginfi",
+            router="jupiter",
+            cluster=config.cluster.name,
+            genesis_hash=config.cluster.genesis_hash,
+            transport="rpc",
+            profile_generation=2,
+        )
 
 
 def test_non_marginfi_profile_cannot_qualify_before_composition_adapter(

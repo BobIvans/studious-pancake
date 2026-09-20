@@ -27,7 +27,6 @@ from src.strategy.multihop_solver import (
     search_bounded_cycles,
 )
 
-
 D1 = "1" * 64
 D2 = "2" * 64
 D3 = "3" * 64

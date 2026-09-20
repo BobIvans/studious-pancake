@@ -7,6 +7,10 @@ import pytest
 
 from src.production_qualification import (
     AGG04CampaignPolicy,
+    AGG04DelayStressSample,
+    AGG04DemotionTransition,
+    AGG04PairedEpisodeResult,
+    AGG04SelectionBiasReport,
     AGG04EpisodeEvidence,
     AGG04ProbeEvidence,
     AGG04TemporalSplit,
@@ -14,9 +18,14 @@ from src.production_qualification import (
     AGG04_INSUFFICIENT_EVIDENCE,
     AGG04_NEGATIVE,
     AGG04_QUALIFIED_SCOPE,
+    build_agg04_dashboard,
     build_agg04_evidence_package,
+    build_agg04_survival_observation,
+    compare_agg04_baselines,
+    compute_agg04_class_statistics,
     build_agg04_funnel,
     qualify_agg04_campaign,
+    summarize_agg04_delay_stress,
 )
 
 SHA_A = "a" * 64
@@ -275,3 +284,151 @@ def test_coverage_manifest_lists_exactly_41_primary_nf() -> None:
     assert len(set(ids)) == 41
     assert all(item.startswith("NF-") for item in ids)
     assert payload["live_enabled"] is False
+
+def test_survival_is_interval_or_right_censored_not_continuous_assumption() -> None:
+    v = variant(episode_id="e1", variant_id="v1")
+    interval = build_agg04_survival_observation(
+        variant=v,
+        probes=(
+            probe("v1", elapsed_ms=100, positive=True),
+            probe("v1", elapsed_ms=700, positive=True),
+            probe("v1", elapsed_ms=900, positive=False),
+        ),
+        horizon_ms=500,
+    )
+    right = build_agg04_survival_observation(
+        variant=v,
+        probes=(probe("v1", elapsed_ms=700, positive=True),),
+        horizon_ms=500,
+    )
+
+    assert interval.last_positive_ms == 700
+    assert interval.first_negative_ms == 900
+    assert interval.interval_censored
+    assert not interval.right_censored
+    assert interval.positive_at_horizon
+    assert right.right_censored
+    assert right.first_negative_ms is None
+
+
+def test_selection_bias_never_claims_unbiasedness_with_unknown_propensity() -> None:
+    incomplete = AGG04SelectionBiasReport(
+        tested_hypotheses=12,
+        sampled_episode_ids=("e1", "e2"),
+        known_propensity_episode_ids=("e1",),
+        correction_method="holm",
+    )
+    complete = AGG04SelectionBiasReport(
+        tested_hypotheses=12,
+        sampled_episode_ids=("e1", "e2"),
+        known_propensity_episode_ids=("e1", "e2"),
+        correction_method="holm",
+    )
+
+    assert incomplete.unknown_propensity_episode_ids == ("e2",)
+    assert not incomplete.unbiased_claim_allowed
+    assert complete.unbiased_claim_allowed
+
+
+def test_class_statistics_forbid_two_selected_variants_from_same_episode() -> None:
+    variants = (
+        variant(episode_id="e1", variant_id="v1", net=4),
+        variant(episode_id="e1", variant_id="v2", net=9),
+    )
+    with pytest.raises(ValueError, match="cherry-pick"):
+        compute_agg04_class_statistics(
+            variants=variants,
+            selected_variant_ids=("v1", "v2"),
+            selection_policy_sha256=SHA_A,
+        )
+
+
+def test_class_statistics_keep_unknown_net_separate_from_zero() -> None:
+    stats = compute_agg04_class_statistics(
+        variants=(
+            variant(episode_id="e1", variant_id="v1", net=9),
+            variant(episode_id="e2", variant_id="v2", net=-3),
+            variant(episode_id="e3", variant_id="v3", net=0),
+            variant(episode_id="e4", variant_id="v4", net=None),
+        ),
+        selected_variant_ids=("v1", "v2", "v3", "v4"),
+        selection_policy_sha256=SHA_A,
+    )
+
+    assert stats.episode_count == 4
+    assert stats.known_net_episode_count == 3
+    assert stats.positive_net_episode_count == 1
+    assert stats.negative_net_episode_count == 1
+    assert stats.zero_net_episode_count == 1
+    assert stats.unknown_net_episode_count == 1
+    assert stats.total_net_atomic == 6
+    assert stats.mean_net_ratio == (6, 3)
+
+
+def test_paired_baseline_comparison_accounts_for_resource_costs_and_unknowns() -> None:
+    report = compare_agg04_baselines(
+        (
+            AGG04PairedEpisodeResult("e1", 10, 14, 1, 2),
+            AGG04PairedEpisodeResult("e2", 5, 4, 0, 0),
+            AGG04PairedEpisodeResult("e3", None, 8, 0, 0),
+        )
+    )
+
+    assert report.paired_episode_count == 2
+    assert report.unknown_episode_count == 1
+    assert report.challenger_incremental_net_atomic == 2
+    assert report.improved_episode_count == 1
+    assert report.degraded_episode_count == 1
+
+
+def test_delay_stress_is_counterfactual_and_unknown_is_preserved() -> None:
+    report = summarize_agg04_delay_stress(
+        (
+            AGG04DelayStressSample("e1", 50, True, SHA_A),
+            AGG04DelayStressSample("e2", 400, False, SHA_B),
+            AGG04DelayStressSample("e3", 900, None, SHA_C),
+        )
+    )
+    assert report.sample_count == 3
+    assert report.positive_count == 1
+    assert report.negative_count == 1
+    assert report.unknown_count == 1
+    assert report.maximum_latency_ms == 900
+
+    with pytest.raises(ValueError, match="counterfactual"):
+        AGG04DelayStressSample("e4", 10, True, SHA_D, counterfactual=False)
+
+
+def test_dashboard_and_demotion_remain_fail_closed() -> None:
+    p = policy()
+    temporal = split("e1")
+    f = build_agg04_funnel(
+        episodes=(episode("e1", "o1"),),
+        variants=(variant(episode_id="e1", variant_id="v1", net=7),),
+        probes=(probe("v1", elapsed_ms=700, positive=True),),
+        survival_horizon_ms=p.survival_horizon_ms,
+    )
+    verdict = qualify_agg04_campaign(
+        policy=p,
+        funnel=f,
+        temporal_split=temporal,
+        as_of_ns=500,
+    )
+    dashboard = build_agg04_dashboard(
+        funnel=f,
+        verdict=verdict,
+        unresolved_reason_codes=("DEPLOYED_VECTOR_EXPIRY",),
+    )
+    transition = AGG04DemotionTransition(
+        prior_verdict_sha256=verdict.verdict_sha256,
+        trigger="deployment-drift",
+        affected_scope=("raydium-cpmm",),
+    )
+
+    assert dashboard["status"] == AGG04_QUALIFIED_SCOPE
+    assert dashboard["live_enabled"] is False
+    assert dashboard["unresolved_reason_codes"] == ["DEPLOYED_VECTOR_EXPIRY"]
+    assert transition.requalification_required
+    assert not transition.live_enabled
+    assert not transition.automatic_rearm_allowed
+

@@ -1,0 +1,29 @@
+{
+  "schema": "agg14.research-coverage.v1",
+  "agg_id": "AGG-14",
+  "base_sha": "0c4f216a62d62b20f6fb4ec4bbd0548cea58df65",
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "UNQUALIFIED",
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "production_ready": false,
+  "nf": [
+    {"id":"NF-308","owner":"RND-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":[]},
+    {"id":"NF-309","owner":"RND-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":[]},
+    {"id":"NF-310","owner":"RND-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":[]},
+    {"id":"NF-311","owner":"RND-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":[]},
+    {"id":"NF-312","owner":"RND-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["DEFENSIVE_TOOL_CORPUS_NOT_EXTERNALLY_QUALIFIED"]},
+    {"id":"NF-313","owner":"RND-02","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["QUBO_HARDWARE_EXPERIMENT_NOT_RUN"]},
+    {"id":"NF-314","owner":"RND-02","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["QUANTUM_MODEL_HOLDOUT_EXPERIMENT_NOT_RUN"]},
+    {"id":"NF-315","owner":"RND-02","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["ACCELERATOR_HARDWARE_BENCHMARK_NOT_RUN"]},
+    {"id":"NF-316","owner":"RND-03","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["FEDERATED_USE_CASE_AND_PARTICIPANT_CONSENT_NOT_PROVISIONED"]},
+    {"id":"NF-317","owner":"RND-03","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["ZK_USE_CASE_AND_PROOF_SYSTEM_NOT_PINNED"]},
+    {"id":"NF-318","owner":"PRODUCT-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["KORA_CAPABILITY_AND_SPONSOR_FUNDING_NOT_EXTERNALLY_ATTESTED"]},
+    {"id":"NF-319","owner":"PRODUCT-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["NO_CUSTOMER_KEEPER_AUTHORIZATION"]},
+    {"id":"NF-320","owner":"PRODUCT-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["NO_EXTERNAL_DATA_API_SERVICE_OR_CUSTOMER_PAYMENT_EVIDENCE"]},
+    {"id":"NF-321","owner":"PRODUCT-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":["NO_VERIFIED_GRANT_OR_BOUNTY_SUBMISSION"]},
+    {"id":"NF-322","owner":"PRODUCT-01","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":[]},
+    {"id":"NF-323","owner":"RND-04","implementation_status":"IMPLEMENTED_OFFLINE","operational_status":"UNQUALIFIED","blockers":[]}
+  ]
+}

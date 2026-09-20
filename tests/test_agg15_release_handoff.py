@@ -408,7 +408,6 @@ def test_product_boundary_rejects_authority_or_accounting_conflation(
         evaluate_release_handoff(manifest)
 
 
-
 def test_product_boundary_rejects_noncanonical_owner_identity() -> None:
     manifest = _complete_manifest()
     product = manifest["product_boundary"]

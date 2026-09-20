@@ -95,6 +95,7 @@ class FinancingPlannerProviderAdapter:
             raise FinancingContractError("FINANCING_GENERATION_MISMATCH")
         self.port = port
         self.evidence = evidence
+        self.evidence_sha256 = evidence.evidence_sha256
         self.lender_id = evidence.lender_id
         self.program_id = evidence.program_id
         self.deployment_generation = evidence.deployment_generation

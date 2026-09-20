@@ -2,7 +2,11 @@
   "schema_version": "super05.strategy-vertical-closure.v1",
   "super_id": "SUPER-05",
   "base_sha": "27875850a88edf102c904e31955e0df8b78b13b4",
-  "w2_packages": ["W2-13", "W2-14", "W2-15"],
+  "w2_packages": [
+    "W2-13",
+    "W2-14",
+    "W2-15"
+  ],
   "child_count": 11,
   "primary_nf_count": 26,
   "implementation_status": "VERIFIED_OFFLINE",
@@ -38,16 +42,38 @@
     "PR-117": "SATISFIED_BY_EXISTING"
   },
   "primary_nf": [
-    "NF-070", "NF-072", "NF-073", "NF-074", "NF-081",
-    "NF-119", "NF-120", "NF-121", "NF-122",
-    "NF-138", "NF-139", "NF-140", "NF-141", "NF-142", "NF-143",
-    "NF-144", "NF-145", "NF-146", "NF-147", "NF-148", "NF-149", "NF-150",
-    "NF-151", "NF-152", "NF-153", "NF-154"
+    "NF-070",
+    "NF-072",
+    "NF-073",
+    "NF-074",
+    "NF-081",
+    "NF-119",
+    "NF-120",
+    "NF-121",
+    "NF-122",
+    "NF-138",
+    "NF-139",
+    "NF-140",
+    "NF-141",
+    "NF-142",
+    "NF-143",
+    "NF-144",
+    "NF-145",
+    "NF-146",
+    "NF-147",
+    "NF-148",
+    "NF-149",
+    "NF-150",
+    "NF-151",
+    "NF-152",
+    "NF-153",
+    "NF-154"
   ],
   "blockers": [
     "SUPER05_ORDERBOOK_RUNTIME_FIXTURE_ONLY",
     "SUPER05_AGG06_OPERATIONAL_EVIDENCE_UNQUALIFIED",
-    "SUPER05_AGG07_OPERATIONAL_EVIDENCE_UNQUALIFIED"
+    "SUPER05_AGG07_OPERATIONAL_EVIDENCE_UNQUALIFIED",
+    "SUPER05_AGG10_OPERATIONAL_EVIDENCE_UNQUALIFIED"
   ],
   "authority_boundary": {
     "signer": false,

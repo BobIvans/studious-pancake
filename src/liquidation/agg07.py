@@ -128,8 +128,7 @@ def build_liquidation_watchlist(
 
         deficit = max(
             0,
-            snapshot.risk.health_liabilities_value
-            - snapshot.risk.health_assets_value,
+            snapshot.risk.health_liabilities_value - snapshot.risk.health_assets_value,
         )
         trigger = evidence_by_target.get(snapshot.target_account)
         trigger_num: int | None = None
@@ -229,10 +228,7 @@ class FinancingEvidence:
 
     @property
     def borrow_index_bound(self) -> bool:
-        return (
-            self.borrow_instruction_index
-            == self.expected_borrow_instruction_index
-        )
+        return self.borrow_instruction_index == self.expected_borrow_instruction_index
 
 
 @dataclass(frozen=True, slots=True)

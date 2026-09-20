@@ -203,7 +203,10 @@ def verify_payload(
         errors.append("SCHEMA_VERSION_MISMATCH")
     if payload.get("super_id") != "SUPER-07":
         errors.append("SUPER_ID_MISMATCH")
-    if tuple(payload.get("w2_packages", ())) != EXPECTED_W2:
+    w2_packages = payload.get("w2_packages")
+    if not isinstance(w2_packages, list):
+        errors.append("W2_PACKAGES_ARRAY_REQUIRED")
+    elif tuple(w2_packages) != EXPECTED_W2:
         errors.append("W2_PACKAGE_SET_MISMATCH")
     if payload.get("source_pr_range") != "PR-129..PR-144":
         errors.append("SOURCE_PR_RANGE_MISMATCH")

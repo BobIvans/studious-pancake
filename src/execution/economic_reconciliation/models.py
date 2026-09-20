@@ -7,7 +7,7 @@ from enum import Enum
 
 from src.config.chain_registry import TOKEN_2022_PROGRAM_ADDRESS, TOKEN_PROGRAM_ADDRESS
 from src.domain.money import NATIVE_SOL_MINT
-from src.execution.financing_evidence import RepaymentDecision
+from src.execution.financing_evidence import FinancingRepaymentBundle
 
 NATIVE_PROGRAM = "native"
 NATIVE_DECIMALS = 9
@@ -231,7 +231,7 @@ class ReconciliationEvidence:
     fees: FeeEvidence
     marginfi: MarginfiRepaymentObservation | None
     required_accounts: tuple[str, ...] = ()
-    financing: RepaymentDecision | None = None
+    financing: FinancingRepaymentBundle | None = None
 
     def __post_init__(self) -> None:
         if self.marginfi is not None and self.financing is not None:

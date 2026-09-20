@@ -100,3 +100,11 @@ def test_super07_rejects_source_pr_range_drift() -> None:
     result = api()["verify_payload"](broken, root=ROOT)
     assert result["ok"] is False
     assert "SOURCE_PR_RANGE_MISMATCH" in result["errors"]
+
+
+def test_super07_rejects_blocker_identifier_whitespace() -> None:
+    broken = deepcopy(payload())
+    broken["blockers"][0] = f" {broken['blockers'][0]} "
+    result = api()["verify_payload"](broken, root=ROOT)
+    assert result["ok"] is False
+    assert "OPERATIONAL_BLOCKER_SET_MISMATCH" in result["errors"]

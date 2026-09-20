@@ -114,6 +114,7 @@ class FinancingRepaymentEvidence:
 class RepaymentDecision:
     proven: bool
     lender_id: str
+    program_id: str
     deployment_generation: int
     decoder_identity: str
     reason: str | None
@@ -122,6 +123,7 @@ class RepaymentDecision:
 
 class FinancingRepaymentValidator(Protocol):
     lender_id: str
+    program_id: str
     deployment_generation: int
     decoder_identity: str
 
@@ -132,27 +134,39 @@ def validate_financing_repayment(
     evidence: FinancingRepaymentEvidence,
     validators: Sequence[FinancingRepaymentValidator],
 ) -> RepaymentDecision:
-    matching = [
+    decoder_matches = [
         validator
         for validator in validators
         if validator.lender_id == evidence.lender_id
         and validator.deployment_generation == evidence.deployment_generation
         and validator.decoder_identity == evidence.decoder_identity
     ]
-    if len(matching) != 1:
+    if len(decoder_matches) != 1:
         return RepaymentDecision(
             False,
             evidence.lender_id,
+            evidence.program_id,
             evidence.deployment_generation,
             evidence.decoder_identity,
             "FINANCING_DECODER_REQUIRED",
             evidence.digest,
         )
-    validator = matching[0]
+    validator = decoder_matches[0]
+    if validator.program_id != evidence.program_id:
+        return RepaymentDecision(
+            False,
+            evidence.lender_id,
+            evidence.program_id,
+            evidence.deployment_generation,
+            evidence.decoder_identity,
+            "FINANCING_PROGRAM_MISMATCH",
+            evidence.digest,
+        )
     if not validator.validate(evidence):
         return RepaymentDecision(
             False,
             evidence.lender_id,
+            evidence.program_id,
             evidence.deployment_generation,
             evidence.decoder_identity,
             "FINANCING_REPAYMENT_NOT_PROVEN",
@@ -161,6 +175,7 @@ def validate_financing_repayment(
     return RepaymentDecision(
         True,
         evidence.lender_id,
+        evidence.program_id,
         evidence.deployment_generation,
         evidence.decoder_identity,
         None,
@@ -199,6 +214,7 @@ class FinalizedFinancingEvidence:
                 "finalized_slot": self.finalized_slot,
                 "repayment_evidence_digest": self.repayment.evidence_digest,
                 "lender_id": self.repayment.lender_id,
+                "program_id": self.repayment.program_id,
                 "deployment_generation": self.repayment.deployment_generation,
                 "decoder_identity": self.repayment.decoder_identity,
             }

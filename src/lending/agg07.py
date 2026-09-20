@@ -475,7 +475,10 @@ class StripMergeQuote:
             ("input_underlying_atomic", self.input_underlying_atomic),
             ("input_pt_atomic", self.input_pt_atomic),
             ("input_yt_atomic", self.input_yt_atomic),
-            ("immediate_output_underlying_atomic", self.immediate_output_underlying_atomic),
+            (
+                "immediate_output_underlying_atomic",
+                self.immediate_output_underlying_atomic,
+            ),
             ("transaction_cost_atomic", self.transaction_cost_atomic),
             ("depth_atomic", self.depth_atomic),
         ):

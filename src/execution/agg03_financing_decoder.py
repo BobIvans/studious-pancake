@@ -239,13 +239,6 @@ class JupiterLendSlumlordRepaymentDecoder:
             minimum_terminal_balance=request.leg_b.other_amount_threshold,
             role=FinancingRole.PRIMARY,
         )
-        self.primary_port.finalize(
-            primary_prepared,
-            finalized.planner_result.transaction_plan.instructions
-            if hasattr(finalized, "planner_result")
-            else tuple(item.instruction for item in finalized.compiled.plan.instructions),
-        )
-
         rent_prepared = self.rent_port.prepare(
             snapshot=rent_protocol,
             amount=request.rent_borrow_amount,
@@ -258,9 +251,7 @@ class JupiterLendSlumlordRepaymentDecoder:
         # Reconstruct exact Solders instruction order from the planner request
         # rather than accepting decoder-selected instructions. The atomic vertical
         # independently compares obligation digests against planner provenance.
-        final_instructions = tuple(
-            item.instruction for item in finalized.compiled.plan.instructions
-        )
+        final_instructions = tuple(finalized.compiled.instructions)
         self.primary_port.finalize(primary_prepared, final_instructions)
         self.rent_port.finalize(rent_prepared, final_instructions)
 

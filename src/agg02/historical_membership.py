@@ -177,6 +177,8 @@ def _selected_facts(
         superseded = by_id.get(fact.supersedes_event_id)
         if superseded is None:
             raise Agg02Error("SUPER01_UNRESOLVED_REVISION_LINK")
+        if fact.revision <= superseded.revision:
+            raise Agg02Error("SUPER01_SUPERSESSION_REVISION_NOT_INCREASING")
         if (
             superseded.market_id != fact.market_id
             or superseded.effective_at_ms != fact.effective_at_ms
@@ -430,7 +432,7 @@ def audit_universe_survivorship(
                 fact.market_id
                 for fact in resolved_all
                 if fact.market_id in included_set
-                and fact.observed_at_ms > manifest.knowledge_cutoff_ms
+                and fact.effective_at_ms > manifest.experiment_time_ms
                 and fact.state is MarketLifecycleState.CLOSED
             }
         )
@@ -441,7 +443,7 @@ def audit_universe_survivorship(
                 fact.market_id
                 for fact in resolved_all
                 if fact.market_id in included_set
-                and fact.observed_at_ms > manifest.knowledge_cutoff_ms
+                and fact.effective_at_ms > manifest.experiment_time_ms
                 and fact.state is MarketLifecycleState.MIGRATED
             }
         )

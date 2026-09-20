@@ -213,6 +213,41 @@ def test_nf272_evm_cycle_requires_state_continuity_and_gas() -> None:
     )
 
 
+    ambiguous_identity = replace(
+        good,
+        legs=(
+            replace(
+                legs[0],
+                output_asset=ChainAsset(
+                    "chain-a",
+                    ChainDialect.EVM,
+                    "TOKEN",
+                    6,
+                    "18:g1",
+                ),
+            ),
+            replace(
+                legs[1],
+                input_asset=ChainAsset(
+                    "chain-a",
+                    ChainDialect.EVM,
+                    "TOKEN:6",
+                    18,
+                    "g1",
+                ),
+            ),
+        ),
+    )
+    assert (
+        ambiguous_identity.legs[0].output_asset.identity
+        == ambiguous_identity.legs[1].input_asset.identity
+    )
+    assert (
+        "LEG_1_ASSET_CONTINUITY_BROKEN"
+        in qualify_evm_cycle(ambiguous_identity).blockers
+    )
+
+
 def collateral(mechanism: str) -> CollateralFirstEvidence:
     return CollateralFirstEvidence(
         mechanism=mechanism,

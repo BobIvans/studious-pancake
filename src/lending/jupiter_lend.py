@@ -49,6 +49,22 @@ INSTRUCTIONS_SYSVAR_ID = Pubkey.from_string(
 FLASHLOAN_BORROW_DISCRIMINATOR = bytes((103, 19, 78, 24, 240, 9, 135, 63))
 FLASHLOAN_PAYBACK_DISCRIMINATOR = bytes((213, 47, 153, 137, 84, 243, 94, 232))
 _U64_MAX = (1 << 64) - 1
+_EXPECTED_META_FLAGS = (
+    (True, True),
+    (False, True),
+    (False, True),
+    (False, False),
+    (False, True),
+    (False, True),
+    (False, False),
+    (False, True),
+    (False, False),
+    (False, False),
+    (False, False),
+    (False, False),
+    (False, False),
+    (False, False),
+)
 
 
 class JupiterLendRejectionCode(StrEnum):
@@ -67,11 +83,7 @@ class JupiterLendAdapterError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class JupiterLendFlashloanAccounts:
-    """Ordered account contract from the pinned flashloan IDL.
-
-    The optional associated-token program is intentionally required by this
-    adapter so the local instruction shape remains deterministic.
-    """
+    """Ordered account contract from the pinned flashloan IDL."""
 
     signer: Pubkey
     flashloan_admin: Pubkey
@@ -196,10 +208,41 @@ def _account_fingerprint(
     )
 
 
+def _validate_account_shape(instruction: Instruction) -> None:
+    accounts = tuple(instruction.accounts)
+    if len(accounts) != len(_EXPECTED_META_FLAGS):
+        raise JupiterLendAdapterError(
+            JupiterLendRejectionCode.ACCOUNT_MISMATCH,
+            "flashloan instruction must contain exactly 14 ordered account metas",
+        )
+
+    actual_flags = tuple(
+        (meta.is_signer, meta.is_writable) for meta in accounts
+    )
+    if actual_flags != _EXPECTED_META_FLAGS:
+        raise JupiterLendAdapterError(
+            JupiterLendRejectionCode.ACCOUNT_MISMATCH,
+            "flashloan account signer/writable flags differ from pinned IDL",
+        )
+
+    fixed = (
+        (1, JUPITER_FLASHLOAN_ADMIN_PDA, "flashloan_admin"),
+        (11, ASSOCIATED_TOKEN_PROGRAM_ID, "associated_token_program"),
+        (12, SYSTEM_PROGRAM_ID, "system_program"),
+        (13, INSTRUCTIONS_SYSVAR_ID, "instruction_sysvar"),
+    )
+    for index, expected, label in fixed:
+        if accounts[index].pubkey != expected:
+            raise JupiterLendAdapterError(
+                JupiterLendRejectionCode.INVALID_FIXED_ACCOUNT,
+                f"{label} differs from pinned IDL",
+            )
+
+
 def validate_jupiter_lend_order(
     instructions: Sequence[Instruction],
 ) -> JupiterLendOrderCertificate:
-    """Require one account-bound Borrow before one matching Payback."""
+    """Require one ABI-valid, account-bound Borrow before matching Payback."""
 
     borrow: list[tuple[int, int, tuple[tuple[Pubkey, bool, bool], ...]]] = []
     payback: list[tuple[int, int, tuple[tuple[Pubkey, bool, bool], ...]]] = []
@@ -208,6 +251,7 @@ def validate_jupiter_lend_order(
             continue
         data = bytes(instruction.data)
         if data.startswith(FLASHLOAN_BORROW_DISCRIMINATOR):
+            _validate_account_shape(instruction)
             borrow.append(
                 (
                     index,
@@ -219,6 +263,7 @@ def validate_jupiter_lend_order(
                 )
             )
         elif data.startswith(FLASHLOAN_PAYBACK_DISCRIMINATOR):
+            _validate_account_shape(instruction)
             payback.append(
                 (
                     index,

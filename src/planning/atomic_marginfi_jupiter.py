@@ -1009,6 +1009,7 @@ class AtomicMarginfiJupiterPlanner:
                     *request.monitored_accounts,
                     *snapshot_pubkeys,
                     *rent_pubkeys,
+                    request.payer,
                     request.destination_token_account,
                     request.repayment_source_token_account,
                 )

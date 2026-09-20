@@ -46,7 +46,7 @@ jobs:
       - run: python -m pip install --requirement requirements-dev.txt
       - run: python -m pip install --no-deps .
       - run: python -m compileall -q src/super05_strategy_closure.py scripts/verify_super05_strategy_closure.py tests/test_super05_strategy_closure.py
-      - run: python -m black --check --diff src/super05_strategy_closure.py scripts/verify_super05_strategy_closure.py tests/test_super05_strategy_closure.py
+      - run: python -m black --check src/super05_strategy_closure.py scripts/verify_super05_strategy_closure.py tests/test_super05_strategy_closure.py
       - run: python scripts/verify_super05_strategy_closure.py
       - run: >-
           python -m pytest -q

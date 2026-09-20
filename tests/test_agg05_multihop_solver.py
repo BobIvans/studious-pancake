@@ -187,3 +187,19 @@ def test_multihop_candidate_requires_exact_positive_full_cost_variant() -> None:
     candidate = build_multihop_candidate(route, variant)
     assert candidate.hop_count == 3
     assert candidate.conservative_net_units == 7
+
+
+def test_route_cap_is_reported_as_budget_exhaustion() -> None:
+    result = search_bounded_cycles(
+        (
+            _edge("ab", "A", "B", "p1"),
+            _edge("ba", "B", "A", "p2"),
+            _edge("ac", "A", "C", "p3"),
+            _edge("ca", "C", "A", "p4"),
+        ),
+        start_asset="A",
+        max_routes=1,
+    )
+
+    assert len(result.routes) == 1
+    assert result.stop_reason is SearchStopReason.BUDGET_EXHAUSTED

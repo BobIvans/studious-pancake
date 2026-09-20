@@ -14,7 +14,7 @@ from src.direct_venue.super03 import (
     Super03Error,
     UpstreamAdmission,
     VenueIdentityEvidence,
-    build_fixed_workload_benchmark,
+    build_amount_bound_leg,\n    build_fixed_workload_benchmark,
     qualify_band_venue_offline,
     qualify_cpmm_offline,
 )
@@ -106,6 +106,10 @@ def test_cpmm_integer_transfer_fee_vector_builds_offline_capability() -> None:
     assert result.capability is not None
     assert result.capability.state is CapabilityState.OFFLINE_VERIFIED
     assert result.capability.venue is VenueFamily.RAYDIUM_CPMM
+    leg = build_amount_bound_leg(result)
+    assert leg.amount_in == 1_000
+    assert leg.guaranteed_min_out == 486
+    assert leg.capability_hash == result.capability.capability_hash
 
 
 def test_cpmm_reference_mismatch_fails_closed() -> None:
@@ -131,6 +135,8 @@ def test_cpmm_reference_mismatch_fails_closed() -> None:
     assert result.status is ConformanceStatus.BLOCKED_EXTERNAL
     assert result.capability is None
     assert "RAYDIUM_CPMM_REFERENCE_VECTOR_MISMATCH" in result.blockers
+    with pytest.raises(Super03Error, match="blocked conformance"):
+        build_amount_bound_leg(result)
 
 
 def test_missing_license_deployment_or_instruction_proof_cannot_qualify() -> None:

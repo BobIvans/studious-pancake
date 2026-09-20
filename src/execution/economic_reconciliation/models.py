@@ -7,6 +7,7 @@ from enum import Enum
 
 from src.config.chain_registry import TOKEN_2022_PROGRAM_ADDRESS, TOKEN_PROGRAM_ADDRESS
 from src.domain.money import NATIVE_SOL_MINT
+from src.execution.financing_evidence import RepaymentDecision
 
 NATIVE_PROGRAM = "native"
 NATIVE_DECIMALS = 9
@@ -41,6 +42,10 @@ class ReconciliationReason(str, Enum):
     FEE_EVIDENCE_INVALID = "fee_evidence_invalid"
     SETTLEMENT_ASSET_MISSING = "settlement_asset_missing"
     MARGINFI_EVIDENCE_MISSING = "marginfi_evidence_missing"
+    FINANCING_EVIDENCE_MISSING = "financing_evidence_missing"
+    FINANCING_EVIDENCE_INVALID = "financing_evidence_invalid"
+    FINANCING_MESSAGE_MISMATCH = "financing_message_mismatch"
+    FINANCING_ASSET_MISMATCH = "financing_asset_mismatch"
     MARGINFI_OWNER_MISMATCH = "marginfi_owner_mismatch"
     MARGINFI_STATE_INVALID = "marginfi_state_invalid"
     MARGINFI_VAULT_MISMATCH = "marginfi_vault_mismatch"
@@ -226,6 +231,11 @@ class ReconciliationEvidence:
     fees: FeeEvidence
     marginfi: MarginfiRepaymentObservation | None
     required_accounts: tuple[str, ...] = ()
+    financing: RepaymentDecision | None = None
+
+    def __post_init__(self) -> None:
+        if self.marginfi is not None and self.financing is not None:
+            raise ValueError("repayment evidence must have one financing owner")
 
 
 @dataclass(frozen=True, slots=True)

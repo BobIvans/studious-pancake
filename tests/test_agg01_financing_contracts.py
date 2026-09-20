@@ -235,7 +235,7 @@ def test_legacy_marginfi_profile_rejects_generation_two() -> None:
         )
 
 
-def test_non_marginfi_profile_cannot_qualify_before_composition_adapter(
+def test_non_marginfi_profile_code_is_composed_but_external_evidence_still_blocks(
     tmp_path: Path,
 ) -> None:
     root = Path(".").resolve()
@@ -258,8 +258,9 @@ def test_non_marginfi_profile_cannot_qualify_before_composition_adapter(
         str(item.get("reason", ""))
         for item in report.implementation_blockers + report.external_or_review_blockers
     }
-    assert "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED" in reasons
+    assert "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED" not in reasons
     assert "CORE_V1_FINANCING_EVIDENCE_NOT_QUALIFIED" in reasons
+    assert "CORE_V1_FINANCING_REPAYMENT_DECODER_NOT_QUALIFIED" in reasons
     assert report.paper_qualified is False
     assert report.eligible_for_production_default_off_review is False
 

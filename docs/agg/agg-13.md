@@ -68,9 +68,7 @@ instrument-access evidence. A positive qualification remains scope-bound and
 
 ## Current dependency truth
 
-AGG-13 declares AGG-02 and AGG-04 as package prerequisites. They are not accepted
-in the observed \`main@0c4f216a62d62b20f6fb4ec4bbd0548cea58df65\` generation,
-so this checkpoint does **not** claim full AGG-13 completion.
+AGG-13 declares AGG-02 and AGG-04 as package prerequisites. At final pre-PR\nsynchronization this branch is based on \`main@141dfa85a0efd42bcd3b90a632ed54a39a3a4511\`;\nAGG-02 is still open as PR #496 and AGG-04 as PR #497, so this checkpoint does\n**not** claim full AGG-13 completion.
 
 Open blockers:
 

@@ -16,9 +16,12 @@ from src.lending.financing import (
     FinancingRole,
 )
 from src.lending.jupiter_lend import (
+    FLASHLOAN_ADMIN_DISCRIMINATOR,
+    JUPITER_FLASHLOAN_ADMIN_BUMP,
     JUPITER_FLASHLOAN_ADMIN_PDA,
     JUPITER_LEND_FLASHLOAN_PROGRAM_ID,
     JupiterLendFlashloanAccounts,
+    decode_flashloan_admin_state,
 )
 from src.lending.slumlord import (
     SLUMLORD_PDA,
@@ -48,6 +51,30 @@ def _jupiter_accounts() -> JupiterLendFlashloanAccounts:
     )
 
 
+def _admin_state(
+    accounts: JupiterLendFlashloanAccounts,
+    *,
+    status: bool = True,
+    fee: int = 0,
+    active: bool = False,
+    active_amount: int = 0,
+):
+    raw = b"".join(
+        (
+            FLASHLOAN_ADMIN_DISCRIMINATOR,
+            bytes(Pubkey.new_unique()),
+            bytes(accounts.liquidity_program),
+            bytes((int(status),)),
+            fee.to_bytes(2, "little"),
+            (123).to_bytes(8, "little"),
+            bytes((int(active),)),
+            active_amount.to_bytes(8, "little"),
+            bytes((JUPITER_FLASHLOAN_ADMIN_BUMP,)),
+        )
+    )
+    return decode_flashloan_admin_state(raw)
+
+
 def _evidence(lender: str, program: Pubkey) -> FinancingEvidence:
     return FinancingEvidence(
         lender_id=lender,
@@ -66,6 +93,7 @@ def test_jupiter_lend_port_prepares_and_finalizes_exact_unsigned_sequence() -> N
     )
     snapshot = JupiterLendFinancingSnapshot(
         accounts=accounts,
+        admin_state=_admin_state(accounts),
         asset_id=f"spl:{accounts.mint}:6",
         available_liquidity_base_units=500,
         required_repayment_base_units=100,
@@ -115,6 +143,40 @@ def test_jupiter_lend_port_refuses_unproven_dynamic_repayment_contract() -> None
             destination_account=str(accounts.signer_borrow_token_account),
             repayment_source_account=str(accounts.signer_borrow_token_account),
             minimum_terminal_balance=101,
+        )
+
+
+def test_jupiter_lend_admin_state_is_byte_decoded_and_fail_closed() -> None:
+    accounts = _jupiter_accounts()
+    state = _admin_state(accounts)
+    assert state.status is True
+    assert state.flashloan_fee == 0
+    assert state.is_flashloan_active is False
+    assert state.active_flashloan_amount == 0
+    assert state.liquidity_program == accounts.liquidity_program
+
+    with pytest.raises(FinancingContractError, match="NONZERO_FEE_UNQUALIFIED"):
+        JupiterLendFinancingSnapshot(
+            accounts=accounts,
+            admin_state=_admin_state(accounts, fee=1),
+            asset_id=f"spl:{accounts.mint}:6",
+            available_liquidity_base_units=500,
+            required_repayment_base_units=100,
+            slot=42,
+            evidence_sha256=SHA_A,
+            state_fingerprint=SHA_B,
+        )
+
+    with pytest.raises(FinancingContractError, match="FLASHLOAN_ALREADY_ACTIVE"):
+        JupiterLendFinancingSnapshot(
+            accounts=accounts,
+            admin_state=_admin_state(accounts, active=True, active_amount=100),
+            asset_id=f"spl:{accounts.mint}:6",
+            available_liquidity_base_units=500,
+            required_repayment_base_units=100,
+            slot=42,
+            evidence_sha256=SHA_A,
+            state_fingerprint=SHA_B,
         )
 
 

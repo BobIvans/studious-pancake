@@ -13,6 +13,7 @@ from src.runtime.core_v1_dependency_resolver import (
     MANIFEST_ENV,
     resolve_installed_core_v1_dependencies,
 )
+from src.runtime.core_v1_composition import build_core_v1_composition
 from src.runtime.core_v1_materializer import CoreV1ReleaseProfile
 
 SHA_A = "a" * 64
@@ -106,6 +107,49 @@ def test_valid_manifest_reaches_static_installed_dependencies(tmp_path: Path) ->
     assert resolution.dependencies.financing_repayment_decoder is not None
     assert resolution.manifest_sha256 is not None
     assert len(resolution.manifest_sha256) == 64
+
+
+def test_static_resolver_builds_canonical_installed_composition(
+    tmp_path: Path,
+) -> None:
+    config = load_runtime_config(
+        cli_overrides={
+            "runtime.mode": "paper",
+            "providers.jupiter.enabled": True,
+        }
+    )
+    profile = CoreV1ReleaseProfile(
+        profile_id="core-jupiter-lend-jupiter-v1",
+        strategy="circular_arbitrage",
+        lender="jupiter-lend",
+        router="jupiter",
+        cluster=config.cluster.name,
+        genesis_hash=config.cluster.genesis_hash,
+        transport="rpc",
+        profile_generation=1,
+    )
+    path = _write(tmp_path, _manifest())
+    resolution = resolve_installed_core_v1_dependencies(
+        profile,
+        {MANIFEST_ENV: str(path)},
+        config=config,
+    )
+    assert resolution.dependencies is not None
+    composition = build_core_v1_composition(
+        config,
+        db_path=tmp_path / "generic.sqlite3",
+        profile=profile,
+        dependencies=resolution.dependencies,
+        external_blocker=resolution.blocker,
+    )
+    try:
+        assert composition.admitted is True
+        assert composition.planner is not None
+        assert composition.vertical is not None
+        assert composition.orchestrator is not None
+        assert composition.capital.store is composition.authority.lifecycle
+    finally:
+        composition.close()
 
 
 def test_decoder_artifact_mismatch_is_rejected(tmp_path: Path) -> None:

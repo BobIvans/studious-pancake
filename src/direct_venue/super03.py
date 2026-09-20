@@ -5,6 +5,7 @@ does not perform RPC/HTTP calls, compile transactions, sign, submit, mutate
 capital, or grant live authority. Existing MPR-2617, AGG-04 and AGG-05 owners
 remain canonical.
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -21,7 +22,6 @@ from src.direct_venue.mpr2617 import (
     VenueFamily,
 )
 from src.strategies.stable_peg.math import LiquidityBand, ceil_div, traverse_bands_exact
-
 
 SUPER03_SCHEMA = "super-03.venue-conformance.v1"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")

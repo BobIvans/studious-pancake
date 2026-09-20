@@ -266,3 +266,31 @@ def test_revision_must_reference_known_prior_fact() -> None:
     )
     with pytest.raises(Agg02Error, match="SUPER01_UNRESOLVED_REVISION_LINK"):
         materialize_market_membership((orphan,), dataset_revision=2)
+
+
+def test_revision_cannot_change_market_or_effective_identity() -> None:
+    original = _fact(
+        "original",
+        "market-a",
+        MarketLifecycleState.ACTIVE,
+        100,
+        100,
+    )
+    moved = _fact(
+        "correction",
+        "market-a",
+        MarketLifecycleState.ACTIVE,
+        150,
+        200,
+        revision=2,
+        supersedes_event_id="original",
+    )
+    with pytest.raises(
+        Agg02Error,
+        match="SUPER01_REVISION_IDENTITY_CHANGE_UNSUPPORTED",
+    ):
+        materialize_market_membership(
+            (original, moved),
+            dataset_revision=2,
+            knowledge_cutoff_ms=300,
+        )

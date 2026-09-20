@@ -58,7 +58,7 @@ from src.paper_shadow.atomic_vertical import (
 from src.execution.exact_simulation import FinalizedSimulation
 
 
-_DECODER_CLOSURE_PATHS = (
+DECODER_CLOSURE_PATHS = (
     "src/execution/agg03_financing_decoder.py",
     "src/execution/financing_evidence.py",
     "src/execution/state_evidence_pr115.py",
@@ -74,13 +74,17 @@ _DECODER_CLOSURE_PATHS = (
 )
 
 
-def decoder_artifact_sha256() -> str:
+def decoder_artifact_sha256(root: str | Path | None = None) -> str:
     """Hash the deterministic installed decoder dependency closure."""
 
-    root = Path(__file__).resolve().parents[2]
+    base = (
+        Path(root).resolve()
+        if root is not None
+        else Path(__file__).resolve().parents[2]
+    )
     digest = hashlib.sha256()
-    for relative in _DECODER_CLOSURE_PATHS:
-        path = root / relative
+    for relative in DECODER_CLOSURE_PATHS:
+        path = base / relative
         raw = path.read_bytes()
         digest.update(relative.encode("utf-8"))
         digest.update(b"\0")
@@ -116,6 +120,37 @@ def financing_pre_state_sha256(
             "accounts": tuple(values),
         }
     )
+
+
+def require_financing_pre_state_commitment(
+    expected_sha256: str | None,
+    addresses: Sequence[str],
+    values: Sequence[Mapping[str, Any] | None],
+) -> None:
+    if (
+        expected_sha256 is None
+        or financing_pre_state_sha256(addresses, values) != expected_sha256
+    ):
+        raise ValueError("FINANCING_PRE_STATE_HASH_MISMATCH")
+
+
+def validate_financing_writable_coverage(
+    monitored_accounts: Sequence[str],
+    instructions: Sequence[Any],
+) -> tuple[str, ...]:
+    monitored = {str(address) for address in monitored_accounts}
+    writable = {
+        str(meta.pubkey)
+        for instruction in instructions
+        for meta in instruction.accounts
+        if meta.is_writable
+    }
+    missing = tuple(sorted(writable.difference(monitored)))
+    if missing:
+        raise ValueError(
+            "FINANCING_WRITABLE_ACCOUNT_NOT_MONITORED:" + ",".join(missing)
+        )
+    return tuple(sorted(writable))
 
 
 def _account_map(
@@ -226,25 +261,17 @@ class JupiterLendSlumlordRepaymentDecoder:
             raise ValueError("FINANCING_POST_STATE_REQUIRED")
 
         addresses = tuple(report.monitored_accounts)
-        writable_accounts = {
-            str(meta.pubkey)
-            for instruction in finalized.compiled.instructions
-            for meta in instruction.accounts
-            if meta.is_writable
-        }
-        missing_writable = sorted(writable_accounts.difference(addresses))
-        if missing_writable:
-            raise ValueError(
-                "FINANCING_WRITABLE_ACCOUNT_NOT_MONITORED:"
-                + ",".join(missing_writable)
+        writable_accounts = set(
+            validate_financing_writable_coverage(
+                addresses,
+                finalized.compiled.instructions,
             )
-        expected_pre_state_hash = request.provider_account_snapshot_hash
-        if (
-            expected_pre_state_hash is None
-            or financing_pre_state_sha256(addresses, pre_values)
-            != expected_pre_state_hash
-        ):
-            raise ValueError("FINANCING_PRE_STATE_HASH_MISMATCH")
+        )
+        require_financing_pre_state_commitment(
+            request.provider_account_snapshot_hash,
+            addresses,
+            pre_values,
+        )
         pre = _account_map(addresses, pre_values)
         post = _account_map(addresses, post_values)
 

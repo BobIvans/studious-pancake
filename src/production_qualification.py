@@ -407,7 +407,9 @@ class AGG04VariantEvidence:
             raise ValueError("conservative_net_atomic must be an integer or null")
         if self.rejection_code is not None:
             object.__setattr__(
-                self, "rejection_code", _agg04_text(self.rejection_code, "rejection_code")
+                self,
+                "rejection_code",
+                validate_agg04_rejection_code(self.rejection_code),
             )
 
     @property

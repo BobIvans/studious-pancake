@@ -45,7 +45,7 @@
   "implementation": "src/decision/agg10.py",
   "tests": "tests/test_agg10_intelligence.py",
   "blockers": [
-    "AGG-02/AGG-04/AGG-05 operational evidence is not merged into this base",
+    "AGG-04/AGG-05 aggregate operational evidence is not merged into this base; AGG-02 code is present but qualification remains scoped",
     "NF-223 remains blocked until actual LIVE-03 sent-attempt labels exist"
   ],
   "authority_boundary": {

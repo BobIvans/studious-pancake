@@ -172,11 +172,16 @@ def _selected_facts(
         by_id[fact.event_id] = fact
 
     for fact in by_id.values():
-        if (
-            fact.supersedes_event_id is not None
-            and fact.supersedes_event_id not in by_id
-        ):
+        if fact.supersedes_event_id is None:
+            continue
+        superseded = by_id.get(fact.supersedes_event_id)
+        if superseded is None:
             raise Agg02Error("SUPER01_UNRESOLVED_REVISION_LINK")
+        if (
+            superseded.market_id != fact.market_id
+            or superseded.effective_at_ms != fact.effective_at_ms
+        ):
+            raise Agg02Error("SUPER01_REVISION_IDENTITY_CHANGE_UNSUPPORTED")
 
     by_transition: dict[tuple[str, int], MarketLifecycleFact] = {}
     for fact in sorted(

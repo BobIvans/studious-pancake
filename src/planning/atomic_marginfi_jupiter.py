@@ -810,12 +810,20 @@ class AtomicMarginfiJupiterPlanner:
         leg_b_other: tuple[Instruction, ...],
         leg_b_swap: Instruction,
         cleanup: tuple[Instruction, ...],
+        rent_prepared: PreparedAuxiliaryFinancingLoan | None,
     ) -> None:
         final = tuple(finalized.instructions)
         start_index = int(finalized.start_index)
         end_index = int(finalized.end_index)
         if not getattr(self._marginfi, "uses_flashloan_bookends", True):
+            rent_prefix = (
+                (rent_prepared.borrow_instruction,) if rent_prepared else ()
+            )
+            rent_suffix = (
+                rent_prepared.repay_instructions if rent_prepared else ()
+            )
             expected = (
+                *rent_prefix,
                 *pre_flash_setup,
                 prepared.borrow_instruction,
                 *leg_a_other,
@@ -824,9 +832,15 @@ class AtomicMarginfiJupiterPlanner:
                 leg_b_swap,
                 prepared.repay_instruction,
                 *cleanup,
+                *rent_suffix,
             )
-            expected_start = len(pre_flash_setup)
-            expected_end = len(expected) - len(cleanup) - 1
+            expected_start = len(rent_prefix) + len(pre_flash_setup)
+            expected_end = (
+                len(expected)
+                - len(rent_suffix)
+                - len(cleanup)
+                - 1
+            )
             if (
                 final != expected
                 or start_index != expected_start
@@ -948,10 +962,23 @@ class AtomicMarginfiJupiterPlanner:
                     AtomicPlannerRejectionCode.INVALID_REQUEST,
                     "financing monitored-account provenance is invalid",
                 ) from exc
+            rent_pubkeys: tuple[Pubkey, ...] = ()
+            if request.rent_financing_snapshot is not None:
+                try:
+                    rent_pubkeys = tuple(
+                        Pubkey.from_string(value)
+                        for value in request.rent_financing_snapshot.monitored_accounts
+                    )
+                except Exception as exc:
+                    raise AtomicPlannerError(
+                        AtomicPlannerRejectionCode.INVALID_REQUEST,
+                        "rent financing monitored-account provenance is invalid",
+                    ) from exc
             return _dedupe_pubkeys(
                 (
                     *request.monitored_accounts,
                     *snapshot_pubkeys,
+                    *rent_pubkeys,
                     request.destination_token_account,
                     request.repayment_source_token_account,
                 )
@@ -991,12 +1018,21 @@ class AtomicMarginfiJupiterPlanner:
         leg_b_other: tuple[Instruction, ...],
         leg_b_swap: Instruction,
         cleanup: tuple[Instruction, ...],
+        rent_prepared: PreparedAuxiliaryFinancingLoan | None,
     ) -> tuple[PlannedInstruction, ...]:
         final = tuple(finalized.instructions)
         start_index = int(finalized.start_index)
         end_index = int(finalized.end_index)
         specs: list[tuple[Instruction, str, str]] = []
         if not getattr(self._marginfi, "uses_flashloan_bookends", True):
+            if rent_prepared is not None:
+                specs.append(
+                    (
+                        rent_prepared.borrow_instruction,
+                        "financing_rent_borrow",
+                        "slumlord_rent_borrow",
+                    )
+                )
             specs.extend(
                 (instruction, "jupiter_setup", f"setup_{index}")
                 for index, instruction in enumerate(pre_flash_setup)
@@ -1029,6 +1065,17 @@ class AtomicMarginfiJupiterPlanner:
                 (instruction, "jupiter_cleanup", f"cleanup_{index}")
                 for index, instruction in enumerate(cleanup)
             )
+            if rent_prepared is not None:
+                specs.extend(
+                    (
+                        instruction,
+                        "financing_rent_repay",
+                        f"slumlord_rent_repay_{index}",
+                    )
+                    for index, instruction in enumerate(
+                        rent_prepared.repay_instructions
+                    )
+                )
             if tuple(instruction for instruction, _, _ in specs) != final:
                 raise AtomicPlannerError(
                     AtomicPlannerRejectionCode.SEQUENCE_INVARIANT,

@@ -21,7 +21,11 @@ from src.direct_venue.super03 import (
 )
 from src.production_qualification import AGG04CampaignPolicy
 from src.strategies.stable_peg.math import LiquidityBand
-from src.strategy.multihop_solver import SearchEdge, SearchStopReason, search_bounded_cycles
+from src.strategy.multihop_solver import (
+    SearchEdge,
+    SearchStopReason,
+    search_bounded_cycles,
+)
 
 
 D1 = "1" * 64

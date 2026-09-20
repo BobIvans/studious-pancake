@@ -352,9 +352,7 @@ def evaluate_super05(
     _validate_symbols(errors)
 
     payloads = (
-        dict(artifacts)
-        if artifacts is not None
-        else _load_artifacts(root or _repo_root())
+        dict(artifacts) if artifacts is not None else _load_artifacts(root or _repo_root())
     )
     _validate_artifacts(payloads, errors, blockers)
     _validate_orderbook_runtime(errors, blockers)

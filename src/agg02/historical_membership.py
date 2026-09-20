@@ -159,7 +159,10 @@ def _selected_facts(
         fact
         for fact in facts
         if fact.revision <= dataset_revision
-        and (knowledge_cutoff_ms is None or fact.observed_at_ms <= knowledge_cutoff_ms)
+        and (
+            knowledge_cutoff_ms is None
+            or fact.observed_at_ms <= knowledge_cutoff_ms
+        )
     ]
     by_id: dict[str, MarketLifecycleFact] = {}
     for fact in eligible:
@@ -191,7 +194,10 @@ def _selected_facts(
         if previous is None or fact.revision > previous.revision:
             by_transition[key] = fact
             continue
-        if fact.revision == previous.revision and fact.fact_hash != previous.fact_hash:
+        if (
+            fact.revision == previous.revision
+            and fact.fact_hash != previous.fact_hash
+        ):
             raise Agg02Error("SUPER01_UNRESOLVED_LIFECYCLE_CONFLICT")
     return tuple(
         sorted(
@@ -225,7 +231,11 @@ def materialize_market_membership(
     for market_id in sorted(grouped):
         transitions = sorted(
             grouped[market_id],
-            key=lambda item: (item.effective_at_ms, item.observed_at_ms, item.event_id),
+            key=lambda item: (
+                item.effective_at_ms,
+                item.observed_at_ms,
+                item.event_id,
+            ),
         )
         for index, fact in enumerate(transitions):
             next_effective = (
@@ -332,7 +342,9 @@ def select_universe_as_known(
             and interval.contains(experiment_time_ms)
         ]
         if not matching:
-            decisions.append(UniverseDecision(market_id, "unknown", "no-known-interval"))
+            decisions.append(
+                UniverseDecision(market_id, "unknown", "no-known-interval")
+            )
             continue
         interval = matching[-1]
         if interval.state is MarketLifecycleState.ACTIVE:

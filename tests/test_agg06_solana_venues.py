@@ -136,15 +136,22 @@ def lst_candidate():
     )
 
 
-def redemption(*, immediate=True, capacity=2_000_000_000):
+def redemption(
+    *,
+    immediate=True,
+    capacity=2_000_000_000,
+    amount=1_020_000_000,
+    generation="gen1",
+    state_hash=H2,
+):
     return qualify_redemption(
         immediate=immediate,
         permissioned=False,
         capacity=capacity,
         fee=0,
         paused=False,
-        evidence=evidence(),
-        amount=1_020_000_000,
+        evidence=evidence(generation=generation, state_hash=state_hash),
+        amount=amount,
         now=200,
     )
 
@@ -192,6 +199,8 @@ def test_clmm_exact_tick_arrays_reference_and_orca_license():
         loaded_arrays=("ta-1", "ta-2"),
         fee_ppm=0,
         evidence=evidence(),
+        market_id="pool-1",
+        direction="a-to-b",
         amount_in=750,
         now=200,
         reference_out=1_375,
@@ -222,6 +231,8 @@ def test_clmm_exact_tick_arrays_reference_and_orca_license():
             loaded_arrays=("ta-1", "ta-2"),
             fee_ppm=0,
             evidence=evidence(license_decision=None),
+            market_id="pool-1",
+            direction="a-to-b",
             amount_in=750,
             now=200,
             reference_out=1_375,
@@ -237,6 +248,8 @@ def test_clmm_reference_mismatch_is_research_not_fake_verified():
         loaded_arrays=("ta-1",),
         fee_ppm=0,
         evidence=evidence(),
+        market_id="pool-1",
+        direction="a-to-b",
         amount_in=100,
         now=200,
         reference_out=99,
@@ -248,6 +261,10 @@ def test_clmm_reference_mismatch_is_research_not_fake_verified():
 def test_token2022_fee_cap_and_unknown_hooks():
     out, fee = apply_token2022_fee(10_000, Token2022(fee_bps=100, max_fee=50))
     assert (out, fee) == (9_950, 50)
+    zero_capped_out, zero_capped_fee = apply_token2022_fee(
+        10_000, Token2022(fee_bps=100, max_fee=0)
+    )
+    assert (zero_capped_out, zero_capped_fee) == (10_000, 0)
     with pytest.raises(Agg06Error) as hook:
         apply_token2022_fee(10_000, Token2022(unsupported_hooks=("x",)))
     assert hook.value.code == "TOKEN2022_UNSUPPORTED_HOOK"
@@ -323,6 +340,18 @@ def test_lst_immediate_exit_reuses_mpr2621_authority():
     assert delayed.decision.value == "BLOCKED"
     assert "REDEMPTION_NOT_IMMEDIATE" in delayed.blockers
 
+    wrong_amount = qualify_lst_conversion(
+        lst_candidate(), redemption(amount=1, capacity=2_000_000_000)
+    )
+    assert wrong_amount.decision.value == "BLOCKED"
+    assert "REDEMPTION_EVIDENCE_IDENTITY_MISMATCH" in wrong_amount.blockers
+
+    wrong_generation = qualify_lst_conversion(
+        lst_candidate(), redemption(generation="other")
+    )
+    assert wrong_generation.decision.value == "BLOCKED"
+    assert "REDEMPTION_EVIDENCE_IDENTITY_MISMATCH" in wrong_generation.blockers
+
 
 def test_basket_and_lp_parity_use_exact_rational_rights():
     kwargs = dict(
@@ -350,6 +379,8 @@ def test_dynamic_fee_clock_token2022_and_time_crossing():
         variable_fee_ppm=10_000,
         valid_until=300,
         evidence=evidence(),
+        market_id="dlmm-1",
+        direction="a-to-b",
         amount=100,
         bands=(LiquidityBand(100, 2, 1, H1),),
         now=200,
@@ -367,6 +398,15 @@ def test_dynamic_fee_clock_token2022_and_time_crossing():
         loan_held_across_wait=False,
     )
     assert signal.accepted and signal.level is Level.RECORDED_OFFLINE
+    unrelated = qualify_time_fee(
+        first,
+        replace(later, market_id="other-market"),
+        elapsed_seconds=5,
+        loan_held_across_wait=False,
+    )
+    assert not unrelated.accepted
+    assert "TIME_FEE_PROVENANCE_MISMATCH" in unrelated.blockers
+
     held = qualify_time_fee(
         first,
         later,
@@ -381,6 +421,8 @@ def test_dynamic_fee_clock_token2022_and_time_crossing():
             variable_fee_ppm=0,
             valid_until=150,
             evidence=evidence(),
+            market_id="dlmm-1",
+            direction="a-to-b",
             amount=100,
             bands=(LiquidityBand(100, 1, 1, H1),),
             now=200,
@@ -457,3 +499,35 @@ def test_package_status_keeps_code_and_operational_truth_separate():
     )
     assert ready["operational_status"] == "EXTERNALLY_QUALIFIED_FOR_PROFILE"
     assert ready["live_enabled"] is False
+
+
+def test_future_evidence_rejected_before_qualification():
+    with pytest.raises(Agg06Error) as future:
+        qualify_lifecycle(
+            stage=Stage.TRADING,
+            fee_ppm=1_000,
+            evidence=evidence(observed_at=900, expires_at=1_000),
+            now=200,
+        )
+    assert future.value.code == "EVIDENCE_FROM_FUTURE"
+
+
+def test_clmm_repeated_band_digest_preserves_tick_array_identity():
+    shared_digest = H1
+    result = quote_clmm(
+        Family.RAYDIUM_CLMM,
+        (
+            ("ta-1", LiquidityBand(50, 1, 1, shared_digest)),
+            ("ta-2", LiquidityBand(50, 1, 1, shared_digest)),
+        ),
+        required_arrays=("ta-1", "ta-2"),
+        loaded_arrays=("ta-1", "ta-2"),
+        fee_ppm=0,
+        evidence=evidence(),
+        market_id="pool-repeat",
+        direction="a-to-b",
+        amount_in=100,
+        now=200,
+        reference_out=100,
+    )
+    assert result.touched == ("ta-1", "ta-2")

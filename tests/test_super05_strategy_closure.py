@@ -60,8 +60,7 @@ def test_current_super05_implementation_closes_offline_but_not_operationally() -
     assert "SUPER05_AGG10_OPERATIONAL_EVIDENCE_UNQUALIFIED" in report.blockers
 
 
-def test_agg06_external_qualified_status_does_not_keep_requirements_as_blockers(
-) -> None:
+def test_agg06_external_qualified_status_does_not_keep_requirements_as_blockers() -> None:
     artifacts = _artifacts()
     agg06 = dict(artifacts["AGG-06"])
     agg06["operational_status"] = "EXTERNALLY_QUALIFIED_FOR_PROFILE"

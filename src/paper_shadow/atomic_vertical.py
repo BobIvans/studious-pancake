@@ -263,6 +263,38 @@ class AtomicPlannerSimulationReconciliationVertical:
                     AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
                     "auxiliary financing decoder output is not bound to plan identity",
                 )
+            expected_obligations = {
+                (lender, program, generation): (
+                    obligation_digest,
+                    principal,
+                    required,
+                )
+                for (
+                    lender,
+                    program,
+                    generation,
+                    obligation_digest,
+                    principal,
+                    required,
+                ) in provenance.auxiliary_financing_obligations
+            }
+            actual_obligations = {
+                (
+                    item.lender_id,
+                    item.program_id,
+                    item.deployment_generation,
+                ): (
+                    item.obligation_digest,
+                    item.debt_before_base_units,
+                    item.required_repayment_base_units,
+                )
+                for item in financing.auxiliary
+            }
+            if actual_obligations != expected_obligations:
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "auxiliary repayment differs from planned rent obligation",
+                )
 
         try:
             raw_state = None

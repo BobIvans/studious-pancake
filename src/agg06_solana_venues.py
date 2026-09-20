@@ -112,6 +112,12 @@ class Evidence:
         _uint(self.observed_at, "observed_at")
         _pos(self.expires_at, "expires_at")
         _uint(now, "now")
+        if self.observed_at > now:
+            raise Agg06Error(
+                "EVIDENCE_FROM_FUTURE",
+                "evidence observation is after evaluation time",
+                stage="evidence",
+            )
         if self.expires_at <= self.observed_at or now >= self.expires_at:
             raise Agg06Error("EVIDENCE_STALE", "evidence is stale", stage="evidence")
 
@@ -124,6 +130,8 @@ class Quote:
     transfer_fee: int
     touched: tuple[str, ...]
     state_hash: str
+    market_id: str
+    quote_basis: str
     level: Level
     blockers: tuple[str, ...] = ()
     live_enabled: bool = False
@@ -135,6 +143,7 @@ class Verdict:
     blockers: tuple[str, ...]
     level: Level
     value: int | Fraction | str | None = None
+    binding: tuple[str, str, int] | None = None
     live_enabled: bool = False
 
 
@@ -197,9 +206,7 @@ def apply_token2022_fee(amount: int, policy: Token2022) -> tuple[int, int]:
     if amount == 0 or policy.fee_bps == 0:
         return amount, 0
     fee = ceil_div(amount * policy.fee_bps, BPS)
-    if policy.max_fee:
-        fee = min(fee, policy.max_fee)
-    fee = min(fee, amount)
+    fee = min(fee, policy.max_fee, amount)
     return amount - fee, fee
 
 
@@ -211,6 +218,8 @@ def quote_clmm(
     loaded_arrays: Sequence[str],
     fee_ppm: int,
     evidence: Evidence,
+    market_id: str,
+    direction: str,
     amount_in: int,
     now: int,
     reference_out: int | None = None,
@@ -218,6 +227,8 @@ def quote_clmm(
 ) -> Quote:
     """NF-117: exact caller-decoded CLMM tick-array traversal."""
     _pos(amount_in, "amount_in")
+    _text(market_id, "market_id")
+    _text(direction, "direction")
     evidence.check(now)
     if family not in {Family.RAYDIUM_CLMM, Family.ORCA}:
         raise Agg06Error("CLMM_FAMILY_INVALID", "not CLMM", stage="clmm")
@@ -231,13 +242,11 @@ def quote_clmm(
     order = {name: index for index, name in enumerate(loaded_arrays)}
     last = -1
     decoded: list[LiquidityBand] = []
-    arrays_by_digest: dict[str, str] = {}
     for array, band in bands:
         if array not in order or order[array] < last:
             raise Agg06Error("CLMM_ARRAY_ORDER_INVALID", array, stage="clmm")
         last = order[array]
         decoded.append(band)
-        arrays_by_digest[band.digest] = array
     try:
         gross, fee, touched = traverse_bands_exact(
             amount_in,
@@ -254,8 +263,9 @@ def quote_clmm(
         if not blockers and evidence.vector_hash
         else Level.RESEARCH
     )
-    touched_arrays = tuple(arrays_by_digest[item] for item in touched)
+    touched_arrays = tuple(array for array, _band in bands[: len(touched)])
     state_hash = _digest((family, evidence.state_hash, amount_in, touched_arrays))
+    quote_basis = _digest((family.value, market_id, direction))
     return Quote(
         amount_in,
         out,
@@ -263,6 +273,8 @@ def quote_clmm(
         transfer_fee,
         touched_arrays,
         state_hash,
+        market_id,
+        quote_basis,
         level,
         blockers,
     )
@@ -359,7 +371,14 @@ def qualify_redemption(
         blockers.append("REDEMPTION_PERMISSION_REQUIRED")
     if max(capacity - fee, 0) < amount:
         blockers.append("REDEMPTION_CAPACITY_INSUFFICIENT")
-    return Verdict(not blockers, tuple(blockers), Level.OFFLINE_VERIFIED)
+    binding = (evidence.generation, evidence.state_hash, amount)
+    return Verdict(
+        not blockers,
+        tuple(blockers),
+        Level.OFFLINE_VERIFIED,
+        amount,
+        binding,
+    )
 
 
 def qualify_lst_conversion(
@@ -368,11 +387,24 @@ def qualify_lst_conversion(
 ) -> LstResult:
     """NF-121: bind MPR-2621 to fresh immediate-exit capacity."""
     result = qualify_lst_existing(candidate)
-    if redemption.accepted:
+    expected_binding = (
+        candidate.capability.pool_generation,
+        candidate.exit.route_account_hash,
+        candidate.exit.guaranteed_active_sol_out_lamports,
+    )
+    binding_blockers: list[str] = []
+    if redemption.binding is None:
+        binding_blockers.append("REDEMPTION_EVIDENCE_UNBOUND")
+    elif redemption.binding != expected_binding:
+        binding_blockers.append("REDEMPTION_EVIDENCE_IDENTITY_MISMATCH")
+    combined_blockers = tuple(
+        dict.fromkeys((*result.blockers, *redemption.blockers, *binding_blockers))
+    )
+    if redemption.accepted and not binding_blockers:
         return result
     return LstResult(
         decision=LstDecision.BLOCKED,
-        blockers=tuple(dict.fromkeys((*result.blockers, *redemption.blockers))),
+        blockers=combined_blockers,
         capability_id=result.capability_id,
         candidate_id=result.candidate_id,
         nav_lamports_per_lst_atomic_num=result.nav_lamports_per_lst_atomic_num,
@@ -435,6 +467,8 @@ def quote_dynamic_fee(
     variable_fee_ppm: int,
     valid_until: int,
     evidence: Evidence,
+    market_id: str,
+    direction: str,
     amount: int,
     bands: tuple[LiquidityBand, ...],
     now: int,
@@ -442,6 +476,8 @@ def quote_dynamic_fee(
 ) -> Quote:
     """NF-140: DLMM dynamic-fee/bin signal on a controlled clock."""
     _pos(amount, "amount")
+    _text(market_id, "market_id")
+    _text(direction, "direction")
     evidence.check(now)
     if now > valid_until:
         raise Agg06Error("DLMM_FEE_CLOCK_STALE", "fee clock stale", stage="dlmm")
@@ -464,7 +500,18 @@ def quote_dynamic_fee(
         ) from exc
     out, transfer_fee = apply_token2022_fee(gross, token2022)
     level = Level.OFFLINE_VERIFIED if evidence.vector_hash else Level.RESEARCH
-    return Quote(amount, out, fee, transfer_fee, touched, evidence.state_hash, level)
+    quote_basis = _digest((Family.DLMM.value, market_id, direction))
+    return Quote(
+        amount,
+        out,
+        fee,
+        transfer_fee,
+        touched,
+        evidence.state_hash,
+        market_id,
+        quote_basis,
+        level,
+    )
 
 
 def qualify_time_fee(
@@ -481,6 +528,13 @@ def qualify_time_fee(
         blockers.append("FLASH_LIQUIDITY_CANNOT_BE_HELD_ACROSS_TIME")
     if first.amount_in != later.amount_in:
         blockers.append("TIME_FEE_AMOUNT_MISMATCH")
+    if (
+        not first.market_id
+        or first.market_id != later.market_id
+        or not first.quote_basis
+        or first.quote_basis != later.quote_basis
+    ):
+        blockers.append("TIME_FEE_PROVENANCE_MISMATCH")
     delta = later.amount_out - first.amount_out
     if delta <= 0:
         blockers.append("TIME_FEE_NO_POSITIVE_CROSSING")

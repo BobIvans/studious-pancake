@@ -50,8 +50,7 @@ def test_unqualified_v1_cannot_be_silently_read() -> None:
         )
 
 
-def test_qualified_format_requires_explicit_decoder_and_preserves_raw_identity(
-) -> None:
+def test_qualified_format_requires_explicit_decoder_and_preserves_raw_identity() -> None:
     capability = _capability(TransactionFormat.V1)
     with pytest.raises(Agg02Error, match="SUPER01_SDK_CODEC_UNAVAILABLE"):
         decode_versioned_transaction_envelope(
@@ -118,8 +117,7 @@ def test_malformed_decoder_output_and_expired_capability_fail_closed() -> None:
         )
 
 
-def test_failed_format_read_records_gap_and_forbids_silent_checkpoint_advance(
-) -> None:
+def test_failed_format_read_records_gap_and_forbids_silent_checkpoint_advance() -> None:
     capability = _capability(TransactionFormat.V0)
     gap = record_format_coverage_gap(
         capability=capability,

@@ -107,13 +107,15 @@ def test_shared_source_budget_is_cross_instance_and_fail_closed(tmp_path: Path) 
         now_ms=1_001,
         dimensions=dimensions,
     )
-    with pytest.raises(Agg02Error, match="AGG02_SOURCE_BUDGET_DENIED"):
+    with pytest.raises(Agg02Error) as denied:
         first.reserve(
             source=_source(),
             key_fingerprint=HASH_A,
             now_ms=1_002,
             dimensions=dimensions,
         )
+    assert denied.value.reason_code == "AGG02_SOURCE_BUDGET_DENIED"
+    assert str(denied.value) == "PR197_QUOTA_EXHAUSTED"
 
     first_db.close()
     second_db.close()

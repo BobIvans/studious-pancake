@@ -169,6 +169,7 @@ class EvmCycleEvidence:
     conservative_net_base_units: int
     deployment_current: bool
     callback_repaid: bool
+    gas_cost_base_units: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -325,6 +326,8 @@ class SuiObjectTransition:
     after_version: int
     liquidity_before: int
     liquidity_after: int
+    state_before_sha256: str | None = None
+    state_after_sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -338,6 +341,7 @@ class SuiCycleEvidence:
     required_gas_units: int
     taker_fee_base_units: int
     conservative_net_base_units: int
+    gas_cost_base_units: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -410,6 +414,14 @@ def qualify_evm_cycle(evidence: EvmCycleEvidence) -> AdmissionDecision:
         "approval_cost_base_units",
     )
     _nonnegative(evidence.flash_fee_base_units, "flash_fee_base_units")
+    if evidence.gas_cost_base_units is None:
+        blockers.append("EVM_GAS_COST_UNPROVEN")
+        gas_cost_base_units = 0
+    else:
+        gas_cost_base_units = _nonnegative(
+            evidence.gas_cost_base_units,
+            "gas_cost_base_units",
+        )
     claimed_net = strict_int(
         evidence.conservative_net_base_units,
         field="conservative_net_base_units",
@@ -421,6 +433,7 @@ def qualify_evm_cycle(evidence: EvmCycleEvidence) -> AdmissionDecision:
             - evidence.legs[0].amount_in
             - evidence.approval_cost_base_units
             - evidence.flash_fee_base_units
+            - gas_cost_base_units
         )
         if claimed_net > route_bound:
             blockers.append("EVM_CLAIMED_NET_EXCEEDS_ROUTE_BOUND")
@@ -833,6 +846,14 @@ def qualify_sui_book(evidence: SuiCycleEvidence) -> AdmissionDecision:
         evidence.taker_fee_base_units,
         "taker_fee_base_units",
     )
+    if evidence.gas_cost_base_units is None:
+        blockers.append("SUI_GAS_COST_UNPROVEN")
+        gas_cost_base_units = 0
+    else:
+        gas_cost_base_units = _nonnegative(
+            evidence.gas_cost_base_units,
+            "gas_cost_base_units",
+        )
     claimed_net = strict_int(
         evidence.conservative_net_base_units,
         field="conservative_net_base_units",
@@ -845,6 +866,7 @@ def qualify_sui_book(evidence: SuiCycleEvidence) -> AdmissionDecision:
             evidence.route_legs[-1].guaranteed_out
             - evidence.returned_units
             - evidence.taker_fee_base_units
+            - gas_cost_base_units
         )
         if claimed_net > route_bound:
             blockers.append("SUI_CLAIMED_NET_EXCEEDS_ROUTE_BOUND")
@@ -856,9 +878,7 @@ def qualify_sui_book(evidence: SuiCycleEvidence) -> AdmissionDecision:
     blockers.extend(
         _sui_object_blockers(
             evidence.object_transitions,
-            required_resource_ids=tuple(
-                leg.shared_resource_id for leg in evidence.route_legs
-            ),
+            required_route_legs=evidence.route_legs,
         )
     )
     if net <= 0:
@@ -1098,10 +1118,10 @@ def _lending_aware_blockers(
 def _sui_object_blockers(
     transitions: Sequence[SuiObjectTransition],
     *,
-    required_resource_ids: Sequence[str] = (),
+    required_route_legs: Sequence[RouteLeg] = (),
 ) -> list[str]:
     blockers: list[str] = []
-    if required_resource_ids and not transitions:
+    if required_route_legs and not transitions:
         blockers.append("SUI_OBJECT_TRANSITIONS_MISSING")
     seen: dict[str, SuiObjectTransition] = {}
     for index, transition in enumerate(transitions):
@@ -1119,6 +1139,20 @@ def _sui_object_blockers(
             transition.liquidity_after,
             "liquidity_after",
         )
+        if transition.state_before_sha256 is None:
+            blockers.append(f"SUI_OBJECT_{index}_STATE_BEFORE_MISSING")
+        else:
+            _sha256(
+                transition.state_before_sha256,
+                "state_before_sha256",
+            )
+        if transition.state_after_sha256 is None:
+            blockers.append(f"SUI_OBJECT_{index}_STATE_AFTER_MISSING")
+        else:
+            _sha256(
+                transition.state_after_sha256,
+                "state_after_sha256",
+            )
         if transition.after_version <= transition.before_version:
             blockers.append(
                 f"SUI_OBJECT_{index}_VERSION_NOT_ADVANCED"
@@ -1137,20 +1171,30 @@ def _sui_object_blockers(
                     f"SUI_OBJECT_{index}_LIQUIDITY_RESET"
                 )
         seen[transition.object_id] = transition
-    required = tuple(required_resource_ids)
+    required = tuple(required_route_legs)
     if len(transitions) != len(required):
         blockers.append("SUI_SHARED_RESOURCE_TRANSITION_COUNT_MISMATCH")
-    for access_index, resource_id in enumerate(required):
+    for access_index, route_leg in enumerate(required):
+        resource_id = route_leg.shared_resource_id
         if access_index >= len(transitions):
             blockers.append(
                 "SUI_SHARED_RESOURCE_TRANSITION_MISSING:"
                 f"{access_index}:{resource_id}"
             )
             continue
-        if transitions[access_index].object_id != resource_id:
+        transition = transitions[access_index]
+        if transition.object_id != resource_id:
             blockers.append(
                 "SUI_SHARED_RESOURCE_TRANSITION_SEQUENCE_MISMATCH:"
                 f"{access_index}:{resource_id}"
+            )
+        if transition.state_before_sha256 != route_leg.state_before_sha256:
+            blockers.append(
+                f"SUI_OBJECT_{access_index}_STATE_BEFORE_MISMATCH"
+            )
+        if transition.state_after_sha256 != route_leg.state_after_sha256:
+            blockers.append(
+                f"SUI_OBJECT_{access_index}_STATE_AFTER_MISMATCH"
             )
     return blockers
 

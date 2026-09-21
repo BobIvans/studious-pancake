@@ -1,9 +1,9 @@
 {
   "schema_version": "pr353.evidence.v1",
   "base_sha": "3a76a1a46553f35bc141d406e4f9fcb89c992c99",
-  "implementation_head_sha": "2038d400a86168cd8e80223869799bb19341d74e",
-  "evidence_state": "NOT_RUN_CURRENT_HEAD",
-  "recorded_reason": "Exact-head GitHub Actions have not executed yet; no local clone/network is available in this execution environment.",
+  "implementation_head_sha": "99ada62cea51c4a5e86aa0383229381217d449b5",
+  "evidence_state": "FORMATTED_AWAITING_EXACT_HEAD_CI",
+  "recorded_reason": "Black 26.3.1 formatting completed and produced head 99ada62cea51c4a5e86aa0383229381217d449b5; exact-head functional and repository CI must still run on the next user-authored head.",
   "environment": {
     "expected_python": "3.13.13",
     "execution_authority": "GitHub Actions on PR head",
@@ -84,5 +84,11 @@
   "live_authority_introduced": false,
   "signing_introduced": false,
   "submission_introduced": false,
-  "production_ready_claimed": false
+  "production_ready_claimed": false,
+  "formatting_evidence": {
+    "workflow_run_id": 35554875830,
+    "formatter": "black==26.3.1",
+    "result": "PASS",
+    "formatting_commit_sha": "99ada62cea51c4a5e86aa0383229381217d449b5"
+  }
 }

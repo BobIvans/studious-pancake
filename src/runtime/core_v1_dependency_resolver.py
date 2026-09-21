@@ -164,10 +164,7 @@ def resolve_installed_core_v1_dependencies(
         or primary.program_id != str(JUPITER_LEND_FLASHLOAN_PROGRAM_ID)
     ):
         raise ValueError("CORE_V1_PRIMARY_FINANCING_IDENTITY_MISMATCH")
-    if (
-        rent.lender_id != "slumlord"
-        or rent.program_id != str(SLUMLORD_PROGRAM_ID)
-    ):
+    if rent.lender_id != "slumlord" or rent.program_id != str(SLUMLORD_PROGRAM_ID):
         raise ValueError("CORE_V1_RENT_FINANCING_IDENTITY_MISMATCH")
     if not primary.qualified:
         return InstalledDependencyResolution(

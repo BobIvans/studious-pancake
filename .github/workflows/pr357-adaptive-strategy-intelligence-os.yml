@@ -43,7 +43,7 @@ jobs:
           tests/research/test_pr357_adaptive_strategy_intelligence.py
       - name: PR-357 format lint and focused type checks
         run: |
-          python -m black --check src/research/pr357_contracts.py src/research/pr357_core.py src/research/pr357_requirements.py src/research/pr357_integrated.py scripts/verify_pr357.py scripts/verify_pr357_replication.py tests/research/test_pr357_adaptive_strategy_intelligence.py
+          python -m black --diff --check src/research/pr357_contracts.py src/research/pr357_core.py src/research/pr357_requirements.py src/research/pr357_integrated.py scripts/verify_pr357.py scripts/verify_pr357_replication.py tests/research/test_pr357_adaptive_strategy_intelligence.py
           python -m flake8 src/research/pr357_contracts.py src/research/pr357_core.py src/research/pr357_requirements.py src/research/pr357_integrated.py scripts/verify_pr357.py scripts/verify_pr357_replication.py tests/research/test_pr357_adaptive_strategy_intelligence.py --count --select=E9,F63,F7,F82 --show-source --statistics
           python -m mypy --config-file mypy.ini src/research/pr357_core.py src/research/pr357_integrated.py
       - name: PR-357 structural and semantic verifier

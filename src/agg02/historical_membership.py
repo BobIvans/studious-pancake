@@ -143,9 +143,7 @@ class MarketMembershipInterval:
 
 
 def _facts_digest(facts: Sequence[MarketLifecycleFact]) -> str:
-    return canonical_hash(
-        tuple((fact.event_id, fact.fact_hash) for fact in facts)
-    )
+    return canonical_hash(tuple((fact.event_id, fact.fact_hash) for fact in facts))
 
 
 def _selected_facts(
@@ -161,10 +159,7 @@ def _selected_facts(
         fact
         for fact in facts
         if fact.revision <= dataset_revision
-        and (
-            knowledge_cutoff_ms is None
-            or fact.observed_at_ms <= knowledge_cutoff_ms
-        )
+        and (knowledge_cutoff_ms is None or fact.observed_at_ms <= knowledge_cutoff_ms)
     ]
     by_id: dict[str, MarketLifecycleFact] = {}
     for fact in eligible:
@@ -293,25 +288,19 @@ class UniverseManifest:
     @property
     def included_market_ids(self) -> tuple[str, ...]:
         return tuple(
-            item.market_id
-            for item in self.decisions
-            if item.disposition == "included"
+            item.market_id for item in self.decisions if item.disposition == "included"
         )
 
     @property
     def excluded_market_ids(self) -> tuple[str, ...]:
         return tuple(
-            item.market_id
-            for item in self.decisions
-            if item.disposition == "excluded"
+            item.market_id for item in self.decisions if item.disposition == "excluded"
         )
 
     @property
     def unknown_market_ids(self) -> tuple[str, ...]:
         return tuple(
-            item.market_id
-            for item in self.decisions
-            if item.disposition == "unknown"
+            item.market_id for item in self.decisions if item.disposition == "unknown"
         )
 
 
@@ -340,7 +329,7 @@ def select_universe_as_known(
     )
     market_ids = tuple(sorted({fact.market_id for fact in selected}))
     intervals = materialize_market_membership(
-        selected,
+        all_facts,
         dataset_revision=dataset_revision,
         knowledge_cutoff_ms=knowledge_cutoff_ms,
     )
@@ -362,9 +351,7 @@ def select_universe_as_known(
         if interval.state is MarketLifecycleState.ACTIVE:
             decisions.append(UniverseDecision(market_id, "included", "active"))
         elif interval.state is MarketLifecycleState.UNKNOWN:
-            decisions.append(
-                UniverseDecision(market_id, "unknown", "explicit-unknown")
-            )
+            decisions.append(UniverseDecision(market_id, "unknown", "explicit-unknown"))
         else:
             decisions.append(
                 UniverseDecision(market_id, "excluded", f"state:{interval.state.value}")

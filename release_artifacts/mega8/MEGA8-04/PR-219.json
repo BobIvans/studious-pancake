@@ -1,0 +1,21 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-219",
+  "child_code": "SUI-02",
+  "nf": [
+    "NF-625",
+    "NF-626",
+    "NF-627",
+    "NF-628"
+  ],
+  "implementation_status": "IMPLEMENTED_RESEARCH_ONLY",
+  "canonical_owner": "src/mega8_04.py + src/multichain/sui.py",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "SUI_PTBS_AND_SHARED_OBJECTS_NOT_DEPLOYED_QUALIFIED"
+  ]
+}

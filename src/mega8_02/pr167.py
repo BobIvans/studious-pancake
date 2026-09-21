@@ -1,4 +1,5 @@
 """PR-167 / SIM-03: sequential shared-state route interpretation."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping, Sequence
@@ -48,7 +49,8 @@ def rollback_failed_route_branch(
 
 
 def emit_state_transition_proof(
-    before: Mapping[str, int], after: Mapping[str, int],
+    before: Mapping[str, int],
+    after: Mapping[str, int],
     mutations: Sequence[StateMutation],
 ) -> str:
     return stable_hash(

@@ -190,10 +190,10 @@ def run_pr357_integrated_vertical() -> Mapping[str, Any]:
     evsi = estimate_evsi(
         decision_problem,
         posterior_scenarios=(
-            {"adverse": 700_000, "favorable": 300_000},
-            {"adverse": 150_000, "favorable": 850_000},
+            {"adverse": 600_000, "favorable": 400_000},
+            {"adverse": 100_000, "favorable": 900_000},
         ),
-        observation_probabilities_ppm=(400_000, 600_000),
+        observation_probabilities_ppm=(500_000, 500_000),
     )
     information_actions = (
         InformationActionSpec(

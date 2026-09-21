@@ -1,4 +1,5 @@
 """PR-181 / YIELD-01: immediate exchange-index conversions."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from .core import EvidenceBinding, Mega802Error, rational_quote, require_positive_int
@@ -23,6 +24,7 @@ def register_yield_exchange_rate(rate: YieldExchangeRate, *, now: int) -> str:
 
 def normalize_accrual_index(rate: YieldExchangeRate) -> tuple[int, int]:
     from math import gcd
+
     common = gcd(rate.numerator, rate.denominator)
     return rate.numerator // common, rate.denominator // common
 

@@ -22,6 +22,4 @@ def test_historical_order_inversions_are_recorded_not_hidden() -> None:
     assert "AGG-09:before:AGG-05" in audit.historical_order_inversions
     assert "AGG-09:before:AGG-08" in audit.historical_order_inversions
     assert "AGG-15:before:AGG-09" not in audit.historical_order_inversions
-    assert set(EXPECTED_DEPENDENCIES) == {
-        f"AGG-{index:02d}" for index in range(1, 16)
-    }
+    assert set(EXPECTED_DEPENDENCIES) == {f"AGG-{index:02d}" for index in range(1, 16)}

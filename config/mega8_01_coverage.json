@@ -1,0 +1,32 @@
+{
+  "schema_version": "mega8-01.coverage.v1",
+  "roadmap_children": [
+    "PR-151",
+    "PR-152",
+    "PR-153",
+    "PR-154",
+    "PR-155",
+    "PR-156",
+    "PR-157",
+    "PR-158",
+    "PR-159",
+    "PR-160",
+    "PR-161",
+    "PR-162"
+  ],
+  "nf_range": [
+    "NF-353",
+    "NF-400"
+  ],
+  "function_count": 48,
+  "status": "IMPLEMENTED_OFFLINE",
+  "activation": "DEFAULT_OFF",
+  "production_ready": false,
+  "live_enabled": false,
+  "upstream_source_copy": "NONE",
+  "residual_blockers": [
+    "real provider/deployment evidence requires environment-specific qualification",
+    "external SDK candidates remain reference-only until immutable pin/license/conformance review",
+    "code merge does not promote shadow/live/capital permissions"
+  ]
+}

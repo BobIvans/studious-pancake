@@ -498,3 +498,253 @@ def apply_lifecycle_hysteresis(
     if forward_score >= forward_threshold and reverse_score < reverse_threshold:
         return "FORWARD"
     if reverse_score >= reverse_threshold and forward_score < forward_threshold:
+        return "REVERSE"
+    return "HOLD"
+
+
+def compute_semantic_delta(
+    parent: Mapping[str, Any],
+    successor: Mapping[str, Any],
+) -> Mapping[str, tuple[Any, Any]]:
+    keys = sorted(set(parent) | set(successor))
+    return {
+        key: (parent.get(key), successor.get(key))
+        for key in keys
+        if parent.get(key) != successor.get(key)
+    }
+
+
+def classify_evidence_inheritance(
+    semantic_delta: Mapping[str, tuple[Any, Any]],
+) -> str:
+    hard = {
+        "mechanism",
+        "economic_rights",
+        "execution_domain",
+        "settlement",
+        "source_schema",
+    }
+    if hard.intersection(semantic_delta):
+        return "INVALID"
+    if semantic_delta:
+        return "PARTIAL"
+    return "REUSABLE"
+
+
+def decompose_strategy_degradation(
+    components: Mapping[str, int],
+) -> Mapping[str, int]:
+    allowed = {
+        "source",
+        "latency",
+        "crowding",
+        "capacity",
+        "fee",
+        "model",
+        "semantic",
+        "regime",
+        "unknown",
+    }
+    unknown = set(components) - allowed
+    if unknown:
+        raise PR357ContractError(
+            "PR357_UNKNOWN_DEGRADATION_COMPONENT:" + ",".join(sorted(unknown))
+        )
+    return {key: int(components.get(key, 0)) for key in sorted(allowed)}
+
+
+def define_market_bootstrap_descriptor(
+    payload: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    required = {
+        "market_id",
+        "chain_or_domain",
+        "instrument_type",
+        "underlying",
+        "settlement",
+        "economic_rights",
+        "execution_domain",
+        "information_domain",
+        "access_domain",
+        "risk_domain",
+        "descriptor_version",
+    }
+    missing = sorted(required - set(payload))
+    if missing:
+        raise PR357ContractError(
+            "PR357_BOOTSTRAP_DESCRIPTOR_MISSING:" + ",".join(missing)
+        )
+    result = {key: payload[key] for key in sorted(payload)}
+    result["execution_right"] = False
+    return result
+
+
+def canonicalize_market_descriptor(
+    payload: Mapping[str, Any],
+) -> Mapping[str, Any]:
+    result = define_market_bootstrap_descriptor(payload)
+    for key, value in tuple(result.items()):
+        if isinstance(value, str):
+            result[key] = " ".join(value.strip().lower().split())
+    return result
+
+
+def score_prior_applicability(prior: PriorCandidate) -> int:
+    base = (
+        prior.semantic_similarity_ppm * 4
+        + prior.topology_similarity_ppm * 3
+        + prior.source_similarity_ppm * 2
+        + prior.freshness_ppm
+    ) // 10
+    penalty = min(PPM, prior.negative_transfer_count * 100_000)
+    if not prior.rights_compatible:
+        return 0
+    return max(0, base - penalty)
+
+
+def filter_stale_or_invalid_prior(
+    prior: PriorCandidate,
+    *,
+    minimum_freshness_ppm: int = 500_000,
+) -> bool:
+    return (
+        prior.rights_compatible
+        and prior.freshness_ppm >= minimum_freshness_ppm
+        and score_prior_applicability(prior) > 0
+    )
+
+
+def rank_bootstrap_prior_set(
+    priors: Sequence[PriorCandidate],
+) -> tuple[str, ...]:
+    eligible = [
+        prior
+        for prior in priors
+        if filter_stale_or_invalid_prior(prior)
+    ]
+    eligible.sort(
+        key=lambda prior: (
+            -score_prior_applicability(prior),
+            prior.prior_id,
+        )
+    )
+    return tuple(prior.prior_id for prior in eligible)
+
+
+def detect_calibration_negative_transfer(
+    *,
+    prior_error_units: int,
+    target_only_error_units: int,
+) -> bool:
+    return prior_error_units > target_only_error_units
+
+
+def fallback_to_target_only_uncertainty(
+    *,
+    prior_error_units: int,
+    target_only_error_units: int,
+    prior_uncertainty_units: int,
+    target_uncertainty_units: int,
+) -> int:
+    if detect_calibration_negative_transfer(
+        prior_error_units=prior_error_units,
+        target_only_error_units=target_only_error_units,
+    ):
+        return target_uncertainty_units
+    return max(prior_uncertainty_units, target_uncertainty_units)
+
+
+def detect_semantic_schema_collision(
+    left: Mapping[str, str],
+    right: Mapping[str, str],
+) -> tuple[str, ...]:
+    return tuple(
+        key
+        for key in sorted(set(left) & set(right))
+        if left[key] != right[key]
+    )
+
+
+def verify_timestamp_semantics(clock: ObservationClock) -> bool:
+    return (
+        clock.event_time
+        <= clock.published_at
+        <= clock.received_at
+        <= clock.available_at
+    )
+
+
+def quarantine_unmapped_fields(
+    source: Mapping[str, Any],
+    mapping: Mapping[str, str],
+) -> Mapping[str, Any]:
+    return {
+        key: source[key]
+        for key in sorted(source)
+        if key not in mapping
+    }
+
+
+def define_market_belief_state(
+    *,
+    belief_id: str,
+    decision_time: int,
+    observed: Mapping[str, int],
+    posterior_mean: Mapping[str, int],
+    covariance: Mapping[str, Mapping[str, int]],
+    missingness_mask: Mapping[str, bool],
+    source_clocks: Mapping[str, ObservationClock],
+    valid_until: int,
+) -> BeliefState:
+    return BeliefState(
+        belief_id=belief_id,
+        decision_time=decision_time,
+        observed=dict(observed),
+        posterior_mean=dict(posterior_mean),
+        covariance={
+            key: dict(value)
+            for key, value in covariance.items()
+        },
+        missingness_mask=dict(missingness_mask),
+        source_clocks=dict(source_clocks),
+        valid_until=valid_until,
+    )
+
+
+def bind_to_pit_snapshot(
+    observations: Mapping[str, tuple[int, ObservationClock]],
+    *,
+    decision_time: int,
+) -> Mapping[str, int]:
+    selected: dict[str, int] = {}
+    for name, (value, clock) in sorted(observations.items()):
+        if clock.available_at <= decision_time:
+            selected[name] = value
+    return selected
+
+
+def represent_missing_unknown_state(
+    variable_names: Iterable[str],
+    observed: Mapping[str, int],
+) -> Mapping[str, bool]:
+    return {
+        name: name not in observed
+        for name in sorted(set(variable_names))
+    }
+
+
+def represent_state_covariance(
+    variables: Sequence[str],
+    variances: Mapping[str, int],
+    cross_covariance: Mapping[tuple[str, str], int] | None = None,
+) -> Mapping[str, Mapping[str, int]]:
+    cross_covariance = cross_covariance or {}
+    rows: dict[str, dict[str, int]] = {}
+    for left in variables:
+        row: dict[str, int] = {}
+        for right in variables:
+            if left == right:
+                value = int(variances[left])
+            else:
+                value = int(
+                    cross_covariance.get(

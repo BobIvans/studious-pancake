@@ -329,7 +329,7 @@ def select_universe_as_known(
     )
     market_ids = tuple(sorted({fact.market_id for fact in selected}))
     intervals = materialize_market_membership(
-        selected,
+        all_facts,
         dataset_revision=dataset_revision,
         knowledge_cutoff_ms=knowledge_cutoff_ms,
     )

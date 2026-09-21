@@ -35,9 +35,7 @@ def predict_fill_quality(
     toxicity_ppm = require_ppm(toxicity_ppm, "toxicity_ppm")
     uncertainty_ppm = require_ppm(uncertainty_ppm, "uncertainty_ppm")
     adverse = estimate_adverse_selection(markouts_ppm)
-    return max(
-        0, 1_000_000 - min(1_000_000, adverse + toxicity_ppm + uncertainty_ppm)
-    )
+    return max(0, 1_000_000 - min(1_000_000, adverse + toxicity_ppm + uncertainty_ppm))
 
 
 def gate_toxic_fill(

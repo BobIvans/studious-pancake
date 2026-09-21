@@ -38,7 +38,7 @@ jobs:
           tests/strategy_evolution
       - name: Check PR-353 formatting
         run: >-
-          python -m black --check
+          python -m black --diff --check
           src/strategy_evolution
           scripts/verify_pr353_strategy_evolution.py
           tests/strategy_evolution

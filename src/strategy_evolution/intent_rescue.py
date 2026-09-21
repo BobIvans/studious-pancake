@@ -107,9 +107,7 @@ def price_rescue_bounty(payload: Mapping[str, Any]):
 def build_intent_rescue_candidate(payload: Mapping[str, Any]):
     if not payload.get("evidence_refs"):
         raise EvolutionError("LINEAGE_GAP")
-    if int(payload.get("value_low_atoms", 0)) <= int(
-        payload.get("cost_high_atoms", 0)
-    ):
+    if int(payload.get("value_low_atoms", 0)) <= int(payload.get("cost_high_atoms", 0)):
         raise EvolutionError("NET_EDGE_NONPOSITIVE")
     candidate_type = str(payload.get("candidate_type", ""))
     if candidate_type not in {"INTENT_RESIDUAL", "KEEPER_RESCUE"}:

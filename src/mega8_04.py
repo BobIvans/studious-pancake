@@ -1174,8 +1174,7 @@ def verify_plugin_capabilities(
         for item in sorted(allowed - _EFFECT_CAPABILITIES - _PLUGIN_CAPABILITIES)
     )
     blockers.extend(
-        f"PLUGIN_CAPABILITY_NOT_ALLOWED:{item}"
-        for item in sorted(requested - allowed)
+        f"PLUGIN_CAPABILITY_NOT_ALLOWED:{item}" for item in sorted(requested - allowed)
     )
     return _ev(
         "NF-636",

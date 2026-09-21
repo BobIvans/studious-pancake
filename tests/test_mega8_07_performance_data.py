@@ -155,9 +155,7 @@ def test_immutable_cache_generation_and_revocation() -> None:
         allowed_generations=("g2",),
     ) == (second,)
     assert validate_cache_generation(first, expected_generation="g1")
-    assert revoke_stale_cache((first, second), current_generation="g2") == (
-        "slice-1",
-    )
+    assert revoke_stale_cache((first, second), current_generation="g2") == ("slice-1",)
     with pytest.raises(Mega807Error, match="GENERATION"):
         validate_cache_generation(first, expected_generation="g2")
 
@@ -191,7 +189,12 @@ def test_event_time_join_materialization_and_replay() -> None:
     right = ((11, 13, "oracle", {"price": 101}),)
     joined = join_event_time_streams(left, right, max_event_gap=2)
     assert len(joined) == 1
-    assert manage_watermark_lateness(left + ((1, 2, "old", {}),), watermark=10, max_lateness=2) == left
+    assert (
+        manage_watermark_lateness(
+            left + ((1, 2, "old", {}),), watermark=10, max_lateness=2
+        )
+        == left
+    )
     state = materialize_stream_state(left, revision="r1")
     assert len(state["sha256"]) == 64
     assert len(replay_stream_join(joined, joined)) == 64
@@ -221,6 +224,7 @@ def test_catalog_is_rebuildable_from_immutable_entries() -> None:
     assert search_evidence_graph(entries, term="feature") == (feature,)
     manifest = export_lineage_manifest(entries)
     assert len(manifest["sha256"]) == 64
+
 
 def test_point_in_time_evidence_and_cache_archive_integrity_fail_closed() -> None:
     future = EvidenceBinding(

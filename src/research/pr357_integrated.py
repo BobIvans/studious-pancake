@@ -42,7 +42,7 @@ from src.research.pr357_core import (
 def _rank_information_actions(
     actions: tuple[InformationActionSpec, ...],
 ) -> tuple[Mapping[str, Any], ...]:
-    rows = [
+    rows: list[dict[str, Any]] = [
         {
             "action_id": action.action_id,
             "net_deadline_adjusted_evsi": compute_deadline_adjusted_evsi(action),

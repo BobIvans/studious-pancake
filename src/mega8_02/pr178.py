@@ -1,4 +1,5 @@
 """PR-178 / ORACLE-02: schedule, confidence and lag mechanics."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence

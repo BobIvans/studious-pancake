@@ -57,7 +57,6 @@ from src.paper_shadow.atomic_vertical import (
 )
 from src.execution.exact_simulation import FinalizedSimulation
 
-
 DECODER_CLOSURE_PATHS = (
     "src/execution/agg03_financing_decoder.py",
     "src/execution/financing_evidence.py",
@@ -281,17 +280,13 @@ class JupiterLendSlumlordRepaymentDecoder:
         rent_address = str(SLUMLORD_PDA)
         if admin_address not in pre or rent_address not in pre:
             raise ValueError("FINANCING_PROTOCOL_STATE_NOT_MONITORED")
-        if (
-            _owner(pre[admin_address])
-            != str(JUPITER_LEND_FLASHLOAN_PROGRAM_ID)
-            or _owner(post[admin_address])
-            != str(JUPITER_LEND_FLASHLOAN_PROGRAM_ID)
-        ):
+        if _owner(pre[admin_address]) != str(
+            JUPITER_LEND_FLASHLOAN_PROGRAM_ID
+        ) or _owner(post[admin_address]) != str(JUPITER_LEND_FLASHLOAN_PROGRAM_ID):
             raise ValueError("JUPITER_LEND_ADMIN_OWNER_MISMATCH")
-        if (
-            _owner(pre[rent_address]) != str(SLUMLORD_PROGRAM_ID)
-            or _owner(post[rent_address]) != str(SLUMLORD_PROGRAM_ID)
-        ):
+        if _owner(pre[rent_address]) != str(SLUMLORD_PROGRAM_ID) or _owner(
+            post[rent_address]
+        ) != str(SLUMLORD_PROGRAM_ID):
             raise ValueError("SLUMLORD_OWNER_MISMATCH")
 
         pre_admin = decode_flashloan_admin_state(
@@ -464,9 +459,9 @@ class JupiterLendSlumlordRepaymentDecoder:
                 opaque_mutable_accounts=tuple(opaque),
             ),
         )
-        decoded_economic_accounts = {
-            item.address for item in proof.native_deltas
-        } | {item.address for item in proof.token_deltas}
+        decoded_economic_accounts = {item.address for item in proof.native_deltas} | {
+            item.address for item in proof.token_deltas
+        }
         missing_economic = sorted(
             address
             for address in writable_accounts

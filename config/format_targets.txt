@@ -274,4 +274,7 @@ tests/test_super01_closure.py
 tests/test_super01_transaction_formats.py
 src/agg02/__init__.py
 src/agg02/storage.py
+src/super05_strategy_closure.py
+scripts/verify_super05_strategy_closure.py
+tests/test_super05_strategy_closure.py
 \nsrc/mega8_04.py\nscripts/verify_mega8_04.py\ntests/test_mega8_04.py\n

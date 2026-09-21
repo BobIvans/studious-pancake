@@ -63,6 +63,11 @@ SUPER01_CLOSURE_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+SUPER05_STRATEGY_CLOSURE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_super05_strategy_closure.py",
+]
+
 MEGA804_CLOSURE_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_mega8_04.py",
@@ -211,8 +216,8 @@ def main() -> int:
     run(MPR32_PUBLIC_ENTRYPOINT_TRUTH_COMMAND)
     run(MPR_NEXT_08_JUPITER_V2_CONTRACT_COMMAND)
     run(SUPER01_CLOSURE_COMMAND)
-    run(MEGA804_CLOSURE_COMMAND)
-    run(PR200_PRODUCTION_CUTOVER_COMMAND)
+    run(SUPER05_STRATEGY_CLOSURE_COMMAND)
+    run(MEGA804_CLOSURE_COMMAND)\n    run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
 
     for command in COMMANDS[1:]:

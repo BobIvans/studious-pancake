@@ -252,9 +252,12 @@ def _subset_feasible(
             return False, usage
         seen_conflicts.update(conflicts)
         for key in budget:
-            usage[key] += int(
+            candidate_usage = int(
                 candidate.get("resource_usage", {}).get(key, 0)
             )
+            if candidate_usage < 0:
+                raise PR356ContractError("CANDIDATE_RESOURCE_USAGE_NEGATIVE")
+            usage[key] += candidate_usage
             if usage[key] > int(budget[key]):
                 return False, usage
     return True, usage
@@ -352,9 +355,17 @@ def verify_portfolio_feasibility(
         if str(row["candidate_id"]) in proposal.candidate_ids
     ]
     feasible, usage = _subset_feasible(selected, problem["budget"])
+    selected_tail_loss = sum(
+        int(row.get("tail_loss_units", 0)) for row in selected
+    )
+    max_tail_loss = int(problem.get("max_tail_loss_units", 2**63 - 1))
+    tail_feasible = selected_tail_loss <= max_tail_loss
     return {
-        "feasible": feasible,
+        "feasible": feasible and tail_feasible,
         "resource_usage": usage,
+        "selected_tail_loss_units": selected_tail_loss,
+        "max_tail_loss_units": max_tail_loss,
+        "tail_loss_feasible": tail_feasible,
         "canonical_recheck_required": True,
         "execution_right": False,
     }

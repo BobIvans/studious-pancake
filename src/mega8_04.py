@@ -572,7 +572,9 @@ def verify_supply_chain_provenance(
     blockers = []
     rows = []
     for item in records:
-        rows.append((item.name, item.version, item.source_identity, item.artifact_sha256))
+        rows.append(
+            (item.name, item.version, item.source_identity, item.artifact_sha256)
+        )
         if len(item.source_identity) < 7:
             blockers.append(f"SOURCE_IDENTITY_NOT_IMMUTABLE:{item.name}")
         if _SHA256.fullmatch(item.artifact_sha256) is None:
@@ -622,9 +624,13 @@ def verify_evidence_inclusion(
     for side, sibling in proof:
         _sha(sibling, "sibling")
         if side == "left":
-            current = sha256(bytes.fromhex(sibling) + bytes.fromhex(current)).hexdigest()
+            current = sha256(
+                bytes.fromhex(sibling) + bytes.fromhex(current)
+            ).hexdigest()
         elif side == "right":
-            current = sha256(bytes.fromhex(current) + bytes.fromhex(sibling)).hexdigest()
+            current = sha256(
+                bytes.fromhex(current) + bytes.fromhex(sibling)
+            ).hexdigest()
         else:
             raise Mega804Error("Merkle proof side must be left/right")
     return current == root_sha256
@@ -1073,14 +1079,15 @@ def audit_post150_coverage(rows: Iterable[CoverageRow]) -> Post150Audit:
         sorted(number for number, row in by_pr.items() if row.status == "DEFERRED")
     )
     research = tuple(
-        sorted(
-            number
-            for number, row in by_pr.items()
-            if row.status == "RESEARCH_ONLY"
-        )
+        sorted(number for number, row in by_pr.items() if row.status == "RESEARCH_ONLY")
     )
     payload = tuple(
-        (number, by_pr[number].status, by_pr[number].owner, by_pr[number].evidence_sha256)
+        (
+            number,
+            by_pr[number].status,
+            by_pr[number].owner,
+            by_pr[number].evidence_sha256,
+        )
         for number in sorted(by_pr)
     )
     return Post150Audit(

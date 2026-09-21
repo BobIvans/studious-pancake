@@ -52,9 +52,7 @@ ADDRESS = "0x" + "1" * 40
 
 
 def test_nf_registry_is_exact_and_default_off() -> None:
-    assert set(NF_SYMBOLS) == {
-        f"NF-{number:03d}" for number in range(585, 641)
-    }
+    assert set(NF_SYMBOLS) == {f"NF-{number:03d}" for number in range(585, 641)}
     assert len(NF_SYMBOLS) == 56
     assert "unknown_outcome_holds_reservation" in define_property_financial_invariants()
 
@@ -106,14 +104,20 @@ def test_supply_chain_sbom_and_reproducibility_are_deterministic() -> None:
     second = generate_sbom((record,))
     assert first == second
     assert first["bomFormat"] == "CycloneDX"
-    assert attest_reproducible_build(
-        first_artifact_sha256=A,
-        second_artifact_sha256=A,
-    ).disposition is Disposition.PASS
-    assert attest_reproducible_build(
-        first_artifact_sha256=A,
-        second_artifact_sha256=B,
-    ).disposition is Disposition.BLOCKED
+    assert (
+        attest_reproducible_build(
+            first_artifact_sha256=A,
+            second_artifact_sha256=A,
+        ).disposition
+        is Disposition.PASS
+    )
+    assert (
+        attest_reproducible_build(
+            first_artifact_sha256=A,
+            second_artifact_sha256=B,
+        ).disposition
+        is Disposition.BLOCKED
+    )
 
 
 def test_signed_evidence_chain_and_merkle_bundle() -> None:
@@ -141,15 +145,21 @@ def test_hsm_contract_is_metadata_only_and_region_fenced() -> None:
         permit_semantics_sha256=B,
     )
     assert primary.live_enabled is False
-    assert execute_key_ceremony(
-        primary,
-        approvals=("operator-a", "operator-b"),
-        quorum=2,
-    ).disposition is Disposition.PASS
-    assert recover_multi_region_signer(
-        primary,
-        secondary,
-    ).disposition is Disposition.PASS
+    assert (
+        execute_key_ceremony(
+            primary,
+            approvals=("operator-a", "operator-b"),
+            quorum=2,
+        ).disposition
+        is Disposition.PASS
+    )
+    assert (
+        recover_multi_region_signer(
+            primary,
+            secondary,
+        ).disposition
+        is Disposition.PASS
+    )
 
 
 def test_evm_adapter_and_calldata_are_research_only() -> None:
@@ -169,10 +179,13 @@ def test_evm_adapter_and_calldata_are_research_only() -> None:
         recipient=ADDRESS,
     )
     assert len(calldata) == 100
-    assert differential_test_evm_math(
-        local_amount_out=9,
-        reference_amount_out=9,
-    ).disposition is Disposition.PASS
+    assert (
+        differential_test_evm_math(
+            local_amount_out=9,
+            reference_amount_out=9,
+        ).disposition
+        is Disposition.PASS
+    )
 
 
 def test_sui_exact_state_and_crosschain_reconciliation_remain_research_only() -> None:

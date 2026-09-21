@@ -38,11 +38,7 @@ def verify() -> dict[str, object]:
         errors.append("MEGA804_CHILDREN_MISSING")
         children = []
 
-    child_ids = {
-        item.get("roadmap_pr")
-        for item in children
-        if isinstance(item, dict)
-    }
+    child_ids = {item.get("roadmap_pr") for item in children if isinstance(item, dict)}
     if child_ids != EXPECTED_CHILDREN:
         errors.append("MEGA804_CHILD_SET_MISMATCH")
 
@@ -116,7 +112,9 @@ def main() -> int:
     if args.json:
         print(json.dumps(evidence, indent=2, sort_keys=True))
     else:
-        print("MEGA8-04 structural closure:", "PASS" if evidence["accepted"] else "FAIL")
+        print(
+            "MEGA8-04 structural closure:", "PASS" if evidence["accepted"] else "FAIL"
+        )
         for error in evidence["errors"]:
             print(f"- {error}")
     return 0 if evidence["accepted"] else 1

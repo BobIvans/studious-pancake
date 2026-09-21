@@ -1,0 +1,77 @@
+{
+  "schema_version": "pr355.marketpacks.v1",
+  "observed_main": "d8d6d9079689efdddf77ce373120675255a99327",
+  "packages": {
+    "MP-N01": {
+      "name": "Boros Funding IRS",
+      "state": "DISABLED",
+      "mode": "read_only_replay",
+      "live": false
+    },
+    "MP-N02": {
+      "name": "Hybrid Liquidity Shape",
+      "state": "DISABLED",
+      "mode": "fork_and_replay_only",
+      "live": false,
+      "bunni": "REFERENCE_ONLY_QUARANTINED"
+    },
+    "MP-N03": {
+      "name": "M0 Programmable Cash",
+      "state": "DISABLED",
+      "mode": "read_only_shadow",
+      "live": false
+    },
+    "MP-N04": {
+      "name": "Ethena Synthetic Dollar",
+      "state": "DISABLED",
+      "mode": "research_only",
+      "live": false
+    },
+    "MP-N05": {
+      "name": "Tokenized Credit/RWA",
+      "state": "DISABLED",
+      "mode": "research_only",
+      "live": false
+    },
+    "MP-N06": {
+      "name": "Aave V4 Hub/Spoke",
+      "state": "DISABLED",
+      "mode": "fork_read_only",
+      "live": false
+    },
+    "MP-N07": {
+      "name": "Research Resources",
+      "state": "DISABLED",
+      "mode": "testnet_or_zero_cost_mock",
+      "live": false,
+      "real_payment": false
+    },
+    "MP-N08": {
+      "name": "Proof-Carrying Research",
+      "state": "DISABLED",
+      "mode": "offline_only",
+      "live": false,
+      "production_proof": false
+    },
+    "MP-N09": {
+      "name": "Incident Corpus",
+      "state": "DISABLED",
+      "mode": "offline_only",
+      "live": false
+    }
+  },
+  "effect_boundary": {
+    "production_ready": false,
+    "live_enabled": false,
+    "signer_access": false,
+    "submission_access": false,
+    "remote_mutation": false,
+    "automatic_promotion": false,
+    "automatic_capital_increase": false,
+    "wallet_funding": false,
+    "paid_production_resources": false
+  },
+  "marginfi": "PAUSED",
+  "slumlord_low_capital_requirement": "REQUIRED",
+  "source_copy_performed": false
+}

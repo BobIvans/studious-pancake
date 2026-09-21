@@ -45,10 +45,10 @@ only simulates counterfactual ordering; offline execution/fee models remain advi
 
 ## Dependency truth
 
-The eight-pack declares MEGA8-01..05 as prerequisites. On branch creation,
-MEGA8-02/#523 was merged; MEGA8-01 was an observed unmerged branch and
-MEGA8-03/#521, MEGA8-04/#522, and MEGA8-05/#524 were still open. Therefore this
-slice is `IMPLEMENTED_OFFLINE` but operationally
+The eight-pack declares MEGA8-01..05 as prerequisites. The branch was re-synchronized
+after MEGA8-01/#525 merged to main at `c786b74c3fdd614d16ef3db6c517e964cb43c194`;
+MEGA8-02/#523 is also merged. MEGA8-03/#521, MEGA8-04/#522, and MEGA8-05/#524
+remain open, so this slice is `IMPLEMENTED_OFFLINE` but operationally
 `BLOCKED_DEPENDENCIES_AND_EXTERNAL_EVIDENCE`.
 
 A code merge must not be represented as integrated roadmap completion, production

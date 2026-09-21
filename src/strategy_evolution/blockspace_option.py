@@ -2,7 +2,13 @@
 
 from typing import Any, Mapping
 
-from .core import EvolutionError, build_candidate, qualify_candidate, result
+from .core import (
+    EvolutionError,
+    build_candidate,
+    qualify_candidate,
+    reject_secret_material,
+    result,
+)
 
 
 def ingest_inclusion_market_quote(payload: Mapping[str, Any]):
@@ -16,6 +22,8 @@ def ingest_inclusion_market_quote(payload: Mapping[str, Any]):
 
 
 def estimate_inclusion_probability_curve(payload: Mapping[str, Any]):
+    if payload.get("regime_unknown"):
+        raise EvolutionError("REGIME_UNKNOWN")
     points = tuple((int(bid), int(ppm)) for bid, ppm in payload.get("points", ()))
     if len(points) < 3:
         raise EvolutionError("SAMPLE_SMALL")
@@ -50,6 +58,8 @@ def price_preconfirmation_option(payload: Mapping[str, Any]):
 
 
 def estimate_blob_calldata_cost_surface(payload: Mapping[str, Any]):
+    if payload.get("mode_available") is False:
+        raise EvolutionError("MODE_UNAVAILABLE")
     if payload.get("fee_state_stale"):
         raise EvolutionError("FEE_STATE_STALE")
     if not payload.get("compression_verified"):
@@ -80,6 +90,10 @@ def detect_da_mode_switch(payload: Mapping[str, Any]):
 def allocate_inclusion_budget(payload: Mapping[str, Any]):
     budget = int(payload.get("budget_atoms", 0))
     options = tuple((int(fee), int(value)) for fee, value in payload.get("options", ()))
+    if payload.get("curve_nonmonotone"):
+        raise EvolutionError("CURVE_NONMONOTONE")
+    if options and all(fee > budget for fee, _value in options):
+        raise EvolutionError("BUDGET_EXCEEDED")
     feasible = [
         (fee, value - fee)
         for fee, value in options
@@ -95,6 +109,14 @@ def allocate_inclusion_budget(payload: Mapping[str, Any]):
 
 
 def build_blockspace_candidate(payload: Mapping[str, Any]):
+    try:
+        reject_secret_material(payload)
+    except EvolutionError as exc:
+        if exc.code == "SECRET_DETECTED":
+            raise EvolutionError("SECRET_PRESENT") from exc
+        raise
+    if not payload.get("evidence_refs"):
+        raise EvolutionError("LINEAGE_GAP")
     if payload.get("target_mismatch"):
         raise EvolutionError("TARGET_MISMATCH")
     return build_candidate(

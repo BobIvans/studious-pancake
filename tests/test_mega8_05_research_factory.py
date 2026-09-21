@@ -143,6 +143,8 @@ def test_pr240_codegen_is_deterministic_and_signer_free() -> None:
     )
     assert verdict.disposition is Disposition.PASS
     assert verdict.payload["generated_code_executed"] is False
+    with pytest.raises(ValueError):
+        generate_idl_account_decoder('"' + "a" * 63, ["owner"])
 
 
 def test_pr241_adapter_contract_separates_quote_and_execution_authority() -> None:
@@ -170,6 +172,9 @@ def test_pr241_adapter_contract_separates_quote_and_execution_authority() -> Non
     )
     assert qualification.disposition is Disposition.PASS
     assert qualification.payload["execution_authority"] is False
+    missing_case = run_adapter_differential_suite({"case": None}, {})
+    assert missing_case.disposition is Disposition.REJECT
+    assert missing_case.payload["missing_upstream"] == ("case",)
 
 
 def test_pr242_unknown_market_stays_quarantined_until_existing_authority() -> None:
@@ -237,7 +242,7 @@ def test_pr244_license_policy_fails_closed_on_unknown_or_incomplete_copy() -> No
     attribution = generate_attribution_bundle(
         source_repository="official/repo",
         immutable_ref="abc",
-        source_hashes=["sha"],
+        source_hashes=["3" * 64],
         notices=["MIT"],
     )
     assert (
@@ -248,6 +253,22 @@ def test_pr244_license_policy_fails_closed_on_unknown_or_incomplete_copy() -> No
         enforce_source_reuse_policy(eligible, attribution).disposition
         is Disposition.PASS
     )
+    unrelated = register_research_hypothesis(
+        hypothesis_id="attribution-lookalike",
+        mechanism_claim="not an attribution bundle",
+        falsification_rule="always",
+    )
+    assert (
+        enforce_source_reuse_policy(eligible, unrelated).disposition
+        is Disposition.BLOCKED
+    )
+    with pytest.raises(ValueError):
+        generate_attribution_bundle(
+            source_repository="official/repo",
+            immutable_ref="abc",
+            source_hashes=[],
+            notices=["MIT"],
+        )
 
 
 def test_pr245_preregistration_identity_changes_when_plan_changes() -> None:
@@ -276,6 +297,11 @@ def test_pr245_preregistration_identity_changes_when_plan_changes() -> None:
     )
     revised = publish_preregistered_experiment(hypothesis, changed, cutoff)
     assert experiment.identity != revised.identity
+    original_identity = plan.identity
+    with pytest.raises(TypeError):
+        plan.payload["metrics"] = ("tampered",)
+    assert plan.identity == original_identity
+    assert plan.payload["metrics"] == ("net",)
 
 
 def test_pr246_multiple_testing_requires_corrected_economic_evidence() -> None:
@@ -390,7 +416,7 @@ def test_pr250_stat_arb_is_non_atomic_and_requires_separate_margin() -> None:
 
 def test_pr251_unknown_regime_fails_to_no_trade() -> None:
     short = infer_market_regime([0.1, 0.2])
-    routed = route_policy_by_regime(short, {"quiet": "policy-a"})
+    routed = route_policy_by_regime(short, {"quiet": "policy-a", "unknown": "trade"})
     assert routed.disposition is Disposition.BLOCKED
     assert routed.payload["policy"] == "no-trade"
     break_artifact = detect_structural_break([1, 1, 1, 3, 3, 3])

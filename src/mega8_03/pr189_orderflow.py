@@ -7,7 +7,14 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-from .common import EvidenceEnvelope, OfflineDecision, PPM, decision, integer, require_rows
+from .common import (
+    EvidenceEnvelope,
+    OfflineDecision,
+    PPM,
+    decision,
+    integer,
+    require_rows,
+)
 
 
 def index_trigger_and_dca_orders(
@@ -19,7 +26,10 @@ def index_trigger_and_dca_orders(
         for row in rows
         if row.get("public_or_opt_in") is True
         and str(row.get("order_id", "")).strip()
-        and integer(row.get("scheduled_amount_atomic", 0), "scheduled_amount_atomic", minimum=0) > 0
+        and integer(
+            row.get("scheduled_amount_atomic", 0), "scheduled_amount_atomic", minimum=0
+        )
+        > 0
     ]
     return tuple(sorted(accepted, key=lambda row: str(row["order_id"])))
 
@@ -75,7 +85,13 @@ def enforce_orderflow_permissions(
         "execution_finalized": bool(execution_finalized),
         "attempts_pre_execution_ordering": bool(attempts_pre_execution_ordering),
     }
-    return decision("PR-189", envelope=envelope, payload=payload, reasons=reasons, research_only=True)
+    return decision(
+        "PR-189",
+        envelope=envelope,
+        payload=payload,
+        reasons=reasons,
+        research_only=True,
+    )
 
 
 __all__ = [

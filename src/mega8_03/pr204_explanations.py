@@ -27,7 +27,10 @@ def emit_human_reason_code(
     limit: int = 3,
 ) -> tuple[str, ...]:
     count = integer(limit, "limit", minimum=1)
-    ranked = sorted(attributions.items(), key=lambda item: (-abs(integer(item[1], "attribution")), item[0]))
+    ranked = sorted(
+        attributions.items(),
+        key=lambda item: (-abs(integer(item[1], "attribution")), item[0]),
+    )
     return tuple(
         f"MODEL_FEATURE_{key.upper().replace('-', '_')}_{'POS' if value >= 0 else 'NEG'}"
         for key, value in ranked[:count]

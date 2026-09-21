@@ -33,7 +33,10 @@ def test_model_data_poisoning(
         abs(integer(clean, "clean_score") - integer(poisoned, "poisoned_score"))
         for clean, poisoned in zip(clean_scores_ppm, poisoned_scores_ppm, strict=True)
     ]
-    return {"mean_score_shift_ppm": mean_int(deltas), "max_score_shift_ppm": max(deltas)}
+    return {
+        "mean_score_shift_ppm": mean_int(deltas),
+        "max_score_shift_ppm": max(deltas),
+    }
 
 
 def detect_distribution_attack(
@@ -64,7 +67,11 @@ def quarantine_unsafe_model(
         maximum_distribution_shift_ppm, "maximum_distribution_shift_ppm", minimum=0
     ):
         reasons.append("MODEL_DISTRIBUTION_ATTACK_SUSPECTED")
-    return {"quarantined": bool(reasons), "reason_codes": tuple(reasons), "execution_authority": False}
+    return {
+        "quarantined": bool(reasons),
+        "reason_codes": tuple(reasons),
+        "execution_authority": False,
+    }
 
 
 __all__ = [

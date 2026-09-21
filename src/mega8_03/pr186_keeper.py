@@ -24,7 +24,10 @@ def discover_rebalance_jobs(
         return ()
     accepted: list[dict[str, Any]] = []
     for row in rows:
-        if row.get("authorized") is not True or row.get("deployment_verified") is not True:
+        if (
+            row.get("authorized") is not True
+            or row.get("deployment_verified") is not True
+        ):
             continue
         job_id = str(row.get("job_id", "")).strip()
         permission_ref = str(row.get("permission_ref", "")).strip()
@@ -38,7 +41,9 @@ def discover_rebalance_jobs(
                 "job_id": job_id,
                 "permission_ref": permission_ref,
                 "capacity_atomic": capacity,
-                "reward_atomic": integer(row.get("reward_atomic", 0), "reward_atomic", minimum=0),
+                "reward_atomic": integer(
+                    row.get("reward_atomic", 0), "reward_atomic", minimum=0
+                ),
             }
         )
     return tuple(sorted(accepted, key=lambda item: item["job_id"]))
@@ -80,7 +85,9 @@ def build_authorized_keeper_plan(
     payload = {
         "job_id": str(job["job_id"]),
         "permission_ref": str(job["permission_ref"]),
-        "capacity_atomic": integer(job["capacity_atomic"], "capacity_atomic", minimum=1),
+        "capacity_atomic": integer(
+            job["capacity_atomic"], "capacity_atomic", minimum=1
+        ),
         "economics": dict(economics),
         "state_generation": envelope.state_generation,
         "deployment_generation": envelope.deployment_generation,
@@ -95,7 +102,10 @@ def qualify_keeper_operation(
     envelope: EvidenceEnvelope,
     minimum_net_atomic: int = 0,
 ) -> OfflineDecision:
-    net = integer(plan.get("economics", {}).get("conservative_net_atomic"), "conservative_net_atomic")
+    net = integer(
+        plan.get("economics", {}).get("conservative_net_atomic"),
+        "conservative_net_atomic",
+    )
     threshold = integer(minimum_net_atomic, "minimum_net_atomic")
     reasons: list[str] = []
     if not plan.get("permission_ref"):

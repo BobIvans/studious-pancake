@@ -15,7 +15,10 @@ def fit_conformal_net_interval(
     alpha = ppm(miscoverage_ppm, "miscoverage_ppm")
     if alpha >= PPM:
         raise ValueError("miscoverage must be below 1.0")
-    absolute = [abs(integer(value, "calibration_error_atomic")) for value in calibration_errors_atomic]
+    absolute = [
+        abs(integer(value, "calibration_error_atomic"))
+        for value in calibration_errors_atomic
+    ]
     radius = quantile_int(absolute, PPM - alpha)
     return {
         "radius_atomic": radius,
@@ -32,7 +35,9 @@ def fit_conformal_latency_interval(
     alpha = ppm(miscoverage_ppm, "miscoverage_ppm")
     if alpha >= PPM:
         raise ValueError("miscoverage must be below 1.0")
-    absolute = [abs(integer(value, "calibration_error_ns")) for value in calibration_errors_ns]
+    absolute = [
+        abs(integer(value, "calibration_error_ns")) for value in calibration_errors_ns
+    ]
     radius = quantile_int(absolute, PPM - alpha)
     return {
         "radius_ns": radius,

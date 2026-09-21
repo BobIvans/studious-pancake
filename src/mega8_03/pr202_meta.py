@@ -15,9 +15,17 @@ def learn_cross_market_representation(
     width = len(feature_rows[0])
     if width == 0 or any(len(row) != width for row in feature_rows):
         raise ValueError("feature width must be stable")
-    means = [mean_int([integer(row[i], "feature") for row in feature_rows]) for i in range(width)]
+    means = [
+        mean_int([integer(row[i], "feature") for row in feature_rows])
+        for i in range(width)
+    ]
     scales = [
-        max(1, mean_int([abs(integer(row[i], "feature") - means[i]) for row in feature_rows]))
+        max(
+            1,
+            mean_int(
+                [abs(integer(row[i], "feature") - means[i]) for row in feature_rows]
+            ),
+        )
         for i in range(width)
     ]
     return advisory_model(
@@ -36,8 +44,14 @@ def adapt_model_to_new_venue(
     if not target_rows:
         raise ValueError("target rows are required")
     source_means = list(representation.parameters["means"])
-    target_means = [mean_int([integer(row[i], "feature") for row in target_rows]) for i in range(len(source_means))]
-    shift = [target - source for source, target in zip(source_means, target_means, strict=True)]
+    target_means = [
+        mean_int([integer(row[i], "feature") for row in target_rows])
+        for i in range(len(source_means))
+    ]
+    shift = [
+        target - source
+        for source, target in zip(source_means, target_means, strict=True)
+    ]
     return advisory_model(
         "mega8-03-adapted-venue",
         "venue-adaptation",

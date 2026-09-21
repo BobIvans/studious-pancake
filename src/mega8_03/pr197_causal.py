@@ -35,7 +35,10 @@ def build_causal_event_graph(
             if delta > lag:
                 break
             edges.append((left[0], right[0], delta))
-    return {"nodes": tuple(item[0] for item in ordered), "precedence_edges": tuple(edges)}
+    return {
+        "nodes": tuple(item[0] for item in ordered),
+        "precedence_edges": tuple(edges),
+    }
 
 
 def estimate_transfer_entropy(
@@ -48,7 +51,9 @@ def estimate_transfer_entropy(
     target = [integer(value, "target_bit", minimum=0) for value in target_bits]
     if any(value not in (0, 1) for value in (*source, *target)):
         raise ValueError("transfer entropy inputs must be binary")
-    triples = Counter((target[i], target[i - 1], source[i - 1]) for i in range(1, len(source)))
+    triples = Counter(
+        (target[i], target[i - 1], source[i - 1]) for i in range(1, len(source))
+    )
     yx = Counter((yp, xp) for _, yp, xp in triples.elements())
     yy = Counter((y, yp) for y, yp, _ in triples.elements())
     yp = Counter(yp for _, yp, _ in triples.elements())
@@ -71,7 +76,9 @@ def test_event_precedence_hypothesis(
     if not cause_times_ns or not effect_times_ns:
         raise ValueError("cause/effect samples are required")
     lag = integer(maximum_lag_ns, "maximum_lag_ns", minimum=1)
-    effects = sorted(integer(value, "effect_time_ns", minimum=0) for value in effect_times_ns)
+    effects = sorted(
+        integer(value, "effect_time_ns", minimum=0) for value in effect_times_ns
+    )
     successes = 0
     causes = [integer(value, "cause_time_ns", minimum=0) for value in cause_times_ns]
     for cause in causes:

@@ -45,9 +45,14 @@ def reconcile_recovery_components(
     total = 0
     for component in components:
         amount = integer(component.get("amount_atomic", 0), "amount_atomic", minimum=0)
-        if component.get("finalized") is True and component.get("source_verified") is True:
+        if (
+            component.get("finalized") is True
+            and component.get("source_verified") is True
+        ):
             total += amount
-    base = integer(strategy_net_before_recoveries_atomic, "strategy_net_before_recoveries_atomic")
+    base = integer(
+        strategy_net_before_recoveries_atomic, "strategy_net_before_recoveries_atomic"
+    )
     reasons = () if finalized else ("RECOVERY_OUTCOME_NOT_FINALIZED",)
     payload = {
         "strategy_net_before_recoveries_atomic": base,

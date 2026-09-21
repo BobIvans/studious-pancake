@@ -99,9 +99,7 @@ def test_pr195_survival_preserves_censoring() -> None:
             {"duration_ns": 20, "event_observed": False},
         )
     )
-    calibration = calibrate_duration_predictions(
-        (10, 30), (12, 20), (False, True)
-    )
+    calibration = calibrate_duration_predictions((10, 30), (12, 20), (False, True))
     assert km.parameters["censored_count"] == 1
     assert parametric.parameters["event_count"] == 2
     assert summary["right_censored_count"] == 1
@@ -112,9 +110,7 @@ def test_pr195_survival_preserves_censoring() -> None:
 
 def test_pr196_conformal_bounds_are_explicit_admission_inputs() -> None:
     net = fit_conformal_net_interval((1, -2, 3, -4), miscoverage_ppm=250_000)
-    latency = fit_conformal_latency_interval(
-        (10, 20, 30, 40), miscoverage_ppm=250_000
-    )
+    latency = fit_conformal_latency_interval((10, 20, 30, 40), miscoverage_ppm=250_000)
     net_interval = compute_prediction_set(
         point_estimate=10, radius=net["radius_atomic"]
     )
@@ -145,9 +141,7 @@ def test_pr197_causal_outputs_never_claim_causal_truth() -> None:
         (0, 0, 1, 1, 0, 1),
         (0, 0, 0, 1, 1, 0),
     )
-    precedence = test_event_precedence_hypothesis(
-        (1, 10), (2, 11), maximum_lag_ns=2
-    )
+    precedence = test_event_precedence_hypothesis((1, 10), (2, 11), maximum_lag_ns=2)
     model = promote_causal_feature(
         feature_id="swap-to-liq",
         preregistered=True,
@@ -167,12 +161,8 @@ def test_pr198_event_intensity_requires_holdout_gain() -> None:
         (10, 20, 40, 80),
         observation_horizon_ns=100,
     )
-    excitation = estimate_cross_venue_excitation(
-        (10, 50), (11, 90), window_ns=5
-    )
-    forecast = forecast_event_intensity(
-        model, elapsed_since_last_event_ns=5
-    )
+    excitation = estimate_cross_venue_excitation((10, 50), (11, 90), window_ns=5)
+    forecast = forecast_event_intensity(model, elapsed_since_last_event_ns=5)
     gain = validate_intensity_gain(
         model_log_loss_ppm=800,
         baseline_log_loss_ppm=1_000,
@@ -189,9 +179,7 @@ def test_pr199_graph_challenger_is_compared_to_deterministic_baseline() -> None:
         ({"node_id": "a"}, {"node_id": "b"}),
         ({"source": "a", "target": "b", "weight_atomic": 10},),
     )
-    model = train_graph_anomaly_model(
-        (encoded, tuple(value + 1 for value in encoded))
-    )
+    model = train_graph_anomaly_model((encoded, tuple(value + 1 for value in encoded)))
     score = score_graph_state_transition(model, encoded)
     comparison = compare_graph_baseline(
         challenger_scores=(0, 100),
@@ -214,9 +202,7 @@ def test_pr200_temporal_dataset_is_available_time_ordered() -> None:
     )
     model = train_temporal_anomaly_model(dataset)
     score = score_sequence_survival(model, dataset[0])
-    bench = benchmark_inference_latency(
-        (10, 20, 30, 40), maximum_p95_ns=50
-    )
+    bench = benchmark_inference_latency((10, 20, 30, 40), maximum_p95_ns=50)
     assert dataset[0][0] == (1, 10)
     assert 0 <= score <= 1_000_000
     assert bench["within_latency_budget"] is True
@@ -231,15 +217,9 @@ def test_pr201_active_learning_consumes_only_bounded_label_quota() -> None:
         ),
         limit=2,
     )
-    requests = request_targeted_labels(
-        selected, quota_units=3, cost_per_label=2
-    )
-    pool = update_active_learning_pool(
-        {"a": None, "b": None}, {"a": "positive"}
-    )
-    efficiency = measure_label_efficiency(
-        (100, 100), (60, 80), acquired_labels=1
-    )
+    requests = request_targeted_labels(selected, quota_units=3, cost_per_label=2)
+    pool = update_active_learning_pool({"a": None, "b": None}, {"a": "positive"})
+    efficiency = measure_label_efficiency((100, 100), (60, 80), acquired_labels=1)
     assert selected[0]["sample_id"] == "a"
     assert len(requests) == 1
     assert pool["a"] == "positive"
@@ -249,15 +229,11 @@ def test_pr201_active_learning_consumes_only_bounded_label_quota() -> None:
 def test_pr202_meta_learning_blocks_negative_transfer() -> None:
     source = learn_cross_market_representation(((1, 2), (3, 4)))
     adapted = adapt_model_to_new_venue(source, ((2, 3), (4, 5)))
-    gain = measure_transfer_gain(
-        baseline_loss_ppm=1_000, transferred_loss_ppm=800
-    )
+    gain = measure_transfer_gain(baseline_loss_ppm=1_000, transferred_loss_ppm=800)
     allowed = prevent_negative_transfer(
         transfer_gain_ppm=gain, minimum_gain_ppm=100_000
     )
-    denied = prevent_negative_transfer(
-        transfer_gain_ppm=-1, minimum_gain_ppm=0
-    )
+    denied = prevent_negative_transfer(transfer_gain_ppm=-1, minimum_gain_ppm=0)
     assert allowed["transfer_allowed"] is True
     assert denied["transfer_allowed"] is False
     assert_advisory(source)
@@ -265,9 +241,7 @@ def test_pr202_meta_learning_blocks_negative_transfer() -> None:
 
 
 def test_pr203_model_robustness_can_quarantine() -> None:
-    down, up = generate_adversarial_features(
-        {"x": 100}, perturbation_ppm=100_000
-    )
+    down, up = generate_adversarial_features({"x": 100}, perturbation_ppm=100_000)
     poison = test_model_data_poisoning((100, 100), (200, 100))
     drift = detect_distribution_attack((100, 100), (200, 200))
     quarantine = quarantine_unsafe_model(
@@ -287,9 +261,7 @@ def test_pr204_explanations_are_bound_to_evidence() -> None:
         {"x": 500_000, "y": -250_000}, {"x": 4, "y": 8}
     )
     reasons = emit_human_reason_code(attribution)
-    trace = trace_model_to_evidence(
-        ("x", "y"), {"x": "a" * 64, "y": "b" * 64}
-    )
+    trace = trace_model_to_evidence(("x", "y"), {"x": "a" * 64, "y": "b" * 64})
     stability = audit_explanation_stability(
         (attribution, dict(attribution)), maximum_mean_delta=0
     )
@@ -305,9 +277,7 @@ def test_pr205_ope_checks_support_instead_of_treating_shadow_as_landed() -> None
         maximum_weight_ppm=2_000_000,
     )
     ips = estimate_offline_policy_value((10, 20), weights)
-    dr = run_doubly_robust_estimator(
-        (10, 20), (8, 18), (9, 19), weights
-    )
+    dr = run_doubly_robust_estimator((10, 20), (8, 18), (9, 19), weights)
     support = reject_unsupported_policy_shift(
         weights,
         maximum_weight_ppm=2_000_000,
@@ -346,9 +316,7 @@ def test_pr206_bandit_has_no_live_actions_and_audits_cost() -> None:
         exploration_budget_ppm=100_000,
         deterministic_draw_ppm=50_000,
     )
-    audit = audit_bandit_regret_and_cost(
-        (8, 9), (10, 10), (1, 1)
-    )
+    audit = audit_bandit_regret_and_cost((8, 9), (10, 10), (1, 1))
     assert len(actions) == 1
     assert chosen["live_effect"] is False
     assert audit["cumulative_regret_atomic"] == 3
@@ -359,9 +327,7 @@ def test_pr207_synthetic_twin_cannot_enter_realized_pnl() -> None:
         {"price": 100}, {"price": -10}, scenario_id="s1"
     )
     calibration = calibrate_digital_twin((100, 105), (100, 100))
-    verdict = validate_sim_to_real_gap(
-        calibration, maximum_gap_ppm=100_000
-    )
+    verdict = validate_sim_to_real_gap(calibration, maximum_gap_ppm=100_000)
     labels = label_synthetic_vs_observed(
         (
             {"episode_id": "s", "source_kind": "synthetic"},
@@ -395,9 +361,7 @@ def test_pr208_competition_adjustment_only_reduces_candidate() -> None:
         attempts_per_episode_ppm=400_000,
         landed_share_ppm=300_000,
     )
-    decay = model_alpha_capacity_decay(
-        (10, 20, 30), (5, 1, -1)
-    )
+    decay = model_alpha_capacity_decay((10, 20, 30), (5, 1, -1))
     adjusted = adjust_candidate_for_competition(
         conservative_net_atomic=100,
         crowding_penalty_ppm=100_000,

@@ -14,19 +14,25 @@ def cluster_competitor_archetypes(
     buckets: dict[str, list[str]] = {}
     for row in rows:
         speed = integer(row.get("latency_ms", 0), "latency_ms", minimum=0)
-        size = integer(row.get("typical_size_atomic", 0), "typical_size_atomic", minimum=0)
+        size = integer(
+            row.get("typical_size_atomic", 0), "typical_size_atomic", minimum=0
+        )
         archetype = (
             "fast-large"
             if speed <= 100 and size > 1_000
-            else "fast-small"
-            if speed <= 100
-            else "slow-large"
-            if size > 1_000
-            else "slow-small"
+            else (
+                "fast-small"
+                if speed <= 100
+                else "slow-large" if size > 1_000 else "slow-small"
+            )
         )
         buckets.setdefault(archetype, []).append(str(row.get("public_actor_id", "")))
     return tuple(
-        {"archetype": name, "public_actor_ids": tuple(sorted(actor for actor in actors if actor)), "count": len(actors)}
+        {
+            "archetype": name,
+            "public_actor_ids": tuple(sorted(actor for actor in actors if actor)),
+            "count": len(actors),
+        }
         for name, actors in sorted(buckets.items())
     )
 
@@ -74,7 +80,9 @@ def adjust_candidate_for_competition(
     decay_penalty_ppm: int,
 ) -> dict[str, int | bool]:
     net = integer(conservative_net_atomic, "conservative_net_atomic")
-    crowding = min(PPM, integer(crowding_penalty_ppm, "crowding_penalty_ppm", minimum=0))
+    crowding = min(
+        PPM, integer(crowding_penalty_ppm, "crowding_penalty_ppm", minimum=0)
+    )
     decay = min(PPM, integer(decay_penalty_ppm, "decay_penalty_ppm", minimum=0))
     retained_ppm = max(0, PPM - crowding - decay)
     adjusted = net * retained_ppm // PPM

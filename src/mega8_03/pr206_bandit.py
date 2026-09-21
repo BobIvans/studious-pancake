@@ -28,13 +28,20 @@ def select_simulation_budget_action(
     actions: Sequence[Mapping[str, Any]],
 ) -> dict[str, Any]:
     require_rows(actions, "actions")
+
     def score(row: Mapping[str, Any]) -> int:
         value = integer(row.get("information_gain_ppm", 0), "information_gain_ppm")
-        uncertainty = integer(row.get("uncertainty_reduction_ppm", 0), "uncertainty_reduction_ppm")
+        uncertainty = integer(
+            row.get("uncertainty_reduction_ppm", 0), "uncertainty_reduction_ppm"
+        )
         cost = max(1, integer(row.get("cost_units", 1), "cost_units", minimum=1))
         return (value + uncertainty) * PPM // cost
+
     selected = max(actions, key=lambda row: (score(row), str(row.get("action_id", ""))))
-    return dict(selected) | {"selection_score_ppm": score(selected), "execution_authority": False}
+    return dict(selected) | {
+        "selection_score_ppm": score(selected),
+        "execution_authority": False,
+    }
 
 
 def apply_conservative_exploration(
@@ -57,12 +64,16 @@ def audit_bandit_regret_and_cost(
     action_cost_units: Sequence[int],
 ) -> dict[str, int]:
     if not realized_values_atomic or not (
-        len(realized_values_atomic) == len(oracle_values_atomic) == len(action_cost_units)
+        len(realized_values_atomic)
+        == len(oracle_values_atomic)
+        == len(action_cost_units)
     ):
         raise ValueError("bandit audit arrays must align")
     regret = sum(
         max(0, integer(oracle, "oracle") - integer(realized, "realized"))
-        for realized, oracle in zip(realized_values_atomic, oracle_values_atomic, strict=True)
+        for realized, oracle in zip(
+            realized_values_atomic, oracle_values_atomic, strict=True
+        )
     )
     cost = sum(integer(value, "cost_units", minimum=0) for value in action_cost_units)
     return {"cumulative_regret_atomic": regret, "total_cost_units": cost}

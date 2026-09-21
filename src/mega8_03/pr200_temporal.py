@@ -4,7 +4,15 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-from .common import AdvisoryModel, PPM, advisory_model, integer, mean_int, quantile_int, require_rows
+from .common import (
+    AdvisoryModel,
+    PPM,
+    advisory_model,
+    integer,
+    mean_int,
+    quantile_int,
+    require_rows,
+)
 
 
 def build_temporal_sequence_dataset(
@@ -14,13 +22,23 @@ def build_temporal_sequence_dataset(
 ) -> tuple[tuple[tuple[int, ...], ...], ...]:
     require_rows(rows, "rows")
     width = integer(window, "window", minimum=1)
-    ordered = sorted(rows, key=lambda row: integer(row.get("available_at_ns"), "available_at_ns", minimum=0))
-    features = [tuple(integer(value, "feature") for value in row.get("features", ())) for row in ordered]
+    ordered = sorted(
+        rows,
+        key=lambda row: integer(
+            row.get("available_at_ns"), "available_at_ns", minimum=0
+        ),
+    )
+    features = [
+        tuple(integer(value, "feature") for value in row.get("features", ()))
+        for row in ordered
+    ]
     if not features or any(not row for row in features):
         raise ValueError("temporal features are required")
     if len({len(row) for row in features}) != 1:
         raise ValueError("feature width must be stable")
-    return tuple(tuple(features[i - width + 1 : i + 1]) for i in range(width - 1, len(features)))
+    return tuple(
+        tuple(features[i - width + 1 : i + 1]) for i in range(width - 1, len(features))
+    )
 
 
 def train_temporal_anomaly_model(
@@ -34,7 +52,9 @@ def train_temporal_anomaly_model(
     width = len(terminal[0])
     if any(len(row) != width for row in terminal):
         raise ValueError("temporal feature width mismatch")
-    means = [mean_int([integer(row[i], "feature") for row in terminal]) for i in range(width)]
+    means = [
+        mean_int([integer(row[i], "feature") for row in terminal]) for i in range(width)
+    ]
     return advisory_model(
         "mega8-03-temporal",
         "temporal-terminal-baseline",
@@ -54,7 +74,10 @@ def score_sequence_survival(
     terminal = sequence[-1]
     if len(terminal) != len(means):
         raise ValueError("sequence feature width mismatch")
-    distance = sum(abs(integer(v, "feature") - integer(m, "mean")) for v, m in zip(terminal, means, strict=True))
+    distance = sum(
+        abs(integer(v, "feature") - integer(m, "mean"))
+        for v, m in zip(terminal, means, strict=True)
+    )
     return max(0, PPM - min(PPM, distance))
 
 

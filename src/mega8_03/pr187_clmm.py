@@ -55,9 +55,15 @@ def estimate_fee_growth_dislocation(
     expected_fee_growth_atomic: int,
     position_liquidity_atomic: int,
 ) -> dict[str, int]:
-    observed = integer(observed_fee_growth_atomic, "observed_fee_growth_atomic", minimum=0)
-    expected = integer(expected_fee_growth_atomic, "expected_fee_growth_atomic", minimum=0)
-    liquidity = integer(position_liquidity_atomic, "position_liquidity_atomic", minimum=1)
+    observed = integer(
+        observed_fee_growth_atomic, "observed_fee_growth_atomic", minimum=0
+    )
+    expected = integer(
+        expected_fee_growth_atomic, "expected_fee_growth_atomic", minimum=0
+    )
+    liquidity = integer(
+        position_liquidity_atomic, "position_liquidity_atomic", minimum=1
+    )
     delta = observed - expected
     return {
         "fee_growth_delta_atomic": delta,
@@ -87,7 +93,13 @@ def emit_clmm_position_candidate(
         "fee_growth": dict(fee_growth),
         "conservative_net_atomic": net,
     }
-    return decision("PR-187", envelope=envelope, payload=payload, reasons=reasons, research_only=True)
+    return decision(
+        "PR-187",
+        envelope=envelope,
+        payload=payload,
+        reasons=reasons,
+        research_only=True,
+    )
 
 
 __all__ = [

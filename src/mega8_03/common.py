@@ -78,7 +78,9 @@ class EvidenceEnvelope:
             if not isinstance(getattr(self, field), bool):
                 raise Mega803Error(f"{field} must be bool")
         if self.signer_allowed or self.submission_allowed or self.live_enabled:
-            raise Mega803Error("MEGA8-03 cannot grant signing/submission/live authority")
+            raise Mega803Error(
+                "MEGA8-03 cannot grant signing/submission/live authority"
+            )
 
     @property
     def blockers(self) -> tuple[str, ...]:
@@ -114,7 +116,9 @@ class OfflineDecision:
             or self.live_enabled
             or self.automatic_capital_increase_allowed
         ):
-            raise Mega803Error("offline decision cannot grant execution/capital authority")
+            raise Mega803Error(
+                "offline decision cannot grant execution/capital authority"
+            )
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -163,11 +167,15 @@ def decision(
     status = (
         OfflineStatus.BLOCKED
         if envelope.blockers
-        else OfflineStatus.REJECTED
-        if reasons_tuple
-        else OfflineStatus.RESEARCH_ONLY
-        if research_only
-        else OfflineStatus.QUALIFIED_OFFLINE
+        else (
+            OfflineStatus.REJECTED
+            if reasons_tuple
+            else (
+                OfflineStatus.RESEARCH_ONLY
+                if research_only
+                else OfflineStatus.QUALIFIED_OFFLINE
+            )
+        )
     )
     evidence = stable_hash(
         f"mega8-03/{child_id}/v1",

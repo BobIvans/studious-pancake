@@ -19,11 +19,15 @@ def generate_synthetic_market_scenario(
     payload = {
         "scenario_id": str(scenario_id),
         "state": state,
-        "shocks": {key: integer(value, f"shock:{key}") for key, value in shocks.items()},
+        "shocks": {
+            key: integer(value, f"shock:{key}") for key, value in shocks.items()
+        },
         "synthetic": True,
         "realized_pnl_eligible": False,
     }
-    return payload | {"scenario_sha256": stable_hash("mega8-03/synthetic-scenario/v1", payload)}
+    return payload | {
+        "scenario_sha256": stable_hash("mega8-03/synthetic-scenario/v1", payload)
+    }
 
 
 def calibrate_digital_twin(
@@ -61,7 +65,13 @@ def label_synthetic_vs_observed(
         source = str(row.get("source_kind", "")).lower()
         if source not in {"synthetic", "observed"}:
             raise ValueError("source_kind must be synthetic or observed")
-        labeled.append(dict(row) | {"synthetic": source == "synthetic", "realized_pnl_eligible": source == "observed"})
+        labeled.append(
+            dict(row)
+            | {
+                "synthetic": source == "synthetic",
+                "realized_pnl_eligible": source == "observed",
+            }
+        )
     return tuple(labeled)
 
 

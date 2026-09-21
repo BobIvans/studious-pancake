@@ -14,7 +14,9 @@ def fit_hawkes_event_model(
     observation_horizon_ns: int,
 ) -> AdvisoryModel:
     horizon = integer(observation_horizon_ns, "observation_horizon_ns", minimum=1)
-    times = sorted(integer(value, "event_time_ns", minimum=0) for value in event_times_ns)
+    times = sorted(
+        integer(value, "event_time_ns", minimum=0) for value in event_times_ns
+    )
     if not times:
         raise ValueError("event times are required")
     if times[-1] > horizon:
@@ -23,7 +25,9 @@ def fit_hawkes_event_model(
     positive = [value for value in intervals if value > 0]
     median_gap = sorted(positive)[len(positive) // 2] if positive else horizon
     short = sum(value <= median_gap for value in positive)
-    branching_ppm = 0 if not positive else min(900_000, short * 500_000 // len(positive))
+    branching_ppm = (
+        0 if not positive else min(900_000, short * 500_000 // len(positive))
+    )
     return advisory_model(
         "mega8-03-hawkes",
         "exponential-kernel-intensity",
@@ -46,12 +50,22 @@ def estimate_cross_venue_excitation(
     window_ns: int,
 ) -> dict[str, int]:
     window = integer(window_ns, "window_ns", minimum=1)
-    sources = sorted(integer(value, "source_time_ns", minimum=0) for value in source_times_ns)
-    targets = sorted(integer(value, "target_time_ns", minimum=0) for value in target_times_ns)
+    sources = sorted(
+        integer(value, "source_time_ns", minimum=0) for value in source_times_ns
+    )
+    targets = sorted(
+        integer(value, "target_time_ns", minimum=0) for value in target_times_ns
+    )
     if not sources:
         raise ValueError("source events are required")
-    excited = sum(any(source < target <= source + window for target in targets) for source in sources)
-    return {"source_count": len(sources), "excited_share_ppm": excited * PPM // len(sources)}
+    excited = sum(
+        any(source < target <= source + window for target in targets)
+        for source in sources
+    )
+    return {
+        "source_count": len(sources),
+        "excited_share_ppm": excited * PPM // len(sources),
+    }
 
 
 def forecast_event_intensity(
@@ -59,7 +73,9 @@ def forecast_event_intensity(
     *,
     elapsed_since_last_event_ns: int,
 ) -> dict[str, int]:
-    elapsed = integer(elapsed_since_last_event_ns, "elapsed_since_last_event_ns", minimum=0)
+    elapsed = integer(
+        elapsed_since_last_event_ns, "elapsed_since_last_event_ns", minimum=0
+    )
     params = model.parameters
     half_life = integer(params["kernel_half_life_ns"], "kernel_half_life_ns", minimum=1)
     branch = integer(params["branching_ratio_ppm"], "branching_ratio_ppm", minimum=0)

@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-from .common import EvidenceEnvelope, OfflineDecision, PPM, decision, integer, require_rows
+from .common import (
+    EvidenceEnvelope,
+    OfflineDecision,
+    PPM,
+    decision,
+    integer,
+    require_rows,
+)
 
 
 def estimate_liquidation_competition(
@@ -52,11 +59,17 @@ def simulate_liquidation_cascade(
     triggered = 0
     debt = 0
     for row in rows:
-        buffer_ppm = integer(row.get("health_buffer_ppm"), "health_buffer_ppm", minimum=0)
+        buffer_ppm = integer(
+            row.get("health_buffer_ppm"), "health_buffer_ppm", minimum=0
+        )
         if shock >= buffer_ppm:
             triggered += 1
             debt += integer(row.get("debt_atomic", 0), "debt_atomic", minimum=0)
-    return {"triggered_positions": triggered, "triggered_debt_atomic": debt, "counterfactual": True}
+    return {
+        "triggered_positions": triggered,
+        "triggered_debt_atomic": debt,
+        "counterfactual": True,
+    }
 
 
 def rank_tail_liquidations(
@@ -69,12 +82,28 @@ def rank_tail_liquidations(
     for row in candidates:
         bonus = integer(row.get("bonus_atomic"), "bonus_atomic", minimum=0)
         exit_cost = integer(row.get("exit_cost_atomic"), "exit_cost_atomic", minimum=0)
-        competition_cost = integer(row.get("competition_cost_atomic"), "competition_cost_atomic", minimum=0)
+        competition_cost = integer(
+            row.get("competition_cost_atomic"), "competition_cost_atomic", minimum=0
+        )
         net = bonus - exit_cost - competition_cost
         payload = dict(row) | {"conservative_net_atomic": net}
         reasons = () if net > 0 else ("LIQUIDATION_NET_NOT_POSITIVE",)
-        decisions.append(decision("PR-192", envelope=envelope, payload=payload, reasons=reasons, research_only=True))
-    return tuple(sorted(decisions, key=lambda item: int(item.payload["conservative_net_atomic"]), reverse=True))
+        decisions.append(
+            decision(
+                "PR-192",
+                envelope=envelope,
+                payload=payload,
+                reasons=reasons,
+                research_only=True,
+            )
+        )
+    return tuple(
+        sorted(
+            decisions,
+            key=lambda item: int(item.payload["conservative_net_atomic"]),
+            reverse=True,
+        )
+    )
 
 
 __all__ = [

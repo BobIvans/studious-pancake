@@ -18,7 +18,15 @@ def detect_new_market_activation(
         and row.get("active") is True
         and str(row.get("market_id", "")).strip()
     ]
-    return tuple(sorted(events, key=lambda row: (integer(row.get("available_at_ns", 0), "available_at_ns", minimum=0), str(row["market_id"]))))
+    return tuple(
+        sorted(
+            events,
+            key=lambda row: (
+                integer(row.get("available_at_ns", 0), "available_at_ns", minimum=0),
+                str(row["market_id"]),
+            ),
+        )
+    )
 
 
 def compare_router_direct_coverage(
@@ -68,7 +76,13 @@ def qualify_new_market_worker(
         "exit_path": dict(exit_path),
         "direct_adapter_qualified": bool(direct_adapter_qualified),
     }
-    return decision("PR-193", envelope=envelope, payload=payload, reasons=reasons, research_only=True)
+    return decision(
+        "PR-193",
+        envelope=envelope,
+        payload=payload,
+        reasons=reasons,
+        research_only=True,
+    )
 
 
 __all__ = [

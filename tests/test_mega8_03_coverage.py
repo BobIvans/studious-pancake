@@ -10,7 +10,6 @@ from src.mega8_03.common import (
     AdvisoryModel,
 )
 
-
 EXPECTED = {
     "pr186_keeper": (
         "discover_rebalance_jobs",

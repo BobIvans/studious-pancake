@@ -15,13 +15,12 @@ def select_uncertain_samples(
     require_rows(rows, "samples")
     count = integer(limit, "limit", minimum=1)
     ranked = sorted(
-        (
-            dict(row)
-            for row in rows
-            if str(row.get("sample_id", "")).strip()
-        ),
+        (dict(row) for row in rows if str(row.get("sample_id", "")).strip()),
         key=lambda row: (
-            abs(integer(row.get("probability_ppm"), "probability_ppm", minimum=0) - PPM // 2),
+            abs(
+                integer(row.get("probability_ppm"), "probability_ppm", minimum=0)
+                - PPM // 2
+            ),
             str(row["sample_id"]),
         ),
     )
@@ -66,11 +65,20 @@ def measure_label_efficiency(
     *,
     acquired_labels: int,
 ) -> dict[str, int]:
-    if not uncertainty_before_ppm or len(uncertainty_before_ppm) != len(uncertainty_after_ppm):
+    if not uncertainty_before_ppm or len(uncertainty_before_ppm) != len(
+        uncertainty_after_ppm
+    ):
         raise ValueError("uncertainty arrays must align")
     labels = integer(acquired_labels, "acquired_labels", minimum=1)
-    before = mean_int([integer(v, "uncertainty_before_ppm", minimum=0) for v in uncertainty_before_ppm])
-    after = mean_int([integer(v, "uncertainty_after_ppm", minimum=0) for v in uncertainty_after_ppm])
+    before = mean_int(
+        [
+            integer(v, "uncertainty_before_ppm", minimum=0)
+            for v in uncertainty_before_ppm
+        ]
+    )
+    after = mean_int(
+        [integer(v, "uncertainty_after_ppm", minimum=0) for v in uncertainty_after_ppm]
+    )
     return {
         "uncertainty_reduction_ppm": before - after,
         "reduction_per_label_ppm": (before - after) // labels,

@@ -200,10 +200,13 @@ def test_pr189_orderflow_never_authorizes_harmful_preexecution_ordering() -> Non
         )
     )
     assert len(rows) == 1
-    assert estimate_scheduled_flow_impact(
-        scheduled_amount_atomic=10,
-        visible_liquidity_atomic=100,
-    )["estimated_impact_ppm"] == 100_000
+    assert (
+        estimate_scheduled_flow_impact(
+            scheduled_amount_atomic=10,
+            visible_liquidity_atomic=100,
+        )["estimated_impact_ppm"]
+        == 100_000
+    )
     residual = detect_post_execution_residual(
         execution_finalized=True,
         pre_reference_atomic=100,
@@ -365,15 +368,22 @@ def test_pr193_market_activation_requires_verified_liquid_exit() -> None:
 
 
 def test_pr194_recovery_attribution_does_not_relabel_recovery_as_alpha() -> None:
-    assert attribute_positive_slippage(
-        quoted_output_atomic=100, finalized_output_atomic=105
-    ) == 5
-    assert attribute_transaction_rebate(
-        finalized_rebate_atomic=4, receipt_verified=True
-    ) == 4
-    assert attribute_affiliate_or_fee_refund(
-        finalized_refund_atomic=3, source_verified=False
-    ) == 0
+    assert (
+        attribute_positive_slippage(
+            quoted_output_atomic=100, finalized_output_atomic=105
+        )
+        == 5
+    )
+    assert (
+        attribute_transaction_rebate(finalized_rebate_atomic=4, receipt_verified=True)
+        == 4
+    )
+    assert (
+        attribute_affiliate_or_fee_refund(
+            finalized_refund_atomic=3, source_verified=False
+        )
+        == 0
+    )
     result = reconcile_recovery_components(
         (
             {"amount_atomic": 4, "finalized": True, "source_verified": True},

@@ -40,7 +40,9 @@ def reserve_margin_and_inventory(
 ) -> dict[str, Any]:
     required = integer(required_margin_atomic, "required_margin_atomic", minimum=1)
     margin = integer(available_margin_atomic, "available_margin_atomic", minimum=0)
-    inventory = integer(available_inventory_atomic, "available_inventory_atomic", minimum=0)
+    inventory = integer(
+        available_inventory_atomic, "available_inventory_atomic", minimum=0
+    )
     spot = integer(plan["spot_amount_atomic"], "spot_amount_atomic", minimum=1)
     return {
         "margin_reserved_atomic": required if margin >= required else 0,
@@ -80,7 +82,10 @@ def reconcile_hedged_position(
         reasons.append("MARGIN_OR_INVENTORY_INSUFFICIENT")
     if finalized is not True:
         reasons.append("HEDGE_OUTCOME_NOT_FINALIZED")
-    if integer(partial_fill_risk.get("unhedged_atomic"), "unhedged_atomic", minimum=0) > 0:
+    if (
+        integer(partial_fill_risk.get("unhedged_atomic"), "unhedged_atomic", minimum=0)
+        > 0
+    ):
         reasons.append("PARTIAL_FILL_EXPOSURE_REMAINS")
     payload = {
         "reservation": dict(reservation),
@@ -88,7 +93,13 @@ def reconcile_hedged_position(
         "finalized": bool(finalized),
         "atomic_profile": False,
     }
-    return decision("PR-191", envelope=envelope, payload=payload, reasons=reasons, research_only=True)
+    return decision(
+        "PR-191",
+        envelope=envelope,
+        payload=payload,
+        reasons=reasons,
+        research_only=True,
+    )
 
 
 __all__ = [

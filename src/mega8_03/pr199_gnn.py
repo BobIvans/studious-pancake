@@ -28,7 +28,9 @@ def encode_dynamic_market_graph(
             raise ValueError("edge references unknown node")
         degrees[left] += 1
         degrees[right] += 1
-        total_weight += integer(edge.get("weight_atomic", 0), "weight_atomic", minimum=0)
+        total_weight += integer(
+            edge.get("weight_atomic", 0), "weight_atomic", minimum=0
+        )
     return (
         len(nodes),
         len(edges),
@@ -46,9 +48,17 @@ def train_graph_anomaly_model(
     width = len(encoded_states[0])
     if width == 0 or any(len(row) != width for row in encoded_states):
         raise ValueError("graph encodings must have stable width")
-    means = [mean_int([integer(row[i], "feature") for row in encoded_states]) for i in range(width)]
+    means = [
+        mean_int([integer(row[i], "feature") for row in encoded_states])
+        for i in range(width)
+    ]
     scales = [
-        max(1, mean_int([abs(integer(row[i], "feature") - means[i]) for row in encoded_states]))
+        max(
+            1,
+            mean_int(
+                [abs(integer(row[i], "feature") - means[i]) for row in encoded_states]
+            ),
+        )
         for i in range(width)
     ]
     return advisory_model(
@@ -86,12 +96,18 @@ def compare_graph_baseline(
         len(challenger_scores) == len(baseline_scores) == len(labels)
     ):
         raise ValueError("score/label arrays must align")
+
     def separation(scores: Sequence[int]) -> int:
-        positives = [integer(s, "score") for s, y in zip(scores, labels, strict=True) if y == 1]
-        negatives = [integer(s, "score") for s, y in zip(scores, labels, strict=True) if y == 0]
+        positives = [
+            integer(s, "score") for s, y in zip(scores, labels, strict=True) if y == 1
+        ]
+        negatives = [
+            integer(s, "score") for s, y in zip(scores, labels, strict=True) if y == 0
+        ]
         if not positives or not negatives:
             return 0
         return mean_int(positives) - mean_int(negatives)
+
     challenger = separation(challenger_scores)
     baseline = separation(baseline_scores)
     return {

@@ -101,9 +101,7 @@ def calibrate_duration_predictions(
     observed_ns: Sequence[int],
     censored: Sequence[bool],
 ) -> dict[str, int | None]:
-    if not predicted_ns or not (
-        len(predicted_ns) == len(observed_ns) == len(censored)
-    ):
+    if not predicted_ns or not (len(predicted_ns) == len(observed_ns) == len(censored)):
         raise ValueError("prediction calibration arrays must align")
     errors: list[int] = []
     censored_covered = 0

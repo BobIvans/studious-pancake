@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-from .common import EvidenceEnvelope, OfflineDecision, PPM, decision, integer, require_rows
+from .common import (
+    EvidenceEnvelope,
+    OfflineDecision,
+    PPM,
+    decision,
+    integer,
+    require_rows,
+)
 
 
 def collect_perp_mark_index_funding(
@@ -23,21 +30,39 @@ def collect_perp_mark_index_funding(
                 "market_id": market_id,
                 "mark_price_atomic": mark,
                 "index_price_atomic": index,
-                "funding_rate_ppm": integer(row.get("funding_rate_ppm", 0), "funding_rate_ppm"),
-                "open_interest_atomic": integer(row.get("open_interest_atomic", 0), "open_interest_atomic", minimum=0),
-                "available_at_ns": integer(row.get("available_at_ns", 0), "available_at_ns", minimum=0),
+                "funding_rate_ppm": integer(
+                    row.get("funding_rate_ppm", 0), "funding_rate_ppm"
+                ),
+                "open_interest_atomic": integer(
+                    row.get("open_interest_atomic", 0),
+                    "open_interest_atomic",
+                    minimum=0,
+                ),
+                "available_at_ns": integer(
+                    row.get("available_at_ns", 0), "available_at_ns", minimum=0
+                ),
             }
         )
-    return tuple(sorted(out, key=lambda item: (item["available_at_ns"], item["market_id"])))
+    return tuple(
+        sorted(out, key=lambda item: (item["available_at_ns"], item["market_id"]))
+    )
 
 
 def normalize_perp_contract_specs(spec: Mapping[str, Any]) -> dict[str, int | str]:
     return {
         "market_id": str(spec["market_id"]),
-        "base_lot_atomic": integer(spec["base_lot_atomic"], "base_lot_atomic", minimum=1),
-        "quote_lot_atomic": integer(spec["quote_lot_atomic"], "quote_lot_atomic", minimum=1),
-        "maintenance_margin_ppm": integer(spec["maintenance_margin_ppm"], "maintenance_margin_ppm", minimum=0),
-        "max_leverage_ppm": integer(spec["max_leverage_ppm"], "max_leverage_ppm", minimum=0),
+        "base_lot_atomic": integer(
+            spec["base_lot_atomic"], "base_lot_atomic", minimum=1
+        ),
+        "quote_lot_atomic": integer(
+            spec["quote_lot_atomic"], "quote_lot_atomic", minimum=1
+        ),
+        "maintenance_margin_ppm": integer(
+            spec["maintenance_margin_ppm"], "maintenance_margin_ppm", minimum=0
+        ),
+        "max_leverage_ppm": integer(
+            spec["max_leverage_ppm"], "max_leverage_ppm", minimum=0
+        ),
     }
 
 
@@ -61,11 +86,27 @@ def rank_inventory_required_basis(
     ranked: list[OfflineDecision] = []
     for row in candidates:
         net = integer(row.get("conservative_net_atomic"), "conservative_net_atomic")
-        margin = integer(row.get("required_margin_atomic"), "required_margin_atomic", minimum=1)
+        margin = integer(
+            row.get("required_margin_atomic"), "required_margin_atomic", minimum=1
+        )
         payload = dict(row) | {"return_on_margin_ppm": net * PPM // margin}
         reasons = () if net > 0 else ("BASIS_NET_NOT_POSITIVE",)
-        ranked.append(decision("PR-190", envelope=envelope, payload=payload, reasons=reasons, research_only=True))
-    return tuple(sorted(ranked, key=lambda item: int(item.payload["return_on_margin_ppm"]), reverse=True))
+        ranked.append(
+            decision(
+                "PR-190",
+                envelope=envelope,
+                payload=payload,
+                reasons=reasons,
+                research_only=True,
+            )
+        )
+    return tuple(
+        sorted(
+            ranked,
+            key=lambda item: int(item.payload["return_on_margin_ppm"]),
+            reverse=True,
+        )
+    )
 
 
 __all__ = [

@@ -4,7 +4,14 @@ from __future__ import annotations
 
 from typing import Any, Mapping, Sequence
 
-from .common import EvidenceEnvelope, OfflineDecision, decision, integer, require_rows, stable_hash
+from .common import (
+    EvidenceEnvelope,
+    OfflineDecision,
+    decision,
+    integer,
+    require_rows,
+    stable_hash,
+)
 
 
 def ingest_solana_intent_quotes(
@@ -26,7 +33,11 @@ def ingest_solana_intent_quotes(
         if not intent_id or not quote_id:
             continue
         accepted.append(dict(row))
-    return tuple(sorted(accepted, key=lambda item: (str(item["intent_id"]), str(item["quote_id"]))))
+    return tuple(
+        sorted(
+            accepted, key=lambda item: (str(item["intent_id"]), str(item["quote_id"]))
+        )
+    )
 
 
 def price_rfq_fill_path(
@@ -36,7 +47,9 @@ def price_rfq_fill_path(
     execution_cost_atomic: int,
 ) -> dict[str, int]:
     offered = integer(offered_output_atomic, "offered_output_atomic", minimum=0)
-    direct = integer(direct_route_output_atomic, "direct_route_output_atomic", minimum=0)
+    direct = integer(
+        direct_route_output_atomic, "direct_route_output_atomic", minimum=0
+    )
     cost = integer(execution_cost_atomic, "execution_cost_atomic", minimum=0)
     return {
         "offered_output_atomic": offered,
@@ -74,7 +87,9 @@ def qualify_opt_in_intent_fill(
     now_ns: int,
 ) -> OfflineDecision:
     reasons: list[str] = []
-    if integer(plan.get("expires_at_ns"), "expires_at_ns", minimum=1) <= integer(now_ns, "now_ns", minimum=0):
+    if integer(plan.get("expires_at_ns"), "expires_at_ns", minimum=1) <= integer(
+        now_ns, "now_ns", minimum=0
+    ):
         reasons.append("INTENT_EXPIRED")
     economics = plan.get("economics", {})
     if integer(economics.get("rfq_advantage_atomic"), "rfq_advantage_atomic") <= 0:

@@ -111,9 +111,8 @@ class DecodedFinancingEconomics:
     evidence_hash: str
 
     def __post_init__(self) -> None:
-        if (
-            len(self.evidence_hash) != 64
-            or any(ch not in "0123456789abcdef" for ch in self.evidence_hash)
+        if len(self.evidence_hash) != 64 or any(
+            ch not in "0123456789abcdef" for ch in self.evidence_hash
         ):
             raise ValueError("financing decoded evidence hash must be sha256")
 
@@ -268,8 +267,7 @@ class AtomicPlannerSimulationReconciliationVertical:
                 or primary.required_repayment_base_units
                 != provenance.required_repayment
                 or provenance.financing_obligation_digest is None
-                or primary.obligation_digest
-                != provenance.financing_obligation_digest
+                or primary.obligation_digest != provenance.financing_obligation_digest
                 or candidate.attempt_id is None
                 or primary.attempt_id != candidate.attempt_id
                 or candidate.attempt_generation is None

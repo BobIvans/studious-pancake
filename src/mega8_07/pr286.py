@@ -42,6 +42,7 @@ def value_protocol_owned_collateral(
 def allocate_liquidation_capital(
     mechanisms: Sequence[LiquidationMechanism], *, capital_budget: int
 ) -> tuple[str, ...]:
+    mechanisms = index_cross_protocol_liquidations(mechanisms)
     remaining = require_nonnegative(capital_budget, "capital_budget")
     selected: list[str] = []
     used_resources: set[str] = set()
@@ -65,6 +66,8 @@ def reconcile_liquidation_portfolio(
     selected_ids: Sequence[str],
     finalized_outcomes: Mapping[str, int],
 ) -> dict[str, int | str]:
+    if len(selected_ids) != len(set(selected_ids)):
+        raise Mega807Error("DUPLICATE_SELECTED_LIQUIDATION")
     if set(selected_ids) != set(finalized_outcomes):
         raise Mega807Error("LIQUIDATION_PORTFOLIO_OUTCOME_GAP")
     total = sum(int(finalized_outcomes[item]) for item in selected_ids)

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Structural verifier for MEGA8-07."""
+
 from __future__ import annotations
 
 import argparse
@@ -9,7 +10,6 @@ import json
 from pathlib import Path
 
 from src.mega8_07.manifest import ALL_FUNCTIONS, CHILDREN, FUNCTION_COUNT, NF_IDS
-
 
 COVERAGE = Path("release_artifacts/mega8/MEGA8-07/coverage.json")
 BANNED_IMPORT_PREFIXES = (

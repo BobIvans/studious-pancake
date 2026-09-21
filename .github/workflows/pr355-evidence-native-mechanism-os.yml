@@ -6,6 +6,8 @@ on:
       - "src/mechanism_discovery/**"
       - "src/strategy_evolution/residual_discovery.py"
       - "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      - "tests/mechanism_discovery/test_pr355_completion.py"
+      - "docs/mechanism_discovery/pr355_incident_corpus.json"
       - "scripts/verify_pr355.py"
       - "config/pr355_*.json"
       - "docs/roadmap/pr355-*"
@@ -38,12 +40,14 @@ jobs:
           src/strategy_evolution/residual_discovery.py
           scripts/verify_pr355.py
           tests/mechanism_discovery/test_pr355_evidence_native.py
+          tests/mechanism_discovery/test_pr355_completion.py
       - name: PR-355 structural verifier
         run: python scripts/verify_pr355.py --json
       - name: PR-355 focused tests
         run: >-
           python -m pytest -q
           tests/mechanism_discovery/test_pr355_evidence_native.py
+          tests/mechanism_discovery/test_pr355_completion.py
           tests/mechanism_discovery/test_pr354_mechanism_discovery.py
           tests/strategy_evolution/test_pr353_strategy_evolution.py
           --disable-socket --allow-unix-socket

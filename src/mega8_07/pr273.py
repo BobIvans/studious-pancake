@@ -1,4 +1,5 @@
 """PR-273 / GPU-01: optional offline GPU benchmark laboratory."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence
@@ -27,9 +28,7 @@ def run_gpu_simulation_batch(
     require_positive(scale_denominator, "scale_denominator")
     return tuple(
         tuple(
-            require_nonnegative(value, "feature")
-            * scale_numerator
-            // scale_denominator
+            require_nonnegative(value, "feature") * scale_numerator // scale_denominator
             for value in row
         )
         for row in batch

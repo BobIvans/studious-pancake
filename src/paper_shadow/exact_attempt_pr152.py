@@ -104,9 +104,8 @@ class ProviderExecutionEvidence:
                 or not self.financing_program_id.strip()
             ):
                 raise ValueError("financing_program_id must be non-blank")
-            if (
-                self.financing_program_hash is None
-                or not _SHA256.fullmatch(self.financing_program_hash)
+            if self.financing_program_hash is None or not _SHA256.fullmatch(
+                self.financing_program_hash
             ):
                 raise ValueError(
                     "financing_program_hash must be a lowercase sha256 digest"
@@ -468,10 +467,7 @@ class ExactPaperAttemptOrchestrator:
                 raise ValueError("generic financing snapshot required")
             if candidate.financing_pre_state_accounts is None:
                 raise ValueError("generic financing raw pre-state required")
-            if (
-                planner.provider_account_snapshot_hash
-                != evidence.account_snapshot_hash
-            ):
+            if planner.provider_account_snapshot_hash != evidence.account_snapshot_hash:
                 raise ValueError("provider snapshot fingerprint mismatch")
             if (
                 snapshot.slot < request.discovery_slot
@@ -479,8 +475,7 @@ class ExactPaperAttemptOrchestrator:
             ):
                 raise ValueError("generic financing snapshot context mismatch")
             if (
-                snapshot.asset_mint
-                != "So11111111111111111111111111111111111111112"
+                snapshot.asset_mint != "So11111111111111111111111111111111111111112"
                 or planner.borrow_amount
                 != request.capital_candidate.requested_flash_loan_lamports
                 or str(planner.payer) != request.wallet_snapshot.wallet_pubkey
@@ -513,7 +508,9 @@ class ExactPaperAttemptOrchestrator:
             or candidate.attempt_id is not None
             or candidate.attempt_generation is not None
         ):
-            raise ValueError("legacy MarginFi candidate cannot carry generic financing state")
+            raise ValueError(
+                "legacy MarginFi candidate cannot carry generic financing state"
+            )
         if getattr(candidate, "pre_state_accounts", None) is None:
             # Historical observation candidates remain representable, but they
             # cannot be promoted into a qualified production paper handoff.
@@ -578,8 +575,7 @@ class ExactPaperAttemptOrchestrator:
                 or provenance.financing_program_id is None
                 or provenance.financing_program_id != evidence.financing_program_id
                 or provenance.financing_evidence_hash is None
-                or provenance.financing_evidence_hash
-                != evidence.financing_program_hash
+                or provenance.financing_evidence_hash != evidence.financing_program_hash
             ):
                 raise ValueError("final financing provenance mismatch")
             if vertical.trace.opportunity_id != request.capital_candidate.candidate_id:

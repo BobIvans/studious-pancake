@@ -53,18 +53,28 @@ def run_adapter_differential_suite(
     local_outputs: Mapping[str, Any],
     upstream_outputs: Mapping[str, Any],
 ) -> ResearchArtifact:
-    keys = sorted(set(local_outputs) | set(upstream_outputs))
+    local_keys = set(local_outputs)
+    upstream_keys = set(upstream_outputs)
+    keys = sorted(local_keys | upstream_keys)
+    missing_local = tuple(sorted(upstream_keys - local_keys))
+    missing_upstream = tuple(sorted(local_keys - upstream_keys))
     mismatches = tuple(
-        key for key in keys if local_outputs.get(key) != upstream_outputs.get(key)
+        key
+        for key in sorted(local_keys & upstream_keys)
+        if local_outputs[key] != upstream_outputs[key]
     )
-    disposition = (
-        Disposition.PASS if not mismatches and bool(keys) else Disposition.REJECT
-    )
+    passed = bool(keys) and not missing_local and not missing_upstream and not mismatches
+    disposition = Disposition.PASS if passed else Disposition.REJECT
     return artifact(
         "adapter-differential",
-        {"case_count": len(keys), "mismatches": mismatches},
+        {
+            "case_count": len(keys),
+            "missing_local": missing_local,
+            "missing_upstream": missing_upstream,
+            "mismatches": mismatches,
+        },
         disposition=disposition,
-        reason="exact-match" if not mismatches and keys else "differential-mismatch",
+        reason="exact-match" if passed else "differential-mismatch",
     )
 
 

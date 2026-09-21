@@ -1,13 +1,19 @@
 {
-  "schema_version": "pr355.evidence.v1",
+  "schema_version": "pr355.evidence.v2",
   "roadmap_id": "PR-355",
+  "status": "FINAL_MERGED_IMPLEMENTATION_EVIDENCE",
   "implementation_base_sha": "d8d6d9079689efdddf77ce373120675255a99327",
-  "tested_head_sha": "b0ad0753e4afb65d6d2d09b8d3355d16b6903773",
-  "ci_status": "PASS_PRE_SEAL",
+  "initial_pr355_merge_commit": "2a5f6b8d699981ff967208db7b9b0a12fbf27031",
+  "corrective_pr": 535,
+  "tested_implementation_head_sha": "080517acfdb9dd587029752892bedc52b25239b3",
+  "merged_main_commit": "cc632f3dd5dc75f41b7c0883aa3bf1ba2430377b",
+  "implementation_ci_status": "PASS",
   "current_head_reconciliation": {
     "strategy_evolution_pr": 531,
     "pr353_closure_pr": 532,
     "mechanism_discovery_pr": 533,
+    "pr355_initial_pr": 534,
+    "pr355_corrective_pr": 535,
     "nf_existing_range": [
       1,
       1184
@@ -18,7 +24,13 @@
     "ig_obligation_count": 57,
     "nxf_count": 72,
     "marketpack_count": 9,
+    "marketpack_binding_count": 9,
     "experiment_count": 26,
+    "completion_section_count": 19,
+    "predecessor_scope_count": 3,
+    "planning_alias_group_count": 2,
+    "focused_test_count": 52,
+    "repository_verification_test_count": 182,
     "boros_vertical": "FIXTURE_TESTED_BLOCKED_EXTERNAL"
   },
   "external_actions": {
@@ -30,17 +42,19 @@
     "live_submission": false
   },
   "claims": {
-    "merged": false,
+    "merged": true,
+    "roadmap_code_research_scope_complete": true,
     "qualified": false,
     "authorized_live": false,
     "production_ready": false,
     "profitability": false
   },
-  "blockers": [
+  "remaining_external_blockers": [
     "BOROS_PRIMARY_HISTORICAL_SOURCE_PIN_ENTITLEMENT_NOT_MATERIALIZED",
-    "HOT_BUNNI_M0_ETHENA_RWA_AAVE_DEPLOYMENT_AND_DATA_EVIDENCE_NOT_MATERIALIZED",
-    "NO_REAL_X402_PAYMENT_ALLOWED_IN_PR355",
-    "NO_PRODUCTION_PROOF_BACKEND_QUALIFIED"
+    "HOT_BUNNI_M0_ETHENA_RWA_AAVE_EXACT_EXTERNAL_EVIDENCE_NOT_MATERIALIZED",
+    "SLUMLORD_ROUTE_MESSAGE_COMPATIBILITY_REQUIRES_SEPARATE_PROOF",
+    "REAL_X402_PRODUCTION_PAYMENT_FORBIDDEN_IN_PR355",
+    "PRODUCTION_PROOF_BACKEND_NOT_QUALIFIED"
   ],
   "safety": {
     "production_ready": false,
@@ -51,94 +65,73 @@
     "automatic_promotion": false,
     "automatic_capital_increase": false
   },
-  "workflow_runs": {
+  "authoritative_workflow_runs": {
     "pr355_evidence_native": {
-      "run_id": 35590064516,
+      "run_id": 35593837129,
+      "head_sha": "080517acfdb9dd587029752892bedc52b25239b3",
       "status": "completed",
       "conclusion": "success"
     },
     "repository_ci": {
-      "run_id": 35590064499,
+      "run_id": 35593837095,
+      "head_sha": "080517acfdb9dd587029752892bedc52b25239b3",
       "status": "completed",
       "conclusion": "success"
     },
     "release_authority": {
-      "run_id": 35590064515,
+      "run_id": 35593837234,
+      "head_sha": "080517acfdb9dd587029752892bedc52b25239b3",
       "status": "completed",
       "conclusion": "success"
     },
     "pr353_strategy_evolution": {
-      "run_id": 35590064504,
+      "run_id": 35593837186,
+      "head_sha": "080517acfdb9dd587029752892bedc52b25239b3",
       "status": "completed",
       "conclusion": "success"
     },
     "pr354_mechanism_discovery": {
-      "run_id": 35590064503,
-      "status": "completed",
-      "conclusion": "success"
-    },
-    "pr353_final_strategy_closure": {
-      "run_id": 35590064549,
-      "status": "completed",
-      "conclusion": "success"
-    },
-    "pr190_diagnostics": {
-      "run_id": 35590064514,
-      "status": "completed",
-      "conclusion": "success"
-    },
-    "architecture_foundation": {
-      "run_id": 35590064512,
+      "run_id": 35593837262,
+      "head_sha": "080517acfdb9dd587029752892bedc52b25239b3",
       "status": "completed",
       "conclusion": "success"
     },
     "jupiter_v2_contract": {
-      "run_id": 35590064497,
-      "status": "completed",
-      "conclusion": "success"
-    },
-    "mega8_04": {
-      "run_id": 35590064538,
-      "status": "completed",
-      "conclusion": "success"
-    },
-    "super05": {
-      "run_id": 35590064614,
-      "status": "completed",
-      "conclusion": "success"
-    },
-    "pr195_webhook": {
-      "run_id": 35590064671,
+      "run_id": 35593837238,
+      "head_sha": "080517acfdb9dd587029752892bedc52b25239b3",
       "status": "completed",
       "conclusion": "success"
     }
   },
-  "commands": [
-    {
-      "command": "python scripts/verify_pr355.py --json",
-      "status": "PASS",
-      "authoritative_run_id": 35590064516
+  "verified_outputs": {
+    "pr355_structural_verifier": {
+      "accepted": true,
+      "errors": [],
+      "owner_total": 138,
+      "nxf_count": 72,
+      "marketpack_binding_count": 9,
+      "experiment_count": 26,
+      "completion_section_count": 19,
+      "predecessor_scope_count": 3,
+      "planning_alias_group_count": 2,
+      "boros_verdict": "BLOCKED_EXTERNAL"
     },
-    {
-      "command": "python -m pytest -q tests/mechanism_discovery/test_pr355_evidence_native.py tests/mechanism_discovery/test_pr354_mechanism_discovery.py tests/strategy_evolution/test_pr353_strategy_evolution.py --disable-socket --allow-unix-socket",
-      "status": "PASS",
-      "authoritative_run_id": 35590064516
+    "pr355_focused_tests": {
+      "passed": 52
     },
-    {
-      "command": "python scripts/verify_pr353_strategy_evolution.py --json",
-      "status": "PASS",
-      "authoritative_run_id": 35590064504
-    },
-    {
-      "command": "python scripts/verify_pr354_mechanism_discovery.py --json",
-      "status": "PASS",
-      "authoritative_run_id": 35590064503
-    },
-    {
-      "command": "python scripts/verify_repo.py",
-      "status": "PASS",
-      "authoritative_run_id": 35590064499
+    "repository_verification": {
+      "passed": true,
+      "focused_tests_passed": 182,
+      "live_trading_readiness_evaluated": false
     }
-  ],
-  "note": "PASS_PRE_SEAL records the exact tested implementation head. This evidence-only commit changes the PR head, so final exact-head CI must pass again before merge."
+  },
+  "process_deviation": {
+    "single_github_pr_requirement_met": false,
+    "reason": "PR #534 had already merged before the full-document audit; corrective completion therefore required PR #535 while preserving one roadmap PR-355 scope."
+  },
+  "evidence_seal_policy": {
+    "this_file_is_evidence_only": true,
+    "implementation_semantics_changed_by_seal": false,
+    "validation_rule": "The tested implementation head and merged commit above are authoritative. The evidence-only seal PR must pass repository CI before merge, but its own run IDs are intentionally not embedded to avoid a self-referential evidence commit loop."
+  }
 }

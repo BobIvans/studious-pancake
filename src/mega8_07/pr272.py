@@ -1,4 +1,5 @@
 """PR-272 / PERF-02: safe vectorized quote/state research."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence

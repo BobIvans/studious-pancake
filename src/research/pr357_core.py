@@ -238,6 +238,9 @@ class BeliefState:
                 raise PR357ContractError(f"PR357_COVARIANCE_COLUMN_MISMATCH:{row_name}")
             if row[row_name] < 0:
                 raise PR357ContractError("PR357_NEGATIVE_VARIANCE")
+            for column_name, value in row.items():
+                if value != self.covariance[column_name][row_name]:
+                    raise PR357ContractError("PR357_COVARIANCE_ASYMMETRIC")
 
 
 @dataclass(frozen=True, slots=True)
@@ -895,6 +898,11 @@ def define_decision_problem(
 ) -> Mapping[str, Any]:
     if not actions or not state_probabilities_ppm:
         raise PR357ContractError("PR357_DECISION_PROBLEM_EMPTY")
+    if any(
+        probability < 0 or probability > PPM
+        for probability in state_probabilities_ppm.values()
+    ):
+        raise PR357ContractError("PR357_STATE_PROBABILITY_RANGE")
     if sum(state_probabilities_ppm.values()) != PPM:
         raise PR357ContractError("PR357_STATE_PROBABILITIES_NOT_NORMALIZED")
     states = set(state_probabilities_ppm)
@@ -986,6 +994,10 @@ def estimate_evsi(
     ):
         if set(posterior) != states:
             raise PR357ContractError("PR357_POSTERIOR_STATE_MISMATCH")
+        if any(
+            probability < 0 or probability > PPM for probability in posterior.values()
+        ):
+            raise PR357ContractError("PR357_POSTERIOR_PROBABILITY_RANGE")
         if sum(posterior.values()) != PPM:
             raise PR357ContractError("PR357_POSTERIOR_NOT_NORMALIZED")
         for state in states:
@@ -1107,6 +1119,13 @@ def reserve_safety_information_budget(
         return {
             "status": "ABSTAIN",
             "reason": "MANDATORY_SAFETY_BUDGET_UNAVAILABLE",
+            "selected": (),
+            "execution_right": False,
+        }
+    if any(reject_too_late_information(action) for action in mandatory):
+        return {
+            "status": "ABSTAIN",
+            "reason": "MANDATORY_SAFETY_MISSES_DEADLINE",
             "selected": (),
             "execution_right": False,
         }

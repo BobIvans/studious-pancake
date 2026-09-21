@@ -1,0 +1,38 @@
+{
+  "schema_version": "pr354.source-registry.v1",
+  "collectors_enabled": false,
+  "sources": [
+    {
+      "source_id": "canonical_pr353_evo09",
+      "owner": "src.strategy_evolution.residual_discovery",
+      "access": "LOCAL_CANONICAL",
+      "retention": "EXISTING_POLICY",
+      "finality": "EXPLICIT_PER_EVENT",
+      "cost": "EXISTING_BUDGET"
+    },
+    {
+      "source_id": "canonical_bot_telemetry",
+      "owner": "existing evidence/outcome stores",
+      "access": "LOCAL_READ_ONLY",
+      "retention": "REDACTED_DERIVED",
+      "finality": "OUTCOME_SPECIFIC",
+      "cost": "LOCAL"
+    },
+    {
+      "source_id": "external_mechanism_references",
+      "owner": "PR-354 provenance ledger",
+      "access": "REFERENCE_ONLY",
+      "retention": "HASHES_AND_DERIVED_ONLY",
+      "finality": "SOURCE_SPECIFIC",
+      "cost": "NO_NEW_PAID_ACCESS"
+    },
+    {
+      "source_id": "synthetic_pr354_fixtures",
+      "owner": "tests/mechanism_discovery",
+      "access": "OFFLINE",
+      "retention": "PERMANENT_FIXTURE",
+      "finality": "SYNTHETIC",
+      "cost": "LOCAL"
+    }
+  ]
+}

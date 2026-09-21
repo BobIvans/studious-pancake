@@ -1,0 +1,104 @@
+{
+  "schema_version": "pr354.evidence.v1",
+  "implementation_base_sha": "30adc0508180131aa6d4122a5db0d24206941405",
+  "tested_head_sha": "ea9b414db8994c9eef2e8337c49880637d1e7ac0",
+  "recorded_at": "2026-09-21T07:08:51+03:00",
+  "environment": {
+    "runner": "GitHub Actions ubuntu-latest",
+    "python": "3.13.13",
+    "dependency_install": "requirements.txt + requirements-dev.txt + --no-deps package install where applicable"
+  },
+  "workflow_runs": {
+    "pr354_mechanism_discovery": {
+      "run_id": 35559698637,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "repository_ci": {
+      "run_id": 35559698596,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "release_authority": {
+      "run_id": 35559698650,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "pr353_final_strategy_closure": {
+      "run_id": 35559698565,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "jupiter_v2_contract": {
+      "run_id": 35559698607,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "mega8_04_closure": {
+      "run_id": 35559698556,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "super05_strategy_closure": {
+      "run_id": 35559698608,
+      "status": "completed",
+      "conclusion": "success"
+    },
+    "architecture_foundation": {
+      "run_id": 35559698636,
+      "status": "completed",
+      "conclusion": "success"
+    }
+  },
+  "commands": [
+    {
+      "command": "python scripts/verify_pr354_mechanism_discovery.py --json",
+      "status": "PASS",
+      "exit_code": 0,
+      "authoritative_run_id": 35559698637
+    },
+    {
+      "command": "python -m pytest -q tests/mechanism_discovery --disable-socket --allow-unix-socket",
+      "status": "PASS",
+      "exit_code": 0,
+      "authoritative_run_id": 35559698637
+    },
+    {
+      "command": "python scripts/verify_pr353_strategy_evolution.py --json",
+      "status": "PASS",
+      "exit_code": 0,
+      "authoritative_run_id": 35559698637
+    },
+    {
+      "command": "python scripts/verify_repo.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "authoritative_run_id": 35559698596
+    }
+  ],
+  "artifact_git_blob_hashes": {
+    "verifier": "29f65958a1d62d6fae0a2a24afcf3e1da1cb6f4e",
+    "focused_tests": "18583cf98c60f03b2c370959cc8525718151b19b",
+    "config": "8d8016be21ececec1647f08df9eea2251d4a354a",
+    "hypothesis_registry": "d4450f5a5ac2edb119725b3334bd501b28697f05",
+    "source_provenance": "888495cc4d59a64fb95e75ad720fc44d49e67c8e"
+  },
+  "scope": {
+    "nf_first": 1089,
+    "nf_last": 1184,
+    "function_count": 96,
+    "package_count": 12,
+    "hypothesis_count": 36,
+    "all_packages_disabled": true,
+    "external_code_copy_performed": false
+  },
+  "claims": {
+    "merged": false,
+    "qualified": false,
+    "authorized_live": false,
+    "production_ready": false,
+    "profitability": false,
+    "universal_anomaly_detection": false
+  },
+  "note": "PASS records the tested implementation head only. This evidence-only commit changes metadata, so exact final-head CI must pass again before merge."
+}

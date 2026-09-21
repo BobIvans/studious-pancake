@@ -1,0 +1,224 @@
+{
+  "schema_version": "pr354.hypothesis-registry.v1",
+  "preregistered": true,
+  "qualification_data_reuse_forbidden": true,
+  "multiple_testing_family": "H-01..H-36",
+  "rows": [
+    {
+      "id": "H-01",
+      "hypothesis": "Liquidation threshold density -> depth depletion",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-02",
+      "hypothesis": "Stablecoin liquidity geography -> funding/basis",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-03",
+      "hypothesis": "Spot/futures/options term structure",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-04",
+      "hypothesis": "Scheduled caps/fees/withdrawal changes",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-05",
+      "hypothesis": "Epoch emissions/claims/buybacks",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-06",
+      "hypothesis": "Lending capacity release -> route depth",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-07",
+      "hypothesis": "Solver/keeper liveness gap",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-08",
+      "hypothesis": "Bot operational residual",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-09",
+      "hypothesis": "Governance + emissions joint event",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-10",
+      "hypothesis": "Cross-market queue congestion",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-11",
+      "hypothesis": "Unlock/claim supply flow",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-12",
+      "hypothesis": "Blockspace cost regime",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-13",
+      "hypothesis": "v4 dynamic-fee hook transition -> external residual",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-14",
+      "hypothesis": "Wrapper hook rate/rounding -> wrapper-underlying basis",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-15",
+      "hypothesis": "DualPool vault maxWithdraw/JIT distribution -> size cliff",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-16",
+      "hypothesis": "ReClamm virtual-balance shift -> delayed correction",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-17",
+      "hypothesis": "ReClamm price-ratio update -> route-capacity transition",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-18",
+      "hypothesis": "Midnight maturity curve kink",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-19",
+      "hypothesis": "Midnight settlement-liquidity scarcity -> offer basis",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-20",
+      "hypothesis": "Fixed Midnight vs floating lending/PT-YT basis",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-21",
+      "hypothesis": "Same ERC-7683/OIF intent -> solver price dispersion",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-22",
+      "hypothesis": "Destination inventory scarcity -> intent premium",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-23",
+      "hypothesis": "Fluid smart-debt utilization transition -> DEX residual",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-24",
+      "hypothesis": "Fluid liquidation-as-swap -> external residual",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-25",
+      "hypothesis": "Fluid direct stETH redemption -> unwind basis",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-26",
+      "hypothesis": "Umbrella reserve deficit/slash -> StakeToken discontinuity",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-27",
+      "hypothesis": "Umbrella reward + cooldown -> liquidity discount",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-28",
+      "hypothesis": "stVault quarantine/confirmation -> stETH liquidity basis",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-29",
+      "hypothesis": "stVault operator fee/performance -> vault-specific basis",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-30",
+      "hypothesis": "HIP-3 deployer oracle/funding/OI-cap change -> temporary basis",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-31",
+      "hypothesis": "HIP-3 halt/resume/settlement -> cross-venue residual",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-32",
+      "hypothesis": "Collateral contagion sequence -> secondary-venue residual",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-33",
+      "hypothesis": "New mechanism deployment -> first-liquidity residual",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-34",
+      "hypothesis": "Provider/source disagreement -> false-positive arbitrage",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-35",
+      "hypothesis": "Bot failure residual clusters -> avoidable rejects",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "H-36",
+      "hypothesis": "Hook/deployment semantic change -> anomaly-family shift",
+      "status": "INCONCLUSIVE_NOT_RUN",
+      "execution_right": false
+    }
+  ]
+}

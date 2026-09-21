@@ -24,7 +24,8 @@ def compute_importance_weights(
     ):
         log_p = integer(logged, "logged_propensity_ppm", minimum=1)
         target_p = integer(target, "target_propensity_ppm", minimum=0)
-        weights.append(min(cap, target_p * PPM // log_p))
+        raw_weight = target_p * PPM // log_p
+        weights.append(min(cap + 1, raw_weight))
     return tuple(weights)
 
 

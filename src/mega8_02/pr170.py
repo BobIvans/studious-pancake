@@ -1,4 +1,5 @@
 """PR-170 / FEE-01: empirical inclusion-cost curves."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence

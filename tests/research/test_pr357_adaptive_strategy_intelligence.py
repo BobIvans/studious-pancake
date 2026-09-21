@@ -215,7 +215,6 @@ def test_integrated_vertical_reduces_regret_and_never_authorizes_execution() -> 
     assert not any(first["effect_boundary"].values())
 
 
-
 def test_lifecycle_replay_preserves_append_order_for_equal_timestamps() -> None:
     first = record_lifecycle_transition(
         strategy_id="same-time",

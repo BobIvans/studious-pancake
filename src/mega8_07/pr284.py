@@ -1,4 +1,5 @@
 """PR-284 / STABLE-02: reserve, redemption and depeg stress research."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass

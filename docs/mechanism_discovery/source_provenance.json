@@ -1,0 +1,63 @@
+{
+  "schema_version": "pr354.source-provenance.v1",
+  "copy_or_port_performed": false,
+  "policy": "REFERENCE_ONLY until immutable pin, exact path/symbol, license decision and differential tests are admitted",
+  "rows": [
+    {
+      "source": "Uniswap/v4-hooks-public",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_note": "MIT observed in planning source; exact file/commit re-attestation required",
+      "pin": "PIN_REQUIRED",
+      "source_copy_allowed": false
+    },
+    {
+      "source": "Uniswap/hooklist",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_note": "reverify exact repository/file",
+      "pin": "PIN_REQUIRED",
+      "source_copy_allowed": false
+    },
+    {
+      "source": "balancer/reclamm",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_note": "reverify exact commit/files",
+      "pin": "PIN_REQUIRED",
+      "source_copy_allowed": false
+    },
+    {
+      "source": "morpho-org/midnight",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_note": "BUSL-1.1 core; exact secondary-license file decision required",
+      "pin": "PIN_REQUIRED",
+      "source_copy_allowed": false
+    },
+    {
+      "source": "ERC-7683 / Open Intents Framework",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_note": "spec/schema reference; implementation license depends on selected repo",
+      "pin": "VERSION_OR_PIN_REQUIRED",
+      "source_copy_allowed": false
+    },
+    {
+      "source": "Instadapp/fluid-contracts-public",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_note": "BUSL-1.1 observed in planning source; integration file review required",
+      "pin": "PIN_REQUIRED",
+      "source_copy_allowed": false
+    },
+    {
+      "source": "aave-dao/aave-umbrella",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_note": "BUSL-1.1 core; MIT integration interfaces noted by planning source",
+      "pin": "PIN_REQUIRED",
+      "source_copy_allowed": false
+    },
+    {
+      "source": "Lido V3 stVaults / Hyperliquid HIP-3",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_note": "docs/API are not code permission; exact code/API terms must be re-attested",
+      "pin": "PIN_OR_SCHEMA_REQUIRED",
+      "source_copy_allowed": false
+    }
+  ]
+}

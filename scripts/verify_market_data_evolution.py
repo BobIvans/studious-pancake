@@ -154,6 +154,15 @@ def verify() -> dict[str, object]:
         errors.append("MDE_REQUIRED_SPLIT_COUNT_MISMATCH")
     if len(config.get("evaluation", {}).get("forbidden", [])) != 7:
         errors.append("MDE_FORBIDDEN_EVALUATION_COUNT_MISMATCH")
+    if len(config.get("document_boundaries", [])) != 8:
+        errors.append("MDE_DOCUMENT_BOUNDARY_COUNT_MISMATCH")
+    if len(config.get("observation_contract_conditionally_required", [])) != 7:
+        errors.append("MDE_OBSERVATION_CONDITIONAL_FIELD_COUNT_MISMATCH")
+    if not config.get("availability_rule") or not config.get("forecast_note"):
+        errors.append("MDE_DOCUMENT_SEMANTIC_NOTES_MISSING")
+    hint = config.get("document_hint", {})
+    if "Graph Continual Learning" not in str(hint.get("topic", "")):
+        errors.append("MDE_DOCUMENT_HINT_MISSING")
 
     source_root = ROOT / "src/market_data_evolution"
     for path in source_root.glob("*.py"):

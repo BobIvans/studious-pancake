@@ -146,9 +146,7 @@ def test_incremental_index_state_trace_and_rollback_are_deterministic() -> None:
 
 
 def test_resource_contention_fee_and_solver_layers() -> None:
-    envelope = calibrate_resource_predictor(
-        (100, 110, 120), (5, 6, 7), (200, 220, 240)
-    )
+    envelope = calibrate_resource_predictor((100, 110, 120), (5, 6, 7), (200, 220, 240))
     assert envelope.compute_units >= 120
     contention = estimate_writable_lock_contention(
         ("pool",), (("pool", "x"), ("other",), ("pool",))
@@ -164,9 +162,7 @@ def test_resource_contention_fee_and_solver_layers() -> None:
             FeeObservation(3, True),
         )
     )
-    assert select_economic_fee_bid(
-        curve, target_inclusion_ppm=600_000, hard_cap=3
-    ) == 3
+    assert select_economic_fee_bid(curve, target_inclusion_ppm=600_000, hard_cap=3) == 3
 
     good = score_route_objectives(
         candidate_id="good",
@@ -186,9 +182,12 @@ def test_resource_contention_fee_and_solver_layers() -> None:
     )
     frontier = build_pareto_frontier((good, worse))
     assert frontier == (good,)
-    assert select_policy_constrained_route(
-        frontier, max_duration_us=10, max_uncertainty=2, max_contention_ppm=10
-    ) == good
+    assert (
+        select_policy_constrained_route(
+            frontier, max_duration_us=10, max_uncertainty=2, max_contention_ppm=10
+        )
+        == good
+    )
 
 
 def test_mixed_robust_lender_variant_and_certificate_replay() -> None:
@@ -198,9 +197,7 @@ def test_mixed_robust_lender_variant_and_certificate_replay() -> None:
         ("r2", 40),
     )
     assert verify_solver_optimality_gap(100, 105, max_gap=5) == 5
-    worst = optimize_worst_case_net(
-        gross_out_low=120, input_amount=100, fixed_cost=5
-    )
+    worst = optimize_worst_case_net(gross_out_low=120, input_amount=100, fixed_cost=5)
     assert worst == 15
     assert reject_fragile_opportunity(worst)
     with pytest.raises(Mega802Error, match="FRAGILE"):
@@ -214,21 +211,26 @@ def test_mixed_robust_lender_variant_and_certificate_replay() -> None:
         ("cheap", 60),
         ("deep", 40),
     )
-    assert select_atomic_financing_variant(
-        quotes, amount=100, max_total_fee=3
-    ) == (("cheap", 60), ("deep", 40))
+    assert select_atomic_financing_variant(quotes, amount=100, max_total_fee=3) == (
+        ("cheap", 60),
+        ("deep", 40),
+    )
 
     raws = generate_transaction_variants(
-        route_ids=("r1",), lender_ids=("l1",), format_ids=("v0",),
+        route_ids=("r1",),
+        lender_ids=("l1",),
+        format_ids=("v0",),
         send_paths=("rpc", "jito"),
     )
     small = ResourceEnvelope(100, 5, 200)
     big = ResourceEnvelope(200, 5, 300)
     variants = (
-        bind_variant_resources(raws[0], message_sha256="a" * 64,
-                               envelope=small, expected_net=10),
-        bind_variant_resources(raws[1], message_sha256="b" * 64,
-                               envelope=big, expected_net=9),
+        bind_variant_resources(
+            raws[0], message_sha256="a" * 64, envelope=small, expected_net=10
+        ),
+        bind_variant_resources(
+            raws[1], message_sha256="b" * 64, envelope=big, expected_net=9
+        ),
     )
     assert len(prune_dominated_variants(variants)) == 1
 

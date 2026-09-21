@@ -74,7 +74,7 @@ jobs:
           src/production_debt_profiles.py
       - name: Black
         run: >-
-          python -m black --check
+          python -m black --diff --check
           src/lending/agg03_financing_ports.py
           src/lending/financing_planner_adapter.py
           src/lending/jupiter_lend.py

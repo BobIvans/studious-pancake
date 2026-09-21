@@ -8,9 +8,12 @@ outside the repository's allowlist.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
+import re
 from typing import Any
 
 from .base import Disposition, ResearchArtifact, artifact, nonempty_text
+
+_SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 _PERMISSIVE = frozenset(
     {
@@ -87,11 +90,21 @@ def generate_attribution_bundle(
     source_hashes: Iterable[str],
     notices: Iterable[str],
 ) -> ResearchArtifact:
+    hashes = tuple(sorted(set(source_hashes)))
+    normalized_notices = tuple(
+        sorted({nonempty_text(notice, "notice") for notice in notices})
+    )
+    if not hashes:
+        raise ValueError("source_hashes cannot be empty")
+    if any(not _SHA256_RE.fullmatch(source_hash) for source_hash in hashes):
+        raise ValueError("source_hashes must contain lowercase sha256 values")
+    if not normalized_notices:
+        raise ValueError("notices cannot be empty")
     payload = {
         "source_repository": nonempty_text(source_repository, "source_repository"),
         "immutable_ref": nonempty_text(immutable_ref, "immutable_ref"),
-        "source_hashes": tuple(sorted(set(source_hashes))),
-        "notices": tuple(sorted(set(notices))),
+        "source_hashes": hashes,
+        "notices": normalized_notices,
     }
     return artifact("attribution-bundle", payload)
 
@@ -102,8 +115,17 @@ def enforce_source_reuse_policy(
 ) -> ResearchArtifact:
     decision = str(eligibility.payload.get("decision", "REFERENCE_ONLY"))
     copying = decision in {"PORT", "VENDOR", "VENDOR-PURE"}
+    attribution_complete = (
+        attribution is not None
+        and attribution.kind == "attribution-bundle"
+        and attribution.disposition is Disposition.PASS
+        and bool(attribution.payload.get("source_hashes"))
+        and bool(attribution.payload.get("notices"))
+        and bool(attribution.payload.get("source_repository"))
+        and bool(attribution.payload.get("immutable_ref"))
+    )
     passed = eligibility.disposition is Disposition.PASS and (
-        not copying or attribution is not None
+        not copying or attribution_complete
     )
     return artifact(
         "source-reuse-policy",

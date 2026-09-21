@@ -575,7 +575,7 @@ def define_market_bootstrap_descriptor(
 def canonicalize_market_descriptor(
     payload: Mapping[str, Any],
 ) -> Mapping[str, Any]:
-    result = define_market_bootstrap_descriptor(payload)
+    result = dict(define_market_bootstrap_descriptor(payload))
     for key, value in tuple(result.items()):
         if isinstance(value, str):
             result[key] = " ".join(value.strip().lower().split())
@@ -1040,11 +1040,11 @@ def detect_double_counted_information(
     threshold_ppm: int,
 ) -> tuple[tuple[str, str], ...]:
     selected = set(action_ids)
-    duplicates = []
+    duplicates: list[tuple[str, str]] = []
     for pair, value in redundancy_pairs.items():
         left, right = pair
         if left in selected and right in selected and value >= threshold_ppm:
-            duplicates.append(tuple(sorted((left, right))))
+            duplicates.append((left, right) if left <= right else (right, left))
     return tuple(sorted(set(duplicates)))
 
 

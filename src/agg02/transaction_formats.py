@@ -34,17 +34,12 @@ class TransactionReadCapabilityReport:
     expires_at_ms: int
 
     def __post_init__(self) -> None:
-        if (
-            not self.provider_id
-            or not self.chain_identity
-            or not self.sdk_identity
-        ):
+        if not self.provider_id or not self.chain_identity or not self.sdk_identity:
             raise Agg02Error("SUPER01_TRANSACTION_CAPABILITY_IDENTITY_REQUIRED")
         if len(self.supported_formats) != len(set(self.supported_formats)):
             raise Agg02Error("SUPER01_TRANSACTION_FORMAT_DUPLICATED")
-        if (
-            len(self.evidence_sha256) != 64
-            or any(ch not in "0123456789abcdef" for ch in self.evidence_sha256)
+        if len(self.evidence_sha256) != 64 or any(
+            ch not in "0123456789abcdef" for ch in self.evidence_sha256
         ):
             raise Agg02Error("SUPER01_TRANSACTION_CAPABILITY_EVIDENCE_INVALID")
         if (
@@ -230,15 +225,10 @@ class FormatCoverageGap:
             or self.requested_end < self.requested_start
         ):
             raise Agg02Error("SUPER01_INVALID_FORMAT_GAP_RANGE")
-        if (
-            not self.provider_id
-            or not self.chain_identity
-            or not self.failure_code
-        ):
+        if not self.provider_id or not self.chain_identity or not self.failure_code:
             raise Agg02Error("SUPER01_INVALID_FORMAT_GAP")
-        if (
-            len(self.evidence_sha256) != 64
-            or any(ch not in "0123456789abcdef" for ch in self.evidence_sha256)
+        if len(self.evidence_sha256) != 64 or any(
+            ch not in "0123456789abcdef" for ch in self.evidence_sha256
         ):
             raise Agg02Error("SUPER01_FORMAT_GAP_EVIDENCE_INVALID")
         if self.checkpoint_advance_allowed:
@@ -276,4 +266,3 @@ __all__ = [
     "qualify_transaction_read_capabilities",
     "record_format_coverage_gap",
 ]
-

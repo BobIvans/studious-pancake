@@ -1,4 +1,5 @@
 """PR-175 / TXVAR-01: exact unsigned transaction variant portfolio."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from itertools import product
@@ -19,28 +20,50 @@ class TransactionVariant:
 
 
 def generate_transaction_variants(
-    *, route_ids: Sequence[str], lender_ids: Sequence[str],
-    format_ids: Sequence[str], send_paths: Sequence[str],
+    *,
+    route_ids: Sequence[str],
+    lender_ids: Sequence[str],
+    format_ids: Sequence[str],
+    send_paths: Sequence[str],
 ) -> tuple[tuple[str, str, str, str], ...]:
     if not route_ids or not lender_ids or not format_ids or not send_paths:
         raise Mega802Error("TX_VARIANT_DIMENSION_EMPTY")
-    return tuple(product(
-        sorted(route_ids), sorted(lender_ids), sorted(format_ids), sorted(send_paths)
-    ))
+    return tuple(
+        product(
+            sorted(route_ids),
+            sorted(lender_ids),
+            sorted(format_ids),
+            sorted(send_paths),
+        )
+    )
 
 
 def bind_variant_resources(
-    raw: tuple[str, str, str, str], *, message_sha256: str,
-    envelope: ResourceEnvelope, expected_net: int,
+    raw: tuple[str, str, str, str],
+    *,
+    message_sha256: str,
+    envelope: ResourceEnvelope,
+    expected_net: int,
 ) -> TransactionVariant:
     route, lender, fmt, send = raw
     return TransactionVariant(
         variant_id=stable_hash(
-            {"route": route, "lender": lender, "format": fmt, "send": send,
-             "message": message_sha256, "resources": envelope}
+            {
+                "route": route,
+                "lender": lender,
+                "format": fmt,
+                "send": send,
+                "message": message_sha256,
+                "resources": envelope,
+            }
         ),
-        route_id=route, lender_id=lender, format_id=fmt, send_path=send,
-        message_sha256=message_sha256, envelope=envelope, expected_net=expected_net,
+        route_id=route,
+        lender_id=lender,
+        format_id=fmt,
+        send_path=send,
+        message_sha256=message_sha256,
+        envelope=envelope,
+        expected_net=expected_net,
     )
 
 

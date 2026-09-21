@@ -58,6 +58,14 @@ def build_bot_operation_feature_frame(rows: Sequence[Mapping[str, Any]]):
         disposition = str(row.get("disposition", "UNKNOWN"))
         if disposition in {"REJECTED", "NO_TRADE", "FAILED"}:
             rejected += 1
+        realized_raw = row.get("realized_net_atoms")
+        realized_net_atoms = (
+            None if realized_raw is None else int(realized_raw)
+        )
+        actual_landed_raw = row.get("actual_landed")
+        actual_landed = (
+            actual_landed_raw if isinstance(actual_landed_raw, bool) else None
+        )
         normalized.append(
             {
                 "operation_id": str(row["operation_id"]),
@@ -65,7 +73,9 @@ def build_bot_operation_feature_frame(rows: Sequence[Mapping[str, Any]]):
                 "decision_at": int(row.get("decision_at", 0)),
                 "disposition": disposition,
                 "predicted_net_atoms": int(row.get("predicted_net_atoms", 0)),
-                "realized_net_atoms": int(row.get("realized_net_atoms", 0)),
+                "realized_net_atoms": realized_net_atoms,
+                "actual_landed": actual_landed,
+                "outcome_missing": realized_net_atoms is None,
             }
         )
     return result(
@@ -115,9 +125,18 @@ def discover_residual_anomaly_clusters(
     *,
     explained_event_ids: Sequence[str],
     multiple_testing_passed: bool,
+    stability_evidence_ref: str | None = None,
+    fdr_evidence_ref: str | None = None,
+    persistence_evidence_ref: str | None = None,
 ):
     if not multiple_testing_passed:
         raise EvolutionError("MULTIPLE_TESTING_FAIL")
+    if not stability_evidence_ref:
+        raise EvolutionError("STABILITY_EVIDENCE_REQUIRED")
+    if not fdr_evidence_ref:
+        raise EvolutionError("FDR_EVIDENCE_REQUIRED")
+    if not persistence_evidence_ref:
+        raise EvolutionError("PERSISTENCE_EVIDENCE_REQUIRED")
     explained = set(str(value) for value in explained_event_ids)
     residuals = [
         row
@@ -134,7 +153,13 @@ def discover_residual_anomaly_clusters(
         raise EvolutionError("CLUSTER_UNSTABLE")
     return result(
         "discover_residual_anomaly_clusters",
-        {"clusters": stable, "residual_count": len(residuals)},
+        {
+            "clusters": stable,
+            "residual_count": len(residuals),
+            "stability_evidence_ref": stability_evidence_ref,
+            "fdr_evidence_ref": fdr_evidence_ref,
+            "persistence_evidence_ref": persistence_evidence_ref,
+        },
     )
 
 
@@ -173,10 +198,10 @@ def estimate_anomaly_lead_lag_graph(
 def attribute_opportunity_to_anomaly(payload: Mapping[str, Any]):
     if payload.get("confounded"):
         raise EvolutionError("CONFOUNDED")
-    if payload.get("outcome_missing"):
+    if payload.get("outcome_missing") or payload.get("realized_net_atoms") is None:
         raise EvolutionError("OUTCOME_MISSING")
     residual = (
-        int(payload.get("realized_net_atoms", 0))
+        int(payload["realized_net_atoms"])
         - int(payload.get("predicted_net_atoms", 0))
         + int(payload.get("known_execution_loss_atoms", 0))
     )
@@ -199,17 +224,21 @@ def score_anomaly_arbitrageability(payload: Mapping[str, Any]):
         raise EvolutionError("NET_EDGE_NONPOSITIVE")
     if capacity <= 0:
         raise EvolutionError("CAPACITY_UNKNOWN")
-    score = (
-        net
-        + capacity // 100
-        + int(payload.get("lead_time_ms", 0))
-        + int(payload.get("reproducibility_ppm", 0)) // 1000
-        - int(payload.get("data_cost_atoms", 0))
-        - int(payload.get("tail_risk_atoms", 0))
-    )
+    data_cost = int(payload.get("data_cost_atoms", 0))
+    tail_risk = int(payload.get("tail_risk_atoms", 0))
+    financial_score = net - data_cost - tail_risk
     return result(
         "score_anomaly_arbitrageability",
-        {**dict(payload), "score_atoms": score, "raw_correlation_ranked": False},
+        {
+            **dict(payload),
+            "score_atoms": financial_score,
+            "financial_score_atoms": financial_score,
+            "lead_time_ms": int(payload.get("lead_time_ms", 0)),
+            "reproducibility_ppm": int(payload.get("reproducibility_ppm", 0)),
+            "capacity_atoms": capacity,
+            "mixed_units_combined": False,
+            "raw_correlation_ranked": False,
+        },
     )
 
 

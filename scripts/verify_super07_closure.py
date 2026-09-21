@@ -171,9 +171,7 @@ EXPECTED_DISPOSITIONS = {
             else "SATISFIED_BY_EXISTING"
         ),
         "qualification_status": (
-            "RESEARCH_ONLY"
-            if child_id in {"PR-134", "PR-144"}
-            else "UNQUALIFIED"
+            "RESEARCH_ONLY" if child_id in {"PR-134", "PR-144"} else "UNQUALIFIED"
         ),
     }
     for child_id in EXPECTED_CHILDREN
@@ -221,9 +219,7 @@ def verify_payload(
         children = []
 
     child_ids = tuple(
-        child.get("source_pr_id")
-        for child in children
-        if isinstance(child, Mapping)
+        child.get("source_pr_id") for child in children if isinstance(child, Mapping)
     )
     if child_ids != EXPECTED_CHILDREN:
         errors.append("CHILD_PR_SET_MISMATCH")
@@ -258,20 +254,12 @@ def verify_payload(
             errors.append(f"{child_id}:QUALIFICATION_STATUS_INVALID")
         expected_disposition = EXPECTED_DISPOSITIONS.get(str(child_id))
         if expected_disposition is not None:
-            if (
-                implementation_status
-                != expected_disposition["implementation_status"]
-            ):
+            if implementation_status != expected_disposition["implementation_status"]:
                 errors.append(
                     f"{child_id}:CHILD_MAPPING_MISMATCH:implementation_status"
                 )
-            if (
-                qualification_status
-                != expected_disposition["qualification_status"]
-            ):
-                errors.append(
-                    f"{child_id}:CHILD_MAPPING_MISMATCH:qualification_status"
-                )
+            if qualification_status != expected_disposition["qualification_status"]:
+                errors.append(f"{child_id}:CHILD_MAPPING_MISMATCH:qualification_status")
         nf = child.get("primary_nf")
         if not isinstance(nf, list) or not nf:
             errors.append(f"{child.get('source_pr_id')}:PRIMARY_NF_REQUIRED")

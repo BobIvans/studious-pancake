@@ -1,6 +1,6 @@
 # MEGA8-07 — Performance, distributed evidence and governed capital mechanisms
 
-Implementation base: `17b9d9533ef7ab93c30b657aed40dc7c5248d5ba`.
+Implementation base revalidated on current main: `1605418661bb4571fcdf7aeaeb3c964087275dc3`.
 
 ## Scope
 
@@ -34,21 +34,21 @@ distributed worker, object-store write, wallet transfer, or capital mutation.
 
 ## Dependency truth
 
-The eight-pack roadmap names MEGA8-01..06 as prerequisites. Current repository
-evidence at branch creation:
+The eight-pack roadmap names MEGA8-01..06 as prerequisites. Revalidated against
+current repository state:
 
-- MEGA8-01: branch observed, not merged.
-- MEGA8-02: merged as GitHub PR #523 at
-  `17b9d9533ef7ab93c30b657aed40dc7c5248d5ba`.
-- MEGA8-03: GitHub PR #521 open.
-- MEGA8-04: GitHub PR #522 open.
-- MEGA8-05: GitHub PR #524 open.
-- MEGA8-06: no matching PR/branch observed.
+- MEGA8-01: merged via GitHub PR #525.
+- MEGA8-02: merged via GitHub PR #523.
+- MEGA8-03: merged via GitHub PR #521.
+- MEGA8-04: GitHub PR #522 remains open/unmerged.
+- MEGA8-05: merged via GitHub PR #524.
+- MEGA8-06: merged via GitHub PR #527 at
+  `1605418661bb4571fcdf7aeaeb3c964087275dc3`.
 
-Therefore repository-internal code status is `IMPLEMENTED_OFFLINE`; integrated
-operational status is `BLOCKED_DEPENDENCIES`. Merge of this code must not be
-described as integrated completion, production readiness, live authorization or
-capital permission.
+Therefore repository-internal code status remains `IMPLEMENTED_OFFLINE`; integrated
+operational status remains `BLOCKED_DEPENDENCIES` solely because MEGA8-04 is not
+merged. Merge of this code must not be described as integrated completion,
+production readiness, live authorization or capital permission.
 
 ## Child ownership
 

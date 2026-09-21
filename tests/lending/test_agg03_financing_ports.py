@@ -126,6 +126,7 @@ def test_jupiter_lend_port_refuses_unproven_dynamic_repayment_contract() -> None
     )
     snapshot = JupiterLendFinancingSnapshot(
         accounts=accounts,
+        admin_state=_admin_state(accounts),
         asset_id=f"spl:{accounts.mint}:6",
         available_liquidity_base_units=500,
         required_repayment_base_units=101,

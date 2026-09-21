@@ -1,6 +1,6 @@
 # MEGA8-07 — Performance, distributed evidence and governed capital mechanisms
 
-Implementation base revalidated on current main: `1605418661bb4571fcdf7aeaeb3c964087275dc3`.
+Original implementation base: `1605418661bb4571fcdf7aeaeb3c964087275dc3`; dependency evidence resealed on closure baseline `613884d8a5d50b1230b29ec5db14627222a9e85d`.
 
 ## Scope
 

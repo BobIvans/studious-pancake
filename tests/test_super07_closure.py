@@ -56,8 +56,7 @@ def test_super07_rejects_per_child_mapping_corruption() -> None:
     result = api()["verify_payload"](broken, root=ROOT)
     assert result["ok"] is False
     assert any(
-        error.startswith("PR-129:CHILD_MAPPING_MISMATCH:")
-        for error in result["errors"]
+        error.startswith("PR-129:CHILD_MAPPING_MISMATCH:") for error in result["errors"]
     )
 
 
@@ -79,19 +78,13 @@ def test_super07_rejects_per_child_disposition_corruption() -> None:
     broken["children"][7]["implementation_status"] = "SATISFIED_BY_EXISTING"
     result = api()["verify_payload"](broken, root=ROOT)
     assert result["ok"] is False
-    assert (
-        "PR-136:CHILD_MAPPING_MISMATCH:implementation_status"
-        in result["errors"]
-    )
+    assert "PR-136:CHILD_MAPPING_MISMATCH:implementation_status" in result["errors"]
 
     research = deepcopy(payload())
     research["children"][5]["qualification_status"] = "UNQUALIFIED"
     result = api()["verify_payload"](research, root=ROOT)
     assert result["ok"] is False
-    assert (
-        "PR-134:CHILD_MAPPING_MISMATCH:qualification_status"
-        in result["errors"]
-    )
+    assert "PR-134:CHILD_MAPPING_MISMATCH:qualification_status" in result["errors"]
 
 
 def test_super07_rejects_source_pr_range_drift() -> None:

@@ -30,18 +30,24 @@
     },
     {
       "id": "MEGA8-02",
-      "observed": "BRANCH_PRESENT_NOT_MERGED",
-      "branch": "codex/mega8-02-163-185"
+      "observed": "OPEN_PR_NOT_MERGED",
+      "branch": "codex/mega8-02-163-185",
+      "pr_number": 523,
+      "head_sha": "5b7aaa333a270d076dea983fb2601a6b53655e10"
     },
     {
       "id": "MEGA8-03",
-      "observed": "NOT_OBSERVED_ON_CURRENT_MAIN",
-      "branch": null
+      "observed": "OPEN_PR_NOT_MERGED",
+      "branch": "codex/mega8-03-186-208",
+      "pr_number": 521,
+      "head_sha": "afbc80846be93d8005db48e74b73d0c0560e7a3f"
     },
     {
       "id": "MEGA8-04",
-      "observed": "NOT_OBSERVED_ON_CURRENT_MAIN",
-      "branch": null
+      "observed": "OPEN_PR_NOT_MERGED",
+      "branch": "codex/mega8-04-209-222",
+      "pr_number": 522,
+      "head_sha": "93841fa88817f1f3e98183d422c3457493a2cfb8"
     }
   ],
   "dependency_policy": "Code slice may be reviewed independently; operational completion remains blocked until exact prerequisite contracts/evidence are merged and revalidated.",
@@ -336,11 +342,12 @@
     }
   ],
   "residual_blockers": [
-    "MEGA8_01_EXACT_PREREQUISITE_NOT_MERGED_AT_BRANCH_CREATION",
-    "MEGA8_02_EXACT_PREREQUISITE_NOT_MERGED_AT_BRANCH_CREATION",
-    "MEGA8_03_EXACT_PREREQUISITE_NOT_OBSERVED_AT_BRANCH_CREATION",
-    "MEGA8_04_EXACT_PREREQUISITE_NOT_OBSERVED_AT_BRANCH_CREATION",
+    "MEGA8_01_EXACT_PREREQUISITE_NOT_MERGED",
+    "MEGA8_02_PR_523_OPEN_NOT_MERGED",
+    "MEGA8_03_PR_521_OPEN_NOT_MERGED",
+    "MEGA8_04_PR_522_OPEN_NOT_MERGED",
     "EXTERNAL_UPSTREAM_RELEASE_LICENSE_AND_CONFORMANCE_EVIDENCE_NOT_BUNDLED",
     "NO_LIVE_OR_CAPITAL_PROMOTION_AUTHORIZED"
-  ]
+  ],
+  "dependency_observed_after_main_sync": "e14d7f2e0d90dee2dce573761baba185feace5ea"
 }

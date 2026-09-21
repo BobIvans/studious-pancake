@@ -1,4 +1,5 @@
 """PR-172 / SOLVER-04: bounded mixed route/flow allocation."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence

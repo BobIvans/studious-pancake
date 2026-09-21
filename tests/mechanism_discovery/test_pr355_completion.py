@@ -70,6 +70,63 @@ def test_every_owner_map_row_has_importable_exact_owner_and_evidence() -> None:
         assert row["evidence_refs"]
 
 
+def test_predecessor_scope_map_and_planning_aliases_are_explicit() -> None:
+    payload = json.loads(
+        (ROOT / "config/pr355_owner_map.json").read_text(encoding="utf-8")
+    )
+    refs = payload["predecessor_scope_refs"]
+    assert refs["NF-001..NF-1016"]["exact_range"] == [1, 1016]
+    assert refs["EVO-01..EVO-09 / NF-1017..NF-1088"]["exact_range"] == [
+        1017,
+        1088,
+    ]
+    assert refs["RND-00..RND-11 / NF-1089..NF-1184"]["exact_range"] == [
+        1089,
+        1184,
+    ]
+    assert (
+        refs["NF-001..NF-1016"]["canonical_owner_source"]
+        == "src/release_gate/ultimate_mega1_closure.py::NF_TO_CLOSURE"
+    )
+    for alias in ("L0-L8", "B00-B08"):
+        row = payload["planning_alias_refs"][alias]
+        assert row["literal_aliases_present_in_current_repo"] is False
+        assert row["no_new_owner_created"] is True
+        assert row["disposition"] == "SATISFIED_BY_EXISTING"
+
+
+def test_unified_research_protocol_covers_entire_statistical_contract() -> None:
+    protocol = json.loads(
+        (ROOT / "config/pr355_research_protocol.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert protocol["sampling"] == {
+        "universe_required": True,
+        "inclusion_probability_required": True,
+        "control_windows_required": True,
+        "adaptive_selection_bias_audit_required": True,
+    }
+    assert protocol["comparators"] == [
+        "SIMPLE_BASELINE",
+        "TARGET_MARKET_LOCAL_ONLY",
+        "POOLED_MARKETS",
+        "MECHANISM_TRANSFER_WITH_LOCAL_ADAPTER",
+    ]
+    assert all(protocol["evaluation"].values())
+    assert protocol["arbitrageability_prerequisites"] == [
+        "EXACT_RIGHTS",
+        "COMPLETE_COSTS",
+        "EXACT_ROUTE",
+        "EXECUTABLE_CAPACITY",
+        "TIMING",
+    ]
+    assert protocol["live_promotion"] is False
+    assert protocol["universal_anomaly_claim"] is False
+    assert protocol["measured_coverage_required"] is True
+    assert protocol["unknown_zones_required"] is True
+
+
 def test_all_nine_marketpack_bindings_are_concrete_default_off_and_blocked() -> None:
     bindings = all_marketpack_bindings()
     assert len(bindings) == 9

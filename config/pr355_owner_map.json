@@ -2297,5 +2297,61 @@
     "evidence_required": true,
     "verifier_imports_symbols": true
   },
-  "completion_revision": "corrective-completion-v2"
+  "completion_revision": "corrective-completion-v2",
+  "corrective_observed_main": "2a5f6b8d699981ff967208db7b9b0a12fbf27031",
+  "predecessor_scope_refs": {
+    "NF-001..NF-1016": {
+      "disposition": "SATISFIED_BY_EXISTING",
+      "canonical_owner_source": "src/release_gate/ultimate_mega1_closure.py::NF_TO_CLOSURE",
+      "evidence_refs": [
+        "src/release_gate/ultimate_mega1_closure.py",
+        "docs/qualification/FINAL_CURRENT_HEAD_RESIDUAL_MAP.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "exact_range": [
+        1,
+        1016
+      ]
+    },
+    "EVO-01..EVO-09 / NF-1017..NF-1088": {
+      "disposition": "SATISFIED_BY_EXISTING",
+      "canonical_owner_source": "src/strategy_evolution/manifest.py::NF_TO_SYMBOL",
+      "evidence_refs": [
+        "src/strategy_evolution/manifest.py",
+        "docs/strategy_evolution/function_registry_nf1017_1088.md",
+        "release_artifacts/pr353/evidence_manifest.json"
+      ],
+      "exact_range": [
+        1017,
+        1088
+      ]
+    },
+    "RND-00..RND-11 / NF-1089..NF-1184": {
+      "disposition": "SATISFIED_BY_EXISTING",
+      "canonical_owner_source": "src/mechanism_discovery/manifest.py::NF_TO_SYMBOL",
+      "evidence_refs": [
+        "src/mechanism_discovery/manifest.py",
+        "docs/mechanism_discovery/function_registry_nf1089_1184.md",
+        "release_artifacts/pr354/evidence_manifest.json"
+      ],
+      "exact_range": [
+        1089,
+        1184
+      ]
+    }
+  },
+  "planning_alias_refs": {
+    "L0-L8": {
+      "literal_aliases_present_in_current_repo": false,
+      "disposition": "SATISFIED_BY_EXISTING",
+      "mapping_basis": "PR-355 prompt canonical-reuse map; current owners are evidenced through the NF/EVO/RND manifests rather than literal L0-L8 package names.",
+      "no_new_owner_created": true
+    },
+    "B00-B08": {
+      "literal_aliases_present_in_current_repo": false,
+      "disposition": "SATISFIED_BY_EXISTING",
+      "mapping_basis": "PR-355 prompt canonical-reuse map; current owners are evidenced through the NF/EVO/RND manifests rather than literal B00-B08 package names.",
+      "no_new_owner_created": true
+    }
+  }
 }

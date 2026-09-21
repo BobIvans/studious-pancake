@@ -1,0 +1,315 @@
+{
+  "schema_version": "mega8-07.coverage.v1",
+  "mega_id": "MEGA8-07",
+  "implementation_base_sha": "17b9d9533ef7ab93c30b657aed40dc7c5248d5ba",
+  "roadmap_children": [
+    271,
+    272,
+    273,
+    274,
+    275,
+    276,
+    277,
+    278,
+    279,
+    280,
+    281,
+    282,
+    283,
+    284,
+    285,
+    286
+  ],
+  "nf_range": [
+    769,
+    832
+  ],
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "BLOCKED_DEPENDENCIES",
+  "activation": "DEFAULT_OFF",
+  "production_ready": false,
+  "live_enabled": false,
+  "signer_access": false,
+  "submission_access": false,
+  "network_mutation": false,
+  "automatic_capital_increase": false,
+  "dependency_status": {
+    "MEGA8-01": {
+      "status": "UNMERGED_BRANCH_OBSERVED",
+      "evidence": "branch codex/mega8-01-151-162",
+      "merge_required_for_integrated_promotion": true
+    },
+    "MEGA8-02": {
+      "status": "MERGED",
+      "evidence": "GitHub PR #523 merge 17b9d9533ef7ab93c30b657aed40dc7c5248d5ba"
+    },
+    "MEGA8-03": {
+      "status": "OPEN_UNMERGED",
+      "evidence": "GitHub PR #521"
+    },
+    "MEGA8-04": {
+      "status": "OPEN_UNMERGED",
+      "evidence": "GitHub PR #522"
+    },
+    "MEGA8-05": {
+      "status": "OPEN_UNMERGED",
+      "evidence": "GitHub PR #524"
+    },
+    "MEGA8-06": {
+      "status": "NOT_OBSERVED_AS_PR_OR_BRANCH",
+      "evidence": "no matching MEGA8-06 PR/branch observed during implementation"
+    }
+  },
+  "canonical_reuse": [
+    "src/research/common.py",
+    "src/economics/capital.py",
+    "src/economics/durable_reservations.py",
+    "src/lending/controlled_expansion.py",
+    "src/security/supply_chain.py",
+    "src/inventory/non_atomic.py",
+    "src/liquidation/planner.py"
+  ],
+  "children": [
+    {
+      "child": "PR-271",
+      "name": "PERF-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        769,
+        772
+      ],
+      "owner": "src/mega8_07/pr271.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py"
+      ]
+    },
+    {
+      "child": "PR-272",
+      "name": "PERF-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        773,
+        776
+      ],
+      "owner": "src/mega8_07/pr272.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py"
+      ]
+    },
+    {
+      "child": "PR-273",
+      "name": "GPU-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        777,
+        780
+      ],
+      "owner": "src/mega8_07/pr273.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py"
+      ]
+    },
+    {
+      "child": "PR-274",
+      "name": "CACHE-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        781,
+        784
+      ],
+      "owner": "src/mega8_07/pr274.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py"
+      ]
+    },
+    {
+      "child": "PR-275",
+      "name": "DIST-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        785,
+        788
+      ],
+      "owner": "src/mega8_07/pr275.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py"
+      ]
+    },
+    {
+      "child": "PR-276",
+      "name": "STREAM-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        789,
+        792
+      ],
+      "owner": "src/mega8_07/pr276.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py"
+      ]
+    },
+    {
+      "child": "PR-277",
+      "name": "ARCHIVE-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        793,
+        796
+      ],
+      "owner": "src/mega8_07/pr277.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py"
+      ]
+    },
+    {
+      "child": "PR-278",
+      "name": "CATALOG-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        797,
+        800
+      ],
+      "owner": "src/mega8_07/pr278.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py"
+      ]
+    },
+    {
+      "child": "PR-279",
+      "name": "CAPITAL-04",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        801,
+        804
+      ],
+      "owner": "src/mega8_07/pr279.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    },
+    {
+      "child": "PR-280",
+      "name": "WALLET-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        805,
+        808
+      ],
+      "owner": "src/mega8_07/pr280.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    },
+    {
+      "child": "PR-281",
+      "name": "CAPITAL-05",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        809,
+        812
+      ],
+      "owner": "src/mega8_07/pr281.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    },
+    {
+      "child": "PR-282",
+      "name": "MARGIN-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        813,
+        816
+      ],
+      "owner": "src/mega8_07/pr282.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    },
+    {
+      "child": "PR-283",
+      "name": "CREDIT-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        817,
+        820
+      ],
+      "owner": "src/mega8_07/pr283.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    },
+    {
+      "child": "PR-284",
+      "name": "STABLE-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        821,
+        824
+      ],
+      "owner": "src/mega8_07/pr284.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    },
+    {
+      "child": "PR-285",
+      "name": "TERM-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        825,
+        828
+      ],
+      "owner": "src/mega8_07/pr285.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    },
+    {
+      "child": "PR-286",
+      "name": "LIQ-04",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        829,
+        832
+      ],
+      "owner": "src/mega8_07/pr286.py",
+      "evidence": [
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    }
+  ],
+  "upstream_reuse": {
+    "copied_source": false,
+    "vendored_source": false,
+    "executed_external_code": false,
+    "mode": "INTERNAL_OR_REFERENCE_ONLY",
+    "note": "PyO3/maturin/petgraph/rayon/NumPy/GPU/distributed/storage/provider SDKs remain roadmap references; no source copy or runtime integration is added here."
+  },
+  "residual_blockers": [
+    "MEGA8_01_NOT_MERGED",
+    "MEGA8_03_NOT_MERGED",
+    "MEGA8_04_NOT_MERGED",
+    "MEGA8_05_NOT_MERGED",
+    "MEGA8_06_NOT_OBSERVED",
+    "RUST_VECTOR_GPU_PARITY_NOT_MEASURED_ON_REAL_ACCELERATORS",
+    "DISTRIBUTED_STREAM_ARCHIVE_INFRA_NOT_DEPLOYED",
+    "CAPITAL_WALLET_MARGIN_CREDIT_LIQUIDATION_PROMOTION_REQUIRES_EXISTING_AUTHORITIES"
+  ]
+}

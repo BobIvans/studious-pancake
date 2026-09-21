@@ -273,6 +273,7 @@ def test_generic_final_vertical_binds_provider_program_evidence_hash() -> None:
         provider_evidence=SimpleNamespace(
             jupiter_contract_pin=SHA_A,
             financing_lender="jupiter-lend",
+            financing_program_id="program",
             financing_program_hash=SHA_B,
         ),
         capital_candidate=SimpleNamespace(candidate_id="opportunity-1"),
@@ -280,6 +281,7 @@ def test_generic_final_vertical_binds_provider_program_evidence_hash() -> None:
     provenance = SimpleNamespace(
         jupiter_contract_pin=SHA_A,
         financing_lender="jupiter-lend",
+        financing_program_id="program",
         financing_evidence_hash=SHA_A,
     )
     vertical = SimpleNamespace(
@@ -293,6 +295,7 @@ def test_generic_final_vertical_binds_provider_program_evidence_hash() -> None:
             status=ReconciliationStatus.PROVEN_PROFIT,
             repayment=SimpleNamespace(proven=True),
             settlement_net=1,
+            breakdowns=(),
         ),
     )
     with pytest.raises(ValueError, match="final financing provenance mismatch"):

@@ -86,9 +86,7 @@ class FinancingPlannerProviderAdapter:
         evidence: FinancingEvidence,
     ) -> None:
         if getattr(port, "execution_conformance_verified", False) is not True:
-            raise FinancingContractError(
-                "FINANCING_EXECUTION_CONFORMANCE_REQUIRED"
-            )
+            raise FinancingContractError("FINANCING_EXECUTION_CONFORMANCE_REQUIRED")
         if port.lender_id != evidence.lender_id:
             raise FinancingContractError("FINANCING_LENDER_MISMATCH")
         if port.deployment_generation != evidence.deployment_generation:
@@ -135,7 +133,10 @@ class FinancingPlannerProviderAdapter:
             raise FinancingContractError("FINANCING_ASSET_MISMATCH")
         if prepared.obligation.principal_base_units != amount:
             raise FinancingContractError("FINANCING_PRINCIPAL_MISMATCH")
-        if len(prepared.borrow_instructions) != 1 or len(prepared.repay_instructions) != 1:
+        if (
+            len(prepared.borrow_instructions) != 1
+            or len(prepared.repay_instructions) != 1
+        ):
             raise FinancingContractError(
                 "PRIMARY_FINANCING_SINGLE_BORROW_REPAY_REQUIRED"
             )
@@ -203,9 +204,7 @@ class AuxiliaryFinancingPlannerAdapter:
 
     def __init__(self, port: FinancingPort, evidence: FinancingEvidence) -> None:
         if getattr(port, "execution_conformance_verified", False) is not True:
-            raise FinancingContractError(
-                "FINANCING_EXECUTION_CONFORMANCE_REQUIRED"
-            )
+            raise FinancingContractError("FINANCING_EXECUTION_CONFORMANCE_REQUIRED")
         if port.lender_id != evidence.lender_id:
             raise FinancingContractError("FINANCING_LENDER_MISMATCH")
         if port.deployment_generation != evidence.deployment_generation:

@@ -98,6 +98,12 @@ PR206_DURABLE_STATE_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+PR353_FINAL_STRATEGY_CLOSURE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr353_strategy_closure.py",
+    "--json",
+]
+
 # Public by design: tests inspect the final offline pytest command.
 COMMANDS: Final[list[list[str]]] = [
     [
@@ -234,6 +240,7 @@ def main() -> int:
     run(PR353_STRATEGY_EVOLUTION_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
+    run(PR353_FINAL_STRATEGY_CLOSURE_COMMAND)
 
     for command in COMMANDS[1:]:
         run(command)

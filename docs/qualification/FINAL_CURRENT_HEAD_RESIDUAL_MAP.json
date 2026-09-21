@@ -1,0 +1,26 @@
+{
+  "schema": "pr353.current-head-residual-map.v1",
+  "observed_main": "3a76a1a46553f35bc141d406e4f9fcb89c992c99",
+  "owner_source": "src/release_gate/ultimate_mega1_closure.py::NF_TO_CLOSURE",
+  "nf_range": [
+    1,
+    1016
+  ],
+  "nf_owner_count": 1016,
+  "owner_policy": "Reuse canonical owner; no duplicate runtime/ledger/planner/signer/sender/release authority.",
+  "current_head_reconciliation": {
+    "dependency_reconciliation_pr": 529,
+    "full_code_closure_pr": 530,
+    "mega8_08": "release_artifacts/mega8/MEGA8-08/coverage.json",
+    "ultimate_mega1": "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+  },
+  "code_closure": "SATISFIED_BY_EXISTING",
+  "operational_qualification": "BLOCKED_EXTERNAL",
+  "production_ready": false,
+  "live_enabled": false,
+  "notes": [
+    "The 1016-row authoritative NF partition is consumed from NF_TO_CLOSURE instead of copied into a second authority.",
+    "Merged code, reachability, external evidence, qualification, activation and realized economics remain distinct states.",
+    "Unknown external evidence remains visible and cannot be converted into PASS by this artifact."
+  ]
+}

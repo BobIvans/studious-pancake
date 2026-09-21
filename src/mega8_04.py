@@ -26,6 +26,9 @@ from src.release_gate.materialized_evidence import collect_materialized_artifact
 MEGA804_SCHEMA = "mega8-04.assurance.v1"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _EVM_ADDRESS = re.compile(r"^0x[0-9a-fA-F]{40}$")
+_COMMIT_SOURCE_IDENTITY = re.compile(r"^commit:[0-9a-f]{40}$")
+_DIGEST_SOURCE_IDENTITY = re.compile(r"^sha256:[0-9a-f]{64}$")
+_GIT_SOURCE_IDENTITY = re.compile(r"^git\+https://[^@\s]+@[0-9a-f]{40}$")
 _RELEASE_STATUSES = frozenset(
     {
         "MERGED_AND_VERIFIED",
@@ -67,6 +70,7 @@ class AssuranceEvidence:
     disposition: Disposition
     evidence_digest: str
     blockers: tuple[str, ...] = ()
+    capabilities: tuple[str, ...] = ()
     live_enabled: bool = False
     signing_enabled: bool = False
     submission_enabled: bool = False
@@ -254,17 +258,31 @@ def _normalize_plugin_capability(value: str) -> str:
     return normalized
 
 
+def _immutable_source_identity(value: str) -> bool:
+    return any(
+        pattern.fullmatch(value) is not None
+        for pattern in (
+            _COMMIT_SOURCE_IDENTITY,
+            _DIGEST_SOURCE_IDENTITY,
+            _GIT_SOURCE_IDENTITY,
+        )
+    )
+
+
 def _ev(
     nf_id: str,
     disposition: Disposition,
     payload: object,
     blockers: Iterable[str] = (),
+    *,
+    capabilities: Iterable[str] = (),
 ) -> AssuranceEvidence:
     return AssuranceEvidence(
         nf_id=nf_id,
         disposition=disposition,
         evidence_digest=_digest((MEGA804_SCHEMA, nf_id, payload)),
         blockers=tuple(dict.fromkeys(blockers)),
+        capabilities=tuple(dict.fromkeys(capabilities)),
     )
 
 
@@ -434,9 +452,17 @@ def verify_safety_liveness_properties(trace: Sequence[str]) -> AssuranceEvidence
 def check_crash_recovery_interleavings(
     traces: Iterable[Sequence[str]],
 ) -> AssuranceEvidence:
+    rows = tuple(tuple(trace) for trace in traces)
+    if not rows:
+        return _ev(
+            "NF-595",
+            Disposition.BLOCKED,
+            (),
+            ("CRASH_RECOVERY_CAMPAIGN_EMPTY",),
+        )
     failed = []
     digests = []
-    for index, trace in enumerate(traces):
+    for index, trace in enumerate(rows):
         result = verify_safety_liveness_properties(trace)
         digests.append(result.evidence_digest)
         if result.disposition is Disposition.BLOCKED:
@@ -531,9 +557,12 @@ def verify_fail_closed_recovery(
     scenarios: Iterable[FaultScenario], *, recovery_states: Mapping[str, str]
 ) -> AssuranceEvidence:
     safe = {"SAFE", "BLOCKED", "QUARANTINED", "READ_ONLY"}
+    scenario_rows = tuple(scenarios)
     blockers = []
     rows = []
-    for scenario in scenarios:
+    if not scenario_rows:
+        blockers.append("CHAOS_SCENARIOS_REQUIRED")
+    for scenario in scenario_rows:
         state = recovery_states.get(scenario.target, "UNKNOWN")
         rows.append((scenario.kind, scenario.target, state))
         if state not in safe:
@@ -614,7 +643,7 @@ def verify_supply_chain_provenance(
         rows.append(
             (item.name, item.version, item.source_identity, item.artifact_sha256)
         )
-        if len(item.source_identity) < 7:
+        if not _immutable_source_identity(item.source_identity):
             blockers.append(f"SOURCE_IDENTITY_NOT_IMMUTABLE:{item.name}")
         if _SHA256.fullmatch(item.artifact_sha256) is None:
             blockers.append(f"ARTIFACT_HASH_INVALID:{item.name}")
@@ -1124,6 +1153,7 @@ def sandbox_strategy_plugin(
         Disposition.BLOCKED if blockers else Disposition.RESEARCH_ONLY,
         (_text(plugin_id, "plugin_id"), requested),
         blockers,
+        capabilities=requested,
     )
 
 
@@ -1131,7 +1161,10 @@ def verify_plugin_capabilities(
     plugin_evidence: AssuranceEvidence, *, allowed_capabilities: Iterable[str]
 ) -> AssuranceEvidence:
     allowed = {_normalize_plugin_capability(item) for item in allowed_capabilities}
+    requested = set(plugin_evidence.capabilities)
     blockers = list(plugin_evidence.blockers)
+    if plugin_evidence.nf_id != "NF-635":
+        blockers.append("PLUGIN_CAPABILITY_EVIDENCE_OWNER_INVALID")
     blockers.extend(
         f"POLICY_ALLOWS_FORBIDDEN_CAPABILITY:{item}"
         for item in sorted(allowed & _EFFECT_CAPABILITIES)
@@ -1140,11 +1173,20 @@ def verify_plugin_capabilities(
         f"POLICY_ALLOWS_UNKNOWN_CAPABILITY:{item}"
         for item in sorted(allowed - _EFFECT_CAPABILITIES - _PLUGIN_CAPABILITIES)
     )
+    blockers.extend(
+        f"PLUGIN_CAPABILITY_NOT_ALLOWED:{item}"
+        for item in sorted(requested - allowed)
+    )
     return _ev(
         "NF-636",
         Disposition.BLOCKED if blockers else Disposition.RESEARCH_ONLY,
-        (plugin_evidence.evidence_digest, tuple(sorted(allowed))),
+        (
+            plugin_evidence.evidence_digest,
+            tuple(sorted(requested)),
+            tuple(sorted(allowed)),
+        ),
         blockers,
+        capabilities=tuple(sorted(requested)),
     )
 
 
@@ -1153,7 +1195,10 @@ def audit_post150_coverage(
     rows: Iterable[CoverageRow], *, repo_root: str | Path
 ) -> Post150Audit:
     by_pr = {}
-    unverified = []
+    unverified: set[int] = set()
+    used_paths: dict[str, int] = {}
+    used_digests: dict[str, int] = {}
+    root = Path(repo_root).resolve()
     for row in rows:
         if not 151 <= row.roadmap_pr <= 221:
             raise Mega804Error("coverage row outside PR-151..221")
@@ -1164,17 +1209,50 @@ def audit_post150_coverage(
         _text(row.owner, "owner")
         _sha(row.evidence_sha256, "evidence_sha256")
         _text(row.evidence_path, "evidence_path")
+
+        previous_path_owner = used_paths.get(row.evidence_path)
+        if previous_path_owner is not None:
+            unverified.update((previous_path_owner, row.roadmap_pr))
+        else:
+            used_paths[row.evidence_path] = row.roadmap_pr
+
+        previous_digest_owner = used_digests.get(row.evidence_sha256)
+        if previous_digest_owner is not None:
+            unverified.update((previous_digest_owner, row.roadmap_pr))
+        else:
+            used_digests[row.evidence_sha256] = row.roadmap_pr
+
         try:
             artifacts = collect_materialized_artifacts(
-                repo_root,
+                root,
                 (row.evidence_path,),
             )
         except (OSError, ValueError):
-            unverified.append(row.roadmap_pr)
+            unverified.add(row.roadmap_pr)
         else:
             if len(artifacts) != 1 or artifacts[0].sha256 != row.evidence_sha256:
-                unverified.append(row.roadmap_pr)
+                unverified.add(row.roadmap_pr)
+            else:
+                evidence_file = root / artifacts[0].path
+                try:
+                    payload = json.loads(evidence_file.read_text(encoding="utf-8"))
+                except (OSError, UnicodeError, json.JSONDecodeError):
+                    unverified.add(row.roadmap_pr)
+                else:
+                    claim = (
+                        payload.get("coverage_claim")
+                        if isinstance(payload, dict)
+                        else None
+                    )
+                    expected_claim = {
+                        "roadmap_pr": f"PR-{row.roadmap_pr}",
+                        "status": row.status,
+                        "owner": row.owner,
+                    }
+                    if claim != expected_claim:
+                        unverified.add(row.roadmap_pr)
         by_pr[row.roadmap_pr] = row
+
     required = set(range(151, 222))
     missing = tuple(sorted(required - set(by_pr)))
     blocked = tuple(

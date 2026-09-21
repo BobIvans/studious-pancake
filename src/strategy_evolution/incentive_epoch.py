@@ -88,9 +88,7 @@ def detect_epoch_roll_dislocation(payload: Mapping[str, Any]):
 
 
 def build_incentive_rotation_candidate(payload: Mapping[str, Any]):
-    if int(payload.get("lock_duration", 0)) > int(
-        payload.get("max_lock_duration", 0)
-    ):
+    if int(payload.get("lock_duration", 0)) > int(payload.get("max_lock_duration", 0)):
         raise EvolutionError("LOCK_EXCEEDS_HORIZON")
     if not payload.get("exit_verified"):
         raise EvolutionError("MISSING_EXIT")

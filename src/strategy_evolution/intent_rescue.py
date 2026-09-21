@@ -105,7 +105,9 @@ def build_intent_rescue_candidate(payload: Mapping[str, Any]):
     return build_candidate("EVO-06", candidate_type, payload)
 
 
-def qualify_intent_rescue(candidate, *, replay_count: int, policy_passed: bool, concurrency_passed: bool):
+def qualify_intent_rescue(
+    candidate, *, replay_count: int, policy_passed: bool, concurrency_passed: bool
+):
     if not concurrency_passed:
         raise EvolutionError("CONCURRENCY_FAIL")
     return qualify_candidate(

@@ -74,9 +74,7 @@ def detect_da_mode_switch(payload: Mapping[str, Any]):
         raise EvolutionError("SAVING_INSIDE_BAND")
     if payload.get("deadline_risk"):
         raise EvolutionError("DEADLINE_RISK")
-    return result(
-        "detect_da_mode_switch", {**dict(payload), "saving_atoms": saving}
-    )
+    return result("detect_da_mode_switch", {**dict(payload), "saving_atoms": saving})
 
 
 def allocate_inclusion_budget(payload: Mapping[str, Any]):
@@ -104,7 +102,14 @@ def build_blockspace_candidate(payload: Mapping[str, Any]):
     )
 
 
-def qualify_blockspace_candidate(candidate, *, replay_count: int, policy_passed: bool, calibration_drift: bool, safety_downgrade: bool):
+def qualify_blockspace_candidate(
+    candidate,
+    *,
+    replay_count: int,
+    policy_passed: bool,
+    calibration_drift: bool,
+    safety_downgrade: bool,
+):
     if calibration_drift:
         raise EvolutionError("CALIBRATION_DRIFT")
     if safety_downgrade:

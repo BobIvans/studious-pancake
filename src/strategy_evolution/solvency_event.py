@@ -105,7 +105,9 @@ def build_solvency_event_candidate(payload: Mapping[str, Any]):
     )
 
 
-def qualify_solvency_event(candidate, *, replay_count: int, policy_passed: bool, tail_risk_bounded: bool):
+def qualify_solvency_event(
+    candidate, *, replay_count: int, policy_passed: bool, tail_risk_bounded: bool
+):
     return qualify_candidate(
         candidate,
         replay_count=replay_count,

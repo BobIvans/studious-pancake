@@ -120,7 +120,9 @@ def build_lifecycle_candidate(payload: Mapping[str, Any]):
     return build_candidate("EVO-08", candidate_type, payload)
 
 
-def qualify_lifecycle_candidate(candidate, *, replay_count: int, policy_passed: bool, entity_concentration_ok: bool):
+def qualify_lifecycle_candidate(
+    candidate, *, replay_count: int, policy_passed: bool, entity_concentration_ok: bool
+):
     if not entity_concentration_ok:
         raise EvolutionError("ENTITY_CONCENTRATION")
     return qualify_candidate(

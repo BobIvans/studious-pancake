@@ -83,9 +83,7 @@ def verify() -> dict[str, object]:
         source = path.read_text(encoding="utf-8")
         for token in FORBIDDEN_EFFECT_TOKENS:
             if token in source:
-                errors.append(
-                    f"PR353_FORBIDDEN_EFFECT_TOKEN:{path.name}:{token}"
-                )
+                errors.append(f"PR353_FORBIDDEN_EFFECT_TOKEN:{path.name}:{token}")
 
     for relative in REQUIRED_DOCS:
         if not (ROOT / relative).is_file():
@@ -102,9 +100,9 @@ def verify() -> dict[str, object]:
         if row.get("source_copy_allowed") is not False:
             errors.append("PR353_EXTERNAL_COPY_NOT_PINNED")
 
-    evo09_source = (
-        ROOT / "src/strategy_evolution/residual_discovery.py"
-    ).read_text(encoding="utf-8")
+    evo09_source = (ROOT / "src/strategy_evolution/residual_discovery.py").read_text(
+        encoding="utf-8"
+    )
     if "from src.decision.agg10 import lead_lag_research" not in evo09_source:
         errors.append("PR353_EVO09_CANONICAL_LEAD_LAG_REUSE_MISSING")
 

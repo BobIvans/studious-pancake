@@ -71,16 +71,12 @@ def _candidate_payload() -> dict[str, object]:
 
 
 def test_exact_nf_surface_and_symbols_import() -> None:
-    assert tuple(PACKAGES) == tuple(
-        f"EVO-{index:02d}" for index in range(1, 10)
-    )
+    assert tuple(PACKAGES) == tuple(f"EVO-{index:02d}" for index in range(1, 10))
     assert FUNCTION_COUNT == 72
     assert NF_IDS == tuple(range(1017, 1089))
     assert len(set(row[2] for row in NF_TO_SYMBOL.values())) == 72
     for _nf, (_package, module_name, symbol) in NF_TO_SYMBOL.items():
-        module = importlib.import_module(
-            f"src.strategy_evolution.{module_name}"
-        )
+        module = importlib.import_module(f"src.strategy_evolution.{module_name}")
         assert callable(getattr(module, symbol))
 
 
@@ -88,27 +84,18 @@ def test_all_packages_checked_in_disabled_and_no_live_effects() -> None:
     payload = json.loads(
         (ROOT / "config/strategy_evolution.json").read_text(encoding="utf-8")
     )
-    assert all(
-        row["state"] == "DISABLED"
-        for row in payload["packages"].values()
-    )
+    assert all(row["state"] == "DISABLED" for row in payload["packages"].values())
     assert all(row["live"] is False for row in payload["packages"].values())
     assert not any(payload["effect_boundary"].values())
 
 
 def test_candidate_id_is_deterministic_and_not_queueable_before_qualification() -> None:
-    left = build_candidate(
-        "EVO-01", "GOVERNANCE_TRANSITION", _candidate_payload()
-    )
+    left = build_candidate("EVO-01", "GOVERNANCE_TRANSITION", _candidate_payload())
     reversed_payload = dict(reversed(list(_candidate_payload().items())))
-    right = build_candidate(
-        "EVO-01", "GOVERNANCE_TRANSITION", reversed_payload
-    )
+    right = build_candidate("EVO-01", "GOVERNANCE_TRANSITION", reversed_payload)
     assert left.candidate_id == right.candidate_id
     assert left.state is EvolutionState.SHADOW_CANDIDATE
-    with pytest.raises(
-        EvolutionError, match="CANDIDATE_NOT_VERIFIED_SHADOW"
-    ):
+    with pytest.raises(EvolutionError, match="CANDIDATE_NOT_VERIFIED_SHADOW"):
         shadow_opportunity_adapter(
             left,
             detection_slot=1,
@@ -136,10 +123,7 @@ def test_extra_cost_cannot_improve_worst_case_net() -> None:
             "capacity_atoms": 100,
         }
     )
-    assert (
-        costly.payload["worst_case_net_atoms"]
-        < base.payload["worst_case_net_atoms"]
-    )
+    assert costly.payload["worst_case_net_atoms"] < base.payload["worst_case_net_atoms"]
 
 
 def test_illegal_async_lifecycle_transition_fails_closed() -> None:
@@ -213,9 +197,7 @@ def test_evo09_point_in_time_alignment_drops_future_and_keeps_rejects() -> None:
         bot.payload,
         decision_at=5,
     )
-    assert [
-        row["event_id"] for row in aligned.payload["market_rows"]
-    ] == ["e1"]
+    assert [row["event_id"] for row in aligned.payload["market_rows"]] == ["e1"]
     assert aligned.payload["dropped_future_rows"] == 1
     assert bot.payload["negative_or_rejected_rows"] == 1
 
@@ -228,13 +210,9 @@ def test_evo09_reuses_canonical_lead_lag_engine() -> None:
         max_lag=1,
         latency_corrected=True,
     )
+    assert report.payload["canonical_engine"] == "src.decision.agg10.lead_lag_research"
     assert (
-        report.payload["canonical_engine"]
-        == "src.decision.agg10.lead_lag_research"
-    )
-    assert (
-        report.payload["challenger_metric_ppm"]
-        > report.payload["baseline_metric_ppm"]
+        report.payload["challenger_metric_ppm"] > report.payload["baseline_metric_ppm"]
     )
 
 

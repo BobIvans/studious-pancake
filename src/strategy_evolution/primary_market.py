@@ -117,7 +117,9 @@ def build_primary_market_candidate(payload: Mapping[str, Any]):
     return build_candidate("EVO-04", "PRIMARY_SECONDARY_BASIS", payload)
 
 
-def qualify_primary_market(candidate, *, replay_count: int, policy_passed: bool, reconciliation_passed: bool):
+def qualify_primary_market(
+    candidate, *, replay_count: int, policy_passed: bool, reconciliation_passed: bool
+):
     if not reconciliation_passed:
         raise EvolutionError("RECONCILIATION_FAIL")
     return qualify_candidate(

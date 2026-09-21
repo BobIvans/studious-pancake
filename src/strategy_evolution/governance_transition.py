@@ -41,7 +41,9 @@ def simulate_post_change_state(payload: Mapping[str, Any]):
         raise EvolutionError("INVARIANT_BREAK")
     state = dict(data.get("pre_state", {}))
     state.update(dict(data.get("deltas", {})))
-    return result("simulate_post_change_state", {"post_state": state, "remote_write": False})
+    return result(
+        "simulate_post_change_state", {"post_state": state, "remote_write": False}
+    )
 
 
 def price_transition_window(payload: Mapping[str, Any]):
@@ -99,7 +101,9 @@ def build_governance_transition_candidate(payload: Mapping[str, Any]):
     return build_candidate("EVO-01", "GOVERNANCE_TRANSITION", payload)
 
 
-def qualify_governance_transition(candidate, *, replay_count: int, policy_passed: bool, drift: bool = False):
+def qualify_governance_transition(
+    candidate, *, replay_count: int, policy_passed: bool, drift: bool = False
+):
     return qualify_candidate(
         candidate,
         replay_count=replay_count,

@@ -107,7 +107,9 @@ def build_stake_queue_candidate(payload: Mapping[str, Any]):
     return build_candidate("EVO-03", "STAKE_QUEUE_BASIS", payload)
 
 
-def qualify_stake_queue(candidate, *, replay_count: int, policy_passed: bool, stress_passed: bool):
+def qualify_stake_queue(
+    candidate, *, replay_count: int, policy_passed: bool, stress_passed: bool
+):
     if not stress_passed:
         raise EvolutionError("STRESS_FAIL")
     return qualify_candidate(

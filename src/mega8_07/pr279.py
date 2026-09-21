@@ -1,4 +1,5 @@
 """PR-279 / CAPITAL-04: evidence-based reinvestment budgets."""
+
 from __future__ import annotations
 
 from typing import Mapping
@@ -6,17 +7,13 @@ from typing import Mapping
 from .core import CapitalEvidence, Mega807Error, require_nonnegative, stable_hash
 
 
-def compute_reinvestment_budget(
-    capital: CapitalEvidence, *, now: int
-) -> int:
+def compute_reinvestment_budget(capital: CapitalEvidence, *, now: int) -> int:
     capital.evidence.assert_usable(now=now)
     spendable_balance = max(0, capital.available_balance - capital.protected_reserve)
     return min(capital.finalized_profit, spendable_balance, capital.capacity_limit)
 
 
-def apply_growth_policy(
-    budget: int, *, current_scale: int, max_growth_ppm: int
-) -> int:
+def apply_growth_policy(budget: int, *, current_scale: int, max_growth_ppm: int) -> int:
     amount = require_nonnegative(budget, "budget")
     scale = require_nonnegative(current_scale, "current_scale")
     growth = require_nonnegative(max_growth_ppm, "max_growth_ppm")
@@ -49,5 +46,10 @@ def reconcile_growth_cycle(
     ending = start + finalized_delta
     if ending < 0:
         raise Mega807Error("NEGATIVE_FINALIZED_CAPITAL")
-    payload = {"starting": start, "redeployed": used, "delta": finalized_delta, "ending": ending}
+    payload = {
+        "starting": start,
+        "redeployed": used,
+        "delta": finalized_delta,
+        "ending": ending,
+    }
     return {**payload, "cycle_sha256": stable_hash("mega8-07-growth-cycle", payload)}

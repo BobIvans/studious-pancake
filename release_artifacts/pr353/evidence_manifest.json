@@ -1,0 +1,88 @@
+{
+  "schema_version": "pr353.evidence.v1",
+  "base_sha": "3a76a1a46553f35bc141d406e4f9fcb89c992c99",
+  "implementation_head_sha": "2038d400a86168cd8e80223869799bb19341d74e",
+  "evidence_state": "NOT_RUN_CURRENT_HEAD",
+  "recorded_reason": "Exact-head GitHub Actions have not executed yet; no local clone/network is available in this execution environment.",
+  "environment": {
+    "expected_python": "3.13.13",
+    "execution_authority": "GitHub Actions on PR head",
+    "source_copy_performed": false
+  },
+  "command_results": [
+    {
+      "command": "python scripts/verify_pr353_strategy_evolution.py --json",
+      "status": "NOT_RUN",
+      "exit_code": null,
+      "timestamp": null
+    },
+    {
+      "command": "python -m pytest -q tests/strategy_evolution --disable-socket --allow-unix-socket",
+      "status": "NOT_RUN",
+      "exit_code": null,
+      "timestamp": null
+    },
+    {
+      "command": "python -m pytest -q tests/test_agg10_intelligence.py tests/test_ultimate_mega1.py --disable-socket --allow-unix-socket",
+      "status": "NOT_RUN",
+      "exit_code": null,
+      "timestamp": null
+    },
+    {
+      "command": "python scripts/verify_repo.py",
+      "status": "NOT_RUN",
+      "exit_code": null,
+      "timestamp": null
+    }
+  ],
+  "package_states": {
+    "EVO-01": "DISABLED",
+    "EVO-02": "DISABLED",
+    "EVO-03": "DISABLED",
+    "EVO-04": "DISABLED",
+    "EVO-05": "DISABLED",
+    "EVO-06": "DISABLED",
+    "EVO-07": "DISABLED",
+    "EVO-08": "DISABLED",
+    "EVO-09": "DISABLED"
+  },
+  "artifact_hashes": [
+    {
+      "path": "src/strategy_evolution/core.py",
+      "git_blob_sha1": "53b7be4290891e34813db4c24d30c81079be1963"
+    },
+    {
+      "path": "src/strategy_evolution/manifest.py",
+      "git_blob_sha1": "739709678b3c5e50582d53678488aedc17d325f6"
+    },
+    {
+      "path": "src/strategy_evolution/residual_discovery.py",
+      "git_blob_sha1": "f78b70511cebb7edf20779dc4afb26f02312ae65"
+    },
+    {
+      "path": "config/strategy_evolution.json",
+      "git_blob_sha1": "0f075584a5007065b5e897cc33c8c2eaedd76e6a"
+    },
+    {
+      "path": "scripts/verify_pr353_strategy_evolution.py",
+      "git_blob_sha1": "a15dcbc2f386f21e91a5e4564ab70b572a858d36"
+    },
+    {
+      "path": "tests/strategy_evolution/test_pr353_strategy_evolution.py",
+      "git_blob_sha1": "c79fc85f46b2afc59b2d326a945f6e45c0f9d259"
+    },
+    {
+      "path": "docs/roadmap/pr353_non_duplication.md",
+      "git_blob_sha1": "214e24ac898437fda3dc002ef350c7a677381e6b"
+    },
+    {
+      "path": "docs/strategy_evolution/source_provenance.json",
+      "git_blob_sha1": "cc454b33274fd286666c4e7fbbfc375cbf471fa2"
+    }
+  ],
+  "coverage_claim": "EXPLICIT_BLIND_SPOTS; NO_UNIVERSAL_ANOMALY_DETECTION_CLAIM",
+  "live_authority_introduced": false,
+  "signing_introduced": false,
+  "submission_introduced": false,
+  "production_ready_claimed": false
+}

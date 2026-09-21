@@ -63,6 +63,7 @@ REQUIRED_ARTIFACTS = (
     "config/pr355_marketpacks.json",
     "config/pr355_experiments.json",
     "config/pr355_rollback.json",
+    "config/pr355_research_protocol.json",
     "docs/roadmap/pr355-evidence-native-mechanism-os.md",
     "docs/roadmap/pr355-evidence-native-mechanism-os-ru.md",
     "docs/roadmap/pr355_source_provenance.json",
@@ -151,6 +152,33 @@ def verify() -> dict[str, object]:
     exact_contract = owner_map.get("exact_owner_contract", {})
     if not exact_contract or not all(exact_contract.values()):
         errors.append("PR355_EXACT_OWNER_CONTRACT_INCOMPLETE")
+
+    predecessor_refs = owner_map.get("predecessor_scope_refs", {})
+    expected_predecessors = {
+        "NF-001..NF-1016": (1, 1016),
+        "EVO-01..EVO-09 / NF-1017..NF-1088": (1017, 1088),
+        "RND-00..RND-11 / NF-1089..NF-1184": (1089, 1184),
+    }
+    if set(predecessor_refs) != set(expected_predecessors):
+        errors.append("PR355_PREDECESSOR_SCOPE_MAP_MISMATCH")
+    for key, exact_range in expected_predecessors.items():
+        row = predecessor_refs.get(key, {})
+        if row.get("disposition") != "SATISFIED_BY_EXISTING":
+            errors.append(f"PR355_PREDECESSOR_NOT_REUSED:{key}")
+        if row.get("exact_range") != list(exact_range):
+            errors.append(f"PR355_PREDECESSOR_RANGE_MISMATCH:{key}")
+        if not row.get("canonical_owner_source") or not row.get("evidence_refs"):
+            errors.append(f"PR355_PREDECESSOR_EVIDENCE_MISSING:{key}")
+
+    planning_aliases = owner_map.get("planning_alias_refs", {})
+    for alias in ("L0-L8", "B00-B08"):
+        row = planning_aliases.get(alias, {})
+        if row.get("literal_aliases_present_in_current_repo") is not False:
+            errors.append(f"PR355_PLANNING_ALIAS_TRUTH_MISMATCH:{alias}")
+        if row.get("no_new_owner_created") is not True:
+            errors.append(f"PR355_PLANNING_ALIAS_DUPLICATE_OWNER:{alias}")
+        if row.get("disposition") != "SATISFIED_BY_EXISTING":
+            errors.append(f"PR355_PLANNING_ALIAS_DISPOSITION:{alias}")
 
     ig_rows = owner_map.get("ig_obligations", [])
     nxf_rows = owner_map.get("nxf_requirements", [])
@@ -284,6 +312,49 @@ def verify() -> dict[str, object]:
     if any(row.get("status") == "QUALIFIED" for row in rows):
         errors.append("PR355_SYNTHETIC_QUALIFICATION_FORBIDDEN")
 
+    protocol = json.loads(
+        (ROOT / "config/pr355_research_protocol.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    if protocol.get("canonical_residual_owner") != (
+        "src.strategy_evolution.residual_discovery"
+    ):
+        errors.append("PR355_PROTOCOL_EVO09_OWNER_MISMATCH")
+    if protocol.get("comparators") != [
+        "SIMPLE_BASELINE",
+        "TARGET_MARKET_LOCAL_ONLY",
+        "POOLED_MARKETS",
+        "MECHANISM_TRANSFER_WITH_LOCAL_ADAPTER",
+    ]:
+        errors.append("PR355_PROTOCOL_COMPARATOR_SET_MISMATCH")
+    evaluation = protocol.get("evaluation", {})
+    for field in (
+        "equal_budget_ablation_required",
+        "null_control_required",
+        "probability_calibration_required",
+        "interval_coverage_required",
+        "fdr_required",
+        "fnr_required",
+        "observable_miss_coverage_required",
+        "negative_transfer_required",
+        "old_regime_retention_required",
+    ):
+        if evaluation.get(field) is not True:
+            errors.append(f"PR355_PROTOCOL_EVALUATION_GAP:{field}")
+    if protocol.get("arbitrageability_prerequisites") != [
+        "EXACT_RIGHTS",
+        "COMPLETE_COSTS",
+        "EXACT_ROUTE",
+        "EXECUTABLE_CAPACITY",
+        "TIMING",
+    ]:
+        errors.append("PR355_PROTOCOL_ARBITRAGEABILITY_PREREQUISITES_MISMATCH")
+    if protocol.get("live_promotion") is not False:
+        errors.append("PR355_PROTOCOL_LIVE_PROMOTION_UNSAFE")
+    if protocol.get("universal_anomaly_claim") is not False:
+        errors.append("PR355_PROTOCOL_UNIVERSAL_CLAIM_UNSAFE")
+
     provenance = json.loads(
         (ROOT / "docs/roadmap/pr355_source_provenance.json").read_text(
             encoding="utf-8"
@@ -359,6 +430,7 @@ def verify() -> dict[str, object]:
         "PERSISTENCE_EVIDENCE_REQUIRED",
         "select_training_labels_as_of",
         '"label_leakage": False',
+        "ARBITRAGEABILITY_PROOF_INCOMPLETE",
     ):
         if required not in evo09:
             errors.append(f"PR355_EVO09_SEMANTIC_REPAIR_MISSING:{required}")
@@ -438,8 +510,16 @@ def verify() -> dict[str, object]:
         errors.append("PR355_BOROS_PURGED_SPLIT_MISSING")
     if not boros.get("blind_spots"):
         errors.append("PR355_BOROS_BLIND_SPOTS_MISSING")
-    if "fdr" not in boros or "calibration" not in boros or "source_value" not in boros:
-        errors.append("PR355_BOROS_RESEARCH_PROTOCOL_INCOMPLETE")
+    for field in (
+        "fdr",
+        "calibration",
+        "equal_budget_ablation",
+        "null_control",
+        "detection_coverage",
+        "source_value",
+    ):
+        if field not in boros:
+            errors.append(f"PR355_BOROS_RESEARCH_PROTOCOL_INCOMPLETE:{field}")
 
     evidence = json.loads(
         (ROOT / "release_artifacts/pr355/current-head-evidence.json").read_text(
@@ -470,6 +550,8 @@ def verify() -> dict[str, object]:
         "experiment_count": len(rows),
         "owner_total": len(all_ids),
         "completion_section_count": len(sections),
+        "predecessor_scope_count": len(predecessor_refs),
+        "planning_alias_group_count": len(planning_aliases),
         "boros_verdict": boros.get("verdict"),
         "errors": errors,
         "live_enabled": False,

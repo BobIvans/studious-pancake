@@ -1,4 +1,5 @@
 """PR-174 / CAPITAL-03: multi-lender shared-capacity planner."""
+
 from __future__ import annotations
 from typing import Mapping, Sequence
 from .core import CapacityQuote, Mega802Error, allocate_capacity_core
@@ -25,8 +26,12 @@ def model_shared_lender_liquidity(
         consumed[group] = consumed.get(group, 0) + bounded
         result.append(
             CapacityQuote(
-                quote.source_id, quote.asset_id, bounded, quote.fee,
-                quote.generation, quote.atomic,
+                quote.source_id,
+                quote.asset_id,
+                bounded,
+                quote.fee,
+                quote.generation,
+                quote.atomic,
             )
         )
     return tuple(result)
@@ -44,6 +49,4 @@ def select_atomic_financing_variant(
     atomic = [quote for quote in quotes if quote.atomic]
     if not atomic:
         raise Mega802Error("NO_ATOMIC_FINANCING")
-    return allocate_capacity_core(
-        atomic, amount=amount, max_total_fee=max_total_fee
-    )
+    return allocate_capacity_core(atomic, amount=amount, max_total_fee=max_total_fee)

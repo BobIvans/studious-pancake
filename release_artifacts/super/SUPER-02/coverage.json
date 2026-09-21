@@ -1,0 +1,101 @@
+{
+  "schema": "super02.coverage.v2",
+  "super_id": "SUPER-02",
+  "source_packages": [
+    "W2-03",
+    "W2-04"
+  ],
+  "observed_base_sha": "34117195525eed946b5c9da13634141d9d27e065",
+  "implementation_status": "PARTIAL",
+  "qualification_status": "BLOCKED_EXTERNAL",
+  "activation_status": "DISABLED",
+  "live_enabled": false,
+  "automatic_scale_up_allowed": false,
+  "dependency_reconciliation": {
+    "intended_chain": [
+      "AGG-01",
+      "AGG-02",
+      "AGG-03",
+      "AGG-04"
+    ],
+    "observed_merge_order": [
+      {
+        "pr": 495,
+        "package": "AGG-03",
+        "merged_before": [
+          "AGG-01",
+          "AGG-02"
+        ]
+      },
+      {
+        "pr": 496,
+        "package": "AGG-02",
+        "merged_before": [
+          "AGG-01"
+        ]
+      },
+      {
+        "pr": 497,
+        "package": "AGG-04",
+        "merged_before": [
+          "AGG-01"
+        ]
+      },
+      {
+        "pr": 501,
+        "package": "AGG-01",
+        "closed_later": true
+      }
+    ],
+    "stale_blockers_retired": [
+      "AGG03_PREREQUISITE_EQUIVALENCE_UNPROVEN",
+      "AGG03_GENERIC_FINANCING_SEAM_MISSING",
+      "CORE_V1_FINANCING_RAW_DECODER_NOT_COMPOSED",
+      "CORE_V1_PRIMARY_FINANCING_ROLE_REQUIRED_FOR_SLUMLORD_PROFILE"
+    ]
+  },
+  "children": {
+    "PR-081": "SATISFIED_BY_EXISTING",
+    "PR-087": "PARTIAL_EXTERNAL",
+    "PR-091": "CODE_CLOSED_EXTERNAL_QUALIFICATION_REQUIRED",
+    "PR-092": "CODE_CLOSED_EXTERNAL_QUALIFICATION_REQUIRED",
+    "PR-093": "PARTIAL_EXISTING_EXTERNAL_QUALIFICATION_REQUIRED",
+    "PR-119": "SATISFIED_BY_EXISTING_PARTIAL_EXTERNAL",
+    "PR-090": "SATISFIED_BY_EXISTING",
+    "PR-094": "CODE_CLOSED_DEFAULT_OFF",
+    "PR-095": "SATISFIED_BY_EXISTING",
+    "PR-096": "PARTIAL_EXTERNAL",
+    "PR-097": "CODE_CLOSED_EXTERNAL_QUALIFICATION_REQUIRED"
+  },
+  "canonical_owners": {
+    "obligation_contract": "src/lending/financing.py",
+    "lender_ports": "src/lending/agg03_financing_ports.py",
+    "planner_adapter": "src/lending/financing_planner_adapter.py",
+    "planner": "src/planning/atomic_marginfi_jupiter.py",
+    "exact_simulator": "src/execution/exact_simulation.py",
+    "repayment_decoder": "src/execution/agg03_financing_decoder.py",
+    "reconciler": "src/execution/economic_reconciliation/",
+    "attempt_orchestrator": "src/paper_shadow/exact_attempt_pr152.py",
+    "account_lifecycle": "src/account_lifecycle_pr131.py",
+    "conflict_scheduler": "src/strategy/conflict_scheduler.py",
+    "installed_resolver": "src/runtime/core_v1_dependency_resolver.py",
+    "installed_composition": "src/runtime/core_v1_composition.py"
+  },
+  "code_debt_closed": [
+    "Jupiter Lend and Slumlord implement AGG-01 FinancingPort without MarginFi relabeling",
+    "generic PRIMARY financing adapts into the existing AtomicMarginfiJupiterPlanner instead of a second planner",
+    "Slumlord is composed as auxiliary RENT financing around the same immutable message",
+    "primary and auxiliary repayment evidence is decoder-owned and bound to exact simulation, attempt identity and obligation digests",
+    "installed Jupiter Lend profile selection and evidence resolver are reachable while default-off",
+    "production-debt projection distinguishes code closure from external qualification"
+  ],
+  "residual_blockers": [
+    "JUPITER_LEND_DEPLOYMENT_AND_ROOTED_STATE_EVIDENCE_REQUIRED",
+    "SLUMLORD_DEPLOYMENT_PDA_AND_ROOTED_STATE_EVIDENCE_REQUIRED",
+    "FINANCING_EVIDENCE_MANIFEST_AND_DECODER_ARTIFACT_QUALIFICATION_REQUIRED",
+    "PROVIDER_DRAFT_SOURCE_AND_GOVERNED_RPC_EVIDENCE_REQUIRED",
+    "PR093_ACCOUNT_LIFECYCLE_PROFILE_EVIDENCE_NOT_YET_QUALIFIED",
+    "AGG04_REQUALIFICATION_REQUIRED_ON_EXACT_LENDER_PROFILE_GENERATION",
+    "LOADED_STATE_FORK_FINALIZED_LANDING_AND_SOAK_EVIDENCE_NOT_IMPLIED_BY_CODE_MERGE"
+  ]
+}

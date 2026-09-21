@@ -209,9 +209,7 @@ def test_pr242_unknown_market_stays_quarantined_until_existing_authority() -> No
 
 
 def test_pr243_inferred_semantics_are_hypotheses_until_validated() -> None:
-    graph = reconstruct_cpi_call_graph(
-        [{"parent": "a", "child": "b", "depth": 1}]
-    )
+    graph = reconstruct_cpi_call_graph([{"parent": "a", "child": "b", "depth": 1}])
     accounts = infer_account_relationships(
         [{"account": "vault", "candidate_role": "reserve"}]
     )
@@ -246,8 +244,7 @@ def test_pr244_license_policy_fails_closed_on_unknown_or_incomplete_copy() -> No
         notices=["MIT"],
     )
     assert (
-        enforce_source_reuse_policy(eligible, None).disposition
-        is Disposition.BLOCKED
+        enforce_source_reuse_policy(eligible, None).disposition is Disposition.BLOCKED
     )
     assert (
         enforce_source_reuse_policy(eligible, attribution).disposition
@@ -307,9 +304,7 @@ def test_pr245_preregistration_identity_changes_when_plan_changes() -> None:
 def test_pr246_multiple_testing_requires_corrected_economic_evidence() -> None:
     family = enumerate_hypothesis_family(["h1", "h2", "h3"])
     assert family.payload["denominator"] == 3
-    correction = apply_multiple_test_correction(
-        {"h1": 0.001, "h2": 0.3, "h3": 0.6}
-    )
+    correction = apply_multiple_test_correction({"h1": 0.001, "h2": 0.3, "h3": 0.6})
     summary = estimate_false_discovery_rate(correction, alpha=0.05)
     assert "h1" in summary.payload["discoveries"]
     passed = gate_discovery_claim(
@@ -388,16 +383,12 @@ def test_pr249_factor_residual_is_research_only() -> None:
     assert covariance_artifact.payload["leakage_safe"] is True
     model = fit_dynamic_factor_model(series)
     exposures = estimate_factor_exposures(series, model)
-    residual = detect_factor_residual(
-        {"a": 5.0, "b": 6.0}, exposures, factor_value=5.5
-    )
+    residual = detect_factor_residual({"a": 5.0, "b": 6.0}, exposures, factor_value=5.5)
     assert residual.payload["execution_signal"] is False
 
 
 def test_pr250_stat_arb_is_non_atomic_and_requires_separate_margin() -> None:
-    candidates = discover_cointegrated_baskets(
-        {"a/b": ([1, 2, 3, 4], [1, 2, 3, 4])}
-    )
+    candidates = discover_cointegrated_baskets({"a/b": ([1, 2, 3, 4], [1, 2, 3, 4])})
     assert candidates.payload["research_only"] is True
     hedge = estimate_hedge_vector([1, 2, 3], [2, 4, 6])
     assert "beta" in hedge.payload
@@ -446,9 +437,7 @@ def test_pr252_lead_lag_promotes_feature_not_execution_authority() -> None:
 
 
 def test_pr253_flow_is_public_research_only_and_no_harmful_frontrun() -> None:
-    classified = classify_wallet_flow(
-        [{"wallet": "w", "signed_amount": 10.0}]
-    )
+    classified = classify_wallet_flow([{"wallet": "w", "signed_amount": 10.0}])
     assert classified.payload["deanonymization_claimed"] is False
     meta = infer_meta_order([1, 2, 3, 4])
     assert meta.disposition is Disposition.PASS

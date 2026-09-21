@@ -60,9 +60,7 @@ def link_wallet_program_relationships(
             {
                 "wallet": nonempty_text(item.get("wallet"), "wallet"),
                 "program": nonempty_text(item.get("program"), "program"),
-                "relationship": nonempty_text(
-                    item.get("relationship"), "relationship"
-                ),
+                "relationship": nonempty_text(item.get("relationship"), "relationship"),
                 "confidence": confidence,
                 "public_evidence_only": True,
             }

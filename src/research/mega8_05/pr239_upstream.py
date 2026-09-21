@@ -39,9 +39,7 @@ def extract_candidate_symbols(
         values = candidate.get(key, ())
         if isinstance(values, str):
             values = (values,)
-        result[key] = tuple(
-            sorted({nonempty_text(value, key) for value in values})
-        )
+        result[key] = tuple(sorted({nonempty_text(value, key) for value in values}))
     return result
 
 

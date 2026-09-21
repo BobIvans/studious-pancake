@@ -48,9 +48,7 @@ def detect_liquidity_withdrawal_risk(
     if previous_executable_liquidity == 0:
         fraction = 0.0
     else:
-        fraction = 1.0 - (
-            current_executable_liquidity / previous_executable_liquidity
-        )
+        fraction = 1.0 - (current_executable_liquidity / previous_executable_liquidity)
     risky = fraction >= probability(warning_fraction, "warning_fraction")
     return artifact(
         "liquidity-withdrawal-risk",

@@ -63,7 +63,9 @@ def run_adapter_differential_suite(
         for key in sorted(local_keys & upstream_keys)
         if local_outputs[key] != upstream_outputs[key]
     )
-    passed = bool(keys) and not missing_local and not missing_upstream and not mismatches
+    passed = (
+        bool(keys) and not missing_local and not missing_upstream and not mismatches
+    )
     disposition = Disposition.PASS if passed else Disposition.REJECT
     return artifact(
         "adapter-differential",

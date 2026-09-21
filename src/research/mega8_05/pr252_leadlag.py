@@ -34,10 +34,7 @@ def estimate_multiscale_lead_lag(
 def build_information_flow_graph(
     links: Mapping[str, ResearchArtifact],
 ) -> ResearchArtifact:
-    edges = {
-        key: value.payload["scores"]
-        for key, value in sorted(links.items())
-    }
+    edges = {key: value.payload["scores"] for key, value in sorted(links.items())}
     return artifact(
         "information-flow-graph",
         {"edges": edges, "time_versioned": True},
@@ -52,10 +49,7 @@ def test_lead_lag_stability(
 ) -> ResearchArtifact:
     common = sorted(set(train.payload["scores"]) & set(holdout.payload["scores"]))
     stable = bool(common) and all(
-        abs(
-            float(train.payload["scores"][lag])
-            - float(holdout.payload["scores"][lag])
-        )
+        abs(float(train.payload["scores"][lag]) - float(holdout.payload["scores"][lag]))
         <= tolerance
         for lag in common
     )
@@ -82,12 +76,8 @@ def promote_predictive_link(
         "predictive-feature-link",
         {
             "stability": stability.identity,
-            "stale_data_alternative_rejected": bool(
-                stale_data_alternative_rejected
-            ),
-            "common_cause_alternative_tested": bool(
-                common_cause_alternative_tested
-            ),
+            "stale_data_alternative_rejected": bool(stale_data_alternative_rejected),
+            "common_cause_alternative_tested": bool(common_cause_alternative_tested),
             "execution_authority": False,
         },
         disposition=Disposition.PASS if passed else Disposition.BLOCKED,

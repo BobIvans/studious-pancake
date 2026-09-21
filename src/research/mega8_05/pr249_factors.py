@@ -22,10 +22,7 @@ def update_online_covariance(
     names = tuple(sorted(series))
     require_same_length(*(series[name] for name in names))
     matrix = {
-        left: {
-            right: covariance(series[left], series[right])
-            for right in names
-        }
+        left: {right: covariance(series[left], series[right]) for right in names}
         for left in names
     }
     return artifact(
@@ -42,8 +39,7 @@ def fit_dynamic_factor_model(
     names = tuple(sorted(series))
     length = require_same_length(*(series[name] for name in names))
     factor = tuple(
-        mean([float(series[name][index]) for name in names])
-        for index in range(length)
+        mean([float(series[name][index]) for name in names]) for index in range(length)
     )
     return artifact(
         "dynamic-factor-model",
@@ -78,8 +74,7 @@ def detect_factor_residual(
     factor_value: float,
 ) -> ResearchArtifact:
     residuals = {
-        name: float(observed[name])
-        - float(beta) * float(factor_value)
+        name: float(observed[name]) - float(beta) * float(factor_value)
         for name, beta in exposures.payload["exposures"].items()
         if name in observed
     }

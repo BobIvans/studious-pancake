@@ -128,9 +128,7 @@ def qualify_stat_arb_basket(
         checks,
         disposition=Disposition.PASS if passed else Disposition.BLOCKED,
         reason=(
-            "research-qualified-non-atomic"
-            if passed
-            else "non-atomic-evidence-missing"
+            "research-qualified-non-atomic" if passed else "non-atomic-evidence-missing"
         ),
     )
 

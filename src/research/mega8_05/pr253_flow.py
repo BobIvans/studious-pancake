@@ -65,9 +65,7 @@ def estimate_flow_toxicity(
     if len(signed_amounts) != len(subsequent_markouts) or not signed_amounts:
         raise ValueError("flow and markouts must be non-empty and aligned")
     adverse = [
-        1.0
-        if float(flow) * float(markout) < 0.0
-        else 0.0
+        1.0 if float(flow) * float(markout) < 0.0 else 0.0
         for flow, markout in zip(signed_amounts, subsequent_markouts, strict=True)
     ]
     return artifact(

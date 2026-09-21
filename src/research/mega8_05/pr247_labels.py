@@ -8,7 +8,6 @@ from typing import Any
 
 from .base import ResearchArtifact, artifact, finite_number, probability
 
-
 _ALLOWED = {
     "observed",
     "simulated",

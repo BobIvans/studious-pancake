@@ -92,11 +92,7 @@ def verify() -> dict[str, Any]:
     if child_ids != EXPECTED_CHILDREN:
         failures.append("child_ids")
 
-    nf_ids = tuple(
-        nf_id
-        for child in children
-        for nf_id in child.get("nf_ids", [])
-    )
+    nf_ids = tuple(nf_id for child in children for nf_id in child.get("nf_ids", []))
     if nf_ids != EXPECTED_NF or len(set(nf_ids)) != 64:
         failures.append("nf_ids")
 

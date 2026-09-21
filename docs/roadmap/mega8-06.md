@@ -46,8 +46,8 @@ only simulates counterfactual ordering; offline execution/fee models remain advi
 ## Dependency truth
 
 The eight-pack declares MEGA8-01..05 as prerequisites. The branch was re-synchronized
-after MEGA8-01/#525 merged to main at `c786b74c3fdd614d16ef3db6c517e964cb43c194`;
-MEGA8-02/#523 is also merged. MEGA8-03/#521, MEGA8-04/#522, and MEGA8-05/#524
+after MEGA8-03/#521 merged to main at `1426f75749f4091e886b94e9a919df4e90739198`.
+MEGA8-01/#525 and MEGA8-02/#523 are also merged. MEGA8-04/#522 and MEGA8-05/#524
 remain open, so this slice is `IMPLEMENTED_OFFLINE` but operationally
 `BLOCKED_DEPENDENCIES_AND_EXTERNAL_EVIDENCE`.
 

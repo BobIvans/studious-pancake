@@ -1,4 +1,5 @@
 """PR-274 / CACHE-02: immutable generation-aware state slices."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence
@@ -69,8 +70,6 @@ def revoke_stale_cache(
 ) -> tuple[str, ...]:
     return tuple(
         sorted(
-            item.slice_id
-            for item in slices
-            if item.generation != current_generation
+            item.slice_id for item in slices if item.generation != current_generation
         )
     )

@@ -1,17 +1,24 @@
 """PR-164 / GRAPH-03: deterministic operation hyperedges."""
+
 from __future__ import annotations
 from typing import Mapping, Sequence
 from .core import Hyperedge, Mega802Error, apply_hyperedge_core, compile_hyperedge_core
 
 
 def compile_operation_hyperedge(
-    *, edge_id: str, inputs: Mapping[str, int], outputs: Mapping[str, int],
+    *,
+    edge_id: str,
+    inputs: Mapping[str, int],
+    outputs: Mapping[str, int],
     obligations: Mapping[str, int] | None = None,
     writable_resources: Sequence[str] = (),
 ) -> Hyperedge:
     return compile_hyperedge_core(
-        edge_id=edge_id, inputs=inputs, outputs=outputs,
-        obligations=obligations, writable_resources=writable_resources,
+        edge_id=edge_id,
+        inputs=inputs,
+        outputs=outputs,
+        obligations=obligations,
+        writable_resources=writable_resources,
     )
 
 
@@ -24,8 +31,11 @@ def bind_multi_input_obligations(
             raise Mega802Error("INVALID_OBLIGATION")
         merged[asset] = merged.get(asset, 0) + amount
     return compile_hyperedge_core(
-        edge_id=edge.edge_id, inputs=dict(edge.inputs), outputs=dict(edge.outputs),
-        obligations=merged, writable_resources=edge.writable_resources,
+        edge_id=edge.edge_id,
+        inputs=dict(edge.inputs),
+        outputs=dict(edge.outputs),
+        obligations=merged,
+        writable_resources=edge.writable_resources,
     )
 
 

@@ -1,0 +1,32 @@
+{
+  "schema_version": "pr354.evidence.v1",
+  "implementation_base_sha": "30adc0508180131aa6d4122a5db0d24206941405",
+  "implementation_head_sha": "PENDING_EXACT_HEAD",
+  "generated_from": "PR-354 mechanism-discovery implementation",
+  "claims": {
+    "merged": false,
+    "qualified": false,
+    "authorized_live": false,
+    "production_ready": false,
+    "profitability": false,
+    "universal_anomaly_detection": false
+  },
+  "commands": [
+    {
+      "command": "python scripts/verify_pr354_mechanism_discovery.py --json",
+      "status": "NOT_RUN",
+      "exit_code": null
+    },
+    {
+      "command": "python -m pytest -q tests/mechanism_discovery --disable-socket --allow-unix-socket",
+      "status": "NOT_RUN",
+      "exit_code": null
+    },
+    {
+      "command": "python scripts/verify_repo.py",
+      "status": "NOT_RUN",
+      "exit_code": null
+    }
+  ],
+  "note": "Initial manifest is intentionally NOT_RUN; GitHub Actions exact-head evidence is authoritative."
+}

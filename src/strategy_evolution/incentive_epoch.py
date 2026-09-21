@@ -7,6 +7,8 @@ from .core import EvolutionError, build_candidate, contract, qualify_candidate, 
 
 def ingest_epoch_emission_schedule(payload: Mapping[str, Any]):
     data = dict(payload)
+    if data.get("token_metadata_verified") is False:
+        raise EvolutionError("TOKEN_METADATA_UNKNOWN")
     if data.get("state_event_match") is False:
         raise EvolutionError("STATE_EVENT_MISMATCH")
     if data.get("epoch") is None:
@@ -21,6 +23,14 @@ def ingest_epoch_emission_schedule(payload: Mapping[str, Any]):
 
 def compute_gauge_reward_surface(payload: Mapping[str, Any]):
     data = dict(payload)
+    bounded = (
+        int(data.get("tvl_atoms", 0)),
+        int(data.get("reward_atoms", 0)),
+        int(data.get("claim_cost_atoms", 0)),
+        int(data.get("price_low_atoms", 0)),
+    )
+    if any(abs(value) > 2**255 - 1 for value in bounded):
+        raise EvolutionError("OVERFLOW")
     if int(data.get("tvl_atoms", 0)) <= 0:
         raise EvolutionError("TVL_ZERO")
     if data.get("price_low_atoms") is None:
@@ -77,6 +87,10 @@ def compute_buyback_pressure_band(payload: Mapping[str, Any]):
 def detect_epoch_roll_dislocation(payload: Mapping[str, Any]):
     if int(payload.get("capacity_atoms", 0)) <= 0:
         raise EvolutionError("NO_CAPACITY")
+    if int(payload.get("value_low_atoms", 0)) <= int(
+        payload.get("cost_high_atoms", 0)
+    ):
+        raise EvolutionError("INSIDE_BAND")
     if not payload.get("unwind_available"):
         raise EvolutionError("UNWIND_UNAVAILABLE")
     return contract(
@@ -88,6 +102,8 @@ def detect_epoch_roll_dislocation(payload: Mapping[str, Any]):
 
 
 def build_incentive_rotation_candidate(payload: Mapping[str, Any]):
+    if payload.get("reward_risk_unbounded"):
+        raise EvolutionError("REWARD_RISK_UNBOUNDED")
     if int(payload.get("lock_duration", 0)) > int(payload.get("max_lock_duration", 0)):
         raise EvolutionError("LOCK_EXCEEDS_HORIZON")
     if not payload.get("exit_verified"):
@@ -95,7 +111,15 @@ def build_incentive_rotation_candidate(payload: Mapping[str, Any]):
     return build_candidate("EVO-02", "INCENTIVE_ROTATION", payload)
 
 
-def qualify_incentive_rotation(candidate, *, epoch_count: int, policy_passed: bool):
+def qualify_incentive_rotation(
+    candidate,
+    *,
+    epoch_count: int,
+    policy_passed: bool,
+    attribution_clean: bool = True,
+):
+    if not attribution_clean:
+        raise EvolutionError("ATTRIBUTION_LEAK")
     if epoch_count < 3:
         raise EvolutionError("EPOCH_SAMPLE_TOO_SMALL")
     return qualify_candidate(

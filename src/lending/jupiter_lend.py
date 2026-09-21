@@ -32,11 +32,9 @@ JUPITER_LEND_FLASHLOAN_PROGRAM_ID = Pubkey.from_string(
     "jupgfSgfuAXv4B6R2Uxu85Z1qdzgju79s6MfZekN6XS"
 )
 JUPITER_FLASHLOAN_ADMIN_SEED = b"flashloan_admin"
-JUPITER_FLASHLOAN_ADMIN_PDA, JUPITER_FLASHLOAN_ADMIN_BUMP = (
-    Pubkey.find_program_address(
-        [JUPITER_FLASHLOAN_ADMIN_SEED],
-        JUPITER_LEND_FLASHLOAN_PROGRAM_ID,
-    )
+JUPITER_FLASHLOAN_ADMIN_PDA, JUPITER_FLASHLOAN_ADMIN_BUMP = Pubkey.find_program_address(
+    [JUPITER_FLASHLOAN_ADMIN_SEED],
+    JUPITER_LEND_FLASHLOAN_PROGRAM_ID,
 )
 ASSOCIATED_TOKEN_PROGRAM_ID = Pubkey.from_string(
     "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
@@ -290,8 +288,7 @@ def _account_fingerprint(
     instruction: Instruction,
 ) -> tuple[tuple[Pubkey, bool, bool], ...]:
     return tuple(
-        (meta.pubkey, meta.is_signer, meta.is_writable)
-        for meta in instruction.accounts
+        (meta.pubkey, meta.is_signer, meta.is_writable) for meta in instruction.accounts
     )
 
 
@@ -303,9 +300,7 @@ def _validate_account_shape(instruction: Instruction) -> None:
             "flashloan instruction must contain exactly 14 ordered account metas",
         )
 
-    actual_flags = tuple(
-        (meta.is_signer, meta.is_writable) for meta in accounts
-    )
+    actual_flags = tuple((meta.is_signer, meta.is_writable) for meta in accounts)
     if actual_flags != _EXPECTED_META_FLAGS:
         raise JupiterLendAdapterError(
             JupiterLendRejectionCode.ACCOUNT_MISMATCH,

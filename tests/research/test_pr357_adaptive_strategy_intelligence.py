@@ -317,7 +317,6 @@ def test_evsi_rejects_posterior_mixture_that_does_not_reproduce_prior() -> None:
         )
 
 
-
 def test_belief_rejects_asymmetric_covariance() -> None:
     clock = ObservationClock(1, 2, 3, 4, "s", "r")
     with pytest.raises(PR357ContractError, match="PR357_COVARIANCE_ASYMMETRIC"):
@@ -372,6 +371,7 @@ def test_mandatory_safety_that_misses_deadline_forces_abstention() -> None:
     assert plan["status"] == "ABSTAIN"
     assert plan["reason"] == "MANDATORY_SAFETY_MISSES_DEADLINE"
     assert plan["selected"] == ()
+
 
 def test_full_pr357_verifier() -> None:
     result = verify()

@@ -51,7 +51,7 @@ def restore_archived_dataset(
     return tuple(objects[digest] for digest in manifest["object_hashes"])
 
 
-def run_archive_disaster_recovery(
+def test_archive_disaster_recovery(
     manifest: Mapping[str, object],
     primary: Mapping[str, bytes],
     restored: Mapping[str, bytes],
@@ -61,3 +61,7 @@ def run_archive_disaster_recovery(
     if dict(primary) != dict(restored):
         raise Mega807Error("ARCHIVE_RESTORE_MISMATCH")
     return stable_hash("mega8-07-archive-dr", manifest)
+
+# Public roadmap symbol NF-796 intentionally starts with "test_"; prevent pytest
+# from collecting it when imported into a test module.
+test_archive_disaster_recovery.__test__ = False

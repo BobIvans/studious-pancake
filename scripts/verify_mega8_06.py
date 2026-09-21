@@ -64,22 +64,16 @@ def main() -> int:
             if isinstance(node, ast.Import):
                 for alias in node.names:
                     if alias.name.split(".", 1)[0] in FORBIDDEN_IMPORT_ROOTS:
-                        errors.append(
-                            f"forbidden import {alias.name} in {path.name}"
-                        )
+                        errors.append(f"forbidden import {alias.name} in {path.name}")
             elif isinstance(node, ast.ImportFrom) and node.module:
                 if node.module.split(".", 1)[0] in FORBIDDEN_IMPORT_ROOTS:
-                    errors.append(
-                        f"forbidden import {node.module} in {path.name}"
-                    )
+                    errors.append(f"forbidden import {node.module} in {path.name}")
         lowered = text.lower()
         for token in FORBIDDEN_TOKENS:
             if token in lowered:
                 errors.append(f"forbidden effect token {token} in {path.name}")
 
-    coverage = json.loads(
-        (ROOT / "config" / "mega8_06_coverage.json").read_text()
-    )
+    coverage = json.loads((ROOT / "config" / "mega8_06_coverage.json").read_text())
     if coverage.get("live_enabled") is not False:
         errors.append("live_enabled must remain false")
     if coverage.get("signing_enabled") is not False:

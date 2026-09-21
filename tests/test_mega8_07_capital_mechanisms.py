@@ -278,3 +278,13 @@ def test_liquidation_portfolio_counts_shared_resource_once_and_reconciles() -> N
         {"a": 10, "c": -2},
     )
     assert receipt["finalized_total"] == 8
+
+def test_liquidation_portfolio_rejects_duplicate_mechanisms_and_selected_ids() -> None:
+    duplicated = (
+        LiquidationMechanism("a", "proto-a", "SOL", 100, 90, 5, 20, "reserve-1"),
+        LiquidationMechanism("a", "proto-b", "USDC", 60, 60, 5, 20, "reserve-2"),
+    )
+    with pytest.raises(Mega807Error, match="DUPLICATE_LIQUIDATION_MECHANISM"):
+        allocate_liquidation_capital(duplicated, capital_budget=40)
+    with pytest.raises(Mega807Error, match="DUPLICATE_SELECTED_LIQUIDATION"):
+        reconcile_liquidation_portfolio(("a", "a"), {"a": 10})

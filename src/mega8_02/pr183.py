@@ -1,4 +1,5 @@
 """PR-183 / LST-03: stake-account exchange and instant-exit routes."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from .core import EvidenceBinding, Mega802Error, rational_quote, stable_hash
@@ -27,14 +28,16 @@ def build_stake_account_route(
 ) -> str:
     output = quote_stake_account_exchange(quote, amount=amount, now=now)
     return stable_hash(
-        {"stake_account": quote.stake_account, "amount": amount, "output": output,
-         "evidence": quote.evidence.identity}
+        {
+            "stake_account": quote.stake_account,
+            "amount": amount,
+            "output": output,
+            "evidence": quote.evidence.identity,
+        }
     )
 
 
-def verify_instant_exit_capacity(
-    quote: StakeAccountQuote, *, amount: int
-) -> bool:
+def verify_instant_exit_capacity(quote: StakeAccountQuote, *, amount: int) -> bool:
     if amount > quote.exit_capacity:
         raise Mega802Error("INSTANT_EXIT_CAPACITY_UNAVAILABLE")
     return True

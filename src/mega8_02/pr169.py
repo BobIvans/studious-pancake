@@ -1,4 +1,5 @@
 """PR-169 / PREDICT-02: writable-account contention."""
+
 from __future__ import annotations
 from collections import Counter
 from typing import Iterable, Sequence
@@ -41,9 +42,7 @@ def predict_local_auction_competition(
     return min(1_000_000, contention_ppm + competing_writers * 25_000)
 
 
-def gate_high_contention_candidate(
-    competition_ppm: int, *, max_ppm: int
-) -> bool:
+def gate_high_contention_candidate(competition_ppm: int, *, max_ppm: int) -> bool:
     require_nonnegative_int(competition_ppm, "competition_ppm")
     require_nonnegative_int(max_ppm, "max_ppm")
     if competition_ppm > max_ppm:

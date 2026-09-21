@@ -10,6 +10,7 @@ from src.mega8_04 import (
     CoverageRow,
     DependencyRecord,
     Disposition,
+    FaultScenario,
     Mega804Error,
     NF_SYMBOLS,
     SignedEvidenceRecord,
@@ -36,6 +37,7 @@ from src.mega8_04 import (
     generate_sbom,
     generate_stateful_test_sequences,
     publish_post150_release_verdict,
+    quote_evm_pool_exactly,
     reconcile_crosschain_settlement,
     recover_multi_region_signer,
     register_crosschain_asset_rights,
@@ -44,6 +46,7 @@ from src.mega8_04 import (
     sandbox_strategy_plugin,
     schedule_next_evidence_cycle,
     shrink_failing_economic_case,
+    simulate_evm_liquidation_callback,
     simulate_ptb_exactly,
     verify_fail_closed_recovery,
     verify_plugin_capabilities,
@@ -148,6 +151,9 @@ def test_empty_crash_and_chaos_campaigns_fail_closed() -> None:
     assert chaos.disposition is Disposition.BLOCKED
     assert "CHAOS_SCENARIOS_REQUIRED" in chaos.blockers
 
+    with pytest.raises(Mega804Error, match="unsupported fault scenario kind"):
+        FaultScenario("noop", "target", "generation")
+
 
 def test_supply_chain_sbom_and_reproducibility_are_deterministic() -> None:
     record = DependencyRecord(
@@ -229,6 +235,12 @@ def test_hsm_contract_is_metadata_only_and_region_fenced() -> None:
         ).disposition
         is Disposition.PASS
     )
+    with pytest.raises(Mega804Error, match="approval is required"):
+        execute_key_ceremony(
+            primary,
+            approvals=("", " "),
+            quorum=2,
+        )
 
 
 def test_evm_adapter_and_calldata_are_research_only() -> None:
@@ -248,6 +260,12 @@ def test_evm_adapter_and_calldata_are_research_only() -> None:
         recipient=ADDRESS,
     )
     assert len(calldata) == 100
+    assert quote_evm_pool_exactly(
+        reserve_in=1_000,
+        reserve_out=10_000,
+        amount_in=1,
+        fee_ppm=3_000,
+    ) == 9
     assert (
         differential_test_evm_math(
             local_amount_out=9,
@@ -255,6 +273,13 @@ def test_evm_adapter_and_calldata_are_research_only() -> None:
         ).disposition
         is Disposition.PASS
     )
+
+    with pytest.raises(Mega804Error, match="borrowed_base_units"):
+        simulate_evm_liquidation_callback(
+            borrowed_base_units=-10,
+            repaid_base_units=-5,
+            plan={"conservative_net_base_units": 1},
+        )
 
 
 def test_sui_exact_state_and_crosschain_reconciliation_remain_research_only() -> None:

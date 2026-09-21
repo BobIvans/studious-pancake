@@ -1,8 +1,10 @@
 """AGG-15 full-scope coverage audit and release-handoff contracts.
 
 This module is deliberately not a promotion authority.  It consumes explicit
-coverage/campaign/handoff evidence, checks that the 328 planned NF identities
-are represented without inflation, and produces a fail-closed handoff report.
+coverage/campaign/handoff evidence, checks that the current 352 planned NF
+identities are represented without inflation, and produces a fail-closed handoff
+report.  SUPER-08 extends this same owner rather than creating a second release
+authority.
 Canonical production promotion remains owned by MPR-2612.
 """
 
@@ -16,9 +18,24 @@ from pathlib import Path
 import re
 from typing import Any, Iterable, Mapping, Sequence
 
-AGG15_SCHEMA_VERSION = "agg15.release-handoff.v1"
-EXPECTED_NF_COUNT = 328
+AGG15_SCHEMA_VERSION = "agg15.release-handoff.v2"
+EXPECTED_NF_COUNT = 352
 EXPECTED_NF_IDS = tuple(f"NF-{index:03d}" for index in range(1, EXPECTED_NF_COUNT + 1))
+
+EXTENSION_SCOPE_ROWS = (
+    *((f"NF-{index:03d}", "TREASURY-01", "PR-073") for index in range(329, 333)),
+    *((f"NF-{index:03d}", "BATCH-01", "PR-074") for index in range(333, 337)),
+    *((f"NF-{index:03d}", "UNIVERSE-01", "PR-075") for index in range(337, 341)),
+    *((f"NF-{index:03d}", "ALT-01", "PR-076") for index in range(341, 345)),
+    *((f"NF-{index:03d}", "FORMAT-01", "PR-077") for index in range(345, 349)),
+    *((f"NF-{index:03d}", "FORMAT-02", "PR-078") for index in range(349, 353)),
+)
+EXTENSION_NF_OWNERS = {nf_id: owner for nf_id, owner, _ in EXTENSION_SCOPE_ROWS}
+EXTENSION_SOURCE_PRS = {
+    nf_id: source_pr for nf_id, _, source_pr in EXTENSION_SCOPE_ROWS
+}
+CANONICAL_PRODUCT_OWNER = "src.research.product"
+CANONICAL_PRODUCT_ACCOUNTING_OWNER = "RevenueAttributionLedger"
 EXPECTED_EVOLUTION_STAGES = (
     "record",
     "analyse",
@@ -31,7 +48,7 @@ EXPECTED_EVOLUTION_STAGES = (
 
 _GIT_OBJECT_ID = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
-_NF_ID = re.compile(r"^NF-(?:00[1-9]|0[1-9][0-9]|[12][0-9]{2}|3[01][0-9]|32[0-8])$")
+_NF_ID = re.compile(r"^NF-(?:00[1-9]|0[1-9][0-9]|[12][0-9]{2}|3[0-4][0-9]|35[0-2])$")
 _AGG_ID = re.compile(r"^AGG-(?:0[1-9]|1[0-5])$")
 
 
@@ -82,6 +99,12 @@ class CoverageRecord:
         if not _AGG_ID.fullmatch(self.agg_id):
             raise Agg15AuditError("AGG15_INVALID_AGG_ID")
         _text(self.primary_owner, "primary_owner")
+        expected_extension_owner = EXTENSION_NF_OWNERS.get(self.nf_id)
+        if (
+            expected_extension_owner is not None
+            and self.primary_owner != expected_extension_owner
+        ):
+            raise Agg15AuditError("AGG15_EXTENSION_OWNER_MISMATCH")
         _text(self.contract_ref, "contract_ref")
         _unique_texts(self.test_refs, "test_refs")
         _unique_texts(self.evidence_refs, "evidence_refs")
@@ -295,12 +318,50 @@ class ContinuousEvolution:
 
 
 @dataclass(frozen=True, slots=True)
+class ProductBoundary:
+    """Evidence that PRODUCT-01 cannot inflate trading PnL or execution authority."""
+
+    product_owner: str
+    accounting_owner: str
+    evidence_refs: tuple[str, ...]
+    service_accounting_separate: bool
+    product_revenue_is_trading_pnl: bool = False
+    client_funds_are_trading_capital: bool = False
+    signing_allowed: bool = False
+    submission_allowed: bool = False
+    remote_product_mutation_performed: bool = False
+
+    def __post_init__(self) -> None:
+        _text(self.product_owner, "product_owner")
+        _text(self.accounting_owner, "accounting_owner")
+        _unique_texts(self.evidence_refs, "product_evidence_refs")
+        if self.product_revenue_is_trading_pnl:
+            raise Agg15AuditError("AGG15_PRODUCT_REVENUE_AS_TRADING_PNL_FORBIDDEN")
+        if self.client_funds_are_trading_capital:
+            raise Agg15AuditError("AGG15_CLIENT_FUNDS_AS_TRADING_CAPITAL_FORBIDDEN")
+        if self.signing_allowed or self.submission_allowed:
+            raise Agg15AuditError("AGG15_PRODUCT_EXECUTION_AUTHORITY_FORBIDDEN")
+        if self.remote_product_mutation_performed:
+            raise Agg15AuditError("AGG15_PRODUCT_REMOTE_MUTATION_FORBIDDEN")
+
+    @property
+    def ready(self) -> bool:
+        return (
+            self.product_owner == CANONICAL_PRODUCT_OWNER
+            and self.accounting_owner == CANONICAL_PRODUCT_ACCOUNTING_OWNER
+            and self.service_accounting_separate
+            and bool(self.evidence_refs)
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ReleaseHandoffReport:
     schema_version: str
     release_id: str
     source_commit: str
     coverage: CoverageAudit
     selected_profiles: tuple[SelectedProfile, ...]
+    product_boundary_ready: bool
     blockers: tuple[str, ...]
     scoped_release_handoff_ready: bool
     full_target_handoff_ready: bool
@@ -317,6 +378,7 @@ class ReleaseHandoffReport:
             "source_commit": self.source_commit,
             "coverage": self.coverage.to_dict(),
             "selected_profiles": [asdict(item) for item in self.selected_profiles],
+            "product_boundary_ready": self.product_boundary_ready,
             "blockers": list(self.blockers),
             "scoped_release_handoff_ready": self.scoped_release_handoff_ready,
             "full_target_handoff_ready": self.full_target_handoff_ready,
@@ -407,11 +469,15 @@ def evaluate_release_handoff(payload: Mapping[str, Any]) -> ReleaseHandoffReport
     evolution = (
         _evolution(evolution_raw) if isinstance(evolution_raw, Mapping) else None
     )
+    product_raw = payload.get("product_boundary")
+    product_boundary = (
+        _product_boundary(product_raw) if isinstance(product_raw, Mapping) else None
+    )
 
     blockers: list[str] = []
     blockers.extend(code for row in records for code in row.blocker_codes)
     if not coverage.structurally_complete:
-        blockers.append("AGG15_COVERAGE_NOT_328")
+        blockers.append("AGG15_COVERAGE_NOT_352")
     if coverage.required_incomplete_nf_ids:
         blockers.append("AGG15_REQUIRED_SCOPE_INCOMPLETE")
     if not profiles:
@@ -432,6 +498,10 @@ def evaluate_release_handoff(payload: Mapping[str, Any]) -> ReleaseHandoffReport
         blockers.append("AGG15_OPERATOR_HANDOFF_INCOMPLETE")
     if evolution is None or not evolution.ready:
         blockers.append("AGG15_CONTINUOUS_EVOLUTION_INCOMPLETE")
+    if product_boundary is None:
+        blockers.append("AGG15_PRODUCT_BOUNDARY_MISSING")
+    elif not product_boundary.ready:
+        blockers.append("AGG15_PRODUCT_BOUNDARY_INCOMPLETE")
 
     receipt = payload.get("release_authority_receipt_ref")
     canonical_release_receipt_present = isinstance(receipt, str) and bool(
@@ -448,6 +518,8 @@ def evaluate_release_handoff(payload: Mapping[str, Any]) -> ReleaseHandoffReport
         and handoff.ready
         and evolution is not None
         and evolution.ready
+        and product_boundary is not None
+        and product_boundary.ready
     )
     full_ready = scoped_ready and coverage.full_target_code_complete
     review_ready = scoped_ready and canonical_release_receipt_present and not blockers
@@ -460,6 +532,9 @@ def evaluate_release_handoff(payload: Mapping[str, Any]) -> ReleaseHandoffReport
         source_commit=source_commit,
         coverage=coverage,
         selected_profiles=profiles,
+        product_boundary_ready=(
+            product_boundary is not None and product_boundary.ready
+        ),
         blockers=tuple(dict.fromkeys(blockers)),
         scoped_release_handoff_ready=scoped_ready,
         full_target_handoff_ready=full_ready,
@@ -573,6 +648,28 @@ def _evolution(raw: Mapping[str, Any]) -> ContinuousEvolution:
             raw, "risk_authority_overridable", default=False
         ),
         auto_live=_bool_field(raw, "auto_live", default=False),
+    )
+
+
+def _product_boundary(raw: Mapping[str, Any]) -> ProductBoundary:
+    return ProductBoundary(
+        product_owner=_text(raw.get("product_owner"), "product_owner"),
+        accounting_owner=_text(raw.get("accounting_owner"), "accounting_owner"),
+        evidence_refs=_texts(raw.get("evidence_refs", ()), "product_evidence_refs"),
+        service_accounting_separate=_bool_field(
+            raw, "service_accounting_separate", default=False
+        ),
+        product_revenue_is_trading_pnl=_bool_field(
+            raw, "product_revenue_is_trading_pnl", default=False
+        ),
+        client_funds_are_trading_capital=_bool_field(
+            raw, "client_funds_are_trading_capital", default=False
+        ),
+        signing_allowed=_bool_field(raw, "signing_allowed", default=False),
+        submission_allowed=_bool_field(raw, "submission_allowed", default=False),
+        remote_product_mutation_performed=_bool_field(
+            raw, "remote_product_mutation_performed", default=False
+        ),
     )
 
 

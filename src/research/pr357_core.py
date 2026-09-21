@@ -804,8 +804,7 @@ def _cholesky_factor(
     for row in range(len(names)):
         for column in range(row + 1):
             residual = matrix[row][column] - sum(
-                lower[row][index] * lower[column][index]
-                for index in range(column)
+                lower[row][index] * lower[column][index] for index in range(column)
             )
             if row == column:
                 if residual < -1e-9:
@@ -836,8 +835,7 @@ def generate_joint_predictive_distribution(
         sample: dict[str, int] = {}
         for row, name in enumerate(names):
             delta = sum(
-                lower[row][column] * independent[column]
-                for column in range(row + 1)
+                lower[row][column] * independent[column] for column in range(row + 1)
             )
             sample[name] = int(round(belief.posterior_mean[name] + delta))
         rows.append(sample)
@@ -998,9 +996,7 @@ def estimate_evsi(
         expected_posterior_loss += loss * weight
     for state, prior_probability in prior.items():
         if abs(mixture_numerators[state] - prior_probability * PPM) > PPM:
-            raise PR357ContractError(
-                f"PR357_POSTERIOR_MIXTURE_INCOHERENT:{state}"
-            )
+            raise PR357ContractError(f"PR357_POSTERIOR_MIXTURE_INCOHERENT:{state}")
     expected_posterior_loss //= PPM
     return max(0, current_loss - expected_posterior_loss)
 

@@ -48,8 +48,7 @@
     },
     "MEGA8-04": {
       "status": "MERGED_REQUALIFIED",
-      "evidence": "GitHub PR #522 merge 829e56a6069a08dc33ef61b5a36814575b3e652a",
-      "merge_required_for_integrated_promotion": true
+      "evidence": "GitHub PR #522 merge 829e56a6069a08dc33ef61b5a36814575b3e652a"
     },
     "MEGA8-05": {
       "status": "MERGED_REQUALIFIED",

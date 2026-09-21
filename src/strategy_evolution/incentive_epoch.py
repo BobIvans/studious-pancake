@@ -87,9 +87,7 @@ def compute_buyback_pressure_band(payload: Mapping[str, Any]):
 def detect_epoch_roll_dislocation(payload: Mapping[str, Any]):
     if int(payload.get("capacity_atoms", 0)) <= 0:
         raise EvolutionError("NO_CAPACITY")
-    if int(payload.get("value_low_atoms", 0)) <= int(
-        payload.get("cost_high_atoms", 0)
-    ):
+    if int(payload.get("value_low_atoms", 0)) <= int(payload.get("cost_high_atoms", 0)):
         raise EvolutionError("INSIDE_BAND")
     if not payload.get("unwind_available"):
         raise EvolutionError("UNWIND_UNAVAILABLE")

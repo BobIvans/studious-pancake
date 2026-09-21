@@ -403,7 +403,8 @@ def test_document_boundaries_and_conditional_observation_contract_are_preserved(
         "request_hash",
         "licence_id",
     ]
-    assert "available_at" in payload["availability_rule"]
+    assert "decision time" in payload["availability_rule"]
+    assert "first_seen" in payload["availability_rule"]
     assert "эмпирический эксперимент не выполнен" in payload["forecast_note"]
     assert "Graph Continual Learning" in payload["document_hint"]["topic"]
 

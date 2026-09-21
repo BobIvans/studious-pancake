@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import json
 from pathlib import Path
 
 import pytest
@@ -21,6 +22,7 @@ from src.mega8_04 import (
     audit_post150_coverage,
     build_evm_swap_calldata,
     build_merkle_evidence_root,
+    check_crash_recovery_interleavings,
     classify_simulator_disagreement,
     compile_dsl_to_primitive_graph,
     define_property_financial_invariants,
@@ -43,7 +45,10 @@ from src.mega8_04 import (
     schedule_next_evidence_cycle,
     shrink_failing_economic_case,
     simulate_ptb_exactly,
+    verify_fail_closed_recovery,
+    verify_plugin_capabilities,
     verify_safety_liveness_properties,
+    verify_supply_chain_provenance,
 )
 
 pytestmark = pytest.mark.unit
@@ -52,6 +57,29 @@ A = "a" * 64
 B = "b" * 64
 C = "c" * 64
 ADDRESS = "0x" + "1" * 40
+
+
+def _write_coverage_claim(
+    root: Path,
+    *,
+    roadmap_pr: int,
+    status: str,
+    owner: str,
+    filename: str,
+) -> tuple[str, str]:
+    path = root / filename
+    payload = {
+        "coverage_claim": {
+            "roadmap_pr": f"PR-{roadmap_pr}",
+            "status": status,
+            "owner": owner,
+        }
+    }
+    path.write_text(
+        json.dumps(payload, sort_keys=True),
+        encoding="utf-8",
+    )
+    return path.name, sha256(path.read_bytes()).hexdigest()
 
 
 def test_nf_registry_is_exact_and_default_off() -> None:
@@ -111,6 +139,16 @@ def test_unknown_nonterminal_trace_and_duplicate_engine_fail_closed() -> None:
         gate_on_simulation_quorum((one, one))
 
 
+def test_empty_crash_and_chaos_campaigns_fail_closed() -> None:
+    crash = check_crash_recovery_interleavings(())
+    assert crash.disposition is Disposition.BLOCKED
+    assert "CRASH_RECOVERY_CAMPAIGN_EMPTY" in crash.blockers
+
+    chaos = verify_fail_closed_recovery((), recovery_states={})
+    assert chaos.disposition is Disposition.BLOCKED
+    assert "CHAOS_SCENARIOS_REQUIRED" in chaos.blockers
+
+
 def test_supply_chain_sbom_and_reproducibility_are_deterministic() -> None:
     record = DependencyRecord(
         "example",
@@ -137,6 +175,18 @@ def test_supply_chain_sbom_and_reproducibility_are_deterministic() -> None:
         ).disposition
         is Disposition.BLOCKED
     )
+    assert verify_supply_chain_provenance((record,)).disposition is Disposition.PASS
+
+    mutable = DependencyRecord(
+        "mutable-example",
+        "1.0.0",
+        "MIT",
+        "https://example.invalid/repo@main",
+        B,
+    )
+    provenance = verify_supply_chain_provenance((mutable,))
+    assert provenance.disposition is Disposition.BLOCKED
+    assert "SOURCE_IDENTITY_NOT_IMMUTABLE:mutable-example" in provenance.blockers
 
 
 def test_signed_evidence_chain_and_merkle_bundle() -> None:
@@ -276,30 +326,49 @@ def test_dsl_cannot_gain_sign_or_send_capabilities() -> None:
             requested_capabilities=("sign",),
         )
 
+    quote_only = sandbox_strategy_plugin(
+        plugin_id="plugin-c",
+        requested_capabilities=("QUOTE",),
+    )
+    policy = verify_plugin_capabilities(
+        quote_only,
+        allowed_capabilities=("READ_STATE",),
+    )
+    assert policy.disposition is Disposition.BLOCKED
+    assert "PLUGIN_CAPABILITY_NOT_ALLOWED:QUOTE" in policy.blockers
+
 
 def test_post150_release_audit_is_honestly_blocked_without_full_evidence(
     tmp_path: Path,
 ) -> None:
-    first = tmp_path / "evidence-209.json"
-    second = tmp_path / "evidence-210.json"
-    first.write_text("one", encoding="utf-8")
-    second.write_text("two", encoding="utf-8")
-    first_sha = sha256(first.read_bytes()).hexdigest()
-    second_sha = sha256(second.read_bytes()).hexdigest()
+    first_path, first_sha = _write_coverage_claim(
+        tmp_path,
+        roadmap_pr=209,
+        status="COVERED_BY_EXISTING",
+        owner="src.mega8_04",
+        filename="evidence-209.json",
+    )
+    second_path, second_sha = _write_coverage_claim(
+        tmp_path,
+        roadmap_pr=210,
+        status="RESEARCH_ONLY",
+        owner="src.mega8_04",
+        filename="evidence-210.json",
+    )
     rows = (
         CoverageRow(
             209,
             "COVERED_BY_EXISTING",
             "src.mega8_04",
             first_sha,
-            first.name,
+            first_path,
         ),
         CoverageRow(
             210,
             "RESEARCH_ONLY",
             "src.mega8_04",
             second_sha,
-            second.name,
+            second_path,
         ),
     )
     audit = audit_post150_coverage(rows, repo_root=tmp_path)
@@ -348,6 +417,39 @@ def test_post150_audit_rejects_hash_shaped_unresolved_evidence(
     )
     audit = audit_post150_coverage(rows, repo_root=tmp_path)
     assert audit.missing_prs == ()
+    assert len(audit.unverified_prs) == 71
+    campaign = run_post150_integrated_campaign(
+        audit,
+        code_generation="code-1",
+        data_generation="data-1",
+        model_generation="model-1",
+        deployment_generation="deployment-1",
+    )
+    assert campaign.disposition is Disposition.BLOCKED
+    assert "POST150_EVIDENCE_UNVERIFIED" in campaign.blockers
+
+
+def test_post150_audit_rejects_artifact_reuse_across_rows(
+    tmp_path: Path,
+) -> None:
+    path, digest = _write_coverage_claim(
+        tmp_path,
+        roadmap_pr=151,
+        status="MERGED_AND_VERIFIED",
+        owner="shared-owner",
+        filename="shared.json",
+    )
+    rows = tuple(
+        CoverageRow(
+            number,
+            "MERGED_AND_VERIFIED",
+            "shared-owner",
+            digest,
+            path,
+        )
+        for number in range(151, 222)
+    )
+    audit = audit_post150_coverage(rows, repo_root=tmp_path)
     assert len(audit.unverified_prs) == 71
     campaign = run_post150_integrated_campaign(
         audit,

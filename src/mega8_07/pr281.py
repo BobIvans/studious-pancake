@@ -1,10 +1,17 @@
 """PR-281 / CAPITAL-05: conservative lender-capacity forecasts."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Sequence
 
-from .core import EvidenceBinding, LenderCapacity, Mega807Error, require_id, require_positive
+from .core import (
+    EvidenceBinding,
+    LenderCapacity,
+    Mega807Error,
+    require_id,
+    require_positive,
+)
 
 
 @dataclass(frozen=True, slots=True)

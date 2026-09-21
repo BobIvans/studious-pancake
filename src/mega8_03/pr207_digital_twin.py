@@ -65,6 +65,38 @@ def label_synthetic_vs_observed(
         source = str(row.get("source_kind", "")).lower()
         if source not in {"synthetic", "observed"}:
             raise ValueError("source_kind must be synthetic or observed")
+
+        if "scenario_sha256" in row:
+            if source != "synthetic":
+                raise ValueError("synthetic scenario cannot be relabeled observed")
+            if row.get("synthetic") is not True:
+                raise ValueError("synthetic scenario provenance flag mismatch")
+            if row.get("realized_pnl_eligible") is not False:
+                raise ValueError("synthetic scenario cannot be realized PnL eligible")
+            state = row.get("state")
+            shocks = row.get("shocks")
+            if not isinstance(state, Mapping) or not isinstance(shocks, Mapping):
+                raise ValueError("synthetic scenario state/shocks must be mappings")
+            payload = {
+                "scenario_id": str(row.get("scenario_id", "")),
+                "state": dict(state),
+                "shocks": dict(shocks),
+                "synthetic": True,
+                "realized_pnl_eligible": False,
+            }
+            if row.get("scenario_sha256") != stable_hash(
+                "mega8-03/synthetic-scenario/v1", payload
+            ):
+                raise ValueError("synthetic scenario hash mismatch")
+            labeled.append(
+                dict(row) | {"synthetic": True, "realized_pnl_eligible": False}
+            )
+            continue
+
+        if source == "observed" and row.get("synthetic") is True:
+            raise ValueError("synthetic row cannot be relabeled observed")
+        if source == "synthetic" and row.get("realized_pnl_eligible") is True:
+            raise ValueError("synthetic row cannot be realized PnL eligible")
         labeled.append(
             dict(row)
             | {

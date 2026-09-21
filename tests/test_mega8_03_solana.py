@@ -122,6 +122,52 @@ def test_pr186_keeper_contract_is_permission_and_net_bound() -> None:
     assert_offline(result)
 
 
+def test_pr186_keeper_rejects_unbound_or_tampered_authorization() -> None:
+    evidence = env()
+    jobs = discover_rebalance_jobs(
+        (
+            {
+                "job_id": "j1",
+                "permission_ref": "permit-1",
+                "authorized": True,
+                "deployment_verified": True,
+                "capacity_atomic": 10,
+                "reward_atomic": 10,
+            },
+        ),
+        envelope=evidence,
+    )
+    economics = price_keeper_reward_and_cost(
+        reward_atomic=10,
+        network_fee_atomic=1,
+        tip_atomic=0,
+        state_change_cost_atomic=0,
+    )
+    plan = build_authorized_keeper_plan(jobs[0], economics, envelope=evidence)
+
+    tampered = dict(plan)
+    tampered["permission_ref"] = "permit-evil"
+    tampered_result = qualify_keeper_operation(tampered, envelope=evidence)
+    assert tampered_result.status is OfflineStatus.REJECTED
+    assert "KEEPER_PLAN_INTEGRITY_MISMATCH" in tampered_result.reason_codes
+
+    forged = {
+        "job_id": "j1",
+        "permission_ref": "permit-1",
+        "capacity_atomic": 10,
+        "economics": {"conservative_net_atomic": 9},
+        "state_generation": evidence.state_generation,
+        "deployment_generation": evidence.deployment_generation,
+        "execution_authority": False,
+        "plan_sha256": "f" * 64,
+    }
+    forged_result = qualify_keeper_operation(forged, envelope=evidence)
+    assert forged_result.status is OfflineStatus.REJECTED
+    assert "KEEPER_AUTHORIZATION_NOT_VERIFIED" in forged_result.reason_codes
+    assert "KEEPER_AUTHORIZATION_EVIDENCE_MISMATCH" in forged_result.reason_codes
+    assert "KEEPER_PLAN_INTEGRITY_MISMATCH" in forged_result.reason_codes
+
+
 def test_pr187_clmm_is_research_only_and_integer_bounded() -> None:
     pressure = measure_clmm_range_pressure(
         current_index=11,
@@ -437,18 +483,27 @@ def test_pr194_recovery_attribution_does_not_relabel_recovery_as_alpha() -> None
 
 
 def test_replay_identity_is_stable_for_same_keeper_evidence() -> None:
-    job = {
-        "job_id": "j1",
-        "permission_ref": "permit-1",
-        "capacity_atomic": 10,
-    }
+    evidence = env()
+    job = discover_rebalance_jobs(
+        (
+            {
+                "job_id": "j1",
+                "permission_ref": "permit-1",
+                "authorized": True,
+                "deployment_verified": True,
+                "capacity_atomic": 10,
+                "reward_atomic": 10,
+            },
+        ),
+        envelope=evidence,
+    )[0]
     economics = price_keeper_reward_and_cost(
         reward_atomic=10,
         network_fee_atomic=1,
         tip_atomic=0,
         state_change_cost_atomic=0,
     )
-    plan = build_authorized_keeper_plan(job, economics, envelope=env())
-    first = qualify_keeper_operation(plan, envelope=env())
-    second = qualify_keeper_operation(plan, envelope=env())
+    plan = build_authorized_keeper_plan(job, economics, envelope=evidence)
+    first = qualify_keeper_operation(plan, envelope=evidence)
+    second = qualify_keeper_operation(plan, envelope=evidence)
     assert first.evidence_sha256 == second.evidence_sha256

@@ -19,7 +19,7 @@ def define_safe_bandit_actions(
         for row in actions
         if str(row.get("action_id", "")).strip()
         and integer(row.get("cost_units", 0), "cost_units", minimum=0) <= quota
-        and row.get("live_effect") is not True
+        and row.get("live_effect") is False
     ]
     return tuple(sorted(accepted, key=lambda row: str(row["action_id"])))
 

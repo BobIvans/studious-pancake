@@ -92,6 +92,16 @@ def assert_advisory(model) -> None:
     assert model.execution_authority is False
 
 
+def test_advisory_model_parameters_are_deeply_immutable() -> None:
+    model = learn_cross_market_representation(((1, 2), (3, 4)))
+    with pytest.raises(TypeError):
+        model.parameters["means"] = (99, 99)
+    means = model.parameters["means"]
+    assert isinstance(means, tuple)
+    with pytest.raises(TypeError):
+        means[0] = 99
+
+
 def test_pr195_survival_preserves_censoring() -> None:
     km = fit_kaplan_meier_survival((10, 20, 30), (True, False, True))
     parametric = fit_parametric_edge_duration((10, 20, 30), (True, False, True))
@@ -342,6 +352,12 @@ def test_pr206_bandit_has_no_live_actions_and_audits_cost() -> None:
                 "uncertainty_reduction_ppm": 1_000,
                 "live_effect": True,
             },
+            {
+                "action_id": "unknown-a",
+                "cost_units": 1,
+                "information_gain_ppm": 2_000,
+                "uncertainty_reduction_ppm": 2_000,
+            },
         ),
         hard_quota_units=5,
     )
@@ -388,6 +404,22 @@ def test_pr207_synthetic_twin_cannot_enter_realized_pnl() -> None:
     scenario = generate_synthetic_market_scenario(
         {"price": 100}, {"price": -10}, scenario_id="s1"
     )
+    synthetic_label = label_synthetic_vs_observed(
+        (scenario | {"source_kind": "synthetic"},)
+    )[0]
+    assert synthetic_label["scenario_sha256"] == scenario["scenario_sha256"]
+    assert synthetic_label["realized_pnl_eligible"] is False
+
+    with pytest.raises(ValueError, match="relabeled observed"):
+        label_synthetic_vs_observed((scenario | {"source_kind": "observed"},))
+
+    tampered = scenario | {
+        "source_kind": "synthetic",
+        "state": {"price": 999},
+    }
+    with pytest.raises(ValueError, match="hash mismatch"):
+        label_synthetic_vs_observed((tampered,))
+
     calibration = calibrate_digital_twin((100, 105), (100, 100))
     verdict = validate_sim_to_real_gap(calibration, maximum_gap_ppm=100_000)
     labels = label_synthetic_vs_observed(

@@ -1,0 +1,353 @@
+{
+  "schema": "mega8-05.research-factory-coverage.v1",
+  "mega_id": "MEGA8-05",
+  "base_sha": "04480fa25d1117e9d20e7fe8caad23b16cd5ef4a",
+  "child_range": "PR-239..PR-254",
+  "primary_nf_range": "NF-641..NF-704",
+  "primary_nf_count": 64,
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "BLOCKED_DEPENDENCIES",
+  "activation_status": "DEFAULT_OFF",
+  "effect_boundary": {
+    "network_reads": false,
+    "remote_mutation": false,
+    "signing": false,
+    "submission": false,
+    "live_trading": false,
+    "automatic_capital_increase": false
+  },
+  "source_reuse": {
+    "copied_external_source": false,
+    "generated_external_code_executed": false,
+    "unknown_license_allows_copy": false,
+    "policy": "PIN_COMMIT_LICENSE_AND_TESTS_BEFORE_REUSE"
+  },
+  "mega_dependencies": [
+    {
+      "id": "MEGA8-01",
+      "observed": "BRANCH_PRESENT_NOT_MERGED",
+      "branch": "codex/mega8-01-151-162"
+    },
+    {
+      "id": "MEGA8-02",
+      "observed": "OPEN_PR_NOT_MERGED",
+      "branch": "codex/mega8-02-163-185",
+      "pr_number": 523,
+      "head_sha": "5b7aaa333a270d076dea983fb2601a6b53655e10"
+    },
+    {
+      "id": "MEGA8-03",
+      "observed": "OPEN_PR_NOT_MERGED",
+      "branch": "codex/mega8-03-186-208",
+      "pr_number": 521,
+      "head_sha": "afbc80846be93d8005db48e74b73d0c0560e7a3f"
+    },
+    {
+      "id": "MEGA8-04",
+      "observed": "OPEN_PR_NOT_MERGED",
+      "branch": "codex/mega8-04-209-222",
+      "pr_number": 522,
+      "head_sha": "93841fa88817f1f3e98183d422c3457493a2cfb8"
+    }
+  ],
+  "dependency_policy": "Code slice may be reviewed independently; operational completion remains blocked until exact prerequisite contracts/evidence are merged and revalidated.",
+  "children": [
+    {
+      "child_id": "PR-239",
+      "nf_ids": [
+        "NF-641",
+        "NF-642",
+        "NF-643",
+        "NF-644"
+      ],
+      "functions": [
+        "discover_upstream_release_candidates",
+        "extract_candidate_symbols",
+        "rank_reuse_opportunity",
+        "publish_upstream_research_dossier"
+      ],
+      "owner_path": "src/research/mega8_05/pr239_upstream.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-240",
+      "nf_ids": [
+        "NF-645",
+        "NF-646",
+        "NF-647",
+        "NF-648"
+      ],
+      "functions": [
+        "generate_idl_account_decoder",
+        "generate_abi_read_adapter",
+        "generate_move_resource_decoder",
+        "validate_generated_adapter"
+      ],
+      "owner_path": "src/research/mega8_05/pr240_codegen.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-241",
+      "nf_ids": [
+        "NF-649",
+        "NF-650",
+        "NF-651",
+        "NF-652"
+      ],
+      "functions": [
+        "define_adapter_conformance_contract",
+        "build_golden_vector_pack",
+        "run_adapter_differential_suite",
+        "publish_adapter_qualification"
+      ],
+      "owner_path": "src/research/mega8_05/pr241_adapter_sdk.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-242",
+      "nf_ids": [
+        "NF-653",
+        "NF-654",
+        "NF-655",
+        "NF-656"
+      ],
+      "functions": [
+        "discover_unknown_deployment",
+        "quarantine_unknown_market",
+        "collect_promotion_evidence",
+        "promote_discovered_capability"
+      ],
+      "owner_path": "src/research/mega8_05/pr242_discovery.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-243",
+      "nf_ids": [
+        "NF-657",
+        "NF-658",
+        "NF-659",
+        "NF-660"
+      ],
+      "functions": [
+        "reconstruct_cpi_call_graph",
+        "infer_account_relationships",
+        "infer_shared_resource_dependencies",
+        "validate_inferred_semantics"
+      ],
+      "owner_path": "src/research/mega8_05/pr243_semantics.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-244",
+      "nf_ids": [
+        "NF-661",
+        "NF-662",
+        "NF-663",
+        "NF-664"
+      ],
+      "functions": [
+        "scan_license_surface",
+        "classify_copy_eligibility",
+        "generate_attribution_bundle",
+        "enforce_source_reuse_policy"
+      ],
+      "owner_path": "src/research/mega8_05/pr244_license.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-245",
+      "nf_ids": [
+        "NF-665",
+        "NF-666",
+        "NF-667",
+        "NF-668"
+      ],
+      "functions": [
+        "register_research_hypothesis",
+        "freeze_analysis_plan",
+        "bind_dataset_cutoff",
+        "publish_preregistered_experiment"
+      ],
+      "owner_path": "src/research/mega8_05/pr245_preregistration.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-246",
+      "nf_ids": [
+        "NF-669",
+        "NF-670",
+        "NF-671",
+        "NF-672"
+      ],
+      "functions": [
+        "enumerate_hypothesis_family",
+        "apply_multiple_test_correction",
+        "estimate_false_discovery_rate",
+        "gate_discovery_claim"
+      ],
+      "owner_path": "src/research/mega8_05/pr246_multiple_testing.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-247",
+      "nf_ids": [
+        "NF-673",
+        "NF-674",
+        "NF-675",
+        "NF-676"
+      ],
+      "functions": [
+        "model_observation_selection",
+        "label_missingness_mechanism",
+        "weight_selective_samples",
+        "audit_selection_bias"
+      ],
+      "owner_path": "src/research/mega8_05/pr247_labels.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-248",
+      "nf_ids": [
+        "NF-677",
+        "NF-678",
+        "NF-679",
+        "NF-680"
+      ],
+      "functions": [
+        "resolve_asset_entities",
+        "resolve_protocol_entities",
+        "link_wallet_program_relationships",
+        "publish_entity_graph"
+      ],
+      "owner_path": "src/research/mega8_05/pr248_entity.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-249",
+      "nf_ids": [
+        "NF-681",
+        "NF-682",
+        "NF-683",
+        "NF-684"
+      ],
+      "functions": [
+        "update_online_covariance",
+        "fit_dynamic_factor_model",
+        "estimate_factor_exposures",
+        "detect_factor_residual"
+      ],
+      "owner_path": "src/research/mega8_05/pr249_factors.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-250",
+      "nf_ids": [
+        "NF-685",
+        "NF-686",
+        "NF-687",
+        "NF-688"
+      ],
+      "functions": [
+        "discover_cointegrated_baskets",
+        "estimate_hedge_vector",
+        "model_mean_reversion_half_life",
+        "qualify_stat_arb_basket"
+      ],
+      "owner_path": "src/research/mega8_05/pr250_stat_arb.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-251",
+      "nf_ids": [
+        "NF-689",
+        "NF-690",
+        "NF-691",
+        "NF-692"
+      ],
+      "functions": [
+        "detect_structural_break",
+        "infer_market_regime",
+        "route_policy_by_regime",
+        "archive_regime_transition"
+      ],
+      "owner_path": "src/research/mega8_05/pr251_regimes.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-252",
+      "nf_ids": [
+        "NF-693",
+        "NF-694",
+        "NF-695",
+        "NF-696"
+      ],
+      "functions": [
+        "estimate_multiscale_lead_lag",
+        "build_information_flow_graph",
+        "test_lead_lag_stability",
+        "promote_predictive_link"
+      ],
+      "owner_path": "src/research/mega8_05/pr252_leadlag.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-253",
+      "nf_ids": [
+        "NF-697",
+        "NF-698",
+        "NF-699",
+        "NF-700"
+      ],
+      "functions": [
+        "classify_wallet_flow",
+        "infer_meta_order",
+        "estimate_flow_toxicity",
+        "route_flow_signal"
+      ],
+      "owner_path": "src/research/mega8_05/pr253_flow.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    },
+    {
+      "child_id": "PR-254",
+      "nf_ids": [
+        "NF-701",
+        "NF-702",
+        "NF-703",
+        "NF-704"
+      ],
+      "functions": [
+        "monitor_authority_mutations",
+        "detect_liquidity_withdrawal_risk",
+        "score_honeypot_or_rug_behavior",
+        "enforce_dynamic_asset_quarantine"
+      ],
+      "owner_path": "src/research/mega8_05/pr254_scam.py",
+      "test_path": "tests/test_mega8_05_research_factory.py",
+      "status": "IMPLEMENTED_OFFLINE"
+    }
+  ],
+  "residual_blockers": [
+    "MEGA8_01_EXACT_PREREQUISITE_NOT_MERGED",
+    "MEGA8_02_PR_523_OPEN_NOT_MERGED",
+    "MEGA8_03_PR_521_OPEN_NOT_MERGED",
+    "MEGA8_04_PR_522_OPEN_NOT_MERGED",
+    "EXTERNAL_UPSTREAM_RELEASE_LICENSE_AND_CONFORMANCE_EVIDENCE_NOT_BUNDLED",
+    "NO_LIVE_OR_CAPITAL_PROMOTION_AUTHORIZED"
+  ],
+  "dependency_observed_after_main_sync": "e14d7f2e0d90dee2dce573761baba185feace5ea"
+}

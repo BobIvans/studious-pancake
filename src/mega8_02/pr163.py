@@ -1,21 +1,36 @@
 """PR-163 / GRAPH-02: typed financial primitives and rights."""
+
 from __future__ import annotations
 from typing import Mapping, Sequence
 from .core import Mega802Error, Primitive, require_text, stable_hash
 
 
 def define_financial_primitive_type(
-    *, kind: str, asset_id: str, unit: str, rights: Sequence[str],
-    underlying: Sequence[str] = (), maturity: int | None = None,
+    *,
+    kind: str,
+    asset_id: str,
+    unit: str,
+    rights: Sequence[str],
+    underlying: Sequence[str] = (),
+    maturity: int | None = None,
 ) -> Primitive:
     return Primitive(
         primitive_id=stable_hash(
-            {"kind": kind, "asset_id": asset_id, "unit": unit,
-             "rights": sorted(rights), "underlying": list(underlying),
-             "maturity": maturity}
+            {
+                "kind": kind,
+                "asset_id": asset_id,
+                "unit": unit,
+                "rights": sorted(rights),
+                "underlying": list(underlying),
+                "maturity": maturity,
+            }
         ),
-        kind=kind, asset_id=asset_id, unit=unit, rights=tuple(rights),
-        underlying=tuple(underlying), maturity=maturity,
+        kind=kind,
+        asset_id=asset_id,
+        unit=unit,
+        rights=tuple(rights),
+        underlying=tuple(underlying),
+        maturity=maturity,
     )
 
 
@@ -54,7 +69,9 @@ def resolve_wrapper_underlying_chain(
 
 
 def reject_invalid_primitive_composition(
-    inputs: Sequence[Primitive], outputs: Sequence[Primitive], *,
+    inputs: Sequence[Primitive],
+    outputs: Sequence[Primitive],
+    *,
     required_rights: Sequence[str],
 ) -> tuple[str, ...]:
     if not inputs or not outputs:

@@ -83,9 +83,7 @@ def price_mint_redeem_latency(payload: Mapping[str, Any]):
 
 
 def detect_primary_secondary_basis(payload: Mapping[str, Any]):
-    if int(payload.get("value_low_atoms", 0)) <= int(
-        payload.get("cost_high_atoms", 0)
-    ):
+    if int(payload.get("value_low_atoms", 0)) <= int(payload.get("cost_high_atoms", 0)):
         raise EvolutionError("NEGATIVE_WORST_CASE")
     if not payload.get("eligible"):
         raise EvolutionError("NOT_ELIGIBLE")

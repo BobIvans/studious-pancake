@@ -17,9 +17,7 @@ def register_opt_in_orderflow_policy(
         "intent_id": require_text(intent_id, "intent_id"),
         "user_id": require_text(user_id, "user_id"),
         "expires_at": require_nonnegative_int(expires_at, "expires_at"),
-        "min_user_output": require_nonnegative_int(
-            min_user_output, "min_user_output"
-        ),
+        "min_user_output": require_nonnegative_int(min_user_output, "min_user_output"),
         "consent_revision": require_text(consent_revision, "consent_revision"),
         "harmful_frontrun_allowed": False,
     }
@@ -30,9 +28,7 @@ def compute_user_surplus_floor(
 ) -> int:
     quoted_output = require_nonnegative_int(quoted_output, "quoted_output")
     min_user_output = require_nonnegative_int(min_user_output, "min_user_output")
-    protected_surplus = require_nonnegative_int(
-        protected_surplus, "protected_surplus"
-    )
+    protected_surplus = require_nonnegative_int(protected_surplus, "protected_surplus")
     return max(min_user_output, quoted_output + protected_surplus)
 
 
@@ -48,9 +44,9 @@ def verify_orderflow_consent(
         raise Mega806Error("CONSENT_REVOKED")
     if now >= require_nonnegative_int(policy.get("expires_at"), "expires_at"):
         raise Mega806Error("CONSENT_EXPIRED")
-    if require_text(
-        policy.get("consent_revision"), "consent_revision"
-    ) != require_text(consent_revision, "consent_revision"):
+    if require_text(policy.get("consent_revision"), "consent_revision") != require_text(
+        consent_revision, "consent_revision"
+    ):
         raise Mega806Error("CONSENT_REVISION_MISMATCH")
     return True
 

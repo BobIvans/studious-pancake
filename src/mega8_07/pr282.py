@@ -1,4 +1,5 @@
 """PR-282 / MARGIN-01: non-atomic collateral and leverage research."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence
@@ -11,9 +12,7 @@ def normalize_margin_requirements(
 ) -> tuple[MarginRequirement, ...]:
     if not requirements:
         raise Mega807Error("MARGIN_REQUIREMENTS_REQUIRED")
-    return tuple(
-        sorted(requirements, key=lambda item: (item.venue_id, item.asset_id))
-    )
+    return tuple(sorted(requirements, key=lambda item: (item.venue_id, item.asset_id)))
 
 
 def optimize_collateral_allocation(
@@ -39,14 +38,15 @@ def optimize_collateral_allocation(
 
 
 def simulate_margin_liquidation(
-    *, collateral_value: int, debt_value: int, maintenance_margin_ppm: int,
+    *,
+    collateral_value: int,
+    debt_value: int,
+    maintenance_margin_ppm: int,
     stress_loss: int,
 ) -> dict[str, int | bool]:
     collateral = require_nonnegative(collateral_value, "collateral_value")
     debt = require_nonnegative(debt_value, "debt_value")
-    maintenance = require_nonnegative(
-        maintenance_margin_ppm, "maintenance_margin_ppm"
-    )
+    maintenance = require_nonnegative(maintenance_margin_ppm, "maintenance_margin_ppm")
     loss = require_nonnegative(stress_loss, "stress_loss")
     stressed = max(0, collateral - loss)
     required = debt + debt * maintenance // 1_000_000

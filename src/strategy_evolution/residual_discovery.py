@@ -153,7 +153,10 @@ def align_cross_domain_event_time(
     *,
     decision_at: int,
 ):
-    if market_frame.get("clock_trusted") is False or bot_frame.get("clock_trusted") is False:
+    if (
+        market_frame.get("clock_trusted") is False
+        or bot_frame.get("clock_trusted") is False
+    ):
         raise EvolutionError("CLOCK_UNTRUSTED")
     if market_frame.get("cross_domain_ambiguous") or bot_frame.get(
         "cross_domain_ambiguous"
@@ -357,7 +360,8 @@ def update_anomaly_coverage_registry(
         "BLIND_SPOT",
     }
     if any(
-        cell.domain not in allowed_domains or cell.status.upper() not in allowed_statuses
+        cell.domain not in allowed_domains
+        or cell.status.upper() not in allowed_statuses
         for cell in cells
     ):
         raise EvolutionError("TAXONOMY_UNKNOWN")

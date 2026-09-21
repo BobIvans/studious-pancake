@@ -70,7 +70,9 @@ Offline fixture path:
 3. pooled-markets;
 4. shared mechanism representation + local adapter.
 
-Используются independent episodes, purged walk-forward + embargo, FDR control, calibration/interval coverage и explicit negative-transfer result.
+Используются declared universe/inclusion probability/control windows, independent episodes, purged walk-forward + embargo, equal-budget ablation, null/control experiment, FDR/FNR/observable-miss coverage, calibration/interval coverage и explicit negative-transfer result. Latency, executable capacity, eligibility и source cost измеряются отдельно.
+
+Нельзя называть residual arbitrageability без отдельных evidence для exact rights, complete costs, exact route, executable capacity и timing. Coverage публикуется только относительно измеренного universe, неизвестные зоны сохраняются явно.
 
 ## 8. Upstream и incident policy
 

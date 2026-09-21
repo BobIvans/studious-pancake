@@ -37,9 +37,7 @@ def train_offline_execution_policy(
         totals.setdefault(action, []).append(require_int(row.get("reward"), "reward"))
     if not totals:
         raise Mega806Error("NO_SUPPORTED_ACTIONS")
-    means = {
-        action: sum(values) // len(values) for action, values in totals.items()
-    }
+    means = {action: sum(values) // len(values) for action, values in totals.items()}
     best = max(means, key=lambda action: (means[action], action))
     return {
         "action": best,

@@ -1,4 +1,5 @@
 """PR-168 / PREDICT-01: calibrated resource envelopes."""
+
 from __future__ import annotations
 from typing import Sequence
 from .core import Mega802Error, ResourceEnvelope, require_nonnegative_int
@@ -26,7 +27,8 @@ def predict_message_bytes(samples: Sequence[int], *, reserve: int = 32) -> int:
 
 
 def calibrate_resource_predictor(
-    compute_samples: Sequence[int], account_samples: Sequence[int],
+    compute_samples: Sequence[int],
+    account_samples: Sequence[int],
     message_samples: Sequence[int],
 ) -> ResourceEnvelope:
     return ResourceEnvelope(

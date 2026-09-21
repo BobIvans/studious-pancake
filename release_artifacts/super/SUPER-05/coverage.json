@@ -1,0 +1,84 @@
+{
+  "schema_version": "super05.strategy-vertical-closure.v1",
+  "super_id": "SUPER-05",
+  "base_sha": "27875850a88edf102c904e31955e0df8b78b13b4",
+  "w2_packages": [
+    "W2-13",
+    "W2-14",
+    "W2-15"
+  ],
+  "child_count": 11,
+  "primary_nf_count": 26,
+  "implementation_status": "VERIFIED_OFFLINE",
+  "operational_status": "UNQUALIFIED",
+  "qualification_complete": false,
+  "live_enabled": false,
+  "release_claim_allowed": false,
+  "reused_merges": {
+    "AGG-06": {
+      "pr": 507,
+      "merge_sha": "d341024c9e76851a42f63370a56de3922539a8d3"
+    },
+    "AGG-07": {
+      "pr": 499,
+      "merge_sha": "a04662f885476d73c381984ead4ef694eb83ad3d"
+    },
+    "AGG-10": {
+      "pr": 500,
+      "merge_sha": "de483bc3084a87d2b3f34830bdecf94ea0e4e63d"
+    }
+  },
+  "children": {
+    "PR-108": "SATISFIED_BY_EXISTING",
+    "PR-109": "SATISFIED_BY_EXISTING_RELATED_ONLY",
+    "PR-110": "SATISFIED_BY_EXISTING",
+    "PR-111": "SATISFIED_BY_EXISTING",
+    "PR-112": "SATISFIED_BY_EXISTING",
+    "PR-113": "SATISFIED_BY_EXISTING",
+    "PR-118": "SATISFIED_BY_EXISTING",
+    "PR-114": "SATISFIED_BY_EXISTING",
+    "PR-115": "SATISFIED_BY_EXISTING",
+    "PR-116": "SATISFIED_BY_EXISTING",
+    "PR-117": "SATISFIED_BY_EXISTING"
+  },
+  "primary_nf": [
+    "NF-070",
+    "NF-072",
+    "NF-073",
+    "NF-074",
+    "NF-081",
+    "NF-119",
+    "NF-120",
+    "NF-121",
+    "NF-122",
+    "NF-138",
+    "NF-139",
+    "NF-140",
+    "NF-141",
+    "NF-142",
+    "NF-143",
+    "NF-144",
+    "NF-145",
+    "NF-146",
+    "NF-147",
+    "NF-148",
+    "NF-149",
+    "NF-150",
+    "NF-151",
+    "NF-152",
+    "NF-153",
+    "NF-154"
+  ],
+  "blockers": [
+    "SUPER05_ORDERBOOK_RUNTIME_FIXTURE_ONLY",
+    "SUPER05_AGG06_OPERATIONAL_EVIDENCE_UNQUALIFIED",
+    "SUPER05_AGG07_OPERATIONAL_EVIDENCE_UNQUALIFIED",
+    "SUPER05_AGG10_OPERATIONAL_EVIDENCE_UNQUALIFIED"
+  ],
+  "authority_boundary": {
+    "signer": false,
+    "submission": false,
+    "remote_mutation": false,
+    "automatic_promotion": false
+  }
+}

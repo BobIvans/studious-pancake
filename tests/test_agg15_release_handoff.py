@@ -11,6 +11,8 @@ from src.release_gate.agg15_release_handoff import (
     AGG15_SCHEMA_VERSION,
     EXPECTED_EVOLUTION_STAGES,
     EXPECTED_NF_COUNT,
+    EXTENSION_NF_OWNERS,
+    EXTENSION_SOURCE_PRS,
     Agg15AuditError,
     CoverageRecord,
     ImplementationStatus,
@@ -39,7 +41,10 @@ def _record(
     return CoverageRecord(
         nf_id=f"NF-{index:03d}",
         agg_id="AGG-15" if index >= 324 else "AGG-01",
-        primary_owner="RELEASE-01" if index >= 324 else "QUAL-01",
+        primary_owner=(
+            EXTENSION_NF_OWNERS.get(f"NF-{index:03d}")
+            or ("RELEASE-01" if index >= 324 else "QUAL-01")
+        ),
         contract_ref=f"contract://NF-{index:03d}",
         implementation_status=implementation,
         operational_status=operational,
@@ -140,22 +145,36 @@ def _complete_manifest() -> dict[str, object]:
             "risk_authority_overridable": False,
             "auto_live": False,
         },
+        "product_boundary": {
+            "product_owner": "src.research.product",
+            "accounting_owner": "RevenueAttributionLedger",
+            "evidence_refs": [
+                "evidence://agg14/product",
+                "evidence://agg14/revenue-attribution",
+            ],
+            "service_accounting_separate": True,
+            "product_revenue_is_trading_pnl": False,
+            "client_funds_are_trading_capital": False,
+            "signing_allowed": False,
+            "submission_allowed": False,
+            "remote_product_mutation_performed": False,
+        },
         "release_authority_receipt_ref": "evidence://mpr2612/receipt",
         "live_enabled": False,
         "automatic_scale_up_allowed": False,
     }
 
 
-def test_coverage_requires_exactly_328_unique_nf_ids() -> None:
+def test_coverage_requires_exactly_352_unique_nf_ids() -> None:
     rows = tuple(_record(index) for index in range(1, EXPECTED_NF_COUNT + 1))
     audit = audit_coverage(rows)
 
-    assert audit.mapped_nf_count == 328
+    assert audit.mapped_nf_count == 352
     assert audit.evidence_completed_nf_count == 0
     assert audit.structurally_complete is True
     assert audit.full_target_code_complete is False
     assert audit.required_incomplete_nf_ids[0] == "NF-001"
-    assert audit.required_incomplete_nf_ids[-1] == "NF-328"
+    assert audit.required_incomplete_nf_ids[-1] == "NF-352"
 
 
 def test_duplicate_nf_id_is_rejected_instead_of_count_inflation() -> None:
@@ -182,8 +201,9 @@ def test_implemented_claim_requires_tests_and_evidence() -> None:
 def test_complete_manifest_is_handoff_ready_but_not_a_promotion_authority() -> None:
     report = evaluate_release_handoff(_complete_manifest())
 
-    assert report.coverage.mapped_nf_count == 328
-    assert report.coverage.evidence_completed_nf_count == 328
+    assert report.coverage.mapped_nf_count == 352
+    assert report.coverage.evidence_completed_nf_count == 352
+    assert report.product_boundary_ready is True
     assert report.scoped_release_handoff_ready is True
     assert report.full_target_handoff_ready is True
     assert report.eligible_for_canonical_release_review is True
@@ -234,7 +254,7 @@ def test_live_or_auto_scale_defaults_are_rejected() -> None:
 def test_research_disposition_does_not_become_fake_completion() -> None:
     rows = [_record(index) for index in range(1, EXPECTED_NF_COUNT + 1)]
     rows[-1] = _record(
-        328,
+        EXPECTED_NF_COUNT,
         disposition=ScopeDisposition.RESEARCH,
     )
 
@@ -242,7 +262,7 @@ def test_research_disposition_does_not_become_fake_completion() -> None:
 
     assert audit.structurally_complete is True
     assert audit.full_target_code_complete is False
-    assert "NF-328" in audit.research_or_deferred_nf_ids
+    assert f"NF-{EXPECTED_NF_COUNT:03d}" in audit.research_or_deferred_nf_ids
     assert audit.evidence_completed_nf_count == 0
 
 
@@ -318,3 +338,85 @@ def test_explicit_coverage_blocker_prevents_completion_and_is_propagated() -> No
     assert report.full_target_handoff_ready is False
     assert "AGG15_TEST_UNRESOLVED_BLOCKER" in report.blockers
     assert report.eligible_for_canonical_release_review is False
+
+
+def test_legacy_328_row_manifest_is_incomplete_under_v2_target() -> None:
+    rows = tuple(_record(index) for index in range(1, 329))
+
+    audit = audit_coverage(rows)
+
+    assert audit.structurally_complete is False
+    assert audit.mapped_nf_count == 328
+    assert audit.missing_nf_ids[0] == "NF-329"
+    assert audit.missing_nf_ids[-1] == "NF-352"
+
+
+def test_nf329_to_nf352_have_exact_extension_owner_and_source_pr() -> None:
+    assert len(EXTENSION_NF_OWNERS) == 24
+    assert len(EXTENSION_SOURCE_PRS) == 24
+    assert EXTENSION_NF_OWNERS["NF-329"] == "TREASURY-01"
+    assert EXTENSION_SOURCE_PRS["NF-329"] == "PR-073"
+    assert EXTENSION_NF_OWNERS["NF-352"] == "FORMAT-02"
+    assert EXTENSION_SOURCE_PRS["NF-352"] == "PR-078"
+
+    with pytest.raises(Agg15AuditError, match="AGG15_EXTENSION_OWNER_MISMATCH"):
+        CoverageRecord(
+            nf_id="NF-329",
+            agg_id="AGG-15",
+            primary_owner="RELEASE-01",
+            contract_ref="contract://NF-329",
+            implementation_status=ImplementationStatus.PLANNED,
+            operational_status=OperationalStatus.UNQUALIFIED,
+            scope_disposition=ScopeDisposition.REQUIRED,
+        )
+
+
+def test_product_boundary_is_required_but_does_not_grant_execution() -> None:
+    manifest = _complete_manifest()
+    product = manifest["product_boundary"]
+    assert isinstance(product, dict)
+    product.pop("evidence_refs")
+
+    report = evaluate_release_handoff(manifest)
+
+    assert report.product_boundary_ready is False
+    assert report.scoped_release_handoff_ready is False
+    assert "AGG15_PRODUCT_BOUNDARY_INCOMPLETE" in report.blockers
+    assert report.live_enabled is False
+    assert report.release_claim_allowed is False
+
+
+@pytest.mark.parametrize(
+    "field",
+    (
+        "product_revenue_is_trading_pnl",
+        "client_funds_are_trading_capital",
+        "signing_allowed",
+        "submission_allowed",
+        "remote_product_mutation_performed",
+    ),
+)
+def test_product_boundary_rejects_authority_or_accounting_conflation(
+    field: str,
+) -> None:
+    manifest = _complete_manifest()
+    product = manifest["product_boundary"]
+    assert isinstance(product, dict)
+    product[field] = True
+
+    with pytest.raises(Agg15AuditError):
+        evaluate_release_handoff(manifest)
+
+
+def test_product_boundary_rejects_noncanonical_owner_identity() -> None:
+    manifest = _complete_manifest()
+    product = manifest["product_boundary"]
+    assert isinstance(product, dict)
+    product["product_owner"] = "unrelated-module"
+    product["accounting_owner"] = "unrelated-ledger"
+
+    report = evaluate_release_handoff(manifest)
+
+    assert report.product_boundary_ready is False
+    assert report.scoped_release_handoff_ready is False
+    assert "AGG15_PRODUCT_BOUNDARY_INCOMPLETE" in report.blockers

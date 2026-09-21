@@ -44,6 +44,54 @@ def replay_receipt_computation(
     )
 
 
+def verify_receipt_components(
+    receipt: ResearchReceipt,
+    *,
+    raw_hashes: tuple[str, ...],
+    code_commit: str,
+    tree_hash: str,
+    config_hash: str,
+    model_hash: str,
+    environment_lock_hash: str,
+    output_hashes: tuple[str, ...],
+):
+    observed = {
+        "raw_hashes": tuple(raw_hashes),
+        "code_commit": code_commit,
+        "tree_hash": tree_hash,
+        "config_hash": config_hash,
+        "model_hash": model_hash,
+        "environment_lock_hash": environment_lock_hash,
+        "output_hashes": tuple(output_hashes),
+    }
+    expected = {
+        "raw_hashes": receipt.raw_hashes,
+        "code_commit": receipt.code_commit,
+        "tree_hash": receipt.tree_hash,
+        "config_hash": receipt.config_hash,
+        "model_hash": receipt.model_hash,
+        "environment_lock_hash": receipt.environment_lock_hash,
+        "output_hashes": receipt.output_hashes,
+    }
+    mismatches = tuple(
+        key for key in expected if observed[key] != expected[key]
+    )
+    if mismatches:
+        raise EvidenceNativeError(
+            "RECEIPT_COMPONENT_MISMATCH:" + ",".join(mismatches)
+        )
+    return record(
+        "verify_receipt_components",
+        {
+            "receipt_hash": receipt.receipt_hash,
+            "verified": True,
+            "component_count": len(expected),
+            "live_authority": False,
+            "profitability_claim": False,
+        },
+    )
+
+
 def generate_optional_computation_proof(payload: Mapping[str, Any]):
     backend = require_text(payload.get("backend"), "backend").upper()
     if backend not in {"NONE", "MOCK_SP1"}:

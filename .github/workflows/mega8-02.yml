@@ -47,7 +47,7 @@ jobs:
           tests/test_mega8_02_solana_assets.py
       - name: Format MEGA8-02 surfaces
         run: >-
-          python -m black --check
+          python -m black --diff --check
           src/mega8_02
           tests/test_mega8_02_manifest.py
           tests/test_mega8_02_graph_solver.py

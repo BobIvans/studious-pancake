@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from enum import StrEnum
-from math import isqrt
+from math import sqrt
 import random
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -18,7 +18,6 @@ from src.research.pr357_contracts import (
     PR357ContractError,
     canonical_hash,
 )
-
 
 PPM = 1_000_000
 
@@ -111,7 +110,9 @@ class ObservationClock:
             self.received_at,
             self.available_at,
         )
-        if any(isinstance(value, bool) or not isinstance(value, int) for value in values):
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) for value in values
+        ):
             raise PR357ContractError("PR357_TIMESTAMP_INTEGER_REQUIRED")
         if min(values) < 0:
             raise PR357ContractError("PR357_NEGATIVE_TIMESTAMP")
@@ -221,19 +222,20 @@ class BeliefState:
             raise PR357ContractError("PR357_BELIEF_VALIDITY_INVALID")
         if self.execution_right:
             raise PR357ContractError("PR357_BELIEF_EXECUTION_RIGHT_FORBIDDEN")
+        missing_clocks = sorted(set(self.observed) - set(self.source_clocks))
+        if missing_clocks:
+            raise PR357ContractError(
+                "PR357_OBSERVED_CLOCK_MISSING:" + ",".join(missing_clocks)
+            )
         for name, clock in self.source_clocks.items():
             if clock.available_at > self.decision_time:
-                raise PR357ContractError(
-                    f"PR357_LOOKAHEAD_OBSERVATION:{name}"
-                )
+                raise PR357ContractError(f"PR357_LOOKAHEAD_OBSERVATION:{name}")
         names = set(self.posterior_mean)
         if set(self.covariance) != names:
             raise PR357ContractError("PR357_COVARIANCE_ROW_MISMATCH")
         for row_name, row in self.covariance.items():
             if set(row) != names:
-                raise PR357ContractError(
-                    f"PR357_COVARIANCE_COLUMN_MISMATCH:{row_name}"
-                )
+                raise PR357ContractError(f"PR357_COVARIANCE_COLUMN_MISMATCH:{row_name}")
             if row[row_name] < 0:
                 raise PR357ContractError("PR357_NEGATIVE_VARIANCE")
 
@@ -314,14 +316,11 @@ def replay_lifecycle_history(
 ) -> LifecycleState:
     state = define_strategy_lifecycle_state(initial_state)
     last_time = -1
-    for transition in sorted(
-        transitions,
-        key=lambda item: (item.decision_time, item.receipt_hash),
-    ):
-        if transition.decision_time > as_of:
-            break
+    for transition in transitions:
         if transition.decision_time < last_time:
             raise PR357ContractError("PR357_TRANSITION_TIME_REGRESSION")
+        if transition.decision_time > as_of:
+            break
         if transition.previous_state != state:
             raise PR357ContractError("PR357_TRANSITION_HISTORY_FORK")
         state = transition.next_state
@@ -383,9 +382,7 @@ def compute_evidence_age_vector(
         ),
     )
     invalidators = tuple(
-        name
-        for name, current, prior in generation_pairs
-        if current != prior
+        name for name, current, prior in generation_pairs if current != prior
     )
     return EvidenceAgeVector(
         wall_age=now - evidence_available_at,
@@ -395,13 +392,9 @@ def compute_evidence_age_vector(
         source_schema_age=abs(
             current_source_schema_generation - evidence_source_schema_generation
         ),
-        topology_age=abs(
-            current_topology_generation - evidence_topology_generation
-        ),
+        topology_age=abs(current_topology_generation - evidence_topology_generation),
         regime_distance=regime_distance,
-        model_generation_age=abs(
-            current_model_generation - evidence_model_generation
-        ),
+        model_generation_age=abs(current_model_generation - evidence_model_generation),
         hard_invalidators=invalidators,
     )
 
@@ -617,11 +610,7 @@ def filter_stale_or_invalid_prior(
 def rank_bootstrap_prior_set(
     priors: Sequence[PriorCandidate],
 ) -> tuple[str, ...]:
-    eligible = [
-        prior
-        for prior in priors
-        if filter_stale_or_invalid_prior(prior)
-    ]
+    eligible = [prior for prior in priors if filter_stale_or_invalid_prior(prior)]
     eligible.sort(
         key=lambda prior: (
             -score_prior_applicability(prior),
@@ -659,9 +648,7 @@ def detect_semantic_schema_collision(
     right: Mapping[str, str],
 ) -> tuple[str, ...]:
     return tuple(
-        key
-        for key in sorted(set(left) & set(right))
-        if left[key] != right[key]
+        key for key in sorted(set(left) & set(right)) if left[key] != right[key]
     )
 
 
@@ -678,11 +665,7 @@ def quarantine_unmapped_fields(
     source: Mapping[str, Any],
     mapping: Mapping[str, str],
 ) -> Mapping[str, Any]:
-    return {
-        key: source[key]
-        for key in sorted(source)
-        if key not in mapping
-    }
+    return {key: source[key] for key in sorted(source) if key not in mapping}
 
 
 def define_market_belief_state(
@@ -701,10 +684,7 @@ def define_market_belief_state(
         decision_time=decision_time,
         observed=dict(observed),
         posterior_mean=dict(posterior_mean),
-        covariance={
-            key: dict(value)
-            for key, value in covariance.items()
-        },
+        covariance={key: dict(value) for key, value in covariance.items()},
         missingness_mask=dict(missingness_mask),
         source_clocks=dict(source_clocks),
         valid_until=valid_until,
@@ -727,10 +707,7 @@ def represent_missing_unknown_state(
     variable_names: Iterable[str],
     observed: Mapping[str, int],
 ) -> Mapping[str, bool]:
-    return {
-        name: name not in observed
-        for name in sorted(set(variable_names))
-    }
+    return {name: name not in observed for name in sorted(set(variable_names))}
 
 
 def represent_state_covariance(
@@ -775,17 +752,11 @@ def update_belief_with_observation(
     missing[variable] = False
     clocks = dict(belief.source_clocks)
     clocks[variable] = clock
-    covariance = {
-        key: dict(row)
-        for key, row in belief.covariance.items()
-    }
+    covariance = {key: dict(row) for key, row in belief.covariance.items()}
     if variable not in covariance:
         for row in covariance.values():
             row[variable] = 0
-        covariance[variable] = {
-            key: 0
-            for key in means
-        }
+        covariance[variable] = {key: 0 for key in means}
     covariance[variable][variable] = posterior_variance
     return define_market_belief_state(
         belief_id=belief.belief_id,
@@ -807,10 +778,7 @@ def widen_uncertainty_under_missingness(
 ) -> Mapping[str, Mapping[str, int]]:
     if factor_ppm < PPM:
         raise PR357ContractError("PR357_MISSINGNESS_FACTOR_MUST_WIDEN")
-    result = {
-        name: dict(row)
-        for name, row in covariance.items()
-    }
+    result = {name: dict(row) for name, row in covariance.items()}
     for name, missing in missingness_mask.items():
         if missing and name in result and name in result[name]:
             result[name][name] = result[name][name] * factor_ppm // PPM
@@ -825,6 +793,33 @@ def avoid_future_backfill_leakage(
     return clock.available_at <= decision_time
 
 
+def _cholesky_factor(
+    belief: BeliefState,
+    names: Sequence[str],
+) -> tuple[tuple[float, ...], ...]:
+    matrix = [
+        [float(belief.covariance[left][right]) for right in names]
+        for left in names
+    ]
+    lower = [[0.0 for _ in names] for _ in names]
+    for row in range(len(names)):
+        for column in range(row + 1):
+            residual = matrix[row][column] - sum(
+                lower[row][index] * lower[column][index]
+                for index in range(column)
+            )
+            if row == column:
+                if residual < -1e-9:
+                    raise PR357ContractError("PR357_COVARIANCE_NOT_PSD")
+                lower[row][column] = sqrt(max(0.0, residual))
+            elif lower[column][column] == 0.0:
+                if abs(residual) > 1e-9:
+                    raise PR357ContractError("PR357_COVARIANCE_NOT_PSD")
+            else:
+                lower[row][column] = residual / lower[column][column]
+    return tuple(tuple(row) for row in lower)
+
+
 def generate_joint_predictive_distribution(
     belief: BeliefState,
     *,
@@ -835,19 +830,17 @@ def generate_joint_predictive_distribution(
         raise PR357ContractError("PR357_SCENARIO_SAMPLE_COUNT")
     rng = random.Random(seed)
     names = tuple(sorted(belief.posterior_mean))
+    lower = _cholesky_factor(belief, names)
     rows: list[Mapping[str, int]] = []
     for _ in range(sample_count):
-        shared = rng.choice((-1, 1))
+        independent = [rng.gauss(0.0, 1.0) for _ in names]
         sample: dict[str, int] = {}
-        for name in names:
-            variance = belief.covariance[name][name]
-            scale = isqrt(variance)
-            local = rng.choice((-1, 0, 1))
-            sample[name] = (
-                belief.posterior_mean[name]
-                + shared * scale // 2
-                + local * scale // 2
+        for row, name in enumerate(names):
+            delta = sum(
+                lower[row][column] * independent[column]
+                for column in range(row + 1)
             )
+            sample[name] = int(round(belief.posterior_mean[name] + delta))
         rows.append(sample)
     return tuple(rows)
 
@@ -880,10 +873,7 @@ def measure_joint_calibration(
             errors.setdefault(name, []).append(
                 abs(int(forecast[name]) - int(actual[name]))
             )
-    return {
-        name: sum(values) // len(values)
-        for name, values in sorted(errors.items())
-    }
+    return {name: sum(values) // len(values) for name, values in sorted(errors.items())}
 
 
 def downgrade_unsupported_counterfactual(
@@ -913,17 +903,10 @@ def define_decision_problem(
     states = set(state_probabilities_ppm)
     for action, losses in actions.items():
         if set(losses) != states:
-            raise PR357ContractError(
-                f"PR357_ACTION_STATE_MISMATCH:{action}"
-            )
+            raise PR357ContractError(f"PR357_ACTION_STATE_MISMATCH:{action}")
     return {
-        "actions": {
-            key: dict(value)
-            for key, value in sorted(actions.items())
-        },
-        "state_probabilities_ppm": dict(
-            sorted(state_probabilities_ppm.items())
-        ),
+        "actions": {key: dict(value) for key, value in sorted(actions.items())},
+        "state_probabilities_ppm": dict(sorted(state_probabilities_ppm.items())),
         "deadline": deadline,
         "mandatory_safety": tuple(sorted(mandatory_safety)),
         "execution_right": False,
@@ -934,10 +917,10 @@ def _expected_loss(
     losses: Mapping[str, int],
     probabilities_ppm: Mapping[str, int],
 ) -> int:
-    return sum(
-        losses[state] * probabilities_ppm[state]
-        for state in probabilities_ppm
-    ) // PPM
+    return (
+        sum(losses[state] * probabilities_ppm[state] for state in probabilities_ppm)
+        // PPM
+    )
 
 
 def compute_current_bayes_action(
@@ -974,8 +957,7 @@ def estimate_evpi(decision_problem: Mapping[str, Any]) -> int:
     perfect_loss = 0
     for state, probability in probabilities.items():
         state_minimum = min(
-            losses[state]
-            for losses in decision_problem["actions"].values()
+            losses[state] for losses in decision_problem["actions"].values()
         )
         perfect_loss += state_minimum * probability
     perfect_loss //= PPM
@@ -996,18 +978,30 @@ def estimate_evsi(
     if sum(observation_probabilities_ppm) != PPM:
         raise PR357ContractError("PR357_EVSI_PROBABILITIES_NOT_NORMALIZED")
     _, current_loss = compute_current_bayes_action(decision_problem)
+    prior = decision_problem["state_probabilities_ppm"]
+    states = set(prior)
+    mixture_numerators = {state: 0 for state in states}
     expected_posterior_loss = 0
     for posterior, weight in zip(
         posterior_scenarios,
         observation_probabilities_ppm,
         strict=True,
     ):
+        if set(posterior) != states:
+            raise PR357ContractError("PR357_POSTERIOR_STATE_MISMATCH")
         if sum(posterior.values()) != PPM:
             raise PR357ContractError("PR357_POSTERIOR_NOT_NORMALIZED")
+        for state in states:
+            mixture_numerators[state] += posterior[state] * weight
         candidate = dict(decision_problem)
         candidate["state_probabilities_ppm"] = dict(posterior)
         _, loss = compute_current_bayes_action(candidate)
         expected_posterior_loss += loss * weight
+    for state, prior_probability in prior.items():
+        if abs(mixture_numerators[state] - prior_probability * PPM) > PPM:
+            raise PR357ContractError(
+                f"PR357_POSTERIOR_MIXTURE_INCOHERENT:{state}"
+            )
     expected_posterior_loss //= PPM
     return max(0, current_loss - expected_posterior_loss)
 
@@ -1041,10 +1035,7 @@ def estimate_provider_common_failure(
     groups: dict[str, list[int]] = {}
     for action in actions:
         groups.setdefault(action.provider_group, []).append(action.failure_ppm)
-    return {
-        group: max(values)
-        for group, values in sorted(groups.items())
-    }
+    return {group: max(values) for group, values in sorted(groups.items())}
 
 
 def detect_double_counted_information(
@@ -1057,11 +1048,7 @@ def detect_double_counted_information(
     duplicates = []
     for pair, value in redundancy_pairs.items():
         left, right = pair
-        if (
-            left in selected
-            and right in selected
-            and value >= threshold_ppm
-        ):
+        if left in selected and right in selected and value >= threshold_ppm:
             duplicates.append(tuple(sorted((left, right))))
     return tuple(sorted(set(duplicates)))
 
@@ -1087,9 +1074,7 @@ def estimate_value_of_computation(
     latency_penalty_units: int,
 ) -> int:
     return (
-        expected_decision_improvement_units
-        - compute_cost_units
-        - latency_penalty_units
+        expected_decision_improvement_units - compute_cost_units - latency_penalty_units
     )
 
 
@@ -1193,9 +1178,7 @@ def assert_research_only_effect_boundary(
 ) -> None:
     for key, expected in EFFECT_BOUNDARY.items():
         if payload.get(key, expected) is not expected:
-            raise PR357ContractError(
-                f"PR357_EFFECT_AUTHORITY_FORBIDDEN:{key}"
-            )
+            raise PR357ContractError(f"PR357_EFFECT_AUTHORITY_FORBIDDEN:{key}")
 
 
 def effect_boundary() -> Mapping[str, bool]:

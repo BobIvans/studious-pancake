@@ -1,4 +1,5 @@
 """PR-179 / STABLE-01: stablecoin conversion rights and parity."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from .core import EvidenceBinding, Mega802Error, rational_quote, require_nonnegative_int

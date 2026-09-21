@@ -19,6 +19,7 @@ from src.research.pr357_core import (
     compute_evidence_age_vector,
     define_market_belief_state,
     detect_double_counted_information,
+    estimate_evsi,
     generate_joint_predictive_distribution,
     record_lifecycle_transition,
     replay_lifecycle_history,
@@ -70,16 +71,22 @@ def test_lifecycle_transition_is_append_only_and_replayable() -> None:
         reason="stale evidence",
         evidence_refs=("e2",),
     )
-    assert replay_lifecycle_history(
-        LifecycleState.RESEARCH_ONLY,
-        (first, second),
-        15,
-    ) is LifecycleState.OBSERVING
-    assert replay_lifecycle_history(
-        LifecycleState.RESEARCH_ONLY,
-        (first, second),
-        25,
-    ) is LifecycleState.REQUALIFICATION_DUE
+    assert (
+        replay_lifecycle_history(
+            LifecycleState.RESEARCH_ONLY,
+            (first, second),
+            15,
+        )
+        is LifecycleState.OBSERVING
+    )
+    assert (
+        replay_lifecycle_history(
+            LifecycleState.RESEARCH_ONLY,
+            (first, second),
+            25,
+        )
+        is LifecycleState.REQUALIFICATION_DUE
+    )
     assert first.receipt_hash != second.receipt_hash
     assert first.execution_right is False
 
@@ -102,18 +109,24 @@ def test_multidimensional_evidence_age_detects_hard_invalidator() -> None:
 
 
 def test_lifecycle_hysteresis_requires_stronger_reverse_evidence() -> None:
-    assert apply_lifecycle_hysteresis(
-        forward_score=90,
-        reverse_score=95,
-        forward_threshold=80,
-        reverse_threshold=100,
-    ) == "FORWARD"
-    assert apply_lifecycle_hysteresis(
-        forward_score=10,
-        reverse_score=110,
-        forward_threshold=80,
-        reverse_threshold=100,
-    ) == "REVERSE"
+    assert (
+        apply_lifecycle_hysteresis(
+            forward_score=90,
+            reverse_score=95,
+            forward_threshold=80,
+            reverse_threshold=100,
+        )
+        == "FORWARD"
+    )
+    assert (
+        apply_lifecycle_hysteresis(
+            forward_score=10,
+            reverse_score=110,
+            forward_threshold=80,
+            reverse_threshold=100,
+        )
+        == "REVERSE"
+    )
 
 
 def test_pit_belief_rejects_future_observation() -> None:
@@ -190,7 +203,10 @@ def test_integrated_vertical_reduces_regret_and_never_authorizes_execution() -> 
     second = run_pr357_integrated_vertical()
     assert first["integrated_receipt_hash"] == second["integrated_receipt_hash"]
     assert first["status"] == "SUPPORTED_RESEARCH_ONLY"
-    assert first["decision"]["challenger_regret_units"] < first["decision"]["baseline_regret_units"]
+    assert (
+        first["decision"]["challenger_regret_units"]
+        < first["decision"]["baseline_regret_units"]
+    )
     assert first["decision"]["absent_safety_probe"] == "ABSTAIN"
     assert first["execution_right"] is False
     assert first["production_ready"] is False
@@ -198,6 +214,108 @@ def test_integrated_vertical_reduces_regret_and_never_authorizes_execution() -> 
     assert first["realized_pnl_claim"] is False
     assert not any(first["effect_boundary"].values())
 
+
+
+def test_lifecycle_replay_preserves_append_order_for_equal_timestamps() -> None:
+    first = record_lifecycle_transition(
+        strategy_id="same-time",
+        previous_state=LifecycleState.RESEARCH_ONLY,
+        next_state=LifecycleState.OBSERVING,
+        decision_time=10,
+        reason="first append",
+        evidence_refs=("e1",),
+    )
+    second = record_lifecycle_transition(
+        strategy_id="same-time",
+        previous_state=LifecycleState.OBSERVING,
+        next_state=LifecycleState.REQUALIFICATION_DUE,
+        decision_time=10,
+        reason="second append",
+        evidence_refs=("e2",),
+    )
+    assert (
+        replay_lifecycle_history(
+            LifecycleState.RESEARCH_ONLY,
+            (first, second),
+            10,
+        )
+        is LifecycleState.REQUALIFICATION_DUE
+    )
+
+
+def test_pit_belief_requires_clock_for_every_observed_variable() -> None:
+    with pytest.raises(PR357ContractError, match="PR357_OBSERVED_CLOCK_MISSING:x"):
+        define_market_belief_state(
+            belief_id="missing-clock",
+            decision_time=10,
+            observed={"x": 1},
+            posterior_mean={"x": 1},
+            covariance={"x": {"x": 4}},
+            missingness_mask={"x": False},
+            source_clocks={},
+            valid_until=20,
+        )
+
+
+def test_joint_scenarios_honor_positive_and_negative_covariance() -> None:
+    clock = ObservationClock(1, 2, 3, 4, "s", "r")
+    common = {
+        "belief_id": "covariance",
+        "decision_time": 10,
+        "observed": {"x": 0, "y": 0},
+        "posterior_mean": {"x": 0, "y": 0},
+        "missingness_mask": {"x": False, "y": False},
+        "source_clocks": {"x": clock, "y": clock},
+        "valid_until": 20,
+    }
+    positive = define_market_belief_state(
+        **common,
+        covariance={
+            "x": {"x": 100, "y": 80},
+            "y": {"x": 80, "y": 100},
+        },
+    )
+    negative = define_market_belief_state(
+        **common,
+        covariance={
+            "x": {"x": 100, "y": -80},
+            "y": {"x": -80, "y": 100},
+        },
+    )
+    positive_samples = generate_joint_predictive_distribution(
+        positive,
+        sample_count=1_000,
+        seed=357,
+    )
+    negative_samples = generate_joint_predictive_distribution(
+        negative,
+        sample_count=1_000,
+        seed=357,
+    )
+    positive_cross = sum(row["x"] * row["y"] for row in positive_samples)
+    negative_cross = sum(row["x"] * row["y"] for row in negative_samples)
+    assert positive_cross > 0
+    assert negative_cross < 0
+    assert positive_samples != negative_samples
+
+
+def test_evsi_rejects_posterior_mixture_that_does_not_reproduce_prior() -> None:
+    decision = {
+        "actions": {
+            "A": {"down": 100, "up": 0},
+            "B": {"down": 10, "up": 10},
+        },
+        "state_probabilities_ppm": {"down": 500_000, "up": 500_000},
+        "deadline": 10,
+        "mandatory_safety": (),
+        "execution_right": False,
+    }
+    with pytest.raises(PR357ContractError, match="PR357_POSTERIOR_MIXTURE_INCOHERENT"):
+        estimate_evsi(
+            decision,
+            posterior_scenarios=({"down": 0, "up": 1_000_000},),
+            observation_probabilities_ppm=(1_000_000,),
+        )
 
 def test_full_pr357_verifier() -> None:
     result = verify()

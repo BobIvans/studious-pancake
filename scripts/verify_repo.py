@@ -115,6 +115,11 @@ PR356_CORRECTIVE_COMPLETION_COMMAND: Final[list[str]] = [
     "scripts/verify_pr356_completion.py",
 ]
 
+PR357_ADAPTIVE_STRATEGY_INTELLIGENCE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr357.py",
+]
+
 MARKET_DATA_EVOLUTION_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_market_data_evolution.py",
@@ -278,6 +283,7 @@ def main() -> int:
     run(PR355_EVIDENCE_NATIVE_MECHANISM_OS_COMMAND)
     run(PR356_AUTONOMOUS_MARKET_SCIENCE_COMMAND)
     run(PR356_CORRECTIVE_COMPLETION_COMMAND)
+    run(PR357_ADAPTIVE_STRATEGY_INTELLIGENCE_COMMAND)
     run(MARKET_DATA_EVOLUTION_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)

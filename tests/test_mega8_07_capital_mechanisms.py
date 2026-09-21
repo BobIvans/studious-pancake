@@ -82,20 +82,29 @@ def test_reinvestment_uses_only_finalized_spendable_capacity() -> None:
         evidence=evidence(),
     )
     assert compute_reinvestment_budget(capital, now=2) == 40
-    assert apply_growth_policy(
-        40,
-        current_scale=100,
-        max_growth_ppm=200_000,
-    ) == 20
-    assert cap_profit_redeployment(
-        30,
-        capacity_limit=25,
-    ) == 25
-    assert cap_profit_redeployment(
-        30,
-        capacity_limit=25,
-        protected_reserve_shortfall=1,
-    ) == 0
+    assert (
+        apply_growth_policy(
+            40,
+            current_scale=100,
+            max_growth_ppm=200_000,
+        )
+        == 20
+    )
+    assert (
+        cap_profit_redeployment(
+            30,
+            capacity_limit=25,
+        )
+        == 25
+    )
+    assert (
+        cap_profit_redeployment(
+            30,
+            capacity_limit=25,
+            protected_reserve_shortfall=1,
+        )
+        == 0
+    )
     cycle = reconcile_growth_cycle(
         starting_capital=100,
         redeployed=20,

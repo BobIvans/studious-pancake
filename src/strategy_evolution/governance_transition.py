@@ -7,6 +7,13 @@ from .core import EvolutionError, build_candidate, contract, qualify_candidate, 
 
 def normalize_governance_event(payload: Mapping[str, Any]):
     data = dict(payload)
+    clock_fields = tuple(
+        name
+        for name in ("block_number", "slot", "timestamp")
+        if data.get(name) is not None
+    )
+    if data.get("clock_ambiguous") or len(clock_fields) > 1:
+        raise EvolutionError("AMBIGUOUS_CLOCK")
     if data.get("event_kind") not in {"PROPOSE", "QUEUE", "CANCEL", "EXECUTE"}:
         raise EvolutionError("UNKNOWN_ABI")
     if data.get("reorged"):
@@ -21,6 +28,8 @@ def normalize_governance_event(payload: Mapping[str, Any]):
 
 def decode_parameter_delta(payload: Mapping[str, Any]):
     data = dict(payload)
+    if data.get("state_available") is False:
+        raise EvolutionError("STATE_UNAVAILABLE")
     if not data.get("interface_verified"):
         raise EvolutionError("UNVERIFIED_INTERFACE")
     if data.get("selector_kind") != "PARAMETER":
@@ -39,6 +48,8 @@ def simulate_post_change_state(payload: Mapping[str, Any]):
         raise EvolutionError("UNSUPPORTED_DELTA")
     if data.get("invariant_break"):
         raise EvolutionError("INVARIANT_BREAK")
+    if data.get("adapter_deterministic") is False:
+        raise EvolutionError("NONDETERMINISTIC_ADAPTER")
     state = dict(data.get("pre_state", {}))
     state.update(dict(data.get("deltas", {})))
     return result(
@@ -47,6 +58,10 @@ def simulate_post_change_state(payload: Mapping[str, Any]):
 
 
 def price_transition_window(payload: Mapping[str, Any]):
+    if payload.get("executable_quote_available") is False:
+        raise EvolutionError("NO_EXECUTABLE_QUOTE")
+    if payload.get("cost_high_atoms") is None:
+        raise EvolutionError("COST_UNKNOWN")
     return contract(
         "price_transition_window",
         payload,

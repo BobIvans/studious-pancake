@@ -248,3 +248,253 @@ class InformationActionSpec:
     mandatory_safety: bool
     provider_group: str
     failure_ppm: int = 0
+
+    def __post_init__(self) -> None:
+        if not self.action_id or not self.provider_group:
+            raise PR357ContractError("PR357_INFORMATION_ACTION_ID_REQUIRED")
+        if min(self.cost_units, self.latency, self.deadline, self.failure_ppm) < 0:
+            raise PR357ContractError("PR357_INFORMATION_ACTION_NEGATIVE")
+        if self.failure_ppm > PPM:
+            raise PR357ContractError("PR357_FAILURE_PPM_RANGE")
+
+
+def define_strategy_lifecycle_state(value: str) -> LifecycleState:
+    try:
+        return LifecycleState(value)
+    except ValueError as exc:
+        raise PR357ContractError("PR357_UNKNOWN_LIFECYCLE_STATE") from exc
+
+
+def define_lifecycle_transition(
+    previous_state: str,
+    next_state: str,
+) -> tuple[LifecycleState, LifecycleState]:
+    previous = define_strategy_lifecycle_state(previous_state)
+    nxt = define_strategy_lifecycle_state(next_state)
+    if nxt not in _ALLOWED_TRANSITIONS[previous]:
+        raise PR357ContractError("PR357_LIFECYCLE_TRANSITION_INVALID")
+    return previous, nxt
+
+
+def record_lifecycle_transition(
+    *,
+    strategy_id: str,
+    previous_state: str,
+    next_state: str,
+    decision_time: int,
+    reason: str,
+    evidence_refs: Sequence[str],
+) -> LifecycleTransitionReceipt:
+    previous, nxt = define_lifecycle_transition(previous_state, next_state)
+    return LifecycleTransitionReceipt(
+        strategy_id=strategy_id,
+        previous_state=previous,
+        next_state=nxt,
+        decision_time=decision_time,
+        reason=reason,
+        evidence_refs=tuple(evidence_refs),
+    )
+
+
+def reject_invalid_lifecycle_transition(
+    previous_state: str,
+    next_state: str,
+) -> bool:
+    try:
+        define_lifecycle_transition(previous_state, next_state)
+    except PR357ContractError:
+        return True
+    return False
+
+
+def replay_lifecycle_history(
+    initial_state: str,
+    transitions: Sequence[LifecycleTransitionReceipt],
+    as_of: int,
+) -> LifecycleState:
+    state = define_strategy_lifecycle_state(initial_state)
+    last_time = -1
+    for transition in sorted(
+        transitions,
+        key=lambda item: (item.decision_time, item.receipt_hash),
+    ):
+        if transition.decision_time > as_of:
+            break
+        if transition.decision_time < last_time:
+            raise PR357ContractError("PR357_TRANSITION_TIME_REGRESSION")
+        if transition.previous_state != state:
+            raise PR357ContractError("PR357_TRANSITION_HISTORY_FORK")
+        state = transition.next_state
+        last_time = transition.decision_time
+    return state
+
+
+def compute_evidence_age_vector(
+    *,
+    now: int,
+    evidence_available_at: int,
+    current_deployment_generation: int,
+    evidence_deployment_generation: int,
+    current_source_schema_generation: int,
+    evidence_source_schema_generation: int,
+    current_topology_generation: int,
+    evidence_topology_generation: int,
+    regime_distance: int,
+    current_model_generation: int,
+    evidence_model_generation: int,
+) -> EvidenceAgeVector:
+    fields = (
+        now,
+        evidence_available_at,
+        current_deployment_generation,
+        evidence_deployment_generation,
+        current_source_schema_generation,
+        evidence_source_schema_generation,
+        current_topology_generation,
+        evidence_topology_generation,
+        regime_distance,
+        current_model_generation,
+        evidence_model_generation,
+    )
+    if min(fields) < 0:
+        raise PR357ContractError("PR357_EVIDENCE_AGE_INPUT_NEGATIVE")
+    if evidence_available_at > now:
+        raise PR357ContractError("PR357_EVIDENCE_FROM_FUTURE")
+    generation_pairs = (
+        (
+            "DEPLOYMENT_GENERATION_CHANGED",
+            current_deployment_generation,
+            evidence_deployment_generation,
+        ),
+        (
+            "SOURCE_SCHEMA_CHANGED",
+            current_source_schema_generation,
+            evidence_source_schema_generation,
+        ),
+        (
+            "TOPOLOGY_GENERATION_CHANGED",
+            current_topology_generation,
+            evidence_topology_generation,
+        ),
+        (
+            "MODEL_GENERATION_CHANGED",
+            current_model_generation,
+            evidence_model_generation,
+        ),
+    )
+    invalidators = tuple(
+        name
+        for name, current, prior in generation_pairs
+        if current != prior
+    )
+    return EvidenceAgeVector(
+        wall_age=now - evidence_available_at,
+        deployment_generation_age=abs(
+            current_deployment_generation - evidence_deployment_generation
+        ),
+        source_schema_age=abs(
+            current_source_schema_generation - evidence_source_schema_generation
+        ),
+        topology_age=abs(
+            current_topology_generation - evidence_topology_generation
+        ),
+        regime_distance=regime_distance,
+        model_generation_age=abs(
+            current_model_generation - evidence_model_generation
+        ),
+        hard_invalidators=invalidators,
+    )
+
+
+def detect_evidence_invalidation_event(
+    age: EvidenceAgeVector,
+) -> tuple[str, ...]:
+    return age.hard_invalidators
+
+
+def estimate_strategy_survival_curve(
+    durations: Sequence[int],
+    failed: Sequence[bool],
+) -> tuple[tuple[int, int], ...]:
+    if len(durations) != len(failed) or not durations:
+        raise PR357ContractError("PR357_SURVIVAL_INPUT_INVALID")
+    if any(duration < 0 for duration in durations):
+        raise PR357ContractError("PR357_SURVIVAL_DURATION_NEGATIVE")
+    at_risk = len(durations)
+    survival_ppm = PPM
+    result: list[tuple[int, int]] = []
+    for time in sorted(set(durations)):
+        events = sum(
+            1
+            for duration, event in zip(durations, failed, strict=True)
+            if duration == time and event
+        )
+        censored = sum(
+            1
+            for duration, event in zip(durations, failed, strict=True)
+            if duration == time and not event
+        )
+        if at_risk <= 0:
+            break
+        if events:
+            survival_ppm = survival_ppm * (at_risk - events) // at_risk
+        result.append((time, survival_ppm))
+        at_risk -= events + censored
+    return tuple(result)
+
+
+def detect_offline_change_point(
+    values: Sequence[int],
+    *,
+    minimum_window: int,
+    threshold_units: int,
+) -> int | None:
+    if minimum_window < 1 or threshold_units < 0:
+        raise PR357ContractError("PR357_CHANGE_POINT_POLICY_INVALID")
+    if len(values) < minimum_window * 2:
+        return None
+    best: tuple[int, int] | None = None
+    for split in range(minimum_window, len(values) - minimum_window + 1):
+        left = values[:split]
+        right = values[split:]
+        left_mean = sum(left) // len(left)
+        right_mean = sum(right) // len(right)
+        distance = abs(right_mean - left_mean)
+        candidate = (distance, -split)
+        if best is None or candidate > best:
+            best = candidate
+    assert best is not None
+    distance, negative_split = best
+    if distance < threshold_units:
+        return None
+    return -negative_split
+
+
+def separate_data_break_from_market_regime(
+    *,
+    change_detected: bool,
+    schema_generation_changed: bool,
+    source_gap_detected: bool,
+    independent_market_signal_count: int,
+) -> str:
+    if not change_detected:
+        return "NO_CONFIRMED_BREAK"
+    if schema_generation_changed or source_gap_detected:
+        return "DATA_BREAK"
+    if independent_market_signal_count >= 2:
+        return "MARKET_REGIME_CANDIDATE"
+    return "INCONCLUSIVE"
+
+
+def apply_lifecycle_hysteresis(
+    *,
+    forward_score: int,
+    reverse_score: int,
+    forward_threshold: int,
+    reverse_threshold: int,
+) -> str:
+    if min(forward_threshold, reverse_threshold) < 0:
+        raise PR357ContractError("PR357_HYSTERESIS_THRESHOLD_NEGATIVE")
+    if forward_score >= forward_threshold and reverse_score < reverse_threshold:
+        return "FORWARD"
+    if reverse_score >= reverse_threshold and forward_score < forward_threshold:

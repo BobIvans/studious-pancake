@@ -1,0 +1,1366 @@
+{
+  "schema_version": "pr355.owner-map.v1",
+  "observed_main": "d8d6d9079689efdddf77ce373120675255a99327",
+  "policy": "No duplicate registries/journals/graphs/evidence ledgers/signers/senders/release authorities. NXF stays provisional.",
+  "counts": {
+    "ig": 57,
+    "nxf": 72,
+    "marketpacks": 9,
+    "total": 138
+  },
+  "ig_obligations": [
+    {
+      "requirement_id": "IG00-reconcile_requirement_owners",
+      "group": "IG00",
+      "responsibility": "reconcile_requirement_owners",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG00-record_source_claim_conflicts",
+      "group": "IG00",
+      "responsibility": "record_source_claim_conflicts",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG00-repair_evo09_semantic_gaps",
+      "group": "IG00",
+      "responsibility": "repair_evo09_semantic_gaps",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG00-separate_code_and_operational_verdict",
+      "group": "IG00",
+      "responsibility": "separate_code_and_operational_verdict",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG01-register_instrument_economic_identity",
+      "group": "IG01",
+      "responsibility": "register_instrument_economic_identity",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG01-register_source_access_contract",
+      "group": "IG01",
+      "responsibility": "register_source_access_contract",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG01-link_primary_feed_dependencies",
+      "group": "IG01",
+      "responsibility": "link_primary_feed_dependencies",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG01-track_deployment_and_semantic_version",
+      "group": "IG01",
+      "responsibility": "track_deployment_and_semantic_version",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG02-capture_bounded_shared_events",
+      "group": "IG02",
+      "responsibility": "capture_bounded_shared_events",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG02-checkpoint_and_recover_ingestion",
+      "group": "IG02",
+      "responsibility": "checkpoint_and_recover_ingestion",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG02-record_sampling_and_control_windows",
+      "group": "IG02",
+      "responsibility": "record_sampling_and_control_windows",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG02-manage_source_cost_and_expiry",
+      "group": "IG02",
+      "responsibility": "manage_source_cost_and_expiry",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG02-capture_redacted_bot_telemetry",
+      "group": "IG02",
+      "responsibility": "capture_redacted_bot_telemetry",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG03-normalize_units_and_availability",
+      "group": "IG03",
+      "responsibility": "normalize_units_and_availability",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing point-in-time/replay/data-lineage owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG03-materialize_revisioned_market_state",
+      "group": "IG03",
+      "responsibility": "materialize_revisioned_market_state",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing point-in-time/replay/data-lineage owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG03-query_features_as_of",
+      "group": "IG03",
+      "responsibility": "query_features_as_of",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing point-in-time/replay/data-lineage owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG03-build_self_contained_replay_manifest",
+      "group": "IG03",
+      "responsibility": "build_self_contained_replay_manifest",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing point-in-time/replay/data-lineage owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG03-maintain_multifrequency_views",
+      "group": "IG03",
+      "responsibility": "maintain_multifrequency_views",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing point-in-time/replay/data-lineage owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG04-register_economic_rights_relations",
+      "group": "IG04",
+      "responsibility": "register_economic_rights_relations",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing economic/predictive/executable graph owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG04-register_predictive_relation",
+      "group": "IG04",
+      "responsibility": "register_predictive_relation",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing economic/predictive/executable graph owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG04-compose_stateful_transformation_edges",
+      "group": "IG04",
+      "responsibility": "compose_stateful_transformation_edges",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing economic/predictive/executable graph owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG04-recompute_only_affected_routes",
+      "group": "IG04",
+      "responsibility": "recompute_only_affected_routes",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing economic/predictive/executable graph owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG05-register_task_and_horizon",
+      "group": "IG05",
+      "responsibility": "register_task_and_horizon",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims + existing evaluation owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG05-write_forecast_before_outcome",
+      "group": "IG05",
+      "responsibility": "write_forecast_before_outcome",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims + existing evaluation owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG05-mature_and_join_labels",
+      "group": "IG05",
+      "responsibility": "mature_and_join_labels",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims + existing evaluation owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG05-form_independent_market_episodes",
+      "group": "IG05",
+      "responsibility": "form_independent_market_episodes",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims + existing evaluation owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG05-attribute_execution_prediction_errors",
+      "group": "IG05",
+      "responsibility": "attribute_execution_prediction_errors",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims + existing evaluation owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG05-score_conservative_arbitrageability",
+      "group": "IG05",
+      "responsibility": "score_conservative_arbitrageability",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.claims + existing evaluation owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG06-freeze_trial_and_holdout",
+      "group": "IG06",
+      "responsibility": "freeze_trial_and_holdout",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing research evaluation and qualification owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG06-run_equal_budget_ablation",
+      "group": "IG06",
+      "responsibility": "run_equal_budget_ablation",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing research evaluation and qualification owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG06-run_purged_walk_forward",
+      "group": "IG06",
+      "responsibility": "run_purged_walk_forward",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing research evaluation and qualification owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG06-evaluate_probabilities_and_intervals",
+      "group": "IG06",
+      "responsibility": "evaluate_probabilities_and_intervals",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing research evaluation and qualification owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG06-control_false_discoveries_and_misses",
+      "group": "IG06",
+      "responsibility": "control_false_discoveries_and_misses",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing research evaluation and qualification owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG06-publish_class_qualification",
+      "group": "IG06",
+      "responsibility": "publish_class_qualification",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing research evaluation and qualification owners",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG07-partition_learning_memories",
+      "group": "IG07",
+      "responsibility": "partition_learning_memories",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG07-evaluate_then_learn_matured",
+      "group": "IG07",
+      "responsibility": "evaluate_then_learn_matured",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG07-compare_transfer_variants",
+      "group": "IG07",
+      "responsibility": "compare_transfer_variants",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG07-test_old_regime_retention",
+      "group": "IG07",
+      "responsibility": "test_old_regime_retention",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG07-promote_or_rollback_model_artifact",
+      "group": "IG07",
+      "responsibility": "promote_or_rollback_model_artifact",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG08-build_crypto_basis_market_pack",
+      "group": "IG08",
+      "responsibility": "build_crypto_basis_market_pack",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing market research owners + PR-355 MarketPack adapters",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG08-build_gold_claim_market_pack",
+      "group": "IG08",
+      "responsibility": "build_gold_claim_market_pack",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing market research owners + PR-355 MarketPack adapters",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG08-build_macro_vintage_market_pack",
+      "group": "IG08",
+      "responsibility": "build_macro_vintage_market_pack",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing market research owners + PR-355 MarketPack adapters",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG08-build_energy_and_corporate_packs",
+      "group": "IG08",
+      "responsibility": "build_energy_and_corporate_packs",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing market research owners + PR-355 MarketPack adapters",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG08-compare_market_pack_portability",
+      "group": "IG08",
+      "responsibility": "compare_market_pack_portability",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing market research owners + PR-355 MarketPack adapters",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG09-bind_evo_mechanism_market_packs",
+      "group": "IG09",
+      "responsibility": "bind_evo_mechanism_market_packs",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery + canonical EVO-09 residual owner",
+      "evidence_refs": [
+        "src/strategy_evolution/residual_discovery.py",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG09-verify_mechanism_dossier",
+      "group": "IG09",
+      "responsibility": "verify_mechanism_dossier",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery + canonical EVO-09 residual owner",
+      "evidence_refs": [
+        "src/strategy_evolution/residual_discovery.py",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG09-operate_quarantined_deployment_watcher",
+      "group": "IG09",
+      "responsibility": "operate_quarantined_deployment_watcher",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery + canonical EVO-09 residual owner",
+      "evidence_refs": [
+        "src/strategy_evolution/residual_discovery.py",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG09-connect_residual_loop_to_research",
+      "group": "IG09",
+      "responsibility": "connect_residual_loop_to_research",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery + canonical EVO-09 residual owner",
+      "evidence_refs": [
+        "src/strategy_evolution/residual_discovery.py",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG10-build_evidence_bound_proposal",
+      "group": "IG10",
+      "responsibility": "build_evidence_bound_proposal",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing proposal/capital/finality authorities",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG10-admit_by_financial_domain",
+      "group": "IG10",
+      "responsibility": "admit_by_financial_domain",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing proposal/capital/finality authorities",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG10-prove_low_capital_prefix_budget",
+      "group": "IG10",
+      "responsibility": "prove_low_capital_prefix_budget",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing proposal/capital/finality authorities",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG10-reconcile_feedback_from_finality",
+      "group": "IG10",
+      "responsibility": "reconcile_feedback_from_finality",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing proposal/capital/finality authorities",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG10-scale_resources_after_measurement",
+      "group": "IG10",
+      "responsibility": "scale_resources_after_measurement",
+      "disposition": "SATISFIED_BY_EXISTING",
+      "owner": "existing proposal/capital/finality authorities",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG11-research_pin_and_test_upstream",
+      "group": "IG11",
+      "responsibility": "research_pin_and_test_upstream",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing upstream/evidence/product owners + PR-355 receipt consumer",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG11-isolate_quant_research_agents",
+      "group": "IG11",
+      "responsibility": "isolate_quant_research_agents",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing upstream/evidence/product owners + PR-355 receipt consumer",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG11-publish_evidence_products",
+      "group": "IG11",
+      "responsibility": "publish_evidence_products",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing upstream/evidence/product owners + PR-355 receipt consumer",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    },
+    {
+      "requirement_id": "IG11-close_scope_by_evidence",
+      "group": "IG11",
+      "responsibility": "close_scope_by_evidence",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "existing upstream/evidence/product owners + PR-355 receipt consumer",
+      "evidence_refs": [
+        "current main canonical owner map",
+        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+      ]
+    }
+  ],
+  "nxf_requirements": [
+    {
+      "requirement_id": "NXF-001",
+      "group": "NX-00",
+      "responsibility": "map_delta_to_current_owners",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "symbol": "map_delta_to_current_owners",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-002",
+      "group": "NX-00",
+      "responsibility": "classify_delta_non_duplication",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "symbol": "classify_delta_non_duplication",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-003",
+      "group": "NX-00",
+      "responsibility": "bind_delta_source_provenance",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "symbol": "bind_delta_source_provenance",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-004",
+      "group": "NX-00",
+      "responsibility": "register_delta_marketpack",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "symbol": "register_delta_marketpack",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-005",
+      "group": "NX-00",
+      "responsibility": "audit_delta_effect_boundary",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "symbol": "audit_delta_effect_boundary",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-006",
+      "group": "NX-00",
+      "responsibility": "publish_delta_coverage_receipt",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.pr355_delta",
+      "symbol": "publish_delta_coverage_receipt",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-007",
+      "group": "NX-01",
+      "responsibility": "define_cashflow_stream",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.claims",
+      "symbol": "define_cashflow_stream",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-008",
+      "group": "NX-01",
+      "responsibility": "define_claim_right",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.claims",
+      "symbol": "define_claim_right",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-009",
+      "group": "NX-01",
+      "responsibility": "normalize_rate_instrument",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.claims",
+      "symbol": "normalize_rate_instrument",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-010",
+      "group": "NX-01",
+      "responsibility": "compile_fixed_floating_payoff",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.claims",
+      "symbol": "compile_fixed_floating_payoff",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-011",
+      "group": "NX-01",
+      "responsibility": "price_cashflow_after_costs",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.claims",
+      "symbol": "price_cashflow_after_costs",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-012",
+      "group": "NX-01",
+      "responsibility": "qualify_cashflow_identity",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.claims",
+      "symbol": "qualify_cashflow_identity",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-013",
+      "group": "NX-02",
+      "responsibility": "define_liquidity_shape",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.liquidity_shape",
+      "symbol": "define_liquidity_shape",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-014",
+      "group": "NX-02",
+      "responsibility": "compile_liquidity_shape_surface",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.liquidity_shape",
+      "symbol": "compile_liquidity_shape_surface",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-015",
+      "group": "NX-02",
+      "responsibility": "project_dynamic_liquidity_shape",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.liquidity_shape",
+      "symbol": "project_dynamic_liquidity_shape",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-016",
+      "group": "NX-02",
+      "responsibility": "compare_hybrid_execution_paths",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.liquidity_shape",
+      "symbol": "compare_hybrid_execution_paths",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-017",
+      "group": "NX-02",
+      "responsibility": "estimate_lvr_and_lp_response",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.liquidity_shape",
+      "symbol": "estimate_lvr_and_lp_response",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-018",
+      "group": "NX-02",
+      "responsibility": "stress_liquidity_shape",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.liquidity_shape",
+      "symbol": "stress_liquidity_shape",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-019",
+      "group": "NX-03",
+      "responsibility": "register_programmable_cash_asset",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.programmable_cash",
+      "symbol": "register_programmable_cash_asset",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-020",
+      "group": "NX-03",
+      "responsibility": "model_earning_and_claim_modes",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.programmable_cash",
+      "symbol": "model_earning_and_claim_modes",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-021",
+      "group": "NX-03",
+      "responsibility": "read_mint_redeem_capacity",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.programmable_cash",
+      "symbol": "read_mint_redeem_capacity",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-022",
+      "group": "NX-03",
+      "responsibility": "detect_extension_parity_residual",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.programmable_cash",
+      "symbol": "detect_extension_parity_residual",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-023",
+      "group": "NX-03",
+      "responsibility": "decompose_synthetic_dollar_backing",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.programmable_cash",
+      "symbol": "decompose_synthetic_dollar_backing",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-024",
+      "group": "NX-03",
+      "responsibility": "qualify_redemption_eligibility",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.programmable_cash",
+      "symbol": "qualify_redemption_eligibility",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-025",
+      "group": "NX-04",
+      "responsibility": "register_rwa_instrument_rights",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.rwa",
+      "symbol": "register_rwa_instrument_rights",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-026",
+      "group": "NX-04",
+      "responsibility": "ingest_nav_revision_history",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.rwa",
+      "symbol": "ingest_nav_revision_history",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-027",
+      "group": "NX-04",
+      "responsibility": "model_rwa_subscription_redemption",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.rwa",
+      "symbol": "model_rwa_subscription_redemption",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-028",
+      "group": "NX-04",
+      "responsibility": "model_custody_receipt_state",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.rwa",
+      "symbol": "model_custody_receipt_state",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-029",
+      "group": "NX-04",
+      "responsibility": "detect_rwa_nav_basis",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.rwa",
+      "symbol": "detect_rwa_nav_basis",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-030",
+      "group": "NX-04",
+      "responsibility": "qualify_rwa_access_path",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.rwa",
+      "symbol": "qualify_rwa_access_path",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-031",
+      "group": "NX-05",
+      "responsibility": "map_hub_spoke_liquidity",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.shared_credit",
+      "symbol": "map_hub_spoke_liquidity",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-032",
+      "group": "NX-05",
+      "responsibility": "normalize_spoke_risk_parameters",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.shared_credit",
+      "symbol": "normalize_spoke_risk_parameters",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-033",
+      "group": "NX-05",
+      "responsibility": "compute_shared_liquidity_bottleneck",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.shared_credit",
+      "symbol": "compute_shared_liquidity_bottleneck",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-034",
+      "group": "NX-05",
+      "responsibility": "simulate_cross_spoke_utilization",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.shared_credit",
+      "symbol": "simulate_cross_spoke_utilization",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-035",
+      "group": "NX-05",
+      "responsibility": "detect_hub_spoke_basis",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.shared_credit",
+      "symbol": "detect_hub_spoke_basis",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-036",
+      "group": "NX-05",
+      "responsibility": "qualify_shared_credit_route",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.shared_credit",
+      "symbol": "qualify_shared_credit_route",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-037",
+      "group": "NX-06",
+      "responsibility": "build_mechanism_fingerprint",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer",
+      "symbol": "build_mechanism_fingerprint",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-038",
+      "group": "NX-06",
+      "responsibility": "build_marketpack_adapter_features",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer",
+      "symbol": "build_marketpack_adapter_features",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-039",
+      "group": "NX-06",
+      "responsibility": "train_local_only_baseline",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer",
+      "symbol": "train_local_only_baseline",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-040",
+      "group": "NX-06",
+      "responsibility": "train_mechanism_transfer_challenger",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer",
+      "symbol": "train_mechanism_transfer_challenger",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-041",
+      "group": "NX-06",
+      "responsibility": "measure_negative_transfer",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer",
+      "symbol": "measure_negative_transfer",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-042",
+      "group": "NX-06",
+      "responsibility": "promote_or_reject_transfer",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.mechanism_transfer",
+      "symbol": "promote_or_reject_transfer",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-043",
+      "group": "NX-07",
+      "responsibility": "estimate_marketpack_information_value",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.frontier",
+      "symbol": "estimate_marketpack_information_value",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-044",
+      "group": "NX-07",
+      "responsibility": "estimate_marketpack_onboarding_cost",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.frontier",
+      "symbol": "estimate_marketpack_onboarding_cost",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-045",
+      "group": "NX-07",
+      "responsibility": "score_research_frontier",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.frontier",
+      "symbol": "score_research_frontier",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-046",
+      "group": "NX-07",
+      "responsibility": "allocate_capture_budget_by_frontier",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.frontier",
+      "symbol": "allocate_capture_budget_by_frontier",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-047",
+      "group": "NX-07",
+      "responsibility": "audit_frontier_selection_bias",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.frontier",
+      "symbol": "audit_frontier_selection_bias",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-048",
+      "group": "NX-07",
+      "responsibility": "retire_low_value_marketpack",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.frontier",
+      "symbol": "retire_low_value_marketpack",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-049",
+      "group": "NX-08",
+      "responsibility": "build_research_receipt_manifest",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.research_receipt",
+      "symbol": "build_research_receipt_manifest",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-050",
+      "group": "NX-08",
+      "responsibility": "replay_receipt_computation",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.research_receipt",
+      "symbol": "replay_receipt_computation",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-051",
+      "group": "NX-08",
+      "responsibility": "generate_optional_computation_proof",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.research_receipt",
+      "symbol": "generate_optional_computation_proof",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-052",
+      "group": "NX-08",
+      "responsibility": "verify_computation_proof",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.research_receipt",
+      "symbol": "verify_computation_proof",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-053",
+      "group": "NX-08",
+      "responsibility": "redact_receipt_for_sharing",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.research_receipt",
+      "symbol": "redact_receipt_for_sharing",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-054",
+      "group": "NX-08",
+      "responsibility": "bind_receipt_to_evidence_ledger",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.research_receipt",
+      "symbol": "bind_receipt_to_evidence_ledger",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-055",
+      "group": "NX-09",
+      "responsibility": "register_paid_research_resource",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.research_resources",
+      "symbol": "register_paid_research_resource",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-056",
+      "group": "NX-09",
+      "responsibility": "discover_paid_resource",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.research_resources",
+      "symbol": "discover_paid_resource",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-057",
+      "group": "NX-09",
+      "responsibility": "quote_research_purchase",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.research_resources",
+      "symbol": "quote_research_purchase",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-058",
+      "group": "NX-09",
+      "responsibility": "authorize_bounded_resource_purchase",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.research_resources",
+      "symbol": "authorize_bounded_resource_purchase",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-059",
+      "group": "NX-09",
+      "responsibility": "reconcile_resource_payment",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.research_resources",
+      "symbol": "reconcile_resource_payment",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-060",
+      "group": "NX-09",
+      "responsibility": "score_information_value_after_payment",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.research_resources",
+      "symbol": "score_information_value_after_payment",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-061",
+      "group": "NX-10",
+      "responsibility": "ingest_protocol_incident",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.incident_admission",
+      "symbol": "ingest_protocol_incident",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-062",
+      "group": "NX-10",
+      "responsibility": "derive_incident_invariant_tests",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.incident_admission",
+      "symbol": "derive_incident_invariant_tests",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-063",
+      "group": "NX-10",
+      "responsibility": "build_adversarial_mechanism_states",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.incident_admission",
+      "symbol": "build_adversarial_mechanism_states",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-064",
+      "group": "NX-10",
+      "responsibility": "quarantine_vulnerable_deployment",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.incident_admission",
+      "symbol": "quarantine_vulnerable_deployment",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-065",
+      "group": "NX-10",
+      "responsibility": "detect_semantic_security_drift",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.incident_admission",
+      "symbol": "detect_semantic_security_drift",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-066",
+      "group": "NX-10",
+      "responsibility": "gate_mechanism_admission_on_security",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.incident_admission",
+      "symbol": "gate_mechanism_admission_on_security",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-067",
+      "group": "NX-11",
+      "responsibility": "define_market_intervention",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.causal_twin",
+      "symbol": "define_market_intervention",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-068",
+      "group": "NX-11",
+      "responsibility": "declare_causal_assumptions",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.causal_twin",
+      "symbol": "declare_causal_assumptions",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-069",
+      "group": "NX-11",
+      "responsibility": "simulate_intervention_twin",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.causal_twin",
+      "symbol": "simulate_intervention_twin",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-070",
+      "group": "NX-11",
+      "responsibility": "compare_observed_and_counterfactual",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.causal_twin",
+      "symbol": "compare_observed_and_counterfactual",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-071",
+      "group": "NX-11",
+      "responsibility": "estimate_intervention_uncertainty",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.causal_twin",
+      "symbol": "estimate_intervention_uncertainty",
+      "permanent_nf": null
+    },
+    {
+      "requirement_id": "NXF-072",
+      "group": "NX-11",
+      "responsibility": "reject_unsupported_causal_claim",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.causal_twin",
+      "symbol": "reject_unsupported_causal_claim",
+      "permanent_nf": null
+    }
+  ],
+  "marketpacks": [
+    {
+      "requirement_id": "MP-N01",
+      "name": "Boros Funding IRS",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.boros",
+      "symbol": "run_boros_fixture_vertical",
+      "state": "DISABLED"
+    },
+    {
+      "requirement_id": "MP-N02",
+      "name": "Hybrid Liquidity Shape",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.liquidity_shape",
+      "symbol": "compare_hybrid_execution_paths",
+      "state": "DISABLED"
+    },
+    {
+      "requirement_id": "MP-N03",
+      "name": "M0 Programmable Cash",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.programmable_cash",
+      "symbol": "register_programmable_cash_asset",
+      "state": "DISABLED"
+    },
+    {
+      "requirement_id": "MP-N04",
+      "name": "Ethena Synthetic Dollar",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.programmable_cash",
+      "symbol": "decompose_synthetic_dollar_backing",
+      "state": "DISABLED"
+    },
+    {
+      "requirement_id": "MP-N05",
+      "name": "Tokenized Credit/RWA",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.rwa",
+      "symbol": "register_rwa_instrument_rights",
+      "state": "DISABLED"
+    },
+    {
+      "requirement_id": "MP-N06",
+      "name": "Aave V4 Hub/Spoke",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.shared_credit",
+      "symbol": "map_hub_spoke_liquidity",
+      "state": "DISABLED"
+    },
+    {
+      "requirement_id": "MP-N07",
+      "name": "Research Resources",
+      "disposition": "NEW_OUTCOME",
+      "owner": "src.mechanism_discovery.research_resources",
+      "symbol": "register_paid_research_resource",
+      "state": "DISABLED"
+    },
+    {
+      "requirement_id": "MP-N08",
+      "name": "Proof-Carrying Research",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.research_receipt",
+      "symbol": "build_research_receipt_manifest",
+      "state": "DISABLED"
+    },
+    {
+      "requirement_id": "MP-N09",
+      "name": "Incident Corpus",
+      "disposition": "SPECIALIZE_EXISTING",
+      "owner": "src.mechanism_discovery.incident_admission",
+      "symbol": "ingest_protocol_incident",
+      "state": "DISABLED"
+    }
+  ],
+  "duplicate_authorities": [],
+  "permanent_nf_allocated": false
+}

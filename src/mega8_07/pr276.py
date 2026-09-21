@@ -18,10 +18,12 @@ def join_event_time_streams(
     require_nonnegative(max_event_gap, "max_event_gap")
     joined: list[tuple[EventRow, EventRow]] = []
     for lrow in left:
+        if lrow[1] < lrow[0]:
+            raise Mega807Error("IMPOSSIBLE_AVAILABILITY_ORDER")
         for rrow in right:
+            if rrow[1] < rrow[0]:
+                raise Mega807Error("IMPOSSIBLE_AVAILABILITY_ORDER")
             if abs(lrow[0] - rrow[0]) <= max_event_gap:
-                if lrow[1] > rrow[1] and rrow[1] > lrow[1]:
-                    raise Mega807Error("IMPOSSIBLE_AVAILABILITY_ORDER")
                 joined.append((lrow, rrow))
     return tuple(sorted(joined, key=lambda pair: (pair[0][0], pair[1][0])))
 

@@ -103,9 +103,7 @@ def price_cover_claim_right(payload: Mapping[str, Any]):
 
 
 def build_solvency_event_candidate(payload: Mapping[str, Any]):
-    if int(payload.get("value_low_atoms", 0)) <= int(
-        payload.get("cost_high_atoms", 0)
-    ):
+    if int(payload.get("value_low_atoms", 0)) <= int(payload.get("cost_high_atoms", 0)):
         raise EvolutionError("NEGATIVE_EDGE")
     if payload.get("waterfall_ambiguous"):
         raise EvolutionError("WATERFALL_AMBIGUOUS")

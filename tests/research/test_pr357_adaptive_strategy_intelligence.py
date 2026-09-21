@@ -316,6 +316,7 @@ def test_evsi_rejects_posterior_mixture_that_does_not_reproduce_prior() -> None:
             observation_probabilities_ppm=(1_000_000,),
         )
 
+
 def test_full_pr357_verifier() -> None:
     result = verify()
     assert result["accepted"], result["errors"]

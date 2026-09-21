@@ -61,8 +61,18 @@ def verify() -> dict[str, object]:
             errors.append(f"MEGA804_CHILD_EVIDENCE_MISSING:{evidence_file}")
             continue
         evidence = json.loads(path.read_text(encoding="utf-8"))
+        if evidence.get("mega_id") != "MEGA8-04":
+            errors.append(f"MEGA804_CHILD_MEGA_ID_MISMATCH:{evidence_file}")
+        if evidence.get("roadmap_pr") != item.get("roadmap_pr"):
+            errors.append(f"MEGA804_CHILD_ROADMAP_PR_MISMATCH:{evidence_file}")
+        if evidence.get("nf") != nfs:
+            errors.append(f"MEGA804_CHILD_NF_PARTITION_MISMATCH:{evidence_file}")
         if evidence.get("live_enabled") is not False:
             errors.append(f"MEGA804_CHILD_LIVE_NOT_OFF:{evidence_file}")
+        if evidence.get("signing_enabled") is not False:
+            errors.append(f"MEGA804_CHILD_SIGNING_NOT_OFF:{evidence_file}")
+        if evidence.get("submission_enabled") is not False:
+            errors.append(f"MEGA804_CHILD_SUBMISSION_NOT_OFF:{evidence_file}")
         if evidence.get("operational_qualified") is not False:
             errors.append(f"MEGA804_CHILD_OPERATIONAL_FALSE_REQUIRED:{evidence_file}")
 

@@ -73,6 +73,14 @@ PR356_CODE_PATHS = (
     "src/mechanism_discovery/pr356_discovery.py",
     "src/research/pr356_ecology.py",
     "src/research/pr356_allocation.py",
+    "src/research/pr356_completion_contracts.py",
+    "src/mechanism_discovery/pr356_state_completion.py",
+    "src/mechanism_discovery/pr356_campaign_completion.py",
+    "src/mechanism_discovery/pr356_benchmark_completion.py",
+    "src/mechanism_discovery/pr356_discovery_completion.py",
+    "src/research/pr356_ecology_completion.py",
+    "src/research/pr356_allocation_completion.py",
+    "src/research/pr356_integrated_loop.py",
 )
 
 
@@ -177,8 +185,20 @@ def verify() -> dict[str, object]:
     for key, expected in expected_registry_counts.items():
         if len(registry.get(key, [])) != expected:
             errors.append(f"PR356_REGISTRY_COUNT_MISMATCH:{key}")
-    if registry.get("scope_complete_implementation_claim") is not False:
-        errors.append("PR356_SCOPE_OVERCLAIM")
+    scope_complete = registry.get("scope_complete_implementation_claim")
+    if scope_complete is True:
+        completion_path = (
+            ROOT / "release_artifacts/pr356/completion_audit.json"
+        )
+        if not completion_path.is_file():
+            errors.append("PR356_SCOPE_COMPLETE_WITHOUT_AUDIT")
+        elif any(
+            row.get("implementation_status") == "NOT_RUN"
+            for row in owner_map.get("requirements", [])
+        ):
+            errors.append("PR356_SCOPE_COMPLETE_WITH_NOT_RUN")
+    elif scope_complete is not False:
+        errors.append("PR356_SCOPE_COMPLETION_FLAG_INVALID")
     if any(
         value is not False
         for value in registry.get("effect_boundary", {}).values()

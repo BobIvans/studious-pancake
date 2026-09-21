@@ -1,38 +1,79 @@
 {
   "schema_version": "pr353.evidence.v1",
   "base_sha": "3a76a1a46553f35bc141d406e4f9fcb89c992c99",
-  "implementation_head_sha": "99ada62cea51c4a5e86aa0383229381217d449b5",
-  "evidence_state": "FORMATTED_AWAITING_EXACT_HEAD_CI",
-  "recorded_reason": "Black 26.3.1 formatting completed and produced head 99ada62cea51c4a5e86aa0383229381217d449b5; exact-head functional and repository CI must still run on the next user-authored head.",
+  "implementation_head_sha": "2038d400a86168cd8e80223869799bb19341d74e",
+  "formatting_commit_sha": "99ada62cea51c4a5e86aa0383229381217d449b5",
+  "prior_evidence_refresh_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed",
+  "tested_head_sha": "06be960bdd396a173092baa23e8d47c0c915cb3c",
+  "evidence_state": "PASS_ON_RECORDED_TESTED_HEAD",
   "environment": {
-    "expected_python": "3.13.13",
-    "execution_authority": "GitHub Actions on PR head",
+    "python": "3.13.13",
+    "black": "26.3.1",
+    "platform": "GitHub Actions ubuntu-latest",
     "source_copy_performed": false
+  },
+  "workflow_evidence": {
+    "dedicated": {
+      "run_id": 35554977012,
+      "name": "PR-353 strategy evolution",
+      "head_sha": "06be960bdd396a173092baa23e8d47c0c915cb3c",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-21T02:40:56Z",
+      "completed_at": "2026-09-21T02:42:13Z"
+    },
+    "repository_ci": {
+      "run_id": 35554976967,
+      "name": "CI",
+      "head_sha": "06be960bdd396a173092baa23e8d47c0c915cb3c",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-21T02:40:56Z",
+      "completed_at": "2026-09-21T02:44:40Z"
+    }
   },
   "command_results": [
     {
+      "command": "python -m compileall -q src/strategy_evolution scripts/verify_pr353_strategy_evolution.py tests/strategy_evolution",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:42:13Z",
+      "workflow_run_id": 35554977012
+    },
+    {
+      "command": "python -m black --check src/strategy_evolution scripts/verify_pr353_strategy_evolution.py tests/strategy_evolution",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:42:13Z",
+      "workflow_run_id": 35554977012
+    },
+    {
       "command": "python scripts/verify_pr353_strategy_evolution.py --json",
-      "status": "NOT_RUN",
-      "exit_code": null,
-      "timestamp": null
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:42:13Z",
+      "workflow_run_id": 35554977012
     },
     {
       "command": "python -m pytest -q tests/strategy_evolution --disable-socket --allow-unix-socket",
-      "status": "NOT_RUN",
-      "exit_code": null,
-      "timestamp": null
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:42:13Z",
+      "workflow_run_id": 35554977012
     },
     {
       "command": "python -m pytest -q tests/test_agg10_intelligence.py tests/test_ultimate_mega1.py --disable-socket --allow-unix-socket",
-      "status": "NOT_RUN",
-      "exit_code": null,
-      "timestamp": null
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:42:13Z",
+      "workflow_run_id": 35554977012
     },
     {
       "command": "python scripts/verify_repo.py",
-      "status": "NOT_RUN",
-      "exit_code": null,
-      "timestamp": null
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:44:40Z",
+      "workflow_run_id": 35554976967
     }
   ],
   "package_states": {
@@ -48,12 +89,48 @@
   },
   "artifact_hashes": [
     {
+      "path": "src/strategy_evolution/__init__.py",
+      "git_blob_sha1": "b09b0ad3dd0dd25df191a575fcb65a74c3ab80be"
+    },
+    {
       "path": "src/strategy_evolution/core.py",
       "git_blob_sha1": "53b7be4290891e34813db4c24d30c81079be1963"
     },
     {
       "path": "src/strategy_evolution/manifest.py",
-      "git_blob_sha1": "739709678b3c5e50582d53678488aedc17d325f6"
+      "git_blob_sha1": "4a87c3a936d015a45ed4286f423ff2314883591a"
+    },
+    {
+      "path": "src/strategy_evolution/governance_transition.py",
+      "git_blob_sha1": "1a99f6543904c78e5be234b0674f7e099b23d870"
+    },
+    {
+      "path": "src/strategy_evolution/incentive_epoch.py",
+      "git_blob_sha1": "7fbd3da3a1814b444c2457853dc5a22b33c0353c"
+    },
+    {
+      "path": "src/strategy_evolution/stake_queue.py",
+      "git_blob_sha1": "e40c84d044ba3ded3dfea83cf89999b1995cd897"
+    },
+    {
+      "path": "src/strategy_evolution/primary_market.py",
+      "git_blob_sha1": "d2e69972b4fcfa580d529940491f04f633c92b3e"
+    },
+    {
+      "path": "src/strategy_evolution/solvency_event.py",
+      "git_blob_sha1": "3f26671742eee5d0fedfaa84bebf4c9a6993b11c"
+    },
+    {
+      "path": "src/strategy_evolution/intent_rescue.py",
+      "git_blob_sha1": "c497a283d926a249191a0532b22b8da19411252d"
+    },
+    {
+      "path": "src/strategy_evolution/blockspace_option.py",
+      "git_blob_sha1": "32b0e06af517e2386be63470daff83ae2e48d520"
+    },
+    {
+      "path": "src/strategy_evolution/rights_lifecycle.py",
+      "git_blob_sha1": "6f8cf8d8a2d490b1f88ab73ab4c416a6dd1c4753"
     },
     {
       "path": "src/strategy_evolution/residual_discovery.py",
@@ -65,11 +142,11 @@
     },
     {
       "path": "scripts/verify_pr353_strategy_evolution.py",
-      "git_blob_sha1": "a15dcbc2f386f21e91a5e4564ab70b572a858d36"
+      "git_blob_sha1": "78700fc2fd1d654a19bf5ddebd4696df92fec152"
     },
     {
       "path": "tests/strategy_evolution/test_pr353_strategy_evolution.py",
-      "git_blob_sha1": "c79fc85f46b2afc59b2d326a945f6e45c0f9d259"
+      "git_blob_sha1": "64b909a9385496ebe7992adc7d2e4ddafecca523"
     },
     {
       "path": "docs/roadmap/pr353_non_duplication.md",
@@ -78,17 +155,21 @@
     {
       "path": "docs/strategy_evolution/source_provenance.json",
       "git_blob_sha1": "cc454b33274fd286666c4e7fbbfc375cbf471fa2"
+    },
+    {
+      "path": "docs/strategy_evolution/data_source_registry.json",
+      "git_blob_sha1": "d90f2babb49ba5d4edd83ff120b31ebe6b990839"
     }
   ],
-  "coverage_claim": "EXPLICIT_BLIND_SPOTS; NO_UNIVERSAL_ANOMALY_DETECTION_CLAIM",
+  "source_provenance_status": "REFERENCE_ONLY_NO_EXTERNAL_SOURCE_COPY",
+  "anomaly_coverage_status": "EXPLICIT_UNKNOWN_AND_BLIND_SPOTS_RETAINED",
+  "accepted_hypotheses": [],
+  "rejected_hypotheses": [],
   "live_authority_introduced": false,
   "signing_introduced": false,
   "submission_introduced": false,
+  "auto_promotion_introduced": false,
   "production_ready_claimed": false,
-  "formatting_evidence": {
-    "workflow_run_id": 35554875830,
-    "formatter": "black==26.3.1",
-    "result": "PASS",
-    "formatting_commit_sha": "99ada62cea51c4a5e86aa0383229381217d449b5"
-  }
+  "universal_anomaly_detection_claimed": false,
+  "note": "Commands above passed on tested_head_sha. The evidence-only head that contains this manifest must also pass exact-head CI before merge."
 }

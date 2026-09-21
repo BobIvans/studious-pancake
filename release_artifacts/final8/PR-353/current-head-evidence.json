@@ -1,0 +1,956 @@
+{
+  "schema": "pr353.final-strategy-closure.v1",
+  "roadmap_id": "PR-353",
+  "title": "ULTIMATE FINAL STRATEGY CLOSURE",
+  "observed_main": "3a76a1a46553f35bc141d406e4f9fcb89c992c99",
+  "single_roadmap_pr": true,
+  "retired_planning_aliases": [
+    354,
+    355,
+    356,
+    357,
+    358,
+    359,
+    360
+  ],
+  "nf_owner_source": "src/release_gate/ultimate_mega1_closure.py::NF_TO_CLOSURE",
+  "nf_range": [
+    1,
+    1016
+  ],
+  "nf_owner_count": 1016,
+  "work_packages": [
+    {
+      "wp_id": "WP-1",
+      "status": "IMPLEMENTED_CURRENT_HEAD",
+      "canonical_owner": "src/release_gate/pr353_strategy_closure.py",
+      "evidence_refs": [
+        "main@3a76a1a46553f35bc141d406e4f9fcb89c992c99",
+        "config/capabilities.json",
+        "src/release_gate/ultimate_mega1_closure.py::NF_TO_CLOSURE",
+        "GitHub PR #529",
+        "GitHub PR #530"
+      ],
+      "blockers": []
+    },
+    {
+      "wp_id": "WP-2",
+      "status": "SATISFIED_BY_EXISTING",
+      "canonical_owner": "existing MEGA8-08 + ULTIMATE-MEGA1 owners",
+      "evidence_refs": [
+        "GitHub PR #530",
+        "release_artifacts/mega8/MEGA8-08/coverage.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json",
+        "src/mega8_08/manifest.py",
+        "src/ultimate_mega1/manifest.py"
+      ],
+      "blockers": []
+    },
+    {
+      "wp_id": "WP-3",
+      "status": "BLOCKED_EXTERNAL",
+      "canonical_owner": "existing data-plane/provider-governance/external-contract owners",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "src/provider_governance/**",
+        "src/data_plane/**"
+      ],
+      "blockers": [
+        "ACCOUNT_SPECIFIC_ENTITLEMENT_DEPLOYMENT_AND_POINT_IN_TIME_READ_EVIDENCE_NOT_MATERIALIZED"
+      ]
+    },
+    {
+      "wp_id": "WP-4",
+      "status": "BLOCKED_EXTERNAL",
+      "canonical_owner": "installed paper/shadow + canonical planner/compiler/simulator/reconciler owners",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "src/paper_shadow/**",
+        "src/execution/exact_simulation.py"
+      ],
+      "blockers": [
+        "REAL_OBSERVATION_INSTALLED_MULTI_STRATEGY_CAMPAIGN_NOT_RUN_ON_THIS_PR"
+      ]
+    },
+    {
+      "wp_id": "WP-5",
+      "status": "BLOCKED_INSUFFICIENT_DATA",
+      "canonical_owner": "existing decision/research/model evidence owners",
+      "evidence_refs": [
+        "src/decision/**",
+        "src/research/**",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_AND_AVAILABLE_AT_HELDOUT_EVALUATION_NOT_MATERIALIZED"
+      ]
+    },
+    {
+      "wp_id": "WP-6",
+      "status": "CODE_READY_EFFECT_NOT_AUTHORIZED",
+      "canonical_owner": "existing reviewed-canary/signer/submission/finalized-settlement authorities",
+      "evidence_refs": [
+        "src/release_gate/reviewed_canary.py",
+        "src/submission/**",
+        "src/execution/finalized_settlement_pr138.py"
+      ],
+      "blockers": [
+        "SEPARATE_EXPLICIT_EFFECT_AUTHORIZATION_ABSENT",
+        "PUBLIC_WALLET_AND_MAX_LOSS_PERMIT_NOT_SUPPLIED"
+      ]
+    },
+    {
+      "wp_id": "WP-7",
+      "status": "BLOCKED_EXTERNAL",
+      "canonical_owner": "existing multichain/cross-chain/inventory/research owners",
+      "evidence_refs": [
+        "src/multichain/**",
+        "src/cross_chain/**",
+        "src/inventory/**",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "EVM_FORK_AND_SUI_LOADED_STATE_PTB_CAMPAIGNS_NOT_MATERIALIZED"
+      ]
+    },
+    {
+      "wp_id": "WP-8",
+      "status": "NO_GO_BLOCKED_EXTERNAL",
+      "canonical_owner": "existing canonical release/evidence/capability authorities",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "src/release_gate/**",
+        "scripts/verify_repo.py"
+      ],
+      "blockers": [
+        "WP3_EXTERNAL_PROVIDER_EVIDENCE_PENDING",
+        "WP4_REAL_SOLANA_QUALIFICATION_PENDING",
+        "WP5_REAL_INTELLIGENCE_EVALUATION_PENDING",
+        "WP6_EFFECT_NOT_AUTHORIZED",
+        "WP7_MULTICHAIN_LOADED_STATE_EVIDENCE_PENDING"
+      ]
+    }
+  ],
+  "strategy_dispositions": [
+    {
+      "strategy_id": "SOL-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-02",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-03",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-04",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-05",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-06",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-07",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-08",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-09",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-10",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-11",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-12",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-13",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-14",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-15",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-16",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-17",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-18",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-19",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-20",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-21",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-22",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-23",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-24",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-25",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-26",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-27",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-28",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SOL-29",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SOLANA_PROVIDER_DEPLOYMENT_AND_SAME_VARIANT_CAMPAIGN_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-02",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-03",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-04",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-05",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-06",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-07",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-08",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-09",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-10",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-11",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-12",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-13",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-14",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-15",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "AI-16",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EPISODE_DATASET_HELDOUT_AND_CALIBRATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-02",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-03",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-04",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-05",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-06",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-07",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-08",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-09",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-10",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-11",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "EVM-12",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_EVM_DEPLOYMENT_AND_FORK_PROFILE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SUI-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SUI_PACKAGE_OBJECT_AND_PTB_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SUI-02",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SUI_PACKAGE_OBJECT_AND_PTB_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "SUI-03",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "REAL_SUI_PACKAGE_OBJECT_AND_PTB_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "INV-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "ACTUAL_FILL_MARGIN_FUNDING_AND_RECONCILIATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "INV-02",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "ACTUAL_FILL_MARGIN_FUNDING_AND_RECONCILIATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "INV-03",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "ACTUAL_FILL_MARGIN_FUNDING_AND_RECONCILIATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "INV-04",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "ACTUAL_FILL_MARGIN_FUNDING_AND_RECONCILIATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "INV-05",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "ACTUAL_FILL_MARGIN_FUNDING_AND_RECONCILIATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "INV-06",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "ACTUAL_FILL_MARGIN_FUNDING_AND_RECONCILIATION_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "XCHAIN-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "BRIDGE_CUSTODY_FINALITY_AND_TRANSFER_RIGHTS_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "XCHAIN-02",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "BRIDGE_CUSTODY_FINALITY_AND_TRANSFER_RIGHTS_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "RWA-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "INSTRUMENT_SESSION_CUSTODY_REDEMPTION_AND_COMPLIANCE_EVIDENCE_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "PROD-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "INDEPENDENT_PRODUCT_AUTHORIZATION_AND_ECONOMICS_QUALIFICATION_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "PROD-02",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "INDEPENDENT_PRODUCT_AUTHORIZATION_AND_ECONOMICS_QUALIFICATION_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "FRONT-01",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "CLASSICAL_BASELINE_AND_REAL_ACCELERATOR_OR_PRIVACY_QUALIFICATION_MISSING"
+      ]
+    },
+    {
+      "strategy_id": "FRONT-02",
+      "disposition": "BLOCKED_EXTERNAL",
+      "evidence_refs": [
+        "config/capabilities.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "blockers": [
+        "CLASSICAL_BASELINE_AND_REAL_ACCELERATOR_OR_PRIVACY_QUALIFICATION_MISSING"
+      ]
+    }
+  ],
+  "final_verdict": "NO_GO",
+  "final_blockers": [
+    "REAL_PROVIDER_AND_DEPLOYMENT_EVIDENCE_PENDING",
+    "INSTALLED_REAL_OBSERVATION_SOLANA_QUALIFICATION_CAMPAIGN_PENDING",
+    "REAL_HELDOUT_INTELLIGENCE_EVALUATION_PENDING",
+    "CANARY_EFFECT_AUTHORIZATION_ABSENT",
+    "EVM_AND_SUI_LOADED_STATE_QUALIFICATION_PENDING",
+    "MULTI_DAY_OPERATIONAL_SOAK_NOT_MATERIALIZED_FOR_ANY_PROMOTED_PROFILE"
+  ],
+  "safety": {
+    "production_ready": false,
+    "live_enabled": false,
+    "signer_access": false,
+    "submission_access": false,
+    "network_mutation": false,
+    "automatic_capital_increase": false
+  }
+}

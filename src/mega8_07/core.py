@@ -64,6 +64,8 @@ class EvidenceBinding:
         require_nonnegative(now, "now")
         if not self.verified:
             raise Mega807Error("UNVERIFIED_EVIDENCE")
+        if now < self.observed_at:
+            raise Mega807Error("FUTURE_EVIDENCE")
         if now >= self.expires_at:
             raise Mega807Error("STALE_EVIDENCE")
 
@@ -115,12 +117,14 @@ class StateSlice:
     slice_id: str
     generation: str
     content_sha256: str
+    evidence_identity: str
     payload: Mapping[str, int | str]
 
     def __post_init__(self) -> None:
         require_id(self.slice_id, "slice_id")
         require_id(self.generation, "generation")
         require_sha256(self.content_sha256, "content_sha256")
+        require_sha256(self.evidence_identity, "evidence_identity")
 
 
 @dataclass(frozen=True, slots=True)

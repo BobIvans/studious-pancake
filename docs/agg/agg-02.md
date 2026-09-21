@@ -101,3 +101,15 @@ wallet effect, signing, submission or live trading.
 Rollback is a normal revert of the aggregate PR. The new raw journal is
 analytical/observation state only; existing durable financial lifecycle and
 capital stores are not migrated or deleted by this change.
+
+## Post-merge reconciliation
+
+Historical base/dependency notes above describe the state when AGG-02 was
+developed. Current merge identity is PR #496 /
+`a52bbd11338e3c9092cd871227d2279450b928a3`. AGG-01 is now merged through
+PR #501, so AGG-01 is not a current package-dependency blocker.
+
+The code slice is present in main; current aggregate implementation truth is
+tracked as `MERGED_CODE` by `config/agg_merge_receipts.json`. External
+provider entitlements, collectors and current wallet/reserve observations remain
+operational evidence requirements and are not upgraded by this reconciliation.

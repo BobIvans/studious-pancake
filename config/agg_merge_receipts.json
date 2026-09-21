@@ -1,0 +1,164 @@
+{
+  "schema": "agg.dependency-reconciliation.v1",
+  "reconciliation_input_main": "27875850a88edf102c904e31955e0df8b78b13b4",
+  "effect_scope": "DEFAULT_OFF_NO_SIGN_NO_SEND",
+  "packages": [
+    {
+      "agg_id": "AGG-01",
+      "pr": 501,
+      "merge_commit": "670ed70a3b3be199ece5d5f6cba29ee1709d4c55",
+      "merged_at": "2026-09-20T21:32:07Z",
+      "dependencies": []
+    },
+    {
+      "agg_id": "AGG-02",
+      "pr": 496,
+      "merge_commit": "a52bbd11338e3c9092cd871227d2279450b928a3",
+      "merged_at": "2026-09-20T20:37:56Z",
+      "dependencies": [
+        "AGG-01"
+      ]
+    },
+    {
+      "agg_id": "AGG-03",
+      "pr": 495,
+      "merge_commit": "693afe31c4cb5d2aa63b84c7aa40c88b115e3c0b",
+      "merged_at": "2026-09-20T20:36:16Z",
+      "dependencies": [
+        "AGG-01",
+        "AGG-02"
+      ]
+    },
+    {
+      "agg_id": "AGG-04",
+      "pr": 497,
+      "merge_commit": "b26c6a05c0646fb839f49f537fc21acbd863455c",
+      "merged_at": "2026-09-20T20:41:38Z",
+      "dependencies": [
+        "AGG-01",
+        "AGG-02",
+        "AGG-03"
+      ]
+    },
+    {
+      "agg_id": "AGG-05",
+      "pr": 498,
+      "merge_commit": "1eef148ae77459f9974754b6b911ab31b461c851",
+      "merged_at": "2026-09-20T21:12:55Z",
+      "dependencies": [
+        "AGG-02",
+        "AGG-04"
+      ]
+    },
+    {
+      "agg_id": "AGG-06",
+      "pr": 507,
+      "merge_commit": "d341024c9e76851a42f63370a56de3922539a8d3",
+      "merged_at": "2026-09-20T21:23:51Z",
+      "dependencies": [
+        "AGG-01",
+        "AGG-02",
+        "AGG-04",
+        "AGG-05"
+      ]
+    },
+    {
+      "agg_id": "AGG-07",
+      "pr": 499,
+      "merge_commit": "a04662f885476d73c381984ead4ef694eb83ad3d",
+      "merged_at": "2026-09-20T20:51:21Z",
+      "dependencies": [
+        "AGG-01",
+        "AGG-02",
+        "AGG-03",
+        "AGG-04",
+        "AGG-05"
+      ]
+    },
+    {
+      "agg_id": "AGG-08",
+      "pr": 504,
+      "merge_commit": "27875850a88edf102c904e31955e0df8b78b13b4",
+      "merged_at": "2026-09-20T21:47:47Z",
+      "dependencies": [
+        "AGG-02",
+        "AGG-03",
+        "AGG-04"
+      ]
+    },
+    {
+      "agg_id": "AGG-09",
+      "pr": 505,
+      "merge_commit": "5d1d8177c933221dcb31baf0753924c4f32e3313",
+      "merged_at": "2026-09-20T20:52:17Z",
+      "dependencies": [
+        "AGG-04",
+        "AGG-05",
+        "AGG-08"
+      ]
+    },
+    {
+      "agg_id": "AGG-10",
+      "pr": 500,
+      "merge_commit": "de483bc3084a87d2b3f34830bdecf94ea0e4e63d",
+      "merged_at": "2026-09-20T21:13:38Z",
+      "dependencies": [
+        "AGG-02",
+        "AGG-04",
+        "AGG-05"
+      ]
+    },
+    {
+      "agg_id": "AGG-11",
+      "pr": 508,
+      "merge_commit": "8d74566a70cde58366d04f46e6656022210aaf03",
+      "merged_at": "2026-09-20T21:13:58Z",
+      "dependencies": [
+        "AGG-01",
+        "AGG-04"
+      ]
+    },
+    {
+      "agg_id": "AGG-12",
+      "pr": 502,
+      "merge_commit": "cff36ceb3c5b60b283327d97e3967b89119fcdf6",
+      "merged_at": "2026-09-20T21:14:05Z",
+      "dependencies": [
+        "AGG-07",
+        "AGG-11"
+      ]
+    },
+    {
+      "agg_id": "AGG-13",
+      "pr": 506,
+      "merge_commit": "65ca2a6c92ecae58e9da480d0e0ef3632e109acd",
+      "merged_at": "2026-09-20T21:32:30Z",
+      "dependencies": [
+        "AGG-02",
+        "AGG-04"
+      ]
+    },
+    {
+      "agg_id": "AGG-14",
+      "pr": 509,
+      "merge_commit": "baedd8c0697c0bf789e582dab8acf5bbc113c123",
+      "merged_at": "2026-09-20T20:45:07Z",
+      "dependencies": [
+        "AGG-01",
+        "AGG-04",
+        "AGG-09",
+        "AGG-10"
+      ]
+    },
+    {
+      "agg_id": "AGG-15",
+      "pr": 503,
+      "merge_commit": "991f961bc41fd2af95b878969d6a9fe3afe9ea87",
+      "merged_at": "2026-09-20T21:24:27Z",
+      "dependencies": [
+        "AGG-09",
+        "AGG-14"
+      ]
+    }
+  ]
+}

@@ -15,6 +15,7 @@ from .mega_pr02_proof import (
 )
 
 from src.execution.exact_simulation import FinalizedSimulation
+from src.execution.financing_evidence import FinancingRepaymentBundle
 
 from .models import (
     AssetKey,
@@ -216,6 +217,7 @@ def evidence_from_exact_simulation(
     required_accounts: tuple[str, ...] = (),
     tip_lamports: int = 0,
     protocol_fees: tuple[AssetQuantity, ...] = (),
+    financing: FinancingRepaymentBundle | None = None,
 ) -> ReconciliationEvidence:
     """Bind decoded account state to the exact final PR-036 simulation.
 
@@ -259,6 +261,7 @@ def evidence_from_exact_simulation(
         fees=FeeEvidence(base_fee, priority_fee, tip_lamports, protocol_fees),
         marginfi=marginfi,
         required_accounts=required_accounts or report.monitored_accounts,
+        financing=financing,
     )
 
 

@@ -48,3 +48,15 @@ status in a separately reviewed change.
 7. A qualification verdict for Base does not qualify Ethereum, Arbitrum, Sui or
    the existing Solana profile.
 8. live_enabled remains false in AGG-11 code.
+
+## Post-merge reconciliation
+
+AGG-11 is merged through PR #508 /
+`8d74566a70cde58366d04f46e6656022210aaf03`. Its package prerequisites
+AGG-01 and AGG-04 are now merged as well, so missing aggregate receipts are not
+current blockers. The historical default-off design remains unchanged.
+
+EVM/Sui operational qualification is still absent: concrete chain/deployment,
+ABI/package, fork/checkpoint, gas/finality and protocol conformance evidence must
+be produced per exact chain/profile generation before any operational status can
+advance.

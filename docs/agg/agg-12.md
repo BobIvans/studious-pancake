@@ -1,9 +1,9 @@
 # AGG-12 — multichain arbitrage research and offline qualification
 
-This slice implements the sender-free, default-off part of AGG-12 on the current
-`main` while its aggregate prerequisites AGG-07 and AGG-11 are not yet merged.
-It must not be interpreted as full AGG-12 completion or per-chain operational
-qualification.
+This slice implements the sender-free, default-off part of AGG-12. Post-AGG
+reconciliation confirms that aggregate prerequisites AGG-07 and AGG-11 now have
+canonical merge receipts. AGG-12 therefore has `MERGED_CODE` implementation
+status, but this must not be interpreted as per-chain operational qualification.
 
 ## Implemented scope
 
@@ -30,9 +30,9 @@ All financial values are integer-only. Evidence is content-addressed and every
 
 ## Deliberate blockers / prerequisites
 
-The current `main` does not contain merged AGG-11 chain dialect execution
-adapters or CHAIN-06 per-chain qualification, and AGG-07/RATE-02 is not merged.
-Therefore this slice does not claim:
+AGG-07 and AGG-11 package prerequisites are now merged. Remaining blockers are
+chain/protocol qualification evidence rather than missing AGG packages. This
+slice does not claim:
 
 - executable EVM transaction building or fork qualification;
 - executable Sui PTB compilation or shared-object mainnet evidence;

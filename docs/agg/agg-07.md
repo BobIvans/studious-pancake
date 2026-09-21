@@ -88,3 +88,15 @@ double-count, Exponent permission gate, and future-yield exclusion.
 claim until the required deployed/source/conformance evidence is materialized.
 
 No live capability, signing, submission or fund-spending path is enabled by AGG-07.
+
+## Post-merge reconciliation
+
+The base shown above is historical. AGG-07 is merged through PR #499 /
+`a04662f885476d73c381984ead4ef694eb83ad3d`, and all master-plan package
+prerequisites AGG-01…05 are now represented by canonical merge receipts.
+Missing package identities are therefore no longer current blockers.
+
+This changes only implementation/dependency truth. Kamino/Save/Jupiter-Lend/
+Exponent deployment, permission, liquidity and conformance evidence remains
+`BLOCKED` or `UNQUALIFIED` exactly where the protocol-specific gates require
+it. No live authority is gained from the merge receipt.

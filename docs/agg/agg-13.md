@@ -68,23 +68,23 @@ instrument-access evidence. A positive qualification remains scope-bound and
 
 ## Current dependency truth
 
-AGG-13 declares AGG-02 and AGG-04 as package prerequisites. At final pre-PR\nsynchronization this branch is based on \`main@141dfa85a0efd42bcd3b90a632ed54a39a3a4511\`;\nAGG-02 is still open as PR #496 and AGG-04 as PR #497, so this checkpoint does\n**not** claim full AGG-13 completion.
+AGG-13 declares AGG-02 and AGG-04 as package prerequisites. Post-AGG
+reconciliation confirms both canonical merge receipts, so historical prerequisite
+blockers are retired.
 
-Open blockers:
+Current blockers:
 
-- \`AGG13_PREREQUISITE_AGG02_NOT_ACCEPTED\`
-- \`AGG13_PREREQUISITE_AGG04_NOT_ACCEPTED\`
-- \`AGG13_PROVIDER_SPECIFIC_COLLECTORS_UNQUALIFIED\`
-- \`AGG13_EXCHANGE_TRADING_CONNECTORS_UNQUALIFIED\`
-- \`AGG13_ACTUAL_FILL_RECONCILIATION_EVIDENCE_MISSING\`
-- \`AGG13_MARKET_FAMILY_PRICING_MODELS_NOT_QUALIFIED\`
-- \`AGG13_INVENTORY_CAMPAIGN_NOT_RUN\`
+- `AGG13_PROVIDER_SPECIFIC_COLLECTORS_UNQUALIFIED`
+- `AGG13_EXCHANGE_TRADING_CONNECTORS_UNQUALIFIED`
+- `AGG13_ACTUAL_FILL_RECONCILIATION_EVIDENCE_MISSING`
+- `AGG13_MARKET_FAMILY_PRICING_MODELS_NOT_QUALIFIED`
+- `AGG13_INVENTORY_CAMPAIGN_NOT_RUN`
 
-For the contracts/foundation in this PR:
-\`implementation_status=IMPLEMENTED_OFFLINE\`,
-\`operational_status=UNQUALIFIED\`.
-The aggregate package remains \`IN_PROGRESS\` until prerequisite generations and
-real external evidence are available.
+For the contracts/foundation:
+`implementation_status=MERGED_CODE`,
+`operational_status=UNQUALIFIED`.
+Real external collector, exchange-fill, pricing and inventory campaign evidence
+remain required.
 
 ## Focused acceptance cases
 

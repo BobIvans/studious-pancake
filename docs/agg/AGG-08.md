@@ -96,3 +96,16 @@ profile/deployment proofs exist.
 Revert this PR. Existing MPR-46, signer, sender, lifecycle, capital and MPR-2610
 owners are not migrated or replaced, so rollback must not delete durable attempts
 or rewrite historical settlement evidence.
+
+## Post-merge reconciliation
+
+The base line above is historical. AGG-08 is merged through PR #504 /
+`27875850a88edf102c904e31955e0df8b78b13b4`. AGG-02, AGG-03 and AGG-04
+are also merged, and the post-AGG closure adds the lender-neutral CORE-V1 seam
+and installed Jupiter-Lend profile boundary. Therefore the old statement that
+current main lacks AGG-03 lender-neutral code is no longer a current blocker.
+
+Operational status nevertheless remains `UNQUALIFIED/BLOCKED` until an exact
+profile has current deployment/repayment-decoder evidence, a qualified campaign,
+and observed LIVE-03 finalized landing evidence. Code merge is still not a send
+or live authorization.

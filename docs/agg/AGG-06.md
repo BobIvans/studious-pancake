@@ -42,9 +42,16 @@ It preserves the fail-closed direct-venue policy already established by MPR-2617
 
 ## Operational truth
 
-The branch was cut from `main@693afe31c4cb5d2aa63b84c7aa40c88b115e3c0b`. AGG-06 requires AGG-01, AGG-02, AGG-04, and AGG-05 evidence for operational qualification; those prerequisite package receipts were not present on this base. Therefore code status and operational status remain separate.
+The branch was historically cut from `main@693afe31c4cb5d2aa63b84c7aa40c88b115e3c0b`.
+Post-AGG reconciliation confirms canonical merge receipts for AGG-01, AGG-02,
+AGG-04 and AGG-05. Missing package prerequisites are therefore no longer current
+blockers and implementation status is `MERGED_CODE`.
 
-Before any family can be externally qualified, the campaign must provide current program/deployment identity, exact upstream artifact/license decision, independent conformance vectors, recorded/loaded-state evidence, and a family-specific qualification verdict. This PR does not enable signing, submission, remote mutation, live trading, or claim profitability.
+Operational status remains `UNQUALIFIED` per venue/family until a campaign
+provides current program/deployment identity, exact upstream artifact/license
+decision, independent conformance vectors, recorded/loaded-state evidence and a
+family-specific qualification verdict. Merge does not enable signing, submission,
+remote mutation, live trading or a profitability claim.
 
 ## Verification
 

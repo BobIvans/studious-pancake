@@ -321,3 +321,17 @@ tests/test_mega8_04.py
 src/release_gate/mega8_dependency_closure.py
 scripts/verify_mega8_dependency_closure.py
 tests/test_mega8_dependency_closure.py
+src/strategy_evolution/__init__.py
+src/strategy_evolution/core.py
+src/strategy_evolution/manifest.py
+src/strategy_evolution/governance_transition.py
+src/strategy_evolution/incentive_epoch.py
+src/strategy_evolution/stake_queue.py
+src/strategy_evolution/primary_market.py
+src/strategy_evolution/solvency_event.py
+src/strategy_evolution/intent_rescue.py
+src/strategy_evolution/blockspace_option.py
+src/strategy_evolution/rights_lifecycle.py
+src/strategy_evolution/residual_discovery.py
+scripts/verify_pr353_strategy_evolution.py
+tests/strategy_evolution/test_pr353_strategy_evolution.py

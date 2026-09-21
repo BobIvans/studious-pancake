@@ -1,4 +1,5 @@
 """PR-184 / LP-01: LP supply/NAV and immediate mint-burn parity."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping

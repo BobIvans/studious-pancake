@@ -1,0 +1,21 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-214",
+  "child_code": "SUPPLY-01",
+  "nf": [
+    "NF-605",
+    "NF-606",
+    "NF-607",
+    "NF-608"
+  ],
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "canonical_owner": "src/mega8_04.py + src/security/supply_chain.py + Release authority",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "EXTERNAL_SLSA_ATTESTATION_SERVICE_NOT_INVOKED"
+  ]
+}

@@ -1130,9 +1130,7 @@ def sandbox_strategy_plugin(
 def verify_plugin_capabilities(
     plugin_evidence: AssuranceEvidence, *, allowed_capabilities: Iterable[str]
 ) -> AssuranceEvidence:
-    allowed = {
-        _normalize_plugin_capability(item) for item in allowed_capabilities
-    }
+    allowed = {_normalize_plugin_capability(item) for item in allowed_capabilities}
     blockers = list(plugin_evidence.blockers)
     blockers.extend(
         f"POLICY_ALLOWS_FORBIDDEN_CAPABILITY:{item}"
@@ -1174,10 +1172,7 @@ def audit_post150_coverage(
         except (OSError, ValueError):
             unverified.append(row.roadmap_pr)
         else:
-            if (
-                len(artifacts) != 1
-                or artifacts[0].sha256 != row.evidence_sha256
-            ):
+            if len(artifacts) != 1 or artifacts[0].sha256 != row.evidence_sha256:
                 unverified.append(row.roadmap_pr)
         by_pr[row.roadmap_pr] = row
     required = set(range(151, 222))

@@ -97,8 +97,7 @@ def test_permission_escalation_and_simulator_disagreement_fail_closed() -> None:
 
 def test_unknown_nonterminal_trace_and_duplicate_engine_fail_closed() -> None:
     assert (
-        verify_safety_liveness_properties(("BOGUS",)).disposition
-        is Disposition.BLOCKED
+        verify_safety_liveness_properties(("BOGUS",)).disposition is Disposition.BLOCKED
     )
     assert (
         verify_safety_liveness_properties(("RESERVED",)).disposition

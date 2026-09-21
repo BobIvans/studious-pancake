@@ -288,6 +288,7 @@ def test_liquidation_portfolio_counts_shared_resource_once_and_reconciles() -> N
     )
     assert receipt["finalized_total"] == 8
 
+
 def test_liquidation_portfolio_rejects_duplicate_mechanisms_and_selected_ids() -> None:
     duplicated = (
         LiquidationMechanism("a", "proto-a", "SOL", 100, 90, 5, 20, "reserve-1"),

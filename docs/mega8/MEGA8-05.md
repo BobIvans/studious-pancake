@@ -14,8 +14,11 @@ Branch creation base: `main@04480fa25d1117e9d20e7fe8caad23b16cd5ef4a`.
 The roadmap names MEGA8-01, MEGA8-02, MEGA8-03 and MEGA8-04 as prerequisites.
 At branch creation, `codex/mega8-01-151-162` and
 `codex/mega8-02-163-185` were observed as branches but were not merged into
-`main`; MEGA8-03 and MEGA8-04 branches were not observed. Therefore this PR
-does **not** claim operational completion. It is reviewable as an independent,
+`main`. After synchronizing with `main@e14d7f2e0d90dee2dce573761baba185feace5ea`,
+the exact prerequisite state was refreshed: MEGA8-02 is open as PR #523,
+MEGA8-03 as PR #521 and MEGA8-04 as PR #522; MEGA8-01 still has only an
+observed branch. None is merged into current main. Therefore this PR does
+**not** claim operational completion. It is reviewable as an independent,
 sender-free research code slice while dependency readiness remains explicit in
 the coverage artifact.
 

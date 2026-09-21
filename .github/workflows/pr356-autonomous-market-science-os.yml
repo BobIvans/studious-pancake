@@ -1,0 +1,76 @@
+name: PR-356 Autonomous Market Science OS
+
+on:
+  pull_request:
+    paths:
+      - "src/mechanism_discovery/pr356_*.py"
+      - "src/research/pr356_*.py"
+      - "tests/mechanism_discovery/test_pr356_science_os.py"
+      - "scripts/verify_pr356.py"
+      - "config/pr356_*.json"
+      - "docs/roadmap/pr356-*"
+      - "release_artifacts/pr356/**"
+      - "scripts/verify_repo.py"
+      - ".github/workflows/pr356-autonomous-market-science-os.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pr356:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.13"
+      - name: Install runtime and test dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Compile PR-356 surfaces
+        run: >-
+          python -m compileall -q
+          src/mechanism_discovery/pr356_contracts.py
+          src/mechanism_discovery/pr356_state_machine.py
+          src/mechanism_discovery/pr356_campaigns.py
+          src/mechanism_discovery/pr356_discovery.py
+          src/research/pr356_ecology.py
+          src/research/pr356_allocation.py
+          scripts/verify_pr356.py
+          tests/mechanism_discovery/test_pr356_science_os.py
+      - name: PR-356 structural and semantic verifier
+        run: python scripts/verify_pr356.py --json
+      - name: PR-356 focused tests
+        run: >-
+          python -m pytest -q
+          tests/mechanism_discovery/test_pr356_science_os.py
+          tests/mechanism_discovery/test_pr355_completion.py
+          tests/mechanism_discovery/test_pr354_mechanism_discovery.py
+          tests/strategy_evolution/test_pr353_strategy_evolution.py
+          --disable-socket --allow-unix-socket
+      - name: Predecessor and current-head regression gates
+        run: |
+          python scripts/verify_pr353_strategy_evolution.py --json
+          python scripts/verify_pr353_semantic_conformance.py --json
+          python scripts/verify_pr354_mechanism_discovery.py --json
+          python scripts/verify_pr355.py --json
+          python scripts/verify_market_data_evolution.py --json
+      - name: Assert research-only effect boundary
+        run: |
+          python - <<'PY'
+          import json
+          owner = json.load(open("config/pr356_owner_map.json", encoding="utf-8"))
+          registry = json.load(open("config/pr356_registry.json", encoding="utf-8"))
+          assert len(owner["requirements"]) == 544
+          assert len(registry["packages"]) == 68
+          assert not any(owner["effect_boundary"].values())
+          assert owner["marginfi"] == "PAUSED"
+          assert owner["slumlord_low_capital_requirement"] == "REQUIRED"
+          assert registry["scope_complete_implementation_claim"] is False
+          assert all(row["execution_right"] is False for row in registry["hypotheses"])
+          print("PR356_RESEARCH_ONLY_OK")
+          PY

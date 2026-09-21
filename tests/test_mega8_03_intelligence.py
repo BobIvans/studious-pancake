@@ -85,10 +85,8 @@ from src.mega8_03.pr208_competition import (
     model_alpha_capacity_decay,
 )
 
-
 def assert_advisory(model) -> None:
     assert model.execution_authority is False
-
 
 def test_pr195_survival_preserves_censoring() -> None:
     km = fit_kaplan_meier_survival((10, 20, 30), (True, False, True))
@@ -106,7 +104,6 @@ def test_pr195_survival_preserves_censoring() -> None:
     assert calibration["uncensored_mae_ns"] == 2
     assert_advisory(km)
     assert_advisory(parametric)
-
 
 def test_pr196_conformal_bounds_are_explicit_admission_inputs() -> None:
     net = fit_conformal_net_interval((1, -2, 3, -4), miscoverage_ppm=250_000)
@@ -128,7 +125,6 @@ def test_pr196_conformal_bounds_are_explicit_admission_inputs() -> None:
     assert net_interval[0] > 0
     assert gate["admitted_offline"] is True
 
-
 def test_pr196_conformal_uses_finite_sample_rank() -> None:
     net = fit_conformal_net_interval((1, 2, 3, 4), miscoverage_ppm=250_000)
     latency = fit_conformal_latency_interval(
@@ -136,8 +132,6 @@ def test_pr196_conformal_uses_finite_sample_rank() -> None:
     )
     assert net["radius_atomic"] == 4
     assert latency["radius_ns"] == 40
-
-
 
 def test_pr197_causal_outputs_never_claim_causal_truth() -> None:
     graph = build_causal_event_graph(
@@ -165,7 +159,6 @@ def test_pr197_causal_outputs_never_claim_causal_truth() -> None:
     assert model.parameters["causal_truth_claimed"] is False
     assert_advisory(model)
 
-
 def test_pr197_causal_graph_sorts_by_available_time_not_event_id() -> None:
     graph = build_causal_event_graph(
         (
@@ -176,8 +169,6 @@ def test_pr197_causal_graph_sorts_by_available_time_not_event_id() -> None:
     )
     assert graph["nodes"] == ("b", "a")
     assert graph["precedence_edges"] == (("b", "a", 1),)
-
-
 
 def test_pr198_event_intensity_requires_holdout_gain() -> None:
     model = fit_hawkes_event_model(
@@ -196,7 +187,6 @@ def test_pr198_event_intensity_requires_holdout_gain() -> None:
     assert gain["holdout_gain_verified"] is True
     assert_advisory(model)
 
-
 def test_pr199_graph_challenger_is_compared_to_deterministic_baseline() -> None:
     encoded = encode_dynamic_market_graph(
         ({"node_id": "a"}, {"node_id": "b"}),
@@ -212,7 +202,6 @@ def test_pr199_graph_challenger_is_compared_to_deterministic_baseline() -> None:
     assert score >= 0
     assert comparison["challenger_beats_baseline"] is True
     assert_advisory(model)
-
 
 def test_pr200_temporal_dataset_is_available_time_ordered() -> None:
     dataset = build_temporal_sequence_dataset(
@@ -231,7 +220,6 @@ def test_pr200_temporal_dataset_is_available_time_ordered() -> None:
     assert bench["within_latency_budget"] is True
     assert_advisory(model)
 
-
 def test_pr201_active_learning_consumes_only_bounded_label_quota() -> None:
     selected = select_uncertain_samples(
         (
@@ -248,7 +236,6 @@ def test_pr201_active_learning_consumes_only_bounded_label_quota() -> None:
     assert pool["a"] == "positive"
     assert efficiency["uncertainty_reduction_ppm"] == 30
 
-
 def test_pr202_meta_learning_blocks_negative_transfer() -> None:
     source = learn_cross_market_representation(((1, 2), (3, 4)))
     adapted = adapt_model_to_new_venue(source, ((2, 3), (4, 5)))
@@ -261,7 +248,6 @@ def test_pr202_meta_learning_blocks_negative_transfer() -> None:
     assert denied["transfer_allowed"] is False
     assert_advisory(source)
     assert_advisory(adapted)
-
 
 def test_pr203_model_robustness_can_quarantine() -> None:
     down, up = generate_adversarial_features({"x": 100}, perturbation_ppm=100_000)
@@ -278,7 +264,6 @@ def test_pr203_model_robustness_can_quarantine() -> None:
     assert quarantine["quarantined"] is True
     assert quarantine["execution_authority"] is False
 
-
 def test_pr204_explanations_are_bound_to_evidence() -> None:
     attribution = compute_local_feature_attribution(
         {"x": 500_000, "y": -250_000}, {"x": 4, "y": 8}
@@ -291,7 +276,6 @@ def test_pr204_explanations_are_bound_to_evidence() -> None:
     assert reasons
     assert trace["x"] == "a" * 64
     assert stability["stable"] is True
-
 
 def test_pr205_ope_checks_support_instead_of_treating_shadow_as_landed() -> None:
     weights = compute_importance_weights(
@@ -311,7 +295,6 @@ def test_pr205_ope_checks_support_instead_of_treating_shadow_as_landed() -> None
     assert dr >= 0
     assert support["supported"] is True
 
-
 def test_pr205_ope_preserves_weight_overflow_for_support_rejection() -> None:
     weights = compute_importance_weights(
         (1, 1),
@@ -325,8 +308,6 @@ def test_pr205_ope_preserves_weight_overflow_for_support_rejection() -> None:
     )
     assert weights == (2_000_001, 2_000_001)
     assert support["supported"] is False
-
-
 
 def test_pr206_bandit_has_no_live_actions_and_audits_cost() -> None:
     actions = define_safe_bandit_actions(
@@ -360,7 +341,6 @@ def test_pr206_bandit_has_no_live_actions_and_audits_cost() -> None:
     assert chosen["live_effect"] is False
     assert audit["cumulative_regret_atomic"] == 3
 
-
 def test_pr207_synthetic_twin_cannot_enter_realized_pnl() -> None:
     scenario = generate_synthetic_market_scenario(
         {"price": 100}, {"price": -10}, scenario_id="s1"
@@ -378,7 +358,6 @@ def test_pr207_synthetic_twin_cannot_enter_realized_pnl() -> None:
     assert verdict["calibrated_for_research"] is True
     assert labels[0]["realized_pnl_eligible"] is False
     assert labels[1]["realized_pnl_eligible"] is True
-
 
 def test_pr208_competition_adjustment_only_reduces_candidate() -> None:
     clusters = cluster_competitor_archetypes(

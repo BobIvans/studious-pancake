@@ -191,13 +191,106 @@ def evaluate_probability_calibration(
         if lower <= target <= upper:
             covered += 1
     return record(
-        "evaluate_probability_calibration",
+        "evaluate_detection_coverage",
+    "evaluate_null_control",
+    "evaluate_probability_calibration",
         {
             "mean_absolute_calibration_error_ppm": (
                 sum(absolute_errors) // len(absolute_errors)
             ),
             "interval_coverage_ppm": covered * 1_000_000 // len(rows),
             "row_count": len(rows),
+        },
+    )
+
+
+def run_equal_budget_ablation(
+    *,
+    baseline_utility_units: int,
+    challenger_utility_units: int,
+    baseline_cost_units: int,
+    challenger_cost_units: int,
+    budget_units: int,
+) -> Mapping[str, object]:
+    budget = require_int(budget_units, "budget_units", minimum=0)
+    baseline_cost = require_int(
+        baseline_cost_units, "baseline_cost_units", minimum=0
+    )
+    challenger_cost = require_int(
+        challenger_cost_units, "challenger_cost_units", minimum=0
+    )
+    if baseline_cost > budget or challenger_cost > budget:
+        raise EvidenceNativeError("EQUAL_BUDGET_ABLATION_BUDGET_EXCEEDED")
+    baseline_utility = require_int(
+        baseline_utility_units, "baseline_utility_units"
+    )
+    challenger_utility = require_int(
+        challenger_utility_units, "challenger_utility_units"
+    )
+    return record(
+        "run_equal_budget_ablation",
+        {
+            "budget_units": budget,
+            "baseline_cost_units": baseline_cost,
+            "challenger_cost_units": challenger_cost,
+            "baseline_utility_units": baseline_utility,
+            "challenger_utility_units": challenger_utility,
+            "utility_delta_units": challenger_utility - baseline_utility,
+        },
+    )
+
+
+def evaluate_null_control(
+    *,
+    observed_metric_atoms: int,
+    null_metric_atoms: int,
+    minimum_effect_atoms: int,
+) -> Mapping[str, object]:
+    observed = require_int(observed_metric_atoms, "observed_metric_atoms")
+    null = require_int(null_metric_atoms, "null_metric_atoms")
+    minimum = require_int(
+        minimum_effect_atoms, "minimum_effect_atoms", minimum=0
+    )
+    delta = observed - null
+    return record(
+        "evaluate_null_control",
+        {
+            "observed_metric_atoms": observed,
+            "null_metric_atoms": null,
+            "effect_delta_atoms": delta,
+            "minimum_effect_atoms": minimum,
+            "null_rejected": abs(delta) >= minimum,
+        },
+    )
+
+
+def evaluate_detection_coverage(
+    *,
+    false_discoveries: int,
+    discoveries: int,
+    false_negatives: int,
+    positives: int,
+    observable_cells: int,
+    covered_cells: int,
+) -> Mapping[str, object]:
+    fp = require_int(false_discoveries, "false_discoveries", minimum=0)
+    discovered = require_int(discoveries, "discoveries", minimum=0)
+    fn = require_int(false_negatives, "false_negatives", minimum=0)
+    positive = require_int(positives, "positives", minimum=0)
+    observable = require_int(observable_cells, "observable_cells", minimum=1)
+    covered = require_int(covered_cells, "covered_cells", minimum=0)
+    if fp > discovered or fn > positive or covered > observable:
+        raise EvidenceNativeError("DETECTION_COVERAGE_COUNTS_INVALID")
+    return record(
+        "evaluate_detection_coverage",
+        {
+            "fdr_ppm": fp * 1_000_000 // max(1, discovered),
+            "fnr_ppm": fn * 1_000_000 // max(1, positive),
+            "observable_miss_ppm": (
+                (observable - covered) * 1_000_000 // observable
+            ),
+            "observable_cells": observable,
+            "covered_cells": covered,
         },
     )
 
@@ -243,5 +336,6 @@ __all__ = [
     "evaluate_probability_calibration",
     "form_independent_episodes",
     "purged_walk_forward_split",
+    "run_equal_budget_ablation",
     "source_value_report",
 ]

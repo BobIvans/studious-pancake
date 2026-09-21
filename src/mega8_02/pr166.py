@@ -1,4 +1,5 @@
 """PR-166 / GRAPH-04: generation-bound incremental route index."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping, Sequence
@@ -50,9 +51,13 @@ def maintain_scc_cycle_cache(
     unseen = set(nodes)
     while unseen:
         node = min(unseen)
-        group = tuple(sorted(n for n in unseen if n == node or (
-            n in reach[node] and node in reach[n]
-        )))
+        group = tuple(
+            sorted(
+                n
+                for n in unseen
+                if n == node or (n in reach[node] and node in reach[n])
+            )
+        )
         groups.append(group)
         unseen.difference_update(group)
     return tuple(groups)
@@ -61,10 +66,15 @@ def maintain_scc_cycle_cache(
 def identify_affected_routes(
     index: IncrementalGraphIndex, changed_resources: Sequence[str]
 ) -> tuple[str, ...]:
-    return tuple(sorted({
-        route for resource in changed_resources
-        for route in index.routes_by_resource.get(resource, ())
-    }))
+    return tuple(
+        sorted(
+            {
+                route
+                for resource in changed_resources
+                for route in index.routes_by_resource.get(resource, ())
+            }
+        )
+    )
 
 
 def invalidate_stale_route_proofs(

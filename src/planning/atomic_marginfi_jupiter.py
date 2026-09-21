@@ -338,7 +338,10 @@ class AtomicMarginfiJupiterPlanner:
                     AtomicPlannerRejectionCode.INVALID_REQUEST,
                     "auxiliary financing requires lender-neutral primary financing",
                 )
-            if request.rent_financing_snapshot is None or request.rent_borrow_amount <= 0:
+            if (
+                request.rent_financing_snapshot is None
+                or request.rent_borrow_amount <= 0
+            ):
                 raise AtomicPlannerError(
                     AtomicPlannerRejectionCode.INVALID_REQUEST,
                     "rent financing snapshot and positive amount are required",
@@ -586,9 +589,7 @@ class AtomicMarginfiJupiterPlanner:
                 if request.marginfi_source_vectors is None
                 else request.marginfi_source_vectors.evidence_hash
             ),
-            financing_lender=str(
-                getattr(self._marginfi, "lender_id", "marginfi")
-            ),
+            financing_lender=str(getattr(self._marginfi, "lender_id", "marginfi")),
             financing_program_id=(
                 str(getattr(self._marginfi, "program_id"))
                 if getattr(self._marginfi, "program_id", None) is not None
@@ -611,26 +612,30 @@ class AtomicMarginfiJupiterPlanner:
             ),
             auxiliary_financing_identities=(
                 (
-                    self._auxiliary_financing.lender_id,
-                    self._auxiliary_financing.program_id,
-                    self._auxiliary_financing.deployment_generation,
-                ),
-            )
-            if self._auxiliary_financing is not None
-            else (),
+                    (
+                        self._auxiliary_financing.lender_id,
+                        self._auxiliary_financing.program_id,
+                        self._auxiliary_financing.deployment_generation,
+                    ),
+                )
+                if self._auxiliary_financing is not None
+                else ()
+            ),
             provider_account_snapshot_hash=request.provider_account_snapshot_hash,
             auxiliary_financing_obligations=(
                 (
-                    self._auxiliary_financing.lender_id,
-                    self._auxiliary_financing.program_id,
-                    self._auxiliary_financing.deployment_generation,
-                    rent_prepared.obligation_digest,
-                    request.rent_borrow_amount,
-                    rent_prepared.required_repayment,
-                ),
-            )
-            if self._auxiliary_financing is not None and rent_prepared is not None
-            else (),
+                    (
+                        self._auxiliary_financing.lender_id,
+                        self._auxiliary_financing.program_id,
+                        self._auxiliary_financing.deployment_generation,
+                        rent_prepared.obligation_digest,
+                        request.rent_borrow_amount,
+                        rent_prepared.required_repayment,
+                    ),
+                )
+                if self._auxiliary_financing is not None and rent_prepared is not None
+                else ()
+            ),
         )
         return AtomicPlannerResult(
             transaction_plan=transaction_plan,
@@ -682,9 +687,8 @@ class AtomicMarginfiJupiterPlanner:
                 "discovery_slot must be positive",
             )
         if isinstance(self._marginfi, FinancingPlannerProviderAdapter):
-            if (
-                request.provider_account_snapshot_hash is None
-                or not _is_sha256(request.provider_account_snapshot_hash)
+            if request.provider_account_snapshot_hash is None or not _is_sha256(
+                request.provider_account_snapshot_hash
             ):
                 raise AtomicPlannerError(
                     AtomicPlannerRejectionCode.INVALID_REQUEST,
@@ -868,12 +872,8 @@ class AtomicMarginfiJupiterPlanner:
         start_index = int(finalized.start_index)
         end_index = int(finalized.end_index)
         if not getattr(self._marginfi, "uses_flashloan_bookends", True):
-            rent_prefix = (
-                (rent_prepared.borrow_instruction,) if rent_prepared else ()
-            )
-            rent_suffix = (
-                rent_prepared.repay_instructions if rent_prepared else ()
-            )
+            rent_prefix = (rent_prepared.borrow_instruction,) if rent_prepared else ()
+            rent_suffix = rent_prepared.repay_instructions if rent_prepared else ()
             expected = (
                 *rent_prefix,
                 *pre_flash_setup,
@@ -887,12 +887,7 @@ class AtomicMarginfiJupiterPlanner:
                 *rent_suffix,
             )
             expected_start = len(rent_prefix) + len(pre_flash_setup)
-            expected_end = (
-                len(expected)
-                - len(rent_suffix)
-                - len(cleanup)
-                - 1
-            )
+            expected_end = len(expected) - len(rent_suffix) - len(cleanup) - 1
             if (
                 final != expected
                 or start_index != expected_start

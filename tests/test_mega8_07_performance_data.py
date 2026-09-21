@@ -42,7 +42,7 @@ from src.mega8_07.pr276 import (
 from src.mega8_07.pr277 import (
     archive_cold_partition,
     restore_archived_dataset,
-    run_archive_disaster_recovery,
+    test_archive_disaster_recovery,
     verify_archive_manifest,
 )
 from src.mega8_07.pr278 import (
@@ -211,7 +211,7 @@ def test_archive_manifest_restore_and_dr_are_exact() -> None:
     assert verify_archive_manifest(manifest, objects)
     restored = restore_archived_dataset(manifest, objects)
     assert set(restored) == {b"alpha", b"beta"}
-    assert len(run_archive_disaster_recovery(manifest, objects, dict(objects))) == 64
+    assert len(test_archive_disaster_recovery(manifest, objects, dict(objects))) == 64
 
 
 def test_catalog_is_rebuildable_from_immutable_entries() -> None:

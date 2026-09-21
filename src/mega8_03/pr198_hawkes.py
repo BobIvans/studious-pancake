@@ -21,7 +21,7 @@ def fit_hawkes_event_model(
         raise ValueError("event times are required")
     if times[-1] > horizon:
         raise ValueError("event lies outside observation horizon")
-    intervals = [right - left for left, right in zip(times, times[1:], strict=True)]
+    intervals = [right - left for left, right in zip(times, times[1:])]
     positive = [value for value in intervals if value > 0]
     median_gap = sorted(positive)[len(positive) // 2] if positive else horizon
     short = sum(value <= median_gap for value in positive)

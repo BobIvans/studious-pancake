@@ -1,10 +1,10 @@
 """PR-276 / STREAM-02: event-time joins and revisioned state."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence
 
 from .core import Mega807Error, require_nonnegative, stable_hash
-
 
 EventRow = tuple[int, int, str, Mapping[str, int | str]]
 

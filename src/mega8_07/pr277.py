@@ -27,6 +27,14 @@ def verify_archive_manifest(
     manifest: Mapping[str, object], objects: Mapping[str, bytes]
 ) -> bool:
     expected = tuple(manifest.get("object_hashes", ()))
+    manifest_payload = {
+        "partition_id": manifest.get("partition_id"),
+        "object_hashes": expected,
+        "storage_cost_units": manifest.get("storage_cost_units"),
+    }
+    expected_manifest_sha = stable_hash("mega8-07-archive", manifest_payload)
+    if manifest.get("manifest_sha256") != expected_manifest_sha:
+        raise Mega807Error("ARCHIVE_MANIFEST_HASH_MISMATCH")
     if set(expected) != set(objects):
         raise Mega807Error("ARCHIVE_OBJECT_SET_MISMATCH")
     for digest, payload in objects.items():
@@ -43,7 +51,7 @@ def restore_archived_dataset(
     return tuple(objects[digest] for digest in manifest["object_hashes"])
 
 
-def test_archive_disaster_recovery(
+def run_archive_disaster_recovery(
     manifest: Mapping[str, object],
     primary: Mapping[str, bytes],
     restored: Mapping[str, bytes],

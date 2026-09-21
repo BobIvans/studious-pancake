@@ -275,6 +275,15 @@ def attribute_opportunity_to_anomaly(payload: Mapping[str, Any]):
 def score_anomaly_arbitrageability(payload: Mapping[str, Any]):
     if payload.get("correlation_only"):
         raise EvolutionError("NONCAUSAL_ONLY")
+    required_proofs = (
+        "rights_verified",
+        "costs_complete",
+        "route_verified",
+        "capacity_verified",
+        "timing_verified",
+    )
+    if any(payload.get(field) is not True for field in required_proofs):
+        raise EvolutionError("ARBITRAGEABILITY_PROOF_INCOMPLETE")
     net = int(payload.get("net_edge_atoms", 0))
     capacity = int(payload.get("capacity_atoms", 0))
     if net <= 0:

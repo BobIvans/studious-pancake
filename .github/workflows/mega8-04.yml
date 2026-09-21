@@ -1,0 +1,71 @@
+name: MEGA8-04 formal assurance and multichain closure
+
+on:
+  pull_request:
+    paths:
+      - "src/mega8_04.py"
+      - "tests/test_mega8_04.py"
+      - "scripts/verify_mega8_04.py"
+      - "config/mega8_04_coverage.json"
+      - "release_artifacts/mega8/MEGA8-04/**"
+      - "docs/roadmap/mega8-04.md"
+      - ".github/workflows/mega8-04.yml"
+      - "config/format_targets.txt"
+      - "scripts/verify_repo.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  mega8-04:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+
+      - name: Materialize hash-locked dependency environment
+        run: |
+          python -m pip download --require-hashes --only-binary=:all: -r requirements-dev.lock -d "$RUNNER_TEMP/wheelhouse"
+          python -m pip install --no-index --require-hashes --find-links "$RUNNER_TEMP/wheelhouse" -r requirements-dev.lock
+          python -m pip install --no-index --no-deps --no-build-isolation .
+
+      - name: Installed MEGA8-04 import
+        run: |
+          cd "$RUNNER_TEMP"
+          env -u PYTHONPATH python - <<'PY'
+          import src.mega8_04
+          assert len(src.mega8_04.NF_SYMBOLS) == 56
+          print("installed MEGA8-04 import: ok")
+          PY
+
+      - name: Compile
+        run: >-
+          python -m compileall -q
+          src/mega8_04.py
+          scripts/verify_mega8_04.py
+          tests/test_mega8_04.py
+
+      - name: Format
+        run: >-
+          python -m black --check
+          src/mega8_04.py
+          scripts/verify_mega8_04.py
+          tests/test_mega8_04.py
+
+      - name: Structural verifier
+        run: python scripts/verify_mega8_04.py --json
+
+      - name: MEGA8-04 and canonical owner regressions
+        run: >-
+          python -m pytest -q
+          tests/test_mega8_04.py
+          tests/test_agg11_evm_state_semantics.py
+          tests/test_agg11_multichain_execution_models.py
+          tests/test_agg12_multichain_qualification.py
+          tests/test_mpr2608_isolated_signer_submission.py
+          tests/test_pr043_wallet_supply_chain.py
+          --disable-socket --allow-unix-socket

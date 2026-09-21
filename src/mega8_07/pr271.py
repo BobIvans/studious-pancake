@@ -1,4 +1,5 @@
 """PR-271 / PERF-01: isolated Rust accelerator protocol and parity."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -40,7 +41,9 @@ def batch_quote_in_rust(
         raise Mega807Error("SIDECAR_BATCH_LIMIT")
     require_positive(numerator, "numerator")
     require_positive(denominator, "denominator")
-    return tuple(require_positive(v, "amount") * numerator // denominator for v in amounts)
+    return tuple(
+        require_positive(v, "amount") * numerator // denominator for v in amounts
+    )
 
 
 def search_routes_in_rust(

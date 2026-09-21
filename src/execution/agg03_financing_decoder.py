@@ -26,6 +26,7 @@ from src.execution.economic_reconciliation.models import (
 from src.execution.financing_evidence import (
     FinancingRepaymentBundle,
     FinancingRepaymentEvidence,
+    FinancingRepaymentValidator,
     RepaymentDecision,
     validate_financing_repayment,
 )
@@ -190,7 +191,7 @@ def _token_amount(raw: Mapping[str, Any]) -> int:
 
 
 @dataclass(frozen=True, slots=True)
-class _ExactValidator:
+class _ExactValidator(FinancingRepaymentValidator):
     lender_id: str
     program_id: str
     deployment_generation: int
@@ -222,7 +223,7 @@ class JupiterLendSlumlordRepaymentDecoder:
         self.lender_id = primary_evidence.lender_id
         self.program_id = primary_evidence.program_id
         self.deployment_generation = primary_evidence.deployment_generation
-        self.auxiliary_identities = (
+        self.auxiliary_identities: tuple[tuple[str, str, int], ...] = (
             (
                 rent_evidence.lender_id,
                 rent_evidence.program_id,

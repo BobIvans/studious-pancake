@@ -1,4 +1,5 @@
 """PR-277 / ARCHIVE-02: immutable cold-archive manifests and restore drills."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence
@@ -7,14 +8,19 @@ from .core import Mega807Error, require_nonnegative, require_sha256, stable_hash
 
 
 def archive_cold_partition(
-    *, partition_id: str, object_hashes: Sequence[str], storage_cost_units: int,
+    *,
+    partition_id: str,
+    object_hashes: Sequence[str],
+    storage_cost_units: int,
     max_cost_units: int,
 ) -> dict[str, object]:
     cost = require_nonnegative(storage_cost_units, "storage_cost_units")
     limit = require_nonnegative(max_cost_units, "max_cost_units")
     if cost > limit:
         raise Mega807Error("ARCHIVE_COST_BUDGET_EXCEEDED")
-    hashes = tuple(sorted(require_sha256(value, "object_hash") for value in object_hashes))
+    hashes = tuple(
+        sorted(require_sha256(value, "object_hash") for value in object_hashes)
+    )
     manifest = {
         "partition_id": partition_id,
         "object_hashes": hashes,
@@ -61,6 +67,7 @@ def test_archive_disaster_recovery(
     if dict(primary) != dict(restored):
         raise Mega807Error("ARCHIVE_RESTORE_MISMATCH")
     return stable_hash("mega8-07-archive-dr", manifest)
+
 
 # Public roadmap symbol NF-796 intentionally starts with "test_"; prevent pytest
 # from collecting it when imported into a test module.

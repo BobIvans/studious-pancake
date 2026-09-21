@@ -11,8 +11,17 @@ from dataclasses import dataclass, replace
 from enum import StrEnum
 from hashlib import sha256
 import json
+from pathlib import Path
 import re
 from typing import Callable, Iterable, Mapping, Sequence
+
+from src.multichain.core import MultiChainError
+from src.multichain.sui import (
+    SuiObjectKind as CanonicalSuiObjectKind,
+    SuiObjectRef as CanonicalSuiObjectRef,
+    SuiStateFrame as CanonicalSuiStateFrame,
+)
+from src.release_gate.materialized_evidence import collect_materialized_artifacts
 
 MEGA804_SCHEMA = "mega8-04.assurance.v1"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -28,6 +37,16 @@ _RELEASE_STATUSES = frozenset(
 )
 _EFFECT_CAPABILITIES = frozenset(
     {"SIGN", "SEND", "SUBMIT", "PRIVATE_KEY", "CAPITAL_WRITE", "POLICY_WRITE"}
+)
+_PLUGIN_CAPABILITIES = frozenset(
+    {
+        "READ_STATE",
+        "READ_EVIDENCE",
+        "QUOTE",
+        "SIMULATE",
+        "BUILD_UNSIGNED",
+        "EMIT_RESEARCH",
+    }
 )
 
 
@@ -136,12 +155,14 @@ class SuiObjectState:
     digest: str
     shared: bool
     mutable: bool
+    type_tag: str = "mega8::unknown"
 
 
 @dataclass(frozen=True, slots=True)
 class SuiObjectStateFrame:
     chain_id: str
     checkpoint: int
+    epoch: int
     objects: tuple[SuiObjectState, ...]
     frame_sha256: str
 
@@ -178,6 +199,7 @@ class CoverageRow:
     status: str
     owner: str
     evidence_sha256: str
+    evidence_path: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,6 +209,7 @@ class Post150Audit:
     deferred_prs: tuple[int, ...]
     research_only_prs: tuple[int, ...]
     missing_prs: tuple[int, ...]
+    unverified_prs: tuple[int, ...]
     evidence_digest: str
     release_claim_allowed: bool = False
     production_ready: bool = False
@@ -221,6 +244,14 @@ def _uint(value: int, field: str) -> int:
     if isinstance(value, bool) or not isinstance(value, int) or value < 0:
         raise Mega804Error(f"{field} must be a non-negative integer")
     return value
+
+
+def _normalize_plugin_capability(value: str) -> str:
+    raw = _text(value, "plugin_capability")
+    normalized = raw.strip().upper()
+    if normalized != raw:
+        raise Mega804Error("plugin capabilities must use canonical uppercase spelling")
+    return normalized
 
 
 def _ev(
@@ -377,12 +408,17 @@ def model_execution_state_machine() -> Mapping[str, tuple[str, ...]]:
 
 def verify_safety_liveness_properties(trace: Sequence[str]) -> AssuranceEvidence:
     machine = model_execution_state_machine()
+    terminal_states = {"SETTLED", "CANCELLED", "QUARANTINED"}
     blockers = []
     if not trace:
         blockers.append("EMPTY_EXECUTION_TRACE")
+    unknown = tuple(state for state in trace if state not in machine)
+    blockers.extend(f"UNKNOWN_EXECUTION_STATE:{state}" for state in unknown)
     for left, right in zip(trace, trace[1:]):
-        if right not in machine.get(left, ()):
+        if left in machine and right not in machine[left]:
             blockers.append(f"INVALID_TRANSITION:{left}->{right}")
+    if trace and trace[-1] in machine and trace[-1] not in terminal_states:
+        blockers.append(f"EXECUTION_TRACE_NONTERMINAL:{trace[-1]}")
     if "DISPATCHED_UNKNOWN" in trace:
         tail = trace[trace.index("DISPATCHED_UNKNOWN") :]
         if "CANCELLED" in tail:
@@ -427,10 +463,13 @@ def run_multi_engine_simulation(
     rows = tuple(sorted(results, key=lambda item: item.engine))
     if len(rows) < 2:
         raise Mega804Error("simulation quorum requires at least two engines")
+    engines = []
     for item in rows:
-        _text(item.engine, "engine")
+        engines.append(_text(item.engine, "engine"))
         _sha(item.post_state_sha256, "post_state_sha256")
         _sha(item.trace_sha256, "trace_sha256")
+    if len(set(engines)) != len(engines):
+        raise Mega804Error("simulation quorum requires distinct engine identities")
     return rows
 
 
@@ -851,27 +890,68 @@ def qualify_evm_atomic_strategy(
 
 # PR-219 / SUI-02 / NF-625..628
 def assemble_sui_object_state_frame(
-    *, chain_id: str, checkpoint: int, objects: Iterable[SuiObjectState]
+    *,
+    chain_id: str,
+    checkpoint: int,
+    epoch: int,
+    objects: Iterable[SuiObjectState],
 ) -> SuiObjectStateFrame:
-    if checkpoint < 0:
-        raise Mega804Error("checkpoint must be non-negative")
-    rows = tuple(sorted(objects, key=lambda item: item.object_id))
-    if len({item.object_id for item in rows}) != len(rows):
-        raise Mega804Error("duplicate Sui object in state frame")
-    for item in rows:
-        _text(item.object_id, "object_id")
-        _text(item.digest, "digest")
-        if item.version < 0:
-            raise Mega804Error("Sui object version must be non-negative")
+    rows = tuple(sorted(objects, key=lambda item: item.object_id.lower()))
+    canonical_objects = []
+    try:
+        for item in rows:
+            kind = (
+                CanonicalSuiObjectKind.SHARED
+                if item.shared
+                else (
+                    CanonicalSuiObjectKind.OWNED
+                    if item.mutable
+                    else CanonicalSuiObjectKind.IMMUTABLE
+                )
+            )
+            canonical_objects.append(
+                CanonicalSuiObjectRef(
+                    object_id=item.object_id,
+                    version=item.version,
+                    digest=item.digest,
+                    kind=kind,
+                    type_tag=item.type_tag,
+                )
+            )
+        CanonicalSuiStateFrame(
+            chain_key=chain_id,
+            checkpoint=checkpoint,
+            epoch=epoch,
+            objects=tuple(canonical_objects),
+        )
+    except MultiChainError as exc:
+        raise Mega804Error(f"canonical Sui state rejected: {exc}") from exc
+    normalized_rows = tuple(
+        replace(item, object_id=item.object_id.lower()) for item in rows
+    )
     payload = (
         _text(chain_id, "chain_id"),
         checkpoint,
+        epoch,
         tuple(
-            (item.object_id, item.version, item.digest, item.shared, item.mutable)
-            for item in rows
+            (
+                item.object_id,
+                item.version,
+                item.digest,
+                item.shared,
+                item.mutable,
+                item.type_tag,
+            )
+            for item in normalized_rows
         ),
     )
-    return SuiObjectStateFrame(chain_id, checkpoint, rows, _digest(payload))
+    return SuiObjectStateFrame(
+        chain_id,
+        checkpoint,
+        epoch,
+        normalized_rows,
+        _digest(payload),
+    )
 
 
 def plan_sui_object_locks(
@@ -1030,24 +1110,37 @@ def compile_dsl_to_primitive_graph(dsl: StrategyDsl, source: str) -> tuple[str, 
 def sandbox_strategy_plugin(
     *, plugin_id: str, requested_capabilities: Iterable[str]
 ) -> AssuranceEvidence:
-    requested = tuple(sorted(set(requested_capabilities)))
+    requested = tuple(
+        sorted({_normalize_plugin_capability(item) for item in requested_capabilities})
+    )
     blocked = sorted(set(requested) & _EFFECT_CAPABILITIES)
+    unknown = sorted(set(requested) - _EFFECT_CAPABILITIES - _PLUGIN_CAPABILITIES)
+    blockers = [
+        *(f"FORBIDDEN_PLUGIN_CAPABILITY:{item}" for item in blocked),
+        *(f"UNKNOWN_PLUGIN_CAPABILITY:{item}" for item in unknown),
+    ]
     return _ev(
         "NF-635",
-        Disposition.BLOCKED if blocked else Disposition.RESEARCH_ONLY,
+        Disposition.BLOCKED if blockers else Disposition.RESEARCH_ONLY,
         (_text(plugin_id, "plugin_id"), requested),
-        tuple(f"FORBIDDEN_PLUGIN_CAPABILITY:{item}" for item in blocked),
+        blockers,
     )
 
 
 def verify_plugin_capabilities(
     plugin_evidence: AssuranceEvidence, *, allowed_capabilities: Iterable[str]
 ) -> AssuranceEvidence:
-    allowed = set(allowed_capabilities)
+    allowed = {
+        _normalize_plugin_capability(item) for item in allowed_capabilities
+    }
     blockers = list(plugin_evidence.blockers)
     blockers.extend(
         f"POLICY_ALLOWS_FORBIDDEN_CAPABILITY:{item}"
         for item in sorted(allowed & _EFFECT_CAPABILITIES)
+    )
+    blockers.extend(
+        f"POLICY_ALLOWS_UNKNOWN_CAPABILITY:{item}"
+        for item in sorted(allowed - _EFFECT_CAPABILITIES - _PLUGIN_CAPABILITIES)
     )
     return _ev(
         "NF-636",
@@ -1058,8 +1151,11 @@ def verify_plugin_capabilities(
 
 
 # PR-222 / RELEASE-02 / NF-637..640
-def audit_post150_coverage(rows: Iterable[CoverageRow]) -> Post150Audit:
+def audit_post150_coverage(
+    rows: Iterable[CoverageRow], *, repo_root: str | Path
+) -> Post150Audit:
     by_pr = {}
+    unverified = []
     for row in rows:
         if not 151 <= row.roadmap_pr <= 221:
             raise Mega804Error("coverage row outside PR-151..221")
@@ -1069,6 +1165,20 @@ def audit_post150_coverage(rows: Iterable[CoverageRow]) -> Post150Audit:
             raise Mega804Error("unsupported post-150 coverage status")
         _text(row.owner, "owner")
         _sha(row.evidence_sha256, "evidence_sha256")
+        _text(row.evidence_path, "evidence_path")
+        try:
+            artifacts = collect_materialized_artifacts(
+                repo_root,
+                (row.evidence_path,),
+            )
+        except (OSError, ValueError):
+            unverified.append(row.roadmap_pr)
+        else:
+            if (
+                len(artifacts) != 1
+                or artifacts[0].sha256 != row.evidence_sha256
+            ):
+                unverified.append(row.roadmap_pr)
         by_pr[row.roadmap_pr] = row
     required = set(range(151, 222))
     missing = tuple(sorted(required - set(by_pr)))
@@ -1087,6 +1197,8 @@ def audit_post150_coverage(rows: Iterable[CoverageRow]) -> Post150Audit:
             by_pr[number].status,
             by_pr[number].owner,
             by_pr[number].evidence_sha256,
+            by_pr[number].evidence_path,
+            number not in unverified,
         )
         for number in sorted(by_pr)
     )
@@ -1096,6 +1208,7 @@ def audit_post150_coverage(rows: Iterable[CoverageRow]) -> Post150Audit:
         deferred_prs=deferred,
         research_only_prs=research,
         missing_prs=missing,
+        unverified_prs=tuple(sorted(unverified)),
         evidence_digest=_digest(payload),
     )
 
@@ -1113,6 +1226,8 @@ def run_post150_integrated_campaign(
         blockers.append("POST150_COVERAGE_INCOMPLETE")
     if audit.blocked_prs:
         blockers.append("POST150_MANDATORY_BLOCKERS_REMAIN")
+    if audit.unverified_prs:
+        blockers.append("POST150_EVIDENCE_UNVERIFIED")
     generations = (
         _text(code_generation, "code_generation"),
         _text(data_generation, "data_generation"),

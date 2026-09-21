@@ -48,7 +48,7 @@ jobs:
           tests/test_mega8_03_coverage.py
       - name: Format MEGA8-03 surfaces
         run: >-
-          python -m black --diff --check
+          python -m black --check
           src/mega8_03
           tests/test_mega8_03_solana.py
           tests/test_mega8_03_intelligence.py

@@ -51,7 +51,7 @@ jobs:
 
       - name: Black
         run: |
-          python -m black --check \
+          python -m black --check --diff \
             src/research/mega8_05 \
             scripts/verify_mega8_05.py \
             tests/test_mega8_05_research_factory.py

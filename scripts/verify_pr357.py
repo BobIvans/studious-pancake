@@ -258,6 +258,18 @@ def verify() -> dict[str, object]:
         errors.append("PR357_INCOHERENT_EVSI_ACCEPTED")
     except PR357ContractError:
         pass
+    try:
+        estimate_evsi(
+            decision,
+            posterior_scenarios=(
+                {"down": -1_000_000, "up": 2_000_000},
+                {"down": 2_000_000, "up": -1_000_000},
+            ),
+            observation_probabilities_ppm=(500_000, 500_000),
+        )
+        errors.append("PR357_SIGNED_POSTERIOR_ACCEPTED")
+    except PR357ContractError:
+        pass
 
     covariance_clock = ObservationClock(1, 2, 3, 4, "cov", "v1")
     positive_belief = define_market_belief_state(
@@ -273,6 +285,24 @@ def verify() -> dict[str, object]:
         source_clocks={"x": covariance_clock, "y": covariance_clock},
         valid_until=11,
     )
+    try:
+        define_market_belief_state(
+            belief_id="asymmetric-covariance",
+            decision_time=10,
+            observed={"x": 0, "y": 0},
+            posterior_mean={"x": 0, "y": 0},
+            covariance={
+                "x": {"x": 100, "y": 99},
+                "y": {"x": -99, "y": 100},
+            },
+            missingness_mask={"x": False, "y": False},
+            source_clocks={"x": covariance_clock, "y": covariance_clock},
+            valid_until=11,
+        )
+        errors.append("PR357_ASYMMETRIC_COVARIANCE_ACCEPTED")
+    except PR357ContractError:
+        pass
+
     negative_belief = define_market_belief_state(
         belief_id="negative-covariance",
         decision_time=10,
@@ -305,6 +335,10 @@ def verify() -> dict[str, object]:
         errors.append("PR357_SAFETY_RESERVATION")
     if not block_decision_without_safety_info((), ("safety",)):
         errors.append("PR357_SAFETY_ABSTENTION")
+    late_safety = InformationActionSpec("late-safety", 5, 1, 11, 10, True, "p0")
+    late_plan = reserve_safety_information_budget((late_safety,), budget_units=1)
+    if late_plan.get("status") != "ABSTAIN":
+        errors.append("PR357_LATE_SAFETY_NOT_BLOCKED")
 
     priors = (
         PriorCandidate("ok", 800_000, 800_000, 800_000, 900_000, 0),

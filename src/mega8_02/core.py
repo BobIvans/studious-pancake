@@ -3,6 +3,7 @@
 The package is deliberately sender-free. It accepts already-observed, immutable
 state/evidence and produces deterministic research/shadow artifacts only.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -289,8 +290,7 @@ def compile_hyperedge_core(
     def rows(values: Mapping[str, int]) -> tuple[tuple[str, int], ...]:
         return tuple(
             sorted(
-                (key, require_positive_int(value, key))
-                for key, value in values.items()
+                (key, require_positive_int(value, key)) for key, value in values.items()
             )
         )
 
@@ -303,9 +303,7 @@ def compile_hyperedge_core(
     )
 
 
-def apply_hyperedge_core(
-    state: Mapping[str, int], edge: Hyperedge
-) -> dict[str, int]:
+def apply_hyperedge_core(state: Mapping[str, int], edge: Hyperedge) -> dict[str, int]:
     result = {key: require_nonnegative_int(value, key) for key, value in state.items()}
     for asset, amount in edge.inputs:
         available = result.get(asset, 0)
@@ -413,7 +411,7 @@ def rational_quote(amount: int, numerator: int, denominator: int, fee: int = 0) 
     numerator = require_positive_int(numerator, "numerator")
     denominator = require_positive_int(denominator, "denominator")
     fee = require_nonnegative_int(fee, "fee")
-    gross = (Fraction(amount) * numerator // denominator)
+    gross = Fraction(amount) * numerator // denominator
     if gross < fee:
         raise Mega802Error("fee exceeds gross output")
     return int(gross - fee)

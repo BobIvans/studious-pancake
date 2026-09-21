@@ -211,7 +211,7 @@ CHILDREN = {
     ),
 }
 
-FUNCTION_COUNT = sum(len(item[1]) for _, item in CHILDREN.values())
+FUNCTION_COUNT = sum(len(rows) for _, rows in CHILDREN.values())
 NF_IDS = tuple(nf for _, (_, rows) in sorted(CHILDREN.items()) for nf, _ in rows)
 ALL_FUNCTIONS = tuple(
     name for _, (_, rows) in sorted(CHILDREN.items()) for _, name in rows

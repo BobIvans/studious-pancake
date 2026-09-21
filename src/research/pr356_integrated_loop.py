@@ -253,7 +253,7 @@ def run_integrated_science_fixture() -> Mapping[str, Any]:
             "proposal": published_proposal,
             "feasibility": feasibility,
         },
-        "frontier_feedback": frontier.payload,
+        "frontier_feedback": dict(frontier),
         "research_only": True,
         "execution_right": False,
         "external_qualification": False,

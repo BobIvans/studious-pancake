@@ -4,7 +4,20 @@ from __future__ import annotations
 
 from typing import Sequence
 
-from .common import PPM, integer, ppm, quantile_int
+from .common import PPM, Mega803Error, integer, ppm
+
+
+def _finite_sample_radius(values: Sequence[int], *, miscoverage_ppm: int) -> int:
+    if not values:
+        raise Mega803Error("conformal calibration requires observations")
+    alpha = ppm(miscoverage_ppm, "miscoverage_ppm")
+    if alpha >= PPM:
+        raise ValueError("miscoverage must be below 1.0")
+    ordered = sorted(integer(value, "calibration_error", minimum=0) for value in values)
+    numerator = (len(ordered) + 1) * (PPM - alpha)
+    rank = (numerator + PPM - 1) // PPM
+    rank = min(len(ordered), max(1, rank))
+    return ordered[rank - 1]
 
 
 def fit_conformal_net_interval(
@@ -13,13 +26,11 @@ def fit_conformal_net_interval(
     miscoverage_ppm: int,
 ) -> dict[str, int]:
     alpha = ppm(miscoverage_ppm, "miscoverage_ppm")
-    if alpha >= PPM:
-        raise ValueError("miscoverage must be below 1.0")
     absolute = [
         abs(integer(value, "calibration_error_atomic"))
         for value in calibration_errors_atomic
     ]
-    radius = quantile_int(absolute, PPM - alpha)
+    radius = _finite_sample_radius(absolute, miscoverage_ppm=alpha)
     return {
         "radius_atomic": radius,
         "miscoverage_ppm": alpha,
@@ -33,12 +44,10 @@ def fit_conformal_latency_interval(
     miscoverage_ppm: int,
 ) -> dict[str, int]:
     alpha = ppm(miscoverage_ppm, "miscoverage_ppm")
-    if alpha >= PPM:
-        raise ValueError("miscoverage must be below 1.0")
     absolute = [
         abs(integer(value, "calibration_error_ns")) for value in calibration_errors_ns
     ]
-    radius = quantile_int(absolute, PPM - alpha)
+    radius = _finite_sample_radius(absolute, miscoverage_ppm=alpha)
     return {
         "radius_ns": radius,
         "miscoverage_ppm": alpha,

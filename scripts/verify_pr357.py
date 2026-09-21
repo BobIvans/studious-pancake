@@ -25,7 +25,9 @@ from src.research.pr357_core import (
     define_market_belief_state,
     estimate_evpi,
     estimate_evsi,
+    generate_joint_predictive_distribution,
     record_lifecycle_transition,
+    replay_lifecycle_history,
     reserve_safety_information_budget,
 )
 from src.research.pr357_integrated import run_pr357_integrated_vertical
@@ -158,6 +160,47 @@ def verify() -> dict[str, object]:
     except PR357ContractError:
         pass
 
+    try:
+        define_market_belief_state(
+            belief_id="missing-clock",
+            decision_time=10,
+            observed={"x": 1},
+            posterior_mean={"x": 1},
+            covariance={"x": {"x": 1}},
+            missingness_mask={"x": False},
+            source_clocks={},
+            valid_until=11,
+        )
+        errors.append("PR357_OBSERVED_CLOCK_NOT_REQUIRED")
+    except PR357ContractError:
+        pass
+
+    same_time_first = record_lifecycle_transition(
+        strategy_id="same-time",
+        previous_state=LifecycleState.RESEARCH_ONLY,
+        next_state=LifecycleState.OBSERVING,
+        decision_time=9,
+        reason="first append",
+        evidence_refs=("a",),
+    )
+    same_time_second = record_lifecycle_transition(
+        strategy_id="same-time",
+        previous_state=LifecycleState.OBSERVING,
+        next_state=LifecycleState.REQUALIFICATION_DUE,
+        decision_time=9,
+        reason="second append",
+        evidence_refs=("b",),
+    )
+    if (
+        replay_lifecycle_history(
+            LifecycleState.RESEARCH_ONLY,
+            (same_time_first, same_time_second),
+            9,
+        )
+        is not LifecycleState.REQUALIFICATION_DUE
+    ):
+        errors.append("PR357_EQUAL_TIME_APPEND_ORDER")
+
     age = compute_evidence_age_vector(
         now=100,
         evidence_available_at=50,
@@ -206,6 +249,51 @@ def verify() -> dict[str, object]:
     )
     if evsi <= 0 or evsi > 5:
         errors.append("PR357_EVSI_BOUND")
+    try:
+        estimate_evsi(
+            decision,
+            posterior_scenarios=({"down": 0, "up": 1_000_000},),
+            observation_probabilities_ppm=(1_000_000,),
+        )
+        errors.append("PR357_INCOHERENT_EVSI_ACCEPTED")
+    except PR357ContractError:
+        pass
+
+    covariance_clock = ObservationClock(1, 2, 3, 4, "cov", "v1")
+    positive_belief = define_market_belief_state(
+        belief_id="positive-covariance",
+        decision_time=10,
+        observed={"x": 0, "y": 0},
+        posterior_mean={"x": 0, "y": 0},
+        covariance={
+            "x": {"x": 100, "y": 80},
+            "y": {"x": 80, "y": 100},
+        },
+        missingness_mask={"x": False, "y": False},
+        source_clocks={"x": covariance_clock, "y": covariance_clock},
+        valid_until=11,
+    )
+    negative_belief = define_market_belief_state(
+        belief_id="negative-covariance",
+        decision_time=10,
+        observed={"x": 0, "y": 0},
+        posterior_mean={"x": 0, "y": 0},
+        covariance={
+            "x": {"x": 100, "y": -80},
+            "y": {"x": -80, "y": 100},
+        },
+        missingness_mask={"x": False, "y": False},
+        source_clocks={"x": covariance_clock, "y": covariance_clock},
+        valid_until=11,
+    )
+    positive_samples = generate_joint_predictive_distribution(
+        positive_belief, sample_count=200, seed=357
+    )
+    negative_samples = generate_joint_predictive_distribution(
+        negative_belief, sample_count=200, seed=357
+    )
+    if positive_samples == negative_samples:
+        errors.append("PR357_COVARIANCE_IGNORED")
 
     safety = InformationActionSpec("safety", 1, 3, 1, 10, True, "p0")
     optional = InformationActionSpec("optional", 10, 3, 1, 10, False, "p1")
@@ -246,7 +334,10 @@ def verify() -> dict[str, object]:
         errors.append("PR357_VERTICAL_STATUS")
     if first["decision"]["absent_safety_probe"] != "ABSTAIN":
         errors.append("PR357_VERTICAL_SAFETY_PROBE")
-    if first["decision"]["challenger_regret_units"] >= first["decision"]["baseline_regret_units"]:
+    if (
+        first["decision"]["challenger_regret_units"]
+        >= first["decision"]["baseline_regret_units"]
+    ):
         errors.append("PR357_VERTICAL_REGRET_NOT_REDUCED")
     if any(first["effect_boundary"].values()):
         errors.append("PR357_VERTICAL_EFFECT_BOUNDARY")

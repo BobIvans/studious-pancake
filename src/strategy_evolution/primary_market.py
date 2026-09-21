@@ -35,6 +35,8 @@ def normalize_primary_market_terms(payload: Mapping[str, Any]):
 
 
 def track_async_vault_request(payload: Mapping[str, Any]):
+    if payload.get("event_gap"):
+        raise EvolutionError("EVENT_GAP")
     current = str(payload.get("current_state"))
     target = str(payload.get("target_state"))
     assert_transition(current, target, TRANSITIONS)
@@ -59,6 +61,8 @@ def estimate_next_nav_oracle_window(payload: Mapping[str, Any]):
 
 
 def price_mint_redeem_latency(payload: Mapping[str, Any]):
+    if payload.get("claim_uncertain"):
+        raise EvolutionError("CLAIM_UNCERTAIN")
     if payload.get("funding_curve_missing"):
         raise EvolutionError("FUNDING_CURVE_MISSING")
     if payload.get("fx_unknown"):
@@ -79,6 +83,10 @@ def price_mint_redeem_latency(payload: Mapping[str, Any]):
 
 
 def detect_primary_secondary_basis(payload: Mapping[str, Any]):
+    if int(payload.get("value_low_atoms", 0)) <= int(
+        payload.get("cost_high_atoms", 0)
+    ):
+        raise EvolutionError("NEGATIVE_WORST_CASE")
     if not payload.get("eligible"):
         raise EvolutionError("NOT_ELIGIBLE")
     if payload.get("cutoff_missed"):
@@ -92,6 +100,10 @@ def detect_primary_secondary_basis(payload: Mapping[str, Any]):
 
 
 def size_settlement_inventory(payload: Mapping[str, Any]):
+    requested = payload.get("requested_atoms")
+    capacity = int(payload.get("capacity_atoms", 0))
+    if requested is not None and int(requested) > capacity:
+        raise EvolutionError("CAP_EXCEEDED")
     if int(payload.get("duration_seconds", 0)) > int(
         payload.get("max_duration_seconds", 0)
     ):
@@ -110,6 +122,8 @@ def size_settlement_inventory(payload: Mapping[str, Any]):
 
 
 def build_primary_market_candidate(payload: Mapping[str, Any]):
+    if not payload.get("evidence_refs"):
+        raise EvolutionError("LINEAGE_GAP")
     if not payload.get("primary_leg_proven"):
         raise EvolutionError("PRIMARY_LEG_UNPROVEN")
     if not payload.get("hedge_present"):
@@ -120,6 +134,8 @@ def build_primary_market_candidate(payload: Mapping[str, Any]):
 def qualify_primary_market(
     candidate, *, replay_count: int, policy_passed: bool, reconciliation_passed: bool
 ):
+    if replay_count < 3:
+        raise EvolutionError("SETTLEMENT_SAMPLE_SMALL")
     if not reconciliation_passed:
         raise EvolutionError("RECONCILIATION_FAIL")
     return qualify_candidate(

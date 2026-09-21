@@ -78,7 +78,7 @@ def test_replay_witness_is_incomplete_when_account_missing_and_network_is_forbid
         {"slot": 42, "bank_context": "bank:42", "accounts": {"a": {"lamports": 1}}},
     )
     assert seed.status == "INCOMPLETE"
-    assert seed.payload["missing_dependencies"] == ("b",)
+    assert seed.payload["missing_dependencies"] == ["b"]
     with pytest.raises(UltimateMegaError, match="HIDDEN_NETWORK_ACCESS"):
         replay_witness_without_network(
             {"closure_complete": True, "missing_dependencies": ()},

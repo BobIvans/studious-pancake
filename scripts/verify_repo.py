@@ -92,6 +92,12 @@ PR354_MECHANISM_DISCOVERY_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+PR355_EVIDENCE_NATIVE_MECHANISM_OS_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr355.py",
+    "--json",
+]
+
 PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr200_production_cutover.py",
@@ -245,6 +251,7 @@ def main() -> int:
     run(MEGA8_DEPENDENCY_CLOSURE_COMMAND)
     run(PR353_STRATEGY_EVOLUTION_COMMAND)
     run(PR354_MECHANISM_DISCOVERY_COMMAND)
+    run(PR355_EVIDENCE_NATIVE_MECHANISM_OS_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
     run(PR353_FINAL_STRATEGY_CLOSURE_COMMAND)

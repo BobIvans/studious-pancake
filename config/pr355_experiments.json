@@ -1,0 +1,528 @@
+{
+  "schema_version": "pr355.experiments.v1",
+  "preregistered": true,
+  "frozen_before_external_evaluation": true,
+  "family": "NXE-01..NXE-26",
+  "rows": [
+    {
+      "id": "NXE-01",
+      "hypothesis": "Boros fixed-vs-floating basis survives settlement, margin and fees",
+      "reject_condition": "Net disappears after equivalent-cashflow normalization",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "FIXTURE_TESTED_BLOCKED_EXTERNAL",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-02",
+      "hypothesis": "Cross-exchange funding dispersion predicts executable Boros IRS basis",
+      "reject_condition": "Effect disappears after timing, contract and settlement normalization",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-03",
+      "hypothesis": "Settlement-liquidity scarcity explains Boros spread and failures",
+      "reject_condition": "Capacity is sufficient or effect is not OOS stable",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-04",
+      "hypothesis": "HOT dynamic-fee updates leave temporary cross-venue residuals",
+      "reject_condition": "Hook-aware quote removes apparent edge",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-05",
+      "hypothesis": "HOT RFQ↔AMM switching is predictable from solver/fee state",
+      "reject_condition": "Route choice adds no utility after latency",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-06",
+      "hypothesis": "Bunni LDF changes precede executable depth cliffs",
+      "reject_condition": "Effect is stale-data artefact or deployment is unsafe/unfixed",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-07",
+      "hypothesis": "ReClamm/v4/JIT share transferable liquidity-shape features",
+      "reject_condition": "Local-only model outperforms transfer",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-08",
+      "hypothesis": "M0 extensions have 1:1 rights but temporary secondary basis",
+      "reject_condition": "Access/capacity prevents realizable conversion",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-09",
+      "hypothesis": "M0 scaled-ui/index sync produces timing residuals",
+      "reject_condition": "Available-at alignment removes effect",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-10",
+      "hypothesis": "Earning/non-earning/claim modes add basis beyond price features",
+      "reject_condition": "Mode adds no OOS value",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-11",
+      "hypothesis": "Ethena backing/funding/custody predicts USDe premium regimes",
+      "reject_condition": "Price/market beta explains all effect",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-12",
+      "hypothesis": "Direct-redemption eligibility segmentation creates persistent non-universal basis",
+      "reject_condition": "Eligible and ineligible instruments are not economically comparable",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-13",
+      "hypothesis": "RWA NAV publication/revision lag explains secondary/lending gaps",
+      "reject_condition": "Stale or closed-session pricing explains gap",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-14",
+      "hypothesis": "RWA session/redemption calendar predicts 24/7 collateral haircut",
+      "reject_condition": "No independent forward improvement",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-15",
+      "hypothesis": "Aave Horizon eligibility/cap/oracle changes alter demand and collateral basis",
+      "reject_condition": "Effect is fully market-wide",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-16",
+      "hypothesis": "Aave V4 Hub utilization transmits pressure across Spokes",
+      "reject_condition": "Shared graph adds no value over local Spoke state",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-17",
+      "hypothesis": "Collateral risk-premium changes lead cross-Spoke allocation",
+      "reject_condition": "Effect disappears after governance timing/common-rate controls",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-18",
+      "hypothesis": "Shared capacity creates bottlenecks invisible to isolated models",
+      "reject_condition": "Exact capacity matches isolated model",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-19",
+      "hypothesis": "Selective x402-like data purchase improves qualified candidates per cost",
+      "reject_condition": "Equal-budget free sources perform as well",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-20",
+      "hypothesis": "Resource reliability/latency can be learned without paying for failures",
+      "reject_condition": "Selection bias or payment failures dominate",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-21",
+      "hypothesis": "Proof-carrying receipts lower independent verification cost",
+      "reject_condition": "Proof exceeds deterministic replay cost without material assurance gain",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-22",
+      "hypothesis": "Incident-derived invariants improve unsafe-adapter detection",
+      "reject_condition": "False positives or stale incident assumptions dominate",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-23",
+      "hypothesis": "Mechanism fingerprints transfer better than ticker pooling",
+      "reject_condition": "Target-only baseline wins",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-24",
+      "hypothesis": "Frontier scheduling yields more reproducible hypotheses per data budget",
+      "reject_condition": "Adaptive selection increases misses or FDR",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-25",
+      "hypothesis": "Scheduled protocol interventions predict capacity changes",
+      "reject_condition": "Effect is already priced or causal assumptions fail",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    },
+    {
+      "id": "NXE-26",
+      "hypothesis": "Cashflow IR reduces false equivalence across PT/YT, Boros, lending and RWA",
+      "reject_condition": "Existing identity captures all errors",
+      "target": "DECLARED_PER_MARKETPACK",
+      "horizon": "DECLARED_BEFORE_EVALUATION",
+      "split": "PURGED_WALK_FORWARD_WITH_EMBARGO",
+      "costs": "FEES_MARGIN_BORROW_LATENCY_DATA_LICENSE_WHERE_APPLICABLE",
+      "assumptions": "EXPLICIT_AND_VERSIONED",
+      "missing_and_censored": "PRESERVE_NOT_ZERO",
+      "allowed_conclusions": [
+        "SUPPORTED_RESEARCH_ONLY",
+        "REJECTED_WITH_EVIDENCE",
+        "INCONCLUSIVE",
+        "BLOCKED_EXTERNAL",
+        "SATISFIED_BY_EXISTING"
+      ],
+      "status": "NOT_RUN",
+      "execution_right": false
+    }
+  ]
+}

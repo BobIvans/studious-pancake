@@ -51,6 +51,9 @@ _PLUGIN_CAPABILITIES = frozenset(
         "EMIT_RESEARCH",
     }
 )
+_FAULT_SCENARIO_KINDS = frozenset(
+    {"provider_fault", "network_partition", "storage_corruption"}
+)
 
 
 class Mega804Error(ValueError):
@@ -90,6 +93,12 @@ class FaultScenario:
     kind: str
     target: str
     generation: str
+
+    def __post_init__(self) -> None:
+        if self.kind not in _FAULT_SCENARIO_KINDS:
+            raise Mega804Error("unsupported fault scenario kind")
+        _text(self.target, "target")
+        _text(self.generation, "generation")
 
 
 @dataclass(frozen=True, slots=True)
@@ -742,7 +751,11 @@ def enroll_hsm_signer(
 def execute_key_ceremony(
     profile: HsmSignerProfile, *, approvals: Sequence[str], quorum: int
 ) -> AssuranceEvidence:
-    unique = tuple(sorted(set(approvals)))
+    unique = tuple(
+        sorted({_text(approval, "approval").strip() for approval in approvals})
+    )
+    if isinstance(quorum, bool) or not isinstance(quorum, int):
+        raise Mega804Error("quorum must be an integer")
     blockers = []
     if quorum < 2 or len(unique) < quorum:
         blockers.append("KEY_CEREMONY_APPROVAL_QUORUM_NOT_MET")
@@ -812,8 +825,10 @@ def quote_evm_pool_exactly(
         raise Mega804Error("reserves and amount_in must be positive")
     if fee_ppm >= 1_000_000:
         raise Mega804Error("fee_ppm must be below one million")
-    net_in = amount_in * (1_000_000 - fee_ppm) // 1_000_000
-    return reserve_out * net_in // (reserve_in + net_in)
+    scaled_input = amount_in * (1_000_000 - fee_ppm)
+    numerator = reserve_out * scaled_input
+    denominator = reserve_in * 1_000_000 + scaled_input
+    return numerator // denominator
 
 
 def build_evm_swap_calldata(
@@ -885,6 +900,8 @@ def build_collateral_inventory_plan(
 def simulate_evm_liquidation_callback(
     *, borrowed_base_units: int, repaid_base_units: int, plan: Mapping[str, int]
 ) -> AssuranceEvidence:
+    _uint(borrowed_base_units, "borrowed_base_units")
+    _uint(repaid_base_units, "repaid_base_units")
     blockers = []
     if repaid_base_units < borrowed_base_units:
         blockers.append("EVM_CALLBACK_REPAYMENT_SHORTFALL")

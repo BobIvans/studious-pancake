@@ -1,0 +1,22 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-216",
+  "child_code": "SIGNER-02",
+  "nf": [
+    "NF-613",
+    "NF-614",
+    "NF-615",
+    "NF-616"
+  ],
+  "implementation_status": "IMPLEMENTED_METADATA_DEFAULT_OFF",
+  "canonical_owner": "src/mega8_04.py + isolated_signer_service/mpr2608.py",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "REAL_HSM_KMS_NOT_ENROLLED",
+    "MULTI_REGION_SIGNER_RECOVERY_NOT_OPERATIONALLY_QUALIFIED"
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "schema_version": "pr355.evidence.v1",
+  "roadmap_id": "PR-355",
+  "implementation_base_sha": "d8d6d9079689efdddf77ce373120675255a99327",
+  "tested_head_sha": null,
+  "ci_status": "NOT_RUN",
+  "current_head_reconciliation": {
+    "strategy_evolution_pr": 531,
+    "pr353_closure_pr": 532,
+    "mechanism_discovery_pr": 533,
+    "nf_existing_range": [
+      1,
+      1184
+    ],
+    "new_permanent_nf_allocated": false
+  },
+  "scope": {
+    "ig_obligation_count": 57,
+    "nxf_count": 72,
+    "marketpack_count": 9,
+    "experiment_count": 26,
+    "boros_vertical": "FIXTURE_TESTED_BLOCKED_EXTERNAL"
+  },
+  "external_actions": {
+    "paid_subscription_activation": false,
+    "external_dataset_download": false,
+    "real_x402_payment": false,
+    "remote_write": false,
+    "wallet_access": false,
+    "live_submission": false
+  },
+  "claims": {
+    "merged": false,
+    "qualified": false,
+    "authorized_live": false,
+    "production_ready": false,
+    "profitability": false
+  },
+  "blockers": [
+    "BOROS_PRIMARY_HISTORICAL_SOURCE_PIN_ENTITLEMENT_NOT_MATERIALIZED",
+    "HOT_BUNNI_M0_ETHENA_RWA_AAVE_DEPLOYMENT_AND_DATA_EVIDENCE_NOT_MATERIALIZED",
+    "NO_REAL_X402_PAYMENT_ALLOWED_IN_PR355",
+    "NO_PRODUCTION_PROOF_BACKEND_QUALIFIED"
+  ],
+  "safety": {
+    "production_ready": false,
+    "live_enabled": false,
+    "signer_access": false,
+    "submission_access": false,
+    "remote_mutation": false,
+    "automatic_promotion": false,
+    "automatic_capital_increase": false
+  }
+}

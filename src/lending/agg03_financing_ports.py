@@ -111,7 +111,6 @@ class JupiterLendFinancingSnapshot:
         normalized = tuple(dict.fromkeys((*self.monitored_accounts, *required)))
         object.__setattr__(self, "monitored_accounts", normalized)
 
-
     @property
     def required_monitored_accounts(self) -> tuple[str, ...]:
         return (
@@ -130,7 +129,6 @@ class SlumlordFinancingSnapshot:
     def __post_init__(self) -> None:
         _sha(self.evidence_sha256, "evidence_sha256")
         _sha(self.state_fingerprint, "state_fingerprint")
-
 
     @property
     def required_monitored_accounts(self) -> tuple[str, ...]:

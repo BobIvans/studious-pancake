@@ -69,33 +69,28 @@ def test_program_change_and_oracle_contracts() -> None:
 def test_stable_vault_yield_and_lp_are_capacity_bounded_integer_math() -> None:
     stable = StablecoinRight("USDX", "USDC", 1, 1, 1, 100, evidence())
     assert quote_stablecoin_conversion(stable, amount=10, now=20) == 9
-    assert detect_stablecoin_parity_cycle(
-        stable, amount=10, dex_guaranteed_out=11, now=20
-    ) == 2
+    assert (
+        detect_stablecoin_parity_cycle(stable, amount=10, dex_guaranteed_out=11, now=20)
+        == 2
+    )
     with pytest.raises(Mega802Error, match="CAPACITY"):
         quote_stablecoin_conversion(stable, amount=101, now=20)
 
-    vault = VaultSemantics(
-        "vault", "vSHARE", 100, {"USDC": 200}, 50, 50, evidence()
-    )
+    vault = VaultSemantics("vault", "vSHARE", 100, {"USDC": 200}, 50, 50, evidence())
     nav, mint_cap, burn_cap = read_vault_nav_and_capacity(
         vault, {"USDC": 1_000_000}, now=20
     )
     assert (nav, mint_cap, burn_cap) == (2_000_000, 50, 50)
-    assert detect_vault_share_parity(
-        intrinsic_value=20, market_value=18
-    ) == 2
+    assert detect_vault_share_parity(intrinsic_value=20, market_value=18) == 2
 
     rate = YieldExchangeRate("y", "u", 105, 100, 1000, evidence())
     assert normalize_accrual_index(rate) == (21, 20)
     assert quote_immediate_yield_conversion(rate, amount=100, now=20) == 105
 
-    lp = LPPoolState(
-        "pool", 100, {"A": 50, "B": 50}, 20, 20, evidence()
+    lp = LPPoolState("pool", 100, {"A": 50, "B": 50}, 20, 20, evidence())
+    assert (
+        compute_lp_token_nav(lp, {"A": 1_000_000, "B": 1_000_000}, now=20) == 1_000_000
     )
-    assert compute_lp_token_nav(
-        lp, {"A": 1_000_000, "B": 1_000_000}, now=20
-    ) == 1_000_000
     assert detect_lp_nav_cycle(nav_value=100, secondary_market_value=90) == 10
 
 
@@ -108,9 +103,10 @@ def test_lst_stake_account_and_inventory_paths_remain_offline() -> None:
     quote = StakeAccountQuote("stake", 100, 110, 100, evidence())
     route_id = build_stake_account_route(quote, amount=50, now=20)
     assert len(route_id) == 64
-    assert simulate_stake_account_cycle(
-        quote, amount=50, dex_guaranteed_out=60, now=20
-    ) == 5
+    assert (
+        simulate_stake_account_cycle(quote, amount=50, dex_guaranteed_out=60, now=20)
+        == 5
+    )
 
     fee = InventoryEvent("proto", "USDC", 50, "fee_sweep", 40, evidence())
     other = InventoryEvent("proto", "USDC", 10, "reserve", 10, evidence())

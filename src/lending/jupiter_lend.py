@@ -48,6 +48,8 @@ INSTRUCTIONS_SYSVAR_ID = Pubkey.from_string(
 
 FLASHLOAN_BORROW_DISCRIMINATOR = bytes((103, 19, 78, 24, 240, 9, 135, 63))
 FLASHLOAN_PAYBACK_DISCRIMINATOR = bytes((213, 47, 153, 137, 84, 243, 94, 232))
+FLASHLOAN_ADMIN_DISCRIMINATOR = bytes((162, 161, 45, 28, 131, 91, 202, 88))
+FLASHLOAN_ADMIN_ACCOUNT_LEN = 93
 _U64_MAX = (1 << 64) - 1
 _EXPECTED_META_FLAGS = (
     (True, True),
@@ -143,6 +145,91 @@ class JupiterLendFlashloanAccounts:
             AccountMeta(self.system_program, False, False),
             AccountMeta(self.instruction_sysvar, False, False),
         ]
+
+
+@dataclass(frozen=True, slots=True)
+class JupiterLendFlashloanAdminState:
+    authority: Pubkey
+    liquidity_program: Pubkey
+    status: bool
+    flashloan_fee: int
+    flashloan_timestamp: int
+    is_flashloan_active: bool
+    active_flashloan_amount: int
+    bump: int
+
+    def __post_init__(self) -> None:
+        if not 0 <= self.flashloan_fee <= 0xFFFF:
+            raise JupiterLendAdapterError(
+                JupiterLendRejectionCode.INVALID_FIXED_ACCOUNT,
+                "flashloan fee is outside u16 range",
+            )
+        if not 0 <= self.flashloan_timestamp <= _U64_MAX:
+            raise JupiterLendAdapterError(
+                JupiterLendRejectionCode.INVALID_FIXED_ACCOUNT,
+                "flashloan timestamp is outside u64 range",
+            )
+        if not 0 <= self.active_flashloan_amount <= _U64_MAX:
+            raise JupiterLendAdapterError(
+                JupiterLendRejectionCode.INVALID_FIXED_ACCOUNT,
+                "active amount is outside u64 range",
+            )
+        if self.bump != JUPITER_FLASHLOAN_ADMIN_BUMP:
+            raise JupiterLendAdapterError(
+                JupiterLendRejectionCode.INVALID_FIXED_ACCOUNT,
+                "flashloan admin bump differs from pinned PDA",
+            )
+
+
+def _decode_bool(value: int, label: str) -> bool:
+    if value not in (0, 1):
+        raise JupiterLendAdapterError(
+            JupiterLendRejectionCode.INVALID_FIXED_ACCOUNT,
+            f"{label} is not canonical borsh bool",
+        )
+    return bool(value)
+
+
+def decode_flashloan_admin_state(data: bytes) -> JupiterLendFlashloanAdminState:
+    """Decode exact Anchor/Borsh FlashloanAdmin layout from pinned IDL v0.1.4."""
+
+    raw = bytes(data)
+    if len(raw) != FLASHLOAN_ADMIN_ACCOUNT_LEN:
+        raise JupiterLendAdapterError(
+            JupiterLendRejectionCode.INVALID_FIXED_ACCOUNT,
+            "flashloan admin account length differs from pinned IDL",
+        )
+    if raw[:8] != FLASHLOAN_ADMIN_DISCRIMINATOR:
+        raise JupiterLendAdapterError(
+            JupiterLendRejectionCode.INVALID_FIXED_ACCOUNT,
+            "flashloan admin discriminator differs from pinned IDL",
+        )
+    offset = 8
+    authority = Pubkey.from_bytes(raw[offset : offset + 32])
+    offset += 32
+    liquidity_program = Pubkey.from_bytes(raw[offset : offset + 32])
+    offset += 32
+    status = _decode_bool(raw[offset], "status")
+    offset += 1
+    flashloan_fee = int.from_bytes(raw[offset : offset + 2], "little")
+    offset += 2
+    flashloan_timestamp = int.from_bytes(raw[offset : offset + 8], "little")
+    offset += 8
+    is_flashloan_active = _decode_bool(raw[offset], "is_flashloan_active")
+    offset += 1
+    active_flashloan_amount = int.from_bytes(raw[offset : offset + 8], "little")
+    offset += 8
+    bump = raw[offset]
+    return JupiterLendFlashloanAdminState(
+        authority=authority,
+        liquidity_program=liquidity_program,
+        status=status,
+        flashloan_fee=flashloan_fee,
+        flashloan_timestamp=flashloan_timestamp,
+        is_flashloan_active=is_flashloan_active,
+        active_flashloan_amount=active_flashloan_amount,
+        bump=bump,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -304,6 +391,8 @@ def validate_jupiter_lend_order(
 
 __all__ = [
     "ASSOCIATED_TOKEN_PROGRAM_ID",
+    "FLASHLOAN_ADMIN_ACCOUNT_LEN",
+    "FLASHLOAN_ADMIN_DISCRIMINATOR",
     "FLASHLOAN_BORROW_DISCRIMINATOR",
     "FLASHLOAN_PAYBACK_DISCRIMINATOR",
     "INSTRUCTIONS_SYSVAR_ID",
@@ -318,9 +407,11 @@ __all__ = [
     "SYSTEM_PROGRAM_ID",
     "JupiterLendAdapterError",
     "JupiterLendFlashloanAccounts",
+    "JupiterLendFlashloanAdminState",
     "JupiterLendOrderCertificate",
     "JupiterLendRejectionCode",
     "build_flashloan_borrow_instruction",
     "build_flashloan_payback_instruction",
+    "decode_flashloan_admin_state",
     "validate_jupiter_lend_order",
 ]

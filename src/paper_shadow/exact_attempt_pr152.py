@@ -16,6 +16,7 @@ import time
 from typing import Awaitable, Callable, Protocol
 
 from src.durability import AttemptKey
+from src.kernel import canonical_json_bytes
 from src.durability.unified_authority_pr02 import (
     AuthorityFence,
     ReservationTerminalState,
@@ -82,6 +83,10 @@ class ProviderExecutionEvidence:
     expires_at_ns: int
     jupiter_execution_allowed: bool
     marginfi_execution_allowed: bool
+    financing_lender: str | None = None
+    financing_program_id: str | None = None
+    financing_program_hash: str | None = None
+    financing_execution_allowed: bool | None = None
 
     def __post_init__(self) -> None:
         for name in (
@@ -91,6 +96,28 @@ class ProviderExecutionEvidence:
         ):
             if not _SHA256.fullmatch(getattr(self, name)):
                 raise ValueError(f"{name} must be a lowercase sha256 digest")
+        if self.financing_lender is not None:
+            if not self.financing_lender.strip():
+                raise ValueError("financing_lender must not be blank")
+            if (
+                not isinstance(self.financing_program_id, str)
+                or not self.financing_program_id.strip()
+            ):
+                raise ValueError("financing_program_id must be non-blank")
+            if self.financing_program_hash is None or not _SHA256.fullmatch(
+                self.financing_program_hash
+            ):
+                raise ValueError(
+                    "financing_program_hash must be a lowercase sha256 digest"
+                )
+            if type(self.financing_execution_allowed) is not bool:
+                raise ValueError("financing_execution_allowed must be boolean")
+        elif (
+            self.financing_program_id is not None
+            or self.financing_program_hash is not None
+            or self.financing_execution_allowed is not None
+        ):
+            raise ValueError("generic financing evidence requires financing_lender")
         if min(self.rooted_slot, self.captured_at_ns, self.expires_at_ns) < 0:
             raise ValueError("slot and timestamps must be non-negative")
         if self.expires_at_ns <= self.captured_at_ns:
@@ -100,8 +127,11 @@ class ProviderExecutionEvidence:
         blockers: list[str] = []
         if not self.jupiter_execution_allowed:
             blockers.append("PR152_JUPITER_EXECUTION_NOT_ALLOWED")
-        if not self.marginfi_execution_allowed:
-            blockers.append("PR152_MARGINFI_EXECUTION_NOT_ALLOWED")
+        if self.financing_lender is None:
+            if not self.marginfi_execution_allowed:
+                blockers.append("PR152_MARGINFI_EXECUTION_NOT_ALLOWED")
+        elif self.financing_execution_allowed is not True:
+            blockers.append("PR152_FINANCING_EXECUTION_NOT_ALLOWED")
         if now_ns > self.expires_at_ns:
             blockers.append("PR152_PROVIDER_EVIDENCE_EXPIRED")
         if self.rooted_slot < discovery_slot:
@@ -120,6 +150,10 @@ class ProviderExecutionEvidence:
                 "expires_at_ns": self.expires_at_ns,
                 "jupiter_execution_allowed": self.jupiter_execution_allowed,
                 "marginfi_execution_allowed": self.marginfi_execution_allowed,
+                "financing_lender": self.financing_lender,
+                "financing_program_id": self.financing_program_id,
+                "financing_program_hash": self.financing_program_hash,
+                "financing_execution_allowed": self.financing_execution_allowed,
             }
         )
 
@@ -414,6 +448,69 @@ class ExactPaperAttemptOrchestrator:
             raise ValueError("candidate identity mismatch")
         if planner.jupiter_contract_pin != evidence.jupiter_contract_pin:
             raise ValueError("Jupiter contract pin mismatch")
+        if evidence.financing_lender is not None:
+            if (
+                candidate.pre_state_accounts is not None
+                or candidate.decoded_account_hashes
+                or candidate.native_observations
+                or candidate.token_observations
+                or candidate.marginfi_observation is not None
+                or candidate.decode_policy is not None
+                or candidate.valuation is not None
+                or candidate.marginfi_registry is not None
+            ):
+                raise ValueError(
+                    "generic financing candidate must use decoder-owned economics"
+                )
+            snapshot = planner.financing_snapshot
+            if snapshot is None:
+                raise ValueError("generic financing snapshot required")
+            if candidate.financing_pre_state_accounts is None:
+                raise ValueError("generic financing raw pre-state required")
+            if planner.provider_account_snapshot_hash != evidence.account_snapshot_hash:
+                raise ValueError("provider snapshot fingerprint mismatch")
+            if (
+                snapshot.slot < request.discovery_slot
+                or evidence.rooted_slot < snapshot.slot
+            ):
+                raise ValueError("generic financing snapshot context mismatch")
+            if (
+                snapshot.asset_mint != "So11111111111111111111111111111111111111112"
+                or planner.borrow_amount
+                != request.capital_candidate.requested_flash_loan_lamports
+                or str(planner.payer) != request.wallet_snapshot.wallet_pubkey
+            ):
+                raise ValueError(
+                    "generic capital principal requires exact native WSOL units"
+                )
+            if (
+                planner.rent_financing_snapshot is None
+                or planner.rent_borrow_amount <= 0
+            ):
+                raise ValueError("rent financing snapshot and amount required")
+            if planner.rent_financing_snapshot.slot != snapshot.slot:
+                raise ValueError("primary and rent financing snapshots differ in slot")
+            if (
+                candidate.financing_pre_state_accounts is None
+                or not candidate.financing_pre_state_accounts
+                or candidate.financing_pre_state_slot != snapshot.slot
+            ):
+                raise ValueError("generic financing raw pre-state required")
+            if (
+                candidate.attempt_id != request.attempt_key.attempt_id
+                or candidate.attempt_generation != request.attempt_key.generation
+            ):
+                raise ValueError("generic financing attempt identity mismatch")
+            return
+        if (
+            candidate.financing_pre_state_accounts is not None
+            or candidate.financing_pre_state_slot is not None
+            or candidate.attempt_id is not None
+            or candidate.attempt_generation is not None
+        ):
+            raise ValueError(
+                "legacy MarginFi candidate cannot carry generic financing state"
+            )
         if getattr(candidate, "pre_state_accounts", None) is None:
             # Historical observation candidates remain representable, but they
             # cannot be promoted into a qualified production paper handoff.
@@ -472,6 +569,38 @@ class ExactPaperAttemptOrchestrator:
         evidence = request.provider_evidence
         if provenance.jupiter_contract_pin != evidence.jupiter_contract_pin:
             raise ValueError("final Jupiter provenance mismatch")
+        if evidence.financing_lender is not None:
+            if (
+                provenance.financing_lender != evidence.financing_lender
+                or provenance.financing_program_id is None
+                or provenance.financing_program_id != evidence.financing_program_id
+                or provenance.financing_evidence_hash is None
+                or provenance.financing_evidence_hash != evidence.financing_program_hash
+            ):
+                raise ValueError("final financing provenance mismatch")
+            if vertical.trace.opportunity_id != request.capital_candidate.candidate_id:
+                raise ValueError("vertical opportunity identity mismatch")
+            if (
+                vertical.qualification is not None
+                or vertical.evidence_origin != "financing_decoder_owned"
+                or not isinstance(vertical.raw_evidence_hash, str)
+                or not _SHA256.fullmatch(vertical.raw_evidence_hash)
+                or vertical.reconciliation.complete is not True
+                or vertical.reconciliation.status
+                is not ReconciliationStatus.PROVEN_PROFIT
+                or vertical.reconciliation.repayment.proven is not True
+                or type(vertical.reconciliation.settlement_net) is not int
+                or vertical.reconciliation.settlement_net <= 0
+                or any(
+                    item.asset != vertical.reconciliation.settlement_asset
+                    and item.net < 0
+                    for item in vertical.reconciliation.breakdowns
+                )
+            ):
+                raise ValueError(
+                    "generic financing economic qualification not admitted"
+                )
+            return
         if provenance.marginfi_pin_hash != evidence.marginfi_program_hash:
             raise ValueError("final MarginFi provenance mismatch")
         if vertical.trace.opportunity_id != request.capital_candidate.candidate_id:

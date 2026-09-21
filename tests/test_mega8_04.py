@@ -260,12 +260,15 @@ def test_evm_adapter_and_calldata_are_research_only() -> None:
         recipient=ADDRESS,
     )
     assert len(calldata) == 100
-    assert quote_evm_pool_exactly(
-        reserve_in=1_000,
-        reserve_out=10_000,
-        amount_in=1,
-        fee_ppm=3_000,
-    ) == 9
+    assert (
+        quote_evm_pool_exactly(
+            reserve_in=1_000,
+            reserve_out=10_000,
+            amount_in=1,
+            fee_ppm=3_000,
+        )
+        == 9
+    )
     assert (
         differential_test_evm_math(
             local_amount_out=9,

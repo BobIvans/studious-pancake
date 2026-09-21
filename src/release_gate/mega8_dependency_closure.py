@@ -85,7 +85,9 @@ def _require_sha(value: object, name: str) -> str:
     return value
 
 
-def load_receipts(path: str | Path) -> tuple[str, tuple[MegaReceipt, ...], Mapping[str, Any]]:
+def load_receipts(
+    path: str | Path,
+) -> tuple[str, tuple[MegaReceipt, ...], Mapping[str, Any]]:
     raw = json.loads(Path(path).read_text(encoding="utf-8"))
     if not isinstance(raw, Mapping) or raw.get("schema") != SCHEMA:
         raise ValueError("MEGA8_DEBT_SCHEMA_MISMATCH")
@@ -111,7 +113,9 @@ def load_receipts(path: str | Path) -> tuple[str, tuple[MegaReceipt, ...], Mappi
         receipt = MegaReceipt(
             mega_id=mega_id,
             pr=int(item.get("pr", 0)),
-            merge_commit=_require_sha(item.get("merge_commit"), f"{mega_id}.merge_commit"),
+            merge_commit=_require_sha(
+                item.get("merge_commit"), f"{mega_id}.merge_commit"
+            ),
             merged_at=str(item.get("merged_at", "")),
             dependencies=tuple(deps),
             followup_merge_commits=tuple(
@@ -153,7 +157,9 @@ def audit_receipts(path: str | Path) -> MegaDependencyAudit:
             if parent is None:
                 unresolved.append(f"{mega_id}:{dependency}")
                 continue
-            parent_time = datetime.fromisoformat(parent.merged_at.replace("Z", "+00:00"))
+            parent_time = datetime.fromisoformat(
+                parent.merged_at.replace("Z", "+00:00")
+            )
             if parent_time > current_time:
                 inversions.append(f"{mega_id}:before:{dependency}")
 
@@ -168,7 +174,9 @@ def audit_receipts(path: str | Path) -> MegaDependencyAudit:
     )
 
 
-def verify_current_manifests(root: str | Path, receipt_path: str | Path) -> dict[str, Any]:
+def verify_current_manifests(
+    root: str | Path, receipt_path: str | Path
+) -> dict[str, Any]:
     root_path = Path(root)
     audit = audit_receipts(receipt_path)
     _, _, requalification = load_receipts(receipt_path)

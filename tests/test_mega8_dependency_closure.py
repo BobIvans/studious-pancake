@@ -86,7 +86,9 @@ def test_mega8_07_is_resealed_not_reimplemented() -> None:
     assert payload["dependency_reconciliation"]["mode"] == "RESEALED_CURRENT_HEAD"
 
 
-def test_super02_agg04_code_contract_is_requalified_but_external_evidence_stays_blocked() -> None:
+def test_super02_agg04_code_contract_is_requalified_but_external_evidence_stays_blocked() -> (
+    None
+):
     payload = json.loads(
         (ROOT / "release_artifacts/super/SUPER-02/coverage.json").read_text()
     )

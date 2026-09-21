@@ -1,0 +1,21 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-222",
+  "child_code": "RELEASE-02",
+  "nf": [
+    "NF-637",
+    "NF-638",
+    "NF-639",
+    "NF-640"
+  ],
+  "implementation_status": "IMPLEMENTED_AUDIT_BLOCKED_EXTERNAL",
+  "canonical_owner": "src/mega8_04.py + src/release_gate",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "PR151_221_EXTERNAL_EVIDENCE_NOT_ALL_OPERATIONALLY_QUALIFIED"
+  ]
+}

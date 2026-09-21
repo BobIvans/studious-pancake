@@ -16,7 +16,7 @@ from src.mega8_03.pr197_causal import (
     build_causal_event_graph,
     estimate_transfer_entropy,
     promote_causal_feature,
-    test_event_precedence_hypothesis,
+    test_event_precedence_hypothesis as event_precedence_hypothesis,
 )
 from src.mega8_03.pr198_hawkes import (
     estimate_cross_venue_excitation,
@@ -52,7 +52,7 @@ from src.mega8_03.pr203_model_robustness import (
     detect_distribution_attack,
     generate_adversarial_features,
     quarantine_unsafe_model,
-    test_model_data_poisoning,
+    test_model_data_poisoning as model_data_poisoning,
 )
 from src.mega8_03.pr204_explanations import (
     audit_explanation_stability,
@@ -129,6 +129,16 @@ def test_pr196_conformal_bounds_are_explicit_admission_inputs() -> None:
     assert gate["admitted_offline"] is True
 
 
+def test_pr196_conformal_uses_finite_sample_rank() -> None:
+    net = fit_conformal_net_interval((1, 2, 3, 4), miscoverage_ppm=250_000)
+    latency = fit_conformal_latency_interval(
+        (10, 20, 30, 40), miscoverage_ppm=250_000
+    )
+    assert net["radius_atomic"] == 4
+    assert latency["radius_ns"] == 40
+
+
+
 def test_pr197_causal_outputs_never_claim_causal_truth() -> None:
     graph = build_causal_event_graph(
         (
@@ -141,7 +151,7 @@ def test_pr197_causal_outputs_never_claim_causal_truth() -> None:
         (0, 0, 1, 1, 0, 1),
         (0, 0, 0, 1, 1, 0),
     )
-    precedence = test_event_precedence_hypothesis((1, 10), (2, 11), maximum_lag_ns=2)
+    precedence = event_precedence_hypothesis((1, 10), (2, 11), maximum_lag_ns=2)
     model = promote_causal_feature(
         feature_id="swap-to-liq",
         preregistered=True,
@@ -154,6 +164,19 @@ def test_pr197_causal_outputs_never_claim_causal_truth() -> None:
     assert precedence["precedence_share_ppm"] == 1_000_000
     assert model.parameters["causal_truth_claimed"] is False
     assert_advisory(model)
+
+
+def test_pr197_causal_graph_sorts_by_available_time_not_event_id() -> None:
+    graph = build_causal_event_graph(
+        (
+            {"event_id": "a", "event_type": "later", "available_at_ns": 2},
+            {"event_id": "b", "event_type": "earlier", "available_at_ns": 1},
+        ),
+        maximum_lag_ns=5,
+    )
+    assert graph["nodes"] == ("b", "a")
+    assert graph["precedence_edges"] == (("b", "a", 1),)
+
 
 
 def test_pr198_event_intensity_requires_holdout_gain() -> None:
@@ -242,7 +265,7 @@ def test_pr202_meta_learning_blocks_negative_transfer() -> None:
 
 def test_pr203_model_robustness_can_quarantine() -> None:
     down, up = generate_adversarial_features({"x": 100}, perturbation_ppm=100_000)
-    poison = test_model_data_poisoning((100, 100), (200, 100))
+    poison = model_data_poisoning((100, 100), (200, 100))
     drift = detect_distribution_attack((100, 100), (200, 200))
     quarantine = quarantine_unsafe_model(
         poisoning_shift_ppm=poison["max_score_shift_ppm"],
@@ -287,6 +310,22 @@ def test_pr205_ope_checks_support_instead_of_treating_shadow_as_landed() -> None
     assert ips == 10
     assert dr >= 0
     assert support["supported"] is True
+
+
+def test_pr205_ope_preserves_weight_overflow_for_support_rejection() -> None:
+    weights = compute_importance_weights(
+        (1, 1),
+        (1_000_000, 1_000_000),
+        maximum_weight_ppm=2_000_000,
+    )
+    support = reject_unsupported_policy_shift(
+        weights,
+        maximum_weight_ppm=2_000_000,
+        minimum_effective_sample_ppm=100_000,
+    )
+    assert weights == (2_000_001, 2_000_001)
+    assert support["supported"] is False
+
 
 
 def test_pr206_bandit_has_no_live_actions_and_audits_cost() -> None:

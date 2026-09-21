@@ -12,9 +12,7 @@ def probe_rpc_region_quality(sample: Mapping[str, object]) -> dict[str, object]:
     fork_agreement_ppm = require_ppm(
         sample.get("fork_agreement_ppm", 0), "fork_agreement_ppm"
     )
-    reliability_ppm = require_ppm(
-        sample.get("reliability_ppm", 0), "reliability_ppm"
-    )
+    reliability_ppm = require_ppm(sample.get("reliability_ppm", 0), "reliability_ppm")
     return {
         "region": region,
         "latency_us": latency_us,

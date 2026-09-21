@@ -336,3 +336,4 @@ src/strategy_evolution/residual_discovery.py
 scripts/verify_pr353_strategy_evolution.py
 tests/strategy_evolution/test_pr353_strategy_evolution.py
 tests/strategy_evolution/test_pr353_semantic_conformance.py
+scripts/verify_pr353_semantic_conformance.py

@@ -64,8 +64,8 @@ def route_policy_by_regime(
     policies: Mapping[str, str],
 ) -> ResearchArtifact:
     name = str(regime.payload["regime"])
-    policy = policies.get(name, "no-trade")
     known = name != "unknown" and name in policies
+    policy = policies[name] if known else "no-trade"
     return artifact(
         "regime-policy-route",
         {"regime": name, "policy": policy, "fallback": not known},

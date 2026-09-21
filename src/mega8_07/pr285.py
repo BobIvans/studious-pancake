@@ -1,4 +1,5 @@
 """PR-285 / TERM-01: maturity-aware term-structure research."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -37,7 +38,9 @@ def normalize_fixed_rate_instruments(
 ) -> tuple[FixedRateInstrument, ...]:
     seen: set[str] = set()
     rows: list[FixedRateInstrument] = []
-    for item in sorted(instruments, key=lambda row: (row.asset_id, row.maturity, row.instrument_id)):
+    for item in sorted(
+        instruments, key=lambda row: (row.asset_id, row.maturity, row.instrument_id)
+    ):
         if item.instrument_id in seen:
             raise Mega807Error("DUPLICATE_FIXED_RATE_INSTRUMENT")
         seen.add(item.instrument_id)
@@ -45,9 +48,7 @@ def normalize_fixed_rate_instruments(
     return tuple(rows)
 
 
-def detect_term_basis(
-    left: FixedRateInstrument, right: FixedRateInstrument
-) -> int:
+def detect_term_basis(left: FixedRateInstrument, right: FixedRateInstrument) -> int:
     if left.asset_id != right.asset_id or left.maturity != right.maturity:
         raise Mega807Error("TERM_BASIS_REQUIRES_MATCHED_ASSET_AND_MATURITY")
     left_rate = (left.redemption - left.principal) * 1_000_000 // left.principal

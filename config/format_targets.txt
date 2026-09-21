@@ -315,3 +315,6 @@ tests/execution/test_financing_reconciliation.py
 tests/lending/test_agg03_financing_ports.py
 tests/test_agg03_dependency_resolver.py
 tests/test_agg03_installed_profile_selection.py
+src/mega8_04.py
+scripts/verify_mega8_04.py
+tests/test_mega8_04.py

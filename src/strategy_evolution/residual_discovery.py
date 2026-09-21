@@ -64,6 +64,13 @@ def build_bot_operation_feature_frame(rows: Sequence[Mapping[str, Any]]):
         actual_landed = (
             actual_landed_raw if isinstance(actual_landed_raw, bool) else None
         )
+        label_available_raw = row.get("label_available_at")
+        label_available_at = (
+            None
+            if label_available_raw is None
+            else int(label_available_raw)
+        )
+        censored = bool(row.get("censored", False))
         normalized.append(
             {
                 "operation_id": str(row["operation_id"]),
@@ -74,6 +81,13 @@ def build_bot_operation_feature_frame(rows: Sequence[Mapping[str, Any]]):
                 "realized_net_atoms": realized_net_atoms,
                 "actual_landed": actual_landed,
                 "outcome_missing": realized_net_atoms is None,
+                "label_available_at": label_available_at,
+                "censored": censored,
+                "failure_class": (
+                    None
+                    if row.get("failure_class") is None
+                    else str(row.get("failure_class"))
+                ),
             }
         )
     return result(
@@ -82,6 +96,53 @@ def build_bot_operation_feature_frame(rows: Sequence[Mapping[str, Any]]):
             "rows": tuple(normalized),
             "row_count": len(normalized),
             "negative_or_rejected_rows": rejected,
+        },
+    )
+
+
+def select_training_labels_as_of(
+    rows: Sequence[Mapping[str, Any]],
+    *,
+    training_cutoff: int,
+):
+    cutoff = int(training_cutoff)
+    if cutoff < 0:
+        raise EvolutionError("TRAINING_CUTOFF_INVALID")
+    selected = []
+    missing = 0
+    censored = 0
+    future = 0
+    for row in rows:
+        realized = row.get("realized_net_atoms")
+        available_at = row.get("label_available_at")
+        if row.get("censored"):
+            censored += 1
+            continue
+        if realized is None or available_at is None:
+            missing += 1
+            continue
+        available = int(available_at)
+        if available > cutoff:
+            future += 1
+            continue
+        selected.append(
+            {
+                "operation_id": str(row.get("operation_id", "")),
+                "realized_net_atoms": int(realized),
+                "label_available_at": available,
+                "disposition": str(row.get("disposition", "UNKNOWN")),
+            }
+        )
+    return result(
+        "select_training_labels_as_of",
+        {
+            "training_cutoff": cutoff,
+            "rows": tuple(selected),
+            "selected_count": len(selected),
+            "missing_preserved": missing,
+            "censored_preserved": censored,
+            "future_labels_excluded": future,
+            "label_leakage": False,
         },
     )
 

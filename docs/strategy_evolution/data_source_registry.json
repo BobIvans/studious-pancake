@@ -1,0 +1,50 @@
+{
+  "schema_version": "pr353.data-source-registry.v1",
+  "sources": [
+    {
+      "source_id": "canonical_market_events",
+      "official_endpoint_or_repository": "existing governed provider/data plane",
+      "owner": "existing provider/data owners",
+      "chain_domain": "MULTI",
+      "schema_version": "existing",
+      "access_class": "CANONICAL_READ_ONLY",
+      "license_tos_review_state": "EXISTING_OWNER",
+      "cost_class": "EXISTING_BUDGET",
+      "rate_limit": "EXISTING_OWNER",
+      "freshness_sla": "EXISTING_OWNER",
+      "finality_semantics": "EXPLICIT_PER_EVENT",
+      "retention_class": "PERMITTED_DERIVED_DATA",
+      "redaction_policy": "NO_SECRETS_OR_PRIVATE_ORDER_FLOW"
+    },
+    {
+      "source_id": "canonical_bot_telemetry",
+      "official_endpoint_or_repository": "existing evidence/outcome stores",
+      "owner": "existing evidence owners",
+      "chain_domain": "INTERNAL",
+      "schema_version": "existing",
+      "access_class": "LOCAL_READ_ONLY",
+      "license_tos_review_state": "INTERNAL",
+      "cost_class": "LOCAL",
+      "rate_limit": "N/A",
+      "freshness_sla": "EVENT_TIME",
+      "finality_semantics": "OUTCOME_SPECIFIC",
+      "retention_class": "AGGREGATED_REDACTED",
+      "redaction_policy": "DROP_KEYS_HEADERS_SIGNED_TX_PII"
+    },
+    {
+      "source_id": "synthetic_redacted_fixtures",
+      "official_endpoint_or_repository": "tests/strategy_evolution",
+      "owner": "PR-353 tests",
+      "chain_domain": "SYNTHETIC",
+      "schema_version": "v1",
+      "access_class": "OFFLINE",
+      "license_tos_review_state": "LOCAL",
+      "cost_class": "LOCAL",
+      "rate_limit": "N/A",
+      "freshness_sla": "FIXED",
+      "finality_semantics": "SYNTHETIC_LABEL",
+      "retention_class": "PERMANENT_FIXTURE",
+      "redaction_policy": "NO_REAL_SECRET_PRIVATE_OR_PAID_PAYLOAD"
+    }
+  ]
+}

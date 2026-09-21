@@ -1,0 +1,225 @@
+{
+  "schema_version": "pr353.evidence.v1",
+  "base_sha": "3a76a1a46553f35bc141d406e4f9fcb89c992c99",
+  "implementation_head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed",
+  "formatting_commit_sha": "99ada62cea51c4a5e86aa0383229381217d449b5",
+  "prior_evidence_refresh_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed",
+  "tested_head_sha": "06be960bdd396a173092baa23e8d47c0c915cb3c",
+  "evidence_state": "INTEGRATED_CURRENT_MAIN_VALIDATED_PASS",
+  "environment": {
+    "expected_python": "3.13.13",
+    "execution_authority": "GitHub Actions on PR head",
+    "source_copy_performed": false,
+    "final_validation_required_after_evidence_update": true
+  },
+  "workflow_evidence": {
+    "dedicated": {
+      "run_id": 35554977012,
+      "name": "PR-353 strategy evolution",
+      "head_sha": "06be960bdd396a173092baa23e8d47c0c915cb3c",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-21T02:40:56Z",
+      "completed_at": "2026-09-21T02:42:13Z"
+    },
+    "repository_ci": {
+      "run_id": 35554976967,
+      "name": "CI",
+      "head_sha": "06be960bdd396a173092baa23e8d47c0c915cb3c",
+      "status": "completed",
+      "conclusion": "success",
+      "started_at": "2026-09-21T02:40:56Z",
+      "completed_at": "2026-09-21T02:44:40Z"
+    }
+  },
+  "command_results": [
+    {
+      "command": "python scripts/verify_pr353_strategy_evolution.py --json",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:42:45Z",
+      "workflow_run_id": 35555006710,
+      "head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed"
+    },
+    {
+      "command": "python -m pytest -q tests/strategy_evolution --disable-socket --allow-unix-socket",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:42:45Z",
+      "workflow_run_id": 35555006710,
+      "head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed"
+    },
+    {
+      "command": "python -m pytest -q tests/test_agg10_intelligence.py tests/test_ultimate_mega1.py --disable-socket --allow-unix-socket",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:42:45Z",
+      "workflow_run_id": 35555006710,
+      "head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed"
+    },
+    {
+      "command": "python scripts/verify_repo.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:46:51Z",
+      "workflow_run_id": 35555006654,
+      "head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed"
+    }
+  ],
+  "package_states": {
+    "EVO-01": "DISABLED",
+    "EVO-02": "DISABLED",
+    "EVO-03": "DISABLED",
+    "EVO-04": "DISABLED",
+    "EVO-05": "DISABLED",
+    "EVO-06": "DISABLED",
+    "EVO-07": "DISABLED",
+    "EVO-08": "DISABLED",
+    "EVO-09": "DISABLED"
+  },
+  "artifact_hashes": [
+    {
+      "path": "src/strategy_evolution/core.py",
+      "git_blob_sha1": "53b7be4290891e34813db4c24d30c81079be1963"
+    },
+    {
+      "path": "src/strategy_evolution/manifest.py",
+      "git_blob_sha1": "4a87c3a936d015a45ed4286f423ff2314883591a"
+    },
+    {
+      "path": "src/strategy_evolution/residual_discovery.py",
+      "git_blob_sha1": "f78b70511cebb7edf20779dc4afb26f02312ae65"
+    },
+    {
+      "path": "config/strategy_evolution.json",
+      "git_blob_sha1": "0f075584a5007065b5e897cc33c8c2eaedd76e6a"
+    },
+    {
+      "path": "scripts/verify_pr353_strategy_evolution.py",
+      "git_blob_sha1": "78700fc2fd1d654a19bf5ddebd4696df92fec152"
+    },
+    {
+      "path": "tests/strategy_evolution/test_pr353_strategy_evolution.py",
+      "git_blob_sha1": "64b909a9385496ebe7992adc7d2e4ddafecca523"
+    },
+    {
+      "path": "docs/roadmap/pr353_non_duplication.md",
+      "git_blob_sha1": "214e24ac898437fda3dc002ef350c7a677381e6b"
+    },
+    {
+      "path": "docs/strategy_evolution/source_provenance.json",
+      "git_blob_sha1": "cc454b33274fd286666c4e7fbbfc375cbf471fa2"
+    },
+    {
+      "path": "scripts/verify_repo.py",
+      "git_blob_sha1": "49551b34709efba9ce8cb2021c5709f272a1f2d6"
+    },
+    {
+      "path": "src/release_gate/pr353_strategy_closure.py",
+      "git_blob_sha1": "53db4d0ae75dcbb0266572dd472977e76a92fc80"
+    },
+    {
+      "path": "scripts/verify_pr353_strategy_closure.py",
+      "git_blob_sha1": "c0a7309729a6ada338f242d434fa30c4542ded99"
+    }
+  ],
+  "source_provenance_status": "REFERENCE_ONLY_NO_EXTERNAL_SOURCE_COPY",
+  "anomaly_coverage_status": "EXPLICIT_UNKNOWN_AND_BLIND_SPOTS_RETAINED",
+  "accepted_hypotheses": [],
+  "rejected_hypotheses": [],
+  "live_authority_introduced": false,
+  "signing_introduced": false,
+  "submission_introduced": false,
+  "auto_promotion_introduced": false,
+  "production_ready_claimed": false,
+  "universal_anomaly_detection_claimed": false,
+  "note": "Commands above passed on tested_head_sha. The evidence-only head that contains this manifest must also pass exact-head CI before merge.",
+  "validated_code_head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed",
+  "recorded_reason": "PR-353 strategy-evolution code plus merged current-main PR-353 final-closure authority passed all triggered workflows on integrated head 8e05695c3244ebf6af16f4aaff8461329939e435. This commit only seals evidence metadata; the resulting head must pass one final exact-head cycle before merge.",
+  "validation_runs": {
+    "pr353_strategy_evolution": {
+      "workflow_run_id": 35555006710,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-09-21T02:42:45Z",
+      "validated_head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed"
+    },
+    "repository_ci": {
+      "workflow_run_id": 35555006654,
+      "status": "completed",
+      "conclusion": "success",
+      "completed_at": "2026-09-21T02:46:51Z",
+      "validated_head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed"
+    },
+    "release_authority": {
+      "workflow_run_id": 35555006689,
+      "status": "completed",
+      "conclusion": "success",
+      "validated_head_sha": "cc6a7cec24e6a183c28f57d20866adf121ae87ed"
+    }
+  },
+  "evidence_update_scope": "METADATA_ONLY_AFTER_CURRENT_MAIN_INTEGRATED_VALIDATION",
+  "integrated_main_sha": "97da8f769135ebf3c35b9695e43dfb62ea386f50",
+  "integrated_head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435",
+  "integrated_validation_runs": {
+    "pr353_strategy_evolution": {
+      "workflow_run_id": 35555638872,
+      "conclusion": "success",
+      "completed_at": "2026-09-21T02:54:30Z",
+      "head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435"
+    },
+    "pr353_final_strategy_closure": {
+      "workflow_run_id": 35555638877,
+      "conclusion": "success",
+      "completed_at": "2026-09-21T02:54:08Z",
+      "head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435"
+    },
+    "repository_ci": {
+      "workflow_run_id": 35555638860,
+      "conclusion": "success",
+      "completed_at": "2026-09-21T02:56:58Z",
+      "head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435"
+    },
+    "release_authority": {
+      "workflow_run_id": 35555638919,
+      "conclusion": "success",
+      "completed_at": "2026-09-21T02:54:31Z",
+      "head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435"
+    }
+  },
+  "integrated_command_results": [
+    {
+      "command": "python scripts/verify_pr353_strategy_evolution.py --json",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:54:30Z",
+      "workflow_run_id": 35555638872,
+      "head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435"
+    },
+    {
+      "command": "python scripts/verify_pr353_strategy_closure.py --json",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:54:08Z",
+      "workflow_run_id": 35555638877,
+      "head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435"
+    },
+    {
+      "command": "python scripts/verify_repo.py",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:56:58Z",
+      "workflow_run_id": 35555638860,
+      "head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435"
+    },
+    {
+      "command": "Release authority",
+      "status": "PASS",
+      "exit_code": 0,
+      "timestamp": "2026-09-21T02:54:31Z",
+      "workflow_run_id": 35555638919,
+      "head_sha": "8e05695c3244ebf6af16f4aaff8461329939e435"
+    }
+  ],
+  "final_exact_head_validation_required": true
+}

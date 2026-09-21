@@ -1,0 +1,99 @@
+{
+  "schema_version": "pr353.strategy-evolution.config.v1",
+  "implementation_base_sha": "3a76a1a46553f35bc141d406e4f9fcb89c992c99",
+  "packages": {
+    "EVO-01": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "EVO-02": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "EVO-03": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "EVO-04": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "EVO-05": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "EVO-06": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "EVO-07": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "EVO-08": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "EVO-09": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    }
+  },
+  "effect_boundary": {
+    "signing": false,
+    "submission": false,
+    "relayer": false,
+    "raw_transaction_builder": false,
+    "key_loader": false,
+    "live_permission": false,
+    "auto_promotion": false,
+    "remote_mutation": false
+  },
+  "marginfi": "PAUSED",
+  "slumlord_low_capital_requirement": "PRESERVED"
+}

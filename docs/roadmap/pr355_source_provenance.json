@@ -1,0 +1,88 @@
+{
+  "schema_version": "pr355.source-provenance.v1",
+  "copy_or_port_performed": false,
+  "policy": "REFERENCE_ONLY until immutable pin/version, exact artifact, license/terms/entitlement and conformance evidence are admitted.",
+  "rows": [
+    {
+      "source": "Pendle Boros docs and historical data",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "PIN_OR_DATASET_VERSION_REQUIRED",
+      "license_decision": "REVERIFY_DOCS_DATA_TERMS",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    },
+    {
+      "source": "Arrakis HOT whitepaper/deployed interfaces",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "PIN_AND_DEPLOYMENT_REQUIRED",
+      "license_decision": "REVERIFY_EXACT_CODE_LICENSE",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    },
+    {
+      "source": "Bunni v2 LDF docs/source",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "PIN_REQUIRED",
+      "license_decision": "INCIDENT_REFERENCE_ONLY_LICENSE_REVIEW_REQUIRED",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    },
+    {
+      "source": "M0 protocol/extensions",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "PIN_AND_SCHEMA_REQUIRED",
+      "license_decision": "REVERIFY_EXACT_ARTIFACT_LICENSE",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    },
+    {
+      "source": "Ethena docs",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "DOC_VERSION_REQUIRED",
+      "license_decision": "DOCS_NOT_CODE_PERMISSION",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    },
+    {
+      "source": "Centrifuge docs",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "DOC_OR_API_VERSION_REQUIRED",
+      "license_decision": "REVERIFY_TERMS_AND_DATA_RIGHTS",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    },
+    {
+      "source": "Aave Horizon and Aave V4 SDK/architecture",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "PIN_AND_DEPLOYMENT_REQUIRED",
+      "license_decision": "REVERIFY_FILE_LEVEL_LICENSE",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    },
+    {
+      "source": "x402 Foundation SDK/spec",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "PIN_OR_SPEC_VERSION_REQUIRED",
+      "license_decision": "MOCK_TESTNET_ONLY_IN_PR355",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    },
+    {
+      "source": "Succinct SP1 / contract-call tooling",
+      "reuse_mode": "REFERENCE_ONLY",
+      "pin": "PIN_REQUIRED",
+      "license_decision": "OPTIONAL_MOCK_PROOF_ONLY_IN_PR355",
+      "entitlement": "NOT_ACTIVATED",
+      "source_copy_allowed": false,
+      "remote_action_performed": false
+    }
+  ]
+}

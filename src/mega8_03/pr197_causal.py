@@ -23,7 +23,7 @@ def build_causal_event_graph(
             integer(row.get("available_at_ns"), "available_at_ns", minimum=0),
         )
         for row in events
-    )
+    , key=lambda item: (item[2], item[0], item[1]))
     if any(not event_id or not event_type for event_id, event_type, _ in ordered):
         raise ValueError("event identity/type is required")
     edges: list[tuple[str, str, int]] = []

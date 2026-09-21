@@ -1,0 +1,321 @@
+{
+  "mega_id": "MEGA8-06",
+  "title": "Microstructure, portfolio risk and network execution intelligence",
+  "roadmap_children": [
+    "PR-255",
+    "PR-256",
+    "PR-257",
+    "PR-258",
+    "PR-259",
+    "PR-260",
+    "PR-261",
+    "PR-262",
+    "PR-263",
+    "PR-264",
+    "PR-265",
+    "PR-266",
+    "PR-267",
+    "PR-268",
+    "PR-269",
+    "PR-270"
+  ],
+  "nf_range": "NF-705..NF-768",
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "BLOCKED_DEPENDENCIES_AND_EXTERNAL_EVIDENCE",
+  "activation": "DEFAULT_OFF",
+  "production_ready": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "automatic_capital_increase": false,
+  "source_copy": "NONE",
+  "upstream_policy": "REFERENCE_ONLY_PENDING_IMMUTABLE_PIN_LICENSE_AND_CONFORMANCE",
+  "branch_base_sha": "17b9d9533ef7ab93c30b657aed40dc7c5248d5ba",
+  "dependency_snapshot": {
+    "MEGA8-01": {
+      "status": "BRANCH_OBSERVED_NOT_MERGED",
+      "ref": "codex/mega8-01-151-162"
+    },
+    "MEGA8-02": {
+      "status": "MERGED",
+      "ref": "GitHub PR #523"
+    },
+    "MEGA8-03": {
+      "status": "OPEN",
+      "ref": "GitHub PR #521"
+    },
+    "MEGA8-04": {
+      "status": "OPEN",
+      "ref": "GitHub PR #522"
+    },
+    "MEGA8-05": {
+      "status": "OPEN",
+      "ref": "GitHub PR #524"
+    }
+  },
+  "children": [
+    {
+      "roadmap_pr": "PR-255",
+      "label": "MICRO-01",
+      "nf_ids": [
+        "NF-705",
+        "NF-706",
+        "NF-707",
+        "NF-708"
+      ],
+      "owner_path": "src/mega8_06/pr255.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-256",
+      "label": "IMPACT-01",
+      "nf_ids": [
+        "NF-709",
+        "NF-710",
+        "NF-711",
+        "NF-712"
+      ],
+      "owner_path": "src/mega8_06/pr256.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-257",
+      "label": "TCA-01",
+      "nf_ids": [
+        "NF-713",
+        "NF-714",
+        "NF-715",
+        "NF-716"
+      ],
+      "owner_path": "src/mega8_06/pr257.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-258",
+      "label": "PORTFOLIO-02",
+      "nf_ids": [
+        "NF-717",
+        "NF-718",
+        "NF-719",
+        "NF-720"
+      ],
+      "owner_path": "src/mega8_06/pr258.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-259",
+      "label": "RUIN-01",
+      "nf_ids": [
+        "NF-721",
+        "NF-722",
+        "NF-723",
+        "NF-724"
+      ],
+      "owner_path": "src/mega8_06/pr259.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-260",
+      "label": "TAIL-01",
+      "nf_ids": [
+        "NF-725",
+        "NF-726",
+        "NF-727",
+        "NF-728"
+      ],
+      "owner_path": "src/mega8_06/pr260.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-261",
+      "label": "COUNTERPARTY-01",
+      "nf_ids": [
+        "NF-729",
+        "NF-730",
+        "NF-731",
+        "NF-732"
+      ],
+      "owner_path": "src/mega8_06/pr261.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-262",
+      "label": "ECON-02",
+      "nf_ids": [
+        "NF-733",
+        "NF-734",
+        "NF-735",
+        "NF-736"
+      ],
+      "owner_path": "src/mega8_06/pr262.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-263",
+      "label": "NETWORK-01",
+      "nf_ids": [
+        "NF-737",
+        "NF-738",
+        "NF-739",
+        "NF-740"
+      ],
+      "owner_path": "src/mega8_06/pr263.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-264",
+      "label": "NETWORK-02",
+      "nf_ids": [
+        "NF-741",
+        "NF-742",
+        "NF-743",
+        "NF-744"
+      ],
+      "owner_path": "src/mega8_06/pr264.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-265",
+      "label": "NETWORK-03",
+      "nf_ids": [
+        "NF-745",
+        "NF-746",
+        "NF-747",
+        "NF-748"
+      ],
+      "owner_path": "src/mega8_06/pr265.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-266",
+      "label": "SUBMIT-03",
+      "nf_ids": [
+        "NF-749",
+        "NF-750",
+        "NF-751",
+        "NF-752"
+      ],
+      "owner_path": "src/mega8_06/pr266.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-267",
+      "label": "MEV-02",
+      "nf_ids": [
+        "NF-753",
+        "NF-754",
+        "NF-755",
+        "NF-756"
+      ],
+      "owner_path": "src/mega8_06/pr267.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-268",
+      "label": "ORDERFLOW-02",
+      "nf_ids": [
+        "NF-757",
+        "NF-758",
+        "NF-759",
+        "NF-760"
+      ],
+      "owner_path": "src/mega8_06/pr268.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-269",
+      "label": "RL-EXEC-01",
+      "nf_ids": [
+        "NF-761",
+        "NF-762",
+        "NF-763",
+        "NF-764"
+      ],
+      "owner_path": "src/mega8_06/pr269.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    },
+    {
+      "roadmap_pr": "PR-270",
+      "label": "RL-BID-01",
+      "nf_ids": [
+        "NF-765",
+        "NF-766",
+        "NF-767",
+        "NF-768"
+      ],
+      "owner_path": "src/mega8_06/pr270.py",
+      "status": "IMPLEMENTED_OFFLINE",
+      "tests": [
+        "tests/test_mega8_06.py"
+      ],
+      "effect_boundary": "NO_SIGN_NO_SEND_NO_REMOTE_MUTATION"
+    }
+  ],
+  "residual_blockers": [
+    "Earlier-wave roadmap dependencies are not all merged/qualified on this base.",
+    "No live provider/leader/TPU/block-engine experiment is run by this code slice.",
+    "No real-money offline-RL exploration is permitted or used as evidence.",
+    "Transport receipts remain advisory until canonical finalized settlement.",
+    "External upstream candidates remain unpinned references; no source code is copied."
+  ]
+}

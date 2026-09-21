@@ -161,6 +161,7 @@ def test_nf272_evm_cycle_requires_state_continuity_and_gas() -> None:
         7,
         True,
         True,
+        1,
     )
     assert qualify_evm_cycle(good).admitted
 
@@ -178,6 +179,84 @@ def test_nf272_evm_cycle_requires_state_continuity_and_gas() -> None:
     decision = qualify_evm_cycle(bad)
     assert "LEG_1_SHARED_RESOURCE_STATE_RESET" in decision.blockers
     assert "EVM_GAS_NOT_FUNDED" in decision.blockers
+
+    losing = replace(
+        good,
+        legs=(
+            legs[0],
+            replace(legs[1], guaranteed_out=1),
+        ),
+        conservative_net_base_units=7,
+    )
+    losing_decision = qualify_evm_cycle(losing)
+    assert "EVM_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in losing_decision.blockers
+    assert "EVM_CONSERVATIVE_NET_NONPOSITIVE" in losing_decision.blockers
+
+    gas_dominated = replace(
+        good,
+        gas_cost_base_units=20,
+        conservative_net_base_units=1,
+    )
+    gas_dominated_decision = qualify_evm_cycle(gas_dominated)
+    assert "EVM_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in gas_dominated_decision.blockers
+    assert "EVM_CONSERVATIVE_NET_NONPOSITIVE" in gas_dominated_decision.blockers
+
+    gas_unproven = replace(good, gas_cost_base_units=None)
+    assert "EVM_GAS_COST_UNPROVEN" in qualify_evm_cycle(gas_unproven).blockers
+
+    decimal_mismatch = replace(
+        good,
+        legs=(
+            legs[0],
+            replace(
+                legs[1],
+                input_asset=ChainAsset(
+                    "chain-a",
+                    ChainDialect.EVM,
+                    "B",
+                    6,
+                    "g1",
+                ),
+            ),
+        ),
+    )
+    assert (
+        "LEG_1_ASSET_CONTINUITY_BROKEN" in qualify_evm_cycle(decimal_mismatch).blockers
+    )
+
+    ambiguous_identity = replace(
+        good,
+        legs=(
+            replace(
+                legs[0],
+                output_asset=ChainAsset(
+                    "chain-a",
+                    ChainDialect.EVM,
+                    "TOKEN",
+                    6,
+                    "18:g1",
+                ),
+            ),
+            replace(
+                legs[1],
+                input_asset=ChainAsset(
+                    "chain-a",
+                    ChainDialect.EVM,
+                    "TOKEN:6",
+                    18,
+                    "g1",
+                ),
+            ),
+        ),
+    )
+    assert (
+        ambiguous_identity.legs[0].output_asset.identity
+        == ambiguous_identity.legs[1].input_asset.identity
+    )
+    assert (
+        "LEG_1_ASSET_CONTINUITY_BROKEN"
+        in qualify_evm_cycle(ambiguous_identity).blockers
+    )
 
 
 def collateral(mechanism: str) -> CollateralFirstEvidence:
@@ -245,10 +324,7 @@ def test_nf276_bold_basket_requires_every_component_exit() -> None:
             ),
         ),
     )
-    assert (
-        "BASKET_COMPONENT_1_EXIT_UNKNOWN"
-        in qualify_bold_basket(bad).blockers
-    )
+    assert "BASKET_COMPONENT_1_EXIT_UNKNOWN" in qualify_bold_basket(bad).blockers
 
 
 def test_nf277_eulerswap_checks_capacity_and_repayment() -> None:
@@ -272,7 +348,11 @@ def test_nf277_eulerswap_checks_capacity_and_repayment() -> None:
     )
     decision = qualify_eulerswap(bad)
     assert "EULERSWAP_CAPACITY_EXCEEDED" in decision.blockers
+    assert "EULERSWAP_REPAYMENT_BELOW_BORROW" in decision.blockers
     assert "EULERSWAP_RESIDUAL_DEBT" in decision.blockers
+
+    underpaid = replace(good, repay_base_units=0)
+    assert "EULERSWAP_REPAYMENT_BELOW_BORROW" in qualify_eulerswap(underpaid).blockers
 
 
 def test_nf278_erc4626_preview_does_not_override_capacity() -> None:
@@ -297,10 +377,7 @@ def test_nf278_erc4626_preview_does_not_override_capacity() -> None:
         executable_redeem_assets=111,
     )
     decision = qualify_erc4626(bad)
-    assert (
-        "ERC4626_ASYNC_REDEEM_NOT_ATOMIC_EXIT"
-        in decision.blockers
-    )
+    assert "ERC4626_ASYNC_REDEEM_NOT_ATOMIC_EXIT" in decision.blockers
     assert "ERC4626_REDEEM_EXCEEDS_CAPACITY" in decision.blockers
 
 
@@ -325,10 +402,7 @@ def test_nf279_directional_fee_requires_active_rule_and_state() -> None:
     )
     decision = qualify_stablesurge(bad)
     assert "DYNAMIC_FEE_RULE_INACTIVE" in decision.blockers
-    assert (
-        "DYNAMIC_FEE_STATE_TRANSITION_UNPROVEN"
-        in decision.blockers
-    )
+    assert "DYNAMIC_FEE_STATE_TRANSITION_UNPROVEN" in decision.blockers
 
 
 def test_nf280_netting_savings_are_not_spread() -> None:
@@ -346,10 +420,7 @@ def test_nf280_netting_savings_are_not_spread() -> None:
         good,
         gross_external_spread_base_units=0,
     )
-    assert (
-        "NETTING_SAVINGS_ARE_NOT_SPREAD"
-        in qualify_netting(bad).blockers
-    )
+    assert "NETTING_SAVINGS_ARE_NOT_SPREAD" in qualify_netting(bad).blockers
 
 
 def test_nf281_pendle_excludes_future_yield_from_atomic_net() -> None:
@@ -372,10 +443,7 @@ def test_nf281_pendle_excludes_future_yield_from_atomic_net() -> None:
         atomic_surplus_base_units=0,
         future_yield_units=1_000_000,
     )
-    assert (
-        "PENDLE_ATOMIC_NET_NONPOSITIVE"
-        in qualify_pendle(bad).blockers
-    )
+    assert "PENDLE_ATOMIC_NET_NONPOSITIVE" in qualify_pendle(bad).blockers
 
 
 def test_nf282_flashmint_enforces_cap_capacity_and_burn() -> None:
@@ -434,10 +502,7 @@ def test_nf283_llamma_requires_every_component_and_deployment() -> None:
             ),
         ),
     )
-    assert (
-        "LLAMMA_COMPONENT_0_EXIT_UNKNOWN"
-        in qualify_llamma(bad).blockers
-    )
+    assert "LLAMMA_COMPONENT_0_EXIT_UNKNOWN" in qualify_llamma(bad).blockers
 
 
 def test_nf284_intent_validates_signature_expiry_and_costs() -> None:
@@ -494,10 +559,7 @@ def test_nf285_optin_backrun_requires_consent_and_safe_mev() -> None:
     decision = qualify_optin_backrun(bad)
     assert "BACKRUN_RELAY_NOT_CURRENT" in decision.blockers
     assert "BACKRUN_SANDWICH_FORBIDDEN" in decision.blockers
-    assert (
-        "BACKRUN_ORACLE_MANIPULATION_FORBIDDEN"
-        in decision.blockers
-    )
+    assert "BACKRUN_ORACLE_MANIPULATION_FORBIDDEN" in decision.blockers
 
 
 def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
@@ -507,7 +569,7 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
             "USDC",
             before=H1,
             after=H2,
-            shared="book",
+            shared="0x1",
             dialect=ChainDialect.SUI,
             family="deepbook",
         ),
@@ -516,7 +578,7 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
             "SUI",
             before=H2,
             after=H3,
-            shared="book",
+            shared="0x1",
             dialect=ChainDialect.SUI,
             family="cetus",
         ),
@@ -528,6 +590,8 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
             2,
             1000,
             900,
+            H1,
+            H2,
         ),
         SuiObjectTransition(
             "0x1",
@@ -535,6 +599,8 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
             3,
             900,
             850,
+            H2,
+            H3,
         ),
     )
     good = SuiCycleEvidence(
@@ -546,7 +612,8 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
         50,
         40,
         5,
-        10,
+        4,
+        1,
     )
     assert qualify_sui_book(good).admitted
 
@@ -564,13 +631,110 @@ def test_nf286_sui_checks_object_versions_gas_and_repayment() -> None:
         gas_budget_units=10,
     )
     decision = qualify_sui_book(bad)
-    assert (
-        "SUI_OBJECT_1_VERSION_CHAIN_BROKEN"
-        in decision.blockers
-    )
+    assert "SUI_OBJECT_1_VERSION_CHAIN_BROKEN" in decision.blockers
     assert "SUI_OBJECT_1_LIQUIDITY_RESET" in decision.blockers
     assert "SUI_BORROW_NOT_REPAID" in decision.blockers
     assert "SUI_GAS_NOT_FUNDED" in decision.blockers
+
+    missing_objects = replace(good, object_transitions=())
+    missing_decision = qualify_sui_book(missing_objects)
+    assert "SUI_OBJECT_TRANSITIONS_MISSING" in missing_decision.blockers
+    assert any(
+        blocker.startswith("SUI_SHARED_RESOURCE_TRANSITION_MISSING:")
+        for blocker in missing_decision.blockers
+    )
+
+    incomplete_objects = replace(
+        good,
+        object_transitions=(transitions[0],),
+    )
+    incomplete_decision = qualify_sui_book(incomplete_objects)
+    assert (
+        "SUI_SHARED_RESOURCE_TRANSITION_COUNT_MISMATCH" in incomplete_decision.blockers
+    )
+    assert (
+        "SUI_SHARED_RESOURCE_TRANSITION_MISSING:1:0x1" in incomplete_decision.blockers
+    )
+
+    surplus_objects = replace(
+        good,
+        object_transitions=(
+            transitions[0],
+            transitions[1],
+            SuiObjectTransition(
+                "0x1",
+                3,
+                4,
+                850,
+                800,
+                H3,
+                H4,
+            ),
+        ),
+    )
+    surplus_decision = qualify_sui_book(surplus_objects)
+    assert "SUI_SHARED_RESOURCE_TRANSITION_COUNT_MISMATCH" in surplus_decision.blockers
+
+    losing = replace(
+        good,
+        route_legs=(
+            legs[0],
+            replace(legs[1], guaranteed_out=90),
+        ),
+        conservative_net_base_units=5,
+    )
+    losing_decision = qualify_sui_book(losing)
+    assert "SUI_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in losing_decision.blockers
+    assert "SUI_CONSERVATIVE_NET_NONPOSITIVE" in losing_decision.blockers
+
+    gas_dominated = replace(
+        good,
+        gas_cost_base_units=20,
+        conservative_net_base_units=1,
+    )
+    gas_dominated_decision = qualify_sui_book(gas_dominated)
+    assert "SUI_CLAIMED_NET_EXCEEDS_ROUTE_BOUND" in gas_dominated_decision.blockers
+    assert "SUI_CONSERVATIVE_NET_NONPOSITIVE" in gas_dominated_decision.blockers
+
+    gas_unproven = replace(good, gas_cost_base_units=None)
+    assert "SUI_GAS_COST_UNPROVEN" in qualify_sui_book(gas_unproven).blockers
+
+    unrelated_state = replace(
+        good,
+        object_transitions=(
+            replace(transitions[0], state_after_sha256=H4),
+            transitions[1],
+        ),
+    )
+    unrelated_decision = qualify_sui_book(unrelated_state)
+    assert "SUI_OBJECT_0_STATE_AFTER_MISMATCH" in unrelated_decision.blockers
+
+    unchanged_snapshots = replace(
+        good,
+        route_legs=(
+            replace(legs[0], state_after_sha256=H1),
+            replace(
+                legs[1],
+                state_before_sha256=H1,
+                state_after_sha256=H1,
+            ),
+        ),
+        object_transitions=(
+            replace(
+                transitions[0],
+                state_before_sha256=H1,
+                state_after_sha256=H1,
+            ),
+            replace(
+                transitions[1],
+                state_before_sha256=H1,
+                state_after_sha256=H1,
+            ),
+        ),
+    )
+    unchanged_decision = qualify_sui_book(unchanged_snapshots)
+    assert "SUI_OBJECT_0_STATE_NOT_ADVANCED" in unchanged_decision.blockers
+    assert "SUI_OBJECT_1_STATE_NOT_ADVANCED" in unchanged_decision.blockers
 
 
 def test_nf287_sui_fee_chooses_best_net_not_highest_bid() -> None:
@@ -593,9 +757,23 @@ def test_nf287_sui_fee_chooses_best_net_not_highest_bid() -> None:
     )
     assert stale.option is None
     assert "SUI_FEE_RULE_INACTIVE" in stale.decision.blockers
+    assert "SUI_FEE_RULE_GENERATION_STALE" in stale.decision.blockers
+
+    active_single = choose_sui_gas_option(
+        (low,),
+        fee_rule_active=True,
+        deployment_generation="g1",
+        fee_rule_generation="g1",
+    )
+    inactive_single = choose_sui_gas_option(
+        (low,),
+        fee_rule_active=False,
+        deployment_generation="g1",
+        fee_rule_generation="g1",
+    )
     assert (
-        "SUI_FEE_RULE_GENERATION_STALE"
-        in stale.decision.blockers
+        active_single.decision.evidence_digest
+        != inactive_single.decision.evidence_digest
     )
 
 

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 from src.config.runtime import load_runtime_config
+from src.execution.economic_reconciliation import ReconciliationStatus
 from src.execution.financing_evidence import (
     FinalizedFinancingEvidence,
     FinancingRepaymentEvidence,
@@ -20,6 +22,7 @@ from src.lending.financing import (
 )
 from src.lending.jupiter_lend import JUPITER_LEND_FLASHLOAN_PROGRAM_ID
 from src.lending.slumlord import SLUMLORD_PROGRAM_ID
+from src.paper_shadow.exact_attempt_pr152 import ExactPaperAttemptOrchestrator
 from src.production_debt_profiles import evaluate_core_v1_profile_debt
 from src.runtime.core_v1_composition import build_core_v1_composition
 from src.runtime.core_v1_materializer import (
@@ -235,7 +238,7 @@ def test_legacy_marginfi_profile_rejects_generation_two() -> None:
         )
 
 
-def test_non_marginfi_profile_cannot_qualify_before_composition_adapter(
+def test_non_marginfi_profile_code_is_composed_but_external_evidence_still_blocks(
     tmp_path: Path,
 ) -> None:
     root = Path(".").resolve()
@@ -258,10 +261,56 @@ def test_non_marginfi_profile_cannot_qualify_before_composition_adapter(
         str(item.get("reason", ""))
         for item in report.implementation_blockers + report.external_or_review_blockers
     }
-    assert "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED" in reasons
+    assert "CORE_V1_FINANCING_ADAPTER_NOT_COMPOSED" not in reasons
     assert "CORE_V1_FINANCING_EVIDENCE_NOT_QUALIFIED" in reasons
+    assert "CORE_V1_FINANCING_REPAYMENT_DECODER_NOT_QUALIFIED" in reasons
     assert report.paper_qualified is False
     assert report.eligible_for_production_default_off_review is False
+
+
+def test_generic_final_vertical_binds_provider_program_evidence_hash() -> None:
+    request = SimpleNamespace(
+        provider_evidence=SimpleNamespace(
+            jupiter_contract_pin=SHA_A,
+            financing_lender="jupiter-lend",
+            financing_program_id="program",
+            financing_program_hash=SHA_B,
+        ),
+        capital_candidate=SimpleNamespace(candidate_id="opportunity-1"),
+    )
+    provenance = SimpleNamespace(
+        jupiter_contract_pin=SHA_A,
+        financing_lender="jupiter-lend",
+        financing_program_id="program",
+        financing_evidence_hash=SHA_A,
+    )
+    vertical = SimpleNamespace(
+        planner_result=SimpleNamespace(provenance=provenance),
+        trace=SimpleNamespace(opportunity_id="opportunity-1"),
+        qualification=None,
+        evidence_origin="financing_decoder_owned",
+        raw_evidence_hash=SHA_A,
+        reconciliation=SimpleNamespace(
+            complete=True,
+            status=ReconciliationStatus.PROVEN_PROFIT,
+            repayment=SimpleNamespace(proven=True),
+            settlement_net=1,
+            breakdowns=(),
+        ),
+    )
+    with pytest.raises(ValueError, match="final financing provenance mismatch"):
+        ExactPaperAttemptOrchestrator._validate_vertical(
+            vertical,
+            request,
+            SimpleNamespace(),
+        )
+
+    provenance.financing_evidence_hash = SHA_B
+    ExactPaperAttemptOrchestrator._validate_vertical(
+        vertical,
+        request,
+        SimpleNamespace(),
+    )
 
 
 @pytest.mark.parametrize(

@@ -15,6 +15,8 @@ import json
 import re
 from typing import Protocol, Sequence
 
+from src.lending.financing import FinancingRole
+
 _SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
@@ -68,6 +70,7 @@ class FinancingRepaymentEvidence:
     debt_after_base_units: int
     required_repayment_base_units: int
     observed_repayment_base_units: int
+    role: FinancingRole = FinancingRole.PRIMARY
 
     def __post_init__(self) -> None:
         _text(self.attempt_id, "attempt_id")
@@ -110,6 +113,7 @@ class FinancingRepaymentEvidence:
                 "debt_after_base_units": self.debt_after_base_units,
                 "required_repayment_base_units": self.required_repayment_base_units,
                 "observed_repayment_base_units": self.observed_repayment_base_units,
+                "role": self.role.value,
             }
         )
 
@@ -124,6 +128,13 @@ class RepaymentDecision:
     program_id: str
     deployment_generation: int
     decoder_identity: str
+    obligation_digest: str
+    asset_id: str
+    debt_before_base_units: int
+    debt_after_base_units: int
+    required_repayment_base_units: int
+    observed_repayment_base_units: int
+    role: FinancingRole
     reason: str | None
     evidence_digest: str
 
@@ -135,6 +146,33 @@ class FinancingRepaymentValidator(Protocol):
     decoder_identity: str
 
     def validate(self, evidence: FinancingRepaymentEvidence) -> bool: ...
+
+
+def _decision(
+    evidence: FinancingRepaymentEvidence,
+    *,
+    proven: bool,
+    reason: str | None,
+) -> RepaymentDecision:
+    return RepaymentDecision(
+        proven=proven,
+        attempt_id=evidence.attempt_id,
+        attempt_generation=evidence.attempt_generation,
+        message_hash=evidence.message_hash,
+        lender_id=evidence.lender_id,
+        program_id=evidence.program_id,
+        deployment_generation=evidence.deployment_generation,
+        decoder_identity=evidence.decoder_identity,
+        obligation_digest=evidence.obligation_digest,
+        asset_id=evidence.asset_id,
+        debt_before_base_units=evidence.debt_before_base_units,
+        debt_after_base_units=evidence.debt_after_base_units,
+        required_repayment_base_units=evidence.required_repayment_base_units,
+        observed_repayment_base_units=evidence.observed_repayment_base_units,
+        role=evidence.role,
+        reason=reason,
+        evidence_digest=evidence.digest,
+    )
 
 
 def validate_financing_repayment(
@@ -149,57 +187,67 @@ def validate_financing_repayment(
         and validator.decoder_identity == evidence.decoder_identity
     ]
     if len(decoder_matches) != 1:
-        return RepaymentDecision(
-            False,
-            evidence.attempt_id,
-            evidence.attempt_generation,
-            evidence.message_hash,
-            evidence.lender_id,
-            evidence.program_id,
-            evidence.deployment_generation,
-            evidence.decoder_identity,
-            "FINANCING_DECODER_REQUIRED",
-            evidence.digest,
+        return _decision(
+            evidence,
+            proven=False,
+            reason="FINANCING_DECODER_REQUIRED",
         )
     validator = decoder_matches[0]
     if validator.program_id != evidence.program_id:
-        return RepaymentDecision(
-            False,
-            evidence.attempt_id,
-            evidence.attempt_generation,
-            evidence.message_hash,
-            evidence.lender_id,
-            evidence.program_id,
-            evidence.deployment_generation,
-            evidence.decoder_identity,
-            "FINANCING_PROGRAM_MISMATCH",
-            evidence.digest,
+        return _decision(
+            evidence,
+            proven=False,
+            reason="FINANCING_PROGRAM_MISMATCH",
         )
     if not validator.validate(evidence):
-        return RepaymentDecision(
-            False,
-            evidence.attempt_id,
-            evidence.attempt_generation,
-            evidence.message_hash,
-            evidence.lender_id,
-            evidence.program_id,
-            evidence.deployment_generation,
-            evidence.decoder_identity,
-            "FINANCING_REPAYMENT_NOT_PROVEN",
-            evidence.digest,
+        return _decision(
+            evidence,
+            proven=False,
+            reason="FINANCING_REPAYMENT_NOT_PROVEN",
         )
-    return RepaymentDecision(
-        True,
-        evidence.attempt_id,
-        evidence.attempt_generation,
-        evidence.message_hash,
-        evidence.lender_id,
-        evidence.program_id,
-        evidence.deployment_generation,
-        evidence.decoder_identity,
-        None,
-        evidence.digest,
-    )
+    return _decision(evidence, proven=True, reason=None)
+
+
+@dataclass(frozen=True, slots=True)
+class FinancingRepaymentBundle:
+    primary: RepaymentDecision
+    auxiliary: tuple[RepaymentDecision, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.primary.role is not FinancingRole.PRIMARY:
+            raise FinancingEvidenceError("FINANCING_PRIMARY_ROLE_REQUIRED")
+        identities: set[tuple[str, str, int]] = set()
+        expected = (
+            self.primary.attempt_id,
+            self.primary.attempt_generation,
+            self.primary.message_hash,
+        )
+        for item in (self.primary, *self.auxiliary):
+            if (
+                item.attempt_id,
+                item.attempt_generation,
+                item.message_hash,
+            ) != expected:
+                raise FinancingEvidenceError("FINANCING_BUNDLE_IDENTITY_MISMATCH")
+            identity = (
+                item.lender_id,
+                item.program_id,
+                item.deployment_generation,
+            )
+            if identity in identities:
+                raise FinancingEvidenceError("FINANCING_BUNDLE_DUPLICATE_IDENTITY")
+            identities.add(identity)
+        if any(item.role is not FinancingRole.RENT for item in self.auxiliary):
+            raise FinancingEvidenceError("FINANCING_AUXILIARY_ROLE_INVALID")
+
+    @property
+    def digest(self) -> str:
+        return _digest(
+            {
+                "primary": self.primary.evidence_digest,
+                "auxiliary": [item.evidence_digest for item in self.auxiliary],
+            }
+        )
 
 
 @dataclass(frozen=True, slots=True)
@@ -249,6 +297,7 @@ __all__ = [
     "FinalizedFinancingEvidence",
     "FinancingEvidenceError",
     "FinancingRepaymentEvidence",
+    "FinancingRepaymentBundle",
     "FinancingRepaymentValidator",
     "RepaymentDecision",
     "validate_financing_repayment",

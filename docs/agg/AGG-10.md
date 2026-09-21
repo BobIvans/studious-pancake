@@ -44,13 +44,15 @@ live execution, or trade away a mandatory safety query to save quota.
 
 ## Dependency disposition
 
-The master plan lists AGG-02, AGG-04 and AGG-05 as whole-package dependencies.
-The synchronized base now contains the merged AGG-02 code/evidence slice (and
-AGG-03 financing work), but AGG-04 and AGG-05 are not yet accepted in this base.
-Therefore this PR lands the independently valid offline/default-off intelligence
-layer while its operational status remains **UNQUALIFIED**. Downstream adapters
-must bind real campaign, episode, simulation and LIVE-03 evidence from the
-canonical owners as those prerequisite packages become accepted.
+Post-AGG reconciliation confirms merged receipts for AGG-02, AGG-04 and AGG-05,
+so those package dependencies are no longer current blockers. AGG-10
+implementation status is `MERGED_CODE`.
+
+Operational status remains **UNQUALIFIED** where evidence is absent. In
+particular NF-223 still requires actual sent-attempt landing/cost labels sourced
+from LIVE-03 for the selected exact profile; the fact that AGG-08 code is merged
+does not create those observations. Paper/counterfactual rows remain ineligible
+as real landing labels.
 
 ## Verification
 

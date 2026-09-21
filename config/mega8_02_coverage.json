@@ -1,0 +1,390 @@
+{
+  "schema_version": "mega8-02.coverage.v1",
+  "mega_id": "MEGA8-02",
+  "implementation_base_sha": "04480fa25d1117e9d20e7fe8caad23b16cd5ef4a",
+  "roadmap_children": [
+    163,
+    164,
+    165,
+    166,
+    167,
+    168,
+    169,
+    170,
+    171,
+    172,
+    173,
+    174,
+    175,
+    176,
+    177,
+    178,
+    179,
+    180,
+    181,
+    182,
+    183,
+    184,
+    185
+  ],
+  "nf_range": [
+    401,
+    492
+  ],
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "RESEARCH_ONLY",
+  "live_enabled": false,
+  "signer_access": false,
+  "network_access": false,
+  "capital_mutation": false,
+  "dependency_status": {
+    "MEGA8-01": {
+      "status": "DEFERRED_FOR_INTEGRATED_PROMOTION",
+      "note": "MEGA8-02 code contracts remain independently testable and default-off; no claim that the earlier eight-pack prerequisite is fully closed."
+    }
+  },
+  "canonical_reuse": [
+    "src/routing/route_graph.py",
+    "src/strategy/multihop_solver.py",
+    "src/strategy/conflict_scheduler.py",
+    "src/economics/split_flow.py",
+    "src/execution/exact_simulation.py",
+    "src/execution/financing_evidence.py",
+    "src/direct_venue/super03.py"
+  ],
+  "children": [
+    {
+      "child": "PR-163",
+      "name": "GRAPH-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        401,
+        404
+      ],
+      "owner": "src/mega8_02/pr163.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-164",
+      "name": "GRAPH-03",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        405,
+        408
+      ],
+      "owner": "src/mega8_02/pr164.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-165",
+      "name": "ROUTE-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        409,
+        412
+      ],
+      "owner": "src/mega8_02/pr165.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-166",
+      "name": "GRAPH-04",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        413,
+        416
+      ],
+      "owner": "src/mega8_02/pr166.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-167",
+      "name": "SIM-03",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        417,
+        420
+      ],
+      "owner": "src/mega8_02/pr167.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-168",
+      "name": "PREDICT-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        421,
+        424
+      ],
+      "owner": "src/mega8_02/pr168.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-169",
+      "name": "PREDICT-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        425,
+        428
+      ],
+      "owner": "src/mega8_02/pr169.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-170",
+      "name": "FEE-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        429,
+        432
+      ],
+      "owner": "src/mega8_02/pr170.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-171",
+      "name": "SOLVER-03",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        433,
+        436
+      ],
+      "owner": "src/mega8_02/pr171.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-172",
+      "name": "SOLVER-04",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        437,
+        440
+      ],
+      "owner": "src/mega8_02/pr172.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-173",
+      "name": "SOLVER-05",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        441,
+        444
+      ],
+      "owner": "src/mega8_02/pr173.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-174",
+      "name": "CAPITAL-03",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        445,
+        448
+      ],
+      "owner": "src/mega8_02/pr174.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-175",
+      "name": "TXVAR-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        449,
+        452
+      ],
+      "owner": "src/mega8_02/pr175.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-176",
+      "name": "PROOF-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        453,
+        456
+      ],
+      "owner": "src/mega8_02/pr176.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py"
+      ]
+    },
+    {
+      "child": "PR-177",
+      "name": "SOLANA-CONFIG-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        457,
+        460
+      ],
+      "owner": "src/mega8_02/pr177.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    {
+      "child": "PR-178",
+      "name": "ORACLE-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        461,
+        464
+      ],
+      "owner": "src/mega8_02/pr178.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    {
+      "child": "PR-179",
+      "name": "STABLE-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        465,
+        468
+      ],
+      "owner": "src/mega8_02/pr179.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    {
+      "child": "PR-180",
+      "name": "VAULT-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        469,
+        472
+      ],
+      "owner": "src/mega8_02/pr180.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    {
+      "child": "PR-181",
+      "name": "YIELD-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        473,
+        476
+      ],
+      "owner": "src/mega8_02/pr181.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    {
+      "child": "PR-182",
+      "name": "LST-02",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        477,
+        480
+      ],
+      "owner": "src/mega8_02/pr182.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    {
+      "child": "PR-183",
+      "name": "LST-03",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        481,
+        484
+      ],
+      "owner": "src/mega8_02/pr183.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    {
+      "child": "PR-184",
+      "name": "LP-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        485,
+        488
+      ],
+      "owner": "src/mega8_02/pr184.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    {
+      "child": "PR-185",
+      "name": "POL-01",
+      "status": "IMPLEMENTED_OFFLINE",
+      "nf_range": [
+        489,
+        492
+      ],
+      "owner": "src/mega8_02/pr185.py",
+      "evidence": [
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    }
+  ],
+  "upstream_reuse": {
+    "copied_source": false,
+    "vendored_source": false,
+    "mode": "INTERNAL_OR_REFERENCE_ONLY",
+    "note": "No external source code is copied or executed by MEGA8-02."
+  },
+  "residual_blockers": [
+    "MEGA8_01_FULL_EIGHT_PACK_PREREQUISITE_NOT_CLAIMED_CLOSED",
+    "DEPLOYMENT_SPECIFIC_SOLANA_PROTOCOL_CONFORMANCE_NOT_CLAIMED",
+    "LIVE_OR_CAPITAL_PROMOTION_REQUIRES_SEPARATE_EXISTING_AUTHORITIES"
+  ]
+}

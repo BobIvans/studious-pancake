@@ -1,0 +1,21 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-215",
+  "child_code": "EVIDENCE-02",
+  "nf": [
+    "NF-609",
+    "NF-610",
+    "NF-611",
+    "NF-612"
+  ],
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "canonical_owner": "src/mega8_04.py + existing release/evidence manifests",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "EXTERNAL_SIGNING_IDENTITY_AND_PUBLICATION_NOT_CONFIGURED"
+  ]
+}

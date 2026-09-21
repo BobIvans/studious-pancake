@@ -1,0 +1,21 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-209",
+  "child_code": "VERIFY-01",
+  "nf": [
+    "NF-585",
+    "NF-586",
+    "NF-587",
+    "NF-588"
+  ],
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "canonical_owner": "src/mega8_04.py + existing security/execution invariants",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "HYPOTHESIS_CAMPAIGN_NOT_EXTERNAL_OPERATIONAL_EVIDENCE"
+  ]
+}

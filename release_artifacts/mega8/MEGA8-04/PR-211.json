@@ -1,0 +1,21 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-211",
+  "child_code": "VERIFY-03",
+  "nf": [
+    "NF-593",
+    "NF-594",
+    "NF-595",
+    "NF-596"
+  ],
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "canonical_owner": "src/mega8_04.py + src/execution/state_machine.py + durable recovery owners",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "EXTERNAL_TLA_APALACHE_RUN_NOT_REQUIRED_FOR_OFFLINE_CODE_MERGE"
+  ]
+}

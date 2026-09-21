@@ -1,0 +1,21 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-218",
+  "child_code": "EVM-05",
+  "nf": [
+    "NF-621",
+    "NF-622",
+    "NF-623",
+    "NF-624"
+  ],
+  "implementation_status": "IMPLEMENTED_RESEARCH_ONLY",
+  "canonical_owner": "src/mega8_04.py + src/cross_chain/agg12.py",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "EVM_CALLBACK_DEPLOYMENT_AND_FORK_CAMPAIGN_NOT_QUALIFIED"
+  ]
+}

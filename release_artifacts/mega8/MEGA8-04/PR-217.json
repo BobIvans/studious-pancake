@@ -1,0 +1,21 @@
+{
+  "schema_version": "mega8-04.child-evidence.v1",
+  "mega_id": "MEGA8-04",
+  "roadmap_pr": "PR-217",
+  "child_code": "EVM-04",
+  "nf": [
+    "NF-617",
+    "NF-618",
+    "NF-619",
+    "NF-620"
+  ],
+  "implementation_status": "IMPLEMENTED_RESEARCH_ONLY",
+  "canonical_owner": "src/mega8_04.py + src/multichain",
+  "operational_qualified": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "blockers": [
+    "PINNED_PROTOCOL_SPECIFIC_EVM_DEPLOYMENT_VECTORS_NOT_QUALIFIED"
+  ]
+}

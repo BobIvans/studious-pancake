@@ -1,4 +1,5 @@
 """PR-275 / DIST-01: deterministic sender-free research scheduling."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence

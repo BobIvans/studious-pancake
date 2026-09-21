@@ -1,6 +1,6 @@
 # MEGA8-07 — Performance, distributed evidence and governed capital mechanisms
 
-Implementation base revalidated on current main: `1605418661bb4571fcdf7aeaeb3c964087275dc3`.
+Original implementation base: `1605418661bb4571fcdf7aeaeb3c964087275dc3`; dependency evidence resealed on closure baseline `613884d8a5d50b1230b29ec5db14627222a9e85d`.
 
 ## Scope
 
@@ -34,21 +34,16 @@ distributed worker, object-store write, wallet transfer, or capital mutation.
 
 ## Dependency truth
 
-The eight-pack roadmap names MEGA8-01..06 as prerequisites. Revalidated against
-current repository state:
+The eight-pack roadmap names MEGA8-01..06 as prerequisites. All six are now merged
+and their dependency evidence is resealed on closure baseline
+`613884d8a5d50b1230b29ec5db14627222a9e85d`. MEGA8-07 itself merged after
+MEGA8-04, so no MEGA8-07 implementation inversion remains.
 
-- MEGA8-01: merged via GitHub PR #525.
-- MEGA8-02: merged via GitHub PR #523.
-- MEGA8-03: merged via GitHub PR #521.
-- MEGA8-04: GitHub PR #522 remains open/unmerged.
-- MEGA8-05: merged via GitHub PR #524.
-- MEGA8-06: merged via GitHub PR #527 at
-  `1605418661bb4571fcdf7aeaeb3c964087275dc3`.
-
-Therefore repository-internal code status remains `IMPLEMENTED_OFFLINE`; integrated
-operational status remains `BLOCKED_DEPENDENCIES` solely because MEGA8-04 is not
-merged. Merge of this code must not be described as integrated completion,
-production readiness, live authorization or capital permission.
+Repository-internal code status remains `IMPLEMENTED_OFFLINE`. Operational status
+is `BLOCKED_EXTERNAL_AND_PROMOTION_EVIDENCE` because real accelerator/distributed
+infrastructure evidence and any capital/wallet/margin/credit/liquidation promotion
+must still pass their existing authorities. Dependency reconciliation does not
+grant production readiness, live authorization or capital permission.
 
 ## Child ownership
 

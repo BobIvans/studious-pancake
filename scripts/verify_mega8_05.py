@@ -70,7 +70,7 @@ def verify() -> dict[str, Any]:
         failures.append("primary_nf_count")
     if coverage.get("implementation_status") != "IMPLEMENTED_OFFLINE":
         failures.append("implementation_status")
-    if coverage.get("operational_status") != "BLOCKED_DEPENDENCIES":
+    if coverage.get("operational_status") != "BLOCKED_EXTERNAL_EVIDENCE":
         failures.append("operational_status")
     if coverage.get("activation_status") != "DEFAULT_OFF":
         failures.append("activation_status")
@@ -129,7 +129,11 @@ def verify() -> dict[str, Any]:
         failures.append("package-scaffold")
 
     blockers = coverage.get("residual_blockers", [])
-    if len(blockers) < 4:
+    required_blockers = {
+        "EXTERNAL_UPSTREAM_RELEASE_LICENSE_AND_CONFORMANCE_EVIDENCE_NOT_BUNDLED",
+        "NO_LIVE_OR_CAPITAL_PROMOTION_AUTHORIZED",
+    }
+    if not isinstance(blockers, list) or not required_blockers.issubset(set(blockers)):
         failures.append("residual_blockers")
 
     result = {

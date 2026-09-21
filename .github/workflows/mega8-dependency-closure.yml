@@ -1,0 +1,80 @@
+name: MEGA8 dependency closure
+
+on:
+  pull_request:
+    paths:
+      - "src/release_gate/mega8_dependency_closure.py"
+      - "release_artifacts/mega8/dependency_reconciliation.json"
+      - "config/mega8_02_coverage.json"
+      - "release_artifacts/mega8/MEGA8-05/coverage.json"
+      - "config/mega8_06_coverage.json"
+      - "release_artifacts/mega8/MEGA8-06/coverage.json"
+      - "release_artifacts/mega8/MEGA8-07/coverage.json"
+      - "release_artifacts/super/SUPER-02/coverage.json"
+      - "scripts/verify_mega8_dependency_closure.py"
+      - "tests/test_mega8_dependency_closure.py"
+      - "docs/roadmap/mega8-dependency-closure.md"
+      - ".github/workflows/mega8-dependency-closure.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-closure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Install runtime and test dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Compile closure
+        run: >-
+          python -m compileall -q
+          src/release_gate/mega8_dependency_closure.py
+          scripts/verify_mega8_dependency_closure.py
+          tests/test_mega8_dependency_closure.py
+      - name: Black
+        run: >-
+          python -m black --check
+          src/release_gate/mega8_dependency_closure.py
+          scripts/verify_mega8_dependency_closure.py
+          tests/test_mega8_dependency_closure.py
+      - name: Dependency verifier
+        run: python scripts/verify_mega8_dependency_closure.py --json
+      - name: Cross-Mega requalification regressions
+        run: >-
+          python -m pytest -q
+          tests/test_mega8_dependency_closure.py
+          tests/test_mega8_02_manifest.py
+          tests/test_mega8_02_graph_solver.py
+          tests/test_mega8_02_solana_assets.py
+          tests/test_mega8_04.py
+          tests/test_mega8_05_research_factory.py
+          tests/test_mega8_06.py
+          tests/test_mega8_07_manifest.py
+          tests/test_mega8_07_performance_data.py
+          tests/test_mega8_07_capital_mechanisms.py
+          --disable-socket --allow-unix-socket
+      - name: Installed package smoke
+        run: |
+          cd "$(mktemp -d)"
+          python - <<'PY'
+          from src.release_gate.mega8_dependency_closure import EXPECTED_DEPENDENCIES
+          assert tuple(EXPECTED_DEPENDENCIES) == (
+              "MEGA8-01",
+              "MEGA8-02",
+              "MEGA8-03",
+              "MEGA8-04",
+              "MEGA8-05",
+              "MEGA8-06",
+              "MEGA8-07",
+          )
+          print("MEGA8_DEPENDENCY_CLOSURE_IMPORT_OK")
+          PY

@@ -77,7 +77,7 @@ def verify() -> dict[str, object]:
     ):
         if coverage.get(flag) is not False:
             errors.append(f"unsafe-flag:{flag}")
-    if coverage.get("operational_status") != "BLOCKED_DEPENDENCIES":
+    if coverage.get("operational_status") != "BLOCKED_EXTERNAL_AND_PROMOTION_EVIDENCE":
         errors.append("dependency-truth")
     if coverage.get("implementation_status") != "IMPLEMENTED_OFFLINE":
         errors.append("implementation-status")

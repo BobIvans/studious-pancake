@@ -25,7 +25,7 @@
     832
   ],
   "implementation_status": "IMPLEMENTED_OFFLINE",
-  "operational_status": "BLOCKED_DEPENDENCIES",
+  "operational_status": "BLOCKED_EXTERNAL_AND_PROMOTION_EVIDENCE",
   "activation": "DEFAULT_OFF",
   "production_ready": false,
   "live_enabled": false,
@@ -35,28 +35,27 @@
   "automatic_capital_increase": false,
   "dependency_status": {
     "MEGA8-01": {
-      "status": "MERGED",
+      "status": "MERGED_REQUALIFIED",
       "evidence": "GitHub PR #525 merge c786b74c3fdd614d16ef3db6c517e964cb43c194"
     },
     "MEGA8-02": {
-      "status": "MERGED",
+      "status": "MERGED_REQUALIFIED",
       "evidence": "GitHub PR #523 merge 17b9d9533ef7ab93c30b657aed40dc7c5248d5ba"
     },
     "MEGA8-03": {
-      "status": "MERGED",
+      "status": "MERGED_REQUALIFIED",
       "evidence": "GitHub PR #521 merge 1426f75749f4091e886b94e9a919df4e90739198"
     },
     "MEGA8-04": {
-      "status": "OPEN_UNMERGED",
-      "evidence": "GitHub PR #522",
-      "merge_required_for_integrated_promotion": true
+      "status": "MERGED_REQUALIFIED",
+      "evidence": "GitHub PR #522 merge 829e56a6069a08dc33ef61b5a36814575b3e652a"
     },
     "MEGA8-05": {
-      "status": "MERGED",
+      "status": "MERGED_REQUALIFIED",
       "evidence": "GitHub PR #524 merge 4eba34de3fa5457830ca42d2a40e65dabfce86a2"
     },
     "MEGA8-06": {
-      "status": "MERGED",
+      "status": "MERGED_REQUALIFIED",
       "evidence": "GitHub PR #527 merge 1605418661bb4571fcdf7aeaeb3c964087275dc3"
     }
   },
@@ -303,9 +302,13 @@
     "note": "PyO3/maturin/petgraph/rayon/NumPy/GPU/distributed/storage/provider SDKs remain roadmap references; no source copy or runtime integration is added here."
   },
   "residual_blockers": [
-    "MEGA8_04_NOT_MERGED",
     "RUST_VECTOR_GPU_PARITY_NOT_MEASURED_ON_REAL_ACCELERATORS",
     "DISTRIBUTED_STREAM_ARCHIVE_INFRA_NOT_DEPLOYED",
     "CAPITAL_WALLET_MARGIN_CREDIT_LIQUIDATION_PROMOTION_REQUIRES_EXISTING_AUTHORITIES"
-  ]
+  ],
+  "dependency_reconciliation": {
+    "mode": "RESEALED_CURRENT_HEAD",
+    "closure_base_sha": "613884d8a5d50b1230b29ec5db14627222a9e85d",
+    "receipt": "release_artifacts/mega8/dependency_reconciliation.json"
+  }
 }

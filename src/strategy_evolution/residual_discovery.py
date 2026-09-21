@@ -66,9 +66,7 @@ def build_bot_operation_feature_frame(rows: Sequence[Mapping[str, Any]]):
         )
         label_available_raw = row.get("label_available_at")
         label_available_at = (
-            None
-            if label_available_raw is None
-            else int(label_available_raw)
+            None if label_available_raw is None else int(label_available_raw)
         )
         censored = bool(row.get("censored", False))
         normalized.append(

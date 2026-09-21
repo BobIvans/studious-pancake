@@ -1,4 +1,5 @@
 """PR-283 / CREDIT-01: lending-rate spread research."""
+
 from __future__ import annotations
 
 from typing import Sequence
@@ -12,13 +13,14 @@ def collect_lending_rate_curves(
     require_nonnegative(cutoff, "cutoff")
     rows = [point for point in points if point.available_at <= cutoff]
     return tuple(
-        sorted(rows, key=lambda point: (point.asset_id, point.market_id, point.available_at))
+        sorted(
+            rows,
+            key=lambda point: (point.asset_id, point.market_id, point.available_at),
+        )
     )
 
 
-def detect_borrow_supply_spread(
-    supply: RatePoint, borrow: RatePoint
-) -> int:
+def detect_borrow_supply_spread(supply: RatePoint, borrow: RatePoint) -> int:
     if supply.asset_id != borrow.asset_id:
         raise Mega807Error("RATE_ASSET_MISMATCH")
     capacity = min(supply.capacity, borrow.capacity)

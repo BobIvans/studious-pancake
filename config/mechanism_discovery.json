@@ -1,0 +1,130 @@
+{
+  "schema_version": "pr354.mechanism-discovery.config.v1",
+  "implementation_base_sha": "30adc0508180131aa6d4122a5db0d24206941405",
+  "canonical_residual_owner": "src.strategy_evolution.residual_discovery",
+  "packages": {
+    "RND-00": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-01": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-02": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-03": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-04": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-05": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-06": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-07": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-08": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-09": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-10": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    },
+    "RND-11": {
+      "state": "DISABLED",
+      "allowed_modes": [
+        "OFFLINE",
+        "PAPER",
+        "SHADOW"
+      ],
+      "live": false
+    }
+  },
+  "effect_boundary": {
+    "signing": false,
+    "submission": false,
+    "sender": false,
+    "signer": false,
+    "raw_transaction_builder": false,
+    "key_loader": false,
+    "wallet_funding": false,
+    "live_permission": false,
+    "auto_promotion": false,
+    "remote_mutation": false
+  },
+  "source_copy_performed": false,
+  "marginfi": "PAUSED",
+  "slumlord_low_capital_requirement": "PRESERVED"
+}

@@ -51,7 +51,7 @@ jobs:
 
       - name: Format
         run: >-
-          python -m black --diff --check
+          python -m black --check
           src/mega8_04.py
           scripts/verify_mega8_04.py
           tests/test_mega8_04.py

@@ -24,7 +24,13 @@ def publish_immutable_state_slice(
             "evidence": evidence.identity,
         },
     )
-    return StateSlice(slice_id, generation, digest, dict(payload))
+    return StateSlice(
+        slice_id,
+        generation,
+        digest,
+        evidence.identity,
+        dict(payload),
+    )
 
 
 def subscribe_edge_cache(
@@ -50,11 +56,11 @@ def validate_cache_generation(
             "slice_id": state_slice.slice_id,
             "generation": state_slice.generation,
             "payload": dict(sorted(state_slice.payload.items())),
-            "evidence": None,
+            "evidence": state_slice.evidence_identity,
         },
     )
-    if len(expected) != 64:
-        raise Mega807Error("CACHE_HASH_INTERNAL_ERROR")
+    if expected != state_slice.content_sha256:
+        raise Mega807Error("CACHE_CONTENT_HASH_MISMATCH")
     return True
 
 

@@ -33,6 +33,8 @@ def reconstruct_solver_score(payload: Mapping[str, Any]):
 
 def estimate_batch_clearing_price(payload: Mapping[str, Any]):
     prices = tuple(int(value) for value in payload.get("feasible_prices_atoms", ()))
+    if any(abs(value) > 2**255 - 1 for value in prices):
+        raise EvolutionError("NUMERIC_OVERFLOW")
     if not prices:
         raise EvolutionError("NO_FEASIBLE_CLEARING")
     if payload.get("liquidity_stale"):
@@ -48,6 +50,8 @@ def estimate_batch_clearing_price(payload: Mapping[str, Any]):
 
 
 def detect_solver_surplus_residual(payload: Mapping[str, Any]):
+    if payload.get("attribution_complete") is False:
+        raise EvolutionError("ATTRIBUTION_GAP")
     if not payload.get("receipt_present"):
         raise EvolutionError("RECEIPT_MISSING")
     known = sum(
@@ -86,6 +90,8 @@ def detect_keeper_liveness_gap(payload: Mapping[str, Any]):
 
 
 def price_rescue_bounty(payload: Mapping[str, Any]):
+    if payload.get("cost_high_atoms") is None:
+        raise EvolutionError("COST_UNBOUNDED")
     if not payload.get("reward_funded"):
         raise EvolutionError("REWARD_UNFUNDED")
     if payload.get("race_risk_unbounded"):
@@ -99,6 +105,12 @@ def price_rescue_bounty(payload: Mapping[str, Any]):
 
 
 def build_intent_rescue_candidate(payload: Mapping[str, Any]):
+    if not payload.get("evidence_refs"):
+        raise EvolutionError("LINEAGE_GAP")
+    if int(payload.get("value_low_atoms", 0)) <= int(
+        payload.get("cost_high_atoms", 0)
+    ):
+        raise EvolutionError("NET_EDGE_NONPOSITIVE")
     candidate_type = str(payload.get("candidate_type", ""))
     if candidate_type not in {"INTENT_RESIDUAL", "KEEPER_RESCUE"}:
         raise EvolutionError("TYPE_AMBIGUOUS")
@@ -106,8 +118,15 @@ def build_intent_rescue_candidate(payload: Mapping[str, Any]):
 
 
 def qualify_intent_rescue(
-    candidate, *, replay_count: int, policy_passed: bool, concurrency_passed: bool
+    candidate,
+    *,
+    replay_count: int,
+    policy_passed: bool,
+    concurrency_passed: bool,
+    replay_diverged: bool = False,
 ):
+    if replay_diverged:
+        raise EvolutionError("REPLAY_DIVERGENCE")
     if not concurrency_passed:
         raise EvolutionError("CONCURRENCY_FAIL")
     return qualify_candidate(

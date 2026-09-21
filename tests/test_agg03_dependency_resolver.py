@@ -190,10 +190,7 @@ def test_unqualified_primary_deployment_stays_blocked(tmp_path: Path) -> None:
         _profile(),
         {MANIFEST_ENV: str(path)},
     )
-    assert (
-        resolution.blocker
-        == "CORE_V1_PRIMARY_FINANCING_DEPLOYMENT_NOT_QUALIFIED"
-    )
+    assert resolution.blocker == "CORE_V1_PRIMARY_FINANCING_DEPLOYMENT_NOT_QUALIFIED"
 
 
 def test_unqualified_decoder_evidence_stays_blocked(tmp_path: Path) -> None:
@@ -206,10 +203,7 @@ def test_unqualified_decoder_evidence_stays_blocked(tmp_path: Path) -> None:
         _profile(),
         {MANIFEST_ENV: str(path)},
     )
-    assert (
-        resolution.blocker
-        == "CORE_V1_FINANCING_REPAYMENT_DECODER_NOT_QUALIFIED"
-    )
+    assert resolution.blocker == "CORE_V1_FINANCING_REPAYMENT_DECODER_NOT_QUALIFIED"
 
 
 def test_financing_pre_state_commitment_binds_addresses_and_raw_accounts() -> None:

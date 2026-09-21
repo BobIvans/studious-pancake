@@ -42,7 +42,7 @@ from src.mega8_07.pr276 import (
 from src.mega8_07.pr277 import (
     archive_cold_partition,
     restore_archived_dataset,
-    test_archive_disaster_recovery,
+    run_archive_disaster_recovery,
     verify_archive_manifest,
 )
 from src.mega8_07.pr278 import (
@@ -211,7 +211,7 @@ def test_archive_manifest_restore_and_dr_are_exact() -> None:
     assert verify_archive_manifest(manifest, objects)
     restored = restore_archived_dataset(manifest, objects)
     assert set(restored) == {b"alpha", b"beta"}
-    assert len(test_archive_disaster_recovery(manifest, objects, dict(objects))) == 64
+    assert len(run_archive_disaster_recovery(manifest, objects, dict(objects))) == 64
 
 
 def test_catalog_is_rebuildable_from_immutable_entries() -> None:
@@ -221,3 +221,56 @@ def test_catalog_is_rebuildable_from_immutable_entries() -> None:
     assert search_evidence_graph(entries, term="feature") == (feature,)
     manifest = export_lineage_manifest(entries)
     assert len(manifest["sha256"]) == 64
+
+def test_point_in_time_evidence_and_cache_archive_integrity_fail_closed() -> None:
+    future = EvidenceBinding(
+        "future-evidence",
+        "c" * 64,
+        "generation-future",
+        "policy-future",
+        10,
+        20,
+    )
+    with pytest.raises(Mega807Error, match="FUTURE_EVIDENCE"):
+        future.assert_usable(now=9)
+
+    state_slice = publish_immutable_state_slice(
+        slice_id="slice-integrity",
+        generation="g1",
+        payload={"slot": 1},
+        evidence=evidence(),
+        now=2,
+    )
+    tampered = type(state_slice)(
+        state_slice.slice_id,
+        state_slice.generation,
+        state_slice.content_sha256,
+        state_slice.evidence_identity,
+        {"slot": 2},
+    )
+    with pytest.raises(Mega807Error, match="CACHE_CONTENT_HASH_MISMATCH"):
+        validate_cache_generation(tampered, expected_generation="g1")
+
+    objects = {
+        stable_hash("mega8-07-archive-object", b"alpha".hex()): b"alpha",
+    }
+    manifest = archive_cold_partition(
+        partition_id="p-integrity",
+        object_hashes=tuple(objects),
+        storage_cost_units=1,
+        max_cost_units=2,
+    )
+    corrupted = dict(manifest)
+    corrupted["storage_cost_units"] = 2
+    with pytest.raises(Mega807Error, match="ARCHIVE_MANIFEST_HASH_MISMATCH"):
+        verify_archive_manifest(corrupted, objects)
+
+
+def test_event_time_join_rejects_future_available_event_order() -> None:
+    malformed = ((10, 9, "dex", {"price": 100}),)
+    with pytest.raises(Mega807Error, match="IMPOSSIBLE_AVAILABILITY_ORDER"):
+        join_event_time_streams(
+            malformed,
+            ((10, 10, "oracle", {"price": 100}),),
+            max_event_gap=0,
+        )

@@ -1,0 +1,47 @@
+{
+  "schema_version": "market-data-evolution.evidence.v1",
+  "observed_main": "73c96faebf8d2e60d1a38e28722f9dc8ae861e36",
+  "branch": "codex/mega-market-data-layer-evolution",
+  "status": "PRE_CI",
+  "scope": {
+    "layers": 9,
+    "experiments": 8,
+    "milestones": 8,
+    "sources": 23,
+    "packs": 3
+  },
+  "predecessor_truth": {
+    "pr354_github_pr": 533,
+    "pr354_status": "SATISFIED_BY_EXISTING",
+    "pr354_nf_range": [
+      1089,
+      1184
+    ],
+    "pr354_function_count": 96
+  },
+  "claims": {
+    "merged": false,
+    "code_research_contract_scope_complete": false,
+    "empirical_market_campaign_complete": false,
+    "external_sources_qualified": false,
+    "production_ready": false,
+    "live_authorized": false,
+    "profitability": false
+  },
+  "external_actions": {
+    "source_download": false,
+    "paid_data_activation": false,
+    "wallet_access": false,
+    "signing": false,
+    "submission": false,
+    "remote_mutation": false
+  },
+  "expected_blockers": [
+    "REAL_CROSS_MARKET_CAPTURE_NOT_RUN",
+    "DERIVATIVES_DATA_ENTITLEMENT_NOT_MATERIALIZED",
+    "GOLD_DATA_LICENCE_ACCESS_NOT_MATERIALIZED",
+    "MACRO_VINTAGE_CORPUS_NOT_MATERIALIZED",
+    "REAL_EMPIRICAL_E01_E08_CAMPAIGN_NOT_RUN"
+  ],
+  "note": "Pre-CI manifest. Final implementation evidence must be sealed from exact-head GitHub Actions before merge."
+}

@@ -1,0 +1,697 @@
+{
+  "schema_version": "market-data-evolution.mega.v1",
+  "source_document": "MARKET_DATA_LAYER_EVOLUTION_RU_2026-09-20",
+  "source_document_original_status": "DESIGN_ONLY_NOT_IMPLEMENTED",
+  "observed_main": "73c96faebf8d2e60d1a38e28722f9dc8ae861e36",
+  "implementation_status": "IMPLEMENTED_CONTRACT_LAYER_EXTERNAL_DATA_BLOCKED",
+  "default_mode": "research_only",
+  "effect_boundary": {
+    "live_enabled": false,
+    "signing_allowed": false,
+    "submission_allowed": false,
+    "funds_movement_allowed": false,
+    "remote_mutation_allowed": false,
+    "automatic_promotion_allowed": false
+  },
+  "anti_duplication": {
+    "pr354_document": "SATISFIED_BY_MERGED_GITHUB_PR_533",
+    "reused_closed_prs": {
+      "496": "AGG-02 causal raw/PIT data plane and durable replay",
+      "500": "AGG-10 source ablation, statistical graph, model registry, regime memory and drift",
+      "515": "SUPER-07 non-atomic market evidence closure",
+      "521": "MEGA8-03 survival/UQ/causal/model-governance research",
+      "530": "ULTIMATE-MEGA1 predecessor ownership closure",
+      "533": "PR-354 RND-00..RND-11 / NF-1089..1184",
+      "535": "PR-355 corrective statistical/MarketPack completion"
+    },
+    "duplicate_feature_store_created": false,
+    "duplicate_predictive_graph_created": false,
+    "duplicate_model_registry_created": false,
+    "duplicate_execution_authority_created": false
+  },
+  "counts": {
+    "layers": 9,
+    "experiments": 8,
+    "milestones": 8,
+    "sources": 23,
+    "cross_market_packs": 3
+  },
+  "layers": [
+    {
+      "id": "L0",
+      "name": "Реестр источников и инструментов",
+      "status": "IMPLEMENTED_BRIDGE",
+      "child_owner": "src.market_data_evolution.contracts:SourceManifest",
+      "secondary_child": "src.market_data_evolution.contracts:InstrumentIdentity",
+      "canonical_reuse": [
+        "src.config.activation:ConfigSourceManifest",
+        "src.inventory.research:MarketRights"
+      ]
+    },
+    {
+      "id": "L1",
+      "name": "Сырые наблюдения",
+      "status": "IMPLEMENTED_BRIDGE",
+      "child_owner": "src.market_data_evolution.contracts:RawObservation",
+      "secondary_child": "src.market_data_evolution.contracts:GapEvent",
+      "canonical_reuse": [
+        "src.agg02.contracts:RawEventEnvelope",
+        "src.agg02.storage:DurableRawJournal"
+      ]
+    },
+    {
+      "id": "L2",
+      "name": "Нормализация и история доступности",
+      "status": "IMPLEMENTED_BRIDGE",
+      "child_owner": "src.market_data_evolution.contracts:NormalizedObservation",
+      "secondary_child": "src.market_data_evolution.contracts:select_as_of",
+      "canonical_reuse": [
+        "src.agg02.contracts:as_of_join",
+        "src.mechanism_discovery.core:validate_point_in_time"
+      ]
+    },
+    {
+      "id": "L3",
+      "name": "Воспроизводимые состояния рынков",
+      "status": "IMPLEMENTED_BRIDGE",
+      "child_owner": "src.market_data_evolution.contracts:StateSnapshot",
+      "secondary_child": "src.market_data_evolution.contracts:materialize_state",
+      "canonical_reuse": [
+        "src.agg02.contracts:StateFrame",
+        "src.agg02.storage:DatasetReplayReader"
+      ]
+    },
+    {
+      "id": "L4",
+      "name": "Признаки, эпизоды и два графа",
+      "status": "IMPLEMENTED_BRIDGE",
+      "child_owner": "src.market_data_evolution.contracts:MarketEpisode",
+      "secondary_child": "src.market_data_evolution.contracts:PredictiveRelation",
+      "canonical_reuse": [
+        "src.decision.agg10:FeatureGenerator",
+        "src.decision.agg10:StatisticalRelationGraph"
+      ]
+    },
+    {
+      "id": "L5",
+      "name": "Вероятностные прогнозы",
+      "status": "IMPLEMENTED_CONTRACT",
+      "child_owner": "src.market_data_evolution.contracts:ForecastRecord",
+      "canonical_reuse": [
+        "src.decision.agg10:ModelRegistry",
+        "src.decision.agg10:BuildabilityModel"
+      ]
+    },
+    {
+      "id": "L6",
+      "name": "Квалификация",
+      "status": "IMPLEMENTED_BRIDGE",
+      "child_owner": "src.market_data_evolution.contracts:QualificationEvidence",
+      "canonical_reuse": [
+        "src.mechanism_discovery.research_quality:purged_walk_forward_split",
+        "src.decision.agg10:compare_source_ablation"
+      ]
+    },
+    {
+      "id": "L7",
+      "name": "Риск и исполнение",
+      "status": "SATISFIED_BY_EXISTING_DEFAULT_OFF",
+      "child_owner": "src.market_data_evolution.contracts:research_effect_boundary",
+      "canonical_reuse": [
+        "src.inventory.research:evaluate_hypothesis",
+        "src.inventory.research:qualify_inventory_platform"
+      ]
+    },
+    {
+      "id": "L8",
+      "name": "Память и непрерывное обучение",
+      "status": "IMPLEMENTED_BRIDGE",
+      "child_owner": "src.market_data_evolution.contracts:ModelCandidate",
+      "secondary_child": "src.market_data_evolution.contracts:evaluate_retention",
+      "canonical_reuse": [
+        "src.decision.agg10:RegimeMemory",
+        "src.decision.agg10:ModelRegistry",
+        "src.mechanism_discovery.mechanism_transfer:measure_negative_transfer"
+      ]
+    }
+  ],
+  "packs": [
+    {
+      "id": "MDE-P01",
+      "name": "Crypto Derivatives and Basis",
+      "builder": "src.market_data_evolution.packs:build_crypto_derivatives_pack",
+      "status": "BLOCKED_EXTERNAL",
+      "state": "DISABLED"
+    },
+    {
+      "id": "MDE-P02",
+      "name": "Gold Underlying and Claims",
+      "builder": "src.market_data_evolution.packs:build_gold_claim_pack",
+      "status": "BLOCKED_EXTERNAL",
+      "state": "DISABLED"
+    },
+    {
+      "id": "MDE-P03",
+      "name": "Macro Vintage and Cross Asset Regimes",
+      "builder": "src.market_data_evolution.packs:build_macro_vintage_pack",
+      "status": "BLOCKED_EXTERNAL",
+      "state": "DISABLED"
+    }
+  ],
+  "experiments": [
+    {
+      "id": "E01",
+      "name": "Forced-flow / ликвидационный риск",
+      "targets": [
+        "liquidity_depletion_5m",
+        "realized_volatility_1h"
+      ],
+      "horizons": [
+        "5m",
+        "1h"
+      ],
+      "initial_mode": "read_only_shadow",
+      "status": "CONTRACT_IMPLEMENTED_NOT_RUN",
+      "execution_right": false,
+      "reject": "Effect vanishes after availability, price/volume and lag controls or horizon/cost is unusable."
+    },
+    {
+      "id": "E02",
+      "name": "География долларовой ликвидности",
+      "targets": [
+        "funding_distribution_next_interval",
+        "basis_change_1h"
+      ],
+      "horizons": [
+        "1h",
+        "1d"
+      ],
+      "initial_mode": "read_only_shadow",
+      "status": "CONTRACT_IMPLEMENTED_NOT_RUN",
+      "execution_right": false,
+      "reject": "Flows are internal rebalancing or add no OOS information."
+    },
+    {
+      "id": "E03",
+      "name": "Crypto spot/futures/options term structure",
+      "targets": [
+        "basis_convergence_net_1h",
+        "carry_distribution_1d",
+        "tail_loss_1d"
+      ],
+      "horizons": [
+        "1h",
+        "1d"
+      ],
+      "initial_mode": "paper_inventory",
+      "status": "CONTRACT_IMPLEMENTED_BLOCKED_EXTERNAL",
+      "execution_right": false,
+      "reject": "Margin, funding flip or slippage removes economic gain."
+    },
+    {
+      "id": "E04",
+      "name": "Gold underlying/claim decomposition",
+      "targets": [
+        "token_premium_distribution_1h",
+        "gold_volatility_1d"
+      ],
+      "horizons": [
+        "1h",
+        "1d"
+      ],
+      "initial_mode": "research_only",
+      "status": "CONTRACT_IMPLEMENTED_BLOCKED_EXTERNAL",
+      "execution_right": false,
+      "reject": "Apparent spread is closed market, stale price or non-transferable redemption rights."
+    },
+    {
+      "id": "E05",
+      "name": "Macro regimes and cross-asset risk",
+      "targets": [
+        "volatility_regime_1w",
+        "tail_dependence_1w",
+        "strategy_risk_budget"
+      ],
+      "horizons": [
+        "1d",
+        "1w",
+        "4w"
+      ],
+      "initial_mode": "research_only",
+      "status": "CONTRACT_IMPLEMENTED_BLOCKED_EXTERNAL",
+      "execution_right": false,
+      "reject": "Result uses late publications, one cycle or disappears in new temporal window."
+    },
+    {
+      "id": "E06",
+      "name": "Scheduled protocol transitions",
+      "targets": [
+        "route_capacity_change",
+        "withdrawal_pressure",
+        "basis_change"
+      ],
+      "horizons": [
+        "event_time",
+        "1h",
+        "1d"
+      ],
+      "initial_mode": "read_only_shadow",
+      "status": "SATISFIED_BY_EXISTING_PLUS_BRIDGE",
+      "execution_right": false,
+      "reject": "Event is fully priced or indistinguishable from market movement."
+    },
+    {
+      "id": "E07",
+      "name": "Адаптивная покупка информации",
+      "targets": [
+        "forecast_loss_per_credit",
+        "qualified_candidates_per_credit"
+      ],
+      "horizons": [
+        "per_decision"
+      ],
+      "initial_mode": "offline_replay",
+      "status": "SATISFIED_BY_EXISTING_PLUS_BRIDGE",
+      "execution_right": false,
+      "reject": "Savings create misses/selection bias or fail to beat simple quota policy."
+    },
+    {
+      "id": "E08",
+      "name": "Continual transfer без забывания",
+      "targets": [
+        "oos_loss",
+        "old_regime_retention",
+        "selective_net_utility"
+      ],
+      "horizons": [
+        "model_update_cycle"
+      ],
+      "initial_mode": "offline_then_shadow",
+      "status": "SATISFIED_BY_EXISTING_PLUS_BRIDGE",
+      "execution_right": false,
+      "reject": "Negative transfer, calibration drift or critical stress-slice degradation."
+    }
+  ],
+  "milestones": [
+    {
+      "id": "D01",
+      "name": "Разметить действующие точки интеграции",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "id": "D02",
+      "name": "Запустить узкий capture и as-of replay",
+      "status": "BLOCKED_EXTERNAL_REAL_CAPTURE_NOT_RUN"
+    },
+    {
+      "id": "D03",
+      "name": "Создать episode/label factory",
+      "status": "IMPLEMENTED_CONTRACT"
+    },
+    {
+      "id": "D04",
+      "name": "Поставить benchmark и ablations",
+      "status": "IMPLEMENTED_PROTOCOL_EMPIRICAL_RESULT_NOT_RUN"
+    },
+    {
+      "id": "D05",
+      "name": "Добавить gold research view",
+      "status": "IMPLEMENTED_CONTRACT_BLOCKED_EXTERNAL"
+    },
+    {
+      "id": "D06",
+      "name": "Добавить адаптацию и память",
+      "status": "SATISFIED_BY_EXISTING_PLUS_BRIDGE"
+    },
+    {
+      "id": "D07",
+      "name": "Разрешить агенту только исследовательские изменения",
+      "status": "SATISFIED_BY_EXISTING_RESEARCH_ONLY"
+    },
+    {
+      "id": "D08",
+      "name": "Квалифицировать execution отдельно",
+      "status": "SATISFIED_BY_EXISTING_LIVE_FALSE"
+    }
+  ],
+  "observation_contract_required": [
+    "observation_id",
+    "source_id",
+    "instrument_id",
+    "event_at",
+    "first_seen_at",
+    "available_at",
+    "payload_hash",
+    "schema_version",
+    "units",
+    "quality_flags"
+  ],
+  "forecast_contract_required": [
+    "forecast_id",
+    "model_version",
+    "information_cutoff",
+    "train_cutoff",
+    "target",
+    "horizon",
+    "feature_snapshot_hash",
+    "distribution_or_quantiles",
+    "calibration_version",
+    "valid_until",
+    "market_regime",
+    "abstention_reason"
+  ],
+  "relation_contract_required": [
+    "relation_id",
+    "source_features",
+    "target",
+    "lag",
+    "horizon",
+    "regime",
+    "estimator_version",
+    "fit_cutoff",
+    "oos_period",
+    "effect_estimate",
+    "uncertainty",
+    "multiple_test_family",
+    "expiry"
+  ],
+  "evaluation": {
+    "baselines": [
+      "price_only",
+      "price_plus_onchain",
+      "price_plus_onchain_plus_derivatives",
+      "target_market_only",
+      "pooled_markets",
+      "transferred_adapters"
+    ],
+    "required_metrics": [
+      "Brier_or_log_loss",
+      "quantile_loss",
+      "coverage_and_interval_width",
+      "precision_at_fixed_coverage",
+      "net_utility_after_costs",
+      "max_drawdown",
+      "tail_loss",
+      "old_regime_retention",
+      "incremental_value_per_source",
+      "data_cost_per_qualified_candidate"
+    ],
+    "required_splits": [
+      "blocked_temporal_walk_forward",
+      "matured_labels_only",
+      "nonoverlapping_event_groups",
+      "held_out_market",
+      "unseen_forward_period"
+    ],
+    "forbidden": [
+      "random_split_of_overlapping_windows",
+      "future_revisions_in_features",
+      "full_history_scaling",
+      "mark_price_as_executable_fill",
+      "LLM_reading_locked_test_outcomes",
+      "reported_accuracy_without_base_rate",
+      "synthetic_PnL_as_real_PnL"
+    ]
+  },
+  "sources": [
+    {
+      "id": "S01",
+      "title": "FRED: real-time periods / ALFRED",
+      "url": "https://fred.stlouisfed.org/docs/api/fred/realtime_period.html",
+      "usage_note": "Различать период наблюдения и время доступности версии макроданных.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S02",
+      "title": "CFTC: Commitments of Traders",
+      "url": "https://www.cftc.gov/MarketReports/CommitmentsofTraders/index.htm",
+      "usage_note": "Обычно позиции вторника публикуются в пятницу; не переносить знание назад.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S03",
+      "title": "Binance futures market-data API",
+      "url": "https://developers.binance.com/en/docs/catalog/core-trading-derivatives-trading-usd-s-m-futures/api/rest-api/market-data",
+      "usage_note": "Funding, OI, basis, mark/index, instrument metadata; лимиты и глубина истории зависят от endpoint.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S04",
+      "title": "Binance Public Data",
+      "url": "https://github.com/binance/binance-public-data",
+      "usage_note": "Исторические сделки и свечи; не замена полной истории стакана.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S05",
+      "title": "Hyperliquid perpetuals info",
+      "url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/info-endpoint/perpetuals",
+      "usage_note": "Metadata и контекст perpetuals; получать текущий universe, а не угадывать символы.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S06",
+      "title": "Deribit API",
+      "url": "https://docs.deribit.com/",
+      "usage_note": "Источники по деривативам; отделять цены исполнения от mark/summary.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S07",
+      "title": "World Gold Council: gold prices",
+      "url": "https://www.gold.org/goldhub/data/gold-prices",
+      "usage_note": "Часть исторических LBMA данных удалена с открытого сайта; проверять лицензию и частоту.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S08",
+      "title": "World Gold Council: ETF holdings and flows",
+      "url": "https://www.gold.org/goldhub/data/gold-etfs-holdings-and-flows",
+      "usage_note": "Потоки ETF и запасы как медленные признаки с фактическим временем публикации.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S09",
+      "title": "LBMA: historical data access",
+      "url": "https://www.lbma.org.uk/articles/lbma-benchmark-prices-data-tables-are-moving",
+      "usage_note": "История перенесена в портал; educational access не равно коммерческим правам.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S10",
+      "title": "CME: gold contract specifications",
+      "url": "https://www.cmegroup.com/markets/metals/precious/gold.contractSpecs.html",
+      "usage_note": "Contract multiplier, expiry, settlement и session — часть идентичности инструмента.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S11",
+      "title": "CME: data and analytics",
+      "url": "https://www.cmegroup.com/market-data.html",
+      "usage_note": "Различать real-time, delayed, historical; отдельно проверять права доступа.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S12",
+      "title": "Paxos: Pax Gold",
+      "url": "https://www.paxos.com/pax-gold",
+      "usage_note": "PAXG представляет fine troy ounce; на странице указана недоступность в ЕС, поэтому прямой доступ пользователя не предполагается.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S13",
+      "title": "Helius pricing",
+      "url": "https://www.helius.dev/pricing",
+      "usage_note": "Free tier ограничен месячными credits и RPS; не считать постоянную работу на максимальном RPS бесплатной.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S14",
+      "title": "Feast: point-in-time joins",
+      "url": "https://docs.feast.dev/getting-started/concepts/point-in-time-joins",
+      "usage_note": "Референс исторических joins; наш контракт дополнительно требует знания available_at и revisions.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S15",
+      "title": "Tigramite",
+      "url": "https://github.com/jakobrunge/tigramite",
+      "usage_note": "Условные временные зависимости и causal discovery при явно заданных допущениях; GPL-3.0 требует проверки совместимости.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S16",
+      "title": "River",
+      "url": "https://github.com/online-ml/river",
+      "usage_note": "Потоковое обучение и мониторинг дрейфа.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S17",
+      "title": "Microsoft Qlib",
+      "url": "https://github.com/microsoft/qlib",
+      "usage_note": "Модульные quant experiments; не заменяет специализированный on-chain execution engine.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S18",
+      "title": "Microsoft RD-Agent",
+      "url": "https://github.com/microsoft/RD-Agent",
+      "usage_note": "Автоматизированная генерация и проверка факторов; агент не должен читать закрытый holdout.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S19",
+      "title": "DoubleAdapt",
+      "url": "https://arxiv.org/abs/2306.09862",
+      "usage_note": "Исследование data/model adaptation для меняющегося распределения stock data; не доказательство переноса прибыли на другие рынки.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S20",
+      "title": "Chronos forecasting",
+      "url": "https://github.com/amazon-science/chronos-forecasting",
+      "usage_note": "Chronos-2: multivariate/covariate forecasting; рыночную полезность проверять отдельно.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S21",
+      "title": "TimesFM",
+      "url": "https://github.com/google-research/timesfm",
+      "usage_note": "По актуальному README: 3.0 — исследовательский challenger с non-commercial/non-production weights; 2.5 weights — Apache-2.0.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S22",
+      "title": "Adaptive Conformal Inference",
+      "url": "https://arxiv.org/abs/2106.00170",
+      "usage_note": "Контроль покрытия при дрейфе не равен вероятности прибыльной сделки или условной гарантии в каждом режиме.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    },
+    {
+      "id": "S23",
+      "title": "Crypto DRL and backtest overfitting",
+      "url": "https://arxiv.org/abs/2209.05559",
+      "usage_note": "Референс оценки переобучения торговых агентов.",
+      "document_verified_at": "2026-09-20",
+      "reuse_mode": "REFERENCE_ONLY",
+      "license_status": "REVERIFY",
+      "entitlement_status": "REVERIFY",
+      "external_fetch_performed": false
+    }
+  ],
+  "document_boundaries": [
+    "Документы пользователя — backlog идей, не доказательства рыночной точности.",
+    "Высокий F1 fraud detection не равен win rate или прибыли.",
+    "Continual learning включает обновление параметров; оно не гарантирует отсутствие забывания.",
+    "Фундаментальные модели прогнозов сравниваются с простыми baseline; их benchmark win rate не является долей прибыльных сделок.",
+    "Не считать корреляцию экономической конвертацией или доказанной причинностью.",
+    "Доступ к данным не означает право/возможность торговать инструментом.",
+    "Лицензии model weights и datasets проверяются отдельно от лицензий кода.",
+    "Не копировать signer, capital authority или finalized ledger в исследовательский контур."
+  ],
+  "observation_contract_conditionally_required": [
+    "published_at",
+    "revision_id",
+    "block_or_checkpoint",
+    "source_sequence",
+    "commitment",
+    "request_hash",
+    "licence_id"
+  ],
+  "availability_rule": "В live features допускаются только версии, реально доступные системе к decision time. В backfill неизвестное first_seen нельзя выдумывать; использовать явный консервативный availability assumption.",
+  "forecast_note": "Значения прогнозов не приведены: эмпирический эксперимент не выполнен.",
+  "document_hint": {
+    "file": "Новый документ(1).txt",
+    "topic": "Graph Continual Learning; катастрофическое забывание; качество графа и адаптация к drift",
+    "interpretation": "Технологическое направление для проверки; не свидетельство точности прогнозов рыночной доходности."
+  }
+}

@@ -998,3 +998,212 @@ def estimate_evsi(
     _, current_loss = compute_current_bayes_action(decision_problem)
     expected_posterior_loss = 0
     for posterior, weight in zip(
+        posterior_scenarios,
+        observation_probabilities_ppm,
+        strict=True,
+    ):
+        if sum(posterior.values()) != PPM:
+            raise PR357ContractError("PR357_POSTERIOR_NOT_NORMALIZED")
+        candidate = dict(decision_problem)
+        candidate["state_probabilities_ppm"] = dict(posterior)
+        _, loss = compute_current_bayes_action(candidate)
+        expected_posterior_loss += loss * weight
+    expected_posterior_loss //= PPM
+    return max(0, current_loss - expected_posterior_loss)
+
+
+def subtract_information_cost(evsi_units: int, cost_units: int) -> int:
+    return evsi_units - cost_units
+
+
+def bound_voi_by_deadline(
+    value_units: int,
+    *,
+    completion_time: int,
+    deadline: int,
+) -> int:
+    if completion_time > deadline:
+        return 0
+    return value_units
+
+
+def estimate_source_redundancy(
+    shared_information_ppm: int,
+) -> int:
+    if not 0 <= shared_information_ppm <= PPM:
+        raise PR357ContractError("PR357_REDUNDANCY_PPM_RANGE")
+    return shared_information_ppm
+
+
+def estimate_provider_common_failure(
+    actions: Sequence[InformationActionSpec],
+) -> Mapping[str, int]:
+    groups: dict[str, list[int]] = {}
+    for action in actions:
+        groups.setdefault(action.provider_group, []).append(action.failure_ppm)
+    return {
+        group: max(values)
+        for group, values in sorted(groups.items())
+    }
+
+
+def detect_double_counted_information(
+    action_ids: Sequence[str],
+    redundancy_pairs: Mapping[tuple[str, str], int],
+    *,
+    threshold_ppm: int,
+) -> tuple[tuple[str, str], ...]:
+    selected = set(action_ids)
+    duplicates = []
+    for pair, value in redundancy_pairs.items():
+        left, right = pair
+        if (
+            left in selected
+            and right in selected
+            and value >= threshold_ppm
+        ):
+            duplicates.append(tuple(sorted((left, right))))
+    return tuple(sorted(set(duplicates)))
+
+
+def compute_deadline_adjusted_evsi(action: InformationActionSpec) -> int:
+    value = bound_voi_by_deadline(
+        action.evsi_units,
+        completion_time=action.latency,
+        deadline=action.deadline,
+    )
+    failure_adjusted = value * (PPM - action.failure_ppm) // PPM
+    return failure_adjusted - action.cost_units
+
+
+def reject_too_late_information(action: InformationActionSpec) -> bool:
+    return action.latency > action.deadline
+
+
+def estimate_value_of_computation(
+    *,
+    expected_decision_improvement_units: int,
+    compute_cost_units: int,
+    latency_penalty_units: int,
+) -> int:
+    return (
+        expected_decision_improvement_units
+        - compute_cost_units
+        - latency_penalty_units
+    )
+
+
+def stop_computation_on_decision_stability(
+    rankings: Sequence[Sequence[str]],
+    *,
+    stable_rounds: int,
+) -> bool:
+    if stable_rounds < 2 or len(rankings) < stable_rounds:
+        return False
+    tail = [tuple(row) for row in rankings[-stable_rounds:]]
+    return len(set(tail)) == 1
+
+
+def preserve_mandatory_safety_features(
+    requested: Sequence[str],
+    mandatory: Sequence[str],
+) -> tuple[str, ...]:
+    return tuple(sorted(set(requested) | set(mandatory)))
+
+
+def reserve_safety_information_budget(
+    actions: Sequence[InformationActionSpec],
+    *,
+    budget_units: int,
+) -> Mapping[str, Any]:
+    if budget_units < 0:
+        raise PR357ContractError("PR357_SAFETY_BUDGET_NEGATIVE")
+    mandatory = sorted(
+        (action for action in actions if action.mandatory_safety),
+        key=lambda action: action.action_id,
+    )
+    required = sum(action.cost_units for action in mandatory)
+    if required > budget_units:
+        return {
+            "status": "ABSTAIN",
+            "reason": "MANDATORY_SAFETY_BUDGET_UNAVAILABLE",
+            "selected": (),
+            "execution_right": False,
+        }
+    selected = list(mandatory)
+    remaining = budget_units - required
+    optional = sorted(
+        (action for action in actions if not action.mandatory_safety),
+        key=lambda action: (
+            -compute_deadline_adjusted_evsi(action),
+            action.action_id,
+        ),
+    )
+    for action in optional:
+        if compute_deadline_adjusted_evsi(action) <= 0:
+            continue
+        if action.cost_units <= remaining:
+            selected.append(action)
+            remaining -= action.cost_units
+    return {
+        "status": "PLANNED",
+        "selected": tuple(action.action_id for action in selected),
+        "remaining_budget": remaining,
+        "execution_right": False,
+    }
+
+
+def block_decision_without_safety_info(
+    observed: Sequence[str],
+    mandatory: Sequence[str],
+) -> bool:
+    return not set(mandatory).issubset(set(observed))
+
+
+def force_abstention_on_unknown_safety(
+    observed: Sequence[str],
+    mandatory: Sequence[str],
+) -> str:
+    if block_decision_without_safety_info(observed, mandatory):
+        return "ABSTAIN"
+    return "RESEARCH_DECISION_ALLOWED"
+
+
+def measure_decision_regret_and_cost(
+    *,
+    regret_units: int,
+    information_cost_units: int,
+    compute_cost_units: int,
+    deadline_loss_units: int,
+) -> Mapping[str, int]:
+    values = {
+        "decision_regret": regret_units,
+        "information_cost": information_cost_units,
+        "compute_cost": compute_cost_units,
+        "deadline_loss": deadline_loss_units,
+    }
+    if min(values.values()) < 0:
+        raise PR357ContractError("PR357_DECISION_SCORE_NEGATIVE")
+    values["total_loss"] = sum(values.values())
+    return values
+
+
+def assert_research_only_effect_boundary(
+    payload: Mapping[str, Any],
+) -> None:
+    for key, expected in EFFECT_BOUNDARY.items():
+        if payload.get(key, expected) is not expected:
+            raise PR357ContractError(
+                f"PR357_EFFECT_AUTHORITY_FORBIDDEN:{key}"
+            )
+
+
+def effect_boundary() -> Mapping[str, bool]:
+    return dict(EFFECT_BOUNDARY)
+
+
+def deterministic_receipt(payload: Mapping[str, Any]) -> Mapping[str, Any]:
+    body = dict(payload)
+    body["execution_right"] = False
+    body["receipt_hash"] = canonical_hash(body)
+    return body

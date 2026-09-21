@@ -229,8 +229,7 @@ class StateValidator:
                 primary.debt_before_base_units,
                 primary.required_repayment_base_units,
                 primary.observed_repayment_base_units,
-                primary.required_repayment_base_units
-                - primary.debt_before_base_units,
+                primary.required_repayment_base_units - primary.debt_before_base_units,
             )
 
         item = evidence.marginfi

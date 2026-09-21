@@ -70,7 +70,7 @@ class ChainAsset:
     def identity(self) -> str:
         return (
             f"{self.dialect.value}:{self.chain_id}:"
-            f"{self.identifier}:{self.generation}"
+            f"{self.identifier}:{self.decimals}:{self.generation}"
         )
 
 
@@ -169,6 +169,7 @@ class EvmCycleEvidence:
     conservative_net_base_units: int
     deployment_current: bool
     callback_repaid: bool
+    gas_cost_base_units: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -325,6 +326,8 @@ class SuiObjectTransition:
     after_version: int
     liquidity_before: int
     liquidity_after: int
+    state_before_sha256: str | None = None
+    state_after_sha256: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -338,6 +341,7 @@ class SuiCycleEvidence:
     required_gas_units: int
     taker_fee_base_units: int
     conservative_net_base_units: int
+    gas_cost_base_units: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -410,10 +414,30 @@ def qualify_evm_cycle(evidence: EvmCycleEvidence) -> AdmissionDecision:
         "approval_cost_base_units",
     )
     _nonnegative(evidence.flash_fee_base_units, "flash_fee_base_units")
-    net = strict_int(
+    if evidence.gas_cost_base_units is None:
+        blockers.append("EVM_GAS_COST_UNPROVEN")
+        gas_cost_base_units = 0
+    else:
+        gas_cost_base_units = _nonnegative(
+            evidence.gas_cost_base_units,
+            "gas_cost_base_units",
+        )
+    claimed_net = strict_int(
         evidence.conservative_net_base_units,
         field="conservative_net_base_units",
     )
+    route_bound = claimed_net
+    if evidence.legs:
+        route_bound = (
+            evidence.legs[-1].guaranteed_out
+            - evidence.legs[0].amount_in
+            - evidence.approval_cost_base_units
+            - evidence.flash_fee_base_units
+            - gas_cost_base_units
+        )
+        if claimed_net > route_bound:
+            blockers.append("EVM_CLAIMED_NET_EXCEEDS_ROUTE_BOUND")
+    net = min(claimed_net, route_bound)
     if evidence.funded_gas_units < evidence.required_gas_units:
         blockers.append("EVM_GAS_NOT_FUNDED")
     if net <= 0:
@@ -613,10 +637,7 @@ def qualify_netting(evidence: NettingEvidence) -> AdmissionDecision:
         blockers.append("NETTING_RESIDUAL_OBLIGATION")
     if evidence.gross_external_spread_base_units <= 0:
         blockers.append("NETTING_SAVINGS_ARE_NOT_SPREAD")
-    net = (
-        evidence.gross_external_spread_base_units
-        - evidence.total_cost_base_units
-    )
+    net = evidence.gross_external_spread_base_units - evidence.total_cost_base_units
     if net <= 0:
         blockers.append("NETTING_CONSERVATIVE_NET_NONPOSITIVE")
     return _decision("NF-280", evidence, blockers, net)
@@ -681,15 +702,9 @@ def qualify_flashmint_psm(
         blockers.append("FLASHMINT_CAP_EXCEEDED")
     if evidence.minted_units > evidence.psm_capacity_units:
         blockers.append("FLASHMINT_PSM_CAPACITY_EXCEEDED")
-    if (
-        evidence.returned_units < evidence.minted_units
-        or evidence.residual_debt_units
-    ):
+    if evidence.returned_units < evidence.minted_units or evidence.residual_debt_units:
         blockers.append("FLASHMINT_NOT_FULLY_RETURNED")
-    net = (
-        evidence.executable_exit_base_units
-        - evidence.total_cost_base_units
-    )
+    net = evidence.executable_exit_base_units - evidence.total_cost_base_units
     if net <= 0:
         blockers.append("FLASHMINT_CONSERVATIVE_NET_NONPOSITIVE")
     return _decision("NF-282", evidence, blockers, net)
@@ -719,11 +734,7 @@ def qualify_llamma(evidence: LlammaEvidence) -> AdmissionDecision:
             "executable_exit_base_units",
         )
         total_exit += component.executable_exit_base_units
-    net = (
-        total_exit
-        - evidence.debt_base_units
-        - evidence.total_cost_base_units
-    )
+    net = total_exit - evidence.debt_base_units - evidence.total_cost_base_units
     if net <= 0:
         blockers.append("LLAMMA_CONSERVATIVE_NET_NONPOSITIVE")
     return _decision("NF-283", evidence, blockers, net)
@@ -778,13 +789,9 @@ def qualify_optin_backrun(
         "BACKRUN_RELAY_NOT_CURRENT": evidence.relay_current,
         "BACKRUN_CONSENT_NOT_BOUND": evidence.consent_bound,
         "BACKRUN_HINTS_INCOMPLETE": evidence.hints_complete,
-        "BACKRUN_USER_CONDITIONS_UNSATISFIED": (
-            evidence.user_conditions_satisfied
-        ),
+        "BACKRUN_USER_CONDITIONS_UNSATISFIED": (evidence.user_conditions_satisfied),
         "BACKRUN_SANDWICH_FORBIDDEN": evidence.no_sandwich,
-        "BACKRUN_ORACLE_MANIPULATION_FORBIDDEN": (
-            evidence.no_oracle_manipulation
-        ),
+        "BACKRUN_ORACLE_MANIPULATION_FORBIDDEN": (evidence.no_oracle_manipulation),
     }
     blockers.extend(code for code, ok in checks.items() if not ok)
     _nonnegative(
@@ -822,15 +829,41 @@ def qualify_sui_book(evidence: SuiCycleEvidence) -> AdmissionDecision:
         evidence.taker_fee_base_units,
         "taker_fee_base_units",
     )
-    net = strict_int(
+    if evidence.gas_cost_base_units is None:
+        blockers.append("SUI_GAS_COST_UNPROVEN")
+        gas_cost_base_units = 0
+    else:
+        gas_cost_base_units = _nonnegative(
+            evidence.gas_cost_base_units,
+            "gas_cost_base_units",
+        )
+    claimed_net = strict_int(
         evidence.conservative_net_base_units,
         field="conservative_net_base_units",
     )
+    route_bound = claimed_net
+    if evidence.route_legs:
+        if evidence.route_legs[0].amount_in != evidence.borrowed_units:
+            blockers.append("SUI_BORROW_ROUTE_INPUT_MISMATCH")
+        route_bound = (
+            evidence.route_legs[-1].guaranteed_out
+            - evidence.returned_units
+            - evidence.taker_fee_base_units
+            - gas_cost_base_units
+        )
+        if claimed_net > route_bound:
+            blockers.append("SUI_CLAIMED_NET_EXCEEDS_ROUTE_BOUND")
+    net = min(claimed_net, route_bound)
     if evidence.returned_units < evidence.borrowed_units:
         blockers.append("SUI_BORROW_NOT_REPAID")
     if evidence.gas_budget_units < evidence.required_gas_units:
         blockers.append("SUI_GAS_NOT_FUNDED")
-    blockers.extend(_sui_object_blockers(evidence.object_transitions))
+    blockers.extend(
+        _sui_object_blockers(
+            evidence.object_transitions,
+            required_route_legs=evidence.route_legs,
+        )
+    )
     if net <= 0:
         blockers.append("SUI_CONSERVATIVE_NET_NONPOSITIVE")
     return _decision("NF-286", evidence, blockers, net)
@@ -877,17 +910,14 @@ def choose_sui_gas_option(
         key=lambda x: x.conservative_net_base_units,
         default=None,
     )
-    net = (
-        best.conservative_net_base_units
-        if best is not None
-        else None
-    )
+    net = best.conservative_net_base_units if best is not None else None
     if best is not None and best.conservative_net_base_units <= 0:
         blockers.append("SUI_GAS_OPTION_NET_NONPOSITIVE")
     decision = _decision(
         "NF-287",
         {
             "options": normalized,
+            "fee_rule_active": fee_rule_active,
             "deployment_generation": deployment_generation,
             "fee_rule_generation": fee_rule_generation,
         },
@@ -935,9 +965,7 @@ def _qualify_chain_dossier(
         chain_id=dossier.chain_id,
         disposition=disposition,
         blockers=tuple(dict.fromkeys(blockers)),
-        evidence_digest=_digest(
-            {"nf_id": nf_id, "dossier": dossier}
-        ),
+        evidence_digest=_digest({"nf_id": nf_id, "dossier": dossier}),
         live_enabled=False,
     )
 
@@ -959,31 +987,17 @@ def _route_blockers(
             blockers.append(f"LEG_{index}_DIALECT_MISMATCH")
         if index:
             prev = legs[index - 1]
-            if prev.output_asset.identity != leg.input_asset.identity:
-                blockers.append(
-                    f"LEG_{index}_ASSET_CONTINUITY_BROKEN"
-                )
+            if prev.output_asset != leg.input_asset:
+                blockers.append(f"LEG_{index}_ASSET_CONTINUITY_BROKEN")
             if leg.amount_in > prev.guaranteed_out:
-                blockers.append(
-                    f"LEG_{index}_INPUT_EXCEEDS_PRIOR_OUTPUT"
-                )
-    if (
-        require_cycle
-        and legs[0].input_asset.identity
-        != legs[-1].output_asset.identity
-    ):
+                blockers.append(f"LEG_{index}_INPUT_EXCEEDS_PRIOR_OUTPUT")
+    if require_cycle and legs[0].input_asset != legs[-1].output_asset:
         blockers.append("ROUTE_NOT_CLOSED")
     seen: dict[str, RouteLeg] = {}
     for index, leg in enumerate(legs):
         prior = seen.get(leg.shared_resource_id)
-        if (
-            prior is not None
-            and prior.state_after_sha256
-            != leg.state_before_sha256
-        ):
-            blockers.append(
-                f"LEG_{index}_SHARED_RESOURCE_STATE_RESET"
-            )
+        if prior is not None and prior.state_after_sha256 != leg.state_before_sha256:
+            blockers.append(f"LEG_{index}_SHARED_RESOURCE_STATE_RESET")
         seen[leg.shared_resource_id] = leg
     return blockers
 
@@ -1006,10 +1020,7 @@ def _qualify_collateral_first(
         blockers.append("COLLATERAL_ACCESS_NOT_PERMITTED")
     if require_callback and not evidence.callback_permitted:
         blockers.append("COLLATERAL_CALLBACK_NOT_PERMITTED")
-    if (
-        require_callback
-        and not evidence.collateral_delivered_before_debt
-    ):
+    if require_callback and not evidence.collateral_delivered_before_debt:
         blockers.append("COLLATERAL_FIRST_ORDER_UNPROVEN")
     for name in (
         "collateral_units",
@@ -1058,6 +1069,8 @@ def _lending_aware_blockers(
         _nonnegative(getattr(evidence, name), name)
     if evidence.requested_units > evidence.borrow_capacity_units:
         blockers.append(f"{prefix}_CAPACITY_EXCEEDED")
+    if evidence.repay_base_units < evidence.requested_units:
+        blockers.append(f"{prefix}_REPAYMENT_BELOW_BORROW")
     if evidence.residual_debt_units:
         blockers.append(f"{prefix}_RESIDUAL_DEBT")
     return blockers
@@ -1065,8 +1078,12 @@ def _lending_aware_blockers(
 
 def _sui_object_blockers(
     transitions: Sequence[SuiObjectTransition],
+    *,
+    required_route_legs: Sequence[RouteLeg] = (),
 ) -> list[str]:
     blockers: list[str] = []
+    if required_route_legs and not transitions:
+        blockers.append("SUI_OBJECT_TRANSITIONS_MISSING")
     seen: dict[str, SuiObjectTransition] = {}
     for index, transition in enumerate(transitions):
         _text(transition.object_id, "object_id")
@@ -1083,24 +1100,56 @@ def _sui_object_blockers(
             transition.liquidity_after,
             "liquidity_after",
         )
-        if transition.after_version <= transition.before_version:
-            blockers.append(
-                f"SUI_OBJECT_{index}_VERSION_NOT_ADVANCED"
+        if transition.state_before_sha256 is None:
+            blockers.append(f"SUI_OBJECT_{index}_STATE_BEFORE_MISSING")
+        else:
+            _sha256(
+                transition.state_before_sha256,
+                "state_before_sha256",
             )
+        if transition.state_after_sha256 is None:
+            blockers.append(f"SUI_OBJECT_{index}_STATE_AFTER_MISSING")
+        else:
+            _sha256(
+                transition.state_after_sha256,
+                "state_after_sha256",
+            )
+        if (
+            transition.state_before_sha256 is not None
+            and transition.state_after_sha256 is not None
+            and transition.state_before_sha256 == transition.state_after_sha256
+        ):
+            blockers.append(f"SUI_OBJECT_{index}_STATE_NOT_ADVANCED")
+        if transition.after_version <= transition.before_version:
+            blockers.append(f"SUI_OBJECT_{index}_VERSION_NOT_ADVANCED")
         prior = seen.get(transition.object_id)
         if prior is not None:
             if prior.after_version != transition.before_version:
-                blockers.append(
-                    f"SUI_OBJECT_{index}_VERSION_CHAIN_BROKEN"
-                )
-            if (
-                prior.liquidity_after
-                != transition.liquidity_before
-            ):
-                blockers.append(
-                    f"SUI_OBJECT_{index}_LIQUIDITY_RESET"
-                )
+                blockers.append(f"SUI_OBJECT_{index}_VERSION_CHAIN_BROKEN")
+            if prior.liquidity_after != transition.liquidity_before:
+                blockers.append(f"SUI_OBJECT_{index}_LIQUIDITY_RESET")
         seen[transition.object_id] = transition
+    required = tuple(required_route_legs)
+    if len(transitions) != len(required):
+        blockers.append("SUI_SHARED_RESOURCE_TRANSITION_COUNT_MISMATCH")
+    for access_index, route_leg in enumerate(required):
+        resource_id = route_leg.shared_resource_id
+        if access_index >= len(transitions):
+            blockers.append(
+                "SUI_SHARED_RESOURCE_TRANSITION_MISSING:"
+                f"{access_index}:{resource_id}"
+            )
+            continue
+        transition = transitions[access_index]
+        if transition.object_id != resource_id:
+            blockers.append(
+                "SUI_SHARED_RESOURCE_TRANSITION_SEQUENCE_MISMATCH:"
+                f"{access_index}:{resource_id}"
+            )
+        if transition.state_before_sha256 != route_leg.state_before_sha256:
+            blockers.append(f"SUI_OBJECT_{access_index}_STATE_BEFORE_MISMATCH")
+        if transition.state_after_sha256 != route_leg.state_after_sha256:
+            blockers.append(f"SUI_OBJECT_{access_index}_STATE_AFTER_MISMATCH")
     return blockers
 
 
@@ -1115,33 +1164,25 @@ def _decision(
         nf_id=nf_id,
         admitted=not unique,
         blockers=unique,
-        evidence_digest=_digest(
-            {"nf_id": nf_id, "evidence": evidence}
-        ),
+        evidence_digest=_digest({"nf_id": nf_id, "evidence": evidence}),
         conservative_net_units=net,
         live_enabled=False,
     )
 
 
 def _digest(value: object) -> str:
-    return sha256(
-        _stable_json(_jsonable(value)).encode()
-    ).hexdigest()
+    return sha256(_stable_json(_jsonable(value)).encode()).hexdigest()
 
 
 def _jsonable(value: object) -> object:
     if hasattr(value, "__dataclass_fields__"):
         return {
-            name: _jsonable(getattr(value, name))
-            for name in value.__dataclass_fields__
+            name: _jsonable(getattr(value, name)) for name in value.__dataclass_fields__
         }
     if isinstance(value, StrEnum):
         return value.value
     if isinstance(value, Mapping):
-        return {
-            str(key): _jsonable(item)
-            for key, item in value.items()
-        }
+        return {str(key): _jsonable(item) for key, item in value.items()}
     if isinstance(value, (tuple, list)):
         return [_jsonable(item) for item in value]
     return value
@@ -1172,27 +1213,15 @@ def _text_tuple(
         raise Agg12Error(f"{field} must be a tuple")
     if not allow_empty and not value:
         raise Agg12Error(f"{field} must not be empty")
-    if any(
-        not isinstance(item, str) or not item.strip()
-        for item in value
-    ):
-        raise Agg12Error(
-            f"{field} must contain non-empty text"
-        )
+    if any(not isinstance(item, str) or not item.strip() for item in value):
+        raise Agg12Error(f"{field} must contain non-empty text")
     if len(value) != len(set(value)):
-        raise Agg12Error(
-            f"{field} must not contain duplicates"
-        )
+        raise Agg12Error(f"{field} must not contain duplicates")
 
 
 def _sha256(value: object, field: str) -> str:
-    if (
-        not isinstance(value, str)
-        or not _HEX64.fullmatch(value)
-    ):
-        raise Agg12Error(
-            f"{field} must be a lowercase sha256 digest"
-        )
+    if not isinstance(value, str) or not _HEX64.fullmatch(value):
+        raise Agg12Error(f"{field} must be a lowercase sha256 digest")
     return value
 
 
@@ -1213,9 +1242,7 @@ def _positive(value: object, field: str) -> int:
 def _bounded_bps(value: object, field: str) -> int:
     number = strict_int(value, field=field)
     if not 0 <= number <= 10_000:
-        raise Agg12Error(
-            f"{field} must be in [0,10000]"
-        )
+        raise Agg12Error(f"{field} must be in [0,10000]")
     return number
 
 
@@ -1227,9 +1254,7 @@ def _ceil_mul_div(
     _nonnegative(value, "value")
     _nonnegative(numerator, "numerator")
     _positive(denominator, "denominator")
-    return (
-        value * numerator + denominator - 1
-    ) // denominator
+    return (value * numerator + denominator - 1) // denominator
 
 
 __all__ = [

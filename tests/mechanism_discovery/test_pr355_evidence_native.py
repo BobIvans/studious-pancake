@@ -280,6 +280,11 @@ def test_evo09_missing_outcome_and_financial_units_repaired() -> None:
             "reproducibility_ppm": 900_000,
             "data_cost_atoms": 10,
             "tail_risk_atoms": 5,
+            "rights_verified": True,
+            "costs_complete": True,
+            "route_verified": True,
+            "capacity_verified": True,
+            "timing_verified": True,
         }
     )
     assert score.payload["financial_score_atoms"] == 85

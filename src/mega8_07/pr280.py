@@ -1,10 +1,10 @@
 """PR-280 / WALLET-02: role-separated wallet generations."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence
 
 from .core import Mega807Error, require_id, stable_hash
-
 
 _ALLOWED_ROLES = ("canary", "treasury", "research", "settlement")
 

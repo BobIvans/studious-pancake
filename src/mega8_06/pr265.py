@@ -9,9 +9,7 @@ def build_tpu_quic_payload(
     signed_wire_hex: str, *, permit_message_sha256: str
 ) -> dict[str, str]:
     signed_wire_hex = require_text(signed_wire_hex, "signed_wire_hex")
-    permit_message_sha256 = require_text(
-        permit_message_sha256, "permit_message_sha256"
-    )
+    permit_message_sha256 = require_text(permit_message_sha256, "permit_message_sha256")
     try:
         wire = bytes.fromhex(signed_wire_hex)
     except ValueError as exc:

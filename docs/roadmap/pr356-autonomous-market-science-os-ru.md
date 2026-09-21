@@ -71,3 +71,30 @@ Rollback disables PR-356 consumers first, stops optional research delegation, qu
 claims/topologies, detaches consumers, and restores prior frontier selection while preserving
 receipts and negative knowledge. No fund/transaction recovery is needed because the PR has no
 execution effects.
+
+
+## Corrective completion after GitHub #539
+
+Foundation #539 merged at main `67e87a45683bccd2f5ae8f282d0b20493e9780b3`.
+The corrective completion closes the remaining 391 provisional requirement
+contracts without inventing empirical success.
+
+Current code/research-scope truth:
+
+- 544/544 requirements have an exact owner disposition;
+- 499 are concrete callable PR-356 contracts;
+- 45 are satisfied by existing canonical owners;
+- 0 remain NOT_RUN at the implementation-contract layer;
+- all 68 packages are CONTRACT_IMPLEMENTED or SATISFIED_BY_EXISTING;
+- the three #539 review findings are fixed;
+- an isolated-process replication gate and integrated receipt chain are added;
+- `roadmap_code_research_scope_complete=true`;
+- `external_qualification_complete=false`.
+
+External/factual blockers remain explicit rather than converted to PASS: current
+Morpho/Euler deployment and fork evidence, new primary real-source acquisition,
+held-out real Solana ecology calibration, remote federation evidence, and any
+live/finalized/profitability evidence.
+
+Therefore code/research implementation closure does not change the original
+effect boundary: `MERGED != QUALIFIED != AUTHORIZED_LIVE`.

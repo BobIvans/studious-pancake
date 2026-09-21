@@ -6,58 +6,94 @@
       "name": "Boros Funding IRS",
       "state": "DISABLED",
       "mode": "read_only_replay",
-      "live": false
+      "live": false,
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "FIXTURE_TESTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     },
     "MP-N02": {
       "name": "Hybrid Liquidity Shape",
       "state": "DISABLED",
       "mode": "fork_and_replay_only",
       "live": false,
-      "bunni": "REFERENCE_ONLY_QUARANTINED"
+      "bunni": "REFERENCE_ONLY_QUARANTINED",
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "CONTRACT_IMPLEMENTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     },
     "MP-N03": {
       "name": "M0 Programmable Cash",
       "state": "DISABLED",
       "mode": "read_only_shadow",
-      "live": false
+      "live": false,
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "CONTRACT_IMPLEMENTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     },
     "MP-N04": {
       "name": "Ethena Synthetic Dollar",
       "state": "DISABLED",
       "mode": "research_only",
-      "live": false
+      "live": false,
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "CONTRACT_IMPLEMENTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     },
     "MP-N05": {
       "name": "Tokenized Credit/RWA",
       "state": "DISABLED",
       "mode": "research_only",
-      "live": false
+      "live": false,
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "CONTRACT_IMPLEMENTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     },
     "MP-N06": {
       "name": "Aave V4 Hub/Spoke",
       "state": "DISABLED",
       "mode": "fork_read_only",
-      "live": false
+      "live": false,
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "CONTRACT_IMPLEMENTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     },
     "MP-N07": {
       "name": "Research Resources",
       "state": "DISABLED",
       "mode": "testnet_or_zero_cost_mock",
       "live": false,
-      "real_payment": false
+      "real_payment": false,
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "FIXTURE_TESTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     },
     "MP-N08": {
       "name": "Proof-Carrying Research",
       "state": "DISABLED",
       "mode": "offline_only",
       "live": false,
-      "production_proof": false
+      "production_proof": false,
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "FIXTURE_TESTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     },
     "MP-N09": {
       "name": "Incident Corpus",
       "state": "DISABLED",
       "mode": "offline_only",
-      "live": false
+      "live": false,
+      "adapter_owner": "src.mechanism_discovery.marketpack_adapters:build_marketpack_binding",
+      "evidence_status": "FIXTURE_TESTED",
+      "external_qualification": "BLOCKED_EXTERNAL",
+      "authorized_live": false
     }
   },
   "effect_boundary": {
@@ -73,5 +109,17 @@
   },
   "marginfi": "PAUSED",
   "slumlord_low_capital_requirement": "REQUIRED",
-  "source_copy_performed": false
+  "source_copy_performed": false,
+  "allowed_evidence_statuses": [
+    "REFERENCE_ONLY",
+    "CONTRACT_IMPLEMENTED",
+    "FIXTURE_TESTED",
+    "OFFLINE_REPLAYED",
+    "PAPER_OBSERVED",
+    "BLOCKED_EXTERNAL",
+    "NOT_RUN",
+    "QUALIFIED",
+    "AUTHORIZED_LIVE"
+  ],
+  "completion_revision": "corrective-completion-v2"
 }

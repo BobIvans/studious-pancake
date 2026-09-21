@@ -10,9 +10,12 @@ from .evidence_native_core import EvidenceNativeError, ResearchReceipt, record, 
 from .research_quality import (
     benjamini_hochberg_ppm,
     compare_four_model_variants,
+    evaluate_detection_coverage,
+    evaluate_null_control,
     evaluate_probability_calibration,
     form_independent_episodes,
     purged_walk_forward_split,
+    run_equal_budget_ablation,
     source_value_report,
 )
 
@@ -283,6 +286,26 @@ def run_boros_fixture_vertical(
             },
         )
     )
+    equal_budget = run_equal_budget_ablation(
+        baseline_utility_units=10,
+        challenger_utility_units=12,
+        baseline_cost_units=5,
+        challenger_cost_units=5,
+        budget_units=5,
+    )
+    null_control = evaluate_null_control(
+        observed_metric_atoms=prediction,
+        null_metric_atoms=0,
+        minimum_effect_atoms=1,
+    )
+    detection_coverage = evaluate_detection_coverage(
+        false_discoveries=1,
+        discoveries=10,
+        false_negatives=2,
+        positives=10,
+        observable_cells=20,
+        covered_cells=15,
+    )
 
     fees_atoms = 3
     margin_cost_atoms = 5
@@ -308,6 +331,9 @@ def run_boros_fixture_vertical(
         "model_comparison_hash": str(model_comparison["evidence_hash"]),
         "fdr_hash": str(fdr["evidence_hash"]),
         "calibration_hash": str(calibration["evidence_hash"]),
+        "equal_budget_hash": str(equal_budget["evidence_hash"]),
+        "null_control_hash": str(null_control["evidence_hash"]),
+        "detection_coverage_hash": str(detection_coverage["evidence_hash"]),
         "net_after_stress_atoms": net_after_stress_atoms,
     }
     output_hash = stable_hash("pr355:boros-output", output_payload)
@@ -363,6 +389,9 @@ def run_boros_fixture_vertical(
             },
             "fdr": dict(fdr),
             "calibration": dict(calibration),
+            "equal_budget_ablation": dict(equal_budget),
+            "null_control": dict(null_control),
+            "detection_coverage": dict(detection_coverage),
             "fees_atoms": fees_atoms,
             "margin_cost_atoms": margin_cost_atoms,
             "liquidity_shortfall_atoms": liquidity_shortfall_atoms,

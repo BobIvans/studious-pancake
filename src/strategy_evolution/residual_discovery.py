@@ -59,9 +59,7 @@ def build_bot_operation_feature_frame(rows: Sequence[Mapping[str, Any]]):
         if disposition in {"REJECTED", "NO_TRADE", "FAILED"}:
             rejected += 1
         realized_raw = row.get("realized_net_atoms")
-        realized_net_atoms = (
-            None if realized_raw is None else int(realized_raw)
-        )
+        realized_net_atoms = None if realized_raw is None else int(realized_raw)
         actual_landed_raw = row.get("actual_landed")
         actual_landed = (
             actual_landed_raw if isinstance(actual_landed_raw, bool) else None

@@ -1,4 +1,5 @@
 """PR-180 / VAULT-01: immediate vault-share NAV parity."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Mapping

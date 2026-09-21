@@ -11,6 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 from math import sqrt
+from types import MappingProxyType
 from typing import Any, Iterable, Mapping, Sequence
 
 from src.research.common import hash_json, require_id, require_text
@@ -44,6 +45,21 @@ class ResearchArtifact:
             )
 
 
+def _deep_freeze(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return MappingProxyType(
+            {
+                key: _deep_freeze(item)
+                for key, item in sorted(value.items(), key=lambda pair: str(pair[0]))
+            }
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_deep_freeze(item) for item in value)
+    if isinstance(value, (set, frozenset)):
+        return tuple(sorted((_deep_freeze(item) for item in value), key=repr))
+    return value
+
+
 def artifact(
     kind: str,
     payload: Mapping[str, Any],
@@ -55,7 +71,7 @@ def artifact(
     return ResearchArtifact(
         kind=kind,
         identity=identity,
-        payload=dict(payload),
+        payload=_deep_freeze(payload),
         disposition=disposition,
         reason=reason,
     )

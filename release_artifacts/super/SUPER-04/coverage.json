@@ -1,0 +1,49 @@
+{
+  "schema": "super04.coverage.v1",
+  "super_id": "SUPER-04",
+  "packages": ["W2-11", "W2-12"],
+  "source_prs": ["PR-073", "PR-076", "PR-074", "PR-078"],
+  "primary_nf_ids": [
+    "NF-329", "NF-330", "NF-331", "NF-332",
+    "NF-341", "NF-342", "NF-343", "NF-344",
+    "NF-333", "NF-334", "NF-335", "NF-336",
+    "NF-349", "NF-350", "NF-351", "NF-352"
+  ],
+  "implementation_status": "PARTIAL",
+  "qualification_status": "BLOCKED",
+  "activation_status": "DEFAULT_OFF",
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "children": {
+    "PR-073": {
+      "status": "VERIFIED_OFFLINE",
+      "owner": "src/economics/treasury_replenishment.py",
+      "tests": ["tests/test_super04_treasury_replenishment.py"]
+    },
+    "PR-076": {
+      "status": "VERIFIED_OFFLINE",
+      "owner": "src/execution/alt_lifecycle.py",
+      "tests": ["tests/execution/test_super04_alt_lifecycle.py"],
+      "operational_blockers": [
+        "on-chain lifecycle activation requires separately authorized canonical execution",
+        "owned-table usefulness and deployment evidence remain workload-specific"
+      ]
+    },
+    "PR-074": {
+      "status": "VERIFIED_OFFLINE",
+      "owner": "src/planning/intent_batch.py",
+      "tests": ["tests/test_super04_intent_batch.py"]
+    },
+    "PR-078": {
+      "status": "BLOCKED",
+      "owner": "src/execution/transaction_format_qualification.py",
+      "tests": ["tests/execution/test_super04_transaction_format_qualification.py"],
+      "blockers": [
+        "canonical compiler remains MessageV0-only",
+        "no pinned local v1 unsigned compiler/decoder adapter is qualified",
+        "no v1 exact-simulation, permit, and finalized-settlement conformance corpus exists"
+      ]
+    }
+  }
+}

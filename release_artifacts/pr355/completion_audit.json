@@ -1,0 +1,119 @@
+{
+  "schema_version": "pr355.completion-audit.v2",
+  "roadmap_id": "PR-355",
+  "base_after_initial_merge": "2a5f6b8d699981ff967208db7b9b0a12fbf27031",
+  "rule": "BLOCKED_EXTERNAL is a valid terminal research/code disposition when the prompt explicitly forbids fabricated data, entitlement, deployment, payments or live effects.",
+  "sections": [
+    {
+      "section": "0",
+      "title": "Mission",
+      "status": "IMPLEMENTED_WITH_HONEST_BLOCKERS"
+    },
+    {
+      "section": "1",
+      "title": "Current truth and pre-flight",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "section": "2",
+      "title": "Single-PR phased delivery",
+      "status": "IMPLEMENTED_AS_INITIAL_PLUS_CORRECTIVE_SAME_ROADMAP_SCOPE"
+    },
+    {
+      "section": "3",
+      "title": "Hard boundaries and non-goals",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "section": "4",
+      "title": "Canonical reuse map",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "section": "5",
+      "title": "IG00-IG11 integration obligations",
+      "status": "IMPLEMENTED_EXACT_OWNER_MAP"
+    },
+    {
+      "section": "6",
+      "title": "NX-00..NX-11 outcomes",
+      "status": "IMPLEMENTED_72_PROVISIONAL_NXF_NO_NEW_NF"
+    },
+    {
+      "section": "7",
+      "title": "Data contracts",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "section": "8",
+      "title": "Nine default-off MarketPacks",
+      "status": "IMPLEMENTED_BOUNDED_ADAPTERS"
+    },
+    {
+      "section": "9",
+      "title": "NXE-01..26 preregistration",
+      "status": "IMPLEMENTED_CONCRETE_TARGET_HORIZON_CONTROL"
+    },
+    {
+      "section": "10",
+      "title": "Statistical and anomaly protocol",
+      "status": "IMPLEMENTED_OFFLINE_FIXTURE_HARNESS"
+    },
+    {
+      "section": "11",
+      "title": "Sources and upstream reuse",
+      "status": "BLOCKED_EXTERNAL_REFERENCE_ONLY_NO_COPY"
+    },
+    {
+      "section": "12",
+      "title": "Repository shape",
+      "status": "IMPLEMENTED_USING_EXISTING_OWNERS"
+    },
+    {
+      "section": "13",
+      "title": "Test matrix",
+      "status": "IMPLEMENTED_FOCUSED_AND_REPOSITORY_REGRESSIONS"
+    },
+    {
+      "section": "14",
+      "title": "Evidence and CI rules",
+      "status": "IMPLEMENTED"
+    },
+    {
+      "section": "15",
+      "title": "Required deliverables",
+      "status": "IMPLEMENTED_WITH_EXTERNAL_BLOCKERS"
+    },
+    {
+      "section": "16",
+      "title": "Rollback",
+      "status": "IMPLEMENTED_CONFIG_FIRST_APPEND_ONLY"
+    },
+    {
+      "section": "17",
+      "title": "PR title and body",
+      "status": "IMPLEMENTED_BY_GITHUB_PR_535"
+    },
+    {
+      "section": "18",
+      "title": "Final agent response",
+      "status": "READY_FOR_FINAL_RESPONSE_AFTER_MERGE"
+    }
+  ],
+  "external_nonclaims": {
+    "profitability": false,
+    "production_ready": false,
+    "live_authorization": false,
+    "real_paid_resource_use": false,
+    "real_wallet_access": false
+  },
+  "corrective_pr": 535,
+  "corrective_branch": "codex/pr355-corrective-completion",
+  "remaining_external_blockers": [
+    "BOROS_PRIMARY_HISTORICAL_SOURCE_PIN_ENTITLEMENT_NOT_MATERIALIZED",
+    "HOT_BUNNI_M0_ETHENA_RWA_AAVE_EXACT_EXTERNAL_EVIDENCE_NOT_MATERIALIZED",
+    "SLUMLORD_ROUTE_MESSAGE_COMPATIBILITY_REQUIRES_SEPARATE_PROOF",
+    "REAL_X402_PRODUCTION_PAYMENT_FORBIDDEN_IN_PR355",
+    "PRODUCTION_PROOF_BACKEND_NOT_QUALIFIED"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "schema_version": "pr355.rollback.v1",
+  "config_first": true,
+  "steps": [
+    {
+      "order": 1,
+      "action": "DISABLE_ALL_PR355_MARKETPACKS",
+      "preserve_evidence": true
+    },
+    {
+      "order": 2,
+      "action": "DETACH_OPTIONAL_COLLECTORS_ADAPTERS_CONSUMERS",
+      "preserve_evidence": true
+    },
+    {
+      "order": 3,
+      "action": "RESTORE_PREVIOUS_RESEARCH_MODEL_SELECTION",
+      "preserve_evidence": true
+    },
+    {
+      "order": 4,
+      "action": "QUARANTINE_INVALID_SOURCE_DEPLOYMENT_MODEL_PROOF_EVIDENCE",
+      "preserve_evidence": true
+    },
+    {
+      "order": 5,
+      "action": "PRESERVE_APPEND_ONLY_RAW_EVIDENCE_RECEIPT_HISTORY",
+      "preserve_evidence": true
+    }
+  ],
+  "signing_required": false,
+  "fund_recovery_required": false,
+  "remote_transaction_reversal_required": false,
+  "schema_policy": "ADDITIVE_OR_TESTED_BACKWARD_READER"
+}

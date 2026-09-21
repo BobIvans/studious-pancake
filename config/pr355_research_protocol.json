@@ -1,0 +1,66 @@
+{
+  "schema_version": "pr355.research-protocol.v1",
+  "roadmap_id": "PR-355",
+  "canonical_residual_owner": "src.strategy_evolution.residual_discovery",
+  "sampling": {
+    "universe_required": true,
+    "inclusion_probability_required": true,
+    "control_windows_required": true,
+    "adaptive_selection_bias_audit_required": true
+  },
+  "availability_clocks": [
+    "event_time",
+    "published_at",
+    "received_at",
+    "available_at",
+    "revision"
+  ],
+  "episode_policy": {
+    "independent_episodes": true,
+    "purge_required": true,
+    "embargo_required": true,
+    "overlapping_windows_not_independent": true
+  },
+  "comparators": [
+    "SIMPLE_BASELINE",
+    "TARGET_MARKET_LOCAL_ONLY",
+    "POOLED_MARKETS",
+    "MECHANISM_TRANSFER_WITH_LOCAL_ADAPTER"
+  ],
+  "evaluation": {
+    "equal_budget_ablation_required": true,
+    "null_control_required": true,
+    "probability_calibration_required": true,
+    "interval_coverage_required": true,
+    "fdr_required": true,
+    "fnr_required": true,
+    "observable_miss_coverage_required": true,
+    "negative_transfer_required": true,
+    "old_regime_retention_required": true
+  },
+  "separately_measured": [
+    "LATENCY",
+    "EXECUTABLE_CAPACITY",
+    "ELIGIBILITY",
+    "SOURCE_COST"
+  ],
+  "preserve_outcomes": [
+    "REJECTED",
+    "NO_TRADE",
+    "FAILED",
+    "CENSORED",
+    "MISSING"
+  ],
+  "arbitrageability_prerequisites": [
+    "EXACT_RIGHTS",
+    "COMPLETE_COSTS",
+    "EXACT_ROUTE",
+    "EXECUTABLE_CAPACITY",
+    "TIMING"
+  ],
+  "promotion_scope": "RESEARCH_REGISTRY_ONLY",
+  "live_promotion": false,
+  "universal_anomaly_claim": false,
+  "measured_coverage_required": true,
+  "unknown_zones_required": true
+}

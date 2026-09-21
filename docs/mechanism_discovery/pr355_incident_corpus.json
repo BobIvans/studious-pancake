@@ -1,0 +1,24 @@
+{
+  "schema_version": "pr355.incident-corpus.v1",
+  "policy": "Reference-only incident evidence can generate invariants and quarantine requirements but cannot authorize a production adapter.",
+  "rows": [
+    {
+      "incident_id": "BUNNI-V2-REFERENCE",
+      "protocol_family": "Bunni v2",
+      "source_status": "REFERENCE_ONLY",
+      "immutable_pin": "PIN_REQUIRED",
+      "exact_deployment": "UNATTESTED",
+      "root_cause": "UNATTESTED_EXTERNAL_REFERENCE",
+      "affected_state": "UNATTESTED",
+      "source_copy_allowed": false,
+      "production_adapter_allowed": false,
+      "quarantine_required": true,
+      "invariant_generation_allowed": true,
+      "blockers": [
+        "EXACT_INCIDENT_SOURCE_PIN_REQUIRED",
+        "EXACT_DEPLOYMENT_AND_FIX_STATUS_REQUIRED",
+        "FILE_LEVEL_LICENSE_DECISION_REQUIRED"
+      ]
+    }
+  ]
+}

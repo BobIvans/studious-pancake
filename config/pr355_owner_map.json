@@ -16,8 +16,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "owner_symbol": "map_delta_to_current_owners",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -27,8 +33,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "owner_symbol": "map_delta_to_current_owners",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -38,8 +50,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "owner_symbol": "map_delta_to_current_owners",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -49,8 +67,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "owner_symbol": "map_delta_to_current_owners",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -60,8 +84,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "owner_symbol": "qualify_cashflow_identity",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -71,8 +101,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "owner_symbol": "qualify_cashflow_identity",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -82,8 +118,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "owner_symbol": "qualify_cashflow_identity",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -93,8 +135,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "owner_symbol": "qualify_cashflow_identity",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -104,8 +152,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/operationalize.py",
+      "owner_symbol": "capture_evo_point_in_time_corpus",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -115,8 +169,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/operationalize.py",
+      "owner_symbol": "capture_evo_point_in_time_corpus",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -126,8 +186,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/operationalize.py",
+      "owner_symbol": "capture_evo_point_in_time_corpus",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -137,8 +203,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/operationalize.py",
+      "owner_symbol": "capture_evo_point_in_time_corpus",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -148,8 +220,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing data_plane/provider_governance + EVO-09 telemetry owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/operationalize.py",
+      "owner_symbol": "capture_evo_point_in_time_corpus",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -159,8 +237,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing point-in-time/replay/data-lineage owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/core.py",
+      "owner_symbol": "validate_point_in_time",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -170,8 +254,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing point-in-time/replay/data-lineage owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/core.py",
+      "owner_symbol": "validate_point_in_time",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -181,8 +271,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing point-in-time/replay/data-lineage owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/core.py",
+      "owner_symbol": "validate_point_in_time",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -192,8 +288,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing point-in-time/replay/data-lineage owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/core.py",
+      "owner_symbol": "validate_point_in_time",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -203,8 +305,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing point-in-time/replay/data-lineage owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/core.py",
+      "owner_symbol": "validate_point_in_time",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -214,8 +322,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing economic/predictive/executable graph owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/mechanism_compiler.py",
+      "owner_symbol": "infer_rights_obligations_timing",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -225,8 +339,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing economic/predictive/executable graph owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/mechanism_compiler.py",
+      "owner_symbol": "infer_rights_obligations_timing",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -236,8 +356,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing economic/predictive/executable graph owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/mechanism_compiler.py",
+      "owner_symbol": "infer_rights_obligations_timing",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -247,8 +373,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing economic/predictive/executable graph owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/mechanism_compiler.py",
+      "owner_symbol": "infer_rights_obligations_timing",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -258,8 +390,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims + existing evaluation owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/boros.py",
+      "owner_symbol": "run_boros_fixture_vertical",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -269,8 +407,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims + existing evaluation owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/boros.py",
+      "owner_symbol": "run_boros_fixture_vertical",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -280,8 +424,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims + existing evaluation owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/boros.py",
+      "owner_symbol": "run_boros_fixture_vertical",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -291,8 +441,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims + existing evaluation owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/boros.py",
+      "owner_symbol": "run_boros_fixture_vertical",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -302,8 +458,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims + existing evaluation owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/boros.py",
+      "owner_symbol": "run_boros_fixture_vertical",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -313,8 +475,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.claims + existing evaluation owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/boros.py",
+      "owner_symbol": "run_boros_fixture_vertical",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -324,8 +492,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing research evaluation and qualification owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "purged_walk_forward_split",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -335,8 +509,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing research evaluation and qualification owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "purged_walk_forward_split",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -346,8 +526,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing research evaluation and qualification owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "purged_walk_forward_split",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -357,8 +543,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing research evaluation and qualification owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "purged_walk_forward_split",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -368,8 +560,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing research evaluation and qualification owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "purged_walk_forward_split",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -379,8 +577,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing research evaluation and qualification owners",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "purged_walk_forward_split",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -390,8 +594,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "compare_four_model_variants",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -401,8 +611,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "compare_four_model_variants",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -412,8 +628,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "compare_four_model_variants",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -423,8 +645,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "compare_four_model_variants",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -434,8 +662,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer + existing model registry",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_quality.py",
+      "owner_symbol": "compare_four_model_variants",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -445,8 +679,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing market research owners + PR-355 MarketPack adapters",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -456,8 +696,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing market research owners + PR-355 MarketPack adapters",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -467,8 +713,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing market research owners + PR-355 MarketPack adapters",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -478,8 +730,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing market research owners + PR-355 MarketPack adapters",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -489,8 +747,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing market research owners + PR-355 MarketPack adapters",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -500,8 +764,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery + canonical EVO-09 residual owner",
       "evidence_refs": [
-        "src/strategy_evolution/residual_discovery.py",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/strategy_evolution/residual_discovery.py",
+      "owner_symbol": "update_anomaly_coverage_registry",
+      "tests": [
+        "tests/strategy_evolution/test_pr353_strategy_evolution.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -511,8 +781,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery + canonical EVO-09 residual owner",
       "evidence_refs": [
-        "src/strategy_evolution/residual_discovery.py",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/strategy_evolution/residual_discovery.py",
+      "owner_symbol": "update_anomaly_coverage_registry",
+      "tests": [
+        "tests/strategy_evolution/test_pr353_strategy_evolution.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -522,8 +798,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery + canonical EVO-09 residual owner",
       "evidence_refs": [
-        "src/strategy_evolution/residual_discovery.py",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/strategy_evolution/residual_discovery.py",
+      "owner_symbol": "update_anomaly_coverage_registry",
+      "tests": [
+        "tests/strategy_evolution/test_pr353_strategy_evolution.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -533,8 +815,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery + canonical EVO-09 residual owner",
       "evidence_refs": [
-        "src/strategy_evolution/residual_discovery.py",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/strategy_evolution/residual_discovery.py",
+      "owner_symbol": "update_anomaly_coverage_registry",
+      "tests": [
+        "tests/strategy_evolution/test_pr353_strategy_evolution.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -544,8 +832,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing proposal/capital/finality authorities",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "owner_symbol": "allocate_capture_budget_by_frontier",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -555,8 +849,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing proposal/capital/finality authorities",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "owner_symbol": "allocate_capture_budget_by_frontier",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -566,8 +866,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing proposal/capital/finality authorities",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "owner_symbol": "allocate_capture_budget_by_frontier",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -577,8 +883,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing proposal/capital/finality authorities",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "owner_symbol": "allocate_capture_budget_by_frontier",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -588,8 +900,14 @@
       "disposition": "SATISFIED_BY_EXISTING",
       "owner": "existing proposal/capital/finality authorities",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "owner_symbol": "allocate_capture_budget_by_frontier",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -599,8 +917,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing upstream/evidence/product owners + PR-355 receipt consumer",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "owner_symbol": "bind_receipt_to_evidence_ledger",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -610,8 +934,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing upstream/evidence/product owners + PR-355 receipt consumer",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "owner_symbol": "bind_receipt_to_evidence_ledger",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -621,8 +951,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing upstream/evidence/product owners + PR-355 receipt consumer",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "owner_symbol": "bind_receipt_to_evidence_ledger",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     },
     {
@@ -632,8 +968,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "existing upstream/evidence/product owners + PR-355 receipt consumer",
       "evidence_refs": [
-        "current main canonical owner map",
-        "docs/roadmap/pr355-evidence-native-mechanism-os.md"
+        "config/pr355_owner_map.json",
+        "release_artifacts/pr355/current-head-evidence.json"
+      ],
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "owner_symbol": "bind_receipt_to_evidence_ledger",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py",
+        "tests/mechanism_discovery/test_pr355_completion.py"
       ]
     }
   ],
@@ -645,7 +987,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "symbol": "map_delta_to_current_owners",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-002",
@@ -654,7 +1003,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "symbol": "classify_delta_non_duplication",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-003",
@@ -663,7 +1019,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "symbol": "bind_delta_source_provenance",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-004",
@@ -672,7 +1035,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "symbol": "register_delta_marketpack",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-005",
@@ -681,7 +1051,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "symbol": "audit_delta_effect_boundary",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-006",
@@ -690,7 +1067,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.pr355_delta",
       "symbol": "publish_delta_coverage_receipt",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/pr355_delta.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-007",
@@ -699,7 +1083,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.claims",
       "symbol": "define_cashflow_stream",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-008",
@@ -708,7 +1099,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.claims",
       "symbol": "define_claim_right",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-009",
@@ -717,7 +1115,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.claims",
       "symbol": "normalize_rate_instrument",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-010",
@@ -726,7 +1131,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.claims",
       "symbol": "compile_fixed_floating_payoff",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-011",
@@ -735,7 +1147,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.claims",
       "symbol": "price_cashflow_after_costs",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-012",
@@ -744,7 +1163,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.claims",
       "symbol": "qualify_cashflow_identity",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/claims.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-013",
@@ -753,7 +1179,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.liquidity_shape",
       "symbol": "define_liquidity_shape",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/liquidity_shape.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-014",
@@ -762,7 +1195,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.liquidity_shape",
       "symbol": "compile_liquidity_shape_surface",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/liquidity_shape.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-015",
@@ -771,7 +1211,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.liquidity_shape",
       "symbol": "project_dynamic_liquidity_shape",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/liquidity_shape.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-016",
@@ -780,7 +1227,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.liquidity_shape",
       "symbol": "compare_hybrid_execution_paths",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/liquidity_shape.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-017",
@@ -789,7 +1243,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.liquidity_shape",
       "symbol": "estimate_lvr_and_lp_response",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/liquidity_shape.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-018",
@@ -798,7 +1259,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.liquidity_shape",
       "symbol": "stress_liquidity_shape",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/liquidity_shape.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-019",
@@ -807,7 +1275,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.programmable_cash",
       "symbol": "register_programmable_cash_asset",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/programmable_cash.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-020",
@@ -816,7 +1291,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.programmable_cash",
       "symbol": "model_earning_and_claim_modes",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/programmable_cash.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-021",
@@ -825,7 +1307,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.programmable_cash",
       "symbol": "read_mint_redeem_capacity",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/programmable_cash.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-022",
@@ -834,7 +1323,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.programmable_cash",
       "symbol": "detect_extension_parity_residual",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/programmable_cash.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-023",
@@ -843,7 +1339,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.programmable_cash",
       "symbol": "decompose_synthetic_dollar_backing",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/programmable_cash.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-024",
@@ -852,7 +1355,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.programmable_cash",
       "symbol": "qualify_redemption_eligibility",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/programmable_cash.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-025",
@@ -861,7 +1371,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.rwa",
       "symbol": "register_rwa_instrument_rights",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/rwa.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-026",
@@ -870,7 +1387,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.rwa",
       "symbol": "ingest_nav_revision_history",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/rwa.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-027",
@@ -879,7 +1403,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.rwa",
       "symbol": "model_rwa_subscription_redemption",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/rwa.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-028",
@@ -888,7 +1419,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.rwa",
       "symbol": "model_custody_receipt_state",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/rwa.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-029",
@@ -897,7 +1435,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.rwa",
       "symbol": "detect_rwa_nav_basis",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/rwa.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-030",
@@ -906,7 +1451,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.rwa",
       "symbol": "qualify_rwa_access_path",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/rwa.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-031",
@@ -915,7 +1467,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.shared_credit",
       "symbol": "map_hub_spoke_liquidity",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/shared_credit.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-032",
@@ -924,7 +1483,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.shared_credit",
       "symbol": "normalize_spoke_risk_parameters",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/shared_credit.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-033",
@@ -933,7 +1499,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.shared_credit",
       "symbol": "compute_shared_liquidity_bottleneck",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/shared_credit.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-034",
@@ -942,7 +1515,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.shared_credit",
       "symbol": "simulate_cross_spoke_utilization",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/shared_credit.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-035",
@@ -951,7 +1531,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.shared_credit",
       "symbol": "detect_hub_spoke_basis",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/shared_credit.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-036",
@@ -960,7 +1547,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.shared_credit",
       "symbol": "qualify_shared_credit_route",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/shared_credit.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-037",
@@ -969,7 +1563,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer",
       "symbol": "build_mechanism_fingerprint",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/mechanism_transfer.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-038",
@@ -978,7 +1579,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer",
       "symbol": "build_marketpack_adapter_features",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/mechanism_transfer.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-039",
@@ -987,7 +1595,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer",
       "symbol": "train_local_only_baseline",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/mechanism_transfer.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-040",
@@ -996,7 +1611,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer",
       "symbol": "train_mechanism_transfer_challenger",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/mechanism_transfer.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-041",
@@ -1005,7 +1627,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer",
       "symbol": "measure_negative_transfer",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/mechanism_transfer.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-042",
@@ -1014,7 +1643,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.mechanism_transfer",
       "symbol": "promote_or_reject_transfer",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/mechanism_transfer.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-043",
@@ -1023,7 +1659,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.frontier",
       "symbol": "estimate_marketpack_information_value",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-044",
@@ -1032,7 +1675,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.frontier",
       "symbol": "estimate_marketpack_onboarding_cost",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-045",
@@ -1041,7 +1691,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.frontier",
       "symbol": "score_research_frontier",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-046",
@@ -1050,7 +1707,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.frontier",
       "symbol": "allocate_capture_budget_by_frontier",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-047",
@@ -1059,7 +1723,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.frontier",
       "symbol": "audit_frontier_selection_bias",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-048",
@@ -1068,7 +1739,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.frontier",
       "symbol": "retire_low_value_marketpack",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/frontier.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-049",
@@ -1077,7 +1755,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.research_receipt",
       "symbol": "build_research_receipt_manifest",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-050",
@@ -1086,7 +1771,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.research_receipt",
       "symbol": "replay_receipt_computation",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-051",
@@ -1095,7 +1787,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.research_receipt",
       "symbol": "generate_optional_computation_proof",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-052",
@@ -1104,7 +1803,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.research_receipt",
       "symbol": "verify_computation_proof",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-053",
@@ -1113,7 +1819,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.research_receipt",
       "symbol": "redact_receipt_for_sharing",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-054",
@@ -1122,7 +1835,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.research_receipt",
       "symbol": "bind_receipt_to_evidence_ledger",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_receipt.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-055",
@@ -1131,7 +1851,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.research_resources",
       "symbol": "register_paid_research_resource",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_resources.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-056",
@@ -1140,7 +1867,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.research_resources",
       "symbol": "discover_paid_resource",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_resources.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-057",
@@ -1149,7 +1883,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.research_resources",
       "symbol": "quote_research_purchase",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_resources.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-058",
@@ -1158,7 +1899,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.research_resources",
       "symbol": "authorize_bounded_resource_purchase",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_resources.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-059",
@@ -1167,7 +1915,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.research_resources",
       "symbol": "reconcile_resource_payment",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_resources.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-060",
@@ -1176,7 +1931,14 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.research_resources",
       "symbol": "score_information_value_after_payment",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/research_resources.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-061",
@@ -1185,7 +1947,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.incident_admission",
       "symbol": "ingest_protocol_incident",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/incident_admission.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-062",
@@ -1194,7 +1963,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.incident_admission",
       "symbol": "derive_incident_invariant_tests",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/incident_admission.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-063",
@@ -1203,7 +1979,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.incident_admission",
       "symbol": "build_adversarial_mechanism_states",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/incident_admission.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-064",
@@ -1212,7 +1995,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.incident_admission",
       "symbol": "quarantine_vulnerable_deployment",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/incident_admission.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-065",
@@ -1221,7 +2011,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.incident_admission",
       "symbol": "detect_semantic_security_drift",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/incident_admission.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-066",
@@ -1230,7 +2027,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.incident_admission",
       "symbol": "gate_mechanism_admission_on_security",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/incident_admission.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-067",
@@ -1239,7 +2043,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.causal_twin",
       "symbol": "define_market_intervention",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/causal_twin.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-068",
@@ -1248,7 +2059,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.causal_twin",
       "symbol": "declare_causal_assumptions",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/causal_twin.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-069",
@@ -1257,7 +2075,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.causal_twin",
       "symbol": "simulate_intervention_twin",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/causal_twin.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-070",
@@ -1266,7 +2091,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.causal_twin",
       "symbol": "compare_observed_and_counterfactual",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/causal_twin.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-071",
@@ -1275,7 +2107,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.causal_twin",
       "symbol": "estimate_intervention_uncertainty",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/causal_twin.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     },
     {
       "requirement_id": "NXF-072",
@@ -1284,7 +2123,14 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.causal_twin",
       "symbol": "reject_unsupported_causal_claim",
-      "permanent_nf": null
+      "permanent_nf": null,
+      "owner_path": "src/mechanism_discovery/causal_twin.py",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_evidence_native.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_owner_map.json"
+      ]
     }
   ],
   "marketpacks": [
@@ -1294,7 +2140,16 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.boros",
       "symbol": "run_boros_fixture_vertical",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N01",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     },
     {
       "requirement_id": "MP-N02",
@@ -1302,7 +2157,16 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.liquidity_shape",
       "symbol": "compare_hybrid_execution_paths",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N02",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     },
     {
       "requirement_id": "MP-N03",
@@ -1310,7 +2174,16 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.programmable_cash",
       "symbol": "register_programmable_cash_asset",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N03",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     },
     {
       "requirement_id": "MP-N04",
@@ -1318,7 +2191,16 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.programmable_cash",
       "symbol": "decompose_synthetic_dollar_backing",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N04",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     },
     {
       "requirement_id": "MP-N05",
@@ -1326,7 +2208,16 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.rwa",
       "symbol": "register_rwa_instrument_rights",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N05",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     },
     {
       "requirement_id": "MP-N06",
@@ -1334,7 +2225,16 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.shared_credit",
       "symbol": "map_hub_spoke_liquidity",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N06",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     },
     {
       "requirement_id": "MP-N07",
@@ -1342,7 +2242,16 @@
       "disposition": "NEW_OUTCOME",
       "owner": "src.mechanism_discovery.research_resources",
       "symbol": "register_paid_research_resource",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N07",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     },
     {
       "requirement_id": "MP-N08",
@@ -1350,7 +2259,16 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.research_receipt",
       "symbol": "build_research_receipt_manifest",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N08",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     },
     {
       "requirement_id": "MP-N09",
@@ -1358,9 +2276,82 @@
       "disposition": "SPECIALIZE_EXISTING",
       "owner": "src.mechanism_discovery.incident_admission",
       "symbol": "ingest_protocol_incident",
-      "state": "DISABLED"
+      "state": "DISABLED",
+      "owner_path": "src/mechanism_discovery/marketpack_adapters.py",
+      "owner_symbol": "build_marketpack_binding",
+      "binding_pack_id": "MP-N09",
+      "tests": [
+        "tests/mechanism_discovery/test_pr355_completion.py"
+      ],
+      "evidence_refs": [
+        "config/pr355_marketpacks.json"
+      ]
     }
   ],
   "duplicate_authorities": [],
-  "permanent_nf_allocated": false
+  "permanent_nf_allocated": false,
+  "exact_owner_contract": {
+    "owner_path_required": true,
+    "owner_symbol_required": true,
+    "tests_required": true,
+    "evidence_required": true,
+    "verifier_imports_symbols": true
+  },
+  "completion_revision": "corrective-completion-v2",
+  "corrective_observed_main": "2a5f6b8d699981ff967208db7b9b0a12fbf27031",
+  "predecessor_scope_refs": {
+    "NF-001..NF-1016": {
+      "disposition": "SATISFIED_BY_EXISTING",
+      "canonical_owner_source": "src/release_gate/ultimate_mega1_closure.py::NF_TO_CLOSURE",
+      "evidence_refs": [
+        "src/release_gate/ultimate_mega1_closure.py",
+        "docs/qualification/FINAL_CURRENT_HEAD_RESIDUAL_MAP.json",
+        "release_artifacts/ultimate/ULTIMATE-MEGA1/coverage.json"
+      ],
+      "exact_range": [
+        1,
+        1016
+      ]
+    },
+    "EVO-01..EVO-09 / NF-1017..NF-1088": {
+      "disposition": "SATISFIED_BY_EXISTING",
+      "canonical_owner_source": "src/strategy_evolution/manifest.py::NF_TO_SYMBOL",
+      "evidence_refs": [
+        "src/strategy_evolution/manifest.py",
+        "docs/strategy_evolution/function_registry_nf1017_1088.md",
+        "release_artifacts/pr353/evidence_manifest.json"
+      ],
+      "exact_range": [
+        1017,
+        1088
+      ]
+    },
+    "RND-00..RND-11 / NF-1089..NF-1184": {
+      "disposition": "SATISFIED_BY_EXISTING",
+      "canonical_owner_source": "src/mechanism_discovery/manifest.py::NF_TO_SYMBOL",
+      "evidence_refs": [
+        "src/mechanism_discovery/manifest.py",
+        "docs/mechanism_discovery/function_registry_nf1089_1184.md",
+        "release_artifacts/pr354/evidence_manifest.json"
+      ],
+      "exact_range": [
+        1089,
+        1184
+      ]
+    }
+  },
+  "planning_alias_refs": {
+    "L0-L8": {
+      "literal_aliases_present_in_current_repo": false,
+      "disposition": "SATISFIED_BY_EXISTING",
+      "mapping_basis": "PR-355 prompt canonical-reuse map; current owners are evidenced through the NF/EVO/RND manifests rather than literal L0-L8 package names.",
+      "no_new_owner_created": true
+    },
+    "B00-B08": {
+      "literal_aliases_present_in_current_repo": false,
+      "disposition": "SATISFIED_BY_EXISTING",
+      "mapping_basis": "PR-355 prompt canonical-reuse map; current owners are evidenced through the NF/EVO/RND manifests rather than literal B00-B08 package names.",
+      "no_new_owner_created": true
+    }
+  }
 }

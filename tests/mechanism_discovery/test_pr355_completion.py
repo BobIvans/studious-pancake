@@ -12,21 +12,34 @@ from src.mechanism_discovery.evidence_native_core import (
     EvidenceNativeError,
     ResearchReceipt,
 )
+from src.mechanism_discovery.incident_admission import (
+    derive_incident_invariant_tests,
+    detect_semantic_security_drift,
+)
+from src.mechanism_discovery.liquidity_shape import compare_hybrid_execution_paths
 from src.mechanism_discovery.marketpack_adapters import (
     all_marketpack_bindings,
 )
 from src.mechanism_discovery.research_quality import (
     benjamini_hochberg_ppm,
     compare_four_model_variants,
+    evaluate_detection_coverage,
+    evaluate_null_control,
     evaluate_probability_calibration,
     form_independent_episodes,
     purged_walk_forward_split,
+    run_equal_budget_ablation,
 )
 from src.mechanism_discovery.research_receipt import (
+    redact_receipt_for_sharing,
     verify_receipt_components,
 )
+from src.mechanism_discovery.research_resources import reconcile_resource_payment
+from src.mechanism_discovery.rwa import qualify_rwa_access_path
+from src.strategy_evolution.core import EvolutionError
 from src.strategy_evolution.residual_discovery import (
     build_bot_operation_feature_frame,
+    score_anomaly_arbitrageability,
     select_training_labels_as_of,
 )
 
@@ -166,6 +179,9 @@ def test_boros_full_fixture_protocol_covers_all_four_comparators_and_blind_spots
     assert result["purged_walk_forward"]["holdout_count"] >= 1
     assert "fdr" in result
     assert "calibration" in result
+    assert "equal_budget_ablation" in result
+    assert "null_control" in result
+    assert "detection_coverage" in result
     assert "source_value" in result
     assert result["blind_spots"]
     assert result["verdict"] == "BLOCKED_EXTERNAL"
@@ -225,6 +241,140 @@ def test_research_quality_protocol_has_purge_fdr_calibration_and_negative_transf
         )
     )
     assert calibration["interval_coverage_ppm"] == 1_000_000
+
+
+
+def test_equal_budget_null_and_detection_coverage_protocol() -> None:
+    ablation = run_equal_budget_ablation(
+        baseline_utility_units=10,
+        challenger_utility_units=12,
+        baseline_cost_units=5,
+        challenger_cost_units=5,
+        budget_units=5,
+    )
+    assert ablation["utility_delta_units"] == 2
+
+    null = evaluate_null_control(
+        observed_metric_atoms=10,
+        null_metric_atoms=2,
+        minimum_effect_atoms=5,
+    )
+    assert null["null_rejected"] is True
+
+    coverage = evaluate_detection_coverage(
+        false_discoveries=1,
+        discoveries=10,
+        false_negatives=2,
+        positives=10,
+        observable_cells=20,
+        covered_cells=15,
+    )
+    assert coverage["fdr_ppm"] == 100_000
+    assert coverage["fnr_ppm"] == 200_000
+    assert coverage["observable_miss_ppm"] == 250_000
+
+
+def test_arbitrageability_requires_rights_cost_route_capacity_and_timing() -> None:
+    with pytest.raises(EvolutionError, match="ARBITRAGEABILITY_PROOF_INCOMPLETE"):
+        score_anomaly_arbitrageability(
+            {
+                "net_edge_atoms": 10,
+                "capacity_atoms": 100,
+                "correlation_only": False,
+            }
+        )
+    report = score_anomaly_arbitrageability(
+        {
+            "net_edge_atoms": 10,
+            "capacity_atoms": 100,
+            "correlation_only": False,
+            "rights_verified": True,
+            "costs_complete": True,
+            "route_verified": True,
+            "capacity_verified": True,
+            "timing_verified": True,
+        }
+    )
+    assert report.payload["score_atoms"] == 10
+    assert report.payload["mixed_units_combined"] is False
+
+
+def test_rwa_unknown_access_hybrid_mismatch_and_resource_error_fail_closed() -> None:
+    access = qualify_rwa_access_path(
+        {
+            "jurisdiction_known": False,
+            "allowlist_known": True,
+            "session_known": True,
+            "custody_known": True,
+        }
+    )
+    assert access["qualified"] is False
+    assert "jurisdiction_known" in access["unknown_fields"]
+
+    with pytest.raises(EvidenceNativeError, match="HYBRID_CONSTRAINT_MISMATCH"):
+        compare_hybrid_execution_paths(
+            (
+                {
+                    "constraint_id": "a",
+                    "path_id": "rfq",
+                    "kind": "RFQ",
+                    "net_output_atoms": 10,
+                    "latency_ms": 1,
+                    "capacity_atoms": 10,
+                },
+                {
+                    "constraint_id": "b",
+                    "path_id": "amm",
+                    "kind": "AMM",
+                    "net_output_atoms": 11,
+                    "latency_ms": 1,
+                    "capacity_atoms": 10,
+                },
+            )
+        )
+
+    with pytest.raises(EvidenceNativeError, match="ERROR_OR_CANCEL_CHARGED"):
+        reconcile_resource_payment(
+            {
+                "payment_scheme": "MOCK",
+                "status": "ERROR",
+                "charged_atoms": 1,
+                "response": {},
+                "latency_ms": 1,
+            }
+        )
+
+
+def test_incident_invariants_security_drift_and_receipt_redaction() -> None:
+    invariants = derive_incident_invariant_tests(
+        {"mechanics": ("shared-vault-accounting", "withdrawal-ordering")}
+    )
+    assert invariants["test_count"] == 2
+
+    drift = detect_semantic_security_drift(
+        {
+            "previous_semantic_hash": "old",
+            "current_semantic_hash": "new",
+            "previous_config_hash": "config-a",
+            "current_config_hash": "config-b",
+        }
+    )
+    assert drift["drift"] is True
+    assert drift["invalidate_prior_safety_evidence"] is True
+
+    redacted = redact_receipt_for_sharing(
+        {
+            "receipt_hash": "public",
+            "authorization": "secret",
+            "signed_transaction": "signed",
+            "sensitive_route": "route",
+        }
+    )
+    assert set(redacted["removed_fields"]) == {
+        "authorization",
+        "sensitive_route",
+        "signed_transaction",
+    }
 
 
 def _receipt() -> ResearchReceipt:

@@ -391,6 +391,23 @@ def test_experiments_are_preregistered_but_not_empirically_qualified() -> None:
         assert row["horizons"]
 
 
+def test_document_boundaries_and_conditional_observation_contract_are_preserved() -> None:
+    payload = _config()
+    assert len(payload["document_boundaries"]) == 8
+    assert payload["observation_contract_conditionally_required"] == [
+        "published_at",
+        "revision_id",
+        "block_or_checkpoint",
+        "source_sequence",
+        "commitment",
+        "request_hash",
+        "licence_id",
+    ]
+    assert "available_at" in payload["availability_rule"]
+    assert "эмпирический эксперимент не выполнен" in payload["forecast_note"]
+    assert "Graph Continual Learning" in payload["document_hint"]["topic"]
+
+
 def test_effect_boundary_is_all_false() -> None:
     assert not any(_config()["effect_boundary"].values())
     assert not any(research_effect_boundary().values())

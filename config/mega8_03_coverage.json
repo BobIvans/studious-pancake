@@ -1,0 +1,561 @@
+{
+  "schema_version": "mega8-03.coverage.v1",
+  "mega_id": "MEGA8-03",
+  "base_sha": "04480fa25d1117e9d20e7fe8caad23b16cd5ef4a",
+  "roadmap_children": [
+    "PR-186",
+    "PR-187",
+    "PR-188",
+    "PR-189",
+    "PR-190",
+    "PR-191",
+    "PR-192",
+    "PR-193",
+    "PR-194",
+    "PR-195",
+    "PR-196",
+    "PR-197",
+    "PR-198",
+    "PR-199",
+    "PR-200",
+    "PR-201",
+    "PR-202",
+    "PR-203",
+    "PR-204",
+    "PR-205",
+    "PR-206",
+    "PR-207",
+    "PR-208"
+  ],
+  "nf_range": [
+    "NF-493",
+    "NF-584"
+  ],
+  "nf_count": 92,
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "BLOCKED_EXTERNAL_AND_UNQUALIFIED",
+  "dependency_disposition": "CURRENT_HEAD_CONTRACT_REUSE; MEGA8-01/02 NUMBERING_ALONE_NOT_TREATED_AS_READY",
+  "canonical_reuse": [
+    "src/production_qualification.py",
+    "src/strategy/conflict_scheduler.py",
+    "src/strategy/multihop_solver.py",
+    "src/economics/split_flow.py",
+    "src/liquidation/",
+    "src/inventory/",
+    "src/decision/",
+    "src/research/",
+    "src/execution/economic_reconciliation/"
+  ],
+  "source_copy_mode": "NO_SOURCE_COPY; INTERNAL_OR_REFERENCE_ONLY",
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "live_enabled": false,
+  "automatic_capital_increase_allowed": false,
+  "release_claim_allowed": false,
+  "production_ready": false,
+  "children": [
+    {
+      "child": "PR-186",
+      "owner": "KEEPER-01",
+      "path": "src/mega8_03/pr186_keeper.py",
+      "nf": [
+        "NF-493",
+        "NF-494",
+        "NF-495",
+        "NF-496"
+      ],
+      "dependencies": [
+        "PR-105",
+        "PR-120",
+        "PR-122",
+        "PR-148",
+        "PR-185"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-187",
+      "owner": "CLMM-01",
+      "path": "src/mega8_03/pr187_clmm.py",
+      "nf": [
+        "NF-497",
+        "NF-498",
+        "NF-499",
+        "NF-500"
+      ],
+      "dependencies": [
+        "PR-099",
+        "PR-100",
+        "PR-101",
+        "PR-112"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-188",
+      "owner": "RFQ-01",
+      "path": "src/mega8_03/pr188_rfq.py",
+      "nf": [
+        "NF-501",
+        "NF-502",
+        "NF-503",
+        "NF-504"
+      ],
+      "dependencies": [
+        "PR-090",
+        "PR-105",
+        "PR-118"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-189",
+      "owner": "ORDERFLOW-01",
+      "path": "src/mega8_03/pr189_orderflow.py",
+      "nf": [
+        "NF-505",
+        "NF-506",
+        "NF-507",
+        "NF-508"
+      ],
+      "dependencies": [
+        "PR-118",
+        "PR-129",
+        "PR-188"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-190",
+      "owner": "PERP-01",
+      "path": "src/mega8_03/pr190_perp_research.py",
+      "nf": [
+        "NF-509",
+        "NF-510",
+        "NF-511",
+        "NF-512"
+      ],
+      "dependencies": [
+        "PR-129",
+        "PR-140",
+        "PR-141"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-191",
+      "owner": "PERP-02",
+      "path": "src/mega8_03/pr191_spot_perp_sandbox.py",
+      "nf": [
+        "NF-513",
+        "NF-514",
+        "NF-515",
+        "NF-516"
+      ],
+      "dependencies": [
+        "PR-120",
+        "PR-121",
+        "PR-122",
+        "PR-140",
+        "PR-190"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-192",
+      "owner": "LIQ-03",
+      "path": "src/mega8_03/pr192_liquidation_competition.py",
+      "nf": [
+        "NF-517",
+        "NF-518",
+        "NF-519",
+        "NF-520"
+      ],
+      "dependencies": [
+        "PR-114",
+        "PR-115",
+        "PR-118",
+        "PR-123",
+        "PR-178"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-193",
+      "owner": "LISTING-01",
+      "path": "src/mega8_03/pr193_market_activation.py",
+      "nf": [
+        "NF-521",
+        "NF-522",
+        "NF-523",
+        "NF-524"
+      ],
+      "dependencies": [
+        "PR-085",
+        "PR-102",
+        "PR-118",
+        "PR-166",
+        "PR-177"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-194",
+      "owner": "ECON-01",
+      "path": "src/mega8_03/pr194_recoveries.py",
+      "nf": [
+        "NF-525",
+        "NF-526",
+        "NF-527",
+        "NF-528"
+      ],
+      "dependencies": [
+        "PR-122",
+        "PR-128",
+        "PR-148"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-195",
+      "owner": "SURV-01",
+      "path": "src/mega8_03/pr195_survival.py",
+      "nf": [
+        "NF-529",
+        "NF-530",
+        "NF-531",
+        "NF-532"
+      ],
+      "dependencies": [
+        "PR-103",
+        "PR-104",
+        "PR-124",
+        "PR-156",
+        "PR-159"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-196",
+      "owner": "UQ-01",
+      "path": "src/mega8_03/pr196_conformal.py",
+      "nf": [
+        "NF-533",
+        "NF-534",
+        "NF-535",
+        "NF-536"
+      ],
+      "dependencies": [
+        "PR-123",
+        "PR-124",
+        "PR-173",
+        "PR-195"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-197",
+      "owner": "CAUSAL-01",
+      "path": "src/mega8_03/pr197_causal.py",
+      "nf": [
+        "NF-537",
+        "NF-538",
+        "NF-539",
+        "NF-540"
+      ],
+      "dependencies": [
+        "PR-083",
+        "PR-089",
+        "PR-118",
+        "PR-156"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-198",
+      "owner": "HAWKES-01",
+      "path": "src/mega8_03/pr198_hawkes.py",
+      "nf": [
+        "NF-541",
+        "NF-542",
+        "NF-543",
+        "NF-544"
+      ],
+      "dependencies": [
+        "PR-089",
+        "PR-124",
+        "PR-197"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-199",
+      "owner": "GNN-01",
+      "path": "src/mega8_03/pr199_gnn.py",
+      "nf": [
+        "NF-545",
+        "NF-546",
+        "NF-547",
+        "NF-548"
+      ],
+      "dependencies": [
+        "PR-088",
+        "PR-125",
+        "PR-162",
+        "PR-197"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-200",
+      "owner": "TEMPORAL-01",
+      "path": "src/mega8_03/pr200_temporal.py",
+      "nf": [
+        "NF-549",
+        "NF-550",
+        "NF-551",
+        "NF-552"
+      ],
+      "dependencies": [
+        "PR-123",
+        "PR-124",
+        "PR-125",
+        "PR-162"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-201",
+      "owner": "ACTIVE-01",
+      "path": "src/mega8_03/pr201_active_learning.py",
+      "nf": [
+        "NF-553",
+        "NF-554",
+        "NF-555",
+        "NF-556"
+      ],
+      "dependencies": [
+        "PR-123",
+        "PR-124",
+        "PR-160",
+        "PR-196"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-202",
+      "owner": "META-01",
+      "path": "src/mega8_03/pr202_meta.py",
+      "nf": [
+        "NF-557",
+        "NF-558",
+        "NF-559",
+        "NF-560"
+      ],
+      "dependencies": [
+        "PR-124",
+        "PR-125",
+        "PR-199",
+        "PR-200"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-203",
+      "owner": "ROBUST-01",
+      "path": "src/mega8_03/pr203_model_robustness.py",
+      "nf": [
+        "NF-561",
+        "NF-562",
+        "NF-563",
+        "NF-564"
+      ],
+      "dependencies": [
+        "PR-123",
+        "PR-124",
+        "PR-128",
+        "PR-161",
+        "PR-202"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-204",
+      "owner": "EXPLAIN-01",
+      "path": "src/mega8_03/pr204_explanations.py",
+      "nf": [
+        "NF-565",
+        "NF-566",
+        "NF-567",
+        "NF-568"
+      ],
+      "dependencies": [
+        "PR-123",
+        "PR-124",
+        "PR-176",
+        "PR-196",
+        "PR-203"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-205",
+      "owner": "OPE-01",
+      "path": "src/mega8_03/pr205_ope.py",
+      "nf": [
+        "NF-569",
+        "NF-570",
+        "NF-571",
+        "NF-572"
+      ],
+      "dependencies": [
+        "PR-103",
+        "PR-104",
+        "PR-122",
+        "PR-123",
+        "PR-124"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-206",
+      "owner": "BANDIT-01",
+      "path": "src/mega8_03/pr206_bandit.py",
+      "nf": [
+        "NF-573",
+        "NF-574",
+        "NF-575",
+        "NF-576"
+      ],
+      "dependencies": [
+        "PR-123",
+        "PR-160",
+        "PR-201",
+        "PR-205"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-207",
+      "owner": "TWIN-01",
+      "path": "src/mega8_03/pr207_digital_twin.py",
+      "nf": [
+        "NF-577",
+        "NF-578",
+        "NF-579",
+        "NF-580"
+      ],
+      "dependencies": [
+        "PR-096",
+        "PR-097",
+        "PR-104",
+        "PR-125",
+        "PR-199",
+        "PR-200"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    },
+    {
+      "child": "PR-208",
+      "owner": "COMPETE-01",
+      "path": "src/mega8_03/pr208_competition.py",
+      "nf": [
+        "NF-581",
+        "NF-582",
+        "NF-583",
+        "NF-584"
+      ],
+      "dependencies": [
+        "PR-118",
+        "PR-122",
+        "PR-123",
+        "PR-124",
+        "PR-185",
+        "PR-187",
+        "PR-192",
+        "PR-193",
+        "PR-195",
+        "PR-197",
+        "PR-198",
+        "PR-207"
+      ],
+      "implementation_status": "IMPLEMENTED_OFFLINE",
+      "operational_status": "UNQUALIFIED",
+      "execution_authority": false,
+      "live_enabled": false
+    }
+  ],
+  "residual_blockers": [
+    "CURRENT_DEPLOYMENT_AND_PROTOCOL_PERMISSION_EVIDENCE_NOT_COLLECTED_BY_THIS_PR",
+    "FINALIZED_MULTI_PROTOCOL_OUTCOME_DATASET_NOT_MEASURED_BY_THIS_PR",
+    "MODEL_HOLDOUT_AND_CALIBRATION_CAMPAIGNS_NOT_RUN_BY_THIS_PR",
+    "MEGA8_01_AND_MEGA8_02_WHOLE_PACKAGE_COMPLETION_NOT_ASSUMED_FROM_NUMBERING",
+    "NO_LIVE_OR_CAPITAL_PROMOTION_EVIDENCE"
+  ]
+}

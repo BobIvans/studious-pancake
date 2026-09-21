@@ -303,9 +303,7 @@ def _validate_account_shape(instruction: Instruction) -> None:
             "flashloan instruction must contain exactly 14 ordered account metas",
         )
 
-    actual_flags = tuple(
-        (meta.is_signer, meta.is_writable) for meta in accounts
-    )
+    actual_flags = tuple((meta.is_signer, meta.is_writable) for meta in accounts)
     if actual_flags != _EXPECTED_META_FLAGS:
         raise JupiterLendAdapterError(
             JupiterLendRejectionCode.ACCOUNT_MISMATCH,

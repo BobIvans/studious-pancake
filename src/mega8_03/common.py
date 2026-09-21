@@ -11,6 +11,7 @@ from enum import StrEnum
 import hashlib
 import json
 import math
+from types import MappingProxyType
 from typing import Any, Iterable, Mapping, Sequence
 
 from src.research.common import (
@@ -124,6 +125,16 @@ class OfflineDecision:
         return asdict(self)
 
 
+def _freeze_value(value: Any) -> Any:
+    if isinstance(value, Mapping):
+        return MappingProxyType(
+            {key: _freeze_value(item) for key, item in value.items()}
+        )
+    if isinstance(value, (list, tuple)):
+        return tuple(_freeze_value(item) for item in value)
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class AdvisoryModel:
     model_id: str
@@ -138,6 +149,7 @@ class AdvisoryModel:
         require_id(self.model_id, "model_id")
         require_id(self.model_kind, "model_kind")
         require_sha256(self.evidence_sha256, "evidence_sha256")
+        object.__setattr__(self, "parameters", _freeze_value(self.parameters))
         if self.execution_authority:
             raise Mega803Error("research model cannot own execution authority")
 

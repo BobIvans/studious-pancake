@@ -1,4 +1,5 @@
 """PR-182 / LST-02: stake-pool deployment and exit capacity registry."""
+
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Sequence
@@ -36,11 +37,10 @@ def read_stake_pool_exchange_rate(pool: StakePool, *, now: int) -> tuple[int, in
     return pool.exchange_numerator, pool.exchange_denominator
 
 
-def model_exit_queue_capacity(
-    pool: StakePool, *, immediate_required: bool
-) -> int:
+def model_exit_queue_capacity(pool: StakePool, *, immediate_required: bool) -> int:
     capacity = (
-        pool.instant_exit_capacity if immediate_required
+        pool.instant_exit_capacity
+        if immediate_required
         else pool.instant_exit_capacity + pool.delayed_exit_capacity
     )
     return require_nonnegative_int(capacity, "capacity")
@@ -51,7 +51,8 @@ def rank_lender_independent_lst_edges(
 ) -> tuple[str, ...]:
     eligible = [pool for pool in pools if pool.instant_exit_capacity > 0]
     return tuple(
-        pool.pool_id for pool in sorted(
+        pool.pool_id
+        for pool in sorted(
             eligible, key=lambda item: (-item.instant_exit_capacity, item.pool_id)
         )
     )

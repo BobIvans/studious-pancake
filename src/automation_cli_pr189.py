@@ -52,6 +52,10 @@ def _parser() -> argparse.ArgumentParser:
     handoff.add_argument("mode", choices=("inspect", "check"))
     handoff.add_argument("--manifest", required=True)
 
+    agg_debt = commands.add_parser("agg-debt")
+    agg_debt.add_argument("mode", choices=("inspect", "check"))
+    agg_debt.add_argument("--manifest", required=True)
+
     return parser
 
 
@@ -298,6 +302,32 @@ def evaluate_release_handoff_command(
     )
 
 
+def evaluate_agg_debt_command(
+    mode: CommandMode,
+    manifest: str,
+) -> CommandResult:
+    from src.release_gate.agg_debt_closure import audit_receipts
+
+    audit = audit_receipts(manifest)
+    payload = audit.to_dict()
+    ready = audit.all_dependencies_present and not audit.unresolved_dependencies
+    reasons = (
+        ()
+        if ready
+        else tuple(
+            f"AGG_DEPENDENCY_UNRESOLVED:{item}"
+            for item in audit.unresolved_dependencies
+        )
+    )
+    return result(
+        command="agg-debt",
+        mode=mode,
+        ready=ready,
+        reason_codes=reasons,
+        details=payload,
+    )
+
+
 def _evaluate(args: argparse.Namespace) -> CommandResult:
     mode = _mode(args.mode)
     if args.command == "paper-vertical":
@@ -320,6 +350,8 @@ def _evaluate(args: argparse.Namespace) -> CommandResult:
         )
     if args.command == "release-handoff":
         return evaluate_release_handoff_command(mode, args.manifest)
+    if args.command == "agg-debt":
+        return evaluate_agg_debt_command(mode, args.manifest)
     raise ValueError("unsupported PR-189 command")
 
 

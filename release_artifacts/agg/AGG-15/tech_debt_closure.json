@@ -1,0 +1,88 @@
+{
+  "schema": "agg15.tech-debt-closure.v1",
+  "pr": 513,
+  "reconciliation_base": "27875850a88edf102c904e31955e0df8b78b13b4",
+  "implementation_status": "IMPLEMENTED_OFFLINE",
+  "operational_status": "BLOCKED",
+  "effect_scope": "DEFAULT_OFF_NO_SIGN_NO_SEND",
+  "live_enabled": false,
+  "automatic_scale_up_allowed": false,
+  "code_debt_closed": [
+    "AGG_DEPENDENCY_DAG_RECEIPTS",
+    "STALE_AGG_PREREQUISITE_RECORDS",
+    "AGG03_LENDER_NEUTRAL_FINANCING_PORTS",
+    "AGG03_PRIMARY_PLUS_RENT_SINGLE_MESSAGE_COMPOSITION",
+    "AGG03_FINANCING_PROGRAM_GENERATION_EVIDENCE_BINDING",
+    "AGG03_PRIMARY_AND_RENT_OBLIGATION_DIGEST_BINDING",
+    "AGG03_LENDER_NEUTRAL_ECONOMIC_RECONCILIATION",
+    "AGG03_POST_SIMULATION_DECODER_BOUNDARY",
+    "AGG03_GENERIC_CORE_V1_COMPOSITION",
+    "AGG03_INSTALLED_JUPITER_LEND_PROFILE_REACHABILITY",
+    "AGG03_JUPITER_FLASHLOAN_ADMIN_RAW_STATE_DECODER",
+    "AGG09_STALE_DEPENDENCY_BLOCKERS"
+  ],
+  "preserved_external_blockers": [
+    {
+      "code": "AGG03_JUPITER_LEND_DEPLOYMENT_STATE_UNQUALIFIED",
+      "scope": "JUP-02/NF-109",
+      "required_evidence": "rooted deployed account/layout/liquidity evidence and independent loaded-state conformance"
+    },
+    {
+      "code": "AGG03_JUPITER_LEND_REPAYMENT_DECODER_UNQUALIFIED",
+      "scope": "JUP-02/CORE-02",
+      "required_evidence": "protocol account layouts/source sufficient to derive repayment from exact final simulation without caller economics"
+    },
+    {
+      "code": "AGG03_SLUM_DEPLOYMENT_UNQUALIFIED",
+      "scope": "SLUM-01/NF-097",
+      "required_evidence": "current executable/loader/program-data identity, PDA owner/balance and deployment generation"
+    },
+    {
+      "code": "AGG03_FULL_MESSAGE_EXTERNAL_CONFORMANCE_UNPROVEN",
+      "scope": "CORE-02/RISK-01",
+      "required_evidence": "loaded-state/fork exact-message vectors for Jupiter Lend + Jupiter route + Slumlord bookends"
+    },
+    {
+      "code": "AGG03_PREFIX_SOLVENCY_EVIDENCE_MISSING",
+      "scope": "SLUM-02",
+      "required_evidence": "real/recorded network-fee, ATA/WSOL/rent and protected-inventory prefix balance campaign"
+    },
+    {
+      "code": "AGG04_CURRENT_PROFILE_CAMPAIGN_REQUIRED",
+      "scope": "AGG-04",
+      "required_evidence": "new frozen campaign on exact merged source/wheel/config/data/program/profile generation"
+    },
+    {
+      "code": "AGG09_LIVE03_OBSERVED_LANDING_EVIDENCE_MISSING",
+      "scope": "AGG-08/09",
+      "required_evidence": "observed sent/finalized attempts; paper/simulation labels are not substitutes"
+    },
+    {
+      "code": "AGG09_REAL_OPERATIONAL_SOAK_MISSING",
+      "scope": "OPS-03/NF-254",
+      "required_evidence": "predeclared busy/quiet soak with restart/failover/incidents and exact recovery"
+    },
+    {
+      "code": "AGG09_CROSS_HOST_RECOVERY_EVIDENCE_MISSING",
+      "scope": "OPS-01",
+      "required_evidence": "external coordinator/signer recovery evidence"
+    },
+    {
+      "code": "AGG09_REAL_WORKLOAD_PERFORMANCE_EVIDENCE_MISSING",
+      "scope": "OPS-02",
+      "required_evidence": "real scoped workload p50/p95/p99, gaps, dropped work, quota/backpressure observations"
+    }
+  ],
+  "evidence_refs": [
+    "config/agg_merge_receipts.json",
+    "src/release_gate/agg_debt_closure.py",
+    "src/lending/agg03_financing_ports.py",
+    "src/lending/financing_planner_adapter.py",
+    "src/planning/atomic_marginfi_jupiter.py",
+    "src/paper_shadow/atomic_vertical.py",
+    "src/runtime/core_v1_composition.py",
+    "src/runtime/runtime_entrypoint.py",
+    "release_artifacts/agg/AGG-09/coverage.json"
+  ],
+  "note": "Merge receipt and exact merged source identity must be appended post-merge; this pre-merge artifact never claims operational qualification."
+}

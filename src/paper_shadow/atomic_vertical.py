@@ -17,7 +17,7 @@ from __future__ import annotations
 from dataclasses import dataclass, replace
 import json
 from enum import Enum
-from typing import Mapping, Any
+from typing import Mapping, Any, Protocol
 from src.kernel import canonical_json_bytes
 from src.execution.state_evidence_pr115 import PR115DecodePolicy
 from src.execution.economic_reconciliation.exact_adapter import (
@@ -36,10 +36,12 @@ from src.execution.economic_reconciliation import (
     EconomicReconciler,
     MarginfiRepaymentObservation,
     NativeObservation,
+    ReconciliationEvidence,
     ReconciliationReport,
     TokenObservation,
     evidence_from_exact_simulation,
 )
+from src.execution.financing_evidence import FinancingRepaymentBundle
 from src.execution.exact_simulation import (
     ExactSimulationFinalizer,
     FinalizedSimulation,
@@ -97,6 +99,35 @@ class AtomicVerticalCandidate:
     approved_assets: tuple[AssetKey, ...] = ()
     valuation: ConservativeValuationSnapshot | None = None
     marginfi_registry: MarginfiRegistrySnapshot | None = None
+    financing_pre_state_accounts: tuple[Mapping[str, Any] | None, ...] | None = None
+    financing_pre_state_slot: int | None = None
+    attempt_id: str | None = None
+    attempt_generation: int | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class DecodedFinancingEconomics:
+    evidence: ReconciliationEvidence
+    evidence_hash: str
+
+    def __post_init__(self) -> None:
+        if len(self.evidence_hash) != 64 or any(
+            ch not in "0123456789abcdef" for ch in self.evidence_hash
+        ):
+            raise ValueError("financing decoded evidence hash must be sha256")
+
+
+class FinancingRepaymentDecoder(Protocol):
+    lender_id: str
+    program_id: str
+    deployment_generation: int
+    auxiliary_identities: tuple[tuple[str, str, int], ...]
+
+    def decode(
+        self,
+        finalized: FinalizedSimulation,
+        candidate: AtomicVerticalCandidate,
+    ) -> DecodedFinancingEconomics: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,10 +174,12 @@ class AtomicPlannerSimulationReconciliationVertical:
         simulator: ExactSimulationFinalizer,
         *,
         reconciler: EconomicReconciler | None = None,
+        financing_decoder: FinancingRepaymentDecoder | None = None,
     ) -> None:
         self.planner = planner
         self.simulator = simulator
         self.reconciler = reconciler or EconomicReconciler()
+        self.financing_decoder = financing_decoder
 
     async def run(self, candidate: AtomicVerticalCandidate) -> AtomicVerticalResult:
         if candidate.pre_state_accounts is not None:
@@ -171,10 +204,138 @@ class AtomicPlannerSimulationReconciliationVertical:
             serialized_submission_message=serialized_message,
         )
 
+        decoded_financing: DecodedFinancingEconomics | None = None
+        if self.financing_decoder is not None:
+            if (
+                candidate.pre_state_accounts is not None
+                or candidate.native_observations
+                or candidate.token_observations
+                or candidate.marginfi_observation is not None
+                or candidate.decoded_account_hashes
+                or candidate.decode_policy is not None
+                or candidate.valuation is not None
+                or candidate.marginfi_registry is not None
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "generic financing decoder must own all economic observations",
+                )
+            decoded_financing = self.financing_decoder.decode(finalized, candidate)
+            decoded = decoded_financing.evidence
+            report = finalized.report
+            if (
+                decoded.expected_message_hash != message_hash
+                or decoded.simulated_message_hash != message_hash
+                or decoded.simulation_slot != report.final.slot
+                or decoded.snapshot_slot != report.final.slot
+                or decoded.min_context_slot != report.min_context_slot
+                or decoded.response_hash != report.final.response_hash
+                or decoded.logs_hash != report.final.logs_hash
+                or decoded.settlement_asset != candidate.settlement_asset
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "financing decoder evidence is not bound to exact finalized simulation",
+                )
+            planned_snapshot = candidate.request.financing_snapshot
+            if (
+                planned_snapshot is None
+                or planned_snapshot.asset_id != candidate.settlement_asset.stable_id()
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "decoded settlement asset differs from planned financing asset",
+                )
+            financing = decoded.financing
+            if financing is None:
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "financing decoder omitted financing repayment bundle",
+                )
+            provenance = planner_result.provenance
+            primary = financing.primary
+            expected_program = provenance.financing_program_id
+            expected_generation = provenance.financing_deployment_generation
+            if (
+                primary.lender_id != provenance.financing_lender
+                or expected_program is None
+                or primary.program_id != expected_program
+                or expected_generation is None
+                or primary.deployment_generation != expected_generation
+                or primary.message_hash != message_hash
+                or primary.debt_before_base_units != provenance.borrow_amount
+                or primary.required_repayment_base_units
+                != provenance.required_repayment
+                or provenance.financing_obligation_digest is None
+                or primary.obligation_digest != provenance.financing_obligation_digest
+                or candidate.attempt_id is None
+                or primary.attempt_id != candidate.attempt_id
+                or candidate.attempt_generation is None
+                or primary.attempt_generation != candidate.attempt_generation
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "primary financing economics differ from planned obligation",
+                )
+            expected_aux = set(provenance.auxiliary_financing_identities)
+            actual_aux = {
+                (
+                    item.lender_id,
+                    item.program_id,
+                    item.deployment_generation,
+                )
+                for item in financing.auxiliary
+            }
+            if actual_aux != expected_aux or any(
+                item.message_hash != message_hash
+                or item.attempt_id != candidate.attempt_id
+                or item.attempt_generation != candidate.attempt_generation
+                for item in financing.auxiliary
+            ):
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "auxiliary financing decoder output is not bound to plan identity",
+                )
+            expected_obligations = {
+                (lender, program, generation): (
+                    obligation_digest,
+                    principal,
+                    required,
+                )
+                for (
+                    lender,
+                    program,
+                    generation,
+                    obligation_digest,
+                    principal,
+                    required,
+                ) in provenance.auxiliary_financing_obligations
+            }
+            actual_obligations = {
+                (
+                    item.lender_id,
+                    item.program_id,
+                    item.deployment_generation,
+                ): (
+                    item.obligation_digest,
+                    item.debt_before_base_units,
+                    item.required_repayment_base_units,
+                )
+                for item in financing.auxiliary
+            }
+            if actual_obligations != expected_obligations:
+                raise AtomicVerticalError(
+                    AtomicVerticalRejectionCode.ACCOUNT_EVIDENCE_MISMATCH,
+                    "auxiliary repayment differs from planned rent obligation",
+                )
+
         try:
             raw_state = None
             raw_hash = None
-            if candidate.pre_state_accounts is not None:
+            if decoded_financing is not None:
+                evidence = decoded_financing.evidence
+                raw_hash = decoded_financing.evidence_hash
+            elif candidate.pre_state_accounts is not None:
                 if (
                     candidate.native_observations
                     or candidate.token_observations
@@ -277,9 +438,13 @@ class AtomicPlannerSimulationReconciliationVertical:
             qualification=qualification,
             raw_evidence_hash=raw_hash,
             evidence_origin=(
-                "decoder_owned_offline"
-                if raw_state is not None
-                else "legacy_observations_unqualified"
+                "financing_decoder_owned"
+                if decoded_financing is not None
+                else (
+                    "decoder_owned_offline"
+                    if raw_state is not None
+                    else "legacy_observations_unqualified"
+                )
             ),
         )
 
@@ -345,4 +510,6 @@ __all__ = [
     "AtomicVerticalRejectionCode",
     "AtomicVerticalResult",
     "AtomicVerticalTrace",
+    "DecodedFinancingEconomics",
+    "FinancingRepaymentDecoder",
 ]

@@ -798,8 +798,7 @@ def _cholesky_factor(
     names: Sequence[str],
 ) -> tuple[tuple[float, ...], ...]:
     matrix = [
-        [float(belief.covariance[left][right]) for right in names]
-        for left in names
+        [float(belief.covariance[left][right]) for right in names] for left in names
     ]
     lower = [[0.0 for _ in names] for _ in names]
     for row in range(len(names)):

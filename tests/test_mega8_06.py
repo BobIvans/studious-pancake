@@ -70,9 +70,7 @@ def test_microstructure_markouts_are_side_aware_and_fail_closed() -> None:
     assert curve == ((1, -10_000), (5, -20_000))
     adverse = estimate_adverse_selection([x for _, x in curve])
     assert adverse == 15_000
-    assert (
-        predict_fill_quality([x for _, x in curve], toxicity_ppm=5_000) == 980_000
-    )
+    assert predict_fill_quality([x for _, x in curve], toxicity_ppm=5_000) == 980_000
     with pytest.raises(Mega806Error, match="ADVERSE_SELECTION_LIMIT"):
         gate_toxic_fill(
             [x for _, x in curve],
@@ -82,9 +80,7 @@ def test_microstructure_markouts_are_side_aware_and_fail_closed() -> None:
 
 
 def test_impact_capacity_never_extrapolates() -> None:
-    curve = fit_market_impact_curve(
-        ((10, 1000), (20, 1500), (20, 1700), (30, 5000))
-    )
+    curve = fit_market_impact_curve(((10, 1000), (20, 1500), (20, 1700), (30, 5000)))
     assert curve == ((10, 1000), (20, 1600), (30, 5000))
     frontier = estimate_capacity_frontier(
         curve, expected_edge_ppm=4500, uncertainty_ppm=1000
@@ -121,9 +117,10 @@ def test_portfolio_counts_shared_resources_once_and_freezes_unknowns() -> None:
             },
         )
     )
-    assert solve_portfolio_admission(
-        candidates, capital_budget=9, tail_budget=2
-    ) == ("a", "c")
+    assert solve_portfolio_admission(candidates, capital_budget=9, tail_budget=2) == (
+        "a",
+        "c",
+    )
     reconciled = reconcile_portfolio_outcomes(("a", "c"), {"a": 2, "c": None})
     assert reconciled["freeze_conflicting_capital"] is True
     assert reconciled["unknown_children"] == ("c",)
@@ -131,9 +128,7 @@ def test_portfolio_counts_shared_resources_once_and_freezes_unknowns() -> None:
 
 def test_microcapital_has_protected_floor_and_no_loss_chasing() -> None:
     assert (
-        allocate_microcapital_budget(
-            100, protected_floor=80, max_spend_ppm=500_000
-        )
+        allocate_microcapital_budget(100, protected_floor=80, max_spend_ppm=500_000)
         == 10
     )
     assert compute_risk_of_ruin(25, (-10, -5, 2), attempts=5) == 500_000
@@ -206,9 +201,7 @@ def test_protective_orderflow_requires_current_consent_and_user_floor() -> None:
         consent_revision="r1",
     )
     assert verify_orderflow_consent(policy, now=99, consent_revision="r1")
-    plan = build_protective_backrun_plan(
-        policy, user_output=95, candidate_profit=3
-    )
+    plan = build_protective_backrun_plan(policy, user_output=95, candidate_profit=3)
     assert plan["pre_user_execution"] is False
     assert plan["submission_authority"] is False
     with pytest.raises(Mega806Error, match="CONSENT_EXPIRED"):
@@ -249,8 +242,7 @@ def test_offline_execution_policy_rejects_future_data_and_remains_advisory() -> 
     policy = train_offline_execution_policy(dataset)
     evaluation = evaluate_execution_policy_offline(policy, dataset)
     assert (
-        gate_policy_deployment(evaluation, baseline_reward=1)
-        == "ADVISORY_SHADOW_ONLY"
+        gate_policy_deployment(evaluation, baseline_reward=1) == "ADVISORY_SHADOW_ONLY"
     )
 
 

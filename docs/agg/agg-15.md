@@ -18,6 +18,19 @@ Historical inversions не стираются. Они объясняют, поч
 могут содержать “prerequisite missing”, но после reconciliation не считаются
 текущими blockers автоматически.
 
+SUPER-08 расширяет тот же canonical audit target с NF-328 до NF-352. NF-329…352
+не создают нового AGG-15 ownership и сохраняют владельцев continuation crosswalk:
+
+- NF-329…332 → TREASURY-01 / PR-073;
+- NF-333…336 → BATCH-01 / PR-074;
+- NF-337…340 → UNIVERSE-01 / PR-075;
+- NF-341…344 → ALT-01 / PR-076;
+- NF-345…348 → FORMAT-01 / PR-077;
+- NF-349…352 → FORMAT-02 / PR-078.
+
+Release-handoff schema поэтому остаётся текущей v2; legacy 328-row v1 manifest
+не может быть молча повышен до current full-target evidence.
+
 ## Code-debt closure
 
 Post-AGG reconciliation закрывает оставшийся code-side financing debt:
@@ -33,38 +46,53 @@ Post-AGG reconciliation закрывает оставшийся code-side financ
 
 Code closure не превращает отсутствующее network evidence в qualification.
 
-## NF-324…NF-328
+## NF-324…NF-352
 
-- **NF-324 / full_coverage_audit** — mapped coverage и completion остаются
-  разными понятиями. Merge receipt без tests/evidence не равен completion.
-- **NF-325 / full_integrated_campaign** — текущая integrated campaign должна
-  принадлежать одной release/profile/program/data generation и включать
-  unknown-outcome/shared-capacity stress.
-- **NF-326 / production_human_handoff** — bootstrap/status/stop/recovery
-  commands не содержат secrets и не включают live по умолчанию.
+- **NF-324 / full_coverage_audit** — canonical current full-target manifest
+  содержит NF-001…NF-352 без duplicate IDs. Mapped coverage и completion остаются
+  разными понятиями; merge receipt без tests/evidence не равен completion.
+- **NF-325 / full_integrated_campaign** — campaign должна принадлежать одной
+  release/profile/program/data generation и включать unknown-outcome/shared-capacity
+  stress.
+- **NF-326 / production_human_handoff** — bootstrap/status/stop/recovery commands
+  не содержат secrets и не включают live по умолчанию.
 - **NF-327 / release_full_target** — canonical promotion остаётся у MPR-2612.
   `production_ready`, `release_claim_allowed`, `live_enabled` и automatic
   scale-up остаются false до реального evidence.
 - **NF-328 / continuous_evolution** — только
   `record → analyse → hypothesis → reviewed_change → test → qualification →
   scoped_deploy` с независимым promotion gate.
+- **NF-329…352** — учитываются через SUPER-08 continuation owners и v2 handoff;
+  AGG-15 не присваивает себе их runtime/economic authority.
+
+## SUPER-08 product boundary
+
+W2-22 / PRODUCT-01 остаётся у уже merged AGG-14 research/product package.
+RELEASE-01 только потребляет явное evidence, что product accounting и execution
+authority разделены. V2 handoff включает `product_boundary` evidence, связывающий
+существующего product owner и `RevenueAttributionLedger`, при этом доказывая:
+
+- service/grant/rebate revenue не является arbitrage PnL;
+- client funds не являются trading capital;
+- product planning surface не может sign/submit;
+- audit не выполняет remote product/service mutation.
+
+Эти проверки не считаются внешней qualification Kora, keeper customer, data
+product или grant и не дают trading permissions.
 
 ## Remaining blockers are qualification debt
 
-Current code/dependency ordering no longer blocks the aggregate program.
-Remaining blockers require evidence that this code-only closure must not invent:
+Current code/dependency ordering больше не является blocker. Остаются evidence,
+которые этот code-only closure не имеет права выдумывать:
 
 1. qualified Jupiter Lend deployment/account/fee evidence;
 2. qualified Slumlord executable/PDA/deployment evidence;
 3. post-simulation lender repayment decoder conformance on loaded state;
-4. exact AGG-04 campaign regenerated on the merged source/wheel/profile;
+4. exact AGG-04 campaign regenerated on merged source/wheel/profile;
 5. observed LIVE-03 finalized landing evidence;
 6. real AGG-09 operational soak and recovery/performance evidence;
-7. external chain/venue/protocol evidence for optional/deferred AGG scopes where
-   their own coverage says UNQUALIFIED/BLOCKED.
-
-These stay visible in the current closure artifact rather than being relabelled
-as code completion.
+7. external chain/venue/protocol evidence для optional/deferred AGG/SUPER scopes,
+   где их собственная coverage остаётся UNQUALIFIED/BLOCKED.
 
 ## Installed commands
 
@@ -75,16 +103,21 @@ flashloan-checks production-debt inspect
 flashloan-checks provider-readiness inspect
 ```
 
-A structurally complete handoff can still be operationally BLOCKED. That is the
-intended state until the required real campaigns exist.
+Текущая минимальная handoff schema использует
+`schema_version = "agg15.release-handoff.v2"` и содержит `product_boundary`.
+Структурно полный handoff всё ещё может быть operationally BLOCKED.
 
-## Evidence
+## Evidence and rollback
 
 - `config/agg_merge_receipts.json`
 - `src/release_gate/agg_debt_closure.py`
 - `tests/test_agg_dependency_reconciliation.py`
 - `release_artifacts/agg/AGG-15/tech_debt_closure.json`
-- existing `src/release_gate/agg15_release_handoff.py`
+- `src/release_gate/agg15_release_handoff.py`
+- `tests/test_agg15_release_handoff.py`
+- `.github/workflows/agg-15-release-handoff.yml`
+- `.github/workflows/super-08-product-release.yml`
 
-Rollback of this closure must not delete lifecycle rows, reservations,
-settlement history, or reinterpret old evidence under a new generation.
+Rollback debt-closure/SUPER-08 layers не должен удалять lifecycle rows,
+reservations, settlement history или reinterpret old evidence under a new
+generation.

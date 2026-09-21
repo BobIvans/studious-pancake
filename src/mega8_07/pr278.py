@@ -1,4 +1,5 @@
 """PR-278 / CATALOG-01: searchable immutable lineage catalog."""
+
 from __future__ import annotations
 
 from typing import Mapping, Sequence
@@ -45,13 +46,12 @@ def search_evidence_graph(
     return tuple(
         entry
         for entry in entries
-        if needle in str(entry.get("id", "")).lower()
-        or needle in str(entry).lower()
+        if needle in str(entry.get("id", "")).lower() or needle in str(entry).lower()
     )
 
 
 def export_lineage_manifest(
-    entries: Sequence[Mapping[str, object]]
+    entries: Sequence[Mapping[str, object]],
 ) -> dict[str, object]:
     ordered = tuple(sorted((dict(item) for item in entries), key=lambda row: str(row)))
     return {

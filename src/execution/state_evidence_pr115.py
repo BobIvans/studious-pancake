@@ -365,9 +365,7 @@ def build_pr115_simulation_owned_economic_proof(
         ):
             raise PR115StateEvidenceError("readonly_account_changed")
         mutable = opaque_mutable.get(post.address)
-        if mutable is not None and not (
-            pre.owner == post.owner == mutable.owner
-        ):
+        if mutable is not None and not (pre.owner == post.owner == mutable.owner):
             raise PR115StateEvidenceError("opaque_mutable_owner_changed")
     repayment = (
         None

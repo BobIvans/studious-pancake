@@ -236,8 +236,16 @@ def verify() -> dict[str, object]:
         "implementation_base_sha"
     ):
         errors.append("PR356_EVIDENCE_BASE_SHA_MISMATCH")
-    if any(evidence.get("claims", {}).values()):
-        errors.append("PR356_EVIDENCE_OVERCLAIM")
+    claims = evidence.get("claims", {})
+    for field in (
+        "qualified",
+        "external_qualification",
+        "authorized_live",
+        "production_ready",
+        "profitability",
+    ):
+        if claims.get(field) is not False:
+            errors.append(f"PR356_EVIDENCE_OVERCLAIM:{field}")
     if any(
         value is not False
         for value in evidence.get("safety", {}).values()

@@ -1,0 +1,183 @@
+{
+  "schema_version": "mega8-04.coverage.v1",
+  "mega_id": "MEGA8-04",
+  "base_sha": "04480fa25d1117e9d20e7fe8caad23b16cd5ef4a",
+  "roadmap_pr_range": "PR-209..PR-222",
+  "nf_range": "NF-585..NF-640",
+  "child_count": 14,
+  "nf_count": 56,
+  "dependencies": [
+    "MEGA8-01",
+    "MEGA8-02",
+    "MEGA8-03"
+  ],
+  "dependencies_resolved_by_current_contract_evidence": true,
+  "implementation_status": "IMPLEMENTED_OFFLINE_WITH_EXTERNAL_QUALIFICATION_BLOCKERS",
+  "operational_qualified": false,
+  "release_claim_allowed": false,
+  "production_ready": false,
+  "live_enabled": false,
+  "signing_enabled": false,
+  "submission_enabled": false,
+  "automatic_capital_increase_allowed": false,
+  "canonical_reuse": [
+    "src/security",
+    "src/execution",
+    "src/submission",
+    "src/ha_dr/mpr2616.py",
+    "src/security/supply_chain.py",
+    "src/release_gate",
+    "isolated_signer_service/src/flashloan_isolated_signer/mpr2608.py",
+    "src/multichain",
+    "src/cross_chain/agg12.py"
+  ],
+  "children": [
+    {
+      "roadmap_pr": "PR-209",
+      "nf": [
+        "NF-585",
+        "NF-586",
+        "NF-587",
+        "NF-588"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-209.json"
+    },
+    {
+      "roadmap_pr": "PR-210",
+      "nf": [
+        "NF-589",
+        "NF-590",
+        "NF-591",
+        "NF-592"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-210.json"
+    },
+    {
+      "roadmap_pr": "PR-211",
+      "nf": [
+        "NF-593",
+        "NF-594",
+        "NF-595",
+        "NF-596"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-211.json"
+    },
+    {
+      "roadmap_pr": "PR-212",
+      "nf": [
+        "NF-597",
+        "NF-598",
+        "NF-599",
+        "NF-600"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-212.json"
+    },
+    {
+      "roadmap_pr": "PR-213",
+      "nf": [
+        "NF-601",
+        "NF-602",
+        "NF-603",
+        "NF-604"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-213.json"
+    },
+    {
+      "roadmap_pr": "PR-214",
+      "nf": [
+        "NF-605",
+        "NF-606",
+        "NF-607",
+        "NF-608"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-214.json"
+    },
+    {
+      "roadmap_pr": "PR-215",
+      "nf": [
+        "NF-609",
+        "NF-610",
+        "NF-611",
+        "NF-612"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-215.json"
+    },
+    {
+      "roadmap_pr": "PR-216",
+      "nf": [
+        "NF-613",
+        "NF-614",
+        "NF-615",
+        "NF-616"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-216.json"
+    },
+    {
+      "roadmap_pr": "PR-217",
+      "nf": [
+        "NF-617",
+        "NF-618",
+        "NF-619",
+        "NF-620"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-217.json"
+    },
+    {
+      "roadmap_pr": "PR-218",
+      "nf": [
+        "NF-621",
+        "NF-622",
+        "NF-623",
+        "NF-624"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-218.json"
+    },
+    {
+      "roadmap_pr": "PR-219",
+      "nf": [
+        "NF-625",
+        "NF-626",
+        "NF-627",
+        "NF-628"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-219.json"
+    },
+    {
+      "roadmap_pr": "PR-220",
+      "nf": [
+        "NF-629",
+        "NF-630",
+        "NF-631",
+        "NF-632"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-220.json"
+    },
+    {
+      "roadmap_pr": "PR-221",
+      "nf": [
+        "NF-633",
+        "NF-634",
+        "NF-635",
+        "NF-636"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-221.json"
+    },
+    {
+      "roadmap_pr": "PR-222",
+      "nf": [
+        "NF-637",
+        "NF-638",
+        "NF-639",
+        "NF-640"
+      ],
+      "evidence_file": "release_artifacts/mega8/MEGA8-04/PR-222.json"
+    }
+  ],
+  "residual_blockers": [
+    "REAL_MULTI_ENGINE_VECTOR_FLEET_NOT_QUALIFIED",
+    "DEPLOYED_CHAOS_DRILL_NOT_RUN",
+    "REAL_HSM_KMS_NOT_ENROLLED",
+    "EVM_SUI_BRIDGE_DEPLOYMENT_EVIDENCE_NOT_OPERATIONALLY_QUALIFIED",
+    "PR151_221_EXTERNAL_EVIDENCE_NOT_ALL_OPERATIONALLY_QUALIFIED"
+  ]
+}

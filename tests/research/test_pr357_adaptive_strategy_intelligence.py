@@ -317,6 +317,62 @@ def test_evsi_rejects_posterior_mixture_that_does_not_reproduce_prior() -> None:
         )
 
 
+
+def test_belief_rejects_asymmetric_covariance() -> None:
+    clock = ObservationClock(1, 2, 3, 4, "s", "r")
+    with pytest.raises(PR357ContractError, match="PR357_COVARIANCE_ASYMMETRIC"):
+        define_market_belief_state(
+            belief_id="asymmetric",
+            decision_time=10,
+            observed={"x": 0, "y": 0},
+            posterior_mean={"x": 0, "y": 0},
+            covariance={
+                "x": {"x": 100, "y": 99},
+                "y": {"x": -99, "y": 100},
+            },
+            missingness_mask={"x": False, "y": False},
+            source_clocks={"x": clock, "y": clock},
+            valid_until=20,
+        )
+
+
+def test_evsi_rejects_signed_posterior_probabilities() -> None:
+    decision = {
+        "actions": {
+            "A": {"down": 100, "up": 0},
+            "B": {"down": 0, "up": 100},
+        },
+        "state_probabilities_ppm": {"down": 500_000, "up": 500_000},
+        "deadline": 10,
+        "mandatory_safety": (),
+        "execution_right": False,
+    }
+    with pytest.raises(PR357ContractError, match="PR357_POSTERIOR_PROBABILITY_RANGE"):
+        estimate_evsi(
+            decision,
+            posterior_scenarios=(
+                {"down": -1_000_000, "up": 2_000_000},
+                {"down": 2_000_000, "up": -1_000_000},
+            ),
+            observation_probabilities_ppm=(500_000, 500_000),
+        )
+
+
+def test_mandatory_safety_that_misses_deadline_forces_abstention() -> None:
+    late_safety = InformationActionSpec(
+        "late-safety",
+        100,
+        1,
+        11,
+        10,
+        True,
+        "safety-provider",
+    )
+    plan = reserve_safety_information_budget((late_safety,), budget_units=1)
+    assert plan["status"] == "ABSTAIN"
+    assert plan["reason"] == "MANDATORY_SAFETY_MISSES_DEADLINE"
+    assert plan["selected"] == ()
+
 def test_full_pr357_verifier() -> None:
     result = verify()
     assert result["accepted"], result["errors"]

@@ -748,3 +748,253 @@ def represent_state_covariance(
             else:
                 value = int(
                     cross_covariance.get(
+                        (left, right),
+                        cross_covariance.get((right, left), 0),
+                    )
+                )
+            row[right] = value
+        rows[left] = row
+    return rows
+
+
+def update_belief_with_observation(
+    belief: BeliefState,
+    *,
+    variable: str,
+    value: int,
+    clock: ObservationClock,
+    posterior_variance: int,
+) -> BeliefState:
+    if clock.available_at > belief.decision_time:
+        raise PR357ContractError("PR357_FUTURE_BELIEF_UPDATE")
+    means = dict(belief.posterior_mean)
+    means[variable] = value
+    observed = dict(belief.observed)
+    observed[variable] = value
+    missing = dict(belief.missingness_mask)
+    missing[variable] = False
+    clocks = dict(belief.source_clocks)
+    clocks[variable] = clock
+    covariance = {
+        key: dict(row)
+        for key, row in belief.covariance.items()
+    }
+    if variable not in covariance:
+        for row in covariance.values():
+            row[variable] = 0
+        covariance[variable] = {
+            key: 0
+            for key in means
+        }
+    covariance[variable][variable] = posterior_variance
+    return define_market_belief_state(
+        belief_id=belief.belief_id,
+        decision_time=belief.decision_time,
+        observed=observed,
+        posterior_mean=means,
+        covariance=covariance,
+        missingness_mask=missing,
+        source_clocks=clocks,
+        valid_until=belief.valid_until,
+    )
+
+
+def widen_uncertainty_under_missingness(
+    covariance: Mapping[str, Mapping[str, int]],
+    missingness_mask: Mapping[str, bool],
+    *,
+    factor_ppm: int,
+) -> Mapping[str, Mapping[str, int]]:
+    if factor_ppm < PPM:
+        raise PR357ContractError("PR357_MISSINGNESS_FACTOR_MUST_WIDEN")
+    result = {
+        name: dict(row)
+        for name, row in covariance.items()
+    }
+    for name, missing in missingness_mask.items():
+        if missing and name in result and name in result[name]:
+            result[name][name] = result[name][name] * factor_ppm // PPM
+    return result
+
+
+def avoid_future_backfill_leakage(
+    clock: ObservationClock,
+    *,
+    decision_time: int,
+) -> bool:
+    return clock.available_at <= decision_time
+
+
+def generate_joint_predictive_distribution(
+    belief: BeliefState,
+    *,
+    sample_count: int,
+    seed: int,
+) -> tuple[Mapping[str, int], ...]:
+    if sample_count < 1:
+        raise PR357ContractError("PR357_SCENARIO_SAMPLE_COUNT")
+    rng = random.Random(seed)
+    names = tuple(sorted(belief.posterior_mean))
+    rows: list[Mapping[str, int]] = []
+    for _ in range(sample_count):
+        shared = rng.choice((-1, 1))
+        sample: dict[str, int] = {}
+        for name in names:
+            variance = belief.covariance[name][name]
+            scale = isqrt(variance)
+            local = rng.choice((-1, 0, 1))
+            sample[name] = (
+                belief.posterior_mean[name]
+                + shared * scale // 2
+                + local * scale // 2
+            )
+        rows.append(sample)
+    return tuple(rows)
+
+
+def preserve_scenario_provenance(
+    *,
+    belief: BeliefState,
+    seed: int,
+    samples: Sequence[Mapping[str, int]],
+) -> Mapping[str, Any]:
+    return {
+        "belief_id": belief.belief_id,
+        "decision_time": belief.decision_time,
+        "seed": seed,
+        "sample_count": len(samples),
+        "sample_hash": canonical_hash(tuple(samples)),
+        "execution_right": False,
+    }
+
+
+def measure_joint_calibration(
+    predicted: Sequence[Mapping[str, int]],
+    realized: Sequence[Mapping[str, int]],
+) -> Mapping[str, int]:
+    if len(predicted) != len(realized) or not predicted:
+        raise PR357ContractError("PR357_CALIBRATION_INPUT_INVALID")
+    errors: dict[str, list[int]] = {}
+    for forecast, actual in zip(predicted, realized, strict=True):
+        for name in set(forecast) & set(actual):
+            errors.setdefault(name, []).append(
+                abs(int(forecast[name]) - int(actual[name]))
+            )
+    return {
+        name: sum(values) // len(values)
+        for name, values in sorted(errors.items())
+    }
+
+
+def downgrade_unsupported_counterfactual(
+    *,
+    identifiable: bool,
+    support_overlap_ppm: int,
+    minimum_overlap_ppm: int,
+) -> str:
+    if not identifiable:
+        return "INCONCLUSIVE"
+    if support_overlap_ppm < minimum_overlap_ppm:
+        return "INCONCLUSIVE"
+    return "SUPPORTED_RESEARCH_ONLY"
+
+
+def define_decision_problem(
+    *,
+    actions: Mapping[str, Mapping[str, int]],
+    state_probabilities_ppm: Mapping[str, int],
+    deadline: int,
+    mandatory_safety: Sequence[str],
+) -> Mapping[str, Any]:
+    if not actions or not state_probabilities_ppm:
+        raise PR357ContractError("PR357_DECISION_PROBLEM_EMPTY")
+    if sum(state_probabilities_ppm.values()) != PPM:
+        raise PR357ContractError("PR357_STATE_PROBABILITIES_NOT_NORMALIZED")
+    states = set(state_probabilities_ppm)
+    for action, losses in actions.items():
+        if set(losses) != states:
+            raise PR357ContractError(
+                f"PR357_ACTION_STATE_MISMATCH:{action}"
+            )
+    return {
+        "actions": {
+            key: dict(value)
+            for key, value in sorted(actions.items())
+        },
+        "state_probabilities_ppm": dict(
+            sorted(state_probabilities_ppm.items())
+        ),
+        "deadline": deadline,
+        "mandatory_safety": tuple(sorted(mandatory_safety)),
+        "execution_right": False,
+    }
+
+
+def _expected_loss(
+    losses: Mapping[str, int],
+    probabilities_ppm: Mapping[str, int],
+) -> int:
+    return sum(
+        losses[state] * probabilities_ppm[state]
+        for state in probabilities_ppm
+    ) // PPM
+
+
+def compute_current_bayes_action(
+    decision_problem: Mapping[str, Any],
+) -> tuple[str, int]:
+    probabilities = decision_problem["state_probabilities_ppm"]
+    scored = [
+        (
+            _expected_loss(losses, probabilities),
+            action,
+        )
+        for action, losses in decision_problem["actions"].items()
+    ]
+    loss, action = min(scored)
+    return action, loss
+
+
+def estimate_decision_regret(
+    decision_problem: Mapping[str, Any],
+    chosen_action: str,
+) -> int:
+    probabilities = decision_problem["state_probabilities_ppm"]
+    chosen = _expected_loss(
+        decision_problem["actions"][chosen_action],
+        probabilities,
+    )
+    _, best = compute_current_bayes_action(decision_problem)
+    return chosen - best
+
+
+def estimate_evpi(decision_problem: Mapping[str, Any]) -> int:
+    _, current_loss = compute_current_bayes_action(decision_problem)
+    probabilities = decision_problem["state_probabilities_ppm"]
+    perfect_loss = 0
+    for state, probability in probabilities.items():
+        state_minimum = min(
+            losses[state]
+            for losses in decision_problem["actions"].values()
+        )
+        perfect_loss += state_minimum * probability
+    perfect_loss //= PPM
+    return max(0, current_loss - perfect_loss)
+
+
+def estimate_evsi(
+    decision_problem: Mapping[str, Any],
+    *,
+    posterior_scenarios: Sequence[Mapping[str, int]],
+    observation_probabilities_ppm: Sequence[int],
+) -> int:
+    if (
+        len(posterior_scenarios) != len(observation_probabilities_ppm)
+        or not posterior_scenarios
+    ):
+        raise PR357ContractError("PR357_EVSI_SCENARIOS_INVALID")
+    if sum(observation_probabilities_ppm) != PPM:
+        raise PR357ContractError("PR357_EVSI_PROBABILITIES_NOT_NORMALIZED")
+    _, current_loss = compute_current_bayes_action(decision_problem)
+    expected_posterior_loss = 0
+    for posterior, weight in zip(

@@ -6,7 +6,7 @@
   "primary_nf_range": "NF-641..NF-704",
   "primary_nf_count": 64,
   "implementation_status": "IMPLEMENTED_OFFLINE",
-  "operational_status": "BLOCKED_DEPENDENCIES",
+  "operational_status": "BLOCKED_EXTERNAL_EVIDENCE",
   "activation_status": "DEFAULT_OFF",
   "effect_boundary": {
     "network_reads": false,
@@ -25,29 +25,28 @@
   "mega_dependencies": [
     {
       "id": "MEGA8-01",
-      "observed": "BRANCH_PRESENT_NOT_MERGED",
-      "branch": "codex/mega8-01-151-162"
+      "observed": "MERGED_REQUALIFIED",
+      "pr_number": 525,
+      "merge_commit": "c786b74c3fdd614d16ef3db6c517e964cb43c194"
     },
     {
       "id": "MEGA8-02",
-      "observed": "OPEN_PR_NOT_MERGED",
-      "branch": "codex/mega8-02-163-185",
+      "observed": "MERGED_REQUALIFIED",
       "pr_number": 523,
-      "head_sha": "5b7aaa333a270d076dea983fb2601a6b53655e10"
+      "merge_commit": "17b9d9533ef7ab93c30b657aed40dc7c5248d5ba"
     },
     {
       "id": "MEGA8-03",
-      "observed": "OPEN_PR_NOT_MERGED",
-      "branch": "codex/mega8-03-186-208",
+      "observed": "MERGED_REQUALIFIED",
       "pr_number": 521,
-      "head_sha": "afbc80846be93d8005db48e74b73d0c0560e7a3f"
+      "merge_commit": "1426f75749f4091e886b94e9a919df4e90739198",
+      "followup_merge_commit": "837de2a109cfaa3ba807c1c1ca36c5e1c5efe132"
     },
     {
       "id": "MEGA8-04",
-      "observed": "OPEN_PR_NOT_MERGED",
-      "branch": "codex/mega8-04-209-222",
+      "observed": "MERGED_REQUALIFIED",
       "pr_number": 522,
-      "head_sha": "93841fa88817f1f3e98183d422c3457493a2cfb8"
+      "merge_commit": "829e56a6069a08dc33ef61b5a36814575b3e652a"
     }
   ],
   "dependency_policy": "Code slice may be reviewed independently; operational completion remains blocked until exact prerequisite contracts/evidence are merged and revalidated.",
@@ -342,12 +341,12 @@
     }
   ],
   "residual_blockers": [
-    "MEGA8_01_EXACT_PREREQUISITE_NOT_MERGED",
-    "MEGA8_02_PR_523_OPEN_NOT_MERGED",
-    "MEGA8_03_PR_521_OPEN_NOT_MERGED",
-    "MEGA8_04_PR_522_OPEN_NOT_MERGED",
     "EXTERNAL_UPSTREAM_RELEASE_LICENSE_AND_CONFORMANCE_EVIDENCE_NOT_BUNDLED",
     "NO_LIVE_OR_CAPITAL_PROMOTION_AUTHORIZED"
   ],
-  "dependency_observed_after_main_sync": "e14d7f2e0d90dee2dce573761baba185feace5ea"
+  "dependency_observed_after_main_sync": "613884d8a5d50b1230b29ec5db14627222a9e85d",
+  "current_head_requalification": {
+    "status": "PREREQUISITES_REQUALIFIED_CURRENT_HEAD",
+    "receipt": "release_artifacts/mega8/dependency_reconciliation.json"
+  }
 }

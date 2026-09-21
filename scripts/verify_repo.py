@@ -74,6 +74,12 @@ MEGA804_CLOSURE_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+MEGA8_DEPENDENCY_CLOSURE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_mega8_dependency_closure.py",
+    "--json",
+]
+
 PR200_PRODUCTION_CUTOVER_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr200_production_cutover.py",
@@ -218,6 +224,7 @@ def main() -> int:
     run(SUPER01_CLOSURE_COMMAND)
     run(SUPER05_STRATEGY_CLOSURE_COMMAND)
     run(MEGA804_CLOSURE_COMMAND)
+    run(MEGA8_DEPENDENCY_CLOSURE_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)
 

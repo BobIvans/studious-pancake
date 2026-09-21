@@ -1,0 +1,117 @@
+{
+  "schema": "mega8.dependency-reconciliation.v1",
+  "closure_base_sha": "613884d8a5d50b1230b29ec5db14627222a9e85d",
+  "packages": [
+    {
+      "mega_id": "MEGA8-01",
+      "pr": 525,
+      "merge_commit": "c786b74c3fdd614d16ef3db6c517e964cb43c194",
+      "merged_at": "2026-09-21T01:29:54Z",
+      "dependencies": []
+    },
+    {
+      "mega_id": "MEGA8-02",
+      "pr": 523,
+      "merge_commit": "17b9d9533ef7ab93c30b657aed40dc7c5248d5ba",
+      "merged_at": "2026-09-21T01:12:19Z",
+      "dependencies": ["MEGA8-01"]
+    },
+    {
+      "mega_id": "MEGA8-03",
+      "pr": 521,
+      "merge_commit": "1426f75749f4091e886b94e9a919df4e90739198",
+      "merged_at": "2026-09-21T01:31:37Z",
+      "dependencies": ["MEGA8-01", "MEGA8-02"],
+      "followup_merge_commits": [
+        "837de2a109cfaa3ba807c1c1ca36c5e1c5efe132"
+      ]
+    },
+    {
+      "mega_id": "MEGA8-04",
+      "pr": 522,
+      "merge_commit": "829e56a6069a08dc33ef61b5a36814575b3e652a",
+      "merged_at": "2026-09-21T01:45:49Z",
+      "dependencies": ["MEGA8-01", "MEGA8-02", "MEGA8-03"]
+    },
+    {
+      "mega_id": "MEGA8-05",
+      "pr": 524,
+      "merge_commit": "4eba34de3fa5457830ca42d2a40e65dabfce86a2",
+      "merged_at": "2026-09-21T01:40:27Z",
+      "dependencies": ["MEGA8-01", "MEGA8-02", "MEGA8-03", "MEGA8-04"]
+    },
+    {
+      "mega_id": "MEGA8-06",
+      "pr": 527,
+      "merge_commit": "1605418661bb4571fcdf7aeaeb3c964087275dc3",
+      "merged_at": "2026-09-21T01:41:08Z",
+      "dependencies": ["MEGA8-01", "MEGA8-02", "MEGA8-03", "MEGA8-04", "MEGA8-05"]
+    },
+    {
+      "mega_id": "MEGA8-07",
+      "pr": 526,
+      "merge_commit": "613884d8a5d50b1230b29ec5db14627222a9e85d",
+      "merged_at": "2026-09-21T01:48:03Z",
+      "dependencies": ["MEGA8-01", "MEGA8-02", "MEGA8-03", "MEGA8-04", "MEGA8-05", "MEGA8-06"]
+    }
+  ],
+  "requalification": {
+    "MEGA8-02": {
+      "status": "PREREQUISITES_REQUALIFIED_CURRENT_HEAD",
+      "depends_on": ["MEGA8-01", "SUPER-02"],
+      "evidence": [
+        "tests/test_mega8_dependency_closure.py",
+        "tests/test_mega8_02_manifest.py",
+        "tests/test_mega8_02_graph_solver.py",
+        "tests/test_mega8_02_solana_assets.py"
+      ]
+    },
+    "MEGA8-05": {
+      "status": "PREREQUISITES_REQUALIFIED_CURRENT_HEAD",
+      "depends_on": ["MEGA8-01", "MEGA8-02", "MEGA8-03", "MEGA8-04"],
+      "evidence": [
+        "tests/test_mega8_dependency_closure.py",
+        "tests/test_mega8_05_research_factory.py",
+        "scripts/verify_mega8_04.py"
+      ]
+    },
+    "MEGA8-06": {
+      "status": "PREREQUISITES_REQUALIFIED_CURRENT_HEAD",
+      "depends_on": ["MEGA8-01", "MEGA8-02", "MEGA8-03", "MEGA8-04", "MEGA8-05"],
+      "evidence": [
+        "tests/test_mega8_dependency_closure.py",
+        "tests/test_mega8_06.py",
+        "scripts/verify_mega8_04.py"
+      ]
+    },
+    "MEGA8-07": {
+      "status": "DEPENDENCY_EVIDENCE_RESEALED_CURRENT_HEAD",
+      "depends_on": ["MEGA8-01", "MEGA8-02", "MEGA8-03", "MEGA8-04", "MEGA8-05", "MEGA8-06"],
+      "evidence": [
+        "tests/test_mega8_dependency_closure.py",
+        "tests/test_mega8_07_manifest.py",
+        "tests/test_mega8_07_performance_data.py",
+        "tests/test_mega8_07_capital_mechanisms.py"
+      ]
+    },
+    "SUPER02_AGG04": {
+      "status": "CODE_CONTRACT_REQUALIFIED",
+      "super02_merge_commit": "23cb506c0dc54b9473dea574c2479bf113c79a69",
+      "agg04_merge_commit": "b26c6a05c0646fb839f49f537fc21acbd863455c",
+      "closure_base_sha": "613884d8a5d50b1230b29ec5db14627222a9e85d",
+      "scope": "code/import/owner-contract generation only",
+      "operational_status": "BLOCKED_EXTERNAL",
+      "remaining_external_evidence": [
+        "current Jupiter Lend deployment/admin/reserve rooted evidence",
+        "current Slumlord executable/PDA/rooted-state evidence",
+        "qualified lender evidence manifest and repayment-decoder artifact",
+        "governed provider/RPC loaded-state capture",
+        "selected-profile ATA/wSOL/rent lifecycle evidence",
+        "loaded-state/fork/finalized landing/soak evidence"
+      ]
+    }
+  },
+  "production_ready": false,
+  "live_enabled": false,
+  "automatic_capital_increase_allowed": false
+}

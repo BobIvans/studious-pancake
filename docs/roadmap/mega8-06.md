@@ -45,14 +45,17 @@ only simulates counterfactual ordering; offline execution/fee models remain advi
 
 ## Dependency truth
 
-The eight-pack declares MEGA8-01..05 as prerequisites. The branch was re-synchronized
-after MEGA8-03/#521 merged to main at `1426f75749f4091e886b94e9a919df4e90739198`.
-MEGA8-01/#525 and MEGA8-02/#523 are also merged. MEGA8-04/#522 and MEGA8-05/#524
-remain open, so this slice is `IMPLEMENTED_OFFLINE` but operationally
-`BLOCKED_DEPENDENCIES_AND_EXTERNAL_EVIDENCE`.
+The eight-pack declares MEGA8-01..05 as prerequisites. All five prerequisites are
+now merged and revalidated together on closure baseline
+`613884d8a5d50b1230b29ec5db14627222a9e85d`. Historical development still records
+that MEGA8-06 merged before MEGA8-04; that inversion remains an audit fact rather
+than a current missing-dependency blocker.
 
-A code merge must not be represented as integrated roadmap completion, production
-readiness, profitability evidence, live authorization, or capital promotion.
+This slice remains `IMPLEMENTED_OFFLINE` and operationally
+`BLOCKED_EXTERNAL_EVIDENCE`: real provider/leader/TPU/block-engine measurements,
+external upstream qualification and finalized-settlement evidence are still
+required. Dependency closure does not imply production readiness, profitability,
+live authorization, or capital promotion.
 
 ## Upstream / source-copy decision
 

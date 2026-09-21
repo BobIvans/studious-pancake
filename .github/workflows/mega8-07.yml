@@ -67,7 +67,7 @@ jobs:
           tests/lending/test_mpr2615_controlled_expansion.py
           tests/test_liquidation_planner.py
           --disable-socket --allow-unix-socket
-      - name: Verify dependency truth remains blocked and default-off
+      - name: Verify dependency closure remains externally blocked and default-off
         run: |
           python - <<'PY'
           import json
@@ -77,7 +77,7 @@ jobs:
           assert p["roadmap_children"] == list(range(271, 287))
           assert p["nf_range"] == [769, 832]
           assert p["implementation_status"] == "IMPLEMENTED_OFFLINE"
-          assert p["operational_status"] == "BLOCKED_DEPENDENCIES"
+          assert p["operational_status"] == "BLOCKED_EXTERNAL_AND_PROMOTION_EVIDENCE"
           assert p["production_ready"] is False
           assert p["live_enabled"] is False
           assert p["signer_access"] is False

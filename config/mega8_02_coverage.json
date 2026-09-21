@@ -39,8 +39,10 @@
   "capital_mutation": false,
   "dependency_status": {
     "MEGA8-01": {
-      "status": "DEFERRED_FOR_INTEGRATED_PROMOTION",
-      "note": "MEGA8-02 code contracts remain independently testable and default-off; no claim that the earlier eight-pack prerequisite is fully closed."
+      "status": "MERGED_REQUALIFIED",
+      "pr_number": 525,
+      "merge_commit": "c786b74c3fdd614d16ef3db6c517e964cb43c194",
+      "note": "Merged prerequisite revalidated with current-head dependency closure; no live/capital promotion implied."
     }
   },
   "canonical_reuse": [
@@ -383,8 +385,13 @@
     "note": "No external source code is copied or executed by MEGA8-02."
   },
   "residual_blockers": [
-    "MEGA8_01_FULL_EIGHT_PACK_PREREQUISITE_NOT_CLAIMED_CLOSED",
     "DEPLOYMENT_SPECIFIC_SOLANA_PROTOCOL_CONFORMANCE_NOT_CLAIMED",
     "LIVE_OR_CAPITAL_PROMOTION_REQUIRES_SEPARATE_EXISTING_AUTHORITIES"
-  ]
+  ],
+  "current_head_requalification": {
+    "status": "PREREQUISITES_REQUALIFIED_CURRENT_HEAD",
+    "closure_base_sha": "613884d8a5d50b1230b29ec5db14627222a9e85d",
+    "super02_merge_commit": "23cb506c0dc54b9473dea574c2479bf113c79a69",
+    "receipt": "release_artifacts/mega8/dependency_reconciliation.json"
+  }
 }

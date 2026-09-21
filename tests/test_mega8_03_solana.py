@@ -201,9 +201,7 @@ def test_pr188_rfq_rejects_unverified_consent_and_tampered_plan() -> None:
 
     tampered = dict(plan)
     tampered["economics"] = {"rfq_advantage_atomic": 99}
-    tampered_result = qualify_opt_in_intent_fill(
-        tampered, envelope=evidence, now_ns=60
-    )
+    tampered_result = qualify_opt_in_intent_fill(tampered, envelope=evidence, now_ns=60)
     assert tampered_result.status is OfflineStatus.REJECTED
     assert "INTENT_PLAN_INTEGRITY_MISMATCH" in tampered_result.reason_codes
 
@@ -218,9 +216,7 @@ def test_pr188_rfq_rejects_unverified_consent_and_tampered_plan() -> None:
         "execution_authority": False,
         "plan_sha256": "f" * 64,
     }
-    forged_result = qualify_opt_in_intent_fill(
-        forged, envelope=evidence, now_ns=60
-    )
+    forged_result = qualify_opt_in_intent_fill(forged, envelope=evidence, now_ns=60)
     assert forged_result.status is OfflineStatus.REJECTED
     assert "INTENT_OPT_IN_NOT_VERIFIED" in forged_result.reason_codes
     assert "INTENT_PLAN_INTEGRITY_MISMATCH" in forged_result.reason_codes

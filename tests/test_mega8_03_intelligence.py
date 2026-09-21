@@ -131,9 +131,7 @@ def test_pr196_conformal_bounds_are_explicit_admission_inputs() -> None:
 
 def test_pr196_conformal_uses_finite_sample_rank() -> None:
     net = fit_conformal_net_interval((1, 2, 3, 4), miscoverage_ppm=250_000)
-    latency = fit_conformal_latency_interval(
-        (10, 20, 30, 40), miscoverage_ppm=250_000
-    )
+    latency = fit_conformal_latency_interval((10, 20, 30, 40), miscoverage_ppm=250_000)
     assert net["radius_atomic"] == 4
     assert latency["radius_ns"] == 40
 

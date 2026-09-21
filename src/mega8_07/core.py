@@ -3,6 +3,7 @@
 This package is deliberately sender-free and effect-free. It consumes already
 captured evidence/state and emits deterministic research/control artifacts only.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass

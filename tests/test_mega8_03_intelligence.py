@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from src.mega8_03.pr195_survival import (
     calibrate_duration_predictions,
     fit_kaplan_meier_survival,
@@ -356,6 +358,32 @@ def test_pr206_bandit_has_no_live_actions_and_audits_cost() -> None:
     assert audit["cumulative_regret_atomic"] == 3
 
 
+def test_pr206_bandit_rejects_live_or_unknown_effect_actions() -> None:
+    safe = {
+        "action_id": "safe",
+        "cost_units": 1,
+        "information_gain_ppm": 10,
+        "uncertainty_reduction_ppm": 10,
+        "live_effect": False,
+    }
+    with pytest.raises(ValueError, match="simulation-only"):
+        apply_conservative_exploration(
+            selected_action=safe | {"live_effect": True},
+            baseline_action=safe,
+            exploration_budget_ppm=100_000,
+            deterministic_draw_ppm=0,
+        )
+    unknown = dict(safe)
+    unknown.pop("live_effect")
+    with pytest.raises(ValueError, match="simulation-only"):
+        apply_conservative_exploration(
+            selected_action=safe,
+            baseline_action=unknown,
+            exploration_budget_ppm=100_000,
+            deterministic_draw_ppm=0,
+        )
+
+
 def test_pr207_synthetic_twin_cannot_enter_realized_pnl() -> None:
     scenario = generate_synthetic_market_scenario(
         {"price": 100}, {"price": -10}, scenario_id="s1"
@@ -406,3 +434,11 @@ def test_pr208_competition_adjustment_only_reduces_candidate() -> None:
     assert decay["largest_positive_size_atomic"] == 20
     assert adjusted["adjusted_net_atomic"] == 70
     assert adjusted["execution_authority"] is False
+
+    losing = adjust_candidate_for_competition(
+        conservative_net_atomic=-100,
+        crowding_penalty_ppm=300_000,
+        decay_penalty_ppm=200_000,
+    )
+    assert losing["adjusted_net_atomic"] == -150
+    assert losing["adjusted_net_atomic"] <= -100

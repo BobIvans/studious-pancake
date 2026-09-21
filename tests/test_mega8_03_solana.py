@@ -184,6 +184,48 @@ def test_pr188_rfq_requires_opt_in_expiry_and_economic_advantage() -> None:
     assert_offline(result)
 
 
+def test_pr188_rfq_rejects_unverified_consent_and_tampered_plan() -> None:
+    evidence = env()
+    economics = price_rfq_fill_path(
+        offered_output_atomic=110,
+        direct_route_output_atomic=100,
+        execution_cost_atomic=2,
+    )
+    quote = {
+        "intent_id": "i1",
+        "quote_id": "q1",
+        "opt_in": True,
+        "expires_at_ns": 100,
+    }
+    plan = build_limit_order_fill_plan(quote, economics, envelope=evidence)
+
+    tampered = dict(plan)
+    tampered["economics"] = {"rfq_advantage_atomic": 99}
+    tampered_result = qualify_opt_in_intent_fill(
+        tampered, envelope=evidence, now_ns=60
+    )
+    assert tampered_result.status is OfflineStatus.REJECTED
+    assert "INTENT_PLAN_INTEGRITY_MISMATCH" in tampered_result.reason_codes
+
+    forged = {
+        "intent_id": "i1",
+        "quote_id": "q1",
+        "opt_in": False,
+        "consent_evidence_sha256": evidence.evidence_sha256,
+        "expires_at_ns": 100,
+        "economics": {"rfq_advantage_atomic": 1},
+        "state_generation": evidence.state_generation,
+        "execution_authority": False,
+        "plan_sha256": "f" * 64,
+    }
+    forged_result = qualify_opt_in_intent_fill(
+        forged, envelope=evidence, now_ns=60
+    )
+    assert forged_result.status is OfflineStatus.REJECTED
+    assert "INTENT_OPT_IN_NOT_VERIFIED" in forged_result.reason_codes
+    assert "INTENT_PLAN_INTEGRITY_MISMATCH" in forged_result.reason_codes
+
+
 def test_pr189_orderflow_never_authorizes_harmful_preexecution_ordering() -> None:
     rows = index_trigger_and_dca_orders(
         (

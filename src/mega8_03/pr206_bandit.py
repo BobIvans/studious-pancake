@@ -51,6 +51,13 @@ def apply_conservative_exploration(
     exploration_budget_ppm: int,
     deterministic_draw_ppm: int,
 ) -> dict[str, Any]:
+    for action, field in (
+        (selected_action, "selected_action"),
+        (baseline_action, "baseline_action"),
+    ):
+        if action.get("live_effect") is not False:
+            raise ValueError(f"{field} must be explicitly simulation-only")
+
     budget = integer(exploration_budget_ppm, "exploration_budget_ppm", minimum=0)
     draw = integer(deterministic_draw_ppm, "deterministic_draw_ppm", minimum=0)
     use_selected = draw < min(PPM, budget)

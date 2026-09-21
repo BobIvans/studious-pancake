@@ -72,6 +72,8 @@ def build_limit_order_fill_plan(
     payload = {
         "intent_id": str(quote["intent_id"]),
         "quote_id": str(quote["quote_id"]),
+        "opt_in": True,
+        "consent_evidence_sha256": envelope.evidence_sha256,
         "expires_at_ns": integer(quote["expires_at_ns"], "expires_at_ns", minimum=1),
         "economics": dict(economics),
         "state_generation": envelope.state_generation,
@@ -87,6 +89,20 @@ def qualify_opt_in_intent_fill(
     now_ns: int,
 ) -> OfflineDecision:
     reasons: list[str] = []
+    if plan.get("opt_in") is not True:
+        reasons.append("INTENT_OPT_IN_NOT_VERIFIED")
+    if plan.get("consent_evidence_sha256") != envelope.evidence_sha256:
+        reasons.append("INTENT_CONSENT_EVIDENCE_MISMATCH")
+    if plan.get("state_generation") != envelope.state_generation:
+        reasons.append("INTENT_STATE_GENERATION_MISMATCH")
+    if plan.get("execution_authority") is not False:
+        reasons.append("INTENT_EXECUTION_AUTHORITY_FORBIDDEN")
+
+    claimed_plan_sha256 = str(plan.get("plan_sha256", ""))
+    plan_body = {key: value for key, value in plan.items() if key != "plan_sha256"}
+    if claimed_plan_sha256 != stable_hash("mega8-03/intent-plan/v1", plan_body):
+        reasons.append("INTENT_PLAN_INTEGRITY_MISMATCH")
+
     if integer(plan.get("expires_at_ns"), "expires_at_ns", minimum=1) <= integer(
         now_ns, "now_ns", minimum=0
     ):

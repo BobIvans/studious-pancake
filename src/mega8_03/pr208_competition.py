@@ -84,8 +84,13 @@ def adjust_candidate_for_competition(
         PPM, integer(crowding_penalty_ppm, "crowding_penalty_ppm", minimum=0)
     )
     decay = min(PPM, integer(decay_penalty_ppm, "decay_penalty_ppm", minimum=0))
-    retained_ppm = max(0, PPM - crowding - decay)
-    adjusted = net * retained_ppm // PPM
+    penalty_ppm = min(PPM, crowding + decay)
+    retained_ppm = PPM - penalty_ppm
+    if net >= 0:
+        adjusted = net * retained_ppm // PPM
+    else:
+        penalty_atomic = ((-net) * penalty_ppm + PPM - 1) // PPM
+        adjusted = net - penalty_atomic
     return {
         "adjusted_net_atomic": adjusted,
         "retained_alpha_ppm": retained_ppm,

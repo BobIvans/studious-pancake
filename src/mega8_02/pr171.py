@@ -1,16 +1,26 @@
 """PR-171 / SOLVER-03: multi-objective Pareto route selection."""
+
 from __future__ import annotations
 from typing import Iterable, Mapping
 from .core import Mega802Error, ObjectiveVector, pareto_frontier_core
 
 
 def score_route_objectives(
-    *, candidate_id: str, conservative_net: int, duration_us: int,
-    resource_cost: int, uncertainty: int, contention_ppm: int,
+    *,
+    candidate_id: str,
+    conservative_net: int,
+    duration_us: int,
+    resource_cost: int,
+    uncertainty: int,
+    contention_ppm: int,
 ) -> ObjectiveVector:
     return ObjectiveVector(
-        candidate_id, conservative_net, duration_us, resource_cost,
-        uncertainty, contention_ppm,
+        candidate_id,
+        conservative_net,
+        duration_us,
+        resource_cost,
+        uncertainty,
+        contention_ppm,
     )
 
 
@@ -21,11 +31,15 @@ def build_pareto_frontier(
 
 
 def select_policy_constrained_route(
-    frontier: Iterable[ObjectiveVector], *,
-    max_duration_us: int, max_uncertainty: int, max_contention_ppm: int,
+    frontier: Iterable[ObjectiveVector],
+    *,
+    max_duration_us: int,
+    max_uncertainty: int,
+    max_contention_ppm: int,
 ) -> ObjectiveVector:
     eligible = [
-        row for row in frontier
+        row
+        for row in frontier
         if row.duration_us <= max_duration_us
         and row.uncertainty <= max_uncertainty
         and row.contention_ppm <= max_contention_ppm
@@ -36,7 +50,10 @@ def select_policy_constrained_route(
     return max(
         eligible,
         key=lambda row: (
-            row.conservative_net, -row.resource_cost, -row.duration_us, row.candidate_id
+            row.conservative_net,
+            -row.resource_cost,
+            -row.duration_us,
+            row.candidate_id,
         ),
     )
 

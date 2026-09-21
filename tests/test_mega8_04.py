@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+from pathlib import Path
 
 import pytest
 
@@ -8,6 +9,7 @@ from src.mega8_04 import (
     CoverageRow,
     DependencyRecord,
     Disposition,
+    Mega804Error,
     NF_SYMBOLS,
     SignedEvidenceRecord,
     SimulationEngineResult,
@@ -41,6 +43,7 @@ from src.mega8_04 import (
     schedule_next_evidence_cycle,
     shrink_failing_economic_case,
     simulate_ptb_exactly,
+    verify_safety_liveness_properties,
 )
 
 pytestmark = pytest.mark.unit
@@ -90,6 +93,23 @@ def test_permission_escalation_and_simulator_disagreement_fail_closed() -> None:
     disagreement = classify_simulator_disagreement((one, two))
     assert disagreement.disposition is Disposition.BLOCKED
     assert gate_on_simulation_quorum((one, two)).disposition is Disposition.BLOCKED
+
+
+def test_unknown_nonterminal_trace_and_duplicate_engine_fail_closed() -> None:
+    assert (
+        verify_safety_liveness_properties(("BOGUS",)).disposition
+        is Disposition.BLOCKED
+    )
+    assert (
+        verify_safety_liveness_properties(("RESERVED",)).disposition
+        is Disposition.BLOCKED
+    )
+    one = SimulationEngineResult("litesvm", True, A, 10, B)
+    with pytest.raises(
+        Mega804Error,
+        match="distinct engine identities",
+    ):
+        gate_on_simulation_quorum((one, one))
 
 
 def test_supply_chain_sbom_and_reproducibility_are_deterministic() -> None:
@@ -189,10 +209,27 @@ def test_evm_adapter_and_calldata_are_research_only() -> None:
 
 
 def test_sui_exact_state_and_crosschain_reconciliation_remain_research_only() -> None:
+    with pytest.raises(Mega804Error, match="canonical Sui state rejected"):
+        assemble_sui_object_state_frame(
+            chain_id="sui-mainnet",
+            checkpoint=100,
+            epoch=1,
+            objects=(SuiObjectState("0x1", 7, "digest-a", True, True),),
+        )
+
     frame = assemble_sui_object_state_frame(
         chain_id="sui-mainnet",
         checkpoint=100,
-        objects=(SuiObjectState("0x1", 7, "digest-a", True, True),),
+        epoch=1,
+        objects=(
+            SuiObjectState(
+                "0x" + "1" * 64,
+                7,
+                "digest-a",
+                True,
+                True,
+            ),
+        ),
     )
     sim = simulate_ptb_exactly(
         frame=frame,
@@ -231,14 +268,43 @@ def test_dsl_cannot_gain_sign_or_send_capabilities() -> None:
     )
     assert blocked.disposition is Disposition.BLOCKED
     assert blocked.signing_enabled is False
+    with pytest.raises(
+        Mega804Error,
+        match="canonical uppercase spelling",
+    ):
+        sandbox_strategy_plugin(
+            plugin_id="plugin-b",
+            requested_capabilities=("sign",),
+        )
 
 
-def test_post150_release_audit_is_honestly_blocked_without_full_evidence() -> None:
+def test_post150_release_audit_is_honestly_blocked_without_full_evidence(
+    tmp_path: Path,
+) -> None:
+    first = tmp_path / "evidence-209.json"
+    second = tmp_path / "evidence-210.json"
+    first.write_text("one", encoding="utf-8")
+    second.write_text("two", encoding="utf-8")
+    first_sha = sha256(first.read_bytes()).hexdigest()
+    second_sha = sha256(second.read_bytes()).hexdigest()
     rows = (
-        CoverageRow(209, "COVERED_BY_EXISTING", "src.mega8_04", A),
-        CoverageRow(210, "RESEARCH_ONLY", "src.mega8_04", B),
+        CoverageRow(
+            209,
+            "COVERED_BY_EXISTING",
+            "src.mega8_04",
+            first_sha,
+            first.name,
+        ),
+        CoverageRow(
+            210,
+            "RESEARCH_ONLY",
+            "src.mega8_04",
+            second_sha,
+            second.name,
+        ),
     )
-    audit = audit_post150_coverage(rows)
+    audit = audit_post150_coverage(rows, repo_root=tmp_path)
+    assert audit.unverified_prs == ()
     assert audit.covered_count == 2
     assert 151 in audit.missing_prs
     assert audit.release_claim_allowed is False
@@ -266,6 +332,33 @@ def test_post150_release_audit_is_honestly_blocked_without_full_evidence() -> No
     )
     assert cycle["cycle"] == 1
     assert cycle["automatic_promotion"] is False
+
+
+def test_post150_audit_rejects_hash_shaped_unresolved_evidence(
+    tmp_path: Path,
+) -> None:
+    rows = tuple(
+        CoverageRow(
+            number,
+            "MERGED_AND_VERIFIED",
+            "fake-owner",
+            A,
+            f"missing/{number}.json",
+        )
+        for number in range(151, 222)
+    )
+    audit = audit_post150_coverage(rows, repo_root=tmp_path)
+    assert audit.missing_prs == ()
+    assert len(audit.unverified_prs) == 71
+    campaign = run_post150_integrated_campaign(
+        audit,
+        code_generation="code-1",
+        data_generation="data-1",
+        model_generation="model-1",
+        deployment_generation="deployment-1",
+    )
+    assert campaign.disposition is Disposition.BLOCKED
+    assert "POST150_EVIDENCE_UNVERIFIED" in campaign.blockers
 
 
 def test_merkle_leaf_identity_is_sha256() -> None:

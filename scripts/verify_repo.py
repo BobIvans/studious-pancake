@@ -86,6 +86,12 @@ PR353_STRATEGY_EVOLUTION_COMMAND: Final[list[str]] = [
     "--json",
 ]
 
+PR353_SEMANTIC_CONFORMANCE_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_pr353_semantic_conformance.py",
+    "--json",
+]
+
 PR354_MECHANISM_DISCOVERY_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_pr354_mechanism_discovery.py",
@@ -250,6 +256,7 @@ def main() -> int:
     run(MEGA804_CLOSURE_COMMAND)
     run(MEGA8_DEPENDENCY_CLOSURE_COMMAND)
     run(PR353_STRATEGY_EVOLUTION_COMMAND)
+    run(PR353_SEMANTIC_CONFORMANCE_COMMAND)
     run(PR354_MECHANISM_DISCOVERY_COMMAND)
     run(PR355_EVIDENCE_NATIVE_MECHANISM_OS_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)

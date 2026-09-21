@@ -48,6 +48,8 @@ def build_bot_operation_feature_frame(rows: Sequence[Mapping[str, Any]]):
     normalized = []
     rejected = 0
     for row in rows:
+        if row.get("schema_drift"):
+            raise EvolutionError("SCHEMA_DRIFT")
         if any(
             str(key).lower() in secret_keys and value not in (None, "", False)
             for key, value in row.items()
@@ -151,6 +153,15 @@ def align_cross_domain_event_time(
     *,
     decision_at: int,
 ):
+    if (
+        market_frame.get("clock_trusted") is False
+        or bot_frame.get("clock_trusted") is False
+    ):
+        raise EvolutionError("CLOCK_UNTRUSTED")
+    if market_frame.get("cross_domain_ambiguous") or bot_frame.get(
+        "cross_domain_ambiguous"
+    ):
+        raise EvolutionError("CROSS_DOMAIN_AMBIGUITY")
     allowed_market = []
     dropped_future = 0
     for row in market_frame.get("rows", ()):
@@ -228,6 +239,8 @@ def estimate_anomaly_lead_lag_graph(
     max_lag: int,
     latency_corrected: bool,
 ):
+    if len(trigger) < 3 or len(target) < 3:
+        raise EvolutionError("GRAPH_TOO_SPARSE")
     if not latency_corrected:
         raise EvolutionError("CLOCK_ARTIFACT")
     comparison = lead_lag_research(
@@ -253,6 +266,8 @@ def estimate_anomaly_lead_lag_graph(
 
 
 def attribute_opportunity_to_anomaly(payload: Mapping[str, Any]):
+    if payload.get("attribution_unstable"):
+        raise EvolutionError("ATTRIBUTION_UNSTABLE")
     if payload.get("confounded"):
         raise EvolutionError("CONFOUNDED")
     if payload.get("outcome_missing") or payload.get("realized_net_atoms") is None:
@@ -315,6 +330,41 @@ def update_anomaly_coverage_registry(
     existing_hypothesis_ids: Sequence[str],
     evidence_complete: bool,
 ):
+    allowed_domains = {
+        "price",
+        "liquidity/depth",
+        "flow/order",
+        "volatility",
+        "oracle",
+        "credit/health",
+        "funding/OI",
+        "queue/latency",
+        "governance",
+        "incentives",
+        "solvency",
+        "claims/rights",
+        "bridge/finality",
+        "blockspace/DA",
+        "operational",
+        "queue",
+    }
+    allowed_statuses = {
+        "OBSERVED",
+        "REPRODUCIBLE",
+        "EXPLAINED",
+        "HYPOTHESIS",
+        "FALSIFIED",
+        "PAPER_POSITIVE",
+        "SHADOW_QUALIFIED",
+        "UNKNOWN",
+        "BLIND_SPOT",
+    }
+    if any(
+        cell.domain not in allowed_domains
+        or cell.status.upper() not in allowed_statuses
+        for cell in cells
+    ):
+        raise EvolutionError("TAXONOMY_UNKNOWN")
     if hypothesis.hypothesis_id in set(existing_hypothesis_ids):
         raise EvolutionError("DUPLICATE_HYPOTHESIS")
     if not evidence_complete:

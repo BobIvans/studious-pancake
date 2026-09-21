@@ -6,6 +6,10 @@ from .core import EvolutionError, build_candidate, contract, qualify_candidate, 
 
 
 def ingest_validator_queue_state(payload: Mapping[str, Any]):
+    if payload.get("finality") not in {"ROOTED", "FINALIZED"}:
+        raise EvolutionError("UNFINALIZED_HEAD")
+    if payload.get("churn_limit") is None or int(payload.get("churn_limit", 0)) <= 0:
+        raise EvolutionError("CHURN_UNKNOWN")
     if payload.get("queue_gap"):
         raise EvolutionError("QUEUE_GAP")
     return contract(
@@ -18,6 +22,8 @@ def ingest_validator_queue_state(payload: Mapping[str, Any]):
 
 
 def estimate_validator_activation_exit_eta(payload: Mapping[str, Any]):
+    if payload.get("fork_mismatch"):
+        raise EvolutionError("FORK_MISMATCH")
     churn = int(payload.get("churn_limit", 0))
     epoch_seconds = int(payload.get("epoch_seconds", 0))
     if churn <= 0:
@@ -38,16 +44,32 @@ def estimate_validator_activation_exit_eta(payload: Mapping[str, Any]):
     )
 
 
+def _fake_exponential(factor: int, numerator: int, denominator: int) -> int:
+    if factor < 0 or numerator < 0 or denominator <= 0:
+        raise EvolutionError("STATE_UNAVAILABLE")
+    i = 1
+    output = 0
+    numerator_accum = factor * denominator
+    while numerator_accum > 0:
+        output += numerator_accum
+        numerator_accum = (numerator_accum * numerator) // (denominator * i)
+        i += 1
+    return output // denominator
+
+
 def price_withdrawal_request_fee(payload: Mapping[str, Any]):
     if not payload.get("active"):
         raise EvolutionError("PREDEPLOY_INACTIVE")
-    base = int(payload.get("base_fee_atoms", 0))
+    base = int(payload.get("base_fee_atoms", 1))
     excess = int(payload.get("excess_requests", 0))
-    if base < 0 or excess < 0:
-        raise EvolutionError("STATE_UNAVAILABLE")
+    denominator = int(payload.get("fee_update_fraction", 17))
+    fee = _fake_exponential(base, excess, denominator)
+    expected = payload.get("expected_fee_atoms")
+    if expected is not None and int(expected) != fee:
+        raise EvolutionError("ARITHMETIC_MISMATCH")
     return result(
         "price_withdrawal_request_fee",
-        {**dict(payload), "request_fee_atoms": base * (2 ** min(excess, 32))},
+        {**dict(payload), "request_fee_atoms": fee},
     )
 
 
@@ -100,6 +122,10 @@ def compute_stake_liquidity_basis(payload: Mapping[str, Any]):
 
 
 def build_stake_queue_candidate(payload: Mapping[str, Any]):
+    if int(payload.get("duration_seconds", 0)) > int(
+        payload.get("max_duration_seconds", payload.get("duration_seconds", 0))
+    ):
+        raise EvolutionError("DURATION_LIMIT")
     if not payload.get("independent_exit"):
         raise EvolutionError("ONE_WAY_LIQUIDITY")
     if payload.get("loss_tail_unbounded"):
@@ -110,6 +136,8 @@ def build_stake_queue_candidate(payload: Mapping[str, Any]):
 def qualify_stake_queue(
     candidate, *, replay_count: int, policy_passed: bool, stress_passed: bool
 ):
+    if replay_count < 3:
+        raise EvolutionError("SAMPLE_TOO_SMALL")
     if not stress_passed:
         raise EvolutionError("STRESS_FAIL")
     return qualify_candidate(

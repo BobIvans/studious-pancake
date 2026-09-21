@@ -64,6 +64,8 @@ def price_settlement_basis(payload: Mapping[str, Any]):
 
 
 def forecast_unlock_stream_supply(payload: Mapping[str, Any]):
+    if payload.get("entity_map_weak"):
+        raise EvolutionError("ENTITY_MAP_WEAK")
     if payload.get("stream_state_gap"):
         raise EvolutionError("STREAM_STATE_GAP")
     if payload.get("cancellation_right_unknown"):
@@ -112,6 +114,8 @@ def estimate_transferability_haircut(payload: Mapping[str, Any]):
 
 
 def build_lifecycle_candidate(payload: Mapping[str, Any]):
+    if not payload.get("evidence_refs"):
+        raise EvolutionError("LINEAGE_GAP")
     candidate_type = str(payload.get("candidate_type", ""))
     if candidate_type not in {"EXPIRY", "UNLOCK", "CLAIM"}:
         raise EvolutionError("TYPE_MIXED")
@@ -121,8 +125,15 @@ def build_lifecycle_candidate(payload: Mapping[str, Any]):
 
 
 def qualify_lifecycle_candidate(
-    candidate, *, replay_count: int, policy_passed: bool, entity_concentration_ok: bool
+    candidate,
+    *,
+    replay_count: int,
+    policy_passed: bool,
+    entity_concentration_ok: bool,
+    replay_diverged: bool = False,
 ):
+    if replay_diverged:
+        raise EvolutionError("REPLAY_DIVERGENCE")
     if not entity_concentration_ok:
         raise EvolutionError("ENTITY_CONCENTRATION")
     return qualify_candidate(

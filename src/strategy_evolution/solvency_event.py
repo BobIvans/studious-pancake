@@ -6,6 +6,8 @@ from .core import EvolutionError, build_candidate, contract, qualify_candidate, 
 
 
 def normalize_solvency_state(payload: Mapping[str, Any]):
+    if payload.get("version_verified") is False:
+        raise EvolutionError("VERSION_UNKNOWN")
     if payload.get("accounting_gap"):
         raise EvolutionError("ACCOUNTING_GAP")
     if payload.get("oracle_disputed"):
@@ -20,6 +22,8 @@ def normalize_solvency_state(payload: Mapping[str, Any]):
 
 
 def estimate_insurance_fund_runway(payload: Mapping[str, Any]):
+    if payload.get("inflow_verified") is False:
+        raise EvolutionError("INFLOW_UNVERIFIED")
     if payload.get("liability_unknown"):
         raise EvolutionError("LIABILITY_UNKNOWN")
     losses = tuple(int(value) for value in payload.get("loss_scenarios_atoms", ()))
@@ -49,6 +53,9 @@ def model_auto_deleveraging_priority(payload: Mapping[str, Any]):
             key=lambda row: (-row[1], row[0]),
         )
     )
+    reported = payload.get("reported_priority")
+    if reported is not None and tuple(tuple(row) for row in reported) != ranking:
+        raise EvolutionError("RANK_MISMATCH")
     return result(
         "model_auto_deleveraging_priority",
         {**dict(payload), "priority": ranking},
@@ -96,6 +103,8 @@ def price_cover_claim_right(payload: Mapping[str, Any]):
 
 
 def build_solvency_event_candidate(payload: Mapping[str, Any]):
+    if int(payload.get("value_low_atoms", 0)) <= int(payload.get("cost_high_atoms", 0)):
+        raise EvolutionError("NEGATIVE_EDGE")
     if payload.get("waterfall_ambiguous"):
         raise EvolutionError("WATERFALL_AMBIGUOUS")
     if payload.get("seniority_mismatch"):
@@ -106,8 +115,15 @@ def build_solvency_event_candidate(payload: Mapping[str, Any]):
 
 
 def qualify_solvency_event(
-    candidate, *, replay_count: int, policy_passed: bool, tail_risk_bounded: bool
+    candidate,
+    *,
+    replay_count: int,
+    policy_passed: bool,
+    tail_risk_bounded: bool,
+    waterfall_replay_passed: bool = True,
 ):
+    if not waterfall_replay_passed:
+        raise EvolutionError("WATERFALL_REPLAY_FAIL")
     return qualify_candidate(
         candidate,
         replay_count=replay_count,

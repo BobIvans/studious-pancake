@@ -126,14 +126,29 @@ class MarketEpisodeRecord:
         ):
             _text(value, name)
         _int(self.trigger_available_at, "trigger_available_at", minimum=0)
-        _int(self.episode_start, "episode_start", minimum=0)
-        _int(self.episode_end_or_censored, "episode_end_or_censored", minimum=0)
+        trigger_at = _int(self.trigger_available_at, "trigger_available_at", minimum=0)
+        episode_start = _int(self.episode_start, "episode_start", minimum=0)
+        episode_end = _int(
+            self.episode_end_or_censored,
+            "episode_end_or_censored",
+            minimum=0,
+        )
+        if episode_start < trigger_at:
+            raise PR356ContractError("EPISODE_START_BEFORE_TRIGGER")
+        if episode_end < episode_start:
+            raise PR356ContractError("EPISODE_END_BEFORE_START")
         if self.label_status not in ALLOWED_LABEL_STATUSES:
             raise PR356ContractError("LABEL_STATUS_INVALID")
         if self.label_status == "MATURE":
             if self.label_available_at is None or not self.outcome_provenance:
                 raise PR356ContractError("MATURE_LABEL_PROVENANCE_REQUIRED")
-            _int(self.label_available_at, "label_available_at", minimum=0)
+            label_available_at = _int(
+                self.label_available_at,
+                "label_available_at",
+                minimum=0,
+            )
+            if label_available_at < episode_end:
+                raise PR356ContractError("LABEL_AVAILABLE_BEFORE_EPISODE_END")
         elif self.label_available_at is not None:
             _int(self.label_available_at, "label_available_at", minimum=0)
 

@@ -100,6 +100,7 @@ def test_valid_manifest_reaches_static_installed_dependencies(tmp_path: Path) ->
     config = load_runtime_config(
         cli_overrides={
             "runtime.mode": "paper",
+            "strategies.circular_arbitrage": "paper",
             "providers.jupiter.enabled": True,
         }
     )
@@ -123,6 +124,7 @@ def test_static_resolver_builds_canonical_installed_composition(
     config = load_runtime_config(
         cli_overrides={
             "runtime.mode": "paper",
+            "strategies.circular_arbitrage": "paper",
             "providers.jupiter.enabled": True,
         }
     )
@@ -169,6 +171,7 @@ def test_decoder_artifact_mismatch_is_rejected(tmp_path: Path) -> None:
     config = load_runtime_config(
         cli_overrides={
             "runtime.mode": "paper",
+            "strategies.circular_arbitrage": "paper",
             "providers.jupiter.enabled": True,
         }
     )

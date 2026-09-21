@@ -5,6 +5,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
+from src.research.common import require_sha256
+
 from .base import Disposition, ResearchArtifact, artifact, nonempty_text
 
 
@@ -22,8 +24,7 @@ def _generated(
     schema_sha256: str,
     members: Iterable[str],
 ) -> str:
-    if len(schema_sha256) != 64:
-        raise ValueError("schema_sha256 must be a 64-character digest")
+    require_sha256(schema_sha256, "schema_sha256")
     safe_members = _names(members, "member")
     lines = [
         '"""Generated read-only adapter skeleton. Do not add signing/submission."""',

@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 from src.super05_strategy_closure import evaluate_super05
 
 
 def main() -> int:
-    report = evaluate_super05()
+    report = evaluate_super05(root=Path.cwd())
     print(json.dumps(report.to_dict(), sort_keys=True, indent=2))
     if (
         not report.implementation_complete

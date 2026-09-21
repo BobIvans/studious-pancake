@@ -217,9 +217,7 @@ def test_slumlord_port_preserves_rent_role_and_check_repaid_order() -> None:
 
 def test_ports_reject_evidence_from_another_program_or_snapshot_generation() -> None:
     with pytest.raises(FinancingContractError, match="FINANCING_PROGRAM_MISMATCH"):
-        JupiterLendFinancingPort(
-            _evidence("jupiter-lend", Pubkey.new_unique())
-        )
+        JupiterLendFinancingPort(_evidence("jupiter-lend", Pubkey.new_unique()))
 
     port = SlumlordFinancingPort(_evidence("slumlord", SLUMLORD_PROGRAM_ID))
     reserve = SlumlordReserveState(

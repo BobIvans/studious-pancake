@@ -33,12 +33,12 @@
   "branch_base_sha": "17b9d9533ef7ab93c30b657aed40dc7c5248d5ba",
   "dependency_snapshot": {
     "MEGA8-01": {
-      "status": "BRANCH_OBSERVED_NOT_MERGED",
-      "ref": "codex/mega8-01-151-162"
+      "status": "MERGED",
+      "ref": "GitHub PR #525 / c786b74c3fdd614d16ef3db6c517e964cb43c194"
     },
     "MEGA8-02": {
       "status": "MERGED",
-      "ref": "GitHub PR #523"
+      "ref": "GitHub PR #523 / 17b9d9533ef7ab93c30b657aed40dc7c5248d5ba"
     },
     "MEGA8-03": {
       "status": "OPEN",
@@ -312,7 +312,7 @@
     }
   ],
   "residual_blockers": [
-    "Earlier-wave roadmap dependencies are not all merged/qualified on this base.",
+    "MEGA8-03/#521, MEGA8-04/#522 and MEGA8-05/#524 remain open and require independent merge/qualification evidence.",
     "No live provider/leader/TPU/block-engine experiment is run by this code slice.",
     "No real-money offline-RL exploration is permitted or used as evidence.",
     "Transport receipts remain advisory until canonical finalized settlement.",
@@ -322,6 +322,8 @@
     "compile": "PASS",
     "focused_pytest": "12 passed",
     "structural_verifier": "PASS",
-    "black": "CI_AUTHORITATIVE"
-  }
+    "black": "CI_AUTHORITATIVE",
+    "dedicated_gate_pre_dependency_sync": "PASS"
+  },
+  "latest_integrated_main_sha": "c786b74c3fdd614d16ef3db6c517e964cb43c194"
 }

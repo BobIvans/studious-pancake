@@ -41,8 +41,8 @@
       "ref": "GitHub PR #523 / 17b9d9533ef7ab93c30b657aed40dc7c5248d5ba"
     },
     "MEGA8-03": {
-      "status": "OPEN",
-      "ref": "GitHub PR #521"
+      "status": "MERGED",
+      "ref": "GitHub PR #521 / 1426f75749f4091e886b94e9a919df4e90739198"
     },
     "MEGA8-04": {
       "status": "OPEN",
@@ -312,11 +312,11 @@
     }
   ],
   "residual_blockers": [
-    "MEGA8-03/#521, MEGA8-04/#522 and MEGA8-05/#524 remain open and require independent merge/qualification evidence.",
+    "MEGA8-04/#522 and MEGA8-05/#524 remain open and require independent merge/qualification evidence.",
     "No live provider/leader/TPU/block-engine experiment is run by this code slice.",
     "No real-money offline-RL exploration is permitted or used as evidence.",
     "Transport receipts remain advisory until canonical finalized settlement.",
     "External upstream candidates remain unpinned references; no source code is copied."
   ],
-  "latest_integrated_main_sha": "c786b74c3fdd614d16ef3db6c517e964cb43c194"
+  "latest_integrated_main_sha": "1426f75749f4091e886b94e9a919df4e90739198"
 }

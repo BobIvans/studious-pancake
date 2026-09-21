@@ -318,3 +318,6 @@ tests/test_agg03_installed_profile_selection.py
 src/mega8_04.py
 scripts/verify_mega8_04.py
 tests/test_mega8_04.py
+src/release_gate/mega8_dependency_closure.py
+scripts/verify_mega8_dependency_closure.py
+tests/test_mega8_dependency_closure.py

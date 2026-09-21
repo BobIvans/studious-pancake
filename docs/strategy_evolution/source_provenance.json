@@ -1,0 +1,115 @@
+{
+  "schema_version": "pr353.source-provenance.v1",
+  "copy_or_port_performed": false,
+  "policy": "PR-353 copies or vendors no external implementation. Any future reuse requires immutable commit, exact path/symbol, file/package license decision, notices, dependency closure and differential/conformance tests before code import.",
+  "rows": [
+    {
+      "package_id": "EVO-01",
+      "source": "OpenZeppelin governance / Compound governance",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/governance_transition.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    },
+    {
+      "package_id": "EVO-02",
+      "source": "Curve DAO / Velodrome-Aerodrome",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/incentive_epoch.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    },
+    {
+      "package_id": "EVO-03",
+      "source": "EIP-7002 / EIP-7251 / EigenLayer",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/stake_queue.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    },
+    {
+      "package_id": "EVO-04",
+      "source": "ERC-7540 / ERC-7575 / Centrifuge",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/primary_market.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    },
+    {
+      "package_id": "EVO-05",
+      "source": "Drift / Maker DSS / Nexus Mutual",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/solvency_event.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    },
+    {
+      "package_id": "EVO-06",
+      "source": "CoW Protocol / Chainlink Automation",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/intent_rescue.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    },
+    {
+      "package_id": "EVO-07",
+      "source": "EIP-4844 / mev-boost / OP Stack specifications",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/blockspace_option.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    },
+    {
+      "package_id": "EVO-08",
+      "source": "Opyn Gamma / Sablier Lockup",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/rights_lifecycle.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    },
+    {
+      "package_id": "EVO-09",
+      "source": "River / NetworkX / scikit-learn",
+      "reuse_mode": "REFERENCE_ONLY",
+      "immutable_commit": null,
+      "exact_path": null,
+      "exact_symbol": null,
+      "license_review": "REQUIRED_BEFORE_REUSE",
+      "local_owner": "src/strategy_evolution/residual_discovery.py",
+      "source_copy_allowed": false,
+      "differential_tests_required_before_port": true
+    }
+  ]
+}

@@ -52,6 +52,7 @@ from src.research.pr358_core import (
     sample_normal_control_episode,
 )
 
+
 def _load_fixture() -> Mapping[str, Any]:
     payload = json.loads(
         resources.files("src.resources")

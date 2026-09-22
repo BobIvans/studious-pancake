@@ -397,7 +397,7 @@ def _post_init(self: Any) -> None:
 _CONTRACT_TYPES: dict[str, type[Any]] = {}
 for _name, _raw_fields in CONTRACT_SCHEMAS.items():
     _names = tuple(dict.fromkeys(_field_name(item) for item in _raw_fields))
-    _spec = []
+    _spec: list[Any] = []
     for _field in _names:
         if _field in _FALSE_FLAGS:
             _spec.append((_field, object, field(default=False)))

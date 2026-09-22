@@ -9,7 +9,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from src.research.pr358_contracts import CONTRACT_SCHEMAS, EFFECT_BOUNDARY, PR358ContractError, contract_type
+from src.research.pr358_contracts import (
+    CONTRACT_SCHEMAS,
+    EFFECT_BOUNDARY,
+    PR358ContractError,
+    contract_type,
+)
 from src.research.pr358_core import (
     CacheEntry,
     CorrelationObservation,
@@ -57,7 +62,9 @@ def _scan_imports(path: Path) -> list[str]:
     return errors
 
 
-def _fixture_observation(*, bucket: str, frame: str, value: int, available_at: int) -> CorrelationObservation:
+def _fixture_observation(
+    *, bucket: str, frame: str, value: int, available_at: int
+) -> CorrelationObservation:
     return CorrelationObservation(
         frame_id=frame,
         entity_id="entity",
@@ -114,10 +121,18 @@ def verify() -> dict[str, object]:
         errors.append("PR358_OWNER_SCOPE_INCOMPLETE")
     if owner.get("external_qualification_complete") is not False:
         errors.append("PR358_EXTERNAL_OVERCLAIM")
-    if owner.get("marginfi") != "PAUSED" or owner.get("slumlord_low_capital_requirement") != "REQUIRED":
+    if (
+        owner.get("marginfi") != "PAUSED"
+        or owner.get("slumlord_low_capital_requirement") != "REQUIRED"
+    ):
         errors.append("PR358_PREDECESSOR_POLICY_DRIFT")
 
-    allowed = {"SATISFIED_BY_EXISTING", "SPECIALIZE_EXISTING", "NEW_OUTCOME", "BLOCKED_EXTERNAL"}
+    allowed = {
+        "SATISFIED_BY_EXISTING",
+        "SPECIALIZE_EXISTING",
+        "NEW_OUTCOME",
+        "BLOCKED_EXTERNAL",
+    }
     residual_calls = 0
     runtime_blocked = 0
     for row in rows:
@@ -161,14 +176,24 @@ def verify() -> dict[str, object]:
     for key, expected in registry_expected.items():
         if len(registry.get(key, [])) != expected:
             errors.append(f"PR358_REGISTRY_COUNT:{key}")
-    tech02 = next((row for row in registry.get("technology_buckets", []) if row.get("id") == "TECH-02"), None)
+    tech02 = next(
+        (
+            row
+            for row in registry.get("technology_buckets", [])
+            if row.get("id") == "TECH-02"
+        ),
+        None,
+    )
     if not tech02 or tech02.get("name") != "UNSPECIFIED_IN_PROMPT":
         errors.append("PR358_TECH02_SOURCE_GAP_NOT_PRESERVED")
     if any(item.get("dependency_added") for item in registry.get("sources", [])):
         errors.append("PR358_UNREVIEWED_RUNTIME_DEPENDENCY")
     if len(rights.get("sources", [])) != 53:
         errors.append("PR358_RIGHTS_LEDGER_COUNT")
-    if any(item.get("selected_for_runtime_dependency") for item in rights.get("sources", [])):
+    if any(
+        item.get("selected_for_runtime_dependency")
+        for item in rights.get("sources", [])
+    ):
         errors.append("PR358_EXTERNAL_RUNTIME_DEPENDENCY_SELECTED")
     if rights.get("fixture_policy", {}).get("redistribution_allowed") is not True:
         errors.append("PR358_FIXTURE_RIGHTS")
@@ -177,7 +202,10 @@ def verify() -> dict[str, object]:
         errors.append("PR358_PR357_DEPENDENCY_INCOMPLETE")
     if pr357.get("external_qualification_complete") is not False:
         errors.append("PR358_PR357_EXTERNAL_OVERCLAIM")
-    if evidence.get("observed_main_at_start") != "dd40b9c8f3e95cedb94a630a0a0c83e02a73a146":
+    if (
+        evidence.get("observed_main_at_start")
+        != "dd40b9c8f3e95cedb94a630a0a0c83e02a73a146"
+    ):
         errors.append("PR358_BASE_SHA_MISMATCH")
     if evidence.get("pr357_merge_sha") != "dd40b9c8f3e95cedb94a630a0a0c83e02a73a146":
         errors.append("PR358_PR357_DEPENDENCY_PROOF")
@@ -221,8 +249,26 @@ def verify() -> dict[str, object]:
     if compute_incremental_invalidation((node_a, node_b), ("a",)) != ("a", "b"):
         errors.append("PR358_INVALIDATION_NOT_PRECISE")
     entry = CacheEntry(key, "f" * 64, 10, "l1", "e1", "r1", "d1", "s1")
-    exact = classify_cache_reuse(entry, expected_content_key=key, time_cutoff=10, license_generation="l1", entitlement_generation="e1", source_revision="r1", deployment_generation="d1", semantic_version="s1")
-    changed = classify_cache_reuse(entry, expected_content_key=key, time_cutoff=10, license_generation="l1", entitlement_generation="e1", source_revision="r2", deployment_generation="d1", semantic_version="s1")
+    exact = classify_cache_reuse(
+        entry,
+        expected_content_key=key,
+        time_cutoff=10,
+        license_generation="l1",
+        entitlement_generation="e1",
+        source_revision="r1",
+        deployment_generation="d1",
+        semantic_version="s1",
+    )
+    changed = classify_cache_reuse(
+        entry,
+        expected_content_key=key,
+        time_cutoff=10,
+        license_generation="l1",
+        entitlement_generation="e1",
+        source_revision="r2",
+        deployment_generation="d1",
+        semantic_version="s1",
+    )
     if exact != "REUSE_EXACT" or changed != "INVALIDATE":
         errors.append("PR358_CACHE_PROVENANCE")
     try:
@@ -239,12 +285,16 @@ def verify() -> dict[str, object]:
     if len(joined["rows"]) != 2:
         errors.append("PR358_JOIN_MISSING_ROWS")
     try:
-        future = _fixture_observation(bucket="DB-05", frame="future", value=3, available_at=12)
+        future = _fixture_observation(
+            bucket="DB-05", frame="future", value=3, available_at=12
+        )
         materialize_joined_research_view((obs_a, future), decision_time=11)
         errors.append("PR358_LOOKAHEAD_ACCEPTED")
     except PR358ContractError:
         pass
-    if apply_relation_multiple_testing_control({"good": 10_000, "bad": 900_000}, alpha_ppm=50_000) != ("good",):
+    if apply_relation_multiple_testing_control(
+        {"good": 10_000, "bad": 900_000}, alpha_ppm=50_000
+    ) != ("good",):
         errors.append("PR358_FDR_IDENTITY")
 
     service = define_market_science_service(
@@ -278,11 +328,20 @@ def verify() -> dict[str, object]:
         errors.append("PR358_VERTICAL_STATUS")
     if first.get("joined_bucket_count", 0) < 3:
         errors.append("PR358_VERTICAL_BUCKET_COVERAGE")
-    if first["cache"]["exact"] != "REUSE_EXACT" or first["cache"]["revision_change"] != "INVALIDATE":
+    if (
+        first["cache"]["exact"] != "REUSE_EXACT"
+        or first["cache"]["revision_change"] != "INVALIDATE"
+    ):
         errors.append("PR358_VERTICAL_CACHE")
     if any(first["effect_boundary"].values()):
         errors.append("PR358_VERTICAL_EFFECT_BOUNDARY")
-    for key in ("execution_right", "production_ready", "live_enabled", "customer_billing", "external_service_activation"):
+    for key in (
+        "execution_right",
+        "production_ready",
+        "live_enabled",
+        "customer_billing",
+        "external_service_activation",
+    ):
         if first.get(key) is not False:
             errors.append(f"PR358_VERTICAL_FORBIDDEN_EFFECT:{key}")
 

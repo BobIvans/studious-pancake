@@ -9,8 +9,8 @@ submission, wallet, release, or external-service action.
 from __future__ import annotations
 
 import hashlib
+from importlib import resources
 import json
-from pathlib import Path
 from typing import Any, Mapping
 
 from src.agg02.contracts import RawEventEnvelope
@@ -52,12 +52,12 @@ from src.research.pr358_core import (
     sample_normal_control_episode,
 )
 
-ROOT = Path(__file__).resolve().parents[2]
-FIXTURE_PATH = ROOT / "tests/fixtures/pr358_relation_vertical.json"
-
-
 def _load_fixture() -> Mapping[str, Any]:
-    payload = json.loads(FIXTURE_PATH.read_text(encoding="utf-8"))
+    payload = json.loads(
+        resources.files("src.resources")
+        .joinpath("pr358_relation_vertical.json")
+        .read_text(encoding="utf-8")
+    )
     expected = payload["fixture_sha256"]
     body = dict(payload)
     body.pop("fixture_sha256", None)

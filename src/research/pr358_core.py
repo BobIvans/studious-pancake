@@ -585,13 +585,24 @@ def update_incremental_view(
 ) -> Mapping[str, Any]:
     watermark = int(view["watermark"])
     prior = tuple(view["rows"])
-    combined = prior + tuple(row for row in new_rows if row.available_at <= watermark)
+    tombstones = {tuple(item) for item in view.get("retractions", ())}
+    admitted = tuple(
+        row
+        for row in new_rows
+        if row.available_at <= watermark
+        and (row.frame_id, row.revision) not in tombstones
+    )
+    combined = prior + admitted
     dedup = {(row.frame_id, row.revision): row for row in combined}
     rows = tuple(dedup[key] for key in sorted(dedup))
     result = dict(view)
     result["rows"] = rows
+    result["retractions"] = tuple(sorted(tombstones))
     result["view_hash"] = canonical_hash(
-        tuple((row.frame_id, row.revision) for row in rows)
+        {
+            "rows": tuple(canonical_hash(row) for row in rows),
+            "retractions": result["retractions"],
+        }
     )
     return result
 
@@ -641,10 +652,8 @@ def measure_stream_batch_equivalence(
     stream_rows: Sequence[CorrelationObservation],
     batch_rows: Sequence[CorrelationObservation],
 ) -> bool:
-    stream = tuple(
-        sorted((row.frame_id, row.revision, row.value) for row in stream_rows)
-    )
-    batch = tuple(sorted((row.frame_id, row.revision, row.value) for row in batch_rows))
+    stream = tuple(sorted(canonical_hash(row) for row in stream_rows))
+    batch = tuple(sorted(canonical_hash(row) for row in batch_rows))
     return stream == batch
 
 
@@ -1205,6 +1214,9 @@ def materialize_relation_atlas_snapshot(
     *,
     knowledge_cutoff: int,
 ) -> Mapping[str, Any]:
+    _nonnegative(knowledge_cutoff, "PR358_ATLAS_CUTOFF_NEGATIVE")
+    if any(relation.discovery_cutoff > knowledge_cutoff for relation in relations):
+        raise PR358ContractError("PR358_ATLAS_LOOKAHEAD_RELATION")
     counts: dict[str, int] = {}
     for relation in relations:
         counts[relation.status] = counts.get(relation.status, 0) + 1

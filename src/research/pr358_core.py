@@ -4,6 +4,7 @@ All functions are offline, sender-free and stdlib-only.  Existing repository
 owners remain authoritative for raw/PIT truth, statistical graphs, PR-357
 world-model/VOI, product ledgers, execution, capital and release.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -153,15 +154,14 @@ class CorrelationObservation:
         ):
             _nonempty(value, code)
         clocks = (self.event_at, self.published_at, self.received_at, self.available_at)
-        if any(isinstance(value, bool) or not isinstance(value, int) for value in clocks):
+        if any(
+            isinstance(value, bool) or not isinstance(value, int) for value in clocks
+        ):
             raise PR358ContractError("PR358_CLOCK_INTEGER_REQUIRED")
         if min(clocks) < 0:
             raise PR358ContractError("PR358_CLOCK_NEGATIVE")
         if not (
-            self.event_at
-            <= self.published_at
-            <= self.received_at
-            <= self.available_at
+            self.event_at <= self.published_at <= self.received_at <= self.available_at
         ):
             raise PR358ContractError("PR358_CLOCK_ORDER_INVALID")
 
@@ -630,9 +630,7 @@ def snapshot_incremental_view(view: Mapping[str, Any]) -> Mapping[str, Any]:
             {
                 "view_id": view["view_id"],
                 "watermark": view["watermark"],
-                "row_ids": tuple(
-                    (row.frame_id, row.revision) for row in view["rows"]
-                ),
+                "row_ids": tuple((row.frame_id, row.revision) for row in view["rows"]),
                 "retractions": tuple(view.get("retractions", ())),
             }
         ),
@@ -646,9 +644,7 @@ def measure_stream_batch_equivalence(
     stream = tuple(
         sorted((row.frame_id, row.revision, row.value) for row in stream_rows)
     )
-    batch = tuple(
-        sorted((row.frame_id, row.revision, row.value) for row in batch_rows)
-    )
+    batch = tuple(sorted((row.frame_id, row.revision, row.value) for row in batch_rows))
     return stream == batch
 
 
@@ -780,7 +776,9 @@ def measure_compute_reuse_rate(*, reused_nodes: int, total_nodes: int) -> int:
     return reused_nodes * PPM // total_nodes
 
 
-def measure_cost_to_closed_verdict(*, total_cost_units: int, closed_verdicts: int) -> int:
+def measure_cost_to_closed_verdict(
+    *, total_cost_units: int, closed_verdicts: int
+) -> int:
     _nonnegative(total_cost_units, "PR358_TOTAL_COST_NEGATIVE")
     if closed_verdicts <= 0:
         raise PR358ContractError("PR358_CLOSED_VERDICT_COUNT_INVALID")
@@ -797,6 +795,7 @@ def align_episode_available_at(
     if not observations:
         raise PR358ContractError("PR358_EPISODE_EMPTY")
     return max(row.available_at for row in observations)
+
 
 def sample_normal_control_episode(values: Sequence[int]) -> tuple[int, ...]:
     if len(values) < 2:
@@ -834,20 +833,14 @@ def _fraction_correlation(left: Sequence[Fraction], right: Sequence[Fraction]) -
     mean_left = sum(left, Fraction(0)) / n
     mean_right = sum(right, Fraction(0)) / n
     covariance = sum(
-        (x - mean_left) * (y - mean_right)
-        for x, y in zip(left, right, strict=True)
+        (x - mean_left) * (y - mean_right) for x, y in zip(left, right, strict=True)
     )
     left_ss = sum((x - mean_left) ** 2 for x in left)
     right_ss = sum((y - mean_right) ** 2 for y in right)
     if left_ss == 0 or right_ss == 0:
         return 0
     numerator = covariance.numerator * covariance.numerator
-    denominator = (
-        covariance.denominator
-        * covariance.denominator
-        * left_ss
-        * right_ss
-    )
+    denominator = covariance.denominator * covariance.denominator * left_ss * right_ss
     if denominator <= 0:
         return 0
     magnitude = isqrt(max(0, numerator * PPM * PPM // int(denominator)))
@@ -932,7 +925,9 @@ def compare_relation_methods(
 ) -> Mapping[str, Any]:
     if baseline_method not in method_metrics:
         raise PR358ContractError("PR358_BASELINE_METHOD_MISSING")
-    best_method, best_value = max(method_metrics.items(), key=lambda pair: (pair[1], pair[0]))
+    best_method, best_value = max(
+        method_metrics.items(), key=lambda pair: (pair[1], pair[0])
+    )
     return {
         "baseline_method": baseline_method,
         "best_method": best_method,
@@ -947,7 +942,9 @@ def detect_clock_artifact(
 ) -> bool:
     if len(source_available_at) != len(target_event_at):
         raise PR358ContractError("PR358_CLOCK_ARTIFACT_INPUT_MISMATCH")
-    return any(source > target for source, target in zip(source_available_at, target_event_at))
+    return any(
+        source > target for source, target in zip(source_available_at, target_event_at)
+    )
 
 
 def detect_common_cause_candidate(
@@ -996,10 +993,14 @@ def measure_sequence_precision_recall(
     predicted = tuple(predicted_events)
     actual = tuple(actual_events)
     matched_pred = sum(
-        1 for event in predicted if any(abs(event - target) <= tolerance for target in actual)
+        1
+        for event in predicted
+        if any(abs(event - target) <= tolerance for target in actual)
     )
     matched_actual = sum(
-        1 for target in actual if any(abs(event - target) <= tolerance for event in predicted)
+        1
+        for target in actual
+        if any(abs(event - target) <= tolerance for event in predicted)
     )
     precision = matched_pred * PPM // max(1, len(predicted))
     recall = matched_actual * PPM // max(1, len(actual))
@@ -1026,7 +1027,9 @@ def estimate_directional_information_flow(
     source: Sequence[int],
     target: Sequence[int],
 ) -> int:
-    return int(run_transfer_entropy_challenger(source, target)["directional_information_ppm"])
+    return int(
+        run_transfer_entropy_challenger(source, target)["directional_information_ppm"]
+    )
 
 
 def bind_relation_units(units: Mapping[str, str]) -> Mapping[str, str]:
@@ -1195,6 +1198,7 @@ def compile_relation_to_voi_question(
         "question_only": True,
         "execution_right": False,
     }
+
 
 def materialize_relation_atlas_snapshot(
     relations: Sequence[RelationCandidateState],
@@ -1377,7 +1381,9 @@ def simulate_keeper_job_market(
 ) -> Mapping[str, Any]:
     if not offers:
         raise PR358ContractError("PR358_KEEPER_OFFERS_EMPTY")
-    best = min(offers, key=lambda offer: (int(offer["service_fee"]), str(offer["job_id"])))
+    best = min(
+        offers, key=lambda offer: (int(offer["service_fee"]), str(offer["job_id"]))
+    )
     return {
         "selected_job_id": best["job_id"],
         "simulation_only": True,

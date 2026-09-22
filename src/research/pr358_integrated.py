@@ -306,9 +306,7 @@ def run_pr358_integrated_vertical() -> Mapping[str, Any]:
         "bootstrap": compile_relation_to_bootstrap_prior(
             relation, evidence_hash=evidence_hash
         ),
-        "voi": compile_relation_to_voi_question(
-            relation, evidence_hash=evidence_hash
-        ),
+        "voi": compile_relation_to_voi_question(relation, evidence_hash=evidence_hash),
     }
     atlas = materialize_relation_atlas_snapshot((relation,), knowledge_cutoff=1_070)
 
@@ -329,9 +327,7 @@ def run_pr358_integrated_vertical() -> Mapping[str, Any]:
     )
     bind_distribution_entitlement(service, requested_scope="research")
     remaining_queries = bind_product_query_budget(service, used_queries=1)
-    redaction = bind_product_redaction_policy(
-        service, privacy_class="PUBLIC_SYNTHETIC"
-    )
+    redaction = bind_product_redaction_policy(service, privacy_class="PUBLIC_SYNTHETIC")
     stale = bind_product_staleness(service, artifact_age=1)
 
     artifact_hash = hashlib.sha256(

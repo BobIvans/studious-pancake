@@ -36,7 +36,10 @@ def main() -> int:
     if first != second:
         print(json.dumps({"accepted": False, "first": first, "second": second}))
         return 1
-    if first.get("execution_right") is not False or first.get("customer_billing") is not False:
+    if (
+        first.get("execution_right") is not False
+        or first.get("customer_billing") is not False
+    ):
         print(json.dumps({"accepted": False, "reason": "forbidden_effect"}))
         return 1
     print(json.dumps({"accepted": True, **first}, sort_keys=True))

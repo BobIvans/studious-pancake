@@ -344,3 +344,10 @@ src/research/pr357_integrated.py
 scripts/verify_pr357.py
 scripts/verify_pr357_replication.py
 tests/research/test_pr357_adaptive_strategy_intelligence.py
+src/research/pr358_contracts.py
+src/research/pr358_core.py
+src/research/pr358_requirements.py
+src/research/pr358_integrated.py
+scripts/verify_pr358.py
+scripts/verify_pr358_replication.py
+tests/research/test_pr358_market_relation_exchange.py

@@ -24,6 +24,7 @@ from src.research.pr358_core import (
     compute_incremental_invalidation,
     compute_node_content_key,
     define_experiment_dag,
+    define_incremental_view,
     define_machine_payment_quote,
     define_market_science_service,
     define_relation_candidate,
@@ -31,8 +32,10 @@ from src.research.pr358_core import (
     detect_relation_negative_transfer,
     materialize_relation_atlas_snapshot,
     measure_relation_half_life,
+    measure_sequence_precision_recall,
     measure_stream_batch_equivalence,
     retract_reorg_revision,
+    run_rank_correlation_baseline,
     simulate_solver_competition,
     update_incremental_view,
     simulate_x402_single_payment,
@@ -182,6 +185,26 @@ def test_stream_batch_equivalence_and_retraction() -> None:
         (row.frame_id, row.revision) for row in advanced["rows"]
     )
 
+
+
+
+def test_initial_incremental_view_hash_binds_complete_observation() -> None:
+    left = _obs("DB-01", "same", 10)
+    changed = replace(left, value=2)
+    first = define_incremental_view("view", (left,), watermark=10)
+    second = define_incremental_view("view", (changed,), watermark=10)
+    assert first["view_hash"] != second["view_hash"]
+
+
+def test_rank_correlation_preserves_fractional_tied_rank_denominator() -> None:
+    result = run_rank_correlation_baseline((0, 0, 0, 1), (0, 0, 1, 2))
+    assert result["spearman_ppm"] == 816_496
+
+
+def test_sequence_matching_is_one_to_one() -> None:
+    result = measure_sequence_precision_recall((9, 10, 11), (10,), tolerance=1)
+    assert result["precision_ppm"] == 333_333
+    assert result["recall_ppm"] == 1_000_000
 
 def test_fdr_stability_invariants_and_negative_transfer() -> None:
     assert apply_relation_multiple_testing_control(

@@ -857,7 +857,9 @@ def _fraction_correlation(left: Sequence[Fraction], right: Sequence[Fraction]) -
     right_ss = sum((y - mean_right) ** 2 for y in right)
     if left_ss == 0 or right_ss == 0:
         return 0
-    squared_correlation = covariance * covariance / (left_ss * right_ss)
+    squared_correlation = Fraction(
+        covariance * covariance / (left_ss * right_ss)
+    )
     if squared_correlation <= 0:
         return 0
     scaled_squared = squared_correlation * PPM * PPM

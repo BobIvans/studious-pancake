@@ -4,6 +4,7 @@ Bespoke deterministic semantics live in :mod:`src.research.pr358_core`.  The
 remaining roadmap symbols are thin research-contract adapters.  They preserve
 exact requirement identities while keeping external/paid/live work blocked.
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable, Mapping

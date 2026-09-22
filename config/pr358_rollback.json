@@ -1,0 +1,1 @@
+{"atlas_product_policy":"REBUILD_FROM_IMMUTABLE_RECEIPTS","cache_policy":"DERIVED_CACHE_MAY_BE_DROPPED; CANONICAL_EVIDENCE_PRESERVED","capital_effects":false,"external_effects":false,"payment_effects":false,"release_effects":false,"roadmap_id":"PR-358","schema_policy":"ADDITIVE_OR_READ_OLD","signing_effects":false,"strategy":"ONE_PR_REVERT","submission_effects":false}

@@ -861,9 +861,7 @@ def _fraction_correlation(left: Sequence[Fraction], right: Sequence[Fraction]) -
     if squared_correlation <= 0:
         return 0
     scaled_squared = squared_correlation * PPM * PPM
-    magnitude = isqrt(
-        scaled_squared.numerator // scaled_squared.denominator
-    )
+    magnitude = isqrt(scaled_squared.numerator // scaled_squared.denominator)
     return min(PPM, magnitude) if covariance >= 0 else -min(PPM, magnitude)
 
 

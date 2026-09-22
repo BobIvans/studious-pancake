@@ -567,14 +567,23 @@ def define_incremental_view(
 ) -> Mapping[str, Any]:
     _nonempty(view_id, "PR358_VIEW_ID_REQUIRED")
     _nonnegative(watermark, "PR358_WATERMARK_NEGATIVE")
-    admitted = tuple(row for row in rows if row.available_at <= watermark)
+    admitted = tuple(
+        sorted(
+            (row for row in rows if row.available_at <= watermark),
+            key=lambda row: (row.frame_id, row.revision, canonical_hash(row)),
+        )
+    )
+    retractions: tuple[tuple[str, str], ...] = ()
     return {
         "view_id": view_id,
         "watermark": watermark,
         "rows": admitted,
-        "retractions": (),
+        "retractions": retractions,
         "view_hash": canonical_hash(
-            tuple((row.frame_id, row.revision) for row in admitted)
+            {
+                "rows": tuple(canonical_hash(row) for row in admitted),
+                "retractions": retractions,
+            }
         ),
     }
 
@@ -848,11 +857,13 @@ def _fraction_correlation(left: Sequence[Fraction], right: Sequence[Fraction]) -
     right_ss = sum((y - mean_right) ** 2 for y in right)
     if left_ss == 0 or right_ss == 0:
         return 0
-    numerator = covariance.numerator * covariance.numerator
-    denominator = covariance.denominator * covariance.denominator * left_ss * right_ss
-    if denominator <= 0:
+    squared_correlation = covariance * covariance / (left_ss * right_ss)
+    if squared_correlation <= 0:
         return 0
-    magnitude = isqrt(max(0, numerator * PPM * PPM // int(denominator)))
+    scaled_squared = squared_correlation * PPM * PPM
+    magnitude = isqrt(
+        scaled_squared.numerator // scaled_squared.denominator
+    )
     return min(PPM, magnitude) if covariance >= 0 else -min(PPM, magnitude)
 
 
@@ -999,20 +1010,26 @@ def measure_sequence_precision_recall(
     *,
     tolerance: int,
 ) -> Mapping[str, int]:
-    predicted = tuple(predicted_events)
-    actual = tuple(actual_events)
-    matched_pred = sum(
-        1
-        for event in predicted
-        if any(abs(event - target) <= tolerance for target in actual)
-    )
-    matched_actual = sum(
-        1
-        for target in actual
-        if any(abs(event - target) <= tolerance for event in predicted)
-    )
-    precision = matched_pred * PPM // max(1, len(predicted))
-    recall = matched_actual * PPM // max(1, len(actual))
+    if tolerance < 0:
+        raise PR358ContractError("PR358_SEQUENCE_TOLERANCE_NEGATIVE")
+    predicted = tuple(sorted(predicted_events))
+    actual = tuple(sorted(actual_events))
+    predicted_index = 0
+    actual_index = 0
+    matched = 0
+    while predicted_index < len(predicted) and actual_index < len(actual):
+        event = predicted[predicted_index]
+        target = actual[actual_index]
+        if abs(event - target) <= tolerance:
+            matched += 1
+            predicted_index += 1
+            actual_index += 1
+        elif event < target - tolerance:
+            predicted_index += 1
+        else:
+            actual_index += 1
+    precision = matched * PPM // max(1, len(predicted))
+    recall = matched * PPM // max(1, len(actual))
     return {"precision_ppm": precision, "recall_ppm": recall}
 
 

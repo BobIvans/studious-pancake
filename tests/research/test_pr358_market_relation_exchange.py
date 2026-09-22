@@ -186,8 +186,6 @@ def test_stream_batch_equivalence_and_retraction() -> None:
     )
 
 
-
-
 def test_initial_incremental_view_hash_binds_complete_observation() -> None:
     left = _obs("DB-01", "same", 10)
     changed = replace(left, value=2)
@@ -205,6 +203,7 @@ def test_sequence_matching_is_one_to_one() -> None:
     result = measure_sequence_precision_recall((9, 10, 11), (10,), tolerance=1)
     assert result["precision_ppm"] == 333_333
     assert result["recall_ppm"] == 1_000_000
+
 
 def test_fdr_stability_invariants_and_negative_transfer() -> None:
     assert apply_relation_multiple_testing_control(

@@ -6,7 +6,11 @@ from pathlib import Path
 import pytest
 
 from scripts.verify_pr358 import verify
-from src.research.pr358_contracts import CONTRACT_SCHEMAS, PR358ContractError, contract_type
+from src.research.pr358_contracts import (
+    CONTRACT_SCHEMAS,
+    PR358ContractError,
+    contract_type,
+)
 from src.research.pr358_core import (
     CacheEntry,
     CorrelationObservation,
@@ -79,7 +83,9 @@ def _obs(bucket: str, frame: str, available_at: int = 10) -> CorrelationObservat
 
 
 def test_owner_map_covers_all_288_requirements() -> None:
-    payload = json.loads((ROOT / "config/pr358_owner_map.json").read_text(encoding="utf-8"))
+    payload = json.loads(
+        (ROOT / "config/pr358_owner_map.json").read_text(encoding="utf-8")
+    )
     rows = payload["requirements"]
     assert len(rows) == 288
     assert len({row["id"] for row in rows}) == 288
@@ -92,7 +98,10 @@ def test_owner_map_covers_all_288_requirements() -> None:
 def test_24_normative_contracts_are_immutable_and_fail_closed() -> None:
     assert len(CONTRACT_SCHEMAS) == 24
     relation = contract_type("RelationCandidate")
-    kwargs = {field.split("=", 1)[0].replace("/", "_"): "fixture" for field in CONTRACT_SCHEMAS["RelationCandidate"]}
+    kwargs = {
+        field.split("=", 1)[0].replace("/", "_"): "fixture"
+        for field in CONTRACT_SCHEMAS["RelationCandidate"]
+    }
     kwargs["causal_claim"] = True
     kwargs["execution_right"] = False
     with pytest.raises(PR358ContractError):
@@ -106,9 +115,29 @@ def test_dag_key_acyclicity_cache_and_precise_invalidation() -> None:
     assert compute_node_content_key(a) == compute_node_content_key(a)
     assert define_experiment_dag((a, b, c))["execution_right"] is False
     assert compute_incremental_invalidation((a, b, c), ("b",)) == ("b", "c")
-    entry = CacheEntry(compute_node_content_key(a), "f" * 64, 100, "l1", "e1", "r1", "d1", "s1")
-    exact = classify_cache_reuse(entry, expected_content_key=entry.content_key, time_cutoff=100, license_generation="l1", entitlement_generation="e1", source_revision="r1", deployment_generation="d1", semantic_version="s1")
-    changed = classify_cache_reuse(entry, expected_content_key=entry.content_key, time_cutoff=100, license_generation="l1", entitlement_generation="e1", source_revision="r2", deployment_generation="d1", semantic_version="s1")
+    entry = CacheEntry(
+        compute_node_content_key(a), "f" * 64, 100, "l1", "e1", "r1", "d1", "s1"
+    )
+    exact = classify_cache_reuse(
+        entry,
+        expected_content_key=entry.content_key,
+        time_cutoff=100,
+        license_generation="l1",
+        entitlement_generation="e1",
+        source_revision="r1",
+        deployment_generation="d1",
+        semantic_version="s1",
+    )
+    changed = classify_cache_reuse(
+        entry,
+        expected_content_key=entry.content_key,
+        time_cutoff=100,
+        license_generation="l1",
+        entitlement_generation="e1",
+        source_revision="r2",
+        deployment_generation="d1",
+        semantic_version="s1",
+    )
     assert exact == "REUSE_EXACT"
     assert changed == "INVALIDATE"
     with pytest.raises(PR358ContractError):
@@ -135,10 +164,15 @@ def test_stream_batch_equivalence_and_retraction() -> None:
 
 
 def test_fdr_stability_invariants_and_negative_transfer() -> None:
-    assert apply_relation_multiple_testing_control({"signal": 10_000, "null": 900_000}, alpha_ppm=50_000) == ("signal",)
+    assert apply_relation_multiple_testing_control(
+        {"signal": 10_000, "null": 900_000}, alpha_ppm=50_000
+    ) == ("signal",)
     assert measure_relation_half_life((1_000_000, 600_000, 400_000)) == 2
     assert check_accounting_invariant((10, 5), (8, 7), tolerance=0)["holds"] is True
-    assert detect_relation_negative_transfer(target_local_loss=10, transferred_loss=12) is True
+    assert (
+        detect_relation_negative_transfer(target_local_loss=10, transferred_loss=12)
+        is True
+    )
 
 
 def test_entitlement_query_budget_and_staleness_fail_closed() -> None:
@@ -170,7 +204,9 @@ def test_solver_and_x402_are_simulation_only() -> None:
     solver = simulate_solver_competition({"a": 100, "b": 95}, {"a": 5, "b": 1})
     assert solver["simulation_only"] is True
     assert solver["execution_right"] is False
-    quote = define_machine_payment_quote(service_id="svc", price_units=5, settlement_overhead=1)
+    quote = define_machine_payment_quote(
+        service_id="svc", price_units=5, settlement_overhead=1
+    )
     payment = simulate_x402_single_payment(quote)
     assert payment["payment_state"] == "SIMULATED_ONLY"
     assert payment["payment_sent"] is False

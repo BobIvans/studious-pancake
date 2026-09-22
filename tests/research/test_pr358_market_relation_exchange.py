@@ -178,7 +178,9 @@ def test_stream_batch_equivalence_and_retraction() -> None:
     assert tuple(row.frame_id for row in replayed["rows"]) == ("b",)
     newer_revision = replace(left, revision="v2")
     advanced = update_incremental_view(replayed, (newer_revision,))
-    assert ("a", "v2") in tuple((row.frame_id, row.revision) for row in advanced["rows"])
+    assert ("a", "v2") in tuple(
+        (row.frame_id, row.revision) for row in advanced["rows"]
+    )
 
 
 def test_fdr_stability_invariants_and_negative_transfer() -> None:

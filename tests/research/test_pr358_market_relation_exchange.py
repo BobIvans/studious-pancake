@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -25,12 +26,15 @@ from src.research.pr358_core import (
     define_experiment_dag,
     define_machine_payment_quote,
     define_market_science_service,
+    define_relation_candidate,
     define_semantic_join,
     detect_relation_negative_transfer,
+    materialize_relation_atlas_snapshot,
     measure_relation_half_life,
     measure_stream_batch_equivalence,
     retract_reorg_revision,
     simulate_solver_competition,
+    update_incremental_view,
     simulate_x402_single_payment,
     test_accounting_invariant as check_accounting_invariant,
 )
@@ -157,10 +161,24 @@ def test_stream_batch_equivalence_and_retraction() -> None:
     left = _obs("DB-01", "a", 10)
     right = _obs("DB-03", "b", 10)
     assert measure_stream_batch_equivalence((left, right), (right, left)) is True
+    semantically_different = replace(
+        left,
+        event_at=6,
+        published_at=7,
+        received_at=8,
+        available_at=9,
+    )
+    assert measure_stream_batch_equivalence((left,), (semantically_different,)) is False
+
     view = {"rows": (left, right), "watermark": 10, "retractions": (), "view_hash": "x"}
     retracted = retract_reorg_revision(view, frame_id="a", revision="v1")
     assert tuple(row.frame_id for row in retracted["rows"]) == ("b",)
     assert retracted["retractions"] == (("a", "v1"),)
+    replayed = update_incremental_view(retracted, (left,))
+    assert tuple(row.frame_id for row in replayed["rows"]) == ("b",)
+    newer_revision = replace(left, revision="v2")
+    advanced = update_incremental_view(replayed, (newer_revision,))
+    assert ("a", "v2") in tuple((row.frame_id, row.revision) for row in advanced["rows"])
 
 
 def test_fdr_stability_invariants_and_negative_transfer() -> None:
@@ -173,6 +191,22 @@ def test_fdr_stability_invariants_and_negative_transfer() -> None:
         detect_relation_negative_transfer(target_local_loss=10, transferred_loss=12)
         is True
     )
+
+
+def test_atlas_snapshot_rejects_future_relation() -> None:
+    relation = define_relation_candidate(
+        relation_id="future",
+        source_variables=("x",),
+        target_variables=("y",),
+        relation_family="fixture",
+        lag=1,
+        market_scope="fixture",
+        regime_scope="fixture",
+        method_id="fixture",
+        discovery_cutoff=100,
+    )
+    with pytest.raises(PR358ContractError, match="PR358_ATLAS_LOOKAHEAD_RELATION"):
+        materialize_relation_atlas_snapshot((relation,), knowledge_cutoff=50)
 
 
 def test_entitlement_query_budget_and_staleness_fail_closed() -> None:

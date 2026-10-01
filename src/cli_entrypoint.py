@@ -212,6 +212,13 @@ def _inspection_parser() -> argparse.ArgumentParser:
     doctor_parser.add_argument("--online", action="store_true")
     doctor_parser.add_argument("--check-secrets", action="store_true")
     doctor_parser.add_argument("--json", action="store_true", dest="as_json")
+
+    report_parser = subparsers.add_parser(
+        "qualify-and-report", help="collect bounded offline installed-CLI evidence"
+    )
+    report_parser.add_argument("--output-dir", default=".runtime/qualification")
+    report_parser.add_argument("--project-root", default=".")
+    report_parser.add_argument("--timeout-seconds", type=int, default=30)
     return parser
 
 
@@ -406,6 +413,7 @@ def _run_lightweight_inspection(
         "runtime-admission",
         "config",
         "run",
+        "qualify-and-report",
     }:
         return None
     if command_name == "run" and _requested_run_mode(args) == "paper":
@@ -421,6 +429,19 @@ def _run_lightweight_inspection(
             return 0
         return exc.code if isinstance(exc.code, int) else 1
 
+    if parsed.command == "qualify-and-report":
+        # No arbitrary YAML, online flags or custom shell commands are admitted
+        # by this evidence collector. Child commands use packaged defaults.
+        if parsed.config_file is not None:
+            print("qualify-and-report does not accept --config-file", file=sys.stderr)
+            return 2
+        from src.qualify_and_report import run_cli
+
+        return run_cli(
+            output_dir=parsed.output_dir,
+            project_root=parsed.project_root,
+            timeout_seconds=parsed.timeout_seconds,
+        )
     if parsed.command == "status":
         _print_status(
             _inspection_status_payload(

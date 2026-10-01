@@ -88,6 +88,7 @@ logs/
 *.parquet
 *.feather
 .pytest_cache/
+.runtime/qualification/
 .mypy_cache/
 .ruff_cache/
 .coverage

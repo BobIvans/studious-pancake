@@ -351,3 +351,5 @@ src/research/pr358_integrated.py
 scripts/verify_pr358.py
 scripts/verify_pr358_replication.py
 tests/research/test_pr358_market_relation_exchange.py
+scripts/run_qualification_task.py
+tests/test_qualification_task_adapter.py

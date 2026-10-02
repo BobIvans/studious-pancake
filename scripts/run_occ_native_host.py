@@ -5,6 +5,7 @@ The host accepts one registered audit action, pins it to a durable context
 version, and delegates execution to ``scripts.run_qualification_task``.  It is
 not a second queue, scheduler, shell, signer, or live-execution authority.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -67,13 +68,15 @@ def validate_request(raw: object) -> dict[str, Any]:
         raise OCCNativeHostError("ACTION_UNREGISTERED")
     for field in ("job_id", "namespace", "source_id", "release_id"):
         _identifier(field, raw[field])
-    if not isinstance(raw["context_version_sha256"], str) or _SHA256_RE.fullmatch(
-        raw["context_version_sha256"]
-    ) is None:
+    if (
+        not isinstance(raw["context_version_sha256"], str)
+        or _SHA256_RE.fullmatch(raw["context_version_sha256"]) is None
+    ):
         raise OCCNativeHostError("CONTEXT_VERSION_INVALID")
-    if not isinstance(raw["source_commit"], str) or _COMMIT_RE.fullmatch(
-        raw["source_commit"]
-    ) is None:
+    if (
+        not isinstance(raw["source_commit"], str)
+        or _COMMIT_RE.fullmatch(raw["source_commit"]) is None
+    ):
         raise OCCNativeHostError("SOURCE_COMMIT_INVALID")
     if type(raw["repeat"]) is not int or not 2 <= raw["repeat"] <= 5:
         raise OCCNativeHostError("REPEAT_OUT_OF_BOUNDS")
@@ -274,7 +277,9 @@ def execute_host_request(
         "delegated_owner": "scripts.run_qualification_task",
         "delegated_receipt_sha256": inner_digest,
         "job_state": status,
-        "local_test_verdict": "PASS" if status == "CHECKED_REVIEW_ELIGIBLE" else "BLOCKED",
+        "local_test_verdict": (
+            "PASS" if status == "CHECKED_REVIEW_ELIGIBLE" else "BLOCKED"
+        ),
         "ci_evidence": {"kind": "EXTERNAL_EXACT_HEAD", "verdict": "NOT_EMBEDDED"},
         "blocker": blockers[0] if blockers else None,
         "next_action": (

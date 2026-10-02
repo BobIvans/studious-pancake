@@ -365,3 +365,6 @@ scripts/verify_fast_q1_smoke.py
 tests/test_fast_q1_qualification_report.py
 scripts/run_qualification_task.py
 tests/test_qualification_task_adapter.py
+src/fast_q_automation.py
+scripts/verify_fast_q_automation.py
+tests/test_fast_q_automation.py

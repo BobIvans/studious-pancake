@@ -9,7 +9,7 @@ source/deployment/account/build/review-bound admission record.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 import hashlib
 import json
 import re
@@ -481,9 +481,7 @@ def validate_protocol_admission_receipt(
 
     if observed > valid_until:
         raise ProtocolAdmissionError("SP_Q01_EVIDENCE_TIME_ORDER_INVALID")
-    if valid_until - observed > timedelta_seconds(
-        _MAX_EVIDENCE_WINDOW_SECONDS
-    ):
+    if valid_until - observed > timedelta(seconds=_MAX_EVIDENCE_WINDOW_SECONDS):
         raise ProtocolAdmissionError("SP_Q01_EVIDENCE_WINDOW_TOO_WIDE")
     normalized_now = now_utc.astimezone(UTC)
     if normalized_now > valid_until:
@@ -539,12 +537,6 @@ def validate_protocol_admission_receipt(
         artifact_bundle_sha256=artifact_bundle,
         receipt_sha256=receipt_sha,
     )
-
-
-def timedelta_seconds(seconds: int):
-    from datetime import timedelta
-
-    return timedelta(seconds=seconds)
 
 
 __all__ = [

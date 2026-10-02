@@ -49,3 +49,5 @@ The dedicated PR workflow also runs PR-358 and the canonical repository verifier
 ## Not implemented by this PR
 
 Wave 15 Batches D-F remain future work: strategic effort/shirking, participation/entry/exit, subsidy removal, population adaptation, coalition/Sybil stress, external demand, real task shadowing and independent population replication. The rest of the 96 Wave 15 proposed capabilities therefore remain partially or wholly unimplemented.
+
+Published-head validation is performed from the pull-request synchronize event after all implementation files are present.

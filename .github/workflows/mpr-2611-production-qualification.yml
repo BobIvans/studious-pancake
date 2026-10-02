@@ -8,9 +8,11 @@ on:
       - "scripts/qualify_release.py"
       - "scripts/verify_mpr2611_production_qualification.py"
       - "scripts/run_mpr2611_clean_qualification.py"
+      - "scripts/run_qualification_task.py"
       - "config/mpr2611_qualification_authority.json"
       - "tests/test_mpr2611_production_qualification.py"
       - "tests/test_mpr2611_qualification_authority.py"
+      - "tests/test_qualification_task_adapter.py"
       - ".github/workflows/mpr-2611-production-qualification.yml"
   workflow_dispatch:
 
@@ -36,14 +38,17 @@ jobs:
           scripts/qualify_release.py
           scripts/verify_mpr2611_production_qualification.py
           scripts/run_mpr2611_clean_qualification.py
+          scripts/run_qualification_task.py
           tests/test_mpr2611_production_qualification.py
           tests/test_mpr2611_qualification_authority.py
+          tests/test_qualification_task_adapter.py
       - name: Focused qualification regressions
         run: >-
           python -m pytest -q
           tests/test_pr176_hermetic_qualification.py
           tests/test_mpr2611_production_qualification.py
           tests/test_mpr2611_qualification_authority.py
+          tests/test_qualification_task_adapter.py
       - name: Verify qualification authority
         run: python scripts/verify_mpr2611_production_qualification.py
       - name: Recompute qualification twice

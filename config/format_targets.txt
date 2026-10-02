@@ -363,3 +363,5 @@ src/automation_cli_pr189.py
 scripts/verify_fast_q1_v3.py
 scripts/verify_fast_q1_smoke.py
 tests/test_fast_q1_qualification_report.py
+scripts/run_qualification_task.py
+tests/test_qualification_task_adapter.py

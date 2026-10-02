@@ -365,6 +365,11 @@ def test_state_generation_does_not_promote_qualification(tmp_path, monkeypatch):
         output, blockers=["paper-shadow:blocked_missing_wallet_public_key"]
     )
     monkeypatch.setattr(a, "_check_source", lambda repo, expected: {"git_sha": SHA})
+    monkeypatch.setattr(
+        a,
+        "_run_command",
+        lambda argv, repo, timeout: {"argv": list(argv), "exit_code": 0},
+    )
     test_receipt = a.execute_request(
         request(
             "run_focused_validation",

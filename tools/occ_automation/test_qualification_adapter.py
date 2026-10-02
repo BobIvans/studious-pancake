@@ -2,274 +2,196 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-import subprocess
 import tempfile
 import unittest
+from unittest import mock
 
-import qualification_adapter as qa
+from src import fast_q_automation as fastq
 
 SHA = "a" * 40
+TOOL = Path(__file__).resolve().parent
 
 
-def request(action="qualification_audit", goal="Проверь блокеры, ничего не запускай"):
-    return qa.validate_action_request({
-        "schema_version": qa.ACTION_SCHEMA,
+def request(
+    action: str = "qualify_and_report",
+    *,
+    text: str | None = None,
+    proposal: dict[str, str] | None = None,
+) -> dict[str, object]:
+    return {
+        "schema_version": fastq.REQUEST_SCHEMA,
         "request_id": "req-1",
+        "idempotency_key": "req-1",
         "action": action,
-        "goal": goal,
-        "source_refs": ["receipt:fastq"],
-        "repeat": "once",
-        "duration_hours": None,
-    })
+        "text": text,
+        "inputs": {},
+        "proposal": proposal,
+    }
 
 
-class AdapterTests(unittest.TestCase):
-    def test_laya_high_confidence_cannot_change_or_grant_action(self):
-        routed = qa.route_request(
-            request(),
-            laya_proposal="pause_jobs",
-            laya_confidence=0.999,
+class OccFastQBoundaryTests(unittest.TestCase):
+    def test_laya_proposal_cannot_change_explicit_action(self):
+        raw = request(
+            proposal={
+                "source": "laya",
+                "action": "transcribe_local_audio",
+            }
         )
-        self.assertEqual(routed.selected_action, "qualification_audit")
-        self.assertFalse(routed.permissions_granted_by_laya)
-        self.assertTrue(routed.executable)
+        normalized = fastq.validate_request(raw)
+        self.assertEqual(normalized["action"], "qualify_and_report")
 
-    def test_design_only_paper_plan_cannot_execute(self):
-        with self.assertRaisesRegex(qa.AdapterError, "DESIGN_ONLY"):
-            qa.assert_paper_plan_not_executable(
-                {"schema_version": "occ-paper-campaign-proposal.v1"}
+    def test_laya_confidence_field_cannot_grant_permission(self):
+        raw = request(
+            proposal={
+                "source": "laya",
+                "action": "qualify_and_report",
+                "confidence": "1.0",
+            }
+        )
+        with self.assertRaisesRegex(ValueError, "PROPOSAL_INVALID"):
+            fastq.validate_request(raw)
+
+    def test_design_only_paper_plan_is_not_action_request(self):
+        plan = json.loads(
+            (TOOL / "config" / "paper_campaign.plan.json").read_text(
+                encoding="utf-8"
             )
-
-    def test_transcript_shell_and_transaction_text_remains_data(self):
-        meta = qa.transcript_metadata(
-            "powershell curl X; sendTransaction and sendBundle"
         )
-        self.assertTrue(meta["contains_execution_like_text"])
-        self.assertFalse(meta["raw_text_persisted"])
-        self.assertFalse(meta["execution_authority"])
-
-    def test_strict_request_rejects_extra_fields(self):
-        raw = {
-            "schema_version": qa.ACTION_SCHEMA,
-            "request_id": "req",
-            "action": "qualification_audit",
-            "goal": "x",
-            "source_refs": [],
-            "repeat": "once",
-            "duration_hours": None,
-            "shell": "rm -rf /",
-        }
-        with self.assertRaisesRegex(qa.AdapterError, "FIELDS_MISMATCH"):
-            qa.validate_action_request(raw)
-
-    def test_non_qualification_actions_are_never_executed_here(self):
-        for action in (
-            "intake_once",
-            "search_context",
-            "draft_work_item",
-            "propose_paper_campaign",
-            "pause_jobs",
-            "job_status",
+        self.assertEqual(
+            plan["schema_version"],
+            "occ-paper-campaign-proposal.v1",
+        )
+        self.assertFalse(plan["native_adapter_compatible"])
+        with self.assertRaisesRegex(
+            ValueError,
+            "REQUEST_SCHEMA_OR_FIELDS_INVALID",
         ):
-            routed = qa.route_request(request(action=action))
-            self.assertFalse(routed.executable)
-            self.assertIsNone(routed.selected_action)
+            fastq.validate_request(plan)
 
-    def test_child_receipt_keeps_blocker_and_never_promotes(self):
+    def test_transaction_like_text_is_rejected_not_executed(self):
+        raw = request(
+            action="qualify_and_report",
+            text="send transaction now",
+        )
+        with self.assertRaisesRegex(ValueError, "LIVE_OR_UNSAFE"):
+            fastq.validate_request(raw)
+
+    def test_external_asr_action_is_contract_only(self):
+        raw = request(action="transcribe_local_audio")
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
-            repo = root / "repo"
-            repo.mkdir()
-            out = root / "runs"
-            child = {
-                "schema_version": "pr189.command-result.v1",
-                "command": "qualify-and-report",
-                "command_mode": "inspect",
-                "details": {
-                    "request_id": "req-1-fastq",
-                    "profile": qa.PROFILE,
-                    "qualified": False,
-                    "release_authorized": False,
-                    "live_authorized": False,
-                    "transactions_sent": 0,
-                    "sender_free_pass": False,
-                    "blockers": [
-                        "paper-shadow:blocked_missing_wallet_public_key"
-                    ],
-                },
-            }
-            calls = []
-
-            def runner(argv, **kwargs):
-                calls.append((argv, kwargs))
-                return subprocess.CompletedProcess(
-                    argv,
-                    0,
-                    json.dumps(child).encode(),
-                    b"diagnostic",
-                )
-
-            receipt = qa.execute_qualification_audit(
-                request=request(),
-                repo_root=repo,
-                output_root=out,
-                expected_sha=SHA,
-                runner=runner,
-            )
-            self.assertEqual(receipt["domain_verdict"], "BLOCKED")
-            self.assertFalse(receipt["qualified"])
-            self.assertFalse(receipt["live_authorized"])
-            self.assertEqual(receipt["transactions_sent"], 0)
-            self.assertEqual(
-                receipt["repair_task"]["status"],
-                "NEEDS_OPERATOR_INPUT",
-            )
-            self.assertNotIn(
-                "Проверь блокеры",
-                json.dumps(receipt, ensure_ascii=False),
-            )
-            self.assertFalse(calls[0][1]["shell"])
-            self.assertEqual(
-                calls[0][0][:3],
-                [
-                    "flashloan-checks",
-                    "qualify-and-report",
-                    "inspect",
-                ],
-            )
-
-    def test_unsafe_child_flags_are_rejected(self):
-        with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
-            repo = root / "repo"
-            repo.mkdir()
-            out = root / "runs"
-            child = {
-                "schema_version": "pr189.command-result.v1",
-                "command": "qualify-and-report",
-                "command_mode": "inspect",
-                "details": {
-                    "request_id": "req-1-fastq",
-                    "profile": qa.PROFILE,
-                    "qualified": True,
-                    "release_authorized": False,
-                    "live_authorized": False,
-                    "transactions_sent": 0,
-                    "sender_free_pass": False,
-                    "blockers": [],
-                },
-            }
-
-            def runner(argv, **kwargs):
-                return subprocess.CompletedProcess(
-                    argv,
-                    0,
-                    json.dumps(child).encode(),
-                    b"",
-                )
-
-            with self.assertRaisesRegex(qa.AdapterError, "UNSAFE_FLAG"):
-                qa.execute_qualification_audit(
-                    request=request(),
-                    repo_root=repo,
-                    output_root=out,
-                    expected_sha=SHA,
-                    runner=runner,
-                )
-
-    def test_same_request_is_reused_and_changed_input_conflicts(self):
-        with tempfile.TemporaryDirectory() as td:
-            root = Path(td)
-            repo = root / "repo"
-            repo.mkdir()
-            out = root / "runs"
-            count = 0
-            child = {
-                "schema_version": "pr189.command-result.v1",
-                "command": "qualify-and-report",
-                "command_mode": "inspect",
-                "details": {
-                    "request_id": "req-1-fastq",
-                    "profile": qa.PROFILE,
-                    "qualified": False,
-                    "release_authorized": False,
-                    "live_authorized": False,
-                    "transactions_sent": 0,
-                    "sender_free_pass": False,
-                    "blockers": ["b"],
-                },
-            }
-
-            def runner(argv, **kwargs):
-                nonlocal count
-                count += 1
-                return subprocess.CompletedProcess(
-                    argv,
-                    0,
-                    json.dumps(child).encode(),
-                    b"",
-                )
-
-            first = qa.execute_qualification_audit(
-                request=request(),
-                repo_root=repo,
-                output_root=out,
-                expected_sha=SHA,
-                runner=runner,
-            )
-            second = qa.execute_qualification_audit(
-                request=request(),
-                repo_root=repo,
-                output_root=out,
-                expected_sha=SHA,
-                runner=runner,
-            )
-            self.assertFalse(first["reused"])
-            self.assertTrue(second["reused"])
-            self.assertEqual(count, 1)
-            changed = qa.ActionRequest(
-                "req-1",
-                "qualification_audit",
-                "different",
-                ("receipt:fastq",),
-                "once",
-                None,
-            )
-            with self.assertRaisesRegex(qa.AdapterError, "INPUT_CONFLICT"):
-                qa.execute_qualification_audit(
-                    request=changed,
-                    repo_root=repo,
-                    output_root=out,
-                    expected_sha=SHA,
-                    runner=runner,
-                )
-
-    def test_repo_output_overlap_is_rejected(self):
-        with tempfile.TemporaryDirectory() as td:
-            repo = Path(td)
-            with self.assertRaisesRegex(
-                qa.AdapterError,
-                "MUST_NOT_OVERLAP",
+            with mock.patch.object(
+                fastq,
+                "_check_source",
+                return_value={"git_sha": SHA},
             ):
-                qa.execute_qualification_audit(
-                    request=request(),
-                    repo_root=repo,
-                    output_root=repo / "runs",
+                receipt = fastq.execute_request(
+                    raw,
+                    repo_root=root / "repo",
+                    output_root=root / "out",
                     expected_sha=SHA,
                 )
+        contract = receipt["result"]["adapter_contract"]
+        self.assertEqual(
+            receipt["status"],
+            "EXTERNAL_ADAPTER_REQUIRED",
+        )
+        self.assertFalse(contract["core_execution_performed"])
+        self.assertFalse(contract["model_supplied_paths_allowed"])
+        self.assertFalse(contract["paid_api_fallback"])
 
-    def test_safe_environment_drops_keys_and_providers(self):
-        env = qa._safe_env({
-            "PATH": "x",
-            "OPENAI_API_KEY": "secret",
-            "FLASHLOAN_PRIVATE_KEY": "secret",
-            "HTTPS_PROXY": "x",
-        })
-        self.assertNotIn("OPENAI_API_KEY", env)
-        self.assertNotIn("FLASHLOAN_PRIVATE_KEY", env)
-        self.assertNotIn("HTTPS_PROXY", env)
-        self.assertEqual(env["LIVE_TRADING_ENABLED"], "false")
-        self.assertEqual(env["FLASHLOAN_JUPITER_ENABLED"], "false")
+    def test_registered_actions_do_not_include_shell_or_send(self):
+        forbidden = {
+            "shell",
+            "exec",
+            "execute_shell",
+            "send_transaction",
+            "send_bundle",
+            "sign",
+            "trade_live",
+        }
+        self.assertFalse(forbidden.intersection(fastq.ACTION_IDS))
+
+    def test_private_request_text_is_not_persisted_in_receipt(self):
+        phrase = "Проверь готовность бота"
+        raw = {
+            "schema_version": fastq.LEGACY_REQUEST_SCHEMA,
+            "request_id": "private-1",
+            "text": phrase,
+        }
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            with (
+                mock.patch.object(
+                    fastq,
+                    "_check_source",
+                    return_value={"git_sha": SHA},
+                ),
+                mock.patch.object(
+                    fastq,
+                    "_execute_qualification",
+                    return_value={
+                        "status": "INSPECTED",
+                        "blockers": ["blocked"],
+                        "first_blocker": "blocked",
+                        "next_action": "inspect_current_blocker",
+                        "limitations": [],
+                    },
+                ),
+            ):
+                fastq.execute_request(
+                    raw,
+                    repo_root=root / "repo",
+                    output_root=root / "out",
+                    expected_sha=SHA,
+                )
+            saved = (
+                root
+                / "out"
+                / "actions"
+                / "private-1"
+                / "receipt.json"
+            ).read_text(encoding="utf-8")
+        self.assertNotIn(phrase, saved)
+
+    def test_secret_bearing_inputs_fail_closed(self):
+        raw = request(action="inspect_current_blocker")
+        raw["inputs"] = {
+            "qualification_request_id": "q1",
+            "api_key": "secret",
+        }
+        with self.assertRaisesRegex(ValueError, "SECRET_BEARING"):
+            fastq.validate_request(raw)
+
+    def test_current_wallet_blocker_never_allows_patch(self):
+        owner = fastq._owner_for(
+            "paper-shadow:blocked_missing_wallet_public_key"
+        )
+        self.assertIsNotNone(owner)
+        self.assertFalse(owner["patch_allowed"])
+        self.assertEqual(
+            owner["stop_reason"],
+            "EXTERNAL_OPERATOR_INPUT_REQUIRED",
+        )
+
+    def test_voice_schema_contains_only_registered_proposals(self):
+        tools = json.loads(
+            (TOOL / "config" / "voice_tools.responses.json").read_text(
+                encoding="utf-8"
+            )
+        )
+        enum = set(
+            tools[0]["parameters"]["properties"]["action"]["enum"]
+        )
+        unsafe = {
+            "shell",
+            "exec",
+            "send_transaction",
+            "send_bundle",
+            "merge",
+            "trade_live",
+        }
+        self.assertFalse(enum.intersection(unsafe))
 
 
 if __name__ == "__main__":

@@ -354,3 +354,6 @@ tests/research/test_pr358_market_relation_exchange.py
 src/research/pr359_wave15_institution.py
 scripts/verify_pr359.py
 tests/research/test_pr359_wave15_market_institution.py
+
+src/lending/sp_q01_protocol_admission.py
+scripts/verify_sp_q01_protocol_admission.py

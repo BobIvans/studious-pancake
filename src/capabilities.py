@@ -25,6 +25,14 @@ class CapabilityState(str, Enum):
 _ALLOWED_STRATEGY_MODES = frozenset({"disabled", "shadow", "live"})
 
 
+def _require_boolean(raw: dict[str, Any], field: str, *, owner: str) -> bool:
+    # bool("false") and bool(1) are True: capability flags must not coerce.
+    value = raw.get(field)
+    if type(value) is not bool:
+        raise CapabilityContractError(f"{owner}.{field} must be a JSON boolean")
+    return value
+
+
 @dataclass(frozen=True, slots=True)
 class ComponentCapability:
     id: str
@@ -40,6 +48,8 @@ class ComponentCapability:
 
     @classmethod
     def from_dict(cls, raw: dict[str, Any]) -> "ComponentCapability":
+        if not isinstance(raw, dict):
+            raise CapabilityContractError("capability component must be an object")
         required = {
             "id",
             "kind",
@@ -54,6 +64,15 @@ class ComponentCapability:
         if missing:
             raise CapabilityContractError(
                 f"capability component is missing fields {missing}: {raw.get('id', '<unknown>')}"
+            )
+        active = _require_boolean(
+            raw, "active_in_supported_entrypoint", owner="component"
+        )
+        quarantined = _require_boolean(raw, "quarantined", owner="component")
+        required_in_package = True
+        if "required_in_installed_package" in raw:
+            required_in_package = _require_boolean(
+                raw, "required_in_installed_package", owner="component"
             )
         try:
             state = CapabilityState(str(raw["capability"]))
@@ -71,7 +90,7 @@ class ComponentCapability:
             raise CapabilityContractError(
                 f"allowed_modes must not be empty: {raw['id']}"
             )
-        if raw["quarantined"] and modes != ("disabled",):
+        if quarantined and modes != ("disabled",):
             raise CapabilityContractError(
                 f"quarantined component may only allow disabled mode: {raw['id']}"
             )
@@ -80,8 +99,8 @@ class ComponentCapability:
             kind=str(raw["kind"]),
             path=str(raw["path"]),
             capability=state,
-            active_in_supported_entrypoint=bool(raw["active_in_supported_entrypoint"]),
-            quarantined=bool(raw["quarantined"]),
+            active_in_supported_entrypoint=active,
+            quarantined=quarantined,
             allowed_modes=modes,
             reason=str(raw["reason"]),
             registry_name=(
@@ -89,9 +108,7 @@ class ComponentCapability:
                 if raw.get("registry_name") is not None
                 else None
             ),
-            required_in_installed_package=bool(
-                raw.get("required_in_installed_package", True)
-            ),
+            required_in_installed_package=required_in_package,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -150,6 +167,10 @@ class CapabilityMatrix:
             raise CapabilityContractError(
                 f"runtime_modes must be exactly {sorted(expected_modes)}"
             )
+        for mode, settings in runtime_modes.items():
+            if not isinstance(settings, dict):
+                raise CapabilityContractError(f"runtime_modes.{mode} must be an object")
+            _require_boolean(settings, "available", owner=f"runtime_modes.{mode}")
         return cls(
             schema_version=str(raw.get("schema_version", "")),
             product_state=str(raw.get("product_state", "")),

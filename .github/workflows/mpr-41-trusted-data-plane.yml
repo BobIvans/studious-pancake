@@ -1,0 +1,44 @@
+name: MPR-41 trusted data plane
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "src/data_plane/mpr41_trusted_provider_data_plane.py"
+      - "src/resources/mpr41_trusted_provider_data_plane_contract.json"
+      - "scripts/verify_mpr41_trusted_data_plane.py"
+      - "tests/test_mpr41_trusted_provider_data_plane.py"
+      - "docs/roadmap/mpr_41_trusted_provider_data_plane.md"
+      - ".github/workflows/mpr-41-trusted-data-plane.yml"
+  push:
+    branches:
+      - "mpr-41-*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  trusted-data-plane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # mpr-41-waive-moving-action: SHA pinning is handled by MPR-44/MPR-NEXT-13.
+      - uses: actions/checkout@v4
+      # mpr-41-waive-moving-action: SHA pinning is handled by MPR-44/MPR-NEXT-13.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install focused test dependency
+        run: python -m pip install --disable-pip-version-check pytest==9.0.2
+      - name: Compile MPR-41 slice
+        run: >-
+          python -m compileall -q
+          src/data_plane/mpr41_trusted_provider_data_plane.py
+          scripts/verify_mpr41_trusted_data_plane.py
+          tests/test_mpr41_trusted_provider_data_plane.py
+      - name: Run focused MPR-41 tests
+        run: python -m pytest -q tests/test_mpr41_trusted_provider_data_plane.py
+      - name: Inspect static MPR-41 contract
+        run: python scripts/verify_mpr41_trusted_data_plane.py --json

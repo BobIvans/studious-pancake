@@ -1,0 +1,57 @@
+[
+  {
+    "type": "function",
+    "name": "occ_propose_job",
+    "description": "Propose a bounded OCC job for server-side validation; no arbitrary shell, transaction or merge.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "search_context",
+            "intake_once",
+            "qualification_audit",
+            "draft_work_item",
+            "propose_paper_campaign",
+            "pause_jobs",
+            "job_status"
+          ]
+        },
+        "goal": {
+          "type": "string"
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repeat": {
+          "type": "string",
+          "enum": [
+            "once",
+            "hourly"
+          ]
+        },
+        "duration_hours": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 24
+        }
+      },
+      "required": [
+        "action",
+        "goal",
+        "source_refs",
+        "repeat",
+        "duration_hours"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

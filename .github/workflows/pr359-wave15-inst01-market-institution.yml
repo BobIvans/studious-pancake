@@ -33,6 +33,12 @@ jobs:
           src/research/pr359_wave15_institution.py
           scripts/verify_pr359.py
           tests/research/test_pr359_wave15_market_institution.py
+      - name: PR-359 format check
+        run: >-
+          python -m black --diff --check
+          src/research/pr359_wave15_institution.py
+          scripts/verify_pr359.py
+          tests/research/test_pr359_wave15_market_institution.py
       - name: PR-359 semantic verifier
         run: python scripts/verify_pr359.py
       - name: PR-359 focused tests

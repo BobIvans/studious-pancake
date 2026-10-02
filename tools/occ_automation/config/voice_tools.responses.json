@@ -2,7 +2,7 @@
   {
     "type": "function",
     "name": "occ_propose_job",
-    "description": "Propose a bounded OCC job for server-side validation; no arbitrary shell, transaction or merge.",
+    "description": "Propose one registered FAST-Q/OCC action for deterministic server-side validation; no arbitrary shell, transaction, signer, live trade, or merge.",
     "strict": true,
     "parameters": {
       "type": "object",
@@ -10,13 +10,14 @@
         "action": {
           "type": "string",
           "enum": [
-            "search_context",
-            "intake_once",
-            "qualification_audit",
-            "draft_work_item",
-            "propose_paper_campaign",
-            "pause_jobs",
-            "job_status"
+            "qualify_and_report",
+            "inspect_current_blocker",
+            "prepare_repair_task",
+            "run_focused_validation",
+            "update_receipt_state",
+            "ingest_local_content",
+            "search_local_corpus",
+            "transcribe_local_audio"
           ]
         },
         "goal": {

@@ -1,0 +1,49 @@
+name: PR-359 Wave 15 INST-01 Market Institution
+
+on:
+  pull_request:
+    paths:
+      - "src/research/pr359_wave15_institution.py"
+      - "tests/research/test_pr359_wave15_market_institution.py"
+      - "scripts/verify_pr359.py"
+      - "docs/roadmap/pr359-*"
+      - ".github/workflows/pr359-wave15-inst01-market-institution.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  pr359:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13.13"
+      - name: Install runtime and test dependencies
+        run: |
+          python -m pip install --requirement requirements.txt
+          python -m pip install --requirement requirements-dev.txt
+          python -m pip install --no-deps .
+      - name: Compile PR-359 surfaces
+        run: >-
+          python -m compileall -q
+          src/research/pr359_wave15_institution.py
+          scripts/verify_pr359.py
+          tests/research/test_pr359_wave15_market_institution.py
+      - name: PR-359 semantic verifier
+        run: python scripts/verify_pr359.py
+      - name: PR-359 focused tests
+        run: >-
+          python -m pytest -q
+          tests/research/test_pr359_wave15_market_institution.py
+          --disable-socket --allow-unix-socket
+      - name: Predecessor regression gate
+        run: python scripts/verify_pr358.py
+      - name: Static no-effect and no-network assertions
+        run: |
+          ! grep -n -E 'requests|httpx|aiohttp|socket|urllib|sign_and_send|send_raw_transaction|customer_billing[[:space:]]*=[[:space:]]*True|payment_is_real[[:space:]]*=[[:space:]]*True' src/research/pr359_wave15_institution.py
+      - name: Canonical repository verifier
+        run: python scripts/verify_repo.py --skip-dependency-audit

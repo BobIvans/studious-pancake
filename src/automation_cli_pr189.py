@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import subprocess
 from typing import Any, Mapping, Sequence
 
 from src.cli_contract_pr189 import (
@@ -37,6 +38,14 @@ def _parser() -> argparse.ArgumentParser:
         "--profile", choices=("offline_sender_free",), default="offline_sender_free"
     )
     report.add_argument("--timeout-seconds", type=int, default=30)
+
+    automation = commands.add_parser("automation-request")
+    automation.add_argument("mode", choices=("inspect", "check"))
+    automation.add_argument("--request", required=True, type=Path)
+    automation.add_argument("--repo-root", required=True, type=Path)
+    automation.add_argument("--output-root", required=True, type=Path)
+    automation.add_argument("--expected-sha", required=True)
+    automation.add_argument("--timeout-seconds", type=int, default=30)
 
     paper = commands.add_parser("paper-vertical")
     paper.add_argument("mode", choices=("inspect", "check"))
@@ -360,6 +369,44 @@ def _evaluate(args: argparse.Namespace) -> CommandResult:
             reason_codes=reasons,
             details=receipt,
         )
+    if args.command == "automation-request":
+        from src.fast_q_automation import execute_request, load_request
+
+        receipt = execute_request(
+            load_request(args.request),
+            repo_root=args.repo_root,
+            output_root=args.output_root,
+            expected_sha=args.expected_sha,
+            timeout_seconds=args.timeout_seconds,
+        )
+        status = str(receipt["status"])
+        action_result = receipt.get("result", {})
+        ready = (
+            status in {"NO_CURRENT_BLOCKER", "TEST_PASSED", "STATE_UPDATED"}
+            or (
+                status == "INSPECTED"
+                and bool(
+                    action_result.get("sender_free_pass")
+                    if isinstance(action_result, Mapping)
+                    else False
+                )
+            )
+        )
+        reasons: tuple[str, ...] = ()
+        if not ready:
+            first_blocker = (
+                action_result.get("first_blocker")
+                if isinstance(action_result, Mapping)
+                else None
+            )
+            reasons = (str(first_blocker or f"FAST_Q_AUTOMATION:{status}"),)
+        return result(
+            command="automation-request",
+            mode=mode,
+            ready=ready,
+            reason_codes=reasons,
+            details=receipt,
+        )
     if args.command == "paper-vertical":
         return evaluate_paper_vertical(mode, args.config_file)
     if args.command == "production-debt":
@@ -396,7 +443,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             mode=mode,
             exc=exc,
         )
-    except (OSError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, ValueError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
         command_result = error_result(
             command=str(args.command),
             mode=mode,

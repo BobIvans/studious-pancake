@@ -474,7 +474,10 @@ def qualify_and_report(
         raise ValueError("EXPECTED_SHA_INVALID")
     if profile != PROFILE:
         raise ValueError("PROFILE_NOT_ALLOWED")
-    if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= MAX_TIMEOUT_SECONDS:
+    if (
+        type(timeout_seconds) is not int
+        or not 1 <= timeout_seconds <= MAX_TIMEOUT_SECONDS
+    ):
         raise ValueError("TIMEOUT_INVALID")
 
     repo = repo_root.resolve(strict=True)
@@ -527,7 +530,9 @@ def qualify_and_report(
     }
     _write_json(run / "run_manifest.json", manifest)
     _write_json(run / "baseline.json", baseline)
-    manifest["artifact_sha256"]["baseline.json"] = _artifact_digest(run, "baseline.json")
+    manifest["artifact_sha256"]["baseline.json"] = _artifact_digest(
+        run, "baseline.json"
+    )
 
     records: list[dict[str, Any]] = []
     blockers: list[str] = []

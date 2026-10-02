@@ -101,7 +101,10 @@ def verify() -> dict[str, object]:
         profile_generation=1,
     )
     resolution = resolve_installed_core_v1_dependencies(marginfi, {})
-    if resolution.dependencies is not None or resolution.blocker != CORE_V1_BLOCKED_EXTERNAL:
+    if (
+        resolution.dependencies is not None
+        or resolution.blocker != CORE_V1_BLOCKED_EXTERNAL
+    ):
         errors.append("SP_Q01_MARGINFI_POLICY_DRIFT")
 
     baseline = json.loads(
@@ -111,8 +114,7 @@ def verify() -> dict[str, object]:
     )
     matrix = json.loads(
         (
-            ROOT
-            / "release_artifacts/sp_q01/REQUIREMENT_EVIDENCE_MATRIX.json"
+            ROOT / "release_artifacts/sp_q01/REQUIREMENT_EVIDENCE_MATRIX.json"
         ).read_text(encoding="utf-8")
     )
     if baseline.get("selected_goal") != "SP-Q01":

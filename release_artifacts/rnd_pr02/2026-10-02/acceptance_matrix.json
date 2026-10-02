@@ -57,7 +57,7 @@
       "evidence": [
         "focused_tests.txt",
         "receipt.json",
-        "../../../../docs/qualification/RND_PR02_CANONICAL_PAPER_BLOCKED_RU.md"
+        "../../../docs/qualification/RND_PR02_CANONICAL_PAPER_BLOCKED_RU.md"
       ]
     }
   ]

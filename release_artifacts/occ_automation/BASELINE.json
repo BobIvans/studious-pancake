@@ -1,6 +1,6 @@
 {
   "schema": "occ-automation.baseline.v1",
-  "base_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "base_sha": "0b0080d954236509988f856c474560bd422350b8",
   "integration_pr": 553,
   "disposition": "EXTEND_EXISTING",
   "owners": {
@@ -9,7 +9,10 @@
     "qualification_task_adapter": "scripts/run_qualification_task.py",
     "release_authority": "existing release gates unchanged",
     "local_occ_intake": "tools/occ_automation/occ_local.py",
-    "local_occ_adapter": "tools/occ_automation/qualification_adapter.py"
+    "local_occ_router": "src/fast_q_automation.py",
+    "local_occ_asr": "tools/occ_automation/asr_cpu_experiment.py",
+    "memory_qualification_bridge": "PR #554 merged; separate owner",
+    "durable_host": "PR #556 open; separate owner, not absorbed"
   },
   "current_known_evidence": {
     "prior_fast_q_domain_verdict": "BLOCKED",

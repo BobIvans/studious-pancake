@@ -378,3 +378,8 @@ tests/test_fast_q_automation.py
 scripts/verify_occ_automation.py
 tools/occ_automation/occ_local.py
 tools/occ_automation/asr_cpu_experiment.py
+src/market/source_catalog.py
+src/market/discovery.py
+src/strategy/market_graph_ingest.py
+scripts/shadow_market_graph_demo.py
+tests/test_shadow_market_data_aggregation.py

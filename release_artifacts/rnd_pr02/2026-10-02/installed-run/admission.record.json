@@ -1,0 +1,112 @@
+{
+  "argv": [
+    "flashloan-bot",
+    "runtime-admission",
+    "--command",
+    "flashloan-bot.run",
+    "--mode",
+    "paper",
+    "--json"
+  ],
+  "ended_at": "2026-10-02T19:38:12.473649+00:00",
+  "error": null,
+  "exit_code": 0,
+  "payload": {
+    "admitted": true,
+    "bootstrap_sha256": "8d8097aac2fde848d6395d27690ae8fd854fe4025a8ffb9c10e185680c48e01d",
+    "command": {
+      "admitted": true,
+      "blockers": [],
+      "closure_sha256": "fe429a893ede341d72b7c5f01921ea59329f440b6f9bfb843bfdda3b06f2fb50",
+      "command": "flashloan-bot.run",
+      "dependencies": [
+        {
+          "blocking": false,
+          "class": "mandatory_safety_authority",
+          "detail": null,
+          "module": "src.runtime.platform_identity",
+          "probe_evidence": {},
+          "reason": "READY",
+          "symbol": "qualify_current_platform"
+        },
+        {
+          "blocking": false,
+          "class": "mandatory_feature",
+          "detail": null,
+          "module": "src.cli",
+          "probe_evidence": {},
+          "reason": "READY",
+          "symbol": "main"
+        }
+      ],
+      "manifest_sha256": "b2eff2cc6bd0ef7dd9913d1bd0d918331a86ce2f69b4215697831a6b540c46ca",
+      "schema_version": "mpr-rp-01.command-admission.v1"
+    },
+    "platform": {
+      "admitted": true,
+      "blockers": [],
+      "identity": {
+        "environment_fingerprint": "b118955e97dd3ec72cffff3f7f841cf583a86978550059c065caaf5873f8f186",
+        "event_loop_policy": "asyncio",
+        "executable_realpath": "/root/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/bin/python3.13",
+        "kernel": "#1 SMP Sat Sep 26 20:02:31 UTC 2026",
+        "libc_name": "glibc",
+        "libc_version": "2.39",
+        "machine": "x86_64",
+        "native_distributions": [
+          {
+            "name": "solders",
+            "record_sha256": "6cb423cd19e2d1d1d85d86de1f1b55cd6a75af9dea5a8df971b79c8a889b71a2",
+            "status": "installed",
+            "version": "0.28.0"
+          },
+          {
+            "name": "solana",
+            "record_sha256": "91e61f54c6092db3b9a14361086ecc46298929f260ac54dcebb6c1e46777aa80",
+            "status": "installed",
+            "version": "0.40.1"
+          },
+          {
+            "name": "orjson",
+            "record_sha256": "39a48aff1b14bec76337c035e8cab0de1b00cd47d98c62585016846721a8c0d2",
+            "status": "installed",
+            "version": "3.11.6"
+          },
+          {
+            "name": "brotli",
+            "record_sha256": "36d364593d6405d18af5192573235f7609523df12904b3c82c5090172e0a8e15",
+            "status": "installed",
+            "version": "1.2.0"
+          },
+          {
+            "name": "uvloop",
+            "record_sha256": "a703aed81db4575562909e5ec0c277f8c839a2deaea97cacd7ac8e8919063ee7",
+            "status": "installed",
+            "version": "0.22.1"
+          }
+        ],
+        "openssl_version": "OpenSSL 3.5.8 25 Aug 2026",
+        "python_abi": "cp313",
+        "python_implementation": "CPython",
+        "python_version": "3.13.15",
+        "release": "6.18.44",
+        "schema_version": "mpr-rp-01.platform-identity.v1",
+        "system": "Linux"
+      },
+      "identity_sha256": "434782a41bd981c557baa62c9e978f733a9719c49ba349094380ebabef4227a3",
+      "known_answer_results": {},
+      "matched_platform_id": "linux-x86_64-glibc-cp313",
+      "policy_sha256": "7ca456e544369a343f31a8d48ffb7f2ff36eb8b4f6ba56c308cb58722a74bbf4",
+      "requested_mode": "paper",
+      "schema_version": "mpr-rp-01.platform-qualification.v1"
+    },
+    "schema_version": "mpr-rp-01.runtime-admission-bundle.v1"
+  },
+  "raw_sha256": {
+    "admission.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "admission.stdout.bin": "46a6bc505a1b7c4d0d2dad1f219d8fcf9684cb23e7358f4f3b25d798b5ac7e70"
+  },
+  "reason_code": null,
+  "started_at": "2026-10-02T19:38:11.005820+00:00",
+  "step": "admission"
+}

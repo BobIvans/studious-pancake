@@ -1,0 +1,8 @@
+FAST-Q1
+execution_status=COMPLETE
+domain_verdict=BLOCKED
+qualified=false
+live_authorized=false
+transactions_sent=0
+Блокеры:
+paper-shadow:blocked_missing_wallet_public_key

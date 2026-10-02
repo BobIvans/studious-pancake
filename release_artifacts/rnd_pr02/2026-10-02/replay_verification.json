@@ -1,0 +1,15 @@
+{
+  "schema": "studious.rnd-pr02.replay-verification.v1",
+  "tested_git_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "request_id": "rnd-pr02-baseline",
+  "input_digest": "5f391b021d3903410d28ab4dbd034e60775be94057a03c172262a6452a4470e4",
+  "reused": true,
+  "identical_result_except_reused": true,
+  "steps_reexecuted": 0,
+  "qualified": false,
+  "transactions_sent": 0,
+  "original_manifest_sha256": "e4c08e0780944157d0581d2fd4524505c322185fbb20a7b30494ff992e6d31e6",
+  "original_receipt_sha256": "633ca0aa157d45068d62de6b2670c8d17adc6dc8758591dabd3489f30d5a5111",
+  "stored_artifact_digests_verified": true,
+  "unknown_outcome_policy": "RUN_INCOMPLETE_RECONCILE_BEFORE_RETRY; covered by existing tests, no crash during this installed run"
+}

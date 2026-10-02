@@ -1,0 +1,64 @@
+{
+  "schema": "studious.rnd-pr02.acceptance-evidence.v1",
+  "tested_git_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "all_campaign_gates_passed": false,
+  "gates": [
+    {
+      "id": "G0",
+      "status": "PASS",
+      "evidence": [
+        "receipt.json",
+        "installed-run/baseline.json",
+        "installed_owner_integrity.json"
+      ]
+    },
+    {
+      "id": "G1",
+      "status": "PASS",
+      "evidence": [
+        "installed-run/paper-shadow.record.json",
+        "paper_vertical_inspection.json"
+      ]
+    },
+    {
+      "id": "G2",
+      "status": "BLOCKED_EXTERNAL",
+      "reason": "All four required runtime bindings absent. No fake wiring or weakened validation."
+    },
+    {
+      "id": "G3",
+      "status": "PARTIAL_EXISTING_OFFLINE_COVERAGE",
+      "evidence": [
+        "focused_tests.txt"
+      ],
+      "not_claimed": "Real candidate admission and provider evidence qualification."
+    },
+    {
+      "id": "G4",
+      "status": "NOT_STARTED",
+      "reason": "Canonical startup BLOCKED and authorized market inputs absent."
+    },
+    {
+      "id": "G5",
+      "status": "NOT_MEASURED",
+      "reason": "No admitted candidates, unsigned simulations or comparable economic unit."
+    },
+    {
+      "id": "G6",
+      "status": "DIAGNOSTIC_REPLAY_PASS_CAMPAIGN_NOT_STARTED",
+      "evidence": [
+        "replay_verification.json",
+        "focused_tests.txt"
+      ]
+    },
+    {
+      "id": "G7",
+      "status": "LOCAL_EVIDENCE_PASS_CI_PENDING",
+      "evidence": [
+        "focused_tests.txt",
+        "receipt.json",
+        "../../../../docs/qualification/RND_PR02_CANONICAL_PAPER_BLOCKED_RU.md"
+      ]
+    }
+  ]
+}

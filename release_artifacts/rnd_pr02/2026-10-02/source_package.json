@@ -1,0 +1,8 @@
+{
+  "schema": "studious.rnd-pr02.source-package.v1",
+  "uploaded_name": "STUDIOUS_RND_PR02_CANONICAL_PAPER_ONE_PR_2026-10-02(1).zip",
+  "sha256": "7f0bc5e479f96a802a782ba6d3ed9460e47fea4c74cebc6344476ba73b05be84",
+  "selected_contract": "implementation/01_RND_PR02_IMPLEMENTATION_SPEC_RU.md",
+  "selected_rule": "If the runtime is blocked by missing data, provider configuration, identity mismatch, or an external prerequisite rather than code, return NEEDS_DATA / BLOCKED_EXTERNAL instead of inventing a patch.",
+  "merge_authorization": "Explicit current user request: implement and merge. Package automatic-merge exclusion does not revoke that direct request."
+}

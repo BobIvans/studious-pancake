@@ -1,0 +1,75 @@
+{
+  "schema": "studious.rnd-pr02.installed-owner-integrity.v1",
+  "tested_git_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "wheel_sha256": "3f9f1ccedf7cc2b55cd198133a5987a7af11b2b934c7e7d5e9241cd28c324e51",
+  "python_files_checked": 856,
+  "all_source_matches": true,
+  "mismatches": [],
+  "canonical_owners": [
+    {
+      "path": "src/automation_cli_pr189.py",
+      "sha256": "9215d0e460f39c195e9fd55b9081fcdc72297edf6b4bb2412dc294532dc50816",
+      "matches": true
+    },
+    {
+      "path": "src/cli_pr189.py",
+      "sha256": "a2266da0c55ef515edd19fffad557539eb56ad7a1cc36448eb649d7421c2554d",
+      "matches": true
+    },
+    {
+      "path": "src/economics/exact_fee_workflow.py",
+      "sha256": "7ee9df1910acdd0a3dbc47b387288b0c44188d37d27bc2843e2967d0102f1734",
+      "matches": true
+    },
+    {
+      "path": "src/paper_shadow/a1_vertical_preflight.py",
+      "sha256": "aeee8d3e423c98fb17361ba396c1b4b21f074c76a9f08bd925d98b55d4b5e0ba",
+      "matches": true
+    },
+    {
+      "path": "src/paper_shadow/atomic_runtime_stages.py",
+      "sha256": "db5a45bf71958f24839a8ca70db7cfa2e0868f1b24720dadabfb7cf240374864",
+      "matches": true
+    },
+    {
+      "path": "src/paper_shadow/canonical_paper_vertical.py",
+      "sha256": "d25f55621f143a6a5b51da23c9a9a829e3a2dacfbd78ffa54e33b304fdcabd4f",
+      "matches": true
+    },
+    {
+      "path": "src/paper_shadow/composition.py",
+      "sha256": "fe79708f5f13c201fc0c097e30e4945dcf82ab1afc1eacb35fd0b9c2bf910b38",
+      "matches": true
+    },
+    {
+      "path": "src/paper_shadow/journal.py",
+      "sha256": "3b2cc3d85cebd97a8f160390a1b9add201558b88299435fb5695971fe0fc6101",
+      "matches": true
+    },
+    {
+      "path": "src/paper_shadow/runner.py",
+      "sha256": "1c79ecb44a326e1f5a276390ad321eb7b4fba4ca15db457d3495e8e529e16206",
+      "matches": true
+    },
+    {
+      "path": "src/qualification_report.py",
+      "sha256": "af90d5b30f60d9261430337490c86349a993d0503c167c8b250bb9d3ae7b06bf",
+      "matches": true
+    },
+    {
+      "path": "src/runtime_discovery_coordinator.py",
+      "sha256": "beb3189181931d39b59ff61875aba9aaef6d526635cdfe8620123bc9c78125f8",
+      "matches": true
+    },
+    {
+      "path": "src/strategy/detectors.py",
+      "sha256": "7a2e8c7fe0d6e6c060d1fe4a66bf2226d40dee650332c761224f8c6f9defc932",
+      "matches": true
+    },
+    {
+      "path": "src/strategy/strategies.py",
+      "sha256": "59f406b76d90b46f7fca0dca97ca4c89b398d8108ad5d90f6c4a51e91677535e",
+      "matches": true
+    }
+  ]
+}

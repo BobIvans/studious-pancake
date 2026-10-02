@@ -1,0 +1,151 @@
+{
+  "argv": [
+    "flashloan-bot",
+    "status",
+    "--json"
+  ],
+  "ended_at": "2026-10-02T19:38:10.323061+00:00",
+  "error": null,
+  "exit_code": 0,
+  "payload": {
+    "bootstrap": {
+      "fingerprint": "9eb5f60e452edf8efc498af4f882b75cbc907301bc42b4ddb2b9de6d48568482",
+      "invocation_id": "881e12f47004f2af05f1cffcdba8713f",
+      "working_root": "/workspace/scratch/b440248a80b8/repo"
+    },
+    "capability_contract_errors": [],
+    "capability_contract_valid": true,
+    "command_admission": {
+      "admitted": true,
+      "blockers": [],
+      "closure_sha256": "e10fae70104521557fbe8f62523433d22995c7368988ce224d3e5b5d00e0be61",
+      "command": "flashloan-bot.status",
+      "dependencies": [
+        {
+          "blocking": false,
+          "class": "mandatory_safety_authority",
+          "detail": null,
+          "module": "src.capabilities",
+          "probe_evidence": {},
+          "reason": "READY",
+          "symbol": "CapabilityMatrix"
+        },
+        {
+          "blocking": false,
+          "class": "mandatory_feature",
+          "detail": null,
+          "module": "src.config.runtime",
+          "probe_evidence": {},
+          "reason": "READY",
+          "symbol": "load_runtime_config"
+        }
+      ],
+      "manifest_sha256": "b2eff2cc6bd0ef7dd9913d1bd0d918331a86ce2f69b4215697831a6b540c46ca",
+      "schema_version": "mpr-rp-01.command-admission.v1"
+    },
+    "configuration": {
+      "cluster": "mainnet-beta",
+      "fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+      "jito_enabled": false,
+      "jupiter_enabled": false,
+      "marginfi_enabled": false,
+      "mode": "paper",
+      "rpc_configured": false,
+      "schema_version": "pr026.runtime-config.v1"
+    },
+    "default_command": "run --mode shadow",
+    "diagnostic": "NO_EXECUTABLE_STRATEGIES",
+    "executable_strategies": [],
+    "live_available": false,
+    "live_enabled": false,
+    "platform_admission": {
+      "admitted": true,
+      "blockers": [],
+      "identity": {
+        "environment_fingerprint": "b118955e97dd3ec72cffff3f7f841cf583a86978550059c065caaf5873f8f186",
+        "event_loop_policy": "asyncio",
+        "executable_realpath": "/root/.local/share/uv/python/cpython-3.13.15-linux-x86_64-gnu/bin/python3.13",
+        "kernel": "#1 SMP Sat Sep 26 20:02:31 UTC 2026",
+        "libc_name": "glibc",
+        "libc_version": "2.39",
+        "machine": "x86_64",
+        "native_distributions": [
+          {
+            "name": "solders",
+            "record_sha256": "6cb423cd19e2d1d1d85d86de1f1b55cd6a75af9dea5a8df971b79c8a889b71a2",
+            "status": "installed",
+            "version": "0.28.0"
+          },
+          {
+            "name": "solana",
+            "record_sha256": "91e61f54c6092db3b9a14361086ecc46298929f260ac54dcebb6c1e46777aa80",
+            "status": "installed",
+            "version": "0.40.1"
+          },
+          {
+            "name": "orjson",
+            "record_sha256": "39a48aff1b14bec76337c035e8cab0de1b00cd47d98c62585016846721a8c0d2",
+            "status": "installed",
+            "version": "3.11.6"
+          },
+          {
+            "name": "brotli",
+            "record_sha256": "36d364593d6405d18af5192573235f7609523df12904b3c82c5090172e0a8e15",
+            "status": "installed",
+            "version": "1.2.0"
+          },
+          {
+            "name": "uvloop",
+            "record_sha256": "a703aed81db4575562909e5ec0c277f8c839a2deaea97cacd7ac8e8919063ee7",
+            "status": "installed",
+            "version": "0.22.1"
+          }
+        ],
+        "openssl_version": "OpenSSL 3.5.8 25 Aug 2026",
+        "python_abi": "cp313",
+        "python_implementation": "CPython",
+        "python_version": "3.13.15",
+        "release": "6.18.44",
+        "schema_version": "mpr-rp-01.platform-identity.v1",
+        "system": "Linux"
+      },
+      "identity_sha256": "434782a41bd981c557baa62c9e978f733a9719c49ba349094380ebabef4227a3",
+      "known_answer_results": {},
+      "matched_platform_id": "linux-x86_64-glibc-cp313",
+      "policy_sha256": "7ca456e544369a343f31a8d48ffb7f2ff36eb8b4f6ba56c308cb58722a74bbf4",
+      "requested_mode": "disabled",
+      "schema_version": "mpr-rp-01.platform-qualification.v1"
+    },
+    "private_key_material_allowed": false,
+    "product_state": "not-production-ready",
+    "runtime_modes": {
+      "disabled": {
+        "available": true,
+        "description": "Inspection-only state. No detector, simulation, signing, or submission is started."
+      },
+      "live": {
+        "available": false,
+        "description": "Hard denied. Signer, sender, settlement and canary are not connected to the supported entrypoint."
+      },
+      "paper": {
+        "available": true,
+        "description": "Sender-free durable paper service is available as a fail-closed data/reconciliation boundary; missing upstream authorities block the cycle."
+      },
+      "shadow": {
+        "available": true,
+        "description": "Detector-only shadow candidates are available only for explicitly enabled shadow-ready strategies; planner, exact simulation and reconciliation remain unavailable until later PRs."
+      }
+    },
+    "schema_version": "mpr-close-01.dependency-light-status.v1",
+    "sender_loaded": false,
+    "signer_loaded": false,
+    "supported_entrypoint": "flashloan-bot"
+  },
+  "raw_sha256": {
+    "status.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status.stdout.bin": "4547a7c8e5f45dc6513c9532775ebf06b5c6ac5a78b0420d1ae35715917a68d2"
+  },
+  "reason_code": null,
+  "started_at": "2026-10-02T19:38:09.857816+00:00",
+  "step": "status"
+}

@@ -1,0 +1,29 @@
+{
+  "capabilities_sha256": "2895ef2d684a3a4a03e3cd2d87b76695915d15a0bec0480da2a8a61abc08eec5",
+  "checkout_source_sha256": {
+    "automation_cli_pr189.py": "9215d0e460f39c195e9fd55b9081fcdc72297edf6b4bb2412dc294532dc50816",
+    "cli_entrypoint.py": "7d20c0c85317e22536f760e2f709353c851a1c4f5840b1badfd34a209c2d9986",
+    "cli_pr189.py": "a2266da0c55ef515edd19fffad557539eb56ad7a1cc36448eb649d7421c2554d",
+    "qualification_report.py": "af90d5b30f60d9261430337490c86349a993d0503c167c8b250bb9d3ae7b06bf"
+  },
+  "dirty": false,
+  "distribution": "studious-pancake-flashloan-bot",
+  "flashloan_bot_target": "src.cli_pr189:main",
+  "flashloan_checks_target": "src.automation_cli_pr189:main",
+  "git_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "installed_console_script": "/workspace/scratch/b440248a80b8/.venv/bin/flashloan-bot",
+  "installed_source_matches": true,
+  "installed_source_sha256": {
+    "automation_cli_pr189.py": "9215d0e460f39c195e9fd55b9081fcdc72297edf6b4bb2412dc294532dc50816",
+    "cli_entrypoint.py": "7d20c0c85317e22536f760e2f709353c851a1c4f5840b1badfd34a209c2d9986",
+    "cli_pr189.py": "a2266da0c55ef515edd19fffad557539eb56ad7a1cc36448eb649d7421c2554d",
+    "qualification_report.py": "af90d5b30f60d9261430337490c86349a993d0503c167c8b250bb9d3ae7b06bf"
+  },
+  "package_installed": true,
+  "package_version": "0.27.0.dev1",
+  "python_executable": "/workspace/scratch/b440248a80b8/.venv/bin/python",
+  "python_version": "3.13.15",
+  "record_sha256": "6b18c6a1fdf86e9c360bf38f885a8a4078015b2a3184f43d1f58c71813382793",
+  "repository_root": "/workspace/scratch/b440248a80b8/repo",
+  "schema_version": "fast-q1.baseline.v2"
+}

@@ -1,0 +1,21 @@
+{
+  "state": {
+    "request": "Проверь блокеры квалификации бота и подготовь отчёт. Не запускай сделки.",
+    "source": "explicit_user_command",
+    "context": "Only offline evidence inspection is currently wired. Market campaign is not admitted."
+  },
+  "model": "multilingual",
+  "questions": {
+    "proposed_route": {
+      "type": "choice",
+      "instructions": "Select a proposed workflow. This answer never grants execution permissions.",
+      "criteria": {
+        "inspect_evidence": "Inspect saved qualification evidence",
+        "search_context": "Find authorized project source material",
+        "draft_change": "Propose code or document changes",
+        "propose_paper_campaign": "Design a sender-free experiment, do not run it",
+        "needs_context": "Request missing facts or unsupported action"
+      }
+    }
+  }
+}

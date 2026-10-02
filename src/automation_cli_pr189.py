@@ -443,7 +443,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             mode=mode,
             exc=exc,
         )
-    except (OSError, ValueError, json.JSONDecodeError, subprocess.SubprocessError) as exc:
+    except (
+        OSError,
+        ValueError,
+        json.JSONDecodeError,
+        subprocess.SubprocessError,
+    ) as exc:
         command_result = error_result(
             command=str(args.command),
             mode=mode,

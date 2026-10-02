@@ -292,9 +292,7 @@ def validate_request(raw: object) -> dict[str, Any]:
     if set(raw) != REQUEST_FIELDS or raw.get("schema_version") != REQUEST_SCHEMA:
         raise ValueError("REQUEST_SCHEMA_OR_FIELDS_INVALID")
     request_id = _identifier(raw.get("request_id"), "REQUEST_ID_INVALID")
-    idempotency_key = _identifier(
-        raw.get("idempotency_key"), "IDEMPOTENCY_KEY_INVALID"
-    )
+    idempotency_key = _identifier(raw.get("idempotency_key"), "IDEMPOTENCY_KEY_INVALID")
     inputs = raw.get("inputs")
     if not isinstance(inputs, dict):
         raise ValueError("REQUEST_INPUTS_INVALID")
@@ -683,9 +681,7 @@ def _update_state(
     summary_path = claim / "STATUS_RU.txt"
     summary_path.write_text(
         "FAST-Q automation state\n"
-        + "\n".join(
-            f"{key}={value}" for key, value in state["status_ladder"].items()
-        )
+        + "\n".join(f"{key}={value}" for key, value in state["status_ladder"].items())
         + f"\ntransactions_sent=0\nfirst_blocker={state['current_first_blocker']}\n"
         + f"next_action={state['next_action']}\n",
         encoding="utf-8",
@@ -794,9 +790,7 @@ def execute_request(
         return {**receipt, "reused": True}
 
     started = _now()
-    result = _dispatch(
-        request, repo, output, claim, expected_sha, timeout_seconds
-    )
+    result = _dispatch(request, repo, output, claim, expected_sha, timeout_seconds)
     receipt: dict[str, Any] = {
         "schema_version": RECEIPT_SCHEMA,
         "request_id": request["request_id"],

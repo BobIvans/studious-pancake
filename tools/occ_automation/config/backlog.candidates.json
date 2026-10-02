@@ -1,0 +1,31 @@
+{
+  "schema_version": "occ-proposed-backlog.v1",
+  "actual_github_prs_created_by_this_package": 0,
+  "historical_1000_task_count_verified": false,
+  "current_owner_reconciliation": {
+    "fast_q1": "PR #552 merged",
+    "qualification_task_adapter": "PR #543 merged",
+    "capability_boolean_contract": "PR #544 merged",
+    "current_integration_pr": 553
+  },
+  "items": [
+    {
+      "id": "OCC-NEXT-01",
+      "title": "Receipt-driven current blocker repair",
+      "status": "PARTIALLY_IMPLEMENTED_IN_PR553",
+      "acceptance": "Current blocker is preserved; repair metadata is bounded and cannot grant live authority."
+    },
+    {
+      "id": "OCC-NEXT-02",
+      "title": "Authorized context import",
+      "status": "PROPOSED",
+      "acceptance": "Source rights, revisions, deletion and privacy taint remain explicit."
+    },
+    {
+      "id": "OCC-NEXT-03",
+      "title": "Sender-free paper observation campaign",
+      "status": "BLOCKED_NOT_STARTED",
+      "acceptance": "Separate admission and frozen thresholds; no transaction send."
+    }
+  ]
+}

@@ -31,7 +31,7 @@ jobs:
       - name: Compile
         run: python -m compileall -q src/qualification_report.py src/automation_cli_pr189.py scripts/verify_fast_q1_v3.py scripts/verify_fast_q1_smoke.py tests/test_fast_q1_qualification_report.py
       - name: Black
-        run: python -m black --check src/qualification_report.py src/automation_cli_pr189.py scripts/verify_fast_q1_v3.py scripts/verify_fast_q1_smoke.py tests/test_fast_q1_qualification_report.py
+        run: python -m black --diff --check src/qualification_report.py src/automation_cli_pr189.py scripts/verify_fast_q1_v3.py scripts/verify_fast_q1_smoke.py tests/test_fast_q1_qualification_report.py
       - name: Verify contract
         run: python scripts/verify_fast_q1_v3.py
       - name: Focused tests

@@ -29,10 +29,17 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install focused test tools
-        run: python -m pip install --disable-pip-version-check pytest==9.0.3
+        run: python -m pip install --disable-pip-version-check pytest==9.0.3 black==26.3.1
       - name: Compile OCC surfaces
         run: >-
           python -m compileall -q
+          src/occ_durable_library.py
+          scripts/run_occ_native_host.py
+          scripts/verify_occ_durable_host.py
+          tests/test_occ_durable_host.py
+      - name: Check OCC formatting
+        run: >-
+          python -m black --diff --check
           src/occ_durable_library.py
           scripts/run_occ_native_host.py
           scripts/verify_occ_durable_host.py

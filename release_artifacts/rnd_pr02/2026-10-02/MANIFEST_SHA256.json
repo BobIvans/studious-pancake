@@ -2,7 +2,7 @@
   "schema": "studious.rnd-pr02.artifact-manifest.v1",
   "tested_git_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
   "files": {
-    "acceptance_matrix.json": "ee1bb0b50a562156dcf3b9284ba3cfa5898a3beac6d6d20f6a1626b084881d4b",
+    "acceptance_matrix.json": "41c053af3d16e5f6efef8f9e342f9d29df85c6251d8135dc96d970e059d137e9",
     "campaign_verdict.json": "a1949da41387338a8b9acce3e01e0886fb8b6740f4b04e119d5c7e0450f413c9",
     "fast_q1_contract_verification.json": "2dbaa2160b664e6dd99e97db6d2db78cc184ea59fd49ae9bc83c27a0b525bf5d",
     "fast_q1_smoke_verification.json": "c78302b6d6adc715f8a5c4cb92fdb487993ccc079299ca80302b6128b677434b",

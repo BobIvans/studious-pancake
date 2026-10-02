@@ -174,7 +174,9 @@ def test_duplicate_offer_and_double_allocation_fail_closed() -> None:
             offers=(Offer(task.task_id, "A", 1), Offer(task.task_id, "A", 2)),
         )
     runtime = InstitutionRuntime()
-    runtime.award_once(task=task, rules=rules, profiles=_profiles(), offers=_offers(task))
+    runtime.award_once(
+        task=task, rules=rules, profiles=_profiles(), offers=_offers(task)
+    )
     with pytest.raises(Wave15InstitutionError, match="ALREADY_ALLOCATED"):
         runtime.award_once(
             task=task,
@@ -210,9 +212,10 @@ def _resolver_for(
     )
     if payload_mutator is not None:
         payload = payload_mutator(payload)
-    return SemanticEvidenceResolver(
-        api=DataEvidenceApi((artifact,)), payloads=(payload,)
-    ), ref
+    return (
+        SemanticEvidenceResolver(api=DataEvidenceApi((artifact,)), payloads=(payload,)),
+        ref,
+    )
 
 
 def test_correct_semantic_result_is_accepted_but_never_real_pnl() -> None:
@@ -252,9 +255,7 @@ def test_binding_mismatch_is_not_success() -> None:
     def mutate(payload):
         return replace(payload, state_hash="wrong-state")
 
-    resolver, ref = _resolver_for(
-        task=task, supplier_id="A", payload_mutator=mutate
-    )
+    resolver, ref = _resolver_for(task=task, supplier_id="A", payload_mutator=mutate)
     result = resolver.resolve(
         evidence_ref=ref,
         task=task,

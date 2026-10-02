@@ -294,10 +294,7 @@ def _artifact_bundle_payload(
 
 def admission_artifact_bundle_sha256(payload: Mapping[str, Any]) -> str:
     accounts_raw = payload.get("accounts")
-    if (
-        not isinstance(accounts_raw, Sequence)
-        or isinstance(accounts_raw, (str, bytes))
-    ):
+    if not isinstance(accounts_raw, Sequence) or isinstance(accounts_raw, (str, bytes)):
         raise ProtocolAdmissionError("SP_Q01_ACCOUNTS_REQUIRED")
     accounts = tuple(_account(item) for item in accounts_raw)
     return canonical_sha256(
@@ -395,8 +392,7 @@ def validate_protocol_admission_receipt(
         raise ProtocolAdmissionError("SP_Q01_INTERFACE_BLOBS_REQUIRED")
     blobs = tuple(
         sorted(
-            _git_object(value, "SP_Q01_INTERFACE_BLOB_INVALID")
-            for value in blobs_raw
+            _git_object(value, "SP_Q01_INTERFACE_BLOB_INVALID") for value in blobs_raw
         )
     )
     build_sha = _sha256(

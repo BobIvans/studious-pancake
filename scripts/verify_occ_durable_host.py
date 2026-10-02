@@ -59,13 +59,17 @@ def verify() -> dict[str, object]:
             content="one",
             allowed_namespaces={"local"},
         )
-        if not duplicate["duplicate"] or len(
-            library.history(
-                namespace="local",
-                source_id="fixture",
-                allowed_namespaces={"local"},
+        if (
+            not duplicate["duplicate"]
+            or len(
+                library.history(
+                    namespace="local",
+                    source_id="fixture",
+                    allowed_namespaces={"local"},
+                )
             )
-        ) != 1:
+            != 1
+        ):
             errors.append("DUPLICATE_SYNC_NOT_NOOP")
         try:
             library.latest(

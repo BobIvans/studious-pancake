@@ -27,6 +27,15 @@ def _parser() -> argparse.ArgumentParser:
     )
     commands = parser.add_subparsers(dest="command", required=True)
 
+    report = commands.add_parser("qualify-and-report")
+    report.add_argument("mode", choices=("inspect", "check"))
+    report.add_argument("--repo-root", required=True, type=Path)
+    report.add_argument("--output-root", required=True, type=Path)
+    report.add_argument("--request-id", required=True)
+    report.add_argument("--expected-sha", required=True)
+    report.add_argument("--profile", choices=("offline_sender_free",), default="offline_sender_free")
+    report.add_argument("--timeout-seconds", type=int, default=30)
+
     paper = commands.add_parser("paper-vertical")
     paper.add_argument("mode", choices=("inspect", "check"))
     paper.add_argument("--config-file", default=None)
@@ -330,6 +339,25 @@ def evaluate_agg_debt_command(
 
 def _evaluate(args: argparse.Namespace) -> CommandResult:
     mode = _mode(args.mode)
+    if args.command == "qualify-and-report":
+        from src.qualification_report import qualify_and_report
+
+        receipt = qualify_and_report(
+            repo_root=args.repo_root,
+            output_root=args.output_root,
+            request_id=args.request_id,
+            expected_sha=args.expected_sha,
+            profile=args.profile,
+            timeout_seconds=args.timeout_seconds,
+        )
+        reasons = tuple(str(item) for item in receipt["blockers"])
+        return result(
+            command="qualify-and-report",
+            mode=mode,
+            ready=bool(receipt["sender_free_pass"]),
+            reason_codes=reasons,
+            details=receipt,
+        )
     if args.command == "paper-vertical":
         return evaluate_paper_vertical(mode, args.config_file)
     if args.command == "production-debt":

@@ -2,52 +2,66 @@
 
 Эта интеграция добавляет **изолированный локальный tooling слой**. Она не входит
 в latency-critical trading runtime и не создаёт второй paper runtime, journal,
-source registry или release authority.
+source registry, action router или release authority.
 
-## Канонический путь qualification
+## Канонический routing owner
 
-Единственный executable action этого слоя:
+Единственный router/action registry этого PR:
 
-`qualification_audit -> flashloan-checks qualify-and-report inspect`
+`src/fast_q_automation.py`
 
-Adapter передаёт только фиксированный argv и проверяет текущий
-`pr189.command-result.v1`. Exit 0 в inspect означает завершённую диагностику,
-а не готовность к торговле. Поля `qualified`, `release_authorized` и
-`live_authorized` обязаны оставаться false; `transactions_sent=0`.
+Текущий executable qualification path:
 
-Текущий известный historical blocker из FAST-Q:
+`qualify_and_report -> src.qualification_report.qualify_and_report`
+
+Он использует существующий sender-free FAST-Q1 owner. Exit 0 в inspect означает
+завершённую диагностику, а не готовность к торговле. Квитанции этого orchestration
+слоя всегда сохраняют `qualified=false`, `live_authorized=false`,
+`transactions_sent=0`; существующие release authorities не изменяются.
+
+PR #554 уже владеет memory -> qualification bridge. PR #556 отдельно владеет
+draft durable library/native host. Этот PR не дублирует и не поглощает их.
+
+## Текущий известный blocker
+
+Historical exact FAST-Q evidence сохраняет:
 
 `paper-shadow:blocked_missing_wallet_public_key`
 
-Он не заменяется fake wallet или секретом. Repair metadata разрешает только
-operator-owned public identity/configuration и повтор focused verification.
+Он не заменяется fake wallet или секретом. `prepare_repair_task` оставляет
+`patch_allowed=false` и требует operator-owned public wallet configuration /
+evidence через существующий owner.
 
 ## Laya / voice
 
-`laya_request.example.json` — advisory proposal. Даже confidence=1.0 не
-выдаёт permission и не меняет explicit registered action.
+`laya_request.example.json` — advisory proposal. Laya proposal не меняет
+explicit action и не выдаёт permission.
 
-`voice_tools.responses.json` описывает schema будущего tool call. Transcript
-или model output не становятся shell/argv/transaction командой.
+`voice_tools.responses.json` использует тот же закрытый action registry:
+`qualify_and_report`, blocker/repair/validation/state actions и external-only
+intake/search/ASR contracts. Transcript/model output не превращается в
+shell/argv/transaction command.
 
 ## Local intake
 
 `occ_local.py` читает только explicit workspace/inbox и optional repo,
 ограничивает размер/количество, дедуплицирует по SHA-256 и не сохраняет raw
 private text в generated report. Репозиторный Python анализ — только AST/static
-heuristics, не execution.
+heuristics, не execution. Network/model/subprocess imports отсутствуют.
 
 ## ASR
 
 `asr_cpu_experiment.py` — opt-in эксперимент. `faster-whisper` импортируется
-только внутри реального вызова; dependency не добавлена в bot runtime. Output
-создаётся только новым файлом, вход хешируется до/после inference.
+только внутри реального operator-run вызова; dependency не добавлена в bot
+runtime. CI использует только injected test double и не скачивает weights.
+Output создаётся только новым файлом, вход хешируется до и после inference.
 
 ## Design-only paper plan
 
 `paper_campaign.plan.json` имеет schema
-`occ-paper-campaign-proposal.v1` и статус `BLOCKED_NOT_STARTED`. Adapter
-намеренно отклоняет этот schema как executable input.
+`occ-paper-campaign-proposal.v1`, статус `BLOCKED_NOT_STARTED` и
+`native_adapter_compatible=false`. Эта схема не является
+`fast-q2.action-request.v1` и не принимается action router.
 
 ## Проверка
 
@@ -55,6 +69,10 @@ heuristics, не execution.
 python -m unittest discover -s tools/occ_automation -p 'test_*.py' -v
 python -m compileall -q tools/occ_automation
 python scripts/verify_occ_automation.py
+python scripts/verify_fast_q_automation.py
 ```
 
-CI не скачивает ASR weights и не выполняет network/model/market calls.
+GitHub exact-head CI является merge authority. CI не скачивает ASR weights и не
+выполняет network/model/market calls.
+
+MERGED != QUALIFIED != LIVE_AUTHORIZED.

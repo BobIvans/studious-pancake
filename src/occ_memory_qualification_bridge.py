@@ -200,9 +200,10 @@ def _verify_replay(
     request_sha256: str,
     operator_profile_sha256: str,
 ) -> dict[str, Any]:
-    if manifest.get("request_sha256") != request_sha256 or manifest.get(
-        "operator_profile_sha256"
-    ) != operator_profile_sha256:
+    if (
+        manifest.get("request_sha256") != request_sha256
+        or manifest.get("operator_profile_sha256") != operator_profile_sha256
+    ):
         raise ValueError("REQUEST_ID_INPUT_CONFLICT")
     if manifest.get("state") != "COMPLETE":
         raise ValueError("BRIDGE_INCOMPLETE_RECONCILE_BEFORE_RETRY")

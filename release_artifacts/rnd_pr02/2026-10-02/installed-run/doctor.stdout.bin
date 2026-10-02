@@ -1,0 +1,22 @@
+{
+  "config_fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+  "diagnostics": [
+    {
+      "code": "CLUSTER_IDENTITY_VALID",
+      "message": "cluster identity matches registry",
+      "severity": "info"
+    },
+    {
+      "code": "PROGRAM_ALLOWLIST_VALID",
+      "message": "all program IDs are registered",
+      "severity": "info"
+    },
+    {
+      "code": "RPC_NOT_CONFIGURED",
+      "message": "RPC is intentionally absent in fail-closed defaults",
+      "severity": "info"
+    }
+  ],
+  "ok": true,
+  "schema_version": "pr026.config-doctor.v1"
+}

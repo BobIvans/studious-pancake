@@ -1,0 +1,40 @@
+{
+  "argv": [
+    "flashloan-bot",
+    "config",
+    "doctor",
+    "--json"
+  ],
+  "ended_at": "2026-10-02T19:38:11.005185+00:00",
+  "error": null,
+  "exit_code": 0,
+  "payload": {
+    "config_fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+    "diagnostics": [
+      {
+        "code": "CLUSTER_IDENTITY_VALID",
+        "message": "cluster identity matches registry",
+        "severity": "info"
+      },
+      {
+        "code": "PROGRAM_ALLOWLIST_VALID",
+        "message": "all program IDs are registered",
+        "severity": "info"
+      },
+      {
+        "code": "RPC_NOT_CONFIGURED",
+        "message": "RPC is intentionally absent in fail-closed defaults",
+        "severity": "info"
+      }
+    ],
+    "ok": true,
+    "schema_version": "pr026.config-doctor.v1"
+  },
+  "raw_sha256": {
+    "doctor.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "doctor.stdout.bin": "ef175dee739b85b0f7b8342665b1b0f9b92a757e713f7f98a6e286d2cfcafde3"
+  },
+  "reason_code": null,
+  "started_at": "2026-10-02T19:38:10.539867+00:00",
+  "step": "doctor"
+}

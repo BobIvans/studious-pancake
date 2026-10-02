@@ -1,0 +1,54 @@
+{
+  "check_passed": null,
+  "command": "paper-vertical",
+  "command_mode": "inspect",
+  "details": {
+    "available_surfaces": {
+      "atomic_stage_suite": false,
+      "exact_fee_workflow": false,
+      "jupiter_v2_build": false,
+      "verified_marginfi_provider": false
+    },
+    "config_fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+    "dependency_reasons": [
+      "blocked_pr_a1_canonical_paper_vertical_unwired",
+      "missing_atomic_stage_suite",
+      "missing_exact_fee_workflow",
+      "missing_verified_marginfi_provider",
+      "missing_jupiter_v2_build"
+    ],
+    "invalid_surfaces": [],
+    "missing_surfaces": [
+      "atomic_stage_suite",
+      "exact_fee_workflow",
+      "verified_marginfi_provider",
+      "jupiter_v2_build"
+    ],
+    "ready": false,
+    "reason_code": "blocked_pr_a1_canonical_paper_vertical_unwired",
+    "required_surfaces": [
+      "atomic_stage_suite",
+      "exact_fee_workflow",
+      "verified_marginfi_provider",
+      "jupiter_v2_build"
+    ],
+    "runtime_mode": "paper",
+    "safety": {
+      "fake_success_permitted": false,
+      "live_enabled": false,
+      "network_io_performed": false,
+      "private_key_loading": false,
+      "sender_reachable": false,
+      "signer_reachable": false
+    },
+    "schema_version": "mega-pr-a1.paper-vertical-preflight.v1",
+    "state": "blocked"
+  },
+  "exit_code": 0,
+  "ready": false,
+  "reason_codes": [
+    "blocked_pr_a1_canonical_paper_vertical_unwired"
+  ],
+  "schema_version": "pr189.command-result.v1",
+  "verdict": "blocked"
+}

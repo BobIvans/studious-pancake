@@ -1,0 +1,154 @@
+{
+  "schema": "studious.rnd-pr02.implementation-receipt.v1",
+  "rnd_pr_id": "RND-PR-02",
+  "generated_at": "2026-10-02T19:42:48.373921+00:00",
+  "repository": "BobIvans/studious-pancake",
+  "base_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "tested_git_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "publication_head_sha": null,
+  "publication_head_sha_note": "Evidence commit identity is recorded by Git/PR metadata. These immutable observations were taken at tested_git_sha, before any source changes.",
+  "disposition": "BLOCKED_EXTERNAL_EVIDENCE_ONLY",
+  "runtime_patch_applied": false,
+  "reason_no_runtime_patch": "The reproduced first blocker is missing external public identity; all required evidence bindings are absent. The supplied specification requires NEEDS_DATA/BLOCKED_EXTERNAL rather than invented dependencies or READY.",
+  "selected_inspector": {
+    "owner": "src/qualification_report.py::qualify_and_report",
+    "entrypoint": "flashloan-checks -> src.automation_cli_pr189:main",
+    "bot_entrypoint": "flashloan-bot -> src.cli_pr189:main",
+    "canonical_pr": 552,
+    "merge_sha": "5b1b555e37451852e589cc4f14aa0a28c0e610d4",
+    "historical_alternatives": {
+      "545": {
+        "state": "closed",
+        "merged": false,
+        "head_sha": "311ae1301c6907e0b52f74335c822860ec580472"
+      },
+      "547": {
+        "state": "closed",
+        "merged": false,
+        "head_sha": "08cdbf67653615c8e5a71dfe0dcf8b6cacad1d99"
+      }
+    },
+    "comparison": "#545 and #547 diverge from 75e78b2b0f8af5884df5e0859b7ac9a42ca1a5b4; current #552 supersedes both. Neither historical branch was merged by this task."
+  },
+  "observed_overlap": {
+    "number": 553,
+    "head_sha_at_audit": "786c09daa14c4bcbb79529ba4066d19abc030934",
+    "scope_at_audit": "FAST-Q orchestration; this evidence change adds only its own artifact directory and one RU document"
+  },
+  "blocker_before": [
+    "paper-shadow:blocked_missing_wallet_public_key"
+  ],
+  "blocker_after": [
+    "paper-shadow:blocked_missing_wallet_public_key"
+  ],
+  "surfaces_before": {
+    "available_surfaces": {
+      "atomic_stage_suite": false,
+      "exact_fee_workflow": false,
+      "jupiter_v2_build": false,
+      "verified_marginfi_provider": false
+    },
+    "config_fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+    "fake_success_permitted": false,
+    "integration_reason_code": "blocked_pr_a_canonical_vertical_unwired",
+    "invalid_surfaces": [],
+    "live_allowed": false,
+    "missing_surfaces": [
+      "atomic_stage_suite",
+      "exact_fee_workflow",
+      "verified_marginfi_provider",
+      "jupiter_v2_build"
+    ],
+    "ready": false,
+    "reason_code": "blocked_pr089_atomic_dependencies_missing",
+    "required_surfaces": [
+      "atomic_stage_suite",
+      "exact_fee_workflow",
+      "verified_marginfi_provider",
+      "jupiter_v2_build"
+    ],
+    "runtime_mode": "paper",
+    "schema_version": "mega-pr-a.canonical-paper-vertical.startup.v1",
+    "sender_reachable": false,
+    "signer_reachable": false,
+    "status": "blocked"
+  },
+  "surfaces_after": {
+    "available_surfaces": {
+      "atomic_stage_suite": false,
+      "exact_fee_workflow": false,
+      "jupiter_v2_build": false,
+      "verified_marginfi_provider": false
+    },
+    "config_fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+    "fake_success_permitted": false,
+    "integration_reason_code": "blocked_pr_a_canonical_vertical_unwired",
+    "invalid_surfaces": [],
+    "live_allowed": false,
+    "missing_surfaces": [
+      "atomic_stage_suite",
+      "exact_fee_workflow",
+      "verified_marginfi_provider",
+      "jupiter_v2_build"
+    ],
+    "ready": false,
+    "reason_code": "blocked_pr089_atomic_dependencies_missing",
+    "required_surfaces": [
+      "atomic_stage_suite",
+      "exact_fee_workflow",
+      "verified_marginfi_provider",
+      "jupiter_v2_build"
+    ],
+    "runtime_mode": "paper",
+    "schema_version": "mega-pr-a.canonical-paper-vertical.startup.v1",
+    "sender_reachable": false,
+    "signer_reachable": false,
+    "status": "blocked"
+  },
+  "config_fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+  "installed_source_matches": true,
+  "installed_owner_integrity": "installed_owner_integrity.json",
+  "owners_changed": [],
+  "artifact_paths": [
+    "release_artifacts/rnd_pr02/2026-10-02/",
+    "docs/qualification/RND_PR02_CANONICAL_PAPER_BLOCKED_RU.md"
+  ],
+  "tests": {
+    "command": "python -m pytest -q tests/test_fast_q1_qualification_report.py tests/test_pr_a_canonical_paper_vertical.py tests/test_pr_a1_paper_vertical_preflight.py tests/test_pr089_active_paper_composition_root.py tests/test_pr113_amount_coupled_discovery.py tests/test_pr189_automation_cli_contract.py tests/test_pr074_exact_fee_capital_workflow.py tests/test_pr227_exact_money_atomic_evidence.py tests/test_pr038_paper_shadow_runner.py --disable-socket --allow-unix-socket",
+    "cwd": "repository root",
+    "passed": 72,
+    "failed": 0,
+    "log": "focused_tests.txt",
+    "initial_invocation_correction": "An initial invocation from the parent directory failed two repository-relative file reads (45 passed, 2 failed). Rerunning the same tests at repository root plus economics/journal tests passed all 72. No source fix was needed."
+  },
+  "verifiers": [
+    "fast_q1_contract_verification.json",
+    "fast_q1_smoke_verification.json"
+  ],
+  "campaign_id": "rnd-pr02-baseline",
+  "diagnostic_duration_seconds": 4.198861,
+  "campaign_duration_seconds": 0,
+  "considered": 0,
+  "rejected": 0,
+  "simulated": 0,
+  "economic_unit": null,
+  "transactions_sent": 0,
+  "signer_access": false,
+  "market_run_scope": "sender-free installed diagnostic only; campaign not admitted",
+  "domain_verdict": "BLOCKED",
+  "operational_qualification": "BLOCKED_EXTERNAL",
+  "production_ready": false,
+  "live_enabled": false,
+  "exact_head_ci": {
+    "status": "NOT_YET_OBSERVED",
+    "note": "Publication/merge head CI must be checked separately; this receipt does not claim future CI success."
+  },
+  "limitations": [
+    "No market qualification, modeled edge, economic unit, fill, landing or realized PnL measured.",
+    "No verified runtime bindings or real authorized snapshot bundle supplied by the uploaded plan.",
+    "Existing detector confirms amount coupling, freshness/slot checks and a final-requote-required marker. The marker alone does not prove end-to-end final-requote execution on this blocked installed path.",
+    "The legacy required surface name verified_marginfi_provider is preserved while MarginFi remains PAUSED; no live provider is instantiated to satisfy it.",
+    "Installed-run paths are original historical paths; artifact hashes remain valid after copying. Reproduce with a new external output directory/request ID, not the archived directory."
+  ],
+  "next_single_task": "Provide and review one recorded sender-free evidence bundle with public fee-payer identity, lender/repayment/prefix-liquidity and fee/rent compatibility evidence; bind it through the existing canonical owner and rerun pinned startup before admitting a campaign."
+}

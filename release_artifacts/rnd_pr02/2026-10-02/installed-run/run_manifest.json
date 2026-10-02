@@ -1,0 +1,39 @@
+{
+  "action_id": "qualify_and_report",
+  "artifact_sha256": {
+    "BLOCKERS_RU.txt": "fc4c416a15bb35e370a26998023f06fed144b4b2762e7bb3ec87da0b082bffdc",
+    "admission.record.json": "069b404b6492fbd856c426478d7f3b266734a8590f81c666357545173e43175e",
+    "admission.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "admission.stdout.bin": "46a6bc505a1b7c4d0d2dad1f219d8fcf9684cb23e7358f4f3b25d798b5ac7e70",
+    "baseline.json": "33e8feb31ea62076493103d7a8da86088d2a7b97fc268602194a06b1b3d118fa",
+    "capabilities.record.json": "5244db872f780fdc305c54ab7ee48fb801413c7578ddc8c8cc0b226119425078",
+    "capabilities.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "capabilities.stdout.bin": "12c75d9e59a368787b4b36a482a424cbe9daf6dd657dd2e788013feefd052882",
+    "doctor.record.json": "5d7c63897acdd1ec6839979809206fcd98f57acdeac983b8587d3aa6cbd5b409",
+    "doctor.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "doctor.stdout.bin": "ef175dee739b85b0f7b8342665b1b0f9b92a757e713f7f98a6e286d2cfcafde3",
+    "paper-shadow.jsonl": "f550a91010c153a82fea30940538ad16b5af2d560bef9dc83397c14fdc2f57c9",
+    "paper-shadow.record.json": "d7fcccfc010fbfbaa277b949756752581bb583e7e042883dbcf60957d35806d6",
+    "paper-shadow.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "paper-shadow.stdout.bin": "a1476f5f4522ee9c002f5cf164e9e7d864568cab1fab7c3a3f8178104548851f",
+    "qualification_receipt.json": "633ca0aa157d45068d62de6b2670c8d17adc6dc8758591dabd3489f30d5a5111",
+    "status.record.json": "4608f3a0742b3c85da00c22eaf7726d0f8039f51e6644201bb9f79a19bb9da10",
+    "status.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "status.stdout.bin": "4547a7c8e5f45dc6513c9532775ebf06b5c6ac5a78b0420d1ae35715917a68d2"
+  },
+  "completed_steps": [
+    "status",
+    "capabilities",
+    "doctor",
+    "admission",
+    "paper-shadow"
+  ],
+  "ended_at": "2026-10-02T19:38:14.056347+00:00",
+  "external_effects_permitted": false,
+  "input_digest": "5f391b021d3903410d28ab4dbd034e60775be94057a03c172262a6452a4470e4",
+  "receipt_sha256": "633ca0aa157d45068d62de6b2670c8d17adc6dc8758591dabd3489f30d5a5111",
+  "schema_version": "fast-q1.run-manifest.v2",
+  "started_at": "2026-10-02T19:38:09.857486+00:00",
+  "state": "COMPLETE",
+  "updated_at": "2026-10-02T19:38:14.044720+00:00"
+}

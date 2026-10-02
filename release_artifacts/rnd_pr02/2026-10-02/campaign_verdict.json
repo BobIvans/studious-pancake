@@ -1,0 +1,85 @@
+{
+  "schema": "studious.rnd-pr02.campaign-verdict.v1",
+  "rnd_pr_id": "RND-PR-02",
+  "campaign_id": "rnd-pr02-baseline",
+  "diagnostic_run_id": "5a925260ea534ff0bb779dc5c8d33850",
+  "tested_git_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "verdict": "BLOCKED",
+  "operational_qualification": "BLOCKED_EXTERNAL",
+  "execution_state": "NOT_STARTED_NEEDS_DATA_AND_BINDINGS",
+  "campaign_admitted": false,
+  "market_run_performed": false,
+  "diagnostic_paper_pass_performed": true,
+  "diagnostic_duration_seconds": 4.198861,
+  "campaign_duration_seconds": 0,
+  "considered": 0,
+  "rejected": 0,
+  "simulated": 0,
+  "provider_requests_attempted": 0,
+  "provider_spend": 0,
+  "transactions_sent": 0,
+  "signer_access": false,
+  "send_transactions": false,
+  "live_enabled": false,
+  "production_ready": false,
+  "economic_unit": null,
+  "modeled_edge": null,
+  "realized_pnl": "NOT_MEASURED",
+  "landing": "NOT_MEASURED",
+  "fill": "NOT_MEASURED",
+  "first_blocker": "paper-shadow:blocked_missing_wallet_public_key",
+  "canonical_startup": {
+    "available_surfaces": {
+      "atomic_stage_suite": false,
+      "exact_fee_workflow": false,
+      "jupiter_v2_build": false,
+      "verified_marginfi_provider": false
+    },
+    "config_fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+    "fake_success_permitted": false,
+    "integration_reason_code": "blocked_pr_a_canonical_vertical_unwired",
+    "invalid_surfaces": [],
+    "live_allowed": false,
+    "missing_surfaces": [
+      "atomic_stage_suite",
+      "exact_fee_workflow",
+      "verified_marginfi_provider",
+      "jupiter_v2_build"
+    ],
+    "ready": false,
+    "reason_code": "blocked_pr089_atomic_dependencies_missing",
+    "required_surfaces": [
+      "atomic_stage_suite",
+      "exact_fee_workflow",
+      "verified_marginfi_provider",
+      "jupiter_v2_build"
+    ],
+    "runtime_mode": "paper",
+    "schema_version": "mega-pr-a.canonical-paper-vertical.startup.v1",
+    "sender_reachable": false,
+    "signer_reachable": false,
+    "status": "blocked"
+  },
+  "candidate_evidence_outputs": {
+    "candidate_rejections.jsonl": "NOT_CREATED: campaign not admitted; zero considered candidates",
+    "unsigned_simulation_receipts.jsonl": "NOT_CREATED: no unsigned simulation performed",
+    "cost_ledger.jsonl": "NOT_CREATED: no candidate economic model available"
+  },
+  "limits": {
+    "duration_seconds": 900,
+    "max_candidates": 100,
+    "concurrency": 1,
+    "provider_spend_budget": 0,
+    "live_rpc_calls": 0
+  },
+  "missing_inputs": [
+    "authorized fee-payer/wallet public identity (not a private key)",
+    "recorded quote/state snapshots with source/version/units/slots/availability timing",
+    "qualified lender-neutral repayment evidence and prefix-liquidity proof",
+    "exact fee/rent timeline and compatibility proof when temporary rent/ATA liquidity is needed",
+    "verified bindings for every required canonical surface"
+  ],
+  "marginfi": "PAUSED",
+  "slumlord": "REQUIRED only when low-capital rent/ATA liquidity is needed, subject to compatibility proof",
+  "profitability_claim": false
+}

@@ -1,0 +1,91 @@
+{
+  "argv": [
+    "flashloan-bot",
+    "paper-shadow",
+    "--journal-path",
+    "/workspace/scratch/b440248a80b8/evidence_before/runs/rnd-pr02-baseline/paper-shadow.jsonl",
+    "--json"
+  ],
+  "ended_at": "2026-10-02T19:38:14.044102+00:00",
+  "error": null,
+  "exit_code": 5,
+  "payload": {
+    "candidates_seen": 0,
+    "events_written": 2,
+    "journal_path": "/workspace/scratch/b440248a80b8/evidence_before/runs/rnd-pr02-baseline/paper-shadow.jsonl",
+    "readiness": {
+      "dependency_reasons": [
+        "blocked_missing_wallet_public_key"
+      ],
+      "ready_for_next_cycle": false
+    },
+    "run_id": "5a925260ea534ff0bb779dc5c8d33850",
+    "schema_version": "pr076.paper-shadow-summary.v1",
+    "status": "blocked",
+    "terminal_reason": "blocked_missing_wallet_public_key",
+    "upstream_cycle_evidence": {
+      "batches_completed": 0,
+      "candidates_created": 0,
+      "candidates_dropped_backpressure": 0,
+      "canonical_paper_vertical": {
+        "available_surfaces": {
+          "atomic_stage_suite": false,
+          "exact_fee_workflow": false,
+          "jupiter_v2_build": false,
+          "verified_marginfi_provider": false
+        },
+        "config_fingerprint": "2ad88c5b277fc0b63e7119df0669dde20c4d40dcc5aa658989948fb3e542b11e",
+        "fake_success_permitted": false,
+        "integration_reason_code": "blocked_pr_a_canonical_vertical_unwired",
+        "invalid_surfaces": [],
+        "live_allowed": false,
+        "missing_surfaces": [
+          "atomic_stage_suite",
+          "exact_fee_workflow",
+          "verified_marginfi_provider",
+          "jupiter_v2_build"
+        ],
+        "ready": false,
+        "reason_code": "blocked_pr089_atomic_dependencies_missing",
+        "required_surfaces": [
+          "atomic_stage_suite",
+          "exact_fee_workflow",
+          "verified_marginfi_provider",
+          "jupiter_v2_build"
+        ],
+        "runtime_mode": "paper",
+        "schema_version": "mega-pr-a.canonical-paper-vertical.startup.v1",
+        "sender_reachable": false,
+        "signer_reachable": false,
+        "status": "blocked"
+      },
+      "commitment": "confirmed",
+      "completed_at": 1790969893.8759053,
+      "completed_required_pairs": [],
+      "configured_pairs": 4,
+      "cycle_id": "4fff0765c7dc406b933b953ffb50800c",
+      "cycle_succeeded": false,
+      "degraded_reasons": [],
+      "detector_rejections": {},
+      "duplicate_candidates_dropped": 0,
+      "duplicate_snapshots_dropped": 0,
+      "duration_ms": 0.021,
+      "provider_failures": {},
+      "requests_attempted": 0,
+      "required_pairs": [
+        "sol-usdc-loop"
+      ],
+      "schema_version": "pr056.discovery-evidence.v1",
+      "snapshots_created": 0,
+      "started_at": 1790969893.8758843,
+      "terminal_reason": "blocked_missing_wallet_public_key"
+    }
+  },
+  "raw_sha256": {
+    "paper-shadow.stderr.bin": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "paper-shadow.stdout.bin": "a1476f5f4522ee9c002f5cf164e9e7d864568cab1fab7c3a3f8178104548851f"
+  },
+  "reason_code": "blocked_missing_wallet_public_key",
+  "started_at": "2026-10-02T19:38:12.474400+00:00",
+  "step": "paper-shadow"
+}

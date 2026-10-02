@@ -383,3 +383,6 @@ src/market/discovery.py
 src/strategy/market_graph_ingest.py
 scripts/shadow_market_graph_demo.py
 tests/test_shadow_market_data_aggregation.py
+src/strategy/exact_cpmm_capacity.py
+tests/test_exact_cpmm_capacity.py
+src/direct_venue/cpmm_math.py

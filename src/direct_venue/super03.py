@@ -15,13 +15,14 @@ import json
 import re
 from typing import Iterable, Mapping
 
+from src.direct_venue.cpmm_math import cpmm_exact_input_quote
 from src.direct_venue.mpr2617 import (
     CapabilityState,
     DirectRouteLeg,
     VenueCapability,
     VenueFamily,
 )
-from src.strategies.stable_peg.math import LiquidityBand, ceil_div, traverse_bands_exact
+from src.strategies.stable_peg.math import LiquidityBand, traverse_bands_exact
 
 SUPER03_SCHEMA = "super-03.venue-conformance.v1"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -180,17 +181,15 @@ class CpmmQuoteVector:
         _sha256(self.reference_vector_sha256, "reference_vector_sha256")
 
     def local_quote(self) -> tuple[int, int]:
-        pool_input = self.amount_in - self.input_transfer_fee
-        trade_fee = ceil_div(
-            pool_input * self.trade_fee_numerator, self.trade_fee_denominator
+        return cpmm_exact_input_quote(
+            amount_in=self.amount_in,
+            reserve_in=self.reserve_in,
+            reserve_out=self.reserve_out,
+            trade_fee_numerator=self.trade_fee_numerator,
+            trade_fee_denominator=self.trade_fee_denominator,
+            input_transfer_fee=self.input_transfer_fee,
+            output_transfer_fee=self.output_transfer_fee,
         )
-        swap_input = pool_input - trade_fee
-        if swap_input <= 0:
-            return 0, trade_fee
-        gross_out = (swap_input * self.reserve_out) // (self.reserve_in + swap_input)
-        if self.output_transfer_fee > gross_out:
-            raise Super03Error("output transfer fee exceeds gross output")
-        return gross_out - self.output_transfer_fee, trade_fee
 
 
 @dataclass(frozen=True, slots=True)
@@ -715,6 +714,7 @@ __all__ = [
     "VenueIdentityEvidence",
     "build_amount_bound_leg",
     "build_fixed_workload_benchmark",
+    "cpmm_exact_input_quote",
     "qualify_band_venue_offline",
     "qualify_cpmm_offline",
 ]

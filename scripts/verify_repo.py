@@ -145,6 +145,11 @@ MEGA_CONTEXT_WAVE3_COMMAND: Final[list[str]] = [
     "scripts/verify_mega_context_wave3.py",
 ]
 
+OCC_DURABLE_HOST_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_occ_durable_host.py",
+]
+
 MARKET_DATA_EVOLUTION_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_market_data_evolution.py",
@@ -314,6 +319,7 @@ def main() -> int:
     run(SP_Q01_PROTOCOL_ADMISSION_COMMAND)
     run(FAST_Q1_V3_COMMAND)
     run(MEGA_CONTEXT_WAVE3_COMMAND)
+    run(OCC_DURABLE_HOST_COMMAND)
     run(MARKET_DATA_EVOLUTION_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)

@@ -12,11 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 TOOL = ROOT / "tools" / "occ_automation"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
-if str(TOOL) not in sys.path:
-    sys.path.insert(0, str(TOOL))
 
-import qualification_adapter as qa
 from src import automation_cli_pr189
+from src import fast_q_automation as fastq
 
 CONFIG = TOOL / "config"
 
@@ -36,53 +34,65 @@ def verify() -> dict[str, object]:
     errors: list[str] = []
 
     parser = automation_cli_pr189._parser()
-    action = next(
+    command_action = next(
         item
         for item in parser._actions
         if getattr(item, "dest", None) == "command"
     )
-    if "qualify-and-report" not in action.choices:
-        errors.append("OCC_CURRENT_QUALIFICATION_ROUTE_MISSING")
+    for command in ("qualify-and-report", "automation-request"):
+        if command not in command_action.choices:
+            errors.append(f"OCC_REQUIRED_ROUTE_MISSING:{command}")
 
-    request = qa.validate_action_request(
+    explicit = fastq.validate_request(
         {
-            "schema_version": qa.ACTION_SCHEMA,
+            "schema_version": fastq.REQUEST_SCHEMA,
             "request_id": "verify",
-            "action": "qualification_audit",
-            "goal": "inspect only",
-            "source_refs": [],
-            "repeat": "once",
-            "duration_hours": None,
+            "idempotency_key": "verify",
+            "action": "qualify_and_report",
+            "text": None,
+            "inputs": {},
+            "proposal": {
+                "source": "laya",
+                "action": "transcribe_local_audio",
+            },
         }
     )
-    routed = qa.route_request(
-        request,
-        laya_proposal="pause_jobs",
-        laya_confidence=1.0,
-    )
-    if routed.selected_action != "qualification_audit":
+    if explicit["action"] != "qualify_and_report":
         errors.append("OCC_LAYA_CHANGED_EXPLICIT_ACTION")
-    if routed.permissions_granted_by_laya:
-        errors.append("OCC_LAYA_GRANTED_PERMISSION")
 
     paper = json.loads(
         (CONFIG / "paper_campaign.plan.json").read_text(encoding="utf-8")
     )
+    if paper.get("status") != "BLOCKED_NOT_STARTED":
+        errors.append("OCC_PAPER_PLAN_NOT_BLOCKED")
+    if paper.get("native_adapter_compatible") is not False:
+        errors.append("OCC_PAPER_PLAN_MARKED_EXECUTABLE")
     try:
-        qa.assert_paper_plan_not_executable(paper)
-    except qa.AdapterError as exc:
-        if str(exc) != "PAPER_PLAN_DESIGN_ONLY_DO_NOT_EXECUTE":
-            errors.append("OCC_PAPER_PLAN_WRONG_BLOCKER")
+        fastq.validate_request(paper)
+    except ValueError:
+        pass
     else:
-        errors.append("OCC_PAPER_PLAN_EXECUTABLE")
+        errors.append("OCC_PAPER_PLAN_ADMITTED_AS_ACTION")
 
     voice = json.loads(
         (CONFIG / "voice_tools.responses.json").read_text(encoding="utf-8")
     )
-    action_enum = voice[0]["parameters"]["properties"]["action"]["enum"]
-    forbidden = {"shell", "exec", "send_transaction", "send_bundle", "merge"}
+    action_enum = set(
+        voice[0]["parameters"]["properties"]["action"]["enum"]
+    )
+    forbidden = {
+        "shell",
+        "exec",
+        "send_transaction",
+        "send_bundle",
+        "merge",
+        "trade_live",
+        "sign",
+    }
     if forbidden.intersection(action_enum):
         errors.append("OCC_VOICE_TOOL_UNSAFE_ACTION")
+    if not action_enum.issubset(set(fastq.ACTION_IDS)):
+        errors.append("OCC_VOICE_ACTION_OUTSIDE_REVIEWED_REGISTRY")
 
     orchestration = json.loads(
         (CONFIG / "occ_orchestration.plan.json").read_text(encoding="utf-8")
@@ -119,19 +129,27 @@ def verify() -> dict[str, object]:
     if {"socket", "requests", "httpx", "aiohttp", "urllib"}.intersection(occ_imports):
         errors.append("OCC_LOCAL_NETWORK_IMPORT_PRESENT")
 
-    adapter_source = (TOOL / "qualification_adapter.py").read_text(
+    router_source = (ROOT / "src/fast_q_automation.py").read_text(
         encoding="utf-8"
     )
-    if "shell=True" in adapter_source:
-        errors.append("OCC_ADAPTER_SHELL_EXECUTION_PRESENT")
-    if "send_raw_transaction" in adapter_source or "sign_and_send" in adapter_source:
-        errors.append("OCC_ADAPTER_TRANSACTION_EXECUTION_PRESENT")
+    if "shell=True" in router_source or "os.system(" in router_source:
+        errors.append("OCC_ROUTER_ARBITRARY_SHELL_PRESENT")
+    if {"sign", "send_transaction", "send_bundle", "trade_live"}.intersection(
+        fastq.ACTION_IDS
+    ):
+        errors.append("OCC_ROUTER_UNSAFE_ACTION_REGISTERED")
+
+    current = fastq._owner_for(
+        "paper-shadow:blocked_missing_wallet_public_key"
+    )
+    if not current or current.get("patch_allowed") is not False:
+        errors.append("OCC_CURRENT_BLOCKER_NOT_FAIL_CLOSED")
 
     return {
-        "schema": "occ-automation.verification.v1",
+        "schema": "occ-automation.verification.v2",
         "ok": not errors,
         "errors": errors,
-        "qualification_route": "flashloan-checks qualify-and-report inspect",
+        "qualification_route": "flashloan-checks automation-request inspect",
         "laya_authority": False,
         "paper_campaign_executable": False,
         "asr_optional": True,

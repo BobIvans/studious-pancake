@@ -1,0 +1,15 @@
+{
+  "schema": "fast-q-automation.requirement-evidence-matrix.v1",
+  "rows": [
+    {"requirement":"fresh installed inspection before implementation","evidence":"FAST-Q1 run 37055812827","status":"CONFIRMED"},
+    {"requirement":"preserve canonical FAST-Q1 owner","owner":"src.qualification_report + src.automation_cli_pr189","status":"EXTEND"},
+    {"requirement":"strict versioned closed action router","owner":"src.fast_q_automation","status":"IMPLEMENTED"},
+    {"requirement":"model/Laya proposal advisory only","owner":"src.fast_q_automation","status":"IMPLEMENTED"},
+    {"requirement":"idempotent integrity-checked action receipts","owner":"src.fast_q_automation","status":"IMPLEMENTED"},
+    {"requirement":"one current blocker to bounded repair task","evidence":"paper-shadow:blocked_missing_wallet_public_key","status":"IMPLEMENTED_FAIL_CLOSED"},
+    {"requirement":"fixed focused validation argv only","owner":"src.fast_q_automation","status":"IMPLEMENTED"},
+    {"requirement":"receipt-derived state and RU status","owner":"src.fast_q_automation","status":"IMPLEMENTED"},
+    {"requirement":"OCC/content/ASR stay external to core","owner":"adapter contract only","status":"IMPLEMENTED"},
+    {"requirement":"no live/signer/sender/paid fallback","status":"PRESERVED"}
+  ]
+}

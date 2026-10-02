@@ -1,0 +1,25 @@
+{
+  "state": {
+    "request": "Проверь блокеры квалификации бота и подготовь отчёт. Не запускай сделки.",
+    "source": "explicit_user_command",
+    "context": "Only offline evidence inspection is currently wired. Market campaign is not admitted."
+  },
+  "model": "multilingual",
+  "questions": {
+    "proposed_route": {
+      "type": "choice",
+      "instructions": "Select a proposed workflow. This answer never grants execution permissions.",
+      "criteria": {
+        "qualify_and_report": "Run the current installed offline qualification inspection",
+        "inspect_current_blocker": "Read the current persisted qualification blocker",
+        "prepare_repair_task": "Prepare bounded fail-closed repair metadata",
+        "run_focused_validation": "Run only a pre-registered focused validation set",
+        "update_receipt_state": "Derive state only from verified receipts",
+        "ingest_local_content": "Propose external local intake; core does not execute it",
+        "search_local_corpus": "Propose external local search; core does not execute it",
+        "transcribe_local_audio": "Propose external optional ASR; core does not execute it",
+        "needs_context": "Request missing facts or unsupported action"
+      }
+    }
+  }
+}

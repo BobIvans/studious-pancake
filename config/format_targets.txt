@@ -371,3 +371,10 @@ scripts/verify_occ_durable_host.py
 tests/test_occ_durable_host.py
 src/strategy/arbitrage_graph.py
 tests/test_shadow_arbitrage_graph.py
+
+src/fast_q_automation.py
+scripts/verify_fast_q_automation.py
+tests/test_fast_q_automation.py
+scripts/verify_occ_automation.py
+tools/occ_automation/occ_local.py
+tools/occ_automation/asr_cpu_experiment.py

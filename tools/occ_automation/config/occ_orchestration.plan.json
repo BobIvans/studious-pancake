@@ -1,0 +1,47 @@
+{
+  "schema_version": "occ-orchestration-proposal.v1",
+  "status": "DESIGN_NOT_DEPLOYED",
+  "warning": "Custom OCC design, not a native Laya request or scheduling endpoint.",
+  "timezone": "Europe/Riga",
+  "deployment": {
+    "local_intake_code_included": true,
+    "installed_on_user_pc": false,
+    "voice_backend_deployed": false,
+    "market_runtime_deployed": false
+  },
+  "intake": {
+    "period_seconds": 3600,
+    "max_new_items": 8,
+    "old_project_sample_count": 1,
+    "content_is_untrusted_data": true
+  },
+  "queue": {
+    "target_catalog_capacity": 1000,
+    "starting_workers": 1,
+    "maximum_proposed_workers": 2,
+    "canonical_owner": "reuse_existing_occ_executor_and_repository_owners",
+    "max_attempts_per_input": 2,
+    "auto_merge": false,
+    "auto_publish_private_material": false
+  },
+  "budget": {
+    "paid_api_enabled": false,
+    "daily_usd_cap": 0,
+    "monthly_usd_cap": 0,
+    "on_missing_price_or_budget": "BLOCK"
+  },
+  "permissions": {
+    "read_explicit_project_sources": true,
+    "local_intake_metadata_reports": true,
+    "propose_docs_and_code": true,
+    "arbitrary_shell": false,
+    "automatic_installation": false,
+    "automatic_push": false,
+    "automatic_merge": false,
+    "signing": false,
+    "transactions": false,
+    "wallet_credentials": false,
+    "automatic_capital_increase": false,
+    "modify_capability_or_release_gates": false
+  }
+}

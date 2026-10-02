@@ -1,0 +1,22 @@
+{
+  "schema_version": "fast-q2.action-registry.v1",
+  "actions": [
+    {"id": "qualify_and_report", "kind": "installed_offline_inspection", "external_only": false},
+    {"id": "inspect_current_blocker", "kind": "receipt_read", "external_only": false},
+    {"id": "prepare_repair_task", "kind": "bounded_repair_task", "external_only": false},
+    {"id": "run_focused_validation", "kind": "fixed_validation", "external_only": false},
+    {"id": "update_receipt_state", "kind": "receipt_state", "external_only": false},
+    {"id": "ingest_local_content", "kind": "external_adapter_contract", "external_only": true},
+    {"id": "search_local_corpus", "kind": "external_adapter_contract", "external_only": true},
+    {"id": "transcribe_local_audio", "kind": "external_adapter_contract", "external_only": true}
+  ],
+  "forbidden_authorities": [
+    "arbitrary_shell",
+    "model_supplied_path_root",
+    "credentials",
+    "signer",
+    "sender",
+    "live_trading",
+    "paid_api_fallback"
+  ]
+}

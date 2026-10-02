@@ -1,0 +1,20 @@
+{
+  "schema": "fast-q-automation.baseline.v1",
+  "base_main_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "probe_commit_sha": "540cab87df3b6017b26b18d389673b70f94768a0",
+  "probe_workflow_run_id": 37055812827,
+  "probe_result": {
+    "domain_verdict": "BLOCKED",
+    "first_blocker": "paper-shadow:blocked_missing_wallet_public_key",
+    "sender_free_pass": false,
+    "transactions_sent": 0
+  },
+  "reconciliation": {
+    "pr_547": "closed_unmerged_historical_input",
+    "pr_552": "merged_canonical_fast_q1_v3",
+    "pr_544": "merged_after_552_no_fast_q1_owner_changes"
+  },
+  "disposition": "EXTEND_EXISTING",
+  "live_authorized": false,
+  "paid_api_fallback": false
+}

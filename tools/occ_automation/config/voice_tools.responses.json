@@ -1,0 +1,58 @@
+[
+  {
+    "type": "function",
+    "name": "occ_propose_job",
+    "description": "Propose one registered FAST-Q/OCC action for deterministic server-side validation; no arbitrary shell, transaction, signer, live trade, or merge.",
+    "strict": true,
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": [
+            "qualify_and_report",
+            "inspect_current_blocker",
+            "prepare_repair_task",
+            "run_focused_validation",
+            "update_receipt_state",
+            "ingest_local_content",
+            "search_local_corpus",
+            "transcribe_local_audio"
+          ]
+        },
+        "goal": {
+          "type": "string"
+        },
+        "source_refs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "repeat": {
+          "type": "string",
+          "enum": [
+            "once",
+            "hourly"
+          ]
+        },
+        "duration_hours": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 1,
+          "maximum": 24
+        }
+      },
+      "required": [
+        "action",
+        "goal",
+        "source_refs",
+        "repeat",
+        "duration_hours"
+      ],
+      "additionalProperties": false
+    }
+  }
+]

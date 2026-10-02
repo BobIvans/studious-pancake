@@ -1,0 +1,32 @@
+{
+  "schema": "occ-automation.test-receipts.v1",
+  "local_pre_push": {
+    "occ_local_tests": {
+      "passed": 20,
+      "failed": 0
+    },
+    "asr_tests": {
+      "passed": 3,
+      "failed": 0
+    },
+    "total": 33,
+    "py_compile": true,
+    "fast_q_occ_boundary_tests": {
+      "passed": 10,
+      "failed": 0
+    }
+  },
+  "github_exact_head": "PENDING_UNTIL_PUBLISHED_HEAD",
+  "claims": {
+    "laya_inference_executed": false,
+    "asr_model_weights_downloaded": false,
+    "market_campaign_executed": false,
+    "transactions_sent": 0,
+    "qualified": false,
+    "live_authorized": false
+  },
+  "notes": [
+    "Local 33-test receipt predates final GitHub reconciliation; exact-head GitHub CI is merge authority.",
+    "Boundary tests reuse src.fast_q_automation; no second qualification router exists."
+  ]
+}

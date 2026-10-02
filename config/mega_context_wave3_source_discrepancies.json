@@ -1,0 +1,1 @@
+{"schema":"mega-context-wave3-discrepancies.v1","baseline_markdown_count":95,"baseline_json_count":94,"baseline_json_missing_id":54,"authoritative_function":"fetch_github_pr_metadata()","policy":"Markdown 95-point enumeration is authoritative; discrepancy preserved and not silently repaired in source inputs."}

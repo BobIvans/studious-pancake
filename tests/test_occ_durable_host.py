@@ -94,20 +94,29 @@ def test_library_is_append_only_and_duplicate_sync_is_noop(tmp_path: Path) -> No
     assert duplicate["duplicate"] is True
     assert duplicate["event_seq"] == first["event_seq"] == 1
     assert second["event_seq"] == 2
-    assert library.latest(
-        namespace="local", source_id="chat", allowed_namespaces={"local"}
-    ).version_sha256 == second["version_sha256"]
-    assert library.get_version(
-        namespace="local",
-        source_id="chat",
-        version_sha256=first["version_sha256"],
-        allowed_namespaces={"local"},
-    ).version_sha256 == first["version_sha256"]
-    assert len(
-        library.history(
+    assert (
+        library.latest(
             namespace="local", source_id="chat", allowed_namespaces={"local"}
+        ).version_sha256
+        == second["version_sha256"]
+    )
+    assert (
+        library.get_version(
+            namespace="local",
+            source_id="chat",
+            version_sha256=first["version_sha256"],
+            allowed_namespaces={"local"},
+        ).version_sha256
+        == first["version_sha256"]
+    )
+    assert (
+        len(
+            library.history(
+                namespace="local", source_id="chat", allowed_namespaces={"local"}
+            )
         )
-    ) == 2
+        == 2
+    )
 
 
 def test_namespace_is_denied_before_content_lookup(tmp_path: Path) -> None:

@@ -3,6 +3,7 @@
 This is a content/provenance owner only.  It does not schedule jobs, execute
 commands, access the network, sign transactions, or grant live authority.
 """
+
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -79,8 +80,7 @@ class OCCDurableLibrary:
 
     def _initialize(self) -> None:
         with self._connect() as connection:
-            connection.executescript(
-                """
+            connection.executescript("""
                 CREATE TABLE IF NOT EXISTS source_versions (
                     namespace TEXT NOT NULL,
                     source_id TEXT NOT NULL,
@@ -113,8 +113,7 @@ class OCCDurableLibrary:
                         REFERENCES source_versions(namespace, source_id, version_sha256)
                         ON DELETE RESTRICT
                 );
-                """
-            )
+                """)
 
     @staticmethod
     def _authorize(namespace: object, allowed_namespaces: Collection[str]) -> str:

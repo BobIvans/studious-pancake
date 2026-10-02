@@ -4,6 +4,7 @@
 faster-whisper is imported only when a real operator-run experiment is requested.
 It is not a bot runtime dependency and CI uses injected test doubles only.
 """
+
 from __future__ import annotations
 
 import argparse

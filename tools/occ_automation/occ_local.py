@@ -4,6 +4,7 @@
 No network, shell, model, wallet, signer, transaction, or release-authority calls.
 Only files explicitly placed in workspace/inbox and an optional --repo are read.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -72,9 +73,7 @@ def excluded(path: Path) -> bool:
     except OSError:
         return True
     reparse = getattr(stat, "FILE_ATTRIBUTE_REPARSE_POINT", 1024)
-    return path.is_symlink() or bool(
-        getattr(st, "st_file_attributes", 0) & reparse
-    )
+    return path.is_symlink() or bool(getattr(st, "st_file_attributes", 0) & reparse)
 
 
 def enumerate_files(root: Path) -> tuple[list[Path], bool]:
@@ -82,9 +81,7 @@ def enumerate_files(root: Path) -> tuple[list[Path], bool]:
     seen = 0
     for current, dirs, names in os.walk(root, followlinks=False):
         dirs[:] = sorted(
-            d
-            for d in dirs
-            if d not in SKIP_DIRS and not excluded(Path(current) / d)
+            d for d in dirs if d not in SKIP_DIRS and not excluded(Path(current) / d)
         )
         for name in sorted(names):
             seen += 1
@@ -127,10 +124,7 @@ def text_from_file(path: Path, data: bytes) -> tuple[str | None, str]:
                     )
                 }
                 body = "\n".join(
-                    "".join(
-                        item.text or ""
-                        for item in paragraph.findall(".//w:t", ns)
-                    )
+                    "".join(item.text or "" for item in paragraph.findall(".//w:t", ns))
                     for paragraph in tree.findall(".//w:p", ns)
                 )
                 return body, "TEXT_EXTRACTED_MAIN_BODY_ONLY"
@@ -256,8 +250,7 @@ def run_once(workspace: Path, repo: Path | None = None) -> dict[str, object]:
         old = {
             row[0]: row
             for row in db.execute(
-                "SELECT key,source,relpath,mtime,size,sha,observed,record "
-                "FROM items"
+                "SELECT key,source,relpath,mtime,size,sha,observed,record " "FROM items"
             )
         }
         candidates: list[tuple[int, int, str, str, Path, Path]] = []
@@ -339,9 +332,9 @@ def run_once(workspace: Path, repo: Path | None = None) -> dict[str, object]:
                 )
         random_review = None
         if old:
-            chosen = random.Random(
-                datetime.now(UTC).strftime("%Y-%m-%dT%H")
-            ).choice(sorted(old))
+            chosen = random.Random(datetime.now(UTC).strftime("%Y-%m-%dT%H")).choice(
+                sorted(old)
+            )
             row = old[chosen]
             root = dict(roots).get(row[1])
             path = Path(chosen)
@@ -409,9 +402,7 @@ def main(argv: list[str] | None = None) -> int:
             json.dumps(
                 {
                     "status": result["status"],
-                    "new_or_changed": len(
-                        result.get("new_or_changed", [])
-                    ),
+                    "new_or_changed": len(result.get("new_or_changed", [])),
                     "market_campaign_executed": False,
                 },
                 ensure_ascii=False,

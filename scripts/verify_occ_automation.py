@@ -46,9 +46,7 @@ def verify() -> dict[str, object]:
 
     parser = automation_cli_pr189._parser()
     command_action = next(
-        item
-        for item in parser._actions
-        if getattr(item, "dest", None) == "command"
+        item for item in parser._actions if getattr(item, "dest", None) == "command"
     )
     if "qualify-and-report" not in command_action.choices:
         errors.append("OCC_CURRENT_QUALIFICATION_ROUTE_MISSING")
@@ -89,9 +87,7 @@ def verify() -> dict[str, object]:
     voice = json.loads(
         (CONFIG / "voice_tools.responses.json").read_text(encoding="utf-8")
     )
-    action_enum = set(
-        voice[0]["parameters"]["properties"]["action"]["enum"]
-    )
+    action_enum = set(voice[0]["parameters"]["properties"]["action"]["enum"])
     if action_enum != set(fastq.ACTION_IDS):
         errors.append("OCC_VOICE_REGISTRY_DRIFT")
     forbidden = {
@@ -108,9 +104,7 @@ def verify() -> dict[str, object]:
     laya = json.loads(
         (CONFIG / "laya_request.example.json").read_text(encoding="utf-8")
     )
-    laya_actions = set(
-        laya["questions"]["proposed_route"]["criteria"]
-    )
+    laya_actions = set(laya["questions"]["proposed_route"]["criteria"])
     if not set(fastq.ACTION_IDS).issubset(laya_actions):
         errors.append("OCC_LAYA_REGISTRY_INCOMPLETE")
 
@@ -159,20 +153,13 @@ def verify() -> dict[str, object]:
     if "faster_whisper" in asr_top:
         errors.append("OCC_ASR_HEAVY_IMPORT_AT_MODULE_LOAD")
 
-    fastq_source = (ROOT / "src/fast_q_automation.py").read_text(
-        encoding="utf-8"
-    )
+    fastq_source = (ROOT / "src/fast_q_automation.py").read_text(encoding="utf-8")
     if "shell=True" in fastq_source or "os.system(" in fastq_source:
         errors.append("OCC_FAST_Q_ARBITRARY_SHELL_PRESENT")
-    if (
-        "send_raw_transaction" in fastq_source
-        or "sign_and_send" in fastq_source
-    ):
+    if "send_raw_transaction" in fastq_source or "sign_and_send" in fastq_source:
         errors.append("OCC_FAST_Q_TRANSACTION_EXECUTION_PRESENT")
 
-    current = fastq._owner_for(
-        "paper-shadow:blocked_missing_wallet_public_key"
-    )
+    current = fastq._owner_for("paper-shadow:blocked_missing_wallet_public_key")
     if not current or current.get("patch_allowed") is not False:
         errors.append("OCC_CURRENT_BLOCKER_NOT_FAIL_CLOSED")
 

@@ -277,15 +277,23 @@ def validate_request(raw: object) -> dict[str, Any]:
     if not isinstance(raw, dict):
         raise ValueError("REQUEST_OBJECT_REQUIRED")
     if raw.get("schema_version") == LEGACY_REQUEST_SCHEMA:
+        from src.occ_memory_qualification_bridge import validate_request as validate_occ
+
+        if set(raw) == LEGACY_FIELDS | {"action_id"}:
+            validate_occ(raw)
+            raise ValueError("OCC_OPERATOR_PROFILE_REQUIRED_USE_MEMORY_BRIDGE")
         if set(raw) != LEGACY_FIELDS:
             raise ValueError("LEGACY_REQUEST_FIELDS_INVALID")
+        # Historical archive envelopes omitted action_id. Reuse the canonical
+        # qualification intent validator; this is not a generic action schema.
+        validate_occ({**raw, "action_id": "qualify_and_report"})
         request_id = _identifier(raw.get("request_id"), "REQUEST_ID_INVALID")
         raw = {
             "schema_version": REQUEST_SCHEMA,
             "request_id": request_id,
             "idempotency_key": request_id,
-            "action": None,
-            "text": raw.get("text"),
+            "action": "qualify_and_report",
+            "text": None,
             "inputs": {},
             "proposal": None,
         }
@@ -387,19 +395,57 @@ def _verified_action_receipt(path: Path) -> dict[str, Any]:
     unsigned = {key: value for key, value in payload.items() if key != "receipt_sha256"}
     if claimed != _digest(unsigned):
         raise ValueError("RECEIPT_DIGEST_MISMATCH")
+    action = payload.get("action")
+    if (
+        not isinstance(action, str)
+        or action not in ACTION_IDS
+        or payload.get("evidence_kind") != ACTION_REGISTRY[action]["evidence_kind"]
+    ):
+        raise ValueError("RECEIPT_ACTION_BINDING_INVALID")
+    result = payload.get("result")
+    if (
+        not isinstance(result, dict)
+        or payload.get("output_sha256") != _digest(result)
+        or payload.get("status") != result.get("status")
+    ):
+        raise ValueError("RECEIPT_RESULT_BINDING_INVALID")
+    if (
+        payload.get("qualified") is not False
+        or payload.get("live_authorized") is not False
+        or payload.get("market_run_performed") is not False
+        or payload.get("paid_api_fallback") is not False
+        or type(payload.get("transactions_sent")) is not int
+        or payload["transactions_sent"] != 0
+    ):
+        raise ValueError("RECEIPT_EFFECT_BOUNDARY_INVALID")
     return payload
 
 
 def _qualification_receipt(
     output_root: Path, request_id: str, expected_sha: str
 ) -> dict[str, Any]:
+    from src import qualification_report as owner
+
     run = output_root / "qualification" / request_id
+    if run.is_symlink():
+        raise ValueError("CHILD_RUN_SYMLINK_BLOCKED")
     receipt_path = run / "qualification_receipt.json"
     manifest_path = run / "run_manifest.json"
     receipt = _read_json(receipt_path)
     manifest = _read_json(manifest_path)
     if not isinstance(receipt, dict) or not isinstance(manifest, dict):
         raise ValueError("CHILD_RECEIPT_INVALID")
+    if (
+        receipt.get("schema_version") != owner.SCHEMA
+        or manifest.get("schema_version") != owner.MANIFEST_SCHEMA
+        or receipt.get("action_id") != owner.ACTION_ID
+        or manifest.get("action_id") != owner.ACTION_ID
+        or receipt.get("profile") != owner.PROFILE
+        or not isinstance(receipt.get("input_digest"), str)
+        or re.fullmatch(r"[0-9a-f]{64}", receipt["input_digest"]) is None
+        or receipt["input_digest"] != manifest.get("input_digest")
+    ):
+        raise ValueError("CHILD_CONTRACT_BINDING_INVALID")
     if receipt.get("git_sha") != expected_sha:
         raise ValueError("CHILD_RECEIPT_STALE_SHA")
     if receipt.get("request_id") != request_id:
@@ -413,7 +459,12 @@ def _qualification_receipt(
         raise ValueError("QUALIFICATION_AUTHORITY_ESCALATION")
     if receipt.get("live_authorized") is not False:
         raise ValueError("LIVE_AUTHORITY_ESCALATION")
-    if receipt.get("transactions_sent") != 0:
+    if receipt.get("release_authorized") is not False:
+        raise ValueError("RELEASE_AUTHORITY_ESCALATION")
+    if (
+        type(receipt.get("transactions_sent")) is not int
+        or receipt["transactions_sent"] != 0
+    ):
         raise ValueError("TRANSACTION_EFFECT_DETECTED")
     blockers = receipt.get("blockers")
     if not isinstance(blockers, list) or not all(
@@ -455,10 +506,15 @@ def _execute_qualification(
         profile="offline_sender_free",
         timeout_seconds=timeout,
     )
-    if child.get("git_sha") != expected_sha:
-        raise ValueError("CHILD_RECEIPT_STALE_SHA")
-    if child.get("live_authorized") is not False or child.get("transactions_sent") != 0:
-        raise ValueError("CHILD_EFFECT_BOUNDARY_INVALID")
+    persisted = _qualification_receipt(
+        output_root, str(request["request_id"]), expected_sha
+    )
+    # The owner's replay response changes only this transport flag.
+    if {k: v for k, v in child.items() if k != "reused"} != {
+        k: v for k, v in persisted.items() if k != "reused"
+    }:
+        raise ValueError("CHILD_RETURNED_RECEIPT_MISMATCH")
+    child = persisted
     receipt_path = (
         output_root
         / "qualification"
@@ -642,21 +698,53 @@ def _update_state(
     source = _verified_action_receipt(
         output_root / "actions" / source_key / "receipt.json"
     )
+    if source.get("source_commit") != expected_sha:
+        raise ValueError("STATE_SOURCE_RECEIPT_STALE_SHA")
+    if source.get("idempotency_key") != source_key:
+        raise ValueError("STATE_SOURCE_RECEIPT_ID_MISMATCH")
     child = _qualification_receipt(output_root, child_id, expected_sha)
     source_status = str(source["status"])
+    validation_passed = False
+    if source.get("action") == "run_focused_validation":
+        result = source["result"]
+        validation_set = result.get("validation_set")
+        commands = (
+            FIXED_VALIDATIONS.get(validation_set)
+            if isinstance(validation_set, str)
+            else None
+        )
+        records = result.get("tests")
+        if (
+            commands is None
+            or not isinstance(records, list)
+            or len(records) != len(commands)
+            or any(
+                not isinstance(record, dict)
+                or record.get("argv") != [Path(argv[0]).name, *argv[1:]]
+                or type(record.get("exit_code")) is not int
+                for record, argv in zip(records, commands)
+            )
+        ):
+            raise ValueError("STATE_VALIDATION_EVIDENCE_INVALID")
+        validation_passed = all(record["exit_code"] == 0 for record in records)
+        if (source_status == "TEST_PASSED") != validation_passed:
+            raise ValueError("STATE_VALIDATION_STATUS_CONFLICT")
     state = {
         "schema_version": STATE_SCHEMA,
         "source_commit": expected_sha,
         "derived_from_receipt_sha256": source["receipt_sha256"],
+        "qualification_request_id": child_id,
+        "qualification_receipt_sha256": hashlib.sha256(
+            (
+                output_root / "qualification" / child_id / "qualification_receipt.json"
+            ).read_bytes()
+        ).hexdigest(),
         "status_ladder": {
             "planned": "CONFIRMED",
-            "implemented": "CONFIRMED",
-            "test_passed": (
-                "CONFIRMED"
-                if source.get("action") == "run_focused_validation"
-                and source_status == "TEST_PASSED"
-                else "NOT_EVIDENCED"
+            "implemented": (
+                "NOT_EVIDENCED" if source["action"] in EXTERNAL_ACTIONS else "CONFIRMED"
             ),
+            "test_passed": ("CONFIRMED" if validation_passed else "NOT_EVIDENCED"),
             "inspected": "CONFIRMED",
             "qualified": (
                 "CONFIRMED" if child.get("qualified") is True else "NOT_QUALIFIED"

@@ -1,8 +1,8 @@
 {
-  "schema": "fast-q1-v3.baseline.v2",
+  "schema": "fast-q1-v3.baseline.v1",
   "observed_main_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
   "observed_at": "2026-10-02T22:29:00+03:00",
-  "selected_goal": "MEGA FAST-Q deterministic automation",
+  "selected_goal": "FAST-Q1",
   "disposition": "EXTEND_EXISTING",
   "canonical_entrypoints": {
     "bot": "flashloan-bot -> src.cli_pr189:main",
@@ -22,11 +22,6 @@
     "pr_544": {
       "state": "merged_after_552",
       "merge_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
-      "changed_paths": [
-        "src/capabilities.py",
-        "tests/runtime/test_capability_boolean_contract.py",
-        "docs/automation/STRICT_CAPABILITY_BOOLEANS_RU.md"
-      ],
       "fast_q1_owner_files_changed": false
     }
   },
@@ -39,7 +34,7 @@
     "sender_free_pass": false,
     "transactions_sent": 0
   },
-  "probe_rule": "This baseline-only commit intentionally triggers a fresh pull-request installed smoke before implementation changes.",
+  "probe_rule": "Baseline metadata only; existing FAST-Q1 verifier and installed smoke remain authoritative.",
   "preserved_owners": [
     "src.cli_pr189",
     "src.cli_entrypoint",

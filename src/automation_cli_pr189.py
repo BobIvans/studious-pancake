@@ -381,15 +381,12 @@ def _evaluate(args: argparse.Namespace) -> CommandResult:
         )
         status = str(receipt["status"])
         action_result = receipt.get("result", {})
-        ready = (
-            status in {"NO_CURRENT_BLOCKER", "TEST_PASSED", "STATE_UPDATED"}
-            or (
-                status == "INSPECTED"
-                and bool(
-                    action_result.get("sender_free_pass")
-                    if isinstance(action_result, Mapping)
-                    else False
-                )
+        ready = status in {"NO_CURRENT_BLOCKER", "TEST_PASSED", "STATE_UPDATED"} or (
+            status == "INSPECTED"
+            and bool(
+                action_result.get("sender_free_pass")
+                if isinstance(action_result, Mapping)
+                else False
             )
         )
         reasons: tuple[str, ...] = ()

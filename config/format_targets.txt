@@ -365,6 +365,11 @@ scripts/verify_fast_q1_smoke.py
 tests/test_fast_q1_qualification_report.py
 scripts/run_qualification_task.py
 tests/test_qualification_task_adapter.py
+src/occ_durable_library.py
+scripts/run_occ_native_host.py
+scripts/verify_occ_durable_host.py
+tests/test_occ_durable_host.py
+
 src/fast_q_automation.py
 scripts/verify_fast_q_automation.py
 tests/test_fast_q_automation.py

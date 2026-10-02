@@ -351,3 +351,6 @@ src/research/pr358_integrated.py
 scripts/verify_pr358.py
 scripts/verify_pr358_replication.py
 tests/research/test_pr358_market_relation_exchange.py
+src/research/pr359_wave15_institution.py
+scripts/verify_pr359.py
+tests/research/test_pr359_wave15_market_institution.py

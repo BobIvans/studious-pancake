@@ -1,0 +1,19 @@
+{
+  "schema": "occ-mega-pr-source-provenance.v2",
+  "source_bundle": "STUDIOUS_PANCAKE_OCC_LAYA_MEGA_PR_ONE_SHOT_2026-10-02",
+  "imported": {
+    "local_intake": true,
+    "local_tests": true,
+    "optional_asr": true,
+    "laya_advisory_schema": true,
+    "voice_tool_schema": true,
+    "orchestration_design": true,
+    "paper_campaign_design": true,
+    "historical_qualification_reference": true
+  },
+  "excluded": {
+    "binary_reference_docx": "not required for runtime implementation; concepts summarized in text docs",
+    "unrelated_private_material": "never publish personal/legal/medical content"
+  },
+  "authority_rule": "current repository code and exact-head CI override historical bundle references"
+}

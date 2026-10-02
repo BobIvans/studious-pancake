@@ -1,0 +1,44 @@
+{
+  "schema_version": "occ-paper-campaign-proposal.v1",
+  "status": "BLOCKED_NOT_STARTED",
+  "native_adapter_compatible": false,
+  "warning": "Design-only future campaign. Do not pass to qualification adapter.",
+  "goal": "Test reproducible net edge after modeled costs; negative results are valid.",
+  "repository": "BobIvans/studious-pancake",
+  "campaign_id": "paper-24h-proposal-001",
+  "campaign_duration_seconds": 86400,
+  "checkpoint_interval_seconds": 3600,
+  "singleton_campaign": true,
+  "execution": {
+    "mode": "SENDER_FREE_OBSERVATION_AND_REPLAY",
+    "implemented_in_this_package": false,
+    "provider_allowlist": [],
+    "wallet_access": false,
+    "signer_access": false,
+    "send_transactions": false,
+    "send_bundles": false,
+    "auto_live_promotion": false,
+    "marginfi_policy": "PRESERVE_PAUSED"
+  },
+  "admission_requirements": [
+    "canonical_paper_vertical_wired",
+    "exact_source_and_installed_package_verified",
+    "existing_source_rights_and_capability_gates_pass",
+    "provider_quota_and_budget_approved",
+    "data_capture_and_point_in_time_consistency_verified",
+    "cost_model_units_and_no_double_counting_reviewed",
+    "heldout_protocol_frozen",
+    "stop_controls_verified"
+  ],
+  "threshold_policy": "Freeze justified thresholds before holdout evaluation; missing required settings block admission.",
+  "outcomes": [
+    "BLOCKED",
+    "NO_EVIDENCE",
+    "NEGATIVE_EDGE",
+    "INCONCLUSIVE",
+    "POSITIVE_PAPER_EDGE_REQUIRES_REPLICATION"
+  ],
+  "profitability_proven": false,
+  "realized_profit": null,
+  "market_campaign_executed": false
+}

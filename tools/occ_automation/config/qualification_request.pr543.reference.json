@@ -1,0 +1,10 @@
+{
+  "schema_version": "qualification-task.v1",
+  "task_id": "qualification-audit-pr543-example-001",
+  "action": "qualification.audit",
+  "source_commit": "8132f300f5066b07b75a29a0c1457b18750788f0",
+  "release_id": "local-audit-pr543-example-001",
+  "repeat": 2,
+  "status": "HISTORICAL_REFERENCE_ONLY",
+  "current_runtime_contract": "flashloan-checks qualify-and-report inspect"
+}

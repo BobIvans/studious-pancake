@@ -1,0 +1,28 @@
+name: OCC local automation
+
+on:
+  pull_request:
+    paths:
+      - "tools/occ_automation/**"
+      - "docs/occ/**"
+      - "release_artifacts/occ_automation/**"
+      - "release_artifacts/fast_q1_v3/BASELINE.json"
+      - "scripts/verify_occ_automation.py"
+      - "scripts/verify_repo.py"
+      - ".github/workflows/occ-local-automation.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Compile isolated tooling
+        run: python -m compileall -q tools/occ_automation scripts/verify_occ_automation.py
+      - name: OCC regression tests
+        run: python -m unittest discover -s tools/occ_automation -p "test_*.py" -v
+      - name: Verify authority boundary
+        run: python scripts/verify_occ_automation.py

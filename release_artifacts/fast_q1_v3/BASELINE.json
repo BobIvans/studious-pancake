@@ -1,1 +1,56 @@
-{"schema":"fast-q1-v3.baseline.v1","observed_main_sha":"2a1eb6ee8003a2bb4ceb254a420c7e979fa69cfd","selected_goal":"FAST-Q1","disposition":"EXTEND_EXISTING","canonical_entrypoints":{"bot":"flashloan-bot -> src.cli_pr189:main","checks":"flashloan-checks -> src.automation_cli_pr189:main"},"reused_drafts":{"545":"conditional sender-free paper-shadow after preflight","547":"clean checkout/source binding, idempotency, raw artifacts and replay integrity"},"preserved_owners":["src.cli_pr189","src.cli_entrypoint","src.automation_cli_pr189","src.paper_shadow.runner","src.runtime.command_capabilities"],"hard_boundaries":{"arbitrary_shell":false,"inherited_credentials":false,"paid_api_fallback":false,"signer":false,"sender":false,"live":false,"automatic_merge":false}}
+{
+  "schema": "fast-q1-v3.baseline.v1",
+  "observed_main_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "observed_at": "2026-10-02T22:29:00+03:00",
+  "selected_goal": "FAST-Q1",
+  "disposition": "EXTEND_EXISTING",
+  "canonical_entrypoints": {
+    "bot": "flashloan-bot -> src.cli_pr189:main",
+    "checks": "flashloan-checks -> src.automation_cli_pr189:main"
+  },
+  "reconciliation": {
+    "pr_547": {
+      "state": "closed_unmerged",
+      "head_sha": "08cdbf67653615c8e5a71dfe0dcf8b6cacad1d99",
+      "reuse": "receipt/idempotency discipline only"
+    },
+    "pr_552": {
+      "state": "merged",
+      "head_sha": "443a79b5a0b5feaa8be8c765a9b8031fca443632",
+      "reuse": "canonical FAST-Q1 v3 implementation"
+    },
+    "pr_544": {
+      "state": "merged_after_552",
+      "merge_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+      "fast_q1_owner_files_changed": false
+    }
+  },
+  "prior_installed_smoke_evidence": {
+    "source_sha": "443a79b5a0b5feaa8be8c765a9b8031fca443632",
+    "workflow_run_id": 37045628664,
+    "conclusion": "success",
+    "domain_verdict": "BLOCKED",
+    "first_blocker": "paper-shadow:blocked_missing_wallet_public_key",
+    "sender_free_pass": false,
+    "transactions_sent": 0
+  },
+  "probe_rule": "Baseline metadata only; existing FAST-Q1 verifier and installed smoke remain authoritative.",
+  "preserved_owners": [
+    "src.cli_pr189",
+    "src.cli_entrypoint",
+    "src.automation_cli_pr189",
+    "src.qualification_report",
+    "src.paper_shadow.runner",
+    "src.runtime_discovery_coordinator"
+  ],
+  "hard_boundaries": {
+    "arbitrary_shell": false,
+    "inherited_credentials": false,
+    "paid_api_fallback": false,
+    "signer": false,
+    "sender": false,
+    "live": false,
+    "transactions_sent": 0
+  },
+  "integration_goal": "MEGA FAST-Q deterministic automation"
+}

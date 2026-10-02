@@ -33,7 +33,9 @@ def _parser() -> argparse.ArgumentParser:
     report.add_argument("--output-root", required=True, type=Path)
     report.add_argument("--request-id", required=True)
     report.add_argument("--expected-sha", required=True)
-    report.add_argument("--profile", choices=("offline_sender_free",), default="offline_sender_free")
+    report.add_argument(
+        "--profile", choices=("offline_sender_free",), default="offline_sender_free"
+    )
     report.add_argument("--timeout-seconds", type=int, default=30)
 
     paper = commands.add_parser("paper-vertical")

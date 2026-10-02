@@ -1,0 +1,29 @@
+{
+  "schema_version": "occ.coverage-manifest.v1",
+  "base_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "target_repo": "BobIvans/studious-pancake",
+  "source_bundle_target_repo": "BobIvans/scaling-chrome-extensions",
+  "owner_decision": "ADAPT_TO_CURRENT_STUDIOUS_OWNERS_DO_NOT_COPY_FOREIGN_PATHS",
+  "rows": [
+    {"candidate_id":"CAND-0001","slice":"contract","disposition":"GAP","owner":"src/occ_durable_library.py + scripts/run_occ_native_host.py","evidence":"typed source/version and host request contracts added"},
+    {"candidate_id":"CAND-0002","slice":"input","disposition":"GAP","owner":"scripts/run_occ_native_host.py","evidence":"strict exact-field request plus bounded native frame"},
+    {"candidate_id":"CAND-0003","slice":"behavior","disposition":"GAP","owner":"src/occ_durable_library.py + scripts/run_occ_native_host.py","evidence":"append-only sync, current-version dispatch and delegated audit"},
+    {"candidate_id":"CAND-0004","slice":"failure","disposition":"GAP","owner":"scripts/run_occ_native_host.py","evidence":"unknown action/stale context/tamper/incomplete job fail closed"},
+    {"candidate_id":"CAND-0005","slice":"recovery","disposition":"GAP","owner":"scripts/run_occ_native_host.py","evidence":"historical replay and NEEDS_RECONCILIATION instead of blind retry"},
+    {"candidate_id":"CAND-0006","slice":"scope","disposition":"COVERED","owner":"src/mega_context_wave3.py + scripts/run_qualification_task.py","evidence":"existing context action boundary and fixed qualification action reused"},
+    {"candidate_id":"CAND-0007","slice":"performance","disposition":"NEEDS_CONTEXT","owner":"none","evidence":"no installed Chrome/Windows performance benchmark supplied or claimed"},
+    {"candidate_id":"CAND-0008","slice":"provenance","disposition":"GAP","owner":"src/occ_durable_library.py + scripts/run_occ_native_host.py","evidence":"namespace/source/version/content/delegated receipt digests surfaced"},
+    {"candidate_id":"CAND-0009","slice":"qualification","disposition":"COVERED","owner":"scripts/run_qualification_task.py + src/qualification_report.py","evidence":"existing idempotent audit and bounded installed qualification receipt reused"},
+    {"candidate_id":"CAND-0010","slice":"experience","disposition":"GAP","owner":"scripts/run_occ_native_host.py","evidence":"receipt exposes blocker, next_action and CI evidence type"}
+  ],
+  "non_claims": {
+    "installed_windows_native_host": "NOT_RUN",
+    "real_asr_laya": "NOT_RUN",
+    "browser_action_execution": "NOT_RUN",
+    "automatic_github_ci_transport": "NOT_IMPLEMENTED",
+    "live_web3": false,
+    "signing": false,
+    "sending": false,
+    "paid_api_fallback": false
+  }
+}

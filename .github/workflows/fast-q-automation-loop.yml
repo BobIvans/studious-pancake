@@ -4,8 +4,12 @@ on:
   pull_request:
     paths:
       - "src/fast_q_automation.py"
+      - "src/occ_memory_qualification_bridge.py"
+      - "src/qualification_report.py"
       - "src/automation_cli_pr189.py"
       - "tests/test_fast_q_automation.py"
+      - "tests/test_occ_memory_qualification_bridge.py"
+      - "tests/test_occ_durable_host.py"
       - "scripts/verify_fast_q_automation.py"
       - "config/fast_q_actions.json"
       - "docs/qualification/FAST_Q_AUTOMATION_RU.md"
@@ -35,7 +39,7 @@ jobs:
       - name: Verify contract
         run: python scripts/verify_fast_q_automation.py
       - name: Focused tests
-        run: python -m pytest -q tests/test_fast_q_automation.py tests/test_fast_q1_qualification_report.py --disable-socket --allow-unix-socket
+        run: python -m pytest -q tests/test_fast_q_automation.py tests/test_occ_memory_qualification_bridge.py tests/test_occ_durable_host.py tests/test_fast_q1_qualification_report.py --disable-socket --allow-unix-socket
       - name: Dependency consistency
         run: python -m pip check
       - name: Installed closed-loop smoke

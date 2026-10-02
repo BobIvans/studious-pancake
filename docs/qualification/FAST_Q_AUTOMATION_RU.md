@@ -27,6 +27,22 @@ Action receipts находятся вне checkout в
 request digest и source SHA; corrupt/incomplete/stale evidence останавливает
 исполнение.
 
+Архивный трёхполевый `occ.qualification-action.v1` поддерживается только для
+канонических qualification-фраз. Четырёхполевый OCC envelope с `action_id`
+нужно отправлять через `scripts/run_occ_memory_qualification.py` с отдельным
+operator profile: FAST-Q2 не удаляет его provenance и не подменяет этот мост.
+Остальные действия используют `fast-q2.action-request.v1`.
+
+При обновлении состояния action receipt должен принадлежать текущему SHA и
+указанному idempotency key. TEST_PASSED подтверждается непустыми записями всех
+команд фиксированного validation set с целыми exit codes. Проверяются result
+digest/status и effect flags; самосогласованный хеш не удостоверяет истинность
+импортного результата. State также связывает ID и bytes hash дочерней FAST-Q1
+квитанции с текущими schema/action/profile и manifest input digest.
+
+Полная карта владельцев и очередь развития OCC:
+[RECONCILIATION_AND_NEXT_RU_2026-10-03.md](../occ/RECONCILIATION_AND_NEXT_RU_2026-10-03.md).
+
 Fresh pre-implementation probe PR #553 на commit
 `540cab87df3b6017b26b18d389673b70f94768a0` подтвердил current blocker:
 

@@ -2,7 +2,7 @@
 
 Design input: [Universal Arbitrage Graph + nonlinear profit solver + event-driven local market-state engine](https://docs.google.com/document/d/1f-asFbZuFDnlWfi0aGKWV8Zjkj739hsPN2t220uUD7k/edit).
 
-Base inspected on 2026-10-02: `main` initially at `91907282eaee685af1a3163acebf6aa0d9f954d5` (graph PR #559 merged), then updated and rebased to `4087d58104bc9cbb2cda56b7c951b35cc76235ab` (OCC/FAST-Q PR #558 merged). Canonical graph, snapshot, sizing, transport and orderbook owners are unchanged by that upstream update. This change adds a source inventory, bounded read-only discovery, and a canonical observation-to-graph bridge. It does not duplicate the merged graph implementation or sizing authority.
+Base inspected on 2026-10-02: `main` initially at `91907282eaee685af1a3163acebf6aa0d9f954d5` (graph PR #559 merged), then updated and rebased to `4087d58104bc9cbb2cda56b7c951b35cc76235ab` (OCC/FAST-Q PR #558 merged). The final review also incorporated `7e83f3b416c3fae2b2ecf8111c7ed0574e7dac44` (FAST-Q/OCC reconciliation PR #560). Canonical graph, snapshot, sizing, transport and orderbook owners are unchanged by these upstream updates. This change adds a source inventory, bounded read-only discovery, and a canonical observation-to-graph bridge. It does not duplicate the merged graph implementation or sizing authority.
 
 ## Existing owners retained
 

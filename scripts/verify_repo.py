@@ -130,6 +130,11 @@ PR359_WAVE15_MARKET_INSTITUTION_COMMAND: Final[list[str]] = [
     "scripts/verify_pr359.py",
 ]
 
+MEGA_CONTEXT_WAVE3_COMMAND: Final[list[str]] = [
+    sys.executable,
+    "scripts/verify_mega_context_wave3.py",
+]
+
 MARKET_DATA_EVOLUTION_COMMAND: Final[list[str]] = [
     sys.executable,
     "scripts/verify_market_data_evolution.py",
@@ -296,6 +301,7 @@ def main() -> int:
     run(PR357_ADAPTIVE_STRATEGY_INTELLIGENCE_COMMAND)
     run(PR358_MARKET_RELATION_SCIENCE_COMMAND)
     run(PR359_WAVE15_MARKET_INSTITUTION_COMMAND)
+    run(MEGA_CONTEXT_WAVE3_COMMAND)
     run(MARKET_DATA_EVOLUTION_COMMAND)
     run(PR200_PRODUCTION_CUTOVER_COMMAND)
     run(PR206_DURABLE_STATE_COMMAND)

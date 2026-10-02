@@ -51,5 +51,6 @@
     "sender": false,
     "live": false,
     "transactions_sent": 0
-  }
+  },
+  "integration_goal": "MEGA FAST-Q deterministic automation"
 }

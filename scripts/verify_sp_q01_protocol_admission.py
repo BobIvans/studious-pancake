@@ -108,14 +108,12 @@ def verify() -> dict[str, object]:
         errors.append("SP_Q01_MARGINFI_POLICY_DRIFT")
 
     baseline = json.loads(
-        (ROOT / "release_artifacts/sp_q01/BASELINE.json").read_text(
-            encoding="utf-8"
-        )
+        (ROOT / "release_artifacts/sp_q01/BASELINE.json").read_text(encoding="utf-8")
     )
     matrix = json.loads(
-        (
-            ROOT / "release_artifacts/sp_q01/REQUIREMENT_EVIDENCE_MATRIX.json"
-        ).read_text(encoding="utf-8")
+        (ROOT / "release_artifacts/sp_q01/REQUIREMENT_EVIDENCE_MATRIX.json").read_text(
+            encoding="utf-8"
+        )
     )
     if baseline.get("selected_goal") != "SP-Q01":
         errors.append("SP_Q01_BASELINE_GOAL_MISMATCH")

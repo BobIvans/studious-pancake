@@ -1,0 +1,28 @@
+name: OCC memory qualification bridge
+
+on:
+  pull_request:
+    paths:
+      - "src/occ_memory_qualification_bridge.py"
+      - "scripts/run_occ_memory_qualification.py"
+      - "tests/test_occ_memory_qualification_bridge.py"
+      - "docs/qualification/OCC_MEMORY_QUALIFICATION_BRIDGE_RU.md"
+      - ".github/workflows/occ-memory-qualification-bridge.yml"
+  workflow_dispatch:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.13"
+      - name: Install focused test dependencies
+        run: python -m pip install pytest==9.0.3 black==26.3.1
+      - name: Compile
+        run: python -m compileall -q src/occ_memory_qualification_bridge.py scripts/run_occ_memory_qualification.py tests/test_occ_memory_qualification_bridge.py
+      - name: Black
+        run: python -m black --diff --check src/occ_memory_qualification_bridge.py scripts/run_occ_memory_qualification.py tests/test_occ_memory_qualification_bridge.py
+      - name: Focused tests
+        run: python -m pytest -q tests/test_occ_memory_qualification_bridge.py

@@ -1,0 +1,30 @@
+{
+  "schema": "occ-automation.baseline.v1",
+  "base_sha": "b31fa445218900702c0d0c4202481488a259c6f8",
+  "integration_pr": 553,
+  "disposition": "EXTEND_EXISTING",
+  "owners": {
+    "qualification_cli": "src/automation_cli_pr189.py :: flashloan-checks qualify-and-report",
+    "qualification_runner": "src/qualification_report.py",
+    "qualification_task_adapter": "scripts/run_qualification_task.py",
+    "release_authority": "existing release gates unchanged",
+    "local_occ_intake": "tools/occ_automation/occ_local.py",
+    "local_occ_adapter": "tools/occ_automation/qualification_adapter.py"
+  },
+  "current_known_evidence": {
+    "prior_fast_q_domain_verdict": "BLOCKED",
+    "prior_first_blocker": "paper-shadow:blocked_missing_wallet_public_key",
+    "sender_free_pass": false,
+    "transactions_sent": 0
+  },
+  "no_duplicate_authority": true,
+  "safety": {
+    "live": false,
+    "signer": false,
+    "sender": false,
+    "wallet_secret_access": false,
+    "paid_api_fallback": false,
+    "arbitrary_shell": false,
+    "auto_merge": false
+  }
+}

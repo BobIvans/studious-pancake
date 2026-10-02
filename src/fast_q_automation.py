@@ -418,7 +418,9 @@ def _qualification_receipt(
     if receipt.get("transactions_sent") != 0:
         raise ValueError("TRANSACTION_EFFECT_DETECTED")
     blockers = receipt.get("blockers")
-    if not isinstance(blockers, list) or not all(isinstance(item, str) for item in blockers):
+    if not isinstance(blockers, list) or not all(
+        isinstance(item, str) for item in blockers
+    ):
         raise ValueError("CHILD_BLOCKERS_INVALID")
     return receipt
 
@@ -493,7 +495,9 @@ def _inspect_blocker(
         "status": "BLOCKED" if first else "NO_CURRENT_BLOCKER",
         "first_blocker": first,
         "blocker_count": len(blockers),
-        "next_action": "prepare_repair_task" if first else "review_sender_free_evidence",
+        "next_action": (
+            "prepare_repair_task" if first else "review_sender_free_evidence"
+        ),
         "limitations": [],
     }
 
@@ -760,7 +764,10 @@ def execute_request(
     timeout_seconds: int = 30,
 ) -> dict[str, Any]:
     request = validate_request(raw_request)
-    if type(timeout_seconds) is not int or not 1 <= timeout_seconds <= MAX_TIMEOUT_SECONDS:
+    if (
+        type(timeout_seconds) is not int
+        or not 1 <= timeout_seconds <= MAX_TIMEOUT_SECONDS
+    ):
         raise ValueError("TIMEOUT_INVALID")
     repo = repo_root.resolve()
     output = output_root.resolve()

@@ -209,9 +209,7 @@ def resolve_installed_core_v1_dependencies(
         now_utc=now_utc,
     )
     if primary_admission.receipt_sha256 != primary.evidence_sha256:
-        raise ValueError(
-            "CORE_V1_PRIMARY_FINANCING_EVIDENCE_RECEIPT_MISMATCH"
-        )
+        raise ValueError("CORE_V1_PRIMARY_FINANCING_EVIDENCE_RECEIPT_MISMATCH")
     if rent_admission.receipt_sha256 != rent.evidence_sha256:
         raise ValueError("CORE_V1_RENT_FINANCING_EVIDENCE_RECEIPT_MISMATCH")
 

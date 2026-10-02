@@ -27,7 +27,11 @@ from src.lending.agg03_financing_ports import (
 from src.lending.financing import FinancingEvidence
 from src.lending.jupiter_lend import JUPITER_LEND_FLASHLOAN_PROGRAM_ID
 from src.lending.slumlord import SLUMLORD_PROGRAM_ID
+from src.lending.sp_q01_protocol_admission import (
+    validate_protocol_admission_receipt,
+)
 from src.planning.atomic_marginfi_jupiter import AtomicPlannerPolicy
+from src.runtime.trusted_time import SystemTrustedTime, TrustedTime
 from src.runtime.core_v1_composition import CoreV1Dependencies
 from src.runtime.core_v1_materializer import (
     CORE_V1_BLOCKED_EXTERNAL,
@@ -35,7 +39,8 @@ from src.runtime.core_v1_materializer import (
     CoreV1ReleaseProfile,
 )
 
-SCHEMA = "core-v1.financing-evidence-manifest.v1"
+SCHEMA = "core-v1.financing-evidence-manifest.v2"
+LEGACY_SCHEMA = "core-v1.financing-evidence-manifest.v1"
 MANIFEST_ENV = "FLASHLOAN_CORE_V1_EVIDENCE_MANIFEST"
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 
@@ -123,6 +128,7 @@ def resolve_installed_core_v1_dependencies(
     environment: Mapping[str, str],
     *,
     config: RuntimeConfig | None = None,
+    trusted_time: TrustedTime | None = None,
 ) -> InstalledDependencyResolution:
     """Validate installed evidence and return statically reviewed dependencies.
 
@@ -149,15 +155,25 @@ def resolve_installed_core_v1_dependencies(
     raw_bytes = path.read_bytes()
     digest = hashlib.sha256(raw_bytes).hexdigest()
     payload = json.loads(raw_bytes)
-    if not isinstance(payload, Mapping) or payload.get("schema_version") != SCHEMA:
+    if not isinstance(payload, Mapping):
+        raise ValueError("CORE_V1_FINANCING_EVIDENCE_MANIFEST_SCHEMA_MISMATCH")
+    if payload.get("schema_version") == LEGACY_SCHEMA:
+        return InstalledDependencyResolution(
+            None,
+            "CORE_V1_FINANCING_ADMISSION_RECEIPT_REQUIRED",
+            digest,
+        )
+    if payload.get("schema_version") != SCHEMA:
         raise ValueError("CORE_V1_FINANCING_EVIDENCE_MANIFEST_SCHEMA_MISMATCH")
     if payload.get("profile_id") != profile.profile_id:
         raise ValueError("CORE_V1_FINANCING_MANIFEST_PROFILE_MISMATCH")
     if payload.get("profile_generation") != profile.profile_generation:
         raise ValueError("CORE_V1_FINANCING_MANIFEST_GENERATION_MISMATCH")
 
-    primary = _identity(payload.get("primary"), "primary")
-    rent = _identity(payload.get("rent"), "rent")
+    primary_raw = payload.get("primary")
+    rent_raw = payload.get("rent")
+    primary = _identity(primary_raw, "primary")
+    rent = _identity(rent_raw, "rent")
     if (
         primary.lender_id != profile.lender
         or primary.deployment_generation != profile.profile_generation
@@ -178,6 +194,24 @@ def resolve_installed_core_v1_dependencies(
             "CORE_V1_RENT_FINANCING_DEPLOYMENT_NOT_QUALIFIED",
             digest,
         )
+
+    if not isinstance(primary_raw, Mapping) or not isinstance(rent_raw, Mapping):
+        raise ValueError("CORE_V1_FINANCING_IDENTITY_REQUIRED")
+    now_utc = (trusted_time or SystemTrustedTime()).snapshot().utc
+    primary_admission = validate_protocol_admission_receipt(
+        primary_raw.get("admission"),
+        role="PRIMARY",
+        now_utc=now_utc,
+    )
+    rent_admission = validate_protocol_admission_receipt(
+        rent_raw.get("admission"),
+        role="RENT",
+        now_utc=now_utc,
+    )
+    if primary_admission.receipt_sha256 != primary.evidence_sha256:
+        raise ValueError("CORE_V1_PRIMARY_FINANCING_EVIDENCE_RECEIPT_MISMATCH")
+    if rent_admission.receipt_sha256 != rent.evidence_sha256:
+        raise ValueError("CORE_V1_RENT_FINANCING_EVIDENCE_RECEIPT_MISMATCH")
 
     decoder_artifact = payload.get("repayment_decoder")
     if not isinstance(decoder_artifact, Mapping):
@@ -249,6 +283,7 @@ def resolve_installed_core_v1_dependencies(
 __all__ = [
     "FinancingIdentity",
     "InstalledDependencyResolution",
+    "LEGACY_SCHEMA",
     "MANIFEST_ENV",
     "SCHEMA",
     "resolve_installed_core_v1_dependencies",

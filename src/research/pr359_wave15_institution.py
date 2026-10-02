@@ -433,7 +433,9 @@ def allocate_service(
             if rules.mechanism == "first_price":
                 payment = winner.price_units
             else:
-                payment = ranked[1].price_units if len(ranked) > 1 else rules.reserve_units
+                payment = (
+                    ranked[1].price_units if len(ranked) > 1 else rules.reserve_units
+                )
 
     reason = "AWARDED" if winner is not None else "NO_ACCEPTABLE_OFFER"
     trace_payload = {
@@ -464,7 +466,9 @@ def supplier_utility(
 ) -> int:
     _text(supplier_id, "W15_UTILITY_SUPPLIER_ID_REQUIRED")
     _money(true_cost, "W15_TRUE_COST_INTEGER_REQUIRED")
-    return decision.payment_units - true_cost if decision.winner_id == supplier_id else 0
+    return (
+        decision.payment_units - true_cost if decision.winner_id == supplier_id else 0
+    )
 
 
 def welfare(

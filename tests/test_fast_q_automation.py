@@ -361,9 +361,7 @@ def test_external_adapters_are_contract_only(tmp_path, monkeypatch):
 
 def test_state_generation_does_not_promote_qualification(tmp_path, monkeypatch):
     output = tmp_path / "out"
-    child_receipt(
-        output, blockers=["paper-shadow:blocked_missing_wallet_public_key"]
-    )
+    child_receipt(output, blockers=["paper-shadow:blocked_missing_wallet_public_key"])
     monkeypatch.setattr(a, "_check_source", lambda repo, expected: {"git_sha": SHA})
     monkeypatch.setattr(
         a,

@@ -284,6 +284,7 @@ class ProviderGovernance:
                 "getGenesisHash",
                 "getSlot",
                 "getTransaction",
+                "getBlock",
             }
             if request.method != "POST" or len(request.content) > 1_048_576:
                 deny()

@@ -4,21 +4,22 @@
   "baseline_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
   "complete_zip_implemented": false,
   "complete_zip_acceptance_passed": false,
-  "runtime_mode": "OFFLINE_SHADOW_ONLY",
+  "runtime_mode": "BOUNDED_READ_ONLY_CAPTURE_AND_SHADOW_REPLAY",
   "connected_feeds_added": 0,
   "execution_right": false,
   "packages": [
     {
       "id": "PM-01",
       "title": "Qualification before scale",
-      "status": "PARTIAL_OFFLINE_CORE",
+      "status": "PARTIAL_NATIVE_CPMM_SHADOW",
       "owner": "src/strategy/exact_cpmm_capacity.py",
       "tests": [
         "tests/test_exact_cpmm_capacity.py",
-        "tests/test_cpmm_fee_accounting.py"
+        "tests/test_cpmm_fee_accounting.py",
+        "tests/test_native_cpmm_qualification.py"
       ],
       "acceptance_closed": false,
-      "remaining": "Pinned source arithmetic and integer vectors implemented; deployed bytecode/rooted raw vectors and complete DP01 corpus remain."
+      "remaining": "Source layouts and full-account native CPMM capture/replay implemented; source-to-deployed-binary attestation, captured mainnet vectors and complete DP01 campaign remain."
     },
     {
       "id": "PM-02",
@@ -34,25 +35,27 @@
     {
       "id": "PM-03",
       "title": "Source entitlements and budgets",
-      "status": "PARTIAL_OFFLINE_CORE",
+      "status": "PARTIAL_NATIVE_CPMM_SHADOW",
       "owner": "src/provider_governance/authority.py",
       "tests": [
-        "tests/test_shadow_market_data_aggregation.py"
+        "tests/test_shadow_market_data_aggregation.py",
+        "tests/test_native_cpmm_qualification.py"
       ],
       "acceptance_closed": false,
-      "remaining": "Existing governance reused; additional endpoints, rights, retry/storage campaigns remain unqualified."
+      "remaining": "One anonymous public read scope uses existing physical-attempt governance and PR02 shared quota; actual discovery attempt failed at transport; additional sources/rights/campaigns remain."
     },
     {
       "id": "PM-04",
       "title": "Recoverable state reconstruction",
-      "status": "PARTIAL_OFFLINE_CORE",
+      "status": "PARTIAL_NATIVE_CPMM_SHADOW",
       "owner": "src/market/streams.py",
       "tests": [
         "tests/test_recoverable_stream_journal.py",
-        "tests/test_absolute_orderbook_stream.py"
+        "tests/test_absolute_orderbook_stream.py",
+        "tests/test_native_cpmm_qualification.py"
       ],
       "acceptance_closed": false,
-      "remaining": "Generic local replay core exists; verified native feed schemas and journal-to-buffer wiring remain."
+      "remaining": "CPMM raw journal-to-state-to-graph path and durable availability barriers implemented; continuous native subscriptions, other protocols, gap/reorg production campaigns remain."
     },
     {
       "id": "PM-05",
@@ -242,7 +245,7 @@
     {
       "id": "WG-04",
       "title": "Governed read-only discovery \u0438 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0438",
-      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "status": "PARTIAL_NATIVE_CPMM_SHADOW",
       "existing_owner_ids": [
         "O07",
         "O08",
@@ -254,12 +257,15 @@
         "T11"
       ],
       "acceptance_closed": false,
-      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+      "remaining": "One-shot governed Raydium metadata discovery and finalized public RPC capture implemented. Verified continuous subscriptions and successful external data campaigns remain.",
+      "tests": [
+        "tests/test_native_cpmm_qualification.py"
+      ]
     },
     {
       "id": "WG-05",
       "title": "\u0421\u043e\u0433\u043b\u0430\u0441\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0439 state engine",
-      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "status": "PARTIAL_NATIVE_CPMM_SHADOW",
       "existing_owner_ids": [
         "O02",
         "O03",
@@ -274,7 +280,10 @@
         "T16"
       ],
       "acceptance_closed": false,
-      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+      "remaining": "Full CPMM account-set reconstruction, restart replay and outage/fork barriers implemented. Event-driven subscriptions and other venue native state models remain.",
+      "tests": [
+        "tests/test_native_cpmm_qualification.py"
+      ]
     },
     {
       "id": "WG-06",
@@ -300,7 +309,7 @@
     {
       "id": "WG-07",
       "title": "\u041a\u0432\u0430\u043b\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f CPMM \u0438 stable pool \u043c\u0430\u0442\u0435\u043c\u0430\u0442\u0438\u043a\u0438",
-      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "status": "PARTIAL_NATIVE_CPMM_SHADOW",
       "existing_owner_ids": [
         "O12",
         "O13"
@@ -311,7 +320,10 @@
         "T23"
       ],
       "acceptance_closed": false,
-      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+      "remaining": "Strict CPMM raw account decoding reuses the integer owner. Actual mainnet vectors, independent deployment binding and exact stable-pool adapter remain.",
+      "tests": [
+        "tests/test_native_cpmm_qualification.py"
+      ]
     },
     {
       "id": "WG-08",
@@ -545,7 +557,7 @@
     {
       "id": "WG-21",
       "title": "Replay corpus \u0438 \u043a\u0432\u0430\u043b\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f \u0441\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u0439",
-      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "status": "PARTIAL_NATIVE_CPMM_SHADOW",
       "existing_owner_ids": [
         "O03",
         "O22",
@@ -557,7 +569,10 @@
         "T70"
       ],
       "acceptance_closed": false,
-      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+      "remaining": "Deterministic synthetic raw-account corpus, receiver-to-journal-to-graph tests and installed replay added. External corpus, forward holdout and full archive qualification are NOT_RUN.",
+      "tests": [
+        "tests/test_native_cpmm_qualification.py"
+      ]
     },
     {
       "id": "WG-22",
@@ -2131,5 +2146,15 @@
     }
   ],
   "verification_evidence": "verification.json",
-  "mapped_archive_case_count": 10
+  "mapped_archive_case_count": 10,
+  "native_capture_adapters_added": 1,
+  "captured_native_snapshots": 0,
+  "forward_qualification_campaigns_completed": 0,
+  "native_followup": {
+    "baseline_commit": "85fcb0f3be36d6e3716f4194896ff2a9fc6e36ff",
+    "runbook": "docs/web3-market-scale/NATIVE_QUALIFICATION_RU.md",
+    "verification": "docs/web3-market-scale/native_verification.json",
+    "external_attempt": "docs/web3-market-scale/native_public_read_attempt.json",
+    "whole_archive_complete": false
+  }
 }

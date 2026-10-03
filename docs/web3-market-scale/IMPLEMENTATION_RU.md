@@ -5,6 +5,12 @@ Design input: `studious-pancake-web3-future-work-plan.zip`, SHA256
 Сверен с main `67d3852cbc4cb1b24582df45adbf6a42d4da2af0`.
 В `design-input/` сохранены все 170 исходных файлов без изменения их статусов.
 
+После merge PR563 добавлен bounded native CPMM capture/replay от main
+`85fcb0f3be36d6e3716f4194896ff2a9fc6e36ff`. Текущий путь сбора, evidence и
+остающиеся ограничения описаны в [NATIVE_QUALIFICATION_RU.md](NATIVE_QUALIFICATION_RU.md).
+Первоначальный `verification.json` относится к предыдущему source tree;
+проверки продолжения находятся в `native_verification.json`.
+
 Это реализация bounded offline/shadow foundations из архива. **Весь ZIP ещё
 не закрыт по acceptance**: полный corpus из 189 сценариев не заменён числом
 unit tests, а новые protocol adapters и forward data campaigns не объявлены

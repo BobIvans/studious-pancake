@@ -33,6 +33,7 @@ class DiscoveryRequest:
     source_id: str
     page: int = 1
     token_mint: str | None = None
+    required_program_id: str | None = None
 
     def __post_init__(self) -> None:
         if self.source_id not in {
@@ -52,6 +53,12 @@ class DiscoveryRequest:
             validate_pubkey(self.token_mint)
         elif self.token_mint is not None:
             raise ValueError("token filter is supported only for DEX Screener")
+        if self.required_program_id is not None:
+            if self.source_id != "raydium":
+                raise ValueError(
+                    "program metadata filter is supported only for Raydium"
+                )
+            validate_pubkey(self.required_program_id)
 
     def endpoint(self) -> tuple[str, dict[str, str]]:
         if self.source_id == "dexscreener":
@@ -293,6 +300,12 @@ class PublicMarketDiscovery:
             parsed: dict[str, DiscoveredMarket] = {}
             for row in rows:
                 try:
+                    if (
+                        request.required_program_id is not None
+                        and row.get("programId") != request.required_program_id
+                    ):
+                        rejected["program-filter"] += 1
+                        continue
                     market = _market(request.source_id, row, receipt.identity)
                     parsed[market.identity] = market
                 except (ValueError, TypeError, KeyError, AttributeError):

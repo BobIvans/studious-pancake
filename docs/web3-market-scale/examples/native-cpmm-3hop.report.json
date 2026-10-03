@@ -1,0 +1,515 @@
+{
+  "schema": "shadow.native-cpmm-qualification.v1",
+  "shadow_only": true,
+  "live_authorization": false,
+  "as_of_ns": 1002000000000,
+  "journal_head": "2c5d7dc16a20c29fae42af7a17b56d81ce4b38afb54dbca6fe3c8151273841a5",
+  "capture_hash": "85e16b83a244fba23be4dac969a7fab96d316702b64bbf223d340bfa061d1b04",
+  "evidence_kind": "synthetic-fixture",
+  "slot": 100,
+  "block_hash": "gBxS1f6uyyGPuW5MzGBukidSb71jdsCb5fZaoSzULE5",
+  "parent_hash": "k7FaK87WHGVXzkaoHb7CdVPgkKDQhZ29VLDeBVbDfYn",
+  "binary_sha256": "bfc32d2b6c141a48826e1af6cfc1cda4997732af5d5615dd4f7df427a87f981e",
+  "deployment_slot": 10,
+  "decoder_revision": "raydium-cpmm-state.v1",
+  "amount_points": [
+    "10",
+    "20",
+    "30"
+  ],
+  "quote_count": 25,
+  "coverage": {
+    "catalog_sources": 53,
+    "discovered_markets": 0,
+    "bound_markets": 3,
+    "exact_quoted_markets": 3,
+    "fresh_quoted_markets": 3,
+    "missing_bindings": [],
+    "batch_complete": true,
+    "discovery_truncated": false,
+    "discovery_errors": []
+  },
+  "traces": [
+    {
+      "edge_identity": "0d26e7939997843529155b741cb941ab0d728230f53c59e93770e36d7a0d3f28",
+      "observation_id": "2fa4e23e63376f854faa409eca215f5e82b1824a21a524f011971c98cea33c10",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 23,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "9d355b8c420e11c143f918b61bd8909048fd5e3724bfb4310497dd6fe274e6af"
+    },
+    {
+      "edge_identity": "221458232e25e44c534ebc9b23c9f0e3623a1248d095fd844f279a8cb2ee08db",
+      "observation_id": "a306219612c579bd51d5b8af61f78514c4f06caf6edf85f3738be238d3bfdd40",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 14,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "85ed361e17dd74283047745e997f238a16da65c56c55eff26d4f85a31ee13d9a"
+    },
+    {
+      "edge_identity": "249c2311e27d8774422729250545cd40330112629db8a95c67e166a8eeb60078",
+      "observation_id": "e2e10d3b09e16502af21ecdeb51dddb2e2e49bca7be44d52d86bfcc1774ea1dd",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 13,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "a3013a539372e5c2da825e91738fa7a8550c8d022a38584e3a783d815679e976"
+    },
+    {
+      "edge_identity": "30c0dda7219ea499e474927e5584533dd9969adad57454a95bed31c391e11e2f",
+      "observation_id": "ee8f748e53b8600d9b725be274aae51e6bb4420137e5e3bb351d88464636fcec",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 1,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "c4040af657280310cebc0c983e9f421df8f0797442298a03f76e798a7a09931b"
+    },
+    {
+      "edge_identity": "3121fdb37a227c07548d04d4232591915cd2a6fad98346c9cbcef65d562955cf",
+      "observation_id": "04ca8ab99d51b1d4ad932099a1625b6405fc4584e72103d2b633348b005c2f51",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 7,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "7f0754a3622e6e25a31b09a4c9321db82ef8e3905da4ad58d0d0afc094ea02d0"
+    },
+    {
+      "edge_identity": "4ee53890e6ba16db07bc9a2cd9970d95da7e1bacbad5715826978c19067097b6",
+      "observation_id": "7f5c454d429b7d6a22bff3928c3f8cb3ed077bb56b9ec67495d393a95b02a1fe",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 10,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "b13f380fa083e808cf6a67e2195c15608cb06eea4fd4558cc831a6322837a1b3"
+    },
+    {
+      "edge_identity": "5050a2a10710bcd39f328a0519e9d50f445c09abb8157a0bed65fea343a73f74",
+      "observation_id": "bc755366b1d1c4846531d446a08d0293ee788e2749cebe79207f91ec77b4a280",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 20,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "8f69371b50393dfdd7369b33b925eba1fe74f5bbf3893ef2f3bcaa5454668870"
+    },
+    {
+      "edge_identity": "564af00d443ffbfefa06abd0f269cd0e341e05bdc86ac24b46efbd7f3a4054bb",
+      "observation_id": "9931929461a992135fd571d61b30366e37f739b493f1b84cb31d02aec758813f",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 17,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "1f892a47d5dacadc99746c29dba936cf508b31f31b0f4dfbabba148576689fd7"
+    },
+    {
+      "edge_identity": "57dbdff160e5bf00d52a31d7acbf76727a122cd200273d33f54b969a47e7a287",
+      "observation_id": "58de5b7df9ac3fe0bc903a2da6c32649e7cd678760223ea76ab87528d14f9264",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 5,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "7733d5e9783d55ab6b1641dac9e7ba0ae39df0a4b80960cf92de3ac8b3336b97"
+    },
+    {
+      "edge_identity": "5a66e65a22397b18f309f4033a10c06be4f966270df4cc8a47b4f6a1fb581f25",
+      "observation_id": "f77546725efd03d9f393f72d9ec4b8fba27da9ee22bbe4579ddd0434f1f72093",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 6,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "1556f8ba5ab6c4d162709b3b57a0a967f97d68b90466a61781202a1053df223a"
+    },
+    {
+      "edge_identity": "604f69071ede262eb5b85e0255dc84e74a778f767c8979c1d506a505387fde9a",
+      "observation_id": "4d18fbdfdff0bca314b22e52070110eb5cfafc34871c905c2ecbecec105fbb0a",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 25,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "cab14b321558dc4d44c128e275cac0555d2af28ceb4b63aca215d6ca9d5e3bcc"
+    },
+    {
+      "edge_identity": "609f8c1be4768a83c868e78a0ff8965fea6ce86ddb1e96dae72e8c4f1a007830",
+      "observation_id": "c8e2500b5538a3a5a866b1114245e348d7a7068f4064244a2cd2dd91445903e1",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 16,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "da0db7ba194fc020741de5719fa98339bf6b9de99579f17a84c500eaae4e4752"
+    },
+    {
+      "edge_identity": "680532a35c554e200ad8b7341d96d94b24a5c0d2199686d71a18989fb8645674",
+      "observation_id": "ffdb4f5e3b336799cbd258ab363d8e6a2fa2a3c11d252ec9d7fd3fb64d23987f",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 12,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "26c9971ffc3ae64670fa5ba6906015df32763c1b6adf738edf6630959a58fa0d"
+    },
+    {
+      "edge_identity": "7b0fa2b30853c79336a54059275a566d7a7f0d9e0209e32c8e4a7e69cd5dee0f",
+      "observation_id": "e82c9d5f7aa83fe24484fd1c3ef5321f44e099166ab2dabe2b94de5a231192a5",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 3,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "90659bffe541c1214b71ac753a37865bc4840c2d7b71134608c3ff198f36039e"
+    },
+    {
+      "edge_identity": "80207c7a2c6a16719bf1515c0be491ba94dfc42e43ab3db9d9148f46b7f6c4f9",
+      "observation_id": "2c936bc3fbc4cc5d53494b37972bac193713d6eada62b475e70ce93d78f21bc3",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 11,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "d12f72898f652db89cc9d089574188f6bb3c8641bd314aef00847a3f2ca02648"
+    },
+    {
+      "edge_identity": "a6de2696815b0025b93fbd7f841563a8673900af42d25ab515083080befb7318",
+      "observation_id": "69379974afea190aa38e98dab910461ec949f747b39288d617cee8c491276c06",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 2,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "32270dc46998c4610cb92c981ffed9dbf9abf046ba6e2c6a09f0e86c54075dd7"
+    },
+    {
+      "edge_identity": "aa37f819f415520f86983a268e5c083126b80939db4c692bcd8303d3efdabf4f",
+      "observation_id": "c310fd2f4c461b407b285abb4308dde7dde60758b5df032de2c73dd6ac17fe10",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 19,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "3fc37d01e4bbe560ea653be4f1e6d40f01ca4f05f226d1230ae8d19da7ac51c3"
+    },
+    {
+      "edge_identity": "b0991317219ce128f8e5bcb25868491b6005ae78dd065aba664a150db83427c0",
+      "observation_id": "33d1c731233c793aed965010d966d6de610b130e184a5bad03d667f98236c22d",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 15,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "0d2f903317e6f84fa73e318890b3da3c8f84024b82440360c2dd171168c41ac1"
+    },
+    {
+      "edge_identity": "b6d56b9fd2c07d275aa96aefab779f26650268dc6838d82df1939d3488880749",
+      "observation_id": "57478ed40532ac4d4451754270e7b85ba758ad05c16de48f2eb7c68888dab183",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 24,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "67536739a788349a187ceb1c9cb7ea1dad5d60e0594de48752347800115b6beb"
+    },
+    {
+      "edge_identity": "b77871f5c5df8cde57485255fade84f368d26b0604f9fd6115cc1455da801e09",
+      "observation_id": "5969879dccf7cf754469f90c5ed7e7045b9dbd7bab60a422478e05474c5170d6",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 8,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "b022da5cbcc8819b5f9b370b6620d6d9b52daeb8656a1b21d8d9602b91b8658f"
+    },
+    {
+      "edge_identity": "c001198711b363650291817f6d4535bff304e548bbae4788c3524bf495de89f6",
+      "observation_id": "d380cdcb4bf27515514a8e643cee2fbed420565eba7cecb094b56247f87c592e",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 4,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "2e0011e6fb0691127b6d37266318f9e118893c07bdc2e6382144349c7bd4ab69"
+    },
+    {
+      "edge_identity": "cd06f19384fb95138a24230a189d0e33ffc0979c1596607f43bddc47fc2a0847",
+      "observation_id": "8fd8358c0deb19e76198c10556bf1974193866786d126bedc58c15c201691da6",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 18,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "1a491c79b243052982da7ed668b5e936a8e96a18c526266e514b03c0b730c1a6"
+    },
+    {
+      "edge_identity": "d9c58f19d8834ebb8c947ef7326d1a9d5259bd2926a6d23516bbb759c8c3c070",
+      "observation_id": "c78683abe5e3be4ae8e35aeb18e200d7a4285d5fb6a68799f55f788d1058e6d7",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 9,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "b2729fbf44b4289bb6e50e2a93b89c18f1bca5154e63c46a4a227cf0aeea5983"
+    },
+    {
+      "edge_identity": "e065b00756e9ddc171ad27b32c5c55ef82bd9f1e4dc0ff7fa96dc725321e44e5",
+      "observation_id": "146faa27050398c61e28c1afa9c754e3dee31eecf0992127a7de4e2c061f237a",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 22,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "99cd553f2846dc9b0ce1031454ed9828165b7120c1aeb449000d514926fe67a2"
+    },
+    {
+      "edge_identity": "f41966f4cef38b2ec7b19109b89a0d7da9415b206e82829c108deacc0feaebf2",
+      "observation_id": "2132e0df28ec38045d81b34191a3dd8053c3fadc71549ce2f67e0e092e4289cf",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 21,
+      "response_hash": "259c0a427afac4abe28e9aa644ef5aae0a10e4c584793fb6f98d1d6170f23c0e",
+      "request_fingerprint": "4732bca2a9ecc5157f6cf403db35661b8c6a52f3c7f4c11ee6afd234f16df9dd"
+    }
+  ],
+  "topology_plans": 2,
+  "topology_expansions": 6,
+  "search_stop": "complete",
+  "evaluations": [
+    {
+      "semantic_route_id": "1f0e36f1a985946ec9d083ad4861f6ad405efaa52eac5c88ca747d0ea5974cb5",
+      "amount": "10",
+      "status": "gross-shadow-candidate",
+      "evaluation_id": "4a5c261db6e12b9da9e7c50e68579936bd1e6be96eeeb0358d22e409a47528ee",
+      "output": "16",
+      "route_id": "b2cb4b3dd1420db94f50a8c4e9dcbe26b0f86b1b7eda866c0857cdfe87fa5ad0"
+    },
+    {
+      "semantic_route_id": "1f0e36f1a985946ec9d083ad4861f6ad405efaa52eac5c88ca747d0ea5974cb5",
+      "amount": "20",
+      "status": "gross-shadow-candidate",
+      "evaluation_id": "60881a3d8cce1add0e7ed682f002a7d23637fd0a4be322ac6c0bb025c6808aa2",
+      "output": "29",
+      "route_id": "7ea47bdfeadf8b9c2dd9232f07ab2c23de9a7bd8e21fcacc533e26caa6cb515b"
+    },
+    {
+      "semantic_route_id": "1f0e36f1a985946ec9d083ad4861f6ad405efaa52eac5c88ca747d0ea5974cb5",
+      "amount": "30",
+      "status": "gross-shadow-candidate",
+      "evaluation_id": "75e755df8ee88a5e2014da6beea706fa65030bed615c0cea917c1799b8f735db",
+      "output": "38",
+      "route_id": "be8674a72f13862535250c9f9f0ce76fe4d328c361e1de56001b7c0a6175df2c"
+    },
+    {
+      "semantic_route_id": "8aaefa425960f4690f66eb2c3834f9acc27dc613290c2e368c126a5eaf9a8aa4",
+      "amount": "10",
+      "status": "amount-rejected",
+      "reason": "negative-gross-output"
+    },
+    {
+      "semantic_route_id": "8aaefa425960f4690f66eb2c3834f9acc27dc613290c2e368c126a5eaf9a8aa4",
+      "amount": "20",
+      "status": "amount-rejected",
+      "reason": "negative-gross-output"
+    },
+    {
+      "semantic_route_id": "8aaefa425960f4690f66eb2c3834f9acc27dc613290c2e368c126a5eaf9a8aa4",
+      "amount": "30",
+      "status": "amount-rejected",
+      "reason": "negative-gross-output"
+    }
+  ],
+  "quote_rejections": [
+    {
+      "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "amount": "10",
+      "reason": "zero-output"
+    },
+    {
+      "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "amount": "20",
+      "reason": "zero-output"
+    },
+    {
+      "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+      "amount": "10",
+      "reason": "zero-output"
+    },
+    {
+      "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+      "amount": "20",
+      "reason": "zero-output"
+    },
+    {
+      "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+      "amount": "30",
+      "reason": "zero-output"
+    }
+  ],
+  "graph_stop": "complete",
+  "graph_rejections": {
+    "amount_mismatch": 114,
+    "below_min_gross_profit": 3
+  },
+  "gross_shadow_candidates": [
+    {
+      "route_id": "44fd9b5cf8e48872dbfe7a5c69b5555feddfddca00b0507a359e340bfddb9482",
+      "hops": 3,
+      "input": "10",
+      "output": "16",
+      "markets": [
+        "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+        "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+        "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm"
+      ],
+      "legs": [
+        {
+          "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+          "input_mint": "So11111111111111111111111111111111111111112",
+          "output_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "input": "10",
+          "output": "241",
+          "observation_id": "69379974afea190aa38e98dab910461ec949f747b39288d617cee8c491276c06"
+        },
+        {
+          "market": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+          "input_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "output_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "input": "241",
+          "output": "566",
+          "observation_id": "a306219612c579bd51d5b8af61f78514c4f06caf6edf85f3738be238d3bfdd40"
+        },
+        {
+          "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+          "input_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "output_mint": "So11111111111111111111111111111111111111112",
+          "input": "566",
+          "output": "16",
+          "observation_id": "33d1c731233c793aed965010d966d6de610b130e184a5bad03d667f98236c22d"
+        }
+      ]
+    },
+    {
+      "route_id": "681e860382df85cd24bb3a83d22a94e16c52169007093cd2c63f85c1caa5f95c",
+      "hops": 3,
+      "input": "20",
+      "output": "29",
+      "markets": [
+        "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+        "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+        "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm"
+      ],
+      "legs": [
+        {
+          "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+          "input_mint": "So11111111111111111111111111111111111111112",
+          "output_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "input": "20",
+          "output": "494",
+          "observation_id": "e82c9d5f7aa83fe24484fd1c3ef5321f44e099166ab2dabe2b94de5a231192a5"
+        },
+        {
+          "market": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+          "input_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "output_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "input": "494",
+          "output": "1059",
+          "observation_id": "c8e2500b5538a3a5a866b1114245e348d7a7068f4064244a2cd2dd91445903e1"
+        },
+        {
+          "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+          "input_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "output_mint": "So11111111111111111111111111111111111111112",
+          "input": "1059",
+          "output": "29",
+          "observation_id": "9931929461a992135fd571d61b30366e37f739b493f1b84cb31d02aec758813f"
+        }
+      ]
+    },
+    {
+      "route_id": "974c0a2042b82c5e9aa9cabf63de3d28cbc852b2c14ca035ebaa2508993bade2",
+      "hops": 3,
+      "input": "30",
+      "output": "38",
+      "markets": [
+        "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+        "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+        "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm"
+      ],
+      "legs": [
+        {
+          "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+          "input_mint": "So11111111111111111111111111111111111111112",
+          "output_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "input": "30",
+          "output": "734",
+          "observation_id": "d380cdcb4bf27515514a8e643cee2fbed420565eba7cecb094b56247f87c592e"
+        },
+        {
+          "market": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+          "input_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "output_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "input": "734",
+          "output": "1451",
+          "observation_id": "8fd8358c0deb19e76198c10556bf1974193866786d126bedc58c15c201691da6"
+        },
+        {
+          "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+          "input_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "output_mint": "So11111111111111111111111111111111111111112",
+          "input": "1451",
+          "output": "38",
+          "observation_id": "c310fd2f4c461b407b285abb4308dde7dde60758b5df032de2c73dd6ac17fe10"
+        }
+      ]
+    }
+  ],
+  "qualification": {
+    "raw_decode": "PASS",
+    "restart_replay": "NOT_RUN_BY_SINGLE_REPLAY",
+    "deployment_source_binding": "MISSING",
+    "forward_holdout": "NOT_RUN",
+    "complete_account_subscription": "NOT_IMPLEMENTED_ONE_SHOT_ONLY",
+    "execution_costs_and_financing": "UNKNOWN",
+    "overall": "BLOCKED"
+  }
+}

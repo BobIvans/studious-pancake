@@ -319,6 +319,15 @@ class RecoverableStreamJournal:
         self.db.execute(
             "CREATE TABLE IF NOT EXISTS raw_stream_events (identity TEXT PRIMARY KEY, source TEXT NOT NULL, partition TEXT NOT NULL, generation INTEGER NOT NULL, cursor INTEGER NOT NULL, available_ns INTEGER NOT NULL, payload TEXT NOT NULL, UNIQUE(source,partition,generation,cursor))"
         )
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS raw_stream_barriers (identity TEXT PRIMARY KEY, source TEXT NOT NULL, partition TEXT NOT NULL, available_ns INTEGER NOT NULL, payload TEXT NOT NULL)"
+        )
+        count, size = self.db.execute(
+            "SELECT COUNT(*),COALESCE(SUM(LENGTH(CAST(payload AS BLOB))),0) FROM (SELECT payload FROM raw_stream_events UNION ALL SELECT payload FROM raw_stream_barriers)"
+        ).fetchone()
+        if count > self.max_events or size > self.max_payload_bytes:
+            self.db.close()
+            raise ObservationError("retained raw journal exceeds storage budget")
 
     def close(self) -> None:
         self.db.close()
@@ -329,6 +338,59 @@ class RecoverableStreamJournal:
             (available_at_ns,),
         ).fetchall()
         return tuple(RawStreamEvent(**json.loads(row[0])) for row in rows)
+
+    def block(
+        self, *, source: str, partition: str, available_at_ns: int, reason: str
+    ) -> str:
+        """Persist an observed outage/gap without advancing the accepted cursor.
+
+        A subsequent full snapshot must become available strictly after this
+        barrier. Historical reads before the barrier remain reproducible. The
+        caller observing a rejected event must record it through this method.
+        """
+        import hashlib
+
+        if not source or not partition or not reason or len(reason) > 256:
+            raise ObservationError("bounded stream barrier identity required")
+        if type(available_at_ns) is not int or not 0 < available_at_ns < 2**63:
+            raise ObservationError("invalid barrier availability")
+        payload = json.dumps(
+            {
+                "source": source,
+                "partition": partition,
+                "available_at_ns": available_at_ns,
+                "reason": reason,
+            },
+            sort_keys=True,
+        )
+        identity = hashlib.sha256(payload.encode()).hexdigest()
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            if self.db.execute(
+                "SELECT 1 FROM raw_stream_barriers WHERE identity=?", (identity,)
+            ).fetchone():
+                self.db.execute("COMMIT")
+                return identity
+            self._check_storage_budget(payload)
+            self.db.execute(
+                "INSERT INTO raw_stream_barriers VALUES(?,?,?,?,?)",
+                (identity, source, partition, available_at_ns, payload),
+            )
+            self.db.execute("COMMIT")
+        except BaseException:
+            self.db.execute("ROLLBACK")
+            raise
+        return identity
+
+    def _check_storage_budget(self, serialized: str) -> None:
+        count, stored_bytes = self.db.execute(
+            "SELECT COUNT(*),COALESCE(SUM(LENGTH(CAST(payload AS BLOB))),0) FROM (SELECT payload FROM raw_stream_events UNION ALL SELECT payload FROM raw_stream_barriers)"
+        ).fetchone()
+        if (
+            count >= self.max_events
+            or stored_bytes + len(serialized.encode("utf-8")) > self.max_payload_bytes
+        ):
+            raise ObservationError("raw journal storage budget exhausted")
 
     def append(self, event: RawStreamEvent) -> bool:
         from dataclasses import asdict
@@ -344,16 +406,8 @@ class RecoverableStreamJournal:
                     raise ObservationError("same cursor has different payload")
                 self.db.execute("COMMIT")
                 return False
-            count, stored_bytes = self.db.execute(
-                "SELECT COUNT(*),COALESCE(SUM(LENGTH(CAST(payload AS BLOB))),0) FROM raw_stream_events"
-            ).fetchone()
             serialized = json.dumps(asdict(event), sort_keys=True)
-            if (
-                count >= self.max_events
-                or stored_bytes + len(serialized.encode("utf-8"))
-                > self.max_payload_bytes
-            ):
-                raise ObservationError("raw journal storage budget exhausted")
+            self._check_storage_budget(serialized)
             row = self.db.execute(
                 "SELECT payload FROM raw_stream_events WHERE source=? AND partition=? ORDER BY generation DESC,cursor DESC LIMIT 1",
                 (event.source, event.partition),
@@ -409,6 +463,13 @@ class RecoverableStreamJournal:
     def reconstruct(
         self, *, source: str, partition: str, available_at_ns: int
     ) -> Mapping[str, object]:
+        return self.reconstruct_with_head(
+            source=source, partition=partition, available_at_ns=available_at_ns
+        )[0]
+
+    def reconstruct_with_head(
+        self, *, source: str, partition: str, available_at_ns: int
+    ) -> tuple[Mapping[str, object], RawStreamEvent]:
         events = tuple(
             e
             for e in self.events(available_at_ns=available_at_ns)
@@ -418,6 +479,7 @@ class RecoverableStreamJournal:
         state: dict[str, object] = {}
         valid = False
         previous: RawStreamEvent | None = None
+        repair: RawStreamEvent | None = None
         for event in events:
             if event.kind == "retraction":
                 continue
@@ -430,6 +492,7 @@ class RecoverableStreamJournal:
                     raise ObservationError("snapshot state must be a mapping")
                 state = body
                 valid = True
+                repair = event
             else:
                 if (
                     not valid
@@ -448,6 +511,14 @@ class RecoverableStreamJournal:
                     else:
                         state[key] = value
             previous = event
-        if not valid:
+        barrier = self.db.execute(
+            "SELECT MAX(available_ns) FROM raw_stream_barriers WHERE source=? AND (partition=? OR partition='*') AND available_ns<=?",
+            (source, partition, available_at_ns),
+        ).fetchone()[0]
+        if barrier is not None and (
+            repair is None or repair.available_at_ns <= barrier
+        ):
+            raise ObservationError("observed stream barrier requires repaired snapshot")
+        if not valid or previous is None:
             raise ObservationError("state requires repaired snapshot")
-        return state
+        return state, previous

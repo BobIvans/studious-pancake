@@ -12,7 +12,7 @@ from enum import StrEnum
 import hashlib
 import json
 import math
-from typing import Iterable
+from typing import Callable, Iterable
 from solders.pubkey import Pubkey
 
 from src.economics.capital import NativeCostBreakdown
@@ -558,6 +558,65 @@ class ExactCpmmRouteEvaluation:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class ExactCpmmTopologyScan:
+    plans: tuple[ExactCpmmRoutePlan, ...]
+    expansions: int
+    stop_reason: str
+
+
+def enumerate_exact_cpmm_routes(
+    pools: tuple[QualifiedCpmmState, ...],
+    settlement_asset: SolanaAssetIdentity,
+    *,
+    max_plans: int = 32,
+    max_expansions: int = 1024,
+) -> ExactCpmmTopologyScan:
+    """Bounded 3/4-hop topology enumeration; contains no quote or sizing math."""
+    if not 1 <= len(pools) <= 8 or len({p.venue for p in pools}) != len(pools):
+        raise ValueError("require 1..8 unique pools")
+    _integer(max_plans, "max_plans", minimum=1)
+    _integer(max_expansions, "max_expansions", minimum=1)
+    if max_plans > 64 or max_expansions > 4096:
+        raise ValueError("topology budget above hard cap")
+    ordered = tuple(sorted(pools, key=lambda p: p.venue))
+    plans: dict[str, ExactCpmmRoutePlan] = {}
+    expansions = 0
+    stop = "complete"
+
+    def visit(
+        asset: SolanaAssetIdentity,
+        path: tuple[QualifiedCpmmState, ...],
+        seen: frozenset[SolanaAssetIdentity],
+    ) -> None:
+        nonlocal expansions, stop
+        for pool in ordered:
+            if stop != "complete":
+                return
+            if pool in path or asset not in (pool.asset_a, pool.asset_b):
+                continue
+            if expansions == max_expansions:
+                stop = "expansion-limit"
+                return
+            expansions += 1
+            target = pool.asset_b if asset == pool.asset_a else pool.asset_a
+            next_path = (*path, pool)
+            if target == settlement_asset:
+                if len(next_path) in (3, 4):
+                    plan = ExactCpmmRoutePlan(settlement_asset, next_path)
+                    if len(plans) == max_plans and plan.semantic_route_id not in plans:
+                        stop = "plan-limit"
+                        return
+                    plans[plan.semantic_route_id] = plan
+            elif target not in seen and len(next_path) < 4:
+                visit(target, next_path, seen | {target})
+
+    visit(settlement_asset, (), frozenset({settlement_asset}))
+    return ExactCpmmTopologyScan(
+        tuple(plans[p] for p in sorted(plans)), expansions, stop
+    )
+
+
 def evaluate_exact_cpmm_route(
     plan: ExactCpmmRoutePlan,
     *,
@@ -566,6 +625,9 @@ def evaluate_exact_cpmm_route(
     max_snapshot_age_seconds: float = 5.0,
     max_slot_skew: int = 0,
     adapter: QualifiedRaydiumCpmmAdapter | None = None,
+    observation_builder: (
+        Callable[[ExactCpmmEdgeEvaluation], MarketObservationV2] | None
+    ) = None,
 ) -> ExactCpmmRouteEvaluation:
     """Re-evaluate every leg at the previous leg's conservative output."""
 
@@ -609,7 +671,23 @@ def evaluate_exact_cpmm_route(
             state, input_asset=current_asset, requested_input=current_amount
         )
         legs.append(leg)
-        observation = leg.to_observation()
+        observation = (
+            leg.to_observation()
+            if observation_builder is None
+            else observation_builder(leg)
+        )
+        if (
+            observation.input_mint != leg.input_asset.mint
+            or observation.output_mint != leg.output_asset.mint
+            or observation.input_amount != leg.requested_input
+            or observation.expected_output != leg.expected_output
+            or observation.guaranteed_output != leg.conservative_output
+            or observation.slot != state.slot
+            or observation.generation != state.generation
+            or observation.observed_at != state.observed_at
+            or observation.expires_at != state.expires_at
+        ):
+            raise ValueError("observation builder changed exact amount/state semantics")
         edges.append(DirectedQuoteEdge(state.venue, observation))
         current_asset = leg.output_asset
         current_amount = leg.conservative_output

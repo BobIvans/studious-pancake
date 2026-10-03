@@ -1,0 +1,154 @@
+{
+  "schema": "shadow.native-cpmm-qualification.v1",
+  "shadow_only": true,
+  "live_authorization": false,
+  "qualification": {
+    "overall": "BLOCKED",
+    "raw_decode": "NOT_EXECUTED"
+  },
+  "error_category": "NativeCaptureError",
+  "governance": {
+    "raydium-native-discovery": {
+      "active_leases": 1,
+      "committed_cost_units": 0,
+      "committed_requests": 0,
+      "committed_spend_micros": 0,
+      "dependency_failures": 0,
+      "dependency_mode": "active",
+      "dependency_reason": "entitlement_generation_active",
+      "dependency_retry_at": null,
+      "generation": "native-cpmm-public-read-v1",
+      "manifest_sha256": "634b91cc1bc48d3273cc27c0c1597a4b16e747fd02f8e2099051db627ac0603e",
+      "provider_id": "raydium-native-discovery",
+      "reserved_cost_units": 1,
+      "reserved_requests": 1,
+      "reserved_spend_micros": 0,
+      "window_resets_at": 1791055959.5530214,
+      "window_started_at": 1791055899.5530214
+    },
+    "solana_rpc": {
+      "active_leases": 1,
+      "committed_cost_units": 0,
+      "committed_requests": 0,
+      "committed_spend_micros": 0,
+      "dependency_failures": 0,
+      "dependency_mode": "active",
+      "dependency_reason": "entitlement_generation_active",
+      "dependency_retry_at": null,
+      "generation": "native-cpmm-public-read-v1",
+      "manifest_sha256": "a4dfbf4926f95ca2fc5d4f8041817f5d5035623f08c481a44f336a97c580916b",
+      "provider_id": "solana_rpc",
+      "reserved_cost_units": 1,
+      "reserved_requests": 1,
+      "reserved_spend_micros": 0,
+      "window_resets_at": 1791055959.5530214,
+      "window_started_at": 1791055899.5530214
+    }
+  },
+  "read_manifests": {
+    "raydium-native-discovery": {
+      "allowed_endpoints": [
+        "https://api-v3.raydium.io/pools/info/list"
+      ],
+      "allowed_http_methods": [
+        "GET"
+      ],
+      "allowed_operations": [
+        "backfill",
+        "discovery"
+      ],
+      "allowed_query_parameters": [
+        "page",
+        "pageSize",
+        "poolSortField",
+        "poolType",
+        "sortType"
+      ],
+      "allowed_rpc_methods": [],
+      "cost_unit_limit": 8,
+      "credential_generation": "anonymous-v1",
+      "credential_ref": "anonymous-public-read",
+      "expires_at_epoch_seconds": 1791072000,
+      "finalization_reserve_cost_units": 0,
+      "finalization_reserve_requests": 0,
+      "finalization_reserve_spend_micros": 0,
+      "generation": "native-cpmm-public-read-v1",
+      "manifest_sha256": "634b91cc1bc48d3273cc27c0c1597a4b16e747fd02f8e2099051db627ac0603e",
+      "max_concurrency": 1,
+      "provider_id": "raydium-native-discovery",
+      "quota_pool_ref": "native-cpmm-public-reads-v1",
+      "request_limit": 8,
+      "source_ref": "https://docs.raydium.io/raydium/for-developers/api",
+      "spend_limit_micros": 0,
+      "spend_window_seconds": 86400,
+      "window_seconds": 60.0
+    },
+    "solana_rpc": {
+      "allowed_endpoints": [
+        "https://api.mainnet-beta.solana.com"
+      ],
+      "allowed_http_methods": [
+        "POST"
+      ],
+      "allowed_operations": [
+        "backfill",
+        "discovery"
+      ],
+      "allowed_query_parameters": [],
+      "allowed_rpc_methods": [
+        "getBlock",
+        "getGenesisHash",
+        "getMultipleAccounts"
+      ],
+      "cost_unit_limit": 8,
+      "credential_generation": "anonymous-v1",
+      "credential_ref": "anonymous-public-read",
+      "expires_at_epoch_seconds": 1791072000,
+      "finalization_reserve_cost_units": 0,
+      "finalization_reserve_requests": 0,
+      "finalization_reserve_spend_micros": 0,
+      "generation": "native-cpmm-public-read-v1",
+      "manifest_sha256": "a4dfbf4926f95ca2fc5d4f8041817f5d5035623f08c481a44f336a97c580916b",
+      "max_concurrency": 1,
+      "provider_id": "solana_rpc",
+      "quota_pool_ref": "native-cpmm-public-reads-v1",
+      "request_limit": 8,
+      "source_ref": "https://solana.com/docs/references/clusters",
+      "spend_limit_micros": 0,
+      "spend_window_seconds": 86400,
+      "window_seconds": 60.0
+    }
+  },
+  "rpc_receipts": [],
+  "discovery": {
+    "markets": [],
+    "receipts": [
+      {
+        "error": "transport-error",
+        "http_status": null,
+        "observed_at": 1791055899.5524356,
+        "request_fingerprint": "3658d0546a22c3bf4115e15b8c6eb2a8ea1c84e9fab79e6266f35c7595b7e3de",
+        "response_hash": null,
+        "source_id": "raydium"
+      }
+    ],
+    "rejections": [
+      [
+        "transport-error",
+        1
+      ]
+    ],
+    "truncated": false
+  },
+  "source_identity": {
+    "digest": "a554d1294f26510542f055dfa14cbd49d0650ac540706bdef6d553f52787e6e9",
+    "file_count": 994,
+    "root_name": "src"
+  },
+  "status": "BLOCKED_EXTERNAL_DATA",
+  "captured_native_snapshots": 0,
+  "captured_markets": 0,
+  "completed_qualification_campaigns": 0,
+  "complete_zip": false,
+  "attempt_report_sha256": "cebf4e5ae639d0091023843eb16b1c9e90198c0f422e0a81a31bede540bf6fe1"
+}

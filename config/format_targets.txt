@@ -421,3 +421,8 @@ src/providers/orderbook/stream_state.py
 tests/test_absolute_orderbook_stream.py
 tests/test_market_scale_scope_manifest.py
 tests/test_cpmm_fee_accounting.py
+src/providers/raydium_cpmm_native.py
+src/market/native_cpmm_capture.py
+src/paper_shadow/native_cpmm_qualification.py
+tests/native_cpmm_fixtures.py
+tests/test_native_cpmm_qualification.py

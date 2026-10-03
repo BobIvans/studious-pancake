@@ -1,0 +1,674 @@
+{
+  "schema": "shadow.native-cpmm-qualification.v1",
+  "shadow_only": true,
+  "live_authorization": false,
+  "as_of_ns": 1002000000000,
+  "journal_head": "8096c28408238870714e14042e4abd9ae9fba6ed62e54c1881b6f8844b06b36f",
+  "capture_hash": "2289db3f98de344cdbaf8b9dd938ce03f300c742664f7053150a678d58599b26",
+  "evidence_kind": "synthetic-fixture",
+  "slot": 100,
+  "block_hash": "gBxS1f6uyyGPuW5MzGBukidSb71jdsCb5fZaoSzULE5",
+  "parent_hash": "k7FaK87WHGVXzkaoHb7CdVPgkKDQhZ29VLDeBVbDfYn",
+  "binary_sha256": "bfc32d2b6c141a48826e1af6cfc1cda4997732af5d5615dd4f7df427a87f981e",
+  "deployment_slot": 10,
+  "decoder_revision": "raydium-cpmm-state.v1",
+  "amount_points": [
+    "10",
+    "20",
+    "30"
+  ],
+  "quote_count": 37,
+  "coverage": {
+    "catalog_sources": 53,
+    "discovered_markets": 0,
+    "bound_markets": 4,
+    "exact_quoted_markets": 4,
+    "fresh_quoted_markets": 4,
+    "missing_bindings": [],
+    "batch_complete": true,
+    "discovery_truncated": false,
+    "discovery_errors": []
+  },
+  "traces": [
+    {
+      "edge_identity": "00f03cc5ca75b8cb0e64cf6edf2313cb8006a4ca081c1deae17895aca85a9bf5",
+      "observation_id": "571a8e9317cbea4e8302cfce80f196840f819bd37c3b596d96c35dc6e6b43882",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 21,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "d1a1a9bd74a6e68675e6105fc479fcc5a4d5813ea5fcd666b3b43b512380c86a"
+    },
+    {
+      "edge_identity": "09009c18af2118ae39ddbf418c3df21897771d7ae94ee651e7aaa50f66e60c6f",
+      "observation_id": "3c8d67b3d67d4906ad129050627b4a2b55aff70e0744a650d12ee246ae844f52",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 31,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "3984e4396e29d717f23a66804f5aecab396a40a495dbae51c9a28c3eed4bbe15"
+    },
+    {
+      "edge_identity": "1415e145b8e15792cb12e4299f3d8f804e8a3cfc523de80d2dad4cb11da163b5",
+      "observation_id": "0a424950f78855b86b5f1fb1beab22ccad5aa4d51aa364001eb928557586b6a3",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 12,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "2f9d9e027de9761e93f529df883485245d1dc28c2b69b4012e3677f5c641820d"
+    },
+    {
+      "edge_identity": "15a87ba746da8a2a829970cf41642e26e8c011d305bb61006760aaf018cb4655",
+      "observation_id": "75f977519f46a07f67f0b67a4bd25e34d6df9fa83d46458cf19f75aa88184ac5",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 1,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "9d4e93717ee3a09cae38ecd73df6ae2c1ed19b0a31b48f2848f1617ffea31b25"
+    },
+    {
+      "edge_identity": "1a641f8d5794ee0221acd7f1704784a47ceaae40fb839c87152a07890a25bb3d",
+      "observation_id": "c59b3844a02aaba5a2ac40db88158501d5db5d37d52a8cc3b9aad0b5eba871a6",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 27,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "66b881fb3132d73cf7c0a4eee3899271c91636464b41b296b0419313b68b2a5b"
+    },
+    {
+      "edge_identity": "218b891248932a00d691b6b07dd5d55dce481857da24dd7e7ed234cde5d63d22",
+      "observation_id": "8679f7bad871e3d8f72e39be25f09f1414d254a962a393c99cc02f32632834eb",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 34,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "ce7d289c0bec1e2ff1eabcf53d9b9acf07a6a2fd8fd5cfd0e6787f3a7b5bd25e"
+    },
+    {
+      "edge_identity": "23cba7d31744b711873e4bd7d83a1424296f345f71c81b6dabefa7f549e668fd",
+      "observation_id": "27c60d0197e11d7c3ca4985b2ca908611b910710a041ed759544e18ff01bb066",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 6,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "ae7bd6c74dfff4b9434d431192f7690c8d168c0b6e712d414a00c25b0ff06489"
+    },
+    {
+      "edge_identity": "2ca138190b13a0a5ab1c3d6798d3b10a0e90647ecbf2e4f0848689ae30c67d2f",
+      "observation_id": "beb248f9853ee7930b59e426532e988b1ee1cecfba37a11cbe30e82a7a1e382d",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 3,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "e06e2122da887785bc073b00843f52107d2f8e5fbd3f01e84d4f82e3f33ffe2d"
+    },
+    {
+      "edge_identity": "30aa2242ed37a5343f6decbff5ca040d283ba1659625cc23b429822e43dd2a0f",
+      "observation_id": "7e38ca6ad66547984ea543ea0832a1119905dc5a912da6f3925065fad4a0b216",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 32,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "d9b4c1e2cbc94a7208f85be380df40143f16edc9575d11fd67973e26a77b4aa6"
+    },
+    {
+      "edge_identity": "3439ec1112c94bf637bac439d5f1d7f71236f6a96c4bf38b3a6e948925ab73bf",
+      "observation_id": "3f51f5c49f1b774ee0466e9163d7033e0829e9985cbc39fae008c234d6e986eb",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 9,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "16946ad527a11df4e9cb00f7d5a8521885d7c58e0c22adfc6b33836383d15400"
+    },
+    {
+      "edge_identity": "3b43cd68d52c198b149bebc6775cb2f3e5cdbe227f89f4df11e2f27b1c7f0899",
+      "observation_id": "f623edd67dd2f757c55c8b3547e255ff7bc046196988d628df6640f92ba52fc3",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 13,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "c9f8ecb424da2c8501e39f0dcd113d22a61f0906d9b6108ec15393b9e0325965"
+    },
+    {
+      "edge_identity": "5299e54637e50ed9d7682e5762c475ce3030298c18a44751527dc82fdb1194cc",
+      "observation_id": "2f2a358a8ac05fcaad52a5289fe220a29145c79fe7b25c7d0b2510e5ffc47f87",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 33,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "497a9bf979618a7942781034dbc7976ab7b51a63254005c60876ab451ac7732d"
+    },
+    {
+      "edge_identity": "53ccbd4d10f2eec3dbb195f1e2d95fc840239f32aa9f8c51ac1edf8e79ff430a",
+      "observation_id": "d8d42532228146ade77049e4d4e28887e56b87cad9d7d8da0a750e4d6b628dd2",
+      "binding_id": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "cursor_offset": 17,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "36437c3e58161a069e00dac6bcc1484fb0c16acda1f813a1ceab6d0de232dc24"
+    },
+    {
+      "edge_identity": "5840c82b2a96768418834ab7e885671d2b3b72dc5885fad3da952c7afa09b1d9",
+      "observation_id": "cb1f4e7bf181a76fae3559a899580362234ce2716981eea9fc239c210857fb6c",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 26,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "4c34f701779002fda2f34c22b515f62a061cadec489b9e5f5013ab806bde2afc"
+    },
+    {
+      "edge_identity": "58cb9aa4a9173763d14f8f82748566e909e0184fd3b76e84836cc477e4fcd182",
+      "observation_id": "362a6ef084548cdd6220c7971752dcd63904e79186aa0f2f8918864074248f44",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 16,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "befa046f4288c322321c2a50bcca197edbe6af1357a5cc2a14cca56758b5f584"
+    },
+    {
+      "edge_identity": "59fe5c74517cd806f6fa18ae0e72a7e6c454a785bf228191e30f8d23d8b82c01",
+      "observation_id": "ba54d6b50b8bbb98f7cecbc2f5599667880e0a6e168add1e858910ce0d48baec",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 7,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "b91010066dd1d9a7787ea49c748a51d4b014dce47b21f794ab155fd2012ee822"
+    },
+    {
+      "edge_identity": "74992926556b5c1adbfbac1163ecf666afb0da23375c956143da56d98ab14651",
+      "observation_id": "44e67cddf5e73531dcebe08caf4bd1550713aa4c0fa42721b1463c22f4b21e72",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 14,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "3162920e6054a9409aebacd7e83330b52491dc0dcd183ecc603117f18952e2aa"
+    },
+    {
+      "edge_identity": "76035bbb9e99f96dd67399c68d56f40cf83934730502fe9796220cd7da23ea69",
+      "observation_id": "95895a59c9b8e95018867b59c5fd61bfdf920d0fefdf644fc4e5e00e287ef99c",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 8,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "0a2ef45817cabd3787590a4865f5dabcc3eefdd1d9ef0ecb37a0b655c5c38b33"
+    },
+    {
+      "edge_identity": "86e61129a593197c14cfd16185632cee233892f3bcd633627c94cd86f2b262f9",
+      "observation_id": "5d9569d95c8876d840254b5cd31f44e47c99d3fd8ae150336e237a59c55a3d0d",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 37,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "1b55fe51b5f67691407b582e5780461ea81e03f2024e9ee4f60602c3f276d5f8"
+    },
+    {
+      "edge_identity": "8ba1c7250ed9f1659a9d5a992205c576bb48dfdeb986618a11cf6b3025629d35",
+      "observation_id": "be9526e01f2464bb6a54b055129857e5b6e7d526f5920983d04fcff1c070257a",
+      "binding_id": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "cursor_offset": 28,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "5f20a7929206a3e1c441182b098b018bba9550e939b8be008da41c29da2ff4ba"
+    },
+    {
+      "edge_identity": "8ca72be36411b501a4fa521519061d51a60f2417ef238aa6c1145a826776525f",
+      "observation_id": "9dc2f21b95449aab9160aed3f2335f9f9b0e5cd8c9f4200db41b826dd7992374",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 11,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "c207ab1441832440bd4a23f4e401c3af6e273c7f294954b3077809f859935f67"
+    },
+    {
+      "edge_identity": "8e09177d57830fc2f6bf3ceaebde9fc0b981358053e20118f371497b01ac950c",
+      "observation_id": "16196dd8981ca4c6d207c39173d08ad75f4748424fdf73c54e9894b4fef37bc8",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 23,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "5983ceafbb96592662b70efb342d6e67aa070cfcd6a664546e29ace973c82a82"
+    },
+    {
+      "edge_identity": "9688deee89a69cb6675b3954ac4b6acf1302eb391a5eaa974b72efc2b1ab5d07",
+      "observation_id": "26a673b66b0807aa6c02253c9a613e088528e23acda9affdc7eac748dbd8f234",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 20,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "35745890c3797abd3063172aa38f467e45e44411452c129cc87167dde7ca518f"
+    },
+    {
+      "edge_identity": "abddeabf916028d5bf9c392c53ff6c9104906863ae1fc8d0ae537dd1071ecff3",
+      "observation_id": "caa276d6438b1a74602d92eecb95b3840dbdc14c4446db20663d7e9bfc7313fa",
+      "binding_id": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "cursor_offset": 22,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "57e5dbffd2f361f1057e4248d74985deb126c31e79ee906595a83268e1f1f67f"
+    },
+    {
+      "edge_identity": "b076f21ea2db2d220d17ab2e0a022eaa805ab502ca10307cd5f3287ad548418b",
+      "observation_id": "8a3b01292502616ce5446f3255018225ed3f72655b5316429c8d6408516978f8",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 29,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "a67ebbe82a2a60869ba87abed3f1efa93ac3e6496b82c7e3cc9dc8864776e7e5"
+    },
+    {
+      "edge_identity": "b5e1241166c39b8748f23350ee8483c269370770472a2870e4acac87ea631231",
+      "observation_id": "8b5850f54d645fcadb57d087c29095b48d4340355ff3bc1d5acc835cc9290c84",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 4,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "f4643107203d0d775c4cce68acaeb8d4fc4ea67426305e3a053a2900075c2243"
+    },
+    {
+      "edge_identity": "bde2a3d307a95b1fd6253dd222414f1e7337a51292256eca79f4b9f4b10ee956",
+      "observation_id": "bca54703dd18540a0a70ed3d4ca50cfb478c101238ed8880464c072d3791331f",
+      "binding_id": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "cursor_offset": 19,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "bd311f1554fe27f5a867093fbc697ebf92ed71ffd16f511b1cb077fe41f5893e"
+    },
+    {
+      "edge_identity": "bebed090baf5c970b5783ae064074fbdf5817798d4e6537062612f8ca55fe563",
+      "observation_id": "c02ef04ced63d467e48faed064b72860d1a46698cf3ea78ec250772ee97d50dd",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 30,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "e0450fbff6fa62797b700ae5eae056c4e527aac62e987b4f3a4205aa9c8b7820"
+    },
+    {
+      "edge_identity": "c80a9e6033c3230def36d4be543914c84ce959016e845cf76d99b7aae548de7e",
+      "observation_id": "1c57591f5c760b4ffe23fd82ffcc09c7f6e1970c6b2fce33615578fb01d0ad36",
+      "binding_id": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "cursor_offset": 2,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "338cada362076dda056df1bf097bd72fac456fe0790a36353f26ae9450c63b2d"
+    },
+    {
+      "edge_identity": "c8cffa519f618a91cda01e2600ec3d0104506806cc2b61c70db83f2c4e291fea",
+      "observation_id": "e6d58353a3c1ab44e8042581363377f523227d79c826f73653fd0a7521aaadb0",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 24,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "d02e268cc30a588b7ccb810cd166d6ecbe14124f476de7b53ad24c4b6cda7c0e"
+    },
+    {
+      "edge_identity": "ca7ada858c4dd8f576634f2b2e8173c84540ad514028937c710f4ae3ecb2c170",
+      "observation_id": "855f9998a05d1d8292c8d0c0cf053b4bda7353dd471b53e026ac8665f8935007",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 35,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "29dd9ebc8d6487634d5b9e6ee18ee59dbe39b815bebf996078f00c58dd0a3fd9"
+    },
+    {
+      "edge_identity": "d1d5bb8c4aa1783234e8cd2af70eceb0f30bacc28c040ecadfdd29685415aadb",
+      "observation_id": "20bb3a42a316c979155e2de89640ad9144d22c1d7986d80f3ad3f14509635414",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 10,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "e05dcc23ae899e722576883268250c7d3dad7f8d31d82d0b0a8f363034af0e9e"
+    },
+    {
+      "edge_identity": "dbb496609fe3d25240102c6d73f1ddc40205542e599ab9b26efdca038adb19d4",
+      "observation_id": "63629b2df8263b941c8a662c286384a1839668645bcd910c8e0538f1ed61cbc9",
+      "binding_id": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "cursor_offset": 25,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "5ef86597b99498e234f092e39189f2800a876a67919d57c3dccda8b657bdd53b"
+    },
+    {
+      "edge_identity": "e644d044da7a9111787102be16902c58cf5166cc5feb5d0b60ec448c9bba385f",
+      "observation_id": "16004f8e335e15665da319548d1aa3f670f078026a08d6cb3fb8487ad623f7c5",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 36,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "83984e7fbfbf47add5db99470ee85df315e5b0fe98596fdb79ac581bbc420978"
+    },
+    {
+      "edge_identity": "e78d28457fc8b29af6219aa069ba2952393827d6471e6d7f31ccc312e4fc1269",
+      "observation_id": "439afe6b6f025c04f1d0f23ef916a798cd0b842a15a7f35f38afa774427bb35f",
+      "binding_id": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+      "cursor_offset": 15,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "1b4c15607547d3a9b8344c5e00892968465de36d741948c12583adde6aabe389"
+    },
+    {
+      "edge_identity": "ea3bf3ecf578c48d9fb0007d674e845bf0e44b0031ae484b29bcdb48b13a6182",
+      "observation_id": "d5397be0f278543d664bf48ed7e4b902ed167ac06aebc2ce54770e573990326e",
+      "binding_id": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "cursor_offset": 18,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "40c0192ef1cc61c0c1a08ef71e5865d22184bac11f2af902c729190c10098a86"
+    },
+    {
+      "edge_identity": "f1454376a479fe4689da987f10ce529c08d8ff44044a6a7b12452a6d8f45d2fa",
+      "observation_id": "08eb2326541e8ddf32f0ff9121d5853c5a608499e13a6c09ee9c0eb6f341f260",
+      "binding_id": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "catalog_source_id": "raydium",
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "cursor_key": "raydium-native-cpmm:4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+      "cursor_offset": 5,
+      "response_hash": "9d54246cce81c599d856645fb3ad025822930d4403dd8f719d6adc8b01d4301c",
+      "request_fingerprint": "3beb1594973f0bb7a1601853f642af1d33858a7d95708f7405087f2fc4d75f01"
+    }
+  ],
+  "topology_plans": 2,
+  "topology_expansions": 8,
+  "search_stop": "complete",
+  "evaluations": [
+    {
+      "semantic_route_id": "67e3d3ff3bec03b1b1129e0cbd5e3ab27e600c826e277c327f12956aac2dec92",
+      "amount": "10",
+      "status": "gross-shadow-candidate",
+      "evaluation_id": "be9d836474c7478d555d3319fa6824b84c75ffa5a14a304c87b3c67063283329",
+      "output": "16",
+      "route_id": "26523f425dbf54738cb02c415e86263aa284ca6d9137bb2fe3bafcaede0db60d"
+    },
+    {
+      "semantic_route_id": "67e3d3ff3bec03b1b1129e0cbd5e3ab27e600c826e277c327f12956aac2dec92",
+      "amount": "20",
+      "status": "gross-shadow-candidate",
+      "evaluation_id": "d9b9553888017bdd1134e6037e85e4380d149ed866f1c11a219e3ab45db3ffe3",
+      "output": "28",
+      "route_id": "5ac10c827879466e3d1cb35c8b37bf1295929f986140aabc956e695e005aa595"
+    },
+    {
+      "semantic_route_id": "67e3d3ff3bec03b1b1129e0cbd5e3ab27e600c826e277c327f12956aac2dec92",
+      "amount": "30",
+      "status": "gross-shadow-candidate",
+      "evaluation_id": "16af34789471d68134d08bc8d4020fdb8d5dc54a0d663f81f1526d3d72ec94a7",
+      "output": "36",
+      "route_id": "fddad41e5a004abcd34816dbb5aee875543c9b28e60a9803d44bd5ae7f74343d"
+    },
+    {
+      "semantic_route_id": "f7819de9d34e85af1891c2c00858fb1541d57dc7b6756a50db60fea840b5e026",
+      "amount": "10",
+      "status": "amount-rejected",
+      "reason": "negative-gross-output"
+    },
+    {
+      "semantic_route_id": "f7819de9d34e85af1891c2c00858fb1541d57dc7b6756a50db60fea840b5e026",
+      "amount": "20",
+      "status": "amount-rejected",
+      "reason": "negative-gross-output"
+    },
+    {
+      "semantic_route_id": "f7819de9d34e85af1891c2c00858fb1541d57dc7b6756a50db60fea840b5e026",
+      "amount": "30",
+      "status": "amount-rejected",
+      "reason": "negative-gross-output"
+    }
+  ],
+  "quote_rejections": [
+    {
+      "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "amount": "10",
+      "reason": "zero-output"
+    },
+    {
+      "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+      "mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "amount": "20",
+      "reason": "zero-output"
+    },
+    {
+      "market": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+      "amount": "10",
+      "reason": "zero-output"
+    },
+    {
+      "market": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+      "amount": "20",
+      "reason": "zero-output"
+    },
+    {
+      "market": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+      "mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+      "amount": "30",
+      "reason": "zero-output"
+    }
+  ],
+  "graph_stop": "complete",
+  "graph_rejections": {
+    "amount_mismatch": 180,
+    "below_min_gross_profit": 3
+  },
+  "gross_shadow_candidates": [
+    {
+      "route_id": "1aca490994107c61cc6166b6a988a3de601d9ad0f639312c883e7478efc863ed",
+      "hops": 4,
+      "input": "10",
+      "output": "16",
+      "markets": [
+        "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+        "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+        "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+        "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U"
+      ],
+      "legs": [
+        {
+          "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+          "input_mint": "So11111111111111111111111111111111111111112",
+          "output_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "input": "10",
+          "output": "241",
+          "observation_id": "1c57591f5c760b4ffe23fd82ffcc09c7f6e1970c6b2fce33615578fb01d0ad36"
+        },
+        {
+          "market": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+          "input_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "output_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "input": "241",
+          "output": "566",
+          "observation_id": "26a673b66b0807aa6c02253c9a613e088528e23acda9affdc7eac748dbd8f234"
+        },
+        {
+          "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+          "input_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "output_mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+          "input": "566",
+          "output": "617",
+          "observation_id": "571a8e9317cbea4e8302cfce80f196840f819bd37c3b596d96c35dc6e6b43882"
+        },
+        {
+          "market": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+          "input_mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+          "output_mint": "So11111111111111111111111111111111111111112",
+          "input": "617",
+          "output": "16",
+          "observation_id": "caa276d6438b1a74602d92eecb95b3840dbdc14c4446db20663d7e9bfc7313fa"
+        }
+      ]
+    },
+    {
+      "route_id": "311e414257b06c4309b937d65fea3554ed05b70af28800caf85876da3ae207b8",
+      "hops": 4,
+      "input": "30",
+      "output": "36",
+      "markets": [
+        "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+        "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+        "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+        "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U"
+      ],
+      "legs": [
+        {
+          "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+          "input_mint": "So11111111111111111111111111111111111111112",
+          "output_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "input": "30",
+          "output": "734",
+          "observation_id": "8b5850f54d645fcadb57d087c29095b48d4340355ff3bc1d5acc835cc9290c84"
+        },
+        {
+          "market": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+          "input_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "output_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "input": "734",
+          "output": "1451",
+          "observation_id": "cb1f4e7bf181a76fae3559a899580362234ce2716981eea9fc239c210857fb6c"
+        },
+        {
+          "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+          "input_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "output_mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+          "input": "1451",
+          "output": "1442",
+          "observation_id": "c59b3844a02aaba5a2ac40db88158501d5db5d37d52a8cc3b9aad0b5eba871a6"
+        },
+        {
+          "market": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+          "input_mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+          "output_mint": "So11111111111111111111111111111111111111112",
+          "input": "1442",
+          "output": "36",
+          "observation_id": "be9526e01f2464bb6a54b055129857e5b6e7d526f5920983d04fcff1c070257a"
+        }
+      ]
+    },
+    {
+      "route_id": "8041959d27c688462d15f500cbc9f35b1f375675a332f327eb341ae333c3d93a",
+      "hops": 4,
+      "input": "20",
+      "output": "28",
+      "markets": [
+        "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+        "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+        "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+        "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U"
+      ],
+      "legs": [
+        {
+          "market": "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M",
+          "input_mint": "So11111111111111111111111111111111111111112",
+          "output_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "input": "20",
+          "output": "494",
+          "observation_id": "beb248f9853ee7930b59e426532e988b1ee1cecfba37a11cbe30e82a7a1e382d"
+        },
+        {
+          "market": "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4",
+          "input_mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+          "output_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "input": "494",
+          "output": "1059",
+          "observation_id": "16196dd8981ca4c6d207c39173d08ad75f4748424fdf73c54e9894b4fef37bc8"
+        },
+        {
+          "market": "4WnNSfDXkWSnFi1PgXxn8X8fhFwU2Jhe4Df82mL9rKmm",
+          "input_mint": "GgBaCs3NCBuZN12kCJgAW63ydqohFkHEdfdEXBPzLHq",
+          "output_mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+          "input": "1059",
+          "output": "1095",
+          "observation_id": "e6d58353a3c1ab44e8042581363377f523227d79c826f73653fd0a7521aaadb0"
+        },
+        {
+          "market": "4ahfaxgYLok1PoFu7qHhRPuRwR9fhNPTcdKn69Nkbf6U",
+          "input_mint": "LbUiWL3xVV8hTFYBVdbTNrpDo41NKS6o3LHHuDzjfcY",
+          "output_mint": "So11111111111111111111111111111111111111112",
+          "input": "1095",
+          "output": "28",
+          "observation_id": "63629b2df8263b941c8a662c286384a1839668645bcd910c8e0538f1ed61cbc9"
+        }
+      ]
+    }
+  ],
+  "qualification": {
+    "raw_decode": "PASS",
+    "restart_replay": "NOT_RUN_BY_SINGLE_REPLAY",
+    "deployment_source_binding": "MISSING",
+    "forward_holdout": "NOT_RUN",
+    "complete_account_subscription": "NOT_IMPLEMENTED_ONE_SHOT_ONLY",
+    "execution_costs_and_financing": "UNKNOWN",
+    "overall": "BLOCKED"
+  }
+}

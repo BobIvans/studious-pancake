@@ -1,0 +1,55 @@
+{
+  "schema": "shadow.native-layout-review.v1",
+  "raydium_revision": "b3187ae53a1b95a201f855a59024a12ca8f5b51a",
+  "primary_sources": [
+    {
+      "url": "https://raw.githubusercontent.com/raydium-io/raydium-cp-swap/b3187ae53a1b95a201f855a59024a12ca8f5b51a/programs/cp-swap/src/states/pool.rs",
+      "sha256": "e2a836869400bf3cbe3aa52e664235620f82a5c701edd4ced75789f6d7d124ad",
+      "bytes": 18660
+    },
+    {
+      "url": "https://raw.githubusercontent.com/raydium-io/raydium-cp-swap/b3187ae53a1b95a201f855a59024a12ca8f5b51a/programs/cp-swap/src/states/config.rs",
+      "sha256": "02384ef4d41b1dfc985ebf6a581c3227ef60892560300e7233e31dcfc0358890",
+      "bytes": 1668
+    },
+    {
+      "url": "https://raw.githubusercontent.com/raydium-io/raydium-cp-swap/b3187ae53a1b95a201f855a59024a12ca8f5b51a/programs/cp-swap/src/states/oracle.rs",
+      "sha256": "0b8dd5fa9bf69454960d790478a2dc4d61c094991df4e8561843f1b2c1a664ea",
+      "bytes": 6725
+    },
+    {
+      "url": "https://raw.githubusercontent.com/raydium-io/raydium-cp-swap/b3187ae53a1b95a201f855a59024a12ca8f5b51a/programs/cp-swap/src/lib.rs",
+      "sha256": "d4151c3959d5b066d459e02f8ffcb45c842944231d68aaff659909c232639f7b",
+      "bytes": 14248
+    }
+  ],
+  "spl_token_primary_source": {
+    "url": "https://raw.githubusercontent.com/solana-labs/solana-program-library/b1c44c171bc95e6ee74af12365cb9cbab68be76c/token/program/src/state.rs",
+    "sha256": "e1d440c816f4a5c757b9077393e3c08c444a2fcfcf18872ca2ee6e7e713ed069",
+    "bytes": 17531
+  },
+  "account_lengths": {
+    "PoolState": 637,
+    "AmmConfig": 236,
+    "ObservationState": 4075,
+    "SPLMint": 82,
+    "SPLTokenAccount": 165,
+    "SysvarClock": 40
+  },
+  "deployment_source_binding": "MISSING",
+  "captured_mainnet_vectors": 0,
+  "exact_math_owner": "src/direct_venue/cpmm_math.py",
+  "sizing_owner": "src/economics/non_monotonic_sizing.py",
+  "excluded": [
+    "Token-2022",
+    "CLMM",
+    "DLMM",
+    "stable pools",
+    "orderbook subscriptions"
+  ],
+  "notes": [
+    "Raw accounts are one RPC context; block hash is the same provider reported finalized block at that slot, not an independently authenticated account proof.",
+    "A deployed binary hash does not prove it was built from the pinned source.",
+    "Captured-rpc is an acquisition classification; local mocks can produce that envelope. Real campaign provenance and independent deployment attestation remain required."
+  ]
+}

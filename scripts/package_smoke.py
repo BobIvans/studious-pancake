@@ -286,6 +286,43 @@ print('MPR-2601 installed contract, alias and tampered admission passed')
             cwd=temporary,
             env=clean_env,
         )
+        _run(
+            [
+                str(python),
+                "-I",
+                "-c",
+                """
+import json
+from pathlib import Path
+import sys
+from src.market.streams import RecoverableStreamJournal
+from src.market.native_cpmm_capture import persist_capture
+from src.paper_shadow.native_cpmm_qualification import replay_native_journal
+from src.providers.raydium_cpmm_native import canonical_json
+payload = json.loads(Path(sys.argv[1]).read_text())
+assert payload['evidence_kind'] == 'synthetic-fixture'
+journal = RecoverableStreamJournal('native-smoke.sqlite')
+event = persist_capture(journal, payload)
+kwargs = dict(partition=event.partition, as_of_ns=event.available_at_ns,
+              lower_amount=10, upper_amount=30, max_points=3)
+before = replay_native_journal(journal, **kwargs)
+journal.close()
+journal = RecoverableStreamJournal('native-smoke.sqlite')
+assert canonical_json(before) == canonical_json(replay_native_journal(journal, **kwargs))
+assert before['qualification']['overall'] == 'BLOCKED'
+assert before['gross_shadow_candidates']
+assert not before['live_authorization']
+journal.close()
+print('Installed native CPMM shadow replay passed')
+""",
+                str(
+                    ROOT
+                    / "docs/web3-market-scale/examples/native-cpmm-3hop.synthetic.json"
+                ),
+            ],
+            cwd=temporary,
+            env=clean_env,
+        )
         if status["supported_entrypoint"] != "flashloan-bot":
             raise SystemExit("installed CLI reports an unexpected supported entrypoint")
         if capabilities["schema_version"] != "pr023.capabilities.v1":

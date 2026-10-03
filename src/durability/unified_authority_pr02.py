@@ -278,10 +278,18 @@ class UnifiedLifecycleAuthority:
         )
         self.db = self.lifecycle.db
         self.db.row_factory = sqlite3.Row
-        with self.db:
-            DatabaseSchemaAuthority.install_authority_schema(self.db)
-            self.db.executescript(_SCHEMA)
-            self._install_or_verify_identity()
+        try:
+            with self.db:
+                DatabaseSchemaAuthority.install_authority_schema(self.db)
+                self.db.executescript(_SCHEMA)
+            # The lifecycle connection uses autocommit. A connection context
+            # alone does not serialize migration fence reads and writes.
+            # Run DDL first: executescript would commit an existing transaction.
+            with self.lifecycle.write_transaction():
+                self._install_or_verify_identity()
+        except BaseException:
+            self.lifecycle.close()
+            raise
 
     def __enter__(self) -> "UnifiedLifecycleAuthority":
         return self

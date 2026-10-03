@@ -1,4 +1,5 @@
 from dataclasses import asdict, replace
+import sqlite3
 import pytest
 from tests.test_pr02_unified_lifecycle_authority import FakeTimeAuthority, digest
 from src.durability.unified_authority_pr02 import (
@@ -126,14 +127,16 @@ def test_finite_portfolio_beats_greedy_fixture_and_common_payer_blocks_paralleli
         )
 
 
-def test_simultaneous_resource_claims_have_one_winner(tmp_path):
+@pytest.mark.parametrize("preinitialized", [False, True])
+def test_simultaneous_resource_claims_have_one_winner(tmp_path, preinitialized):
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
 
     path = tmp_path / "race.db"
     clock = FakeTimeAuthority()
-    initializer = authority(path, clock, "initializer")
-    initializer.close()
+    if preinitialized:
+        initializer = authority(path, clock, "initializer")
+        initializer.close()
     barrier = Barrier(2)
 
     def contender(owner):
@@ -159,3 +162,50 @@ def test_simultaneous_resource_claims_have_one_winner(tmp_path):
     with ThreadPoolExecutor(max_workers=2) as pool:
         results = list(pool.map(contender, ("a", "b")))
     assert sorted(results) == ["admitted", "denied"]
+
+
+def test_failed_identity_bootstrap_never_publishes_partial_metadata(
+    tmp_path, monkeypatch
+):
+    from src.database_schema_authority_pr195 import DatabaseSchemaAuthority
+
+    path = tmp_path / "bootstrap.db"
+    clock = FakeTimeAuthority()
+    tables = (
+        "database_identity_pr195",
+        "migration_ledger_pr195",
+        "migration_fence_pr195",
+    )
+    release_fence = DatabaseSchemaAuthority.release_fence
+
+    def fail_before_release(self, connection, fence):
+        with sqlite3.connect(path) as observer:
+            assert [
+                observer.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+                for table in tables
+            ] == [0, 0, 0]
+        raise RuntimeError("injected bootstrap failure")
+
+    monkeypatch.setattr(DatabaseSchemaAuthority, "release_fence", fail_before_release)
+    with pytest.raises(RuntimeError, match="injected bootstrap failure"):
+        authority(path, clock, "failed")
+    with sqlite3.connect(path) as observer:
+        assert [
+            observer.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+            for table in tables
+        ] == [0, 0, 0]
+
+    monkeypatch.setattr(DatabaseSchemaAuthority, "release_fence", release_fence)
+    with authority(path, clock, "restarted") as store:
+        assert (
+            store.db.execute("SELECT COUNT(*) FROM database_identity_pr195").fetchone()[
+                0
+            ]
+            == 1
+        )
+        assert (
+            store.db.execute(
+                "SELECT lease_expires_utc_ns FROM migration_fence_pr195"
+            ).fetchone()[0]
+            == 0
+        )

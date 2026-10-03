@@ -44,6 +44,10 @@ submission, payments и enabling orderbook strategy не добавлены.
   не даёт права преобразовать активы.
 - Scheduler различает R/R и R/W. Ресурсные claims и terminals используют существующую
   PR02 SQLite authority: два connections/threads не могут получить общий ресурс.
+  Identity и migration fence публикуются атомарно через existing lifecycle write
+  transaction: concurrent startup сериализуется, а ошибка bootstrap не оставляет
+  частично опубликованную identity или удержанный fence. Проверены cold/warm startup,
+  independent-reader fault injection и restart после rollback.
   Worker death не освобождает удержанный claim без reconciliation. Это single-node
   authority, без distributed ownership и без нового capital/quota ledger.
 - Process workers 1/2/4/8 выполняют только immutable local replay. Queue bounded,

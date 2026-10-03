@@ -3,7 +3,7 @@
   "baseline_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
   "command": "python scripts/verify_repo.py --skip-dependency-audit",
   "repository_gate_passed": true,
-  "configured_pytest_passed": 4830,
+  "configured_pytest_passed": 4832,
   "configured_pytest_deselected": 1,
   "online_dependency_vulnerability_audit_run": false,
   "mypy_source_files": 203,
@@ -14,7 +14,7 @@
   "live_enabled": false,
   "source_file_hashes": {
     "src/direct_venue/cpmm_math.py": "5a0eabe6c694e505defc2acc75ffe07ebc8bbf47fcdec0c3a04c423af9c48d6d",
-    "src/durability/unified_authority_pr02.py": "f5ad46fce878f959896c9271cddabd2bc383799acd513f5e55681a1a6dadfddf",
+    "src/durability/unified_authority_pr02.py": "c36794352797f1192190bb66a175ec65d9522d5bf5098c6c87f645beefefdab9",
     "src/economics/non_monotonic_sizing.py": "be49f39863f202614a8e7cc51b045f048eaa1b703a2fd8a6da3a02527f200e8f",
     "src/economics/split_flow.py": "356e621123511c8c8ffe8d862ebe4c763047a7bc3ad2eef84ddbfc035f936da0",
     "src/inventory/mm_replay.py": "da463f783fe48fb0773f878dc8465faab45b5eeed21c665b406750178072a28b",
@@ -57,8 +57,17 @@
     "tests/test_shadow_graph_review.py": "239d6b838dd9c67724a6e82259dbf0aaa8db953b31f7891b7e5c3fa81d08516e",
     "tests/test_shadow_market_data_aggregation.py": "70bbdd830c2f0e6c8122ac3c877de4584fffd8caec1aec836de1f71e23b9bb0d",
     "tests/test_shadow_mechanism_lab.py": "a498cb619091850b8c16dff7b51292abc574857d36b1f69d6fc5c8f83a9bdcfe",
-    "tests/test_shadow_parallel_authority.py": "c12df880f081f263590d4d19924cd1107a1b6c55af056afa1d52b8834979a19e",
+    "tests/test_shadow_parallel_authority.py": "a087b37b7d4c2a540cbecf302bb9d4cecd593714e834f6218e0c41aafbf233ce",
     "tests/test_shadow_workers.py": "06607e475c7bbce117dd7a5ad41441174dffa78eeb2f7971d61000afede0086a"
   },
-  "verification_log_sha256": "4e6e0c1e9451335f20c8272fb5b4f5bd0e564df54d633b9e37dac7f0277d49b8"
+  "verification_log_sha256": "9f0168de776d807ba8c77c4b402c7502f1ffb4e5056868724128cc7675e0a851",
+  "ci_fix": {
+    "failed_head": "6a71470ee9e0e2068acf88bcd6668459c4cd69ca",
+    "root_cause": "autocommit identity bootstrap exposed and raced migration fence metadata",
+    "fix": "existing lifecycle BEGIN IMMEDIATE transaction after DDL, rollback and connection close on failure",
+    "regression_reproduced_before_fix": true,
+    "focused_tests_passed": 20,
+    "cold_warm_concurrent_race_iterations_passed": 100,
+    "workflow_safeguards_unchanged": true
+  }
 }

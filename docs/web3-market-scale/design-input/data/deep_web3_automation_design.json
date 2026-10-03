@@ -1,0 +1,103 @@
+{
+  "schema": "deep-web3-rnd-automation-design-v1",
+  "status": "DESIGN_ONLY_NOT_RUNNABLE",
+  "enabled": false,
+  "schedule": null,
+  "implementations_or_schedules_created": false,
+  "network_access_enabled": false,
+  "paid_access_enabled": false,
+  "phases": [
+    "diff_docs_and_deployments",
+    "propose_adapter_dossier",
+    "qualify_fixture_semantics",
+    "admit_replay_state",
+    "invalidate_changed_dependencies",
+    "bounded_search",
+    "exact_amount_and_joint_state_evaluation",
+    "verify_costs_and_obligations",
+    "compare_equal_budget_holdout",
+    "write_evidence_and_negative_result",
+    "rank_next_research_task"
+  ],
+  "limits_are_proposals_not_measured_capacity": true,
+  "proposed_initial_limits": {
+    "chains": 1,
+    "model_families": 1,
+    "assets": 3,
+    "venues": 4,
+    "circular_hops": [
+      3,
+      4
+    ],
+    "hot_edges": 512,
+    "route_expansions": 4096,
+    "candidates": 100,
+    "amount_points": 8,
+    "split_paths": 2,
+    "exact_edge_calls_per_experiment": 5000,
+    "pending_events": 512,
+    "portfolio_candidates": 18,
+    "external_requests_per_offline_experiment": 0,
+    "provider_cost_budget": 0
+  },
+  "scale_load_test_only": {
+    "discovery_metadata_universe": [
+      10,
+      100,
+      1000
+    ],
+    "arrival_rate_multipliers": [
+      1,
+      10,
+      100
+    ],
+    "note": "Inactive metadata is not qualified coverage. Do not raise existing runtime safety caps by changing this design."
+  },
+  "clocks": [
+    "source_event_time",
+    "available_at",
+    "received_at",
+    "materialized_at",
+    "evaluated_at"
+  ],
+  "negative_results": [
+    "access_missing",
+    "unsupported_model",
+    "incomplete_state",
+    "economic_loss",
+    "budget_exhausted",
+    "no_eligible_order",
+    "unknown_settlement",
+    "unverified_claim",
+    "no_demand_evidence"
+  ],
+  "required_budget_dimensions": [
+    "native_gas",
+    "principal_by_asset_domain",
+    "collateral",
+    "borrow_cap",
+    "data_requests",
+    "bytes",
+    "cpu_time",
+    "queue_memory",
+    "deadline",
+    "shared_provider",
+    "shared_liquidity"
+  ],
+  "prohibited_effects": [
+    "signing",
+    "transaction_build_and_submit",
+    "sender",
+    "payment",
+    "account_onboarding",
+    "enable_orderbook_strategy",
+    "automatic_qualification",
+    "remote_apply_plan",
+    "deployment",
+    "live_authorization"
+  ],
+  "promotion": "Only a reviewed replay/evidence qualification may advance an adapter. No promotion creates execution permission.",
+  "missing_budget": "BLOCKED",
+  "unknown_upstream_lineage": "NOT_INDEPENDENT",
+  "unknown_rights": "QUARANTINE"
+}

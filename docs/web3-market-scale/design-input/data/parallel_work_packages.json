@@ -1,0 +1,307 @@
+[
+  {
+    "id": "PM-01",
+    "title": "Qualification before scale",
+    "depends_on": [],
+    "owner_roles": [
+      "exact",
+      "math",
+      "sizing",
+      "graph"
+    ],
+    "deliverable": "Revision-bound canonical assets, independent CPMM vectors and amount-local rejection report",
+    "acceptance_gate": "DP-01 gate passes without weakening integer amounts or repeated-venue constraints",
+    "existing_work": "Execute existing DP-01 scope; this is a dependency wrapper, not a second implementation",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-02",
+    "title": "Money-flow observatory",
+    "depends_on": [],
+    "owner_roles": [
+      "raw",
+      "claims"
+    ],
+    "deliverable": "Point-in-time stock/flow metrics, coverage and source revisions",
+    "acceptance_gate": "Reconciles routed-flow double counts and never reports TVL as flash cash",
+    "existing_work": "Extend WG catalog/market-data contracts",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-03",
+    "title": "Source entitlements and budgets",
+    "depends_on": [
+      "PM-02"
+    ],
+    "owner_roles": [
+      "quota",
+      "admission",
+      "raw"
+    ],
+    "deliverable": "Per-endpoint rights, physical request accounting, retry and storage budgets",
+    "acceptance_gate": "All jobs have valid limits; unknown rights or missing budgets block affected jobs",
+    "existing_work": "Reuse provider governance, no second quota ledger",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-04",
+    "title": "Recoverable state reconstruction",
+    "depends_on": [
+      "PM-03"
+    ],
+    "owner_roles": [
+      "streams",
+      "observations",
+      "ingest",
+      "raw"
+    ],
+    "deliverable": "One bounded feed domain with raw log, snapshot, gap repair and retractions",
+    "acceptance_gate": "Deterministic replay hash after disconnect/reorg/crash; no candidates from invalid partitions",
+    "existing_work": "Reuse existing cursors and buffer; cursor alone is not state",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-05",
+    "title": "Typed economic relation registry",
+    "depends_on": [
+      "PM-02"
+    ],
+    "owner_roles": [
+      "claims",
+      "primary",
+      "families"
+    ],
+    "deliverable": "Exact payoff versus empirical relations with access and time predicates",
+    "acceptance_gate": "Ticker aliases, delayed claims and inaccessible redemption remain separate",
+    "existing_work": "Extend claims IR; vector conversions await proper hyperedge contracts",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-06",
+    "title": "Incremental candidate work",
+    "depends_on": [
+      "PM-01",
+      "PM-04",
+      "PM-05"
+    ],
+    "owner_roles": [
+      "graph",
+      "ingest",
+      "streams"
+    ],
+    "deliverable": "Affected-neighborhood invalidation and deterministic bounded work keys",
+    "acceptance_gate": "Same candidate/evidence IDs at 1/2/4 workers and after event permutation within allowed ordering",
+    "existing_work": "Reuse PR559 3/4-hop detector; do not raise bounds to hide completeness gaps",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-07",
+    "title": "Joint exact capacity",
+    "depends_on": [
+      "PM-01",
+      "PM-06"
+    ],
+    "owner_roles": [
+      "split",
+      "exact",
+      "sizing"
+    ],
+    "deliverable": "Two paths, finite integer grid, shared-state replay in both orders",
+    "acceptance_gate": "No double use of liquidity; compare with same-budget best single path",
+    "existing_work": "Execute existing DP-02 before adding more paths",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-08",
+    "title": "Complete conflict footprints",
+    "depends_on": [
+      "PM-06"
+    ],
+    "owner_roles": [
+      "footprint",
+      "scheduler"
+    ],
+    "deliverable": "Proposed access-mode map plus lender/payer/nonce/order/margin resource identities",
+    "acceptance_gate": "Read/write conflicts caught; read/read allowed; unknown accounts reject",
+    "existing_work": "Extend WorkResourceSet and footprint owner; no new scheduler",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-09",
+    "title": "Single authority and fenced work",
+    "depends_on": [
+      "PM-08"
+    ],
+    "owner_roles": [
+      "scheduler",
+      "durable",
+      "capital",
+      "single_truth",
+      "authority_review"
+    ],
+    "deliverable": "One selected lifecycle path, ReservationPort bridge and installed-path evidence",
+    "acceptance_gate": "Two processes cannot both reserve same work; restart and stale fence preserve holds",
+    "existing_work": "Review existing MPR19 cutover state; keep initial SQLite single-node",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-10",
+    "title": "Parallel compute and backpressure",
+    "depends_on": [
+      "PM-04",
+      "PM-06",
+      "PM-09"
+    ],
+    "owner_roles": [
+      "scheduler",
+      "admission",
+      "benchmarks"
+    ],
+    "deliverable": "Bounded CPU process workers over immutable frames; leased jobs and stale output rejection",
+    "acceptance_gate": "Determinism and zero stale admission at 1/2/4/8 workers; cost/tail latency reported",
+    "existing_work": "Distributed stateless workers only after one-host correctness",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-11",
+    "title": "Resource portfolio allocation",
+    "depends_on": [
+      "PM-07",
+      "PM-08",
+      "PM-09"
+    ],
+    "owner_roles": [
+      "allocation",
+      "scheduler",
+      "capital"
+    ],
+    "deliverable": "Finite conflict components, explicit complete budgets and same-unit net-score objectives",
+    "acceptance_gate": "Brute-force small fixtures agree; common dependencies and capital dimensions never omitted",
+    "existing_work": "Extend PR356; no claim of continuous optimum or joint CVaR from score sums",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-12",
+    "title": "Lender terms and debt closure",
+    "depends_on": [
+      "PM-01",
+      "PM-04",
+      "PM-08"
+    ],
+    "owner_roles": [
+      "lending",
+      "evm_lending",
+      "sizing"
+    ],
+    "deliverable": "One lender/asset revision with capacity, premium, instruction/callback terms",
+    "acceptance_gate": "Each asset repays principal plus fees; native cost reserves remain independent",
+    "existing_work": "Reuse financing owner; no lender call, transaction or signer in this slice",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-13",
+    "title": "Correlation research controls",
+    "depends_on": [
+      "PM-04",
+      "PM-05"
+    ],
+    "owner_roles": [
+      "quality",
+      "raw",
+      "causal",
+      "families"
+    ],
+    "deliverable": "Registered hypotheses, point-in-time features and purged chronological holdout",
+    "acceptance_gate": "Latency/null controls and multiple-test accounting; economic-cost test separate",
+    "existing_work": "Reuse research_quality; minimal helpers are not a finished scientific validation suite",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-14",
+    "title": "Market-making replay",
+    "depends_on": [
+      "PM-04",
+      "PM-05",
+      "PM-13"
+    ],
+    "owner_roles": [
+      "inventory",
+      "orderbook",
+      "families"
+    ],
+    "deliverable": "One venue replay with conservative queue, cancel delay, hedge and markout accounting",
+    "acceptance_gate": "All fills and inventory persist; no flashloan-funded resting inventory",
+    "existing_work": "Still leaves OrderbookAmmStrategy disabled without verified subscriptions",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-15",
+    "title": "Three-product bridge",
+    "depends_on": [
+      "PM-07",
+      "PM-13"
+    ],
+    "owner_roles": [
+      "claims",
+      "procurement",
+      "service",
+      "benchmarks"
+    ],
+    "deliverable": "Clearing/evidence-service/mechanism-lab share data and evidence contracts",
+    "acceptance_gate": "Per-user clearing limits, independently verified results and strategic-response sensitivity",
+    "existing_work": "Build on CLR/VRC/MML designs; procurement payments and outreach are not initiated",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  },
+  {
+    "id": "PM-16",
+    "title": "One new domain and forward-shadow gate",
+    "depends_on": [
+      "PM-10",
+      "PM-11",
+      "PM-12",
+      "PM-13"
+    ],
+    "owner_roles": [
+      "raw",
+      "footprint",
+      "benchmarks",
+      "strategy_gate"
+    ],
+    "deliverable": "One chosen chain/venue dossier, measured replay-to-shadow evaluation and stop conditions",
+    "acceptance_gate": "Qualified coverage/cost gate with no live promotion; all missing observations explicit",
+    "existing_work": "Expand domain only after evidence, not according to nominal volume ranking",
+    "status": "PLANNED_NOT_RUN",
+    "implementation_created": false,
+    "live_enabled": false
+  }
+]

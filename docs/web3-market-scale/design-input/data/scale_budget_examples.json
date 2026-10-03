@@ -1,0 +1,78 @@
+{
+  "schema": "research.scale-budget-examples.v1",
+  "status": "ILLUSTRATIVE_ARITHMETIC_ONLY",
+  "storage": [
+    {
+      "events_per_second": 1000,
+      "illustrative_bytes_per_event": 300,
+      "raw_bytes_per_day": 25920000000,
+      "raw_decimal_GB_per_day": 25.92,
+      "illustrative_replication_and_index_multiplier": 4,
+      "uncompressed_total_decimal_GB_per_day": 103.68,
+      "compression_assumed": false,
+      "observed_benchmark": false
+    },
+    {
+      "events_per_second": 10000,
+      "illustrative_bytes_per_event": 300,
+      "raw_bytes_per_day": 259200000000,
+      "raw_decimal_GB_per_day": 259.2,
+      "illustrative_replication_and_index_multiplier": 4,
+      "uncompressed_total_decimal_GB_per_day": 1036.8,
+      "compression_assumed": false,
+      "observed_benchmark": false
+    },
+    {
+      "events_per_second": 100000,
+      "illustrative_bytes_per_event": 300,
+      "raw_bytes_per_day": 2592000000000,
+      "raw_decimal_GB_per_day": 2592.0,
+      "illustrative_replication_and_index_multiplier": 4,
+      "uncompressed_total_decimal_GB_per_day": 10368.0,
+      "compression_assumed": false,
+      "observed_benchmark": false
+    }
+  ],
+  "compute_formula": "cores >= events_per_second * affected_candidates_per_event * mean_eval_cpu_ms / (1000 * target_utilization)",
+  "example": {
+    "events_per_second": 1000,
+    "affected_candidates_per_event": 4,
+    "mean_eval_cpu_ms": 2,
+    "target_utilization_ppm": 600000,
+    "required_cores_rounded_up": 14,
+    "hardware_benchmark": false
+  },
+  "note": "Does not include retries, I/O, GIL, queueing tail or cache effects. Measure before purchasing.",
+  "progression": [
+    {
+      "tier": "S0",
+      "markets": 20,
+      "process_workers": [
+        1,
+        2
+      ],
+      "scope": "synthetic and pinned replay"
+    },
+    {
+      "tier": "S1",
+      "markets": 100,
+      "process_workers": [
+        2,
+        4,
+        8
+      ],
+      "scope": "bounded measured replay; raw feed future only"
+    },
+    {
+      "tier": "S2",
+      "markets": 1000,
+      "process_workers": [
+        4,
+        8,
+        16
+      ],
+      "scope": "candidate target after S1 gate; not achieved capacity"
+    }
+  ],
+  "prices_or_profit_forecasts": false
+}

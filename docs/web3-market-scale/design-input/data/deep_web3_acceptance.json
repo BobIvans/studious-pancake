@@ -1,0 +1,254 @@
+[
+  {
+    "id": "DT-01",
+    "experiment_id": "DP-01",
+    "input_case": "WSOL symbol with wrong mint/genesis/token program/decimals",
+    "expected": "Reject settlement eligibility; symbol and revision text alone cannot qualify identity.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-02",
+    "experiment_id": "DP-01",
+    "input_case": "One gross-negative amount precedes a later feasible amount",
+    "expected": "Report economic rejection for first point and preserve bounded evaluation of later points; unexpected evaluator errors fail explicitly.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-03",
+    "experiment_id": "DP-01",
+    "input_case": "Fee denominator or protocol fee segregation outside pinned model",
+    "expected": "Reject unsupported state semantics; do not silently round fee to basis points.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-04",
+    "experiment_id": "DP-02",
+    "input_case": "Two virtual capacities 80+80 share real balance100",
+    "expected": "Joint allocation cannot spend160; later path receives updated available balance.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-05",
+    "experiment_id": "DP-02",
+    "input_case": "Two paths share one pool but have different provider labels",
+    "expected": "Reuse canonical pool state; second path output uses first transition; evidence identity includes order.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-06",
+    "experiment_id": "DP-02",
+    "input_case": "Distinct singleton pools with a shared mutable hook",
+    "expected": "Do not collapse all pools as one venue; do include hook dependency and conflict when relevant.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-07",
+    "experiment_id": "DP-03",
+    "input_case": "Allowance/config update with no swap event",
+    "expected": "Invalidate all dependent routes, including those without a changed pool reserve.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-08",
+    "experiment_id": "DP-03",
+    "input_case": "Correction + retraction + duplicate event in different arrival orders",
+    "expected": "At same resolved watermark full and incremental engines produce same canonical evidence; duplicate causes no extra consumption.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-09",
+    "experiment_id": "DP-03",
+    "input_case": "Queue overflow, crash and durable cursor without state snapshot",
+    "expected": "Declare gap/incomplete, reload checkpoint plus backfill; no admission from cursor alone.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-10",
+    "experiment_id": "DP-04",
+    "input_case": "Flashblock later removed or changed",
+    "expected": "Invalidate descendant route evidence and pending capacity; no promotion to finalized truth.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-11",
+    "experiment_id": "DP-04",
+    "input_case": "Historical record timestamp earlier than actually available_at",
+    "expected": "Do not expose record to earlier replay decisions; report latency without look-ahead.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-12",
+    "experiment_id": "DP-04",
+    "input_case": "Provider loses WSS/access while HTTP discovery still works",
+    "expected": "Downgrade freshness/coverage; no inferred verified subscription.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-13",
+    "experiment_id": "DP-05",
+    "input_case": "Vault with zero max-functions and special documented semantics",
+    "expected": "Generic adapter quarantines; qualified product-specific limit path must provide its own proof before admission.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-14",
+    "experiment_id": "DP-05",
+    "input_case": "Claim pending until tomorrow or unresolved expired outcome",
+    "expected": "Exclude claim proceeds from current atomic repayment, regardless of displayed NAV or probability.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-15",
+    "experiment_id": "DP-05",
+    "input_case": "Two claims have same symbol but different maturity/condition/controller",
+    "expected": "Distinct identity; reject false merge/netting; account for each residual asset.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-16",
+    "experiment_id": "DP-06",
+    "input_case": "Unhealthy intermediate prefix but healthy final state",
+    "expected": "Reject unless the exact protocol/context explicitly defers that check; never generalize across calls.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-17",
+    "experiment_id": "DP-06",
+    "input_case": "Loan fee and pool fee already embedded in output",
+    "expected": "Repayment and other costs each counted exactly once with unit/source tags.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-18",
+    "experiment_id": "DP-06",
+    "input_case": "Shared collateral borrowed through two adapters",
+    "expected": "Combined health/caps applied once over common underlying account; no doubled credit.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-19",
+    "experiment_id": "DP-07",
+    "input_case": "Exclusive order presented to non-eligible filler",
+    "expected": "Reject or price valid soft override according to pinned reactor; never bypass exclusivity.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-20",
+    "experiment_id": "DP-07",
+    "input_case": "50 cached recent orders labeled complete market feed",
+    "expected": "Coverage remains unknown/truncated; missing order cannot be treated as absent market demand.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-21",
+    "experiment_id": "DP-07",
+    "input_case": "Batch raises aggregate surplus but worsens one user",
+    "expected": "Reject under the declared per-user comparator and fill constraints.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-22",
+    "experiment_id": "DP-08",
+    "input_case": "Destination fill succeeds but repayment proof still pending",
+    "expected": "Keep capital committed; receivable is not spendable inventory.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-23",
+    "experiment_id": "DP-08",
+    "input_case": "Duplicate fill/refund evidence arrives after restart",
+    "expected": "Idempotent reconcile; no duplicate credit or second allocation of unsettled funds.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-24",
+    "experiment_id": "DP-08",
+    "input_case": "Fast fill then long proof delay, timeout or origin reorg",
+    "expected": "Stress capital-time and failure cost; no flashloan or instant turnover classification.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-25",
+    "experiment_id": "DP-09",
+    "input_case": "Two BTC perps use different oracle/index/session/margin domain",
+    "expected": "Do not call payoff equivalent from ticker; keep basis and funding exposure.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-26",
+    "experiment_id": "DP-09",
+    "input_case": "Three of four rate-hedge legs fill, then exchange halts",
+    "expected": "Track residual exposure and stress exit loss; no completed hedge claim.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-27",
+    "experiment_id": "DP-09",
+    "input_case": "Exact same notionals but different accrual day-count/settlement periods",
+    "expected": "Reconcile cashflow units and calendar; difference remains explicit until proved zero.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-28",
+    "experiment_id": "DP-10",
+    "input_case": "Valid payment receipt but incorrect exact output or wrong state",
+    "expected": "Verifier rejects result independently of payment or supplier identity.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-29",
+    "experiment_id": "DP-10",
+    "input_case": "Two suppliers return identical data from one upstream",
+    "expected": "Evidence lineage counts one source; failure correlation is shared.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-30",
+    "experiment_id": "DP-10",
+    "input_case": "Cheap quote costs more after verification/retry/support",
+    "expected": "Local baseline wins; marketplace not promoted on nominal bid alone.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-31",
+    "experiment_id": "DP-11",
+    "input_case": "Dynamic fee looks better only under frozen exogenous flow",
+    "expected": "Label conditional replay; require elastic response stress before broader conclusion.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-32",
+    "experiment_id": "DP-11",
+    "input_case": "Auction fee transfer shown as newly created welfare",
+    "expected": "Separate trader, LP, supplier and solver accounting; no double-counted surplus.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-33",
+    "experiment_id": "DP-11",
+    "input_case": "Profit disappears after subsidies or competitor response",
+    "expected": "Record failed hypothesis; no autonomous expansion from pre-subsidy score.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-34",
+    "experiment_id": "DP-12",
+    "input_case": "Candidate uses a resource dimension absent from budget",
+    "expected": "Reject incomplete resource model; unknown budget is not unlimited capacity.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-35",
+    "experiment_id": "DP-12",
+    "input_case": "Queue/search/amount/provider budget exhausts mid-run",
+    "expected": "Return explicit truncation reason and evaluated subset; do not label no-opportunity or global optimum.",
+    "status": "PLANNED_NOT_RUN"
+  },
+  {
+    "id": "DT-36",
+    "experiment_id": "DP-12",
+    "input_case": "LLM suggests new chain/provider/model or data contains instructions",
+    "expected": "Treat as untrusted proposal; no auto-admission, remote mutation, signer or schedule creation.",
+    "status": "PLANNED_NOT_RUN"
+  }
+]

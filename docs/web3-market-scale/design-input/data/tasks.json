@@ -1,0 +1,1025 @@
+[
+  {
+    "id": "WG-01",
+    "title": "Повторная сверка main и карта владельцев",
+    "wave": "A",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [],
+    "owner_ids": [
+      "O01",
+      "O04",
+      "O05",
+      "O09",
+      "O10",
+      "O11"
+    ],
+    "deliverable": "Обновлённый baseline SHA, owner matrix и один выбранный bounded slice.",
+    "implementation_steps": [
+      "Прочитать актуальные AGENTS.md, git status, main и изменившиеся owner files.",
+      "Сопоставить PR559/561 и AGG-05; признать уже сделанные части, сохранить локальную пользовательскую работу.",
+      "Зафиксировать входные fixtures, новый scope и непокрытые proof obligations до edits."
+    ],
+    "acceptance": [
+      "Каждый затрагиваемый контракт имеет одного владельца.",
+      "Нет заявления, что multihop/split-flow отсутствует; отсутствие интеграции описано отдельно."
+    ],
+    "test_ids": [
+      "T01",
+      "T02"
+    ],
+    "bounds": "Один reviewable PR за slice; ни merge, ни rollout этим архивом не запускаются.",
+    "blocking_conditions": "Неизвестный новый owner или изменение runtime boundary требует корректировки scope, а не дублирования модуля.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-02",
+    "title": "Идентичность активов, прав, рынков и доказательств",
+    "wave": "A",
+    "status": "PARTIALLY_IMPLEMENTED_REMAINDER_PLANNED",
+    "depends_on": [
+      "WG-01"
+    ],
+    "owner_ids": [
+      "O04",
+      "O11",
+      "O22",
+      "O25"
+    ],
+    "deliverable": "Совместимые projection/adapter contracts между spot graph, semantic routes и financial claims.",
+    "implementation_steps": [
+      "Asset key: settlement domain + genesis/chain id + mint/address/object id + token standard/revision; ticker только display.",
+      "Rights key добавляет issuer, maturity, redemption and transfer restrictions, multiplier, rights hash.",
+      "Разделить topology/semantic route id и evaluation/evidence id; ссылаться на существующие хэши, не переписывать их."
+    ],
+    "acceptance": [
+      "Два USDC на разных chain, PT разных maturity и две обёртки не склеиваются.",
+      "Insertion-order invariance сохраняется; amount/state/provenance меняют evidence id."
+    ],
+    "test_ids": [
+      "T03",
+      "T04",
+      "T05"
+    ],
+    "bounds": "Совместимость с текущим Solana graph; новая cross-domain проекция sender-free.",
+    "blocking_conditions": "Неполная identity или неподтверждённая fungibility → unresolved, без executable edge.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed",
+    "latest_main_review_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+    "existing_slice_pr": 562,
+    "existing_slice_scope": "SolanaAssetIdentity and amount/state evidence in PR562; broader rights/domain and strict settlement binding remain.",
+    "review_details": "21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md",
+    "tests_revalidated_in_this_update": false
+  },
+  {
+    "id": "WG-03",
+    "title": "Каталог бесплатного доступа и доказанное покрытие",
+    "wave": "A",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-01"
+    ],
+    "owner_ids": [
+      "O06",
+      "O22"
+    ],
+    "deliverable": "Расширение одного source registry с access/rights/quota/revision/coverage статусами.",
+    "implementation_steps": [
+      "Импортировать 43 baseline records и отдельно рассмотреть watchlist.",
+      "По первичным документам фиксировать API tier, ключ, лимиты, условия хранения/перераспространения, checked_at и unresolved поля.",
+      "Для каждого source определить роль: discovery/reference/raw state/exact quote/indexer/tool; не удваивать underlying liquidity."
+    ],
+    "acceptance": [
+      "Free, open-source и unknown различаются.",
+      "Числа discovered/bound/decoded/exact/fresh относятся к versioned configured universe; global denominator unknown."
+    ],
+    "test_ids": [
+      "T06",
+      "T07",
+      "T08"
+    ],
+    "bounds": "Не массовый crawler; catalog max 128 текущего owner, рост — отдельная проверка.",
+    "blocking_conditions": "Изменение тарифа, лицензии или schema переводит соответствующий source в reverify; нельзя считать ошибку пустым успешным ответом.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-04",
+    "title": "Governed read-only discovery и подписки",
+    "wave": "A",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-03"
+    ],
+    "owner_ids": [
+      "O07",
+      "O08",
+      "O03"
+    ],
+    "deliverable": "Admitted read-only source profiles через существующий provider_governance owner.",
+    "implementation_steps": [
+      "Проверить текущие профили в src/provider_governance, добавить только выбранный source и бюджет.",
+      "Сохранить Transport hooks, retry accounting, timeout, body bound, cancellation и redaction.",
+      "Ограничить subscription fanout и reconnect budget; transport не получает торговые методы."
+    ],
+    "acceptance": [
+      "Каждая физическая попытка учитывается существующим spend/deadline authority.",
+      "429/5xx/gap не создают успешное покрытие, повторные попытки ограничены."
+    ],
+    "test_ids": [
+      "T09",
+      "T10",
+      "T11"
+    ],
+    "bounds": "Начало: один provider; discovery ≤8 запросов, ≤8 pages, ≤1000 rows/response, ≤512 retained records как в PR561.",
+    "blocking_conditions": "Без профиля/квоты/проверки read rights — blocked, никакого обходного HTTP клиента.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-05",
+    "title": "Согласованный локальный state engine",
+    "wave": "A",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-02",
+      "WG-04"
+    ],
+    "owner_ids": [
+      "O02",
+      "O03",
+      "O05",
+      "O22"
+    ],
+    "deliverable": "Checkpoint + event replay и invalidation над текущими stream contracts.",
+    "implementation_steps": [
+      "Определить полные account sets для одного venue: pool, vault, mint, ticks/bins/books/oracle при необходимости.",
+      "Versioned snapshots связывают state hash, decoder revision, genesis, context slot/block, commitment, source cursor и available_at.",
+      "Cursor resume восстанавливает состояние через snapshot/backfill; gaps, reorg, correction, generation change инвалидируют зависимые evaluations."
+    ],
+    "acceptance": [
+      "После restart cursor без state не создаёт quote coverage.",
+      "Идентичный replay даёт одинаковый state и graph evidence; snapshot с пробелом не публикует candidates."
+    ],
+    "test_ids": [
+      "T12",
+      "T13",
+      "T14",
+      "T15",
+      "T16"
+    ],
+    "bounds": "Текущий ingest window ≤512 events/epoch; постоянный daemon только через проверенные checkpoint/rollover, не снятие cap.",
+    "blocking_conditions": "Неполные аккаунты, mixed slots/generations, clock future, checksum gap → non-admissible state.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-06",
+    "title": "Контракт точного edge evaluation",
+    "wave": "B",
+    "status": "PARTIALLY_IMPLEMENTED_REMAINDER_PLANNED",
+    "depends_on": [
+      "WG-02"
+    ],
+    "owner_ids": [
+      "O01",
+      "O02",
+      "O04",
+      "O11",
+      "O13",
+      "O14"
+    ],
+    "deliverable": "Тонкий amount/state-bound adapter interface над существующими evaluators.",
+    "implementation_steps": [
+      "Зафиксировать requested input, consumed input, residual asset amounts, expected output, conservative output, fees и next state.",
+      "Cache key включает amount, state/decoder/token revisions, direction и policy; функция не принимает market price как исполнимую глубину.",
+      "Same-state frozen amount-specific quotes остаются допустимыми; новый размер требует нового evaluation."
+    ],
+    "acceptance": [
+      "Никакого amount×cached-rate или float roundtrip.",
+      "Unknown output guarantee остаётся unknown; остатки не исчезают и не считаются новым collateral."
+    ],
+    "test_ids": [
+      "T17",
+      "T18",
+      "T19",
+      "T20"
+    ],
+    "bounds": "Pure local evaluation; начальный slice — один pinned CPMM, WSOL settlement, ≤8 amounts.",
+    "blocking_conditions": "Неподдерживаемая модель или неполный state → typed rejection, без generic CPMM fallback.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed",
+    "latest_main_review_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+    "existing_slice_pr": 562,
+    "existing_slice_scope": "Exact CPMM input/consumed/residual/output/state evidence bridge exists; general model contract and qualification remain.",
+    "review_details": "21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md",
+    "tests_revalidated_in_this_update": false
+  },
+  {
+    "id": "WG-07",
+    "title": "Квалификация CPMM и stable pool математики",
+    "wave": "B",
+    "status": "PARTIALLY_IMPLEMENTED_REMAINDER_PLANNED",
+    "depends_on": [
+      "WG-06"
+    ],
+    "owner_ids": [
+      "O12",
+      "O13"
+    ],
+    "deliverable": "Protocol-pinned exact wrappers и независимые integer golden vectors.",
+    "implementation_steps": [
+      "Проверить owner math против закреплённой версии protocol implementation/SDK и raw account fixtures.",
+      "Учесть fee placement, rounding direction, transfer fees, pause/amp/rate parameters.",
+      "Запретить qualified adapter использовать missing pool_type default; стаблпул не считать constant product."
+    ],
+    "acceptance": [
+      "Small/large/dust/boundary vectors совпадают bit-for-bit.",
+      "Вне поддержанной token/model версии fail closed; max ticks/bins не маскируется approximate result."
+    ],
+    "test_ids": [
+      "T21",
+      "T22",
+      "T23"
+    ],
+    "bounds": "Первый PR только один CPMM; stable model отдельным bounded follow-up.",
+    "blocking_conditions": "Непроверенные on-chain parameters, token extension или math mismatch блокируют qualification.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed",
+    "latest_main_review_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+    "existing_slice_pr": 562,
+    "existing_slice_scope": "Shared integer CPMM primitive and fixture adapter exist; independent protocol-state qualification and stable models remain.",
+    "review_details": "21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md",
+    "tests_revalidated_in_this_update": false
+  },
+  {
+    "id": "WG-08",
+    "title": "Квалификация CLMM и DLMM",
+    "wave": "B",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-05",
+      "WG-06"
+    ],
+    "owner_ids": [
+      "O12",
+      "O13"
+    ],
+    "deliverable": "Pinned tick/bin state adapters с exact replay и state delta.",
+    "implementation_steps": [
+      "Проверить sqrt-price units, liquidity-net sign, direction, fee parameters и tick/bin crossing.",
+      "Точный input проходит через каждый пересечённый сегмент; ограничение traversal возвращает budget status.",
+      "State patch затрагивает общий pool identity, включая использование одного pool несколькими путями."
+    ],
+    "acceptance": [
+      "Crossing-boundary vectors воспроизводимы и не используют агрегированные TVL/reserves вместо active ranges.",
+      "Неполный tick/bin set не становится valid quote."
+    ],
+    "test_ids": [
+      "T24",
+      "T25",
+      "T26"
+    ],
+    "bounds": "Один venue/model за qualification; ограниченные ticks/bins и evaluation count.",
+    "blocking_conditions": "SDK version drift или snapshot gap → requalify.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-09",
+    "title": "Проверенные orderbook subscriptions и depth adapters",
+    "wave": "B",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-04",
+      "WG-05",
+      "WG-06"
+    ],
+    "owner_ids": [
+      "O14",
+      "O15",
+      "O16",
+      "O17"
+    ],
+    "deliverable": "Read-only qualification dossier для одного venue; shadow evidence adapter после conformance.",
+    "implementation_steps": [
+      "Начать с существующего Phoenix promotion owner; затем отдельные OpenBook/Manifest dossiers.",
+      "Проверить program/account ownership, build hash, schema, market mints, lots/ticks/fees, book completeness.",
+      "Snapshot+delta protocol: sequence rules/checksum where supported, reconnect resync, cancellation/replacement updates.",
+      "Preserve consumed_input и dust из существующего quote engine; aggregate L2 не обещает queue priority/fill."
+    ],
+    "acceptance": [
+      "Неподтверждённая подписка не проходит в graph.",
+      "OrderbookAmmStrategy остаётся disabled во всех работах этого архива; qualification не включает live enable."
+    ],
+    "test_ids": [
+      "T27",
+      "T28",
+      "T29",
+      "T30",
+      "T31"
+    ],
+    "bounds": "Один market, один venue, finite replay corpus до расширения.",
+    "blocking_conditions": "Fixture decoder, placeholder mints, missing sequence or fee proof → blocked; metadata строка не заменяет verification.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-10",
+    "title": "Полная экономика и financing evidence",
+    "wave": "B",
+    "status": "PARTIALLY_IMPLEMENTED_REMAINDER_PLANNED",
+    "depends_on": [
+      "WG-02",
+      "WG-06"
+    ],
+    "owner_ids": [
+      "O01",
+      "O18",
+      "O19",
+      "O20"
+    ],
+    "deliverable": "Связка exact route result → существующий PR118 ledger/decision.",
+    "implementation_steps": [
+      "Разделить principal, repayment, swap fees already embedded, network/priority/tips, provider/platform, rent, uncertainty и residual assets.",
+      "Начать с SOL/WSOL settlement; произвольные quote assets требуют явного расширения того же owner, без подмены units или uppercase mint mapping.",
+      "Зафиксировать eligibility/capacity/fee rounding и debt obligations одного settlement domain; funding evaluation не вызывает execution."
+    ],
+    "acceptance": [
+      "Fees и principal не списываются дважды.",
+      "Неоценённый cost/repayment, чужой chain или asset-unit mismatch отклоняют net-profit claim."
+    ],
+    "test_ids": [
+      "T32",
+      "T33",
+      "T34",
+      "T35"
+    ],
+    "bounds": "Pure economics only; no borrow/sender/signer/transaction construction.",
+    "blocking_conditions": "Нет actual financing availability proof — результат labelled financing-unverified, не profitable executable.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed",
+    "latest_main_review_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+    "existing_slice_pr": 562,
+    "existing_slice_scope": "SOL/WSOL capacity economics calls PR118 ledger; canonical asset binding and broader financing remain.",
+    "review_details": "21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md",
+    "tests_revalidated_in_this_update": false
+  },
+  {
+    "id": "WG-11",
+    "title": "Capacity curves и детерминированный circular search",
+    "wave": "B",
+    "status": "PARTIALLY_IMPLEMENTED_REMAINDER_PLANNED",
+    "depends_on": [
+      "WG-06",
+      "WG-07",
+      "WG-10"
+    ],
+    "owner_ids": [
+      "O01",
+      "O02",
+      "O04",
+      "O09"
+    ],
+    "deliverable": "Точные sampled capacity points и graph → PR118 sizing bridge.",
+    "implementation_steps": [
+      "Сохранить PR559 3/4-hop и repeated-venue constraints; переиспользовать AGG-05 shortlist при явной адаптации identity.",
+      "Для каждой PR118 суммы пересчитать leg i+1 на гарантированном допустимом выходе leg i в том же coherent state.",
+      "Capacity point хранит inputs/outputs/costs/rejections/resources; не интерполировать исполнимость.",
+      "Отрицательная или rejected меньшая сумма не отсекает автоматически большие; неполный поиск помечается budget_exhausted."
+    ],
+    "acceptance": [
+      "3/4-hop amount coupling, stale/slot, repeated venue и identity regression проходят.",
+      "Выбранный размер лучший только среди проверенных admissible points; continuous global optimum не заявляется."
+    ],
+    "test_ids": [
+      "T36",
+      "T37",
+      "T38",
+      "T39",
+      "T40"
+    ],
+    "bounds": "Current caps: edges512, amounts8; default expansions4096/candidates100; hard100000/1000 не повышать автоматически.",
+    "blocking_conditions": "Partial state, invalid amount link, unknown cost или unresolved route id mapping → rejection.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed",
+    "latest_main_review_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+    "existing_slice_pr": 562,
+    "existing_slice_scope": "PR562 sampled CPMM capacity and PR559 coupling exist; per-amount rejection, qualification and broader capacity remain.",
+    "review_details": "21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md",
+    "tests_revalidated_in_this_update": false
+  },
+  {
+    "id": "WG-12",
+    "title": "Интеграция существующего split-flow",
+    "wave": "C",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-08",
+      "WG-10",
+      "WG-11"
+    ],
+    "owner_ids": [
+      "O01",
+      "O09",
+      "O10",
+      "O11"
+    ],
+    "deliverable": "StatefulSplitPath adapters над exact routes и общим replay state.",
+    "implementation_steps": [
+      "Расширить/адаптировать SharedExecutionState в его owner: reserves, ticks/bins, book consumption нужны сверх capacity counters.",
+      "Переиспользовать solve_joint_split_flow для allocation/order enumeration; native-currency sizing остаётся PR118.",
+      "Сравнивать same-budget single и split baseline; фиксированные/общие costs применять один раз на правильном уровне.",
+      "Доказать отсутствие двойного расходования shared pools, collateral и funding capacity."
+    ],
+    "acceptance": [
+      "Порядок ветвей влияет на state и проверяется; initial state immutable.",
+      "Split promotion только complete bounded search и strict net improvement; все residual debts закрыты в модели."
+    ],
+    "test_ids": [
+      "T41",
+      "T42",
+      "T43",
+      "T44"
+    ],
+    "bounds": "Первая integration: 2 paths, finite allocation grid и max evaluations; существующий max_paths5 не означает бесконечный solver.",
+    "blocking_conditions": "State aliasing, missing common-cost model или shared resource неизвестен → split disabled.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-13",
+    "title": "Stable/correlated market pack",
+    "wave": "C",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-07",
+      "WG-10",
+      "WG-11"
+    ],
+    "owner_ids": [
+      "O01",
+      "O04",
+      "O22"
+    ],
+    "deliverable": "Shadow pack для явно определённой пары активов с различными рисками/правами.",
+    "implementation_steps": [
+      "Найти fresh independent pools и точные curves.",
+      "Зафиксировать redemption/peg oracle bands и depeg scenarios отдельно от identity; корреляция не равенство активов.",
+      "Ранжировать по conservative net capacity after costs на held-out replay."
+    ],
+    "acceptance": [
+      "Spread не считается прибылью без полного cost ledger.",
+      "Depeg/paused issuer и oracle staleness дают понятный reason."
+    ],
+    "test_ids": [
+      "T45",
+      "T46"
+    ],
+    "bounds": "Одна asset family, несколько pools, finite replay horizon.",
+    "blocking_conditions": "Нет redemption/fair-value evidence — оставить spot-only directional conversions; не обещать peg arbitrage.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-14",
+    "title": "DEX ↔ wrapper / mint / redeem",
+    "wave": "C",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-02",
+      "WG-06",
+      "WG-10",
+      "WG-11"
+    ],
+    "owner_ids": [
+      "O24",
+      "O25",
+      "O22"
+    ],
+    "deliverable": "Typed rights/transformation adapters для одного проверенного immediate conversion.",
+    "implementation_steps": [
+      "Отразить mint/redeem fees, exchange rate, caps, eligibility, controllers и transferable rights.",
+      "Немедленную трансформацию отделить от request→pending→claimable; asynchronous route хранит время и capital lock.",
+      "Интегрировать существующие LST/primary_market owners после owner audit, не переписывать lifecycle."
+    ],
+    "acceptance": [
+      "Queue/unstaking не замыкают стандартный atomic flashloan.",
+      "Rights изменения инвалидируют cached routes; equivalence требует проверенного преобразования."
+    ],
+    "test_ids": [
+      "T47",
+      "T48",
+      "T49"
+    ],
+    "bounds": "Один wrapper/issuer; no bridge or redemption request submission.",
+    "blocking_conditions": "Unknown eligibility, haircut, cutoff, exchange rate либо queue duration → blocked research candidate.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-15",
+    "title": "Ликвидации + collateral unwind",
+    "wave": "C",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-05",
+      "WG-10",
+      "WG-11"
+    ],
+    "owner_ids": [
+      "O20",
+      "O21",
+      "O18"
+    ],
+    "deliverable": "Интеграция AGG-07 с общим exact unwind graph.",
+    "implementation_steps": [
+      "Согласовать debt, collateral, oracle и close-factor/bonus state на одной версии.",
+      "Пропустить exact repay size через existing liquidation sizing; продажа collateral использует amount-specific route.",
+      "Shared borrower/collateral/liquidity conflicts разрешает существующий batch owner."
+    ],
+    "acceptance": [
+      "Unwind output покрывает exact debt + costs по существующему ledger.",
+      "Already-liquidated/changed eligibility или insufficient collateral отклоняются."
+    ],
+    "test_ids": [
+      "T50",
+      "T51",
+      "T52"
+    ],
+    "bounds": "Один lending venue, fixture/replay only до real evidence qualification.",
+    "blocking_conditions": "Quarantine не снимается наличием catalog source; внешние события без raw proof не создают candidate.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-16",
+    "title": "PT/YT и финансовые hyperedges",
+    "wave": "D",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-02",
+      "WG-06",
+      "WG-10",
+      "WG-18"
+    ],
+    "owner_ids": [
+      "O25",
+      "O24",
+      "O22"
+    ],
+    "deliverable": "Financial-claims projection и один exact composite-product adapter.",
+    "implementation_steps": [
+      "Задать vector inputs/outputs и obligations; SY→PT+YT не сводить к двум независимым бесплатным рёбрам.",
+      "Связать maturity, yield/index rates, fees, negative yield, mint/redeem и flash-swap условия с state.",
+      "Проверить conservation и погашение обязательств на каждом сценарии; arbitrary payoff остаётся research-only."
+    ],
+    "acceptance": [
+      "Нельзя дважды потратить исходный SY или погасить PT другого maturity.",
+      "При maturity переход меняет state/evaluation identity."
+    ],
+    "test_ids": [
+      "T53",
+      "T54",
+      "T55"
+    ],
+    "bounds": "Один protocol/version/chain и bounded recipe set.",
+    "blocking_conditions": "Недоступные права, индекс или state → unknown; ожидание maturity не финансируется atomic flashloan.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-17",
+    "title": "Intent / batch solver",
+    "wave": "D",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-02",
+      "WG-10",
+      "WG-12",
+      "WG-18"
+    ],
+    "owner_ids": [
+      "O26",
+      "O11",
+      "O25"
+    ],
+    "deliverable": "Read-only intent auction adapter и offline clearing experiments.",
+    "implementation_steps": [
+      "Доказать auction access, signed-order semantics, deadlines/partial-fill/limit-price и replay protection без передачи orders.",
+      "Сопоставить встречные требования и внешние exact paths; solver inventory и fees учитывать отдельно.",
+      "Research contracts расширять доказанными adapters, не считать их готовой integration."
+    ],
+    "acceptance": [
+      "Каждый intent удовлетворяет собственным limits, conservation и finality.",
+      "Expired/replayed/unauthorized order исключается; net benefit сравним с same-auction baseline."
+    ],
+    "test_ids": [
+      "T56",
+      "T57",
+      "T58"
+    ],
+    "bounds": "Finite batch; no solver registration, order signature, bid or settlement submission.",
+    "blocking_conditions": "Недоступный поток и недоказанные participation rules → blocked source, не прогноз revenue.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-18",
+    "title": "EVM и последующие settlement domains",
+    "wave": "D",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-02",
+      "WG-03",
+      "WG-05",
+      "WG-06",
+      "WG-10"
+    ],
+    "owner_ids": [
+      "O22",
+      "O19",
+      "O11"
+    ],
+    "deliverable": "Chain-qualified read-only state profile; сначала один EVM chain.",
+    "implementation_steps": [
+      "Genesis/chain id, block hash/number, finality, reorg rollback, token code revision, factory registry и pool-state decoder.",
+      "Pin first chain/protocol pairs; chain RPC requests идут через existing governance/transport.",
+      "После EVM отдельные dossiers для Sui/Move/Cosmos/других сред, каждый со своей state/settlement semantics."
+    ],
+    "acceptance": [
+      "Same-address different-chain активы не совпадают.",
+      "Cross-domain data можно видеть вместе, но global snapshot/atomic settlement не подразумеваются."
+    ],
+    "test_ids": [
+      "T59",
+      "T60",
+      "T61"
+    ],
+    "bounds": "Один domain и один venue за proof; Solana graph owner не размывается цепочками строковых aliases.",
+    "blocking_conditions": "Unknown finality/reorg/account model → reference/discovery only.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-19",
+    "title": "CEX и derivatives market data",
+    "wave": "D",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-03",
+      "WG-04",
+      "WG-05",
+      "WG-22"
+    ],
+    "owner_ids": [
+      "O22",
+      "O23"
+    ],
+    "deliverable": "Отдельные replayable public market-data packs: spot books, funding, futures/options.",
+    "implementation_steps": [
+      "Переиспользовать CCXT/Cryptofeed только для read-only data; protocol-native sequence/checksum приоритетны.",
+      "Instrument key хранит contract multiplier, expiry, underlying, margin/settlement assets, session и mark/index distinction.",
+      "Записывать reconnect gaps и наблюдаемую задержку; synthetic aggregation не заменяет venue L2 depth."
+    ],
+    "acceptance": [
+      "Book checksum/sequence failures инвалидируют depth.",
+      "Data access не даёт trading access; spot/perp symbols не склеиваются."
+    ],
+    "test_ids": [
+      "T62",
+      "T63",
+      "T64"
+    ],
+    "bounds": "Один exchange и ограниченный watchlist; no private account/order APIs.",
+    "blocking_conditions": "Region/key/license/channel ambiguity → access-not-verified; no assumption every endpoint free.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-20",
+    "title": "Cross-chain, CEX–DEX, spot–perp basis",
+    "wave": "D",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-14",
+      "WG-18",
+      "WG-19",
+      "WG-21"
+    ],
+    "owner_ids": [
+      "O22",
+      "O23",
+      "O24",
+      "O19"
+    ],
+    "deliverable": "Asynchronous scenario evaluator с inventory/funding/hedge constraints.",
+    "implementation_steps": [
+      "Моделировать отдельные settlement domains, bridge/request latency, finality и failure states.",
+      "Basis включает funding accrual, borrow rates, margin/liquidation, fees, withdrawal rules и time-dependent capital.",
+      "Сравнивать scenario outcomes на point-in-time corpus, не считать двусторонние quotes гарантированной сделкой."
+    ],
+    "acceptance": [
+      "Обычный bridge/CEX transfer не закрывает стандартный atomic loan.",
+      "Unhedged/stranded inventory, funding reversal и settlement timeout сохраняются в outcome."
+    ],
+    "test_ids": [
+      "T65",
+      "T66",
+      "T67"
+    ],
+    "bounds": "Research simulations only; no hedges, transfers or real inventory allocation.",
+    "blocking_conditions": "Без funding/settlement/access evidence output scenario-only; profitable executable label forbidden.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-21",
+    "title": "Replay corpus и квалификация стратегий",
+    "wave": "A",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-01",
+      "WG-02"
+    ],
+    "owner_ids": [
+      "O03",
+      "O22",
+      "O23"
+    ],
+    "deliverable": "Versioned corpus manifests, deterministic replay и held-out evaluation harness.",
+    "implementation_steps": [
+      "Отделить synthetic golden vectors от captured real read-only state и replay observations.",
+      "Сохранить available_at/revisions, code/model/state hashes, splits train/validation/held-out.",
+      "Ввести fault corpus: missing, reordered, duplicated, stale, reorg, provider outage, fee/rate revision."
+    ],
+    "acceptance": [
+      "Будущие ревизии не попадают в historical decision.",
+      "Одинаковые входы/seed/budgets дают byte-stable canonical outputs."
+    ],
+    "test_ids": [
+      "T68",
+      "T69",
+      "T70"
+    ],
+    "bounds": "Pinned finite corpus; no claim historical quotes prove future fills/profit.",
+    "blocking_conditions": "Look-ahead, selection bias или unavailable raw records → experiment unqualified.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-22",
+    "title": "Trace, покрытие и стоимость данных/вычислений",
+    "wave": "A",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-02",
+      "WG-03"
+    ],
+    "owner_ids": [
+      "O05",
+      "O08",
+      "O22"
+    ],
+    "deliverable": "Evidence lineage и cost metrics в существующих telemetry owners после audit.",
+    "implementation_steps": [
+      "Trace: source receipt→state→edge evaluation→route→size→ledger→rejection/selection.",
+      "Expose request/byte/CPU/memory/lag counters, configured coverage и unknown denominator.",
+      "Измерять marginal useful-coverage gain / recurring cost; понятие useful заранее фиксировать."
+    ],
+    "acceptance": [
+      "Можно воспроизвести каждое решение без секретов в логах.",
+      "Budget-exhausted не отображается как отсутствие возможностей."
+    ],
+    "test_ids": [
+      "T71",
+      "T72",
+      "T73"
+    ],
+    "bounds": "Bounded trace retention и redaction; zero-candidate cost ratio = undefined, а не zero.",
+    "blocking_conditions": "Отсутствующая lineage не скрывается красивым графом.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-23",
+    "title": "Интерфейс market-of-markets graph",
+    "wave": "C",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-02",
+      "WG-11",
+      "WG-22"
+    ],
+    "owner_ids": [
+      "O04",
+      "O05",
+      "O22"
+    ],
+    "deliverable": "Read-only UI с drill-down по domains, instruments, venues, transformations и evidence.",
+    "implementation_steps": [
+      "Сначала показать overview/coverage, затем bounded subgraph и exact capacity point.",
+      "Фильтры age, slot/generation, admission, exactness, settlement horizon, strategy family; rejected data доступно с reason.",
+      "Сравнить paths и costs; gross/net и quote freshness показывать рядом с суммой."
+    ],
+    "acceptance": [
+      "Статус stale/unknown нельзя принять за executable.",
+      "Default экран не пытается отрендерить весь raw graph и не содержит connect-wallet/trade действий."
+    ],
+    "test_ids": [
+      "T74",
+      "T75",
+      "T76"
+    ],
+    "bounds": "First UI page ≤200 nodes/500 edges как предлагаемая presentation policy; pagination и агрегаты явно отмечены.",
+    "blocking_conditions": "Нет backend qualification — UI показывает planned/discovered, не trading-ready.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-24",
+    "title": "Масштабирование и непрерывное улучшение",
+    "wave": "E",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-05",
+      "WG-11",
+      "WG-12",
+      "WG-21",
+      "WG-22"
+    ],
+    "owner_ids": [
+      "O03",
+      "O09",
+      "O10",
+      "O22"
+    ],
+    "deliverable": "Measured benchmarks, incremental invalidation и finite-budget scheduling.",
+    "implementation_steps": [
+      "Affected-market index обновляет только зависимые paths; cache keys сохраняют amount/state semantics.",
+      "Шардировать по settlement domain и pinned market universe, мерить completeness на shard/watermark.",
+      "Повторять held-out comparison при decoder/source/model revision; сохранять last-known-good read-only bundle."
+    ],
+    "acceptance": [
+      "Рост load не снимает search/retention/IO bounds.",
+      "Latency/freshness и cost improvements подтверждены сравнимыми replay workloads."
+    ],
+    "test_ids": [
+      "T77",
+      "T78",
+      "T79"
+    ],
+    "bounds": "No unbounded all-market traversal; SLO targets set after measurement, не выдуманные latency promises.",
+    "blocking_conditions": "Regression/coverage loss/schema drift → invalidation/rollback read-only configuration.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-25",
+    "title": "Рынок проверяемых расчётов и данных",
+    "wave": "E",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-21",
+      "WG-22"
+    ],
+    "owner_ids": [
+      "O28",
+      "O22"
+    ],
+    "deliverable": "Расширение existing INST-01 procurement arena на одну проверяемую услугу.",
+    "implementation_steps": [
+      "Выбрать canonical decode/exact quote/replay task; task hash фиксирует data rights, inputs, deadline и verifiable output.",
+      "Добавить независимую recomputation и сравнение provider cost/latency/accuracy; не путать согласие двух копий одного источника с независимостью.",
+      "Проверить fixed-price/reverse auction baseline и спрос без субсидий в offline/добровольном исследовательском дизайне."
+    ],
+    "acceptance": [
+      "Unknown verification не оплачивается виртуально как success; duplicate task close идемпотентен.",
+      "Нет заявления о живом спросе до фактических результатов."
+    ],
+    "test_ids": [
+      "T80",
+      "T81",
+      "T82"
+    ],
+    "bounds": "Одна homogeneous service; only simulation of allocation/payment, no external messages or real marketplace payments.",
+    "blocking_conditions": "Неверифицируемая услуга, утечка секретов или отсутствующие права на данные → excluded.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-26",
+    "title": "Общий clearing solver как продукт",
+    "wave": "E",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-12",
+      "WG-16",
+      "WG-17",
+      "WG-25"
+    ],
+    "owner_ids": [
+      "O10",
+      "O11",
+      "O25",
+      "O26"
+    ],
+    "deliverable": "Goal-oriented offline solver prototype spec over existing owners.",
+    "implementation_steps": [
+      "Цель: заданный asset/rights outcome при минимальных полных costs, а не только собственный arbitrage.",
+      "Совместить netting, transformations, inventory constraints и funding obligations с finite search.",
+      "Сравнить independent execution baseline с shared clearing; зафиксировать, кому принадлежит improvement и какие права нужны."
+    ],
+    "acceptance": [
+      "Все obligations и user limits соблюдены; surplus не удваивается.",
+      "Продуктовая польза измеряется improvement after costs и воспроизводимостью, не backtest ROI."
+    ],
+    "test_ids": [
+      "T83",
+      "T84"
+    ],
+    "bounds": "Finite batch/domain; no custodial accounts, execution rights or customer order intake activated.",
+    "blocking_conditions": "Неизвестные права/обязательства переводят рецепт в research, не executable.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-27",
+    "title": "Market mechanism lab и критерии L1/L2/L3",
+    "wave": "E",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-21",
+      "WG-25",
+      "WG-26"
+    ],
+    "owner_ids": [
+      "O27",
+      "O28",
+      "O25"
+    ],
+    "deliverable": "Experiment dossiers для hooks/auctions/new products и infrastructure decision memo.",
+    "implementation_steps": [
+      "Сравнить baseline auction/fee/allocation rule; sandbox canary traces только офлайн.",
+      "Измерить demand, cost and settlement bottleneck до выбора новой сети.",
+      "Сравнить приложение, L2, L3, L1 по control, operation cost, liquidity access, finality, bridge/validator/sequencer obligations."
+    ],
+    "acceptance": [
+      "Изменение правил имеет observable benefit на фиксированном workload и объяснимый tradeoff.",
+      "Новая chain не объявляется источником liquidity/profit; launch не входит в этот пакет."
+    ],
+    "test_ids": [
+      "T85",
+      "T86"
+    ],
+    "bounds": "Research memo и local simulation; no deployed contracts, sequencer, bridge or token issuance.",
+    "blocking_conditions": "Без demonstrated demand и measured constraint — остановиться на application layer.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  },
+  {
+    "id": "WG-28",
+    "title": "Поэтапная shadow release qualification",
+    "wave": "E",
+    "status": "PLANNED_NOT_IMPLEMENTED",
+    "depends_on": [
+      "WG-09",
+      "WG-13",
+      "WG-14",
+      "WG-15",
+      "WG-16",
+      "WG-17",
+      "WG-20",
+      "WG-23",
+      "WG-24",
+      "WG-25",
+      "WG-26",
+      "WG-27"
+    ],
+    "owner_ids": [
+      "O04",
+      "O05",
+      "O17",
+      "O22"
+    ],
+    "deliverable": "Capability matrix и evidence bundles по каждому независимому pack.",
+    "implementation_steps": [
+      "Каждый pack проходит contract/math/state/economics/replay gates отдельно; экспериментальный pack не повышает статус остальных.",
+      "В PR отчёте указать scope, changed owners, pinned corpus, tests, remaining external blockers и rollback.",
+      "Проверить imports/config/startup на отсутствие sender/signer/submission/live permission изменений."
+    ],
+    "acceptance": [
+      "Нельзя назвать whole-Web3 coverage завершённым из-за прохождения одной Solana fixture.",
+      "Ни один gate не включает live или OrderbookAmmStrategy."
+    ],
+    "test_ids": [
+      "T87",
+      "T88",
+      "T89"
+    ],
+    "bounds": "Итоговая сводка может содержать disabled/blocked packs; done определяется для declared scope.",
+    "blocking_conditions": "Failure/unknown остается explicit blocked; не маскировать тестовыми заглушками.",
+    "runtime_mode": "shadow_only",
+    "effort": "Estimate after baseline and evidence review; no delivery date assumed"
+  }
+]

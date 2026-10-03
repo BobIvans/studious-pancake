@@ -1,0 +1,370 @@
+{
+  "nodes": [
+    "WG-01",
+    "WG-02",
+    "WG-03",
+    "WG-04",
+    "WG-05",
+    "WG-06",
+    "WG-07",
+    "WG-08",
+    "WG-09",
+    "WG-10",
+    "WG-11",
+    "WG-12",
+    "WG-13",
+    "WG-14",
+    "WG-15",
+    "WG-16",
+    "WG-17",
+    "WG-18",
+    "WG-19",
+    "WG-20",
+    "WG-21",
+    "WG-22",
+    "WG-23",
+    "WG-24",
+    "WG-25",
+    "WG-26",
+    "WG-27",
+    "WG-28"
+  ],
+  "edges": [
+    {
+      "before": "WG-01",
+      "after": "WG-02"
+    },
+    {
+      "before": "WG-01",
+      "after": "WG-03"
+    },
+    {
+      "before": "WG-03",
+      "after": "WG-04"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-05"
+    },
+    {
+      "before": "WG-04",
+      "after": "WG-05"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-06"
+    },
+    {
+      "before": "WG-06",
+      "after": "WG-07"
+    },
+    {
+      "before": "WG-05",
+      "after": "WG-08"
+    },
+    {
+      "before": "WG-06",
+      "after": "WG-08"
+    },
+    {
+      "before": "WG-04",
+      "after": "WG-09"
+    },
+    {
+      "before": "WG-05",
+      "after": "WG-09"
+    },
+    {
+      "before": "WG-06",
+      "after": "WG-09"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-10"
+    },
+    {
+      "before": "WG-06",
+      "after": "WG-10"
+    },
+    {
+      "before": "WG-06",
+      "after": "WG-11"
+    },
+    {
+      "before": "WG-07",
+      "after": "WG-11"
+    },
+    {
+      "before": "WG-10",
+      "after": "WG-11"
+    },
+    {
+      "before": "WG-08",
+      "after": "WG-12"
+    },
+    {
+      "before": "WG-10",
+      "after": "WG-12"
+    },
+    {
+      "before": "WG-11",
+      "after": "WG-12"
+    },
+    {
+      "before": "WG-07",
+      "after": "WG-13"
+    },
+    {
+      "before": "WG-10",
+      "after": "WG-13"
+    },
+    {
+      "before": "WG-11",
+      "after": "WG-13"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-14"
+    },
+    {
+      "before": "WG-06",
+      "after": "WG-14"
+    },
+    {
+      "before": "WG-10",
+      "after": "WG-14"
+    },
+    {
+      "before": "WG-11",
+      "after": "WG-14"
+    },
+    {
+      "before": "WG-05",
+      "after": "WG-15"
+    },
+    {
+      "before": "WG-10",
+      "after": "WG-15"
+    },
+    {
+      "before": "WG-11",
+      "after": "WG-15"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-16"
+    },
+    {
+      "before": "WG-06",
+      "after": "WG-16"
+    },
+    {
+      "before": "WG-10",
+      "after": "WG-16"
+    },
+    {
+      "before": "WG-18",
+      "after": "WG-16"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-17"
+    },
+    {
+      "before": "WG-10",
+      "after": "WG-17"
+    },
+    {
+      "before": "WG-12",
+      "after": "WG-17"
+    },
+    {
+      "before": "WG-18",
+      "after": "WG-17"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-18"
+    },
+    {
+      "before": "WG-03",
+      "after": "WG-18"
+    },
+    {
+      "before": "WG-05",
+      "after": "WG-18"
+    },
+    {
+      "before": "WG-06",
+      "after": "WG-18"
+    },
+    {
+      "before": "WG-10",
+      "after": "WG-18"
+    },
+    {
+      "before": "WG-03",
+      "after": "WG-19"
+    },
+    {
+      "before": "WG-04",
+      "after": "WG-19"
+    },
+    {
+      "before": "WG-05",
+      "after": "WG-19"
+    },
+    {
+      "before": "WG-22",
+      "after": "WG-19"
+    },
+    {
+      "before": "WG-14",
+      "after": "WG-20"
+    },
+    {
+      "before": "WG-18",
+      "after": "WG-20"
+    },
+    {
+      "before": "WG-19",
+      "after": "WG-20"
+    },
+    {
+      "before": "WG-21",
+      "after": "WG-20"
+    },
+    {
+      "before": "WG-01",
+      "after": "WG-21"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-21"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-22"
+    },
+    {
+      "before": "WG-03",
+      "after": "WG-22"
+    },
+    {
+      "before": "WG-02",
+      "after": "WG-23"
+    },
+    {
+      "before": "WG-11",
+      "after": "WG-23"
+    },
+    {
+      "before": "WG-22",
+      "after": "WG-23"
+    },
+    {
+      "before": "WG-05",
+      "after": "WG-24"
+    },
+    {
+      "before": "WG-11",
+      "after": "WG-24"
+    },
+    {
+      "before": "WG-12",
+      "after": "WG-24"
+    },
+    {
+      "before": "WG-21",
+      "after": "WG-24"
+    },
+    {
+      "before": "WG-22",
+      "after": "WG-24"
+    },
+    {
+      "before": "WG-21",
+      "after": "WG-25"
+    },
+    {
+      "before": "WG-22",
+      "after": "WG-25"
+    },
+    {
+      "before": "WG-12",
+      "after": "WG-26"
+    },
+    {
+      "before": "WG-16",
+      "after": "WG-26"
+    },
+    {
+      "before": "WG-17",
+      "after": "WG-26"
+    },
+    {
+      "before": "WG-25",
+      "after": "WG-26"
+    },
+    {
+      "before": "WG-21",
+      "after": "WG-27"
+    },
+    {
+      "before": "WG-25",
+      "after": "WG-27"
+    },
+    {
+      "before": "WG-26",
+      "after": "WG-27"
+    },
+    {
+      "before": "WG-09",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-13",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-14",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-15",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-16",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-17",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-20",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-23",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-24",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-25",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-26",
+      "after": "WG-28"
+    },
+    {
+      "before": "WG-27",
+      "after": "WG-28"
+    }
+  ]
+}

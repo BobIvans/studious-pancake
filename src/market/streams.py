@@ -227,3 +227,227 @@ class WatermarkedObservationBuffer:
 
     def cursors(self) -> tuple[SourceCursor, ...]:
         return tuple(sorted(self._cursors.values(), key=lambda item: item.key))
+
+
+@dataclass(frozen=True, slots=True)
+class RawStreamEvent:
+    """Append-only local replay evidence, including native sequence and fork identity."""
+
+    source: str
+    partition: str
+    generation: int
+    cursor: int
+    available_at_ns: int
+    observed_at_ns: int
+    market_id: str
+    revision: str
+    payload_json: str
+    block_hash: str
+    parent_hash: str
+    kind: str = "snapshot"
+    supersedes_hash: str | None = None
+
+    def __post_init__(self) -> None:
+        for field in (
+            "source",
+            "partition",
+            "market_id",
+            "revision",
+            "block_hash",
+            "parent_hash",
+        ):
+            value = getattr(self, field)
+            if not isinstance(value, str) or not value.strip():
+                raise ObservationError(f"{field} required")
+        for field in ("generation", "cursor", "available_at_ns", "observed_at_ns"):
+            if type(getattr(self, field)) is not int or getattr(self, field) < 0:
+                raise ObservationError(f"{field} requires nonnegative integer")
+        if self.available_at_ns < self.observed_at_ns:
+            raise ObservationError("availability precedes observation")
+        if self.kind not in {"snapshot", "delta", "retraction"}:
+            raise ObservationError("unsupported raw event kind")
+        if self.kind == "retraction" and not self.supersedes_hash:
+            raise ObservationError("retraction needs evidence target")
+        if (
+            not isinstance(self.payload_json, str)
+            or len(self.payload_json.encode("utf-8")) > 1_000_000
+        ):
+            raise ObservationError("raw event payload bound exceeded")
+        body = json.loads(self.payload_json)
+        canonical = json.dumps(
+            body, sort_keys=True, separators=(",", ":"), allow_nan=False
+        )
+        object.__setattr__(self, "payload_json", canonical)
+
+    @property
+    def identity(self) -> str:
+        from dataclasses import asdict
+        import hashlib
+
+        return hashlib.sha256(
+            json.dumps(asdict(self), sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+
+
+class RecoverableStreamJournal:
+    """One local raw-state writer; no financial ledger or provider connection.
+
+    Event, cursor and reconstructible head commit together. Sequence gaps and
+    fork changes require a snapshot. Reopening derives state from committed raw
+    evidence rather than treating a saved cursor as a saved order book.
+    """
+
+    def __init__(
+        self,
+        path: str | Path,
+        *,
+        max_events: int = 100_000,
+        max_payload_bytes: int = 64 * 1024 * 1024,
+    ) -> None:
+        if any(
+            type(value) is not int or value <= 0
+            for value in (max_events, max_payload_bytes)
+        ):
+            raise ObservationError("positive integer journal budgets required")
+        self.max_events = max_events
+        self.max_payload_bytes = max_payload_bytes
+        import sqlite3
+
+        self.db = sqlite3.connect(str(path), isolation_level=None)
+        self.db.execute("PRAGMA journal_mode=WAL")
+        self.db.execute("PRAGMA synchronous=FULL")
+        self.db.execute(
+            "CREATE TABLE IF NOT EXISTS raw_stream_events (identity TEXT PRIMARY KEY, source TEXT NOT NULL, partition TEXT NOT NULL, generation INTEGER NOT NULL, cursor INTEGER NOT NULL, available_ns INTEGER NOT NULL, payload TEXT NOT NULL, UNIQUE(source,partition,generation,cursor))"
+        )
+
+    def close(self) -> None:
+        self.db.close()
+
+    def events(self, *, available_at_ns: int) -> tuple[RawStreamEvent, ...]:
+        rows = self.db.execute(
+            "SELECT payload FROM raw_stream_events WHERE available_ns<=? ORDER BY available_ns,source,partition,generation,cursor,identity",
+            (available_at_ns,),
+        ).fetchall()
+        return tuple(RawStreamEvent(**json.loads(row[0])) for row in rows)
+
+    def append(self, event: RawStreamEvent) -> bool:
+        from dataclasses import asdict
+
+        self.db.execute("BEGIN IMMEDIATE")
+        try:
+            prior = self.db.execute(
+                "SELECT identity FROM raw_stream_events WHERE source=? AND partition=? AND generation=? AND cursor=?",
+                (event.source, event.partition, event.generation, event.cursor),
+            ).fetchone()
+            if prior:
+                if prior[0] != event.identity:
+                    raise ObservationError("same cursor has different payload")
+                self.db.execute("COMMIT")
+                return False
+            count, stored_bytes = self.db.execute(
+                "SELECT COUNT(*),COALESCE(SUM(LENGTH(CAST(payload AS BLOB))),0) FROM raw_stream_events"
+            ).fetchone()
+            serialized = json.dumps(asdict(event), sort_keys=True)
+            if (
+                count >= self.max_events
+                or stored_bytes + len(serialized.encode("utf-8"))
+                > self.max_payload_bytes
+            ):
+                raise ObservationError("raw journal storage budget exhausted")
+            row = self.db.execute(
+                "SELECT payload FROM raw_stream_events WHERE source=? AND partition=? ORDER BY generation DESC,cursor DESC LIMIT 1",
+                (event.source, event.partition),
+            ).fetchone()
+            if row:
+                previous = RawStreamEvent(**json.loads(row[0]))
+                if event.generation < previous.generation or (
+                    event.generation == previous.generation
+                    and event.cursor <= previous.cursor
+                ):
+                    raise ObservationError("raw stream cursor regressed")
+                if event.available_at_ns < previous.available_at_ns:
+                    raise ObservationError("availability regressed")
+                continuous = (
+                    event.generation == previous.generation
+                    and event.cursor == previous.cursor + 1
+                )
+                same_fork = (
+                    event.block_hash == previous.block_hash
+                    or event.parent_hash == previous.block_hash
+                )
+                if event.kind == "delta" and (not continuous or not same_fork):
+                    raise ObservationError("gap or fork requires snapshot repair")
+            elif event.kind != "snapshot":
+                raise ObservationError("first event requires snapshot")
+            if (
+                event.kind == "retraction"
+                and self.db.execute(
+                    "SELECT 1 FROM raw_stream_events WHERE identity=?",
+                    (event.supersedes_hash,),
+                ).fetchone()
+                is None
+            ):
+                raise ObservationError("unknown retraction target")
+            self.db.execute(
+                "INSERT INTO raw_stream_events VALUES(?,?,?,?,?,?,?)",
+                (
+                    event.identity,
+                    event.source,
+                    event.partition,
+                    event.generation,
+                    event.cursor,
+                    event.available_at_ns,
+                    json.dumps(asdict(event), sort_keys=True),
+                ),
+            )
+            self.db.execute("COMMIT")
+            return True
+        except BaseException:
+            self.db.execute("ROLLBACK")
+            raise
+
+    def reconstruct(
+        self, *, source: str, partition: str, available_at_ns: int
+    ) -> Mapping[str, object]:
+        events = tuple(
+            e
+            for e in self.events(available_at_ns=available_at_ns)
+            if e.source == source and e.partition == partition
+        )
+        retracted = {e.supersedes_hash for e in events if e.kind == "retraction"}
+        state: dict[str, object] = {}
+        valid = False
+        previous: RawStreamEvent | None = None
+        for event in events:
+            if event.kind == "retraction":
+                continue
+            if event.identity in retracted:
+                valid = False
+                continue
+            if event.kind == "snapshot":
+                body = json.loads(event.payload_json)
+                if not isinstance(body, dict):
+                    raise ObservationError("snapshot state must be a mapping")
+                state = body
+                valid = True
+            else:
+                if (
+                    not valid
+                    or previous is None
+                    or event.generation != previous.generation
+                    or event.cursor != previous.cursor + 1
+                ):
+                    valid = False
+                    continue
+                patch = json.loads(event.payload_json)
+                if not isinstance(patch, dict):
+                    raise ObservationError("delta state must be a mapping")
+                for key, value in patch.items():
+                    if value is None:
+                        state.pop(key, None)
+                    else:
+                        state[key] = value
+            previous = event
+        if not valid:
+            raise ObservationError("state requires repaired snapshot")
+        return state

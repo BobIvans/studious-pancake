@@ -51,6 +51,7 @@ class WorkResourceSet:
     economic_resources: tuple[str, ...] = ()
     fee_payer: str | None = None
     nonce_or_object_ids: tuple[str, ...] = ()
+    readonly_accounts: tuple[str, ...] = ()
 
     def __post_init__(self) -> None:
         for field in (
@@ -58,6 +59,7 @@ class WorkResourceSet:
             "writable_accounts",
             "economic_resources",
             "nonce_or_object_ids",
+            "readonly_accounts",
         ):
             object.__setattr__(
                 self,
@@ -84,12 +86,15 @@ class WorkResourceSet:
             economic_resources=economic_resources,
             fee_payer=fee_payer,
             nonce_or_object_ids=nonce_or_object_ids,
+            readonly_accounts=tuple(footprint.oracles),
         )
 
     def conflicts_with(self, other: WorkResourceSet) -> bool:
-        if set(self.pools).intersection(other.pools):
-            return True
-        if set(self.writable_accounts).intersection(other.writable_accounts):
+        writes = set((*self.pools, *self.writable_accounts))
+        other_writes = set((*other.pools, *other.writable_accounts))
+        if writes.intersection(
+            (*other_writes, *other.readonly_accounts)
+        ) or other_writes.intersection(self.readonly_accounts):
             return True
         if set(self.economic_resources).intersection(other.economic_resources):
             return True
@@ -403,3 +408,54 @@ __all__ = [
     "WorkerFence",
     "WorkResourceSet",
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class ResourceFootprintRequirements:
+    """Required keys supplied by a separately reviewed adapter/state revision.
+
+    This is a local completeness contract, not evidence that an adapter or
+    deployment actually has been reviewed. Unknown requirements reject admission.
+    """
+
+    state_generation: str
+    adapter_revision: str
+    mandatory_reads: tuple[str, ...]
+    mandatory_writes: tuple[str, ...]
+    mandatory_economic_resources: tuple[str, ...]
+
+    def __post_init__(self):
+        if not self.state_generation.strip() or not self.adapter_revision.strip():
+            raise ValueError("footprint generation and revision required")
+        for field in (
+            "mandatory_reads",
+            "mandatory_writes",
+            "mandatory_economic_resources",
+        ):
+            object.__setattr__(
+                self, field, _clean_tuple(tuple(getattr(self, field)), field)
+            )
+
+
+def require_complete_resource_footprint(
+    resources: WorkResourceSet,
+    *,
+    requirements: ResourceFootprintRequirements | None,
+    state_generation: str,
+    adapter_revision: str,
+) -> None:
+    if (
+        requirements is None
+        or requirements.state_generation != state_generation
+        or requirements.adapter_revision != adapter_revision
+    ):
+        raise ValueError("unknown or stale footprint requirements")
+    writes = set((*resources.pools, *resources.writable_accounts))
+    if (
+        not set(requirements.mandatory_writes) <= writes
+        or not set(requirements.mandatory_reads)
+        <= writes.union(resources.readonly_accounts)
+        or not set(requirements.mandatory_economic_resources)
+        <= set(resources.economic_resources)
+    ):
+        raise ValueError("incomplete resource footprint")

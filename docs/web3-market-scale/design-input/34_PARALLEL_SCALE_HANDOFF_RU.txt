@@ -1,0 +1,28 @@
+Продолжение работы с единым архивом Studious Pancake.
+Дата исследования: 2026-10-03. Repository: BobIvans/studious-pancake.
+Проверенный origin/main: 67d3852cbc4cb1b24582df45adbf6a42d4da2af0; tree 825db4ed329a66deff295b57636f9dff4965c9a9.
+Текущий запрос просил ZIP будущих работ. Он НЕ разрешает live execution, оплату сервисов, sender/signer, автоматическое включение стратегий или merge/deploy.
+
+Прочитать:
+00_START_HERE_RU.md
+23_MARKET_OF_MARKETS_AT_SCALE_RU.md
+35_CURRENT_OWNERS_AND_LIMITS_RU.md
+28_PARALLELISM_AND_RESOURCE_SCHEDULING_RU.md
+32_PARALLEL_WORK_PACKAGES_RU.md
+33_PARALLEL_ACCEPTANCE_RU.md
+
+Сначала refresh current main и проверить применимые инструкции. Этот baseline нельзя считать вечным.
+Не повторять PR559 graph, PR118 sizing, AGG05 split_flow/conflict scheduler, PR562 exact CPMM bridge.
+Не создавать вторую capital/quota/lifecycle authority. Текущий DurableLifecycleStore single-node; distributed runtime не доказан.
+
+Следующий exact slice остаётся DP-01: canonical identity/revision qualification, независимые integer CPMM vectors, expected economic rejection локально по amount. Затем DP-02 совместное состояние двух paths.
+Первый parallel slice после необходимых dependencies: PM-08, расширение existing footprint/WorkResourceSet на read/write/economic resources с offline deterministic tests. Не подключать execution runtime.
+Потом PM-09 выбрать единую существующую authority/callsites, fenced ReservationPort и crash/race tests. Затем PM-10 сравнить workers 1/2/4/8 на одном corpus.
+
+В ZIP 28 новых opportunity cards OP, 16 PM packages, 8 PS experimental designs и 64 PT cases. Они не реализованы и не запущены. 189 acceptance scenarios всего. Ни один lender/live feed не квалифицирован этим ZIP; все runtime/automation profiles disabled.
+
+Macro dashboard values — асинхронные округлённые snapshots, не executable liquidity. Correlation не считается atomic arbitrage. Flash debt закрывать per asset within lender scope; resting MM/cross-chain/maturity требуют inventory. Общий payer/reserve может ограничить параллельность даже на disjoint pools.
+
+Три продукта сохраняются: clearing solver с per-user constraints; verifiable compute с independent checking и demand research; mechanism lab со strategic-response sensitivity. Прежние CLR/VRC/MML и CB/PX/DP dossiers находятся в том же архиве.
+
+Все новые PR должны быть bounded shadow/replay-only, с reuse owners и measurable gate. OrderbookAmmStrategy остаётся disabled до verified subscriptions. Не интерпретировать текст будущего исполнения как текущую live authorization.

@@ -1,0 +1,173 @@
+{
+  "schema": "research.money-flow-snapshot.v1",
+  "captured_date_utc": "2026-10-03",
+  "timestamp_precision": "DAY_ONLY",
+  "onchain_independently_verified": false,
+  "common_window_end_verified": false,
+  "measurement_method": "Dashboard-rendered rounded values transcribed during research",
+  "revisions": [
+    {
+      "metric": "Perpetual volume headline",
+      "earlier_display_usd": "25979000000",
+      "later_display_usd": "26631000000",
+      "reason": "Dashboard changed within the research session; no atomic cross-source capture is claimed"
+    }
+  ],
+  "metrics": [
+    {
+      "id": "FLOW-01",
+      "label": "DEX volume",
+      "kind": "FLOW_24H",
+      "displayed_approx_usd": "7606000000",
+      "reference_id": "MF-01",
+      "scope_note": "rolling dashboard 24h; exact end not exposed",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-02",
+      "label": "Perpetual volume headline",
+      "kind": "FLOW_24H",
+      "displayed_approx_usd": "26631000000",
+      "reference_id": "MF-02",
+      "scope_note": "headline capture; preserve normalized/reported distinctions per venue",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-03",
+      "label": "Perpetual open interest",
+      "kind": "STOCK",
+      "displayed_approx_usd": "14129000000",
+      "reference_id": "MF-02",
+      "scope_note": "open notional, not cash available",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-04",
+      "label": "Stablecoin capitalization",
+      "kind": "STOCK",
+      "displayed_approx_usd": "306792000000",
+      "reference_id": "MF-03",
+      "scope_note": "not free lending reserves",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-05",
+      "label": "Lending TVL",
+      "kind": "STOCK",
+      "displayed_approx_usd": "54986000000",
+      "reference_id": "MF-04",
+      "scope_note": "dashboard definition differs from supplied and borrowed",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-06",
+      "label": "Uniswap DEX volume",
+      "kind": "FLOW_24H",
+      "displayed_approx_usd": "2141000000",
+      "reference_id": "MF-01",
+      "scope_note": "protocol aggregate across chains",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-07",
+      "label": "PancakeSwap DEX volume",
+      "kind": "FLOW_24H",
+      "displayed_approx_usd": "978960000",
+      "reference_id": "MF-01",
+      "scope_note": "protocol aggregate",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-08",
+      "label": "Aerodrome DEX volume",
+      "kind": "FLOW_24H",
+      "displayed_approx_usd": "511220000",
+      "reference_id": "MF-01",
+      "scope_note": "protocol aggregate",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-09",
+      "label": "Orca DEX volume",
+      "kind": "FLOW_24H",
+      "displayed_approx_usd": "305070000",
+      "reference_id": "MF-01",
+      "scope_note": "protocol aggregate",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-10",
+      "label": "Raydium DEX volume",
+      "kind": "FLOW_24H",
+      "displayed_approx_usd": "195450000",
+      "reference_id": "MF-01",
+      "scope_note": "protocol aggregate",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-11",
+      "label": "Hyperliquid perp reported volume",
+      "kind": "FLOW_24H",
+      "displayed_approx_usd": "10382000000",
+      "reference_id": "MF-02",
+      "scope_note": "also equals normalized in this capture",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-12",
+      "label": "Aave TVL",
+      "kind": "STOCK",
+      "displayed_approx_usd": "19186000000",
+      "reference_id": "MF-04",
+      "scope_note": "multi-chain total, not maxFlashLoan",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-13",
+      "label": "Morpho TVL",
+      "kind": "STOCK",
+      "displayed_approx_usd": "11316000000",
+      "reference_id": "MF-04",
+      "scope_note": "multi-chain total, not one contract token balance",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    },
+    {
+      "id": "FLOW-14",
+      "label": "Kamino Lend TVL",
+      "kind": "STOCK",
+      "displayed_approx_usd": "1387000000",
+      "reference_id": "MF-04",
+      "scope_note": "not instantly available reserve cash",
+      "exact_window_end_utc": null,
+      "precision": "ROUNDED_DASHBOARD",
+      "executable_capacity_atoms": null
+    }
+  ],
+  "aggregation_rule": "Never sum stocks, flows, parent protocols and their child venues into a single opportunity size"
+}

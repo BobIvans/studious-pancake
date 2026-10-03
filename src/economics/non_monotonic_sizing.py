@@ -358,6 +358,22 @@ class PR118SizingEvaluation:
         }
 
 
+class PR118SizingPointRejected(ValueError):
+    """An expected, amount-local rejection; state/configuration errors must propagate."""
+
+    def __init__(self, reason: str) -> None:
+        if not isinstance(reason, str) or not reason.strip():
+            raise ValueError("rejection reason is required")
+        self.reason = reason
+        super().__init__(reason)
+
+
+@dataclass(frozen=True, slots=True)
+class PR118RejectedSizingPoint:
+    amount_lamports: int
+    reason: str
+
+
 @dataclass(frozen=True, slots=True)
 class PR118NonMonotonicSizingResult:
     """Best admissible exact sizing point without monotonicity assumptions."""
@@ -367,6 +383,7 @@ class PR118NonMonotonicSizingResult:
     evaluations: tuple[PR118SizingEvaluation, ...]
     stop_reason: PR118SizingStopReason
     schema_version: str = PR118_SIZING_SCHEMA_VERSION
+    rejected_points: tuple[PR118RejectedSizingPoint, ...] = ()
 
     @property
     def allowed(self) -> bool:
@@ -374,7 +391,15 @@ class PR118NonMonotonicSizingResult:
 
     @property
     def evaluated_amounts(self) -> tuple[int, ...]:
-        return tuple(item.amount_lamports for item in self.evaluations)
+        """All attempted points, including expected amount-local rejections."""
+        return tuple(
+            sorted(
+                (
+                    *[item.amount_lamports for item in self.evaluations],
+                    *[item.amount_lamports for item in self.rejected_points],
+                )
+            )
+        )
 
     def to_json(self) -> dict[str, object]:
         return {
@@ -387,6 +412,10 @@ class PR118NonMonotonicSizingResult:
             "allowed": self.allowed,
             "selected": None if self.selected is None else self.selected.to_json(),
             "evaluations": [item.to_json() for item in self.evaluations],
+            "rejected_points": [
+                {"amount_lamports": str(item.amount_lamports), "reason": item.reason}
+                for item in self.rejected_points
+            ],
             "stop_reason": self.stop_reason.value,
         }
 
@@ -446,8 +475,13 @@ def evaluate_pr118_non_monotonic_sizing(
         )
 
     evaluations: list[PR118SizingEvaluation] = []
+    rejected: list[PR118RejectedSizingPoint] = []
     for amount in unique_amounts[:max_evaluations]:
-        evidence = candidate_factory(amount)
+        try:
+            evidence = candidate_factory(amount)
+        except PR118SizingPointRejected as exc:
+            rejected.append(PR118RejectedSizingPoint(amount, exc.reason))
+            continue
         if not isinstance(evidence, PR118SizingCandidateEvidence):
             raise CapitalEngineError(
                 "candidate_factory must return PR118SizingCandidateEvidence"
@@ -469,7 +503,7 @@ def evaluate_pr118_non_monotonic_sizing(
     selected = _best_allowed(evaluations)
     stop_reason = (
         PR118SizingStopReason.REQUEST_BUDGET_EXHAUSTED
-        if len(unique_amounts) > len(evaluations)
+        if len(unique_amounts) > len(evaluations) + len(rejected)
         else PR118SizingStopReason.EVALUATED_ALL_POINTS
     )
     return PR118NonMonotonicSizingResult(
@@ -477,6 +511,7 @@ def evaluate_pr118_non_monotonic_sizing(
         selected=selected,
         evaluations=tuple(evaluations),
         stop_reason=stop_reason,
+        rejected_points=tuple(rejected),
     )
 
 
@@ -551,6 +586,8 @@ __all__ = [
     "PR118NonMonotonicSizingResult",
     "PR118SizingCandidateEvidence",
     "PR118SizingEvaluation",
+    "PR118SizingPointRejected",
+    "PR118RejectedSizingPoint",
     "PR118SizingStopReason",
     "PR118TypedCostLedger",
     "build_pr118_amount_grid",

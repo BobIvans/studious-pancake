@@ -189,12 +189,14 @@ def test_route_footprint_adapter_reuses_existing_shape() -> None:
     class Footprint:
         pools = ("pool-a",)
         writable_accounts = ("account-a",)
+        oracles = ("oracle-a",)
 
     result = WorkResourceSet.from_route_footprint(
         Footprint(),
         economic_resources=("reserve-a",),
         fee_payer="payer-a",
     )
+    assert result.readonly_accounts == ("oracle-a",)
     assert result.pools == ("pool-a",)
     assert result.writable_accounts == ("account-a",)
     assert result.economic_resources == ("reserve-a",)
@@ -231,3 +233,48 @@ def test_durable_lease_expiry_uses_wall_clock_not_deadline_clock() -> None:
     decision = scheduler.admit(_intent("a", fence=fence))
 
     assert decision.reason is SchedulerRejectReason.STALE_WORKER_FENCE
+
+
+def test_read_write_conflicts_are_symmetric_but_shared_reads_are_parallel() -> None:
+    read = WorkResourceSet(readonly_accounts=("oracle",))
+    write = WorkResourceSet(writable_accounts=("oracle",))
+    assert read.conflicts_with(write)
+    assert write.conflicts_with(read)
+    assert not read.conflicts_with(read)
+
+
+def test_pool_mutation_conflicts_with_account_read_of_same_resource():
+    reader = WorkResourceSet(readonly_accounts=("pool-account",))
+    swap = WorkResourceSet(pools=("pool-account",))
+    assert reader.conflicts_with(swap)
+    assert swap.conflicts_with(reader)
+
+
+def test_missing_hook_or_margin_resource_does_not_assume_independence():
+    from src.strategy.conflict_scheduler import (
+        ResourceFootprintRequirements,
+        require_complete_resource_footprint,
+    )
+
+    required = ResourceFootprintRequirements(
+        "frame",
+        "adapter-v1",
+        ("oracle",),
+        ("pool", "hook", "fee-recipient"),
+        ("shared-margin",),
+    )
+    args = dict(
+        requirements=required, state_generation="frame", adapter_revision="adapter-v1"
+    )
+    incomplete = WorkResourceSet(pools=("pool",), readonly_accounts=("oracle",))
+    with pytest.raises(ValueError, match="incomplete"):
+        require_complete_resource_footprint(incomplete, **args)
+    complete = WorkResourceSet(
+        pools=("pool",),
+        writable_accounts=("hook", "fee-recipient"),
+        readonly_accounts=("oracle",),
+        economic_resources=("shared-margin",),
+    )
+    require_complete_resource_footprint(complete, **args)
+    with pytest.raises(ValueError, match="unknown or stale"):
+        require_complete_resource_footprint(complete, **{**args, "requirements": None})

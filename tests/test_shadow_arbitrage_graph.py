@@ -377,3 +377,30 @@ def test_orderbook_strategy_remains_disabled():
     strategy = OrderbookAmmStrategy()
     assert strategy.mode is StrategyMode.DISABLED
     assert "verified market subscriptions" in strategy.disabled_reason
+
+
+@pytest.mark.parametrize("hops", [3, 4])
+def test_affected_rebuild_matches_full_current_candidate_set(hops):
+    edges = _cycle(hops) + _cycle(3, amount=20, final=25)
+    graph = _graph(edges)
+    detector = _detector(upper_amount_base_units=20, max_amount_points=2)
+    changed = frozenset((edges[1].venue,))
+    expected = tuple(
+        route
+        for route in detector.detect(graph, now=NOW).candidates
+        if any(edge.venue in changed for edge in route.edges)
+    )
+    result = detector.detect_affected(graph, now=NOW, changed_venues=changed)
+    assert result.candidates == expected
+    assert result.stop_reason is GraphSearchStop.COMPLETE
+    assert (
+        detector.detect_affected(graph, now=NOW, changed_venues=frozenset()).candidates
+        == ()
+    )
+    # Fresh restart uses the same snapshot, with no hidden previous-route cache.
+    assert (
+        _detector(upper_amount_base_units=20, max_amount_points=2).detect_affected(
+            graph, now=NOW, changed_venues=changed
+        )
+        == result
+    )

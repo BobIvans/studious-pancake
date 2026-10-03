@@ -1,0 +1,403 @@
+[
+  {
+    "id": "RD-00",
+    "title": "Общий корпус и проверяемый benchmark",
+    "track": "common",
+    "depends_on": [],
+    "existing_task_ids": [
+      "WG-01",
+      "WG-02",
+      "WG-21",
+      "WG-22"
+    ],
+    "owner_paths": [
+      "src/research/benchmarks.py",
+      "src/market_data_evolution/contracts.py",
+      "src/mechanism_discovery/research_quality.py"
+    ],
+    "hypothesis": "Одна общая система evidence позволяет честно сравнить clearing, услуги и market rules.",
+    "experiment_design": [
+      "Задать episode capsule: domain, asset/rights IDs, available_at, raw/state hashes, fees, source/model/code revisions, declared balances and obligations, input intents/task и resource budget.",
+      "Начало: до3 assets,4 venues,10 intents в episode; routes≤4hops, PR118 grid≤8points там, где допустим его settlement asset. Это предложенные pilot caps, не новые production limits.",
+      "Отдельные domain fixtures: Solana pilot и pinned EVM/v4 pilot. Общий schema/runner, но не общий atomic state и не смешанные funding balances.",
+      "Сначала20 curated synthetic correctness cases; затем при доступных данных100 point-in-time episodes, grouped chronologically. Это стартовые размеры, не статистическая мощность или доказательство generalization.",
+      "Зафиксировать problem/corpus/seed/budget hashes и training/validation/held-out до эксперимента. Если real evidence недоступно, итог fixture-only; results поля остаются пустыми."
+    ],
+    "metrics": [
+      "deterministic result hashes",
+      "lineage completeness",
+      "integer/conservation failures",
+      "end-to-end cost/latency",
+      "corpus evidence class"
+    ],
+    "advance_gate": "Все объявленные invariants соблюдены, identical replay воспроизводим, source/rights gaps видимы; затем можно исследовать выгоду.",
+    "stop_or_pivot": "Любой unexplained state/amount mismatch или look-ahead блокирует economic claims.",
+    "deliverable": "Corpus manifest, replay contract, result schema, baseline selection и null-control specification.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "CLR-01",
+    "title": "Clearing против отдельных обменов",
+    "track": "clearing",
+    "depends_on": [
+      "RD-00"
+    ],
+    "existing_task_ids": [
+      "WG-17",
+      "WG-26"
+    ],
+    "owner_paths": [
+      "src/routing/route_graph.py",
+      "src/strategy/multihop_solver.py",
+      "src/mechanism_discovery/intent_graph.py",
+      "src/mechanism_discovery/pr356_state_completion.py"
+    ],
+    "hypothesis": "Встречные требования могут уменьшать обращения к внешней ликвидности при сохранении user constraints.",
+    "experiment_design": [
+      "Одинаковые intents/state/fees и search budget. A: independent route evaluation на одном общем replay state; B: compatible netting + external routes только для unmatched residue.",
+      "Не считать independent baseline так, будто каждый order исполняется на исходном нетронутом pool. Зафиксировать order или сравнить одинаковый bounded set orderings.",
+      "Задать strict per-user quantity/limit/deadline/partial-fill constraints и baseline no-worse outcome. Не разрешать ухудшить одного участника ради total surplus.",
+      "Сравнение при одинаковом выполненном объёме; если объём разный — отдельная Pareto таблица fill/quality/cost, не ложная savings percentage.",
+      "Neutral controls: нет встречных orders; all intents same direction; expired intent; shared pool across router sources."
+    ],
+    "metrics": [
+      "external swaps count",
+      "filled quantities by intent",
+      "per-user surplus vector",
+      "fees and data/compute cost",
+      "gross vs conservative net",
+      "search budget exhausted"
+    ],
+    "advance_gate": "На held-out declared episodes есть положительное улучшение после costs при нуле нарушений user/conservation constraints; sample size/uncertainty указаны.",
+    "stop_or_pivot": "Если экономия исчезает после fair shared-state baseline — оставить negative result и не продавать netting advantage.",
+    "deliverable": "A/B clearing dossier с per-intent outcomes, resource trace и причинами неудач.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "CLR-02",
+    "title": "Минимальное необходимое финансирование",
+    "track": "clearing",
+    "depends_on": [
+      "CLR-01"
+    ],
+    "existing_task_ids": [
+      "WG-10",
+      "WG-12",
+      "WG-26"
+    ],
+    "owner_paths": [
+      "src/economics/non_monotonic_sizing.py",
+      "src/economics/split_flow.py",
+      "src/lending/financing.py",
+      "src/mechanism_discovery/pr356_discovery.py",
+      "src/mechanism_discovery/pr356_state_machine.py"
+    ],
+    "hypothesis": "Netting и допустимая перестановка операций могут уменьшать временный дефицит по каждому активу.",
+    "experiment_design": [
+      "Построить ordered vector balance trace, строго разделяя свободные user balances, недоступные claims, protocol transient deltas и financing obligations.",
+      "Для фиксированного cashflow schedule считать необходимый additional prefunding по каждому asset из максимального отрицательного допустимого prefix. Не оценивать только terminal net balance.",
+      "Deferred windows допускают временные deltas лишь при pinned protocol rules и обязательном close на boundary. Flash accounting не является безусловным free flashloan.",
+      "Borrow amount изменяет fee/repayment; каждый допустимый integer amount и ordering пересчитать. PR118 SOL/WSOL semantics сохраняются; иной settlement не маскировать lamports.",
+      "Сравнить same feasible fills: baseline funding, netting funding, netting+stateful split. Search ≤5000 evaluations в proposed pilot; exhausted → incomplete."
+    ],
+    "metrics": [
+      "peak funding vector by asset",
+      "repayment/fee vector",
+      "capital locked duration",
+      "residual debt",
+      "resource constraints",
+      "conservative net after financing"
+    ],
+    "advance_gate": "Меньше financing requirement или выше after-cost outcome на одинаковых feasible fills; все prefixes/deadlines/closure проверены.",
+    "stop_or_pivot": "Если требуется отрицательный недопустимый баланс, один ресурс повторно или неизвестный lender cap — такой рецепт invalid.",
+    "deliverable": "Funding frontier: finite evaluated alternatives с actual prefix/closure evidence.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "CLR-03",
+    "title": "Преобразования прав поверх clearing",
+    "track": "clearing",
+    "depends_on": [
+      "CLR-02"
+    ],
+    "existing_task_ids": [
+      "WG-14",
+      "WG-16",
+      "WG-26"
+    ],
+    "owner_paths": [
+      "src/mechanism_discovery/claims.py",
+      "src/strategy_evolution/primary_market.py",
+      "src/economics/split_flow.py"
+    ],
+    "hypothesis": "Одна проверенная mint/redeem/wrapper transformation иногда дешевле последовательности spot swaps.",
+    "experiment_design": [
+      "Добавить одну pinned immediate conversion с точными fees/caps/rights; сначала wrapper, composite PT/YT позже при qualified EVM profile.",
+      "A: clearing spot-only; B: clearing+conversion. Один и тот же исходный state и outcomes; проверить input/output vectors и capacity changes.",
+      "Asynchronous redemption только separate scenario, не допустимая нога atomic funding. Rights hashes, maturity и eligibility входят в result identity.",
+      "Ablation: убрать новую transformation; посчитать marginal gain и дополнительную data/verification cost."
+    ],
+    "metrics": [
+      "marginal net improvement",
+      "removed swaps",
+      "peak funding",
+      "rights/obligation failures",
+      "additional model/data cost"
+    ],
+    "advance_gate": "Сохранение прав и конечных обязательств плюс positive incremental after-cost improvement на declared corpus.",
+    "stop_or_pivot": "Если выгода требует предположить мгновенный unstaking или объединить разные maturities — invalid hypothesis.",
+    "deliverable": "Один воспроизводимый transformation recipe и отрицательные controls; без обещания поддержать любой financial product.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "VRC-01",
+    "title": "Первая полезная проверяемая услуга",
+    "track": "verified_compute",
+    "depends_on": [
+      "RD-00"
+    ],
+    "existing_task_ids": [
+      "WG-25"
+    ],
+    "owner_paths": [
+      "src/research/pr359_wave15_institution.py",
+      "src/research/product.py",
+      "src/research/benchmarks.py",
+      "src/ingest/amm_math_dispatcher.py"
+    ],
+    "hypothesis": "INST-01 можно расширить с sum-int-v1 на точное вычисление с реальной полезностью для графа.",
+    "experiment_design": [
+      "Выбрать ровно один service kind: exact quote для pinned CPMM на immutable validated state и конкретном input; decoding и simulation — отдельные следующие service kinds.",
+      "Task binding включает state/model/fee/token revisions, amount/direction, output schema, deadline и resource cap.",
+      "Существующий calculator против независимых pinned protocol vectors/implementation. Hash и два экземпляра одного кода не считаются независимым oracle.",
+      "Развести CORRECT_FOR_DECLARED_STATE, FRESH_ENOUGH, AUTHENTIC_SOURCE и OPTIMAL_WITHIN_UNIVERSE. Correct computation на stale state не свежая quote; valid route не proof optimal route.",
+      "Корпус ошибок:1atom rounding, wrong fee, wrong amount, substituted state, copied receipt, late result, corrupted payload."
+    ],
+    "metrics": [
+      "exact correctness",
+      "false accept/reject by corruption type",
+      "freshness",
+      "verification cost",
+      "end-to-end latency",
+      "state/task binding coverage"
+    ],
+    "advance_gate": "Все заведомо неверные golden/adversarial cases отклонены; корректные результаты exact; scope proof явно ограничен corpus/model.",
+    "stop_or_pivot": "Если проверка стоит столько же или больше локального вычисления, торговый marketplace этой услуги пока не оправдан; использовать как reproducibility API.",
+    "deliverable": "Qualified service contract и verifier dossier; no provider registration/payment/network marketplace.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "VRC-02",
+    "title": "Конкуренция поставщиков с полной ценой проверки",
+    "track": "verified_compute",
+    "depends_on": [
+      "VRC-01"
+    ],
+    "existing_task_ids": [
+      "WG-25"
+    ],
+    "owner_paths": [
+      "src/research/pr359_wave15_institution.py",
+      "src/research/benchmarks.py",
+      "src/research/product.py"
+    ],
+    "hypothesis": "Конкуренция может улучшать delivered correctness/cost/deadline outcome относительно одного local provider.",
+    "experiment_design": [
+      "Local virtual providers на одном homogeneous task: быстрый дорогой, медленный дешёвый, ошибочный/просроченный. Их профили помечены simulated.",
+      "Сравнить local baseline, posted price и existing reverse-auction policies INST-01. Не считать finite bid enumeration общим proof incentive compatibility.",
+      "Сначала отсечь неверные/stale/late outputs, затем оценить money cost с verification/retries/transfer/compute. Seconds и currency не складывать без заранее объявленной valuation.",
+      "Latency измеряет caller monotonic clock; provider сам не заверяет собственную скорость. Equal-hardware algorithm benchmark и real heterogeneous infrastructure benchmark разделить.",
+      "Включить duplicate receipts, colluding identical outputs, provider dropout и shared upstream outage. Same source alias не новая независимая проверка."
+    ],
+    "metrics": [
+      "cost per correct timely result",
+      "deadline hit rate",
+      "p95 end-to-end latency",
+      "verification/production cost ratio",
+      "simulated buyer/supplier utility",
+      "correlated failure rate"
+    ],
+    "advance_gate": "Есть Pareto improvement по полной стоимости/latency при сохранении correctness; иначе single-provider baseline остаётся предпочтительным.",
+    "stop_or_pivot": "Если network+verification уничтожают savings, pivot к cached corpus/managed API или более дорогой проверяемой задаче.",
+    "deliverable": "Procurement comparison report с failure cases и simulation-only demand labels.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "VRC-03",
+    "title": "Какие расчёты выгодно проверять и покупать",
+    "track": "verified_compute",
+    "depends_on": [
+      "VRC-02"
+    ],
+    "existing_task_ids": [
+      "WG-25"
+    ],
+    "owner_paths": [
+      "src/research/product.py",
+      "src/research/pr359_wave15_institution.py",
+      "src/mechanism_discovery/research_resources.py",
+      "src/research/benchmarks.py"
+    ],
+    "hypothesis": "Для дорогих задач отношение стоимости generation к verification может быть лучше, чем для простой quote.",
+    "experiment_design": [
+      "Отдельно оценить decoder, fixed-route exact replay и bounded route search. Не аукционировать их как одну взаимозаменяемую homogeneous услугу.",
+      "У fixed-route result доказать feasibility; у search quality сравнить с exhaustive tiny-universe baseline при одинаковых caps. Не называть validity proof доказательством global optimality.",
+      "Сравнить full independent recomputation, restricted verification и cache reuse с указанным остаточным риском; sampled check не даёт полной correctness guarantee.",
+      "Подготовить спросовой эксперимент: внешний добровольный пользователь получает реальную полезность, выбирает повторное использование и готовность платить без субсидии. Только дизайн; никаких сообщений, платежей или набора участников сейчас.",
+      "Не добавлять token, staking, slashing, ZK network или rollup до доказательства bottleneck. Возможность изучить proof system остаётся условным следующим dossier."
+    ],
+    "metrics": [
+      "generation/verification cost ratio",
+      "proof scope vs residual uncertainty",
+      "repeat use without subsidy (not yet measured)",
+      "willingness to pay (not yet measured)",
+      "retention and gross margin hypothesis"
+    ],
+    "advance_gate": "Выбрана услуга с проверяемым quality boundary и measured cost advantage; реальный спрос остаётся UNKNOWN до отдельного исследования.",
+    "stop_or_pivot": "Synthetic utility или signed result не доказывает рыночную цену/спрос. При отсутствии преимущества продукт = internal service, не новый marketplace.",
+    "deliverable": "Service ranking, verification modes и demand-study protocol без fabricated observations.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "MML-01",
+    "title": "Dynamic fee против фиксированной комиссии",
+    "track": "mechanism_lab",
+    "depends_on": [
+      "RD-00"
+    ],
+    "existing_task_ids": [
+      "WG-27"
+    ],
+    "owner_paths": [
+      "src/mechanism_discovery/hook_native.py",
+      "src/mechanism_discovery/research_quality.py",
+      "src/mechanism_discovery/causal_twin.py"
+    ],
+    "hypothesis": "Одна ограниченная fee rule может менять balance trader/LP outcomes в конкретных рыночных режимах.",
+    "experiment_design": [
+      "Отдельный pinned EVM/v4 fixture. Фиксированный pool type, начальная liquidity, external reference process и request stream.",
+      "A: fixed fee. B: один dynamic-fee rule с lagged observable volatility/depth input и fee bounds. Изменять один фактор, параметры выбирать на training, замораживать на held-out.",
+      "Пересчитать counterfactual state path, fills и fees; нельзя взять observed historical trades как гарантированно неизменные при новых fees.",
+      "Phase1 frozen-demand replay — результат условен. Phase2 stress demand elasticity/order abandonment, stale oracle, jump/depeg, congestion и adversarial timing.",
+      "Разложить per-user execution, LP fees и inventory markout, solver net и compute/gas cost. Fee transfer от trader кLP сам по себе не общий economic gain."
+    ],
+    "metrics": [
+      "trader cost/slippage/fill",
+      "LP fees plus inventory value under explicit valuation",
+      "solver after-cost result",
+      "order abandonment",
+      "gas/compute overhead",
+      "sensitivity to demand response"
+    ],
+    "advance_gate": "Нет нарушений state/fee invariants; tradeoff и неопределённость измерены. Кандидат проходит только заранее выбранную цель с guardrails для остальных участников.",
+    "stop_or_pivot": "Более высокая fee revenue при ухудшении итогового LP outcome или collapse flow не называется улучшением рынка.",
+    "deliverable": "Fee mechanism dossier с conditional counterfactual results, constraints и negative regimes.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "MML-02",
+    "title": "Правила batch auction и allocation",
+    "track": "mechanism_lab",
+    "depends_on": [
+      "CLR-01",
+      "MML-01"
+    ],
+    "existing_task_ids": [
+      "WG-17",
+      "WG-27"
+    ],
+    "owner_paths": [
+      "src/mechanism_discovery/intent_graph.py",
+      "src/research/pr359_wave15_institution.py",
+      "src/mechanism_discovery/research_quality.py"
+    ],
+    "hypothesis": "Правило выбора compatible solutions влияет на fairness, fill и устойчивость к стратегическим bids.",
+    "experiment_design": [
+      "Чётко разделить аукцион пользовательских intents и procurement auction вычислительной услуги; INST-01 policy не переносить механически на settlement.",
+      "На одинаковых batch/problem/budget сравнить baseline individual solutions, batched netting и fair selection с no-worse per-order constraint.",
+      "Указать deterministic tie-break, per-user limit/deadline, duplicate/conflict rules. No double fill/inventory consumption.",
+      "Проверить omission, bid splitting, delayed arrival, duplicate identity, known collusion scenarios и boundary budgets. Это finite robustness tests, не механизм с доказанной strategy-proofness."
+    ],
+    "metrics": [
+      "surplus by participant",
+      "fill ratio",
+      "worst-order degradation",
+      "allocation stability",
+      "strategic deviation gains within tested set",
+      "compute cost"
+    ],
+    "advance_gate": "No-worse guardrails и conservation соблюдены; advantage после costs устойчив в declared scenarios.",
+    "stop_or_pivot": "Больший total surplus, купленный ухудшением отдельного order за пределами policy, отклоняется.",
+    "deliverable": "Allocation rule comparison с formal constraints и ограниченным набором deviation tests.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  },
+  {
+    "id": "MML-03",
+    "title": "Custom accounting и будущие финансовые продукты",
+    "track": "mechanism_lab",
+    "depends_on": [
+      "CLR-03",
+      "MML-02"
+    ],
+    "existing_task_ids": [
+      "WG-16",
+      "WG-27"
+    ],
+    "owner_paths": [
+      "src/mechanism_discovery/hook_native.py",
+      "src/mechanism_discovery/claims.py",
+      "src/mechanism_discovery/pr356_state_machine.py",
+      "src/mechanism_discovery/mechanism_compiler.py"
+    ],
+    "hypothesis": "Одна новая accounting/transformation rule может уменьшить transfers или открыть полезный продукт при явных obligations.",
+    "experiment_design": [
+      "Сперва baseline flash-accounting delta model и один simple wrapper/conversion; затем отдельно fixed/floating rights или PT/YT при verified adapter.",
+      "Hook identity включает domain, PoolKey, hook address/permissions/code revision и reachable mutable configuration; shared hook state может связывать несколько pools.",
+      "Все transient balances закрываются на правильном boundary; нельзя считать внутренний delta всемирной credit line.",
+      "Custom accounting changes переводят evaluator в другую model revision; unsupported hooks fail closed, не стандартная AMM formula.",
+      "Переиспользовать существующие research model/contracts; только offline model/local fixture evaluation без deployment, signer или submission. Сравнить с application-level implementation."
+    ],
+    "metrics": [
+      "transfers/resources saved",
+      "capital requirement by asset",
+      "obligation closure",
+      "rights/capacity failures",
+      "model complexity and verification cost",
+      "new user outcome availability"
+    ],
+    "advance_gate": "Конкретная полезная capability с exact invariants и after-cost advantage; отсутствующая liquidity/distribution — explicit product blocker.",
+    "stop_or_pivot": "Если решение требует собственной chain до доказанного workload/demand bottleneck, отложить L1/L2/L3 и сохранить application baseline.",
+    "deliverable": "One-product mechanism dossier, compatibility/identity rules и application-vs-chain decision criteria.",
+    "status": "PLANNED_NOT_RUN",
+    "proposed_only": true,
+    "code_implemented": false,
+    "live_enabled": false
+  }
+]

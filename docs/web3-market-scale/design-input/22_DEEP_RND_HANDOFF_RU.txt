@@ -1,0 +1,21 @@
+CURRENT CONSOLIDATED HANDOFF: 34_PARALLEL_SCALE_HANDOFF_RU.txt; current owner addendum: 35_CURRENT_OWNERS_AND_LIMITS_RU.md. This earlier handoff is retained as history.
+
+БУДУЩАЯ СЕССИЯ: ГЛУБОКИЙ WEB3 R&D
+
+Этот ZIP — planning artifact. Он не содержит разрешения на live execution, merge всех заданий или запуск внешних solver quickstarts.
+
+Сначала прочитай00_START_HERE_RU.md,16_DEEP_WEB3_RND_RU.md и21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md.
+Последний static baseline: main@67d3852cbc4cb1b24582df45adbf6a42d4da2af0; прежний09 slice уже представлен PR562.
+Re-fetch main, AGENTS и текущие owners. Не изменяй пользовательскую ветку только ради аудита.
+
+Первое предлагаемое bounded задание: DP-01 (qualification и per-amount rejection) поверх PR562/PR118/PR559.
+После отдельного verdict: DP-02 exact shared-state split у AGG05, затем DP-03 incremental replay.
+Для новых markets выбирай один CB/PX, все gates из17 и конкретные planned DT, а не включай всё сразу.
+
+Сохраняй exact integer amounts, consumed/residual semantics, source/available_at evidence, shared liquidity alias, rights и settlement time.
+Не смешивай atomic cycles, carry/margin, LP mechanisms и service profits в одну PnL или flashloan model.
+Не создавай второй sizing/split/inventory/evidence owner. Generic wrapper и fixture не являются qualified production algorithm.
+
+Автоматизация JSON disabled, schedule=null, не runnable. Реальные networks/payments требуют другого конкретного scope; здесь никакого sender/signer/submission/transaction authorization, user outreach, supplier purchase, external apply_plan или OrderbookAmmStrategy enable.
+
+Результат каждого будущего experiment: finite corpus+hashes+versions+budgets, fair baseline, точные результаты или reject/unknown, after-cost metrics и отрицательные примеры. Не заменяй отсутствующее измерение рассказом о прибыльности.

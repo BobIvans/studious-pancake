@@ -1,0 +1,96 @@
+{
+  "schema": "research.parallel-pipeline.v1",
+  "enabled": false,
+  "schedule": null,
+  "stages": [
+    {
+      "id": "catalog",
+      "tier": "COLD",
+      "purpose": "Protocol directories and macro flow summaries",
+      "partition": "chain/domain",
+      "flow_control": "slow bounded refresh",
+      "owner_role": "quota",
+      "invariant": "No promotion from TVL or listing alone"
+    },
+    {
+      "id": "raw_ingest",
+      "tier": "HOT_OR_WARM",
+      "purpose": "Shared provider feed once, dedup before fanout",
+      "partition": "provider/connection/market",
+      "flow_control": "bounded byte queues",
+      "owner_role": "admission",
+      "invariant": "Preserve gap and reorg evidence"
+    },
+    {
+      "id": "reconstruct",
+      "tier": "HOT",
+      "purpose": "Snapshot plus venue-specific event updates",
+      "partition": "one writer per state partition",
+      "flow_control": "event order",
+      "owner_role": "streams",
+      "invariant": "Invalid partition stops dependent candidates"
+    },
+    {
+      "id": "feature_projection",
+      "tier": "WARM",
+      "purpose": "Rights, depth, flow and event features",
+      "partition": "market/underlying/relation family",
+      "flow_control": "point-in-time joins",
+      "owner_role": "raw",
+      "invariant": "Provisional and final data remain distinguishable"
+    },
+    {
+      "id": "candidate_search",
+      "tier": "HOT",
+      "purpose": "Affected neighborhoods and bounded relation templates",
+      "partition": "frame/relation/amount grid",
+      "flow_control": "bounded jobs/deadlines",
+      "owner_role": "graph",
+      "invariant": "Deterministic ordering independent of workers"
+    },
+    {
+      "id": "exact_eval",
+      "tier": "HOT",
+      "purpose": "Immutable local state forks",
+      "partition": "candidate/evidence ID",
+      "flow_control": "CPU workers, bounded amount points",
+      "owner_role": "exact",
+      "invariant": "No capital held for every cheap screening job"
+    },
+    {
+      "id": "joint_select",
+      "tier": "HOT",
+      "purpose": "Joint shared-state routes and conflict graph",
+      "partition": "resource component/domain",
+      "flow_control": "bounded subset/path order",
+      "owner_role": "allocation",
+      "invariant": "Shared economic capacity checked jointly"
+    },
+    {
+      "id": "shadow_admit",
+      "tier": "HOT",
+      "purpose": "Canonical authority receipts and fenced completion",
+      "partition": "single coordinator initially",
+      "flow_control": "deadline and lease are distinct",
+      "owner_role": "scheduler",
+      "invariant": "Unknown external state never freed by compute TTL"
+    },
+    {
+      "id": "audit_metrics",
+      "tier": "WARM",
+      "purpose": "All outcomes including rejects and absent data",
+      "partition": "manifest/hypothesis/run",
+      "flow_control": "append and compact projections",
+      "owner_role": "benchmarks",
+      "invariant": "Success counters include honest coverage denominator"
+    }
+  ],
+  "scaling_order": [
+    "one host, one authority, bounded processes",
+    "stateless workers on additional hosts; same logical authority service only after qualification",
+    "sharded authorities only for proven disjoint resources with explicit cross-shard protocol"
+  ],
+  "sqlite_over_network_allowed": false,
+  "distributed_authority_implemented": false,
+  "submission_stage_in_this_artifact": false
+}

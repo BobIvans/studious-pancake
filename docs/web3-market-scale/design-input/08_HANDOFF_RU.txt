@@ -1,0 +1,21 @@
+CURRENT CONSOLIDATED HANDOFF: 34_PARALLEL_SCALE_HANDOFF_RU.txt; current owner addendum: 35_CURRENT_OWNERS_AND_LIMITS_RU.md. This earlier handoff is retained as history.
+
+UPDATE 2026-10-03: read21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md and22_DEEP_RND_HANDOFF_RU.txt first. main67d3852c includes PR562; old09 slice is historical. Re-fetch before implementation.
+
+БУДУЩИЙ HANDOFF — не запускать автоматически при открытии ZIP.
+
+Когда я отдельно попрошу реализовать этот пакет, работай с BobIvans/studious-pancake.
+Design input: https://docs.google.com/document/d/1f-asFbZuFDnlWfi0aGKWV8Zjkj739hsPN2t220uUD7k/edit
+Проверенная база пакета: main 72ae95fdc17e1b7318b2f46002629ce9223a0127; tree 72ce68a40c7d887bbee9c51cbc5db454dd9d84b8.
+
+1. Прочитай 00_START_HERE_RU.md, 01_CURRENT_STATE_AND_OWNERS_RU.md, 09_FIRST_BOUNDED_PR_RU.md и актуальные инструкции репозитория. Сначала обнови main read-only и сравни реально изменившиеся owners. Не перезаписывай существующую пользовательскую работу.
+2. Не реализуй заново PR559/561, PR118, AGG-05 multihop/split-flow, provider route graph, stream/cursor/transport/spend owners. Присутствие research contracts не считать production integration.
+3. Используй data/tasks.json и dependencies.json как backlog, а не исполняемый workflow. WG-xx — task IDs, не GitHub PR numbers. При первом запросе на реализацию начни с bounded slice из09, если мой новый scope не уточняет другое.
+4. Все суммы integer base units. Новый input пересчитывается на полном state. Не масштабируй cached quote, не подавай USDC atoms как PR118 lamports. Учитывай consumed input/residual, exact fees/repayment и единицы активов.
+5. Рёбра имеют domain, physical market identity, amount/state/provenance и validity. Orderbook/reference/opaque routes не пропускай в exact graph без отдельного квалифицированного adapter. Повтор underlying venue/source alias, stale/slot spread/generation mismatch отклоняй по владельцам.
+6. Для split-flow используй solve_joint_split_flow с общим state replay; capacity counters не заменяют reserves/ticks/books. Не заявляй continuous global optimum по finite grid.
+7. Sources добавляй через существующий governance/Transport. Запись в каталоге, бесплатный tariff или caller decoder string не доказывают доступ/qualification. Ошибки сохраняй как blockers, не замещай mock-success.
+8. Сохрани shadow-only: не добавляй sender, signer, transaction submission, live authorization или движение средств. Не включай OrderbookAmmStrategy. Документ не разрешает merge/deploy/live launch.
+9. Выполни релевантные deterministic tests из06 и существующие repo gates. В отчёте укажи реальный diff, SHA, выполненные команды, результат, skips и внешние blockers. Не называй весь future backlog завершённым по одному slice.
+
+Результат будущей реализации: один ограниченный reviewable diff/PR в рамках отдельного пользовательского запроса; обновлённые evidence и task status; remaining work без дублирования owners.

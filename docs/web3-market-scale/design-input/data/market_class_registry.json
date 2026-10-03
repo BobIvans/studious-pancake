@@ -1,0 +1,555 @@
+{
+  "status": "RESEARCH_DESIGN_ONLY",
+  "class_count": 12,
+  "classes": [
+    {
+      "id": "MC-01",
+      "name": "Stablecoin-платежи, FX и treasury liquidity",
+      "priority": "P1",
+      "customer_hypothesis": "Платёжные платформы, merchants, казначейства и vault operators.",
+      "product_hypothesis": "Read-only treasury optimizer: сравнение маршрутов, взаимозачёт платежей, прогноз дефицита ликвидности и reconciliation; возможная модель оплаты за API/аналитику.",
+      "transformation_primitives": [
+        "swap",
+        "net_obligations",
+        "transfer",
+        "reserve_liquidity"
+      ],
+      "owner_paths": [
+        "src/routing/route_graph.py",
+        "src/mechanism_discovery/programmable_cash.py",
+        "src/inventory/non_atomic.py",
+        "src/research/pr356_allocation.py"
+      ],
+      "work_package_ids": [
+        "WG-10",
+        "WG-17",
+        "WG-20",
+        "WG-26"
+      ],
+      "rnd_parent_ids": [
+        "CLR-01",
+        "CLR-02"
+      ],
+      "reference_ids": [
+        "circle",
+        "cow"
+      ],
+      "clearing_application": "Встречные платежные obligations и остаточные swaps; сохранять owner/recipient/asset/domain identity.",
+      "verified_compute_application": "Exact FX/route comparisons, fees, idempotent payment-state reconstruction.",
+      "mechanism_lab_application": "Compare batch interval, liquidity reservation и fee allocation; deadlines клиентов — hard constraints.",
+      "first_experiment": "Один domain,2stable assets,10 synthetic due payments. Baseline individual flows против netting+residual routing на одном state. Fiat leg только отдельная delayed-settlement модель.",
+      "success_measurement": "Net cost, payment deadline misses, minimum prefunding by asset, reconciliation errors при одинаковых обязательствах.",
+      "funding_and_time": "Atomic funding только для конкретного same-domain recipe; fiat payout/межсетевое ожидание требуют inventory и права settlement.",
+      "blocking_conditions": "Issuer risk, redemption/access eligibility, FX spread, provider limits, receiver/settlement constraints; токены разных эмитентов не равны из-за названия stablecoin.",
+      "scaling_axis": "Число recurring payment flows и клиентов с одним reusable model, а не только размер собственного flashloan.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-02",
+      "name": "Vault shares, cash management и redemption queues",
+      "priority": "P1",
+      "customer_hypothesis": "DAO/корпоративные казначейства, разработчики vault dashboards.",
+      "product_hypothesis": "Liquidity-aware cash planner: когда asset доступен, какие withdrawal costs и capacity; API evidence по vaults.",
+      "transformation_primitives": [
+        "deposit",
+        "mint_shares",
+        "withdraw",
+        "redeem",
+        "request",
+        "claim"
+      ],
+      "owner_paths": [
+        "src/strategy_evolution/primary_market.py",
+        "src/mechanism_discovery/claims.py",
+        "src/mechanism_discovery/programmable_cash.py",
+        "src/market_data_evolution/contracts.py"
+      ],
+      "work_package_ids": [
+        "WG-14",
+        "WG-16",
+        "WG-18"
+      ],
+      "rnd_parent_ids": [
+        "CLR-03"
+      ],
+      "reference_ids": [
+        "vaults",
+        "async-vaults"
+      ],
+      "clearing_application": "Сопоставить liquidity deadlines со shares и допустимыми immediate conversions.",
+      "verified_compute_application": "Pinned preview/max/fee/rounding checks плюс воспроизводимый request lifecycle.",
+      "mechanism_lab_application": "Compare queue batching и withdrawal fee policy с одинаковыми obligations.",
+      "first_experiment": "Один synchronous vault и одна async synthetic request queue. Baseline highest displayed rate против deadline-aware feasible plan; правила pricing не смешивать.",
+      "success_measurement": "Недоступный к deadline cash, conversion loss, foregone yield как условная оценка, fees и inventory duration.",
+      "funding_and_time": "Yield за время не доход instant flashloan. Request→claim может изменять цену и требует locked capital.",
+      "blocking_conditions": "ERC4626 convert functions не включают все fees/slippage; preview не проверяет max limits. ERC7540 pending claim не равен готовым assets. Нужно pin implementation, не доверять одному стандарту.",
+      "scaling_axis": "Повторное использование интерфейсов и qualification по многим vault implementations; customer goals вместо общего highest-APY рейтинга.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-03",
+      "name": "Collateral, refinancing и liquidation operations",
+      "priority": "P2",
+      "customer_hypothesis": "Lending/treasury operators и разработчики collateral dashboards.",
+      "product_hypothesis": "Debt/collateral planner: смена financing source, collateral conversion, liquidation/unwind evidence.",
+      "transformation_primitives": [
+        "borrow_obligation",
+        "repay",
+        "release_collateral",
+        "liquidate",
+        "swap"
+      ],
+      "owner_paths": [
+        "src/lending/financing.py",
+        "src/liquidation/agg07.py",
+        "src/multichain/evm_financing.py",
+        "src/research/pr356_allocation.py"
+      ],
+      "work_package_ids": [
+        "WG-10",
+        "WG-15",
+        "WG-18"
+      ],
+      "rnd_parent_ids": [
+        "CLR-02"
+      ],
+      "reference_ids": [
+        "aave"
+      ],
+      "clearing_application": "Композиция repayment/unlock/swap и netting совместимых obligations.",
+      "verified_compute_application": "Exact health/cap/rate/oracle/unwind evaluation с общим collateral state.",
+      "mechanism_lab_application": "Compare liquidation batching, auction incentives и close-factor regimes офлайн.",
+      "first_experiment": "Одна позиция,2 financing offers и3 collateral shocks; compare do-nothing/independent refinance/atomic recipe при одинаковом post-state target.",
+      "success_measurement": "Total borrowing/closing cost, health constraints, peak capital, failed unwind и time-dependent exposure.",
+      "funding_and_time": "Flash refinancing возможно только в доказанном atomic recipe; будущая процентная экономия — отдельная horizon-dependent гипотеза.",
+      "blocking_conditions": "Changing rates/caps/oracles, eligibility, debt dust, shared collateral, unhealthy intermediate states.",
+      "scaling_axis": "Переиспользуемые lender adapters и recurring risk/treasury workflows; не удваивать общий borrow capacity.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-04",
+      "name": "Доходность, PT/YT и fixed/floating rates",
+      "priority": "P2",
+      "customer_hypothesis": "Vault managers, hedgers и аналитические платформы ставок.",
+      "product_hypothesis": "Rate/claim optimizer: сравнение фиксированных и плавающих cashflows, maturity exposure и collateral needs.",
+      "transformation_primitives": [
+        "split_claims",
+        "merge_claims",
+        "cashflow_stream",
+        "margin",
+        "settle_at_time"
+      ],
+      "owner_paths": [
+        "src/mechanism_discovery/claims.py",
+        "src/mechanism_discovery/boros.py",
+        "src/strategy_evolution/rights_lifecycle.py",
+        "src/inventory/research.py"
+      ],
+      "work_package_ids": [
+        "WG-16",
+        "WG-19",
+        "WG-20"
+      ],
+      "rnd_parent_ids": [
+        "CLR-03",
+        "MML-03"
+      ],
+      "reference_ids": [
+        "boros"
+      ],
+      "clearing_application": "Netting совместимых cashflow obligations по asset/time/index, не произвольных доходностей.",
+      "verified_compute_application": "Индексы, maturity, margin и protocol payoff replay; existing Boros owner fixture-only.",
+      "mechanism_lab_application": "Compare rate-auction, collateral/margin schedules и settlement interval sensitivity.",
+      "first_experiment": "Один фиксированный/плавающий инструмент: positive/negative funding, oracle lag и margin stress; baseline unhedged против declared hedge.",
+      "success_measurement": "Cashflow volatility, total hedge cost, margin drawdown, obligation shortfall и basis risk.",
+      "funding_and_time": "Хранение позиции и периодические settlements требуют margin/inventory; maturity не финансируется atomic loan.",
+      "blocking_conditions": "Разные индексы/мaturity/settlement assets не равны; funding reversal и liquidation могут уничтожить apparent spread.",
+      "scaling_axis": "Большое число recurring rate exposures и risk customers; объем не гарантирован и определяется глубиной и доступом.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-05",
+      "name": "Spot–perp, options и hedge baskets",
+      "priority": "P2",
+      "customer_hypothesis": "Market makers, treasury и аналитики derivatives.",
+      "product_hypothesis": "Scenario-based hedge/basis research engine; портфель альтернатив с фактическими constraints.",
+      "transformation_primitives": [
+        "spot_swap",
+        "future_claim",
+        "option_claim",
+        "margin",
+        "hedge",
+        "funding_cashflow"
+      ],
+      "owner_paths": [
+        "src/inventory/non_atomic.py",
+        "src/inventory/research.py",
+        "src/research/pr356_allocation.py",
+        "src/market_data_evolution/packs.py"
+      ],
+      "work_package_ids": [
+        "WG-19",
+        "WG-20",
+        "WG-21"
+      ],
+      "rnd_parent_ids": [
+        "CLR-02"
+      ],
+      "reference_ids": [
+        "deribit"
+      ],
+      "clearing_application": "Net exposure и bounded multi-leg hedge; нельзя считать все CEX fills simultaneous.",
+      "verified_compute_application": "Mark/index/book differences, funding/borrow terms и stress replay.",
+      "mechanism_lab_application": "Compare margin netting, batch hedge allocation и quote priority rules.",
+      "first_experiment": "Один underlying,2 venues и несколько maturities с one-leg failure, disconnect и funding flip; compare feasible hedge alternatives.",
+      "success_measurement": "Residual exposure, drawdown scenarios, carry/fees, capital locked, fill uncertainty.",
+      "funding_and_time": "Обычно prefunded inventory и margin; carry не instant arbitrage.",
+      "blocking_conditions": "Exercise style, multiplier, settlement index, custody, sessions, borrow availability и correlated failure.",
+      "scaling_axis": "Reuse contract identity/risk models across families; реальные exposures и data rights ограничивают universe.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-06",
+      "name": "Conditional claims и complete sets",
+      "priority": "P2",
+      "customer_hypothesis": "Разработчики event-market analytics и market-quality tooling.",
+      "product_hypothesis": "Проверка complete-set parity и объяснение resolution/condition risks; read-only market integrity API.",
+      "transformation_primitives": [
+        "split_conditional_claim",
+        "merge_complete_set",
+        "redeem_resolved_claim"
+      ],
+      "owner_paths": [
+        "src/mechanism_discovery/claims.py",
+        "src/inventory/research.py",
+        "src/strategy_evolution/rights_lifecycle.py"
+      ],
+      "work_package_ids": [
+        "WG-16",
+        "WG-18",
+        "WG-19"
+      ],
+      "rnd_parent_ids": [
+        "CLR-03",
+        "MML-02"
+      ],
+      "reference_ids": [
+        "conditional"
+      ],
+      "clearing_application": "Совместимые outcome bundles дают общий collateral claim; condition IDs и collateral обязательны.",
+      "verified_compute_application": "Outcome partitions, exact lot/fee/depth и split/merge rights.",
+      "mechanism_lab_application": "Compare batch matching, fees и allocation с per-user constraints.",
+      "first_experiment": "Один pinned binary condition: complete pair vs synthetic incomplete/wrong-condition pairs; compare acquired set cost after fees с допустимым merge outcome.",
+      "success_measurement": "Conservation, realizable merge value, partial-fill risk, resolution/fee uncertainty.",
+      "funding_and_time": "Pure split/merge иногда same-domain; сбор набора через CLOB или ожидание resolution не автоматически atomic.",
+      "blocking_conditions": "Different question/resolver/expiry, negative-risk configuration, disputes, market access and collateral revisions.",
+      "scaling_axis": "Many conditions через одну grammar; forecasts и ставку на исход не выдавать за доказанный arbitrage.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-07",
+      "name": "RWA, tokenized funds/equities и NAV rights",
+      "priority": "P3",
+      "customer_hypothesis": "Qualified asset managers, custodial/issuer analytics и portfolio tools.",
+      "product_hypothesis": "Rights-aware NAV/redemption monitor и сравнение доступных преобразований.",
+      "transformation_primitives": [
+        "subscribe",
+        "redeem_claim",
+        "corporate_action",
+        "custody_receipt",
+        "transfer_restricted_right"
+      ],
+      "owner_paths": [
+        "src/mechanism_discovery/rwa.py",
+        "src/strategy_evolution/primary_market.py",
+        "src/market_data_evolution/contracts.py",
+        "src/inventory/research.py"
+      ],
+      "work_package_ids": [
+        "WG-14",
+        "WG-18",
+        "WG-20"
+      ],
+      "rnd_parent_ids": [
+        "CLR-03"
+      ],
+      "reference_ids": [
+        "ondo"
+      ],
+      "clearing_application": "Net compatible issuer obligations только с доказанными правами; token ≠ underlying title автоматически.",
+      "verified_compute_application": "NAV vintage, eligibility/session, custody, corporate action and redemption evidence.",
+      "mechanism_lab_application": "Compare redemption windows, queue allocation и inventory buffers на офлайн модели.",
+      "first_experiment": "Один product dossier и stale NAV/closed session/pending redemption cases; shadow basis только при point-in-time terms.",
+      "success_measurement": "Realizable-after-cost basis, days capital locked, access unknowns и settlement failures.",
+      "funding_and_time": "Общие RWA redemption/market hours требуют времени; flashloan eligibility проверяется для конкретной мгновенной операции.",
+      "blocking_conditions": "Product-specific eligibility, transfer/redemption access, custody, sessions, taxes/costs если применимы; этот план не подтверждает доступ пользователя.",
+      "scaling_axis": "Multi-product rights evidence tooling; не обещать unlimited access к tokenized securities.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-08",
+      "name": "Cross-domain liquidity и inventory rebalancing",
+      "priority": "P2",
+      "customer_hypothesis": "Intent solvers, bridge/liquidity operators, CEX–DEX treasury teams.",
+      "product_hypothesis": "Read-only rebalancing planner с trapped inventory/timeout scenarios и quality/cost comparison.",
+      "transformation_primitives": [
+        "intent_fulfillment",
+        "bridge_claim",
+        "transfer",
+        "hedge",
+        "refund",
+        "reconcile"
+      ],
+      "owner_paths": [
+        "src/inventory/non_atomic.py",
+        "src/inventory/research.py",
+        "src/mechanism_discovery/intent_graph.py",
+        "src/mechanism_discovery/pr356_state_completion.py"
+      ],
+      "work_package_ids": [
+        "WG-17",
+        "WG-18",
+        "WG-20"
+      ],
+      "rnd_parent_ids": [
+        "CLR-01",
+        "CLR-02"
+      ],
+      "reference_ids": [
+        "crosschain"
+      ],
+      "clearing_application": "Сопоставлять встречные domain obligations, чтобы реже переносить inventory.",
+      "verified_compute_application": "Finality, settlement assumptions, refund/timeout and exact fee evidence.",
+      "mechanism_lab_application": "Compare inventory reservation, filler auctions и failure allocation policies.",
+      "first_experiment": "2 domains, finite pre-funded balances,10 requests; compare transfer-every-time против netting/rebalance schedule с одной failed leg.",
+      "success_measurement": "Capital by domain, completion delay, failed/unknown obligations, loss scenarios и transfer costs.",
+      "funding_and_time": "Prefunding/credit и asynchronous settlement; interoperable order format не гарантирует atomicity.",
+      "blocking_conditions": "Bridge/security/finality assumptions, non-executable quote, domain-specific token identity, unavailable refund proof.",
+      "scaling_axis": "Customer intents и reuse resolver adapters; capacity constrained общим inventory и доступом к исполнению.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-09",
+      "name": "Compute, inference и storage procurement",
+      "priority": "P1",
+      "customer_hypothesis": "Разработчики solver/R&D workloads и data pipelines.",
+      "product_hypothesis": "Resource broker: выбрать допустимую вычислительную услугу по delivered result cost, deadline и quality.",
+      "transformation_primitives": [
+        "request_service",
+        "reserve_capacity",
+        "deliver_result",
+        "verify",
+        "release_obligation"
+      ],
+      "owner_paths": [
+        "src/research/pr359_wave15_institution.py",
+        "src/research/benchmarks.py",
+        "src/mechanism_discovery/research_resources.py",
+        "src/research/pr356_allocation.py"
+      ],
+      "work_package_ids": [
+        "WG-25",
+        "WG-24"
+      ],
+      "rnd_parent_ids": [
+        "VRC-01",
+        "VRC-02",
+        "VRC-03"
+      ],
+      "reference_ids": [
+        "akash"
+      ],
+      "clearing_application": "Совместить batch задач с доступными time/resource slots; сохранять deadline/privacy/data locality constraints.",
+      "verified_compute_application": "Повторяемый результат и actual end-to-end resource usage; stochastic inference требует task-specific quality, не просто identical bytes.",
+      "mechanism_lab_application": "Compare posted/reverse auction, cancellation/refund и reservation policy на synthetic providers.",
+      "first_experiment": "Одна deterministic route-evaluation job,3 provider profiles и outage/cold-start; compare local execution и procurement incl verification/transfer.",
+      "success_measurement": "Cost per correct timely result, idle capacity, p95 latency, retry/verification overhead.",
+      "funding_and_time": "Расходы периода услуги и оплаты, не atomic flashloan. Публичный marketplace не означает бесплатный compute.",
+      "blocking_conditions": "Hardware comparability, data rights/secrets, non-determinism, cancellation, provider independence и verification economics.",
+      "scaling_axis": "Множество клиентов и workloads при reuse task contracts; capacity по quality/location/time, не одному GPU ticker.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-10",
+      "name": "Данные, freshness и evidence services",
+      "priority": "P1",
+      "customer_hypothesis": "Solver teams, analytics, risk systems и разработчики финансовых продуктов.",
+      "product_hypothesis": "Market-state/evidence API: reproducible snapshots, exact route evaluation и provenance bundles.",
+      "transformation_primitives": [
+        "request_data",
+        "observe",
+        "normalize",
+        "verify",
+        "license_access"
+      ],
+      "owner_paths": [
+        "src/research/product.py",
+        "src/research/pr359_wave15_institution.py",
+        "src/market/streams.py",
+        "src/provider_governance/__init__.py"
+      ],
+      "work_package_ids": [
+        "WG-03",
+        "WG-05",
+        "WG-22",
+        "WG-25"
+      ],
+      "rnd_parent_ids": [
+        "VRC-01",
+        "VRC-02",
+        "VRC-03"
+      ],
+      "reference_ids": [],
+      "clearing_application": "Batch одинаковых запросов, deduplicate raw fetches и allocate shared quotas без двойной продажи обещанной freshness.",
+      "verified_compute_application": "State authenticity, amount-specific correctness, freshness и completeness проверять раздельно.",
+      "mechanism_lab_application": "Compare freshness SLA tiers, pay-per-verified-result и query budgets в offline buyer model.",
+      "first_experiment": "Три data sources с shared upstream и gaps; compare naive replicas против lineage-aware cache/verification.",
+      "success_measurement": "Fresh qualified coverage, cost per useful receipt, correlated outage, stale false-accept и redistribution constraints.",
+      "funding_and_time": "Recurring service funding; atomic lender не финансирует continuous collection.",
+      "blocking_conditions": "Public visibility ≠ redistribution rights; metadata hash ≠ truth; synthetic demand ≠ revenue.",
+      "scaling_axis": "Subscription/API customers и reusable evidence; предельная стоимость новой coherent coverage важнее числа API.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-11",
+      "name": "Blockspace, inclusion и execution-quality services",
+      "priority": "P2",
+      "customer_hypothesis": "Application operators и solvers, которым важны deadlines.",
+      "product_hypothesis": "Inclusion-cost/latency research advisor и monitoring SLA; без sender.",
+      "transformation_primitives": [
+        "quote_service",
+        "reserve_window",
+        "attest_inclusion",
+        "reconcile_timeout"
+      ],
+      "owner_paths": [
+        "src/strategy_evolution/blockspace_option.py",
+        "src/strategy/multihop_solver.py",
+        "src/research/benchmarks.py"
+      ],
+      "work_package_ids": [
+        "WG-22",
+        "WG-24",
+        "WG-27"
+      ],
+      "rnd_parent_ids": [
+        "VRC-03",
+        "MML-02"
+      ],
+      "reference_ids": [],
+      "clearing_application": "Batch совместимых demands for resources; конфликтующие writes/deadlines не объединять механически.",
+      "verified_compute_application": "Calibrated inclusion/latency evidence и независимый receipt, не provider self-reported guarantee.",
+      "mechanism_lab_application": "Compare fee bid/deadline allocation и service guarantee models.",
+      "first_experiment": "Recorded/synthetic fee regimes и timeout traces; compare static budget vs calibrated bounded choices на одинаковом deadline workload.",
+      "success_measurement": "Missed deadlines, paid cost, calibration error, regime-change robustness и shared-capacity conflicts.",
+      "funding_and_time": "Time-bounded service budget. Preconfirmation claim требует точных enforceable terms; не равен finalized settlement.",
+      "blocking_conditions": "No real inclusion evidence, unknown guarantee, changing congestion; никакого нового sender/bundle submission.",
+      "scaling_axis": "Распределение ресурсов многих application workloads; преимущество только после after-cost deadline benchmark.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    },
+    {
+      "id": "MC-12",
+      "name": "Физическая B2B-торговля: закупки, logistics, energy capacity",
+      "priority": "P3",
+      "customer_hypothesis": "Procurement teams и поставщики с доступными цифровыми quotes/fulfillment records.",
+      "product_hypothesis": "Delivery-aware procurement planner и проверка supplier evidence; сначала digital twin одного procurement class.",
+      "transformation_primitives": [
+        "request_quote",
+        "allocate_capacity",
+        "deliver_physical",
+        "inspect",
+        "accept",
+        "invoice",
+        "dispute"
+      ],
+      "owner_paths": [
+        "src/mechanism_discovery/claims.py",
+        "src/research/pr359_wave15_institution.py",
+        "src/mechanism_discovery/causal_twin.py",
+        "src/inventory/research.py"
+      ],
+      "work_package_ids": [
+        "WG-25",
+        "WG-26",
+        "WG-27"
+      ],
+      "rnd_parent_ids": [
+        "VRC-03",
+        "MML-02",
+        "MML-03"
+      ],
+      "reference_ids": [
+        "gs1"
+      ],
+      "clearing_application": "Консолидировать спрос только для одинаковых спецификаций, места/времени поставки и прав; не складывать разные качества товара.",
+      "verified_compute_application": "Evidence о происхождении/поставке и invoice matching; цифровая запись не доказывает физическую истину сама по себе.",
+      "mechanism_lab_application": "Compare supplier auctions, partial delivery, cancellations, deposits и penalties на модели.",
+      "first_experiment": "Один goods/service specification,2 suppliers и10 orders с lead time/partial delivery; только user-owned или synthetic data.",
+      "success_measurement": "Landed cost, stockouts, lead-time misses, working capital, defects и dispute outcomes.",
+      "funding_and_time": "Working capital, custody/delivery risk и длительный settlement; atomic flashloan обычно не подходит.",
+      "blocking_conditions": "Quality/location/time, logistics, freight/taxes, title, inspection, supplier contracts; общего executable public orderbook нет.",
+      "scaling_axis": "Повторяющиеся procurement workflows и SaaS-клиенты; отраслевой adapter обязателен, universal commerce ещё не реализован.",
+      "status": "PROPOSED_RND_NOT_RUN",
+      "specific_adapter_qualified_by_this_package": false,
+      "live_enabled": false,
+      "source_access": "Not automatically free or admitted; per-source qualification required",
+      "demand_evidence": "UNKNOWN",
+      "revenue_evidence": "UNKNOWN"
+    }
+  ]
+}

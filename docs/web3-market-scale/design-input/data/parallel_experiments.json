@@ -1,0 +1,119 @@
+[
+  {
+    "id": "PS-01",
+    "title": "Data coverage and repair",
+    "package_ids": [
+      "PM-03",
+      "PM-04"
+    ],
+    "corpus": "One venue, bounded recorded outage/reorg traces",
+    "metrics": "Replay state hash, gap downtime, bytes and request cost",
+    "gate": "No candidate while state is invalid",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "enabled": false,
+    "schedule": null
+  },
+  {
+    "id": "PS-02",
+    "title": "Compute scaling",
+    "package_ids": [
+      "PM-06",
+      "PM-10"
+    ],
+    "corpus": "Identical corpus at 1/2/4/8 process workers",
+    "metrics": "Useful candidates before deadline per CPU-second; p50/p95/p99 age",
+    "gate": "Identical decisions and bounded queues; improvement must exceed overhead",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "enabled": false,
+    "schedule": null
+  },
+  {
+    "id": "PS-03",
+    "title": "Conflict-aware selection",
+    "package_ids": [
+      "PM-08",
+      "PM-11"
+    ],
+    "corpus": "Disjoint pools, shared lender, shared payer, read/write and read/read",
+    "metrics": "Foregone modeled surplus, component sizes and admitted set correctness",
+    "gate": "Agreement with exhaustive small cases; measure heuristic gap for large components",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "enabled": false,
+    "schedule": null
+  },
+  {
+    "id": "PS-04",
+    "title": "Joint two-path capacity",
+    "package_ids": [
+      "PM-07",
+      "PM-12"
+    ],
+    "corpus": "Exact grid, path ordering, changed lender fees and partial fill rejections",
+    "metrics": "Net benefit over best single path at equal total compute cost",
+    "gate": "Debt closure and shared-state consistency for every selected point",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "enabled": false,
+    "schedule": null
+  },
+  {
+    "id": "PS-05",
+    "title": "Correlation falsification",
+    "package_ids": [
+      "PM-05",
+      "PM-13"
+    ],
+    "corpus": "Registered pairs, asynchronous timestamps and null/lag perturbations",
+    "metrics": "Out-of-sample residuals, effective episodes, after-cost economics",
+    "gate": "Unknown remains unknown; no promoted relation from in-sample correlation",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "enabled": false,
+    "schedule": null
+  },
+  {
+    "id": "PS-06",
+    "title": "Market-maker economics",
+    "package_ids": [
+      "PM-14"
+    ],
+    "corpus": "One book and conservative queue/cancel/hedge variants",
+    "metrics": "Fill-conditioned markouts, inventory drawdown and total PnL",
+    "gate": "Full cost and loss accounting; no invented trade access",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "enabled": false,
+    "schedule": null
+  },
+  {
+    "id": "PS-07",
+    "title": "Useful service procurement",
+    "package_ids": [
+      "PM-15"
+    ],
+    "corpus": "Same decoding/routing problem and independent validator",
+    "metrics": "Useful correct output cost, latency, error and repeat demand design",
+    "gate": "Do not count signed incorrect output or subsidized self-demand",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "enabled": false,
+    "schedule": null
+  },
+  {
+    "id": "PS-08",
+    "title": "Forward-shadow readiness",
+    "package_ids": [
+      "PM-16"
+    ],
+    "corpus": "Recorded replay first; future read-only capture under a bounded explicit run budget",
+    "metrics": "Useful coverage, invalidations, failure recovery and economic uncertainty",
+    "gate": "No live enablement; promotion is separate future scope",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "enabled": false,
+    "schedule": null
+  }
+]

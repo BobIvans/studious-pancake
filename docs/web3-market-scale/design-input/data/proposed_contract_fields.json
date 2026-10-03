@@ -1,0 +1,58 @@
+{
+  "status": "DESIGN_SPEC_NOT_RUNTIME_SCHEMA",
+  "reuse_before_new_type": true,
+  "edge_evaluation": [
+    "existing semantic route id",
+    "existing evidence route id",
+    "domain",
+    "market identity",
+    "requested_input(asset, integer atoms)",
+    "consumed_input(asset, integer atoms)",
+    "residual_balances[]",
+    "expected_output",
+    "conservative_output or unknown",
+    "fees_by_asset[]",
+    "state_before",
+    "state_after",
+    "generation",
+    "decoder/token revisions",
+    "validity",
+    "resource footprint",
+    "rejection reason"
+  ],
+  "capacity_point": [
+    "input_amount",
+    "ordered_leg_evidence_ids[]",
+    "funding_obligations[]",
+    "existing PR118 ledger reference",
+    "net value or unknown",
+    "cost unit",
+    "evaluation_count",
+    "search_stop_reason",
+    "snapshot generation"
+  ],
+  "source_receipt": [
+    "source_id",
+    "profile revision",
+    "request hash without secrets",
+    "payload hash",
+    "event time",
+    "available_at",
+    "slot/block/sequence",
+    "schema revision",
+    "access status",
+    "gap/rejection reason"
+  ],
+  "transformation": [
+    "vector inputs",
+    "vector outputs",
+    "rights consumed/created",
+    "obligations",
+    "time window",
+    "settlement domain",
+    "eligibility conditions",
+    "state mutation"
+  ],
+  "transport_integer_encoding": "Decimal strings for amounts crossing JSON/UI boundaries; exact integers inside qualified math. Never IEEE-754 amount conversion.",
+  "examples_are_not_evidence": true
+}

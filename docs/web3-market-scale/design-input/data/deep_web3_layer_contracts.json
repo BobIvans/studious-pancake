@@ -1,0 +1,111 @@
+{
+  "schema": "research-layer-design-v1",
+  "implemented_by_this_update": false,
+  "layers": [
+    {
+      "id": "DATA",
+      "name": "Discovery and provenance",
+      "owner_paths": [
+        "src/market/source_catalog.py",
+        "src/market/discovery.py",
+        "src/market_data_evolution/contracts.py"
+      ],
+      "contract": "Untrusted catalog records + rights/lineage; no executable quote."
+    },
+    {
+      "id": "STATE",
+      "name": "Coherent market state",
+      "owner_paths": [
+        "src/market/streams.py",
+        "src/strategy/market_graph_ingest.py"
+      ],
+      "contract": "Generation, block/slot/object versions, available_at, commitment, completeness, checkpoint."
+    },
+    {
+      "id": "ACTION",
+      "name": "Exact transformation models",
+      "owner_paths": [
+        "src/strategy/exact_cpmm_capacity.py",
+        "src/direct_venue/cpmm_math.py",
+        "src/mechanism_discovery/claims.py"
+      ],
+      "contract": "Typed consumed/residual/output vector + state transition + obligations; exact only for pinned admitted model."
+    },
+    {
+      "id": "RESOURCE",
+      "name": "Rights, credit, aliases",
+      "owner_paths": [
+        "src/lending/financing.py",
+        "src/mechanism_discovery/pr356_state_machine.py",
+        "src/research/pr356_allocation.py"
+      ],
+      "contract": "Shared balances/collateral/allowance/nonce and required check boundaries; no implicit unlimited budgets."
+    },
+    {
+      "id": "SOLVE",
+      "name": "Bounded search and sizing",
+      "owner_paths": [
+        "src/strategy/arbitrage_graph.py",
+        "src/strategy/multihop_solver.py",
+        "src/economics/non_monotonic_sizing.py",
+        "src/economics/split_flow.py"
+      ],
+      "contract": "Finite exact candidates and sampled capacities; no linear quote extrapolation."
+    },
+    {
+      "id": "CLEAR",
+      "name": "User obligations and allocation",
+      "owner_paths": [
+        "src/mechanism_discovery/intent_graph.py",
+        "src/routing/route_graph.py"
+      ],
+      "contract": "Per-user limits/deadlines; original owner wrappers need concrete algorithm extension."
+    },
+    {
+      "id": "EVIDENCE",
+      "name": "Replay and verification service",
+      "owner_paths": [
+        "src/research/product.py",
+        "src/research/benchmarks.py",
+        "src/research/pr359_wave15_institution.py"
+      ],
+      "contract": "Reproducible capsule, semantic checks, full service costs; validity != optimality."
+    },
+    {
+      "id": "LAB",
+      "name": "Mechanisms and competitive response",
+      "owner_paths": [
+        "src/mechanism_discovery/causal_twin.py",
+        "src/research/pr356_ecology.py"
+      ],
+      "contract": "Rule comparison, behavioural assumptions, null/negative results and no-subsidy demand."
+    },
+    {
+      "id": "RECONCILE",
+      "name": "Non-atomic lifecycle",
+      "owner_paths": [
+        "src/inventory/non_atomic.py",
+        "src/inventory/research.py"
+      ],
+      "contract": "Claims, partial fills, settlement/restart evidence; not a transaction sender."
+    }
+  ],
+  "edge_design_fields": [
+    "semantic_action_id",
+    "evidence_evaluation_id",
+    "asset_rights_inputs",
+    "asset_rights_outputs",
+    "amounts_requested_consumed_residual",
+    "read_set",
+    "write_set",
+    "liquidity_aliases",
+    "generation_and_commitment",
+    "rights_preconditions",
+    "protocol_check_boundaries",
+    "obligations",
+    "fee_ledger",
+    "model_revision",
+    "budget_status"
+  ],
+  "note": "Conceptual extension through canonical owners, not an implemented parallel graph/solver schema."
+}

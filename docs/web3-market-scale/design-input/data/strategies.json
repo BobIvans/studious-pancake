@@ -1,0 +1,172 @@
+[
+  {
+    "id": "S01",
+    "name": "Multi-path / split-flow",
+    "task_ids": [
+      "WG-11",
+      "WG-12"
+    ],
+    "owner_ids": [
+      "O01",
+      "O09",
+      "O10",
+      "O11"
+    ],
+    "candidate_source_ids": [
+      "raydium",
+      "orca",
+      "meteora-dlmm",
+      "meteora-damm",
+      "uniswap",
+      "curve",
+      "balancer",
+      "jupiter"
+    ],
+    "required_evidence": "Pool/account state и shared resource replay",
+    "financing_condition": "В одном atomic domain при доказанном repayment",
+    "scaling_constraints": "Capacity after costs; shared liquidity, fixed costs, CU/message bounds",
+    "status": "FUTURE_INTEGRATION_NOT_QUALIFIED_BY_THIS_PLAN"
+  },
+  {
+    "id": "S02",
+    "name": "Stable/correlated assets",
+    "task_ids": [
+      "WG-13"
+    ],
+    "owner_ids": [
+      "O01",
+      "O04",
+      "O13",
+      "O22"
+    ],
+    "candidate_source_ids": [
+      "curve",
+      "balancer",
+      "raydium",
+      "orca",
+      "pyth-hermes",
+      "switchboard"
+    ],
+    "required_evidence": "Exact depth + depeg/redemption evidence",
+    "financing_condition": "Условно: только немедленные операции в одном domain",
+    "scaling_constraints": "Small spread, depeg, stale oracle; correlation ≠ identity",
+    "status": "FUTURE_INTEGRATION_NOT_QUALIFIED_BY_THIS_PLAN"
+  },
+  {
+    "id": "S03",
+    "name": "DEX ↔ mint/redeem/wrapper",
+    "task_ids": [
+      "WG-14"
+    ],
+    "owner_ids": [
+      "O24",
+      "O25"
+    ],
+    "candidate_source_ids": [
+      "sanctum",
+      "kamino",
+      "marginfi",
+      "aave",
+      "morpho"
+    ],
+    "required_evidence": "Exchange rates, права, caps, fees, queues",
+    "financing_condition": "Immediate conversion — возможно; async queue — нет",
+    "scaling_constraints": "Eligibility, pause, cutoff, rights transfer, latency/capital lock",
+    "status": "FUTURE_INTEGRATION_NOT_QUALIFIED_BY_THIS_PLAN"
+  },
+  {
+    "id": "S04",
+    "name": "Liquidation + collateral sale",
+    "task_ids": [
+      "WG-15"
+    ],
+    "owner_ids": [
+      "O18",
+      "O20",
+      "O21"
+    ],
+    "candidate_source_ids": [
+      "kamino",
+      "marginfi",
+      "aave",
+      "morpho",
+      "pyth-hermes"
+    ],
+    "required_evidence": "Debt/collateral/oracle + exact unwind",
+    "financing_condition": "Условно, если protocol и atomic repayment доказаны",
+    "scaling_constraints": "Close factor, bonus, competition, shared collateral and pool liquidity",
+    "status": "FUTURE_INTEGRATION_NOT_QUALIFIED_BY_THIS_PLAN"
+  },
+  {
+    "id": "S05",
+    "name": "PT/YT и composite products",
+    "task_ids": [
+      "WG-16"
+    ],
+    "owner_ids": [
+      "O22",
+      "O24",
+      "O25"
+    ],
+    "candidate_source_ids": [
+      "pendle",
+      "uniswap"
+    ],
+    "required_evidence": "Vector claims, SY rates, maturity and pool state",
+    "financing_condition": "Только для конкретного проверенного atomic recipe",
+    "scaling_constraints": "Maturity, negative yield, fees, vector conservation",
+    "status": "FUTURE_INTEGRATION_NOT_QUALIFIED_BY_THIS_PLAN"
+  },
+  {
+    "id": "S06",
+    "name": "Intent / batch solver",
+    "task_ids": [
+      "WG-17",
+      "WG-26"
+    ],
+    "owner_ids": [
+      "O10",
+      "O11",
+      "O26"
+    ],
+    "candidate_source_ids": [
+      "cow-protocol",
+      "0x",
+      "1inch",
+      "jupiter"
+    ],
+    "required_evidence": "Intent rules, auction snapshot, exact external routes",
+    "financing_condition": "Один из вариантов financing, не доступ к order flow",
+    "scaling_constraints": "Access, limit prices, deadlines, partial fills, inventory and surplus ownership",
+    "status": "FUTURE_INTEGRATION_NOT_QUALIFIED_BY_THIS_PLAN"
+  },
+  {
+    "id": "S07",
+    "name": "Cross-chain / CEX–DEX / spot–perp basis",
+    "task_ids": [
+      "WG-18",
+      "WG-19",
+      "WG-20"
+    ],
+    "owner_ids": [
+      "O19",
+      "O22",
+      "O23",
+      "O24"
+    ],
+    "candidate_source_ids": [
+      "ccxt",
+      "cryptofeed",
+      "binance-spot",
+      "coinbase-exchange",
+      "kraken",
+      "bybit",
+      "okx-cex",
+      "defillama"
+    ],
+    "required_evidence": "Domain-separated depth, funding, borrow, finality/withdrawal terms",
+    "financing_condition": "Обычный atomic flashloan не финансирует междоменное ожидание",
+    "scaling_constraints": "Inventory, bridge/CEX settlement, margin, funding and hedge risk",
+    "status": "FUTURE_INTEGRATION_NOT_QUALIFIED_BY_THIS_PLAN"
+  }
+]

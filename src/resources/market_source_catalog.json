@@ -225,6 +225,19 @@
       "limitation": "Free public API has rate limits, pagination and indexed lag. Pool and OHLCV data cannot establish executable depth or slot-consistent state."
     },
     {
+      "source_id": "geth-pubsub",
+      "label": "EVM logs and heads",
+      "family": "rpc",
+      "domains": [
+        "evm"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://geth.ethereum.org/docs/interacting-with-geth/rpc/pubsub"
+      ],
+      "limitation": "Reorg removals and getLogs backfill; RPC capacity not unlimited Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
+    },
+    {
       "source_id": "helius",
       "label": "Helius RPC",
       "family": "rpc",
@@ -237,6 +250,45 @@
         "https://www.helius.dev/docs/rpc/websocket"
       ],
       "limitation": "Free plan requires an API key: 1M credits/month, 10 RPC requests/s as checked. Mainnet gRPC/LaserStream is not included as a free service."
+    },
+    {
+      "source_id": "helius-laserstream",
+      "label": "Managed Solana stream",
+      "family": "infrastructure",
+      "domains": [
+        "solana"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://www.helius.dev/docs/laserstream"
+      ],
+      "limitation": "No subscription purchased; validate available replay window Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
+    },
+    {
+      "source_id": "hyperliquid",
+      "label": "Perp/spot book and market state",
+      "family": "orderbook-tool",
+      "domains": [
+        "hyperliquid"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/websocket/subscriptions"
+      ],
+      "limitation": "Depth/precision cap; no certified full market depth Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
+    },
+    {
+      "source_id": "jito-market-structure",
+      "label": "Auction and landing-cost research",
+      "family": "reference",
+      "domains": [
+        "solana"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.jito.wtf/lowlatencytxnsend/"
+      ],
+      "limitation": "Docs are not a live signal; no submission endpoint is enabled Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
     },
     {
       "source_id": "jupiter",
@@ -263,6 +315,19 @@
         "https://github.com/Kamino-Finance/klend-sdk"
       ],
       "limitation": "Lending/flashloan/liquidation state is not a swap edge. Existing lending conformance owner remains authoritative; no borrowing or execution added."
+    },
+    {
+      "source_id": "kamino-klend",
+      "label": "Source/deployment qualification candidate",
+      "family": "lending-tool",
+      "domains": [
+        "solana"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://github.com/Kamino-Finance/klend"
+      ],
+      "limitation": "Deployment and flash capacity unverified Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
     },
     {
       "source_id": "kraken",
@@ -342,6 +407,19 @@
         "https://docs.morpho.org/get-started/"
       ],
       "limitation": "Lending/risk/reference extension requires its own domain and evidence. No active adapter or free RPC guarantee."
+    },
+    {
+      "source_id": "morpho-blue",
+      "label": "Contract balance and financing terms",
+      "family": "lending-tool",
+      "domains": [
+        "evm"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.morpho.org/developers/contracts/blue/"
+      ],
+      "limitation": "Shared contract cash must not be counted once per market Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
     },
     {
       "source_id": "odos",
@@ -448,6 +526,19 @@
       "limitation": "Repository adapters remain fixture-only. Verified subscriptions, pinned account decoder, lot/depth and lifecycle conformance required; graph ingest is blocked in this PR."
     },
     {
+      "source_id": "project0",
+      "label": "Cross-venue collateral research",
+      "family": "reference",
+      "domains": [
+        "solana"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.marginfi.com/"
+      ],
+      "limitation": "Map Project 0 / mrgnLendv2 to actual programs before adapter reuse Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
+    },
+    {
       "source_id": "pumpswap",
       "label": "Pump public program documentation",
       "family": "amm-tool",
@@ -514,6 +605,19 @@
       "limitation": "Shared, rate-limited, no production SLA. RPC/account state is not an exact swap quote; verify genesis, owner, decoder and slot."
     },
     {
+      "source_id": "sui-objects",
+      "label": "Object/checkpoint state",
+      "family": "rpc",
+      "domains": [
+        "sui"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.sui.io/develop/sui-architecture/object-model"
+      ],
+      "limitation": "Version+digest consistency and owned/shared resource classification Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
+    },
+    {
       "source_id": "switchboard",
       "label": "Switchboard oracle tooling",
       "family": "reference",
@@ -540,6 +644,19 @@
       "limitation": "API keys, plans and query quotas vary; indexer lag and indexing coverage explicit. Not a guaranteed free complete realtime source."
     },
     {
+      "source_id": "thegraph",
+      "label": "Indexed historical protocol state",
+      "family": "reference",
+      "domains": [
+        "multichain"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://thegraph.com/docs/en/subgraphs/providers/subgraph-studio/introduction/"
+      ],
+      "limitation": "Query cost, index lag, block pin and subgraph revision Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
+    },
+    {
       "source_id": "uniswap",
       "label": "Uniswap v3/v4 SDK and protocol tooling",
       "family": "amm-tool",
@@ -554,6 +671,19 @@
       "limitation": "Open-source tooling requires EVM RPC, tick/hook/fee verification and its own settlement domain. EVM observations cannot enter this Solana graph bridge."
     },
     {
+      "source_id": "uniswap-v3-flash",
+      "label": "Pool-local flash terms",
+      "family": "lending-tool",
+      "domains": [
+        "evm"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://developers.uniswap.org/docs/protocols/v3/guides/flash-swaps/getting-started"
+      ],
+      "limitation": "Pool lock/callback and fees; source is not additional independent pool cash Documentation-only candidate imported from the 2026-10-03 design ZIP; rights, quotas, deployment and subscription remain unverified. No connector enabled."
+    },
+    {
       "source_id": "yellowstone-grpc",
       "label": "Yellowstone Geyser gRPC tooling",
       "family": "infrastructure",
@@ -566,5 +696,7 @@
       ],
       "limitation": "Open-source streaming software requires your validator or a provider. Hosted mainnet gRPC is not inherently free; no subscription is created here."
     }
-  ]
+  ],
+  "assembled_at": "2026-10-03",
+  "reference_only_added_count": 10
 }

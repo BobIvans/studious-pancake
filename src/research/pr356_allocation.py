@@ -21,30 +21,21 @@ def build_strategy_evidence_card(
     return StrategyEvidenceCard(
         strategy_id=str(payload["strategy_id"]),
         strategy_version=str(payload["strategy_version"]),
-        mechanism_scope=tuple(
-            str(x) for x in payload.get("mechanism_scope", ())
-        ),
+        mechanism_scope=tuple(str(x) for x in payload.get("mechanism_scope", ())),
         time_domain=str(payload["time_domain"]),
         evidence_tier=str(payload["evidence_tier"]),
         oos_metrics={
-            str(k): int(v)
-            for k, v in dict(payload.get("oos_metrics", {})).items()
+            str(k): int(v) for k, v in dict(payload.get("oos_metrics", {})).items()
         },
         capacity_curve=tuple(
             (int(x), int(y)) for x, y in payload.get("capacity_curve", ())
         ),
-        cost_curve=tuple(
-            (int(x), int(y)) for x, y in payload.get("cost_curve", ())
-        ),
+        cost_curve=tuple((int(x), int(y)) for x, y in payload.get("cost_curve", ())),
         uncertainty_components={
             str(k): int(v)
-            for k, v in dict(
-                payload.get("uncertainty_components", {})
-            ).items()
+            for k, v in dict(payload.get("uncertainty_components", {})).items()
         },
-        access_constraints=tuple(
-            str(x) for x in payload.get("access_constraints", ())
-        ),
+        access_constraints=tuple(str(x) for x in payload.get("access_constraints", ())),
         valid_from=int(payload["valid_from"]),
         valid_until=int(payload["valid_until"]),
     )
@@ -56,44 +47,29 @@ def define_resource_claim_vector(
     return ResourceClaimVector(
         claim_id=str(payload["claim_id"]),
         capital_by_asset={
-            str(k): int(v)
-            for k, v in dict(
-                payload.get("capital_by_asset", {})
-            ).items()
+            str(k): int(v) for k, v in dict(payload.get("capital_by_asset", {})).items()
         },
         fee_reserve=int(payload.get("fee_reserve", 0)),
-        rent_or_account_capital=int(
-            payload.get("rent_or_account_capital", 0)
-        ),
+        rent_or_account_capital=int(payload.get("rent_or_account_capital", 0)),
         margin_collateral={
             str(k): int(v)
-            for k, v in dict(
-                payload.get("margin_collateral", {})
-            ).items()
+            for k, v in dict(payload.get("margin_collateral", {})).items()
         },
         borrow_capacity={
-            str(k): int(v)
-            for k, v in dict(
-                payload.get("borrow_capacity", {})
-            ).items()
+            str(k): int(v) for k, v in dict(payload.get("borrow_capacity", {})).items()
         },
         data_quota={
-            str(k): int(v)
-            for k, v in dict(payload.get("data_quota", {})).items()
+            str(k): int(v) for k, v in dict(payload.get("data_quota", {})).items()
         },
         compute_seconds=int(payload.get("compute_seconds", 0)),
         simulation_slots=int(payload.get("simulation_slots", 0)),
         storage_bytes=int(payload.get("storage_bytes", 0)),
         human_review=int(payload.get("human_review", 0)),
-        conflict_keys=tuple(
-            str(x) for x in payload.get("conflict_keys", ())
-        ),
+        conflict_keys=tuple(str(x) for x in payload.get("conflict_keys", ())),
     )
 
 
-def define_hard_resource_constraint(
-    *, dimension: str, limit: int
-) -> Mapping[str, Any]:
+def define_hard_resource_constraint(*, dimension: str, limit: int) -> Mapping[str, Any]:
     if not dimension or limit < 0:
         raise PR356ContractError("HARD_RESOURCE_CONSTRAINT_INVALID")
     return {"dimension": dimension, "limit": int(limit), "hard": True}
@@ -105,9 +81,7 @@ def bind_resource_conflict_key(
     if not key:
         raise PR356ContractError("RESOURCE_CONFLICT_KEY_REQUIRED")
     payload = asdict(claim)
-    payload["conflict_keys"] = tuple(
-        sorted(set(claim.conflict_keys) | {key})
-    )
+    payload["conflict_keys"] = tuple(sorted(set(claim.conflict_keys) | {key}))
     return ResourceClaimVector(**payload)
 
 
@@ -128,8 +102,7 @@ def build_strategy_dependency_graph(
     edges = []
     for left, right in combinations(rows, 2):
         shared = sorted(
-            set(left.get("dependencies", ()))
-            & set(right.get("dependencies", ()))
+            set(left.get("dependencies", ())) & set(right.get("dependencies", ()))
         )
         if shared:
             edges.append(
@@ -164,8 +137,7 @@ def build_scenario_loss_cube(
     matrix = {}
     for scenario_id, losses in scenarios.items():
         matrix[str(scenario_id)] = {
-            strategy_id: int(losses.get(strategy_id, 0))
-            for strategy_id in ids
+            strategy_id: int(losses.get(strategy_id, 0)) for strategy_id in ids
         }
     return {
         "strategy_ids": ids,
@@ -182,12 +154,8 @@ def build_strategy_capacity_surface(
             (
                 {
                     "amount_atoms": int(row["amount_atoms"]),
-                    "expected_utility_units": int(
-                        row["expected_utility_units"]
-                    ),
-                    "failure_probability_ppm": int(
-                        row["failure_probability_ppm"]
-                    ),
+                    "expected_utility_units": int(row["expected_utility_units"]),
+                    "failure_probability_ppm": int(row["failure_probability_ppm"]),
                 }
                 for row in rows
             ),
@@ -212,9 +180,10 @@ def build_opportunity_portfolio_problem(
     candidates: Sequence[Mapping[str, Any]],
     budget: Mapping[str, int],
 ) -> Mapping[str, Any]:
+    checked_budget = encode_shared_budget_constraints(budget)
     return {
         "candidates": tuple(dict(row) for row in candidates),
-        "budget": {str(k): int(v) for k, v in budget.items()},
+        "budget": checked_budget,
         "execution_right": False,
     }
 
@@ -233,9 +202,15 @@ def encode_hard_conflict_constraints(
 def encode_shared_budget_constraints(
     budget: Mapping[str, int],
 ) -> Mapping[str, int]:
-    if any(int(value) < 0 for value in budget.values()):
-        raise PR356ContractError("SHARED_BUDGET_NEGATIVE")
-    return {str(key): int(value) for key, value in budget.items()}
+    if any(
+        not isinstance(key, str)
+        or not key.strip()
+        or type(value) is not int
+        or value < 0
+        for key, value in budget.items()
+    ):
+        raise PR356ContractError("SHARED_BUDGET_INTEGER_AND_IDENTITY_REQUIRED")
+    return dict(budget)
 
 
 def _subset_feasible(
@@ -245,16 +220,12 @@ def _subset_feasible(
     usage = {key: 0 for key in budget}
     seen_conflicts: set[str] = set()
     for candidate in subset:
-        conflicts = {
-            str(x) for x in candidate.get("conflict_keys", ())
-        }
+        conflicts = {str(x) for x in candidate.get("conflict_keys", ())}
         if seen_conflicts.intersection(conflicts):
             return False, usage
         seen_conflicts.update(conflicts)
         for key in budget:
-            candidate_usage = int(
-                candidate.get("resource_usage", {}).get(key, 0)
-            )
+            candidate_usage = int(candidate.get("resource_usage", {}).get(key, 0))
             if candidate_usage < 0:
                 raise PR356ContractError("CANDIDATE_RESOURCE_USAGE_NEGATIVE")
             usage[key] += candidate_usage
@@ -263,15 +234,95 @@ def _subset_feasible(
     return True, usage
 
 
+def _portfolio_tail_loss(
+    subset: Sequence[Mapping[str, Any]], problem: Mapping[str, Any]
+) -> int:
+    vectors = problem.get("scenario_loss_vectors")
+    if vectors is None:
+        return sum(int(row.get("tail_loss_units", 0)) for row in subset)
+    confidence = problem["scenario_cvar_confidence_ppm"]
+    count = len(next(iter(vectors.values())))
+    losses = sorted(
+        (
+            sum(vectors[str(row["candidate_id"])][index] for row in subset)
+            for index in range(count)
+        ),
+        reverse=True,
+    )
+    tail_mass = (1_000_000 - confidence) * count
+    remaining = tail_mass
+    weighted = 0
+    for loss in losses:
+        mass = min(remaining, 1_000_000)
+        weighted += loss * mass
+        remaining -= mass
+        if remaining == 0:
+            break
+    return (weighted + tail_mass - 1) // tail_mass
+
+
+def _validate_portfolio_problem(
+    problem: Mapping[str, Any],
+) -> tuple[tuple[Mapping[str, Any], ...], dict[str, int]]:
+    candidates = tuple(problem["candidates"])
+    if len(candidates) > 18:
+        raise PR356ContractError("PORTFOLIO_EXACT_SEARCH_BOUND_EXCEEDED")
+    budget = dict(encode_shared_budget_constraints(problem["budget"]))
+    if any(type(limit) is not int or limit < 0 for limit in budget.values()):
+        raise PR356ContractError("RESOURCE_BUDGET_INTEGER_REQUIRED")
+    candidate_ids = [row.get("candidate_id") for row in candidates]
+    if any(not isinstance(cid, str) or not cid.strip() for cid in candidate_ids) or len(
+        set(candidate_ids)
+    ) != len(candidate_ids):
+        raise PR356ContractError("CANDIDATE_IDENTITY_REQUIRED_OR_DUPLICATED")
+    for row in candidates:
+        claims = row.get("resource_usage", {})
+        if set(claims) - set(budget):
+            raise PR356ContractError("RESOURCE_BUDGET_DIMENSION_MISSING")
+        if any(type(value) is not int or value < 0 for value in claims.values()):
+            raise PR356ContractError("CANDIDATE_RESOURCE_INTEGER_REQUIRED")
+        if (
+            any(
+                type(row.get(key, 0)) is not int
+                for key in ("expected_utility_units", "tail_loss_units")
+            )
+            or row.get("tail_loss_units", 0) < 0
+        ):
+            raise PR356ContractError("CANDIDATE_UTILITY_OR_TAIL_INVALID")
+    if (
+        type(problem.get("max_tail_loss_units", 0)) is not int
+        or problem.get("max_tail_loss_units", 0) < 0
+    ):
+        raise PR356ContractError("TAIL_LOSS_BOUND_INVALID")
+    vectors = problem.get("scenario_loss_vectors")
+    if vectors is not None:
+        confidence = problem.get("scenario_cvar_confidence_ppm")
+        if (
+            type(confidence) is not int
+            or not 0 <= confidence < 1_000_000
+            or not isinstance(problem.get("risk_unit"), str)
+            or not problem["risk_unit"].strip()
+        ):
+            raise PR356ContractError("JOINT_CVAR_UNIT_OR_CONFIDENCE_REQUIRED")
+        if not candidates or set(vectors) != set(candidate_ids):
+            raise PR356ContractError("JOINT_CVAR_COMPLETE_SCENARIOS_REQUIRED")
+        lengths = {len(vector) for vector in vectors.values()}
+        if len(lengths) != 1 or not 1 <= next(iter(lengths)) <= 256:
+            raise PR356ContractError("JOINT_CVAR_SCENARIO_BOUND")
+        if any(
+            type(value) is not int or value < 0
+            for vector in vectors.values()
+            for value in vector
+        ):
+            raise PR356ContractError("JOINT_CVAR_INTEGER_LOSSES_REQUIRED")
+    return candidates, budget
+
+
 def solve_opportunity_portfolio(
     problem: Mapping[str, Any],
 ) -> AllocationProposal:
-    candidates = tuple(problem["candidates"])
-    if len(candidates) > 18:
-        raise PR356ContractError(
-            "PORTFOLIO_EXACT_SEARCH_BOUND_EXCEEDED"
-        )
-    budget = dict(problem["budget"])
+    candidates, budget = _validate_portfolio_problem(problem)
+    vectors = problem.get("scenario_loss_vectors")
     best_subset: tuple[Mapping[str, Any], ...] = ()
     best_utility = 0
     best_tail = 0
@@ -281,60 +332,42 @@ def solve_opportunity_portfolio(
             feasible, usage = _subset_feasible(subset, budget)
             if not feasible:
                 continue
-            utility = sum(
-                int(row.get("expected_utility_units", 0))
-                for row in subset
-            )
-            tail = sum(
-                int(row.get("tail_loss_units", 0)) for row in subset
-            )
-            max_tail = int(
-                problem.get("max_tail_loss_units", 2**63 - 1)
-            )
+            utility = sum(int(row.get("expected_utility_units", 0)) for row in subset)
+            tail = _portfolio_tail_loss(subset, problem)
+            max_tail = int(problem.get("max_tail_loss_units", 2**63 - 1))
             if tail > max_tail:
                 continue
-            ids = tuple(
-                sorted(str(row["candidate_id"]) for row in subset)
-            )
-            best_ids = tuple(
-                sorted(str(row["candidate_id"]) for row in best_subset)
-            )
+            ids = tuple(sorted(str(row["candidate_id"]) for row in subset))
+            best_ids = tuple(sorted(str(row["candidate_id"]) for row in best_subset))
             if utility > best_utility or (
-                utility == best_utility
-                and (tail, ids) < (best_tail, best_ids)
+                utility == best_utility and (tail, ids) < (best_tail, best_ids)
             ):
                 best_subset = subset
                 best_utility = utility
                 best_tail = tail
                 best_usage = usage
-    chosen = tuple(
-        sorted(str(row["candidate_id"]) for row in best_subset)
-    )
-    all_ids = tuple(
-        sorted(str(row["candidate_id"]) for row in candidates)
-    )
+    chosen = tuple(sorted(str(row["candidate_id"]) for row in best_subset))
+    all_ids = tuple(sorted(str(row["candidate_id"]) for row in candidates))
     binding = tuple(
         sorted(
-            key
-            for key, limit in budget.items()
-            if best_usage.get(key, 0) == int(limit)
+            key for key, limit in budget.items() if best_usage.get(key, 0) == int(limit)
         )
     )
     return AllocationProposal(
-        proposal_id=canonical_hash(
-            {"chosen": chosen, "budget": budget}
-        )[:20],
+        proposal_id=canonical_hash({"chosen": chosen, "budget": budget})[:20],
         candidate_ids=chosen,
         weights_or_sizes={cid: 1 for cid in chosen},
         resource_usage=best_usage,
         expected_utility_units=best_utility,
         tail_loss_units=best_tail,
         binding_constraints=binding,
-        rejected_candidates=tuple(
-            cid for cid in all_ids if cid not in chosen
-        ),
+        rejected_candidates=tuple(cid for cid in all_ids if cid not in chosen),
         sensitivity_ppm=0,
-        evidence_refs=("PR356_RESEARCH_ONLY",),
+        evidence_refs=(
+            ("PR356_RESEARCH_ONLY", "EQUAL_WEIGHT_EMPIRICAL_JOINT_CVAR")
+            if vectors is not None
+            else ("PR356_RESEARCH_ONLY",)
+        ),
     )
 
 
@@ -349,19 +382,30 @@ def solve_cvar_constrained_allocation(
 def verify_portfolio_feasibility(
     proposal: AllocationProposal, problem: Mapping[str, Any]
 ) -> Mapping[str, Any]:
+    candidates, budget = _validate_portfolio_problem(problem)
+    if not set(proposal.candidate_ids) <= {
+        str(row["candidate_id"]) for row in candidates
+    }:
+        raise PR356ContractError("PROPOSAL_CONTAINS_UNKNOWN_CANDIDATE")
     selected = [
         row
         for row in problem["candidates"]
         if str(row["candidate_id"]) in proposal.candidate_ids
     ]
     feasible, usage = _subset_feasible(selected, problem["budget"])
-    selected_tail_loss = sum(
-        int(row.get("tail_loss_units", 0)) for row in selected
-    )
+    selected_tail_loss = _portfolio_tail_loss(selected, problem)
     max_tail_loss = int(problem.get("max_tail_loss_units", 2**63 - 1))
     tail_feasible = selected_tail_loss <= max_tail_loss
+    evidence_consistent = (
+        proposal.resource_usage == usage
+        and proposal.tail_loss_units == selected_tail_loss
+        and proposal.expected_utility_units
+        == sum(row.get("expected_utility_units", 0) for row in selected)
+        and proposal.weights_or_sizes == {cid: 1 for cid in proposal.candidate_ids}
+    )
     return {
-        "feasible": feasible and tail_feasible,
+        "feasible": feasible and tail_feasible and evidence_consistent,
+        "proposal_evidence_consistent": evidence_consistent,
         "resource_usage": usage,
         "selected_tail_loss_units": selected_tail_loss,
         "max_tail_loss_units": max_tail_loss,
@@ -388,9 +432,7 @@ def publish_allocation_proposal(
 ) -> Mapping[str, Any]:
     payload = asdict(proposal)
     if payload["execution_right"] is not False:
-        raise PR356ContractError(
-            "ALLOCATION_EXECUTION_RIGHT_FORBIDDEN"
-        )
+        raise PR356ContractError("ALLOCATION_EXECUTION_RIGHT_FORBIDDEN")
     return {**payload, "proposal_hash": canonical_hash(payload)}
 
 
@@ -399,11 +441,7 @@ def measure_allocation_sensitivity(
 ) -> Mapping[str, int]:
     union = set(base.candidate_ids) | set(perturbed.candidate_ids)
     changed = set(base.candidate_ids) ^ set(perturbed.candidate_ids)
-    sensitivity = (
-        0
-        if not union
-        else len(changed) * 1_000_000 // len(union)
-    )
+    sensitivity = 0 if not union else len(changed) * 1_000_000 // len(union)
     return {"sensitivity_ppm": sensitivity}
 
 

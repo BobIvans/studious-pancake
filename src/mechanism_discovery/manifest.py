@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
-PACKAGES = {
+from typing import Any
+
+PACKAGES: dict[str, dict[str, Any]] = {
     "RND-00": {
         "module": "operationalize",
         "start": 1089,
@@ -14,8 +16,8 @@ PACKAGES = {
             "run_evo_source_ablation",
             "run_evo_walk_forward",
             "measure_evo_coverage",
-            "publish_evo_qualification_verdict"
-        ]
+            "publish_evo_qualification_verdict",
+        ],
     },
     "RND-01": {
         "module": "hook_native",
@@ -28,8 +30,8 @@ PACKAGES = {
             "simulate_wrapper_hook_parity",
             "simulate_dualpool_jit_liquidity",
             "detect_hook_cross_venue_residual",
-            "qualify_hook_family"
-        ]
+            "qualify_hook_family",
+        ],
     },
     "RND-02": {
         "module": "reclamm",
@@ -42,8 +44,8 @@ PACKAGES = {
             "detect_reclamm_transition_basis",
             "attribute_reclamm_residual",
             "stress_reclamm_parameter_change",
-            "qualify_reclamm_strategy"
-        ]
+            "qualify_reclamm_strategy",
+        ],
     },
     "RND-03": {
         "module": "midnight",
@@ -56,8 +58,8 @@ PACKAGES = {
             "detect_cross_maturity_kink",
             "detect_fixed_float_basis",
             "model_post_maturity_and_liquidation",
-            "qualify_midnight_family"
-        ]
+            "qualify_midnight_family",
+        ],
     },
     "RND-04": {
         "module": "intent_graph",
@@ -70,8 +72,8 @@ PACKAGES = {
             "compare_solver_quotes_same_intent",
             "estimate_solver_inventory_shadow_cost",
             "detect_intent_settlement_basis",
-            "qualify_intent_dialect"
-        ]
+            "qualify_intent_dialect",
+        ],
     },
     "RND-05": {
         "module": "fluid",
@@ -84,8 +86,8 @@ PACKAGES = {
             "model_fluid_steth_redemption",
             "detect_fluid_utilization_transition",
             "detect_fluid_cross_protocol_residual",
-            "qualify_fluid_family"
-        ]
+            "qualify_fluid_family",
+        ],
     },
     "RND-06": {
         "module": "umbrella",
@@ -98,8 +100,8 @@ PACKAGES = {
             "model_umbrella_cooldown_liquidity",
             "attribute_umbrella_market_residual",
             "stress_umbrella_multi_reserve_event",
-            "qualify_umbrella_specialization"
-        ]
+            "qualify_umbrella_specialization",
+        ],
     },
     "RND-07": {
         "module": "stvault",
@@ -112,8 +114,8 @@ PACKAGES = {
             "detect_quarantine_liquidity_basis",
             "detect_stvault_fee_term_basis",
             "stress_stvault_withdrawal_shortfall",
-            "qualify_stvault_specialization"
-        ]
+            "qualify_stvault_specialization",
+        ],
     },
     "RND-08": {
         "module": "hip3",
@@ -126,8 +128,8 @@ PACKAGES = {
             "detect_hip3_halt_resume_residual",
             "detect_hip3_cross_dex_basis",
             "attribute_hip3_deployer_regime",
-            "qualify_hip3_specialization"
-        ]
+            "qualify_hip3_specialization",
+        ],
     },
     "RND-09": {
         "module": "contagion",
@@ -140,8 +142,8 @@ PACKAGES = {
             "estimate_forced_flow_liquidity_depletion",
             "detect_post_contagion_residual",
             "attribute_contagion_episode",
-            "qualify_contagion_model"
-        ]
+            "qualify_contagion_model",
+        ],
     },
     "RND-10": {
         "module": "mechanism_compiler",
@@ -154,8 +156,8 @@ PACKAGES = {
             "generate_decoder_adapter_skeleton",
             "generate_mechanism_test_vectors",
             "validate_primitives_against_traces",
-            "publish_mechanism_dossier"
-        ]
+            "publish_mechanism_dossier",
+        ],
     },
     "RND-11": {
         "module": "deployment_watcher",
@@ -168,9 +170,9 @@ PACKAGES = {
             "quarantine_new_mechanism",
             "schedule_minimum_data_capture",
             "retire_obsolete_mechanism",
-            "feed_watcher_into_evo09"
-        ]
-    }
+            "feed_watcher_into_evo09",
+        ],
+    },
 }
 
 NF_TO_SYMBOL = {

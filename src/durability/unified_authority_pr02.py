@@ -456,6 +456,91 @@ class UnifiedLifecycleAuthority:
             sequence=sequence,
         )
 
+    def begin_shadow_work(
+        self,
+        *,
+        work_id: str,
+        generation: int,
+        state_generation: str,
+        resource_payload: Mapping[str, Any],
+    ) -> AuthorityFence:
+        """Single-node resource claim in the existing intent authority.
+
+        Claims remain held after worker death until explicit reconciliation;
+        expiration never invents a successful release of ambiguous work.
+        No capital or quota is granted by this research-only claim.
+        """
+        from src.strategy.conflict_scheduler import WorkResourceSet
+
+        if (
+            type(generation) is not int
+            or generation < 1
+            or not work_id.strip()
+            or not state_generation.strip()
+        ):
+            raise ValueError("shadow work identity and generation required")
+        resources = WorkResourceSet(**dict(resource_payload))
+        payload = {
+            "scope": "shadow-resource-work.v1",
+            "work_id": work_id,
+            "generation": generation,
+            "state_generation": state_generation,
+            "resources": asdict(resources),
+            "execution_right": False,
+        }
+        source_identity = _hash_json(payload)
+        with self.lifecycle.write_transaction():
+            rows = self.db.execute(
+                "SELECT payload_json FROM pr02_intents WHERE terminal_id IS NULL"
+            ).fetchall()
+            for row in rows:
+                active = json.loads(row["payload_json"])
+                if active.get("scope") != "shadow-resource-work.v1":
+                    continue
+                if active == payload:
+                    continue
+                if resources.conflicts_with(WorkResourceSet(**active["resources"])):
+                    raise UnifiedAuthorityError("PR02_SHADOW_RESOURCE_CONFLICT")
+            return self._begin_intent(
+                kind=IntentKind.PAPER_CYCLE,
+                source_identity=source_identity,
+                payload=payload,
+                run_id="shadow-work/" + work_id,
+                sequence=generation,
+            )
+
+    def commit_shadow_work(
+        self,
+        fence: AuthorityFence,
+        *,
+        evidence: Mapping[str, object],
+        outcome: str = "completed",
+    ) -> TerminalCommit:
+        """Fence-checked local result; no execution or capital side effects."""
+        with self.lifecycle.write_transaction():
+            row = self._verify_fence(
+                self.db, fence, self._snapshot(), allow_terminal_replay=True
+            )
+            payload = json.loads(row["payload_json"])
+            if payload.get("scope") != "shadow-resource-work.v1":
+                raise UnifiedAuthorityError("PR02_WRONG_SHADOW_WORK_KIND")
+            report = {
+                "scope": "shadow-result.v1",
+                "evidence": dict(evidence),
+                "execution_right": False,
+            }
+            digest = _hash_json(report)
+            return self.commit_cycle_terminal(
+                fence,
+                outcome=outcome,
+                reason_code="OFFLINE_SHADOW_RESULT",
+                report_hash=digest,
+                report_payload=report,
+                provider_evidence_hash=digest,
+                ready_for_next_cycle=False,
+                source_surface="shadow-resource-work.v1",
+            )
+
     def begin_attempt_intent(
         self,
         *,

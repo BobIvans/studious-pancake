@@ -1,0 +1,210 @@
+[
+  {
+    "id": "DP-01",
+    "title": "CPMM qualification boundary and amount-local rejection",
+    "depends_on": [],
+    "combination_ids": [
+      "CB-01",
+      "CB-08"
+    ],
+    "baseline": "Current PR562 immutable-model evaluator; source-independent pinned integer vectors.",
+    "corpus": "Finite adversarial identities, valid/invalid fee semantics, negative/zero/positive gross amounts.",
+    "gate": "Unknown identity/state rejects route; expected economic rejection is reported per amount without claiming unsampled capacity.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-02",
+    "title": "Shared resource alias and sequential split",
+    "depends_on": [
+      "DP-01"
+    ],
+    "combination_ids": [
+      "CB-01",
+      "CB-04"
+    ],
+    "baseline": "Best individually exact evaluated single path; same cost model and starting state.",
+    "corpus": "2 paths, one shared pool, then two different markets backed by one balance; both path orders.",
+    "gate": "No double consumption; state read/write keys complete; joint result equals tiny exhaustive oracle within declared finite grid.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-03",
+    "title": "Incremental event-driven graph",
+    "depends_on": [
+      "DP-01",
+      "DP-02"
+    ],
+    "combination_ids": [
+      "CB-08"
+    ],
+    "baseline": "Full recomputation on same bounded universe and event trace.",
+    "corpus": "1x/10x/100x synthetic arrival rates; duplicates, unrelated changes, hook/allowance changes, correction and restart.",
+    "gate": "Same qualified candidates/evidence after each watermark; omissions only explicit budget truncation, no false completeness.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-04",
+    "title": "Fast state vs canonical state",
+    "depends_on": [
+      "DP-03"
+    ],
+    "combination_ids": [
+      "CB-08",
+      "CB-05"
+    ],
+    "baseline": "Canonical committed replay; equal provider and compute budgets.",
+    "corpus": "Provisional branch, sealed block, reorg, delayed available_at, provider outage and missing event.",
+    "gate": "Generation/commitment separation; p99 arrival-to-evidence reported with reject/backfill costs; no hindsight advantage.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-05",
+    "title": "Claims and vault semantics",
+    "depends_on": [
+      "DP-01"
+    ],
+    "combination_ids": [
+      "CB-02",
+      "CB-06",
+      "CB-07"
+    ],
+    "baseline": "Independent product-specific conversions with no synthetic immediate liquidity.",
+    "corpus": "Immediate shares, async claim, max-function special case, wrong maturity/condition and decimals.",
+    "gate": "Strict units and rights match; multi-input/output conservation; future claims excluded from spendable cash.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-06",
+    "title": "Credit and collateral prefix constraints",
+    "depends_on": [
+      "DP-05"
+    ],
+    "combination_ids": [
+      "CB-02",
+      "CB-04",
+      "CB-05"
+    ],
+    "baseline": "Separate operations under identical initial equity and final obligations.",
+    "corpus": "2 financing terms, immediate check vs declared deferred window, cap reduction and interest accrual.",
+    "gate": "Every required boundary feasible; debt/fee/residual closure; flash and term funding segregated.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-07",
+    "title": "Versioned intents and clearing",
+    "depends_on": [
+      "DP-02",
+      "DP-05"
+    ],
+    "combination_ids": [
+      "CB-03"
+    ],
+    "baseline": "Individually feasible customer fills at same timestamp, state and budget.",
+    "corpus": "10 intents; hard/soft exclusivity, expired/cancelled order, unknown reactor, partial fills and fee allocation.",
+    "gate": "Per-user constraints and no-worse comparator; no duplicate order consumption; feed coverage explicitly bounded.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-08",
+    "title": "Settlement-time capital",
+    "depends_on": [
+      "DP-06",
+      "DP-07"
+    ],
+    "combination_ids": [
+      "CB-05"
+    ],
+    "baseline": "Per-domain prefunding with explicit repayment wait and rebalance cost.",
+    "corpus": "2 domains, 10 requests, timeout, proof error, duplicate reimbursement, conflicting root and trapped funds.",
+    "gate": "Peak and time-integrated inventory measured by asset/domain; restart never makes unknown funds available.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-09",
+    "title": "Cross-product payoff equivalence",
+    "depends_on": [
+      "DP-05"
+    ],
+    "combination_ids": [
+      "CB-06",
+      "CB-07"
+    ],
+    "baseline": "Same notional economic exposure without claiming identical tickers imply identical claims.",
+    "corpus": "Index/basis mismatch, different maturity, funding cadence, expiry, market halt and failed hedge leg.",
+    "gate": "No guaranteed-arbitrage label when residual exposure remains; stress margin and exit costs included.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-10",
+    "title": "Verified service unit economics",
+    "depends_on": [
+      "DP-01"
+    ],
+    "combination_ids": [
+      "CB-09"
+    ],
+    "baseline": "Local exact evaluator + local evidence distribution cost.",
+    "corpus": "3 synthetic suppliers; bad amount/state, stale hash, cheap slow answer, shared upstream, duplicate bill.",
+    "gate": "Verification correctness and total delivery cost measured separately from demand; no real payments.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-11",
+    "title": "Mechanism response and competition",
+    "depends_on": [
+      "DP-07",
+      "DP-10"
+    ],
+    "combination_ids": [
+      "CB-03",
+      "CB-04",
+      "CB-09"
+    ],
+    "baseline": "Fixed rule with equal information, customer orders and budgets.",
+    "corpus": "Frozen flow conditional replay plus independent elastic-flow/crowding stress; subsidy removal.",
+    "gate": "Per-user/LP/provider outcomes separated; no causal advantage claim from frozen order flow; losses retained.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  },
+  {
+    "id": "DP-12",
+    "title": "Budgeted scale and product selection",
+    "depends_on": [
+      "DP-03",
+      "DP-10"
+    ],
+    "combination_ids": [
+      "CB-01",
+      "CB-03",
+      "CB-08",
+      "CB-09"
+    ],
+    "baseline": "Small admitted universe, local compute, full recomputation comparator.",
+    "corpus": "10/100/1000 market metadata; bounded active graph; full resource vector; 18 candidate portfolio; missing budget and empty data.",
+    "gate": "Cost per fresh validated opportunity and workflow measured; finite optimum scope explicit; unknown outcome stays unknown.",
+    "status": "PLANNED_NOT_RUN",
+    "results": null,
+    "live_enabled": false
+  }
+]

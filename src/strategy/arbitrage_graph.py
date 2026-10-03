@@ -237,8 +237,51 @@ class CircularGraphCandidateDetector:
     def __init__(self, policy: CircularGraphPolicy) -> None:
         self.policy = policy
 
+    def detect_affected(
+        self,
+        graph: UniversalArbitrageGraph,
+        *,
+        now: float,
+        changed_venues: frozenset[VenueIdentity],
+    ) -> CircularGraphDetection:
+        """Recompute current candidates touching changed venues, within four hops.
+
+        The caller must retract prior candidates touching changed/removed venues.
+        Two undirected neighborhood rounds cover every vertex of a 3/4-hop
+        circle containing a changed edge. Batch completeness/generation remain
+        owned by the original snapshot, including evidence outside this view.
+        """
+        nodes = {
+            node
+            for edge in graph.edges
+            if edge.venue in changed_venues
+            for node in (edge.source, edge.target)
+        }
+        for _ in range(2):
+            additions = {
+                node
+                for edge in graph.edges
+                if edge.source in nodes or edge.target in nodes
+                for node in (edge.source, edge.target)
+            }
+            nodes |= additions
+        edges = tuple(
+            edge
+            for edge in graph.edges
+            if edge.source in nodes and edge.target in nodes
+        )
+        return self.detect(
+            UniversalArbitrageGraph(graph.batch, edges),
+            now=now,
+            affected_venues=changed_venues,
+        )
+
     def detect(
-        self, graph: UniversalArbitrageGraph, *, now: float
+        self,
+        graph: UniversalArbitrageGraph,
+        *,
+        now: float,
+        affected_venues: frozenset[VenueIdentity] | None = None,
     ) -> CircularGraphDetection:
         if not math.isfinite(now) or now <= 0:
             raise ValueError("now must be a finite positive timestamp")
@@ -318,6 +361,10 @@ class CircularGraphCandidateDetector:
                 if edge.target == base:
                     if len(extended) not in (3, 4):
                         rejected["unsupported_hop_count"] += 1
+                        continue
+                    if affected_venues is not None and not any(
+                        item.venue in affected_venues for item in extended
+                    ):
                         continue
                     route = CircularShadowRoute(
                         extended,

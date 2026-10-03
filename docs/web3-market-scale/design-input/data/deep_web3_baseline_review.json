@@ -1,0 +1,254 @@
+{
+  "repository": "BobIvans/studious-pancake",
+  "checked_at_utc": "2026-10-03",
+  "remote_main_fetch_succeeded": true,
+  "inspected_main_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+  "tree": "825db4ed329a66deff295b57636f9dff4965c9a9",
+  "previous_baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127",
+  "local_head_unchanged": "9cf87a9511e9049901d23c446aa221ad415b11aa",
+  "merged_since_previous": [
+    {
+      "pr": 562,
+      "commit": "a644d065",
+      "merge_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "title": "Add exact CPMM capacity evidence bridge"
+    }
+  ],
+  "review_method": "git show/diff origin/main; targeted static owner review; no branch checkout or code modification",
+  "tests_run_this_request": false,
+  "live_data_or_chain_state_verified": false,
+  "historical_first_slice": "09_FIRST_BOUNDED_PR_RU.md describes the slice now present via PR562; do not recreate it.",
+  "owner_records": [
+    {
+      "path": "src/direct_venue/cpmm_math.py",
+      "git_blob": "179f1a5ee1ce5758b96bed30ca00f033fff29092",
+      "sha256": "d9e3ac3534642a1aa1dcb847b2e5eaad234f883a60a02e456e68e0b2dd7db814",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/direct_venue/super03.py",
+      "git_blob": "e799929b182e75cc2d984c7078a2d87ff8c39666",
+      "sha256": "1cd1c372de25044ce445a2e4ea499938bad58343d9f32ffe9b71ddc8aefede9b",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/economics/non_monotonic_sizing.py",
+      "git_blob": "ee7cf70aa3557abbe2a2daac1000c8d99dcaefe5",
+      "sha256": "e57ba4fce0ce96bb81fa445f7d402fb6b490afe6b44a37ea2d14074e609d2a35",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/economics/split_flow.py",
+      "git_blob": "7b81dc378dc4d40840b8f5244f5922d622bd2ee3",
+      "sha256": "35000f39f533c2318350b00dc1b8943f5c7305a9644f89a0d579f129cc202fc9",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/inventory/non_atomic.py",
+      "git_blob": "5b4da8eb95915cdde7b3ec1dab723e15f68d5395",
+      "sha256": "ef001feb0cfccfd06077d5d878fdfa1fcc19831a0ba5bbdc0e61b04aa942e015",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/inventory/research.py",
+      "git_blob": "19ca9867e4de14bdcb6ab49315e1dccd252920ad",
+      "sha256": "410ca1492eb4afb02a72e375f8d12e2adf550cd97805ff147f157da1a7c4c420",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/lending/financing.py",
+      "git_blob": "b8dcf8da873a63f6d871e85085a34867c26d2dcc",
+      "sha256": "5154683be9bc3e5f33e3b75b3a36bf7b1524b0e54b146ca2b1355082beee4609",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/liquidation/agg07.py",
+      "git_blob": "13f1db2791a87a9e43fc49e3049322506ad664e8",
+      "sha256": "756857c6937b8e898c92b37a70ce3f7889f3dd7c6a08cb8c2aa6ea37f8abd2f5",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/market/discovery.py",
+      "git_blob": "b1f9b11404e4bd82510e8bdfd87d956f31614ad2",
+      "sha256": "7c015376defcbaffadbecab5f7394f9a3a232773104aced1c7f7303b68d26eeb",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/market/source_catalog.py",
+      "git_blob": "4ecea0700f7349bf5a8c82678939dc65b7a97e50",
+      "sha256": "bc8efc7755a843356011336d713cfbf3e83cfed9c7c4de8e180c79959697df23",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/market/streams.py",
+      "git_blob": "cd7e0cf2d3ace2021647b3fc9e1b7e9e43d52b95",
+      "sha256": "82fc7d65a5de5c5a5c350ea35c24619a2e8be5bb92b263ee2185ff1417c39ed1",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/market_data_evolution/contracts.py",
+      "git_blob": "66c71dd7c7e2e76b983c39a2c661bbacb91f258c",
+      "sha256": "bd88a3c1b1c517a2163de0c7236f31774110a04ab3c5d44e6241d567bd3f8ff8",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/mechanism_discovery/boros.py",
+      "git_blob": "cb4e3485cd38cdc3055ab4d3c0eee4d8447dfb84",
+      "sha256": "2cc7ce268ef241b582640b40be8d848eeca73d94ad9955265ab5c07a513ddff0",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/mechanism_discovery/causal_twin.py",
+      "git_blob": "5d7b991d30d4bb7df712ef18b636e7dcc68c7e7c",
+      "sha256": "6e0442733905296138aebbd57b4c996f924a918ed46c8a6659d2e1fb06493e43",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/mechanism_discovery/claims.py",
+      "git_blob": "8abf5d045118404593598ca017a47f62e4875460",
+      "sha256": "700134dee746df9bcd6bdf435db0633e224c69cef1a207f28b1d9ec76c399822",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/mechanism_discovery/intent_graph.py",
+      "git_blob": "090ca620cf9fbd36e968c733be47dac9b5e63226",
+      "sha256": "c096d8e4ed7a954f8ef8d1b04769b123598977e9499ca52e415d340cc9ae40e1",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/mechanism_discovery/pr356_discovery.py",
+      "git_blob": "a3bd6e589a2610cf283b88c5597b7894e3a86ea1",
+      "sha256": "9f6b9630c136daa89f19e6a59e975cc9ba0da9fa72f720f40103c99971eee3a8",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/mechanism_discovery/pr356_state_machine.py",
+      "git_blob": "c3c663fb5748ecbecc5c734805a7ea8f7c3a7c24",
+      "sha256": "3c8074e2219b4d83b30947c310f985a00a56b11298c8d282701cba5cd09fe8af",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/mechanism_discovery/programmable_cash.py",
+      "git_blob": "fdde5439b022e4d9bfac8fafe1c0f5d1d1e5fe4b",
+      "sha256": "3257784f9c5408082c52b2c5eb58a4dd26da7ca7292294541f241b43e3952b6b",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/mechanism_discovery/research_resources.py",
+      "git_blob": "ed601caecde74241193a6f89f77b3af927eb7f02",
+      "sha256": "50de3c719eb5d1656b9af50ae1d3edb7e89c49c229c26c70f4e966cdee35b6ab",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/multichain/evm_financing.py",
+      "git_blob": "1374795b12c7d44108e5a385aebb0f3923ad26ef",
+      "sha256": "acfe26702738d9b3ef3c3d75b6f444e3229d389cd6ea460e3091e61073d0a840",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/provider_governance/scheduler.py",
+      "git_blob": "57623e87a8a7690c2395be1465c30a919fda8e07",
+      "sha256": "e1375c86acd6f1fac1c6d8a8e7b24117f92e16940af860339a8b5aabae38ef31",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/providers/orderbook/quote.py",
+      "git_blob": "89774697538288ccd928fc729ad7c1dd4c09625c",
+      "sha256": "826e45101211edd05535c27e261bec60dad163d54cc7b7785d1619037d215339",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/research/benchmarks.py",
+      "git_blob": "f7fe5c4e99fd665564700999db6b2ace49a344cc",
+      "sha256": "cb4a69315c40469c1d7e07b12ab9de4ab2cd426e43a72c945352bb462e74357e",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/research/pr356_allocation.py",
+      "git_blob": "37ae39d88dbec1ed05af3531e129b826fa945014",
+      "sha256": "0ef5c47b0e8d6abad9fbedbe0bf34124fbe7853b86344df5a4e1c805f15b3fdd",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/research/pr356_ecology.py",
+      "git_blob": "e17cb18a0f482831a3c24c8e7cf2ba9d4fd040b3",
+      "sha256": "1b16aa411ea8e42cdcfe00f22051cac9f6a29903f0510758c191c0e289ce3ae2",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/research/pr359_wave15_institution.py",
+      "git_blob": "fff926717bc8892b9276dfcd13e48048de328c88",
+      "sha256": "62974fa285b25bd76b402fb326cdeae25a135ace39a1060d3c1959eb940d1367",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/research/product.py",
+      "git_blob": "8970ceaa0d0f9c0bbb5b341920fc07cdcd946a7b",
+      "sha256": "5e338fda8d78f084c5465ee25e755c3844d658b9125acfda85d1818cb761e248",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/routing/route_graph.py",
+      "git_blob": "a6a9e248bcf35c0bbbab8b69e7ea26be997dcd7c",
+      "sha256": "e3cef075e338cf378827ec3c182969487d6c5d3b326181ea3962b5f20cc039ff",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/strategy/arbitrage_graph.py",
+      "git_blob": "1af0559d0cab5f7b0980189af016062ca5f73c64",
+      "sha256": "1d2e0b654b8eeac409e9245869d57b8d6f35606aa69462657da69f292ff33471",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/strategy/exact_cpmm_capacity.py",
+      "git_blob": "60661db3ea7c3450184ffed168a0c54101077700",
+      "sha256": "573923883de3e96153913734f4ad7a0914fe3c7fa3d08f5b492fc9faa7ef0108",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/strategy/market_graph_ingest.py",
+      "git_blob": "59850f70db879caa965eb3e38cdc826a40778b75",
+      "sha256": "8b3dbe3bd60f67f448e2a0352181974bb5c8cc9ef3020ddf22660662e67f5193",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/strategy/multihop_solver.py",
+      "git_blob": "bd5f28c441f6f75a8bcc8ed128d8c056c66ac211",
+      "sha256": "6d18e7c6eb57ce49da4e907ed7b30d0c5620efaacf5832cb8acc0f38a42034ca",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/strategy/strategies.py",
+      "git_blob": "21528649fd71a81b8581f7e5d9e8f96d401b9e96",
+      "sha256": "59f406b76d90b46f7fca0dca97ca4c89b398d8108ad5d90f6c4a51e91677535e",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/strategy_evolution/primary_market.py",
+      "git_blob": "c25efa2aca73c1c6c9c0e9e479aa349a2601644e",
+      "sha256": "59a135a1fb33fb11e9459da2fb919c3418e9f0f9e0afb7a20d75f9c35a776db7",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "src/strategy_evolution/rights_lifecycle.py",
+      "git_blob": "d0bebdd24184128adc087c7b961d14862c98f2c6",
+      "sha256": "7f2735257dd45ec76fe8a6cedea2dedd82df78cf31f814b3e3a11f2fad9045a9",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    },
+    {
+      "path": "tests/test_exact_cpmm_capacity.py",
+      "git_blob": "686a1071494cc8770bc3bb16f804deb2f242f6b8",
+      "sha256": "3883757b6de62d101b775e6614e8ba7034a666a06bcf2e6512b29ffd051f32fd",
+      "baseline": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0"
+    }
+  ],
+  "qualification_gaps": [
+    "QualifiedCpmmState is already-decoded input; decoder/model strings are not raw-state proof or protocol deployment parity.",
+    "Adapter qualification checks revision/program/domain labels but not a complete pinned genesis/token-program/WSOL mint binding; capacity SOL/WSOL label needs binding to actual settlement identity and units.",
+    "evaluate_exact_cpmm_route requires a PR559 nonnegative-gross candidate. candidate_factory exceptions propagate through PR118, so an expected unprofitable/zero-output point can abort the sampled report; design per-point rejection at canonical owner.",
+    "State-after reserve update assumes declared fee model. Qualify segregated protocol/fund fees, fee precision and transfer semantics before protocol-parity claims.",
+    "AGG05 SharedExecutionState capacity map is not full pool/tick/book/hook state. Extend existing owner for joint evaluation; do not add second solver.",
+    "Existing PR356 CVaR helper sums provided tails rather than estimating joint CVaR; budget keys must cover every consumed dimension."
+  ],
+  "scope": "PLANNING_ONLY"
+}

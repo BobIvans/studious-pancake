@@ -1,0 +1,80 @@
+{
+  "schema": "research.funding-qualification.v1",
+  "status": "NO_LENDER_QUALIFIED_BY_THIS_ARCHIVE",
+  "lenders": [
+    {
+      "name": "Aave V3",
+      "reference_id": "MF-09",
+      "resource_identity": "EVM deployment/reserve/asset",
+      "capacity_proof": "Reserve cash plus flags, premium, callback and eligibility",
+      "debt_scope": "One transaction; selected repay mode only",
+      "limitation": "Multiasset flashLoan has different options from flashLoanSimple",
+      "currently_usable_atoms": null,
+      "fee_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "name": "Morpho Blue",
+      "reference_id": "MF-10",
+      "resource_identity": "EVM deployment/token balance",
+      "capacity_proof": "Actual whole contract token balance; common resource across markets",
+      "debt_scope": "Callback repayment within transaction",
+      "limitation": "Do not sum per-market liquidity as independent flash reserves",
+      "currently_usable_atoms": null,
+      "fee_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "name": "Balancer V3",
+      "reference_id": "MF-11",
+      "resource_identity": "Vault/token and unlocked context",
+      "capacity_proof": "Actual available token balance and Vault accounting constraints",
+      "debt_scope": "Close deltas and settle in transaction",
+      "limitation": "Current linked guide is V3; fees must be pinned to deployed rules",
+      "currently_usable_atoms": null,
+      "fee_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "name": "Uniswap V3",
+      "reference_id": "MF-25",
+      "resource_identity": "Pool/token0/token1",
+      "capacity_proof": "Actual pool balances plus lock/callback restrictions",
+      "debt_scope": "Pool callback debt closes in transaction",
+      "limitation": "Lender pool and swapped pools can be conflicting resources",
+      "currently_usable_atoms": null,
+      "fee_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "name": "Kamino",
+      "reference_id": "MF-26",
+      "resource_identity": "Solana program revision/reserve/mint",
+      "capacity_proof": "UNVERIFIED in this research; inspect deployed program and accounts",
+      "debt_scope": "Must prove borrow/repay instruction conformance",
+      "limitation": "Reuse lending owner; no fresh network or program-conformance test",
+      "currently_usable_atoms": null,
+      "fee_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "name": "Project 0 / mrgnLendv2",
+      "reference_id": "MF-24",
+      "resource_identity": "Solana program/bank/mint",
+      "capacity_proof": "UNVERIFIED; SDK naming changed in docs",
+      "debt_scope": "Do not infer legacy flash semantics from product homepage",
+      "limitation": "Cross-venue collateral is a separate persistent health constraint",
+      "currently_usable_atoms": null,
+      "fee_atoms": null,
+      "live_enabled": false
+    }
+  ],
+  "global_rules": [
+    "No TVL-to-flash-capacity conversion",
+    "No loan across transaction or settlement-domain boundary unless the lender explicitly supports the exact model; this plan assumes ordinary same-transaction loans",
+    "Repay principal and fee in each asset, not a scalar USD total",
+    "Pay gas/failure costs from available native funding outside the temporary loan where chain semantics require it",
+    "Sequential reuse is modeled with state transitions; uncertain repayment is not new cash",
+    "Internal netting reduces gross transfers but does not mint new funding capacity"
+  ]
+}

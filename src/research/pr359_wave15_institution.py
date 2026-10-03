@@ -387,10 +387,10 @@ def _eligible_rows(
         if offer.supplier_id in seen:
             raise Wave15InstitutionError("W15_DUPLICATE_SUPPLIER_OFFER")
         seen.add(offer.supplier_id)
-        profile = by_supplier.get(offer.supplier_id)
-        if profile is None:
+        supplier_profile = by_supplier.get(offer.supplier_id)
+        if supplier_profile is None:
             raise Wave15InstitutionError("W15_OFFER_SUPPLIER_NOT_REGISTERED")
-        if not profile.eligible or offer.price_units > rules.reserve_units:
+        if not supplier_profile.eligible or offer.price_units > rules.reserve_units:
             continue
         rows.append(_BidRow(offer.supplier_id, offer.price_units))
     return tuple(rows)

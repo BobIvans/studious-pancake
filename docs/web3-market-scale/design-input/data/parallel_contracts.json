@@ -1,0 +1,184 @@
+{
+  "schema": "research.proposed-contracts.v1",
+  "status": "DESIGN_ONLY",
+  "contracts": {
+    "RawEventEnvelope": {
+      "required": [
+        "source_id",
+        "provider_connection_generation",
+        "chain_domain",
+        "canonical_market_id",
+        "observed_at_ns",
+        "available_at_ns",
+        "payload_hash",
+        "schema_revision",
+        "source_cursor",
+        "commitment",
+        "license_policy_id"
+      ],
+      "chain_specific": [
+        "block_hash_and_parent",
+        "slot_write_version_and_fork",
+        "checkpoint_object_version_digest",
+        "venue_session_sequence"
+      ],
+      "rules": [
+        "Reject bool/float as exact amounts",
+        "Store source timestamp separately; do not substitute it for available_at",
+        "No invented sequence numbers for feeds without one",
+        "Corrections link to prior evidence; append instead of silently overwriting"
+      ]
+    },
+    "QualifiedStateFrame": {
+      "required": [
+        "frame_id",
+        "generation",
+        "domain",
+        "ancestor_id",
+        "account_version_vector",
+        "decoded_state_hash",
+        "decoder_revision",
+        "raw_manifest_hash",
+        "coverage",
+        "expiry_policy"
+      ],
+      "rules": [
+        "One recoverable state writer per partition",
+        "Cursor is not reconstructed state",
+        "Same Solana slot alone does not establish cross-account atomicity",
+        "Cross-domain vectors describe asynchronous knowledge, never one atomic world state"
+      ]
+    },
+    "FlowAggregate": {
+      "required": [
+        "metric_id",
+        "definition_revision",
+        "unit",
+        "stock_or_flow",
+        "window_start",
+        "window_end",
+        "available_at",
+        "coverage_denominator",
+        "dedup_policy",
+        "source_lineage",
+        "aggregation_level"
+      ],
+      "rules": [
+        "UNKNOWN is not zero",
+        "Separate mint/burn, bridge lock/mint, DEX fills and CEX transfers",
+        "Wallet labels are uncertain annotations, not proof of beneficial ownership",
+        "Do not add aggregator routed volume to the underlying DEX volume"
+      ]
+    },
+    "EconomicRelation": {
+      "required": [
+        "relation_id",
+        "version",
+        "asset_right_ids",
+        "cashflow_vector",
+        "time_domain",
+        "access_predicates",
+        "evidence_refs",
+        "hypothesis_family",
+        "registered_at"
+      ],
+      "rules": [
+        "Canonical chain+contract+token-program identity, never uppercase ticker",
+        "Distinguish exact payoff identity, empirical relation and untested idea",
+        "A right with a queue cannot be silently converted into cash"
+      ]
+    },
+    "CandidateEvidence": {
+      "required": [
+        "route_semantic_id",
+        "evaluation_evidence_id",
+        "state_frame_ids",
+        "amount_atoms_by_asset",
+        "ordered_transitions",
+        "cost_breakdown",
+        "funding_terms_id",
+        "resource_footprint_hash",
+        "valid_until",
+        "rejection_codes"
+      ],
+      "rules": [
+        "Each next leg consumes the exact previous integer output",
+        "Requested, consumed and residual orderbook amounts remain separate",
+        "No linear rescaling of one quote",
+        "Retain amount-local failures without hiding valid samples"
+      ]
+    },
+    "ResourceClaim": {
+      "required": [
+        "resource_id",
+        "domain",
+        "kind",
+        "access_mode",
+        "units",
+        "demand",
+        "capacity_version",
+        "owner_authority"
+      ],
+      "kinds": [
+        "account",
+        "pool",
+        "lender_cash",
+        "fee_payer",
+        "nonce_lane",
+        "gas_object",
+        "order_nonce",
+        "margin_account",
+        "provider_quota",
+        "compute_slot",
+        "storage_budget"
+      ],
+      "rules": [
+        "R/R may coexist; W/R and W/W conflict for the same physical resource",
+        "Namespace collisions fail closed",
+        "Unknown required capacity or account set rejects admission",
+        "Resource completeness derives from qualified instruction/account behavior; EVM accessList alone is not exhaustive"
+      ]
+    },
+    "ParallelAdmissionReceipt": {
+      "required": [
+        "work_id",
+        "attempt_identity",
+        "authority_revision",
+        "worker_fence",
+        "deadline",
+        "resource_claim_hash",
+        "capital_reservation_ids",
+        "quota_reservation_ids",
+        "state_generation",
+        "status"
+      ],
+      "rules": [
+        "Existing authority owns atomically bound reservation/fence decisions",
+        "Worker output cannot authorize its own admission",
+        "Retries use the same logical identity",
+        "Unknown future external outcome remains HELD under canonical lifecycle"
+      ]
+    },
+    "HypothesisResult": {
+      "required": [
+        "hypothesis_id",
+        "pre_registered_universe",
+        "train_cutoff",
+        "embargo",
+        "holdout_manifest",
+        "null_controls",
+        "cost_model_version",
+        "multiple_test_family",
+        "sample_count",
+        "effective_episodes",
+        "result_state"
+      ],
+      "rules": [
+        "No newest snapshot in historical joins",
+        "Do not conflate prediction error with trading profit",
+        "Insufficient observations remains UNKNOWN",
+        "No automatic promotion from p-value or correlation"
+      ]
+    }
+  }
+}

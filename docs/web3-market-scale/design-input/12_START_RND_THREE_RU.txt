@@ -1,0 +1,16 @@
+CURRENT CONSOLIDATED HANDOFF: 34_PARALLEL_SCALE_HANDOFF_RU.txt; current owner addendum: 35_CURRENT_OWNERS_AND_LIMITS_RU.md. This earlier handoff is retained as history.
+
+UPDATE 2026-10-03: read21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md and22_DEEP_RND_HANDOFF_RU.txt first. main67d3852c includes PR562; old09 slice is historical. Re-fetch before implementation.
+
+БУДУЩИЙ ЗАПУСК R&D: ТРИ ПРОДУКТА MARKET-OF-MARKETS
+
+Этот документ не исполняется автоматически и не разрешает live-трейдинг.
+При отдельном запросе на реализацию прочитай11_RND_NEXT_3_PRODUCTS_RU.md и10 карточек rnd_three/.
+Начни с RD-00; затем минимальные CLR-01 и VRC-01 на одном declared corpus.
+После доказанной корректности переходи к CLR-02, VRC-02 и отдельному MML-01 v4 pilot.
+
+Перед edits сверить текущий main, AGENTS.md и найденных owners. Не переписывать PR118, AGG-05, AGG-14, PR354/355/356 и INST-01 рядом новыми дубликатами. Исследовательские generic wrappers не выдавать за реализованный clearing или hook decoder.
+
+Критерий первой поставки: один bounded replay experiment, deterministic evidence, fair baseline, exact per-user/asset conservation, полный accounting data/compute/verification costs и читаемый вердикт ADVANCE/PIVOT/STOP/UNKNOWN. NOT_RUN до фактического запуска. Отрицательный результат допустим.
+
+Работа остаётся shadow/offline. Никаких sender, signer, transaction submission, live authorization, real funds, customer/provider messaging, public deployment или автоматического merge. OrderbookAmmStrategy disabled. Заявления о спросе/доходности требуют соответствующего evidence, которого в этом архиве нет.

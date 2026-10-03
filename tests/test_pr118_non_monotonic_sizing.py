@@ -246,3 +246,44 @@ def test_pr118_credit_entries_use_integer_amounts_only() -> None:
     assert ledger.net_cost_by_asset() == {"SOL": -5}
     assert ledger.conservative_net_amount() == 52
     assert ledger.to_json()["min_out"]["amount"] == "1050"
+
+
+def test_expected_point_rejections_consume_budget_and_continue(tmp_path: Path) -> None:
+    from src.economics.non_monotonic_sizing import PR118SizingPointRejected
+
+    seen = []
+
+    def factory(amount: int) -> PR118SizingCandidateEvidence:
+        seen.append(amount)
+        if amount == 10:
+            raise PR118SizingPointRejected("zero-output")
+        return _evidence(amount, 5)
+
+    result = evaluate_pr118_non_monotonic_sizing(
+        coordinator=_coordinator(tmp_path),
+        wallet_snapshot=_snapshot(),
+        amounts_lamports=(30, 10, 20, 10),
+        candidate_factory=factory,
+        max_evaluations=2,
+    )
+    assert seen == [10, 20]
+    assert result.selected_amount_lamports == 20
+    assert result.rejected_points[0].amount_lamports == 10
+    assert result.stop_reason is PR118SizingStopReason.REQUEST_BUDGET_EXHAUSTED
+    assert result.to_json()["rejected_points"] == [
+        {"amount_lamports": "10", "reason": "zero-output"}
+    ]
+
+
+def test_unexpected_sizing_failure_propagates(tmp_path: Path) -> None:
+    def factory(amount: int) -> PR118SizingCandidateEvidence:
+        raise RuntimeError("decoder corruption")
+
+    with pytest.raises(RuntimeError, match="decoder corruption"):
+        evaluate_pr118_non_monotonic_sizing(
+            coordinator=_coordinator(tmp_path),
+            wallet_snapshot=_snapshot(),
+            amounts_lamports=(10, 20),
+            candidate_factory=factory,
+            max_evaluations=2,
+        )

@@ -1,0 +1,254 @@
+[
+  {
+    "id": "O01",
+    "concern": "Integer/non-monotonic sizing",
+    "path": "src/economics/non_monotonic_sizing.py",
+    "symbols": "build_pr118_amount_grid; evaluate_pr118_non_monotonic_sizing; PR118TypedCostLedger",
+    "qualification": "Действующий PR118; amounts_lamports и SOL/WSOL settlement нельзя молча переименовать в произвольный токен.",
+    "sha256": "e57ba4fce0ce96bb81fa445f7d402fb6b490afe6b44a37ea2d14074e609d2a35",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/economics/non_monotonic_sizing.py"
+  },
+  {
+    "id": "O02",
+    "concern": "Точные наблюдения",
+    "path": "src/market/observations.py",
+    "symbols": "MarketObservationV2; exact_output_for",
+    "qualification": "Переиспользовать exact requested amount / guaranteed output; legacy project_output не годится для подтверждения другого размера.",
+    "sha256": "a92621373ee387e9f2ff71bfce8befe82754de4851639c1525da1847577770bb",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/market/observations.py"
+  },
+  {
+    "id": "O03",
+    "concern": "Курсоры и согласованность",
+    "path": "src/market/streams.py",
+    "symbols": "WatermarkedObservationBuffer; FanoutMatrix; DurableCursorStore",
+    "qualification": "Курсор не заменяет восстановленный snapshot; поколения, corrections, retractions и backfill остаются здесь.",
+    "sha256": "82fc7d65a5de5c5a5c350ea35c24619a2e8be5bb92b263ee2185ff1417c39ed1",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/market/streams.py"
+  },
+  {
+    "id": "O04",
+    "concern": "3/4-hop shadow graph",
+    "path": "src/strategy/arbitrage_graph.py",
+    "symbols": "UniversalArbitrageGraph; CircularGraphCandidateDetector; CircularShadowRoute",
+    "qualification": "PR559 уже merged; повторная реализация не нужна. Exact coupled snapshots, identity, age/slot/generation и bounds уже есть.",
+    "sha256": "1d2e0b654b8eeac409e9245869d57b8d6f35606aa69462657da69f292ff33471",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/strategy/arbitrage_graph.py"
+  },
+  {
+    "id": "O05",
+    "concern": "Discovery → canonical graph bridge",
+    "path": "src/strategy/market_graph_ingest.py",
+    "symbols": "ShadowMarketBinding; ShadowMarketGraphIngest",
+    "qualification": "PR561 уже merged. Frozen explicit Solana AMM bindings; orderbook/reference/CEX/EVM/opaque router не допускаются.",
+    "sha256": "8b3dbe3bd60f67f448e2a0352181974bb5c8cc9ef3020ddf22660662e67f5193",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/strategy/market_graph_ingest.py"
+  },
+  {
+    "id": "O06",
+    "concern": "Каталог источников",
+    "path": "src/market/source_catalog.py",
+    "symbols": "MarketSourceCatalog; load_market_source_catalog",
+    "qualification": "Типизированный каталог, не разрешение на I/O или runtime activation.",
+    "sha256": "bc8efc7755a843356011336d713cfbf3e83cfed9c7c4de8e180c79959697df23",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/market/source_catalog.py"
+  },
+  {
+    "id": "O07",
+    "concern": "Ограниченный discovery",
+    "path": "src/market/discovery.py",
+    "symbols": "PublicMarketDiscovery",
+    "qualification": "4 fixture-tested one-shot GET parser; текущая доступность payload на живых endpoints не доказана.",
+    "sha256": "7c015376defcbaffadbecab5f7394f9a3a232773104aced1c7f7303b68d26eeb",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/market/discovery.py"
+  },
+  {
+    "id": "O08",
+    "concern": "Transport",
+    "path": "src/routing/transport.py",
+    "symbols": "Transport; HttpxJsonTransport",
+    "qualification": "Переиспользовать TLS, host/body/time bounds, redaction и hooks физических попыток.",
+    "sha256": "9f6d0c7402da4b3685ba4b1777d6b261c013fe6330bd68be8887e6ce14a7214c",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/routing/transport.py"
+  },
+  {
+    "id": "O09",
+    "concern": "Multihop shortlist и ranking",
+    "path": "src/strategy/multihop_solver.py",
+    "symbols": "search_bounded_cycles; evaluate_shortlisted_routes; rank_resource_feasible_routes",
+    "qualification": "AGG-05 уже существует. Marginal rates дают shortlist, exact evaluator передаётся вызывающей стороной.",
+    "sha256": "6d18e7c6eb57ce49da4e907ed7b30d0c5620efaacf5832cb8acc0f38a42034ca",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/strategy/multihop_solver.py"
+  },
+  {
+    "id": "O10",
+    "concern": "Shared-state split-flow",
+    "path": "src/economics/split_flow.py",
+    "symbols": "solve_joint_split_flow; SharedExecutionState; StatefulSplitPath",
+    "qualification": "AGG-05 уже существует. Discrete bounded allocations и execution order; capacity-map не является полным tick/reserve state.",
+    "sha256": "35000f39f533c2318350b00dc1b8943f5c7305a9644f89a0d579f129cc202fc9",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/economics/split_flow.py"
+  },
+  {
+    "id": "O11",
+    "concern": "Семантические provider routes",
+    "path": "src/routing/route_graph.py",
+    "symbols": "RouteGraph; RouteEdge; OpportunityResourceFootprint",
+    "qualification": "Semantic route hash намеренно исключает delivery metadata; сохранить отличие от evidence identity PR559.",
+    "sha256": "e3cef075e338cf378827ec3c182969487d6c5d3b326181ea3962b5f20cc039ff",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/routing/route_graph.py"
+  },
+  {
+    "id": "O12",
+    "concern": "AMM dispatch",
+    "path": "src/ingest/amm_math_dispatcher.py",
+    "symbols": "AmmMathDispatcher; classify_pool_type",
+    "qualification": "Unknown nonempty program id отклоняется; empty/None и CPMM aliases имеют legacy defaults. Qualification требует явного проверенного pool type.",
+    "sha256": "f838f66032ddfbd5238dd75b304e219e7fb91125a7372703f27a8ebacbe4f10b",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/ingest/amm_math_dispatcher.py"
+  },
+  {
+    "id": "O13",
+    "concern": "AMM math",
+    "path": "src/ingest/amm_math.py",
+    "symbols": "AmmMath",
+    "qualification": "Сначала проверить конкретную модель и округления на независимых protocol vectors; наличие метода не доказывает exact on-chain parity.",
+    "sha256": "e9bd7d93fcfa17ca402b63b615b9fbf29459fca5c5d250686083d73f62a5c5f7",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/ingest/amm_math.py"
+  },
+  {
+    "id": "O14",
+    "concern": "Orderbook integer depth",
+    "path": "src/providers/orderbook/quote.py",
+    "symbols": "OrderbookQuoteEngine",
+    "qualification": "Fixture-only quarantine. BUY_BASE может потратить меньше input; sell также оставляет lot dust. Preserve consumed input / residual.",
+    "sha256": "826e45101211edd05535c27e261bec60dad163d54cc7b7785d1619037d215339",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/providers/orderbook/quote.py"
+  },
+  {
+    "id": "O15",
+    "concern": "Orderbook registry",
+    "path": "src/providers/orderbook/registry.py",
+    "symbols": "VenueRegistry",
+    "qualification": "Conformance, pinned decoder и promotion evidence должны остаться владельцами допуска.",
+    "sha256": "0daf85ee06f430e686ffb6c48bb61983c5b1b45841fbc7934f816c383a3fddbb",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/providers/orderbook/registry.py"
+  },
+  {
+    "id": "O16",
+    "concern": "Phoenix shadow qualification",
+    "path": "src/providers/orderbook/pr066_phoenix.py",
+    "symbols": "PhoenixPromotionEvidence; evaluate_phoenix_shadow_promotion",
+    "qualification": "Нельзя заменить проверенный artifact hash строкой decoder_revision из binding.",
+    "sha256": "eac931226f5f7621b12c2ec3b91c7f3349e08d1b4310a7d17d715aa219269e84",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/providers/orderbook/pr066_phoenix.py"
+  },
+  {
+    "id": "O17",
+    "concern": "Disabled runtime strategy",
+    "path": "src/strategy/strategies.py",
+    "symbols": "OrderbookAmmStrategy",
+    "qualification": "Остаётся disabled: detector wiring awaits verified market subscriptions.",
+    "sha256": "59f406b76d90b46f7fca0dca97ca4c89b398d8108ad5d90f6c4a51e91677535e",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/strategy/strategies.py"
+  },
+  {
+    "id": "O18",
+    "concern": "Financing contract",
+    "path": "src/lending/financing.py",
+    "symbols": "FinancingPort; FinancingObligation; validate_financing_binding",
+    "qualification": "Точные debt/repayment/source/generation; только evidence evaluation в этом плане.",
+    "sha256": "5154683be9bc3e5f33e3b75b3a36bf7b1524b0e54b146ca2b1355082beee4609",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/lending/financing.py"
+  },
+  {
+    "id": "O19",
+    "concern": "EVM financing research",
+    "path": "src/multichain/evm_financing.py",
+    "symbols": "AaveFinancingAdapter; MorphoFinancingAdapter; validate_repayment",
+    "qualification": "Переиспользовать obligations; capability на другой chain не является Solana-atomic funding.",
+    "sha256": "acfe26702738d9b3ef3c3d75b6f444e3229d389cd6ea460e3091e61073d0a840",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/multichain/evm_financing.py"
+  },
+  {
+    "id": "O20",
+    "concern": "Liquidation composition",
+    "path": "src/liquidation/agg07.py",
+    "symbols": "build_flash_funded_liquidation_candidate; select_non_conflicting_liquidations",
+    "qualification": "Уже есть owner композиции финансирования и collateral unwind; новую независимую strategy не создавать.",
+    "sha256": "756857c6937b8e898c92b37a70ce3f7889f3dd7c6a08cb8c2aa6ea37f8abd2f5",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/liquidation/agg07.py"
+  },
+  {
+    "id": "O21",
+    "concern": "Liquidation orchestration",
+    "path": "src/liquidation/strategy.py",
+    "symbols": "ShadowLiquidationStrategy",
+    "qualification": "Модуль явно quarantine / fixture-only; наличие класса не означает проверенный production adapter.",
+    "sha256": "6384cf2039226810a0504e7d3ed8997f2518b757164ac2c9082c92fc7bbaef35",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/liquidation/strategy.py"
+  },
+  {
+    "id": "O22",
+    "concern": "Cross-market identity/replay",
+    "path": "src/market_data_evolution/contracts.py",
+    "symbols": "InstrumentIdentity; RawObservation; AvailabilityProof; StateSnapshot; ReplayManifest",
+    "qualification": "Additive sender-free view. Правильное available_at предотвращает look-ahead.",
+    "sha256": "bd88a3c1b1c517a2163de0c7236f31774110a04ab3c5d44e6241d567bd3f8ff8",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/market_data_evolution/contracts.py"
+  },
+  {
+    "id": "O23",
+    "concern": "Cross-market packs",
+    "path": "src/market_data_evolution/packs.py",
+    "symbols": "CrossMarketPack; all_cross_market_packs",
+    "qualification": "Default DISABLED/BLOCKED_EXTERNAL; derivatives, gold claims и macro не подключены этим планом.",
+    "sha256": "5f7bbb7b14e4d325347c9db5d88d7dd8086b8a744b1372050e5c18f8f0e5311c",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/market_data_evolution/packs.py"
+  },
+  {
+    "id": "O24",
+    "concern": "Primary market / async rights",
+    "path": "src/strategy_evolution/primary_market.py",
+    "symbols": "normalize_primary_market_terms; track_async_vault_request; size_settlement_inventory",
+    "qualification": "Есть состояния request/claim и eligibility/time bounds; нужна protocol qualification и integration.",
+    "sha256": "59a135a1fb33fb11e9459da2fb919c3418e9f0f9e0afb7a20d75f9c35a776db7",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/strategy_evolution/primary_market.py"
+  },
+  {
+    "id": "O25",
+    "concern": "Financial claims",
+    "path": "src/mechanism_discovery/claims.py",
+    "symbols": "define_cashflow_stream; define_claim_right; qualify_cashflow_identity",
+    "qualification": "Переиспользовать rights/cashflow IR для PT/YT и составных продуктов.",
+    "sha256": "700134dee746df9bcd6bdf435db0633e224c69cef1a207f28b1d9ec76c399822",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/claims.py"
+  },
+  {
+    "id": "O26",
+    "concern": "Intent research contracts",
+    "path": "src/mechanism_discovery/intent_graph.py",
+    "symbols": "compile_intent_dependency_graph; normalize_intent_deadlines_and_finality",
+    "qualification": "Research functions через make_research_function; не считать production CoW adapter.",
+    "sha256": "c096d8e4ed7a954f8ef8d1b04769b123598977e9499ca52e415d340cc9ae40e1",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/intent_graph.py"
+  },
+  {
+    "id": "O27",
+    "concern": "Mechanism compiler research",
+    "path": "src/mechanism_discovery/mechanism_compiler.py",
+    "symbols": "infer_rights_obligations_timing; validate_primitives_against_traces",
+    "qualification": "Research contracts не доказывают автоматическое понимание произвольного нового протокола.",
+    "sha256": "2d451e1272c35517cbd25e5e215a7572f0a33b8ae13756ac514bb1e46faef43c",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/mechanism_compiler.py"
+  },
+  {
+    "id": "O28",
+    "concern": "Service procurement institution",
+    "path": "src/research/pr359_wave15_institution.py",
+    "symbols": "InstitutionRuntime; SemanticEvidenceResolver; run_inst01_vertical",
+    "qualification": "Уже существует narrow offline INST-01, sum-int-v1 service. Нет evidence живого спроса или общей incentive compatibility.",
+    "sha256": "62974fa285b25bd76b402fb326cdeae25a135ace39a1060d3c1959eb940d1367",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/research/pr359_wave15_institution.py"
+  }
+]

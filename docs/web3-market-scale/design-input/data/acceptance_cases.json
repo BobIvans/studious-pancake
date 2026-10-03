@@ -1,0 +1,625 @@
+[
+  {
+    "id": "T01",
+    "group": "baseline",
+    "given_when": "main SHA изменился после baseline; повторить owner scan",
+    "expected": "Сначала обновить owner map, diff и scope; существующий solver не дублировать.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T02",
+    "group": "baseline",
+    "given_when": "В checkout есть пользовательские правки",
+    "expected": "Не перезаписать; изолировать работу и точно перечислить её diff.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T03",
+    "group": "identity",
+    "given_when": "Одинаковый тикер/адрес на разных chain или разный genesis",
+    "expected": "Различные asset identities; atomic route не пересекает settlement domains.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T04",
+    "group": "identity",
+    "given_when": "Переставить independent input rows, сохранить семантику",
+    "expected": "Semantic identity стабильна; evidence identity следует существующему contract.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T05",
+    "group": "identity",
+    "given_when": "Изменить amount, fee/decoder revision, slot/hash, provenance или maturity",
+    "expected": "Соответствующая evaluation identity меняется; cache miss/invalidation.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T06",
+    "group": "sources",
+    "given_when": "Один pool обнаружен двумя aggregators",
+    "expected": "Один physical market, две source receipts; liquidity не складывается.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T07",
+    "group": "sources",
+    "given_when": "Timeout/schema drift/пустая успешная page",
+    "expected": "Разные статусы; только empty response без ошибок, но не proof completeness.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T08",
+    "group": "sources",
+    "given_when": "Запись open-source SDK или unknown tier",
+    "expected": "Не маркировать free hosted/full depth или graph-admitted.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T09",
+    "group": "governance",
+    "given_when": "429 с retry-after, затем outage",
+    "expected": "Retry/deadline budget сохраняется, physical attempts учтены, bounded stop.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T10",
+    "group": "governance",
+    "given_when": "Cancel во время IO или огромный/deep body",
+    "expected": "Cancellation propagates; ограничение ресурса до парсинга/мутации, secret body не логируется.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T11",
+    "group": "governance",
+    "given_when": "Источник без admitted profile или изменённый host",
+    "expected": "До IO отказ; новый HTTP обход запрещён.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T12",
+    "group": "state",
+    "given_when": "Restart с durable cursor, без snapshot",
+    "expected": "Coverage=unrestored; кандидатов нет до backfill.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T13",
+    "group": "state",
+    "given_when": "Одинаковый replay с duplicates/corrections/retractions",
+    "expected": "Детерминированный final state; retracted evidence не остаётся в routes.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T14",
+    "group": "state",
+    "given_when": "Mixed generation, future timestamp, stale/expired edge",
+    "expected": "Отказ до candidate emission; ни один stale leg не скрывается aggregate age.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T15",
+    "group": "state",
+    "given_when": "Slot spread route-wide больше policy при допустимых adjacent deltas",
+    "expected": "Route отклоняется по общему max-min slot, не только pairwise.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T16",
+    "group": "state",
+    "given_when": "Event cap или reorg посреди epoch",
+    "expected": "Отказ/инвалидация до некорректной публикации; backfill восстанавливает coherent view.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T17",
+    "group": "exact amounts",
+    "given_when": "Quote на10; запрос на100 в нелинейном pool",
+    "expected": "Fresh evaluation на100; multiply-by10 forbidden.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T18",
+    "group": "exact amounts",
+    "given_when": "Raw amounts больше2**53; bool/float вместо int",
+    "expected": "Точные integers сохраняются; неподходящие типы rejected.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T19",
+    "group": "exact amounts",
+    "given_when": "Expected leg output12, conservative11; next edge input12",
+    "expected": "Текущая guaranteed-output coupling не проходит; нужен exact input11 evaluation.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T20",
+    "group": "exact amounts",
+    "given_when": "Input101, consumed100, остаток1; partial depth",
+    "expected": "Conservation включает residual1; не выдавать как consumed101 или бесплатный дополнительный выход.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T21",
+    "group": "AMM",
+    "given_when": "Pinned constant-product vectors: fee/no fee, dust и reserve extremes",
+    "expected": "Exact integer matches независимому protocol oracle; rounding и fee location совпадают.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T22",
+    "group": "AMM",
+    "given_when": "Stable amp/rate изменился; попытка reuse CPMM или старого cache",
+    "expected": "Правильная model/revision или reject; не переиспользовать чужую curve.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T23",
+    "group": "AMM",
+    "given_when": "Missing program/pool type либо unsupported transfer-fee token",
+    "expected": "Qualified wrapper fail closed; legacy defaults не дают admission.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T24",
+    "group": "ticks bins",
+    "given_when": "Swap пересекает tick/bin boundary и ровно истощает segment",
+    "expected": "Корректные liquidity/fee transitions и integer output.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T25",
+    "group": "ticks bins",
+    "given_when": "Missing tick array/bin либо traversal budget exhausted",
+    "expected": "Неполный quote не считается exact; explicit rejection/budget status.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T26",
+    "group": "ticks bins",
+    "given_when": "Два routes касаются разных ranges одного physical pool",
+    "expected": "Общий mutable identity/state; нельзя удвоить reserves.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T27",
+    "group": "orderbooks",
+    "given_when": "Неверный program owner, artifact hash или unverified subscription",
+    "expected": "Graph admission отклоняет; disabled strategy сохраняется.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T28",
+    "group": "orderbooks",
+    "given_when": "Snapshot, несколько deltas, sequence gap, reconnect",
+    "expected": "Book invalid до resnapshot/checksum; historical gaps сохраняются.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T29",
+    "group": "orderbooks",
+    "given_when": "Buy/sell с non-divisible lot input, tiny depth, fee ceiling",
+    "expected": "Requested/consumed/residual и fee units exact; никакого full-fill claim без подтверждения.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T30",
+    "group": "orderbooks",
+    "given_when": "Cancel/replace на best level перед размерным quote",
+    "expected": "Новая state identity/output; cache старой depth не применяется.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T31",
+    "group": "orderbooks",
+    "given_when": "L2 level красивый, но fill guarantee/queue state неизвестны",
+    "expected": "Research depth quote labelled conditional, не исполнимая гарантия.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T32",
+    "group": "economics",
+    "given_when": "Principal100, min_out105, repayment101, other cost2 уже без swap fees",
+    "expected": "Net2; не вычитать principal ещё раз и не дважды считать embedded fees.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T33",
+    "group": "economics",
+    "given_when": "Fee ceiling повышает repayment на1; estimated profit1",
+    "expected": "Повторная проверка net: threshold соблюдён либо reject по exact amounts.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T34",
+    "group": "economics",
+    "given_when": "Input USDC units передан как lamports или mint приведён uppercase",
+    "expected": "Asset/unit mismatch rejected; canonical mint не меняется.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T35",
+    "group": "economics",
+    "given_when": "Неизвестна стоимость/repayment; financing source другого chain",
+    "expected": "Нет validated net/atomic label; blocker явен.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T36",
+    "group": "circular sizing",
+    "given_when": "Exact 3hop и4hop; затем2hop и5hop в PR559 detector",
+    "expected": "Первые допустимы при остальных constraints; последние остаются вне его scope.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T37",
+    "group": "circular sizing",
+    "given_when": "Один pool повторён через разные provider/direction; затем разные pools одного program",
+    "expected": "Повтор одного venue rejected; разные markets одного program разрешены.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T38",
+    "group": "circular sizing",
+    "given_when": "Permute inputs; одинаковый amount/state/provenance",
+    "expected": "Те же ordered candidates/ids и bounded stop.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T39",
+    "group": "circular sizing",
+    "given_when": "На размере10 отказ/убыток, на20 прибыль, на30 снова убыток",
+    "expected": "PR118 рассматривает20; monotonic pruning не применяется.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T40",
+    "group": "circular sizing",
+    "given_when": "Ищем при max expansions/evaluations/edge cap",
+    "expected": "Детерминированный bounded result; неполный search не заявляет отсутствия alpha или continuous optimum.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T41",
+    "group": "split flow",
+    "given_when": "Две ветви потребляют shared pool/collateral/funding capacity",
+    "expected": "Sequential replay не выдаёт общий ресурс обеим ветвям целиком.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T42",
+    "group": "split flow",
+    "given_when": "A→B order и B→A order дают разные outputs",
+    "expected": "Оба admissible ordering учитываются в budget; initial state не мутирует.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T43",
+    "group": "split flow",
+    "given_when": "Split gross лучше, но fixed common cost делает net хуже single",
+    "expected": "Выбрать nondominated single; common cost применить один раз.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T44",
+    "group": "split flow",
+    "given_when": "Residual debt>0 либо search exhausted",
+    "expected": "Split promotion отклонить; label finite-grid optimum только при complete enumeration.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T45",
+    "group": "correlated",
+    "given_when": "Stable spread меньше costs",
+    "expected": "Нет positive-net candidate.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T46",
+    "group": "correlated",
+    "given_when": "Depeg/pause/redemption rights diverge",
+    "expected": "Assets не склеиваются; сценарий риска/eligibility отражён.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T47",
+    "group": "primary",
+    "given_when": "Immediate wrapper exact conversion с fees/cap",
+    "expected": "Amount conservation и capacity соблюдены.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T48",
+    "group": "primary",
+    "given_when": "Redemption request pending до следующего epoch",
+    "expected": "Не включать в atomic cycle; хранить duration/capital lock.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T49",
+    "group": "primary",
+    "given_when": "Cutoff/eligibility/controller или exchange rate изменились",
+    "expected": "Invalidate evaluation; не расходовать чужое claim right.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T50",
+    "group": "liquidations",
+    "given_when": "Exact debt state, close factor, collateral и unwind",
+    "expected": "Заем/repay/bonus/unwind amount-coupled; расходы покрыты.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T51",
+    "group": "liquidations",
+    "given_when": "Два candidates на одно collateral/borrower или exhausted pool",
+    "expected": "Existing conflict selector не удваивает resource.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T52",
+    "group": "liquidations",
+    "given_when": "Oracle stale / health изменился / позиция закрыта",
+    "expected": "Liquidation candidate rejected; speculative trigger не заменяет state.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T53",
+    "group": "claims",
+    "given_when": "SY input10 порождает PT/YT bundle",
+    "expected": "Вход тратится один раз; vector conservation вместо двух независимых edges.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T54",
+    "group": "claims",
+    "given_when": "PT maturityA с YT maturityB; redemption before cutoff не разрешён",
+    "expected": "Recipe rejected by rights identity/eligibility.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T55",
+    "group": "claims",
+    "given_when": "Maturity/time/index/negative-yield regime изменились",
+    "expected": "Новая model/state identity; recompute, obligations не исчезают.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T56",
+    "group": "intents",
+    "given_when": "Два opposing intents + внешняя route",
+    "expected": "Оба limit prices/deadlines/fees соблюдены; surplus не double counted.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T57",
+    "group": "intents",
+    "given_when": "Partial fill, expired/replayed intent, changed auction id",
+    "expected": "Fill rules/nonce/auction bound; недопустимые intents исключены.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T58",
+    "group": "intents",
+    "given_when": "Лучший gross solver quote имеет inventory/settlement cost",
+    "expected": "Rank по одинаковому after-cost outcome; no submitted bid.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T59",
+    "group": "domains",
+    "given_when": "EVM same address на двух chain; block number одинаковый",
+    "expected": "Chain/genesis identity различна; block hash/finality обязательны.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T60",
+    "group": "domains",
+    "given_when": "Reorg rollback затронул pool and allowance/state evidence",
+    "expected": "Все зависимые computations invalidated; replay canonical branch.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T61",
+    "group": "domains",
+    "given_when": "Неполный Move object/Cosmos module profile",
+    "expected": "Discovery/reference only; не заимствовать EVM atomicity.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T62",
+    "group": "CEX data",
+    "given_when": "REST snapshot плюс WS deltas с gap/out-of-order",
+    "expected": "Exchange-specific resync/checksum; не применять чужие sequence semantics.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T63",
+    "group": "CEX data",
+    "given_when": "BTC spot/perp/future с разным multiplier/expiry",
+    "expected": "Разные instrument IDs и amounts; mark ≠ executable bid/ask.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T64",
+    "group": "CEX data",
+    "given_when": "Public feed доступен, торговые права неизвестны",
+    "expected": "Read-only status; no trading/funding access claim.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T65",
+    "group": "asynchronous basis",
+    "given_when": "CEX–DEX либо обычный bridge transfer требуется между ногами",
+    "expected": "Atomic flashloan eligibility=false; inventory settlement scenario.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T66",
+    "group": "asynchronous basis",
+    "given_when": "Funding sign сменился, margin call, withdrawal задержан",
+    "expected": "Negative outcomes отражены; hedge/funding/carry учитываются по времени.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T67",
+    "group": "asynchronous basis",
+    "given_when": "Одна сторона исполнилась, другая недоступна",
+    "expected": "Stranded exposure сохранена, не записывается как complete arbitrage.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T68",
+    "group": "replay",
+    "given_when": "Цена опубликована позже decision_at; revised historical observation",
+    "expected": "Available_at filter исключает look-ahead и поздние исправления.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T69",
+    "group": "replay",
+    "given_when": "Повтор одного fixture corpus с одинаковыми versions/seeds",
+    "expected": "Canonical evidence stable; synthetic не маркируется real.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T70",
+    "group": "replay",
+    "given_when": "Настройка на training и оценка на held-out outage windows",
+    "expected": "Разделение сохранено; отчёт включает rejects и opportunity misses, не только winners.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T71",
+    "group": "trace cost",
+    "given_when": "От route_id пройти к amount/ledger/state/raw receipts",
+    "expected": "Полная lineage доступна; key/header/body secrets отсутствуют.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T72",
+    "group": "trace cost",
+    "given_when": "Discovered100, exact20, fresh12, configured200; глобальный total неизвестен",
+    "expected": "Показывать четыре числа и defined denominator; не писать100% Web3.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T73",
+    "group": "trace cost",
+    "given_when": "Расходы есть, qualified useful candidates0",
+    "expected": "Cost-per-useful undefined; не zero и не скрытая division by zero.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T74",
+    "group": "UI",
+    "given_when": "Открыть большой global view на мобильной ширине",
+    "expected": "Aggregated/partial view bounded; drill-down, не миллионы nodes.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T75",
+    "group": "UI",
+    "given_when": "Выбрать stale/blocked edge с gross positive number",
+    "expected": "Видны age/reason/amount/net unknown; execution affordance отсутствует.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T76",
+    "group": "UI",
+    "given_when": "Переключить amount или snapshot generation",
+    "expected": "Capacity/evidence обновляются; старый result не подписан новым amount.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T77",
+    "group": "scale",
+    "given_when": "Изменился один market из множества",
+    "expected": "Invalidate affected dependency closure; остальные кеши используют корректные version keys.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T78",
+    "group": "scale",
+    "given_when": "Burst/reconnectstorm превышают IO/CPU/retention policy",
+    "expected": "Backpressure/explicit gap/drop status, bounded memory; no invisible lost completeness.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T79",
+    "group": "scale",
+    "given_when": "Сравнить old/new на одном corpus/hardware and budgets",
+    "expected": "Публикуются p50/p95/p99, coverage/accuracy/rejects и cost; unfair benchmark excluded.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T80",
+    "group": "services",
+    "given_when": "Два поставщика дали разные decode/exact results",
+    "expected": "Independent verification определяет pass/unknown; consensus без oracle не достаточен.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T81",
+    "group": "services",
+    "given_when": "Duplicate service close или unknown receipt",
+    "expected": "Existing institution lifecycle не даёт double release; HELD_UNKNOWN сохраняется.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T82",
+    "group": "services",
+    "given_when": "Убрать subsidies из procurement experiment",
+    "expected": "Отдельно demand/quality/cost observations; синтетический спрос не выдаётся за рыночный.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T83",
+    "group": "clearing",
+    "given_when": "Netting нескольких rights/asset obligations",
+    "expected": "Каждый participant получает допустимый outcome; остаточные обязательства явны.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T84",
+    "group": "clearing",
+    "given_when": "Clearing меньше swaps, но больше latency/data/compute costs",
+    "expected": "Польза после всех затрат относительно same-input baseline; отрицательный эффект сохраняется.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T85",
+    "group": "mechanisms",
+    "given_when": "Изменить hook/auction fee и allocation rule",
+    "expected": "Invariant/conservation/incentive tests на зафиксированных сценариях; general proof не заявляется.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T86",
+    "group": "mechanisms",
+    "given_when": "L2/L3/L1 proposal без demand или измеренного infrastructure constraint",
+    "expected": "Decision memo сохраняет application-first option; автоматического launch нет.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T87",
+    "group": "release boundary",
+    "given_when": "Shadow pack passes fixtures, но нет verified real subscription",
+    "expected": "Qualified_fixture status; no live/whole-market assertion.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T88",
+    "group": "release boundary",
+    "given_when": "Просканировать changed imports/config/startup/effects",
+    "expected": "Нет sender, signer, tx submission, live authorization, enabled OrderbookAmmStrategy.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  },
+  {
+    "id": "T89",
+    "group": "release boundary",
+    "given_when": "Один research pack blocked, другие прошли свои gates",
+    "expected": "Capability matrix честно раздельна; не глобальный success.",
+    "status": "PLANNED_TEST_NOT_RUN"
+  }
+]

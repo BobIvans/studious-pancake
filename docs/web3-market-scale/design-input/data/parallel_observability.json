@@ -1,0 +1,83 @@
+{
+  "schema": "research.observability-design.v1",
+  "enabled": false,
+  "metrics": [
+    {
+      "id": "qualified_coverage",
+      "definition": "Qualified markets / declared eligible catalog universe",
+      "qualification": "Report both numerator and denominator, by depth/asset/domain; global universe unknown"
+    },
+    {
+      "id": "state_freshness",
+      "definition": "decision_at minus latest complete usable state available_at",
+      "qualification": "p50/p95/p99 plus maximum, separately from block age and provider timestamp"
+    },
+    {
+      "id": "gap_exposure",
+      "definition": "Time partition was invalid / observed capture duration",
+      "qualification": "Track dependent candidates suppressed and repair cost"
+    },
+    {
+      "id": "useful_compute",
+      "definition": "Valid timely evidence records / CPU-second",
+      "qualification": "Stable IDs deduplicated; raw candidate count excluded"
+    },
+    {
+      "id": "deadline_survival",
+      "definition": "Qualified candidates still valid at admission / qualified candidates",
+      "qualification": "No assumption that simulation success equals landing"
+    },
+    {
+      "id": "incremental_capacity",
+      "definition": "Best exact modeled net result at added size minus baseline result",
+      "qualification": "Same state, costs and budget; finite grid only"
+    },
+    {
+      "id": "cost_per_useful_result",
+      "definition": "Data+compute+storage+verification cost / useful validated results",
+      "qualification": "Report no denominator / no useful result explicitly; do not divide by zero"
+    },
+    {
+      "id": "model_error",
+      "definition": "Quoted exact atoms minus independent evaluation atoms",
+      "qualification": "Distribution and causes; not a USD floating tolerance"
+    },
+    {
+      "id": "conflict_loss",
+      "definition": "Reference finite feasible objective minus chosen feasible objective",
+      "qualification": "Only for bounded fixtures where optimum is known"
+    },
+    {
+      "id": "capital_efficiency",
+      "definition": "Cost-adjusted outcome / time-weighted owned capital at risk",
+      "qualification": "Separate flash principal turnover from owned fee/inventory capital"
+    },
+    {
+      "id": "maker_markout",
+      "definition": "Signed fill-to-reference price move times quantity at each horizon",
+      "qualification": "Show inventory and hedge PnL so markouts are not double charged"
+    },
+    {
+      "id": "research_survival",
+      "definition": "Pre-registered hypotheses surviving independent holdout / all trials",
+      "qualification": "Include abandoned trials and insufficient-evidence results"
+    }
+  ],
+  "graph_views": [
+    "money-flow aggregate",
+    "qualified executable transformations",
+    "resource conflicts",
+    "dated obligations",
+    "evidence lineage"
+  ],
+  "drilldown": [
+    "source and timestamp",
+    "asset rights",
+    "amount capacity curve",
+    "state lineage",
+    "cost breakdown",
+    "rejection cause",
+    "owner and experiment"
+  ],
+  "money_flow_edges_are_executable": false
+}

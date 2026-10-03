@@ -1,0 +1,503 @@
+[
+  {
+    "id": "PX-01",
+    "name": "Uniswap v4 hooks + accounting",
+    "reference_ids": [
+      "DS-01",
+      "DS-02"
+    ],
+    "family": "AMM / mechanism",
+    "required_condition": "Один квалифицированный PoolKey/hook, известная fee function и закрытые deltas.",
+    "qualification_status": "DOC_ONLY",
+    "state_required": [
+      "pool state",
+      "hook code/config",
+      "token behavior",
+      "unlock obligations"
+    ],
+    "shared_resource_keys": [
+      "pool id",
+      "hook storage",
+      "settlement context"
+    ],
+    "future_checks": [
+      "hook upgrade invalidates cache",
+      "same hook affects two pools",
+      "all delta currencies close"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-02",
+    "name": "Fluid Lite",
+    "reference_ids": [
+      "DS-03"
+    ],
+    "family": "correlated AMM",
+    "required_condition": "Отдельная модель Lite и закреплённый deployment.",
+    "qualification_status": "DOC_ONLY",
+    "state_required": [
+      "resolver block",
+      "pool reserves/model",
+      "fees/limits"
+    ],
+    "shared_resource_keys": [
+      "pool id",
+      "singleton shared dependencies"
+    ],
+    "future_checks": [
+      "Lite != v2",
+      "complete state at one block"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-03",
+    "name": "Fluid DEX v2",
+    "reference_ids": [
+      "DS-04"
+    ],
+    "family": "shared liquidity / credit",
+    "required_condition": "Сначала deployment existence для выбранной сети.",
+    "qualification_status": "BLOCKED_DEPLOYMENT_QUALIFICATION",
+    "state_required": [
+      "DEX type",
+      "debt/collateral shares",
+      "liquidity layer",
+      "hook/fees"
+    ],
+    "shared_resource_keys": [
+      "underlying liquidity",
+      "credit capacity",
+      "hook state"
+    ],
+    "future_checks": [
+      "Ethereum TBD not admitted",
+      "shares are not raw asset atoms"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-04",
+    "name": "Aqua / SwapVM / Aave composition",
+    "reference_ids": [
+      "DS-05",
+      "DS-06",
+      "DS-07"
+    ],
+    "family": "shared wallet liquidity",
+    "required_condition": "Проверенные taker rights плюс balance/allowance/health semantics.",
+    "qualification_status": "BLOCKED_ACCESS_AND_MODEL_QUALIFICATION",
+    "state_required": [
+      "maker real balance",
+      "virtual allocation",
+      "strategy hash",
+      "allowance",
+      "credit health"
+    ],
+    "shared_resource_keys": [
+      "maker/token",
+      "app/strategy",
+      "collateral account"
+    ],
+    "future_checks": [
+      "no double count across strategies",
+      "revoked allowance invalidates all routes",
+      "prefix health"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-05",
+    "name": "Euler EVC",
+    "reference_ids": [
+      "DS-08"
+    ],
+    "family": "credit / batching",
+    "required_condition": "Корректные account/controller/receiver identities и protocol health boundaries.",
+    "qualification_status": "DOC_ONLY",
+    "state_required": [
+      "account state",
+      "vault caps",
+      "controller",
+      "oracle",
+      "checks deferred scope"
+    ],
+    "shared_resource_keys": [
+      "account debt",
+      "collateral pool",
+      "vault cash"
+    ],
+    "future_checks": [
+      "simulation-mode divergence",
+      "receiver vs account mismatch"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-06",
+    "name": "Morpho Vault V2",
+    "reference_ids": [
+      "DS-09",
+      "DS-10"
+    ],
+    "family": "vault conversion",
+    "required_condition": "Product-specific max/cap handling, gate evidence, liquidity source.",
+    "qualification_status": "DOC_ONLY",
+    "state_required": [
+      "vault shares",
+      "adapter allocation",
+      "caps/gates",
+      "withdrawable assets",
+      "index block"
+    ],
+    "shared_resource_keys": [
+      "underlying market",
+      "adapter capacity",
+      "idle assets"
+    ],
+    "future_checks": [
+      "zero max does not infer universal economic zero",
+      "unlisted discovery coverage"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-07",
+    "name": "Morpho Midnight",
+    "reference_ids": [
+      "DS-11"
+    ],
+    "family": "dated credit",
+    "required_condition": "Exact maturity/collateral/gate identity и deployed implementation.",
+    "qualification_status": "DOC_ONLY_NO_LIQUIDITY_PROOF",
+    "state_required": [
+      "market id",
+      "maturity",
+      "loan token",
+      "collateral/oracle",
+      "gate state"
+    ],
+    "shared_resource_keys": [
+      "debt by market",
+      "collateral",
+      "loan inventory"
+    ],
+    "future_checks": [
+      "future credit not spendable cash",
+      "flash closure separate from maturity"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-08",
+    "name": "UniswapX Dutch RFQ",
+    "reference_ids": [
+      "DS-12",
+      "DS-13",
+      "DS-14"
+    ],
+    "family": "intent / auction",
+    "required_condition": "Versioned reactor и eligibility at evaluation block.",
+    "qualification_status": "DOC_ONLY_WITH_DOCUMENTATION_DRIFT",
+    "state_required": [
+      "order bytes",
+      "reactor",
+      "nonce/cancel",
+      "exclusivity",
+      "block decay",
+      "available_at"
+    ],
+    "shared_resource_keys": [
+      "order fillability",
+      "maker balance",
+      "routing pools"
+    ],
+    "future_checks": [
+      "exclusive order reject",
+      "bounded feed coverage",
+      "unknown order variant quarantine"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-09",
+    "name": "CoW clearing",
+    "reference_ids": [
+      "DS-15"
+    ],
+    "family": "batch clearing",
+    "required_condition": "Фиксированные пользовательские ограничения и fair comparator.",
+    "qualification_status": "DOC_ONLY",
+    "state_required": [
+      "batch orders",
+      "limits",
+      "fee rules",
+      "partial fill",
+      "common pool state"
+    ],
+    "shared_resource_keys": [
+      "user balances",
+      "orders",
+      "pools"
+    ],
+    "future_checks": [
+      "per-user no worse",
+      "do not equate procurement auction with swap clearing"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-10",
+    "name": "OIF / ERC-7683 / Across",
+    "reference_ids": [
+      "DS-16",
+      "DS-17",
+      "DS-18",
+      "DS-19",
+      "DS-30",
+      "DS-31"
+    ],
+    "family": "cross-domain intent",
+    "required_condition": "Отдельный async lifecycle и inventory budget; pin proof/settler pair.",
+    "qualification_status": "DOC_ONLY_ASYNC_ONLY",
+    "state_required": [
+      "origin escrow/lock",
+      "destination fill",
+      "proof status",
+      "refund deadline",
+      "settlement chain"
+    ],
+    "shared_resource_keys": [
+      "inventory per domain",
+      "repayment claims",
+      "shared proof provider"
+    ],
+    "future_checks": [
+      "fill != settled",
+      "out of order proof",
+      "timeout traps inventory"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-11",
+    "name": "Flashblocks / ShredStream",
+    "reference_ids": [
+      "DS-20",
+      "DS-21",
+      "DS-22"
+    ],
+    "family": "state delivery",
+    "required_condition": "State reconstruction, commitments и invalidation до использования.",
+    "qualification_status": "DOC_ONLY_NO_ACCESS_OR_LATENCY_BENCHMARK",
+    "state_required": [
+      "event sequence",
+      "provisional generation",
+      "parent block",
+      "received_at",
+      "commitment"
+    ],
+    "shared_resource_keys": [
+      "upstream provider",
+      "network quota",
+      "reorg scope"
+    ],
+    "future_checks": [
+      "provisional correction",
+      "gap triggers backfill",
+      "no timestamp-only cross-domain join"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-12",
+    "name": "Sui DeepBook spot + margin",
+    "reference_ids": [
+      "DS-23",
+      "DS-24"
+    ],
+    "family": "orderbook / margin",
+    "required_condition": "Независимая Sui qualification; существующая Solana strategy остаётся disabled.",
+    "qualification_status": "DOC_ONLY",
+    "state_required": [
+      "object version",
+      "package revision",
+      "book depth",
+      "fees",
+      "balance manager",
+      "margin pool"
+    ],
+    "shared_resource_keys": [
+      "shared object",
+      "balance manager",
+      "margin cash"
+    ],
+    "future_checks": [
+      "lot residual",
+      "shared balance across pools",
+      "isolated margin"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-13",
+    "name": "DeepBook Predict",
+    "reference_ids": [
+      "DS-25"
+    ],
+    "family": "conditional claims",
+    "required_condition": "Проверить новые active markets и свежий oracle; до этого discovery-only.",
+    "qualification_status": "BLOCKED_BY_DOCUMENTED_INACTIVE_MARKET_STATE",
+    "state_required": [
+      "condition/expiry",
+      "oracle update",
+      "settlement state",
+      "quote coin type",
+      "package revision"
+    ],
+    "shared_resource_keys": [
+      "outcome collateral",
+      "pool vault"
+    ],
+    "future_checks": [
+      "expired unsettled market rejects candidate"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-14",
+    "name": "HIP-3 markets",
+    "reference_ids": [
+      "DS-26"
+    ],
+    "family": "builder markets / perps",
+    "required_condition": "Точные payoff/oracle/session/quote asset semantics и доступный hedge.",
+    "qualification_status": "DOC_ONLY_NON_ATOMIC",
+    "state_required": [
+      "DEX identity",
+      "asset id",
+      "oracle/index",
+      "margin terms",
+      "halt state"
+    ],
+    "shared_resource_keys": [
+      "per-DEX collateral",
+      "hedge capacity",
+      "oracle lineage"
+    ],
+    "future_checks": [
+      "ticker collision",
+      "halted hedge",
+      "independent margin"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-15",
+    "name": "Boros + CrossEx reference",
+    "reference_ids": [
+      "DS-27",
+      "DS-28"
+    ],
+    "family": "funding / carry",
+    "required_condition": "Четыре согласованных cashflow exposures и inventory/margin до выхода.",
+    "qualification_status": "DOC_ONLY_NON_ATOMIC",
+    "state_required": [
+      "YU units",
+      "underlying index",
+      "maturity",
+      "perp positions",
+      "settlement interval",
+      "fees"
+    ],
+    "shared_resource_keys": [
+      "margin per venue",
+      "borrow",
+      "custody",
+      "funding index"
+    ],
+    "future_checks": [
+      "one-leg failure",
+      "funding index mismatch",
+      "hedge close cost"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  },
+  {
+    "id": "PX-16",
+    "name": "x402 + verified evidence service",
+    "reference_ids": [
+      "DS-29"
+    ],
+    "family": "machine service commerce",
+    "required_condition": "Явные service contract, verifier, rights и buyer demand.",
+    "qualification_status": "DOC_ONLY_NO_PAYMENTS",
+    "state_required": [
+      "task hash",
+      "source license",
+      "state hash",
+      "quote/fee",
+      "result receipt"
+    ],
+    "shared_resource_keys": [
+      "provider quota",
+      "common upstream",
+      "verification budget"
+    ],
+    "future_checks": [
+      "paid but wrong answer",
+      "duplicate receipt",
+      "verification costs exceed benefit"
+    ],
+    "adapter_implemented": false,
+    "newly_connected": false,
+    "measured_capacity": null,
+    "measured_profit": null
+  }
+]

@@ -1,0 +1,72 @@
+[
+  {
+    "path": "src/inventory/non_atomic.py",
+    "concern": "AGG-13 durable reconciliation",
+    "qualification": "Idempotent receipts/partial fills/unknown exposure across restart. Не sender.",
+    "sha256": "ef001feb0cfccfd06077d5d878fdfa1fcc19831a0ba5bbdc0e61b04aa942e015",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/inventory/research.py",
+    "concern": "Non-atomic families and qualification",
+    "qualification": "Funding/basis/options/complete sets/RWA/commodity families уже перечислены. Право trade не выводится из read-only данных.",
+    "sha256": "410ca1492eb4afb02a72e375f8d12e2adf550cd97805ff147f157da1a7c4c420",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/research/pr356_allocation.py",
+    "concern": "Shared resource research portfolio",
+    "qualification": "Exact subset search≤18 candidates. solve_cvar_constrained_allocation вызывает общий solver и суммирует supplied tail_loss_units; это не вычисление CVaR совместного loss distribution. Unknown resource key отсутствует в loop budget, поэтому qualification должна доказать полноту budget dimensions.",
+    "sha256": "0ef5c47b0e8d6abad9fbedbe0bf34124fbe7853b86344df5a4e1c805f15b3fdd",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/research/pr356_ecology.py",
+    "concern": "Synthetic competitive ecology",
+    "qualification": "Crowding/competition/half-life research owner; его output synthetic, не observed market advantage.",
+    "sha256": "1b16aa411ea8e42cdcfe00f22051cac9f6a29903f0510758c191c0e289ce3ae2",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/mechanism_discovery/boros.py",
+    "concern": "Rate cashflow fixture vertical",
+    "qualification": "Детерминированные fixtures, не подключение Boros и не исполнимая hedge position.",
+    "sha256": "2cc7ce268ef241b582640b40be8d848eeca73d94ad9955265ab5c07a513ddff0",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/mechanism_discovery/rwa.py",
+    "concern": "RWA access/custody/NAV lifecycle",
+    "qualification": "Owner уже есть; actual issuer rights и доступ требуют отдельного evidence.",
+    "sha256": "e7a0c4933c8ff880c2d701b85e2ca5a8c5a3097cbfdead3ac7ca79dff6461095",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/mechanism_discovery/programmable_cash.py",
+    "concern": "Cash identity/claims/redemption",
+    "qualification": "В model_earning_and_claim_modes index_ppm ограничен require_ppm≤1e6, а claim считает max(index-1e6,0): для принятых значений claim всегда0. Проверить intended units и исправлять у этого owner до reuse growth-index semantics; сейчас код не менялся.",
+    "sha256": "3257784f9c5408082c52b2c5eb58a4dd26da7ca7292294541f241b43e3952b6b",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/mechanism_discovery/research_resources.py",
+    "concern": "Research service economy",
+    "qualification": "Mock/testnet/zero-cost boundary; real purchases этим R&D не включаются.",
+    "sha256": "50de3c719eb5d1656b9af50ae1d3edb7e89c49c229c26c70f4e966cdee35b6ab",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/strategy_evolution/blockspace_option.py",
+    "concern": "Inclusion/settlement timing research",
+    "qualification": "Claim о guarantee требует enforceable terms; historical calibration не future inclusion promise.",
+    "sha256": "f7b37264695d5ea98bef4b799d922bf6e6c45f13ab815f99bf6e07ed281f7168",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  },
+  {
+    "path": "src/external_resources/engine.py",
+    "concern": "Existing remote mutation owner",
+    "qualification": "Обнаружен apply_plan с remote mutation capability. Он не входит в proposed read-only R&D path; schema/catalog discovery не вызывает apply_plan.",
+    "sha256": "68427cf0559018bb3bdfbb9628bce1b2a8b728c59714030dd92cf24e5e31fbca",
+    "baseline": "72ae95fdc17e1b7318b2f46002629ce9223a0127"
+  }
+]

@@ -1,0 +1,94 @@
+{
+  "checked_at_local": "2026-10-03",
+  "timezone": "Europe/Riga",
+  "sources": [
+    {
+      "id": "circle",
+      "title": "Circle Payments Network",
+      "url": "https://developers.circle.com/cpn",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "vaults",
+      "title": "ERC-4626",
+      "url": "https://eips.ethereum.org/EIPS/eip-4626",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "async-vaults",
+      "title": "ERC-7540",
+      "url": "https://eips.ethereum.org/EIPS/eip-7540",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "crosschain",
+      "title": "ERC-7683",
+      "url": "https://eips.ethereum.org/EIPS/eip-7683",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "boros",
+      "title": "Boros funding-rate settlement",
+      "url": "https://docs.pendle.finance/boros-docs/about-boros/funding-rate-settlement",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "conditional",
+      "title": "Polymarket positions",
+      "url": "https://docs.polymarket.com/trading/positions/how-positions-work",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "ondo",
+      "title": "Ondo product/rights documentation",
+      "url": "https://docs.ondo.finance/",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "akash",
+      "title": "Akash deployment lifecycle",
+      "url": "https://akash.network/docs/learn/core-concepts/deployments/",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "gs1",
+      "title": "GS1 EPCIS2.0",
+      "url": "https://ref.gs1.org/standards/epcis/",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "aave",
+      "title": "Aave flash-loan concepts",
+      "url": "https://www.aave.com/docs/aave-v3/guides/flash-loans",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "deribit",
+      "title": "Deribit API documentation",
+      "url": "https://docs.deribit.com/",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "cow",
+      "title": "CoW fair combinatorial auction",
+      "url": "https://docs.cow.fi/cow-protocol/concepts/introduction/fair-combinatorial-auction",
+      "role": "primary reference, not proof of free access or production readiness"
+    },
+    {
+      "id": "hooks",
+      "title": "Uniswap v4 hooks",
+      "url": "https://developers.uniswap.org/docs/protocols/v4/concepts/hooks",
+      "role": "primary reference, not proof of free access or production readiness"
+    }
+  ],
+  "retrieval_limits": [
+    "Ondo /global-markets URL unavailable; retrieved current docs landing instead.",
+    "GS1 marketing URL unavailable; official EPCIS2.0 reference document retrieved."
+  ],
+  "not_claimed": [
+    "all market APIs discovered",
+    "live endpoints connected",
+    "current user trading access",
+    "TAM or profitability ranking"
+  ]
+}

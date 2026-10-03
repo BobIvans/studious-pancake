@@ -1,0 +1,29 @@
+{
+  "repository": "BobIvans/studious-pancake",
+  "inspected_main_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+  "tree": "825db4ed329a66deff295b57636f9dff4965c9a9",
+  "checked_at_utc": "2026-10-03",
+  "prepared_local_date": "2026-10-03",
+  "timezone": "Europe/Riga",
+  "design_input": "https://docs.google.com/document/d/1f-asFbZuFDnlWfi0aGKWV8Zjkj739hsPN2t220uUD7k/edit",
+  "status": "PLANNING_ONLY_NO_NEW_IMPLEMENTATION",
+  "merged_foundation_prs": [
+    559,
+    561,
+    562
+  ],
+  "code_changed_in_this_request": false,
+  "new_pr_created": false,
+  "source_catalog_count": 43,
+  "scope": "Complete future work scoped to the Web3 graph/data/strategy request in this conversation, not all historical repository roadmaps.",
+  "historical_baseline_before_deep_rnd": {
+    "inspected_main_commit": "72ae95fdc17e1b7318b2f46002629ce9223a0127",
+    "tree": "72ce68a40c7d887bbee9c51cbc5db454dd9d84b8",
+    "source": "initial plan and earlier R&D supplements"
+  },
+  "current_review": "data/deep_web3_baseline_review.json",
+  "initial_first_slice_status": "PRESENT_IN_MAIN_VIA_PR562_NOT_FULL_WG_COMPLETION",
+  "parallel_scale_review": "data/parallel_owner_review.json",
+  "last_checked_at_utc": "2026-10-03",
+  "main_unchanged_since_deep_web3_update": true
+}

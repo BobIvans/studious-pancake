@@ -1,0 +1,16 @@
+CURRENT CONSOLIDATED HANDOFF: 34_PARALLEL_SCALE_HANDOFF_RU.txt; current owner addendum: 35_CURRENT_OWNERS_AND_LIMITS_RU.md. This earlier handoff is retained as history.
+
+UPDATE 2026-10-03: read21_CURRENT_MAIN_AND_NEXT_SLICE_RU.md and22_DEEP_RND_HANDOFF_RU.txt first. main67d3852c includes PR562; old09 slice is historical. Re-fetch before implementation.
+
+БУДУЩАЯ РЕАЛИЗАЦИЯ: МАСШТАБИРОВАНИЕ ПО MARKET CLASSES
+
+Прочитай13_RND_SCALE_MARKET_CLASSES_RU.md,14_SCALE_OWNERS_AND_GAPS_RU.md и выбранную карточку market_classes/.
+Начальная рекомендация: MC-01 treasury/payment planning + MC-10 evidence API; после этого MC-02 vault liquidity. Это инженерный приоритет, не обещание доходности.
+
+Сначала current-main/AGENTS/owner review. Обновить baseline, не смешивать outcome старого исследования с новой версией кода. Проверить конкретные gaps14 до использования cash growth/portfolio risk models.
+
+Выбрать один class, один customer workflow и finite corpus. Выполнить SCALE-01 и связанные R&D cards; сравнить fair baseline. Для реального спроса сейчас нет evidence, заполнять results только после наблюдений.
+
+Не открывать все12 markets одновременно. Переиспользовать existing AGG-13 inventory, PR118 sizing, AGG-05 routing/split, AGG-14 evidence, PR356 allocation/ecology и INST-01. Generic wrappers и каталог не доказывают adapter qualification.
+
+Automations JSON — design only, disabled. Scope остаётся read-only/shadow/offline; никаких sender, signer, tx submission, payments, actual procurement, deployments или OrderbookAmmStrategy enable. Ни один исследовательский результат не даёт live authorization.

@@ -1,0 +1,107 @@
+{
+  "schema": "shadow.market-scale-replay.v1",
+  "qualification": "MODEL_REPLAY_ONLY",
+  "live_enabled": false,
+  "generation": {
+    "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    "provider_generation": "fixture-provider-v1",
+    "asset_generation": "fixture-assets-v1",
+    "policy_generation": "shadow-only-v1",
+    "code_generation": "exact-cpmm-capacity-v1"
+  },
+  "assets": {
+    "So11111111111111111111111111111111111111112": {
+      "domain": "solana-mainnet",
+      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "mint": "So11111111111111111111111111111111111111112",
+      "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "token_revision": "spl-token-v1",
+      "decimals": 9
+    },
+    "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR": {
+      "domain": "solana-mainnet",
+      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "mint": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "token_revision": "spl-token-v1",
+      "decimals": 9
+    },
+    "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8": {
+      "domain": "solana-mainnet",
+      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+      "token_revision": "spl-token-v1",
+      "decimals": 9
+    }
+  },
+  "pools": [
+    {
+      "venue": {
+        "program_id": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+        "market_id": "pool-1"
+      },
+      "asset_a": "So11111111111111111111111111111111111111112",
+      "asset_b": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "reserve_a": 333,
+      "reserve_b": 9170,
+      "fee_bps": 25,
+      "slot": 100,
+      "observed_at": 999.0,
+      "expires_at": 1001.0,
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "model_revision": "super03-cpmm-integer-v1",
+      "pool_id": "pool-1"
+    },
+    {
+      "venue": {
+        "program_id": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+        "market_id": "pool-2"
+      },
+      "asset_a": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
+      "asset_b": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "reserve_a": 2350,
+      "reserve_b": 6118,
+      "fee_bps": 25,
+      "slot": 100,
+      "observed_at": 999.0,
+      "expires_at": 1001.0,
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "model_revision": "super03-cpmm-integer-v1",
+      "pool_id": "pool-2"
+    },
+    {
+      "venue": {
+        "program_id": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+        "market_id": "pool-3"
+      },
+      "asset_a": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
+      "asset_b": "So11111111111111111111111111111111111111112",
+      "reserve_a": 8573,
+      "reserve_b": 266,
+      "fee_bps": 25,
+      "slot": 100,
+      "observed_at": 999.0,
+      "expires_at": 1001.0,
+      "decoder_revision": "raydium-cpmm-state.v1",
+      "model_revision": "super03-cpmm-integer-v1",
+      "pool_id": "pool-3"
+    }
+  ],
+  "routes": [
+    {
+      "settlement_asset": "So11111111111111111111111111111111111111112",
+      "pools": [
+        "pool-1",
+        "pool-2",
+        "pool-3"
+      ]
+    }
+  ],
+  "amounts": [
+    10,
+    20,
+    30
+  ],
+  "snapshot_now": 1000.0
+}

@@ -174,13 +174,13 @@ def _detect(snapshot):
 
 def test_installable_catalog_separates_access_and_never_promotes_orderbooks():
     catalog = load_market_source_catalog()
-    assert len(catalog.sources) == 43
+    assert len(catalog.sources) == 53
     assert catalog.require("helius").access is SourceAccess.FREE_TIER_KEY
     assert catalog.require("yellowstone-grpc").access is SourceAccess.OPEN_SOURCE
     assert catalog.require("odos").access is SourceAccess.UNVERIFIED
     assert {
         s.source_id for s in catalog.sources if s.family is SourceFamily.ORDERBOOK
-    } == {"phoenix-legacy", "openbook-v2", "manifest"}
+    } == {"phoenix-legacy", "openbook-v2", "manifest", "hyperliquid"}
     with pytest.raises(ValueError, match="unregistered"):
         catalog.require("unlisted")
 
@@ -574,3 +574,22 @@ def test_nonfinite_quote_evidence_fails_before_stream_state_mutation():
     with pytest.raises(ValueError):
         bridge.ingest(bindings[0].binding_id, invalid)
     assert bridge.publish(now=NOW) == before
+
+
+def test_scale_catalog_additions_remain_unverified_not_discovery_adapters():
+    catalog = load_market_source_catalog()
+    for source in (
+        "geth-pubsub",
+        "helius-laserstream",
+        "hyperliquid",
+        "jito-market-structure",
+        "kamino-klend",
+        "morpho-blue",
+        "project0",
+        "sui-objects",
+        "thegraph",
+        "uniswap-v3-flash",
+    ):
+        assert catalog.require(source).access is SourceAccess.UNVERIFIED
+        with pytest.raises(ValueError, match="no implemented"):
+            DiscoveryRequest(source)

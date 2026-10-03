@@ -1,0 +1,120 @@
+{
+  "schema": "research.synthetic-selection-fixture.v1",
+  "real_market_data": false,
+  "repo_solver_executed": false,
+  "calculation_checked": true,
+  "max_selected": 3,
+  "candidates": [
+    {
+      "id": "A",
+      "modeled_net_score": 9,
+      "score_unit": "SYNTHETIC_SAME_ASSET_ATOMS",
+      "reads": [
+        "oracle:O"
+      ],
+      "writes": [
+        "pool:1",
+        "reserve:1",
+        "payer:A"
+      ]
+    },
+    {
+      "id": "B",
+      "modeled_net_score": 8,
+      "score_unit": "SYNTHETIC_SAME_ASSET_ATOMS",
+      "reads": [
+        "oracle:O"
+      ],
+      "writes": [
+        "pool:1",
+        "reserve:2",
+        "payer:B"
+      ]
+    },
+    {
+      "id": "C",
+      "modeled_net_score": 7,
+      "score_unit": "SYNTHETIC_SAME_ASSET_ATOMS",
+      "reads": [
+        "oracle:O"
+      ],
+      "writes": [
+        "pool:2",
+        "reserve:1",
+        "payer:C"
+      ]
+    },
+    {
+      "id": "D",
+      "modeled_net_score": 1,
+      "score_unit": "SYNTHETIC_SAME_ASSET_ATOMS",
+      "reads": [
+        "oracle:O"
+      ],
+      "writes": [
+        "pool:2",
+        "reserve:3",
+        "payer:D"
+      ]
+    },
+    {
+      "id": "E",
+      "modeled_net_score": 5,
+      "score_unit": "SYNTHETIC_SAME_ASSET_ATOMS",
+      "reads": [
+        "oracle:O"
+      ],
+      "writes": [
+        "pool:3",
+        "reserve:4",
+        "payer:E"
+      ]
+    },
+    {
+      "id": "F",
+      "modeled_net_score": 4,
+      "score_unit": "SYNTHETIC_SAME_ASSET_ATOMS",
+      "reads": [
+        "oracle:O"
+      ],
+      "writes": [
+        "pool:4",
+        "reserve:5",
+        "payer:F"
+      ]
+    }
+  ],
+  "pair_conflicts": [
+    [
+      "A",
+      "B"
+    ],
+    [
+      "A",
+      "C"
+    ],
+    [
+      "C",
+      "D"
+    ]
+  ],
+  "expected_optimal_ids": [
+    "B",
+    "C",
+    "E"
+  ],
+  "expected_optimal_score": 20,
+  "expected_greedy_ids": [
+    "A",
+    "E",
+    "F"
+  ],
+  "expected_greedy_score": 18,
+  "shared_fee_payer_variant": {
+    "expected_ids": [
+      "A"
+    ],
+    "expected_score": 9
+  },
+  "limitations": "One simultaneous conflict-free wave with additive fictional scores. Sequential schedules require re-evaluation after each state change; this is not global market profit optimization."
+}

@@ -1,0 +1,246 @@
+{
+  "repository": "BobIvans/studious-pancake",
+  "checked_at_utc": "2026-10-03",
+  "main_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+  "tree": "825db4ed329a66deff295b57636f9dff4965c9a9",
+  "remote_main_fetch_succeeded": true,
+  "main_changed_since_previous_zip": false,
+  "current_working_tree_modified": false,
+  "repository_tests_run": false,
+  "owner_records": [
+    {
+      "role": "sizing",
+      "path": "src/economics/non_monotonic_sizing.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "ee7cf70aa3557abbe2a2daac1000c8d99dcaefe5",
+      "sha256": "e57ba4fce0ce96bb81fa445f7d402fb6b490afe6b44a37ea2d14074e609d2a35"
+    },
+    {
+      "role": "graph",
+      "path": "src/strategy/arbitrage_graph.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "1af0559d0cab5f7b0980189af016062ca5f73c64",
+      "sha256": "1d2e0b654b8eeac409e9245869d57b8d6f35606aa69462657da69f292ff33471"
+    },
+    {
+      "role": "exact",
+      "path": "src/strategy/exact_cpmm_capacity.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "60661db3ea7c3450184ffed168a0c54101077700",
+      "sha256": "573923883de3e96153913734f4ad7a0914fe3c7fa3d08f5b492fc9faa7ef0108"
+    },
+    {
+      "role": "math",
+      "path": "src/direct_venue/cpmm_math.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "179f1a5ee1ce5758b96bed30ca00f033fff29092",
+      "sha256": "d9e3ac3534642a1aa1dcb847b2e5eaad234f883a60a02e456e68e0b2dd7db814"
+    },
+    {
+      "role": "split",
+      "path": "src/economics/split_flow.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "7b81dc378dc4d40840b8f5244f5922d622bd2ee3",
+      "sha256": "35000f39f533c2318350b00dc1b8943f5c7305a9644f89a0d579f129cc202fc9"
+    },
+    {
+      "role": "scheduler",
+      "path": "src/strategy/conflict_scheduler.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "499a3e888d987b3c6c500db467763d01ca596ddb",
+      "sha256": "a45ea2b4296c988bdd77fd49e56fdf647b7d8a16bf3e4cbc950a6f0fc8a12c96"
+    },
+    {
+      "role": "footprint",
+      "path": "src/routing/route_graph.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "a6a9e248bcf35c0bbbab8b69e7ea26be997dcd7c",
+      "sha256": "e3cef075e338cf378827ec3c182969487d6c5d3b326181ea3962b5f20cc039ff"
+    },
+    {
+      "role": "streams",
+      "path": "src/market/streams.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "cd7e0cf2d3ace2021647b3fc9e1b7e9e43d52b95",
+      "sha256": "82fc7d65a5de5c5a5c350ea35c24619a2e8be5bb92b263ee2185ff1417c39ed1"
+    },
+    {
+      "role": "ingest",
+      "path": "src/strategy/market_graph_ingest.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "59850f70db879caa965eb3e38cdc826a40778b75",
+      "sha256": "8b3dbe3bd60f67f448e2a0352181974bb5c8cc9ef3020ddf22660662e67f5193"
+    },
+    {
+      "role": "observations",
+      "path": "src/market/observations.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "4b92fe8a1485166cb97967976badfc39fc946dda",
+      "sha256": "a92621373ee387e9f2ff71bfce8befe82754de4851639c1525da1847577770bb"
+    },
+    {
+      "role": "quota",
+      "path": "src/provider_governance/authority.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "9c854e1340e6329cfa73bc0235c5914e18bb462c",
+      "sha256": "53d1f43afc96d1e0e9a43248b79c83b2f42248cc95166e5216d58fd9667ae6f7"
+    },
+    {
+      "role": "admission",
+      "path": "src/provider_governance/scheduler.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "57623e87a8a7690c2395be1465c30a919fda8e07",
+      "sha256": "e1375c86acd6f1fac1c6d8a8e7b24117f92e16940af860339a8b5aabae38ef31"
+    },
+    {
+      "role": "durable",
+      "path": "src/durability/lifecycle.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "b6104676d32375613bd5c10f82ab3146c7218688",
+      "sha256": "aadf2de4a7cd1dab4f664bd3580c495111b9359a307bdb96db5a81b9d29e719f"
+    },
+    {
+      "role": "capital",
+      "path": "src/economics/durable_reservations.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "8cb5789743d318622ba3d4095eea4c274859a09b",
+      "sha256": "eff72fd18639ec1b3d78f62061a8135f358ee22d63fb9e5b81d17543b3f450ff"
+    },
+    {
+      "role": "authority_review",
+      "path": "src/durability/mpr19_economic_authority.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "8c56695ee6be63f739479e44cdd4a092243e3d83",
+      "sha256": "2719124da11e11fdc4ebfde5277c83cdac8a4a209fb1092ef29a5f272a95ea84"
+    },
+    {
+      "role": "single_truth",
+      "path": "src/durability/single_truth.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "8578588d0790892f8461e35ce00e79e947b29872",
+      "sha256": "37f091522479c424ac8bb10468e4aa537692207fa4af60647052c074cc444d00"
+    },
+    {
+      "role": "allocation",
+      "path": "src/research/pr356_allocation.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "37ae39d88dbec1ed05af3531e129b826fa945014",
+      "sha256": "0ef5c47b0e8d6abad9fbedbe0bf34124fbe7853b86344df5a4e1c805f15b3fdd"
+    },
+    {
+      "role": "quality",
+      "path": "src/mechanism_discovery/research_quality.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "7898ceb20929d39882316d3f20d6f323b783af20",
+      "sha256": "ae8fb0e3c4f698de12f5c03ab2e792701ba48bdeeabfdbbcae7959870f3004ff"
+    },
+    {
+      "role": "claims",
+      "path": "src/mechanism_discovery/claims.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "8abf5d045118404593598ca017a47f62e4875460",
+      "sha256": "700134dee746df9bcd6bdf435db0633e224c69cef1a207f28b1d9ec76c399822"
+    },
+    {
+      "role": "raw",
+      "path": "src/market_data_evolution/contracts.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "66c71dd7c7e2e76b983c39a2c661bbacb91f258c",
+      "sha256": "bd88a3c1b1c517a2163de0c7236f31774110a04ab3c5d44e6241d567bd3f8ff8"
+    },
+    {
+      "role": "inventory",
+      "path": "src/inventory/non_atomic.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "5b4da8eb95915cdde7b3ec1dab723e15f68d5395",
+      "sha256": "ef001feb0cfccfd06077d5d878fdfa1fcc19831a0ba5bbdc0e61b04aa942e015"
+    },
+    {
+      "role": "families",
+      "path": "src/inventory/research.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "19ca9867e4de14bdcb6ab49315e1dccd252920ad",
+      "sha256": "410ca1492eb4afb02a72e375f8d12e2adf550cd97805ff147f157da1a7c4c420"
+    },
+    {
+      "role": "lending",
+      "path": "src/lending/financing.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "b8dcf8da873a63f6d871e85085a34867c26d2dcc",
+      "sha256": "5154683be9bc3e5f33e3b75b3a36bf7b1524b0e54b146ca2b1355082beee4609"
+    },
+    {
+      "role": "evm_lending",
+      "path": "src/multichain/evm_financing.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "1374795b12c7d44108e5a385aebb0f3923ad26ef",
+      "sha256": "acfe26702738d9b3ef3c3d75b6f444e3229d389cd6ea460e3091e61073d0a840"
+    },
+    {
+      "role": "liquidations",
+      "path": "src/liquidation/agg07.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "13f1db2791a87a9e43fc49e3049322506ad664e8",
+      "sha256": "756857c6937b8e898c92b37a70ce3f7889f3dd7c6a08cb8c2aa6ea37f8abd2f5"
+    },
+    {
+      "role": "primary",
+      "path": "src/strategy_evolution/primary_market.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "c25efa2aca73c1c6c9c0e9e479aa349a2601644e",
+      "sha256": "59a135a1fb33fb11e9459da2fb919c3418e9f0f9e0afb7a20d75f9c35a776db7"
+    },
+    {
+      "role": "orderbook",
+      "path": "src/providers/orderbook/quote.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "89774697538288ccd928fc729ad7c1dd4c09625c",
+      "sha256": "826e45101211edd05535c27e261bec60dad163d54cc7b7785d1619037d215339"
+    },
+    {
+      "role": "strategy_gate",
+      "path": "src/strategy/strategies.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "21528649fd71a81b8581f7e5d9e8f96d401b9e96",
+      "sha256": "59f406b76d90b46f7fca0dca97ca4c89b398d8108ad5d90f6c4a51e91677535e"
+    },
+    {
+      "role": "procurement",
+      "path": "src/research/pr359_wave15_institution.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "fff926717bc8892b9276dfcd13e48048de328c88",
+      "sha256": "62974fa285b25bd76b402fb326cdeae25a135ace39a1060d3c1959eb940d1367"
+    },
+    {
+      "role": "service",
+      "path": "src/research/product.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "8970ceaa0d0f9c0bbb5b341920fc07cdcd946a7b",
+      "sha256": "5e338fda8d78f084c5465ee25e755c3844d658b9125acfda85d1818cb761e248"
+    },
+    {
+      "role": "benchmarks",
+      "path": "src/research/benchmarks.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "f7fe5c4e99fd665564700999db6b2ace49a344cc",
+      "sha256": "cb4a69315c40469c1d7e07b12ab9de4ab2cd426e43a72c945352bb462e74357e"
+    },
+    {
+      "role": "causal",
+      "path": "src/mechanism_discovery/causal_twin.py",
+      "commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+      "git_blob": "5d7b991d30d4bb7df712ef18b636e7dcc68c7e7c",
+      "sha256": "6e0442733905296138aebbd57b4c996f924a918ed46c8a6659d2e1fb06493e43"
+    }
+  ],
+  "critical_findings": [
+    "PR118 is the integer/non-monotonic sizing owner. Its current economics contract is SOL/WSOL lamports; no USDC atom relabeling.",
+    "AGG05 ConflictAwareScheduler is in-memory, uses an RLock and delegates reservations. No general read-only account set is represented in WorkResourceSet.",
+    "OpportunityResourceFootprint includes writable accounts and separate oracles; the scheduler adapter currently copies pools and writes, not a full account access-mode map.",
+    "The inspected DurableLifecycleStore explicitly rejects topology other than single-node. Do not share its SQLite file across machines.",
+    "MPR19 and single_truth are existing authority/review surfaces. Their presence is not proof of a complete runtime cutover; map the actual application path before distributed admission.",
+    "Scheduler reaping releases expired work through its reservation port. Future post-submission unknown outcomes must stay held under the lifecycle authority, not be released by this compute queue.",
+    "PR356 allocation is bounded research allocation; ensure complete units/budget dimensions and do not describe sums of supplied tail scores as joint CVaR.",
+    "OrderbookAmmStrategy remains disabled pending verified subscriptions."
+  ]
+}

@@ -1,0 +1,2135 @@
+{
+  "schema": "shadow.zip-execution-disposition.v1",
+  "archive_sha256": "8a0799c35f0404f8fd5290418db2abd01e9ce31ef054f52a090e1aa7c331138d",
+  "baseline_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+  "complete_zip_implemented": false,
+  "complete_zip_acceptance_passed": false,
+  "runtime_mode": "OFFLINE_SHADOW_ONLY",
+  "connected_feeds_added": 0,
+  "execution_right": false,
+  "packages": [
+    {
+      "id": "PM-01",
+      "title": "Qualification before scale",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/strategy/exact_cpmm_capacity.py",
+      "tests": [
+        "tests/test_exact_cpmm_capacity.py",
+        "tests/test_cpmm_fee_accounting.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Pinned source arithmetic and integer vectors implemented; deployed bytecode/rooted raw vectors and complete DP01 corpus remain."
+    },
+    {
+      "id": "PM-02",
+      "title": "Money-flow observatory",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/market_data_evolution/flow_observatory.py",
+      "tests": [
+        "tests/test_shadow_flow_relations.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Actual point-in-time multi-source flow data reconciliation remains."
+    },
+    {
+      "id": "PM-03",
+      "title": "Source entitlements and budgets",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/provider_governance/authority.py",
+      "tests": [
+        "tests/test_shadow_market_data_aggregation.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Existing governance reused; additional endpoints, rights, retry/storage campaigns remain unqualified."
+    },
+    {
+      "id": "PM-04",
+      "title": "Recoverable state reconstruction",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/market/streams.py",
+      "tests": [
+        "tests/test_recoverable_stream_journal.py",
+        "tests/test_absolute_orderbook_stream.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Generic local replay core exists; verified native feed schemas and journal-to-buffer wiring remain."
+    },
+    {
+      "id": "PM-05",
+      "title": "Typed economic relation registry",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/mechanism_discovery/claims.py",
+      "tests": [
+        "tests/test_shadow_flow_relations.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Conversion core exists; complete canonical asset-right registry and protocol payoff packs remain."
+    },
+    {
+      "id": "PM-06",
+      "title": "Incremental candidate work",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/strategy/arbitrage_graph.py",
+      "tests": [
+        "tests/test_shadow_arbitrage_graph.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Affected current candidate recomputation exists; end-to-end event-rate/correction campaigns remain."
+    },
+    {
+      "id": "PM-07",
+      "title": "Joint exact capacity",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/strategy/cpmm_split_replay.py",
+      "tests": [
+        "tests/test_cpmm_split_replay.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Two paths sharing exact pool state tested; two markets aliasing a separate balance and deployed conformance remain."
+    },
+    {
+      "id": "PM-08",
+      "title": "Complete conflict footprints",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/strategy/conflict_scheduler.py",
+      "tests": [
+        "tests/test_agg05_conflict_scheduler.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "R/W core exists; complete deployed allowance/hook/oracle/balance footprints remain."
+    },
+    {
+      "id": "PM-09",
+      "title": "Single authority and fenced work",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/durability/unified_authority_pr02.py",
+      "tests": [
+        "tests/test_shadow_parallel_authority.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Single-node durable shadow claims tested; production capital/quota bridge and reconciliation campaign remain."
+    },
+    {
+      "id": "PM-10",
+      "title": "Parallel compute and backpressure",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/strategy/shadow_workers.py",
+      "tests": [
+        "tests/test_shadow_workers.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "1/2/4/8 offline deterministic processes tested; throughput/p99/cost campaign remains."
+    },
+    {
+      "id": "PM-11",
+      "title": "Resource portfolio allocation",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/research/pr356_allocation.py",
+      "tests": [
+        "tests/test_joint_scenario_portfolio.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Finite complete budgets and joint empirical scenarios implemented; full declared-unit/economic-risk campaign remains."
+    },
+    {
+      "id": "PM-12",
+      "title": "Lender terms and debt closure",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/lending/shadow_capacity.py",
+      "tests": [
+        "tests/test_shadow_clearing_funding.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Revision-bound arithmetic tested; actual lender capacity/fees/eligibility/atomic semantics unqualified."
+    },
+    {
+      "id": "PM-13",
+      "title": "Correlation research controls",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/mechanism_discovery/research_quality.py",
+      "tests": [
+        "tests/test_registered_shadow_hypotheses.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Registered synthetic holdout controls exist; point-in-time market episodes/null campaigns remain."
+    },
+    {
+      "id": "PM-14",
+      "title": "Market-making replay",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/inventory/mm_replay.py",
+      "tests": [
+        "tests/test_mm_shadow_replay.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Synthetic FIFO/cancel/markout with durable inventory tested; one-venue actual queue/hedge calibration remains."
+    },
+    {
+      "id": "PM-15",
+      "title": "Three-product bridge",
+      "status": "PARTIAL_OFFLINE_CORE",
+      "owner": "src/mechanism_discovery/intent_graph.py",
+      "tests": [
+        "tests/test_shadow_clearing_funding.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Finite clearing/procurement/mechanism slices exist; heterogeneous products, audited suppliers and real-demand experiments remain."
+    },
+    {
+      "id": "PM-16",
+      "title": "One new domain and forward-shadow gate",
+      "status": "IMPLEMENTATION_PENDING",
+      "owner": "src/market/source_catalog.py",
+      "tests": [
+        "tests/test_shadow_market_data_aggregation.py"
+      ],
+      "acceptance_closed": false,
+      "remaining": "Reference universe preserved; new-domain dossier, native adapter and forward shadow qualification NOT_IMPLEMENTED here."
+    },
+    {
+      "id": "WG-01",
+      "title": "\u041f\u043e\u0432\u0442\u043e\u0440\u043d\u0430\u044f \u0441\u0432\u0435\u0440\u043a\u0430 main \u0438 \u043a\u0430\u0440\u0442\u0430 \u0432\u043b\u0430\u0434\u0435\u043b\u044c\u0446\u0435\u0432",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O01",
+        "O04",
+        "O05",
+        "O09",
+        "O10",
+        "O11"
+      ],
+      "archive_test_ids": [
+        "T01",
+        "T02"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-02",
+      "title": "\u0418\u0434\u0435\u043d\u0442\u0438\u0447\u043d\u043e\u0441\u0442\u044c \u0430\u043a\u0442\u0438\u0432\u043e\u0432, \u043f\u0440\u0430\u0432, \u0440\u044b\u043d\u043a\u043e\u0432 \u0438 \u0434\u043e\u043a\u0430\u0437\u0430\u0442\u0435\u043b\u044c\u0441\u0442\u0432",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O04",
+        "O11",
+        "O22",
+        "O25"
+      ],
+      "archive_test_ids": [
+        "T03",
+        "T04",
+        "T05"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-03",
+      "title": "\u041a\u0430\u0442\u0430\u043b\u043e\u0433 \u0431\u0435\u0441\u043f\u043b\u0430\u0442\u043d\u043e\u0433\u043e \u0434\u043e\u0441\u0442\u0443\u043f\u0430 \u0438 \u0434\u043e\u043a\u0430\u0437\u0430\u043d\u043d\u043e\u0435 \u043f\u043e\u043a\u0440\u044b\u0442\u0438\u0435",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O06",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T06",
+        "T07",
+        "T08"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-04",
+      "title": "Governed read-only discovery \u0438 \u043f\u043e\u0434\u043f\u0438\u0441\u043a\u0438",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O07",
+        "O08",
+        "O03"
+      ],
+      "archive_test_ids": [
+        "T09",
+        "T10",
+        "T11"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-05",
+      "title": "\u0421\u043e\u0433\u043b\u0430\u0441\u043e\u0432\u0430\u043d\u043d\u044b\u0439 \u043b\u043e\u043a\u0430\u043b\u044c\u043d\u044b\u0439 state engine",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O02",
+        "O03",
+        "O05",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T12",
+        "T13",
+        "T14",
+        "T15",
+        "T16"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-06",
+      "title": "\u041a\u043e\u043d\u0442\u0440\u0430\u043a\u0442 \u0442\u043e\u0447\u043d\u043e\u0433\u043e edge evaluation",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O01",
+        "O02",
+        "O04",
+        "O11",
+        "O13",
+        "O14"
+      ],
+      "archive_test_ids": [
+        "T17",
+        "T18",
+        "T19",
+        "T20"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-07",
+      "title": "\u041a\u0432\u0430\u043b\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f CPMM \u0438 stable pool \u043c\u0430\u0442\u0435\u043c\u0430\u0442\u0438\u043a\u0438",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O12",
+        "O13"
+      ],
+      "archive_test_ids": [
+        "T21",
+        "T22",
+        "T23"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-08",
+      "title": "\u041a\u0432\u0430\u043b\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f CLMM \u0438 DLMM",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O12",
+        "O13"
+      ],
+      "archive_test_ids": [
+        "T24",
+        "T25",
+        "T26"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-09",
+      "title": "\u041f\u0440\u043e\u0432\u0435\u0440\u0435\u043d\u043d\u044b\u0435 orderbook subscriptions \u0438 depth adapters",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O14",
+        "O15",
+        "O16",
+        "O17"
+      ],
+      "archive_test_ids": [
+        "T27",
+        "T28",
+        "T29",
+        "T30",
+        "T31"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-10",
+      "title": "\u041f\u043e\u043b\u043d\u0430\u044f \u044d\u043a\u043e\u043d\u043e\u043c\u0438\u043a\u0430 \u0438 financing evidence",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O01",
+        "O18",
+        "O19",
+        "O20"
+      ],
+      "archive_test_ids": [
+        "T32",
+        "T33",
+        "T34",
+        "T35"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-11",
+      "title": "Capacity curves \u0438 \u0434\u0435\u0442\u0435\u0440\u043c\u0438\u043d\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u044b\u0439 circular search",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O01",
+        "O02",
+        "O04",
+        "O09"
+      ],
+      "archive_test_ids": [
+        "T36",
+        "T37",
+        "T38",
+        "T39",
+        "T40"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-12",
+      "title": "\u0418\u043d\u0442\u0435\u0433\u0440\u0430\u0446\u0438\u044f \u0441\u0443\u0449\u0435\u0441\u0442\u0432\u0443\u044e\u0449\u0435\u0433\u043e split-flow",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O01",
+        "O09",
+        "O10",
+        "O11"
+      ],
+      "archive_test_ids": [
+        "T41",
+        "T42",
+        "T43",
+        "T44"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-13",
+      "title": "Stable/correlated market pack",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O01",
+        "O04",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T45",
+        "T46"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-14",
+      "title": "DEX \u2194 wrapper / mint / redeem",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O24",
+        "O25",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T47",
+        "T48",
+        "T49"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-15",
+      "title": "\u041b\u0438\u043a\u0432\u0438\u0434\u0430\u0446\u0438\u0438 + collateral unwind",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O20",
+        "O21",
+        "O18"
+      ],
+      "archive_test_ids": [
+        "T50",
+        "T51",
+        "T52"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-16",
+      "title": "PT/YT \u0438 \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u044b\u0435 hyperedges",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O25",
+        "O24",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T53",
+        "T54",
+        "T55"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-17",
+      "title": "Intent / batch solver",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O26",
+        "O11",
+        "O25"
+      ],
+      "archive_test_ids": [
+        "T56",
+        "T57",
+        "T58"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-18",
+      "title": "EVM \u0438 \u043f\u043e\u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0438\u0435 settlement domains",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O22",
+        "O19",
+        "O11"
+      ],
+      "archive_test_ids": [
+        "T59",
+        "T60",
+        "T61"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-19",
+      "title": "CEX \u0438 derivatives market data",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O22",
+        "O23"
+      ],
+      "archive_test_ids": [
+        "T62",
+        "T63",
+        "T64"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-20",
+      "title": "Cross-chain, CEX\u2013DEX, spot\u2013perp basis",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O22",
+        "O23",
+        "O24",
+        "O19"
+      ],
+      "archive_test_ids": [
+        "T65",
+        "T66",
+        "T67"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-21",
+      "title": "Replay corpus \u0438 \u043a\u0432\u0430\u043b\u0438\u0444\u0438\u043a\u0430\u0446\u0438\u044f \u0441\u0442\u0440\u0430\u0442\u0435\u0433\u0438\u0439",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O03",
+        "O22",
+        "O23"
+      ],
+      "archive_test_ids": [
+        "T68",
+        "T69",
+        "T70"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-22",
+      "title": "Trace, \u043f\u043e\u043a\u0440\u044b\u0442\u0438\u0435 \u0438 \u0441\u0442\u043e\u0438\u043c\u043e\u0441\u0442\u044c \u0434\u0430\u043d\u043d\u044b\u0445/\u0432\u044b\u0447\u0438\u0441\u043b\u0435\u043d\u0438\u0439",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O05",
+        "O08",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T71",
+        "T72",
+        "T73"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-23",
+      "title": "\u0418\u043d\u0442\u0435\u0440\u0444\u0435\u0439\u0441 market-of-markets graph",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O04",
+        "O05",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T74",
+        "T75",
+        "T76"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-24",
+      "title": "\u041c\u0430\u0441\u0448\u0442\u0430\u0431\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435 \u0438 \u043d\u0435\u043f\u0440\u0435\u0440\u044b\u0432\u043d\u043e\u0435 \u0443\u043b\u0443\u0447\u0448\u0435\u043d\u0438\u0435",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O03",
+        "O09",
+        "O10",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T77",
+        "T78",
+        "T79"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-25",
+      "title": "\u0420\u044b\u043d\u043e\u043a \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u043c\u044b\u0445 \u0440\u0430\u0441\u0447\u0451\u0442\u043e\u0432 \u0438 \u0434\u0430\u043d\u043d\u044b\u0445",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O28",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T80",
+        "T81",
+        "T82"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-26",
+      "title": "\u041e\u0431\u0449\u0438\u0439 clearing solver \u043a\u0430\u043a \u043f\u0440\u043e\u0434\u0443\u043a\u0442",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O10",
+        "O11",
+        "O25",
+        "O26"
+      ],
+      "archive_test_ids": [
+        "T83",
+        "T84"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-27",
+      "title": "Market mechanism lab \u0438 \u043a\u0440\u0438\u0442\u0435\u0440\u0438\u0438 L1/L2/L3",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O27",
+        "O28",
+        "O25"
+      ],
+      "archive_test_ids": [
+        "T85",
+        "T86"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "WG-28",
+      "title": "\u041f\u043e\u044d\u0442\u0430\u043f\u043d\u0430\u044f shadow release qualification",
+      "status": "REQUIRES_OWNER_AND_ACCEPTANCE_RECONCILIATION",
+      "existing_owner_ids": [
+        "O04",
+        "O05",
+        "O17",
+        "O22"
+      ],
+      "archive_test_ids": [
+        "T87",
+        "T88",
+        "T89"
+      ],
+      "acceptance_closed": false,
+      "remaining": "See source task implementation_steps and blocking_conditions; full WG acceptance is not certified by this PR."
+    },
+    {
+      "id": "DP-01",
+      "title": "CPMM qualification boundary and amount-local rejection",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-02",
+      "title": "Shared resource alias and sequential split",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-03",
+      "title": "Incremental event-driven graph",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-04",
+      "title": "Fast state vs canonical state",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-05",
+      "title": "Claims and vault semantics",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-06",
+      "title": "Credit and collateral prefix constraints",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-07",
+      "title": "Versioned intents and clearing",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-08",
+      "title": "Settlement-time capital",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-09",
+      "title": "Cross-product payoff equivalence",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-10",
+      "title": "Verified service unit economics",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-11",
+      "title": "Mechanism response and competition",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "DP-12",
+      "title": "Budgeted scale and product selection",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "RD-00",
+      "title": "\u041e\u0431\u0449\u0438\u0439 \u043a\u043e\u0440\u043f\u0443\u0441 \u0438 \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u043c\u044b\u0439 benchmark",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "CLR-01",
+      "title": "Clearing \u043f\u0440\u043e\u0442\u0438\u0432 \u043e\u0442\u0434\u0435\u043b\u044c\u043d\u044b\u0445 \u043e\u0431\u043c\u0435\u043d\u043e\u0432",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "CLR-02",
+      "title": "\u041c\u0438\u043d\u0438\u043c\u0430\u043b\u044c\u043d\u043e\u0435 \u043d\u0435\u043e\u0431\u0445\u043e\u0434\u0438\u043c\u043e\u0435 \u0444\u0438\u043d\u0430\u043d\u0441\u0438\u0440\u043e\u0432\u0430\u043d\u0438\u0435",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "CLR-03",
+      "title": "\u041f\u0440\u0435\u043e\u0431\u0440\u0430\u0437\u043e\u0432\u0430\u043d\u0438\u044f \u043f\u0440\u0430\u0432 \u043f\u043e\u0432\u0435\u0440\u0445 clearing",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "VRC-01",
+      "title": "\u041f\u0435\u0440\u0432\u0430\u044f \u043f\u043e\u043b\u0435\u0437\u043d\u0430\u044f \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0435\u043c\u0430\u044f \u0443\u0441\u043b\u0443\u0433\u0430",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "VRC-02",
+      "title": "\u041a\u043e\u043d\u043a\u0443\u0440\u0435\u043d\u0446\u0438\u044f \u043f\u043e\u0441\u0442\u0430\u0432\u0449\u0438\u043a\u043e\u0432 \u0441 \u043f\u043e\u043b\u043d\u043e\u0439 \u0446\u0435\u043d\u043e\u0439 \u043f\u0440\u043e\u0432\u0435\u0440\u043a\u0438",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "VRC-03",
+      "title": "\u041a\u0430\u043a\u0438\u0435 \u0440\u0430\u0441\u0447\u0451\u0442\u044b \u0432\u044b\u0433\u043e\u0434\u043d\u043e \u043f\u0440\u043e\u0432\u0435\u0440\u044f\u0442\u044c \u0438 \u043f\u043e\u043a\u0443\u043f\u0430\u0442\u044c",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "MML-01",
+      "title": "Dynamic fee \u043f\u0440\u043e\u0442\u0438\u0432 \u0444\u0438\u043a\u0441\u0438\u0440\u043e\u0432\u0430\u043d\u043d\u043e\u0439 \u043a\u043e\u043c\u0438\u0441\u0441\u0438\u0438",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "MML-02",
+      "title": "\u041f\u0440\u0430\u0432\u0438\u043b\u0430 batch auction \u0438 allocation",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "MML-03",
+      "title": "Custom accounting \u0438 \u0431\u0443\u0434\u0443\u0449\u0438\u0435 \u0444\u0438\u043d\u0430\u043d\u0441\u043e\u0432\u044b\u0435 \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u044b",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/rnd3_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "PS-01",
+      "title": "Data coverage and repair",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "PS-02",
+      "title": "Compute scaling",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "PS-03",
+      "title": "Conflict-aware selection",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "PS-04",
+      "title": "Joint two-path capacity",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "PS-05",
+      "title": "Correlation falsification",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "PS-06",
+      "title": "Market-maker economics",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "PS-07",
+      "title": "Useful service procurement",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "PS-08",
+      "title": "Forward-shadow readiness",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "SCALE-01",
+      "title": "\u041f\u0435\u0440\u0435\u043d\u043e\u0441 \u043e\u0434\u043d\u043e\u0439 market grammar \u043d\u0430 \u0432\u0442\u043e\u0440\u0443\u044e \u043f\u043b\u043e\u0449\u0430\u0434\u043a\u0443",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/scale_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "SCALE-02",
+      "title": "\u041f\u043e\u0440\u0442\u0444\u0435\u043b\u044c \u0432\u043e\u0437\u043c\u043e\u0436\u043d\u043e\u0441\u0442\u0435\u0439 \u0438 \u043e\u0431\u0449\u0438\u0435 \u043e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d\u0438\u044f",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/scale_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "SCALE-03",
+      "title": "\u041e\u0433\u0440\u0430\u043d\u0438\u0447\u0435\u043d\u043d\u0430\u044f \u0430\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0437\u0430\u0446\u0438\u044f R&D",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/scale_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "SCALE-04",
+      "title": "\u0423\u0441\u0442\u043e\u0439\u0447\u0438\u0432\u043e\u0441\u0442\u044c \u043f\u0440\u0435\u0438\u043c\u0443\u0449\u0435\u0441\u0442\u0432\u0430 \u043f\u0440\u0438 \u043a\u043e\u043d\u043a\u0443\u0440\u0435\u043d\u0446\u0438\u0438",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/scale_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    },
+    {
+      "id": "SCALE-05",
+      "title": "\u041f\u0440\u043e\u0432\u0435\u0440\u043a\u0430 \u043f\u0440\u043e\u0434\u0443\u043a\u0442\u0430 \u0438 \u0432\u044b\u0431\u043e\u0440 \u0441\u043b\u0435\u0434\u0443\u044e\u0449\u0435\u0433\u043e \u043a\u043b\u0430\u0441\u0441\u0430",
+      "status": "EXPERIMENT_NOT_RUN_AS_SPECIFIED",
+      "acceptance_closed": false,
+      "design_source": "docs/web3-market-scale/design-input/data/scale_experiments.json",
+      "remaining": "Implemented synthetic helpers are not execution of the complete registered corpus/advance gate."
+    }
+  ],
+  "archive_acceptance_count": 189,
+  "archive_acceptance_cases": [
+    {
+      "id": "T01",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T02",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T03",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T04",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T05",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T06",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T07",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T08",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T09",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T10",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T11",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T12",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T13",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T14",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T15",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T16",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T17",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T18",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T19",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T20",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T21",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T22",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T23",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T24",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T25",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T26",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T27",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T28",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T29",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T30",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T31",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T32",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T33",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T34",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T35",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T36",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T37",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T38",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T39",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T40",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T41",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T42",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T43",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T44",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T45",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T46",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T47",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T48",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T49",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T50",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T51",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T52",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T53",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T54",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T55",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T56",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T57",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T58",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T59",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T60",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T61",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T62",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T63",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T64",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T65",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T66",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T67",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T68",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T69",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T70",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T71",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T72",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T73",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T74",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T75",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T76",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T77",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T78",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T79",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T80",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T81",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T82",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T83",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T84",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T85",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T86",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T87",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T88",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "T89",
+      "design_source": "docs/web3-market-scale/design-input/data/acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-01",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-02",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-03",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-04",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-05",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-06",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-07",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-08",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-09",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-10",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-11",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-12",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-13",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-14",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-15",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-16",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-17",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-18",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-19",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-20",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-21",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-22",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-23",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-24",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-25",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-26",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-27",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-28",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-29",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-30",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-31",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-32",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-33",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-34",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-35",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "DT-36",
+      "design_source": "docs/web3-market-scale/design-input/data/deep_web3_acceptance.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-001",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-002",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_exact_cpmm_capacity.py::test_zero_output_sizing_point_does_not_abort_later_profitable_points",
+        "tests/test_exact_cpmm_capacity.py::test_amount_local_zero_cannot_hide_an_invalid_later_pool",
+        "tests/test_pr118_non_monotonic_sizing.py::test_unexpected_sizing_failure_propagates"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-003",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-004",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-005",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-006",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-007",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-008",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-009",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-010",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-011",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-012",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-013",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-014",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_absolute_orderbook_stream.py::test_absolute_level_updates_replace_remove_and_gap_blocks_frames"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-015",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-016",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-017",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-018",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-019",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-020",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-021",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-022",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-023",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-024",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-025",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_cpmm_split_replay.py::test_shared_pool_is_repriced_after_first_branch_and_replay_is_immutable",
+        "tests/test_cpmm_split_replay.py::test_joint_solver_matches_independent_integer_shared_reserve_oracle"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-026",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_cpmm_split_replay.py::test_joint_solver_matches_independent_integer_shared_reserve_oracle"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-027",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-028",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-029",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_agg05_conflict_scheduler.py::test_read_write_conflicts_are_symmetric_but_shared_reads_are_parallel"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-030",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-031",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_shadow_parallel_authority.py::test_finite_portfolio_beats_greedy_fixture_and_common_payer_blocks_parallelism",
+        "tests/test_shadow_parallel_authority.py::test_simultaneous_resource_claims_have_one_winner"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-032",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-033",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-034",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-035",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-036",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-037",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-038",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-039",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-040",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-041",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_shadow_parallel_authority.py::test_finite_portfolio_beats_greedy_fixture_and_common_payer_blocks_parallelism"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-042",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_shadow_parallel_authority.py::test_finite_portfolio_beats_greedy_fixture_and_common_payer_blocks_parallelism"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-043",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_joint_scenario_portfolio.py::test_common_tail_risk_and_diversification_are_evaluated_jointly"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-044",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-045",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-046",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "IMPLEMENTED_OFFLINE_TEST_MAPPING",
+      "test_mapping": [
+        "tests/test_shadow_clearing_funding.py::test_funding_is_revision_bound_and_repayment_is_per_asset"
+      ],
+      "scope_note": "Mapping to local/model regression evidence; not live qualification. See verification.json for executed test results."
+    },
+    {
+      "id": "PT-047",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-048",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-049",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-050",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-051",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-052",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-053",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-054",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-055",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-056",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-057",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-058",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-059",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-060",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-061",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-062",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-063",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    },
+    {
+      "id": "PT-064",
+      "design_source": "docs/web3-market-scale/design-input/data/parallel_acceptance_cases.json",
+      "status": "NOT_CERTIFIED_AS_ARCHIVE_CASE",
+      "test_mapping": null
+    }
+  ],
+  "verification_evidence": "verification.json",
+  "mapped_archive_case_count": 10
+}

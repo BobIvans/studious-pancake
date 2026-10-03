@@ -1,0 +1,51 @@
+[
+  {
+    "id": "SCALE-01",
+    "title": "Перенос одной market grammar на вторую площадку",
+    "deps": [
+      "RD-00"
+    ],
+    "test": "Выбрать MC-01 или MC-02 и2 независимых implementations. Одинаковая semantics suite, но собственные rights/state/fee adapters. Измерить время квалификации и долю переиспользованного кода; наличие общего интерфейса не substitute protocol proof.",
+    "gate": "Каждый adapter проходит same invariants и свои independent vectors; missing model остаётся blocked."
+  },
+  {
+    "id": "SCALE-02",
+    "title": "Портфель возможностей и общие ограничения",
+    "deps": [
+      "CLR-02"
+    ],
+    "test": "До18 уже проверенных candidate points как существующий exact portfolio bound. Общие provider quotas, collateral, inventory, pool/custody/issuer exposure и compute. Compare greedy vs existing allocator; joint scenarios считать отдельно, не называть сумму tail numbers CVaR.",
+    "gate": "Неизвестный resource key запрещён; один shared pool не расходуется дважды; scenario risk подтверждён выбранной явной моделью."
+  },
+  {
+    "id": "SCALE-03",
+    "title": "Ограниченная автоматизация R&D",
+    "deps": [
+      "RD-00"
+    ],
+    "test": "Finite source snapshots → typed candidate dossier → reproducible experiment plan → replay → measured report. Новая source/schema/model revision инвалидирует связанные results. Пределы IO/CPU/storage устанавливаются до запуска.",
+    "gate": "Proposed hypothesis не становится qualified сама из-за уверенного текста; никаких remote mutations, pay/order/send действий."
+  },
+  {
+    "id": "SCALE-04",
+    "title": "Устойчивость преимущества при конкуренции",
+    "deps": [
+      "CLR-01",
+      "VRC-02",
+      "MML-01"
+    ],
+    "test": "Использовать existing synthetic ecology owner: stress competing solvers, latency, same-source crowding, inventory congestion и external demand response. Compare benefit per customer/useful result after data/compute/verification cost.",
+    "gate": "Synthetic crowding не выдаётся за измеренный live market; positive result переживает объявленные holdout regimes либо записывается negative."
+  },
+  {
+    "id": "SCALE-05",
+    "title": "Проверка продукта и выбор следующего класса",
+    "deps": [
+      "VRC-03",
+      "SCALE-01",
+      "SCALE-04"
+    ],
+    "test": "План исследования willingness to pay/повторного использования: выбрать одного типа клиента и measurable workflow. Сравнить benefit с интеграционными/operation/support затратами. Без сообщений/платежей сейчас; demand UNKNOWN.",
+    "gate": "Следующий класс выбирается по measured marginal value и доступным evidence, а не по TVL/числу функций/числу PR."
+  }
+]

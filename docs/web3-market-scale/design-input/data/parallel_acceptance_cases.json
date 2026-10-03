@@ -1,0 +1,578 @@
+[
+  {
+    "id": "PT-001",
+    "package_id": "PM-01",
+    "name": "Canonical identity",
+    "given": "Same ticker on two chains or token programs",
+    "expected": "Reject cross-identity coupling even if decimals match",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-002",
+    "package_id": "PM-01",
+    "name": "Amount-local rejection",
+    "given": "First amount has zero/negative output; later amount is valid",
+    "expected": "Return a per-amount reason and retain valid samples; unknown state rejects all affected samples",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-003",
+    "package_id": "PM-01",
+    "name": "Sizing owner",
+    "given": "SOL/WSOL and USDC amounts passed to PR118 boundary",
+    "expected": "Lamports accepted only with proper identity; other units require an explicit reviewed owner extension",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-004",
+    "package_id": "PM-01",
+    "name": "Route invariants",
+    "given": "Reordered edges, repeated venue, stale leg and slot mismatch fixtures",
+    "expected": "Stable semantic ID where appropriate; changed evidence ID; invalid route rejects without quote scaling",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-005",
+    "package_id": "PM-02",
+    "name": "Stock versus flow",
+    "given": "TVL, OI, volume and stablecoin cap loaded together",
+    "expected": "Store distinct metric types; aggregation into one size is invalid",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-006",
+    "package_id": "PM-02",
+    "name": "Routed flow",
+    "given": "Aggregator hop and underlying DEX fill describe one trade",
+    "expected": "Underlying gross volume and user flow remain separate without double counting",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-007",
+    "package_id": "PM-02",
+    "name": "Available-at",
+    "given": "A revised historical series appears after the research cutoff",
+    "expected": "Earlier decision receives only the earlier available version",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-008",
+    "package_id": "PM-02",
+    "name": "Missing coverage",
+    "given": "A venue disappears from one source",
+    "expected": "Coverage decreases or is unknown; absent data never becomes zero activity",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-009",
+    "package_id": "PM-03",
+    "name": "Retry budget",
+    "given": "One job causes three physical attempts and two billable responses",
+    "expected": "Charge actual request/credit units through the existing authority",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-010",
+    "package_id": "PM-03",
+    "name": "Entitlement expiry",
+    "given": "Provider key plan or license generation changes",
+    "expected": "Cancel or re-admit affected jobs; do not keep stale rights",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-011",
+    "package_id": "PM-03",
+    "name": "Unlimited free assumption",
+    "given": "Mainnet paid stream selected by a free profile",
+    "expected": "Reject profile or require separately budgeted eligible source; no purchase",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-012",
+    "package_id": "PM-03",
+    "name": "Quota fairness",
+    "given": "Discovery flood competes with near-deadline hot work",
+    "expected": "Bound queue and preserve policy fairness without unbounded retries",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-013",
+    "package_id": "PM-04",
+    "name": "Orderbook gap",
+    "given": "Snapshot and sequence updates have a missing range",
+    "expected": "Invalidate book and dependent candidates until documented resync",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-014",
+    "package_id": "PM-04",
+    "name": "Absolute level size",
+    "given": "Coinbase level size changes from 7 to 3",
+    "expected": "New size is 3, not 10; zero removes it",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-015",
+    "package_id": "PM-04",
+    "name": "Fork/reorg",
+    "given": "Removed log or Solana fork invalidates an applied update",
+    "expected": "Retract dependent evidence and reconstruct from valid ancestor",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-016",
+    "package_id": "PM-04",
+    "name": "Crash restore",
+    "given": "Process dies between raw append, state application and cursor commit",
+    "expected": "Recovery reconstructs a consistent hash without skipping or double applying",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-017",
+    "package_id": "PM-05",
+    "name": "Rights aliases",
+    "given": "Two stablecoins share peg text but different redemption access",
+    "expected": "Do not create an exact conversion relation",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-018",
+    "package_id": "PM-05",
+    "name": "Maturity claim",
+    "given": "PT/YT or RWA claim pays later",
+    "expected": "Separate dated cashflow from immediate assets and flashloan closure",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-019",
+    "package_id": "PM-05",
+    "name": "Vector transformation",
+    "given": "LP split has two outputs and one input",
+    "expected": "All asset deltas and conservation constraints explicit; no single-edge scalar approximation",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-020",
+    "package_id": "PM-05",
+    "name": "Eligibility drift",
+    "given": "Whitelist or product cap changes",
+    "expected": "Invalidate relation eligibility generation before candidate admission",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-021",
+    "package_id": "PM-06",
+    "name": "Worker determinism",
+    "given": "Same valid frame searched with 1, 2 and 4 workers",
+    "expected": "Same bounded candidate set and stable ordering, independent of completion order",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-022",
+    "package_id": "PM-06",
+    "name": "Bound exhaustion",
+    "given": "Expansion/candidate limit reached",
+    "expected": "Report truncation and explored coverage; no full-graph completeness claim",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-023",
+    "package_id": "PM-06",
+    "name": "Targeted invalidation",
+    "given": "One pool changes while an unrelated component is stable",
+    "expected": "Invalidate all dependent candidates and preserve unaffected work",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-024",
+    "package_id": "PM-06",
+    "name": "Evidence identity",
+    "given": "Same semantic route with new state or amount",
+    "expected": "Semantic/evidence identities handled separately without duplicated logical opportunity",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-025",
+    "package_id": "PM-07",
+    "name": "Shared pool capacity",
+    "given": "Two paths draw from the same pool reserves",
+    "expected": "Joint transitions recompute outputs; independent quote sums rejected",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-026",
+    "package_id": "PM-07",
+    "name": "Order sensitivity",
+    "given": "A→B and B→A path execution orders differ",
+    "expected": "Evaluate both bounded orders and bind selected evidence to order",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-027",
+    "package_id": "PM-07",
+    "name": "Finite optimality",
+    "given": "Best amount lies outside sampled integer grid",
+    "expected": "Report best sampled point only; do not assert continuous optimum",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-028",
+    "package_id": "PM-07",
+    "name": "Cost additivity",
+    "given": "Extra path repeats base fee assumption or adds one fixed cost",
+    "expected": "Charge correct transaction-level and per-leg costs without double counting",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-029",
+    "package_id": "PM-08",
+    "name": "Read/write locks",
+    "given": "One candidate reads an account another writes",
+    "expected": "Conflict even if their writable sets do not intersect",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-030",
+    "package_id": "PM-08",
+    "name": "Read/read sharing",
+    "given": "Independent routes read the same immutable/versioned oracle",
+    "expected": "No lock conflict solely for read/read; stale oracle still rejects",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-031",
+    "package_id": "PM-08",
+    "name": "Lender and payer",
+    "given": "Disjoint swap pools share reserve cash or fee payer",
+    "expected": "Conflict/capacity restriction survives separate worker IDs",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-032",
+    "package_id": "PM-08",
+    "name": "Hidden accounts",
+    "given": "Adapter omits a hook, fee recipient or shared margin account",
+    "expected": "Qualification rejects incomplete footprint instead of assuming independence",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-033",
+    "package_id": "PM-09",
+    "name": "Two-process reservation race",
+    "given": "Two workers reserve same attempt identity",
+    "expected": "Exactly one authoritative reservation and version transition",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-034",
+    "package_id": "PM-09",
+    "name": "Zombie worker",
+    "given": "Old worker completes after a new fencing generation is granted",
+    "expected": "Reject old output and retain current authority state",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-035",
+    "package_id": "PM-09",
+    "name": "Pre-submission expiry",
+    "given": "Pure compute job expires before any external side effect",
+    "expected": "Release only its allowed reservations through canonical authority",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-036",
+    "package_id": "PM-09",
+    "name": "Unknown external outcome",
+    "given": "Future lifecycle evidence cannot determine settlement",
+    "expected": "Keep economic hold; compute TTL never reuses uncertain funds",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-037",
+    "package_id": "PM-10",
+    "name": "Overload",
+    "given": "Input rate exceeds processing budget for sustained interval",
+    "expected": "Bound memory/queue and expose dropped/coalesced work without hiding state gaps",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-038",
+    "package_id": "PM-10",
+    "name": "Tail deadline",
+    "given": "A high-score job finishes after its route deadline",
+    "expected": "Discard admission despite valid old simulation",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-039",
+    "package_id": "PM-10",
+    "name": "Cache identity",
+    "given": "Same pool amounts but decoder/fee/frame version changed",
+    "expected": "Cache miss or invalidation; never reuse evidence across versions",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-040",
+    "package_id": "PM-10",
+    "name": "Network partition",
+    "given": "Remote stateless worker loses coordinator access",
+    "expected": "Cannot reserve or promote work locally; results remain unadmitted",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-041",
+    "package_id": "PM-11",
+    "name": "Finite selection optimum",
+    "given": "Six-route illustrative fixture in this archive",
+    "expected": "Selected B,C,E score20 versus greedy18 at max3; shared payer admits only best single candidate",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-042",
+    "package_id": "PM-11",
+    "name": "Missing budget dimension",
+    "given": "Claim includes margin or data quota absent from supplied budgets",
+    "expected": "Reject incomplete budget rather than implicitly treating it as unlimited",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-043",
+    "package_id": "PM-11",
+    "name": "Correlated stress",
+    "given": "Two strategies depend on same oracle/provider/collateral",
+    "expected": "Joint scenario loss includes common shock; additive tail score not labeled CVaR",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-044",
+    "package_id": "PM-11",
+    "name": "Sequential reuse",
+    "given": "Loan repaid in one modeled wave then another route considered",
+    "expected": "Recompute new state/capacity; do not use pending or failed repayment as cash",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-045",
+    "package_id": "PM-12",
+    "name": "Flash premium change",
+    "given": "Governance or reserve revision changes premium",
+    "expected": "Recompute exact repayment; reject stale terms binding",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-046",
+    "package_id": "PM-12",
+    "name": "Multiasset debt",
+    "given": "One borrowed asset is short by one atom but USD total is positive",
+    "expected": "Reject closure; no cross-asset scalar offset",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-047",
+    "package_id": "PM-12",
+    "name": "Shared lender cash",
+    "given": "Several Morpho markets map to one contract token balance",
+    "expected": "Count capacity once under common resource identity",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-048",
+    "package_id": "PM-12",
+    "name": "Scope boundary",
+    "given": "Flash principal expected to persist across a bridge, bundle transaction or resting order",
+    "expected": "Reject unsupported funding scope; inventory path remains separate",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-049",
+    "package_id": "PM-13",
+    "name": "Look-ahead join",
+    "given": "Faster feed arrives before a delayed source timestamp suggests",
+    "expected": "Use available_at plus transport history; no future observation enters features",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-050",
+    "package_id": "PM-13",
+    "name": "Multiple testing",
+    "given": "Many pairs/lag windows tried and only winners retained",
+    "expected": "Register all trials and control chosen test family with dependence-aware validation",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-051",
+    "package_id": "PM-13",
+    "name": "Serial dependence",
+    "given": "Many overlapping trades derived from one shock",
+    "expected": "Report effective independent episodes and purged/embargoed holdout",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-052",
+    "package_id": "PM-13",
+    "name": "Null and latency controls",
+    "given": "Independent series and injected feed delays generate apparent lead/lag",
+    "expected": "Reject unstable relation or mark insufficient evidence; cost-adjusted result remains separate",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-053",
+    "package_id": "PM-14",
+    "name": "Queue optimism",
+    "given": "Quote touches best price without consuming queue ahead",
+    "expected": "No automatic full fill; simulate explicit queue bounds",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-054",
+    "package_id": "PM-14",
+    "name": "Cancel race",
+    "given": "Market moves during cancel acknowledgment delay",
+    "expected": "Account for fills during delay and persist residual inventory",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-055",
+    "package_id": "PM-14",
+    "name": "Cash classification",
+    "given": "Resting maker quote funded only by temporary flash principal",
+    "expected": "Reject funding plan; owned inventory/eligible credit and collateral required",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-056",
+    "package_id": "PM-14",
+    "name": "Markout accounting",
+    "given": "Earned fees accompany adverse price moves",
+    "expected": "Report total mark-to-market PnL, hedges and inventory costs, not fees alone",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-057",
+    "package_id": "PM-15",
+    "name": "Per-user clearing",
+    "given": "Aggregate surplus positive but one order limit violated",
+    "expected": "Reject allocation; collective objective cannot override individual constraints",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-058",
+    "package_id": "PM-15",
+    "name": "Compute evidence fraud/error",
+    "given": "Provider signs result that fails independent semantic check",
+    "expected": "Reject payment eligibility in model; signature alone is not correctness",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-059",
+    "package_id": "PM-15",
+    "name": "Strategic response",
+    "given": "Mechanism changes incentives from frozen historical flow",
+    "expected": "Report sensitivity over response models, not a causal guarantee",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-060",
+    "package_id": "PM-15",
+    "name": "Subsidy removal",
+    "given": "Service appears used only while rewarded",
+    "expected": "Separate paid retained demand from incentives and internal self-trades",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-061",
+    "package_id": "PM-16",
+    "name": "New-chain identity",
+    "given": "Chain name/ID matches but genesis or deployment differs",
+    "expected": "New qualification required; never auto-enable by ticker/chain label",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-062",
+    "package_id": "PM-16",
+    "name": "All-free coverage claim",
+    "given": "Catalog contains public, paid and unverified endpoints",
+    "expected": "Expose access tiers and tested coverage denominator; no full-market claim",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-063",
+    "package_id": "PM-16",
+    "name": "Disabled runtime boundary",
+    "given": "Research profile loaded with orderbook or live options",
+    "expected": "No activation; existing disabled strategy and execution boundary preserved",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  },
+  {
+    "id": "PT-064",
+    "package_id": "PM-16",
+    "name": "Scale success criterion",
+    "given": "More workers raise requests but not useful timely evidence",
+    "expected": "Fail scale gate or reduce workers; no success based on raw throughput alone",
+    "status": "DESIGNED_NOT_RUN",
+    "test_implementation_created": false
+  }
+]

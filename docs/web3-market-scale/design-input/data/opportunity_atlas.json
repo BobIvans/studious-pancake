@@ -1,0 +1,792 @@
+{
+  "schema": "research.opportunity-atlas.v1",
+  "complete_market_claim": false,
+  "profitability_status": "UNKNOWN",
+  "record_count": 28,
+  "opportunities": [
+    {
+      "id": "OP-01",
+      "title": "3/4-hop AMM cycles",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "PRINCIPAL_WITHIN_TX",
+      "settlement_horizon": "ONE_DOMAIN_ONE_TX",
+      "discovery_trigger": "Affected pool updates",
+      "economic_relation_to_prove": "Sequential exact outputs return to the same canonical asset",
+      "minimum_state": [
+        "decoded reserves/ticks",
+        "fees",
+        "slot/block ancestry",
+        "token program"
+      ],
+      "owner_roles": [
+        "graph",
+        "exact",
+        "sizing"
+      ],
+      "main_blocker": "PR562 qualification gaps and adapter coverage",
+      "first_experiment": "DP-01 pinned vectors, then a bounded historical replay",
+      "success_metric": "Amount-valid net surplus after full costs; mismatch and invalidation rates",
+      "research_priority": "P0",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-02",
+      "title": "Two-path split flow",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "PRINCIPAL_WITHIN_TX",
+      "settlement_horizon": "ONE_DOMAIN_ONE_TX",
+      "discovery_trigger": "Single path capacity saturates",
+      "economic_relation_to_prove": "Joint state transitions beat the best single path after extra costs",
+      "minimum_state": [
+        "shared pool state",
+        "path order",
+        "integer allocations"
+      ],
+      "owner_roles": [
+        "split",
+        "exact",
+        "sizing"
+      ],
+      "main_blocker": "SharedExecutionState is not a complete tick/hook state engine",
+      "first_experiment": "DP-02 two paths and both orders",
+      "success_metric": "Incremental exact net benefit over identical-budget single-path baseline",
+      "research_priority": "P0",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-03",
+      "title": "Stable-pair routing",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "PRINCIPAL_WITHIN_TX",
+      "settlement_horizon": "ONE_DOMAIN_ONE_TX",
+      "discovery_trigger": "Executable stable-pair spread",
+      "economic_relation_to_prove": "Close the loop in one actual asset; a peg label alone is insufficient",
+      "minimum_state": [
+        "amplification/curve parameters",
+        "depeg state",
+        "fees"
+      ],
+      "owner_roles": [
+        "graph",
+        "exact",
+        "sizing"
+      ],
+      "main_blocker": "Different invariants and redemption rights",
+      "first_experiment": "Qualify one stable curve with independent vectors",
+      "success_metric": "Residual profit after fees under depeg and imbalance stress",
+      "research_priority": "P1",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-04",
+      "title": "DEX versus immediate mint/redeem",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "ONLY_IMMEDIATE_CONVERSION",
+      "settlement_horizon": "ONE_TX_IF_PERMITTED",
+      "discovery_trigger": "Market price differs from accessible conversion",
+      "economic_relation_to_prove": "Actual same-transaction right converts quantity after fees/caps",
+      "minimum_state": [
+        "identity/rights",
+        "whitelist",
+        "cap",
+        "fee",
+        "conversion state"
+      ],
+      "owner_roles": [
+        "claims",
+        "primary",
+        "sizing"
+      ],
+      "main_blocker": "Access gates, queues or delayed settlement",
+      "first_experiment": "Replay one permission-compatible immediate converter",
+      "success_metric": "Convertible amount and exact closed debt, not NAV discount",
+      "research_priority": "P1",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-05",
+      "title": "Liquidation plus unwind",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "REPAY_THEN_SELL_COLLATERAL",
+      "settlement_horizon": "ONE_DOMAIN_ONE_TX",
+      "discovery_trigger": "Health crosses protocol liquidation boundary",
+      "economic_relation_to_prove": "Seized collateral sale covers debt, penalty/fees and costs",
+      "minimum_state": [
+        "position debt",
+        "oracle validity",
+        "close factor",
+        "collateral book"
+      ],
+      "owner_roles": [
+        "liquidations",
+        "lending",
+        "exact"
+      ],
+      "main_blocker": "Crowded updates and stale borrower state",
+      "first_experiment": "One market deterministic liquidation/unwind replay",
+      "success_metric": "Valid repayable quantity, false positives and modeled cost-adjusted surplus",
+      "research_priority": "P1",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-06",
+      "title": "Wrapper and liquid staking conversions",
+      "classification": "MIXED",
+      "flashloan_role": "IMMEDIATE_LEGS_ONLY",
+      "settlement_horizon": "TX_OR_WITHDRAWAL_QUEUE",
+      "discovery_trigger": "Wrapper exchange-rate residual",
+      "economic_relation_to_prove": "Proven conversion differs from market; queued rights remain dated claims",
+      "minimum_state": [
+        "share rate",
+        "withdraw queue",
+        "access",
+        "slashing/rebase rules"
+      ],
+      "owner_roles": [
+        "claims",
+        "primary",
+        "inventory"
+      ],
+      "main_blocker": "Exchange rate is not guaranteed immediately withdrawable cash",
+      "first_experiment": "Separate wrap/unwrap from queued redemption corpus",
+      "success_metric": "Exact immediate capacity; inventory exposure for delayed path",
+      "research_priority": "P1",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-07",
+      "title": "LP-share mint/burn decomposition",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "IF_ALL_LEGS_CLOSE",
+      "settlement_horizon": "ONE_DOMAIN_ONE_TX",
+      "discovery_trigger": "LP-share market versus underlying vector",
+      "economic_relation_to_prove": "Mint/burn output basket closes every asset obligation",
+      "minimum_state": [
+        "pool assets",
+        "share supply",
+        "exit fees",
+        "rounding"
+      ],
+      "owner_roles": [
+        "claims",
+        "split",
+        "sizing"
+      ],
+      "main_blocker": "Requires vector/hyperedge semantics and shared pool mutation",
+      "first_experiment": "One two-asset share token with integer round trips",
+      "success_metric": "Per-asset conservation and net residual after disposal costs",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-08",
+      "title": "PT/YT/SY split/merge",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "IMMEDIATE_SPLIT_MERGE_ONLY",
+      "settlement_horizon": "TX_OR_MATURITY",
+      "discovery_trigger": "Prices of linked claims diverge",
+      "economic_relation_to_prove": "Product-defined split/merge amounts and exchange rates close the vector",
+      "minimum_state": [
+        "maturity",
+        "SY rate",
+        "PT/YT balances",
+        "product rules"
+      ],
+      "owner_roles": [
+        "claims",
+        "primary",
+        "sizing"
+      ],
+      "main_blocker": "Maturity waiting cannot be flash funded",
+      "first_experiment": "One maturity and immediate split/merge replay",
+      "success_metric": "Repayable closed vector; dated residuals separately valued",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-09",
+      "title": "Complete conditional-outcome sets",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "ONLY_ATOMIC_COMPLETE_SET",
+      "settlement_horizon": "TX_OR_RESOLUTION",
+      "discovery_trigger": "Complete-set price differs from collateral",
+      "economic_relation_to_prove": "Exhaustive mutually exclusive partition with matching collateral and fees",
+      "minimum_state": [
+        "condition ID",
+        "partition",
+        "collateral",
+        "resolution state",
+        "book depth"
+      ],
+      "owner_roles": [
+        "claims",
+        "orderbook",
+        "inventory"
+      ],
+      "main_blocker": "Similar event text is not the same settlement condition",
+      "first_experiment": "Pinned identical-condition split/merge fixtures",
+      "success_metric": "Complete-set conservation and accessible full-depth capacity",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-10",
+      "title": "Debt refinance and collateral swap",
+      "classification": "SERVICE_OR_COST_SAVING",
+      "flashloan_role": "INTRA_TX_BRIDGE",
+      "settlement_horizon": "TX_WITH_PERSISTENT_NEW_DEBT",
+      "discovery_trigger": "Financing spread or borrower demand",
+      "economic_relation_to_prove": "Interest savings exceed switch cost while health and permissions hold",
+      "minimum_state": [
+        "borrow terms",
+        "collateral rights",
+        "fees",
+        "health"
+      ],
+      "owner_roles": [
+        "lending",
+        "evm_lending",
+        "primary"
+      ],
+      "main_blocker": "New debt is collateralized funding, not flashloan profit",
+      "first_experiment": "One approved-position model; no borrower action",
+      "success_metric": "Break-even holding time and post-switch health stress",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-11",
+      "title": "Intent/batch clearing",
+      "classification": "EXECUTION_SERVICE",
+      "flashloan_role": "OPTIONAL_BRIDGE_LIQUIDITY",
+      "settlement_horizon": "AUCTION_SPECIFIC",
+      "discovery_trigger": "Compatible user obligations",
+      "economic_relation_to_prove": "Every user limit and surplus rule survives netting and routing",
+      "minimum_state": [
+        "signed order semantics",
+        "expiry",
+        "allowances",
+        "auction rules"
+      ],
+      "owner_roles": [
+        "claims",
+        "split",
+        "service"
+      ],
+      "main_blocker": "Private flow and solver eligibility are not public market data",
+      "first_experiment": "CLR-01/02 preserve per-user constraints",
+      "success_metric": "User surplus and solver economics versus route-only baseline",
+      "research_priority": "P1",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-12",
+      "title": "AMM/CLOB exact-depth loop",
+      "classification": "ATOMIC_CONDITIONAL",
+      "flashloan_role": "IF_SAME_DOMAIN_SETTLEMENT",
+      "settlement_horizon": "ONE_TX_IF_SUPPORTED",
+      "discovery_trigger": "Depth versus AMM residual",
+      "economic_relation_to_prove": "Lot-rounded consumed amounts and residual inventory close exact loop",
+      "minimum_state": [
+        "verified full depth",
+        "lot/tick",
+        "fees",
+        "AMM state"
+      ],
+      "owner_roles": [
+        "orderbook",
+        "graph",
+        "sizing",
+        "strategy_gate"
+      ],
+      "main_blocker": "Verified subscriptions absent; strategy remains disabled",
+      "first_experiment": "Fixture-to-verified-subscription qualification only",
+      "success_metric": "No fills beyond known depth; dust and residual are explicit",
+      "research_priority": "P1",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-13",
+      "title": "CEX–DEX basis",
+      "classification": "INVENTORY_STRATEGY",
+      "flashloan_role": "LOCAL_ATOMIC_LEG_ONLY",
+      "settlement_horizon": "NON_ATOMIC",
+      "discovery_trigger": "Cross-venue executable bid/ask residual",
+      "economic_relation_to_prove": "Inventory, withdrawal, hedge and fees make spread realizable",
+      "minimum_state": [
+        "both books",
+        "balances",
+        "transfer status",
+        "fees"
+      ],
+      "owner_roles": [
+        "inventory",
+        "families"
+      ],
+      "main_blocker": "Transfers and fills cannot be financed by one cross-venue flashloan",
+      "first_experiment": "Replay matched timestamps and partial fills",
+      "success_metric": "Inventory drawdown, completion time and tail-adjusted PnL",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-14",
+      "title": "Spot–perpetual funding basis",
+      "classification": "INVENTORY_STRATEGY",
+      "flashloan_role": "NOT_CARRY_FINANCING",
+      "settlement_horizon": "HOURS_TO_DAYS",
+      "discovery_trigger": "Funding and executable basis",
+      "economic_relation_to_prove": "Hedged exposure includes index differences, fees and margin cashflows",
+      "minimum_state": [
+        "funding schedule",
+        "index",
+        "mark",
+        "books",
+        "margin"
+      ],
+      "owner_roles": [
+        "inventory",
+        "families",
+        "allocation"
+      ],
+      "main_blocker": "Variable funding, liquidation and collateral costs",
+      "first_experiment": "Point-in-time funding and basis with adverse changes",
+      "success_metric": "Net realized carry and margin drawdown; no annualized promise",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-15",
+      "title": "Perpetual and dated-future calendars",
+      "classification": "INVENTORY_STRATEGY",
+      "flashloan_role": "NOT_TERM_FINANCING",
+      "settlement_horizon": "TO_MATURITY_OR_CLOSE",
+      "discovery_trigger": "Same-underlying maturity curve dislocation",
+      "economic_relation_to_prove": "Match multiplier, settlement index and expiry before hedging",
+      "minimum_state": [
+        "contract specs",
+        "expiry",
+        "books",
+        "borrow"
+      ],
+      "owner_roles": [
+        "claims",
+        "inventory",
+        "families"
+      ],
+      "main_blocker": "Different settlement definitions and hedge timing",
+      "first_experiment": "One normalized curve and staggered fills",
+      "success_metric": "Term-normalized carry net of financing and close costs",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-16",
+      "title": "Options parity and vertical spreads",
+      "classification": "INVENTORY_STRATEGY",
+      "flashloan_role": "RARE_ATOMIC_SUBSET_ONLY",
+      "settlement_horizon": "EXPIRY_OR_CLOSE",
+      "discovery_trigger": "Linked option prices",
+      "economic_relation_to_prove": "Same strike/expiry/style/collateral and enforceable payoff identity",
+      "minimum_state": [
+        "option rights",
+        "exercise rules",
+        "margin",
+        "full depth"
+      ],
+      "owner_roles": [
+        "claims",
+        "inventory",
+        "families"
+      ],
+      "main_blocker": "Exercise, collateral and settlement differ across products",
+      "first_experiment": "Matched-contract static parity plus fill stress",
+      "success_metric": "Payoff-vector residual and capital consumed under shocks",
+      "research_priority": "P3",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-17",
+      "title": "Fixed/floating rate claims",
+      "classification": "INVENTORY_STRATEGY",
+      "flashloan_role": "ATOMIC_ENTRY_ONLY",
+      "settlement_horizon": "DATED_CASHFLOWS",
+      "discovery_trigger": "Rate curve differs from funding expectations",
+      "economic_relation_to_prove": "Coupon/reset conventions, maturity and credit terms match",
+      "minimum_state": [
+        "reset schedule",
+        "rate oracle",
+        "margin",
+        "cashflows"
+      ],
+      "owner_roles": [
+        "claims",
+        "inventory"
+      ],
+      "main_blocker": "Future rate is uncertain; collateral needed throughout",
+      "first_experiment": "Boros/Midnight research recipe with dated cashflows",
+      "success_metric": "Net carry distribution and collateral stress",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-18",
+      "title": "Cross-chain intent and rebalancing",
+      "classification": "INVENTORY_SERVICE",
+      "flashloan_role": "LOCAL_SETTLEMENT_ONLY",
+      "settlement_horizon": "ASYNC_REIMBURSEMENT",
+      "discovery_trigger": "Demand/imbalance across settlement domains",
+      "economic_relation_to_prove": "Destination fill and source reimbursement are separate obligations",
+      "minimum_state": [
+        "proof/finality",
+        "relayer inventory",
+        "fees",
+        "caps"
+      ],
+      "owner_roles": [
+        "inventory",
+        "primary",
+        "claims"
+      ],
+      "main_blocker": "Fill is not reimbursement; access and bridge delay",
+      "first_experiment": "CB cross-chain recipe with delayed proof and failed reimbursement",
+      "success_metric": "Capital-days tied up and completion distribution",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-19",
+      "title": "RWA/NAV and issuer redemption",
+      "classification": "INVENTORY_OR_ACCESS_GATED",
+      "flashloan_role": "ONLY_PROVEN_INSTANT_SUBSET",
+      "settlement_horizon": "BUSINESS_CALENDAR",
+      "discovery_trigger": "Onchain market differs from eligible redemption",
+      "economic_relation_to_prove": "Legal/economic rights, settlement calendar and fees match",
+      "minimum_state": [
+        "eligibility",
+        "issuer calendar",
+        "NAV timestamp",
+        "redemption queue"
+      ],
+      "owner_roles": [
+        "claims",
+        "primary",
+        "inventory"
+      ],
+      "main_blocker": "Transferable token does not grant redemption access",
+      "first_experiment": "One product rights dossier, no financial action",
+      "success_metric": "Eligible capacity and time-adjusted net value; unknown rights reject",
+      "research_priority": "P3",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-20",
+      "title": "Passive CLOB market making",
+      "classification": "MARKET_MAKING",
+      "flashloan_role": "NOT_RESTING_INVENTORY",
+      "settlement_horizon": "CONTINUOUS_INVENTORY",
+      "discovery_trigger": "Spread compensates adverse selection and inventory",
+      "economic_relation_to_prove": "Expected fill edge exceeds fees, hedge and markout costs",
+      "minimum_state": [
+        "queue depth",
+        "trades",
+        "cancel timing",
+        "inventory"
+      ],
+      "owner_roles": [
+        "inventory",
+        "orderbook",
+        "families"
+      ],
+      "main_blocker": "Queue position, partial fills and cancel latency",
+      "first_experiment": "Event replay with pessimistic queue and hedge model",
+      "success_metric": "Fill-conditioned markout and inventory-normalized PnL",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-21",
+      "title": "RFQ market making",
+      "classification": "MARKET_MAKING",
+      "flashloan_role": "ONLY_ATOMIC_HEDGE",
+      "settlement_horizon": "QUOTE_LIFETIME_PLUS_HEDGE",
+      "discovery_trigger": "Eligible request for a price",
+      "economic_relation_to_prove": "Quote terms bind amount/expiry and financed hedge remains valid",
+      "minimum_state": [
+        "RFQ eligibility",
+        "quote lifetime",
+        "hedge depth",
+        "inventory"
+      ],
+      "owner_roles": [
+        "inventory",
+        "service",
+        "claims"
+      ],
+      "main_blocker": "Customer flow, adverse selection and eligibility",
+      "first_experiment": "Offline request corpus with stale quote stress",
+      "success_metric": "Win rate, accepted-quote markout and net hedge economics",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-22",
+      "title": "Concentrated-liquidity market making",
+      "classification": "MARKET_MAKING",
+      "flashloan_role": "NOT_PERSISTENT_LP_CAPITAL",
+      "settlement_horizon": "CONTINUOUS_INVENTORY",
+      "discovery_trigger": "Fee opportunities across price ranges",
+      "economic_relation_to_prove": "LP fees offset inventory revaluation, adverse selection and rebalances",
+      "minimum_state": [
+        "ticks",
+        "liquidity changes",
+        "fees",
+        "price path"
+      ],
+      "owner_roles": [
+        "inventory",
+        "families",
+        "allocation"
+      ],
+      "main_blocker": "Fees alone hide loss-versus-rebalancing and turnover cost",
+      "first_experiment": "Event-level LP versus passive/hedged baselines",
+      "success_metric": "Full mark-to-market PnL including costs and locked inventory",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-23",
+      "title": "Private/proprietary AMM quotes",
+      "classification": "CONDITIONAL_QUOTE_SERVICE",
+      "flashloan_role": "ONLY_FIRM_ATOMIC_QUOTE",
+      "settlement_horizon": "QUOTE_SPECIFIC",
+      "discovery_trigger": "Catalog shows material flow on unfamiliar venues",
+      "economic_relation_to_prove": "Firm amount-specific quote and settlement behavior are verifiable",
+      "minimum_state": [
+        "quote provenance",
+        "expiry",
+        "access",
+        "simulation result"
+      ],
+      "owner_roles": [
+        "observations",
+        "ingest",
+        "sizing"
+      ],
+      "main_blocker": "Internal pricing model or state may be unavailable",
+      "first_experiment": "New-venue dossier before any exact-edge promotion",
+      "success_metric": "Quote reproducibility, bounded capacity and fill/model errors",
+      "research_priority": "P1_DISCOVERY_ONLY",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-24",
+      "title": "New-chain market launch",
+      "classification": "MARKET_ADMISSION",
+      "flashloan_role": "ONLY_QUALIFIED_LOCAL_LENDER",
+      "settlement_horizon": "CHAIN_SPECIFIC",
+      "discovery_trigger": "New settlement domain gains organic depth",
+      "economic_relation_to_prove": "Chain identity, finality, token semantics and product rights are pinned",
+      "minimum_state": [
+        "genesis",
+        "deployment revisions",
+        "node access",
+        "organic liquidity"
+      ],
+      "owner_roles": [
+        "raw",
+        "claims",
+        "footprint"
+      ],
+      "main_blocker": "Incentivized volume and launch docs may precede usable markets",
+      "first_experiment": "One-chain read-only coverage/evidence dossier",
+      "success_metric": "Cost per qualified market; no chain created by this plan",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-25",
+      "title": "Cross-venue collateral and shared liquidity",
+      "classification": "CAPITAL_EFFICIENCY_RESEARCH",
+      "flashloan_role": "NOT_UNLIMITED_LEVERAGE",
+      "settlement_horizon": "TX_PLUS_ONGOING_HEALTH",
+      "discovery_trigger": "Same asset supports multiple market surfaces",
+      "economic_relation_to_prove": "Available balance and collateral health hold jointly after every transition",
+      "minimum_state": [
+        "shared wallet/virtual balances",
+        "haircuts",
+        "health",
+        "orders"
+      ],
+      "owner_roles": [
+        "claims",
+        "allocation",
+        "inventory"
+      ],
+      "main_blocker": "Virtual liquidity can double count one underlying balance",
+      "first_experiment": "Aqua/P0 composition with shared-resource negative tests",
+      "success_metric": "Net financing reduction with no hidden common exposure",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-26",
+      "title": "Verifiable computation procurement",
+      "classification": "SERVICE_MARKET",
+      "flashloan_role": "NO",
+      "settlement_horizon": "DELIVERY_AND_VERIFICATION",
+      "discovery_trigger": "Repeated paid demand for decoding/simulation/route evidence",
+      "economic_relation_to_prove": "Results bind exact input/revision and independently verified semantics",
+      "minimum_state": [
+        "replay manifest",
+        "service spec",
+        "latency/cost",
+        "rights"
+      ],
+      "owner_roles": [
+        "procurement",
+        "service",
+        "benchmarks"
+      ],
+      "main_blocker": "Current offline toy institution is not product demand",
+      "first_experiment": "VRC-01/02 equal-task verification and no-subsidy demand test design",
+      "success_metric": "Verified useful results per cost; retained demand without subsidy",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-27",
+      "title": "Mechanism-design and clearing laboratory",
+      "classification": "R_AND_D_PRODUCT",
+      "flashloan_role": "NO",
+      "settlement_horizon": "OFFLINE_EXPERIMENT",
+      "discovery_trigger": "Market participants need better execution rules",
+      "economic_relation_to_prove": "Allocation respects individual limits and budget/balance constraints",
+      "minimum_state": [
+        "order flow model",
+        "auction rules",
+        "fee schedule",
+        "counterfactuals"
+      ],
+      "owner_roles": [
+        "claims",
+        "causal",
+        "benchmarks"
+      ],
+      "main_blocker": "Frozen-flow replay misses strategic response",
+      "first_experiment": "MML-01/02 response models and independent holdouts",
+      "success_metric": "Surplus distribution and sensitivity, not an assumed causal gain",
+      "research_priority": "P2",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    },
+    {
+      "id": "OP-28",
+      "title": "Blockspace and data-cost procurement",
+      "classification": "COST_OPTIMIZATION",
+      "flashloan_role": "NO",
+      "settlement_horizon": "QUOTE_OR_SERVICE_WINDOW",
+      "discovery_trigger": "Multiple eligible suppliers meet same work deadline",
+      "economic_relation_to_prove": "Identical service specification, rights and verified output",
+      "minimum_state": [
+        "quotas",
+        "cost invoices",
+        "deadline",
+        "provider dependencies"
+      ],
+      "owner_roles": [
+        "quota",
+        "admission",
+        "procurement"
+      ],
+      "main_blocker": "Cheapest nominal quote may be late, incomplete or correlated failure",
+      "first_experiment": "Equal-budget A/B service bench with outage traces",
+      "success_metric": "Cost per useful verified opportunity and deadline survival",
+      "research_priority": "P1",
+      "evidence": "HYPOTHESIS_NOT_QUALIFIED",
+      "estimated_profit_usd": null,
+      "measured_capacity_atoms": null,
+      "live_enabled": false
+    }
+  ]
+}

@@ -1,0 +1,310 @@
+[
+  {
+    "id": "CB-01",
+    "title": "Exact cycles → shared-state split-flow",
+    "priority": "P0",
+    "classification": "conditional atomic research",
+    "protocol_ids": [
+      "PX-01",
+      "PX-02",
+      "PX-03",
+      "PX-04"
+    ],
+    "work_package_ids": [
+      "WG-06",
+      "WG-07",
+      "WG-10",
+      "WG-11",
+      "WG-12",
+      "WG-21"
+    ],
+    "owner_paths": [
+      "src/strategy/exact_cpmm_capacity.py",
+      "src/direct_venue/cpmm_math.py",
+      "src/economics/non_monotonic_sizing.py",
+      "src/economics/split_flow.py"
+    ],
+    "economic_condition": "Terminal settlement atoms minus repayment and non-embedded costs > 0 for an independently evaluated amount; shared state consumes liquidity once.",
+    "first_experiment": "Сначала 2 synthetic Solana CPMM routes с общим pool и 8 точными суммами: single vs disjoint split vs sequential shared-state split. Затем один квалифицированный новый AMM model, не все PX сразу.",
+    "kill_criteria": "Naive split gain исчезает при общем state; amount semantics не доказаны; ресурс или fee не учтён.",
+    "product_hypothesis": "Capacity & Route Evidence API; позже reusable exact adapters.",
+    "compatibility_constraints": [
+      "Внутри circular route повтор venue запрещён как прежде. Общий venue между разными paths требует state transition.",
+      "Pool address, singleton address и liquidity alias — разные identities."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  },
+  {
+    "id": "CB-02",
+    "title": "Vault conversion ↔ DEX ↔ credit",
+    "priority": "P1",
+    "classification": "conditional atomic conversion; yield separate",
+    "protocol_ids": [
+      "PX-05",
+      "PX-06",
+      "PX-07"
+    ],
+    "work_package_ids": [
+      "WG-10",
+      "WG-14",
+      "WG-15",
+      "WG-18"
+    ],
+    "owner_paths": [
+      "src/strategy_evolution/primary_market.py",
+      "src/lending/financing.py",
+      "src/liquidation/agg07.py",
+      "src/multichain/evm_financing.py"
+    ],
+    "economic_condition": "Immediate conversion proceeds after all costs cover exact obligations; projected interest savings remain a separate horizon-dependent metric.",
+    "first_experiment": "Один immediate redeem и один delayed claim, 2 liquidity states и 2 health/cap states. Сравнить direct swap, redeem+swap, repay/unlock; проверить terminal position одинакового качества.",
+    "kill_criteria": "Queue requires waiting; caps unknown; proceeds in another asset; final health fails; no independent model parity.",
+    "product_hypothesis": "Treasury/collateral planning API с объяснимыми liquidity deadlines.",
+    "compatibility_constraints": [
+      "Generic ERC-4626 surface не доказывает limits конкретного vault.",
+      "Flash callbacks не разрешают пропускать checks других protocols."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  },
+  {
+    "id": "CB-03",
+    "title": "Intents → netting → residual exact routing",
+    "priority": "P1",
+    "classification": "clearing / service surplus",
+    "protocol_ids": [
+      "PX-08",
+      "PX-09"
+    ],
+    "work_package_ids": [
+      "WG-17",
+      "WG-26",
+      "WG-12"
+    ],
+    "owner_paths": [
+      "src/mechanism_discovery/intent_graph.py",
+      "src/mechanism_discovery/pr356_discovery.py",
+      "src/routing/route_graph.py",
+      "src/economics/split_flow.py"
+    ],
+    "economic_condition": "Same filled user obligations; each user meets limit and comparator; customer cost reduction and solver fee accounted separately.",
+    "first_experiment": "10 synthetic intents, 3 assets, 4 venues: independent feasible fills vs netting+residual routes. Include exclusivity, cancellation, partial fills and delayed order observation.",
+    "kill_criteria": "Aggregate surplus hides user loss; unavailable RFQ flow assumed; feed only recent orders treated as full market.",
+    "product_hypothesis": "Clearing quote/evidence API для wallets, treasury и intent builders.",
+    "compatibility_constraints": [
+      "Netting снижает промежуточную потребность в капитале, но не создаёт право распоряжаться чужими balances.",
+      "Generic intent owner wrappers требуют реализации у существующего owner."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  },
+  {
+    "id": "CB-04",
+    "title": "aToken / shared wallet liquidity → funding-aware mechanism lab",
+    "priority": "P2",
+    "classification": "leveraged LP research, not guaranteed arbitrage",
+    "protocol_ids": [
+      "PX-04",
+      "PX-05",
+      "PX-06"
+    ],
+    "work_package_ids": [
+      "WG-10",
+      "WG-14",
+      "WG-27"
+    ],
+    "owner_paths": [
+      "src/mechanism_discovery/programmable_cash.py",
+      "src/mechanism_discovery/pr356_state_machine.py",
+      "src/research/pr356_allocation.py",
+      "src/mechanism_discovery/causal_twin.py"
+    ],
+    "economic_condition": "LP fee income + supply income - borrowing cost - losses - operations; compare equal initial equity and equal risk, no TVL multiplication as profit.",
+    "first_experiment": "Synthetic balance100 и 2 virtual strategies по80: adversarial order sequence, collateral shocks, allowance change, flow drought. Compare unlevered vs leveraged under same customer flow.",
+    "kill_criteria": "Benefit survives only subsidized or frozen flow; cumulative obligations exceed real assets; missing taker access.",
+    "product_hypothesis": "Capital-efficiency diagnostics и model qualification service.",
+    "compatibility_constraints": [
+      "Read cash growth-index limitation in owner review before any yield fixture reuse.",
+      "Успешный post-state не исправляет недопустимый intermediate state."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  },
+  {
+    "id": "CB-05",
+    "title": "Cross-domain intents → inventory netting → settlement evidence",
+    "priority": "P2",
+    "classification": "non-atomic inventory",
+    "protocol_ids": [
+      "PX-10",
+      "PX-11"
+    ],
+    "work_package_ids": [
+      "WG-18",
+      "WG-20",
+      "WG-26"
+    ],
+    "owner_paths": [
+      "src/inventory/non_atomic.py",
+      "src/inventory/research.py",
+      "src/market/streams.py",
+      "src/research/pr356_allocation.py"
+    ],
+    "economic_condition": "Delivered-flow revenue minus gas, funding duration, rebalancing, failures and service cost; capacity constrained by capital until reimbursement.",
+    "first_experiment": "2 domains, 2 assets, 10 intents; compare one-way prefunding and two-way matched inventory. Stress proof delay, origin reorg, fill timeout, refund and duplicate events.",
+    "kill_criteria": "Claimed turnover uses fill time instead of settlement time; trapped inventory exceeds budget; unknown finality assumptions.",
+    "product_hypothesis": "Inventory/rebalancing planner и settlement reconciliation API.",
+    "compatibility_constraints": [
+      "No ordinary cross-chain flashloan assumption.",
+      "Proof status, fill status and spendable balance are separate state machines."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  },
+  {
+    "id": "CB-06",
+    "title": "Funding claims ↔ perps / new builder markets",
+    "priority": "P2",
+    "classification": "carry / hedge research",
+    "protocol_ids": [
+      "PX-07",
+      "PX-14",
+      "PX-15"
+    ],
+    "work_package_ids": [
+      "WG-16",
+      "WG-19",
+      "WG-20"
+    ],
+    "owner_paths": [
+      "src/mechanism_discovery/claims.py",
+      "src/mechanism_discovery/boros.py",
+      "src/inventory/non_atomic.py",
+      "src/inventory/research.py"
+    ],
+    "economic_condition": "Matched cashflows after entry/exit fees, funding, basis, margin and failure losses; fixed quoted spread alone is insufficient.",
+    "first_experiment": "1 underlying, 2 perps, 2 rate claims; compare perfect synthetic hedge with mismatch in index, maturity, session and one failed fill. Baseline equal capital and duration.",
+    "kill_criteria": "Cannot prove payoff match; position liquidates in stress; no hedge during trading halt; credit/issuer risk ignored.",
+    "product_hypothesis": "Rate-hedge analytics и multi-venue exposure monitor.",
+    "compatibility_constraints": [
+      "No flash funding for held maturity exposure.",
+      "Offchain/CEX and onchain legs remain non-atomic even behind one UI."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  },
+  {
+    "id": "CB-07",
+    "title": "Orderbooks / conditional claims → exact residual and parity checks",
+    "priority": "P2",
+    "classification": "domain-specific market integrity",
+    "protocol_ids": [
+      "PX-12",
+      "PX-13"
+    ],
+    "work_package_ids": [
+      "WG-09",
+      "WG-16",
+      "WG-18",
+      "WG-19"
+    ],
+    "owner_paths": [
+      "src/providers/orderbook/quote.py",
+      "src/mechanism_discovery/claims.py",
+      "src/strategy_evolution/rights_lifecycle.py",
+      "src/inventory/non_atomic.py"
+    ],
+    "economic_condition": "Parity only for matching conditions, collateral and exercisable merge rights; subtract lot dust and all fees.",
+    "first_experiment": "Synthetic 2-outcome complete set and 2 books: full set, wrong condition, partial acquisition, expired unclosed market, shared BalanceManager conflict.",
+    "kill_criteria": "Inactive deployment, stale oracle, incomplete book or missing subscription proof; separate outcomes conflated.",
+    "product_hypothesis": "Market integrity / depth / completeness evidence API.",
+    "compatibility_constraints": [
+      "Sui adapters are future independent qualification, not reuse of Solana strategy live switch.",
+      "Prediction probabilities and directional bets are not risk-free circular opportunities."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  },
+  {
+    "id": "CB-08",
+    "title": "Low-latency state → dependency invalidation → bounded search",
+    "priority": "P0 after exact baseline",
+    "classification": "infrastructure economics",
+    "protocol_ids": [
+      "PX-11"
+    ],
+    "work_package_ids": [
+      "WG-04",
+      "WG-05",
+      "WG-21",
+      "WG-22",
+      "WG-24"
+    ],
+    "owner_paths": [
+      "src/market/streams.py",
+      "src/strategy/market_graph_ingest.py",
+      "src/strategy/multihop_solver.py",
+      "src/provider_governance/scheduler.py",
+      "src/research/benchmarks.py"
+    ],
+    "economic_condition": "Same admissible opportunities with lower end-to-end delay/CPU/data cost; correctness precedes microbench speed.",
+    "first_experiment": "Replay identical events through full recompute and dirty-subgraph path at 1x/10x/100x input load; record arrival-to-evidence p50/p95/p99, queue, misses, drops and backfill cost.",
+    "kill_criteria": "Only latency median improves while p99/stale errors worsen; true opportunities silently lost; access cost dominates.",
+    "product_hypothesis": "Market-state engine and shared evidence infrastructure.",
+    "compatibility_constraints": [
+      "Shortlist cutoff is explicit budget truncation unless a sound bound proves pruning.",
+      "Preconfirmed state is a separate generation and commitment class."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  },
+  {
+    "id": "CB-09",
+    "title": "Evidence providers → exact verifier → API procurement",
+    "priority": "P1",
+    "classification": "data/compute service economics",
+    "protocol_ids": [
+      "PX-16"
+    ],
+    "work_package_ids": [
+      "WG-25",
+      "WG-26",
+      "WG-27"
+    ],
+    "owner_paths": [
+      "src/research/pr359_wave15_institution.py",
+      "src/research/product.py",
+      "src/research/benchmarks.py",
+      "src/mechanism_discovery/research_resources.py"
+    ],
+    "economic_condition": "Buyer value - source, compute, verification, retry, delivery and support costs; recurring unsubsidized demand required.",
+    "first_experiment": "Local verifier and 3 synthetic providers quote one identical CPMM task. Add wrong state, stale result, slow cheap result, shared upstream and duplicate receipt. Compare local-only baseline.",
+    "kill_criteria": "Verification cost exceeds saved compute; no buyer demand; reuse violates rights; paid receipt accepted as proof.",
+    "product_hypothesis": "Market Evidence API first; provider marketplace only after repeat demand and service economics.",
+    "compatibility_constraints": [
+      "x402 is an optional future billing adapter, not the verifier.",
+      "Current INST-01 sum-int-v1 benchmark is not a ready arbitrary financial service market."
+    ],
+    "status": "PROPOSED_NOT_RUN",
+    "profitability_evidence": "UNKNOWN",
+    "customer_demand": "UNKNOWN",
+    "live_enabled": false
+  }
+]

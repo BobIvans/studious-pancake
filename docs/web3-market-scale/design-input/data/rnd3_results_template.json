@@ -1,0 +1,22 @@
+{
+  "status": "TEMPLATE_NOT_MEASURED",
+  "experiment_id": null,
+  "corpus_hash": null,
+  "code_revision": null,
+  "policy_hash": null,
+  "input_evidence_class": null,
+  "baseline_result": null,
+  "challenger_result": null,
+  "invariant_violations": null,
+  "end_to_end_cost": null,
+  "verification_cost": null,
+  "latency": null,
+  "per_participant_outcomes": null,
+  "peak_funding_by_asset": null,
+  "uncertainty": null,
+  "verdict": "NOT_RUN",
+  "real_demand_observed": false,
+  "external_payments_made": false,
+  "causal_claim_authorized": false,
+  "live_enabled": false
+}

@@ -1,0 +1,14 @@
+Studious Pancake — consolidated future-work and R&D archive, updated 2026-10-03.
+Start with 00_START_HERE_RU.md, then 23_MARKET_OF_MARKETS_AT_SCALE_RU.md.
+
+New extension: money-flow snapshots, 28 opportunity families, scalable data federation and recovery, correlation controls, flashloan qualification, conflict-aware parallel work, market-making economics and the three Market-of-Markets products.
+16 PM work packages, 8 PS experiments and 64 PT acceptance designs are added. All are planned, not run. The archive contains 189 planned acceptance scenarios in total and 53 consolidated source-interface records, not active feeds.
+
+Fetched main remains 67d3852cbc4cb1b24582df45adbf6a42d4da2af0. Reuse PR118 integer/non-monotonic sizing, PR559 graph, AGG05 split flow and ConflictAwareScheduler, PR562 exact CPMM, provider governance and the chosen durable authority. SQLite lifecycle is single-node; distributed execution is not proven.
+Next exact slice: DP-01 qualification, then DP-02 joint-state two-path evaluation. Next parallel slice after dependencies: PM-08 complete read/write/economic footprints; no second scheduler or ledger.
+
+Read 35_CURRENT_OWNERS_AND_LIMITS_RU.md and 34_PARALLEL_SCALE_HANDOFF_RU.txt before implementation. Old baseline reviews remain historical.
+This is a planning artifact, not a ready trading bot. No repository implementation, PR, sender, signer, live authorization, paid service or automation was created in this update. Orderbook strategy remains disabled pending verified subscriptions.
+Flashloan principal is temporary same-transaction funding, not persistent maker inventory. Macro volume/TVL is not executable capacity. No profitability, full-market coverage or unlimited-free-data claim is made.
+
+Integrity checks cover JSON, cross references, dependencies, owner paths, arithmetic illustrations and hashes. Repository tests and future experiments were not run.

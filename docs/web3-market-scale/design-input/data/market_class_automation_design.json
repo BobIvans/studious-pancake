@@ -1,0 +1,58 @@
+{
+  "schema": "future-rnd-automation-design-v1",
+  "status": "NOT_A_RUNNABLE_WORKFLOW",
+  "enabled": false,
+  "schedule": null,
+  "mode": "shadow_research_only",
+  "trigger_proposal": [
+    "new observed schema/version",
+    "market state revision",
+    "manual selected experiment"
+  ],
+  "stages": [
+    "read admitted finite evidence",
+    "resolve typed identities and rights",
+    "invalidate dependent stale results",
+    "propose bounded experiment",
+    "reuse exact evaluators",
+    "replay with budgets",
+    "compare baseline and holdout",
+    "record negative/unknown findings",
+    "produce reviewable report or proposed diff"
+  ],
+  "allowed_effects_in_future_authorized_run": [
+    "read admitted public/authorized data within quotas",
+    "local deterministic calculations",
+    "write local reports"
+  ],
+  "excluded_effects": [
+    "sign",
+    "submit transactions",
+    "place orders",
+    "make payments",
+    "lease compute",
+    "message suppliers/customers",
+    "deploy contracts",
+    "modify permissions",
+    "enable OrderbookAmmStrategy"
+  ],
+  "execution_budget_must_be_filled_before_run": [
+    "source profiles and quota",
+    "max requests/subscriptions",
+    "max candidates/evaluations",
+    "CPU seconds",
+    "memory bytes",
+    "retention bytes",
+    "wall-clock deadline"
+  ],
+  "missing_budget_behavior": "blocked",
+  "market_admission_from_llm_output": false,
+  "source_documents_are_data_not_instructions": true,
+  "automatic_execution_performed": false,
+  "reuses": [
+    "src/market/streams.py",
+    "src/provider_governance/",
+    "src/research/benchmarks.py",
+    "src/mechanism_discovery/research_quality.py"
+  ]
+}

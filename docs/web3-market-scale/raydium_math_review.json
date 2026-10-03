@@ -1,0 +1,30 @@
+{
+  "schema": "shadow.upstream-math-review.v1",
+  "source_repository": "https://github.com/raydium-io/raydium-cp-swap",
+  "source_revision": "b3187ae53a1b95a201f855a59024a12ca8f5b51a",
+  "source_files": [
+    {
+      "url": "https://github.com/raydium-io/raydium-cp-swap/blob/b3187ae53a1b95a201f855a59024a12ca8f5b51a/programs/cp-swap/src/curve/calculator.rs",
+      "sha256": "aee16991f81d755a72eae70cdf929816fc9571144cf8570f5049f42af0e7f7f8"
+    },
+    {
+      "url": "https://github.com/raydium-io/raydium-cp-swap/blob/b3187ae53a1b95a201f855a59024a12ca8f5b51a/programs/cp-swap/src/curve/fees.rs",
+      "sha256": "0d0b005123cd9e9e8f4ce92d41a5fedfac390471d17db4d63b700ac5b5ad7ffb"
+    },
+    {
+      "url": "https://github.com/raydium-io/raydium-cp-swap/blob/b3187ae53a1b95a201f855a59024a12ca8f5b51a/programs/cp-swap/src/instructions/swap_base_input.rs",
+      "sha256": "5878ed09654745b5725030c5d84a8794a07088e836330890cbae2b0d7d7b1349"
+    },
+    {
+      "url": "https://github.com/raydium-io/raydium-cp-swap/blob/b3187ae53a1b95a201f855a59024a12ca8f5b51a/programs/cp-swap/src/states/pool.rs",
+      "sha256": "e2a836869400bf3cbe3aa52e664235620f82a5c701edd4ced75789f6d7d124ad"
+    }
+  ],
+  "implemented_owner": "src/direct_venue/cpmm_math.py",
+  "validation_tests": "tests/test_cpmm_fee_accounting.py",
+  "arithmetic": "ceil trade/creator rates; floor protocol/fund shares; exclude accrued fees from next tradable reserves; creator fee asset follows trade direction",
+  "raw_deployed_vectors_verified": false,
+  "deployed_bytecode_verified": false,
+  "transfer_fee_token_support": false,
+  "execution_right": false
+}

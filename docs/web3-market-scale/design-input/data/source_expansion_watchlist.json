@@ -1,0 +1,79 @@
+[
+  {
+    "source_id": "hyperliquid",
+    "label": "Hyperliquid",
+    "evidence_url": "https://hyperliquid.gitbook.io/hyperliquid-docs/for-developers/api/websocket",
+    "documentation_review": "retrieved",
+    "access": "access-not-verified",
+    "checked_at_utc": "2026-10-02",
+    "live_endpoint_tested": false,
+    "graph_admitted": false,
+    "next_action": "Официально описан WebSocket; будущая проверка book schema, доступного tier, depth и reconnect. Отдельный settlement domain."
+  },
+  {
+    "source_id": "dydx",
+    "label": "dYdX",
+    "evidence_url": "https://docs.dydx.xyz/interaction/data/feeds",
+    "documentation_review": "retrieved",
+    "access": "access-not-verified",
+    "checked_at_utc": "2026-10-02",
+    "live_endpoint_tested": false,
+    "graph_admitted": false,
+    "next_action": "Indexer WebSockets описаны; проверять instrument metadata, snapshots/deltas, лимиты и data rights."
+  },
+  {
+    "source_id": "sqd",
+    "label": "SQD",
+    "evidence_url": "https://docs.sqd.dev/en/home",
+    "documentation_review": "retrieved",
+    "access": "access-not-verified",
+    "checked_at_utc": "2026-10-02",
+    "live_endpoint_tested": false,
+    "graph_admitted": false,
+    "next_action": "Portal/SDK/indexer инфраструктура; shared public development capacity не означает бесплатный production feed без ограничений."
+  },
+  {
+    "source_id": "envio",
+    "label": "Envio",
+    "evidence_url": "https://docs.envio.dev/",
+    "documentation_review": "retrieved",
+    "access": "access-not-verified",
+    "checked_at_utc": "2026-10-02",
+    "live_endpoint_tested": false,
+    "graph_admitted": false,
+    "next_action": "HyperIndex/HyperSync/HyperRPC: проверить отдельно доступ, тариф и полноту поддержанного chain schema."
+  },
+  {
+    "source_id": "deribit",
+    "label": "Deribit",
+    "evidence_url": "https://docs.deribit.com/",
+    "documentation_review": "retrieved",
+    "access": "access-not-verified",
+    "checked_at_utc": "2026-10-02",
+    "live_endpoint_tested": false,
+    "graph_admitted": false,
+    "next_action": "Derivatives API documentation; public channel, rate limits, entitlement и contract semantics требуют отдельного dossier."
+  },
+  {
+    "source_id": "sui-deepbook",
+    "label": "Sui DeepBook",
+    "evidence_url": "https://docs.sui.io/standards/deepbookv3/indexer",
+    "documentation_review": "not_accessible_in_review",
+    "access": "access-not-verified",
+    "checked_at_utc": "2026-10-02",
+    "live_endpoint_tested": false,
+    "graph_admitted": false,
+    "next_action": "Кандидат для отдельного Move-domain research. Указанная страница не прочитана; endpoint/schema/free access не подтверждены."
+  },
+  {
+    "source_id": "injective",
+    "label": "Injective",
+    "evidence_url": "https://docs.injective.network/developers-native/query",
+    "documentation_review": "not_accessible_in_review",
+    "access": "access-not-verified",
+    "checked_at_utc": "2026-10-02",
+    "live_endpoint_tested": false,
+    "graph_admitted": false,
+    "next_action": "Кандидат Cosmos/domain dossier. Указанная страница не прочитана; актуальный URL и read API проверить заново."
+  }
+]

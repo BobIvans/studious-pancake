@@ -24,6 +24,7 @@ class SplitStopReason(StrEnum):
 class SharedExecutionState:
     generation: str
     capacities: tuple[tuple[str, int], ...]
+    market_states: tuple[tuple[str, str], ...] = ()
 
     def __post_init__(self) -> None:
         if not self.generation.strip():
@@ -40,6 +41,18 @@ class SharedExecutionState:
             keys.add(key)
             normalized.append((key, value))
         object.__setattr__(self, "capacities", tuple(sorted(normalized)))
+        states = tuple(sorted(self.market_states))
+        if len({key for key, _ in states}) != len(states):
+            raise ValueError("market state keys must be unique")
+        if any(
+            not isinstance(key, str)
+            or not key.strip()
+            or not isinstance(value, str)
+            or not value
+            for key, value in states
+        ):
+            raise ValueError("market states require immutable serialized values")
+        object.__setattr__(self, "market_states", states)
 
     def capacity(self, key: str) -> int:
         for item_key, value in self.capacities:
@@ -59,6 +72,7 @@ class SharedExecutionState:
         return SharedExecutionState(
             generation=self.generation,
             capacities=tuple(rows.items()),
+            market_states=self.market_states,
         )
 
 

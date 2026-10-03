@@ -1,0 +1,21 @@
+{
+  "schema": "research.archive-evolution.v1",
+  "current_revision": "parallel-market-scale-v5",
+  "previous_zip_sha256": "c55389965dea300420b24caef3ccf3d6b6e66e16e9f43113a864dfd4672c5e13",
+  "baseline_commit": "67d3852cbc4cb1b24582df45adbf6a42d4da2af0",
+  "previous_baseline_same": true,
+  "preserved_prior_entrypoints": [
+    "01_CURRENT_STATE_AND_OWNERS_RU.md",
+    "11_RND_NEXT_3_PRODUCTS_RU.md",
+    "13_RND_SCALE_MARKET_CLASSES_RU.md",
+    "16_DEEP_WEB3_RND_RU.md"
+  ],
+  "current_entrypoint": "00_START_HERE_RU.md",
+  "current_scale_entrypoint": "23_MARKET_OF_MARKETS_AT_SCALE_RU.md",
+  "scope": "USER_REQUESTED_ZIP_OF_WORK_FOR_LATER",
+  "new_runtime_features": 0,
+  "new_connected_sources": 0,
+  "implemented_repository_changes": 0,
+  "scheduled_automations": 0,
+  "live_authorizations": 0
+}

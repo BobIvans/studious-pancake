@@ -13,6 +13,7 @@ import hashlib
 import json
 import math
 from typing import Iterable
+from solders.pubkey import Pubkey
 
 from src.economics.capital import NativeCostBreakdown
 from src.economics.durable_reservations import (
@@ -26,10 +27,14 @@ from src.economics.non_monotonic_sizing import (
     PR118FlashRepaymentTerms,
     PR118NonMonotonicSizingResult,
     PR118SizingCandidateEvidence,
+    PR118SizingPointRejected,
     PR118TypedCostLedger,
     evaluate_pr118_non_monotonic_sizing,
 )
-from src.direct_venue.cpmm_math import cpmm_exact_input_quote
+from src.direct_venue.cpmm_math import (
+    cpmm_fee_accounted_quote,
+    RAYDIUM_FEE_SOURCE_REVISION,
+)
 from src.market.observations import MarketObservationV2, ObservationGeneration
 
 from .arbitrage_graph import (
@@ -45,6 +50,9 @@ RAYDIUM_CPMM_PROGRAM_ID = "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
 PINNED_CPMM_MODEL_REVISION = "super03-cpmm-integer-v1"
 PINNED_DECODER_REVISION = "raydium-cpmm-state.v1"
 PINNED_TOKEN_REVISION = "spl-token-v1"
+MAINNET_GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+SPL_TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+WSOL_MINT = "So11111111111111111111111111111111111111112"
 
 
 def _hash(payload: object) -> str:
@@ -96,12 +104,14 @@ class SolanaAssetIdentity:
 class CpmmEvaluationRejection(StrEnum):
     WRONG_DOMAIN = "wrong-domain"
     WRONG_PROGRAM = "wrong-program"
+    INVALID_ASSET_IDENTITY = "invalid-asset-identity"
     UNSUPPORTED_MODEL_REVISION = "unsupported-model-revision"
     UNSUPPORTED_DECODER_REVISION = "unsupported-decoder-revision"
     UNSUPPORTED_TOKEN_REVISION = "unsupported-token-revision"
     ASSET_NOT_IN_POOL = "asset-not-in-pool"
     INVALID_AMOUNT = "invalid-amount"
     ZERO_OUTPUT = "zero-output"
+    INPUT_CAPACITY_EXCEEDED = "input-capacity-exceeded"
     INCOHERENT_ROUTE_STATE = "incoherent-route-state"
     NO_EXACT_GRAPH_CANDIDATE = "no-exact-graph-candidate"
 
@@ -128,6 +138,14 @@ class QualifiedCpmmState:
     generation: ObservationGeneration
     decoder_revision: str = PINNED_DECODER_REVISION
     model_revision: str = PINNED_CPMM_MODEL_REVISION
+    trade_fee_rate_ppm: int | None = None
+    protocol_fee_rate_ppm: int = 0
+    fund_fee_rate_ppm: int = 0
+    creator_fee_rate_ppm: int = 0
+    creator_fee_on: str = "both"
+    fee_accounting_revision: str = RAYDIUM_FEE_SOURCE_REVISION
+    accrued_fees_a: tuple[int, ...] = (0, 0, 0)
+    accrued_fees_b: tuple[int, ...] = (0, 0, 0)
 
     def __post_init__(self) -> None:
         if not isinstance(self.venue, VenueIdentity):
@@ -144,6 +162,40 @@ class QualifiedCpmmState:
         _integer(self.fee_bps, "fee_bps")
         if self.fee_bps >= 10_000:
             raise ValueError("fee_bps must be < 10000")
+        if self.trade_fee_rate_ppm is not None:
+            _integer(self.trade_fee_rate_ppm, "trade_fee_rate_ppm")
+            if self.fee_bps != 0 or self.trade_fee_rate_ppm >= 1_000_000:
+                raise ValueError(
+                    "explicit ppm fee requires zero legacy fee_bps and valid rate"
+                )
+        for field in (
+            "protocol_fee_rate_ppm",
+            "fund_fee_rate_ppm",
+            "creator_fee_rate_ppm",
+        ):
+            _integer(getattr(self, field), field)
+            if getattr(self, field) >= 1_000_000:
+                raise ValueError("fee rate must be below one million")
+        if (
+            self.protocol_fee_rate_ppm + self.fund_fee_rate_ppm > 1_000_000
+            or self.effective_trade_fee_rate_ppm + self.creator_fee_rate_ppm
+            >= 1_000_000
+        ):
+            raise ValueError("invalid fee rate sums")
+        if self.creator_fee_on not in {"both", "token-a", "token-b"}:
+            raise ValueError("unsupported creator fee direction")
+        for field in ("accrued_fees_a", "accrued_fees_b"):
+            vector = tuple(getattr(self, field))
+            if len(vector) != 3:
+                raise ValueError("three accrued fee counters required")
+            for value in vector:
+                _integer(value, field)
+            object.__setattr__(self, field, vector)
+        if (
+            self.reserve_a + sum(self.accrued_fees_a) > 2**64 - 1
+            or self.reserve_b + sum(self.accrued_fees_b) > 2**64 - 1
+        ):
+            raise ValueError("pool vault amount exceeds u64")
         _integer(self.slot, "slot")
         if not math.isfinite(self.observed_at) or self.observed_at <= 0:
             raise ValueError("observed_at must be finite and positive")
@@ -155,6 +207,14 @@ class QualifiedCpmmState:
         _text(self.model_revision, "model_revision")
 
     @property
+    def effective_trade_fee_rate_ppm(self) -> int:
+        return (
+            self.fee_bps * 100
+            if self.trade_fee_rate_ppm is None
+            else self.trade_fee_rate_ppm
+        )
+
+    @property
     def identity(self) -> str:
         return _hash(
             {
@@ -162,6 +222,16 @@ class QualifiedCpmmState:
                 "assets": [self.asset_a.identity, self.asset_b.identity],
                 "reserves": [str(self.reserve_a), str(self.reserve_b)],
                 "fee_bps": self.fee_bps,
+                "fee_accounting": {
+                    "revision": self.fee_accounting_revision,
+                    "trade_rate": self.effective_trade_fee_rate_ppm,
+                    "protocol_rate": self.protocol_fee_rate_ppm,
+                    "fund_rate": self.fund_fee_rate_ppm,
+                    "creator_rate": self.creator_fee_rate_ppm,
+                    "creator_on": self.creator_fee_on,
+                    "accrued_a": self.accrued_fees_a,
+                    "accrued_b": self.accrued_fees_b,
+                },
                 "slot": self.slot,
                 "observed_at": self.observed_at,
                 "expires_at": self.expires_at,
@@ -274,42 +344,64 @@ class QualifiedRaydiumCpmmAdapter:
                 CpmmEvaluationRejection.INVALID_AMOUNT,
                 "requested input must be positive",
             )
-        self._qualify(state)
+        self.qualify_state(state)
         if input_asset == state.asset_a:
             output_asset = state.asset_b
             reserve_in, reserve_out = state.reserve_a, state.reserve_b
-            output, embedded_fee = cpmm_exact_input_quote(
-                amount_in=requested_input,
-                reserve_in=reserve_in,
-                reserve_out=reserve_out,
-                trade_fee_numerator=state.fee_bps,
-                trade_fee_denominator=10_000,
-            )
-            next_state = replace(
-                state,
-                reserve_a=state.reserve_a + requested_input,
-                reserve_b=state.reserve_b - output,
-            )
+            input_is_a = True
         elif input_asset == state.asset_b:
             output_asset = state.asset_a
             reserve_in, reserve_out = state.reserve_b, state.reserve_a
-            output, embedded_fee = cpmm_exact_input_quote(
-                amount_in=requested_input,
-                reserve_in=reserve_in,
-                reserve_out=reserve_out,
-                trade_fee_numerator=state.fee_bps,
-                trade_fee_denominator=10_000,
-            )
-            next_state = replace(
-                state,
-                reserve_b=state.reserve_b + requested_input,
-                reserve_a=state.reserve_a - output,
-            )
+            input_is_a = False
         else:
             raise CpmmEvaluationError(
                 CpmmEvaluationRejection.ASSET_NOT_IN_POOL,
                 "input asset identity is not part of the pool",
             )
+        input_fees = state.accrued_fees_a if input_is_a else state.accrued_fees_b
+        if reserve_in + sum(input_fees) + requested_input > 2**64 - 1:
+            raise CpmmEvaluationError(
+                CpmmEvaluationRejection.INPUT_CAPACITY_EXCEEDED,
+                "input vault would overflow u64",
+            )
+        creator_on_input = (
+            state.creator_fee_on == "both"
+            or (state.creator_fee_on == "token-a" and input_is_a)
+            or (state.creator_fee_on == "token-b" and not input_is_a)
+        )
+        quote = cpmm_fee_accounted_quote(
+            amount_in=requested_input,
+            reserve_in=reserve_in,
+            reserve_out=reserve_out,
+            trade_fee_rate_ppm=state.effective_trade_fee_rate_ppm,
+            protocol_fee_rate_ppm=state.protocol_fee_rate_ppm,
+            fund_fee_rate_ppm=state.fund_fee_rate_ppm,
+            creator_fee_rate_ppm=state.creator_fee_rate_ppm,
+            creator_fee_on_input=creator_on_input,
+        )
+        output, embedded_fee = quote.output_amount, quote.input_fee_amount
+        input_counters = list(
+            state.accrued_fees_a if input_is_a else state.accrued_fees_b
+        )
+        output_counters = list(
+            state.accrued_fees_b if input_is_a else state.accrued_fees_a
+        )
+        input_counters[0] += quote.protocol_fee_amount
+        input_counters[1] += quote.fund_fee_amount
+        (input_counters if creator_on_input else output_counters)[
+            2
+        ] += quote.creator_fee_amount
+        next_state = replace(
+            state,
+            reserve_a=(
+                quote.next_input_reserve if input_is_a else quote.next_output_reserve
+            ),
+            reserve_b=(
+                quote.next_output_reserve if input_is_a else quote.next_input_reserve
+            ),
+            accrued_fees_a=tuple(input_counters if input_is_a else output_counters),
+            accrued_fees_b=tuple(output_counters if input_is_a else input_counters),
+        )
         if output <= 0 or output >= reserve_out:
             raise CpmmEvaluationError(
                 CpmmEvaluationRejection.ZERO_OUTPUT,
@@ -329,16 +421,42 @@ class QualifiedRaydiumCpmmAdapter:
         )
 
     @staticmethod
-    def _qualify(state: QualifiedCpmmState) -> None:
+    def qualify_state(state: QualifiedCpmmState) -> None:
         if state.asset_a.domain != "solana-mainnet":
             raise CpmmEvaluationError(
                 CpmmEvaluationRejection.WRONG_DOMAIN,
                 "only solana-mainnet is qualified in this slice",
             )
+        for asset in (state.asset_a, state.asset_b):
+            if (
+                asset.genesis_hash != MAINNET_GENESIS
+                or asset.token_program != SPL_TOKEN_PROGRAM
+            ):
+                raise CpmmEvaluationError(
+                    CpmmEvaluationRejection.INVALID_ASSET_IDENTITY,
+                    "unsupported genesis or token program",
+                )
+            try:
+                Pubkey.from_string(asset.mint)
+            except ValueError as exc:
+                raise CpmmEvaluationError(
+                    CpmmEvaluationRejection.INVALID_ASSET_IDENTITY,
+                    "mint must be a canonical public key",
+                ) from exc
+            if asset.mint == WSOL_MINT and asset.decimals != 9:
+                raise CpmmEvaluationError(
+                    CpmmEvaluationRejection.INVALID_ASSET_IDENTITY,
+                    "WSOL decimals must be nine",
+                )
         if state.venue.program_id != RAYDIUM_CPMM_PROGRAM_ID:
             raise CpmmEvaluationError(
                 CpmmEvaluationRejection.WRONG_PROGRAM,
                 "pool is not the pinned Raydium CPMM program",
+            )
+        if state.fee_accounting_revision != RAYDIUM_FEE_SOURCE_REVISION:
+            raise CpmmEvaluationError(
+                CpmmEvaluationRejection.UNSUPPORTED_MODEL_REVISION,
+                "fee accounting source revision is not qualified",
             )
         if state.model_revision != PINNED_CPMM_MODEL_REVISION:
             raise CpmmEvaluationError(
@@ -379,14 +497,37 @@ class ExactCpmmRoutePlan:
             for pool in (pools[0], pools[-1])
         ):
             raise ValueError("route endpoints must contain the settlement asset")
+        self.directed_asset_pairs
+
+    @property
+    def directed_asset_pairs(self) -> tuple[tuple[str, str], ...]:
+        current = self.settlement_asset
+        pairs = []
+        visited = {current}
+        for index, pool in enumerate(self.pools):
+            if current == pool.asset_a:
+                following = pool.asset_b
+            elif current == pool.asset_b:
+                following = pool.asset_a
+            else:
+                raise ValueError("route assets do not couple")
+            if following in visited and index != len(self.pools) - 1:
+                raise ValueError("route cannot repeat an intermediate asset")
+            visited.add(following)
+            pairs.append((current.identity, following.identity))
+            current = following
+        if current != self.settlement_asset:
+            raise ValueError("route does not close")
+        return tuple(pairs)
 
     @property
     def semantic_route_id(self) -> str:
         return _hash(
             {
-                "schema": "shadow.cpmm-semantic-route.v1",
+                "schema": "shadow.cpmm-semantic-route.v2",
                 "settlement_asset": self.settlement_asset.identity,
                 "ordered_venues": [asdict(pool.venue) for pool in self.pools],
+                "ordered_assets": self.directed_asset_pairs,
             }
         )
 
@@ -428,7 +569,37 @@ def evaluate_exact_cpmm_route(
 ) -> ExactCpmmRouteEvaluation:
     """Re-evaluate every leg at the previous leg's conservative output."""
 
+    # Fail closed on shared state before treating an amount-local failure as skippable.
+    _integer(input_amount, "input_amount", minimum=1)
+    _integer(max_slot_skew, "max_slot_skew")
+    if (
+        isinstance(now, bool)
+        or isinstance(max_snapshot_age_seconds, bool)
+        or not math.isfinite(max_snapshot_age_seconds)
+        or max_snapshot_age_seconds <= 0
+    ):
+        raise ValueError("invalid snapshot clock or age policy")
+    if not math.isfinite(now) or max_snapshot_age_seconds < 0 or max_slot_skew < 0:
+        raise ValueError("invalid freshness policy")
+    if any(
+        pool.observed_at > now
+        or now >= pool.expires_at
+        or now - pool.observed_at > max_snapshot_age_seconds
+        for pool in plan.pools
+    ):
+        raise CpmmEvaluationError(
+            CpmmEvaluationRejection.NO_EXACT_GRAPH_CANDIDATE, "stale or future state"
+        )
+    if (
+        max(pool.slot for pool in plan.pools) - min(pool.slot for pool in plan.pools)
+        > max_slot_skew
+    ):
+        raise CpmmEvaluationError(
+            CpmmEvaluationRejection.INCOHERENT_ROUTE_STATE, "slot skew"
+        )
     evaluator = adapter or QualifiedRaydiumCpmmAdapter()
+    for pool in plan.pools:
+        evaluator.qualify_state(pool)
     current_asset = plan.settlement_asset
     current_amount = input_amount
     legs: list[ExactCpmmEdgeEvaluation] = []
@@ -466,6 +637,8 @@ def evaluate_exact_cpmm_route(
             max_slot_skew=max_slot_skew,
         )
     ).detect(graph, now=now)
+    if dict(detection.rejections).get("below_min_gross_profit"):
+        raise PR118SizingPointRejected("negative-gross-output")
     if len(detection.candidates) != 1:
         raise CpmmEvaluationError(
             CpmmEvaluationRejection.NO_EXACT_GRAPH_CANDIDATE,
@@ -502,6 +675,14 @@ class CapacityEconomics:
             raise ValueError("flash_fee_bps must be < 10000")
 
     def ledger_for(self, route: ExactCpmmRouteEvaluation) -> PR118TypedCostLedger:
+        asset = route.legs[0].input_asset
+        if (asset.mint, asset.decimals, asset.token_program, asset.genesis_hash) != (
+            WSOL_MINT,
+            9,
+            SPL_TOKEN_PROGRAM,
+            MAINNET_GENESIS,
+        ):
+            raise ValueError("native capacity ledger requires canonical WSOL identity")
         fee = (route.input_amount * self.flash_fee_bps + 9_999) // 10_000
         entries: list[PR118CostLedgerEntry] = []
         if self.slippage_buffer_atoms:
@@ -578,6 +759,7 @@ class ExactCapacityReport:
                 "points": [point.to_json() for point in self.points],
                 "selected_amount": self.selected_amount,
                 "budget_status": self.budget_status,
+                "rejected_points": self.pr118_result.to_json()["rejected_points"],
             }
         )
 
@@ -599,13 +781,21 @@ def evaluate_sampled_cpmm_capacity(
     evaluated: dict[int, tuple[ExactCpmmRouteEvaluation, PR118TypedCostLedger]] = {}
 
     def candidate_factory(amount: int) -> PR118SizingCandidateEvidence:
-        route = evaluate_exact_cpmm_route(
-            plan,
-            input_amount=amount,
-            now=now,
-            max_snapshot_age_seconds=max_snapshot_age_seconds,
-            max_slot_skew=max_slot_skew,
-        )
+        try:
+            route = evaluate_exact_cpmm_route(
+                plan,
+                input_amount=amount,
+                now=now,
+                max_snapshot_age_seconds=max_snapshot_age_seconds,
+                max_slot_skew=max_slot_skew,
+            )
+        except CpmmEvaluationError as exc:
+            if exc.reason not in (
+                CpmmEvaluationRejection.ZERO_OUTPUT,
+                CpmmEvaluationRejection.INPUT_CAPACITY_EXCEEDED,
+            ):
+                raise
+            raise PR118SizingPointRejected(exc.reason.value) from exc
         ledger = economics.ledger_for(route)
         evaluated[amount] = (route, ledger)
         candidate = ledger.to_capital_candidate(

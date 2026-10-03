@@ -1,0 +1,1096 @@
+{
+  "schema": "research.source-universe.v1",
+  "checked_at_utc": "2026-10-03",
+  "complete_web3_claim": false,
+  "connected_count_added": 0,
+  "identity_note": "Source IDs describe interfaces, not necessarily unique companies. Existing labels are retained.",
+  "records": [
+    {
+      "source_id": "0x",
+      "label": "0x Swap API candidate",
+      "family": "router",
+      "domains": [
+        "evm"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.0x.org/docs/introduction/welcome"
+      ],
+      "limitation": "API-key plans, quotas and integrator fees must be checked before use. Free unlimited access is not claimed; no active connector added.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "1inch",
+      "label": "1inch developer API candidate",
+      "family": "router",
+      "domains": [
+        "evm"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://portal.1inch.dev/documentation/authentication"
+      ],
+      "limitation": "Current authentication/free quotas could not be verified. Candidate only; no active connector added.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "aave",
+      "label": "Reserve and financing terms",
+      "family": "lending-tool",
+      "domains": [
+        "evm"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://www.aave.com/docs/aave-v3/guides/flash-loans"
+      ],
+      "limitation": "Financing is not an executable swap edge; chain-local atomic repayment, fees and conformance separate. No flashloan call added.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "HOT",
+      "access_review": "RPC_REQUIRED",
+      "reference_ids": [
+        "MF-09"
+      ],
+      "current_limitations": "Cash, flags, premium, callback and chain revision",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    },
+    {
+      "source_id": "balancer",
+      "label": "V3 Vault accounting",
+      "family": "amm-tool",
+      "domains": [
+        "evm"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://docs.balancer.fi/"
+      ],
+      "limitation": "Pool-specific state and fees, EVM RPC and settlement-domain validation required; no active adapter here.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "HOT",
+      "access_review": "RPC_REQUIRED",
+      "reference_ids": [
+        "MF-11"
+      ],
+      "current_limitations": "Pin V3; old V2 examples are a different integration",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    },
+    {
+      "source_id": "binance-spot",
+      "label": "Spot depth/trades reference",
+      "family": "cex-orderbook",
+      "domains": [
+        "cex"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://developers.binance.com/docs/binance-spot-api-docs/web-socket-streams"
+      ],
+      "limitation": "Public market streams; synchronize depth snapshot/deltas and sequence numbers. Account restrictions, inventory, latency and fees separate; not Solana-atomic edges.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "WARM",
+      "access_review": "PUBLIC_WITH_LIMITS",
+      "reference_ids": [
+        "MF-14"
+      ],
+      "current_limitations": "Venue snapshot+sequence recovery; public data does not grant trading access",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    },
+    {
+      "source_id": "birdeye",
+      "label": "Birdeye market data candidate",
+      "family": "reference",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.birdeye.so/"
+      ],
+      "limitation": "Current free tier and API-key quota not verified. Indexed prices/candles are reference metadata, not executable integer quotes.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "bybit",
+      "label": "Bybit public orderbook streams",
+      "family": "cex-orderbook",
+      "domains": [
+        "cex"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://bybit-exchange.github.io/docs/v5/websocket/public/orderbook"
+      ],
+      "limitation": "Public depth feeds require snapshot/update sequence validation and exchange-specific access checks. No CEX graph edge in this PR.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "ccxt",
+      "label": "CCXT exchange REST adapters",
+      "family": "infrastructure",
+      "domains": [
+        "cex"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/ccxt/ccxt"
+      ],
+      "limitation": "Read-only public market data support depends on exchange. Check exchange limits, licenses and optional commercial features; no order or transfer APIs used.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "coinbase-exchange",
+      "label": "Spot L2 reference",
+      "family": "cex-orderbook",
+      "domains": [
+        "cex"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://docs.cdp.coinbase.com/exchange/websocket-feed/channels"
+      ],
+      "limitation": "Public feed channel access and heartbeat/sequence rules are channel-specific. CEX custody and settlement cannot close a Solana flashloan in one transaction.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "WARM",
+      "access_review": "PUBLIC_WITH_LIMITS",
+      "reference_ids": [
+        "MF-15"
+      ],
+      "current_limitations": "Absolute level replacement; account/region eligibility separate",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    },
+    {
+      "source_id": "coingecko",
+      "label": "CoinGecko Demo API",
+      "family": "reference",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "free-tier-key-required",
+      "evidence_urls": [
+        "https://docs.coingecko.com/docs/errors-and-rate-limits"
+      ],
+      "limitation": "Demo API key and quota; commercial/Pro endpoints are excluded. Token prices are reference-only.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "cow-protocol",
+      "label": "CoW Protocol solver / auction documentation",
+      "family": "router",
+      "domains": [
+        "evm"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://docs.cow.fi/cow-protocol"
+      ],
+      "limitation": "User intents and batch settlement have different execution semantics. Catalog extension only, not a direct pool or Solana-atomic edge.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "cryptofeed",
+      "label": "Cryptofeed WebSocket feed handlers",
+      "family": "infrastructure",
+      "domains": [
+        "cex"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/bmoscon/cryptofeed"
+      ],
+      "limitation": "Open-source normalizers; per-exchange sequence/checksum, snapshot synchronization and fees need validation. No feed is launched here.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "curve",
+      "label": "Curve protocol tooling",
+      "family": "amm-tool",
+      "domains": [
+        "evm"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://docs.curve.finance/"
+      ],
+      "limitation": "Pool-specific math/rates/fees and RPC required; no cross-chain atomic edge or hosted free data claim.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "defillama",
+      "label": "Macro discovery / historical aggregates",
+      "family": "reference",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://api-docs.defillama.com/"
+      ],
+      "limitation": "Only documented free endpoints; paid Pro endpoints excluded. TVL/yield/reference prices do not prove capacity or execution.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "COLD",
+      "access_review": "PUBLIC_LIMITED",
+      "reference_ids": [
+        "MF-01",
+        "MF-02",
+        "MF-03",
+        "MF-04",
+        "MF-19"
+      ],
+      "current_limitations": "Parent/child and routed-volume deduplication; not raw reserves",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    },
+    {
+      "source_id": "dexscreener",
+      "label": "Pair and token discovery",
+      "family": "discovery",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://docs.dexscreener.com/api/reference"
+      ],
+      "limitation": "Endpoint-specific rate limits. Prices, TVL and volume are discovery/reference metadata, not integer amount-specific guaranteed outputs.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "COLD",
+      "access_review": "PUBLIC_RATE_LIMITED",
+      "reference_ids": [
+        "MF-20"
+      ],
+      "current_limitations": "Promotions and trending are not exact liquidity",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    },
+    {
+      "source_id": "dune",
+      "label": "Historical SQL and cohorts",
+      "family": "reference",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.dune.com/api-reference/overview/introduction"
+      ],
+      "limitation": "Credits/plan and query freshness require checks. Analytics only; never projected into exact route outputs.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "COLD",
+      "access_review": "KEY_AND_CREDITS",
+      "reference_ids": [
+        "MF-23"
+      ],
+      "current_limitations": "Metadata free does not mean all execution or export free",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    },
+    {
+      "source_id": "geckoterminal",
+      "label": "Onchain market discovery",
+      "family": "discovery",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://www.geckoterminal.com/dex-api",
+        "https://api.geckoterminal.com/docs/index.html"
+      ],
+      "limitation": "Free public API has rate limits, pagination and indexed lag. Pool and OHLCV data cannot establish executable depth or slot-consistent state.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "COLD",
+      "access_review": "PLAN_AND_ENDPOINT_SPECIFIC",
+      "reference_ids": [
+        "MF-21"
+      ],
+      "current_limitations": "Guide redirect; verify exact endpoint family and quota",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    },
+    {
+      "source_id": "geth-pubsub",
+      "label": "EVM logs and heads",
+      "tier": "HOT",
+      "access_review": "OWN_NODE_OR_PROVIDER",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-17"
+      ],
+      "current_limitations": "Reorg removals and getLogs backfill; RPC capacity not unlimited",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "helius",
+      "label": "Helius RPC",
+      "family": "rpc",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "free-tier-key-required",
+      "evidence_urls": [
+        "https://www.helius.dev/docs/billing/plans",
+        "https://www.helius.dev/docs/rpc/websocket"
+      ],
+      "limitation": "Free plan requires an API key: 1M credits/month, 10 RPC requests/s as checked. Mainnet gRPC/LaserStream is not included as a free service.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "helius-laserstream",
+      "label": "Managed Solana stream",
+      "tier": "HOT",
+      "access_review": "PAID_MAINNET_OPTIONAL",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-13"
+      ],
+      "current_limitations": "No subscription purchased; validate available replay window",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "hyperliquid",
+      "label": "Perp/spot book and market state",
+      "tier": "WARM",
+      "access_review": "PUBLIC_WITH_LIMITS",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-16"
+      ],
+      "current_limitations": "Depth/precision cap; no certified full market depth",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "jito-market-structure",
+      "label": "Auction and landing-cost research",
+      "tier": "WARM",
+      "access_review": "ACCESS_AND_INFRA_SPECIFIC",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-06"
+      ],
+      "current_limitations": "Docs are not a live signal; no submission endpoint is enabled",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "jupiter",
+      "label": "Jupiter read-only quote / token / price APIs",
+      "family": "router",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://developers.jup.ag/docs/portal/plans"
+      ],
+      "limitation": "Keyless 0.5 RPS; free keyed plan 1 RPS as checked. Aggregate routes must expose underlying venues before graph admission. No swap/build/submit calls here.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "kamino",
+      "label": "Kamino Lending SDK",
+      "family": "lending-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/Kamino-Finance/klend-sdk"
+      ],
+      "limitation": "Lending/flashloan/liquidation state is not a swap edge. Existing lending conformance owner remains authoritative; no borrowing or execution added.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "kamino-klend",
+      "label": "Source/deployment qualification candidate",
+      "tier": "WARM",
+      "access_review": "RPC_AND_REVISION_REQUIRED",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-26"
+      ],
+      "current_limitations": "Deployment and flash capacity unverified",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "kraken",
+      "label": "Kraken public L2 book v2",
+      "family": "cex-orderbook",
+      "domains": [
+        "cex"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://docs.kraken.com/api/docs/websocket-v2/book"
+      ],
+      "limitation": "Public snapshots/updates with checksum and depth rules. Reference/discovery extension only; not an atomic Solana route.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "manifest",
+      "label": "Manifest Solana CLOB tooling",
+      "family": "orderbook-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/Bonasa-Tech/manifest"
+      ],
+      "limitation": "Open-source tooling, separate RPC requirement. No repository production adapter or verified subscription; graph ingest blocked.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "marginfi",
+      "label": "MarginFi TypeScript tooling",
+      "family": "lending-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/mrgnlabs/mrgn-ts"
+      ],
+      "limitation": "State/risk/flashloan tooling requires RPC and conformance. Not a spot edge or authorization to use leverage.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "meteora-damm",
+      "label": "Meteora DAMM V2 tooling",
+      "family": "amm-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/MeteoraAg/damm-v2"
+      ],
+      "limitation": "Open-source program/SDK; no free RPC promise. Exact observation producer is not activated by this catalog.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "meteora-dlmm",
+      "label": "Meteora DLMM public API + SDK",
+      "family": "amm-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://github.com/MeteoraAg/docs/blob/main/developer-guides/dlmm/api-reference/overview.mdx",
+        "https://github.com/MeteoraAg/dlmm-sdk"
+      ],
+      "limitation": "Public indexed /pools API documented at 30 RPS. Exact quotes need verified bins, dynamic fees and on-chain slot state; public API prices are discovery-only.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "morpho",
+      "label": "Morpho lending interfaces",
+      "family": "lending-tool",
+      "domains": [
+        "evm"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://docs.morpho.org/get-started/"
+      ],
+      "limitation": "Lending/risk/reference extension requires its own domain and evidence. No active adapter or free RPC guarantee.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "morpho-blue",
+      "label": "Contract balance and financing terms",
+      "tier": "HOT",
+      "access_review": "RPC_REQUIRED",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-10"
+      ],
+      "current_limitations": "Shared contract cash must not be counted once per market",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "odos",
+      "label": "Odos aggregator candidate",
+      "family": "router",
+      "domains": [
+        "evm"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.odos.xyz/"
+      ],
+      "limitation": "Current access/free quotas could not be verified. Opaque aggregate paths require underlying-venue expansion; no active connector added.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "okx-cex",
+      "label": "OKX public orderbook candidate",
+      "family": "cex-orderbook",
+      "domains": [
+        "cex"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://www.okx.com/docs-v5/en/"
+      ],
+      "limitation": "Current page/access tier was not verified. Candidate only; do not assume free access to every depth channel.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "okx-dex",
+      "label": "OKX DEX API candidate",
+      "family": "router",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://web3.okx.com/build/dev-docs/dex-api/dex-introduction"
+      ],
+      "limitation": "Current tier/rate/auth requirements could not be verified. Reuse existing provider governance if connected; no activation here.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "openbook-v2",
+      "label": "OpenBook V2 program / client",
+      "family": "orderbook-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/openbook-dex/openbook-v2"
+      ],
+      "limitation": "Repository adapters remain fixture-only. Event queues, slabs, lots, owner/market and subscriptions require verification; graph ingest is blocked in this PR.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "openocean",
+      "label": "OpenOcean aggregator candidate",
+      "family": "router",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.openocean.finance/dev/"
+      ],
+      "limitation": "Current access/free quotas could not be verified. Existing router/governance owner remains authoritative; no active discovery adapter added.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "orca",
+      "label": "Orca Whirlpools SDK / math / accounts",
+      "family": "amm-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/orca-so/whirlpools"
+      ],
+      "limitation": "Open-source tooling; RPC hosting/usage is separate. Complete tick arrays, fee/token semantics and amount-specific quotes still need verification.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "pendle",
+      "label": "Pendle PT/SY/YT AMM documentation",
+      "family": "amm-tool",
+      "domains": [
+        "evm"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/LiquidityEngines/AMM"
+      ],
+      "limitation": "Time/rate/redemption semantics require separate typed instruments and adapters. Not fungible Solana spot graph edges in this PR.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "phoenix-legacy",
+      "label": "Phoenix Legacy SDK / orderbook tooling",
+      "family": "orderbook-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/Ellipsis-Labs/phoenix-sdk"
+      ],
+      "limitation": "Repository adapters remain fixture-only. Verified subscriptions, pinned account decoder, lot/depth and lifecycle conformance required; graph ingest is blocked in this PR.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "project0",
+      "label": "Cross-venue collateral research",
+      "tier": "COLD",
+      "access_review": "INTEGRATION_UNQUALIFIED",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-24"
+      ],
+      "current_limitations": "Map Project 0 / mrgnLendv2 to actual programs before adapter reuse",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "pumpswap",
+      "label": "Pump public program documentation",
+      "family": "amm-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/pump-fun/pump-public-docs"
+      ],
+      "limitation": "Account layouts, owner, fees and token extensions must be pinned and verified before an exact canonical producer is admitted. Not activated.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "pyth-hermes",
+      "label": "Pyth Hermes price updates",
+      "family": "reference",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://docs.pyth.network/price-feeds/core/fetch-price-updates"
+      ],
+      "limitation": "Oracle updates require publish-time, confidence and freshness checks. Not an orderbook or executable quote; on-chain update costs are separate.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "raydium",
+      "label": "Raydium API v3 + SDK V2",
+      "family": "amm-tool",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://api-v3.raydium.io/docs/",
+        "https://github.com/raydium-io/raydium-sdk-V2"
+      ],
+      "limitation": "Public pool discovery; no guaranteed free SLA/quota. Exact CLMM/CPMM/AMM amounts require pinned decoder, complete accounts/ticks, fees and slot evidence through canonical observations.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "sanctum",
+      "label": "Sanctum router tooling candidate",
+      "family": "router",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://github.com/sanctumso/sanctum-router-sdk"
+      ],
+      "limitation": "Current repository/access could not be verified. Candidate only; no free hosted service or active connector claimed.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "solana-public-rpc",
+      "label": "Solana public RPC / standard WebSocket",
+      "family": "rpc",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "public-rate-limited",
+      "evidence_urls": [
+        "https://solana.com/docs/references/clusters"
+      ],
+      "limitation": "Shared, rate-limited, no production SLA. RPC/account state is not an exact swap quote; verify genesis, owner, decoder and slot.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "sui-objects",
+      "label": "Object/checkpoint state",
+      "tier": "HOT",
+      "access_review": "OWN_NODE_OR_PROVIDER",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-18"
+      ],
+      "current_limitations": "Version+digest consistency and owned/shared resource classification",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "switchboard",
+      "label": "Switchboard oracle tooling",
+      "family": "reference",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://docs.switchboard.xyz/"
+      ],
+      "limitation": "Hosted access, crank/update costs and free quotas were not verified. Treat oracle data as reference-only.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "the-graph",
+      "label": "The Graph subgraph querying",
+      "family": "infrastructure",
+      "domains": [
+        "multi-domain"
+      ],
+      "access": "access-not-verified",
+      "evidence_urls": [
+        "https://thegraph.com/docs/en/subgraphs/querying/introduction/"
+      ],
+      "limitation": "API keys, plans and query quotas vary; indexer lag and indexing coverage explicit. Not a guaranteed free complete realtime source.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "thegraph",
+      "label": "Indexed historical protocol state",
+      "tier": "COLD",
+      "access_review": "PLAN_SPECIFIC",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-22"
+      ],
+      "current_limitations": "Query cost, index lag, block pin and subgraph revision",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "uniswap",
+      "label": "Uniswap v3/v4 SDK and protocol tooling",
+      "family": "amm-tool",
+      "domains": [
+        "evm"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://developers.uniswap.org/docs/sdks/v3/overview",
+        "https://developers.uniswap.org/docs/protocols/v4/concepts/hooks"
+      ],
+      "limitation": "Open-source tooling requires EVM RPC, tick/hook/fee verification and its own settlement domain. EVM observations cannot enter this Solana graph bridge.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": null,
+      "qualification": "CATALOG_ONLY_UNLESS_SEPARATE_EVIDENCE",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE"
+    },
+    {
+      "source_id": "uniswap-v3-flash",
+      "label": "Pool-local flash terms",
+      "tier": "HOT",
+      "access_review": "RPC_REQUIRED",
+      "latest_primary_review": "2026-10-03",
+      "reference_ids": [
+        "MF-25"
+      ],
+      "current_limitations": "Pool lock/callback and fees; source is not additional independent pool cash",
+      "connected_by_this_update": false,
+      "raw_feed_tested_this_update": false,
+      "qualification": "DOCUMENTATION_ONLY",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "free_unlimited": false
+    },
+    {
+      "source_id": "yellowstone-grpc",
+      "label": "Filtered Solana account/transaction stream",
+      "family": "infrastructure",
+      "domains": [
+        "solana-mainnet"
+      ],
+      "access": "open-source-rpc-or-host-required",
+      "evidence_urls": [
+        "https://github.com/rpcpool/yellowstone-grpc"
+      ],
+      "limitation": "Open-source streaming software requires your validator or a provider. Hosted mainnet gRPC is not inherently free; no subscription is created here.",
+      "baseline_record": true,
+      "connected_by_this_update": false,
+      "latest_primary_review": "2026-10-03",
+      "qualification": "DOCUMENTATION_ONLY",
+      "raw_feed_tested_this_update": false,
+      "license_redistribution_status": "REVERIFY_PER_SERVICE",
+      "tier": "HOT",
+      "access_review": "OPEN_SOURCE_HOSTING_REQUIRED",
+      "reference_ids": [
+        "MF-12"
+      ],
+      "current_limitations": "Persistent gaps/replay and fork ancestry must be qualified",
+      "rate_limit_numeric": null,
+      "monthly_cost_usd": null,
+      "free_unlimited": false
+    }
+  ]
+}

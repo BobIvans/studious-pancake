@@ -1,0 +1,74 @@
+[
+  {
+    "id": "R01",
+    "path": "src/research/benchmarks.py",
+    "symbols": "BenchmarkMeasurement; ComparativeBenchmark; compare_measurements",
+    "qualification": "Есть end-to-end preparation/transfer/queue/compute/verification/cost/memory metrics. Переиспользовать, не писать отдельную benchmark authority.",
+    "sha256": "cb4a69315c40469c1d7e07b12ab9de4ab2cd426e43a72c945352bb462e74357e",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/research/benchmarks.py"
+  },
+  {
+    "id": "R02",
+    "path": "src/research/product.py",
+    "symbols": "DataEvidenceApi; DataEvidenceArtifact",
+    "qualification": "Rights/access/query-budget и metadata admission; hash не доказывает семантическую корректность произвольного расчёта.",
+    "sha256": "5e338fda8d78f084c5465ee25e755c3844d658b9125acfda85d1818cb761e248",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/research/product.py"
+  },
+  {
+    "id": "R03",
+    "path": "src/research/pr359_wave15_institution.py",
+    "symbols": "InstitutionRuntime; SemanticEvidenceResolver; allocate_service",
+    "qualification": "INST-01 уже существует, service sum-int-v1. Следующий шаг — квалифицированный новый service kind, не новая auction platform.",
+    "sha256": "62974fa285b25bd76b402fb326cdeae25a135ace39a1060d3c1959eb940d1367",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/research/pr359_wave15_institution.py"
+  },
+  {
+    "id": "R04",
+    "path": "src/mechanism_discovery/pr356_discovery.py",
+    "symbols": "prove_program_prefix_feasibility; prove_program_obligation_closure",
+    "qualification": "Есть prefix/closure research primitives. Prefix helper сейчас scalar и использует int coercion; multiasset strict typed adapter/extension нуждается в проверке у этого owner.",
+    "sha256": "9f6b9630c136daa89f19e6a59e975cc9ba0da9fa72f720f40103c99971eee3a8",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/pr356_discovery.py"
+  },
+  {
+    "id": "R05",
+    "path": "src/mechanism_discovery/pr356_state_machine.py",
+    "symbols": "DeferredConstraintWindow; snapshot_financial_graph_topology",
+    "qualification": "Есть topology/deferred-window owner; временный долг допустим только в явно заданном протоколом окне, не везде.",
+    "sha256": "3c8074e2219b4d83b30947c310f985a00a56b11298c8d282701cba5cd09fe8af",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/pr356_state_machine.py"
+  },
+  {
+    "id": "R06",
+    "path": "src/mechanism_discovery/pr356_state_completion.py",
+    "symbols": "define_clearing_invoice; reconstruct_netting_queue; qualify_clearing_strategy",
+    "qualification": "Функции оборачивают run_requirement; их имена не доказывают готовый clearing algorithm или реальные queue data.",
+    "sha256": "a078307519a8569b0edb115ccc3bb53deae8685cd9a14b23a77024f6f4719e7c",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/pr356_state_completion.py"
+  },
+  {
+    "id": "R07",
+    "path": "src/mechanism_discovery/hook_native.py",
+    "symbols": "attest_hook_runtime_identity; simulate_hook_fee_surface; qualify_hook_family",
+    "qualification": "PR354 research contracts через make_research_function; нужна одна pinned v4 model/adapter с independent vectors.",
+    "sha256": "5a71be2d70ac7c803d69bca9ceb4aa57f5eae2035f0a4148c40dd0f470acec9e",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/hook_native.py"
+  },
+  {
+    "id": "R08",
+    "path": "src/mechanism_discovery/research_quality.py",
+    "symbols": "purged_walk_forward_split; run_equal_budget_ablation; evaluate_null_control",
+    "qualification": "Owner для holdout/ablation/null controls; acceptance thresholds предварительно фиксировать.",
+    "sha256": "ae8fb0e3c4f698de12f5c03ab2e792701ba48bdeeabfdbbcae7959870f3004ff",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/research_quality.py"
+  },
+  {
+    "id": "R09",
+    "path": "src/mechanism_discovery/causal_twin.py",
+    "symbols": "define_market_intervention; reject_unsupported_causal_claim",
+    "qualification": "Исследовательские causal-assumption contracts; counterfactual replay сам по себе не доказывает реакцию живого рынка.",
+    "sha256": "6e0442733905296138aebbd57b4c996f924a918ed46c8a6659d2e1fb06493e43",
+    "permalink": "https://github.com/BobIvans/studious-pancake/blob/72ae95fdc17e1b7318b2f46002629ce9223a0127/src/mechanism_discovery/causal_twin.py"
+  }
+]

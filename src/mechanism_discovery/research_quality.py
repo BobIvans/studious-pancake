@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Mapping, Sequence
+from typing import Mapping, Sequence, cast
 
 from .evidence_native_core import (
     EvidenceNativeError,
@@ -91,13 +91,9 @@ def purged_walk_forward_split(
 ) -> Mapping[str, object]:
     cutoff = require_int(train_end, "train_end", minimum=0)
     embargo_value = require_int(embargo, "embargo", minimum=0)
-    train = tuple(
-        item for item in episodes if item.label_available_at <= cutoff
-    )
+    train = tuple(item for item in episodes if item.label_available_at <= cutoff)
     holdout = tuple(
-        item
-        for item in episodes
-        if item.feature_available_at > cutoff + embargo_value
+        item for item in episodes if item.feature_available_at > cutoff + embargo_value
     )
     if not train or not holdout:
         raise EvidenceNativeError("PURGED_WALK_FORWARD_SPLIT_EMPTY")
@@ -124,23 +120,15 @@ def compare_four_model_variants(
     holdout_labels: Sequence[int],
     mechanism_prediction_atoms: int,
 ) -> Mapping[str, object]:
-    train = tuple(
-        require_int(value, "train_label") for value in train_labels
-    )
-    pooled = tuple(
-        require_int(value, "pooled_label") for value in pooled_labels
-    )
-    holdout = tuple(
-        require_int(value, "holdout_label") for value in holdout_labels
-    )
+    train = tuple(require_int(value, "train_label") for value in train_labels)
+    pooled = tuple(require_int(value, "pooled_label") for value in pooled_labels)
+    holdout = tuple(require_int(value, "holdout_label") for value in holdout_labels)
     if not train or not pooled or not holdout:
         raise EvidenceNativeError("MODEL_COMPARATOR_DATA_REQUIRED")
 
     simple_prediction = 0
     local_prediction = sum(train) // len(train)
-    pooled_prediction = sum((*train, *pooled)) // (
-        len(train) + len(pooled)
-    )
+    pooled_prediction = sum((*train, *pooled)) // (len(train) + len(pooled))
     mechanism_prediction = require_int(
         mechanism_prediction_atoms,
         "mechanism_prediction_atoms",
@@ -226,9 +214,7 @@ def evaluate_probability_calibration(
             minimum=0,
         )
         if outcome not in {0, 1}:
-            raise EvidenceNativeError(
-                "CALIBRATION_OUTCOME_BINARY_REQUIRED"
-            )
+            raise EvidenceNativeError("CALIBRATION_OUTCOME_BINARY_REQUIRED")
         target = outcome * 1_000_000
         absolute_errors.append(abs(probability - target))
         lower = require_ppm(
@@ -249,9 +235,7 @@ def evaluate_probability_calibration(
             "mean_absolute_calibration_error_ppm": (
                 sum(absolute_errors) // len(absolute_errors)
             ),
-            "interval_coverage_ppm": (
-                covered * 1_000_000 // len(rows)
-            ),
+            "interval_coverage_ppm": (covered * 1_000_000 // len(rows)),
             "row_count": len(rows),
         },
     )
@@ -281,9 +265,7 @@ def run_equal_budget_ablation(
         minimum=0,
     )
     if baseline_cost > budget or challenger_cost > budget:
-        raise EvidenceNativeError(
-            "EQUAL_BUDGET_ABLATION_BUDGET_EXCEEDED"
-        )
+        raise EvidenceNativeError("EQUAL_BUDGET_ABLATION_BUDGET_EXCEEDED")
     baseline_utility = require_int(
         baseline_utility_units,
         "baseline_utility_units",
@@ -300,9 +282,7 @@ def run_equal_budget_ablation(
             "challenger_cost_units": challenger_cost,
             "baseline_utility_units": baseline_utility,
             "challenger_utility_units": challenger_utility,
-            "utility_delta_units": (
-                challenger_utility - baseline_utility
-            ),
+            "utility_delta_units": (challenger_utility - baseline_utility),
         },
     )
 
@@ -379,18 +359,13 @@ def evaluate_detection_coverage(
         minimum=0,
     )
     if fp > discovered or fn > positive or covered > observable:
-        raise EvidenceNativeError(
-            "DETECTION_COVERAGE_COUNTS_INVALID"
-        )
+        raise EvidenceNativeError("DETECTION_COVERAGE_COUNTS_INVALID")
     return record(
         "evaluate_detection_coverage",
         {
             "fdr_ppm": fp * 1_000_000 // max(1, discovered),
             "fnr_ppm": fn * 1_000_000 // max(1, positive),
-            "observable_miss_ppm": (
-                (observable - covered) * 1_000_000
-                // observable
-            ),
+            "observable_miss_ppm": ((observable - covered) * 1_000_000 // observable),
             "observable_cells": observable,
             "covered_cells": covered,
         },
@@ -437,9 +412,7 @@ def source_value_report(
             "qualified_candidates": qualified,
             "total_cost_units": total_cost,
             "source_failures": failures,
-            "qualified_per_cost_ppm": (
-                qualified * 1_000_000 // max(1, total_cost)
-            ),
+            "qualified_per_cost_ppm": (qualified * 1_000_000 // max(1, total_cost)),
             "blind_spot": failures > 0,
         },
     )
@@ -457,3 +430,89 @@ __all__ = [
     "run_equal_budget_ablation",
     "source_value_report",
 ]
+
+
+@dataclass(frozen=True, slots=True)
+class RegisteredHypothesis:
+    hypothesis_id: str
+    registered_at_ns: int
+    family_id: str
+    family_test_count: int
+    latency_ns: int
+    cost_atoms: int
+    null_prediction_atoms: int = 0
+
+    def __post_init__(self):
+        require_text(self.hypothesis_id, "hypothesis_id")
+        require_text(self.family_id, "family_id")
+        for field in ("registered_at_ns", "latency_ns", "cost_atoms"):
+            require_int(getattr(self, field), field, minimum=0)
+        require_int(self.family_test_count, "family_test_count", minimum=1)
+        require_int(self.null_prediction_atoms, "null_prediction_atoms")
+
+
+def evaluate_registered_holdout(
+    registration: RegisteredHypothesis,
+    episodes: tuple[ResearchEpisode, ...],
+    *,
+    train_end: int,
+    embargo: int,
+    raw_pvalue_num: int,
+    raw_pvalue_den: int,
+    alpha_ppm: int = 50_000,
+) -> Mapping[str, object]:
+    """Precommitted walk-forward/null comparison; no profitability inference.
+
+    P-values are supplied evidence, not manufactured from a tiny replay sample.
+    Bonferroni family control is exact integer arithmetic. Only independent,
+    latency-usable holdout episodes contribute to the descriptive MAE comparison.
+    """
+    require_int(raw_pvalue_num, "raw_pvalue_num", minimum=0)
+    require_int(raw_pvalue_den, "raw_pvalue_den", minimum=1)
+    require_ppm(alpha_ppm, "alpha_ppm")
+    if raw_pvalue_num > raw_pvalue_den or not episodes:
+        raise EvidenceNativeError("HYPOTHESIS_PVALUE_OR_EPISODES_INVALID")
+    ordered = tuple(
+        sorted(episodes, key=lambda item: (item.feature_available_at, item.episode_id))
+    )
+    if len({item.episode_id for item in ordered}) != len(ordered):
+        raise EvidenceNativeError("HYPOTHESIS_EPISODE_DUPLICATED")
+    if any(
+        right.feature_available_at <= left.label_available_at
+        for left, right in zip(ordered, ordered[1:])
+    ):
+        raise EvidenceNativeError("HYPOTHESIS_EPISODES_OVERLAP")
+    split = purged_walk_forward_split(ordered, train_end=train_end, embargo=embargo)
+    holdout = tuple(
+        item
+        for item in cast(tuple[ResearchEpisode, ...], split["holdout"])
+        if item.feature_available_at + registration.latency_ns < item.label_available_at
+    )
+    if not holdout or registration.registered_at_ns >= min(
+        item.feature_available_at for item in holdout
+    ):
+        raise EvidenceNativeError("HYPOTHESIS_POSTHOC_OR_LATENCY_UNUSABLE")
+    train = cast(tuple[ResearchEpisode, ...], split["train"])
+    prediction = sum(item.label_atoms for item in train) // len(train)
+    model_mae = _mae(tuple(item.label_atoms for item in holdout), prediction)
+    null_mae = _mae(
+        tuple(item.label_atoms for item in holdout), registration.null_prediction_atoms
+    )
+    significant = (
+        raw_pvalue_num * registration.family_test_count * 1_000_000
+        <= raw_pvalue_den * alpha_ppm
+    )
+    return {
+        "hypothesis_id": registration.hypothesis_id,
+        "family_id": registration.family_id,
+        "holdout_episode_ids": tuple(item.episode_id for item in holdout),
+        "prediction_atoms": prediction,
+        "model_mae_atoms": model_mae,
+        "null_mae_atoms": null_mae,
+        "cost_adjusted_improvement_atoms": null_mae
+        - model_mae
+        - registration.cost_atoms,
+        "family_significant": significant,
+        "execution_right": False,
+        "qualification": "DESCRIPTIVE_HOLDOUT_ONLY",
+    }

@@ -32,7 +32,7 @@ from src.strategy.exact_cpmm_capacity import (
 pytestmark = pytest.mark.unit
 
 NOW = 1_000.0
-GENESIS = "solana-mainnet-genesis-fixture"
+GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
 TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 GENERATION = ObservationGeneration(
     genesis_hash=GENESIS,
@@ -56,7 +56,15 @@ def _asset(mint: str, **changes: object) -> SolanaAssetIdentity:
     return SolanaAssetIdentity(**values)  # type: ignore[arg-type]
 
 
-A, B, C, D = (_asset(mint) for mint in ("WSOL", "TOKEN-B", "TOKEN-C", "TOKEN-D"))
+from solders.pubkey import Pubkey
+
+A, B, C, D = (
+    _asset(mint)
+    for mint in (
+        "So11111111111111111111111111111111111111112",
+        *(str(Pubkey.from_bytes(bytes([i]) * 32)) for i in (2, 3, 4)),
+    )
+)
 
 
 def _pool(
@@ -331,3 +339,85 @@ def test_model_revision_changes_evidence_identity_before_admission() -> None:
             state_before=replace(state, model_revision="future-unqualified"),
         ).evaluation_id
     )
+
+
+@pytest.mark.parametrize(
+    "changes",
+    (
+        {"mint": "WSOL"},
+        {"genesis_hash": "other"},
+        {"token_program": "other"},
+        {"decimals": 6},
+    ),
+)
+def test_native_identity_cannot_be_substituted_by_symbol_or_revision(changes):
+    fake = replace(A, **changes)
+    with pytest.raises(CpmmEvaluationError) as error:
+        QualifiedRaydiumCpmmAdapter().evaluate(
+            _pool(1, fake, replace(B, genesis_hash=fake.genesis_hash), (1000, 2000)),
+            input_asset=fake,
+            requested_input=10,
+        )
+    assert error.value.reason is CpmmEvaluationRejection.INVALID_ASSET_IDENTITY
+
+
+def test_zero_output_sizing_point_does_not_abort_later_profitable_points(tmp_path):
+    report = evaluate_sampled_cpmm_capacity(
+        _three_hop_plan(),
+        amounts=(1, 10, 20),
+        economics=CapacityEconomics(
+            "WSOL", 0, 0, NativeCostBreakdown(base_network_fee_lamports=0)
+        ),
+        coordinator=_coordinator(tmp_path),
+        wallet_snapshot=_wallet(),
+        now=NOW,
+    )
+    assert report.pr118_result.rejected_points[0].amount_lamports == 1
+    assert report.selected_amount == 20
+    assert report.budget_status == "evaluated-all-points"
+
+
+def test_semantic_route_identity_binds_intermediate_asset_revision_not_reserves():
+    plan = _three_hop_plan()
+    changed = replace(B, token_revision="future-token-version")
+    revised = replace(
+        plan,
+        pools=(
+            replace(plan.pools[0], asset_b=changed),
+            replace(plan.pools[1], asset_a=changed),
+            plan.pools[2],
+        ),
+    )
+    assert revised.semantic_route_id != plan.semantic_route_id
+    resized = replace(
+        plan,
+        pools=(
+            replace(plan.pools[0], reserve_a=plan.pools[0].reserve_a + 1),
+            *plan.pools[1:],
+        ),
+    )
+    assert resized.semantic_route_id == plan.semantic_route_id
+
+
+def test_amount_local_zero_cannot_hide_an_invalid_later_pool(tmp_path):
+    plan = _three_hop_plan()
+    plan = replace(
+        plan,
+        pools=(
+            plan.pools[0],
+            replace(plan.pools[1], model_revision="unknown"),
+            plan.pools[2],
+        ),
+    )
+    with pytest.raises(CpmmEvaluationError) as error:
+        evaluate_sampled_cpmm_capacity(
+            plan,
+            amounts=(1, 10, 20),
+            economics=CapacityEconomics(
+                "WSOL", 0, 0, NativeCostBreakdown(base_network_fee_lamports=0)
+            ),
+            coordinator=_coordinator(tmp_path),
+            wallet_snapshot=_wallet(),
+            now=NOW,
+        )
+    assert error.value.reason is CpmmEvaluationRejection.UNSUPPORTED_MODEL_REVISION

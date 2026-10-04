@@ -426,3 +426,8 @@ src/market/native_cpmm_capture.py
 src/paper_shadow/native_cpmm_qualification.py
 tests/native_cpmm_fixtures.py
 tests/test_native_cpmm_qualification.py
+
+src/market_data_evolution/qualification_dataset.py
+src/research/occ_qualification.py
+scripts/run_research_qualification.py
+tests/market_data_evolution/test_occ_research_qualification.py

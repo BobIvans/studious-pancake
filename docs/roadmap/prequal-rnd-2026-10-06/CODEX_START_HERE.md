@@ -1,47 +1,37 @@
-# CODEX START HERE — PRE-QUALIFICATION CAMPAIGN
+# CODEX START HERE — MATERIALIZED PRE-QUALIFICATION R&D
 
-This repository branch contains the complete R&D ZIP at:
-`docs/roadmap/prequal-rnd-2026-10-06/STUDIOUS_PANCAKE_PREQUAL_RND_2026-10-06.zip`.
+The complete 47-file R&D pack is already materialized in this repository branch under:
 
-## Step 0 — materialize the pack
-
-Unpack the archive **inside this branch/worktree** under:
 `docs/roadmap/prequal-rnd-2026-10-06/package/`
 
-Do not delete the original ZIP. Verify SHA-256 first using `docs/roadmap/prequal-rnd-2026-10-06/PACKAGE_SHA256.txt`.
+No download or unzip step is required.
 
-Then read:
-1. `package/00_README_START_HERE_RU.md`
-2. `package/01_MASTER_CONTEXT_RU.md`
-3. `package/03_FASTEST_QUALIFICATION_PATH_RU.md`
-4. `package/06_RUNTIME_RELEASE_AUTHORITY_UNIFICATION_RU.md`
-5. `package/07_RPC_QUORUM_AND_NATIVE_CAPTURE_RU.md`
-6. `package/11_SOURCE_PLUGIN_ARCHITECTURE_RU.md`
-7. `package/data/acceptance_gates.json`
-8. `package/data/pr_plan.json`
-9. `package/16_OPEN_PR_REUSE_SUPERSEDE_RU.md`
+## Read first
 
-## Goal
+1. `package/18_CODEX_START_HERE.md`
+2. `package/00_README_START_HERE_RU.md`
+3. `package/01_MASTER_CONTEXT_RU.md`
+4. `package/02_MASTER_PROBLEM_REGISTER_RU.md`
+5. `package/03_FASTEST_QUALIFICATION_PATH_RU.md`
+6. `package/06_RUNTIME_RELEASE_AUTHORITY_UNIFICATION_RU.md`
+7. `package/07_RPC_QUORUM_AND_NATIVE_CAPTURE_RU.md`
+8. `package/11_SOURCE_PLUGIN_ARCHITECTURE_RU.md`
+9. `package/data/acceptance_gates.json`
+10. `package/data/pr_plan.json`
+11. `package/16_OPEN_PR_REUSE_SUPERSEDE_RU.md`
 
-Execute the R&D plan against the **current main descendant**, not stale PR heads. Preserve all pack context in-repo.
+## Execution instruction
 
-Start **QPR-01**, then **QPR-02**. After they pass Campaign-Start Gate, continue the remaining QPR sequence in `package/17_PR_SEQUENCE_RU.md`. Do not collapse all work into one unsafe mega-diff merely for convenience.
+Work against the current `main` descendant. Do not reset main to the historical pack base SHA if main has advanced.
 
-## Required constraints
+Execute the plan starting with **QPR-01**, then **QPR-02**. After Campaign-Start Gate passes, continue the remaining sequence in `package/17_PR_SEQUENCE_RU.md`.
 
-- sender/signer/submission remain unreachable;
-- source/catalog/indexed data cannot become exact execution edge;
-- no secrets committed;
-- every external request uses governed transport + quota + redacted evidence;
-- replay performs zero network I/O;
-- a single RPC source can collect but cannot qualify;
-- preserve historical source generations; never rewrite evidence in place;
-- stale PRs are references only: reuse unique tests/contracts, do not merge stale branches wholesale;
-- rebase/reconcile pack assumptions whenever current main has advanced.
+Do not merge stale foundational PR branches wholesale. Harvest only unique tests/contracts/evidence semantics and rebuild against current canonical owners.
 
-## Completion output per QPR
+Keep sender, signer and transaction submission unreachable throughout pre-qualification work. Discovery/indexed data may select candidates but may never become exact executable truth without rooted/on-chain qualification evidence.
 
-- code + focused tests;
+For every QPR, leave:
+- code and focused tests;
 - updated problem-register disposition;
 - machine-readable receipt with current base/head SHA;
 - exact remaining blockers;

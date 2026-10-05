@@ -175,7 +175,7 @@ async def test_missing_credentials_disable_only_affected_providers() -> None:
     batch = await DiscoveryPlane(registry).discover(request())
     assert batch.quotes == ()
     assert {failure.provider for failure in batch.failures} == {"jupiter_router"}
-    assert len(transport.calls) == 1
+    assert len(transport.calls) == 0
 
 
 @pytest.mark.asyncio

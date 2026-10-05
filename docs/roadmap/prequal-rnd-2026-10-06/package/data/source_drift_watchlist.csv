@@ -1,0 +1,10 @@
+item,repo_truth,current_external_truth,action
+Pyth Hermes auth/endpoint,Bearer auth added; old hermes host retained,API key required; upgraded endpoint pyth.dourolabs.app/hermes recommended; old host works with auth,Create endpoint generation + probe; no hardcoded host
+Project0 SDK,catalog says p0-ts-sdk >=2.8.0; conformance pins old source artifacts,marginfi-client-v2 deprecated; >=2.8.0 required for 0.1.11 oracle setups,Full rebind dossier
+Solana public RPC,native capture hardcodes api.mainnet-beta.solana.com,docs list api.mainnet.solana.com and say public endpoints not for production,provider profiles; public only smoke
+OpenOcean V4 quote,runtime omits gasPriceDecimals; probe includes it,amountDecimals + gasPriceDecimals required/recommended current V4,shared typed request builder
+Jupiter Free plan,existing provider/quota assumptions need current generation,"Free $0, unlimited usage, 1 request/sec",record plan generation; physical quota owner
+Helius Free plan,catalog previously 1M credits/10 RPS,"current pricing still 1M credits, 10 RPS, standard WSS",candidate quorum member; never count two Helius endpoints as independent
+Meteora DLMM Data API,catalog says 30 RPS discovery,official docs: 30 RPS,good free discovery; exact bins/state via RPC
+DEX Screener,catalog discovery/reference,pair/token endpoints 300 rpm,candidate-universe plugin only
+GeckoTerminal,catalog discovery/reference,"public beta, no auth, 30 calls/min",candidate-universe plugin; version pin

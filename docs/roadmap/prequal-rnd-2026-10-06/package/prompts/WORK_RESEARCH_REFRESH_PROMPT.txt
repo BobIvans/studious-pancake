@@ -1,0 +1,1 @@
+Audit all official external documentation and current main for source-generation drift before a Qualification Campaign. Update source dossiers only from official docs/repos, preserve old generations, classify each change as auth/endpoint/schema/quota/SDK/program/deployment/terms drift, and return exact file-level implementation deltas without enabling live execution.

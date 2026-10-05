@@ -1,0 +1,14 @@
+{
+  "schema_version": "prequal.source-dossier.v1",
+  "source_id": "",
+  "label": "",
+  "checked_at": "",
+  "status": "research-candidate",
+  "official_sources": [{"url":"","kind":"docs|openapi|repo|sdk|program-registry","content_or_version_pin":""}],
+  "access": {"auth_mode":"none|api-key|hmac|rpc|local-sdk","secret_reference":"","free_tier_claim":"UNVERIFIED","rate_limit":{"window_seconds":0,"physical_attempts":0,"notes":""},"terms_url":"","license_class":"UNREVIEWED"},
+  "identity": {"chain_domain":"solana-mainnet","provider":"","operator":"","correlation_group":"","base_url":"","program_id":"","sdk_package":"","sdk_version":"","source_commit":"","deployed_binary_sha256":""},
+  "semantics": {"role":"discovery-only","data_kind":[],"exact_amount_outputs":false,"slot_or_sequence_evidence":false,"underlying_venue_identity":false,"token_2022_policy":"UNKNOWN","oracle_policy":"UNKNOWN"},
+  "runtime_contract": {"adapter_owner":"","typed_request_builder":"","transport_owner":"ProviderGovernance/HttpxJsonTransport","quota_owner":"","journal_owner":"","conformance_probe":"","schema_fingerprint":""},
+  "promotion_requirements": ["official-source-current","auth-valid","quota-bounded","schema-probe-pass","negative-probes-pass","provenance-preserved","rooted-or-sequenced-state","differential-vector-pass-if-exact","campaign-replay-pass"],
+  "blockers": []
+}

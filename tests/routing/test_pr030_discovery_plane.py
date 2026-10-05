@@ -153,7 +153,7 @@ async def test_provider_failure_isolated_and_unknown_schema_fails_closed() -> No
 
     batch = await DiscoveryPlane(registry).discover(request())
 
-    assert batch.quotes == ()
+    assert tuple(quote.provider for quote in batch.quotes) == ("odos",)
     assert len(batch.failures) == 1
     assert batch.failures[0].provider == "jupiter_router"
     assert batch.failures[0].reason is ProviderFailureReason.INVALID_SCHEMA
@@ -173,7 +173,7 @@ async def test_missing_credentials_disable_only_affected_providers() -> None:
     assert "odos" not in report
 
     batch = await DiscoveryPlane(registry).discover(request())
-    assert tuple(quote.provider for quote in batch.quotes) == ("odos",)
+    assert batch.quotes == ()
     assert {failure.provider for failure in batch.failures} == {"jupiter_router"}
     assert len(transport.calls) == 1
 

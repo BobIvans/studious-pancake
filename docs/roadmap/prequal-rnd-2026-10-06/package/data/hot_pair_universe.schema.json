@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "RollingQualificationUniverse",
+  "type": "object",
+  "required": ["generation","pairs"],
+  "properties": {
+    "generation": {"type":"string"},
+    "created_at_utc": {"type":"string"},
+    "target_size": {"type":"integer","minimum":1,"maximum":500},
+    "pairs": {
+      "type":"array",
+      "items":{
+        "type":"object",
+        "required":["base_mint","quote_mint","reason","discovery_sources","priority_score","control_class"],
+        "properties":{
+          "base_mint":{"type":"string"},
+          "quote_mint":{"type":"string"},
+          "reason":{"type":"array","items":{"type":"string"}},
+          "discovery_sources":{"type":"array","items":{"type":"string"}},
+          "venue_candidates":{"type":"array","items":{"type":"string"}},
+          "priority_score":{"type":"number"},
+          "liquidity_reference_usd":{"type":["number","null"]},
+          "volume_reference_usd":{"type":["number","null"]},
+          "cross_source_dispersion_bps":{"type":["number","null"]},
+          "data_completeness":{"type":"number","minimum":0,"maximum":1},
+          "control_class":{"enum":["candidate","negative-control","baseline-stable","new-listing-probe"]},
+          "last_verified_slot":{"type":["integer","null"]},
+          "exact_state_ready":{"type":"boolean"}
+        }
+      }
+    }
+  }
+}

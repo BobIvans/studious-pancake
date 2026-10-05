@@ -1,0 +1,13 @@
+{
+  "schema_version": "prequal.campaign-manifest.v1",
+  "campaign_id": "YYYYMMDD-qual-001",
+  "mode": "CAPTURE_ONLY|QUALIFICATION",
+  "release": {"git_commit":"ac6297e3f174d073c524099f599490edfe30f7b1","wheel_sha256":"","runtime_authority_sha256":"","policy_bundle_sha256":""},
+  "time": {"created_at_utc":"","trusted_clock_generation":"","capture_window_seconds":0,"holdout_start_utc":"","holdout_end_utc":""},
+  "sources": {"discovery_source_ids":[],"rpc_quorum_profile_id":"","oracle_source_ids":[],"protocol_source_ids":[],"venue_source_ids":[]},
+  "universe": {"target_pair_count":160,"seed_pairs":[],"rotation_policy":"score + diversity + negative controls","negative_control_fraction":0.2},
+  "budgets": {"network_spend_usd_max":0,"rpc_physical_attempts_max":0,"per_source_quotas":{},"storage_bytes_max":0,"max_route_expansions":0},
+  "safety": {"sender_reachable":false,"signer_reachable":false,"transaction_submission_allowed":false,"live_authorization":false},
+  "evidence": {"journal_path":"","immutable_head_sha256":"","negative_evidence_required":true,"rooted_quorum_required_for_verdict":true,"single_source_capture_verdict":"BLOCKED_SINGLE_SOURCE"},
+  "acceptance_gate_set": "CAMPAIGN_START_V1"
+}

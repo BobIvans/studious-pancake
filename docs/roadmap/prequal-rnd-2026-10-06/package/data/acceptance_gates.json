@@ -1,0 +1,33 @@
+{
+  "schema_version": "prequal.acceptance-gates.v1",
+  "gate_sets": {
+    "CAMPAIGN_START_V1": [
+      {"id":"CS-01","requirement":"Campaign manifest binds current git/release/policy identity","blocking":true},
+      {"id":"CS-02","requirement":"Sender/signer/submission unreachable","blocking":true},
+      {"id":"CS-03","requirement":"Every source has source dossier + provider generation + quota owner","blocking":true},
+      {"id":"CS-04","requirement":"Discovery data never promoted directly to exact executable edge","blocking":true},
+      {"id":"CS-05","requirement":"Campaign evidence journal is durable and records failures/gaps","blocking":true},
+      {"id":"CS-06","requirement":"At least one real non-synthetic source can capture; if quorum <2 verdict remains BLOCKED","blocking":true},
+      {"id":"CS-07","requirement":"Replay from journal performs zero network requests","blocking":true},
+      {"id":"CS-08","requirement":"Physical request quotas are bounded; retries consume budget","blocking":true},
+      {"id":"CS-09","requirement":"Current external docs/source pins checked at campaign start","blocking":true},
+      {"id":"CS-10","requirement":"Unknown cost/source semantics fail closed, not silently zero","blocking":true}
+    ],
+    "QUALIFICATION_VERDICT_V1": [
+      {"id":"QV-01","requirement":">=2 independent rooted RPC sources agree on exact relevant state","blocking":true},
+      {"id":"QV-02","requirement":"Deployment/source binding for every exact venue/protocol used","blocking":true},
+      {"id":"QV-03","requirement":"Continuous capture covers gaps/reconnects and stale/fork barriers","blocking":true},
+      {"id":"QV-04","requirement":"Forward holdout is sealed before evaluation","blocking":true},
+      {"id":"QV-05","requirement":"Exact amount coupling and Token-2022/oracle semantics proven","blocking":true},
+      {"id":"QV-06","requirement":"Conservative costs + financing included","blocking":true},
+      {"id":"QV-07","requirement":"Negative evidence and no-trades preserved","blocking":true}
+    ],
+    "PRODUCTION_PROMOTION_V1": [
+      {"id":"PP-01","requirement":"Single runtime/release authority digest","blocking":true},
+      {"id":"PP-02","requirement":"Canonical persistence authorities for active lifecycle/economic/provider state","blocking":true},
+      {"id":"PP-03","requirement":"Release-bound non-synthetic 72h soak exact artifact generation","blocking":true},
+      {"id":"PP-04","requirement":"Proof gates are consumed by canonical runtime/release owners","blocking":true},
+      {"id":"PP-05","requirement":"Security/deployment/rollback/finalized-economics evidence complete","blocking":true}
+    ]
+  }
+}

@@ -166,7 +166,7 @@ def test_pr136_fake_distinct_groups_from_one_provider_still_fail_independence() 
     assert decision.reason is RootedRpcQuorumReason.CORRELATED_RPC_SOURCES
 
 
-def test_pr136_distinct_provider_labels_with_one_operator_still_fail_independence() -> None:
+def test_pr136_same_operator_with_distinct_labels_fails_independence() -> None:
     decision = evaluate(
         [
             rooted(

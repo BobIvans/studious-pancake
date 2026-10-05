@@ -11,7 +11,7 @@ Capabilities are explicit:
 - Jupiter `/swap/v2/build`: composable instructions and the only provider eligible for execution planning.
 - OKX: discovery-only until a later promotion gate.
 - OpenOcean: quote-only discovery with underlying-source correlation labels.
-- Odos: immutable-transaction discovery; never inserted into a MarginFi atomic message.
+- Odos: retired from runtime/discovery admission after the operating-company service shutdown on 2026-07-30; historical fixtures remain replay-only.
 
 PR-027 remains the authority for contract admission. A static adapter capability cannot promote a disabled registry entry. PR-031 remains the authority for account-wide Jupiter quota; the PR-030 network client reserves `DISCOVERY` capacity from the shared `JupiterQuotaManager` before issuing a request.
 

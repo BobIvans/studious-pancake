@@ -161,7 +161,7 @@ async def test_provider_failure_isolated_and_unknown_schema_fails_closed() -> No
 
 @pytest.mark.asyncio
 async def test_missing_credentials_disable_only_affected_providers() -> None:
-    transport = RecordedTransport({OdosAdapter.endpoint: (200, {}, FIXTURES["odos"])})
+    transport = RecordedTransport({})
     registry = ProviderRegistry.from_env(
         {}, transport=transport, reviewed_entitlements=reviewed_manifests()
     )
@@ -170,12 +170,12 @@ async def test_missing_credentials_disable_only_affected_providers() -> None:
     assert report["jupiter_router"]["state"] == "ready"
     assert report["okx_dex"]["state"] == "disabled_missing_credentials"
     assert report["openocean"]["state"] == "disabled_missing_credentials"
-    assert report["odos"]["state"] == "discovery_only"
+    assert "odos" not in report
 
     batch = await DiscoveryPlane(registry).discover(request())
-    assert tuple(quote.provider for quote in batch.quotes) == ("odos",)
+    assert batch.quotes == ()
     assert {failure.provider for failure in batch.failures} == {"jupiter_router"}
-    assert len(transport.calls) == 1
+    assert len(transport.calls) == 0
 
 
 @pytest.mark.asyncio
@@ -270,11 +270,6 @@ def test_external_contract_registry_is_authoritative() -> None:
             ),
             "okx": Contract("okx.solana", "discovery-only", ("quote",)),
             "openocean": Contract("openocean.solana", "discovery-only", ("quote",)),
-            "odos": Contract(
-                "odos.solana",
-                "discovery-only",
-                ("quote", "immutable-transaction"),
-            ),
         }
 
         def provider(self, name: str):
@@ -297,5 +292,4 @@ def test_external_contract_registry_is_authoritative() -> None:
         "jupiter_router": ProviderRole.EXECUTABLE,
         "okx_dex": ProviderRole.DISCOVERY_ONLY,
         "openocean": ProviderRole.DISCOVERY_ONLY,
-        "odos": ProviderRole.DISCOVERY_ONLY,
     }

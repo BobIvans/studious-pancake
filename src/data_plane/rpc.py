@@ -437,6 +437,8 @@ class RootedRpcQuorumGate:
             ),
         )
         groups = tuple(sorted({item.identity.correlation_group for item in matches}))
+        providers = {item.identity.provider for item in matches}
+        operators = {item.identity.operator for item in matches}
         endpoints = tuple(item.sample.endpoint_id for item in matches)
         payload_hash = matches[0].sample.payload_hash
 
@@ -450,7 +452,11 @@ class RootedRpcQuorumGate:
                 groups=groups,
                 rejected=tuple(rejected),
             )
-        if len(groups) < self.policy.minimum_independent_correlation_groups:
+        if (
+            len(groups) < self.policy.minimum_independent_correlation_groups
+            or len(providers) < self.policy.minimum_independent_correlation_groups
+            or len(operators) < self.policy.minimum_independent_correlation_groups
+        ):
             return self._result(
                 False,
                 RootedRpcQuorumReason.CORRELATED_RPC_SOURCES,

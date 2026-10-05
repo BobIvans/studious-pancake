@@ -144,6 +144,50 @@ def test_pr136_two_correlated_urls_cannot_satisfy_two_source_quorum() -> None:
     assert decision.independent_correlation_groups == ("helius-mainnet",)
 
 
+def test_pr136_fake_distinct_groups_from_one_provider_still_fail_independence() -> None:
+    decision = evaluate(
+        [
+            rooted(
+                "helius-a",
+                provider="helius",
+                operator="helius",
+                correlation_group="claimed-a",
+            ),
+            rooted(
+                "helius-b",
+                provider="helius",
+                operator="helius",
+                correlation_group="claimed-b",
+            ),
+        ]
+    )
+
+    assert decision.accepted is False
+    assert decision.reason is RootedRpcQuorumReason.CORRELATED_RPC_SOURCES
+
+
+def test_pr136_same_operator_with_distinct_labels_fails_independence() -> None:
+    decision = evaluate(
+        [
+            rooted(
+                "rpc-a",
+                provider="provider-a",
+                operator="shared-operator",
+                correlation_group="group-a",
+            ),
+            rooted(
+                "rpc-b",
+                provider="provider-b",
+                operator="shared-operator",
+                correlation_group="group-b",
+            ),
+        ]
+    )
+
+    assert decision.accepted is False
+    assert decision.reason is RootedRpcQuorumReason.CORRELATED_RPC_SOURCES
+
+
 def test_pr136_independent_rooted_sources_accept_same_payload() -> None:
     decision = evaluate(
         [

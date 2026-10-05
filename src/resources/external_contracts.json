@@ -256,13 +256,13 @@
     {
       "id": "odos.solana-api",
       "provider": "odos",
-      "status": "discovery-only",
+      "status": "disabled-unverified",
       "capabilities": [
         "quote",
         "immutable-transaction"
       ],
       "official_source_url": "https://docs.odos.xyz/api/solana",
-      "source_ref": "documentation-reviewed-2026-07-21",
+      "source_ref": "retired-service-2026-07-30",
       "artifacts": [
         {
           "path": "contracts/routing/odos_solana_api_review_2026-07-21.json",
@@ -275,7 +275,7 @@
       "deployment_program_id": null,
       "cluster": "mainnet-beta",
       "conformance_probe": null,
-      "promotion_state": "remote-schema-freshness-pending",
+      "promotion_state": "local-artifact-integrity-only",
       "evidence": {
         "local_artifact_integrity": true,
         "remote_schema_freshness": false,
@@ -284,7 +284,7 @@
         "execution_conformance": false,
         "promotion_evidence": false
       },
-      "notes": "Odos remains discovery-only because assembled transactions are immutable and not composable into the initial flash-loan vertical."
+      "notes": "Historical Odos Solana review retained for audit replay only. The operating-company services shut down permanently on 2026-07-30; runtime/discovery admission is retired."
     },
     {
       "id": "marginfi.v2-mainnet-source-identity",
@@ -294,8 +294,8 @@
         "protocol-source",
         "read-only-rpc"
       ],
-      "official_source_url": "https://docs.marginfi.com/rust-sdk",
-      "source_ref": "source-identity-unresolved-2026-07-21",
+      "official_source_url": "https://docs.marginfi.com/typescript-sdk/getting-started",
+      "source_ref": "project0-sdk-reviewed-2026-10-06",
       "artifacts": [
         {
           "path": "contracts/marginfi/marginfi_source_identity_review_2026-07-21.json",
@@ -317,7 +317,7 @@
         "execution_conformance": false,
         "promotion_evidence": false
       },
-      "notes": "PR-054 records the current MarginFi source/deployment uncertainty and keeps execution disabled for PR-055."
+      "notes": "Current official tooling is @0dotxyz/p0-ts-sdk >=2.8.0 for program 0.1.11 oracle setups. Existing binary/source vectors are not silently re-pinned; execution stays disabled until current Project 0 source/deployment conformance is materialized."
     }
   ]
 }

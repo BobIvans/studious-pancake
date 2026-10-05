@@ -33,11 +33,9 @@ def test_registry_roles_and_missing_credentials_are_isolated():
         "jupiter_router": "ready",
         "okx_dex": "disabled_missing_credentials",
         "openocean": "disabled_missing_credentials",
-        "odos": "discovery_only",
     }
     assert {r["artifact_kind"] for r in report} >= {
         "raw_instructions",
-        "assembled_transaction",
         "none",
     }
 

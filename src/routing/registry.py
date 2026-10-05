@@ -23,7 +23,6 @@ from src.providers.jupiter.quota import (
 
 from .clients import (
     JupiterRouterAdapter,
-    OdosAdapter,
     OkxDexAdapter,
     OpenOceanAdapter,
     ProviderRequestError,
@@ -49,7 +48,6 @@ _PROVIDER_CONTRACT_NAMES = {
     "jupiter_router": "jupiter",
     "okx_dex": "okx",
     "openocean": "openocean",
-    "odos": "odos",
 }
 
 
@@ -210,7 +208,6 @@ class ProviderRegistry:
                 api_key=env.get("OPENOCEAN_API_KEY"),
                 transport=transport,
             ),
-            OdosAdapter(transport=transport),
         )
         active_contract_registry = (
             _load_default_contract_registry()

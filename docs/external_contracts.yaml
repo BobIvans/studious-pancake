@@ -200,7 +200,7 @@ pr012_capability_overlay:
       raw_instructions_enabled: false
     odos:
       legacy_alias: odos_solana
-      role: discovery_only
+      role: retired_disabled_2026_07_30
       capability_pin: odos-solana-sor-v3-2026-07-19
       official_docs:
         - https://docs.odos.xyz/api/solana
@@ -219,8 +219,9 @@ pr012_capability_overlay:
         - outAmounts
       artifact_kind: assembled_transaction
       contract_corrections:
-        - Assemble returns base64 assembled transaction data and is never composable raw instructions here.
-        - Quote simulation/assemble metadata is informational and not this bot's execution guarantee.
+        - Service is retired from runtime/discovery admission after the 2026-07-30 shutdown; this block is historical evidence only.
+        - Assemble returned base64 assembled transaction data and was never composable raw instructions here.
+        - Quote simulation/assemble metadata was informational and not this bot's execution guarantee.
   not_activated:
     - zero_x_solana
     - kamino

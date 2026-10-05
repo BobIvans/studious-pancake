@@ -1,0 +1,14 @@
+{
+  "schema_version": "mpr29.continuous-installed-paper-shadow-soak.contract.v1",
+  "mpr_id": "MPR-29",
+  "evidence_kind": "continuous-paper-shadow-soak",
+  "installed_artifact_required": true,
+  "source_checkout_allowed": false,
+  "minimum_cycles": 3,
+  "minimum_provider_snapshots": 2,
+  "live_enabled": false,
+  "signer_loaded": false,
+  "sender_loaded": false,
+  "manual_or_scheduled_long_soak_required": true,
+  "production_ready": false
+}

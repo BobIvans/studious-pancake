@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 import aiohttp
 from src.config.addresses import PYTH_FEEDS, HERMES_WS_URL
 from src.config.addresses import get_all_pyth_feed_ids
+from src.ingest.pyth_auth import pyth_bearer_headers
 import random
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,8 @@ class PythHermesClient:
     """
 
     def __init__(self, reconnect_interval: int = 5, session: Optional[aiohttp.ClientSession] = None,
-                 rpc_url: str = ""):
+                 rpc_url: str = "", api_key: str | None = None,
+                 api_key_reference: str | None = None):
         self.ws_url = HERMES_WS_URL
         self.reconnect_interval = reconnect_interval
         self.websocket = None
@@ -33,6 +35,8 @@ class PythHermesClient:
         self.session = session
         self._session_owned = session is None
         self.rpc_url = rpc_url  # Fix 70: RPC URL for on-chain fallback
+        self.api_key = api_key
+        self.api_key_reference = api_key_reference
 
         # Price cache: ticker -> {"price": float, "timestamp": datetime, "confidence": float}
         self.price_cache: Dict[str, Dict[str, Any]] = {}
@@ -46,8 +50,14 @@ class PythHermesClient:
         # Task 58: Background main loop task
         self._main_task: Optional[asyncio.Task] = None
 
+    def _auth_headers(self) -> dict[str, str]:
+        return pyth_bearer_headers(
+            api_key=self.api_key, api_key_reference=self.api_key_reference
+        )
+
     async def start(self):
         """Start the WebSocket connection with Auto-Recovery."""
+        self._auth_headers()  # fail before spawning a reconnect loop
         self.running = True
         logger.info("🚀 Starting Pyth Hermes Client with Auto-Recovery...")
         self._main_task = asyncio.create_task(self._main_loop())
@@ -86,7 +96,11 @@ class PythHermesClient:
                 logger.info("Attempting Pyth Hermes WebSocket connection...")
 
                 async with session.ws_connect(
-                    self.ws_url, heartbeat=15.0, timeout=10.0, receive_timeout=30.0
+                    self.ws_url,
+                    heartbeat=15.0,
+                    timeout=10.0,
+                    receive_timeout=30.0,
+                    headers=self._auth_headers(),
                 ) as websocket:
                     self.websocket = websocket
                     logger.info("✅ Pyth Hermes WebSocket connected!")
@@ -222,8 +236,10 @@ class PythHermesClient:
 
             params = {"ids[]": feed_ids}
             async with self.session.get(
-                rest_url, params=params,
-                timeout=aiohttp.ClientTimeout(total=5.0)
+                rest_url,
+                params=params,
+                headers=self._auth_headers(),
+                timeout=aiohttp.ClientTimeout(total=5.0),
             ) as resp:
                 if resp.status == 200:
                     data = await resp.json()

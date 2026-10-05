@@ -15,7 +15,7 @@
 ## Current provider state after PR-030
 
 - Jupiter Swap V2 build: `active` for quote plus composable-instruction discovery.
-- OKX, OpenOcean and Odos: `discovery-only`.
+- OKX and OpenOcean: `discovery-only`; Odos is retired/disabled after service shutdown on 2026-07-30.
 - Jito and live submission: `disabled-unverified`.
 - MarginFi remains governed by its separate binary/IDL/RPC and runtime release gates.
 

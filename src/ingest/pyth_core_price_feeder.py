@@ -24,6 +24,7 @@ import aiohttp
 import socket
 
 from src.config.addresses import PYTH_CORE_FEEDS, get_mint_for_core_feed
+from src.ingest.pyth_auth import pyth_bearer_headers
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +57,20 @@ class PythCorePriceFeeder:
     ═══════════════════════════════════════════════════════════════════════
     """
 
-    def __init__(self, session: Optional[aiohttp.ClientSession] = None):
+    def __init__(
+        self,
+        session: Optional[aiohttp.ClientSession] = None,
+        *,
+        api_key: str | None = None,
+        api_key_reference: str | None = None,
+    ):
         self.ws_url = HERMES_WS_URL
         self.websocket = None
         self.running = False
         self.session = session
         self._session_owned = session is None
+        self.api_key = api_key
+        self.api_key_reference = api_key_reference
 
         # price_cache: mint_str -> {"price_usd": float, "timestamp": float}
         self.price_cache: Dict[str, Dict[str, float]] = {}
@@ -71,6 +80,11 @@ class PythCorePriceFeeder:
         self.on_price_update: Optional[Callable[[Dict[str, tuple]], None]] = None
 
         self._task: Optional[asyncio.Task] = None
+
+    def _auth_headers(self) -> dict[str, str]:
+        return pyth_bearer_headers(
+            api_key=self.api_key, api_key_reference=self.api_key_reference
+        )
 
     @property
     def feed_ids(self) -> list:
@@ -86,6 +100,7 @@ class PythCorePriceFeeder:
                              e.g. {"So111...": (150.42, timestamp)}
                              which arb_bot can pipe into _set_global_price_matrix()
         """
+        self._auth_headers()  # fail before spawning a reconnect loop
         self.on_price_update = on_price_update
         self.running = True
         self._task = asyncio.create_task(self._run())
@@ -133,7 +148,9 @@ class PythCorePriceFeeder:
         """Connect to Hermes WS, subscribe, and listen for price updates."""
         try:
             session = await self._get_session()
-            async with session.ws_connect(self.ws_url) as websocket:
+            async with session.ws_connect(
+                self.ws_url, headers=self._auth_headers()
+            ) as websocket:
                 self.websocket = websocket
                 logger.debug("✅ PythCorePriceFeeder connected to Hermes")
 

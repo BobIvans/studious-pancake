@@ -33,9 +33,10 @@ def test_default_registry_verifies_required_artifacts() -> None:
         is ContractStatus.DISCOVERY_ONLY
     )
     assert registry.get("openocean.solana-v4-quote").status is ContractStatus.DISCOVERY_ONLY
-    assert registry.get("odos.solana-api").status is ContractStatus.DISCOVERY_ONLY
+    assert registry.get("odos.solana-api").status is ContractStatus.DISABLED_UNVERIFIED
     marginfi = registry.get("marginfi.v2-mainnet-source-identity")
     assert marginfi.deployment_program_id == "MFv2hWf31Z9kbCa1snEPYctwafyhdvnV7FZnsebVacA"
+    assert "typescript-sdk/getting-started" in marginfi.official_source_url
     assert marginfi.promotion_state == "deployment-attestation-pending"
     assert marginfi.evidence.deployed_program_attestation is False
     assert marginfi.execution_allowed is False

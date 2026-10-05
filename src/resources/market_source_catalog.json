@@ -1,6 +1,6 @@
 {
   "schema_version": "shadow.market-source-catalog.v1",
-  "checked_at": "2026-10-02",
+  "checked_at": "2026-10-06",
   "sources": [
     {
       "source_id": "0x",
@@ -357,16 +357,17 @@
     },
     {
       "source_id": "marginfi",
-      "label": "MarginFi TypeScript tooling",
+      "label": "Project 0 / marginfi TypeScript SDK",
       "family": "lending-tool",
       "domains": [
         "solana-mainnet"
       ],
       "access": "open-source-rpc-or-host-required",
       "evidence_urls": [
-        "https://github.com/mrgnlabs/mrgn-ts"
+        "https://docs.marginfi.com/typescript-sdk/getting-started",
+        "https://docs.marginfi.com/typescript-sdk/migration"
       ],
-      "limitation": "State/risk/flashloan tooling requires RPC and conformance. Not a spot edge or authorization to use leverage."
+      "limitation": "The official marginfi SDK is @0dotxyz/p0-ts-sdk; >=2.8.0 is required for program 0.1.11 oracle setups. Existing repository binary/source pins remain quarantined until refreshed conformance vectors bind the current deployment."
     },
     {
       "source_id": "meteora-damm",
@@ -423,7 +424,7 @@
     },
     {
       "source_id": "odos",
-      "label": "Odos aggregator candidate",
+      "label": "Odos aggregator (retired service)",
       "family": "router",
       "domains": [
         "evm"
@@ -432,7 +433,7 @@
       "evidence_urls": [
         "https://docs.odos.xyz/"
       ],
-      "limitation": "Current access/free quotas could not be verified. Opaque aggregate paths require underlying-venue expansion; no active connector added."
+      "limitation": "Operating-company Odos services shut down permanently on 2026-07-30. Historical review artifacts remain for audit replay only; no runtime or discovery admission is allowed."
     },
     {
       "source_id": "okx-cex",
@@ -558,11 +559,12 @@
       "domains": [
         "multi-domain"
       ],
-      "access": "public-rate-limited",
+      "access": "free-tier-key-required",
       "evidence_urls": [
+        "https://docs.pyth.network/price-feeds/core/getting-started",
         "https://docs.pyth.network/price-feeds/core/fetch-price-updates"
       ],
-      "limitation": "Oracle updates require publish-time, confidence and freshness checks. Not an orderbook or executable quote; on-chain update costs are separate."
+      "limitation": "Hermes requires Authorization: Bearer <PYTH_API_KEY> since the 2026-08-26 Pyth Core upgrade. Oracle updates still require publish-time, confidence and freshness checks and are not executable quotes."
     },
     {
       "source_id": "raydium",

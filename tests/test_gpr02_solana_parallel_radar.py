@@ -623,6 +623,95 @@ def test_capture_offline_records_real_transport_failures_and_deterministic_repla
         asyncio.run(capture(output, main_sha="b" * 40))
 
 
+def test_manifest_ticker_book_share_pinned_provider_and_durable_quota(
+    tmp_path, monkeypatch
+):
+    import src.solana_parallel_radar.cli as cli
+    from contextlib import asynccontextmanager
+    from src.strategy.exact_cpmm_capacity import MAINNET_GENESIS
+
+    mints = [a.canonical_identifier for a in priority_pairs(AssetRegistry.load())[0]]
+    calls = []
+
+    def manifest_factory(root, *, main_sha, configuration, sources):
+        return CampaignManifest(
+            "a" * 40,
+            main_sha,
+            "c" * 64,
+            tuple((k, digest(v)) for k, v in configuration.items()),
+            tuple((k, digest(v)) for k, v in sources.items()),
+        )
+
+    @asynccontextmanager
+    async def mock_transport(hosts, *, policy):
+        def handler(req):
+            calls.append(req.url.path)
+            if req.url.path == "/tickers":
+                payload = [
+                    {
+                        "ticker_id": address(50),
+                        "base_currency": mints[0],
+                        "target_currency": mints[1],
+                    }
+                ]
+            elif req.url.path == "/orderbook":
+                payload = {
+                    "ticker_id": address(50),
+                    "timestamp": "1002",
+                    "bids": [["1", "10"]],
+                    "asks": [["1.01", "10"]],
+                }
+            elif req.url.host == "api.dexscreener.com":
+                payload = []
+            elif req.url.host == "api-v3.raydium.io":
+                payload = {"success": True, "data": {"data": []}}
+            elif req.url.host == "dlmm.datapi.meteora.ag":
+                payload = {"data": []}
+            else:
+                body = json.loads(req.content)
+                result = (
+                    MAINNET_GENESIS
+                    if body["method"] == "getGenesisHash"
+                    else {
+                        "context": {"slot": 100},
+                        "value": [None] * len(body["params"][0]),
+                    }
+                )
+                payload = {"jsonrpc": "2.0", "id": body["id"], "result": result}
+            return httpx.Response(200, json=payload)
+
+        client = httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), trust_env=False
+        )
+        transport = HttpxJsonTransport(
+            policy=policy, allowed_hosts=frozenset(hosts), client=client
+        )
+        try:
+            yield transport
+        finally:
+            await transport.aclose()
+            await client.aclose()
+
+    monkeypatch.setattr(cli.CampaignManifest, "create", manifest_factory)
+    monkeypatch.setattr(cli, "campaign_transport", mock_transport)
+    monkeypatch.delenv("JUPITER_API_KEY", raising=False)
+    p = tmp_path / "book-campaign"
+    result = asyncio.run(capture(p, main_sha="b" * 40))
+    assert calls.count("/tickers") == calls.count("/orderbook") == 1
+    assert any(
+        e["kind"] == "gpr02_manifest_book_reference"
+        for e in result["manifest_measurements"]
+    )
+    outcome = next(
+        e for e in result["source_outcomes"] if e["source_id"] == "gpr02-manifest-book"
+    )
+    assert (
+        outcome["http_status"] == 200
+        and outcome["correlation_group"] == "manifest-indexed"
+    )
+    assert result == replay(p)
+
+
 @pytest.mark.parametrize(
     "fault", [None, "forged-quote", "wrong-amount", "correlated-rpc", "ingest-rejected"]
 )

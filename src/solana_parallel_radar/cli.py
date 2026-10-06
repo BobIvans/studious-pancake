@@ -220,26 +220,15 @@ def load_token_policies(path):
     )
 
 
-def manifest_book_contract(contracts):
+def manifest_book_contract(contracts, profile):
     pin = contracts["pins"]["manifest"]
-    p = ProviderProfile(
-        "gpr02-manifest-book-provider",
-        "manifest",
-        "manifest",
-        "manifest-indexed",
-        "https://mfx-stats-mainnet.fly.dev/orderbook",
-        "https://github.com/CKS-Systems/manifest",
-        role="discovery",
-        request_limit=2,
-        campaign_attempt_cap=1,
-        allowed_query_parameters=("ticker_id", "depth"),
-    )
     return ReadContract(
         "gpr02-manifest-book",
-        p,
+        profile,
         pin["git_sha"],
         pin["files"]["scripts/stats-server.ts"],
         pin["files"]["scripts/stats_utils/manifestStatsServer.ts"],
+        request_endpoint="https://mfx-stats-mainnet.fly.dev/orderbook",
     )
 
 
@@ -545,7 +534,7 @@ async def capture(
     seed = CampaignSeed.load(registry)
     sources = source_configuration(registry, contracts)
     zc, jc = read_contracts(contracts)
-    bc = manifest_book_contract(contracts)
+    bc = manifest_book_contract(contracts, sources[0][0].profile)
     rpcs = (
         tuple(ProviderProfile(**p) for p in json.loads(rpc_profiles.read_text()))
         if rpc_profiles
@@ -558,7 +547,6 @@ async def capture(
         *(d.profile for d, _ in sources),
         zc.profile,
         jc.profile,
-        bc.profile,
         *rpcs,
     )
     if len({p.profile_id for p in profiles}) != len(profiles):
@@ -620,6 +608,9 @@ async def capture(
                 c.profile.profile_id: c.entitlement(expires_at_epoch_seconds=expires)
                 for c in (zc, jc)
             }
+        )
+        entitlements[bc.profile.profile_id] = bc.entitlement(
+            expires_at_epoch_seconds=expires
         )
         gov = ProviderGovernance(entitlements, store=store)
         transport = await stack.enter_async_context(
@@ -702,7 +693,7 @@ async def capture(
         if manifest_candidates:
             c = manifest_candidates[0]
             request = SourceReadRequest(
-                bc.profile.endpoint,
+                bc.request_endpoint,
                 (("depth", "20"), ("ticker_id", c.market_id)),
                 bc.semantic_headers,
             )

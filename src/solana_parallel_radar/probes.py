@@ -34,6 +34,7 @@ class ReadContract:
     auth_header: str | None = None
     purpose: str = "REFERENCE_ONLY"
     semantic_headers: tuple[tuple[str, str], ...] = (("Accept", "application/json"),)
+    request_endpoint: str | None = None
 
     def __post_init__(self):
         if (
@@ -62,6 +63,12 @@ class ReadContract:
         )
         if tuple(self.semantic_headers) != required:
             raise ValueError("PINNED_READ_ONLY_PROTOCOL_HEADERS_REQUIRED")
+        if self.request_endpoint is not None and (
+            self.profile.endpoint != "https://mfx-stats-mainnet.fly.dev/tickers"
+            or self.request_endpoint != "https://mfx-stats-mainnet.fly.dev/orderbook"
+            or self.method != "GET"
+        ):
+            raise ValueError("ONLY_SHARED_MANIFEST_READ_ENDPOINT_ALLOWED")
 
     @property
     def generation(self):
@@ -71,6 +78,16 @@ class ReadContract:
         return replace(
             self.profile.entitlement(expires_at_epoch_seconds=expires_at_epoch_seconds),
             allowed_http_methods=frozenset({self.method}),
+            allowed_endpoints=(
+                (self.profile.endpoint, self.request_endpoint)
+                if self.request_endpoint
+                else (self.profile.endpoint,)
+            ),
+            allowed_query_parameters=(
+                frozenset({"depth", "ticker_id"})
+                if self.request_endpoint
+                else frozenset(self.profile.allowed_query_parameters)
+            ),
         )
 
 
@@ -95,9 +112,14 @@ class GovernedReadPlane:
         ):
             raise ValueError("REFERENCE_SOURCE_OR_PROVIDER_GENERATION_MISMATCH")
         if (
-            request.url != p.endpoint
+            request.url != (contract.request_endpoint or p.endpoint)
             or tuple(request.semantic_headers) != tuple(contract.semantic_headers)
-            or set(dict(request.params)) - set(p.allowed_query_parameters)
+            or set(dict(request.params))
+            - (
+                {"depth", "ticker_id"}
+                if contract.request_endpoint
+                else set(p.allowed_query_parameters)
+            )
             or (contract.method == "GET" and json_body is not None)
         ):
             raise ValueError("REFERENCE_REQUEST_CONTRACT_MISMATCH")

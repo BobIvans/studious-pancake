@@ -7,20 +7,21 @@ Branch: `rnd/gpr-parallel-radar-2026-10-06`
 
 QPR-01/#568, QPR-02/#569 and QPR-03/#570 are closed as merged inside the stacked development chain, but the top-level handoff PR #567 is still open. Do **not** assume public `main` contains the whole QPR stack.
 
-Use this #571 branch as the implementation base for the next wave. This PR is intended to be retargeted to the master handoff branch `codex/prequal-rnd-master-2026-10-06` so QPR-02/QPR-03 continuation plus GPR V2 can flow back into the canonical handoff.
+Use this #571 branch as the implementation base for the next wave. Master handoff PR #567 has been renewed to point here. Keep this work PR based on the QPR-03 implementation branch for clean GPR-01 development; integrate it back into the master handoff only after the GPR-01 boundary is complete.
 
 Read in this order:
 
 1. `MASTER_CONTEXT.md`
 2. `ASSET_REGISTRY_V2.json`
-3. `UNIVERSE_V2_EXPANSION.md`
-4. `INTERCHAIN_RELATIONS_V2.json`
-5. `ARCHITECTURE_CONTRACT.md`
-6. `IMPLEMENTATION_ROADMAP.md`
-7. `SOURCE_MATRIX.md`
-8. `ANOMALY_TAXONOMY.json`
-9. `ACCEPTANCE_TESTS.md`
-10. existing QPR handoff under `docs/roadmap/prequal-rnd-2026-10-06/implementation/`
+3. `ASSET_PROVENANCE_V2.md`
+4. `UNIVERSE_V2_EXPANSION.md`
+5. `INTERCHAIN_RELATIONS_V2.json`
+6. `ARCHITECTURE_CONTRACT.md`
+7. `IMPLEMENTATION_ROADMAP.md`
+8. `SOURCE_MATRIX.md`
+9. `ANOMALY_TAXONOMY.json`
+10. `ACCEPTANCE_TESTS.md`
+11. existing QPR handoff under `docs/roadmap/prequal-rnd-2026-10-06/implementation/`
 
 ## Important change from GPR V1
 

@@ -81,6 +81,10 @@ read has a committed attempt reservation and outcome; auth/transport/schema/rate
 failures and missing bindings stay visible. TLS, proxy, checksums and quota policy
 remain enforced. Engineering caps are not claimed as provider SLAs or known USD
 costs. New campaign directories are mandatory; capture requires a clean commit.
+Logical invocation and physical issue are separate: a context-local observer
+marks physical_attempt only after the unchanged canonical transport issue guard
+grants. Pre-wire dependency/quota denials stay false; an HTTP response also
+confirms issue. Retained quote provenance requires physical issue and HTTP 200.
 
 ```bash
 UV_CACHE_DIR=/workspace/.cache/uv uv venv --python 3.13 .venv
@@ -115,7 +119,7 @@ environment or private headers are published.
   --archive /tmp/gpr02-evidence.tar.gz
 ```
 
-Independent worktree validation: 303 offline tests passed, comprising 77 GPR-02
+Independent worktree validation: 306 offline tests passed, comprising 80 GPR-02
 tests plus GPR-01/QPR-01/QPR-02/QPR-03 and existing shadow aggregation/graph
 regressions, including all seven V2.2 delta tests. Mypy passed for nine new modules; lint, formatting and diff checks
 passed. Positive exact funnel proof uses synthetic bytes served through real

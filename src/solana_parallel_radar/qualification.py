@@ -46,6 +46,7 @@ def retained_quote(
         or raw["provider_generation"] != contract.profile.generation
         or generations.get(contract.profile.profile_id) != contract.profile.generation
         or raw["correlation_group"] != contract.profile.correlation_group
+        or raw.get("physical_attempt") is not True
         or raw.get("http_status") != 200
         or raw["quality_state"] != "accepted"
         or digest(raw["raw_payload"]) != raw["raw_payload_hash"]

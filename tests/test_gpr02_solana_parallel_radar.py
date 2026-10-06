@@ -15,7 +15,11 @@ import httpx
 import pytest
 
 from src.market.streams import RecoverableStreamJournal
-from src.provider_governance import ProviderGovernance
+from src.provider_governance import (
+    AdmissionCode,
+    ProviderAdmissionError,
+    ProviderGovernance,
+)
 from src.qualification_campaign.evidence import CampaignEvidenceStore
 from src.qualification_campaign.identity import CampaignManifest, digest
 from src.qualification_campaign.sources import SourceReadRequest
@@ -435,9 +439,22 @@ def test_zero_x_quote_reads_economic_fields_without_consuming_instruction_object
 
 
 @pytest.mark.parametrize(
-    "outcome", ["200", "403", "429", "timeout", "missing-key", "reflection", "quota"]
+    "outcome",
+    [
+        "200",
+        "403",
+        "429",
+        "timeout",
+        "missing-key",
+        "reflection",
+        "quota",
+        "guard-generation",
+        "guard-quota",
+    ],
 )
-def test_governed_quote_probe_retains_raw_negative_budget_and_replay(tmp_path, outcome):
+def test_governed_quote_probe_retains_raw_negative_budget_and_replay(
+    tmp_path, monkeypatch, outcome
+):
     async def run():
         _, c = contracts()
         p = c.profile
@@ -480,6 +497,24 @@ def test_governed_quote_probe_retains_raw_negative_budget_and_replay(tmp_path, o
             clock=lambda: 1002,
             wall_clock=lambda: 1002,
         )
+        if outcome in ("guard-generation", "guard-quota"):
+
+            async def deny(*args, **kwargs):
+                raise ProviderAdmissionError(
+                    p.profile_id,
+                    (
+                        AdmissionCode.GENERATION_MISMATCH
+                        if outcome == "guard-generation"
+                        else AdmissionCode.REQUEST_QUOTA_EXHAUSTED
+                    ),
+                    "synthetic canonical guard denial",
+                    retryable=False,
+                )
+
+            if outcome == "guard-generation":
+                monkeypatch.setattr(gov.dependencies, "assert_admissible", deny)
+            else:
+                monkeypatch.setattr(gov.authority, "reserve", deny)
         plane = GovernedReadPlane(gov, transport, evidence, wall_ns=lambda: NOW)
         request = jupiter_request(address(1), address(2), 1000)
         ref, envelope = await plane.collect(
@@ -489,14 +524,22 @@ def test_governed_quote_probe_retains_raw_negative_budget_and_replay(tmp_path, o
         )
         if outcome == "quota":
             for _ in range(5):
-                await plane.collect(c, request, credential="SECRET-EXAMPLE")
+                _, denied = await plane.collect(c, request, credential="SECRET-EXAMPLE")
             assert len(calls) == 4
+            assert denied["physical_attempt"] is False
         if outcome == "missing-key":
             assert not calls and not any(
                 r.get("kind") == "attempt" for r in evidence.replay()
             )
         if outcome == "reflection":
             assert "SECRET-EXAMPLE" not in json.dumps(evidence.replay())
+        if outcome in ("guard-generation", "guard-quota"):
+            assert not calls
+            assert envelope["logical_attempt_started"] is True
+            assert envelope["physical_attempt"] is False
+            assert envelope["http_status"] is None
+        elif outcome != "missing-key":
+            assert envelope["physical_attempt"] is True
         if outcome in ("200", "reflection", "quota"):
             q = normalized_reference(evidence, c, request, ref, envelope)
             assert q.output_amount == 1010
@@ -761,6 +804,7 @@ def test_portable_replay_rejects_path_traversal_and_links(tmp_path):
         "correlated-rpc",
         "ingest-rejected",
         "slow-provider",
+        "nonphysical-quote",
     ],
 )
 def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
@@ -921,6 +965,23 @@ def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
             )
         if fault == "forged-quote":
             refs[0] = "made-up-ref"
+        if fault == "nonphysical-quote":
+            quote_row = retained_records(evidence)[refs[0]]
+            raw = dict(
+                retained_records(evidence)[quote_row["quote"]["raw_evidence_ref"]]
+            )
+            raw["physical_attempt"] = False
+            raw_ref = evidence.append("gpr02-0x-preview", raw, observed_at_ns=NOW)
+            quote = dict(quote_row["quote"], raw_evidence_ref=raw_ref)
+            refs[0] = evidence.append(
+                "gpr02-quote",
+                {
+                    "kind": "gpr02_quote_preview",
+                    "quote": quote,
+                    "quote_hash": digest(quote),
+                },
+                observed_at_ns=NOW,
+            )
         collectors = [
             GovernedNativeCpmmCollector(
                 gov, transport, profile=p, evidence_store=evidence, wall_ns=lambda: NOW
@@ -967,7 +1028,7 @@ def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
             assert not any(
                 r.get("kind") == "gpr02_exact_shadow_handoff" for r in evidence.replay()
             )
-            if fault in ("forged-quote", "wrong-amount"):
+            if fault in ("forged-quote", "wrong-amount", "nonphysical-quote"):
                 assert not native_calls
             if fault == "slow-provider":
                 assert native_calls

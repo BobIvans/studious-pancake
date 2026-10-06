@@ -5,6 +5,7 @@ Provider responses (including unsigned instructions) remain inert raw evidence.
 """
 
 import asyncio
+from contextvars import ContextVar
 from dataclasses import asdict, dataclass, replace
 import time
 from decimal import Decimal, InvalidOperation
@@ -21,6 +22,10 @@ from src.qualification_campaign.profiles import ProviderProfile
 from src.qualification_campaign.sources import SourceReadRequest
 from src.routing.transport import SanitizedTransportError
 from .funnel import QuotePreview, normalize_jupiter, uint
+
+_active_reference_read: ContextVar[dict | None] = ContextVar(
+    "gpr02_active_reference_read", default=None
+)
 
 
 @dataclass(frozen=True)
@@ -156,6 +161,7 @@ class GovernedReadPlane:
             "raw_payload": None,
             "response_hash": None,
             "physical_attempt": False,
+            "logical_attempt_started": False,
             "quality_state": "pending",
             "evidence_state": "DISCOVERY_ONLY",
             "live_authorization": False,
@@ -185,14 +191,32 @@ class GovernedReadPlane:
                 )
 
                 async def physical():
-                    envelope["physical_attempt"] = True
-                    return await self.transport.request(
-                        contract.method,
-                        request.url,
-                        params=dict(request.params),
-                        headers=headers,
-                        json_body=json_body,
-                    )
+                    envelope["logical_attempt_started"] = True
+                    token = _active_reference_read.set(envelope)
+                    try:
+                        return await self.transport.request(
+                            contract.method,
+                            request.url,
+                            params=dict(request.params),
+                            headers=headers,
+                            json_body=json_body,
+                        )
+                    finally:
+                        _active_reference_read.reset(token)
+
+                # Observe the existing canonical issue guard only after it grants.
+                # Context-local state keeps concurrent read envelopes independent.
+                self.gov.bind_transport(self.transport)
+                guard = self.transport.attempt_guard
+
+                async def observe_grant(request, attempt):
+                    lease = await guard(request, attempt)
+                    active = _active_reference_read.get()
+                    if active is not None:
+                        active["physical_attempt"] = True
+                    return lease
+
+                self.transport.attempt_guard = observe_grant
 
                 status, response_headers, payload = await self.gov.execute_physical(
                     admission,
@@ -205,6 +229,7 @@ class GovernedReadPlane:
                     payload, {"x-api-key": credential} if credential else {}
                 )
                 envelope.update(
+                    physical_attempt=True,  # An actual HTTP response also confirms issue.
                     http_status=status,
                     raw_payload=retained,
                     response_hash=digest(payload),
@@ -299,7 +324,11 @@ def normalize_zero_x(payload, *, body, observed_at_ns, contract, raw_evidence_re
 
 
 def normalized_reference(evidence, contract, request, ref, envelope, *, body=None):
-    if envelope["quality_state"] != "accepted":
+    if (
+        envelope["quality_state"] != "accepted"
+        or envelope.get("physical_attempt") is not True
+        or envelope.get("http_status") != 200
+    ):
         return None
 
     try:

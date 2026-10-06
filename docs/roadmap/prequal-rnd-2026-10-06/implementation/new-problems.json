@@ -53,5 +53,26 @@
       "next_action": "study captured state; bound supported pool controls or implement exact Token-2022 semantics in a separately prioritized PR"
     }
   ],
-  "repository_sha": "921e4fa1dfaaacc69b2f2ca202e449c3d2b44755"
+  "repository_sha": "921e4fa1dfaaacc69b2f2ca202e449c3d2b44755",
+  "validation_findings": [
+    {
+      "id": "VAL-001",
+      "problem": "Existing lock pin fails online vulnerability audit",
+      "origin": "PREEXISTING_MAIN_LOCK",
+      "status": "BLOCKED_CI_AND_PRODUCTION",
+      "evidence": {
+        "status": "BLOCKED_PREEXISTING_MAIN_LOCK",
+        "package": "multidict",
+        "version": "6.7.1",
+        "advisory": "GHSA-54p9-h82j-f925",
+        "fix_version": "6.9.1",
+        "lockfiles_changed_by_phase": false,
+        "command": "python scripts/verify_repo.py",
+        "log": "/tmp/qpr-verify-repo-final.log",
+        "impact": "strict dependency audit blocks Repository verification/merge; bounded read-only campaign remains functional"
+      },
+      "related_roadmap_ids": [],
+      "next_action": "separate reviewed dependency PR before merge; preserve strict audit"
+    }
+  ]
 }

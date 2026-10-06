@@ -40,7 +40,8 @@
       "ACTIVE_PERSISTENCE_CUTOVER",
       "RELEASE_BOUND_72H_SOAK",
       "SECURITY_DEPLOYMENT_ROLLBACK_EVIDENCE",
-      "LIVE_EXECUTION_AUTHORITY_NOT_ENABLED"
+      "LIVE_EXECUTION_AUTHORITY_NOT_ENABLED",
+      "PREEXISTING_DEPENDENCY_AUDIT_MULTIDICT_GHSA-54p9-h82j-f925"
     ],
     "blocks_stronger_qualification": [
       "INDEPENDENT_ROOTED_QUORUM_REQUIRED",
@@ -51,6 +52,9 @@
       "UNKNOWN_TOKEN_ORACLE_SEMANTICS_FAIL_CLOSED",
       "PUBLIC_SMOKE_SINGLE_RPC_CONFIGURED",
       "OBSERVED_TOKEN_2022_CAPTURE_REJECTED"
+    ],
+    "ci_merge_blockers": [
+      "VAL-001"
     ],
     "operational_admission_checks": [
       "fresh reviewed dossiers",
@@ -244,6 +248,12 @@
   "G_new_problem_register": "new-problems.json",
   "H_recommended_next_work": [
     {
+      "basis": "strict audit: multidict 6.7.1 / GHSA-54p9-h82j-f925 already pinned in main",
+      "order": 0,
+      "proposed_pr": "Fix existing lockfile dependency audit blocker before merge",
+      "scope": "separate reviewed dependency update to patched version, refreshed hashes, strict audit and regressions; no QPR-04+ implementation"
+    },
+    {
       "basis": "actual run BLOCKED_SINGLE_SOURCE; only public smoke RPC configured",
       "order": 1,
       "proposed_pr": "Independent RPC configuration and bounded native control evidence",
@@ -277,6 +287,11 @@
   "commit_receipts": "Exact final PR heads/base SHAs are generated after documentation commit in /workspace/shared/qpr/phase-receipts.json to avoid self-referential fields. Observed campaign pins the exact executable ancestor SHA above.",
   "generated_at_utc": "2026-10-06T00:45:25.410020+00:00",
   "observed_campaign": {
+    "archive": {
+      "path": "/workspace/shared/qpr/campaign-reviewed.tar.gz",
+      "sha256": "e83c1608ee217bcb8d461ae2ffd60eee54d5c570904114efcd51bb94adbedb08",
+      "socket_disabled_extracted_replay": "PASS"
+    },
     "event_counts": {
       "attempt": 7,
       "candidate_universe": 1,
@@ -495,10 +510,36 @@
   "schema_version": "prequal.phase-handoff.v1",
   "stop_before": "QPR-04",
   "validation": {
+    "archived_socket_disabled_replay": "PASS",
+    "dependency_audit": {
+      "advisory": "GHSA-54p9-h82j-f925",
+      "command": "python scripts/verify_repo.py",
+      "fix_version": "6.9.1",
+      "impact": "strict dependency audit blocks Repository verification/merge; bounded read-only campaign remains functional",
+      "lockfiles_changed_by_phase": false,
+      "log": "/tmp/qpr-verify-repo-final.log",
+      "package": "multidict",
+      "status": "BLOCKED_PREEXISTING_MAIN_LOCK",
+      "version": "6.7.1"
+    },
+    "deterministic_repository_verification": {
+      "command": "python scripts/verify_repo.py --skip-dependency-audit",
+      "log": "/tmp/qpr-verify-repo-deterministic.log",
+      "note": "The strict audit was run separately and failed on the pre-existing pin; it was not removed or waived in CI.",
+      "status": "PASS"
+    },
     "disabled_cli_and_installed_authority": "PASS",
-    "github_ci": "inspect PR checks; local checks are not a hosted-CI claim",
+    "focused_campaign_native": {
+      "failed": 0,
+      "passed": 75
+    },
+    "github_ci": "Campaign, qualification, wheel/runtime checks PASS on tested code commits. Repository verification fails on pre-existing strict dependency audit; final documentation commit may have checks pending.",
     "hash_locked_install_and_repeat": "PASS",
     "isolated_wheel_package_smoke": "PASS",
+    "mypy": {
+      "source_files": 206,
+      "status": "PASS"
+    },
     "offline_replay": "PASS",
     "offline_suite": {
       "command": "PAPER_TRADING_ONLY=true LIVE_TRADING_ENABLED=false JITO_ENABLED=false KAMINO_LIQUIDATION_ENABLED=false python -m pytest -m 'not live and not manual' --disable-socket --allow-unix-socket -o log_cli=false -q",
@@ -510,6 +551,11 @@
       "seconds": 38.0
     },
     "pip_check": "PASS",
+    "qualification_regressions": {
+      "authority_verifier": "PASS",
+      "passed": 37,
+      "repeated_qualification": "PASS"
+    },
     "real_capture": "PASS"
   }
 }

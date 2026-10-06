@@ -34,7 +34,7 @@ Qualification verdict: **BLOCKED**. Production promotion: **false**. Настр�
 | --- | --- |
 | Блокирует текущую real-data campaign | Подтверждённых нерешённых блокеров нет. Admission требует clean checkout, fresh dossiers, approved network/credentials при необходимости и доступные storage/quota budgets. |
 | Блокирует stronger qualification | В реальном запуске: single smoke RPC и Token-2022 отказ. Также не доказаны deployment/source binding, continuous capture, forward holdout, cost/financing и неизвестные token/oracle semantics. |
-| Блокирует production promotion | Active persistence cutover, release-bound 72h soak, security/deployment/rollback evidence и отдельно разрешённая live authority. |
+| Блокирует production promotion | Active persistence cutover, release-bound 72h soak, security/deployment/rollback evidence и отдельно разрешённая live authority. Существующий dependency-audit finding также блокирует общий CI/merge check. |
 
 Signer, sender, submission и live capital остаются недоступными для campaign composition. Эта фаза не предоставляет automatic promotion.
 
@@ -75,7 +75,11 @@ Raw hashes относятся к canonical JSON. При credential redaction ori
 
 В `new-problems.json` отдельно записаны: полный RPC genesis hash против сокращённого CAIP prefix (исправлено), реальный ProgramData сверх setup bounds (bounded limits/blob storage исправлены), negotiated compression против governed decoder (исправлено), drift official docs URLs (active dossiers обновлены). Token-2022 отказ отмечен как наблюдение уже известного semantic gap, а не искусственно объявленная новая roadmap задача. Исторические реальные captures не переписаны.
 
+Отдельный validation finding `VAL-001`: online audit обнаружил `multidict==6.7.1`, GHSA-54p9-h82j-f925, fix version 6.9.1. Pin уже присутствует в обоих lockfiles исходного `main`; lockfiles в этой фазе не изменены. Это существующий CI blocker, а не новый market-data anomaly.
+
 ## H. Рекомендуемые следующие PR
+
+До merge устранить `VAL-001` отдельным reviewed dependency PR и повторить strict audit. В этой трёх-PR фазе lockfiles не обновлялись и audit finding не исключался из CI.
 
 1. Reviewed independent RPC configuration и bounded supported native control evidence — по фактическому `BLOCKED_SINGLE_SOURCE`.
 2. Targeted Token-2022 semantic qualification либо явный restricted universe — после исследования extensions/owners из сохранённого отказа.
@@ -88,5 +92,7 @@ Raw hashes относятся к canonical JSON. При credential redaction ori
 ## Проверки и среда
 
 Полный offline suite: **4913 passed, 0 failed, 1 deselected**, 38 секунд, network sockets disabled, Unix sockets allowed. После обнаружения регрессий обновлены только синтетические genesis fixtures и canonical authority fixture release test; runtime admission не ослаблен. Isolated wheel/package smoke, hash-locked installation, повторный install, pip check, installed disabled CLI и authority parity прошли. Local validation не заменяет hosted CI status — его нужно смотреть в PR checks.
+
+После CI corrections: mypy — PASS для 206 source files; 75 focused campaign/native tests — PASS; 37 qualification regressions, authority verifier и repeated qualification — PASS. `scripts/verify_repo.py --skip-dependency-audit` полностью прошёл, включая format/type/security, package smoke, repository authority verifiers и повторный offline suite (4913 passed, 1 deselected). Полная команда без skip завершилась BLOCKED на существующем `VAL-001`; это не общий зелёный CI. Hosted campaign/qualification/wheel/runtime checks проходят, Repository verification остаётся red из-за strict dependency audit. Архив сохранён в `/workspace/shared/qpr/campaign-reviewed.tar.gz`; извлечённая копия воспроизведена с network sockets disabled и тем же journal head.
 
 CPython 3.13.5 с ensurepip установлен в `/workspace/.python`, зависимости — в `.venv`. Tested install_script/start_skill и нужные custom network domains сохранены в environment draft; запись draft не является публикацией. Чтобы активировать reusable snapshot/config, требуется review/save в settings и Publish. Текущий saved repository selection `main` сохранён; implementation branches ещё находятся на review, main не изменён.

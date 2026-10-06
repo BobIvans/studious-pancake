@@ -1,0 +1,39 @@
+name: GPR-02 Solana read-only radar
+
+on:
+  pull_request:
+    paths:
+      - "src/solana_parallel_radar/**"
+      - "config/qualification/gpr02-solana-contracts.json"
+      - "tests/test_gpr02_solana_parallel_radar.py"
+      - ".github/workflows/gpr02-solana-parallel-radar.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deterministic-read-only:
+    runs-on: ubuntu-latest
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install locked dependencies
+        run: python -m pip install --require-hashes -r requirements-dev.lock
+      - name: Static and deterministic checks
+        run: |
+          python -m black --check src/solana_parallel_radar tests/test_gpr02_solana_parallel_radar.py
+          python -m flake8 src/solana_parallel_radar tests/test_gpr02_solana_parallel_radar.py --select=E9,F63,F7,F82
+          python -m mypy --config-file mypy.ini --follow-imports=silent src/solana_parallel_radar
+          python -m pytest -q --disable-socket --allow-unix-socket \
+            tests/test_gpr02_solana_parallel_radar.py \
+            tests/test_gpr01_research_economic_graph.py tests/test_gpr01_v22_delta.py \
+            tests/test_qpr01_campaign_identity.py tests/test_qpr02_data_plane.py \
+            tests/test_qpr03_source_intake.py tests/test_shadow_market_data_aggregation.py \
+            tests/test_shadow_arbitrage_graph.py

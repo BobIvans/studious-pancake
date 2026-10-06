@@ -76,11 +76,11 @@ class ManifestRadarAdapter:
             "request": "manifest.tickers.v1",
             "response": "ticker-array.v1",
             "classification": "DISCOVERY_ONLY",
-            "maximum_rows": 1000,
+            "maximum_rows": 5000,
         }
 
     def normalize(self, payload):
-        if not isinstance(payload, list) or len(payload) > 1000:
+        if not isinstance(payload, list) or len(payload) > 5000:
             raise ValueError("BOUNDED_TICKER_ARRAY_REQUIRED")
         result = {}
         rejected: Counter[str] = Counter()

@@ -42,6 +42,7 @@ from src.solana_parallel_radar.probes import (
     jupiter_request,
     normalized_reference,
     normalize_zero_x,
+    normalize_manifest_book,
 )
 from src.solana_parallel_radar.qualification import (
     retained_quote,
@@ -302,6 +303,40 @@ def test_manifest_identifier_radar_uses_confirmed_api_and_no_program_scan():
         ]
     )
     assert c[0].venue_label == "manifest"
+
+
+@pytest.mark.parametrize(
+    "fault", [None, "identity", "depth", "nan", "negative", "large", "shape"]
+)
+def test_manifest_book_depth_numeric_identity_fail_closed(fault):
+    payload = {
+        "ticker_id": address(50),
+        "timestamp": "1002",
+        "bids": [["1.0", "10"]],
+        "asks": [["1.1", "10"]],
+    }
+    if fault == "identity":
+        payload["ticker_id"] = address(51)
+    if fault == "nan":
+        payload["bids"] = [["NaN", "10"]]
+    if fault == "negative":
+        payload["bids"] = [["-1", "10"]]
+    if fault == "large":
+        payload["bids"] = [["1", "10"]] * 11
+    if fault == "shape":
+        payload["bids"] = [["1"]]
+    if fault:
+        with pytest.raises(ValueError):
+            normalize_manifest_book(
+                payload, market_id=address(50), depth=500 if fault == "depth" else 20
+            )
+    else:
+        book = normalize_manifest_book(payload, market_id=address(50))
+        assert (
+            not book["depth_verified"]
+            and not book["fee_verified"]
+            and not book["exact_graph_allowed"]
+        )
 
 
 def quote_payload(input_mint=address(1), output_mint=address(2)):

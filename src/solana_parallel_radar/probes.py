@@ -7,6 +7,7 @@ Provider responses (including unsigned instructions) remain inert raw evidence.
 import asyncio
 from dataclasses import asdict, dataclass, replace
 import time
+from decimal import Decimal, InvalidOperation
 from uuid import uuid4
 
 from src.provider_governance import (
@@ -278,6 +279,7 @@ def normalize_zero_x(payload, *, body, observed_at_ns, contract, raw_evidence_re
 def normalized_reference(evidence, contract, request, ref, envelope, *, body=None):
     if envelope["quality_state"] != "accepted":
         return None
+
     try:
         if contract.source_id == "gpr02-0x-preview":
             quote = normalize_zero_x(
@@ -318,3 +320,33 @@ def normalized_reference(evidence, contract, request, ref, envelope, *, body=Non
             observed_at_ns=evidence.wall_ns(),
         )
         return None
+
+
+def normalize_manifest_book(payload, *, market_id, depth=20):
+    if payload.get("ticker_id") != market_id or depth != 20:
+        raise ValueError("MANIFEST_BOOK_IDENTITY_OR_DEPTH_MISMATCH")
+    result = {
+        "market_id": market_id,
+        "source_time": payload.get("timestamp"),
+        "evidence_state": "DISCOVERY_ONLY",
+        "exact_graph_allowed": False,
+    }
+    for side in ("bids", "asks"):
+        levels = payload.get(side)
+        if not isinstance(levels, list) or len(levels) > depth // 2:
+            raise ValueError("BOUNDED_MANIFEST_BOOK_REQUIRED")
+        parsed = []
+        for level in levels:
+            if not isinstance(level, list) or len(level) != 2:
+                raise ValueError("MANIFEST_BOOK_LEVEL_SCHEMA_MISMATCH")
+            try:
+                values = tuple(Decimal(str(v)) for v in level)
+            except (InvalidOperation, ValueError):
+                raise ValueError("MANIFEST_BOOK_NUMERIC_SCHEMA_MISMATCH") from None
+            if any(not v.is_finite() or v <= 0 or len(str(v)) > 64 for v in values):
+                raise ValueError("MANIFEST_BOOK_POSITIVE_BOUNDED_LEVEL_REQUIRED")
+            parsed.append(tuple(str(v) for v in values))
+        result[side] = tuple(parsed)
+    result["depth_verified"] = False
+    result["fee_verified"] = False
+    return result

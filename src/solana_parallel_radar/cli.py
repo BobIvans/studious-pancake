@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import subprocess
 import time
+from collections import Counter
 
 from src.durability import UnifiedLifecycleAuthority
 from src.market.discovery import DiscoveryRequest
@@ -46,13 +47,14 @@ from src.research_economic_graph import (
 from src.research_economic_graph.graph import retained_records
 from src.research_economic_graph.registry import DEFAULT_PACK
 from src.routing.transport import TransportPolicy
-from src.strategy.exact_cpmm_capacity import MAINNET_GENESIS
+from src.strategy.exact_cpmm_capacity import MAINNET_GENESIS, RAYDIUM_CPMM_PROGRAM_ID
 from .funnel import priority_pairs, persist_funnel_plan, compare_quotes
 from .probes import (
     ReadContract,
     GovernedReadPlane,
     jupiter_request,
     normalized_reference,
+    normalize_manifest_book,
 )
 from .radar import BatchRadarAdapter, ManifestRadarAdapter, TargetedCatalogAdapter
 from .structural import (
@@ -215,6 +217,29 @@ def load_token_policies(path):
             **p,
         )
         for p in raw
+    )
+
+
+def manifest_book_contract(contracts):
+    pin = contracts["pins"]["manifest"]
+    p = ProviderProfile(
+        "gpr02-manifest-book-provider",
+        "manifest",
+        "manifest",
+        "manifest-indexed",
+        "https://mfx-stats-mainnet.fly.dev/orderbook",
+        "https://github.com/CKS-Systems/manifest",
+        role="discovery",
+        request_limit=2,
+        campaign_attempt_cap=1,
+        allowed_query_parameters=("ticker_id", "depth"),
+    )
+    return ReadContract(
+        "gpr02-manifest-book",
+        p,
+        pin["git_sha"],
+        pin["files"]["scripts/stats-server.ts"],
+        pin["files"]["scripts/stats_utils/manifestStatsServer.ts"],
     )
 
 
@@ -415,11 +440,24 @@ def report(evidence, registry, seed):
             "failure_reason": e.get("failure_reason"),
             "binding_name": e.get("binding_name"),
             "source_generation": e.get("source_generation"),
-            "provider_generation": e.get("provider_generation"),
+            "provider_generation": e.get(
+                "provider_generation", e.get("source_generation")
+            ),
             "correlation_group": e.get("correlation_group"),
         }
         for e in reads
     ]
+    candidates = [e for e in events if e.get("kind") == "discovery_candidate"]
+    pair_coverage: Counter[str] = Counter()
+    for e in candidates:
+        try:
+            keys = sorted(
+                registry.by_identifier("solana-mainnet", mint).asset_key
+                for mint in e["candidate"]["mints"]
+            )
+            pair_coverage["/".join(keys)] += 1
+        except ValueError:
+            continue
     return {
         "schema_version": "gpr02.solana-handoff.v1",
         "campaign_id": evidence.manifest.campaign_id,
@@ -430,6 +468,11 @@ def report(evidence, registry, seed):
         "discovery_candidate_count": sum(
             e.get("kind") == "discovery_candidate" for e in events
         ),
+        "unique_pool_count": len({e["candidate_id"] for e in candidates}),
+        "candidates_by_source": dict(
+            Counter(e["provenance"]["source_id"] for e in candidates)
+        ),
+        "pair_coverage": dict(sorted(pair_coverage.items())),
         "source_outcomes": outcomes,
         "reserved_attempts": sum(e.get("kind") == "attempt" for e in events),
         "successful_http_reads": sum(e.get("http_status") == 200 for e in reads),
@@ -441,7 +484,28 @@ def report(evidence, registry, seed):
             e
             for e in events
             if e.get("kind", "").startswith(
-                ("gpr02_structural", "gpr02_token2022", "gpr02_jlp")
+                (
+                    "gpr02_structural",
+                    "gpr02_sanctum",
+                    "gpr02_token2022",
+                    "gpr02_jlp",
+                    "gpr02_lst",
+                )
+            )
+        ],
+        "native_verification_failures": [
+            e
+            for e in events
+            if e.get("kind") in ("capture_failure", "rooted_snapshot_bundle")
+        ],
+        "manifest_measurements": [
+            e
+            for e in events
+            if e.get("kind")
+            in (
+                "gpr02_manifest_payload_metrics",
+                "gpr02_manifest_book_reference",
+                "gpr02_manifest_book_rejected",
             )
         ],
         "anomaly_recurrence_measured": False,
@@ -481,6 +545,7 @@ async def capture(
     seed = CampaignSeed.load(registry)
     sources = source_configuration(registry, contracts)
     zc, jc = read_contracts(contracts)
+    bc = manifest_book_contract(contracts)
     rpcs = (
         tuple(ProviderProfile(**p) for p in json.loads(rpc_profiles.read_text()))
         if rpc_profiles
@@ -489,12 +554,26 @@ async def capture(
     if not 1 <= len(rpcs) <= 4 or any(p.role != "rpc" for p in rpcs):
         raise ValueError("BOUNDED_REVIEWED_RPC_PROFILES_REQUIRED")
     policies = load_token_policies(token_policy_path)
-    profiles = (*(d.profile for d, _ in sources), zc.profile, jc.profile, *rpcs)
+    profiles = (
+        *(d.profile for d, _ in sources),
+        zc.profile,
+        jc.profile,
+        bc.profile,
+        *rpcs,
+    )
     if len({p.profile_id for p in profiles}) != len(profiles):
         raise ValueError("DUPLICATE_PROVIDER_PROFILE")
     generations: dict[str, object] = {p.profile_id: asdict(p) for p in profiles}
     generations.update({d.source_id: asdict(d) for d, _ in sources})
-    generations.update({c.source_id: asdict(c) for c in (zc, jc)})
+    generations.update({c.source_id: asdict(c) for c in (zc, jc, bc)})
+    manifest_policy = TransportPolicy(
+        max_attempts=1,
+        max_wire_bytes=8_000_000,
+        max_response_bytes=8_000_000,
+        max_string_length=6_000_000,
+        max_json_nodes=120_000,
+        max_container_items=5_000,
+    )
     manifest = CampaignManifest.create(
         ROOT,
         main_sha=main_sha,
@@ -502,6 +581,7 @@ async def capture(
             "gpr.registry": registry.configuration,
             "gpr.seed": seed.configuration,
             "gpr02.contracts": contracts,
+            "gpr02.manifest_transport": asdict(manifest_policy),
             "gpr02.campaign": {
                 "zero_x_taker": zero_x_taker,
                 "token_policies": [asdict(p) for p in policies],
@@ -556,6 +636,12 @@ async def capture(
         intake = SourceIntakePlane(
             load_market_source_catalog(), gov, transport, evidence
         )
+        manifest_transport = await stack.enter_async_context(
+            campaign_transport({"mfx-stats-mainnet.fly.dev"}, policy=manifest_policy)
+        )
+        manifest_intake = SourceIntakePlane(
+            load_market_source_catalog(), gov, manifest_transport, evidence
+        )
         records = []
         for d, a in sources:
             evidence.append(
@@ -563,11 +649,91 @@ async def capture(
                 {"kind": "source_dossier", "dossier": asdict(d)},
                 observed_at_ns=time.time_ns(),
             )
-            gathered, _ = await intake.collect(d, a)
+            gathered, _ = await (
+                manifest_intake if d.source_id == "manifest" else intake
+            ).collect(d, a)
             records.extend(gathered)
+            if d.source_id == "manifest":
+                raw = next(
+                    (
+                        b
+                        for b in reversed(tuple(retained_records(evidence).values()))
+                        if b.get("kind") == "source_observation"
+                        and b.get("source_id") == "manifest"
+                    ),
+                    None,
+                )
+                if raw and raw.get("raw_payload") is not None:
+                    nodes, pending = 0, [raw["raw_payload"]]
+                    while pending:
+                        item = pending.pop()
+                        nodes += 1
+                        if isinstance(item, dict):
+                            pending.extend(item.values())
+                        elif isinstance(item, list):
+                            pending.extend(item)
+                    evidence.append(
+                        "gpr02-manifest-metrics",
+                        {
+                            "kind": "gpr02_manifest_payload_metrics",
+                            "json_nodes": nodes,
+                            "canonical_bytes": len(canonical_bytes(raw["raw_payload"])),
+                            "rows": (
+                                len(raw["raw_payload"])
+                                if isinstance(raw["raw_payload"], list)
+                                else None
+                            ),
+                            "max_nodes": 120_000,
+                            "max_rows": 5_000,
+                            "max_response_bytes": 8_000_000,
+                            "response_hash": raw.get("response_hash"),
+                        },
+                        observed_at_ns=time.time_ns(),
+                    )
         graph = SolanaResearchAdapter(ResearchEconomicGraph(registry, seed)).ingest(
             evidence
         )
+        manifest_candidates = sorted(
+            {
+                c.identity: c for c, p in records if p["source_id"] == "manifest"
+            }.values(),
+            key=lambda c: c.identity,
+        )
+        if manifest_candidates:
+            c = manifest_candidates[0]
+            request = SourceReadRequest(
+                bc.profile.endpoint,
+                (("depth", "20"), ("ticker_id", c.market_id)),
+                bc.semantic_headers,
+            )
+            book_plane = GovernedReadPlane(gov, manifest_transport, evidence)
+            raw_ref, envelope = await book_plane.collect(bc, request)
+            if envelope["quality_state"] == "accepted":
+                try:
+                    book = normalize_manifest_book(
+                        envelope["raw_payload"], market_id=c.market_id
+                    )
+                    evidence.append(
+                        "gpr02-book",
+                        {
+                            "kind": "gpr02_manifest_book_reference",
+                            "book": book,
+                            "raw_evidence_ref": raw_ref,
+                            "classification": "DISCOVERY_ONLY",
+                            "exact_graph_allowed": False,
+                        },
+                        observed_at_ns=time.time_ns(),
+                    )
+                except (ValueError, KeyError, TypeError, AttributeError):
+                    evidence.append(
+                        "gpr02-book",
+                        {
+                            "kind": "gpr02_manifest_book_rejected",
+                            "raw_evidence_ref": raw_ref,
+                            "reason": "BOUNDED_BOOK_SCHEMA_REJECTED",
+                        },
+                        observed_at_ns=time.time_ns(),
+                    )
         graph.persist(evidence, observed_at_ns=time.time_ns())
         queue = VerificationQueue(graph, evidence)
         ref = queue.persist(
@@ -696,12 +862,34 @@ async def capture(
             policies,
             tuple(quotes) + ((final,) if final else ()),
         )
+        retained = retained_records(evidence)
         selected = sorted(
-            {c.identity: c for c, p in records if p["source_id"] == "raydium"}.values(),
+            {
+                c.identity: c
+                for c, p in records
+                if p["source_id"] == "raydium"
+                and any(
+                    row.get("id") == c.market_id
+                    and row.get("programId") == RAYDIUM_CPMM_PROGRAM_ID
+                    for row in retained[p["raw_evidence_id"]]["raw_payload"]["data"][
+                        "data"
+                    ]
+                )
+            }.values(),
             key=lambda c: c.identity,
         )[:1]
         if selected and collectors:
             # QPR-02 owns direct state/quorum/decoder. This produces data evidence only.
+            evidence.append(
+                "gpr02-capability",
+                {
+                    "kind": "gpr02_qpr02_decoder_capability_probe",
+                    "market_id": selected[0].market_id,
+                    "qualification_funnel_completed": False,
+                    "exact_graph_handoff_allowed": False,
+                },
+                observed_at_ns=time.time_ns(),
+            )
             try:
                 await NativeRootedSnapshotProvider(collectors, evidence).collect(
                     (selected[0].market_id,)

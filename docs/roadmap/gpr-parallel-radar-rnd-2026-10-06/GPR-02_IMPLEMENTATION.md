@@ -19,7 +19,8 @@ retain CROSS_CHAIN_SIGNAL/REBALANCE_ONLY and cannot enter this exact funnel.
 Official upstream contracts are pinned by Git SHA and file SHA256 in
 `config/qualification/gpr02-solana-contracts.json`. Manifest's upstream SDK
 confirms `mfx-stats-mainnet.fly.dev/tickers` and bounded `/orderbook` semantics.
-Ticker discovery is implemented; exact Manifest order-book decoder/admission is
+Ticker discovery and one bounded book reference (depth 20) are implemented;
+exact Manifest order-book decoder/admission is
 not inferred from its index response. Existing Raydium/Meteora discovery owners
 remain authoritative. Current official HTTP docs/schema availability remains a
 separate observation; stored roadmap/index-owner pins do not prove a live API.
@@ -96,9 +97,9 @@ Use `--rpc-profiles` for reviewed independent ProviderProfile rows,
 reviewed issuer/representation/extension expectations. Secret values never belong
 in these files, Git, saved scripts or chat.
 
-Independent worktree validation: 283 offline tests passed, comprising 64 GPR-02
+Independent worktree validation: 297 offline tests passed, comprising 71 GPR-02
 tests plus GPR-01/QPR-01/QPR-02/QPR-03 and existing shadow aggregation/graph
-regressions. Mypy passed for eight new modules; lint, formatting and diff checks
+regressions, including all seven V2.2 delta tests. Mypy passed for eight new modules; lint, formatting and diff checks
 passed. Positive exact funnel proof uses synthetic bytes served through real
 governed collectors and independent mock profiles; it is not mainnet qualification.
 

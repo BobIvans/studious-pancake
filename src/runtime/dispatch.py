@@ -2,10 +2,11 @@
 
 import argparse
 from collections.abc import Sequence
+from typing import Never
 
 
 class _DispatchParser(argparse.ArgumentParser):
-    def error(self, message: str) -> None:
+    def error(self, message: str) -> Never:
         raise ValueError(message)
 
 

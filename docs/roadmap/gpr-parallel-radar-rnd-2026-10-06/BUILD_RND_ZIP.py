@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a deterministic review ZIP from the materialized GPR R&D directory."""
+"""Build a deterministic review ZIP from the materialized GPR V2 R&D directory."""
 from pathlib import Path
 import zipfile
 
@@ -15,7 +15,10 @@ INCLUDE = (
     "IMPLEMENTATION_ROADMAP.md",
     "SOURCE_MATRIX.md",
     "ASSET_PLACEHOLDERS.md",
+    "ASSET_REGISTRY_V2.json",
     "SYMBOLIC_UNIVERSE.md",
+    "UNIVERSE_V2_EXPANSION.md",
+    "INTERCHAIN_RELATIONS_V2.json",
     "ANOMALY_TAXONOMY.json",
     "ACCEPTANCE_TESTS.md",
 )

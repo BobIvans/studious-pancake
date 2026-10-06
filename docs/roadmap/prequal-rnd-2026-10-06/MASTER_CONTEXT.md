@@ -47,7 +47,7 @@ These can share an economic underlying without sharing an execution identity.
 ## Development order
 
 ```text
-GPR-01 shared asset/representation + research graph contracts
+GPR-01 shared asset/representation + evidence-classified research graph contracts
         ↓
 GPR-02 Solana radar/exact qualification
         ||
@@ -69,3 +69,7 @@ GPR-08 TON research lab
 Canonical mint/coin/Jetton identity is research input, not execution authority.
 
 Keep signer, sender, transaction submission and live promotion unreachable.
+
+## V2.1 refinement
+
+PR #571 now carries 91 research identities, 14 first-campaign families, 9 DeepBook pool IDs, separate heat/execution/evidence axes, and a startup HARD_BOUND identity receipt. The broad universe remains cheap/dynamic until real evidence promotes relations.

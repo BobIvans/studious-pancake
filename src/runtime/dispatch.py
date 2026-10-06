@@ -11,6 +11,7 @@ class _DispatchParser(argparse.ArgumentParser):
 
 def parsed_command(argv: Sequence[str]) -> str | None:
     parser = _DispatchParser(add_help=False, allow_abbrev=False)
+    parser.add_argument("--help", "-h", action="store_true")
     parser.add_argument("--config-file")
     parser.add_argument("command", nargs="?")
     parsed, remaining = parser.parse_known_args(list(argv))
@@ -22,7 +23,7 @@ def parsed_command(argv: Sequence[str]) -> str | None:
         and not str(argv[0]).startswith("--config-file")
     ):
         return None
-    return parsed.command
+    return "--help" if parsed.help and parsed.command is None else parsed.command
 
 
 def requested_run_mode(argv: Sequence[str]) -> str | None:

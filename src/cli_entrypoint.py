@@ -359,21 +359,9 @@ def _run_disabled_or_dry_mode(
 
 
 def _inspection_command_name(args: list[str]) -> str | None:
-    """Return the subcommand that belongs to the dependency-light parser."""
+    from src.runtime.dispatch import parsed_command
 
-    index = 0
-    while index < len(args):
-        item = args[index]
-        if item in {"--help", "-h"}:
-            return item
-        if item == "--config-file":
-            index += 2
-            continue
-        if item.startswith("--config-file="):
-            index += 1
-            continue
-        return item
-    return None
+    return parsed_command(args)
 
 
 def _run_lightweight_inspection(

@@ -225,3 +225,15 @@ def test_attempt_cap_survives_restart_and_campaigns_cannot_mix(tmp_path):
     with pytest.raises(ValueError, match="GENERATION_MISMATCH"):
         CampaignEvidenceStore(journal, replace(m, repository_sha="f" * 40))
     journal.close()
+
+
+def test_active_mainnet_identity_uses_full_rpc_hash():
+    from src.config.chain_registry import ChainRegistry, decode_base58
+    from src.config.runtime import ClusterConfig
+
+    assert len(decode_base58(MAINNET_GENESIS)) == 32
+    assert (
+        ChainRegistry.load_default().canonical_genesis_hashes["mainnet-beta"]
+        == MAINNET_GENESIS
+    )
+    assert ClusterConfig().genesis_hash == MAINNET_GENESIS

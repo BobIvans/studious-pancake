@@ -661,7 +661,8 @@
             "required": [
               "capabilities.json",
               "market_source_catalog.json",
-              "rooted_runtime_truth_policy.json"
+              "rooted_runtime_truth_policy.json",
+              "chain_registry.json"
             ],
             "properties": {
               "capabilities.json": {
@@ -673,6 +674,10 @@
                 "pattern": "^[0-9a-f]{64}$"
               },
               "rooted_runtime_truth_policy.json": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "chain_registry.json": {
                 "type": "string",
                 "pattern": "^[0-9a-f]{64}$"
               }

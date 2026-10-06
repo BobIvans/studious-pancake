@@ -127,7 +127,8 @@
   "generation_bindings": {
     "capabilities.json": "e9a3f2eb90479abefbe3848dafd7c108c41e1b9cacf38ce3c67b887d8897931b",
     "market_source_catalog.json": "16837d79726581ecf5ccdba0a495a79eee8c63fda5ff6eaf88dddf631881d068",
-    "rooted_runtime_truth_policy.json": "1e7d7973ede92082fc6a05197e57f4e57cf6f5683df00f73c28aac98bd041553"
+    "rooted_runtime_truth_policy.json": "1e7d7973ede92082fc6a05197e57f4e57cf6f5683df00f73c28aac98bd041553",
+    "chain_registry.json": "3deeeeaff27df2ef6b7a58fc79d52c8637fa92a4f1c4f3b7019a6e26ac067a77"
   },
   "provider_authority": "src.provider_governance:ProviderGovernance",
   "persistence_authority": "src.durability.unified_authority_pr02:UnifiedLifecycleAuthority"

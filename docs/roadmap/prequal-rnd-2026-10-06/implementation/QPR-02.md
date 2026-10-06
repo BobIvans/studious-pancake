@@ -11,3 +11,7 @@ Native `collect_report` creates a clean exact-SHA CampaignManifest, uses its ide
 Minimal architectural blocker fixed separately: canonical governed sender-free allowlist lacked read-only `getVersion`, so node identity probes could not execute. Only that read method was added.
 
 Validation: 81 focused/regression tests passed, including real collector → governed mock transport → rooted gate → durable restart. Production promotion remains unavailable. Long-running producer and deployment/cost closure are deferred as requested.
+
+## Real-data blocker discovered during this phase
+
+A real `getGenesisHash` reply exposed a truncated registry/model/default cluster pin (the CAIP-style prefix had been used as a full RPC hash). The active registry/default/native CPMM pin and explicitly synthetic vector now use the full 32-byte RPC hash `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d`. The corrected chain registry is pinned in runtime authority. Historical real evidence is not rewritten and must be recollected under this generation. This is the minimum fix needed for native collection, not a broad legacy migration.

@@ -282,7 +282,7 @@ def decode_native_capture(
             ):
                 raise NativeCaptureError("RPC request envelope mismatch")
             if content_hash(
-                {"url": "https://api.mainnet-beta.solana.com", "body": request_body}
+                {"url": receipt.get("endpoint"), "body": request_body}
             ) != receipt.get("request_fingerprint"):
                 raise NativeCaptureError("RPC request provenance mismatch")
             started = integer(receipt.get("requested_at_ns"), "request time", 1)

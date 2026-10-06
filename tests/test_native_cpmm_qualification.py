@@ -286,7 +286,7 @@ def transport_with(handler, *, max_attempts=1):
     )
     transport = HttpxJsonTransport(
         policy=TransportPolicy(max_attempts=max_attempts, max_string_length=900_000),
-        allowed_hosts=frozenset({"api.mainnet-beta.solana.com"}),
+        allowed_hosts=frozenset({"api.mainnet.solana.com"}),
         client=client,
     )
     return client, transport

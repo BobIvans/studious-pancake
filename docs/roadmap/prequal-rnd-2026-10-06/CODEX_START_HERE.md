@@ -13,7 +13,7 @@ Stacked implementation PRs:
 
 The next canonical continuation is:
 
-**PR #571 — GPR V2.1: Asset/Representation Graph + Parallel Solana/Sui Qualification**
+**PR #571 — GPR V2.2: Asset/Representation Graph + Parallel Solana/Sui Qualification**
 
 Branch:
 `rnd/gpr-parallel-radar-2026-10-06`
@@ -78,6 +78,28 @@ For implementation details, leave this master pack and continue from PR #571's `
 
 ## V2.1 first campaign
 
-The renewed continuation now contains 91 research identities, 14 first-campaign families and 9 DeepBook read-only pool identifiers. Codex must implement independent `heat`, `execution_class` and `evidence_state` fields and the startup HARD_BOUND identity receipt before exact promotion.
+The renewed continuation now contains 92 research identities, 14 first-campaign families and 9 DeepBook read-only pool identifiers. Codex must implement independent `heat`, `execution_class` and `evidence_state` fields and the startup HARD_BOUND identity receipt before exact promotion.
 
-See PR #571: `FIRST_CAMPAIGN_FAMILIES_V2_1.json` and `SUI_DEEPBOOK_POOLS_V2_1.json`.
+See PR #571: `FIRST_CAMPAIGN_FAMILIES_V2_2.json` and `SUI_DEEPBOOK_POOLS_V2_1.json`.
+
+
+## GPR-01 reported complete in Codex draft
+
+Codex reported:
+- 91 identities / 14 families / 9 DeepBook refs loaded;
+- ResearchEconomicGraph + bounded VerificationQueue;
+- independent heat/execution/evidence axes;
+- HARD_BOUND receipts;
+- 219 tests + mypy/lint/format PASS;
+- work stopped at GPR-01.
+
+The implementation is not yet visible in remote PR #571, so **do not rerun GPR-01 from scratch** and do not claim remote completion.
+
+Current action:
+1. publish/reconcile the Codex draft implementation;
+2. apply the additive V2.2 delta only where needed;
+3. rerun affected tests;
+4. publish GPR-01 handoff;
+5. then start GPR-02 Solana and GPR-03 Sui in parallel.
+
+V2.2 adds sSUI and explicit USDT0/CCTP/Wormhole transport semantics without changing the GPR-01 architectural goal.

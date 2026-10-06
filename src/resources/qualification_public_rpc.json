@@ -1,0 +1,9 @@
+{
+  "profile_id": "solana_rpc",
+  "provider": "solana-public",
+  "operator": "solana-public",
+  "correlation_group": "solana-public-shared",
+  "endpoint": "https://api.mainnet.solana.com",
+  "official_docs": "https://solana.com/docs/references/clusters",
+  "smoke_only": true
+}

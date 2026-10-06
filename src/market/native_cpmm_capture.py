@@ -33,7 +33,7 @@ from src.provider_governance import (
     ProviderGovernance,
     ProviderOperation,
 )
-from src.routing.transport import HttpxJsonTransport
+from src.routing.transport import HttpxJsonTransport, SanitizedTransportError
 from src.strategy.exact_cpmm_capacity import (
     MAINNET_GENESIS,
     PINNED_DECODER_REVISION,
@@ -43,14 +43,16 @@ from .discovery import DiscoveryRequest, PublicMarketDiscovery
 from .source_catalog import load_market_source_catalog
 from .streams import RawStreamEvent, RecoverableStreamJournal
 
-RPC_URL = "https://api.mainnet-beta.solana.com"
+from src.qualification_campaign.profiles import public_rpc_profile, READ_RPC_METHODS
+
+RPC_URL = public_rpc_profile().endpoint
 DISCOVERY_URL = "https://api-v3.raydium.io/pools/info/list"
 RPC_PROVIDER = "solana_rpc"
 DISCOVERY_PROVIDER = "raydium-native-discovery"
 SOURCE = "raydium-native-cpmm"
 ANONYMOUS_REF = "anonymous-public-read"
 ANONYMOUS_GENERATION = "anonymous-v1"
-RPC_METHODS = frozenset({"getGenesisHash", "getMultipleAccounts", "getBlock"})
+RPC_METHODS = READ_RPC_METHODS
 
 
 def public_read_entitlements(
@@ -106,7 +108,15 @@ class GovernedNativeCpmmCollector:
         transport: HttpxJsonTransport,
         *,
         wall_ns: Callable[[], int] = time.time_ns,
+        profile=None,
+        snapshot_provider=None,
+        evidence_store=None,
+        auth_headers=None,
     ) -> None:
+        self.profile = profile or public_rpc_profile()
+        self.snapshot_provider = snapshot_provider
+        self.evidence_store = evidence_store
+        self.auth_headers = auth_headers
         self.governance = governance
         self.transport = transport
         self.wall_ns = wall_ns
@@ -125,15 +135,20 @@ class GovernedNativeCpmmCollector:
         call: Callable,
     ) -> Any:
         manifest = self.governance.entitlement(provider)
-        if (
-            manifest.credential_ref != ANONYMOUS_REF
-            or manifest.credential_generation != ANONYMOUS_GENERATION
+        if manifest.credential_ref != (
+            self.profile.credential_ref
+            if provider == self.profile.profile_id
+            else ANONYMOUS_REF
+        ) or manifest.credential_generation != (
+            self.profile.credential_generation
+            if provider == self.profile.profile_id
+            else ANONYMOUS_GENERATION
         ):
             raise NativeCaptureError(
-                "collector accepts only the anonymous public read scope"
+                "collector credential scope differs from reviewed profile"
             )
         self._sequence += 1
-        if self._sequence > 8:
+        if self._sequence > self.profile.request_limit:
             raise NativeCaptureError("one-shot logical request budget exhausted")
         request = AdmissionRequest(
             work_id=f"native-capture:{self._run_id}:{self._sequence}",
@@ -147,8 +162,8 @@ class GovernedNativeCpmmCollector:
         return await self.governance.execute_physical(
             request,
             call,
-            credential_ref=ANONYMOUS_REF,
-            credential_generation=ANONYMOUS_GENERATION,
+            credential_ref=manifest.credential_ref,
+            credential_generation=manifest.credential_generation,
         )
 
     async def discover(self, *, max_pools: int = 8) -> tuple[str, ...]:
@@ -176,7 +191,7 @@ class GovernedNativeCpmmCollector:
         return tuple(sorted({m.market_id for m in result.markets}))[:max_pools]
 
     async def _rpc(self, method: str, params: list[Any]) -> dict[str, Any]:
-        if method not in RPC_METHODS:
+        if method not in READ_RPC_METHODS:
             raise NativeCaptureError("RPC method outside native read scope")
         body = {
             "jsonrpc": "2.0",
@@ -184,9 +199,15 @@ class GovernedNativeCpmmCollector:
             "method": method,
             "params": params,
         }
-        fingerprint = content_hash({"url": RPC_URL, "body": body})
+        fingerprint = content_hash({"url": self.profile.endpoint, "body": body})
         started = self.wall_ns()
         receipt: dict[str, Any] = {
+            "endpoint": self.profile.endpoint,
+            "provider_id": self.profile.profile_id,
+            "provider": self.profile.provider,
+            "operator": self.profile.operator,
+            "correlation_group": self.profile.correlation_group,
+            "source_generation": self.profile.generation,
             "method": method,
             "request_id": body["id"],
             "request_body": body,
@@ -195,16 +216,34 @@ class GovernedNativeCpmmCollector:
             "hash_kind": "canonical-json-sha256",
         }
         try:
-            status, _, response = await self._physical(
-                RPC_PROVIDER,
+            if self.evidence_store is not None:
+                self.evidence_store.claim_attempt(self.profile)
+            status, response_headers, response = await self._physical(
+                self.profile.profile_id,
                 ProviderOperation.BACKFILL,
                 fingerprint,
-                lambda: self.transport.request("POST", RPC_URL, json_body=body),
+                lambda: self.transport.request(
+                    "POST",
+                    self.profile.endpoint,
+                    json_body=body,
+                    headers=self.auth_headers,
+                ),
             )
             receipt.update(
                 http_status=status,
                 available_at_ns=self.wall_ns(),
                 response_hash=content_hash(response),
+                raw_response=response,
+                retry_after=response_headers.get("retry-after"),
+                quality_state=(
+                    "rate-limited"
+                    if status == 429
+                    else (
+                        "unauthorized"
+                        if status in (401, 403)
+                        else "accepted" if status == 200 else "http-error"
+                    )
+                ),
             )
             if status != 200:
                 raise NativeCaptureError("native RPC HTTP failure")
@@ -220,9 +259,31 @@ class GovernedNativeCpmmCollector:
             return response
         except BaseException as exc:
             receipt.update(available_at_ns=self.wall_ns(), error=type(exc).__name__)
+            if isinstance(exc, (NativeCaptureError, SanitizedTransportError)):
+                receipt["failure_reason"] = str(exc)
+            receipt.setdefault(
+                "quality_state",
+                (
+                    "timeout"
+                    if "Timeout" in type(exc).__name__
+                    else (
+                        "cancelled"
+                        if "Cancel" in type(exc).__name__
+                        else "transport-or-schema-error"
+                    )
+                ),
+            )
             if not self.receipts or self.receipts[-1] is not receipt:
                 self.receipts.append(receipt)
             raise
+        finally:
+            if self.evidence_store is not None:
+                self.evidence_store.append(
+                    self.profile.profile_id,
+                    {"kind": "rpc_observation", **receipt},
+                    observed_at_ns=started,
+                    available_at_ns=receipt["available_at_ns"],
+                )
 
     @staticmethod
     def _accounts(
@@ -243,6 +304,8 @@ class GovernedNativeCpmmCollector:
         }
 
     async def collect(self, pool_ids: tuple[str, ...]) -> dict[str, Any]:
+        if self.snapshot_provider is not None:
+            return await self.snapshot_provider.collect(pool_ids)
         partition_for(pool_ids)
         pools = tuple(sorted(pool_ids))
         genesis = await self._rpc("getGenesisHash", [])
@@ -325,9 +388,14 @@ class GovernedNativeCpmmCollector:
             "account_response_metadata": metadata,
             "account_response_hash": content_hash(response),
             "manifest_sha256": self.governance.entitlement(
-                RPC_PROVIDER
+                self.profile.profile_id
             ).manifest_sha256,
-            "rpc_receipts": list(self.receipts),
+            "rpc_receipts": [
+                {k: v for k, v in r.items() if k != "raw_response"}
+                for r in self.receipts
+            ],
+            "rpc_profile_generation": self.profile.generation,
+            "rpc_quorum": {"accepted": False, "reason": "BLOCKED_SINGLE_SOURCE"},
         }
         decode_native_capture(payload)
         return payload

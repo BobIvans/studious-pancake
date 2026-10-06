@@ -270,7 +270,7 @@ class RawStreamEvent:
             raise ObservationError("retraction needs evidence target")
         if (
             not isinstance(self.payload_json, str)
-            or len(self.payload_json.encode("utf-8")) > 1_000_000
+            or len(self.payload_json.encode("utf-8")) > 8_000_000
         ):
             raise ObservationError("raw event payload bound exceeded")
         body = json.loads(self.payload_json)

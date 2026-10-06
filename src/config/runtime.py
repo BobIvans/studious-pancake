@@ -112,7 +112,7 @@ class SecretReference(FrozenModel):
 
 class ClusterConfig(FrozenModel):
     name: str = "mainnet-beta"
-    genesis_hash: str = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+    genesis_hash: str = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d"
     commitment: Commitment = Commitment.CONFIRMED
     rpc_http_url: str | None = None
     rpc_ws_url: str | None = None

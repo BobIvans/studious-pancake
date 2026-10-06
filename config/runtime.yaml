@@ -5,7 +5,7 @@ runtime:
   mode: disabled
 cluster:
   name: mainnet-beta
-  genesis_hash: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp
+  genesis_hash: 5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d
   rpc_http_url: null
   rpc_ws_url: null
 wallet:

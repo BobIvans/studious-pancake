@@ -282,6 +282,7 @@ class ProviderGovernance:
                 "getBlockHeight",
                 "getFeeForMessage",
                 "getGenesisHash",
+                "getVersion",
                 "getSlot",
                 "getTransaction",
                 "getBlock",

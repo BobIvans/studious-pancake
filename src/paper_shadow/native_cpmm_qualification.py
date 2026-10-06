@@ -14,6 +14,8 @@ from dataclasses import asdict
 import json
 from pathlib import Path
 import time
+import os
+import subprocess
 from typing import Any
 
 from src.durability import UnifiedLifecycleAuthority
@@ -218,6 +220,11 @@ def replay_native_journal(
         min_gross_profit_base_units=0,
     )
     detected = CircularGraphCandidateDetector(policy).detect(snapshot.graph, now=now)
+    quorum = body.get(
+        "rpc_quorum", {"accepted": False, "reason": "BLOCKED_SINGLE_SOURCE_OR_UNBOUND"}
+    )
+    if not isinstance(quorum, dict):
+        raise NativeCaptureError("rpc quorum evidence must be an object")
     return {
         "schema": REPORT_SCHEMA,
         "shadow_only": True,
@@ -264,7 +271,12 @@ def replay_native_journal(
             }
             for c in detected.candidates
         ],
+        "campaign_manifest_hash": body.get("campaign_manifest_hash"),
+        "rpc_quorum": quorum,
         "qualification": {
+            "rpc_independence": quorum.get(
+                "reason", "BLOCKED_SINGLE_SOURCE_OR_UNBOUND"
+            ),
             "raw_decode": "PASS",
             "restart_replay": "NOT_RUN_BY_SINGLE_REPLAY",
             "deployment_source_binding": "MISSING",
@@ -284,31 +296,70 @@ async def collect_report(
     base_mint: str = WSOL_MINT,
     lower_amount: int = 10_000,
     upper_amount: int = 1_000_000,
+    rpc_profiles: Path | None = None,
 ) -> dict[str, Any]:
     CircularGraphPolicy(base_mint, lower_amount, upper_amount)
     output.mkdir(parents=True, exist_ok=True)
-    source = source_tree_identity(Path(__file__).resolve().parents[1])
-    # Fixed per-day expiry is stable across restarts. The durable authority owns
-    # admission; rerunning the CLI cannot replace a consumed provider window.
+    from dataclasses import asdict as profile_dict
+    from src.qualification_campaign.identity import CampaignManifest
+    from src.qualification_campaign.profiles import ProviderProfile, public_rpc_profile
+    from src.qualification_campaign.evidence import CampaignEvidenceStore
+    from src.qualification_campaign.rpc import NativeRootedSnapshotProvider
+    from src.qualification_campaign.transport import campaign_transport
+
+    root = Path(__file__).resolve().parents[2]
+    source = source_tree_identity(root)
+    profiles = (
+        tuple(ProviderProfile(**p) for p in json.loads(rpc_profiles.read_text()))
+        if rpc_profiles
+        else (public_rpc_profile(),)
+    )
+    main_sha = subprocess.check_output(
+        ["git", "-C", str(root), "rev-parse", "origin/main^{commit}"], text=True
+    ).strip()
+    campaign = CampaignManifest.create(
+        root,
+        main_sha=main_sha,
+        configuration={
+            "capture": {
+                "pool_ids": sorted(pool_ids),
+                "discover": discover,
+                "base_mint": base_mint,
+                "lower_amount": lower_amount,
+                "upper_amount": upper_amount,
+            }
+        },
+        sources={p.profile_id: profile_dict(p) for p in profiles},
+    )
     expires = (int(time.time()) // 86400 + 1) * 86400
-    manifests = public_read_entitlements(expires_at_epoch_seconds=expires)
+    manifests = {
+        p.profile_id: p.entitlement(expires_at_epoch_seconds=expires) for p in profiles
+    }
+    if discover:
+        manifests[DISCOVERY_PROVIDER] = public_read_entitlements(
+            expires_at_epoch_seconds=expires
+        )[DISCOVERY_PROVIDER]
     partition: str | None = None
     async with AsyncExitStack() as resources:
         transport = await resources.enter_async_context(
-            HttpxJsonTransport(
-                policy=TransportPolicy(max_string_length=900_000),
-                allowed_hosts=frozenset(
-                    {"api.mainnet-beta.solana.com", "api-v3.raydium.io"}
+            campaign_transport(
+                policy=TransportPolicy(
+                    max_string_length=6_000_000,
+                    max_response_bytes=8_000_000,
+                    max_wire_bytes=8_000_000,
+                    max_attempts=1,
+                ),
+                hosts=frozenset(
+                    {p.hostname for p in profiles}
+                    | ({"api-v3.raydium.io"} if discover else set())
                 ),
             )
         )
         store = resources.enter_context(
             UnifiedLifecycleAuthority(
                 output / "authority.sqlite",
-                release_digest=source.digest,
-                policy_bundle_hash=content_hash(
-                    {"policy": "native-cpmm-public-read-v1"}
-                ),
+                release_digest=campaign.runtime_authority_sha256,
+                policy_bundle_hash=campaign.campaign_id,
             )
         )
         journal = RecoverableStreamJournal(
@@ -316,7 +367,41 @@ async def collect_report(
         )
         resources.callback(journal.close)
         governance = ProviderGovernance(manifests, store=store)
-        collector = GovernedNativeCpmmCollector(governance, transport)
+        campaign_journal = RecoverableStreamJournal(
+            output / "campaign-evidence.sqlite", max_events=10_000
+        )
+        resources.callback(campaign_journal.close)
+        evidence = CampaignEvidenceStore(campaign_journal, campaign)
+        collectors = []
+        for p in profiles:
+            headers = None
+            if p.auth_header:
+                value = os.environ.get(p.credential_ref)
+                if not value:
+                    raise NativeCaptureError(
+                        "MISSING_CREDENTIAL_BINDING:" + p.credential_ref
+                    )
+                headers = {
+                    p.auth_header: (
+                        ("Bearer " + value)
+                        if p.auth_header == "Authorization"
+                        else value
+                    )
+                }
+            collectors.append(
+                GovernedNativeCpmmCollector(
+                    governance,
+                    transport,
+                    profile=p,
+                    evidence_store=evidence,
+                    auth_headers=headers,
+                )
+            )
+        provider = NativeRootedSnapshotProvider(collectors, evidence)
+        collector = GovernedNativeCpmmCollector(
+            governance, transport, profile=profiles[0], snapshot_provider=provider
+        )
+
         try:
             if discover:
                 pool_ids = await collector.discover()
@@ -363,8 +448,11 @@ async def collect_report(
                 "barrier_error_category": barrier_error,
                 "gross_shadow_candidates": [],
             }
-        report["governance"] = {
-            p: await governance.snapshot(p) for p in (RPC_PROVIDER, DISCOVERY_PROVIDER)
+        report["governance"] = {p: await governance.snapshot(p) for p in manifests}
+        report["campaign"] = {
+            "manifest": campaign.to_dict(),
+            "campaign_id": campaign.campaign_id,
+            "journal_head": evidence.head,
         }
     report.update(
         partition=partition,
@@ -385,6 +473,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--pool", action="append", default=[])
     parser.add_argument("--discover", action="store_true")
+    parser.add_argument(
+        "--rpc-profiles",
+        type=Path,
+        help="reviewed JSON array of ProviderProfile objects",
+    )
     parser.add_argument("--partition")
     parser.add_argument("--as-of-ns", type=int)
     parser.add_argument("--base-mint", default=WSOL_MINT)
@@ -400,6 +493,7 @@ def main(argv: list[str] | None = None) -> int:
                     args.output,
                     pool_ids=tuple(args.pool),
                     discover=args.discover,
+                    rpc_profiles=args.rpc_profiles,
                     base_mint=args.base_mint,
                     lower_amount=args.lower_amount,
                     upper_amount=args.upper_amount,

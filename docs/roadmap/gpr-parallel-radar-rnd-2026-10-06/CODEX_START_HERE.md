@@ -1,64 +1,141 @@
-# CODEX START HERE — GPR Parallel Radar R&D
+# CODEX START HERE — GPR V2: Asset/Representation Graph + Parallel Radar
 
-This planning PR is stacked on QPR-03 PR #570 / head `7132f7341661368917bcc3cf1618a93de96327f8`.
+Canonical continuation PR: **#571**  
+Branch: `rnd/gpr-parallel-radar-2026-10-06`
 
-The complete source-of-truth package is stored beside this file as:
+## Repository state
 
-- `GPR_PARALLEL_RADAR_RND_2026-10-06.zip`
+QPR-01/#568, QPR-02/#569 and QPR-03/#570 are closed as merged inside the stacked development chain, but the top-level handoff PR #567 is still open. Do **not** assume public `main` contains the whole QPR stack.
 
-Extract/read the complete archive before implementation. Inside it, start with:
-1. `CODEX_START_HERE.md`
-2. `MASTER_CONTEXT.md`
-3. `QPR03_COMPATIBILITY.md`
-4. `ARCHITECTURE_CONTRACT.md`
-5. `IMPLEMENTATION_ROADMAP.md`
-6. `SOURCE_MATRIX.md`
-7. `ASSET_PLACEHOLDERS.json`
-8. `WATCH_UNIVERSE_PLACEHOLDERS.json`
-9. `ANOMALY_TAXONOMY.json`
-10. `ACCEPTANCE_TESTS.md`
+Use this #571 branch as the implementation base for the next wave. This PR is intended to be retargeted to the master handoff branch `codex/prequal-rnd-master-2026-10-06` so QPR-02/QPR-03 continuation plus GPR V2 can flow back into the canonical handoff.
 
-Also read the existing QPR-03 implementation handoff:
-- `docs/roadmap/prequal-rnd-2026-10-06/implementation/QPR-03.md`
-- `docs/roadmap/prequal-rnd-2026-10-06/implementation/handoff.md`
-- `docs/roadmap/prequal-rnd-2026-10-06/implementation/handoff.json`
+Read in this order:
+
+1. `MASTER_CONTEXT.md`
+2. `ASSET_REGISTRY_V2.json`
+3. `UNIVERSE_V2_EXPANSION.md`
+4. `INTERCHAIN_RELATIONS_V2.json`
+5. `ARCHITECTURE_CONTRACT.md`
+6. `IMPLEMENTATION_ROADMAP.md`
+7. `SOURCE_MATRIX.md`
+8. `ANOMALY_TAXONOMY.json`
+9. `ACCEPTANCE_TESTS.md`
+10. existing QPR handoff under `docs/roadmap/prequal-rnd-2026-10-06/implementation/`
+
+## Important change from GPR V1
+
+The package is **no longer placeholders-only**.
+
+`ASSET_REGISTRY_V2.json` contains research-verified canonical Solana mints, Sui Move coin types and TON Jetton/master identities from the renewed R&D strategy.
+
+This does **not** grant execution authority.
+
+Every registry row defaults to:
+
+- `runtime_enabled=false`
+- `exact_graph_allowed=false`
+
+Status gates must be enforced:
+
+- `RND_VERIFIED_CURRENT`: usable as a research identity, still requires exact chain-state qualification before exact graph.
+- `RND_VERIFIED_SPECIFIC_REPRESENTATION`: never ticker-alias with another wrapper/bridge representation.
+- `REVALIDATE_CURRENT`: revalidate before any exact/runtime use.
+- `REVALIDATE_ISSUER_STATUS`: identity exists, but current issuer-chain status must be refreshed before stronger claims.
+- `UNRESOLVED`: research symbol only; no exact lookup/promotion.
+
+Examples that must stay restricted:
+- Solana `tBTC` = `REVALIDATE_CURRENT`;
+- Solana `sUSDS` = `UNRESOLVED`;
+- Sui `AUSD` = `REVALIDATE_ISSUER_STATUS`;
+- Solana `fragSOL` identity is research-ready but Token-2022 semantics remain an exact-qualification gate.
 
 ## Immediate implementation scope
 
-Do **not** implement the full package in one code PR.
+Implement only:
 
-First re-check the unresolved review findings on PR #569/#570. Fix only findings that are still real and directly block this wave.
+# GPR-01 — Asset/Representation Registry + Research Economic Graph + Verification Queue
 
-Then implement only:
+### GPR-01A — Registry model
 
-**GPR-01 — Research Economic Graph + Verification Queue**
+Implement chain-neutral types roughly equivalent to:
 
-GPR-01 must:
-- sit above the Solana-specific QPR-03 Candidate/SourceIntakePlane;
-- provide chain-neutral research identities for Solana, Sui and TON;
-- preserve QPR-03 provenance and negative evidence;
-- materialize symbolic relationships only at the research layer;
-- reject unresolved asset placeholders from exact graph promotion;
-- rank candidates for bounded verification;
-- feed exact Solana verification through existing QPR-02 authority;
-- reuse existing UniversalArbitrageGraph / multihop / PR118 / route graph owners rather than duplicate them.
+```text
+EconomicAsset
+Representation
+AssetIdentity
+IdentityStatus
+RepresentationRelation
+```
 
-After GPR-01 passes, Solana GPR-02 and Sui GPR-03 may be implemented in parallel.
+An executable identity is the full representation, not a ticker.
 
-## Asset identity rule
+Examples that must remain distinct:
+- `USDC@Solana`
+- `USDC_NATIVE@Sui`
+- `USDC_WORMHOLE@Sui`
+- `USDT_SUI_BRIDGE`
+- `USDT_WORMHOLE@Sui`
+- `cbBTC@Solana`
+- `WBTC_WORMHOLE@Solana`
+- `XBTC@Sui`
+- `WBTC_WORMHOLE@Sui`
+- `WBTC_SUI_BRIDGE@Sui`
+- `ZWBTC@Sui`
 
-The package intentionally contains **no mint addresses, Sui coin types or TON jetton addresses**.
+### GPR-01B — Research graph
 
-Do not fill them from memory, ticker matching or external heuristics while implementing GPR-01. Every canonical address/type must be a separate evidence-backed onboarding step later.
+Add a chain-neutral `ResearchEconomicGraph` above QPR-03 without weakening the existing Solana `Candidate` checks.
+
+It may contain:
+- discovery/market relations;
+- router quote previews;
+- structural anchors;
+- LST/LRT exchange/redeem relations;
+- stable/yield/NAV relations;
+- lending/flash-capacity/cost signals;
+- representation/economic-equivalence relations;
+- research-only interchain basis relations.
+
+It must **not** auto-create executable edges.
+
+### GPR-01C — Verification queue
+
+Implement decomposed `CandidateScore` + deterministic bounded `VerificationRequest`.
+
+Solana exact promotion must still go through QPR-02/direct-state qualification and existing `MarketObservationV2 -> ShadowMarketGraphIngest -> UniversalArbitrageGraph`.
+
+Sui exact promotion remains blocked until the governed gRPC/GraphQL checkpoint/object-state path exists.
+
+### GPR-01D — Interchain ontology, research only
+
+Load the six research edge types from `INTERCHAIN_RELATIONS_V2.json`:
+
+- ISSUER_EQUIVALENCE
+- NATIVE_BURN_MINT
+- LOCK_MINT_BRIDGE
+- ECONOMIC_UNDERLYING
+- PROTOCOL_REDEMPTION
+- INVENTORY_REBALANCE
+
+These are **never atomic swap edges** in GPR-01.
+
+## Stop condition
+
+After GPR-01:
+- run deterministic tests/replay;
+- prove representation aliasing is impossible;
+- prove REVALIDATE/UNRESOLVED identities cannot enter exact graph;
+- prove no cross-chain relation enters the atomic graph;
+- report exact changed files and remaining blockers;
+- STOP.
+
+Then split work in parallel:
+
+- **GPR-02 — Solana Parallel Radar + 0x/Jupiter/Sanctum/Meteora**
+- **GPR-03 — Sui Shadow Research + Aftermath/Cetus/DeepBook + gRPC/GraphQL**
+
+Do not implement GPR-04+ in the GPR-01 PR.
 
 ## Safety boundary
 
-No signer. No sender. No submission. No live capital. No production promotion.
-
-Stop after GPR-01 and report:
-- changed files;
-- exact guarantees;
-- unresolved QPR/base blockers;
-- proof that the symbolic universe loads deterministically;
-- proof that no placeholder can enter exact graph;
-- recommended split for Solana GPR-02 and Sui GPR-03.
+No signer. No sender. No transaction submission. No live capital. No automatic production promotion. Cross-chain bridges are research/rebalance relations only.

@@ -472,6 +472,13 @@
       ]
     ]
   },
+  "physical_accounting": {
+    "final_code": "Canonical guard grant observed before physical_attempt=true; logical invocation retained separately. Quote normalization/provenance requires physical=true and HTTP200.",
+    "guard_denial_tests": "PASS_DEPENDENCY_GENERATION_AND_QUOTA_NO_WIRE_CALLS",
+    "nonphysical_quote_test": "PASS_BLOCKED_BEFORE_NATIVE_CALLS",
+    "original_archive_semantics": "Original producer physical_attempt marked logical invocation; retained bytes unchanged. The second Manifest book generation mismatch is a pre-wire denial. Actual accounting uses reserved attempts and observed HTTP outcomes separately."
+  },
+  "portable_export_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
   "readiness": {
     "authenticated_quote_measurement": "BLOCKED_MISSING_BINDINGS",
     "exact_qualification": "BLOCKED",
@@ -493,18 +500,18 @@
     "Compare these Solana findings with GPR-03 and choose further measured campaigns before implementing GPR-04/05/06/07/08."
   ],
   "schema_version": "gpr02.solana-final-handoff.v1",
-  "tested_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
+  "tested_code_sha": "78bac3d27e98ed634f27ee36cc0fe062d2aa21d4",
   "tests": {
     "base_regressions_passed": 226,
     "black": "PASS_10_FILES",
     "command": ".venv/bin/python -m pytest -q --disable-socket --allow-unix-socket tests/test_gpr02_solana_parallel_radar.py tests/test_gpr01_research_economic_graph.py tests/test_gpr01_v22_delta.py tests/test_qpr01_campaign_identity.py tests/test_qpr02_data_plane.py tests/test_qpr03_source_intake.py tests/test_shadow_market_data_aggregation.py tests/test_shadow_arbitrage_graph.py",
     "diff_check": "PASS",
-    "duration_seconds": 15.11,
+    "duration_seconds": 15.19,
     "failed": 0,
-    "gpr02_passed": 77,
+    "gpr02_passed": 80,
     "lint": "PASS_E9_F63_F7_F82",
     "mypy": "PASS_9_MODULES",
-    "passed": 303,
+    "passed": 306,
     "portable_replays": 3,
     "skipped": 0
   },

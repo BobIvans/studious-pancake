@@ -56,10 +56,16 @@
       "id": "GPR02-FORWARD-RECURRENCE",
       "next_action": "Collect bounded matched quote/state repeats after prerequisites, then compare with Sui; stop before GPR-04 implementation.",
       "status": "OPEN_UNMEASURED"
+    },
+    {
+      "evidence": "Original physical_attempt flag marked transport invocation before canonical admission. Final code observes successful canonical guard grant, retains separate logical flag, and denies nonphysical quote provenance; dependency generation and quota tests show no wire calls. Archived negative generation-mismatch invocation remains unchanged and is never counted as HTTP success.",
+      "id": "GPR02-PHYSICAL-ACCOUNTING",
+      "next_action": "Use canonical issue evidence and HTTP outcomes separately from reserved budgets and logical invocation counts.",
+      "status": "RESOLVED_ORIGINAL_EVIDENCE_UNCHANGED"
     }
   ],
   "schema_version": "gpr02.problem-report.v1",
   "stop_before": "GPR-04",
-  "tested_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
+  "tested_code_sha": "78bac3d27e98ed634f27ee36cc0fe062d2aa21d4",
   "verified_base_sha": "8c59759b491b6318f259138671dccfea25f2752e"
 }

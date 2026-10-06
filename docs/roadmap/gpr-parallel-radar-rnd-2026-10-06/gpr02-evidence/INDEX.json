@@ -48,6 +48,7 @@
     "virtual environments",
     "caches"
   ],
+  "final_code_portable_replay": "PASS_ALL_THREE_ARCHIVES_UNCHANGED",
   "included": [
     "original manifest",
     "original raw journal events",
@@ -56,6 +57,7 @@
     "deterministic replay summary",
     "per-member SHA-256 index"
   ],
+  "portable_export_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
   "schema_version": "gpr02.portable-campaign-index.v1",
-  "tested_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2"
+  "tested_code_sha": "78bac3d27e98ed634f27ee36cc0fe062d2aa21d4"
 }

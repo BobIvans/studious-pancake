@@ -15,14 +15,16 @@ production readiness is claimed. Stop before GPR-04.
 | First capture producer | `319773d92df7cfb01c36781d3f35146a82214199` |
 | Manifest bound correction / second producer | `c070dc4f86e3b502b814a963ddbae52ef70b1523` |
 | Shared Manifest generation / third producer | `e4c3e0dee6d8ff54832f1a9258dd9ffa8c0161d0` |
-| Final tested code and portable exporter | `da9d71998c3294fd661d780f0fe9704e874125b2` |
+| Portable exporter | `da9d71998c3294fd661d780f0fe9704e874125b2` |
+| Final tested code / physical issue guard | `78bac3d27e98ed634f27ee36cc0fe062d2aa21d4` |
 
-The final report/archive commit is the head of
+The final report commit is the head of
 `impl/gpr02-solana-radar-2026-10-06`. Its full SHA and remote verification are
 recorded externally in `/workspace/shared/gpr/GPR-02_HEAD_RECEIPT.json`, avoiding
 a self-referential tracked commit hash. All capture manifests bind their original
 clean producer commits. Later freshness/export hardening did not produce those
-physical reads. Original capture summaries and current deterministic replay
+physical reads. A later physical issue observer also leaves original archive
+bytes unchanged. Original capture summaries and current deterministic replay
 summaries are retained separately.
 
 Changed files are enumerated in `GPR-02_HANDOFF.json`: nine isolated
@@ -33,9 +35,9 @@ and lockfiles remain unchanged from the verified base.
 
 ## Independent validation
 
-The handoff JSON retains the exact pytest command. **303 tests passed**, with
-77 GPR-02 tests and 226 GPR-01/QPR/shadow regressions, including all seven V2.2
-delta tests; no failures or skips. Runtime was 15.11 seconds. Mypy passed for
+The handoff JSON retains the exact pytest command. **306 tests passed**, with
+80 GPR-02 tests and 226 GPR-01/QPR/shadow regressions, including all seven V2.2
+delta tests; no failures or skips. Runtime was 15.19 seconds. Mypy passed for
 nine modules; Black checked ten files; fatal lint and diff checks passed.
 
 Tests exercise governed radar reads, exact pair and amount correlation, retained
@@ -52,6 +54,11 @@ malformed metadata pointer/self-mint binding, mint/freeze/fee authorities,
 transfer-fee ceiling/cap and epoch rollover. Portable tests cover deterministic
 replay, hash tampering, private fields and path traversal. All three real portable
 archives replayed offline with hash, journal, generation and report checks.
+Canonical guard dependency-generation and quota denial tests verify no wire
+calls and physical_attempt=false despite logical_attempt_started=true. Successful
+issue is marked only after the unchanged canonical guard grants; quote provenance
+requires physical_attempt=true and HTTP 200. A nonphysical retained quote fails
+before native collection.
 
 ## Retained real-data findings
 
@@ -68,6 +75,9 @@ canonical bytes. Normalized candidates remain bounded and exact-mint filtered.
 The second book invocation failed durable generation matching before a wire
 read; it is a retained negative invocation, not a claimed HTTP response. Sharing
 the actual provider generation and quota bucket fixed this in the third slice.
+Original archive physical_attempt flags used the producer's invocation semantics;
+the final code separates logical start from confirmed canonical issue. Budget
+reservations and actual HTTP outcomes above remain distinct.
 
 Latest source counts are Manifest 35, DEX Screener 10, Meteora DLMM 10 and
 Raydium 8. All nine requested priority pairs appear in discovery observations:

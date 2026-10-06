@@ -1,6 +1,6 @@
 {
-  "schema_version": "gpr.asset-registry.v2.1",
-  "generated_from": "Renewed R&D attachments reviewed 2026-10-06; V2.1 adds program/representation corrections and first-campaign identities.",
+  "schema_version": "gpr.asset-registry.v2.2",
+  "generated_from": "Renewed R&D attachments reviewed 2026-10-06; V2.2 adds sSUI and transport-vs-token distinctions.",
   "safety": {
     "default_runtime_enabled": false,
     "default_exact_graph_allowed": false,
@@ -752,6 +752,19 @@
       "exact_graph_allowed": false
     },
     {
+      "asset_key": "sSUI",
+      "economic_asset_key": "SUI",
+      "chain": "sui-mainnet",
+      "canonical_id": "0x83556891f4a0f233ce7b05cfe7f957d4020492a34f5405b2cb9377d060bef4bf::spring_sui::SPRING_SUI",
+      "standard": "Move",
+      "representation": "lst",
+      "issuer": "SpringSui/Suilend",
+      "verification_status": "RND_VERIFIED_CURRENT",
+      "runtime_enabled": false,
+      "exact_graph_allowed": false,
+      "note": "Read-only research identity from renewed R&D; preserve as a separate Sui LST representation."
+    },
+    {
       "asset_key": "SUI",
       "economic_asset_key": "SUI",
       "chain": "sui-mainnet",
@@ -1058,5 +1071,10 @@
       "note"
     ],
     "hard_bound_rule": "At campaign startup, assert owner/program-or-Move-type/decimals and exact representation identity from chain state before HARD_BOUND/exact promotion."
+  },
+  "non_asset_transport_rules": {
+    "USDT0_SOLANA": "No separate Solana USDT0 mint. Use native Solana USDT identity and model USDT0 Legacy Mesh as transport/rebalancing topology.",
+    "CCTP": "No token mint of its own. Connect native USDC representations through a burn/mint transport relation.",
+    "WORMHOLE": "Bridge route is a transformation; wrapped outputs use representation-specific canonical identifiers."
   }
 }

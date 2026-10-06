@@ -1,20 +1,33 @@
 {
-  "schema_version": "gpr.rnd-package.v1",
-  "title": "GPR Parallel Radar / Research Economic Graph",
+  "schema_version": "gpr.rnd-package.v2",
+  "title": "GPR V2 — Asset/Representation Graph + Parallel Solana/Sui Qualification",
   "date": "2026-10-06",
   "repo": "BobIvans/studious-pancake",
-  "base_pr": 570,
-  "base_head": "7132f7341661368917bcc3cf1618a93de96327f8",
-  "next_implementation_pr": "GPR-01 Research Economic Graph + Verification Queue",
-  "pair_summary": {
-    "explicit_pair_relationships": 330,
-    "solana_pairs": 257,
-    "sui_pairs": 53,
-    "ton_pairs": 20,
-    "route_generators": 10
+  "canonical_pr": 571,
+  "canonical_branch": "rnd/gpr-parallel-radar-2026-10-06",
+  "master_handoff_pr": 567,
+  "qpr_stack": {
+    "QPR-01": 568,
+    "QPR-02": 569,
+    "QPR-03": 570
   },
-  "no_asset_addresses": true,
-  "all_symbolic_assets_runtime_disabled": true,
+  "next_implementation_pr": "GPR-01 Asset/Representation Registry + Research Economic Graph + Verification Queue",
+  "asset_registry": {
+    "file": "ASSET_REGISTRY_V2.json",
+    "entries": 88,
+    "runtime_enabled_by_default": false,
+    "exact_graph_allowed_by_default": false
+  },
+  "universe": {
+    "v1_explicit_symbolic_relationships": 330,
+    "v2_expansion_file": "UNIVERSE_V2_EXPANSION.md",
+    "interchain_watch_relations": 12,
+    "interchain_edge_types": 6
+  },
+  "parallel_after_gpr01": [
+    "GPR-02 Solana Parallel Radar",
+    "GPR-03 Sui Shadow Research"
+  ],
   "live_execution_enabled": false,
-  "archive": "GPR_PARALLEL_RADAR_RND_2026-10-06.zip"
+  "cross_chain_atomic_execution_enabled": false
 }

@@ -17,7 +17,10 @@ from src.strategy.exact_cpmm_capacity import MAINNET_GENESIS
 from src.qualification_campaign.identity import CampaignManifest, digest
 from src.qualification_campaign.profiles import ProviderProfile
 from src.qualification_campaign.evidence import CampaignEvidenceStore
-from src.qualification_campaign.rpc import NativeRootedSnapshotProvider
+from src.qualification_campaign.rpc import (
+    NativeRootedSnapshotProvider,
+    validate_quorum_evidence,
+)
 
 
 def profiles():
@@ -178,6 +181,12 @@ def test_native_quorum_uses_real_collector_and_preserves_negative_evidence(
         payload = await injected.collect(tuple(fixture["pool_ids"]))
         assert payload["rpc_quorum"]["accepted"] is (fault == "none")
         assert payload["campaign_manifest_hash"] == manifest(ps).campaign_id
+        validated = validate_quorum_evidence(provider.last_bundle, evidence)
+        assert validated == payload["rpc_quorum"]
+        tampered = copy.deepcopy(provider.last_bundle)
+        tampered["quorum"]["accepted"] = not tampered["quorum"]["accepted"]
+        with pytest.raises(ValueError, match="QUORUM_DECISION_HASH_MISMATCH"):
+            validate_quorum_evidence(tampered, evidence)
         if fault == "single":
             assert payload["rpc_quorum"]["reason"] == "BLOCKED_SINGLE_SOURCE"
         events = evidence.replay()

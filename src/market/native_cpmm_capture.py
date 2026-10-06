@@ -278,9 +278,22 @@ class GovernedNativeCpmmCollector:
             raise
         finally:
             if self.evidence_store is not None:
+                from src.qualification_campaign.evidence import redact_payload
+
+                recorded = dict(receipt)
+                if "raw_response" in recorded:
+                    recorded["raw_response"] = redact_payload(
+                        recorded["raw_response"], self.auth_headers
+                    )
+                    recorded["raw_payload_hash"] = content_hash(
+                        recorded["raw_response"]
+                    )
+                    recorded["redaction_applied"] = (
+                        recorded["raw_payload_hash"] != recorded["response_hash"]
+                    )
                 self.evidence_store.append(
                     self.profile.profile_id,
-                    {"kind": "rpc_observation", **receipt},
+                    {"kind": "rpc_observation", **recorded},
                     observed_at_ns=started,
                     available_at_ns=receipt["available_at_ns"],
                 )

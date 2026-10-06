@@ -184,3 +184,38 @@ class CampaignEvidenceStore:
         return digest(
             [asdict(e) for e in self.journal.events(available_at_ns=2**63 - 1)]
         )
+
+
+def redact_payload(value, headers):
+    """Preserve public response shape, removing credential reflections only."""
+    secrets = []
+    for name, token in (headers or {}).items():
+        if name.lower() in ("authorization", "x-api-key") and token:
+            secrets.extend((token, token.removeprefix("Bearer ")))
+    forbidden = {
+        "authorization",
+        "apikey",
+        "secret",
+        "password",
+        "accesstoken",
+        "privatekey",
+    }
+
+    def clean(item):
+        if isinstance(item, dict):
+            return {
+                k: (
+                    "<redacted>"
+                    if "".join(c for c in str(k).lower() if c.isalnum()) in forbidden
+                    else clean(v)
+                )
+                for k, v in item.items()
+            }
+        if isinstance(item, list):
+            return [clean(v) for v in item]
+        if isinstance(item, str):
+            for secret in secrets:
+                item = item.replace(secret, "<redacted>")
+        return item
+
+    return clean(value)

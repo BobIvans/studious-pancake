@@ -1,0 +1,168 @@
+{
+  "schema_version": "prequal.source-intake-config.v1",
+  "sources": [
+    {
+      "dossier": {
+        "source_id": "dexscreener",
+        "label": "dexscreener indexed discovery",
+        "profile": {
+          "profile_id": "discovery-dexscreener",
+          "provider": "dexscreener",
+          "operator": "dexscreener",
+          "correlation_group": "dexscreener-indexed",
+          "endpoint": "https://api.dexscreener.com/token-pairs/v1/solana/So11111111111111111111111111111111111111112",
+          "official_docs": "https://docs.dexscreener.com/api/reference",
+          "credential_ref": "anonymous-public-read",
+          "credential_generation": "anonymous-v1",
+          "auth_header": null,
+          "request_limit": 8,
+          "window_seconds": 60,
+          "campaign_attempt_cap": 20,
+          "smoke_only": false,
+          "role": "discovery",
+          "allowed_query_parameters": [],
+          "schema_version": "prequal.provider-profile.v1"
+        },
+        "checked_at": "2026-10-06T00:28:28.196323+00:00",
+        "docs_sha256": "f62e383bcfaf5df07b82215d255bfb6291582522e3590549da9f92ad127796a8",
+        "request_schema_version": "DiscoveryRequest.v1",
+        "response_schema_version": "DiscoveredMarket.v1",
+        "schema_fingerprint": "f34d70dd492acca3fd77b3a545169af2d8f547e3653f3d6226fd2ae80e667404",
+        "terms_url": "https://dexscreener.com/terms",
+        "license_class": "UNREVIEWED_PUBLIC_RESEARCH",
+        "capabilities": [
+          "candidate-discovery"
+        ],
+        "classification": "DISCOVERY_ONLY",
+        "renewal_ttl_seconds": 86400,
+        "slot_id": null,
+        "daily_quota": null,
+        "monthly_quota": null,
+        "commercial_use": "UNKNOWN",
+        "redistribution_allowed": "UNKNOWN",
+        "attribution": "UNREVIEWED",
+        "token_semantics": "UNKNOWN",
+        "oracle_semantics": "UNKNOWN",
+        "schema_version": "prequal.source-dossier.v1"
+      },
+      "adapter": {
+        "kind": "catalog",
+        "request": {
+          "source_id": "dexscreener",
+          "token_mint": "So11111111111111111111111111111111111111112"
+        }
+      }
+    },
+    {
+      "dossier": {
+        "source_id": "geckoterminal",
+        "label": "geckoterminal indexed discovery",
+        "profile": {
+          "profile_id": "discovery-geckoterminal",
+          "provider": "geckoterminal",
+          "operator": "geckoterminal",
+          "correlation_group": "geckoterminal-indexed",
+          "endpoint": "https://api.geckoterminal.com/api/v2/networks/solana/pools",
+          "official_docs": "https://api.geckoterminal.com/docs/index.html",
+          "credential_ref": "anonymous-public-read",
+          "credential_generation": "anonymous-v1",
+          "auth_header": null,
+          "request_limit": 8,
+          "window_seconds": 60,
+          "campaign_attempt_cap": 20,
+          "smoke_only": false,
+          "role": "discovery",
+          "allowed_query_parameters": [
+            "page"
+          ],
+          "schema_version": "prequal.provider-profile.v1"
+        },
+        "checked_at": "2026-10-06T00:28:28.196596+00:00",
+        "docs_sha256": "e4f9f9de00ef771d17c055d6a8cd46f05978141419f2aa41cbd2bee6722ec82b",
+        "request_schema_version": "DiscoveryRequest.v1",
+        "response_schema_version": "DiscoveredMarket.v1",
+        "schema_fingerprint": "75df9c9beedc58ad0aecf9cfbc6b4b6751f63958876957744a44f7970e9e74a0",
+        "terms_url": "https://www.geckoterminal.com/terms",
+        "license_class": "UNREVIEWED_PUBLIC_RESEARCH",
+        "capabilities": [
+          "candidate-discovery"
+        ],
+        "classification": "DISCOVERY_ONLY",
+        "renewal_ttl_seconds": 86400,
+        "slot_id": null,
+        "daily_quota": null,
+        "monthly_quota": null,
+        "commercial_use": "UNKNOWN",
+        "redistribution_allowed": "UNKNOWN",
+        "attribution": "UNREVIEWED",
+        "token_semantics": "UNKNOWN",
+        "oracle_semantics": "UNKNOWN",
+        "schema_version": "prequal.source-dossier.v1"
+      },
+      "adapter": {
+        "kind": "catalog",
+        "request": {
+          "source_id": "geckoterminal"
+        }
+      }
+    },
+    {
+      "dossier": {
+        "source_id": "raydium",
+        "label": "raydium indexed discovery",
+        "profile": {
+          "profile_id": "discovery-raydium",
+          "provider": "raydium",
+          "operator": "raydium",
+          "correlation_group": "raydium-indexed",
+          "endpoint": "https://api-v3.raydium.io/pools/info/list",
+          "official_docs": "https://api-v3.raydium.io/docs/",
+          "credential_ref": "anonymous-public-read",
+          "credential_generation": "anonymous-v1",
+          "auth_header": null,
+          "request_limit": 8,
+          "window_seconds": 60,
+          "campaign_attempt_cap": 20,
+          "smoke_only": false,
+          "role": "discovery",
+          "allowed_query_parameters": [
+            "poolType",
+            "poolSortField",
+            "sortType",
+            "pageSize",
+            "page"
+          ],
+          "schema_version": "prequal.provider-profile.v1"
+        },
+        "checked_at": "2026-10-06T00:28:28.196746+00:00",
+        "docs_sha256": "3d1f21ff983b7b71c5cf152d3134374ba8a0050ddbd97a9cb1b4b8cfb9d308b2",
+        "request_schema_version": "DiscoveryRequest.v1",
+        "response_schema_version": "DiscoveredMarket.v1",
+        "schema_fingerprint": "a957e03c65d5f9e2214469e38009ae3b7b44af7e14fa8e9d4cea791e8c6aab96",
+        "terms_url": "https://raydium.io/terms-of-use/",
+        "license_class": "UNREVIEWED_PUBLIC_RESEARCH",
+        "capabilities": [
+          "candidate-discovery"
+        ],
+        "classification": "DISCOVERY_ONLY",
+        "renewal_ttl_seconds": 86400,
+        "slot_id": null,
+        "daily_quota": null,
+        "monthly_quota": null,
+        "commercial_use": "UNKNOWN",
+        "redistribution_allowed": "UNKNOWN",
+        "attribution": "UNREVIEWED",
+        "token_semantics": "UNKNOWN",
+        "oracle_semantics": "UNKNOWN",
+        "schema_version": "prequal.source-dossier.v1"
+      },
+      "adapter": {
+        "kind": "catalog",
+        "request": {
+          "source_id": "raydium",
+          "required_program_id": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
+        }
+      }
+    }
+  ]
+}

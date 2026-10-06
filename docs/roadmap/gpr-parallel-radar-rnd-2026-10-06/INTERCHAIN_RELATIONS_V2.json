@@ -1,5 +1,5 @@
 {
-  "schema_version": "gpr.interchain-relations.v2",
+  "schema_version": "gpr.interchain-relations.v2.1",
   "execution_policy": "RESEARCH_ONLY_NON_ATOMIC",
   "rule": "No bridge edge enters the atomic UniversalArbitrageGraph. Cross-chain opportunities require prefunded local execution and later rebalance in a future simulator.",
   "edge_types": [
@@ -34,84 +34,120 @@
       "kind": "NATIVE_BURN_MINT",
       "left": "solana-mainnet:USDC",
       "right": "sui-mainnet:USDC_NATIVE",
-      "signal": "native USDC basis / CCTP rebalance reference"
+      "signal": "native USDC basis / CCTP rebalance reference",
+      "heat": "HOT",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-02",
-      "kind": "ECONOMIC_UNDERLYING",
+      "kind": "LOCK_MINT_BRIDGE",
       "left": "solana-mainnet:USDC",
-      "right": "sui-mainnet:USDC_WORMHOLE",
-      "signal": "native-vs-bridged USDC basis"
+      "right": "sui-mainnet:USDC_SOL_PORTAL_ON_SUI",
+      "signal": "Solana native USDC vs Solana-origin Wormhole USDCsol on Sui",
+      "heat": "HOT",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-03",
       "kind": "LOCK_MINT_BRIDGE",
       "left": "solana-mainnet:SOL",
       "right": "sui-mainnet:WSOL_WORMHOLE",
-      "signal": "SOL native-basis residual"
+      "signal": "SOL native-basis residual",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-04",
       "kind": "ISSUER_EQUIVALENCE",
       "left": "solana-mainnet:FDUSD",
       "right": "sui-mainnet:FDUSD",
-      "signal": "same-issuer stablecoin cross-chain basis"
+      "signal": "same-issuer stablecoin cross-chain basis",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-05",
       "kind": "ISSUER_EQUIVALENCE",
       "left": "solana-mainnet:USDY",
       "right": "sui-mainnet:USDY",
-      "signal": "yield-asset market basis vs reference value"
+      "signal": "yield-asset market basis vs reference value",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-06",
       "kind": "ECONOMIC_UNDERLYING",
       "left": "solana-mainnet:BTC_REPRESENTATION_FAMILY",
       "right": "sui-mainnet:BTC_REPRESENTATION_FAMILY",
-      "signal": "BTC representation basis"
+      "signal": "BTC representation basis",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-07",
       "kind": "CROSS_CHAIN_RATE_COMPARISON",
       "left": "SOL/USDC@solana-mainnet",
       "right": "WSOL_WORMHOLE/USDC_NATIVE@sui-mainnet",
-      "signal": "SOL/USD chain basis net of hedge/rebalance costs"
+      "signal": "SOL/USD chain basis net of hedge/rebalance costs",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-08",
       "kind": "CROSS_CHAIN_RATE_COMPARISON",
       "left": "FDUSD/USDC@solana-mainnet",
       "right": "FDUSD/USDC_NATIVE@sui-mainnet",
-      "signal": "FDUSD/USD chain basis"
+      "signal": "FDUSD/USD chain basis",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-09",
       "kind": "CROSS_CHAIN_RATE_COMPARISON",
       "left": "USDY/USDC@solana-mainnet",
       "right": "USDY/USDC_NATIVE@sui-mainnet",
-      "signal": "USDY yield-basis divergence"
+      "signal": "USDY yield-basis divergence",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-10",
       "kind": "CROSS_CHAIN_RATE_COMPARISON",
       "left": "BTC_REPRESENTATION/USDC@solana-mainnet",
       "right": "BTC_REPRESENTATION/USDC_NATIVE@sui-mainnet",
-      "signal": "BTC wrapper basis"
+      "signal": "BTC wrapper basis",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-11",
       "kind": "REGIME_COMPARISON",
       "left": "SOLANA_LST_PREMIUM",
       "right": "SUI_LST_PREMIUM",
-      "signal": "staking/restaking premium regime"
+      "signal": "staking/restaking premium regime",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     },
     {
       "id": "IX-12",
       "kind": "REGIME_COMPARISON",
       "left": "SOLANA_FUNDING_RATE",
       "right": "SUI_FUNDING_RATE",
-      "signal": "funding/capital-cost divergence"
+      "signal": "funding/capital-cost divergence",
+      "heat": "WARM",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED"
     }
   ],
   "future_prefunded_candidate_economics": [
@@ -122,5 +158,11 @@
     "expected bridge/rebalance cost",
     "bridge latency risk",
     "capital fragmentation cost"
-  ]
+  ],
+  "classification_contract": {
+    "heat": "HOT|WARM|COLD|EVENT",
+    "execution_class": "CROSS_CHAIN_SIGNAL or REBALANCE_ONLY",
+    "evidence_state": "DISCOVERY_ONLY|IDENTIFIER_VERIFIED|RPC_VERIFIED|EXECUTABLE",
+    "rule": "Interchain bridge/equivalence edges never become chain-local atomic swap edges."
+  }
 }

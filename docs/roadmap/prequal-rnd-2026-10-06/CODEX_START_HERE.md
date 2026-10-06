@@ -13,7 +13,7 @@ Stacked implementation PRs:
 
 The next canonical continuation is:
 
-**PR #571 — GPR V2: Asset/Representation Graph + Parallel Solana/Sui Qualification**
+**PR #571 — GPR V2.1: Asset/Representation Graph + Parallel Solana/Sui Qualification**
 
 Branch:
 `rnd/gpr-parallel-radar-2026-10-06`
@@ -31,7 +31,7 @@ PR #571 should be treated as the continuation/integration PR that brings the lat
 
 The next code PR is:
 
-**GPR-01 — Asset/Representation Registry + Research Economic Graph + Verification Queue**
+**GPR-01 — Asset/Representation Registry + Evidence-Classified Research Economic Graph + Verification Queue**
 
 The renewed strategy includes:
 - canonical research Solana mints;
@@ -75,3 +75,9 @@ No live capital.
 No production promotion.
 
 For implementation details, leave this master pack and continue from PR #571's `CODEX_START_HERE.md`.
+
+## V2.1 first campaign
+
+The renewed continuation now contains 91 research identities, 14 first-campaign families and 9 DeepBook read-only pool identifiers. Codex must implement independent `heat`, `execution_class` and `evidence_state` fields and the startup HARD_BOUND identity receipt before exact promotion.
+
+See PR #571: `FIRST_CAMPAIGN_FAMILIES_V2_1.json` and `SUI_DEEPBOOK_POOLS_V2_1.json`.

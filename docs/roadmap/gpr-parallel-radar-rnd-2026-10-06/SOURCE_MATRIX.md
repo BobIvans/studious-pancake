@@ -1,43 +1,70 @@
-# Source matrix — checked 2026-10-06
+# Source matrix — GPR V2.1 / checked strategy 2026-10-06
 
-All numerical limits below are source-documented where stated. `recommended campaign cap` values are our deliberately lower engineering defaults, not provider promises.
+Numerical limits are retained only where the prior R&D package pinned them. Sources newly added by the V2.1 attachment are marked with no invented quota; characterize them through ProviderProfile before high-frequency use.
 
-| Source | Chain | Role | Documented free/public limit | Initial campaign cap | Phase |
+| Source | Chain | Role | Known/public limit in current pack | Campaign policy | Phase |
 |---|---|---|---|---|---|
-| dexscreener | multi | RADAR_INDEXER | 300 requests/minute on pair/token endpoints | 240 requests/minute maximum; prefer batch reads | EXISTING_QPR03 |
-| meteora-dlmm | solana-mainnet | HIGH_THROUGHPUT_RADAR | 30 RPS | 24 RPS initial cap | IMPLEMENT_NEXT |
-| 0x-solana | solana-mainnet | QUOTE_PREVIEW_B | approximately 5 RPS Free/Standard tier across endpoints | 4 RPS initial cap | IMPLEMENT_NEXT |
-| jupiter | solana-mainnet | QUOTE_PREVIEW_A_FINAL | Free: unlimited usage, 1 request/second general API limit; separate execute/submit buckets exist | 1 request every 1.25 seconds for read-only qualification | IMPLEMENT_NEXT |
-| sanctum | solana-mainnet | STRUCTURAL_LST_QUOTE | numeric public rate limit not established in checked docs; 429 is documented | 0.5 RPS until observed limits are characterized | IMPLEMENT_NEXT_SPECIALIZED |
-| openocean-solana | solana-mainnet | QUOTE_PREVIEW_C | 2 RPS default public plan / Solana API | 1.5 RPS | OPTIONAL_NEXT |
-| okx-dex | multi | QUOTE_COMPARATOR | Trial 1 RPS default, up to 5 RPS after review; 60 days | 0.8 RPS | OPTIONAL_TRIAL |
-| geckoterminal | multi | RADAR_INDEXER | 30 calls/minute public API | 24 calls/minute | EXISTING_QPR03 |
-| raydium | solana-mainnet | VENUE_INDEXER | no stable numerical public limit pinned by this R&D review | retain current QPR-03 conservative bounded profile until measured | EXISTING_QPR03 |
-| vybe | solana-mainnet | PARSED_REFERENCE | Free: 60 RPM, 25,000 credits/month | 48 RPM plus credit budget | IMPLEMENT_LATER_OR_PARALLEL |
-| birdeye | multi | SPARSE_REFERENCE | Standard/free: 1 RPS, 30,000 compute units | 0.5 RPS and strict CU budget | BACKLOG |
-| aftermath | sui-mainnet | SUI_HIGH_THROUGHPUT_ROUTER_RADAR | 1000 requests / 10 seconds default (100 RPS) | 80 RPS initial cap with per-method subcaps | IMPLEMENT_PARALLEL_AFTER_SHARED_GRAPH |
-| cetus | sui-mainnet | SUI_DIRECT_VENUE_STATE | not pinned numerically in checked official docs | 1 RPS until measured and documented | IMPLEMENT_PARALLEL_AFTER_SHARED_GRAPH |
-| sui-grpc-graphql | sui-mainnet | SUI_EXACT_STATE_TRANSPORT | provider-specific; no invented global rate | profile-specific, fail closed | IMPLEMENT_PARALLEL_AFTER_SHARED_GRAPH |
-| stonfi | ton-mainnet | TON_UNLIMITED_RESEARCH_RADAR | Currently no rate limits for the DEX API | self-imposed 20 RPS initially; adaptive lower on errors | IMPLEMENT_RESEARCH_ONLY_AFTER_SHARED_GRAPH |
+| DEX Screener | multi | RADAR_INDEXER | 300 RPM pair/token endpoints | prefer batches | EXISTING_QPR03 |
+| Meteora DLMM | Solana | HIGH_THROUGHPUT_RADAR | 30 RPS | conservative provider bucket | GPR-02 |
+| Raydium | Solana | VENUE_INDEXER | no stable numeric limit pinned | bounded existing profile | EXISTING_QPR03/GPR-02 |
+| GeckoTerminal | multi | RADAR_INDEXER | 30 calls/min | bounded reference | EXISTING_QPR03 |
+| Manifest | Solana | CLOB_BOOK_RADAR | no numeric limit pinned by V2.1 attachment | bounded read-only profile; no uniform polling | GPR-02 |
+| Jupiter metadata/routes | Solana | TOKEN_ROUTE_METADATA | Free general API previously pinned at 1 RPS | spend after cheap radar | GPR-02 |
+| Jupiter JLP NAV | Solana | NAV_STRUCTURAL_ANCHOR | no separate numeric limit pinned | HOT JLP signal only | GPR-02 |
+| 0x Solana | Solana | QUOTE_PREVIEW_B | approx. 5 RPS free/standard in prior pack | first quote validator | GPR-02 |
+| Jupiter quote | Solana | QUOTE_PREVIEW_A_FINAL | 1 RPS general free API in prior pack | final/reference quote | GPR-02 |
+| Sanctum | Solana | LST_STRUCTURAL_QUOTE | numeric limit not established | targeted LST only | GPR-02 |
+| OpenOcean | Solana | QUOTE_PREVIEW_C | 2 RPS prior pack | optional/correlation-tagged | OPTIONAL |
+| Vybe | Solana | PARSED_REFERENCE | 60 RPM / 25k credits prior pack | async/reference | OPTIONAL |
+| Aftermath | Sui | ROUTER_RADAR | 1000 requests / 10 seconds prior pack | bounded engineering subcaps | GPR-03 |
+| DeepBook | Sui | CLOB_BOOK_STATE | no numeric limit pinned by V2.1 attachment | use known pool IDs; checkpoint/object verification | GPR-03 |
+| Cetus | Sui | DIRECT_VENUE_STATE | no numeric limit pinned | bounded provider profile | GPR-03 |
+| Scallop | Sui | LST_LENDING_RATE_REFERENCE | no numeric limit pinned by V2.1 attachment | structural reference only until verified | GPR-03/GPR-05 |
+| Pyth XAU/USD | multi | ORACLE_REFERENCE | keyed/plan-governed in existing repo policy | XAUM research trigger, not trade truth | GPR-03 |
+| Sui gRPC/GraphQL | Sui | EXACT_STATE_TRANSPORT | provider-specific | fail closed/profile-specific | GPR-03 |
+| STON.fi | TON | TON_RESEARCH_RADAR | no API rate limits in prior pack | self-imposed cap | GPR-08 |
 
-## Official links
-- **dexscreener**: https://docs.dexscreener.com/api/reference
-- **meteora-dlmm**: https://github.com/MeteoraAg/docs/blob/main/developer-guides/dlmm/api-reference/overview.mdx
-- **0x-solana**: https://docs.0x.org/docs/developer-resources/rate-limits
-  - secondary_docs: https://docs.0x.org/svm/solana-swap-api/introduction
-- **jupiter**: https://developers.jup.ag/pricing
-- **sanctum**: https://learn.sanctum.so/docs/for-developers/sanctum-api
-- **openocean-solana**: https://docs.openocean.finance/docs/solana-swap-api
-  - pricing_docs: https://docs.openocean.finance/docs/swap-api/api-pricing-and-access
-- **okx-dex**: https://web3.okx.com/onchainos/dev-docs/trade/api-fee
-- **geckoterminal**: https://apiguide.geckoterminal.com/faq
-- **raydium**: https://docs.raydium.io/raydium/build/resources/apis
-- **vybe**: https://docs.vybenetwork.com/docs/plans-rate-limits
-- **birdeye**: https://docs.birdeye.so/docs/pricing
-- **aftermath**: https://docs.aftermath.finance/for-developers/api/rest-api/authorization
-  - router_docs: https://docs.aftermath.finance/trade/smart-order-router
-- **cetus**: https://cetus-1.gitbook.io/cetus-developer-docs/developer/via-sdk-v2/getting-started
-  - pool_list_docs: https://cetus-1.gitbook.io/cetus-developer-docs/developer/via-sdk/features-available/smart-router-v2
-- **sui-grpc-graphql**: https://docs.sui.io/develop/accessing-data/
-  - migration_docs: https://docs.sui.io/references/sui-sdks
-- **stonfi**: https://docs.ston.fi/developer-section/dex/api/reference
+## V2.1 radar order
+
+### Solana
+```text
+Manifest books
++ DEX Screener batches
++ Meteora/Raydium indexed state
++ Jupiter token/route metadata
+        ↓
+ResearchEconomicGraph
+        ↓
+0x
+        ↓
+Jupiter
+        ↓
+Sanctum for LST
+        ↓
+QPR-02 exact state
+```
+
+### Sui
+```text
+DeepBook known pools/book state
++ Aftermath
++ Cetus
++ Scallop rates
++ cheap references
+        ↓
+ResearchEconomicGraph
+        ↓
+governed checkpoint/object verification
+```
+
+No RPC/state verification is spent uniformly over the full symbolic universe.
+
+## Source/provenance targets from the V2.1 attachment
+
+- Manifest market radar: https://app.manifest.trade/order
+- Mysten DeepBook constants/pools: https://github.com/MystenLabs/ts-sdks/blob/main/packages/deepbook-v3/src/utils/constants.ts
+- Scallop supported coins/rates context: https://github.com/scallop-io/scallop-skills/blob/master/references/supported-coins.md
+- Sui bridge representations: https://docs.sui.io/onchain-finance/fungible-tokens/sui-bridging
+- Paxos USDG: https://docs.paxos.com/guides/stablecoin/usdg/mainnet
+- OKX xBTC research identity: current OKX xBTC deployment material
+- JLP NAV/token identity: current Jupiter/JLP material

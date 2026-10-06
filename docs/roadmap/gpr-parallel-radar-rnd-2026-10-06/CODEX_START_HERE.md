@@ -1,4 +1,4 @@
-# CODEX START HERE — GPR V2.1: Evidence-Classified Asset/Representation Graph
+# CODEX START HERE — GPR V2.2: Evidence-Classified Asset/Representation Graph
 
 Canonical continuation PR: **#571**  
 Branch: `rnd/gpr-parallel-radar-2026-10-06`
@@ -30,7 +30,7 @@ If GPR-01 implementation has already started, **do not restart it**. Read `CODEX
 12. `ACCEPTANCE_TESTS.md`
 13. existing QPR implementation handoff under `docs/roadmap/prequal-rnd-2026-10-06/implementation/`
 
-## V2.1 corrections
+## V2.1/V2.2 corrections
 
 The renewed attachment changes several assumptions:
 
@@ -68,6 +68,24 @@ Examples:
 - USDG/USDC may be `HOT + LOCAL_ATOMIC + IDENTIFIER_VERIFIED`.
 - USDC_SOL ↔ USDC_SUI may be `HOT + CROSS_CHAIN_SIGNAL + IDENTIFIER_VERIFIED`.
 - Neither is `EXECUTABLE` until the required exact verification exists.
+
+## GPR-01 draft completion status
+
+Codex has already reported GPR-01 complete in its draft environment with 219 tests and mypy/lint/format passing.
+
+**Do not restart GPR-01.**
+
+Remote publication is still pending. If publishing/reconciling that draft result:
+- read `CODEX_V2_2_DELTA.md`;
+- patch only affected identity/transport contracts and tests;
+- use Asset Registry V2.2 (92 identities);
+- use `FIRST_CAMPAIGN_FAMILIES_V2_2.json`;
+- load `TRANSFORMATION_REGISTRY_V2_2.json`;
+- publish `GPR-01_IMPLEMENTATION.md`;
+- rerun affected deterministic tests;
+- STOP.
+
+Only after remote verification should GPR-02 and GPR-03 start from the published GPR-01 contract.
 
 ## Immediate implementation scope
 
@@ -149,7 +167,7 @@ Cross-chain bridge/CCTP relations remain research/rebalance only.
 
 Do not poll all 330 relationships equally.
 
-Load `FIRST_CAMPAIGN_FAMILIES_V2_1.json` as the initial high-value qualification corpus. It contains 14 families spanning:
+Load `FIRST_CAMPAIGN_FAMILIES_V2_2.json` as the initial high-value qualification corpus. It contains 14 families spanning:
 - USDG/USD1 stables;
 - Solana xBTC/cbBTC;
 - JLP vs NAV;

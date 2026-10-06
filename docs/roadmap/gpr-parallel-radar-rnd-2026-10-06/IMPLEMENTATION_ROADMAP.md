@@ -1,211 +1,153 @@
-# IMPLEMENTATION ROADMAP — GPR V2
+# IMPLEMENTATION ROADMAP — GPR V2.1
 
-## GPR-00 — Stack reconciliation / evidence hardening
+## GPR-00 — evidence hardening gate
 
-Before new implementation, inspect the actual #571 base and the former #569/#570 review findings. Fix only findings that still exist.
+Re-check any still-live QPR review blockers that can corrupt campaign evidence. Fix only what blocks trustworthy GPR-01.
 
-Required boundary:
-- physical reads cannot lose evidence;
-- credentials cannot escape through derived context;
-- replay fails closed on missing evidence;
-- readiness cannot PASS on unusable schemas;
-- current branch identity is reproducible.
+## GPR-01 — Registry + Evidence-Classified Research Graph + Verification Queue
 
-This gate is not permission to do broad cleanup.
+**NEXT CODE PR. STOP AFTER COMPLETION.**
 
-## GPR-01 — Asset/Representation Registry + Research Economic Graph + Verification Queue
-
-**NEXT CODE PR. Stop after this PR.**
-
-Implement:
-
-### A. Asset Registry V2
+### A. Registry V2.1
 - typed loader for `ASSET_REGISTRY_V2.json`;
-- EconomicAsset vs Representation separation;
-- chain + canonical-id uniqueness;
-- status gating;
-- generation/digest identity;
-- no ticker-only lookup for exact work.
+- support origin_chain / bridge / issuer / decimals;
+- preserve representation identity;
+- registry digest/generation;
+- fail closed on REVALIDATE/UNRESOLVED;
+- no ticker-only exact lookup.
 
-### B. ResearchEconomicGraph
+### B. HARD_BOUND identity gate
+At campaign startup, assert exact identifier + owner/program/Move-type + decimals + relevant extension/representation semantics and persist a receipt.
+
+### C. ResearchRelation V2.1
+Implement independent:
+- heat;
+- execution_class;
+- evidence_state;
+- anchor types;
+- pool/book identifiers;
+- synthetic paths;
+- provenance.
+
+### D. ResearchEconomicGraph
 - chain-neutral representation nodes;
-- QPR-03 Solana adapter;
-- deterministic relation identity/dedup;
-- structural-anchor relations;
-- relation provenance and negative evidence;
-- interchain relation loading as research-only.
+- QPR-03 Solana intake adapter;
+- deterministic dedup;
+- structural anchors;
+- negative evidence;
+- cross-chain relations as research/rebalance only.
 
-### C. CandidateScore
-- decomposed scheduling score;
-- representation/correlation/staleness penalties;
+### E. CandidateScore + VerificationQueue
+- deterministic score decomposition;
+- top-K bounded work;
+- chain-specific verification target;
 - no profitability claim.
 
-### D. VerificationQueue
-- bounded deterministic top-K;
-- full representation identity;
-- evidence refs;
-- request/amount budgets;
-- chain-specific exact-verification target.
+### F. Load initial seed
+- `FIRST_CAMPAIGN_FAMILIES_V2_1.json`;
+- `SUI_DEEPBOOK_POOLS_V2_1.json`;
+- broader symbolic universe remains cheap/dynamic.
 
 Acceptance:
-- registry loads deterministically;
-- all 88 rows default runtime-disabled;
-- same ticker across chains never aliases;
-- bridge representations never alias native representations;
-- `REVALIDATE_*` and `UNRESOLVED` fail closed for exact promotion;
-- Token-2022 semantic gate remains explicit;
-- cross-chain edges cannot enter UniversalArbitrageGraph;
-- QPR-03 indexed candidates can rank verification work;
-- replay reproduces graph identities/scores.
+- 91 registry rows load deterministically;
+- USDG and PYUSD retain Token-2022 identity metadata;
+- Solana xBTC_OKX exists separately from cbBTC/WBTC/tBTC;
+- four relevant USDC representations remain distinct;
+- XAUM loads with XAU oracle/reference semantics;
+- 14 families load with all 3 classification axes;
+- 9 DeepBook pool IDs load as IDENTIFIER_VERIFIED research refs;
+- HARD_BOUND fails closed without chain-state receipt;
+- CROSS_CHAIN_SIGNAL/REBALANCE_ONLY never enter exact graph;
+- replay reproduces graph identity and classification.
 
-## GPR-02 — Solana Parallel Radar + Dual Quote Preview
+## GPR-02 — Solana Parallel Radar / first real campaign
 
-May start in parallel with GPR-03 **only after GPR-01 contracts are stable**.
+Start after GPR-01 contract stability, in parallel with GPR-03.
 
-Integrate/adapt in evidence-driven order:
+Primary first-campaign families:
+1. USDG/USDC — HOT local-atomic candidate.
+2. USD1/USDT — HOT local-atomic candidate.
+3. USD1/USDC — HOT local-atomic candidate.
+4. xBTC_OKX/cbBTC — WARM local-atomic candidate, HOT signal priority.
+5. JLP/USDC + live NAV — HOT signal.
+6. BNSOL/bbSOL/hSOL/dSOL vs SOL — WARM structural.
 
-1. Meteora DLMM high-throughput radar.
-2. 0x Solana quote preview.
-3. Jupiter quote preview.
-4. Sanctum LST quote/instant-exit structural path.
-5. optional OpenOcean comparator with underlying-router correlation.
-6. optional Vybe/reference sources.
+Radar:
+- Manifest books;
+- DEX Screener batches;
+- Meteora/Raydium indexed state;
+- Jupiter token/route metadata.
 
-Funnel:
+Candidate quote funnel:
+`cheap radar -> 0x -> Jupiter -> Sanctum for LST -> QPR-02 exact state`.
 
-```text
-DEX Screener + Meteora + Raydium + Gecko
- -> ResearchEconomicGraph
- -> heat/anomaly trigger
- -> 0x
- -> Jupiter
- -> Sanctum if LST/LRT
- -> selected comparators
- -> QPR-02 independent RPC/direct state
- -> MarketObservationV2
- -> existing exact graph
-```
+PYUSD/USDG stays WARM synthetic first:
+`PYUSD/USDC ÷ USDG/USDC`.
+Direct PYUSD/USDG is promoted only when discovery proves a current market.
 
-Initial high-value clusters:
-- SOL + JitoSOL/JupSOL/mSOL/bSOL/INF;
-- hSOL/dSOL/BNSOL/bbSOL/bpSOL/laineSOL/dfdvSOL;
-- sSOL/fragSOL restaking basis;
-- USDC/USDT/PYUSD/USDS/JupUSD/USDe/USDG/FDUSD;
-- cbBTC/WBTC_WORMHOLE/tBTC;
-- JLP market-vs-NAV;
-- EURC vs EUR/USD reference.
+## GPR-03 — Sui Parallel Shadow Campaign
 
-No live executor.
+Start in parallel with GPR-02 after GPR-01.
 
-## GPR-03 — Sui Parallel Shadow Research / Exact-State Qualification
+Priority families:
+7. WUSDC_ETH_ORIGIN / USDC_NATIVE.
+8. USDT_WORMHOLE vs USDT_SUI_BRIDGE.
+9. suiUSDe/USDC + SUI/suiUSDe.
+10. USDSUI/USDC + SUI/USDSUI.
+11. XBTC/USDC + ZWBTC/USDC.
+12. afSUI/haSUI/vSUI/scaSUI.
+13. XAUM vs XAU/USD reference.
 
-Parallel branch after GPR-01.
+Use:
+- DeepBook known pool IDs;
+- Aftermath;
+- Cetus;
+- Scallop rates;
+- governed Sui gRPC/GraphQL checkpoint/object state.
 
-Implement:
-- Aftermath router radar;
-- Cetus/DeepBook direct references;
-- Sui gRPC/GraphQL state transport;
-- checkpoint/object-version provenance;
-- representation-aware stable/BTC/LST graph;
-- adapter to existing `src/multichain/sui.py` domain types.
-
-Priority clusters:
-- SUI/USDC;
-- native/bridge USDT and Wormhole USDT;
-- native USDC and Wormhole USDC;
-- USDsui/suiUSDe/FDUSD/USDY/BUCK/mUSD;
-- DEEP/WAL;
-- XBTC/Wormhole-WBTC/Sui-Bridge-WBTC/zwBTC;
-- afSUI/haSUI/vSUI/scaSUI;
-- Wormhole SOL on Sui.
-
-No new JSON-RPC dependency.
+No new legacy JSON-RPC dependency.
 No live PTB signer/executor.
 
-## GPR-04 — Dynamic Watch Universe + Heat Scheduler
+## GPR-04 — Dynamic Watch Universe + heat scheduler
 
-Operate over evidence, not one polling loop per pair.
+Use `heat` independently from execution/evidence state.
 
-Tiers:
-- HOT
-- WARM
-- COLD
-- EVENT
+Promote/demote from measured:
+- recurrence;
+- divergence;
+- liquidity/depth;
+- topology changes;
+- staleness;
+- source disagreement;
+- structural-anchor residual.
 
-Inputs:
-- volume/liquidity changes;
-- structural-anchor deviation;
-- route topology changes;
-- representation basis;
-- provider disagreement;
-- historical recurrence;
-- cost/capacity regimes.
+No polling loop per symbolic pair.
 
-## GPR-05 — Structural Transformation Graph
+## GPR-05 — Structural transformation graph
 
-Deepen state transformations:
+Add deeper LST/LRT/NAV/lending/capacity/cost transformations only from campaign evidence.
 
-### Solana
-- LST/LRT exchange and instant exit;
-- JLP NAV;
-- stable/yield anchors;
-- BTC wrapper parity;
-- flash-capacity / borrow-cost / Jito tip / priority fee.
+## GPR-06 — Solana↔Sui economic signals
 
-### Sui
-- staking and instant exit;
-- lending/flash capacity;
-- AMM <-> DeepBook;
-- native-vs-bridged stables;
-- BTC representation basis.
+Family 14 first:
+`USDC_SOL_NATIVE ↔ USDC_SUI_NATIVE ↔ USDC_SOL_PORTAL_ON_SUI`.
 
-The solver should increasingly search transformations, not just ticker pairs.
+Use `CROSS_CHAIN_SIGNAL`; bridge/CCTP/Wormhole transport is `REBALANCE_ONLY`.
 
-## GPR-06 — Solana <-> Sui Cross-Chain Economic Graph
+Then consider FDUSD/USDY/SOL/BTC/LST/funding regime relations from evidence.
 
-Load `INTERCHAIN_RELATIONS_V2.json`.
+## GPR-07 — Prefunded cross-chain simulator
 
-Research:
-- USDC native basis / CCTP rebalance relation;
-- SOL vs Wormhole-SOL basis;
-- FDUSD same-issuer basis;
-- USDY yield-basis divergence;
-- BTC representation basis;
-- LST premium regimes;
-- funding/capital-cost divergence;
-- liquidity migration / which chain leads price discovery.
+Only after GPR-06.
 
-Bridges are not atomic swap edges.
+Model simultaneous local execution with prefunded inventory and later rebalance. Include hedge, inventory, bridge/rebalance, latency and capital-fragmentation costs.
 
-## GPR-07 — Prefunded Cross-Chain Arbitrage Simulator
+No live cross-chain executor.
 
-Only after GPR-06 evidence.
+## GPR-08 — TON research lab
 
-Model:
-
-```text
-prefunded inventory on Solana
-+
-prefunded inventory on Sui
- -> simultaneous chain-local execution
- -> hedge/inventory accounting
- -> later CCTP/Wormhole/other rebalance
-```
-
-Include:
-- local execution costs;
-- hedge cost;
-- inventory opportunity cost;
-- expected rebalance/bridge cost;
-- latency risk;
-- capital fragmentation.
-
-No live cross-chain executor in this PR.
-
-## GPR-08 — TON High-Throughput Research Laboratory
-
-Use STON.fi research APIs with self-imposed caps. Keep TON as research-only until a separately justified execution architecture exists.
+Keep STON/TON high-throughput research separate from Solana/Sui exact execution until justified.
 
 ## Production boundary
 
-Live signer/sender/submission/promotion remains outside this roadmap until explicitly authorized after qualification evidence.
+Signer/sender/submission/promotion remain outside this roadmap.

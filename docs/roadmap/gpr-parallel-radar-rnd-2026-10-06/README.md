@@ -1,48 +1,48 @@
-# GPR V2 — Multi-layer Economic Topology
+# GPR V2.1 — Evidence-Classified Multi-layer Economic Topology
 
-This is the renewed continuation strategy for the Qualification Campaign.
+Qualification continuation for PR #571.
 
-## Core architecture
+## Core flow
 
 ```text
 cheap/indexed/router observations
           ↓
 AssetIdentity / Representation registry
           ↓
+ResearchRelation
+  heat + execution_class + evidence_state
+          ↓
 ResearchEconomicGraph
           ↓
-heat + anomaly ranking
-          ↓
-bounded VerificationQueue
+CandidateScore / VerificationQueue
           ↓
 chain-specific exact verification
           ↓
-existing exact graph / route / sizing owners
+existing exact graph / sizing owners
 ```
 
-The graph now distinguishes:
+## V2.1 changes
 
-```text
-EconomicAsset -> Representation -> Chain -> Venue -> Transformation
-```
+- registry expanded to 91 research identities;
+- USDG and PYUSD corrected to Token-2022;
+- Solana xBTC_OKX added;
+- Sui generic Wormhole wUSDC split from Solana-origin USDCsol representation;
+- Sui XAUM/XAU reference experiment added;
+- 9 DeepBook pool identifiers materialized;
+- 14 first-campaign families materialized;
+- priority, topology and proof are now separate axes:
+  - heat
+  - execution_class
+  - evidence_state
 
-rather than treating a ticker as a token identity.
+## First campaign principle
 
-## What changed from V1
+Do not poll all 330 symbolic relations equally.
 
-- Added `ASSET_REGISTRY_V2.json` with 88 Solana/Sui/TON research identities.
-- Added the expanded Solana LST/LRT/stable/NAV universe.
-- Added the expanded Sui stable/BTC/LST representation universe.
-- Added `INTERCHAIN_RELATIONS_V2.json` with 12 initial Solana<->Sui research relationships.
-- Added `UNIVERSE_V2_EXPANSION.md`.
-- GPR-01 now implements Asset/Representation Registry + ResearchEconomicGraph + VerificationQueue.
-- After GPR-01, Solana GPR-02 and Sui GPR-03 may proceed in parallel.
-- Cross-chain execution is modeled later as prefunded local execution + rebalance, never as an assumed atomic bridge route.
+Start with `FIRST_CAMPAIGN_FAMILIES_V2_1.json`; use the broader universe as a dynamic cheap research pool and promote from observed evidence.
 
 ## Safety
 
-All registry assets default to `runtime_enabled=false` and `exact_graph_allowed=false`.
+Registry identity, a known pool ID, HOT heat, or a router quote never grants execution authority.
 
-Canonical mint/coin/Jetton identity is necessary but not sufficient for exact or live use. QPR exact state, token semantics, venue state, costs and authority remain mandatory.
-
-No signer, sender, submission or live-capital authority is introduced here.
+No signer, sender, submission or live capital is introduced by this package.

@@ -1,0 +1,346 @@
+{
+  "schema_version": "gpr.first-campaign-families.v2.1",
+  "classification_contract": {
+    "heat": [
+      "HOT",
+      "WARM",
+      "COLD",
+      "EVENT"
+    ],
+    "execution_class": [
+      "LOCAL_ATOMIC",
+      "LOCAL_SIGNAL",
+      "CROSS_CHAIN_SIGNAL",
+      "REBALANCE_ONLY"
+    ],
+    "evidence_state": [
+      "DISCOVERY_ONLY",
+      "IDENTIFIER_VERIFIED",
+      "RPC_VERIFIED",
+      "EXECUTABLE"
+    ],
+    "rule": "Heat controls watch priority; execution_class describes topology; evidence_state describes proof. Never infer one field from another."
+  },
+  "hard_bound_rule": "Before HARD_BOUND/exact promotion assert owner/program-or-Move-type/decimals and exact representation identity from chain state at campaign startup.",
+  "families": [
+    {
+      "id": "F01",
+      "label": "USDG/USDC_SOL",
+      "chain": "solana-mainnet",
+      "relation_class": "STABLE_PEG",
+      "assets": [
+        "USDG",
+        "USDC"
+      ],
+      "heat": "HOT",
+      "execution_class": "LOCAL_ATOMIC",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "anchor_types": [
+        "USD_REDEMPTION"
+      ],
+      "venues": [
+        "Manifest",
+        "Orca",
+        "Raydium",
+        "Meteora"
+      ],
+      "next_verification": "owner/program/decimals/token-extensions + exact venue state + amount quote"
+    },
+    {
+      "id": "F02",
+      "label": "USD1/USDT_SOL + USD1/USDC_SOL",
+      "chain": "solana-mainnet",
+      "relation_class": "STABLE_PEG",
+      "assets": [
+        "USD1",
+        "USDT",
+        "USDC"
+      ],
+      "heat": "HOT",
+      "execution_class": "LOCAL_ATOMIC",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "anchor_types": [
+        "USD_REDEMPTION"
+      ],
+      "venues": [
+        "Manifest"
+      ],
+      "next_verification": "QPR-02 owner/decimals/authority receipt before HARD_BOUND"
+    },
+    {
+      "id": "F03",
+      "label": "PYUSD/USDG synthetic",
+      "chain": "solana-mainnet",
+      "relation_class": "DIRECT_VS_SYNTHETIC",
+      "assets": [
+        "PYUSD",
+        "USDG",
+        "USDC"
+      ],
+      "heat": "WARM",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "anchor_types": [
+        "USD_REDEMPTION"
+      ],
+      "synthetic_paths": [
+        "PYUSD/USDC ÷ USDG/USDC"
+      ],
+      "direct_market_policy": "DISCOVERY_ONLY_UNTIL_OBSERVED",
+      "note": "Do not assume a strong direct PYUSD/USDG execution market."
+    },
+    {
+      "id": "F04",
+      "label": "xBTC_OKX/cbBTC_SOL",
+      "chain": "solana-mainnet",
+      "relation_class": "WRAPPER_PARITY",
+      "assets": [
+        "xBTC_OKX",
+        "cbBTC"
+      ],
+      "heat": "WARM",
+      "execution_class": "LOCAL_ATOMIC",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "signal_priority": "HOT",
+      "anchor_types": [
+        "SAME_UNDERLYING"
+      ],
+      "venues": [
+        "Manifest"
+      ],
+      "synthetic_paths": [
+        "xBTC_OKX -> USDG -> cbBTC",
+        "xBTC_OKX -> USDC -> cbBTC"
+      ],
+      "risks": [
+        "different_issuer",
+        "custody",
+        "mint_authority",
+        "freeze_authority"
+      ]
+    },
+    {
+      "id": "F05",
+      "label": "JLP/USDC + NAV",
+      "chain": "solana-mainnet",
+      "relation_class": "NAV_MARKET_BASIS",
+      "assets": [
+        "JLP",
+        "USDC"
+      ],
+      "heat": "HOT",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "local_atomic_candidate": true,
+      "anchor_types": [
+        "NAV"
+      ],
+      "anchor_source": "Jupiter live JLP pool NAV",
+      "rule": "Do not model JLP as a fixed USD peg; compare DEX price vs live NAV vs route-size impact."
+    },
+    {
+      "id": "F06",
+      "label": "BNSOL/bbSOL/hSOL/dSOL ↔ SOL",
+      "chain": "solana-mainnet",
+      "relation_class": "LST_RELATIVE_VALUE",
+      "assets": [
+        "BNSOL",
+        "bbSOL",
+        "hSOL",
+        "dSOL",
+        "SOL"
+      ],
+      "heat": "WARM",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "anchor_types": [
+        "STAKING_EXCHANGE_RATE",
+        "SAME_UNDERLYING"
+      ],
+      "promotion_policy": "Promote only identities that repeatedly generate verified executable deviation."
+    },
+    {
+      "id": "F07",
+      "label": "Sui wUSDC/native-USDC",
+      "chain": "sui-mainnet",
+      "relation_class": "REPRESENTATION_BASIS",
+      "assets": [
+        "WUSDC_ETH_ORIGIN",
+        "USDC_NATIVE"
+      ],
+      "heat": "HOT",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "local_atomic_candidate": true,
+      "anchor_types": [
+        "SAME_UNDERLYING",
+        "BRIDGE_PARITY"
+      ],
+      "deepbook_pool_id": "0xa0b9ebefb38c963fd115f52d71fa64501b79d1adcb5270563f92ce0442376545"
+    },
+    {
+      "id": "F08",
+      "label": "Sui wUSDT vs sbUSDT",
+      "chain": "sui-mainnet",
+      "relation_class": "REPRESENTATION_BASIS",
+      "assets": [
+        "USDT_WORMHOLE",
+        "USDT_SUI_BRIDGE",
+        "USDC_NATIVE"
+      ],
+      "heat": "HOT",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "local_atomic_candidate": true,
+      "anchor_types": [
+        "SAME_UNDERLYING",
+        "BRIDGE_PARITY"
+      ],
+      "comparisons": [
+        "USDT_WORMHOLE/USDC_NATIVE",
+        "USDT_SUI_BRIDGE/USDC_NATIVE",
+        "implied(USDT_WORMHOLE/USDT_SUI_BRIDGE)"
+      ],
+      "deepbook_pool_ids": [
+        "0x4e2ca3988246e1d50b9bf209abb9c1cbfec65bd95afdacc620a36c67bdb8452f",
+        "0xfc28a2fb22579c16d672a1152039cbf671e5f4b9f103feddff4ea06ef3c2bc25"
+      ]
+    },
+    {
+      "id": "F09",
+      "label": "suiUSDe/USDC + SUI/suiUSDe",
+      "chain": "sui-mainnet",
+      "relation_class": "STABLE_SYNTHETIC",
+      "assets": [
+        "suiUSDe",
+        "USDC_NATIVE",
+        "SUI"
+      ],
+      "heat": "WARM",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "local_atomic_candidate": true,
+      "anchor_types": [
+        "USD_REDEMPTION",
+        "DIRECT_VS_SYNTHETIC"
+      ],
+      "deepbook_pool_ids": [
+        "0x0fac1cebf35bde899cd9ecdd4371e0e33f44ba83b8a2902d69186646afa3a94b",
+        "0x034f3a42e7348de2084406db7a725f9d9d132a56c68324713e6e623601fb4fd7"
+      ]
+    },
+    {
+      "id": "F10",
+      "label": "USDsui/USDC + SUI/USDsui",
+      "chain": "sui-mainnet",
+      "relation_class": "STABLE_SYNTHETIC",
+      "assets": [
+        "USDSUI",
+        "USDC_NATIVE",
+        "SUI"
+      ],
+      "heat": "WARM",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "local_atomic_candidate": true,
+      "anchor_types": [
+        "USD_REDEMPTION",
+        "DIRECT_VS_SYNTHETIC"
+      ],
+      "deepbook_pool_ids": [
+        "0xa374264d43e6baa5aa8b35ff18ff24fdba7443b4bcb884cb4c2f568d32cdac36",
+        "0x826eeacb2799726334aa580396338891205a41cf9344655e526aae6ddd5dc03f"
+      ]
+    },
+    {
+      "id": "F11",
+      "label": "XBTC/USDC + ZWBTC/USDC",
+      "chain": "sui-mainnet",
+      "relation_class": "WRAPPER_PARITY",
+      "assets": [
+        "XBTC",
+        "ZWBTC",
+        "USDC_NATIVE"
+      ],
+      "heat": "WARM",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "local_atomic_candidate": true,
+      "anchor_types": [
+        "SAME_UNDERLYING"
+      ],
+      "deepbook_pool_ids": [
+        "0x20b9a3ec7a02d4f344aa1ebc5774b7b0ccafa9a5d76230662fdc0300bb215307",
+        "0xf5142aafa24866107df628bf92d0358c7da6acc46c2f10951690fd2b8570f117"
+      ]
+    },
+    {
+      "id": "F12",
+      "label": "afSUI/haSUI/vSUI/scaSUI",
+      "chain": "sui-mainnet",
+      "relation_class": "LST_RELATIVE_VALUE",
+      "assets": [
+        "afSUI",
+        "haSUI",
+        "vSUI",
+        "scaSUI",
+        "SUI"
+      ],
+      "heat": "WARM",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "anchor_types": [
+        "STAKING_EXCHANGE_RATE",
+        "SAME_UNDERLYING"
+      ],
+      "compare": [
+        "DEX market",
+        "protocol exchange rate",
+        "instant exit",
+        "SUI synthetic path"
+      ]
+    },
+    {
+      "id": "F13",
+      "label": "XAUM ↔ XAU/USD",
+      "chain": "sui-mainnet",
+      "relation_class": "ORACLE_MARKET_BASIS",
+      "assets": [
+        "XAUM"
+      ],
+      "heat": "COLD",
+      "execution_class": "LOCAL_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "research_label": "RESEARCH",
+      "anchor_types": [
+        "ORACLE_REFERENCE"
+      ],
+      "oracle_reference": "Pyth XAU/USD",
+      "frictions": [
+        "tokenization",
+        "redemption",
+        "market_liquidity"
+      ]
+    },
+    {
+      "id": "F14",
+      "label": "USDC_SOL ↔ USDC_SUI ↔ USDCsol_SUI",
+      "chain": "cross-chain:solana-sui",
+      "relation_class": "CROSS_CHAIN_NATIVE_BASIS",
+      "assets": [
+        "solana-mainnet:USDC",
+        "sui-mainnet:USDC_NATIVE",
+        "sui-mainnet:USDC_SOL_PORTAL_ON_SUI"
+      ],
+      "heat": "HOT",
+      "execution_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "anchor_types": [
+        "BRIDGE_PARITY",
+        "SAME_UNDERLYING"
+      ],
+      "bridge_execution_class": "REBALANCE_ONLY",
+      "rule": "Watch constantly; bridge/CCTP/Wormhole transport is never an atomic arbitrage edge."
+    }
+  ]
+}

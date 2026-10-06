@@ -1,5 +1,5 @@
 {
-  "schema_version": "gpr.anomaly-taxonomy.v2",
+  "schema_version": "gpr.anomaly-taxonomy.v2.1",
   "rules": {
     "research_score_not_profit": "CandidateScore only ranks verification work; it must never become an executable-profit verdict.",
     "correlation_penalty": "Quotes sharing underlying routers/pools must be downweighted and never counted as independent verification.",
@@ -198,6 +198,22 @@
     },
     {
       "id": "TON_POOL_VS_SIMULATOR_DIVERGENCE",
+      "enabled_for_research": true
+    },
+    {
+      "id": "ORACLE_MARKET_BASIS",
+      "enabled_for_research": true
+    },
+    {
+      "id": "TOKEN_PROGRAM_SEMANTICS_GAP",
+      "enabled_for_research": true
+    },
+    {
+      "id": "ORIGIN_CHAIN_REPRESENTATION_BASIS",
+      "enabled_for_research": true
+    },
+    {
+      "id": "HARD_BOUND_IDENTITY_MISMATCH",
       "enabled_for_research": true
     }
   ]

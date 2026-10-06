@@ -1,0 +1,53 @@
+name: GPR-01 research economic graph
+
+on:
+  pull_request:
+    paths:
+      - "src/research_economic_graph/**"
+      - "src/qualification_campaign/**"
+      - "src/strategy/**"
+      - "src/market/**"
+      - "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/**"
+      - "tests/test_gpr01_research_economic_graph.py"
+      - "tests/test_gpr01_v22_delta.py"
+      - ".github/workflows/gpr01-research-economic-graph.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-contract:
+    runs-on: ubuntu-latest
+    env:
+      PAPER_TRADING_ONLY: "true"
+      LIVE_TRADING_ENABLED: "false"
+      JITO_ENABLED: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install verified locked dependencies and package
+        run: |
+          python -m pip install --require-hashes -r requirements-dev.lock
+          python -m pip install --no-deps --no-build-isolation .
+      - name: Check new contracts
+        run: |
+          python -m black --check src/research_economic_graph tests/test_gpr01_research_economic_graph.py tests/test_gpr01_v22_delta.py
+          python -m flake8 src/research_economic_graph tests/test_gpr01_research_economic_graph.py tests/test_gpr01_v22_delta.py --select=E9,F63,F7,F82 --show-source --statistics
+          python -m mypy --config-file mypy.ini --follow-imports=silent src/research_economic_graph
+      - name: Deterministic GPR and existing authority/graph regressions
+        run: |
+          python -m pytest -q --disable-socket --allow-unix-socket \
+            tests/test_gpr01_research_economic_graph.py \
+            tests/test_gpr01_v22_delta.py \
+            tests/test_qpr01_campaign_identity.py \
+            tests/test_qpr02_data_plane.py \
+            tests/test_qpr03_source_intake.py \
+            tests/test_shadow_market_data_aggregation.py \
+            tests/test_shadow_arbitrage_graph.py
+      - name: Installed offline corpus inspection
+        run: |
+          cd /tmp
+          python -m src.research_economic_graph --pack "$GITHUB_WORKSPACE/docs/roadmap/gpr-parallel-radar-rnd-2026-10-06"

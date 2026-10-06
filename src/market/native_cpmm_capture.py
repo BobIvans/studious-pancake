@@ -33,7 +33,7 @@ from src.provider_governance import (
     ProviderGovernance,
     ProviderOperation,
 )
-from src.routing.transport import HttpxJsonTransport
+from src.routing.transport import HttpxJsonTransport, SanitizedTransportError
 from src.strategy.exact_cpmm_capacity import (
     MAINNET_GENESIS,
     PINNED_DECODER_REVISION,
@@ -259,6 +259,8 @@ class GovernedNativeCpmmCollector:
             return response
         except BaseException as exc:
             receipt.update(available_at_ns=self.wall_ns(), error=type(exc).__name__)
+            if isinstance(exc, (NativeCaptureError, SanitizedTransportError)):
+                receipt["failure_reason"] = str(exc)
             receipt.setdefault(
                 "quality_state",
                 (

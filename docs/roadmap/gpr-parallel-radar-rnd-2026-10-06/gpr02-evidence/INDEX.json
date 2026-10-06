@@ -1,0 +1,61 @@
+{
+  "archives": [
+    {
+      "archive": "campaign-319773d9.tar.gz",
+      "audit": "PASS_PUBLIC_REDACTED_NO_PRIVATE_REQUEST_HEADERS",
+      "campaign_id": "2856f72ee463cfd0f8485ad86d300565fab735c18378aae808b9be813388918a",
+      "capture_repository_sha": "319773d92df7cfb01c36781d3f35146a82214199",
+      "compressed_bytes": 149577,
+      "event_count": 66,
+      "export_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
+      "journal_head": "4812b5db10a1db760342064c40a8aa88f3d4a00593bc1ac7c2bb3471e9f8047b",
+      "offline_replay": "PASS",
+      "sha256": "1c9597c6e6b39bb45bc165281a6666ca960206808515af75e65601b53d10d213"
+    },
+    {
+      "archive": "campaign-c070dc4f.tar.gz",
+      "audit": "PASS_PUBLIC_REDACTED_NO_PRIVATE_REQUEST_HEADERS",
+      "campaign_id": "8f7134f87ed2b3f4ef1490077a558161e0449fc7c480e56295e044f107f16a46",
+      "capture_repository_sha": "c070dc4f86e3b502b814a963ddbae52ef70b1523",
+      "compressed_bytes": 490451,
+      "event_count": 99,
+      "export_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
+      "journal_head": "3d4d25cff28f775dc675b1aa0ee652a4a6bec0fe943c50b1247b534ded5df5c2",
+      "offline_replay": "PASS",
+      "sha256": "eeab807d9a781dcd3d289441c60b4a9d5847eee0bb8a990e47d673aaf2ebb45d"
+    },
+    {
+      "archive": "campaign-e4c3e0de.tar.gz",
+      "audit": "PASS_PUBLIC_REDACTED_NO_PRIVATE_REQUEST_HEADERS",
+      "campaign_id": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+      "capture_repository_sha": "e4c3e0dee6d8ff54832f1a9258dd9ffa8c0161d0",
+      "compressed_bytes": 491274,
+      "event_count": 99,
+      "export_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
+      "journal_head": "1244d298c3b4ef526a1a4de4abac8f1243a6a053fd2ceb6261817b44cccde220",
+      "offline_replay": "PASS",
+      "sha256": "b57144aa984d9e605ed689d420ebeb56b8eba91dd5e0990f7da27ae4a7162946"
+    }
+  ],
+  "base_sha": "8c59759b491b6318f259138671dccfea25f2752e",
+  "compressed_total_bytes": 1131302,
+  "excluded": [
+    "credentials",
+    "private request headers",
+    "proxy values",
+    "authority SQLite",
+    "SQLite locks and journals",
+    "virtual environments",
+    "caches"
+  ],
+  "included": [
+    "original manifest",
+    "original raw journal events",
+    "immutable expanded raw JSON blobs",
+    "original capture summary",
+    "deterministic replay summary",
+    "per-member SHA-256 index"
+  ],
+  "schema_version": "gpr02.portable-campaign-index.v1",
+  "tested_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2"
+}

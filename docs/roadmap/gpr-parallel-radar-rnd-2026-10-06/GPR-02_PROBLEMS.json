@@ -1,0 +1,65 @@
+{
+  "authority_enabled": false,
+  "problems": [
+    {
+      "evidence": "All three campaigns retain missing JUPITER_API_KEY and absent explicit public 0x taker/ZEROX_API_KEY inputs; zero authenticated quote reads and zero quotes measured.",
+      "id": "GPR02-QUOTE-BINDINGS",
+      "next_action": "Bind optional secrets securely and configure a public taker, then run bounded documented economic reads.",
+      "status": "OPEN_EXTERNAL_BINDING"
+    },
+    {
+      "evidence": "Only published public smoke RPC profile solana_rpc / solana-public-shared configured. First native capability probe returned BLOCKED_SINGLE_SOURCE and account owner/executable/size mismatch; subsequent typed CPMM probe filter selected no full-qualified state.",
+      "id": "GPR02-INDEPENDENT-STATE",
+      "next_action": "Provide reviewed independently operated RPC profiles and exact pool binding/policy; do not count public smoke diagnostics as QPR quorum.",
+      "status": "OPEN_REVIEWED_PROFILE_REQUIRED"
+    },
+    {
+      "evidence": "USDG and PYUSD both observed Token-2022 decimals 6 and TLV IDs 3,12,1,4,16,14,18,19; conservative mint validator rejects permanent delegate/confidential transfer/confidential fee/transfer hook (12/4/16/14). No reviewed live issuer policies or full exact pool math decoder.",
+      "id": "GPR02-TOKEN2022-SEMANTICS",
+      "next_action": "Review semantics and authorities against issuer/program docs and independent bytes; preserve HARD_BOUND gate and unsupported rejection.",
+      "status": "OPEN_DECODER_AND_POLICY_REVIEW"
+    },
+    {
+      "evidence": {
+        "current_epoch": 1050,
+        "difference_raw_units": 505835,
+        "mint_supply": 9052244321498178,
+        "pool_supply": 9052244322004013,
+        "pool_updated_epoch": 1050,
+        "qualification": "REJECTED_SUPPLY_MISMATCH",
+        "slot": 453809316
+      },
+      "id": "GPR02-BNSOL-SUPPLY",
+      "next_action": "Investigate bounded later same-bank reads and reviewed pool update semantics; do not weaken strict supply check.",
+      "status": "OPEN_MEASURED_MISMATCH"
+    },
+    {
+      "evidence": "Pool/mint references retained at slot 453809316, but current AUM/supply/oracle proof not implemented; nav_arithmetic_only cannot qualify live NAV.",
+      "id": "GPR02-JLP-LIVE-NAV",
+      "next_action": "Review and independently reconstruct current custody/oracle state before collecting NAV residuals.",
+      "status": "OPEN_STATE_RECONSTRUCTION"
+    },
+    {
+      "evidence": "Initial campaign rejected 37,725-node / 3,826-row ticker payload at existing 20,000-node bound; narrow pinned Manifest-only 120,000-node / 5,000-row / 8,000,000-byte caps then accepted observed payload.",
+      "id": "GPR02-MANIFEST-BOUND",
+      "next_action": "Retain caps and bounded market/row normalization; no global transport loosening.",
+      "status": "RESOLVED_RETAINED_NEGATIVE"
+    },
+    {
+      "evidence": "Second campaign book invocation blocked pre-wire by durable generation_mismatch; ticker/book now share actual provider generation and quota bucket; third book HTTP 200 accepted as discovery only.",
+      "id": "GPR02-MANIFEST-QUOTA-GENERATION",
+      "next_action": "Keep shared provider generation and separate exact source generations.",
+      "status": "RESOLVED_RETAINED_NEGATIVE"
+    },
+    {
+      "evidence": "Three short diagnostic slices contain no authenticated economic quotes, exact qualification or recurrence series; no profit/anomaly ranking can be claimed.",
+      "id": "GPR02-FORWARD-RECURRENCE",
+      "next_action": "Collect bounded matched quote/state repeats after prerequisites, then compare with Sui; stop before GPR-04 implementation.",
+      "status": "OPEN_UNMEASURED"
+    }
+  ],
+  "schema_version": "gpr02.problem-report.v1",
+  "stop_before": "GPR-04",
+  "tested_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
+  "verified_base_sha": "8c59759b491b6318f259138671dccfea25f2752e"
+}

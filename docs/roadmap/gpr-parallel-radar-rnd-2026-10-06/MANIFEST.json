@@ -1,6 +1,6 @@
 {
-  "schema_version": "gpr.rnd-package.v2.1",
-  "title": "GPR V2.1 — Evidence-Classified Asset/Representation Graph + Parallel Solana/Sui Qualification",
+  "schema_version": "gpr.rnd-package.v2.2",
+  "title": "GPR V2.2 — Evidence-Classified Asset/Representation Graph + Transport Semantics",
   "date": "2026-10-06",
   "repo": "BobIvans/studious-pancake",
   "canonical_pr": 571,
@@ -14,10 +14,10 @@
   "next_implementation_pr": "GPR-01 Asset/Representation Registry + Research Economic Graph + Verification Queue",
   "asset_registry": {
     "file": "ASSET_REGISTRY_V2.json",
-    "entries": 91,
+    "entries": 92,
     "runtime_enabled_by_default": false,
     "exact_graph_allowed_by_default": false,
-    "schema_version": "gpr.asset-registry.v2.1"
+    "schema_version": "gpr.asset-registry.v2.2"
   },
   "universe": {
     "v1_explicit_symbolic_relationships": 330,
@@ -33,7 +33,7 @@
   "live_execution_enabled": false,
   "cross_chain_atomic_execution_enabled": false,
   "first_campaign": {
-    "file": "FIRST_CAMPAIGN_FAMILIES_V2_1.json",
+    "file": "FIRST_CAMPAIGN_FAMILIES_V2_2.json",
     "families": 14
   },
   "sui_deepbook_seed": {
@@ -44,5 +44,15 @@
     "heat",
     "execution_class",
     "evidence_state"
-  ]
+  ],
+  "latest_codex_delta": "CODEX_V2_2_DELTA.md",
+  "transformation_registry": {
+    "file": "TRANSFORMATION_REGISTRY_V2_2.json",
+    "transformations": 4,
+    "fake_asset_mints_forbidden": [
+      "USDT0",
+      "CCTP",
+      "WORMHOLE_ROUTE"
+    ]
+  }
 }

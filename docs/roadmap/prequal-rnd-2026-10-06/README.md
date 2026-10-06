@@ -1,62 +1,65 @@
-# Studious Pancake — PRE-QUALIFICATION R&D MASTER PACK
+# Studious Pancake — Qualification Master Handoff
 
-**Дата:** 2026-10-06  
-**Текущий main при создании pack:** `ac6297e3f174d073c524099f599490edfe30f7b1`  
-**PR #566:** merged в этот main; Odos retirement, Pyth auth, Project0 catalog truth и RPC independence baseline не считаются незакрытым PR-A повторно.
+**Renewed:** 2026-10-06
 
-## Цель
+The original PRE-QUALIFICATION R&D pack remains preserved below `package/` as historical source-of-truth input.
 
-Этот пакет — единый source of truth для перехода от зелёного offline CI к **реальному, read-only, replayable Qualification Campaign** и быстрому подключению новых источников данных без повторного архитектурного дрейфа.
+Its first three implementation goals became the stacked QPR wave:
+- #568 QPR-01
+- #569 QPR-02
+- #570 QPR-03 campaign-start
 
-Главное разделение:
+## Current continuation
 
-1. **Campaign-Start Gate** — минимальный набор, после которого можно безопасно запускать real-data problem testing. Кампания может оставаться `BLOCKED` и всё равно быть полезной.
-2. **Qualification-Verdict Gate** — условия, после которых данные позволяют делать сильные выводы о стратегии/venue/protocol.
-3. **Production-Promotion Gate** — полный persistence/release/runtime closure + 72h release-bound evidence. Это НЕ нужно ждать для первого read-only run.
+Do not restart the old QPR sequence.
 
-## Читай в таком порядке
+Continue from:
 
-После распаковки ZIP:
-1. `01_MASTER_CONTEXT_RU.md`
-2. `02_MASTER_PROBLEM_REGISTER_RU.md`
-3. `03_FASTEST_QUALIFICATION_PATH_RU.md`
-4. `11_SOURCE_PLUGIN_ARCHITECTURE_RU.md`
-5. `17_PR_SEQUENCE_RU.md`
-6. `18_CODEX_START_HERE.md`
-7. `data/acceptance_gates.json`
-8. `data/free_source_slots.csv`
+**PR #571 — GPR V2: Asset/Representation Graph + Parallel Solana/Sui Qualification**
 
-## Главная архитектурная идея
+Path:
+
+`docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/`
+
+## Renewed architecture
 
 ```text
-FREE / LOW-COST DISCOVERY SOURCES
-DEX Screener | GeckoTerminal | Jupiter | Raydium/Meteora indexed APIs | future slots
-                         │
-                         ▼
-                Candidate Universe
-             (120–160 rolling pairs)
-                         │
-                         ▼
-             Rooted Verification Lane
-        RPC provider A  +  independent RPC B
-                         │
-          same finalized state / provenance
-                         ▼
-        Protocol / Venue Exact State Decoders
-   Raydium CPMM → CLMM → Meteora DLMM → Orca → books
-                         │
-             Oracle / Protocol Context
-              Pyth + Project0/Kamino/etc
-                         │
-                         ▼
-             Immutable Evidence Journal
-       success + no-trade + timeout + gap + drift
-                         │
-                         ▼
-               Offline Replay / Holdout
-                         │
-                         ▼
-                 Qualification Gate
+FREE / LOW-COST DISCOVERY + QUOTE SOURCES
+                  ↓
+      Asset / Representation Registry
+                  ↓
+          ResearchEconomicGraph
+                  ↓
+         anomaly / heat scoring
+                  ↓
+        bounded VerificationQueue
+                  ↓
+      chain-local exact qualification
+                  ↓
+       existing exact graph / sizing
 ```
 
-**Discovery API data не является executable quote.** Оно только говорит, *куда смотреть*. Exact state должен быть подтверждён on-chain/rooted evidence.
+The graph now models:
+
+```text
+EconomicAsset -> Representation -> Chain -> Venue -> Transformation
+```
+
+This allows Solana and Sui to share economic anchors without pretending their tokens or execution environments are identical.
+
+## Near-term focus
+
+1. GPR-01 shared registry/graph/verification contracts.
+2. Solana GPR-02 and Sui GPR-03 in parallel.
+3. Evidence-driven dynamic watch universe.
+4. Structural transformations: LST/LRT, stable/yield/NAV, BTC representations, lending/capacity.
+5. Solana<->Sui research-only basis graph.
+6. Later prefunded simultaneous local-execution simulator.
+
+## Non-negotiable boundary
+
+Discovery/router/reference data is not executable truth.
+
+Cross-chain bridge/equivalence edges are not atomic swap edges.
+
+No signer, sender, transaction submission or live-capital authority is enabled by this handoff.

@@ -1,29 +1,71 @@
-# MASTER CONTEXT
+# MASTER CONTEXT — RENEWED
 
-## Текущее состояние
+## Current development state
 
-- Base snapshot pack: `main = ac6297e3f174d073c524099f599490edfe30f7b1`. Если main новее — работать от нового descendant и пересчитать drift.
-- PR #566 merged: Odos удалён из automatic runtime registry, Pyth Hermes получает Bearer auth через secret reference, catalog truth переведён на Project0 SDK, generic RPC independence усилена provider/operator checks.
-- Native Raydium CPMM path существует, но qualification report по дизайну остаётся `BLOCKED`: one-shot capture, missing deployment-source binding, no forward holdout, no continuous subscription, unknown financing/cost evidence.
-- Repo-wide static snapshot scan: 2703 файлов; 137 direct SQLite connects, из них 85 не approved текущей persistence policy; 554 broad `except Exception`; 260 `time.time`, 51 `datetime.now`, 176 direct `os.getenv`, ~140 raw aiohttp-style calls. Эти числа — debt indicators, не утверждение, что всё находится в active runtime.
-- GitHub имеет много open PR; несколько foundational PR сильно diverged от current main и не должны мержиться напрямую.
+The original pre-qualification package successfully produced the stacked QPR implementation wave:
 
-## Что считать успехом ближайшей итерации
+- QPR-01 / PR #568 — canonical campaign/runtime/release authority;
+- QPR-02 / PR #569 — governed provider/RPC qualification data plane;
+- QPR-03 / PR #570 — campaign-start source intake and real-data handoff.
 
-Не “production ready”. Ближайший успех:
+The top-level master handoff PR #567 is still open, so do not infer completion from public `main` alone.
 
-1. Campaign manifest привязан к exact current main/release/policy.
-2. Можно добавить новый source через один typed dossier/profile workflow.
-3. Можно собрать real non-synthetic data без signer/sender.
-4. Discovery sources строят rolling universe, но не подменяют exact state.
-5. Native collector умеет использовать независимый RPC quorum либо честно маркирует single-source capture как `BLOCKED_SINGLE_SOURCE`.
-6. Все success/failure/gap/drift events durable и replayable без сети.
-7. Через 24h получаем problem report, а не маркетинговый PASS.
+The canonical continuation is **PR #571**.
 
-## Не делать
+## New strategy source of truth
 
-- Не запускать live sender ради “проверки”.
-- Не объявлять indexed API price/depth точной executable liquidity.
-- Не считать два endpoint одного оператора независимыми.
-- Не merge stale foundational PR напрямую — сначала reuse/supersede audit against current main.
-- Не переписывать весь persistence слой перед первым campaign; сначала один approved campaign evidence authority, затем migration.
+PR #571 contains:
+
+`docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/`
+
+Important files:
+- `CODEX_START_HERE.md`
+- `ASSET_REGISTRY_V2.json`
+- `UNIVERSE_V2_EXPANSION.md`
+- `INTERCHAIN_RELATIONS_V2.json`
+- `ARCHITECTURE_CONTRACT.md`
+- `IMPLEMENTATION_ROADMAP.md`
+
+## New immediate goal
+
+GPR-01 is no longer a placeholder-only candidate graph.
+
+It is:
+
+**Asset/Representation Registry + ResearchEconomicGraph + VerificationQueue**
+
+The model must distinguish economic assets from executable representations.
+
+Examples:
+- Solana native USDC != Sui native USDC != Sui Wormhole USDC;
+- Solana cbBTC != Solana Wormhole WBTC != Solana tBTC;
+- Sui XBTC != Wormhole WBTC != Sui-Bridge WBTC != zwBTC;
+- SOL on Solana != Wormhole SOL on Sui.
+
+These can share an economic underlying without sharing an execution identity.
+
+## Development order
+
+```text
+GPR-01 shared asset/representation + research graph contracts
+        ↓
+GPR-02 Solana radar/exact qualification
+        ||
+GPR-03 Sui shadow/exact-state qualification
+        ↓
+GPR-04 dynamic heat/watch scheduler
+        ↓
+GPR-05 structural transformation graph
+        ↓
+GPR-06 Solana<->Sui economic graph
+        ↓
+GPR-07 prefunded cross-chain simulator
+        ↓
+GPR-08 TON research lab
+```
+
+## Safety
+
+Canonical mint/coin/Jetton identity is research input, not execution authority.
+
+Keep signer, sender, transaction submission and live promotion unreachable.

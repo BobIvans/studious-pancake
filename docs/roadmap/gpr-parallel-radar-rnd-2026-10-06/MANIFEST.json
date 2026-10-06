@@ -1,0 +1,20 @@
+{
+  "schema_version": "gpr.rnd-package.v1",
+  "title": "GPR Parallel Radar / Research Economic Graph",
+  "date": "2026-10-06",
+  "repo": "BobIvans/studious-pancake",
+  "base_pr": 570,
+  "base_head": "7132f7341661368917bcc3cf1618a93de96327f8",
+  "next_implementation_pr": "GPR-01 Research Economic Graph + Verification Queue",
+  "pair_summary": {
+    "explicit_pair_relationships": 330,
+    "solana_pairs": 257,
+    "sui_pairs": 53,
+    "ton_pairs": 20,
+    "route_generators": 10
+  },
+  "no_asset_addresses": true,
+  "all_symbolic_assets_runtime_disabled": true,
+  "live_execution_enabled": false,
+  "archive": "GPR_PARALLEL_RADAR_RND_2026-10-06.zip"
+}

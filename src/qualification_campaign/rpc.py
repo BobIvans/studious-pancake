@@ -14,6 +14,7 @@ from src.data_plane.rpc import (
     RootedRpcSample,
 )
 from src.providers.raydium_cpmm_native import NativeCaptureError
+from src.routing.transport import SanitizedTransportError
 from src.strategy.exact_cpmm_capacity import MAINNET_GENESIS
 from .identity import digest
 import httpx
@@ -146,6 +147,8 @@ class NativeRootedSnapshotProvider:
                         "error": type(exc).__name__,
                     }
                 )
+                if isinstance(exc, (NativeCaptureError, SanitizedTransportError)):
+                    failures[-1]["failure_reason"] = str(exc)
                 self.evidence.append(
                     profile.profile_id,
                     {"kind": "capture_failure", **failures[-1]},

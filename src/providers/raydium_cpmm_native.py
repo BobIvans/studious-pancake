@@ -106,7 +106,8 @@ class NativeAccount:
             or len(encoded) != 2
             or encoded[1] != "base64"
             or not isinstance(encoded[0], str)
-            or len(encoded[0]) > 900_000
+            or len(encoded[0])
+            > (6_000_000 if value.get("owner") == LOADER else 900_000)
         ):
             raise NativeCaptureError("bounded base64 account data required")
         try:

@@ -16,4 +16,4 @@ jobs:
           python-version: '3.13'
       - run: python -m pip install --require-hashes -r requirements-dev.lock
       - run: python -m pip install --no-deps --no-build-isolation .
-      - run: python -m pytest tests/test_qpr*.py tests/test_native_cpmm_qualification.py tests/architecture/test_mpr_4x_02_runtime_authority.py --disable-socket --allow-unix-socket -q
+      - run: python -m pytest tests/test_qpr*.py tests/test_native_cpmm_qualification.py tests/test_exact_cpmm_capacity.py tests/test_pr026_config_doctor.py tests/test_recoverable_stream_journal.py tests/architecture/test_mpr_4x_02_runtime_authority.py --disable-socket --allow-unix-socket -q

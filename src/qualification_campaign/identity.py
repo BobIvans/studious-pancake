@@ -126,3 +126,17 @@ class CampaignManifest:
             tuple((k, digest(v)) for k, v in configuration.items()),
             tuple((k, digest(v)) for k, v in sources.items()),
         )
+
+
+def manifest_from_dict(raw):
+    """Restore exact identity including mandatory safety fields; never ignore them."""
+    values = dict(raw)
+    safety = values.pop("safety", None)
+    if safety != {
+        "signer_reachable": False,
+        "sender_reachable": False,
+        "transaction_submission_allowed": False,
+        "live_authorization": False,
+    }:
+        raise ValueError("CAMPAIGN_SAFETY_BOUNDARY_INVALID")
+    return CampaignManifest(**values)

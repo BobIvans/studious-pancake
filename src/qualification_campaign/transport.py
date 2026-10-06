@@ -34,6 +34,7 @@ async def campaign_transport(
         trust_env=False,
         follow_redirects=False,
         timeout=timeout,
+        headers={"Accept-Encoding": "gzip,deflate,identity"},
     ) as client:
         async with HttpxJsonTransport(
             policy=policy, allowed_hosts=frozenset(hosts), client=client

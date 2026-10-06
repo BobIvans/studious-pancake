@@ -157,14 +157,16 @@ class NativeRootedSnapshotProvider:
         gate = RootedRpcQuorumGate(
             RootedRpcQuorumPolicy(max_observation_age_ms=45_000, max_root_lag_slots=128)
         )
+        evaluated_wall_ms = self.wall_ns() // 1_000_000
+        evaluated_monotonic_ms = self.monotonic_ms()
         decision = gate.evaluate(
             samples,
             expected_genesis_hash=MAINNET_GENESIS,
             expected_method="getMultipleAccounts",
             expected_request_hash=request_hash,
             min_context_slot=1,
-            now_wall_ms=self.wall_ns() // 1_000_000,
-            now_monotonic_ms=self.monotonic_ms(),
+            now_wall_ms=evaluated_wall_ms,
+            now_monotonic_ms=evaluated_monotonic_ms,
         )
         result = asdict(decision)
         result["reason"] = decision.reason.value
@@ -186,8 +188,8 @@ class NativeRootedSnapshotProvider:
             "quorum": result,
             "rooted_samples": [asdict(s) for s in samples],
             "quorum_policy": asdict(gate.policy),
-            "evaluated_at_wall_ms": self.wall_ns() // 1_000_000,
-            "evaluated_at_monotonic_ms": self.monotonic_ms(),
+            "evaluated_at_wall_ms": evaluated_wall_ms,
+            "evaluated_at_monotonic_ms": evaluated_monotonic_ms,
         }
         # Enums are strings; the journal stores the entire replayable decision input.
         self.evidence.append("rpc-quorum", bundle, observed_at_ns=self.wall_ns())
@@ -205,3 +207,61 @@ class NativeRootedSnapshotProvider:
         payload["rpc_quorum"] = result
         payload["campaign_manifest_hash"] = self.evidence.manifest.campaign_id
         return payload
+
+
+def validate_quorum_evidence(bundle, evidence):
+    """A replayed flag cannot replace the canonical gate and exact raw state."""
+    samples = []
+    for raw in bundle["rooted_samples"]:
+        item = dict(raw)
+        sample_data = dict(item.pop("sample"))
+        identity = item.pop("identity")
+        sample_data["commitment"] = CommitmentLevel(sample_data["commitment"])
+        samples.append(
+            RootedRpcSample(
+                RpcSample(**sample_data), RpcEndpointIdentity(**identity), **item
+            )
+        )
+    policy = dict(bundle["quorum_policy"])
+    policy["required_commitment"] = CommitmentLevel(policy["required_commitment"])
+    decision = RootedRpcQuorumGate(RootedRpcQuorumPolicy(**policy)).evaluate(
+        samples,
+        expected_genesis_hash=MAINNET_GENESIS,
+        expected_method="getMultipleAccounts",
+        expected_request_hash=bundle["request_hash"],
+        min_context_slot=1,
+        now_wall_ms=bundle["evaluated_at_wall_ms"],
+        now_monotonic_ms=bundle["evaluated_at_monotonic_ms"],
+    )
+    result = dict(bundle["quorum"])
+    recorded = result.pop("evidence_hash")
+    if (
+        digest(result) != recorded
+        or decision.evidence_hash != result["canonical_gate_evidence_hash"]
+    ):
+        raise ValueError("QUORUM_DECISION_HASH_MISMATCH")
+    if result["accepted"] and (not decision.accepted or bundle.get("failures")):
+        raise ValueError("QUORUM_DECISION_MISMATCH")
+    by_id = {
+        e.identity: evidence.expand(e.payload_json)
+        for e in evidence.journal.events(available_at_ns=2**63 - 1)
+    }
+    captures = [by_id[r]["payload"] for r in bundle["capture_refs"]]
+    if result["accepted"] and (
+        len({c["slot"] for c in captures}) != 1 or len(captures) != len(samples)
+    ):
+        raise ValueError("QUORUM_CAPTURE_MISMATCH")
+    for sample, capture in zip(samples, captures, strict=True):
+        state_hash = digest(
+            {
+                k: capture[k]
+                for k in ("genesis_hash", "commitment", "slot", "accounts", "block")
+            }
+        )
+        if (
+            state_hash != sample.sample.payload_hash
+            or capture["evidence_kind"] != "captured-rpc"
+        ):
+            raise ValueError("QUORUM_RAW_STATE_MISMATCH")
+    result["evidence_hash"] = recorded
+    return result

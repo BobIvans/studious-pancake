@@ -64,6 +64,7 @@ class SuiReadRequest:
     semantic_headers: tuple[tuple[str, str], ...] = (
         ("Accept", "application/json"),
         ("Content-Type", "application/json"),
+        ("Accept-Encoding", "gzip,deflate,identity"),
     )
 
     def __post_init__(self):
@@ -94,6 +95,7 @@ class SuiReadRequest:
         if self.semantic_headers != (
             ("Accept", "application/json"),
             ("Content-Type", "application/json"),
+            ("Accept-Encoding", "gzip,deflate,identity"),
         ):
             raise ValueError("SUI_PINNED_PUBLIC_REQUEST_HEADERS_REQUIRED")
         # GraphQL is deliberately a finite read template, never arbitrary queries.
@@ -210,10 +212,30 @@ class SuiSourceProfile:
     def hostname(self):
         return urlsplit(self.endpoint).hostname
 
+    @property
+    def quota_generation(self):
+        # Source generations bind endpoint/schema/normalization independently.
+        # Aliases of one external operator pool share the reviewed quota contract
+        # generation so the durable dependency owner fences the same budget.
+        return digest(
+            {
+                "contract": "gpr03.operator-quota.v1",
+                "provider": self.provider,
+                "operator": self.operator,
+                "credential_ref": self.credential_ref,
+                "credential_generation": self.credential_generation,
+                "window_seconds": self.window_seconds,
+                "request_limit": self.request_limit,
+                "cost_unit_limit": self.request_limit,
+                "spend_limit_micros": 0,
+                "max_concurrency": 1,
+            }
+        )
+
     def entitlement(self, expires_at_epoch_seconds):
         return ProviderEntitlement(
             self.profile_id,
-            self.generation,
+            self.quota_generation,
             frozenset({ProviderOperation.DISCOVERY, ProviderOperation.BACKFILL}),
             self.window_seconds,
             self.request_limit,

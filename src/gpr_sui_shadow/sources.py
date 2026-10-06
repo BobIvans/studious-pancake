@@ -64,6 +64,8 @@ def rational(value, *, allow_zero=False):
         or number < 0
         or (number == 0 and not allow_zero)
         or len(str(number)) > 64
+        or abs(number.adjusted()) > 76
+        or abs(int(number.as_tuple().exponent)) > 76
     ):
         raise ValueError("SUI_EXACT_FINITE_RATE_REQUIRED")
     return Fraction(number)
@@ -188,3 +190,62 @@ def residual_bps(
         / Fraction(reference_numerator, reference_denominator)
         - 1
     ) * 10_000
+
+
+def indexed_book_reference(payload):
+    """Source-pinned indicative public snapshot; never checkpoint/depth proof."""
+    if not isinstance(payload, dict):
+        raise ValueError("DEEPBOOK_BOUNDED_REFERENCE_REQUIRED")
+    timestamp = payload.get("timestamp")
+    if (
+        not isinstance(timestamp, str)
+        or not timestamp.isascii()
+        or not timestamp.isdecimal()
+        or len(timestamp) > 16
+    ):
+        raise ValueError("DEEPBOOK_INDEXED_TIMESTAMP_REQUIRED")
+    uint(int(timestamp), "indexed_timestamp", 1)
+    sides = {}
+    if sum(len(payload.get(side, [])) for side in ("bids", "asks")) > 20:
+        raise ValueError("DEEPBOOK_REQUESTED_DEPTH_LIMIT")
+    for side in ("bids", "asks"):
+        rows = payload.get(side)
+        if not isinstance(rows, list) or not rows:
+            raise ValueError("DEEPBOOK_TWO_SIDED_REFERENCE_REQUIRED")
+        levels = []
+        for row in rows:
+            if (
+                not isinstance(row, list)
+                or len(row) != 2
+                or any(not isinstance(v, str) for v in row)
+            ):
+                raise ValueError("DEEPBOOK_EXACT_PRICE_SIZE_STRINGS_REQUIRED")
+            price, size = (rational(v) for v in row)
+            for value in (price, size):
+                uint(value.numerator, "book_numerator", 1, 2**256 - 1)
+                uint(value.denominator, "book_denominator", 1, 2**256 - 1)
+            levels.append((price, size))
+        prices = [level[0] for level in levels]
+        if prices != sorted(prices, reverse=side == "bids"):
+            raise ValueError("DEEPBOOK_SORTED_REFERENCE_REQUIRED")
+        sides[side] = levels
+    bid, ask = sides["bids"][0][0], sides["asks"][0][0]
+    if bid >= ask:
+        raise ValueError("DEEPBOOK_NONCROSSED_REFERENCE_REQUIRED")
+    spread = (ask - bid) * 20_000 / (ask + bid)
+    return {
+        "source_timestamp_ms": timestamp,
+        "bid_levels": len(sides["bids"]),
+        "ask_levels": len(sides["asks"]),
+        "best_bid": payload["bids"][0],
+        "best_ask": payload["asks"][0],
+        "indicative_mid_spread_bps": {
+            "numerator": spread.numerator,
+            "denominator": spread.denominator,
+        },
+        "evidence_state": "DISCOVERY_ONLY",
+        "execution_class": "LOCAL_SIGNAL",
+        "book_depth_state": "BOOK_DEPTH_UNQUALIFIED",
+        "exact_state_ready": False,
+        "units_and_fee_state": "UNQUALIFIED_INDEXER_REFERENCE",
+    }

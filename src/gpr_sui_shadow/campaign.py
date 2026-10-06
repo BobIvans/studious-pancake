@@ -34,6 +34,7 @@ from .sources import (
     ScallopRateAdapter,
     checkpoint_request,
     object_request,
+    indexed_book_reference,
 )
 
 BASE_SHA = "8c59759b491b6318f259138671dccfea25f2752e"
@@ -189,6 +190,7 @@ async def capture(root, pack, output):
     outcomes = []
     pool_capture_refs = {}
     book_capture_refs = {}
+    book_measurements = []
     deepbook_index = None
     async with sui_transport({p.hostname for p in profiles}, os.environ) as transport:
         intake = SuiIntakePlane(governance, transport, evidence)
@@ -308,6 +310,26 @@ async def capture(root, pack, output):
                     ),
                 )
                 book_capture_refs[pool.canonical_object_id] = book_ref
+                if book_raw["quality"] == "accepted-read-only":
+                    try:
+                        book_measurements.append(
+                            {
+                                "pool_id": pool.canonical_object_id,
+                                "pool_name": book["name"],
+                                "raw_ref": book_ref,
+                                **indexed_book_reference(book_raw["raw_payload"]),
+                            }
+                        )
+                    except (ValueError, KeyError, TypeError):
+                        evidence.append(
+                            "gpr03-book-reference-rejection",
+                            {
+                                "kind": "gpr03_book_reference_rejection",
+                                "raw_ref": book_ref,
+                                "reason": "bounded-book-schema-invalid",
+                            },
+                            observed_at_ns=time.time_ns(),
+                        )
                 outcomes.append(
                     {
                         "profile": p.profile_id,
@@ -317,6 +339,15 @@ async def capture(root, pack, output):
                         "http_status": book_raw.get("http_status"),
                     }
                 )
+    quota_snapshots = {
+        p.profile_id: await governance.authority.snapshot(p.profile_id)
+        for p in profiles
+    }
+    evidence.append(
+        "gpr03-quota-snapshot",
+        {"kind": "gpr03_quota_snapshot", "snapshots": quota_snapshots},
+        observed_at_ns=time.time_ns(),
+    )
     graph = ingest_research(ResearchEconomicGraph(registry, seed), evidence)
     graph_ref = graph.persist(evidence, observed_at_ns=time.time_ns())
     queue = VerificationQueue(graph, evidence)
@@ -364,11 +395,13 @@ async def capture(root, pack, output):
             r.get("physical_attempt_started") is True for r in rows
         ),
         "reserved_attempts": sum(r.get("kind") == "attempt" for r in rows),
+        "quota_snapshots": quota_snapshots,
         "candidate_count": sum(r.get("kind") == "gpr03_sui_candidate" for r in rows),
         "registered_discovery_relations": sum(
             r.relation_id.startswith("gpr03:") for r in graph.relations.values()
         ),
         "indexed_book_reads": len(book_capture_refs),
+        "indexed_book_measurements": book_measurements,
         "structural_rate_count": sum(
             r.get("kind") == "gpr03_structural_rate" for r in rows
         ),

@@ -72,7 +72,8 @@ inputs. Lending APY is never substituted for a staking exchange rate. The
 campaign quotas are conservative engineering subcaps, not claimed public plans.
 
 POST reads carry explicit pinned Accept/Content-Type and the exact serialized
-body Content-Length. Sent public request bytes, their hash, actual header length
+body Content-Length and `Accept-Encoding: gzip,deflate,identity`, matching the
+canonical transport supported decoders. Sent public request bytes, their hash, actual header length
 and negative response bytes are retained to distinguish an application schema
 error from any deployed proxy/server request-contract failure.
 
@@ -98,3 +99,20 @@ XAUM/XAU requires a reviewed oracle feed identity, entitlement and unit/time
 semantics. This slice does not invent a feed identifier or oracle credential.
 Representation basis, exchange-rate residuals and DeepBook/AMM divergence remain
 unmeasured whenever those actual inputs are missing.
+
+
+Every MystenLabs source alias shares one conservative operator quota pool:
+12 requests/cost units per 60 seconds, zero spend and concurrency one. Distinct
+source generations bind each exact endpoint/schema/adapter; a separate shared
+quota generation binds operator, credentials and these limits. This prevents
+aliases from receiving independent budgets or conflicting durable dependency
+generations. Campaign profile attempt caps also remain active. Deterministic
+in-memory and durable restart tests verify aggregate exhaustion before any send.
+Physical-attempt retention begins only after the canonical governance guard
+issues the lease. Retained final quota snapshots record actual accounting.
+
+Public book references validate the pinned string price/size shape, source
+millisecond timestamp, best-to-worst order, requested total depth <=20, positive
+finite bounded numbers and non-crossed top levels. Summary top levels and exact
+rational midpoint spreads describe the observed index only; they never supply
+checkpoint state, qualified depth/fees, executable profit or a verified anomaly.

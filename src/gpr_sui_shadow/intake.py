@@ -46,11 +46,30 @@ class CapturedJsonTransport(HttpxJsonTransport):
         # transport so parsed payloads and retained bytes never cross requests.
         self.capture_lock = asyncio.Lock()
 
+    def bind_capture_guard(self):
+        if getattr(self, "_sui_capture_guard_installed", False):
+            return
+        guard = self.attempt_guard
+        if guard is None:
+            raise ValueError("SUI_GOVERNED_PHYSICAL_GUARD_REQUIRED")
+
+        async def capture_after_admission(request, attempt):
+            context = await guard(request, attempt)
+            self.raw_capture = {
+                **(self.raw_capture or {}),
+                "physical_attempt_started": True,
+            }
+            return context
+
+        self.attempt_guard = capture_after_admission
+        self._sui_capture_guard_installed = True
+
     async def _read_bounded(self, response):
         self.raw_capture = {
             **(self.raw_capture or {}),
             "http_status": response.status_code,
             "content_type": response.headers.get("content-type"),
+            "content_encoding": response.headers.get("content-encoding", "identity"),
             "declared_content_length": response.headers.get("content-length"),
             "response_limit_bytes": self.policy.max_response_bytes,
             "json_node_limit": self.policy.max_json_nodes,
@@ -61,6 +80,7 @@ class CapturedJsonTransport(HttpxJsonTransport):
             **self.raw_capture,
             "http_status": response.status_code,
             "content_type": response.headers.get("content-type"),
+            "content_encoding": response.headers.get("content-encoding", "identity"),
             "wire_payload_sha256": hashlib.sha256(body).hexdigest(),
             "wire_payload_base64": base64.b64encode(body).decode(),
             "wire_payload_bytes": len(body),
@@ -70,9 +90,11 @@ class CapturedJsonTransport(HttpxJsonTransport):
 
     async def _physical_attempt(self, request, attempt):
         self.raw_capture = {
+            "physical_attempt_started": False,
             "sent_content_length": request.headers.get("content-length"),
             "sent_content_type": request.headers.get("content-type"),
             "sent_accept": request.headers.get("accept"),
+            "sent_accept_encoding": request.headers.get("accept-encoding"),
             "request_wire_sha256": hashlib.sha256(request.content).hexdigest(),
             "request_wire_bytes": len(request.content),
             "request_wire_base64": base64.b64encode(request.content).decode(),
@@ -93,6 +115,7 @@ async def sui_transport(hosts, environment):
         trust_env=False,
         follow_redirects=False,
         timeout=httpx.Timeout(15, connect=10),
+        headers={"Accept-Encoding": "gzip,deflate,identity"},
     ) as client:
         async with CapturedJsonTransport(
             policy=policy, allowed_hosts=frozenset(hosts), client=client
@@ -111,6 +134,7 @@ class SuiIntakePlane:
             wall_ns,
         )
         governance.bind_transport(transport)
+        transport.bind_capture_guard()
 
     async def collect(self, profile, request, adapter=None):
         async with self.transport.capture_lock:
@@ -154,6 +178,10 @@ class SuiIntakePlane:
             "kind": "gpr03_sui_raw",
             "profile": asdict(profile),
             "source_generation": profile.generation,
+            "quota_generation": profile.quota_generation,
+            "quota_pool_ref": self.governance.authority.entitlement(
+                profile.profile_id
+            ).quota_pool_ref,
             "request": asdict(request),
             "request_hash": request.fingerprint,
             "response_hash": None,
@@ -194,11 +222,10 @@ class SuiIntakePlane:
                 request.fingerprint,
                 "gpr03-shadow",
                 self.governance.clock() + 20,
-                expected_generation=profile.generation,
+                expected_generation=profile.quota_generation,
             )
 
             async def physical():
-                envelope["physical_attempt_started"] = True
                 headers = dict(request.semantic_headers)
                 if request.serialized_body is not None:
                     headers["Content-Length"] = str(len(request.serialized_body))

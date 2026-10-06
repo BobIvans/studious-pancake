@@ -955,3 +955,210 @@ def test_complete_negative_slice_has_portable_offline_replay(tmp_path, monkeypat
     retained.write_bytes(retained.read_bytes() + b" ")
     with pytest.raises(ValueError, match="EXPORT_HASH"):
         runner.replay_capture(output, tmp_path / "tampered-replay")
+
+
+@pytest.mark.parametrize("durable", [False, True])
+def test_shared_mysten_quota_generation_and_aggregate_attempt_cap(tmp_path, durable):
+    from src.durability.unified_authority_pr02 import UnifiedLifecycleAuthority
+    import time
+
+    async def run():
+        registry, seed = corpus()
+        pins = json.loads(Path("config/gpr03_sui_source_pins.json").read_text())
+        selected = [p for p in default_profiles(pins) if p.provider == "mystenlabs"]
+        profiles = tuple(replace(p, request_limit=2) for p in selected)
+        assert len({p.generation for p in profiles}) == len(profiles)
+        assert len({p.quota_generation for p in profiles}) == 1
+        manifest = CampaignManifest(
+            "a" * 40,
+            "b" * 40,
+            "c" * 64,
+            (("gpr.registry", registry.generation), ("gpr.seed", seed.generation)),
+            tuple((p.profile_id, p.generation) for p in profiles),
+        )
+        evidence = CampaignEvidenceStore(
+            RecoverableStreamJournal(tmp_path / "quota-events.sqlite"), manifest
+        )
+        store = (
+            UnifiedLifecycleAuthority(
+                tmp_path / "quota-authority.sqlite",
+                release_digest="d" * 64,
+                policy_bundle_hash="e" * 64,
+            )
+            if durable
+            else None
+        )
+        physical = []
+        client = httpx.AsyncClient(
+            transport=httpx.MockTransport(
+                lambda request: physical.append(request) or httpx.Response(200, json={})
+            ),
+            trust_env=False,
+        )
+        transport = CapturedJsonTransport(
+            policy=TransportPolicy(max_attempts=1),
+            allowed_hosts={p.hostname for p in profiles},
+            client=client,
+        )
+        entitlements = {
+            p.profile_id: p.entitlement(int(time.time()) + 3600) for p in profiles
+        }
+        gov = ProviderGovernance(entitlements, store=store)
+        plane = SuiIntakePlane(gov, transport, evidence)
+        # Distinct exact endpoints and source generations spend the same physical
+        # quota, including the GraphQL checkpoint source on another host.
+        reads = [
+            (
+                profiles[1],
+                SuiReadRequest(
+                    "GET",
+                    profiles[1].endpoint,
+                    "book-reference",
+                    params=(("depth", "20"), ("level", "2")),
+                ),
+            ),
+            (profiles[-1], checkpoint_request(profiles[-1].endpoint)),
+            (
+                profiles[2],
+                SuiReadRequest(
+                    "GET",
+                    profiles[2].endpoint,
+                    "book-reference",
+                    params=(("depth", "20"), ("level", "2")),
+                ),
+            ),
+        ]
+        captures = [await plane.collect(p, req) for p, req in reads]
+        assert [r[1]["quality"] for r in captures] == [
+            "accepted-read-only",
+            "accepted-read-only",
+            "quota-or-admission-denied",
+        ]
+        assert captures[-1][1]["error_code"] == "request_quota_exhausted"
+        assert len(physical) == 2 and not captures[-1][1]["physical_attempt_started"]
+        for p in profiles:
+            assert (await gov.authority.snapshot(p.profile_id))[
+                "committed_requests"
+            ] == 2
+        if durable:
+            # A fresh wrapper must recover the shared pool and deny before send.
+            restarted = ProviderGovernance(entitlements, store=store)
+            _, raw = await SuiIntakePlane(
+                restarted,
+                CapturedJsonTransport(
+                    policy=TransportPolicy(max_attempts=1),
+                    allowed_hosts={p.hostname for p in profiles},
+                    client=client,
+                ),
+                evidence,
+            ).collect(
+                profiles[3],
+                SuiReadRequest(
+                    "GET",
+                    profiles[3].endpoint,
+                    "book-reference",
+                    params=(("depth", "20"), ("level", "2")),
+                ),
+            )
+            assert raw["error_code"] == "request_quota_exhausted"
+            assert len(physical) == 2
+            store.close()
+        await client.aclose()
+
+    asyncio.run(run())
+
+
+def test_supported_content_encoding_is_pinned_on_physical_request(tmp_path):
+    async def run():
+        registry, seed = corpus()
+        pins = json.loads(Path("config/gpr03_sui_source_pins.json").read_text())
+        p = next(p for p in default_profiles(pins) if p.source_kind == "scallop")
+        manifest = CampaignManifest(
+            "a" * 40,
+            "b" * 40,
+            "c" * 64,
+            (("gpr.registry", registry.generation), ("gpr.seed", seed.generation)),
+            ((p.profile_id, p.generation),),
+        )
+        evidence = CampaignEvidenceStore(
+            RecoverableStreamJournal(tmp_path / "encoding.sqlite"), manifest
+        )
+
+        def handler(req):
+            assert req.headers["accept-encoding"] == "gzip,deflate,identity"
+            return httpx.Response(
+                200, json={"pools": [{"coinType": "0x2::sui::SUI", "supplyApy": "0"}]}
+            )
+
+        client = httpx.AsyncClient(
+            transport=httpx.MockTransport(handler), trust_env=False
+        )
+        transport = CapturedJsonTransport(
+            policy=TransportPolicy(max_attempts=1),
+            allowed_hosts={p.hostname},
+            client=client,
+        )
+        gov = ProviderGovernance(
+            {p.profile_id: p.entitlement(2000)},
+            clock=lambda: 1002,
+            wall_clock=lambda: 1002,
+        )
+        _, raw = await SuiIntakePlane(gov, transport, evidence).collect(
+            p,
+            SuiReadRequest("GET", p.endpoint, "structural-rates"),
+            ScallopRateAdapter(),
+        )
+        assert (
+            raw["quality"] == "accepted"
+            and raw["sent_accept_encoding"] == "gzip,deflate,identity"
+        )
+        assert raw["content_encoding"] == "identity"
+        await client.aclose()
+
+    asyncio.run(run())
+
+
+@pytest.mark.parametrize(
+    "failure", [None, "depth", "crossed", "unsorted", "nonfinite", "timestamp", "empty"]
+)
+def test_indexed_book_reference_is_bounded_and_never_exact_depth(failure):
+    from src.gpr_sui_shadow.sources import indexed_book_reference
+
+    payload = {
+        "timestamp": "1791265457130",
+        "bids": [["0.99", "1"], ["0.98", "2"]],
+        "asks": [["1.01", "2"]],
+    }
+    if failure == "depth":
+        payload["asks"] *= 21
+    elif failure == "crossed":
+        payload["asks"][0][0] = "0.9"
+    elif failure == "unsorted":
+        payload["bids"].reverse()
+    elif failure == "nonfinite":
+        payload["asks"][0][0] = "NaN"
+    elif failure == "timestamp":
+        payload["timestamp"] = "recent"
+    elif failure == "empty":
+        payload["asks"] = []
+    if failure:
+        with pytest.raises(ValueError):
+            indexed_book_reference(payload)
+    else:
+        result = indexed_book_reference(payload)
+        assert result["indicative_mid_spread_bps"] == {
+            "numerator": 200,
+            "denominator": 1,
+        }
+        assert (
+            not result["exact_state_ready"]
+            and result["book_depth_state"] == "BOOK_DEPTH_UNQUALIFIED"
+        )
+
+
+@pytest.mark.parametrize("value", ["1e1000000", "1e-1000000"])
+def test_structural_numeric_exponent_is_bounded_before_fraction_allocation(value):
+    from src.gpr_sui_shadow.sources import rational
+
+    with pytest.raises(ValueError, match="FINITE_RATE"):
+        rational(value)

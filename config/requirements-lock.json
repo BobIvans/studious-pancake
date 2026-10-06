@@ -26,10 +26,10 @@
   "python": "3.13",
   "resolved_locks": {
     "requirements-dev.lock": {
-      "sha256": "f96b253d4fbf3e101c77d4c391ab77c138d420f495fb4b01a865c598386661c9"
+      "sha256": "749700d39db10b71f30f28155870dde583fc49bf8cd1bc8edd4b006cdbca1072"
     },
     "requirements.lock": {
-      "sha256": "3f8e99030a9b1e90600a08757c75e9b5b0518207124ee8d7a56fe6a4da64c259"
+      "sha256": "681a81d8c439662ecca19a03c1d0745bf5b021620fdec2d9119510344d231251"
     }
   },
   "resolver": {

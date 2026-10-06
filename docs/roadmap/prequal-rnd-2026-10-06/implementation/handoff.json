@@ -40,8 +40,7 @@
       "ACTIVE_PERSISTENCE_CUTOVER",
       "RELEASE_BOUND_72H_SOAK",
       "SECURITY_DEPLOYMENT_ROLLBACK_EVIDENCE",
-      "LIVE_EXECUTION_AUTHORITY_NOT_ENABLED",
-      "PREEXISTING_DEPENDENCY_AUDIT_MULTIDICT_GHSA-54p9-h82j-f925"
+      "LIVE_EXECUTION_AUTHORITY_NOT_ENABLED"
     ],
     "blocks_stronger_qualification": [
       "INDEPENDENT_ROOTED_QUORUM_REQUIRED",
@@ -53,9 +52,7 @@
       "PUBLIC_SMOKE_SINGLE_RPC_CONFIGURED",
       "OBSERVED_TOKEN_2022_CAPTURE_REJECTED"
     ],
-    "ci_merge_blockers": [
-      "VAL-001"
-    ],
+    "ci_merge_blockers": [],
     "operational_admission_checks": [
       "fresh reviewed dossiers",
       "clean checkout/exact SHA",
@@ -247,12 +244,6 @@
   },
   "G_new_problem_register": "new-problems.json",
   "H_recommended_next_work": [
-    {
-      "basis": "strict audit: multidict 6.7.1 / GHSA-54p9-h82j-f925 already pinned in main",
-      "order": 0,
-      "proposed_pr": "Fix existing lockfile dependency audit blocker before merge",
-      "scope": "separate reviewed dependency update to patched version, refreshed hashes, strict audit and regressions; no QPR-04+ implementation"
-    },
     {
       "basis": "actual run BLOCKED_SINGLE_SOURCE; only public smoke RPC configured",
       "order": 1,
@@ -512,20 +503,21 @@
   "validation": {
     "archived_socket_disabled_replay": "PASS",
     "dependency_audit": {
-      "advisory": "GHSA-54p9-h82j-f925",
-      "command": "python scripts/verify_repo.py",
-      "fix_version": "6.9.1",
-      "impact": "strict dependency audit blocks Repository verification/merge; bounded read-only campaign remains functional",
-      "lockfiles_changed_by_phase": false,
-      "log": "/tmp/qpr-verify-repo-final.log",
+      "advisory_fixed": "GHSA-54p9-h82j-f925",
+      "command": "python -m pip_audit -r requirements.lock -r requirements-dev.lock --strict --progress-spinner off",
+      "lockfiles_changed_by_ci_followup": true,
+      "log": "/tmp/qpr-ci-audit-fixed.log",
       "package": "multidict",
-      "status": "BLOCKED_PREEXISTING_MAIN_LOCK",
-      "version": "6.7.1"
+      "previous_version": "6.7.1",
+      "resolution": "pinned uv, preserved other versions, compiler-generated hashes, refreshed requirements-lock manifest",
+      "result": "No known vulnerabilities found",
+      "status": "PASS",
+      "version": "6.9.1"
     },
     "deterministic_repository_verification": {
       "command": "python scripts/verify_repo.py --skip-dependency-audit",
       "log": "/tmp/qpr-verify-repo-deterministic.log",
-      "note": "The strict audit was run separately and failed on the pre-existing pin; it was not removed or waived in CI.",
+      "note": "Historical pre-fix deterministic verification passed. Strict audit is now fixed and remains required in CI.",
       "status": "PASS"
     },
     "disabled_cli_and_installed_authority": "PASS",
@@ -533,7 +525,7 @@
       "failed": 0,
       "passed": 75
     },
-    "github_ci": "Campaign, qualification, wheel/runtime checks PASS on tested code commits. Repository verification fails on pre-existing strict dependency audit; final documentation commit may have checks pending.",
+    "github_ci": "Inspect current PR checks for the CI follow-up commits. The shared audit failure has been fixed; local strict audit and 8 packaging tests passed. Exact final check outcomes are recorded in phase receipts after completion.",
     "hash_locked_install_and_repeat": "PASS",
     "isolated_wheel_package_smoke": "PASS",
     "mypy": {

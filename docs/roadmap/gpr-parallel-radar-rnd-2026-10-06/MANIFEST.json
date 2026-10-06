@@ -1,6 +1,6 @@
 {
-  "schema_version": "gpr.rnd-package.v2",
-  "title": "GPR V2 — Asset/Representation Graph + Parallel Solana/Sui Qualification",
+  "schema_version": "gpr.rnd-package.v2.1",
+  "title": "GPR V2.1 — Evidence-Classified Asset/Representation Graph + Parallel Solana/Sui Qualification",
   "date": "2026-10-06",
   "repo": "BobIvans/studious-pancake",
   "canonical_pr": 571,
@@ -14,20 +14,35 @@
   "next_implementation_pr": "GPR-01 Asset/Representation Registry + Research Economic Graph + Verification Queue",
   "asset_registry": {
     "file": "ASSET_REGISTRY_V2.json",
-    "entries": 88,
+    "entries": 91,
     "runtime_enabled_by_default": false,
-    "exact_graph_allowed_by_default": false
+    "exact_graph_allowed_by_default": false,
+    "schema_version": "gpr.asset-registry.v2.1"
   },
   "universe": {
     "v1_explicit_symbolic_relationships": 330,
     "v2_expansion_file": "UNIVERSE_V2_EXPANSION.md",
     "interchain_watch_relations": 12,
-    "interchain_edge_types": 6
+    "interchain_edge_types": 6,
+    "first_campaign_seed_policy": "14 families first; broader universe cheap/dynamic until evidence promotion"
   },
   "parallel_after_gpr01": [
     "GPR-02 Solana Parallel Radar",
     "GPR-03 Sui Shadow Research"
   ],
   "live_execution_enabled": false,
-  "cross_chain_atomic_execution_enabled": false
+  "cross_chain_atomic_execution_enabled": false,
+  "first_campaign": {
+    "file": "FIRST_CAMPAIGN_FAMILIES_V2_1.json",
+    "families": 14
+  },
+  "sui_deepbook_seed": {
+    "file": "SUI_DEEPBOOK_POOLS_V2_1.json",
+    "pools": 9
+  },
+  "classification_axes": [
+    "heat",
+    "execution_class",
+    "evidence_state"
+  ]
 }

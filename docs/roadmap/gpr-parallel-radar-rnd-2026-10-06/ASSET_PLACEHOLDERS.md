@@ -1,58 +1,27 @@
-# ASSET PLACEHOLDERS — no canonical addresses
-# chain | asset_key | group | canonical_id | runtime_enabled
-solana-mainnet | SOL | settlement | __PLACEHOLDER__ | false
-solana-mainnet | USDC | settlement | __PLACEHOLDER__ | false
-solana-mainnet | USDT | settlement | __PLACEHOLDER__ | false
-solana-mainnet | PYUSD | stable | __PLACEHOLDER__ | false
-solana-mainnet | USDS | stable | __PLACEHOLDER__ | false
-solana-mainnet | JupUSD | stable | __PLACEHOLDER__ | false
-solana-mainnet | USDe | stable | __PLACEHOLDER__ | false
-solana-mainnet | sUSDe | stable | __PLACEHOLDER__ | false
-solana-mainnet | sUSDS | stable | __PLACEHOLDER__ | false
-solana-mainnet | USDY | stable | __PLACEHOLDER__ | false
-solana-mainnet | USD1 | stable | __PLACEHOLDER__ | false
-solana-mainnet | JitoSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | JupSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | mSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | bSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | INF | lst | __PLACEHOLDER__ | false
-solana-mainnet | hubSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | bonkSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | cgntSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | vSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | fwdSOL | lst | __PLACEHOLDER__ | false
-solana-mainnet | cbBTC | btc_wrappers | __PLACEHOLDER__ | false
-solana-mainnet | wBTC | btc_wrappers | __PLACEHOLDER__ | false
-solana-mainnet | tBTC | btc_wrappers | __PLACEHOLDER__ | false
-solana-mainnet | JUP | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | JTO | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | RAY | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | ORCA | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | PYTH | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | BONK | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | WIF | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | POPCAT | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | RENDER | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | HNT | ecosystem | __PLACEHOLDER__ | false
-solana-mainnet | PUMP | ecosystem | __PLACEHOLDER__ | false
-sui-mainnet | SUI | settlement | __PLACEHOLDER__ | false
-sui-mainnet | USDC | settlement | __PLACEHOLDER__ | false
-sui-mainnet | USDT | stable | __PLACEHOLDER__ | false
-sui-mainnet | USDSUI | stable | __PLACEHOLDER__ | false
-sui-mainnet | BUCK | stable | __PLACEHOLDER__ | false
-sui-mainnet | haSUI | staking | __PLACEHOLDER__ | false
-sui-mainnet | afSUI | staking | __PLACEHOLDER__ | false
-sui-mainnet | vSUI | staking | __PLACEHOLDER__ | false
-sui-mainnet | DEEP | ecosystem | __PLACEHOLDER__ | false
-sui-mainnet | WAL | ecosystem | __PLACEHOLDER__ | false
-sui-mainnet | SCA | ecosystem | __PLACEHOLDER__ | false
-sui-mainnet | NAVX | ecosystem | __PLACEHOLDER__ | false
-sui-mainnet | CETUS | ecosystem | __PLACEHOLDER__ | false
-ton-mainnet | TON | settlement | __PLACEHOLDER__ | false
-ton-mainnet | USDT | settlement | __PLACEHOLDER__ | false
-ton-mainnet | tsTON | staking | __PLACEHOLDER__ | false
-ton-mainnet | stTON | staking | __PLACEHOLDER__ | false
-ton-mainnet | STON | ecosystem | __PLACEHOLDER__ | false
-ton-mainnet | NOT | ecosystem | __PLACEHOLDER__ | false
-ton-mainnet | DOGS | ecosystem | __PLACEHOLDER__ | false
-ton-mainnet | DUST | ecosystem | __PLACEHOLDER__ | false
+# DEPRECATED — ASSET PLACEHOLDERS V1
+
+This placeholders-only registry has been superseded by:
+
+- `ASSET_REGISTRY_V2.json`
+
+Do not delete this file yet because older GPR V1 material may reference it.
+
+## New rule
+
+The renewed R&D contains canonical research identities where the supplied research established them, but **every identity remains runtime-disabled and exact-graph-disabled by default**.
+
+Do not convert the old placeholders into ticker-based aliases.
+
+Use the status gates in `ASSET_REGISTRY_V2.json`:
+
+- `RND_VERIFIED_CURRENT`
+- `RND_VERIFIED_SPECIFIC_REPRESENTATION`
+- `REVALIDATE_CURRENT`
+- `REVALIDATE_ISSUER_STATUS`
+- `UNRESOLVED`
+
+Particularly:
+- tBTC must be revalidated;
+- sUSDS remains unresolved;
+- Sui AUSD needs issuer-status revalidation;
+- native and bridge/wrapped versions of USDC/USDT/BTC/SOL are distinct representations.

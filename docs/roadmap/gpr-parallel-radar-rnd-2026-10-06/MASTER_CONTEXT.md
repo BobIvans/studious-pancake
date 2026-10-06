@@ -1,116 +1,119 @@
-# MASTER CONTEXT — GPR V2 / Multi-layer Economic Topology
+# MASTER CONTEXT — GPR V2.1 / Qualification Topology
 
 Date: 2026-10-06  
 Repository: `BobIvans/studious-pancake`  
-Canonical continuation: PR #571 / branch `rnd/gpr-parallel-radar-2026-10-06`
+Continuation: PR #571
 
-## State inherited from QPR
+## Foundation
 
-QPR-01/02/03 were implemented as a stacked sequence. The public `main` branch is not the reliable indicator of the whole stack because the master handoff PR #567 is still open. GPR implementation must therefore use the #571 continuation branch until the stack is reconciled.
+Reuse:
+- QPR-01 authority identity;
+- QPR-02 governed Solana RPC/direct-state qualification;
+- QPR-03 SourceIntakePlane and durable raw/negative evidence;
+- MarketObservationV2;
+- ShadowMarketGraphIngest;
+- UniversalArbitrageGraph;
+- multihop / PR118 / split-flow / RouteGraph owners.
 
-Existing owners remain authoritative:
-
-- QPR-01 campaign/runtime authority identity;
-- QPR-02 governed independent RPC/direct-state qualification;
-- QPR-03 SourceDossier / ProviderProfile / SourceIntakePlane / raw+negative evidence;
-- `MarketObservationV2`;
-- `ShadowMarketGraphIngest`;
-- `UniversalArbitrageGraph`;
-- bounded multihop solver;
-- PR118 non-monotonic sizing;
-- split-flow and RouteGraph owners.
-
-## Renewed strategy
-
-The next system is not primarily a list of pairs.
-
-The ontology is:
+## Ontology
 
 ```text
 EconomicAsset
-    ↓
-Representation
-    ↓
-Chain
-    ↓
-Venue / Protocol
-    ↓
-Transformation
+  -> Representation
+  -> Chain
+  -> Venue / Protocol
+  -> Transformation
 ```
 
-This prevents ticker aliasing and allows one economic asset to have several non-interchangeable executable representations.
+Ticker equality never means execution identity equality.
 
-Examples:
-- native USDC on Solana;
-- native USDC on Sui;
-- Wormhole USDC on Sui;
-- SOL on Solana;
-- Wormhole SOL on Sui;
-- cbBTC/tBTC/Wormhole-WBTC on Solana;
-- XBTC/Wormhole-WBTC/Sui-Bridge-WBTC/zwBTC on Sui.
+## Registry V2.1
 
-## Asset Registry V2
+`ASSET_REGISTRY_V2.json` now contains **91 research identities**.
 
-`ASSET_REGISTRY_V2.json` contains **88 research identity rows** spanning Solana, Sui and TON.
+Important V2.1 corrections/additions:
+- USDG = Token-2022.
+- PYUSD = Token-2022.
+- Solana xBTC_OKX added.
+- Sui generic Wormhole wUSDC is explicitly ETH-origin.
+- Sui Solana-origin USDCsol Portal representation added separately.
+- Sui XAUM tokenized-gold identity added.
+- all remain runtime-disabled / exact-graph-disabled by default.
 
-The renewed registry adds:
-- larger Solana LST graph: hSOL, dSOL, BNSOL, bbSOL, bpSOL, laineSOL, dfdvSOL;
-- Solana restaking/LRT: sSOL, fragSOL;
-- Solana stable/yield/NAV: USDG, FDUSD, EURC, JLP;
-- Sui stable mechanisms: native/bridge USDT, Wormhole USDT/USDC, FDUSD, USDY, suiUSDe, BUCK, mUSD;
-- Sui BTC representations: XBTC, Wormhole WBTC, Sui-Bridge WBTC, zwBTC;
-- Sui staking: afSUI, haSUI, vSUI, scaSUI;
-- Wormhole SOL on Sui;
-- TON canonical research identities.
+## Relation state is three-dimensional
 
-All rows remain runtime-disabled until stronger qualification.
+Do not overload HOT/WARM with execution truth.
 
-## Strong anomaly families
+```text
+heat = HOT | WARM | COLD | EVENT
+execution_class =
+  LOCAL_ATOMIC | LOCAL_SIGNAL | CROSS_CHAIN_SIGNAL | REBALANCE_ONLY
+evidence_state =
+  DISCOVERY_ONLY | IDENTIFIER_VERIFIED | RPC_VERIFIED | EXECUTABLE
+```
 
-Prioritize structural relations over random token count:
+This lets a market be watched constantly while still being unverified or non-atomic.
 
-1. Solana LST/LRT relative value and instant-exit basis.
-2. JLP market price vs reconstructed NAV.
-3. stable mechanism divergence.
-4. native-vs-bridged stable basis on Sui.
-5. BTC representation basis.
-6. AMM vs CLOB / DeepBook.
-7. direct-vs-synthetic path residuals.
-8. amount/route-topology non-monotonicity.
-9. lending/flash-capacity and funding-cost regime changes.
-10. cross-chain basis signals between prefunded execution islands.
+## Initial 14-family campaign
 
-## Solana + Sui
+The first high-value rotation is materialized in `FIRST_CAMPAIGN_FAMILIES_V2_1.json`.
 
-Develop both chains after shared GPR-01 contracts:
+Priorities:
+1. USDG/USDC Solana — HOT local-atomic candidate.
+2. USD1/USDT + USD1/USDC — HOT local-atomic candidates.
+3. PYUSD/USDG — WARM synthetic first; direct market only if discovered.
+4. xBTC_OKX/cbBTC — WARM local-atomic candidate with HOT signal priority.
+5. JLP/USDC + live NAV — HOT signal / NAV basis.
+6. BNSOL/bbSOL/hSOL/dSOL vs SOL — WARM structural.
+7. Sui wUSDC/native USDC — HOT representation-basis signal.
+8. Sui Wormhole USDT vs Sui-Bridge USDT — HOT signal.
+9. suiUSDe/USDC + SUI/suiUSDe.
+10. USDsui/USDC + SUI/USDsui.
+11. XBTC/USDC + ZWBTC/USDC.
+12. afSUI/haSUI/vSUI/scaSUI.
+13. XAUM vs XAU/USD — research.
+14. USDC Solana ↔ native USDC Sui ↔ Solana-origin USDCsol on Sui — HOT cross-chain signal, never an atomic bridge leg.
 
-### Solana exact-primary
-Cheap/indexed radar -> 0x -> Jupiter -> Sanctum when LST -> independent RPC/direct state -> existing exact graph.
+Everything outside this batch remains cheap/dynamic research until evidence promotes it.
 
-### Sui shadow-primary
-Aftermath + Cetus/DeepBook research -> checkpoint/object state via gRPC/GraphQL -> Sui shadow exact evidence.
+## DeepBook seed
 
-Do not introduce a new Sui JSON-RPC dependency.
+`SUI_DEEPBOOK_POOLS_V2_1.json` contains 9 current pool IDs for the priority Sui representation/stable/BTC experiments. Pool IDs are identifiers for read-only onboarding, not exact state proof.
 
-## Cross-chain research
+## Structural anchors
 
-Solana and Sui are two local execution islands connected economically, not atomically.
+ResearchRelation should carry explicit anchor semantics:
+- USD_REDEMPTION
+- STAKING_EXCHANGE_RATE
+- NAV
+- SAME_UNDERLYING
+- BRIDGE_PARITY
+- ORACLE_REFERENCE
 
-Initial anchors:
-- native USDC Solana <-> native USDC Sui;
-- SOL Solana <-> Wormhole SOL Sui;
-- FDUSD Solana <-> FDUSD Sui;
-- USDY Solana <-> USDY Sui;
-- BTC representation families;
-- chain-local LST/funding regimes.
+This is the difference between economic anomaly research and simple API price disagreement.
 
-The future strategy is **prefunded simultaneous local execution + later rebalance**, not bridge latency inside the critical arbitrage transaction.
+## Verification boundary
 
-## Hard restrictions
+A known identifier is not HARD_BOUND.
 
-- Discovery/router data never becomes executable truth directly.
-- Registry identity is not proof of pool/venue state.
-- `REVALIDATE_CURRENT`, `REVALIDATE_ISSUER_STATUS`, and `UNRESOLVED` statuses fail closed.
-- Token-2022 semantics must be qualified separately.
-- Bridge/equivalence edges never enter the atomic graph.
-- No signing/sending/submission/live trading in this R&D wave.
+At campaign startup, exact promotion requires a receipt asserting:
+- owner/program or Move type;
+- decimals;
+- extensions/token standard;
+- exact pool/book identity;
+- slot/checkpoint/state;
+- fee/depth semantics;
+- campaign/repository generation.
+
+Solana then uses QPR-02/direct state.
+Sui uses its separate governed checkpoint/object path once implemented.
+
+## Cross-chain
+
+Solana and Sui are economic execution islands.
+
+Cross-chain USDC/FDUSD/USDY/SOL/BTC relations are signals and future rebalance inputs. Bridge/CCTP/Wormhole is not inserted into the local atomic arbitrage solver.
+
+## Safety
+
+No signer, sender, submission, live capital or promotion authority.

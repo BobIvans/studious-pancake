@@ -1,77 +1,116 @@
-# MASTER CONTEXT — GPR Parallel Radar / Research Economic Graph
+# MASTER CONTEXT — GPR V2 / Multi-layer Economic Topology
 
 Date: 2026-10-06  
 Repository: `BobIvans/studious-pancake`  
-Planning base: QPR-03 head `7132f7341661368917bcc3cf1618a93de96327f8` / PR #570.
+Canonical continuation: PR #571 / branch `rnd/gpr-parallel-radar-2026-10-06`
 
-## Why this package exists
+## State inherited from QPR
 
-QPR-03 was intentionally only the **campaign-start slice**. It implemented the generic Solana `SourceDossier` / `ProviderProfile` / `DiscoveryAdapter` / `SourceIntakePlane` boundary and proved it with DEX Screener, GeckoTerminal and Raydium. It did not implement the broad source inventory, research economic graph, dynamic watch universe, multi-chain research plane or live execution.
+QPR-01/02/03 were implemented as a stacked sequence. The public `main` branch is not the reliable indicator of the whole stack because the master handoff PR #567 is still open. GPR implementation must therefore use the #571 continuation branch until the stack is reconciled.
 
-This package defines the next evidence-driven wave and must reuse QPR-01/02/03 owners.
+Existing owners remain authoritative:
 
-## Current compatibility constraints
+- QPR-01 campaign/runtime authority identity;
+- QPR-02 governed independent RPC/direct-state qualification;
+- QPR-03 SourceDossier / ProviderProfile / SourceIntakePlane / raw+negative evidence;
+- `MarketObservationV2`;
+- `ShadowMarketGraphIngest`;
+- `UniversalArbitrageGraph`;
+- bounded multihop solver;
+- PR118 non-monotonic sizing;
+- split-flow and RouteGraph owners.
 
-- `SourceDossier.catalog_entry()` and QPR-03 `Candidate` are currently Solana-specific.
-- Indexed/router observations remain research/discovery evidence, not executable truth.
-- Existing `ShadowMarketGraphIngest` must continue to require exact `MarketObservationV2`.
-- Existing `UniversalArbitrageGraph`, bounded multihop solver, PR118 amount sizing, split-flow and `RouteGraph` remain canonical owners.
-- Signer/sender/submission/live capital remain unreachable.
+## Renewed strategy
 
-## Review prerequisites
+The next system is not primarily a list of pairs.
 
-At package creation, PR #569/#570 still had unresolved findings that Codex must re-check:
-- configurable baseline/main ref instead of unconditional `origin/main`;
-- interprocess-safe evidence cursor allocation;
-- persist discovery attempts in campaign evidence;
-- readiness PASS must require accepted schema/quality, not merely HTTP 200;
-- redact adapter-derived context before persistence;
-- replay must fail closed when evidence DB is missing.
+The ontology is:
 
-Do not assume a finding is still present; inspect current heads first.
+```text
+EconomicAsset
+    ↓
+Representation
+    ↓
+Chain
+    ↓
+Venue / Protocol
+    ↓
+Transformation
+```
 
-## Architecture decision
+This prevents ticker aliasing and allows one economic asset to have several non-interchangeable executable representations.
 
-Build one **chain-neutral ResearchEconomicGraph**.
+Examples:
+- native USDC on Solana;
+- native USDC on Sui;
+- Wormhole USDC on Sui;
+- SOL on Solana;
+- Wormhole SOL on Sui;
+- cbBTC/tBTC/Wormhole-WBTC on Solana;
+- XBTC/Wormhole-WBTC/Sui-Bridge-WBTC/zwBTC on Sui.
 
-- Solana: primary exact qualification domain.
-- Sui: parallel read-only/shadow research domain from the beginning; exact promotion only after governed gRPC/GraphQL state verification exists.
-- TON/ST​ON: high-throughput research laboratory in this wave, not a second live flash-execution domain.
+## Asset Registry V2
 
-## Parallel quote-preview lanes
+`ASSET_REGISTRY_V2.json` contains **88 research identity rows** spanning Solana, Sui and TON.
 
-Do build parallel **read-only quote/execution-preview** lanes; do not build two live executors.
+The renewed registry adds:
+- larger Solana LST graph: hSOL, dSOL, BNSOL, bbSOL, bpSOL, laineSOL, dfdvSOL;
+- Solana restaking/LRT: sSOL, fragSOL;
+- Solana stable/yield/NAV: USDG, FDUSD, EURC, JLP;
+- Sui stable mechanisms: native/bridge USDT, Wormhole USDT/USDC, FDUSD, USDY, suiUSDe, BUCK, mUSD;
+- Sui BTC representations: XBTC, Wormhole WBTC, Sui-Bridge WBTC, zwBTC;
+- Sui staking: afSUI, haSUI, vSUI, scaSUI;
+- Wormhole SOL on Sui;
+- TON canonical research identities.
 
-Solana:
-- Lane A: Jupiter final/reference quote.
-- Lane B: 0x higher-throughput quote validator.
-- Lane C optional: OpenOcean, correlation-tagged because it can share underlying routing.
-- Specialized: Sanctum for LST economic/exit relationships.
-- Exact truth: independent RPC profiles + direct state decoder/local integer quote.
+All rows remain runtime-disabled until stronger qualification.
 
-Sui:
-- Lane A: Aftermath router.
-- Lane B: direct venue/state path (Cetus / DeepBook where qualified).
-- Exact truth: governed Sui gRPC/GraphQL provider profiles + object/checkpoint state.
-- Do not introduce a new JSON-RPC dependency.
+## Strong anomaly families
 
-## Scale target
+Prioritize structural relations over random token count:
 
-The full ZIP contains 330 symbolic pair relationships:
-- 257 Solana;
-- 53 Sui;
-- 20 TON;
-plus 10 route generators.
+1. Solana LST/LRT relative value and instant-exit basis.
+2. JLP market price vs reconstructed NAV.
+3. stable mechanism divergence.
+4. native-vs-bridged stable basis on Sui.
+5. BTC representation basis.
+6. AMM vs CLOB / DeepBook.
+7. direct-vs-synthetic path residuals.
+8. amount/route-topology non-monotonicity.
+9. lending/flash-capacity and funding-cost regime changes.
+10. cross-chain basis signals between prefunded execution islands.
 
-Every asset identity is a placeholder and runtime-disabled. The research graph may derive thousands of evidence-backed route comparisons without creating thousands of polling loops.
+## Solana + Sui
 
-## Non-negotiable rules
+Develop both chains after shared GPR-01 contracts:
 
-- Never guess a mint/coin-type/jetton address.
-- Symbol-only identity never enters exact graph.
-- Router/discovery quote never equals executable truth.
-- Preserve provider/operator/correlation identity.
-- Timeout/429/empty/schema-drift are evidence.
-- Replay/campaign identity remain mandatory.
-- No Sui JSON-RPC dependency for new work.
-- No signing/sending/submission/live trading in this package.
+### Solana exact-primary
+Cheap/indexed radar -> 0x -> Jupiter -> Sanctum when LST -> independent RPC/direct state -> existing exact graph.
+
+### Sui shadow-primary
+Aftermath + Cetus/DeepBook research -> checkpoint/object state via gRPC/GraphQL -> Sui shadow exact evidence.
+
+Do not introduce a new Sui JSON-RPC dependency.
+
+## Cross-chain research
+
+Solana and Sui are two local execution islands connected economically, not atomically.
+
+Initial anchors:
+- native USDC Solana <-> native USDC Sui;
+- SOL Solana <-> Wormhole SOL Sui;
+- FDUSD Solana <-> FDUSD Sui;
+- USDY Solana <-> USDY Sui;
+- BTC representation families;
+- chain-local LST/funding regimes.
+
+The future strategy is **prefunded simultaneous local execution + later rebalance**, not bridge latency inside the critical arbitrage transaction.
+
+## Hard restrictions
+
+- Discovery/router data never becomes executable truth directly.
+- Registry identity is not proof of pool/venue state.
+- `REVALIDATE_CURRENT`, `REVALIDATE_ISSUER_STATUS`, and `UNRESOLVED` statuses fail closed.
+- Token-2022 semantics must be qualified separately.
+- Bridge/equivalence edges never enter the atomic graph.
+- No signing/sending/submission/live trading in this R&D wave.

@@ -1,78 +1,81 @@
-# ACCEPTANCE / TEST CONTRACT — GPR V2
+# ACCEPTANCE / TEST CONTRACT — GPR V2.1
 
-## Base invariants
-- no signer/sender/submission import in new campaign composition;
-- every external physical request retains attempt + outcome evidence;
-- schema drift, 429, timeout, empty response and cancellation are negative evidence;
-- replay performs zero network I/O and reproduces graph identity;
-- source/provider/operator/correlation identity survives normalization.
+## Base evidence invariants
+- no signer/sender/submission in campaign composition;
+- every physical read retains attempt + outcome evidence;
+- negative responses remain evidence;
+- replay uses zero network I/O;
+- provider/operator/correlation identity survives normalization.
 
-## Asset/representation registry tests
-- registry digest is deterministic;
-- chain + canonical id uniquely identifies a representation;
-- same ticker on two chains never aliases;
-- native and bridged/wrapped representations never alias;
-- all registry rows default to runtime_enabled=false and exact_graph_allowed=false;
-- RND_VERIFIED_CURRENT may enter research graph but not exact graph directly;
-- REVALIDATE_CURRENT cannot enter exact verification without a fresh identity receipt;
-- REVALIDATE_ISSUER_STATUS cannot produce a stronger issuer-equivalence claim until refreshed;
-- UNRESOLVED cannot produce canonical network requests;
-- Token-2022 identity does not imply Token-2022 semantic qualification.
+## Registry tests
+- 91 rows load deterministically;
+- chain + canonical id identifies a representation;
+- all rows default runtime_enabled=false and exact_graph_allowed=false;
+- USDG standard == Token-2022;
+- PYUSD standard == Token-2022;
+- xBTC_OKX is distinct from cbBTC/WBTC_WORMHOLE/tBTC;
+- Sui USDC_NATIVE, WUSDC_ETH_ORIGIN and USDC_SOL_PORTAL_ON_SUI are distinct;
+- USDT_SUI_BRIDGE and USDT_WORMHOLE are distinct;
+- XBTC/WBTC_WORMHOLE/WBTC_SUI_BRIDGE/ZWBTC are distinct;
+- XAUM has its separate tokenized-gold identity and decimals=9;
+- REVALIDATE/UNRESOLVED fail closed.
 
-Regression identities:
-- Solana old Sollet BTC must not alias WBTC_WORMHOLE;
-- Solana cbBTC / WBTC_WORMHOLE / tBTC remain separate;
-- Sui USDC_NATIVE / USDC_WORMHOLE remain separate;
-- Sui USDT_SUI_BRIDGE / USDT_WORMHOLE remain separate;
-- Sui XBTC / WBTC_WORMHOLE / WBTC_SUI_BRIDGE / ZWBTC remain separate;
-- SOL@Solana / WSOL_WORMHOLE@Sui remain separate representations of one economic underlying.
+## Relation-classification tests
+For every first-campaign relation:
+- heat ∈ HOT/WARM/COLD/EVENT;
+- execution_class ∈ LOCAL_ATOMIC/LOCAL_SIGNAL/CROSS_CHAIN_SIGNAL/REBALANCE_ONLY;
+- evidence_state ∈ DISCOVERY_ONLY/IDENTIFIER_VERIFIED/RPC_VERIFIED/EXECUTABLE;
+- heat cannot auto-upgrade evidence_state;
+- LOCAL_ATOMIC cannot auto-upgrade to EXECUTABLE;
+- CROSS_CHAIN_SIGNAL and REBALANCE_ONLY cannot enter atomic graph.
 
-## Research graph tests
-- deterministic relation identity independent of input ordering;
-- duplicate relation dedup retains all provenance;
-- direct-vs-synthetic relation materializes only when all legs have evidence;
-- representation/economic-equivalence relation never implies free convertibility;
-- CandidateScore components are inspectable and cannot be read as profit;
-- stale/correlated sources reduce score;
-- top-K VerificationQueue obeys deterministic tie-breaking and request budgets.
+## Anchor tests
+Support:
+- USD_REDEMPTION
+- STAKING_EXCHANGE_RATE
+- NAV
+- SAME_UNDERLYING
+- BRIDGE_PARITY
+- ORACLE_REFERENCE
+
+JLP must not be treated as fixed $1 peg.
+XAUM must not be treated as XAU spot without tokenization/redemption/liquidity frictions.
+
+## HARD_BOUND tests
+Before exact use require receipt with:
+- canonical identifier;
+- owner/program or Move type;
+- decimals;
+- token extensions/standard when applicable;
+- representation/origin/bridge where material;
+- exact venue/pool/book identity when requested;
+- slot/checkpoint;
+- campaign/repository generation.
+
+Known registry identity alone must fail exact promotion.
+
+## DeepBook seed tests
+- all 9 pool IDs parse deterministically;
+- each remains IDENTIFIER_VERIFIED/read-only until checkpoint/object/depth/fee verification;
+- WUSDC/native-USDC, wUSDT/USDC, sbUSDT/USDC, suiUSDe/USDC, SUI/suiUSDe, SUI/USDSUI, USDSUI/USDC, XBTC/USDC and ZWBTC/USDC are represented separately.
+
+## Synthetic/direct tests
+- PYUSD/USDG starts as synthetic through USDC;
+- absence of a direct current market does not create a fake direct edge;
+- discovery may later add a direct relation without mutating the synthetic identity.
 
 ## Exact-promotion tests
-- QPR-03 indexed discovery never directly enters UniversalArbitrageGraph;
+- QPR-03 discovery never directly enters UniversalArbitrageGraph;
 - Solana exact promotion still requires QPR-02/direct state + MarketObservationV2;
-- REVALIDATE/UNRESOLVED identities fail closed;
-- cross-chain relations fail closed when sent to atomic graph ingest;
-- bridge relation cannot masquerade as a swap pool edge.
+- Sui exact promotion requires governed checkpoint/object evidence;
+- bridge/CCTP/Wormhole transport cannot masquerade as an atomic swap edge.
 
-## Solana quote-preview tests
-- 0x and Jupiter normalize without granting exact authority;
-- provider fee/price impact/route topology retained;
-- OpenOcean carries underlying-router correlation;
-- Sanctum Jup-backed path carries Jupiter correlation;
-- ExactIn/ExactOut differences retained;
-- amount grid may show non-monotonic route/topology switches;
-- structural LST/LRT and JLP-NAV observations remain research evidence until exact qualification.
+## Campaign seed tests
+- load 14 first-campaign families;
+- broader universe remains inactive/cheap until scheduler promotion;
+- F01/F02 are HOT but IDENTIFIER_VERIFIED, not EXECUTABLE;
+- F14 is HOT + CROSS_CHAIN_SIGNAL and non-atomic;
+- replay reproduces identities, classifications and score inputs.
 
-## Sui tests
-- no new legacy JSON-RPC transport introduced;
-- checkpoint/object version bound to observations;
-- Aftermath/Cetus/DeepBook observations do not count as independent exact truth by name alone;
-- PTB/offline model cannot authorize execution;
-- native/bridge representations remain distinct;
-- Sui exact-state promotion requires governed gRPC/GraphQL object/checkpoint evidence.
-
-## Cross-chain tests
-- load six interchain research edge types;
-- all interchain edges have RESEARCH_ONLY_NON_ATOMIC atomicity;
-- USDC CCTP / SOL Wormhole relations never enter local atomic solver;
-- cross-chain basis score includes expected rebalance/latency/capital penalties when available;
-- prefunded inventory simulation is absent from GPR-01 and remains a later PR.
-
-## Campaign smoke after GPR-01
-1. load Asset Registry V2;
-2. replay QPR-03 source evidence into ResearchEconomicGraph;
-3. rank Solana candidates;
-4. load Sui representation relations in shadow mode;
-5. load 12 interchain watch relations as research-only;
-6. attempt forbidden exact/cross-chain promotions and prove fail-closed;
-7. replay and compare deterministic identities/scores;
-8. stop and report split for GPR-02/GPR-03.
+## Stop condition
+After GPR-01 tests pass, stop and report readiness for parallel GPR-02 and GPR-03.

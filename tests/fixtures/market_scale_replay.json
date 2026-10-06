@@ -3,7 +3,7 @@
   "qualification": "MODEL_REPLAY_ONLY",
   "live_enabled": false,
   "generation": {
-    "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+    "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
     "provider_generation": "fixture-provider-v1",
     "asset_generation": "fixture-assets-v1",
     "policy_generation": "shadow-only-v1",
@@ -12,7 +12,7 @@
   "assets": {
     "So11111111111111111111111111111111111111112": {
       "domain": "solana-mainnet",
-      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
       "mint": "So11111111111111111111111111111111111111112",
       "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       "token_revision": "spl-token-v1",
@@ -20,7 +20,7 @@
     },
     "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR": {
       "domain": "solana-mainnet",
-      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
       "mint": "8qbHbw2BbbTHBW1sbeqakYXVKRQM8Ne7pLK7m6CVfeR",
       "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       "token_revision": "spl-token-v1",
@@ -28,7 +28,7 @@
     },
     "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8": {
       "domain": "solana-mainnet",
-      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp",
+      "genesis_hash": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
       "mint": "CktRuQ2mttgRGkXJtyksdKHjUdc2C4TgDzyB98oEzy8",
       "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
       "token_revision": "spl-token-v1",

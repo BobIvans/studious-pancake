@@ -72,4 +72,15 @@ Keep signer, sender, transaction submission and live promotion unreachable.
 
 ## V2.1 refinement
 
-PR #571 now carries 91 research identities, 14 first-campaign families, 9 DeepBook pool IDs, separate heat/execution/evidence axes, and a startup HARD_BOUND identity receipt. The broad universe remains cheap/dynamic until real evidence promotes relations.
+PR #571 now carries 92 research identities, 14 first-campaign families, 9 DeepBook pool IDs, separate heat/execution/evidence axes, and a startup HARD_BOUND identity receipt. The broad universe remains cheap/dynamic until real evidence promotes relations.
+
+
+## Current GPR-01 status
+
+```text
+implementation_status = IMPLEMENTED_IN_CODEX_DRAFT
+publication_status = PENDING_PUBLICATION
+remote_verification = PENDING
+```
+
+Do not restart GPR-01. Reconcile the published Codex result with the V2.2 additive delta, then proceed to parallel GPR-02/GPR-03.

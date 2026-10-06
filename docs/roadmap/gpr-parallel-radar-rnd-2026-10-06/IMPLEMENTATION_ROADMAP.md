@@ -1,117 +1,211 @@
-# IMPLEMENTATION ROADMAP
+# IMPLEMENTATION ROADMAP — GPR V2
 
-## GPR-00 — Base-stack hardening gate
+## GPR-00 — Stack reconciliation / evidence hardening
 
-Before adding new sources, re-check unresolved review threads from PR #569/#570. Fix only findings that remain real. Required: evidence cannot be lost after physical reads, credentials cannot escape via derived context, replay fails closed on missing evidence, and readiness cannot PASS on unusable schemas.
+Before new implementation, inspect the actual #571 base and the former #569/#570 review findings. Fix only findings that still exist.
 
-Stop if the base stack is not trustworthy.
+Required boundary:
+- physical reads cannot lose evidence;
+- credentials cannot escape through derived context;
+- replay fails closed on missing evidence;
+- readiness cannot PASS on unusable schemas;
+- current branch identity is reproducible.
 
-## GPR-01 — Research Economic Graph + Verification Queue (NEXT IMPLEMENTATION PR)
+This gate is not permission to do broad cleanup.
 
-This is the next code PR.
+## GPR-01 — Asset/Representation Registry + Research Economic Graph + Verification Queue
+
+**NEXT CODE PR. Stop after this PR.**
 
 Implement:
-- chain-neutral `ResearchAssetRef`, `ResearchMarketRef`, `ResearchRelation`;
-- adapter from QPR-03 Solana candidates/envelopes;
-- `ResearchEconomicGraph`;
-- deterministic relation identity/dedup;
-- CandidateScore with decomposed features;
-- `VerificationRequest` and bounded priority queue;
-- placeholder asset registry loader;
-- relationship materializer using the symbolic universe;
-- hard guard: unresolved placeholders can exist in research graph but can never be promoted into exact graph;
-- evidence references back to QPR campaign journal.
 
-Do NOT integrate all providers in this PR. Use fake/fixture providers plus existing QPR-03 sources to prove the graph.
+### A. Asset Registry V2
+- typed loader for `ASSET_REGISTRY_V2.json`;
+- EconomicAsset vs Representation separation;
+- chain + canonical-id uniqueness;
+- status gating;
+- generation/digest identity;
+- no ticker-only lookup for exact work.
+
+### B. ResearchEconomicGraph
+- chain-neutral representation nodes;
+- QPR-03 Solana adapter;
+- deterministic relation identity/dedup;
+- structural-anchor relations;
+- relation provenance and negative evidence;
+- interchain relation loading as research-only.
+
+### C. CandidateScore
+- decomposed scheduling score;
+- representation/correlation/staleness penalties;
+- no profitability claim.
+
+### D. VerificationQueue
+- bounded deterministic top-K;
+- full representation identity;
+- evidence refs;
+- request/amount budgets;
+- chain-specific exact-verification target.
 
 Acceptance:
-- QPR-03 indexed data can rank candidates;
-- zero new indexed data reaches `UniversalArbitrageGraph`;
-- relation generation is deterministic;
-- 330 symbolic relationships load without any mint address;
-- unresolved assets are blocked from verification requiring canonical ids;
-- replay produces same graph identities and scores.
+- registry loads deterministically;
+- all 88 rows default runtime-disabled;
+- same ticker across chains never aliases;
+- bridge representations never alias native representations;
+- `REVALIDATE_*` and `UNRESOLVED` fail closed for exact promotion;
+- Token-2022 semantic gate remains explicit;
+- cross-chain edges cannot enter UniversalArbitrageGraph;
+- QPR-03 indexed candidates can rank verification work;
+- replay reproduces graph identities/scores.
 
 ## GPR-02 — Solana Parallel Radar + Dual Quote Preview
 
-Implement source adapters in this order:
-1. Meteora DLMM indexed API — 30 RPS documented, pool pages up to 1000.
-2. 0x Solana quote preview — ~5 RPS free/standard.
-3. Jupiter quote preview — free unlimited usage but 1 RPS general limit.
-4. Sanctum LST quote-only adapter — targeted structural anchor.
-5. optional OpenOcean — 2 RPS, correlation-tagged Jupiter+Titan meta route.
-6. optional Vybe — 60 RPM/25k credits for parsed references.
+May start in parallel with GPR-03 **only after GPR-01 contracts are stable**.
 
-Create provider-specific token buckets and a scheduler that spends cheap/high-throughput calls first.
+Integrate/adapt in evidence-driven order:
 
-Suggested funnel:
+1. Meteora DLMM high-throughput radar.
+2. 0x Solana quote preview.
+3. Jupiter quote preview.
+4. Sanctum LST quote/instant-exit structural path.
+5. optional OpenOcean comparator with underlying-router correlation.
+6. optional Vybe/reference sources.
+
+Funnel:
+
 ```text
-DEX Screener + Meteora + Raydium + Gecko (+ Vybe)
+DEX Screener + Meteora + Raydium + Gecko
  -> ResearchEconomicGraph
  -> heat/anomaly trigger
  -> 0x
  -> Jupiter
- -> Sanctum if LST
- -> OpenOcean/OKX only for selected comparisons
- -> QPR-02 exact RPC verification
+ -> Sanctum if LST/LRT
+ -> selected comparators
+ -> QPR-02 independent RPC/direct state
+ -> MarketObservationV2
+ -> existing exact graph
 ```
 
-Build `QuotePreviewProvider`; do not build a sender.
+Initial high-value clusters:
+- SOL + JitoSOL/JupSOL/mSOL/bSOL/INF;
+- hSOL/dSOL/BNSOL/bbSOL/bpSOL/laineSOL/dfdvSOL;
+- sSOL/fragSOL restaking basis;
+- USDC/USDT/PYUSD/USDS/JupUSD/USDe/USDG/FDUSD;
+- cbBTC/WBTC_WORMHOLE/tBTC;
+- JLP market-vs-NAV;
+- EURC vs EUR/USD reference.
 
-## GPR-03 — Sui Shadow Research Plane (parallel branch after GPR-01)
+No live executor.
 
-Sui can be developed in parallel with GPR-02 once GPR-01 identity/graph contracts are stable.
+## GPR-03 — Sui Parallel Shadow Research / Exact-State Qualification
+
+Parallel branch after GPR-01.
 
 Implement:
-- Sui `ResearchAssetRef` canonical-id placeholder type (coin type unresolved initially);
-- Aftermath adapter with provider cap 1000/10s documented, engineering cap lower;
-- Cetus pool/tick reference adapter;
-- Sui gRPC/GraphQL read-only transport abstraction;
+- Aftermath router radar;
+- Cetus/DeepBook direct references;
+- Sui gRPC/GraphQL state transport;
 - checkpoint/object-version provenance;
-- adapter to existing `src/multichain/sui.py` state/PTB types where useful;
-- DeepBook/Cetus exact-state qualification only when the required object semantics are proven.
+- representation-aware stable/BTC/LST graph;
+- adapter to existing `src/multichain/sui.py` domain types.
 
-Do NOT add a new JSON-RPC dependency.
-Do NOT create a live PTB executor/signer.
+Priority clusters:
+- SUI/USDC;
+- native/bridge USDT and Wormhole USDT;
+- native USDC and Wormhole USDC;
+- USDsui/suiUSDe/FDUSD/USDY/BUCK/mUSD;
+- DEEP/WAL;
+- XBTC/Wormhole-WBTC/Sui-Bridge-WBTC/zwBTC;
+- afSUI/haSUI/vSUI/scaSUI;
+- Wormhole SOL on Sui.
 
-Initial Sui funnel:
-```text
-Aftermath router
- + Cetus direct reference
- + Sui checkpoint/object state
- + DeepBook reference
- -> ResearchEconomicGraph
- -> Sui VerificationRequest
- -> exact-state shadow result
-```
+No new JSON-RPC dependency.
+No live PTB signer/executor.
 
-## GPR-04 — Heat Scheduler / Rolling Universe
+## GPR-04 — Dynamic Watch Universe + Heat Scheduler
 
-Consume the 330 seed pair relationships and dynamic route generators.
+Operate over evidence, not one polling loop per pair.
 
 Tiers:
-- HOT: continuous/event-driven cheap radar
-- WARM: frequent cheap radar
-- COLD: batched indexed scans
-- EVENT: wake only on market/volume/route/pool events
+- HOT
+- WARM
+- COLD
+- EVENT
 
-Features:
-- promotion/demotion from observed evidence;
-- per-provider quotas and credits;
-- per-chain worker budgets;
-- top-K verification queue;
-- staleness/correlation penalties;
-- no polling loop per symbolic pair.
+Inputs:
+- volume/liquidity changes;
+- structural-anchor deviation;
+- route topology changes;
+- representation basis;
+- provider disagreement;
+- historical recurrence;
+- cost/capacity regimes.
 
-## GPR-05 — TON High-Throughput Research Laboratory
+## GPR-05 — Structural Transformation Graph
 
-Use STON.fi DEX API (official docs currently state no rate limits) with a self-imposed campaign cap. Build markets/pools/swap-simulation research relations. Keep TON research-only; do not claim Solana-style atomic flash execution.
+Deepen state transformations:
 
-## Later evidence-driven PRs
+### Solana
+- LST/LRT exchange and instant exit;
+- JLP NAV;
+- stable/yield anchors;
+- BTC wrapper parity;
+- flash-capacity / borrow-cost / Jito tip / priority fee.
 
-Only after campaigns:
-- exact Meteora/Orca/Manifest/Raydium decoder priorities from observed opportunity frequency;
-- Token-2022 semantics where actual candidates require it;
-- Sui DeepBook/Cetus financing/execution qualification if evidence warrants;
-- cost/financing/priority-fee layers;
-- live execution authority only in a separately approved production phase.
+### Sui
+- staking and instant exit;
+- lending/flash capacity;
+- AMM <-> DeepBook;
+- native-vs-bridged stables;
+- BTC representation basis.
+
+The solver should increasingly search transformations, not just ticker pairs.
+
+## GPR-06 — Solana <-> Sui Cross-Chain Economic Graph
+
+Load `INTERCHAIN_RELATIONS_V2.json`.
+
+Research:
+- USDC native basis / CCTP rebalance relation;
+- SOL vs Wormhole-SOL basis;
+- FDUSD same-issuer basis;
+- USDY yield-basis divergence;
+- BTC representation basis;
+- LST premium regimes;
+- funding/capital-cost divergence;
+- liquidity migration / which chain leads price discovery.
+
+Bridges are not atomic swap edges.
+
+## GPR-07 — Prefunded Cross-Chain Arbitrage Simulator
+
+Only after GPR-06 evidence.
+
+Model:
+
+```text
+prefunded inventory on Solana
++
+prefunded inventory on Sui
+ -> simultaneous chain-local execution
+ -> hedge/inventory accounting
+ -> later CCTP/Wormhole/other rebalance
+```
+
+Include:
+- local execution costs;
+- hedge cost;
+- inventory opportunity cost;
+- expected rebalance/bridge cost;
+- latency risk;
+- capital fragmentation.
+
+No live cross-chain executor in this PR.
+
+## GPR-08 — TON High-Throughput Research Laboratory
+
+Use STON.fi research APIs with self-imposed caps. Keep TON as research-only until a separately justified execution architecture exists.
+
+## Production boundary
+
+Live signer/sender/submission/promotion remains outside this roadmap until explicitly authorized after qualification evidence.

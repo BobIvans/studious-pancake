@@ -46,14 +46,12 @@ def test_repository_contract_matches_entrypoint_capabilities_and_package_mirrors
 
 def test_open_pull_requests_are_candidates_not_runtime_authorities():
     authority = AuthorityMap.load_default()
-    assert authority.open_pr_queue
-    assert all(item.authority_status != "active" for item in authority.open_pr_queue)
-    superseded = {
-        item.github_pr
-        for item in authority.open_pr_queue
-        if item.authority_status == "superseded"
-    }
-    assert {127, 199, 217, 223, 233} <= superseded
+    assert authority.open_pr_queue == ()
+    inventory = json.loads((ROOT / "config/development_queue.json").read_text())
+    assert inventory["diagnostic_only"] is True
+    assert all(
+        item["authority_status"] != "active" for item in inventory["open_pr_queue"]
+    )
 
 
 def test_duplicate_concern_fails_closed(tmp_path: Path):

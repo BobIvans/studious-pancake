@@ -12,6 +12,7 @@ import sys
 from typing import Any
 
 from src import cli_entrypoint as _impl
+from src.runtime.dispatch import parsed_command
 
 # Compatibility attributes retained for tests and downstream monkeypatching.
 automation_cli_pr189 = _impl.automation_cli_pr189
@@ -58,7 +59,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         and legacy_cli is _DEFAULT_LEGACY_CLI
         and _callable_identity(legacy_cli.main) is _DEFAULT_LEGACY_MAIN_IDENTITY
     )
-    if default_owners and "run" in args:
+    if default_owners and parsed_command(args) == "run":
         from src.runtime import runtime_entrypoint as runtime_adapter
 
         return runtime_adapter.main(args)

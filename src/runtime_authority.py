@@ -16,6 +16,7 @@ from typing import Any, Mapping
 from src.contracts.registry import SchemaRegistryError, get_schema_registry, _load_json
 
 from src.kernel import canonical_json_bytes, domain_sha256
+from src.qualification_campaign.identity import digest
 
 RUNTIME_AUTHORITY_SCHEMA = "mpr-4x-02.runtime-authority.v1"
 EXPECTED_ENTRYPOINT = "flashloan-bot"
@@ -170,7 +171,16 @@ class RuntimeAuthorityReport:
 
 
 def load_default_authority_map() -> dict[str, Any]:
+    return load_canonical_authority()
+
+
+def load_canonical_authority(repository_root=None) -> dict[str, Any]:
+    """One packaged truth, with exact config mirror and generation validation."""
+    from pathlib import Path
+
     path = resources.files("src.resources").joinpath("runtime_authority.json")
+    if repository_root is not None:
+        path = Path(repository_root) / "src/resources/runtime_authority.json"
     try:
         value = _load_json(path.read_text(encoding="utf-8"))
         get_schema_registry().validate_payload(RUNTIME_AUTHORITY_SCHEMA, value)
@@ -178,6 +188,23 @@ def load_default_authority_map() -> dict[str, Any]:
         raise RuntimeAuthorityError("runtime authority resource invalid") from exc
     if not isinstance(value, dict):
         raise RuntimeAuthorityError("runtime authority map must be an object")
+    root = (
+        Path(repository_root)
+        if repository_root is not None
+        else Path(__file__).resolve().parents[1]
+    )
+    mirror = root / "config/runtime_authority.json"
+    if (root / "config").is_dir():
+        if not mirror.is_file() or mirror.read_bytes() != path.read_bytes():
+            raise RuntimeAuthorityError("RUNTIME_AUTHORITY_MIRROR_MISMATCH")
+    for name, expected in value["generation_bindings"].items():
+        bound = (
+            (root / "src/resources" / name)
+            if repository_root is not None
+            else resources.files("src.resources").joinpath(name)
+        )
+        if digest(_load_json(bound.read_text(encoding="utf-8"))) != expected:
+            raise RuntimeAuthorityError("RUNTIME_AUTHORITY_GENERATION_MISMATCH:" + name)
     return value
 
 
@@ -288,6 +315,7 @@ def evaluate_runtime_authority_map(
         capital_authority=capital or None,
         blockers=tuple(dict.fromkeys(blockers)),
         observed={
+            "runtime_authority_sha256": digest(data),
             "alternate_runtime_surfaces": len(alternates),
             "sensitive_write_surfaces": len(sensitive_writes),
             "terminal_states": sorted(TERMINAL_STATES),

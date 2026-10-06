@@ -75,22 +75,9 @@ def _rewrite_legacy_preflight(args: list[str]) -> list[str] | None:
 
 
 def _requested_run_mode(args: list[str]) -> str | None:
-    """Return an explicitly requested ``run --mode`` without full parsing."""
+    from src.runtime.dispatch import requested_run_mode
 
-    try:
-        run_index = args.index("run")
-    except ValueError:
-        return None
-    tail = args[run_index + 1 :]
-    index = 0
-    while index < len(tail):
-        item = tail[index]
-        if item == "--mode" and index + 1 < len(tail):
-            return tail[index + 1]
-        if item.startswith("--mode="):
-            return item.partition("=")[2]
-        index += 1
-    return "shadow"
+    return requested_run_mode(args)
 
 
 def _is_run_mode_paper(args: list[str]) -> bool:
@@ -464,13 +451,9 @@ def _run_lightweight_inspection(
                 file=sys.stderr,
             )
             return 4
-        return _run_disabled_or_dry_mode(
-            parsed, bootstrap_context=bootstrap_context
-        )
+        return _run_disabled_or_dry_mode(parsed, bootstrap_context=bootstrap_context)
     if parsed.command == "run" and parsed.dry_run and parsed.mode != "paper":
-        return _run_disabled_or_dry_mode(
-            parsed, bootstrap_context=bootstrap_context
-        )
+        return _run_disabled_or_dry_mode(parsed, bootstrap_context=bootstrap_context)
     return None
 
 
@@ -488,9 +471,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         if rewritten_super_mpr_a is not None:
             args = rewritten_super_mpr_a
 
-        inspection_exit = _run_lightweight_inspection(
-            args, bootstrap_context=context
-        )
+        inspection_exit = _run_lightweight_inspection(args, bootstrap_context=context)
         if inspection_exit is not None:
             return inspection_exit
 
@@ -513,9 +494,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
         delegated_context = context.with_environment_overrides(environment_overrides)
         if isinstance(legacy_cli, _LazyCliModule):
-            return legacy_cli.main(
-                forwarded, bootstrap_context=delegated_context
-            )
+            return legacy_cli.main(forwarded, bootstrap_context=delegated_context)
         # Compatibility with tests/downstream monkeypatches that provide a
         # one-argument module-shaped fake.  The real installed path always
         # receives the immutable bootstrap context.

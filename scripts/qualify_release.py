@@ -15,6 +15,7 @@ import json
 import os
 from pathlib import Path
 import sys
+import subprocess
 import tempfile
 import time
 from typing import Any, Iterable, Sequence
@@ -51,11 +52,10 @@ REQUIRED_ARTIFACTS: dict[str, tuple[str, ...]] = {
         ".runtime/evidence/wheelhouse-manifest.json",
     ),
     "capability_manifest_digest": ("src/resources/capabilities.json",),
-    "production_surface_manifest_digest": ("src/resources/production_surface_manifest.json",),
-    "runtime_authority_map_digest": (
-        "config/runtime_authority_map.json",
-        "src/resources/runtime_authority_map.json",
+    "production_surface_manifest_digest": (
+        "src/resources/production_surface_manifest.json",
     ),
+    "runtime_authority_map_digest": ("src/resources/runtime_authority.json",),
     "config_generation_digest": (
         "config/production_cutover_manifest.json",
         ".runtime/evidence/config-generation-digest.json",
@@ -180,17 +180,14 @@ def _utc_now() -> str:
 
 
 def _git_head_commit(root: Path) -> str | None:
-    head = root / ".git" / "HEAD"
-    if not head.is_file():
+    try:
+        return subprocess.check_output(
+            ["git", "-C", str(root), "rev-parse", "--verify", "HEAD^{commit}"],
+            text=True,
+            stderr=subprocess.DEVNULL,
+        ).strip()
+    except subprocess.CalledProcessError:
         return None
-    raw = head.read_text(encoding="utf-8").strip()
-    if raw.startswith("ref: "):
-        ref = raw[5:]
-        target = root / ".git" / ref
-        if target.is_file():
-            return target.read_text(encoding="utf-8").strip() or None
-        return None
-    return raw or None
 
 
 def _glob_matches(root: Path, pattern: str) -> list[Path]:
@@ -243,7 +240,10 @@ def collect_release_artifacts(
     release_id: str | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, dict[str, Any]]]:
     _bootstrap_repo_imports()
-    from src.production_qualification import SEMANTIC_ARTIFACTS, validate_semantic_evidence
+    from src.production_qualification import (
+        SEMANTIC_ARTIFACTS,
+        validate_semantic_evidence,
+    )
 
     artifacts: list[dict[str, Any]] = []
     by_id: dict[str, dict[str, Any]] = {}
@@ -270,6 +270,33 @@ def collect_release_artifacts(
                 "size_bytes": matched.stat().st_size,
                 "validation": None,
             }
+            if artifact_id == "runtime_authority_map_digest":
+                from src.runtime_authority import (
+                    load_canonical_authority,
+                    evaluate_runtime_authority_map,
+                )
+
+                try:
+                    authority = load_canonical_authority(root)
+                    accepted = evaluate_runtime_authority_map(authority).accepted
+                    record["semantic_sha256"] = _sha256_bytes(
+                        _canonical_json(authority)
+                    )
+                    record["validation"] = {
+                        "accepted": accepted,
+                        "reason_codes": (
+                            [] if accepted else ["RUNTIME_AUTHORITY_INVALID"]
+                        ),
+                    }
+                    if not accepted:
+                        record["status"] = "invalid"
+                except (ValueError, OSError):
+                    record["status"] = "invalid"
+                    record["semantic_sha256"] = None
+                    record["validation"] = {
+                        "accepted": False,
+                        "reason_codes": ["RUNTIME_AUTHORITY_INVALID"],
+                    }
             if artifact_id in SEMANTIC_ARTIFACTS:
                 if source_commit is None or release_id is None:
                     record["status"] = "invalid"
@@ -351,7 +378,15 @@ def build_release_bundle(
 
     capabilities = _load_json(root / "src" / "resources" / "capabilities.json")
     inventory = _load_json(root / "src" / "resources" / "production_debt.json")
-    runtime_authority = _load_json(root / "config" / "runtime_authority_map.json")
+    from src.runtime_authority import (
+        load_canonical_authority,
+        evaluate_runtime_authority_map,
+    )
+
+    runtime_authority = load_canonical_authority(root)
+    authority_report = evaluate_runtime_authority_map(runtime_authority)
+    if not authority_report.accepted:
+        raise ValueError("RUNTIME_AUTHORITY_INVALID")
     cutover_manifest = _load_json(root / "config" / "production_cutover_manifest.json")
     pr200 = validate_manifest(cutover_manifest)
     source_commit = _git_head_commit(root)
@@ -407,7 +442,9 @@ def build_release_bundle(
         "live_mode_available": live_mode_available,
         "pr200_cutover": pr200,
         "artifacts": artifacts,
-        "runtime_authority_map_digest": _sha256_bytes(_canonical_json(runtime_authority)),
+        "runtime_authority_map_digest": _sha256_bytes(
+            _canonical_json(runtime_authority)
+        ),
         "production_debt_inventory_digest": _sha256_bytes(_canonical_json(inventory)),
         "debt_resolution": debt_resolution,
         "release_claim_allowed": False,
@@ -441,7 +478,10 @@ def build_release_bundle(
         "live_mode_available": live_mode_available,
         "promotion_state": (
             "blocked_pending_evidence"
-            if missing_artifacts or invalid_artifacts or unresolved_items or not pr200["accepted"]
+            if missing_artifacts
+            or invalid_artifacts
+            or unresolved_items
+            or not pr200["accepted"]
             else "qualified_for_release_review"
         ),
         "qualified": not missing_artifacts
@@ -472,7 +512,10 @@ def build_release_bundle(
 def _legacy_dry_run(args: argparse.Namespace) -> int:
     _bootstrap_repo_imports()
     from src.qualification_pr176 import build_default_qualification_plan
-    from src.qualification_pr186 import qualification_plan_document, source_tree_identity
+    from src.qualification_pr186 import (
+        qualification_plan_document,
+        source_tree_identity,
+    )
 
     root = Path(args.project_root).resolve()
     source = source_tree_identity(root)

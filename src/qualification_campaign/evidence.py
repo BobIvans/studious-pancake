@@ -188,7 +188,7 @@ class CampaignEvidenceStore:
 
 def redact_payload(value, headers):
     """Preserve public response shape, removing credential reflections only."""
-    secrets = []
+    secrets: list[str] = []
     for name, token in (headers or {}).items():
         if name.lower() in ("authorization", "x-api-key") and token:
             secrets.extend((token, token.removeprefix("Bearer ")))

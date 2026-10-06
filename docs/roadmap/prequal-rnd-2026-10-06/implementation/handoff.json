@@ -1,0 +1,515 @@
+{
+  "A_campaign_readiness": {
+    "production_promotion": false,
+    "qualification_verdict": "BLOCKED",
+    "reasons": [
+      "three real governed discovery responses retained",
+      "69 unique candidates with provenance",
+      "native negative evidence and blocked quorum retained",
+      "offline hash-verified replay reproduced identity/candidate count"
+    ],
+    "status": "PASS",
+    "target": "READ_ONLY_REAL_DATA_CAMPAIGN_V1"
+  },
+  "B_completed_guarantees": {
+    "QPR-01": [
+      "Runtime bootstrap, release qualification and campaign factory consume src/resources/runtime_authority.json and its digest.",
+      "Exact byte config mirror and bound resource generations are checked; historical map/PR queue cannot supply release identity.",
+      "Campaign manifest pins clean repository SHA, ancestor main SHA, relevant config and source generations; journal rejects mixed identities.",
+      "Installed CLI and runtime inspection share parser-owned command identity; CI exercises campaign boundary."
+    ],
+    "QPR-02": [
+      "Native collector supports 1..4 reviewed RPC profiles and canonical rooted quorum verification with provider/operator/correlation identity.",
+      "Two independent configured sources may supply agreeing exact native state; correlated, disagreeing, failed, smoke-only or single sources remain blocked.",
+      "Actual genesis/node features/slot/root/finality, raw replies, attempts and negative outcomes are retained with hashes and replay inputs.",
+      "Canonical governance owns read allowlist, durable window quota and physical attempts; campaign cap survives restart.",
+      "Replay verifies retained event/blob hashes without network; deployment/strategy/promotion evidence remains separate."
+    ],
+    "QPR-03_campaign_start": [
+      "Generic SourceDossier/ProviderProfile/DiscoveryAdapter intake reuses existing catalog, governance and durable journal.",
+      "Freshness, docs/schema/profile/config generations and DISCOVERY_ONLY capabilities are admitted before reads.",
+      "Raw/negative observations retain times, supplied context, schema and request hashes; reflected credentials are redacted.",
+      "Normalized pool/mint identity deduplicates deterministically while retaining every source provenance path.",
+      "Candidate verification requires retained provenance, replayed canonical RPC gate and exact pool/mint identity; no executable quote authority.",
+      "Three representative existing sources and one new-source test prove the framework; 64 original FREE-SOURCE slots remain unchanged."
+    ]
+  },
+  "C_remaining_blockers": {
+    "blocks_campaign_now": [],
+    "blocks_production_only": [
+      "ACTIVE_PERSISTENCE_CUTOVER",
+      "RELEASE_BOUND_72H_SOAK",
+      "SECURITY_DEPLOYMENT_ROLLBACK_EVIDENCE",
+      "LIVE_EXECUTION_AUTHORITY_NOT_ENABLED"
+    ],
+    "blocks_stronger_qualification": [
+      "INDEPENDENT_ROOTED_QUORUM_REQUIRED",
+      "DEPLOYMENT_SOURCE_BINDING_MISSING",
+      "CONTINUOUS_CAPTURE_NOT_IMPLEMENTED",
+      "FORWARD_HOLDOUT_MISSING",
+      "COST_FINANCING_UNKNOWN",
+      "UNKNOWN_TOKEN_ORACLE_SEMANTICS_FAIL_CLOSED",
+      "PUBLIC_SMOKE_SINGLE_RPC_CONFIGURED",
+      "OBSERVED_TOKEN_2022_CAPTURE_REJECTED"
+    ],
+    "operational_admission_checks": [
+      "fresh reviewed dossiers",
+      "clean checkout/exact SHA",
+      "approved domains and required credential bindings",
+      "storage/attempt/window budgets"
+    ]
+  },
+  "D_source_onboarding": [
+    {
+      "action": "Generate a runtime skeleton from an unused existing planning slot.",
+      "command": "python -m src.qualification_campaign.cli intake-template --slot FREE-SOURCE-001 --output /workspace/shared/qpr/next-source-template.json",
+      "step": 1
+    },
+    {
+      "action": "Review current official API/docs/terms, license/commercial/redistribution, authentication and window/period quotas. Fill checked_at with timezone, docs_sha256, <=7 day TTL, and explicit UNKNOWN fields where unproven; keep DISCOVERY_ONLY.",
+      "step": 2
+    },
+    {
+      "action": "Implement one reviewed adapter factory under src.market.* or src.qualification_campaign.*. It supplies request()->SourceReadRequest, schema_contract(), normalize()->(Candidate tuple,rejection counts), and optional context(). Use header credential references, never query credentials or hardcoded values.",
+      "step": 3
+    },
+    {
+      "action": "Fill source_id, unique profile_id, provider/operator/correlation, HTTPS endpoint/docs, schema versions and digest(schema_contract()). Set adapter.kind=plugin and factory=module:callable. A new catalog source requires slot_id; MarketSourceCatalog.with_intake remains catalog owner.",
+      "step": 4
+    },
+    {
+      "action": "Test source success, empty/schema/auth/429/timeout, immutable raw hashes, deterministic dedup and retained candidate-to-RPC linkage. Run existing intake suite, review and commit the adapter/config; capture requires a clean checkout.",
+      "command": "python -m pytest tests/test_qpr03_source_intake.py --disable-socket --allow-unix-socket -q",
+      "step": 5
+    },
+    {
+      "action": "Review only necessary network domains in environment settings; add approved credential bindings when required. Credential rotation changes credential_generation and campaign identity. Two RPC profiles require distinct, substantiated provider/operator/correlation identities; aliases of one backend are not independent.",
+      "step": 6
+    },
+    {
+      "action": "Use a current complete source config and a new output directory. Configuration/dossier changes create a new identity; preserve old journals rather than overwriting them.",
+      "command": "python -m src.qualification_campaign.cli capture --source-config /workspace/shared/qpr/reviewed-next-source.json --output /workspace/shared/qpr/next-source-campaign --rpc-profiles /workspace/shared/qpr/reviewed-independent-rpcs.json --verify-native 1",
+      "step": 7
+    },
+    {
+      "action": "Replay without network; inspect raw and negative outcomes, dedup/provenance and quorum verdict before recommending any next implementation.",
+      "command": "python -m src.qualification_campaign.cli replay --output /workspace/shared/qpr/next-source-campaign",
+      "step": 8
+    }
+  ],
+  "E_evidence_schema": {
+    "campaign_identity": {
+      "fields": [
+        "repository_sha",
+        "main_sha",
+        "runtime_authority_sha256",
+        "configuration_digests",
+        "source_generations",
+        "safety"
+      ],
+      "identity": "SHA256 of canonical manifest JSON",
+      "path": "campaign-manifest.json",
+      "schema": "prequal.campaign-manifest.v1"
+    },
+    "durable_quotas": {
+      "campaign_cap": "attempt events before physical I/O",
+      "owner": "src.durability.UnifiedLifecycleAuthority + ProviderGovernance",
+      "path": "authority.sqlite"
+    },
+    "journal": {
+      "event_schema": "prequal.observation.v1",
+      "events": {
+        "attempt": 7,
+        "candidate_universe": 1,
+        "capture_failure": 1,
+        "discovery_candidate": 72,
+        "manifest": 1,
+        "rooted_snapshot_bundle": 1,
+        "rpc_observation": 4,
+        "source_dossier": 3,
+        "source_observation": 3
+      },
+      "fields": [
+        "source",
+        "partition",
+        "cursor",
+        "available_at_ns",
+        "observed_at_ns",
+        "payload_json",
+        "block_hash",
+        "parent_hash"
+      ],
+      "owner": "src.market.streams.RecoverableStreamJournal",
+      "partition": "campaign_id",
+      "path": "campaign-evidence.sqlite"
+    },
+    "large_raw_payloads": {
+      "default_total_budget_bytes": 67108864,
+      "inline_threshold_bytes": 750000,
+      "path": "campaign-evidence.sqlite.blobs/<sha256>.json",
+      "per_blob_limit_bytes": 16777216,
+      "replay": "verify canonical payload hash and campaign identity"
+    },
+    "provenance": {
+      "chain": "candidate_id -> source raw_evidence_id -> verification_evidence_id -> native capture_refs -> rpc receipts",
+      "kinds": [
+        "discovery_candidate",
+        "candidate_universe",
+        "candidate_verification"
+      ]
+    },
+    "raw_and_negative": {
+      "fields": [
+        "request_fingerprint",
+        "provider/source generations",
+        "operator",
+        "correlation_group",
+        "observed_at_ns",
+        "available_at_ns",
+        "source context if supplied",
+        "http_status",
+        "retry_after",
+        "quality_state",
+        "failure_reason",
+        "raw_payload/raw_response",
+        "response_hash",
+        "raw_payload_hash",
+        "redaction_applied"
+      ],
+      "kinds": [
+        "source_observation",
+        "rpc_observation",
+        "capture_failure",
+        "cancelled_capture"
+      ]
+    },
+    "readiness_report": {
+      "path": "report.json",
+      "production_promotion": false,
+      "qualification": "always BLOCKED in this phase"
+    },
+    "rpc_verification": {
+      "fields": [
+        "capture_refs",
+        "rooted_samples",
+        "quorum_policy",
+        "evaluated_at_wall_ms",
+        "evaluated_at_monotonic_ms",
+        "failures",
+        "quorum"
+      ],
+      "gate_owner": "src.data_plane.rpc.RootedRpcQuorumGate",
+      "kinds": [
+        "native_capture",
+        "rooted_snapshot_bundle"
+      ]
+    }
+  },
+  "F_real_campaign_plan": {
+    "bounded_probe": {
+      "automatic_transport_attempts": 1,
+      "budgets": "per-profile quota/window and persistent campaign cap; denial remains evidence",
+      "discovery_requests": 3,
+      "max_total_successful_physical_requests": 17,
+      "native_candidate_limit": 1,
+      "rpc_profiles": 2,
+      "successful_native_rpc_requests_per_profile": 7
+    },
+    "implemented_stage": "bounded one-shot representative campaign; continuous capture is deferred",
+    "next_stage": "external sources -> normalization/dedup -> independent RPC/on-chain verification -> exact/replayable evidence -> anomaly/blocker report -> reprioritize",
+    "pass_criterion": "bounded read-only collection, negative retention and offline replay function; qualification is a separate gate",
+    "preconditions": [
+      "review/refresh 24h dossiers and new configuration generation",
+      "clean reviewed checkout",
+      "approved HTTPS destinations and credentials if used",
+      "two substantiated independent RPC profiles for stronger data evidence",
+      "supported legacy SPL CPMM control plus separately retained Token-2022 negative sample"
+    ],
+    "required_checks": [
+      "retain all raw/negative responses and hashes",
+      "compare matching finalized context slot/account bytes/block identity across independent sources; disagreement or lag remains BLOCKED",
+      "check supplied timestamp/slot coherence and availability delay without promoting indexed context",
+      "verify deterministic candidate identity and provenance",
+      "replay in socket-disabled environment and verify hashes",
+      "record source schema drift/rate-limit/empty/timeout/cancellation/unsupported semantics separately",
+      "never infer holdout/economics/production from discovery success"
+    ],
+    "sources": [
+      "dexscreener",
+      "geckoterminal",
+      "raydium"
+    ],
+    "stop": "Produce evidence-based anomaly report and next-PR recommendations; do not implement QPR-04+ automatically."
+  },
+  "G_new_problem_register": "new-problems.json",
+  "H_recommended_next_work": [
+    {
+      "basis": "actual run BLOCKED_SINGLE_SOURCE; only public smoke RPC configured",
+      "order": 1,
+      "proposed_pr": "Independent RPC configuration and bounded native control evidence",
+      "scope": "review two genuinely independent profiles, approved header bindings and quotas; run legacy-SPL supported controls and preserve disagreements/Token-2022 exclusions; no architecture replacement"
+    },
+    {
+      "basis": "selected real Raydium CPMM pool failed decoder admission on Token-2022",
+      "order": 2,
+      "proposed_pr": "Targeted Token-2022 semantic qualification or explicit restricted universe",
+      "scope": "inspect retained extensions and owners; implement only justified exact support with replay vectors or preserve explicit exclusion; no broad token cleanup"
+    },
+    {
+      "basis": "one-shot evidence cannot prove continuous window/holdout; current sample lacks indexed slot/finality authority",
+      "order": 3,
+      "proposed_pr": "Bounded continuous capture and anomaly accounting after additional probes",
+      "scope": "prioritize timestamp/schema/lag/quota/blind-window findings actually observed by next campaigns; preserve failures and run limits"
+    },
+    {
+      "basis": "these verdict gates remain unproven after successful discovery",
+      "order": 4,
+      "proposed_pr": "Deployment binding, forward holdout and measured cost/financing evidence",
+      "scope": "sequence from captured controls and observed economic blockers, without assuming original QPR-04..10 order"
+    },
+    {
+      "basis": "read-only campaign needs no capital authority; production gates are still closed",
+      "order": 5,
+      "proposed_pr": "Production-only persistence/release soak/security rollback gates",
+      "scope": "only after stronger qualification evidence and a separately authorized promotion phase"
+    }
+  ],
+  "commit_receipts": "Exact final PR heads/base SHAs are generated after documentation commit in /workspace/shared/qpr/phase-receipts.json to avoid self-referential fields. Observed campaign pins the exact executable ancestor SHA above.",
+  "generated_at_utc": "2026-10-06T00:45:25.410020+00:00",
+  "observed_campaign": {
+    "event_counts": {
+      "attempt": 7,
+      "candidate_universe": 1,
+      "capture_failure": 1,
+      "discovery_candidate": 72,
+      "manifest": 1,
+      "rooted_snapshot_bundle": 1,
+      "rpc_observation": 4,
+      "source_dossier": 3,
+      "source_observation": 3
+    },
+    "file_sha256": {
+      "authority.sqlite": "548ca1cfcd81c0b7a7ce8cd067e12b1e29d48a39d7adb8de8156eea2845b709a",
+      "campaign-evidence.sqlite": "40cd9f4cdeda308dd1db0dc218f84b2a95dcf6dfac02e290a3a6ac8ca20602b2",
+      "campaign-evidence.sqlite.blobs/dd95037bfec5cde991f79c0ecdc8797e681e865a9ede3c5187e1e45373a99cd7.json": "dd95037bfec5cde991f79c0ecdc8797e681e865a9ede3c5187e1e45373a99cd7",
+      "campaign-manifest.json": "07565d8ce89b247ffb1b0b62535f584a22d0813bc00bee4af6c72e49377389b6",
+      "report.json": "eee161158ace8cde888739ffcb6f1343c0434b9cfeacdd7b444da841cf5d1a75"
+    },
+    "output_directory": "/workspace/shared/qpr/campaign-reviewed",
+    "physical_requests": {
+      "discovery-dexscreener": 1,
+      "discovery-geckoterminal": 1,
+      "discovery-raydium": 1,
+      "solana_rpc": 4
+    },
+    "report": {
+      "campaign_id": "07565d8ce89b247ffb1b0b62535f584a22d0813bc00bee4af6c72e49377389b6",
+      "campaign_readiness": {
+        "reasons": [],
+        "status": "PASS",
+        "target": "READ_ONLY_REAL_DATA_CAMPAIGN_V1"
+      },
+      "candidate_count": 69,
+      "journal_head": "1b71b248362f87147b9c60e9f4a7e7307c2933ae8e3ce20b24fbd5ef1292ac45",
+      "manifest": {
+        "configuration_digests": [
+          [
+            "capture",
+            "5131bc9981ccb2d1a22de62557d977c1c4778f2c4776595981e94081884cec57"
+          ],
+          [
+            "transport",
+            "16be17a6a04f0c1a0612dfd2bd02570b1b83a1c6c0c4c9826dfa181e82fa109b"
+          ]
+        ],
+        "main_sha": "ac6297e3f174d073c524099f599490edfe30f7b1",
+        "mode": "CAPTURE_ONLY",
+        "repository_sha": "921e4fa1dfaaacc69b2f2ca202e449c3d2b44755",
+        "runtime_authority_sha256": "abafb600a140f7808f8b744bd67946d0624f62865771444c28f366d8a27dacf1",
+        "safety": {
+          "live_authorization": false,
+          "sender_reachable": false,
+          "signer_reachable": false,
+          "transaction_submission_allowed": false
+        },
+        "schema_version": "prequal.campaign-manifest.v1",
+        "source_generations": [
+          [
+            "dexscreener",
+            "c6ee7624edc5952e1b023e7bab70e1a7f373294a05a25147d4b92808ca9cd169"
+          ],
+          [
+            "discovery-dexscreener",
+            "173d16c795db2921ab85e5db7bba7d3ed1517b858fc356f46957c5f168f396e0"
+          ],
+          [
+            "discovery-geckoterminal",
+            "5c0d6b018a3740f1cbf9cfe5d4d86c684837700797782b57a90f2ed9f7026486"
+          ],
+          [
+            "discovery-raydium",
+            "3783773dcd7fbadd8b68298550deb8607f3a3d1bf60af827b47d9af583078e66"
+          ],
+          [
+            "geckoterminal",
+            "3da9c77a74ece55d39e8bb4a329098e5cba5bbe0191d80bd9229c5f458bf7a4d"
+          ],
+          [
+            "raydium",
+            "c710fef0a89a3eece298e76532354a383d75d3ecab3f7ea22a031ef5cfa198fd"
+          ],
+          [
+            "solana_rpc",
+            "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96"
+          ]
+        ]
+      },
+      "negative_evidence": [
+        {
+          "failure_reason": "Token-2022/unknown token program is unqualified",
+          "quality_state": "NativeCaptureError",
+          "request_fingerprint": null,
+          "source_id": "solana_rpc"
+        }
+      ],
+      "production_only_blockers": [
+        "ACTIVE_PERSISTENCE_CUTOVER",
+        "RELEASE_BOUND_72H_SOAK",
+        "SECURITY_DEPLOYMENT_ROLLBACK_EVIDENCE"
+      ],
+      "production_promotion": false,
+      "qualification_verdict": "BLOCKED",
+      "remaining_verdict_blockers": [
+        "INDEPENDENT_ROOTED_QUORUM_REQUIRED",
+        "DEPLOYMENT_SOURCE_BINDING_MISSING",
+        "CONTINUOUS_CAPTURE_NOT_IMPLEMENTED",
+        "FORWARD_HOLDOUT_MISSING",
+        "COST_FINANCING_UNKNOWN",
+        "UNKNOWN_TOKEN_ORACLE_SEMANTICS_FAIL_CLOSED"
+      ],
+      "rpc_verdicts": [
+        {
+          "accepted": false,
+          "canonical_endpoint_id": null,
+          "canonical_gate_evidence_hash": "74e35d576eb576adeaee487405daeff1f6d2f0f76dd33f6ec074ff946915b6a7",
+          "canonical_slot": null,
+          "evidence_hash": "71a23c2a7bc28055ce494e3657065fdaf6e86df962b70c312f05d556e64e18a1",
+          "independent_correlation_groups": [],
+          "matching_endpoints": [],
+          "payload_hash": null,
+          "reason": "BLOCKED_SINGLE_SOURCE",
+          "rejected_endpoints": []
+        }
+      ],
+      "schema_version": "prequal.campaign-handoff.v1",
+      "source_outcomes": {
+        "dexscreener": {
+          "accepted": 1
+        },
+        "geckoterminal": {
+          "accepted": 1
+        },
+        "raydium": {
+          "accepted-with-rejections": 1
+        }
+      },
+      "stop_before": "QPR-04"
+    },
+    "source_observations": [
+      {
+        "available_at_ns": 1791247366154834037,
+        "correlation_group": "dexscreener-indexed",
+        "evidence_id": "2b826f6b093efa3d57b9f8629adfa99e52b7da43d50bfed004b4ab137f8de414",
+        "finality": null,
+        "http_status": 200,
+        "observed_at_ns": 1791247365954358348,
+        "operator": "dexscreener",
+        "provider_generation": "173d16c795db2921ab85e5db7bba7d3ed1517b858fc356f46957c5f168f396e0",
+        "provider_id": "discovery-dexscreener",
+        "quality_state": "accepted",
+        "raw_payload_hash": "f8587a0dcaed7cf41b3579b7ee700f22126a0430fe6392b6a6a9aec478eba518",
+        "redaction_applied": false,
+        "request_fingerprint": "3bfd13f144f1dd90f3b8e4da8a38fc97f0e6eea47e27f5430fc329e607d8b032",
+        "response_hash": "f8587a0dcaed7cf41b3579b7ee700f22126a0430fe6392b6a6a9aec478eba518",
+        "root": null,
+        "schema_fingerprint": "f34d70dd492acca3fd77b3a545169af2d8f547e3653f3d6226fd2ae80e667404",
+        "slot": null,
+        "source_generation": "c6ee7624edc5952e1b023e7bab70e1a7f373294a05a25147d4b92808ca9cd169",
+        "source_id": "dexscreener",
+        "source_provided_time": null
+      },
+      {
+        "available_at_ns": 1791247366488218234,
+        "correlation_group": "geckoterminal-indexed",
+        "evidence_id": "2e3b1adb3c47b99d566222137c60916153ae349e6523ca79559b8d8675a08492",
+        "finality": null,
+        "http_status": 200,
+        "observed_at_ns": 1791247366212710659,
+        "operator": "geckoterminal",
+        "provider_generation": "5c0d6b018a3740f1cbf9cfe5d4d86c684837700797782b57a90f2ed9f7026486",
+        "provider_id": "discovery-geckoterminal",
+        "quality_state": "accepted",
+        "raw_payload_hash": "78159c165dda6347cae4ae96398788fa5170dc344d473ad34c5482181c93cc7c",
+        "redaction_applied": false,
+        "request_fingerprint": "14aa35a407a05efe8fd133c3433a9479e79464c74320430665be07d5974d22e1",
+        "response_hash": "78159c165dda6347cae4ae96398788fa5170dc344d473ad34c5482181c93cc7c",
+        "root": null,
+        "schema_fingerprint": "75df9c9beedc58ad0aecf9cfbc6b4b6751f63958876957744a44f7970e9e74a0",
+        "slot": null,
+        "source_generation": "3da9c77a74ece55d39e8bb4a329098e5cba5bbe0191d80bd9229c5f458bf7a4d",
+        "source_id": "geckoterminal",
+        "source_provided_time": null
+      },
+      {
+        "available_at_ns": 1791247367037962467,
+        "correlation_group": "raydium-indexed",
+        "evidence_id": "3257aa0acbffc33a9c6c7217e7667b807ba451b06d9c3ffa1ce75912e374844e",
+        "finality": null,
+        "http_status": 200,
+        "observed_at_ns": 1791247366554358535,
+        "operator": "raydium",
+        "provider_generation": "3783773dcd7fbadd8b68298550deb8607f3a3d1bf60af827b47d9af583078e66",
+        "provider_id": "discovery-raydium",
+        "quality_state": "accepted-with-rejections",
+        "raw_payload_hash": "bb97dded2e8c1481f04b0d47e4a1deb786a5b83dbca78a1e664ab1cf9752acfe",
+        "redaction_applied": false,
+        "request_fingerprint": "1a2bdd1a153bcb71cbebc550ab94b0916511fbc2cb0456298a341a1474bdcb74",
+        "response_hash": "bb97dded2e8c1481f04b0d47e4a1deb786a5b83dbca78a1e664ab1cf9752acfe",
+        "root": null,
+        "schema_fingerprint": "a957e03c65d5f9e2214469e38009ae3b7b44af7e14fa8e9d4cea791e8c6aab96",
+        "slot": null,
+        "source_generation": "c710fef0a89a3eece298e76532354a383d75d3ecab3f7ea22a031ef5cfa198fd",
+        "source_id": "raydium",
+        "source_provided_time": null
+      }
+    ],
+    "storage_note": "Full raw evidence is retained in this cloud instance outside Git. This tracked summary contains manifest, outcomes and hash receipts, not full public API payloads. Fresh-task restoration is not independently verified."
+  },
+  "phase": "QPR-01 + QPR-02 + QPR-03 campaign-start only",
+  "safety": {
+    "live_authorization": false,
+    "sender_reachable": false,
+    "signer_reachable": false,
+    "transaction_submission_allowed": false
+  },
+  "schema_version": "prequal.phase-handoff.v1",
+  "stop_before": "QPR-04",
+  "validation": {
+    "disabled_cli_and_installed_authority": "PASS",
+    "github_ci": "inspect PR checks; local checks are not a hosted-CI claim",
+    "hash_locked_install_and_repeat": "PASS",
+    "isolated_wheel_package_smoke": "PASS",
+    "offline_replay": "PASS",
+    "offline_suite": {
+      "command": "PAPER_TRADING_ONLY=true LIVE_TRADING_ENABLED=false JITO_ENABLED=false KAMINO_LIQUIDATION_ENABLED=false python -m pytest -m 'not live and not manual' --disable-socket --allow-unix-socket -o log_cli=false -q",
+      "deselected": 1,
+      "failed": 0,
+      "log": "/tmp/qpr-full-offline-final.log",
+      "network": "socket-disabled; Unix sockets allowed",
+      "passed": 4913,
+      "seconds": 38.0
+    },
+    "pip_check": "PASS",
+    "real_capture": "PASS"
+  }
+}

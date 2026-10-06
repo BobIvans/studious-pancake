@@ -1,0 +1,57 @@
+{
+  "schema_version": "prequal.new-problem-register.v1",
+  "campaign_id": "07565d8ce89b247ffb1b0b62535f584a22d0813bc00bee4af6c72e49377389b6",
+  "findings": [
+    {
+      "id": "NEW-001",
+      "problem": "CAIP-style genesis prefix used as full RPC hash",
+      "evidence": "real getGenesisHash mismatch in /tmp/qpr02-real",
+      "status": "FIXED",
+      "related_roadmap_ids": [],
+      "fix": "full 32-byte pin in active registry/default/native model; generation bound in canonical authority"
+    },
+    {
+      "id": "NEW-002",
+      "problem": "Current ProgramData exceeded transport and account/event setup bounds",
+      "evidence": "real full getMultipleAccounts response body >1 MB; ProgramData base64 1058669 chars",
+      "status": "FIXED",
+      "related_roadmap_ids": [],
+      "fix": "bounded native body/loader limits and immutable hash-addressed campaign payloads"
+    },
+    {
+      "id": "NEW-003",
+      "problem": "HTTP client negotiated compression rejected by governed decoder",
+      "evidence": "first real GeckoTerminal probe: provider content encoding is unsupported",
+      "status": "FIXED",
+      "related_roadmap_ids": [],
+      "fix": "negotiate only identity/gzip/deflate; all three discovery sources now captured"
+    },
+    {
+      "id": "NEW-004",
+      "problem": "Official planning docs URLs drifted",
+      "evidence": "old Raydium docs 404; Gecko FAQ 301 to new docs site; current official API documentation HTTP 200",
+      "status": "UPDATED_ACTIVE_DOSSIERS",
+      "related_roadmap_ids": [
+        "SRC-002"
+      ]
+    },
+    {
+      "id": "OBS-001",
+      "problem": "Real selected CPMM pool uses Token-2022; native decoder refuses unqualified semantics",
+      "evidence": [
+        {
+          "source_id": "solana_rpc",
+          "quality_state": "NativeCaptureError",
+          "failure_reason": "Token-2022/unknown token program is unqualified",
+          "request_fingerprint": null
+        }
+      ],
+      "status": "BLOCKED_STRONGER_VERDICT",
+      "related_roadmap_ids": [
+        "TOKEN-001"
+      ],
+      "next_action": "study captured state; bound supported pool controls or implement exact Token-2022 semantics in a separately prioritized PR"
+    }
+  ],
+  "repository_sha": "921e4fa1dfaaacc69b2f2ca202e449c3d2b44755"
+}

@@ -214,12 +214,12 @@ def validate_quorum_evidence(bundle, evidence):
     samples = []
     for raw in bundle["rooted_samples"]:
         item = dict(raw)
-        sample = dict(item.pop("sample"))
+        sample_data = dict(item.pop("sample"))
         identity = item.pop("identity")
-        sample["commitment"] = CommitmentLevel(sample["commitment"])
+        sample_data["commitment"] = CommitmentLevel(sample_data["commitment"])
         samples.append(
             RootedRpcSample(
-                RpcSample(**sample), RpcEndpointIdentity(**identity), **item
+                RpcSample(**sample_data), RpcEndpointIdentity(**identity), **item
             )
         )
     policy = dict(bundle["quorum_policy"])

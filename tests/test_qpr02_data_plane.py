@@ -237,3 +237,25 @@ def test_active_mainnet_identity_uses_full_rpc_hash():
         == MAINNET_GENESIS
     )
     assert ClusterConfig().genesis_hash == MAINNET_GENESIS
+
+
+def test_large_evidence_blob_is_durable_hash_verified_and_bounded(tmp_path):
+    p = profiles()[0]
+    m = manifest((p,))
+    path = tmp_path / "events.sqlite"
+    journal = RecoverableStreamJournal(path)
+    evidence = CampaignEvidenceStore(journal, m)
+    raw = {"kind": "raw-native-test", "data": "a" * 900_000}
+    evidence.append(p.profile_id, raw, observed_at_ns=time.time_ns())
+    assert evidence.replay()[-1]["data"] == raw["data"]
+    head = evidence.head
+    journal.close()
+    journal = RecoverableStreamJournal(path)
+    evidence = CampaignEvidenceStore(journal, m)
+    assert evidence.head == head
+    assert evidence.replay()[-1]["data"] == raw["data"]
+    blob = next(evidence.blob_dir.glob("*.json"))
+    blob.write_text(blob.read_text().replace("aaa", "aab", 1))
+    with pytest.raises(ValueError, match="BLOB_HASH_MISMATCH"):
+        evidence.replay()
+    journal.close()

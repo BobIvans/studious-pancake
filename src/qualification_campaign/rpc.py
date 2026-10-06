@@ -173,6 +173,8 @@ class NativeRootedSnapshotProvider:
             result.update(accepted=False, reason="BLOCKED_CONTEXT_SLOT_DISAGREEMENT")
         elif any(c.profile.smoke_only for c in self.collectors):
             result.update(accepted=False, reason="BLOCKED_PUBLIC_SMOKE_SOURCE")
+        result["canonical_gate_evidence_hash"] = result.pop("evidence_hash")
+        result["evidence_hash"] = digest(result)
         bundle = {
             "kind": "rooted_snapshot_bundle",
             "request_hash": request_hash,
@@ -180,6 +182,9 @@ class NativeRootedSnapshotProvider:
             "failures": failures,
             "quorum": result,
             "rooted_samples": [asdict(s) for s in samples],
+            "quorum_policy": asdict(gate.policy),
+            "evaluated_at_wall_ms": self.wall_ns() // 1_000_000,
+            "evaluated_at_monotonic_ms": self.monotonic_ms(),
         }
         # Enums are strings; the journal stores the entire replayable decision input.
         self.evidence.append("rpc-quorum", bundle, observed_at_ns=self.wall_ns())

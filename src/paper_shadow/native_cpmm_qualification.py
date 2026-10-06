@@ -341,7 +341,12 @@ async def collect_report(
     async with AsyncExitStack() as resources:
         transport = await resources.enter_async_context(
             campaign_transport(
-                policy=TransportPolicy(max_string_length=900_000, max_attempts=1),
+                policy=TransportPolicy(
+                    max_string_length=6_000_000,
+                    max_response_bytes=8_000_000,
+                    max_wire_bytes=8_000_000,
+                    max_attempts=1,
+                ),
                 hosts=frozenset(
                     {p.hostname for p in profiles}
                     | ({"api-v3.raydium.io"} if discover else set())

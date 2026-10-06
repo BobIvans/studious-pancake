@@ -6,6 +6,8 @@ attempt reservations survive restart. Replay uses retained bytes only.
 
 import json
 import time
+import os
+import tempfile
 import fcntl
 from pathlib import Path
 from dataclasses import asdict
@@ -27,6 +29,7 @@ class CampaignEvidenceStore:
         self.manifest = manifest
         db_path = journal.db.execute("PRAGMA database_list").fetchone()[2]
         self.lock_path = Path(db_path + ".campaign-lock")
+        self.blob_dir = Path(db_path + ".blobs")
         retained = journal.events(available_at_ns=2**63 - 1)
         for e in retained:
             if e.partition != manifest.campaign_id:
@@ -52,6 +55,49 @@ class CampaignEvidenceStore:
             else available_at_ns
         )
         body = {**payload, "campaign_manifest_hash": self.manifest.campaign_id}
+        stored = body
+        encoded = canonical_bytes(body)
+        if len(encoded) > 750_000:
+            if len(encoded) > 16 * 1024 * 1024:
+                raise ValueError("EVIDENCE_BLOB_TOO_LARGE")
+            self.blob_dir.mkdir(exist_ok=True)
+            name = digest(body)
+            target = self.blob_dir / (name + ".json")
+            if target.exists():
+                if target.is_symlink() or target.read_bytes() != encoded:
+                    raise ValueError("EVIDENCE_BLOB_HASH_MISMATCH")
+            else:
+                size = sum(f.stat().st_size for f in self.blob_dir.glob("*.json"))
+                if size + len(encoded) > self.journal.max_payload_bytes:
+                    raise ValueError("EVIDENCE_BLOB_STORAGE_BUDGET_EXHAUSTED")
+                temporary = None
+                try:
+                    with tempfile.NamedTemporaryFile(
+                        dir=self.blob_dir, suffix=".tmp", delete=False
+                    ) as handle:
+                        temporary = Path(handle.name)
+                        handle.write(encoded)
+                        handle.flush()
+                        os.fsync(handle.fileno())
+                    try:
+                        os.link(temporary, target)
+                    except FileExistsError:
+                        if target.is_symlink() or target.read_bytes() != encoded:
+                            raise ValueError("EVIDENCE_BLOB_HASH_MISMATCH")
+                finally:
+                    if temporary is not None:
+                        temporary.unlink(missing_ok=True)
+                fd = os.open(self.blob_dir, os.O_DIRECTORY)
+                try:
+                    os.fsync(fd)
+                finally:
+                    os.close(fd)
+            stored = {
+                "kind": "blob_reference",
+                "raw_payload_ref": name,
+                "raw_payload_hash": name,
+                "campaign_manifest_hash": self.manifest.campaign_id,
+            }
         previous = [
             e
             for e in self.journal.events(available_at_ns=2**63 - 1)
@@ -66,8 +112,8 @@ class CampaignEvidenceStore:
             observed_at_ns,
             source,
             "prequal.observation.v1",
-            canonical_bytes(body).decode(),
-            digest(body),
+            canonical_bytes(stored).decode(),
+            digest(stored),
             previous[-1].block_hash if previous else "GENESIS",
         )
         self.journal.append(event)
@@ -111,7 +157,27 @@ class CampaignEvidenceStore:
             # The underlying journal is immutable by contract, verify hashes on replay.
             if digest(json.loads(e.payload_json)) != e.block_hash:
                 raise ValueError("EVIDENCE_HASH_MISMATCH")
-        return tuple(json.loads(e.payload_json) for e in events)
+        return tuple(self.expand(e.payload_json) for e in events)
+
+    def expand(self, serialized):
+        body = json.loads(serialized)
+        if body.get("kind") == "blob_reference":
+            name = body["raw_payload_ref"]
+            if (
+                not isinstance(name, str)
+                or len(name) != 64
+                or any(c not in "0123456789abcdef" for c in name)
+            ):
+                raise ValueError("EVIDENCE_BLOB_REFERENCE_INVALID")
+            target = self.blob_dir / (name + ".json")
+            if target.is_symlink():
+                raise ValueError("EVIDENCE_BLOB_REFERENCE_INVALID")
+            body = json.loads(target.read_text())
+            if digest(body) != name:
+                raise ValueError("EVIDENCE_BLOB_HASH_MISMATCH")
+        if body.get("campaign_manifest_hash") != self.manifest.campaign_id:
+            raise ValueError("CAMPAIGN_GENERATION_MISMATCH")
+        return body
 
     @property
     def head(self):

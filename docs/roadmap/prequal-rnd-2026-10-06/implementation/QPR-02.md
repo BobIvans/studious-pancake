@@ -15,3 +15,5 @@ Validation: 81 focused/regression tests passed, including real collector → gov
 ## Real-data blocker discovered during this phase
 
 A real `getGenesisHash` reply exposed a truncated registry/model/default cluster pin (the CAIP-style prefix had been used as a full RPC hash). The active registry/default/native CPMM pin and explicitly synthetic vector now use the full 32-byte RPC hash `5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d`. The corrected chain registry is pinned in runtime authority. Historical real evidence is not rewritten and must be recollected under this generation. This is the minimum fix needed for native collection, not a broad legacy migration.
+
+The next real observation exposed a setup boundary: full RPC ProgramData exceeded the existing 1 MB response/event ceiling. Native transport now has an 8 MB body/wire limit and 6 MB string limit; raw stream events remain bounded at 8 MB, with native journal total budget 16 MB. Campaign records above 750 KB use immutable SHA256-addressed payload files (16 MB per blob, 64 MB retained store budget by default); replay verifies their hashes. This does not disable transport validation or truncate exact state.

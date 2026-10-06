@@ -85,7 +85,7 @@ High-priority stable/representation graph:
 USDC_NATIVE/USDT_SUI_BRIDGE
 USDC_NATIVE/USDT_WORMHOLE
 USDT_SUI_BRIDGE/USDT_WORMHOLE
-USDC_NATIVE/USDC_WORMHOLE
+USDC_NATIVE/WUSDC_ETH_ORIGIN
 
 USDC_NATIVE/FDUSD
 USDC_NATIVE/AUSD
@@ -144,7 +144,7 @@ For each Sui LST relation compare:
 
 ## Identity caveats
 
-- `USDC_NATIVE_SUI` and `USDC_WORMHOLE_SUI` are distinct representations.
+- `USDC_NATIVE`, `WUSDC_ETH_ORIGIN`, and `USDC_SOL_PORTAL_ON_SUI` are distinct representations.
 - `USDT_SUI_BRIDGE` and `USDT_WORMHOLE` are distinct representations.
 - Solana `WBTC_WORMHOLE` is not old Sollet BTC.
 - `tBTC` remains `REVALIDATE_CURRENT`.
@@ -155,3 +155,22 @@ For each Sui LST relation compare:
 ## Cross-chain
 
 See `INTERCHAIN_RELATIONS_V2.json`. Cross-chain edges are economic/rebalancing relations only; they are never atomic swap edges in the local execution graph.
+
+
+---
+
+# V2.1 priority override
+
+The original expansion remains a broad research universe. It is **not** the initial expensive campaign queue.
+
+Use `FIRST_CAMPAIGN_FAMILIES_V2_1.json` as the first 14-family campaign seed.
+
+Important corrections:
+- USDG and PYUSD are Token-2022.
+- Solana `xBTC_OKX` is a new BTC representation candidate.
+- PYUSD/USDG begins as a synthetic relation through USDC; do not invent a direct market.
+- Sui `WUSDC_ETH_ORIGIN` is distinct from `USDC_SOL_PORTAL_ON_SUI`.
+- XAUM/XAU is a COLD/RESEARCH oracle-market experiment.
+- Sui DeepBook priority markets use the explicit pool IDs in `SUI_DEEPBOOK_POOLS_V2_1.json`.
+
+Promotion from the broad universe depends on measured evidence, not the old static tier label.

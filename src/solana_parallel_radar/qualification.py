@@ -162,6 +162,14 @@ async def qualify_exact_request(
         if provider.evidence.manifest.campaign_id != evidence.manifest.campaign_id:
             raise ValueError("RPC_PROVIDER_CAMPAIGN_MISMATCH")
         await provider.collect((pool_id,))
+        # Direct-state I/O may consume the quote TTL; fresh state cannot freshen it.
+        kwargs["now_ns"] = gate.wall_ns()
+        zx = retained_quote(evidence, zero_x_quote_ref, zero_x_contract, **kwargs)
+        reference = retained_quote(
+            evidence, jupiter_reference_ref, jupiter_contract, **kwargs
+        )
+        final = retained_quote(evidence, jupiter_final_ref, jupiter_contract, **kwargs)
+        compare_quotes(zx, final, now_ns=kwargs["now_ns"])
         bundles = [
             (ref, b)
             for ref, b in retained_records(evidence).items()
@@ -170,6 +178,9 @@ async def qualify_exact_request(
         if not bundles:
             raise ValueError("RETAINED_QPR02_QUORUM_REQUIRED")
         verification_id = bundles[-1][0]
+        state, _ = gate.verified_state(verification_id, pool_id)
+        if final.slot is None or abs(final.slot - state.slot) > 32:
+            raise ValueError("FINAL_QUOTE_DIRECT_STATE_SLOT_ALIGNMENT_REQUIRED")
         relation = graph.relations[request.relation_id]
         receipts = gate.startup_receipts(
             relation, verification_id=verification_id, pool_id=pool_id

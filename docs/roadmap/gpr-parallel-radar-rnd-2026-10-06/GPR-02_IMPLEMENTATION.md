@@ -48,7 +48,10 @@ the retained 0x/Jupiter quotes, replays the current VerificationQueue, calls
 QPR-02 NativeRootedSnapshotProvider, obtains actual startup receipts from the
 unchanged HardBoundIdentityGate, then calls unchanged ingest_solana_exact and
 checks the existing ingest owner's retained accepted decision. Nonempty arbitrary
-preview/receipt refs do not authorize anything. Full native pool math remains
+preview/receipt refs do not authorize anything. Quotes are reconstructed and
+freshness-checked again after awaited RPC collection, immediately before receipt
+and exact-ingest handoff; final Jupiter quote and exact-state slots must align
+within the explicit 32-slot bound. Full native pool math remains
 blocked for Token-2022. Default capture only gathers diagnostic data and emits
 blocked funnel work until reviewed exact bindings, identity policies and independent
 RPC profiles are provided.
@@ -97,9 +100,24 @@ Use `--rpc-profiles` for reviewed independent ProviderProfile rows,
 reviewed issuer/representation/extension expectations. Secret values never belong
 in these files, Git, saved scripts or chat.
 
-Independent worktree validation: 297 offline tests passed, comprising 71 GPR-02
+Public/redacted portable archives retain the original manifest, expanded immutable
+raw blobs and journal events, capture summary, replay summary and per-member
+SHA-256 index. Export audits credential fields and private request headers;
+bounded offline replay verifies member hashes, journal head, manifest generation
+and the complete replay report. No SQLite authority state, locks, caches, virtual
+environment or private headers are published.
+
+```bash
+.venv/bin/python -m src.solana_parallel_radar.portable export \
+  --campaign /workspace/shared/gpr/gpr02-campaign \
+  --archive /tmp/gpr02-evidence.tar.gz
+.venv/bin/python -m src.solana_parallel_radar.portable replay \
+  --archive /tmp/gpr02-evidence.tar.gz
+```
+
+Independent worktree validation: 303 offline tests passed, comprising 77 GPR-02
 tests plus GPR-01/QPR-01/QPR-02/QPR-03 and existing shadow aggregation/graph
-regressions, including all seven V2.2 delta tests. Mypy passed for eight new modules; lint, formatting and diff checks
+regressions, including all seven V2.2 delta tests. Mypy passed for nine new modules; lint, formatting and diff checks
 passed. Positive exact funnel proof uses synthetic bytes served through real
 governed collectors and independent mock profiles; it is not mainnet qualification.
 

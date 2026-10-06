@@ -7,6 +7,8 @@ import hashlib
 import json
 from pathlib import Path
 import struct
+import tarfile
+import io
 
 import base58
 import httpx
@@ -58,6 +60,11 @@ from src.solana_parallel_radar.token2022 import (
     decode_token2022_mint,
     inspect_token2022_semantics,
     transfer_fee,
+)
+from src.solana_parallel_radar.portable import (
+    export_archive,
+    replay_archive,
+    audit_public_redacted,
 )
 from tests.native_cpmm_fixtures import address, synthetic_capture
 
@@ -619,6 +626,23 @@ def test_capture_offline_records_real_transport_failures_and_deterministic_repla
     )
     assert result["reserved_attempts"] == 5 and result["quotes_measured"] == 0
     assert replay(output) == result
+    archive = tmp_path / "portable.tar.gz"
+    exported = export_archive(output, archive)
+    assert exported["compressed_bytes"] > 0 and replay_archive(archive) == result
+    damaged = tmp_path / "damaged.tar.gz"
+    with (
+        tarfile.open(archive, "r:gz") as source,
+        tarfile.open(damaged, "w:gz") as target,
+    ):
+        for member in source:
+            value = source.extractfile(member).read()
+            if member.name == "events.json":
+                value += b" "
+            copy = tarfile.TarInfo(member.name)
+            copy.size = len(value)
+            target.addfile(copy, io.BytesIO(value))
+    with pytest.raises(ValueError, match="HASH_MISMATCH"):
+        replay_archive(damaged)
     with pytest.raises(ValueError, match="NEW_CAMPAIGN"):
         asyncio.run(capture(output, main_sha="b" * 40))
 
@@ -712,8 +736,32 @@ def test_manifest_ticker_book_share_pinned_provider_and_durable_quota(
     assert result == replay(p)
 
 
+@pytest.mark.parametrize("field", ["Authorization", "private_key", "https_proxy"])
+def test_portable_export_rejects_private_fields_without_loading_environment(field):
+    with pytest.raises(ValueError, match="NONPUBLIC"):
+        audit_public_redacted({field: "fixture-only-private-data"})
+
+
+def test_portable_replay_rejects_path_traversal_and_links(tmp_path):
+    archive = tmp_path / "unsafe.tar.gz"
+    with tarfile.open(archive, "w:gz") as tar:
+        member = tarfile.TarInfo("../credential-file")
+        member.size = 1
+        tar.addfile(member, io.BytesIO(b"x"))
+    with pytest.raises(ValueError, match="UNSAFE"):
+        replay_archive(archive)
+
+
 @pytest.mark.parametrize(
-    "fault", [None, "forged-quote", "wrong-amount", "correlated-rpc", "ingest-rejected"]
+    "fault",
+    [
+        None,
+        "forged-quote",
+        "wrong-amount",
+        "correlated-rpc",
+        "ingest-rejected",
+        "slow-provider",
+    ],
 )
 def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
     tmp_path, monkeypatch, fault
@@ -882,6 +930,20 @@ def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
         provider = NativeRootedSnapshotProvider(
             collectors, evidence, monotonic_ms=lambda: 10_000, wall_ns=lambda: NOW
         )
+        if fault == "slow-provider":
+            clock = [NOW]
+            gate.wall_ns = lambda: clock[0]
+            evidence.wall_ns = lambda: clock[0]
+            provider.wall_ns = lambda: clock[0]
+            for collector in collectors:
+                collector.wall_ns = lambda: clock[0]
+            original_collect = provider.collect
+
+            async def slow_collect(pools):
+                clock[0] += 46_000_000_000
+                return await original_collect(pools)
+
+            provider.collect = slow_collect
         sink = lab.exact_sink()
         if fault == "ingest-rejected":
             monkeypatch.setattr(sink, "ingest", lambda *args: False)
@@ -907,6 +969,15 @@ def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
             )
             if fault in ("forged-quote", "wrong-amount"):
                 assert not native_calls
+            if fault == "slow-provider":
+                assert native_calls
+                assert not any(
+                    r.get("kind") == "gpr_identity_receipt" for r in evidence.replay()
+                )
+                latest = [
+                    r for r in evidence.replay() if r.get("kind") == "native_capture"
+                ][-1]
+                assert latest["payload"]["observed_at_ns"] == NOW + 46_000_000_000
         else:
             result = await qualify_exact_request(
                 request, graph, gate, provider, sink, **kwargs

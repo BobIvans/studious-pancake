@@ -88,6 +88,20 @@ class SuiReadRequest:
             raise ValueError("SUI_READ_ONLY_OPERATION_REQUIRED")
         if self.method == "GET" and self.body is not None:
             raise ValueError("SUI_GET_BODY_FORBIDDEN")
+        if any(
+            not isinstance(key, str)
+            or not isinstance(value, str)
+            or not key.isascii()
+            or not value.isascii()
+            or len(key) > 64
+            or len(value) > 128
+            for key, value in self.params
+        ):
+            raise ValueError("SUI_BOUNDED_PUBLIC_QUERY_STRINGS_REQUIRED")
+        if self.purpose == "book-reference" and (
+            self.method != "GET" or self.params != (("depth", "20"), ("level", "2"))
+        ):
+            raise ValueError("SUI_FINITE_REVIEWED_BOOK_REFERENCE_REQUIRED")
         if len(self.params) > 12 or len(dict(self.params)) != len(self.params):
             raise ValueError("SUI_BOUNDED_UNIQUE_PARAMETERS_REQUIRED")
         if len(str(self.body)) > 24_000:

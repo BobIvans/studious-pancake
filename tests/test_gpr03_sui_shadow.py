@@ -1162,3 +1162,17 @@ def test_structural_numeric_exponent_is_bounded_before_fraction_allocation(value
 
     with pytest.raises(ValueError, match="FINITE_RATE"):
         rational(value)
+
+
+@pytest.mark.parametrize(
+    "params",
+    [
+        (("depth", "0"), ("level", "2")),
+        (("depth", "20"), ("level", "999")),
+        (("depth", "9" * 1000), ("level", "2")),
+        (("depth", 20), ("level", "2")),
+    ],
+)
+def test_unbounded_or_unreviewed_book_query_fails_before_any_transport(params):
+    with pytest.raises(ValueError):
+        SuiReadRequest("GET", "https://sui.test/book", "book-reference", params=params)

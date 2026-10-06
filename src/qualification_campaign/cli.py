@@ -186,6 +186,7 @@ async def capture(source_config, output, rpc_profiles=None, verify_native=1):
                 "max_attempts": 1,
                 "max_response_bytes": 8_000_000,
                 "max_string_length": 6_000_000,
+                "accepted_content_encodings": ["identity", "gzip", "deflate"],
             },
         },
         sources=generations,

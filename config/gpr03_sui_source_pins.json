@@ -1,0 +1,38 @@
+{
+  "aftermath": {
+    "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
+    "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
+    "sha256": "c6747a9476a5a200bb5b4435fdf6f0f3aba85b98270ddb070cb91485481b4d39",
+    "source_commit": "5fcad76c2a091f15e270db7aab7eb54be01e2c67",
+    "source_file": "src/packages/pools/pools.ts"
+  },
+  "cetus": {
+    "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
+    "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
+    "sha256": "89f377727bc1ea06901c0ecf48ed3261125aef17ff2f62fd3ef3d158e6d5d003",
+    "source_commit": "bb37cda30d5aca63c2398e6886a1701cca1cf87d",
+    "source_file": "src/config/mainnet.ts"
+  },
+  "deepbook": {
+    "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
+    "indexer_response_schema": "UNREVIEWED_FAIL_CLOSED_IF_MISSING_POOL_COIN_TYPES",
+    "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
+    "sha256": "5d9532d1a99f977821a21b26f3a0f4ddc40479067c4d2ebd65a45391da9e945d",
+    "source_commit": "045187f24721f4590203e13731bfe1174713f74f",
+    "source_file": "packages/deepbook-v3/src/contracts/deepbook/pool.ts"
+  },
+  "graphql": {
+    "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
+    "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
+    "sha256": "a98114bf05f8336e8a00d718ca28596efe3238461b4cca02a9f9f4bae82d55a7",
+    "source_commit": "045187f24721f4590203e13731bfe1174713f74f",
+    "source_file": "packages/sui/src/graphql/generated/schema.graphql"
+  },
+  "scallop": {
+    "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
+    "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
+    "sha256": "ec8ce6963fbd26c7cd57bd281221c33245f4381c46d1c817c3b8a1dbe8ef9ff6",
+    "source_commit": "ce59a37254c1851ae1d5e77b7d8ef690f0bdd28d",
+    "source_file": "src/repositories/market/helpers.ts"
+  }
+}

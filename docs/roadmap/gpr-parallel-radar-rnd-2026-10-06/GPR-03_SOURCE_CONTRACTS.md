@@ -116,3 +116,7 @@ millisecond timestamp, best-to-worst order, requested total depth <=20, positive
 finite bounded numbers and non-crossed top levels. Summary top levels and exact
 rational midpoint spreads describe the observed index only; they never supply
 checkpoint state, qualified depth/fees, executable profit or a verified anomaly.
+
+Known book read requests require exactly GET `depth=20&level=2`; depth zero,
+unreviewed values and oversized/non-ASCII/non-string query values are rejected
+before transport. The immutable final capture already uses this finite template.

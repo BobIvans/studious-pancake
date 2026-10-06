@@ -197,7 +197,10 @@ def load_canonical_authority(repository_root=None) -> dict[str, Any]:
     if (root / "config").is_dir():
         if not mirror.is_file() or mirror.read_bytes() != path.read_bytes():
             raise RuntimeAuthorityError("RUNTIME_AUTHORITY_MIRROR_MISMATCH")
-    for name, expected in value["generation_bindings"].items():
+    bindings = value["generation_bindings"]
+    if not isinstance(bindings, dict):
+        raise RuntimeAuthorityError("runtime authority generation bindings invalid")
+    for name, expected in bindings.items():
         bound = (
             (root / "src/resources" / name)
             if repository_root is not None

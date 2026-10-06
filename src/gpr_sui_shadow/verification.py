@@ -261,7 +261,12 @@ class SuiHardBoundGate:
             raise ValueError("SUI_INDEPENDENT_QUORUM_REQUIRED")
         captures = [validate_capture(self.evidence, ref) for ref in capture_refs]
         for field in ("profile_id", "provider", "operator", "correlation_group"):
-            if len({r["profile"][field] for r in captures}) != len(captures):
+            identities = [r["profile"][field] for r in captures]
+            if field != "profile_id":
+                if any(value != value.strip() for value in identities):
+                    raise ValueError("SUI_CANONICAL_PROVIDER_IDENTITY_REQUIRED")
+                identities = [value.lower() for value in identities]
+            if len(set(identities)) != len(captures):
                 raise ValueError("SUI_CORRELATED_PROVIDERS_BLOCKED")
         checked = [
             scoped_object(

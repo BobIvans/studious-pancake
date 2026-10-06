@@ -1,6 +1,12 @@
 {
   "aftermath": {
     "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
+    "engineering_budget": {
+      "max_json_nodes": 60000,
+      "max_normalized_row_scan": 512,
+      "max_response_bytes": 2097152,
+      "reason": "actual HTTP200 body exceeded 1MiB in first immutable campaign"
+    },
     "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
     "sha256": "c6747a9476a5a200bb5b4435fdf6f0f3aba85b98270ddb070cb91485481b4d39",
     "source_commit": "5fcad76c2a091f15e270db7aab7eb54be01e2c67",
@@ -8,15 +14,38 @@
   },
   "cetus": {
     "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
+    "measured_response_contract": {
+      "campaign_id": "e7e030c88934b6c360b492dbbf6c38730c5fe5ff3b073725285728894d55caf1",
+      "evidence_export_sha256": "c473fa9778d4c83b471de3f69fae5d0f20de0dc961493c361ac557d78abc6982",
+      "shape": "code=0,data.lp_list,address,coin_a_address,coin_b_address"
+    },
     "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
     "sha256": "89f377727bc1ea06901c0ecf48ed3261125aef17ff2f62fd3ef3d158e6d5d003",
     "source_commit": "bb37cda30d5aca63c2398e6886a1701cca1cf87d",
     "source_file": "src/config/mainnet.ts"
   },
   "deepbook": {
+    "book_constants_sha256": "d2fe50883555dd71eb8e0182d5d277844c138008b0345f3801000cecaf144fa6",
     "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
-    "indexer_response_schema": "UNREVIEWED_FAIL_CLOSED_IF_MISSING_POOL_COIN_TYPES",
+    "indexer_response_schema": "SOURCE_PINNED_GET_POOLS_AND_ORDERBOOK",
+    "indexer_schema_sha256": "db4e319169e744f2067df3e54e43cc808ddca678ffe4a4944b481507db002a4f",
+    "indexer_source_commit": "6f73d976320b3dea9697938cdcb9bebbd5ed3de2",
+    "indexer_source_file": "crates/indexer/deepbook-indexer-openapi.yaml",
     "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
+    "priority_book_identifiers": [
+      {
+        "name": "WUSDC_USDC",
+        "pool_id": "0xa0b9ebefb38c963fd115f52d71fa64501b79d1adcb5270563f92ce0442376545"
+      },
+      {
+        "name": "WUSDT_USDC",
+        "pool_id": "0x4e2ca3988246e1d50b9bf209abb9c1cbfec65bd95afdacc620a36c67bdb8452f"
+      },
+      {
+        "name": "USDT_USDC",
+        "pool_id": "0xfc28a2fb22579c16d672a1152039cbf671e5f4b9f103feddff4ea06ef3c2bc25"
+      }
+    ],
     "sha256": "5d9532d1a99f977821a21b26f3a0f4ddc40479067c4d2ebd65a45391da9e945d",
     "source_commit": "045187f24721f4590203e13731bfe1174713f74f",
     "source_file": "packages/deepbook-v3/src/contracts/deepbook/pool.ts"
@@ -30,6 +59,8 @@
   },
   "scallop": {
     "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
+    "indexer_constructor_file": "src/datasources/indexer.ts",
+    "indexer_constructor_sha256": "102bf29430208b4aa53a6248d6602ec6deefbf6866adeddddc5e90bb2dce4b20",
     "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
     "sha256": "ec8ce6963fbd26c7cd57bd281221c33245f4381c46d1c817c3b8a1dbe8ef9ff6",
     "source_commit": "ce59a37254c1851ae1d5e77b7d8ef690f0bdd28d",

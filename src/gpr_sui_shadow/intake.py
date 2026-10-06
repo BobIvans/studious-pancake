@@ -6,7 +6,7 @@ import hashlib
 import json
 import time
 from contextlib import asynccontextmanager
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from uuid import uuid4
 
 import httpx
@@ -47,15 +47,37 @@ class CapturedJsonTransport(HttpxJsonTransport):
         self.capture_lock = asyncio.Lock()
 
     async def _read_bounded(self, response):
+        self.raw_capture = {
+            **(self.raw_capture or {}),
+            "http_status": response.status_code,
+            "content_type": response.headers.get("content-type"),
+            "declared_content_length": response.headers.get("content-length"),
+            "response_limit_bytes": self.policy.max_response_bytes,
+            "json_node_limit": self.policy.max_json_nodes,
+            "body_capture_complete": False,
+        }
         body = await super()._read_bounded(response)
         self.raw_capture = {
+            **self.raw_capture,
             "http_status": response.status_code,
             "content_type": response.headers.get("content-type"),
             "wire_payload_sha256": hashlib.sha256(body).hexdigest(),
             "wire_payload_base64": base64.b64encode(body).decode(),
             "wire_payload_bytes": len(body),
+            "body_capture_complete": True,
         }
         return body
+
+    async def _physical_attempt(self, request, attempt):
+        self.raw_capture = {
+            "sent_content_length": request.headers.get("content-length"),
+            "sent_content_type": request.headers.get("content-type"),
+            "sent_accept": request.headers.get("accept"),
+            "request_wire_sha256": hashlib.sha256(request.content).hexdigest(),
+            "request_wire_bytes": len(request.content),
+            "request_wire_base64": base64.b64encode(request.content).decode(),
+        }
+        return await super()._physical_attempt(request, attempt)
 
 
 @asynccontextmanager
@@ -92,7 +114,17 @@ class SuiIntakePlane:
 
     async def collect(self, profile, request, adapter=None):
         async with self.transport.capture_lock:
-            return await self._collect(profile, request, adapter)
+            original = self.transport.policy
+            self.transport.policy = replace(
+                original,
+                max_response_bytes=profile.max_response_bytes,
+                max_wire_bytes=profile.max_response_bytes,
+                max_json_nodes=profile.max_json_nodes,
+            )
+            try:
+                return await self._collect(profile, request, adapter)
+            finally:
+                self.transport.policy = original
 
     async def _collect(self, profile, request, adapter=None):
         if (
@@ -144,7 +176,10 @@ class SuiIntakePlane:
                 profile.source_kind == "scallop"
                 and not isinstance(adapter, ScallopRateAdapter)
             )
-            or (profile.source_kind == "graphql" and adapter is not None)
+            or (
+                profile.source_kind in ("graphql", "deepbook-book")
+                and adapter is not None
+            )
         ):
             raise ValueError("SUI_SOURCE_ADAPTER_GENERATION_MISMATCH")
         candidates: tuple[SuiCandidate, ...] = ()
@@ -164,11 +199,15 @@ class SuiIntakePlane:
 
             async def physical():
                 envelope["physical_attempt_started"] = True
+                headers = dict(request.semantic_headers)
+                if request.serialized_body is not None:
+                    headers["Content-Length"] = str(len(request.serialized_body))
                 return await self.transport.request(
                     request.method,
                     request.url,
                     params=dict(request.params),
                     json_body=request.body,
+                    headers=headers,
                 )
 
             status, headers, payload = await self.governance.execute_physical(
@@ -266,6 +305,20 @@ def validate_capture(evidence, ref):
         or digest(raw["raw_payload"]) != raw["raw_payload_hash"]
     ):
         raise ValueError("SUI_CAPTURE_REQUEST_OR_PAYLOAD_HASH_MISMATCH")
+    if "request_wire_base64" in raw:
+        sent = base64.b64decode(raw["request_wire_base64"], validate=True)
+        if (
+            hashlib.sha256(sent).hexdigest() != raw["request_wire_sha256"]
+            or len(sent) != raw["request_wire_bytes"]
+        ):
+            raise ValueError("SUI_REQUEST_WIRE_HASH_MISMATCH")
+        if raw["request"]["body"] is not None:
+            if digest(json.loads(sent)) != digest(raw["request"]["body"]) or raw[
+                "sent_content_length"
+            ] != str(len(sent)):
+                raise ValueError("SUI_EXPLICIT_POST_BODY_LENGTH_OR_CONTENT_MISMATCH")
+        elif sent:
+            raise ValueError("SUI_GET_REQUEST_BODY_FORBIDDEN")
     if raw["response_hash"] is not None and "wire_payload_base64" not in raw:
         raise ValueError("SUI_POSITIVE_WIRE_CAPTURE_REQUIRED")
     if "wire_payload_base64" in raw:

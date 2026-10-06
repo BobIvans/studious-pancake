@@ -108,14 +108,22 @@ class PoolIndexAdapter:
         elif self.venue == "deepbook":
             rows = payload if isinstance(payload, list) else payload.get("pools")
         else:
-            if not isinstance(payload, dict) or payload.get("code") != 200:
+            if not isinstance(payload, dict) or payload.get("code") not in (0, 200):
                 raise ValueError("CETUS_RESPONSE_SCHEMA_REJECTED")
-            rows = payload["data"]["pools"]
-        if not isinstance(rows, list) or len(rows) > 512:
+            rows = (
+                payload["data"]["lp_list"]
+                if payload["code"] == 0
+                else payload["data"]["pools"]
+            )
+        if not isinstance(rows, list) or len(rows) > (
+            5000 if self.venue == "aftermath" else 512
+        ):
             raise ValueError("SUI_BOUNDED_POOL_INDEX_REQUIRED")
         candidates = []
         rejected: Counter[str] = Counter()
-        for row in rows:
+        if len(rows) > 512:
+            rejected["bounded-row-scan-truncated"] = len(rows) - 512
+        for row in rows[:512]:
             try:
                 if self.venue == "aftermath":
                     types, pool = tuple(row["coins"]), row["objectId"]
@@ -124,9 +132,9 @@ class PoolIndexAdapter:
                         "pool_id"
                     ]
                 else:
-                    types, pool = (row["coin_a_address"], row["coin_b_address"]), row[
-                        "swap_account"
-                    ]
+                    types, pool = (row["coin_a_address"], row["coin_b_address"]), (
+                        row["address"] if payload["code"] == 0 else row["swap_account"]
+                    )
                 candidates.append(SuiCandidate(pool, types, self.venue))
             except (ValueError, KeyError, TypeError, AttributeError):
                 rejected["missing-or-invalid-exact-pool-coin-types"] += 1
@@ -136,6 +144,8 @@ class PoolIndexAdapter:
 class ScallopRateAdapter:
     def normalize(self, payload):
         rows = payload["pools"]
+        if isinstance(rows, dict):
+            rows = list(rows.values())
         if not isinstance(rows, list) or len(rows) > 128:
             raise ValueError("SCALLOP_BOUNDED_RATE_INDEX_REQUIRED")
         result = []

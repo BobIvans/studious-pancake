@@ -2,6 +2,7 @@
 
 from dataclasses import asdict, dataclass
 import re
+import json
 from urllib.parse import urlsplit
 
 from src.provider_governance import ProviderEntitlement, ProviderOperation
@@ -60,6 +61,10 @@ class SuiReadRequest:
     purpose: str
     params: tuple[tuple[str, str], ...] = ()
     body: dict | None = None
+    semantic_headers: tuple[tuple[str, str], ...] = (
+        ("Accept", "application/json"),
+        ("Content-Type", "application/json"),
+    )
 
     def __post_init__(self):
         url = urlsplit(self.url)
@@ -77,6 +82,7 @@ class SuiReadRequest:
             "structural-rates",
             "checkpoint",
             "checkpoint-object",
+            "book-reference",
         ):
             raise ValueError("SUI_READ_ONLY_OPERATION_REQUIRED")
         if self.method == "GET" and self.body is not None:
@@ -85,6 +91,11 @@ class SuiReadRequest:
             raise ValueError("SUI_BOUNDED_UNIQUE_PARAMETERS_REQUIRED")
         if len(str(self.body)) > 24_000:
             raise ValueError("SUI_BOUNDED_QUERY_REQUIRED")
+        if self.semantic_headers != (
+            ("Accept", "application/json"),
+            ("Content-Type", "application/json"),
+        ):
+            raise ValueError("SUI_PINNED_PUBLIC_REQUEST_HEADERS_REQUIRED")
         # GraphQL is deliberately a finite read template, never arbitrary queries.
         if self.purpose in ("checkpoint", "checkpoint-object"):
             from .sources import CHECKPOINT_QUERY, OBJECT_QUERY
@@ -98,6 +109,16 @@ class SuiReadRequest:
     @property
     def fingerprint(self):
         return digest(asdict(self))
+
+    @property
+    def serialized_body(self):
+        return (
+            None
+            if self.body is None
+            else json.dumps(
+                self.body, ensure_ascii=False, separators=(",", ":"), allow_nan=False
+            ).encode()
+        )
 
 
 @dataclass(frozen=True)
@@ -119,6 +140,8 @@ class SuiSourceProfile:
     credential_ref: str = "anonymous-public-read"
     credential_generation: str = "anonymous-v1"
     allowed_query_parameters: tuple[str, ...] = ()
+    max_response_bytes: int = 1_048_576
+    max_json_nodes: int = 20_000
 
     def __post_init__(self):
         for value in (self.endpoint, self.official_docs):
@@ -136,15 +159,27 @@ class SuiSourceProfile:
             "pool-index",
             "structural-rates",
             "checkpoint",
+            "book-reference",
         ):
             raise ValueError("SUI_READ_PROFILE_REQUIRED")
         if (
             self.source_kind
-            not in ("deepbook", "aftermath", "cetus", "scallop", "graphql")
+            not in (
+                "deepbook",
+                "aftermath",
+                "cetus",
+                "scallop",
+                "graphql",
+                "deepbook-book",
+            )
             or ((self.purpose == "checkpoint") != (self.source_kind == "graphql"))
             or ((self.purpose == "structural-rates") != (self.source_kind == "scallop"))
         ):
             raise ValueError("SUI_PINNED_SOURCE_ADAPTER_KIND_REQUIRED")
+        if (self.purpose == "book-reference") != (self.source_kind == "deepbook-book"):
+            raise ValueError("SUI_PINNED_BOOK_REFERENCE_PROFILE_REQUIRED")
+        uint(self.max_response_bytes, "response_byte_cap", 1, 4_194_304)
+        uint(self.max_json_nodes, "json_node_cap", 1, 100_000)
         for text in (
             self.profile_id,
             self.provider,
@@ -156,6 +191,11 @@ class SuiSourceProfile:
         ):
             if not isinstance(text, str) or not text:
                 raise ValueError("SUI_COMPLETE_PROVIDER_IDENTITY_REQUIRED")
+        for field in ("provider", "operator", "correlation_group"):
+            value = getattr(self, field)
+            if value != value.strip():
+                raise ValueError("SUI_CANONICAL_PROVIDER_IDENTITY_REQUIRED")
+            object.__setattr__(self, field, value.lower())
         sha(self.schema_pin)
         for field in ("request_limit", "campaign_attempt_cap", "window_seconds"):
             uint(getattr(self, field), field, 1, 60)

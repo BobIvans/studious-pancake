@@ -337,6 +337,19 @@ def test_correlated_quorum_fails_closed(tmp_path, field):
         gate.qualify(request, candidate, captures)
 
 
+@pytest.mark.parametrize("field", ["provider", "operator", "correlation_group"])
+def test_cosmetic_provider_case_and_whitespace_never_supply_independence(
+    tmp_path, field
+):
+    first = profile(1, **{field: "MystenLabs"})
+    second = profile(2, **{field: "mystenlabs"})
+    gate, _, candidate, captures, request = setup(tmp_path, (first, second))
+    with pytest.raises(ValueError, match="CORRELATED"):
+        gate.qualify(request, candidate, captures)
+    with pytest.raises(ValueError, match="CANONICAL"):
+        profile(3, **{field: " mystenlabs "})
+
+
 @pytest.mark.parametrize(
     "failure",
     [
@@ -643,8 +656,17 @@ def test_rehashed_or_missing_receipts_never_qualify(tmp_path, mutation):
 def test_scoped_profiles_sources_no_production_credentials_and_focus_corpus():
     pins = json.loads(Path("config/gpr03_sui_source_pins.json").read_text())
     profiles = default_profiles(pins)
-    assert len(profiles) == 5 and all(
-        p.smoke_only and p.campaign_attempt_cap == 12 for p in profiles
+    assert len(profiles) == 8 and all(
+        p.smoke_only and p.campaign_attempt_cap in (1, 12) for p in profiles
+    )
+    assert (
+        next(p for p in profiles if p.source_kind == "aftermath").max_response_bytes
+        == 2_097_152
+    )
+    assert all(
+        p.max_response_bytes == 1_048_576
+        for p in profiles
+        if p.source_kind != "aftermath"
     )
     assert all(p.credential_ref == "anonymous-public-read" for p in profiles)
     registry, seed = corpus()
@@ -740,6 +762,43 @@ def test_zero_apy_is_valid_without_becoming_a_staking_exchange_rate():
     assert {r.rate_kind for r in rates} == {"supplyApy", "borrowApy"}
     assert all(r.rate_numerator == 0 and r.rate_denominator == 1 for r in rates)
     assert rejected == {"rate-or-exact-coin-type-invalid": 1}
+
+
+def test_deployed_cetus_lp_list_schema_from_retained_first_campaign():
+    registry, seed = corpus()
+    candidate = candidate_for(registry, seed)
+    payload = {
+        "code": 0,
+        "msg": "success",
+        "data": {
+            "total": 1,
+            "lp_list": [
+                {
+                    "address": candidate.pool_id,
+                    "coin_a_address": candidate.coin_types[0],
+                    "coin_b_address": candidate.coin_types[1],
+                }
+            ],
+        },
+    }
+    candidates, rates, rejected = PoolIndexAdapter("cetus").normalize(payload)
+    assert not rates and not rejected and len(candidates) == 1
+    assert candidates[0].pool_id == candidate.pool_id and candidates[0].venue == "cetus"
+
+
+def test_scallop_object_values_shape_retains_structural_rates_without_symbol_alias():
+    _, rates, rejected = ScallopRateAdapter().normalize(
+        {
+            "pools": {
+                "sui": {
+                    "coinType": "0x2::sui::SUI",
+                    "conversionRate": "1.1",
+                    "supplyApy": 0,
+                }
+            }
+        }
+    )
+    assert not rejected and len(rates) == 2
 
 
 @pytest.mark.parametrize("suffix", [b"\x00", b"\x80", b"\xff" * 8])

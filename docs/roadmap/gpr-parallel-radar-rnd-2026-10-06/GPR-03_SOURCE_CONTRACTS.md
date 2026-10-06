@@ -43,21 +43,38 @@ that the current hosted endpoint is available or has deployed that schema.
 
 DeepBook's reviewed generated `pool.ts` at the same source commit shows a
 `Pool` containing a versioned inner object, and `PoolInner` containing book,
-state, vault and fee-related inputs. A root object or `/all_pools` row does
+state, vault and fee-related inputs. A root object or indexed pool row does
 not prove dynamic book depth or current fee rules. All nine original DeepBook
 identifiers stay research references until these separate objects and BCS
-layouts are qualified. The indexer's exact response field contract remains
-unreviewed; missing canonical pool/coin types are retained schema rejections.
+layouts are qualified. The corrected indexer contract is source-pinned to
+MystenLabs/deepbookv3 commit `6f73d976320b3dea9697938cdcb9bebbd5ed3de2`,
+`crates/indexer/deepbook-indexer-openapi.yaml`: `GET /get_pools` returns pool IDs,
+names and Move types. `GET /orderbook/{pool_name}?depth=20&level=2` supplies an
+indexed book reference. Three stable-family names are matched against both
+published seed IDs and current index rows. They share provider/operator/
+correlation ownership and supply no independent checkpoint/depth/fee proof.
 
 Aftermath's `Pools.getAllPools` uses a read-only POST with `{}` at
 `https://aftermath.finance/api/pools`; pool coin types are dictionary keys and
-pool identity is `objectId`. Cetus's official configuration names
+pool identity is `objectId`. Aftermath alone has a pinned 2 MiB/60,000 JSON-node
+engineering subcap after the first campaign measured HTTP 200 exceeding 1 MiB.
+Normalization scans at most 512 rows and retains a truncation count; common
+transport and other profiles keep their existing bounds.
+
+Cetus's official configuration names
 `https://api-sui.cetus.zone/v2/sui/stats_pools`; index rows without exact Move
-coin types remain rejected research evidence. Scallop's official indexer uses
-`https://sui.apis.scallop.io/api/market/migrate`; `coinType`, `conversionRate`,
+coin types remain rejected research evidence. Its deployed `code=0/data.lp_list`
+shape is pinned to the first immutable campaign's raw export; the original
+schema rejection is retained. Scallop's `IndexerDataSource` source-pins the
+SDK host, `https://sdk.api.scallop.io/api/market/migrate`; `coinType`, `conversionRate`,
 `supplyApy`, `borrowApy` and `updatedAt` are retained as structural reference
 inputs. Lending APY is never substituted for a staking exchange rate. The
 campaign quotas are conservative engineering subcaps, not claimed public plans.
+
+POST reads carry explicit pinned Accept/Content-Type and the exact serialized
+body Content-Length. Sent public request bytes, their hash, actual header length
+and negative response bytes are retained to distinguish an application schema
+error from any deployed proxy/server request-contract failure.
 
 The HARD_BOUND path reconstructs standard `0x2::coin::CoinMetadata<T>` BCS
 UID/decimals/name/symbol/description/icon contents with bounded canonical lengths.

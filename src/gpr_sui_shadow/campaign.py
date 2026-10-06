@@ -3,8 +3,9 @@
 import argparse
 import asyncio
 from collections import Counter
-from dataclasses import asdict
+from dataclasses import asdict, replace
 import hashlib
+import gzip
 import json
 import os
 from pathlib import Path
@@ -45,7 +46,7 @@ def default_profiles(pins):
             "MystenLabs",
             "MystenLabs",
             "mysten-deepbook-index",
-            "https://deepbook-indexer.mainnet.mystenlabs.com/all_pools",
+            "https://deepbook-indexer.mainnet.mystenlabs.com/get_pools",
             "https://docs.sui.io/standards/deepbookv3-indexer",
             "deepbook",
             "GET",
@@ -78,7 +79,7 @@ def default_profiles(pins):
             "Scallop",
             "scallop-io",
             "scallop-index",
-            "https://sui.apis.scallop.io/api/market/migrate",
+            "https://sdk.api.scallop.io/api/market/migrate",
             "https://github.com/scallop-io/sui-scallop-sdk",
             "scallop",
             "GET",
@@ -96,7 +97,7 @@ def default_profiles(pins):
             "checkpoint",
         ),
     ]
-    return tuple(
+    base = tuple(
         SuiSourceProfile(
             key,
             provider,
@@ -113,6 +114,40 @@ def default_profiles(pins):
         )
         for key, provider, operator, group, url, docs, pin, method, purpose in rows
     )
+    base = tuple(
+        (
+            replace(
+                p,
+                max_response_bytes=pins["aftermath"]["engineering_budget"][
+                    "max_response_bytes"
+                ],
+                max_json_nodes=pins["aftermath"]["engineering_budget"][
+                    "max_json_nodes"
+                ],
+            )
+            if p.source_kind == "aftermath"
+            else p
+        )
+        for p in base
+    )
+    books = tuple(
+        SuiSourceProfile(
+            "deepbook-book-" + book["name"],
+            "MystenLabs",
+            "MystenLabs",
+            "mysten-deepbook-index",
+            "https://deepbook-indexer.mainnet.mystenlabs.com/orderbook/" + book["name"],
+            "https://docs.sui.io/standards/deepbookv3-indexer",
+            digest(pins["deepbook"]),
+            "GET",
+            "book-reference",
+            "deepbook-book",
+            campaign_attempt_cap=1,
+            allowed_query_parameters=("depth", "level"),
+        )
+        for book in pins["deepbook"]["priority_book_identifiers"]
+    )
+    return (*base[:4], *books, base[-1])
 
 
 async def capture(root, pack, output):
@@ -129,7 +164,7 @@ async def capture(root, pack, output):
         "gpr03.capture_policy": {
             "base_sha": BASE_SHA,
             "maximum_pools": 9,
-            "maximum_attempts": 16,
+            "maximum_attempts": 18,
             "read_only": True,
             "shadow_only": True,
             "production_promotion": False,
@@ -153,6 +188,8 @@ async def capture(root, pack, output):
     )
     outcomes = []
     pool_capture_refs = {}
+    book_capture_refs = {}
+    deepbook_index = None
     async with sui_transport({p.hostname for p in profiles}, os.environ) as transport:
         intake = SuiIntakePlane(governance, transport, evidence)
         for p in profiles[:4]:
@@ -171,6 +208,8 @@ async def capture(root, pack, output):
                 )
             )
             ref, raw = await intake.collect(p, request, adapter)
+            if p.source_kind == "deepbook" and raw["quality"] == "accepted":
+                deepbook_index = raw["raw_payload"]
             outcomes.append(
                 {
                     "profile": p.profile_id,
@@ -224,6 +263,60 @@ async def capture(root, pack, output):
                     },
                     observed_at_ns=time.time_ns(),
                 )
+        if isinstance(deepbook_index, list):
+            for book, p in zip(
+                pins["deepbook"]["priority_book_identifiers"],
+                profiles[4:-1],
+                strict=True,
+            ):
+                pool = next(
+                    (
+                        pool
+                        for pool in seed.pools
+                        if pool.canonical_object_id == book["pool_id"]
+                    ),
+                    None,
+                )
+                row = next(
+                    (
+                        r
+                        for r in deepbook_index
+                        if r.get("pool_id") == book["pool_id"]
+                        and r.get("pool_name") == book["name"]
+                    ),
+                    None,
+                )
+                if pool is None or row is None:
+                    continue
+                candidate = SuiCandidate(
+                    row["pool_id"],
+                    (row["base_asset_id"], row["quote_asset_id"]),
+                    "deepbook",
+                )
+                if {
+                    registry.by_identifier("sui-mainnet", t).asset_id
+                    for t in candidate.coin_types
+                } != set(pool.representations):
+                    continue
+                book_ref, book_raw = await intake.collect(
+                    p,
+                    SuiReadRequest(
+                        "GET",
+                        p.endpoint,
+                        "book-reference",
+                        params=(("depth", "20"), ("level", "2")),
+                    ),
+                )
+                book_capture_refs[pool.canonical_object_id] = book_ref
+                outcomes.append(
+                    {
+                        "profile": p.profile_id,
+                        "pool_id": pool.canonical_object_id,
+                        "ref": book_ref,
+                        "quality": book_raw["quality"],
+                        "http_status": book_raw.get("http_status"),
+                    }
+                )
     graph = ingest_research(ResearchEconomicGraph(registry, seed), evidence)
     graph_ref = graph.persist(evidence, observed_at_ns=time.time_ns())
     queue = VerificationQueue(graph, evidence)
@@ -272,6 +365,10 @@ async def capture(root, pack, output):
         ),
         "reserved_attempts": sum(r.get("kind") == "attempt" for r in rows),
         "candidate_count": sum(r.get("kind") == "gpr03_sui_candidate" for r in rows),
+        "registered_discovery_relations": sum(
+            r.relation_id.startswith("gpr03:") for r in graph.relations.values()
+        ),
+        "indexed_book_reads": len(book_capture_refs),
         "structural_rate_count": sum(
             r.get("kind") == "gpr03_structural_rate" for r in rows
         ),
@@ -281,6 +378,9 @@ async def capture(root, pack, output):
                 "pool_id": p.canonical_object_id,
                 "representations": list(p.representations),
                 "checkpoint_object_capture_ref": pool_capture_refs.get(
+                    p.canonical_object_id
+                ),
+                "indexed_book_capture_ref": book_capture_refs.get(
                     p.canonical_object_id
                 ),
                 "book_reference": p.canonical_object_id,
@@ -323,7 +423,14 @@ def replay_capture(capture_dir, output, *, pack=DEFAULT_PACK):
     if output.exists():
         raise ValueError("SUI_NEW_REPLAY_OUTPUT_REQUIRED")
     summary = json.loads((capture_dir / "summary.json").read_text())
-    encoded = (capture_dir / "retained-evidence.json").read_bytes()
+    plain = capture_dir / "retained-evidence.json"
+    if plain.exists():
+        encoded = plain.read_bytes()
+    else:
+        with gzip.open(capture_dir / "retained-evidence.json.gz", "rb") as handle:
+            encoded = handle.read(64 * 1024 * 1024 + 1)
+    if len(encoded) > 64 * 1024 * 1024:
+        raise ValueError("SUI_CAPTURE_EXPORT_SIZE_LIMIT")
     if hashlib.sha256(encoded).hexdigest() != summary["retained_evidence_sha256"]:
         raise ValueError("SUI_CAPTURE_EXPORT_HASH_MISMATCH")
     retained = json.loads(encoded)

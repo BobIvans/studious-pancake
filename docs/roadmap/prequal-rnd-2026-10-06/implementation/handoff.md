@@ -81,6 +81,8 @@ Raw hashes относятся к canonical JSON. При credential redaction ori
 
 `VAL-001` исправлен в PR #568 и перенесён через stack в #569 и #570. Audit не исключался и не ослаблялся в CI.
 
+CI также выявил `VAL-002`: concurrent first-open SQLite WAL bootstrap иногда возвращал SQLITE_BUSY до configured busy timeout. Общий lifecycle owner теперь повторяет только SQLITE_BUSY в пределах одного monotonic timeout budget, восстанавливает configured timeout после успеха и закрывает connection при timeout/других errors. Проверки: 16 targeted tests и 40 independent simultaneous bootstrap/claim rounds — PASS. Этот minimum concurrency fix перенесён через все три PR; persistence migration или новые database owners не добавлены.
+
 1. Reviewed independent RPC configuration и bounded supported native control evidence — по фактическому `BLOCKED_SINGLE_SOURCE`.
 2. Targeted Token-2022 semantic qualification либо явный restricted universe — после исследования extensions/owners из сохранённого отказа.
 3. Bounded continuous capture/anomaly accounting — приоритизировать по новым измеренным timestamp/schema/lag/quota blind windows.

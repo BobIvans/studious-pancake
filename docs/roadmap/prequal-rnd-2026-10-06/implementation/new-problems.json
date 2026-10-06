@@ -85,6 +85,23 @@
         "lockfiles_changed_by_ci_followup": true,
         "resolution": "pinned uv, preserved other versions, compiler-generated hashes, refreshed requirements-lock manifest"
       }
+    },
+    {
+      "id": "VAL-002",
+      "problem": "Concurrent first-open WAL upgrade may bypass SQLite busy handler",
+      "origin": "CI_CONCURRENT_SQLITE_BOOTSTRAP",
+      "status": "FIXED",
+      "evidence": "GitHub job 112059517773: test_simultaneous_resource_claims_have_one_winner[False] failed on PRAGMA journal_mode=WAL / SQLITE_BUSY",
+      "resolution": {
+        "status": "PASS",
+        "targeted_tests": 16,
+        "independent_race_rounds": 40,
+        "mypy_source_files": 206,
+        "fix": "retry only SQLITE_BUSY within configured monotonic timeout; restore policy timeout after success; close and fail on expiry/non-busy errors",
+        "origin": "GitHub Repository verification job 112059517773"
+      },
+      "related_roadmap_ids": [],
+      "next_action": "keep bounded timeout, non-busy failure and simultaneous claim tests in required verification"
     }
   ]
 }

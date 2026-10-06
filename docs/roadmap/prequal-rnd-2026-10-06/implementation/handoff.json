@@ -548,6 +548,14 @@
       "passed": 37,
       "repeated_qualification": "PASS"
     },
-    "real_capture": "PASS"
+    "real_capture": "PASS",
+    "wal_bootstrap": {
+      "fix": "retry only SQLITE_BUSY within configured monotonic timeout; restore policy timeout after success; close and fail on expiry/non-busy errors",
+      "independent_race_rounds": 40,
+      "mypy_source_files": 206,
+      "origin": "GitHub Repository verification job 112059517773",
+      "status": "PASS",
+      "targeted_tests": 16
+    }
   }
 }

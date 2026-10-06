@@ -220,6 +220,11 @@ def replay_native_journal(
         min_gross_profit_base_units=0,
     )
     detected = CircularGraphCandidateDetector(policy).detect(snapshot.graph, now=now)
+    quorum = body.get(
+        "rpc_quorum", {"accepted": False, "reason": "BLOCKED_SINGLE_SOURCE_OR_UNBOUND"}
+    )
+    if not isinstance(quorum, dict):
+        raise NativeCaptureError("rpc quorum evidence must be an object")
     return {
         "schema": REPORT_SCHEMA,
         "shadow_only": True,
@@ -267,12 +272,9 @@ def replay_native_journal(
             for c in detected.candidates
         ],
         "campaign_manifest_hash": body.get("campaign_manifest_hash"),
-        "rpc_quorum": body.get(
-            "rpc_quorum",
-            {"accepted": False, "reason": "BLOCKED_SINGLE_SOURCE_OR_UNBOUND"},
-        ),
+        "rpc_quorum": quorum,
         "qualification": {
-            "rpc_independence": body.get("rpc_quorum", {}).get(
+            "rpc_independence": quorum.get(
                 "reason", "BLOCKED_SINGLE_SOURCE_OR_UNBOUND"
             ),
             "raw_decode": "PASS",

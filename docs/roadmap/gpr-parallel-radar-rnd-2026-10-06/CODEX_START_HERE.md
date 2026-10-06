@@ -9,12 +9,17 @@ QPR-01/#568, QPR-02/#569 and QPR-03/#570 are the stacked qualification foundatio
 
 Do not restart the QPR sequence.
 
+## V2.2 additive delta — Codex may already be working
+
+If GPR-01 implementation has already started, **do not restart it**. Read `CODEX_V2_2_DELTA.md` first and patch only the affected identity/transport contracts and tests. The GPR-01 stop condition is unchanged.
+
 ## Read first
 
-1. `MASTER_CONTEXT.md`
-2. `ASSET_REGISTRY_V2.json`
-3. `ASSET_PROVENANCE_V2.md`
-4. `FIRST_CAMPAIGN_FAMILIES_V2_1.json`
+1. `CODEX_V2_2_DELTA.md`
+2. `MASTER_CONTEXT.md`
+3. `ASSET_REGISTRY_V2.json`
+4. `ASSET_PROVENANCE_V2.md`
+5. `FIRST_CAMPAIGN_FAMILIES_V2_2.json`
 5. `SUI_DEEPBOOK_POOLS_V2_1.json`
 6. `UNIVERSE_V2_EXPANSION.md`
 7. `INTERCHAIN_RELATIONS_V2.json`

@@ -1,71 +1,127 @@
-# ARCHITECTURE CONTRACT
+# ARCHITECTURE CONTRACT — GPR V2
 
 ## 1. Preserve the two-graph boundary
 
 ### ResearchEconomicGraph
-May contain:
-- discovery market
-- router quote
-- reference price
-- oracle price
-- redemption / LST exchange-rate anchor
-- NAV/share relation
-- orderbook reference
-- financing capacity
-- cost signal
-- CEX/reference impulse
-- event
-- exact-state reference
 
-It ranks **verification work**, not profit.
+May contain observations and relationships that rank **verification work**:
+
+- discovery market;
+- router quote preview;
+- reference/oracle price;
+- protocol redemption/exchange rate;
+- LST/LRT/staking relation;
+- vault/basket/JLP NAV;
+- orderbook/AMM reference;
+- financing capacity;
+- cost/funding signal;
+- economic-equivalence / bridge-representation relation;
+- cross-chain basis observation;
+- event;
+- exact-state reference.
 
 ### UniversalArbitrageGraph
-Remains the exact/executable shadow graph. Entry requires canonical exact state and existing `MarketObservationV2`/binding rules.
 
-There must be no automatic promotion from the research graph.
+Remains the chain-local exact/executable shadow graph. Entry requires canonical exact state and existing `MarketObservationV2`/binding rules.
 
-## 2. New chain-neutral identities
+No research relation promotes itself.
 
-Introduce a separate layer instead of weakening the current Solana `Candidate` validation:
+## 2. Ontology
+
+```text
+EconomicAsset
+  economic_asset_key
+
+Representation
+  representation_id
+  economic_asset_key
+  chain
+  canonical_id
+  standard
+  representation_kind
+  verification_status
+  identity_generation
+
+VenueState
+  chain
+  venue/program
+  market/object/pool identity
+  state generation / slot / checkpoint
+
+Transformation
+  source_representation
+  target_representation
+  transformation_kind
+  evidence
+  atomicity_domain
+```
+
+The same human ticker must never imply identity equality.
+
+## 3. Identity status gates
+
+Supported research statuses:
+
+- `RND_VERIFIED_CURRENT`
+- `RND_VERIFIED_SPECIFIC_REPRESENTATION`
+- `REVALIDATE_CURRENT`
+- `REVALIDATE_ISSUER_STATUS`
+- `UNRESOLVED`
+
+Rules:
+
+- all statuses are `runtime_enabled=false` by default;
+- R&D verification may permit graph observation, never exact execution;
+- `REVALIDATE_*` cannot cross into exact verification without a fresh identity receipt;
+- `UNRESOLVED` cannot produce a canonical request;
+- a Token-2022 identity may still be blocked by unqualified extension semantics.
+
+## 4. Research identities
+
+Add chain-neutral research owners above, not instead of, QPR-03 Solana Candidate.
+
+Suggested types:
 
 ```text
 ResearchAssetRef
-- chain
-- symbolic_key
-- canonical_id?           # absent until qualified
-- decimals?
-- token_standard?
-- identity_generation
-- status: PLACEHOLDER | RESOLVED | QUALIFIED
-
+ResearchRepresentationRef
 ResearchMarketRef
-- chain
-- market_id?              # may be absent for router-only relation
-- venue
-- asset_a
-- asset_b
-- source_id
-- correlation_group
-
 ResearchRelation
-- relation_id
-- relation_kind
-- asset refs
-- source provenance
-- observed_at
-- source_time/checkpoint/slot if available
-- amount/input/output when amount-specific
-- liquidity/volume signals when available
-- route topology fingerprint
-- response hash/request fingerprint
-- quality
+ResearchEvidenceRef
 ```
 
-QPR-03 Solana `Candidate` is adapted into this layer; it is not replaced.
+QPR-03 Solana candidates adapt into this layer without weakening Solana pubkey/program checks.
 
-## 3. Candidate score
+## 5. Representation relations
 
-CandidateScore is a scheduling score only:
+Research graph may model:
+
+- same economic asset / different chain;
+- same economic asset / different bridge representation;
+- issuer equivalence;
+- protocol redemption;
+- wrapper parity;
+- LST/LRT underlying;
+- NAV/share relationship.
+
+These are relations between representations, not free conversion assumptions.
+
+## 6. Cross-chain edge classes
+
+The initial non-atomic edge taxonomy is:
+
+1. `ISSUER_EQUIVALENCE`
+2. `NATIVE_BURN_MINT`
+3. `LOCK_MINT_BRIDGE`
+4. `ECONOMIC_UNDERLYING`
+5. `PROTOCOL_REDEMPTION`
+6. `INVENTORY_REBALANCE`
+
+Every one has `atomicity_domain = RESEARCH_ONLY_NON_ATOMIC` unless a future separately qualified mechanism proves otherwise.
+
+## 7. CandidateScore
+
+CandidateScore is a scheduling score, not profit:
 
 ```text
 + inter_source_divergence
@@ -75,73 +131,101 @@ CandidateScore is a scheduling score only:
 + volume_acceleration
 + orderbook_amm_gap
 + oracle_market_gap
++ representation_basis
++ cross_chain_basis
 + historical_recurrence
 + size_convexity
 - source_correlation_penalty
 - staleness_penalty
-- missing_identity_penalty
+- unresolved_identity_penalty
+- rebalance_latency_penalty
 ```
 
-No profit claim may be created here.
+## 8. VerificationRequest
 
-## 4. Verification queue
+Top relations produce a bounded request with:
 
-Top relations produce `VerificationRequest` with:
-- chain/domain
-- candidate/relation id
-- asset ids/status
-- suspected venues/pools
-- amount grid
-- required state objects/accounts
-- required independent provider count
-- evidence refs
-- reason/score decomposition
-- request budget ceiling
+- chain/domain;
+- relation id;
+- full representation identities;
+- identity verification statuses;
+- suspected venues/pools/objects;
+- amount grid;
+- required accounts/objects;
+- independent-provider requirement;
+- evidence refs;
+- score decomposition;
+- request budget;
+- expected atomicity domain.
 
-Solana requests enter QPR-02 RPC quorum/native exact path.
-Sui requests enter a new read-only gRPC/GraphQL exact-state path only when that path exists.
-TON remains research-only in this wave.
+Solana exact requests reuse QPR-02.
+Sui exact requests require governed checkpoint/object state.
+Cross-chain requests cannot promote into the atomic graph.
 
-## 5. Parallel source scheduler
+## 9. Parallel source scheduler
 
-One async scheduler, independent source token buckets:
-- provider limit descriptor
-- campaign safety cap
-- batch width
-- monthly/period credit budget
-- per-chain priority
-- correlation group
-- failure/backoff policy
-- deterministic work ordering
+One async scheduler with provider-specific budgets:
 
-Do not calculate a fake global RPS by summing correlated providers. Quotas are a scheduling resource, not evidence quality.
+- provider rate descriptor;
+- campaign safety cap;
+- batch width;
+- period/credit budget;
+- chain priority;
+- correlation group;
+- failure/backoff policy;
+- deterministic ordering.
 
-## 6. Read-only quote preview interface
+Do not sum correlated provider limits into fake evidence independence.
 
-`QuotePreviewProvider`:
-- `quote_exact_in`
-- optional `quote_exact_out`
-- returns normalized amount, route fingerprint, provider fees, price impact, source time, request/response hashes, raw evidence ref
-- cannot sign, send, submit or create production authority
+## 10. QuotePreviewProvider
 
-Solana implementations:
+Read-only interface:
+
+- `quote_exact_in`;
+- optional `quote_exact_out`;
+- amount/input/output;
+- route fingerprint;
+- provider fees;
+- price impact;
+- source time;
+- request/response hashes;
+- raw evidence ref;
+- correlation metadata.
+
+It cannot sign/send/submit.
+
+Solana:
 1. 0x
 2. Jupiter
-3. optional OpenOcean
-4. Sanctum specialized adapter
+3. Sanctum specialized LST
+4. optional OpenOcean comparator
 
-Sui implementations after shared graph:
+Sui:
 1. Aftermath router
-2. direct Cetus/DeepBook preview/state adapter
+2. direct Cetus/DeepBook research/state path
 
-## 7. Correlation rules
+## 11. Structural transformation graph
 
-Examples:
-- OpenOcean Solana -> correlation group includes Jupiter/Titan meta-routing.
-- Sanctum `swapSrc=Jup` must not be counted independently from Jupiter.
-- two RPC URLs from same operator/correlation group do not satisfy independent quorum.
-- two route providers using the same underlying pool may disagree in fees but are not independent liquidity.
+The research graph should eventually support transformations beyond swaps:
 
-## 8. Sui transport
+```text
+swap
+stake
+unstake / instant-exit
+redeem
+mint
+wrap / unwrap
+borrow
+flash-borrow
+supply
+NAV conversion
+bridge/rebalance reference
+```
 
-New Sui work must prefer gRPC/GraphQL. Official Sui docs state Foundation Mainnet JSON-RPC was disabled in July 2026 and is being removed. Reuse the existing `src/multichain/sui.py` PTB/object semantics, but do not grant execution authority from the offline model alone.
+Atomic search remains chain-local. Cross-chain transformation cost belongs to later prefunded/rebalance simulation.
+
+## 12. Sui transport
+
+New Sui exact-state work uses gRPC/GraphQL/checkpoint/object provenance. Do not introduce a new legacy JSON-RPC dependency.
+
+Reuse `src/multichain/sui.py` PTB/object semantics where useful, but the offline model alone grants no live authority.

@@ -45,6 +45,26 @@ are checked again under the write lock. This first release does not permanently
 destroy Parquet payloads. Tombstones are written before mutation and completion
 receipts afterwards. Failed prepared receipts are reconciled against the owner.
 
+Storage capacities were doubled at the operator's request: the default data
+allowance is now up to 60 GB (previously 30 GB), using at most the free disk above
+the unchanged reserve of max(30 GB, 25% of total disk). The nominal healthy
+allowance is 16 GB rather than 8 GB; smaller measured capacity reports pressure.
+This doubles the previous dynamic allowance, including on small disks, without
+claiming more physical space than exists. Explicit configured budgets must fit
+the measured spare disk. Parquet partitions default to 20,000 rows / 128 MiB raw
+payload, repository blobs to 16 MiB, and portable repository archives to 1 GiB
+uncompressed content. Context/inference budgets and evidence ages retain their
+separate meanings. Historical receipts record the limits at their generation.
+
+There is no automatic "delete the oldest 25%" rule. Pruning is dry-run by
+default; explicit execution checks each event's age (default 24 hours), pins,
+reference inventory, samples, representation, compaction and exact replay proof.
+Only eligible payloads in the supplied verified partition are offloaded. Exact
+Parquet payloads remain available for replay; this is not permanent erasure or
+a guarantee that SQLite immediately shrinks. The 25% number is a disk reserve,
+not a deletion fraction. Admission at a configured journal cap blocks new events;
+it does not silently evict old data. Permanent archive expiry is not implemented.
+
 For bounded ingestion instantiate `DurableRawJournal(path, max_journal_bytes=...)`.
 Admission stops with `AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED` before a new event
 when the measured journal/WAL plus reserved expansion would exceed its cap. The

@@ -179,6 +179,33 @@ def test_bounded_deterministic_failure_and_baseline_samples():
     )
 
 
+@pytest.mark.parametrize(
+    "total_gb,free_gb,expected_gb,reserve_gb",
+    [(200, 150, 60, 50), (100, 60, 30, 30), (100, 35, 5, 30), (100, 20, 0, 30)],
+)
+def test_doubled_budget_preserves_reserve_and_actual_free_space(
+    total_gb, free_gb, expected_gb, reserve_gb
+):
+    gb = 1_000_000_000
+    budget = compute_dynamic_budget(total_gb * gb, free_gb * gb)
+    assert budget["reserve_bytes"] == reserve_gb * gb
+    assert budget["intelligence_budget_bytes"] == expected_gb * gb
+    assert budget["intelligence_budget_bytes"] <= budget["spare_bytes"]
+    assert budget["storage_limit_multiplier"] == 2
+
+
+def test_explicit_budget_can_use_doubled_allowance_but_not_disk_reserve():
+    gb = 1_000_000_000
+    assert (
+        compute_dynamic_budget(100 * gb, 60 * gb, configured_bytes=30 * gb)[
+            "intelligence_budget_bytes"
+        ]
+        == 30 * gb
+    )
+    with pytest.raises(ValueError, match="safe spare disk"):
+        compute_dynamic_budget(100 * gb, 60 * gb, configured_bytes=30 * gb + 1)
+
+
 def test_storage_pressure_blocks_admission_without_advancing_cursor(tmp_path):
     with DurableRawJournal(
         tmp_path / "bounded.db", max_journal_bytes=200_000

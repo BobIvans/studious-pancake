@@ -42,7 +42,7 @@ def start_snapshot(
     destination: str | Path,
     *,
     ref: str = "HEAD",
-    max_blob_bytes: int = 8 * 1024 * 1024,
+    max_blob_bytes: int = 16 * 1024 * 1024,
     batch_size: int | None = None,
 ) -> dict:
     repo, destination = Path(repo).resolve(), Path(destination)

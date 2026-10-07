@@ -16,8 +16,8 @@ def publish_partition(
     destination: str | Path,
     *,
     max_available_at_ms: int | None = None,
-    max_rows: int = 10_000,
-    max_payload_bytes: int = 64 * 1024 * 1024,
+    max_rows: int = 20_000,
+    max_payload_bytes: int = 128 * 1024 * 1024,
 ) -> dict:
     if max_rows < 1 or max_payload_bytes < 1:
         raise ValueError("positive partition budget required")

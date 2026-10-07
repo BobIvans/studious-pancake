@@ -14,9 +14,10 @@ def compute_dynamic_budget(
         raise ValueError("invalid disk measurement")
     reserve = max(30 * GB, total_bytes // 4)
     spare = max(0, free_bytes - reserve)
-    budget = min(30 * GB, max(8 * GB, spare // 2)) if spare >= 16 * GB else spare // 2
+    # Double the previous data allowance, bounded by the actual spare disk.
+    budget = min(60 * GB, spare)
     if configured_bytes is not None:
-        if configured_bytes < 0 or configured_bytes > spare // 2:
+        if configured_bytes < 0 or configured_bytes > spare:
             raise ValueError("configured budget exceeds safe spare disk")
         budget = configured_bytes
     return {
@@ -25,7 +26,8 @@ def compute_dynamic_budget(
         "reserve_bytes": reserve,
         "spare_bytes": spare,
         "intelligence_budget_bytes": budget,
-        "storage_pressure_state": "STORAGE_PRESSURE" if budget < 8 * GB else "NORMAL",
+        "storage_limit_multiplier": 2,
+        "storage_pressure_state": "STORAGE_PRESSURE" if budget < 16 * GB else "NORMAL",
     }
 
 

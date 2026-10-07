@@ -9,7 +9,10 @@ from .repo_snapshot import verify_snapshot_roundtrip
 
 
 def build_portable_archive(
-    snapshot: str | Path, destination: str | Path, *, max_bytes: int = 512 * 1024 * 1024
+    snapshot: str | Path,
+    destination: str | Path,
+    *,
+    max_bytes: int = 1024 * 1024 * 1024,
 ) -> dict:
     root, out = Path(snapshot), Path(destination)
     proof = verify_snapshot_roundtrip(root)
@@ -46,7 +49,7 @@ def build_portable_archive(
     return {**proof, "archive_bytes": out.stat().st_size}
 
 
-def verify_portable_archive(path: str | Path, *, max_bytes=512 * 1024 * 1024) -> dict:
+def verify_portable_archive(path: str | Path, *, max_bytes=1024 * 1024 * 1024) -> dict:
     with zipfile.ZipFile(path) as archive:
         names = archive.namelist()
         if (

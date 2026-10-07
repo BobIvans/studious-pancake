@@ -99,7 +99,7 @@ def select_reclaim_candidates(
         if not isinstance(event_id, str) or event_id not in storage:
             continue
         facts = storage[event_id]
-        if facts["archived"] or facts["inline_payload_bytes"] <= 0:
+        if facts["archived"] or facts["pinned"] or facts["inline_payload_bytes"] <= 0:
             continue
         if not _planning_eligible(
             record, now_ms=now_ms, minimum_age_ms=minimum_age_ms

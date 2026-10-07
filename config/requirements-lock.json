@@ -4,7 +4,7 @@
       "extras": [
         "analytics"
       ],
-      "sha256": "6fd90b4eb82b53e77411bb0b9da14105c69a8b6401a1d63d90a2919ad13aca4b"
+      "sha256": "14e97280e01f34411999bdf8095175cbcd78918de2b97389b2420b4f9a148ac1"
     },
     "requirements-dev.txt": {
       "extras": [
@@ -12,11 +12,11 @@
         "service",
         "dev"
       ],
-      "sha256": "df9367e1192fa831a1f1f04f022265442755b9eb601b47180bf9819e3fc03ddd"
+      "sha256": "56ed55eb180bdf014421ae95d31e37791daae4c30460ca578229536cd745c2eb"
     },
     "requirements.txt": {
       "extras": [],
-      "sha256": "d48d6277464253c7121504fcf0faca1f358e16868787bd51b67f20675dfdd453"
+      "sha256": "f5892759c769e3197ab2f81294b955db939dbe734c7b7a8ec31e6a3b28a8feba"
     }
   },
   "platforms": [
@@ -26,10 +26,10 @@
   "python": "3.13",
   "resolved_locks": {
     "requirements-dev.lock": {
-      "sha256": "f96b253d4fbf3e101c77d4c391ab77c138d420f495fb4b01a865c598386661c9"
+      "sha256": "749700d39db10b71f30f28155870dde583fc49bf8cd1bc8edd4b006cdbca1072"
     },
     "requirements.lock": {
-      "sha256": "3f8e99030a9b1e90600a08757c75e9b5b0518207124ee8d7a56fe6a4da64c259"
+      "sha256": "681a81d8c439662ecca19a03c1d0745bf5b021620fdec2d9119510344d231251"
     }
   },
   "resolver": {

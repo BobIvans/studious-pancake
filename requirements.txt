@@ -10,6 +10,7 @@ construct-typing==0.7.0
 h2==4.4.1
 httpx==0.28.1
 jsonschema==4.26.0
+multidict==6.9.1
 orjson==3.11.6
 pydantic==2.13.4
 python-dateutil==2.9.0.post0

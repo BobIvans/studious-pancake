@@ -15,6 +15,7 @@ import json
 from pathlib import Path
 import time
 from typing import Any
+from urllib.parse import urlsplit
 
 from src.durability import UnifiedLifecycleAuthority
 from src.economics.non_monotonic_sizing import (
@@ -298,7 +299,12 @@ async def collect_report(
             HttpxJsonTransport(
                 policy=TransportPolicy(max_string_length=900_000),
                 allowed_hosts=frozenset(
-                    {"api.mainnet-beta.solana.com", "api-v3.raydium.io"}
+                    {
+                        hostname
+                        for manifest in manifests.values()
+                        for endpoint in manifest.allowed_endpoints
+                        if (hostname := urlsplit(endpoint).hostname) is not None
+                    }
                 ),
             )
         )

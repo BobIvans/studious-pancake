@@ -1,0 +1,348 @@
+{
+  "schema": "studious.local-intelligence.function-backlog.v2",
+  "source_heads": {
+    "studious": "ac6297e3f174d073c524099f599490edfe30f7b1",
+    "scaling_reference": "2bda32d0b3b51ceb98db09fb1591100a843fabff"
+  },
+  "architecture_rule": "additive intelligence plane; existing market/economic/effect owners remain authoritative",
+  "functions": [
+    {
+      "id": "CTX01",
+      "module": "src/intelligence/repo_snapshot.py",
+      "functions": [
+        "start_snapshot",
+        "resume_snapshot",
+        "snapshot_status",
+        "verify_snapshot_roundtrip"
+      ],
+      "reuse": [
+        "scaling:repo_inventory.py",
+        "scaling:repo_context.py"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "CTX02",
+      "module": "src/intelligence/repo_manifest.py",
+      "functions": [
+        "project_manifest",
+        "project_part_index",
+        "validate_manifest",
+        "publish_manifest_atomic"
+      ],
+      "reuse": [
+        "scaling:repo_manifest.py"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "CTX03",
+      "module": "src/intelligence/repo_source.py",
+      "functions": [
+        "analyze_source",
+        "partition_source",
+        "build_import_graph",
+        "resolve_reverse_imports"
+      ],
+      "reuse": [
+        "scaling:repo_source.py",
+        "studious:mega_context_wave3.py"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "CTX04",
+      "module": "src/intelligence/repo_groups.py",
+      "functions": [
+        "build_scc_groups",
+        "build_logical_segments",
+        "attach_tests_and_contracts",
+        "report_oversized_groups"
+      ],
+      "reuse": [
+        "scaling:repo_groups.py"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "CTX05",
+      "module": "src/intelligence/repo_history.py",
+      "functions": [
+        "list_snapshots",
+        "delta_between_snapshots",
+        "affected_dependents"
+      ],
+      "reuse": [
+        "scaling:repo_history.py"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "CTX06",
+      "module": "src/intelligence/repo_coverage.py",
+      "functions": [
+        "coverage_summary",
+        "coverage_gaps",
+        "format_gaps"
+      ],
+      "reuse": [
+        "scaling:repo_coverage.py"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "CTX07",
+      "module": "src/intelligence/context_pack.py",
+      "functions": [
+        "build_context_pack",
+        "continue_context_pack",
+        "build_runtime_path_pack",
+        "build_test_impact_pack"
+      ],
+      "reuse": [
+        "scaling:context_handoff.py",
+        "scaling:context_library.py"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "CTX08",
+      "module": "src/intelligence/context_archive.py",
+      "functions": [
+        "build_portable_archive",
+        "verify_portable_archive"
+      ],
+      "reuse": [
+        "scaling:repo_archive.py"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "CTX09",
+      "module": "src/intelligence/context_recovery.py",
+      "functions": [
+        "backup_index",
+        "verify_backup",
+        "restore_to_copy"
+      ],
+      "reuse": [
+        "scaling:context_recovery.py"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "CTX10",
+      "module": "src/intelligence/context_benchmark.py",
+      "functions": [
+        "seed_oracle",
+        "benchmark_exact_retrieval",
+        "benchmark_context_pack"
+      ],
+      "reuse": [
+        "scaling:context_benchmark.py"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "RET01",
+      "module": "src/intelligence/storage_budget.py",
+      "functions": [
+        "read_disk_budget",
+        "compute_dynamic_budget",
+        "storage_pressure_state",
+        "forecast_days_until_budget"
+      ],
+      "reuse": [],
+      "priority": "P0"
+    },
+    {
+      "id": "RET02",
+      "module": "src/intelligence/retention_policy.py",
+      "functions": [
+        "classify_retention_class",
+        "retention_dry_run",
+        "retention_eligibility",
+        "build_retention_receipt"
+      ],
+      "reuse": [
+        "studious:market_data_evolution.evaluate_retention"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "RET03",
+      "module": "src/intelligence/rollups.py",
+      "functions": [
+        "build_1m_rollup",
+        "build_5m_rollup",
+        "build_1h_rollup",
+        "verify_rollup_coverage"
+      ],
+      "reuse": [
+        "studious:AGG02 RawEventEnvelope/StateFrame"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "RET04",
+      "module": "src/intelligence/sampling.py",
+      "functions": [
+        "select_periodic_baseline",
+        "reservoir_sample_failures",
+        "pin_significant_delta",
+        "pin_candidate_window"
+      ],
+      "reuse": [],
+      "priority": "P0"
+    },
+    {
+      "id": "RET05",
+      "module": "src/intelligence/parquet_compaction.py",
+      "functions": [
+        "publish_partition",
+        "verify_partition",
+        "build_compaction_manifest",
+        "compact_unreferenced_raw"
+      ],
+      "reuse": [
+        "studious:AnalyticalDatasetPublisher",
+        "studious:DatasetReplayReader"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "RET06",
+      "module": "src/intelligence/evidence_refs.py",
+      "functions": [
+        "find_raw_references",
+        "find_episode_references",
+        "find_experiment_pins",
+        "deletion_impact"
+      ],
+      "reuse": [
+        "scaling:context_library.deletion_impact"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "RET07",
+      "module": "src/intelligence/prune.py",
+      "functions": [
+        "prune_dry_run",
+        "prune_verified_payloads",
+        "write_tombstone_receipt"
+      ],
+      "reuse": [],
+      "priority": "P2",
+      "guard": "must never remove referenced evidence or break replay contract"
+    },
+    {
+      "id": "RND01",
+      "module": "src/intelligence/episode_builder.py",
+      "functions": [
+        "build_market_episode",
+        "link_stage_evidence",
+        "link_negative_examples"
+      ],
+      "reuse": [
+        "studious:MarketEpisode",
+        "studious:paper_shadow",
+        "studious:production_qualification"
+      ],
+      "priority": "P0"
+    },
+    {
+      "id": "RND02",
+      "module": "src/intelligence/provider_utility.py",
+      "functions": [
+        "provider_funnel",
+        "unique_candidate_contribution",
+        "provider_disagreement_metrics",
+        "utility_per_quota_unit"
+      ],
+      "reuse": [
+        "studious:runtime_discovery_models",
+        "studious:GraphSourceTrace"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "RND03",
+      "module": "src/intelligence/strategy_report.py",
+      "functions": [
+        "build_strategy_funnel",
+        "compare_strategy_baselines",
+        "build_delay_stress",
+        "build_dashboard",
+        "build_resource_cost_report"
+      ],
+      "reuse": [
+        "studious:production_qualification"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "RND04",
+      "module": "src/intelligence/experiment_manifest.py",
+      "functions": [
+        "seal_experiment",
+        "verify_experiment_identity",
+        "compare_experiment_identity"
+      ],
+      "reuse": [
+        "studious:research/evidence.py"
+      ],
+      "priority": "P1"
+    },
+    {
+      "id": "LAYA01",
+      "module": "src/intelligence/laya_triage.py",
+      "functions": [
+        "build_compact_state",
+        "score_observation",
+        "score_episode",
+        "score_repo_group",
+        "batch_score"
+      ],
+      "reuse": [
+        "scaling:Laya question patterns"
+      ],
+      "priority": "P2"
+    },
+    {
+      "id": "LAYA02",
+      "module": "src/intelligence/laya_cache.py",
+      "functions": [
+        "decision_cache_key",
+        "load_cached_decision",
+        "store_decision_receipt"
+      ],
+      "reuse": [],
+      "priority": "P2"
+    },
+    {
+      "id": "LAYA03",
+      "module": "src/intelligence/triage_loop.py",
+      "functions": [
+        "collect_candidates_for_triage",
+        "apply_laya_retention_extension",
+        "queue_strong_ai_review"
+      ],
+      "reuse": [],
+      "priority": "P2",
+      "guard": "no direct delete/live authority"
+    },
+    {
+      "id": "CLI01",
+      "module": "src/intelligence/cli.py",
+      "functions": [
+        "repo_commands",
+        "storage_commands",
+        "report_commands",
+        "laya_commands"
+      ],
+      "reuse": [],
+      "priority": "P1"
+    }
+  ]
+}

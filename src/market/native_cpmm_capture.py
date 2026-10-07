@@ -9,8 +9,10 @@ from __future__ import annotations
 
 from dataclasses import asdict
 import copy
+import os
 import time
-from typing import Any, Callable
+from typing import Any, Callable, Mapping
+from urllib.parse import urlsplit
 from uuid import uuid4
 
 from src.direct_venue.cpmm_math import RAYDIUM_FEE_SOURCE_REVISION
@@ -53,8 +55,27 @@ ANONYMOUS_GENERATION = "anonymous-v1"
 RPC_METHODS = frozenset({"getGenesisHash", "getMultipleAccounts", "getBlock"})
 
 
+def configured_rpc_url(environ: Mapping[str, str] | None = None) -> str:
+    """Read-only RPC selection; endpoint changes never add execution authority."""
+    environment = os.environ if environ is None else environ
+    url = environment.get("SOLANA_RPC_HTTP") or RPC_URL
+    parsed = urlsplit(url)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username is not None
+        or parsed.password is not None
+        or parsed.fragment
+        or parsed.query
+    ):
+        raise NativeCaptureError(
+            "RPC requires an HTTPS endpoint without URL credentials or query"
+        )
+    return url
+
+
 def public_read_entitlements(
-    *, expires_at_epoch_seconds: int
+    *, expires_at_epoch_seconds: int, rpc_url: str | None = None
 ) -> dict[str, ProviderEntitlement]:
     """Bounded public read scope; contains no credential value or live grants."""
     common: dict[str, Any] = {
@@ -76,7 +97,7 @@ def public_read_entitlements(
         provider_id=RPC_PROVIDER,
         **common,
         source_ref="https://solana.com/docs/references/clusters",
-        allowed_endpoints=(RPC_URL,),
+        allowed_endpoints=(rpc_url or configured_rpc_url(),),
         allowed_http_methods=frozenset({"POST"}),
         allowed_rpc_methods=RPC_METHODS,
     )
@@ -115,6 +136,12 @@ class GovernedNativeCpmmCollector:
         self._run_id = uuid4().hex
         self._sequence = 0
         self._deadline = governance.clock() + 45
+        endpoints = governance.entitlement(RPC_PROVIDER).allowed_endpoints
+        if len(endpoints) != 1:
+            raise NativeCaptureError(
+                "one explicitly governed read-only RPC endpoint required"
+            )
+        self.rpc_url = endpoints[0]
         governance.bind_transport(transport)
 
     async def _physical(
@@ -184,7 +211,7 @@ class GovernedNativeCpmmCollector:
             "method": method,
             "params": params,
         }
-        fingerprint = content_hash({"url": RPC_URL, "body": body})
+        fingerprint = content_hash({"url": self.rpc_url, "body": body})
         started = self.wall_ns()
         receipt: dict[str, Any] = {
             "method": method,
@@ -199,7 +226,7 @@ class GovernedNativeCpmmCollector:
                 RPC_PROVIDER,
                 ProviderOperation.BACKFILL,
                 fingerprint,
-                lambda: self.transport.request("POST", RPC_URL, json_body=body),
+                lambda: self.transport.request("POST", self.rpc_url, json_body=body),
             )
             receipt.update(
                 http_status=status,

@@ -232,6 +232,7 @@ class HttpxJsonTransport:
         ) = None,
     ) -> None:
         self.policy = policy or TransportPolicy()
+        self._rate_limit_until: dict[str, float] = {}
         self.attempt_guard = attempt_guard
         self.attempt_result = attempt_result
         self.allowed_hosts = frozenset(
@@ -306,14 +307,15 @@ class HttpxJsonTransport:
         if raw is None:
             return None
         try:
-            return min(max(float(raw), 0.0), maximum)
+            delay = float(raw)
+            return max(delay, 0.0) if math.isfinite(delay) else None
         except ValueError:
             try:
                 parsed = parsedate_to_datetime(raw)
                 if parsed.tzinfo is None:
                     parsed = parsed.replace(tzinfo=UTC)
                 delay = (parsed - (now or datetime.now(UTC))).total_seconds()
-                return min(max(delay, 0.0), maximum)
+                return max(delay, 0.0)
             except (TypeError, ValueError, OverflowError):
                 return None
 
@@ -492,7 +494,17 @@ class HttpxJsonTransport:
         retry_statuses = {429, 500, 502, 503, 504}
         loop = asyncio.get_running_loop()
         deadline = loop.time() + self.policy.total_timeout_seconds
+        host = urlsplit(url).hostname or ""
         for attempt in range(1, self.policy.max_attempts + 1):
+            cooldown = self._rate_limit_until.get(host, 0.0) - loop.time()
+            if cooldown > 0:
+                if cooldown > self.policy.max_retry_after_seconds:
+                    raise SanitizedTransportError(
+                        "provider rate-limit cooldown exceeds retry window",
+                        status_code=429,
+                        retryable=True,
+                    )
+                await _sleep_with_deadline(cooldown, deadline)
             remaining = deadline - loop.time()
             if remaining <= 0:
                 raise SanitizedTransportError(
@@ -518,10 +530,31 @@ class HttpxJsonTransport:
                     self.policy.backoff_base_seconds * (2 ** (attempt - 1)), deadline
                 )
                 continue
+            if status == 429:
+                retry_after = self._retry_after_seconds(
+                    response_headers, self.policy.max_retry_after_seconds
+                )
+                floor = self.policy.backoff_base_seconds * (2 ** (attempt - 1))
+                self._rate_limit_until[host] = loop.time() + max(
+                    floor, retry_after or 0.0
+                )
+                if attempt == self.policy.max_attempts:
+                    raise SanitizedTransportError(
+                        "provider rate limited", status_code=429, retryable=True
+                    )
+                # The next attempt rechecks the cooldown and total deadline. Never
+                # shorten a server Retry-After to fit our bounded retry window.
+                continue
             if status in retry_statuses and attempt < self.policy.max_attempts:
                 delay = self._retry_after_seconds(
                     response_headers, self.policy.max_retry_after_seconds
                 )
+                if delay is not None and delay > self.policy.max_retry_after_seconds:
+                    raise SanitizedTransportError(
+                        "provider Retry-After exceeds retry window",
+                        status_code=status,
+                        retryable=True,
+                    )
                 await _sleep_with_deadline(
                     (
                         delay

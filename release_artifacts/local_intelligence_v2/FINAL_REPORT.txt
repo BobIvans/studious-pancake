@@ -1,0 +1,41 @@
+Local Intelligence V2: implemented and offline verified; full acceptance pending.
+Implementation: 3bebb4489e980f7a6879289287870aaf2addf895
+Main audited: ac6297e3f174d073c524099f599490edfe30f7b1
+Branch: chatgpt/local-intelligence-retention-v2-2026-10-07; requested PR #574; no merge performed.
+
+Implemented all 91 callable backlog surfaces with code, CLI, typed advisory Laya,
+canonical-owner analytics, repository recovery, deterministic retention, exact
+verified compaction/replay and receipts. Importability alone is not acceptance.
+
+Verification: full repository gate passed, 4901 tests / 1 deselected; 158 targeted
+tests; dependency audit found no known vulnerabilities; configured mypy passed.
+Snapshot: 2753 exact tracked entries, 1074 explicit static-analysis gaps;
+retrieval oracle 32/32 passed. Synthetic fixture: 100 exact replay events,
+96 reversible archives, candidate and baseline pins preserved, verified 1m/5m/1h
+rollup coverage and a checksum-verified offline MD/JSON/TXT/ZIP report bundle.
+
+Storage is measured, not a long-campaign forecast: status STORAGE_PRESSURE,
+free 30461407232 bytes, reserve 30000000000 bytes,
+dynamic intelligence budget 230703616 bytes,
+measured intelligence files 94751194 bytes.
+Unknown rates and unobserved outcomes remain null/NOT_OBSERVED.
+
+RPC is operator-selected Mainnet and provider independent; 429 Retry-After is
+honored without early retries. Only a public wallet address is required.
+Laya cannot directly delete, sign, submit or authorize live trading.
+
+Pending acceptance:
+- User-controlled dedicated research-wallet public address is not configured; no real campaign process was started.
+- Existing paper owner previously reported blocked_pr_a_canonical_vertical_unwired / blocked_pr089_atomic_dependencies_missing; atomic_stage_suite, exact_fee_workflow, verified_marginfi_provider and jupiter_v2_build integration are not empirically qualified.
+- Real 24h sender-free Mainnet campaign, sustained storage rate/quota/latency and measured strategy/provider outcomes are NOT_OBSERVED.
+- GitHub API access is denied by current network policy; PR association and remote CI result are NOT_VERIFIED. Branch push was confirmed independently via Git.
+- Fresh-task environment snapshot restoration has not been independently tested. Draft configuration is saved and requires Review/Save/Publish.
+
+Limits:
+- Reports and replay receipts in offline_report and receipts are explicitly synthetic, except REPO_STATUS, RETRIEVAL_BENCHMARK, STORAGE and MAINNET_READINESS.
+- Static AST analysis supports Python; unsupported files remain exact committed blobs with explicit analysis gaps.
+- Reference inventory/representation attestations must be supplied by authoritative owners before pruning; defaults fail closed.
+- Payload offload preserves exact Parquet bytes and SQLite cursor/gap/envelope truth; it does not VACUUM SQLite or permanently destroy archives.
+- Laya requires an optional local callable or recorded typed responses; no model inference or weights were observed.
+- Archive payload manifests retain their original evidence paths. These are reports, not a relocated journal database backup.
+- A broader ad-hoc mypy invocation following imports exposed two pre-existing production_qualification optional-type errors; the configured repository gate and isolated intelligence check pass.

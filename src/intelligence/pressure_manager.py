@@ -23,6 +23,8 @@ PPM = 1_000_000
 COMPACT_THRESHOLD_PPM = 800_000
 PRUNE_THRESHOLD_PPM = 900_000
 CRITICAL_THRESHOLD_PPM = 950_000
+DEFAULT_PARTITION_PAYLOAD_BYTES = 128 * 1024 * 1024
+COMPACTION_HEADROOM_BYTES = 16 * 1024 * 1024
 
 # Hysteresis targets: reclaim enough to get materially below the threshold,
 # never a fixed fraction of the oldest corpus.
@@ -69,7 +71,9 @@ def pressure_plan(used_bytes: int, budget_bytes: int) -> dict:
     }
 
 
-def _planning_eligible(record: Mapping[str, object], *, now_ms: int, minimum_age_ms: int) -> bool:
+def _planning_eligible(
+    record: Mapping[str, object], *, now_ms: int, minimum_age_ms: int
+) -> bool:
     # Compaction and replay are created by this cycle. All other gates must
     # already be proven before the event can even be selected for offload.
     probe = dict(record)
@@ -88,8 +92,9 @@ def select_reclaim_candidates(
     minimum_age_ms: int,
     requested_reclaim_bytes: int,
     max_events: int = 20_000,
+    max_payload_bytes: int = DEFAULT_PARTITION_PAYLOAD_BYTES,
 ) -> dict:
-    if requested_reclaim_bytes < 0 or max_events < 1:
+    if requested_reclaim_bytes < 0 or max_events < 1 or max_payload_bytes < 1:
         raise ValueError("invalid reclaim budget")
     storage = {row["event_id"]: row for row in journal.retention_storage_inventory()}
     candidates = []
@@ -119,6 +124,10 @@ def select_reclaim_candidates(
     for _, event_id, inline_bytes, record in candidates:
         if len(selected) >= max_events:
             break
+        if inline_bytes > max_payload_bytes:
+            continue
+        if selected and selected_bytes + inline_bytes > max_payload_bytes:
+            break
         selected.append(record)
         selected_bytes += inline_bytes
         if requested_reclaim_bytes and selected_bytes >= requested_reclaim_bytes:
@@ -143,6 +152,7 @@ def run_pressure_cycle(
     output_dir: str | Path,
     minimum_age_ms: int = 86_400_000,
     max_events: int = 20_000,
+    max_payload_bytes: int = DEFAULT_PARTITION_PAYLOAD_BYTES,
     execute: bool = False,
     now_ms: int | None = None,
 ) -> dict:
@@ -152,6 +162,9 @@ def run_pressure_cycle(
     now = int(time.time() * 1000) if now_ms is None else now_ms
     if now < 0:
         raise ValueError("invalid pressure clock")
+    state_root.mkdir(parents=True, exist_ok=True)
+    if not journal_path.is_file():
+        raise ValueError("pressure journal missing")
     measurement = read_disk_budget(state_root, journal=journal_path)
     used = int(measurement["measured_files_bytes"])
     # If the AGG-02 journal is outside the managed state root, count its physical
@@ -180,8 +193,6 @@ def run_pressure_cycle(
     }
     if plan["level"] == "NORMAL" or plan["requested_reclaim_bytes"] == 0:
         return seal({**base, "status": "NO_ACTION_REQUIRED"})
-    if not journal_path.is_file():
-        return seal({**base, "status": "BLOCKED", "reason": "JOURNAL_MISSING"})
     with DurableRawJournal(journal_path) as journal:
         selection = select_reclaim_candidates(
             journal,
@@ -190,6 +201,7 @@ def run_pressure_cycle(
             minimum_age_ms=minimum_age_ms,
             requested_reclaim_bytes=int(plan["requested_reclaim_bytes"]),
             max_events=max_events,
+            max_payload_bytes=max_payload_bytes,
         )
         planned = {**base, "selection": selection}
         if not selection["event_ids"]:
@@ -209,6 +221,23 @@ def run_pressure_cycle(
                     "admission_pause_required": plan["level"] == "CRITICAL",
                 }
             )
+        preflight_bytes = (
+            int(selection["logical_reclaim_bytes"]) + COMPACTION_HEADROOM_BYTES
+        )
+        if preflight_bytes > int(measurement["spare_bytes"]):
+            return seal(
+                {
+                    **planned,
+                    "status": (
+                        "ADMISSION_PAUSE_REQUIRED"
+                        if plan["level"] == "CRITICAL"
+                        else "COMPACTION_HEADROOM_BLOCKED"
+                    ),
+                    "reason": "INSUFFICIENT_SAFE_COMPACTION_HEADROOM",
+                    "compaction_preflight_bytes": preflight_bytes,
+                    "admission_pause_required": plan["level"] == "CRITICAL",
+                }
+            )
         output_dir.mkdir(parents=True, exist_ok=True)
         batch_id = digest(
             {
@@ -223,6 +252,7 @@ def run_pressure_cycle(
             parquet,
             event_ids=set(selection["event_ids"]),
             max_rows=max_events,
+            max_payload_bytes=max_payload_bytes,
         )
         proven = []
         for record in selection["records"]:
@@ -264,7 +294,11 @@ def run_pressure_cycle(
         return seal(
             {
                 **planned,
-                "status": "COMPLETED_WITH_ADMISSION_PAUSE" if pause else "COMPLETED",
+                "status": (
+                    "COMPLETED_WITH_ADMISSION_PAUSE"
+                    if pause
+                    else ("COMPLETED_PARTIAL" if shortfall else "COMPLETED")
+                ),
                 "compaction": compaction,
                 "retention_receipt_sha256": retention["receipt_sha256"],
                 "prune_receipt_sha256": result["receipt_sha256"],
@@ -286,6 +320,7 @@ __all__ = [
     "COMPACT_THRESHOLD_PPM",
     "PRUNE_THRESHOLD_PPM",
     "CRITICAL_THRESHOLD_PPM",
+    "DEFAULT_PARTITION_PAYLOAD_BYTES",
     "pressure_plan",
     "select_reclaim_candidates",
     "run_pressure_cycle",

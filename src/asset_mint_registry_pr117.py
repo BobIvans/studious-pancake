@@ -224,7 +224,8 @@ def _require_evidence(
     )
     if not reviewed:
         execution_blockers.append(f"PR117_{kind}_EVIDENCE_NOT_REVIEWED:{symbol}")
-    if _optional_int(evidence, "slot") is None or _optional_int(evidence, "slot") <= 0:
+    slot = _optional_int(evidence, "slot")
+    if slot is None or slot <= 0:
         execution_blockers.append(f"PR117_{kind}_EVIDENCE_SLOT_MISSING:{symbol}")
     sha256 = _optional_string(evidence, "sha256")
     if sha256 is None or not _valid_sha256(sha256):

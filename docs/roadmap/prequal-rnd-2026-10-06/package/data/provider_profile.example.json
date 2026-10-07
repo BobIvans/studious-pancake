@@ -1,0 +1,14 @@
+{
+  "schema_version": "prequal.provider-profile.v1",
+  "provider_id": "",
+  "generation": "",
+  "provider": "",
+  "operator": "",
+  "correlation_group": "",
+  "role": "rpc|discovery|oracle|protocol|venue",
+  "endpoint": {"base_url":"","allowed_hosts":[],"allowed_methods":[],"tls_required":true,"redirects_allowed":false},
+  "auth": {"mode":"","secret_reference":""},
+  "quota": {"physical_attempts":0,"window_seconds":0,"daily_cap":0,"monthly_cap":0,"retry_consumes_budget":true},
+  "semantics": {"commitment":"finalized","max_staleness_seconds":0,"schema_fingerprint":"","source_dossier_id":""},
+  "evidence": {"request_fingerprint":true,"response_hash":true,"observed_at":true,"available_at":true,"slot_or_sequence":true}
+}

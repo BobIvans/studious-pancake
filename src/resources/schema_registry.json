@@ -422,7 +422,10 @@
           "sensitive_writes",
           "terminal_policy",
           "capital_reservation_policy",
-          "worker_supervision"
+          "worker_supervision",
+          "generation_bindings",
+          "provider_authority",
+          "persistence_authority"
         ],
         "properties": {
           "schema_version": {
@@ -641,6 +644,37 @@
                   "persist_terminal_and_outbox",
                   "close_database"
                 ]
+              }
+            }
+          },
+          "provider_authority": {
+            "type": "string",
+            "minLength": 1
+          },
+          "persistence_authority": {
+            "type": "string",
+            "minLength": 1
+          },
+          "generation_bindings": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "capabilities.json",
+              "market_source_catalog.json",
+              "rooted_runtime_truth_policy.json"
+            ],
+            "properties": {
+              "capabilities.json": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "market_source_catalog.json": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "rooted_runtime_truth_policy.json": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
               }
             }
           }

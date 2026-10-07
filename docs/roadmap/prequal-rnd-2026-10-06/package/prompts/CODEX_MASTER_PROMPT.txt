@@ -1,0 +1,1 @@
+Read the PRE-QUALIFICATION R&D pack starting at 18_CODEX_START_HERE.md. Work against current main, not stale PR branches. Implement QPR-01 then QPR-02 with sender/signer/submission unreachable, reuse only unique tests/contracts from stale PRs, and finish each PR with tests plus a machine-readable blocker receipt; do not claim production readiness.

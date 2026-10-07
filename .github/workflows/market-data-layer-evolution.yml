@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - "src/market_data_evolution/**"
+      - "src/research/occ_qualification.py"
+      - "scripts/run_research_qualification.py"
       - "config/market_data_evolution.json"
       - "docs/roadmap/market-data-layer-evolution-mega.md"
       - "release_artifacts/market_data_evolution/**"
@@ -41,7 +43,7 @@ jobs:
       - name: Focused regressions
         run: >-
           python -m pytest -q
-          tests/market_data_evolution/test_market_data_evolution.py
+          tests/market_data_evolution
           tests/test_agg10_intelligence.py
           tests/mechanism_discovery/test_pr355_completion.py
           --disable-socket --allow-unix-socket

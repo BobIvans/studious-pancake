@@ -112,3 +112,5 @@ patch_bot*.py
 build/
 dist/
 *.egg-info/
+
+.hypothesis/

@@ -95,3 +95,33 @@ def test_sqlite_wal_backup_restore_copy_and_corruption(tmp_path):
     (tmp_path / "backup.sqlite").write_bytes(b"broken")
     with pytest.raises(ValueError, match="checksum"):
         verify_backup(tmp_path / "backup.sqlite", proof["sha256"])
+
+
+def test_cli_compare_campaigns_preserves_unknown_resource_cost(tmp_path, capsys):
+    from src.intelligence.common import save_json
+
+    campaign = {
+        "experiment": identity(),
+        "episodes": [
+            {"episode": {"episode_id": "ep", "label_atoms": 5}, "resource_usage": None}
+        ],
+    }
+    save_json(tmp_path / "a.json", campaign)
+    save_json(tmp_path / "b.json", campaign)
+    assert (
+        main(
+            [
+                "report",
+                "compare",
+                "--baseline",
+                str(tmp_path / "a.json"),
+                "--candidate",
+                str(tmp_path / "b.json"),
+            ]
+        )
+        == 0
+    )
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "NOT_OBSERVED"
+    assert result["resource_cost_unknown_episode_ids"] == ["ep"]
+    assert result["comparison"]["paired_episode_count"] == 0

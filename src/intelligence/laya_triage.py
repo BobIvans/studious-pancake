@@ -1,8 +1,10 @@
 """Optional typed compact-state Laya adapter. It has no mutation capability."""
 
 from collections.abc import Callable
+from importlib.resources import files
+import json
 from pathlib import Path
-from .common import canonical, digest, load_json
+from .common import canonical, digest
 from .laya_cache import decision_cache_key, load_cached_decision, store_decision_receipt
 
 PROMPT_VERSION = "studious.laya-retention.v2"
@@ -40,9 +42,10 @@ def build_compact_state(record: dict, *, kind: str, max_bytes: int = 16_384) -> 
 
 
 def _questions(kind: str) -> list[dict]:
-    root = Path(__file__).resolve().parents[2]
-    contract = load_json(
-        root / "docs/strategy/local-intelligence-v2/LAYA_RETENTION_QUESTIONS.json"
+    contract = json.loads(
+        files("src.resources")
+        .joinpath("local_intelligence_laya_questions_v2.json")
+        .read_text(encoding="utf-8")
     )
     return contract[kind + "_state"]
 

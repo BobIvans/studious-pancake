@@ -389,10 +389,61 @@ def storage_commands(args) -> dict:
 def report_commands(args) -> dict:
     if args.command == "compare":
         from .experiment_manifest import compare_experiment_identity
+        from .strategy_report import compare_strategy_baselines
+        from src.production_qualification import AGG04PairedEpisodeResult
 
-        return compare_experiment_identity(
-            load_json(args.baseline), load_json(args.candidate)
+        def resolve(value: Path) -> dict:
+            if value.is_file():
+                return load_json(value)
+            if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", str(value)):
+                raise ValueError("invalid experiment identity/path")
+            return load_json(
+                args.state_root / "experiments" / str(value) / "campaign.json"
+            )
+
+        baseline, candidate = resolve(args.baseline), resolve(args.candidate)
+        if baseline.get("schema") == "studious.experiment-identity.v2":
+            return compare_experiment_identity(baseline, candidate)
+        identity = compare_experiment_identity(
+            baseline["experiment"], candidate["experiment"]
         )
+        before = {e["episode"]["episode_id"]: e for e in baseline.get("episodes", [])}
+        after = {e["episode"]["episode_id"]: e for e in candidate.get("episodes", [])}
+        rows, cost_unknown = [], []
+        for episode_id in sorted(before.keys() | after.keys()):
+            left, right = before.get(episode_id), after.get(episode_id)
+            left_cost = (
+                (left.get("resource_usage") or {}).get("resource_cost_atomic")
+                if left
+                else None
+            )
+            right_cost = (
+                (right.get("resource_usage") or {}).get("resource_cost_atomic")
+                if right
+                else None
+            )
+            if type(left_cost) is not int or type(right_cost) is not int:
+                cost_unknown.append(episode_id)
+                continue
+            rows.append(
+                AGG04PairedEpisodeResult(
+                    episode_id=episode_id,
+                    baseline_net_atomic=(
+                        left["episode"]["label_atoms"] if left else None
+                    ),
+                    challenger_net_atomic=(
+                        right["episode"]["label_atoms"] if right else None
+                    ),
+                    baseline_resource_cost_atomic=left_cost,
+                    challenger_resource_cost_atomic=right_cost,
+                )
+            )
+        return {
+            "identity": identity,
+            "comparison": compare_strategy_baselines(rows),
+            "resource_cost_unknown_episode_ids": cost_unknown,
+            "status": "NOT_OBSERVED" if not rows else "PAIRED_OBSERVED",
+        }
     campaign_path = args.campaign
     if campaign_path is None and args.experiment:
         if not re.fullmatch(r"[A-Za-z0-9_-]{1,80}", args.experiment):

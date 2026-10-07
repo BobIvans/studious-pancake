@@ -23,6 +23,25 @@ from src.intelligence.triage_loop import (
 from .test_storage import event
 
 
+def test_installed_question_resource_matches_canonical_strategy():
+    from importlib.resources import files
+    import json
+    from pathlib import Path
+
+    package = json.loads(
+        files("src.resources")
+        .joinpath("local_intelligence_laya_questions_v2.json")
+        .read_text()
+    )
+    canonical = json.loads(
+        (
+            Path(__file__).resolve().parents[2]
+            / "docs/strategy/local-intelligence-v2/LAYA_RETENTION_QUESTIONS.json"
+        ).read_text()
+    )
+    assert package == canonical
+
+
 def identity():
     manifest = ResearchExperimentManifest(
         experiment_id="experiment-1",

@@ -123,3 +123,57 @@ The output directory must be empty. Missing public configuration writes a sealed
 BLOCKED receipt without starting a child process. This bounded readiness run is
 not a measured 24-hour campaign: qualification still requires the canonical
 paper vertical, measured observations, and its acceptance receipts.
+
+
+## Automatic storage-pressure manager
+
+The manager is invoked explicitly by the operator/runtime supervisor; it chooses
+the pressure action automatically from measured managed bytes versus the current
+safe intelligence budget:
+
+- below 80%: `NORMAL`, no action;
+- 80–90%: `COMPACT`, target 75%;
+- 90–95%: `PRUNE`, target 80%;
+- 95% or above: `CRITICAL`, target 85%; insufficient safe reclaim requires
+  admission pause instead of evidence loss.
+
+These targets are hysteresis points, not percentages of rows to delete. The
+manager calculates the byte shortfall and selects the oldest *eligible* inline
+payloads only until that byte target is covered. Owner pins are checked before
+selection and again before mutation.
+
+Dry-run:
+
+```bash
+python -m src.intelligence.cli storage pressure \
+  --journal /path/to/agg02.db \
+  --records /path/to/retention-records.json \
+  --references /path/to/reference-inventory.json \
+  --out /workspace/pressure
+```
+
+Execute:
+
+```bash
+python -m src.intelligence.cli storage pressure \
+  --journal /path/to/agg02.db \
+  --records /path/to/retention-records.json \
+  --references /path/to/reference-inventory.json \
+  --out /workspace/pressure \
+  --execute
+```
+
+Execution requires a complete references inventory. It creates an exact
+event-scoped ZSTD Parquet partition, verifies replay, rebuilds the retention
+receipt with compaction/replay proof, and only then offloads eligible inline
+payloads. The Parquet copy remains authoritative for exact replay.
+
+The manager never runs `VACUUM` automatically. Offloaded SQLite pages become
+reusable, but physical file shrink is not guaranteed. A separate maintenance
+operation may later qualify physical compaction when enough temporary disk
+headroom exists and the writer is stopped.
+
+At CRITICAL pressure, if there are not enough safe reclaim candidates or there is
+not enough reserve-preserving headroom to create the verified Parquet partition,
+the result is `ADMISSION_PAUSE_REQUIRED`. New evidence must pause rather than
+silently evict protected data.

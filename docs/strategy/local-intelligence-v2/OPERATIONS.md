@@ -66,6 +66,11 @@ not a deletion fraction. Admission at a configured journal cap blocks new events
 it does not silently evict old data. Permanent archive expiry is not implemented.
 
 For bounded ingestion instantiate `DurableRawJournal(path, max_journal_bytes=...)`.
+The measured dynamic allowance is a policy/report value; it is not automatically
+wired to every existing journal writer. Journal byte enforcement requires that
+explicit cap. An omitted cap keeps the existing owner's uncapped default. The
+CLI does not install a background expiry loop, and caller-supplied journal caps
+remain exact byte values rather than silently being multiplied.
 Admission stops with `AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED` before a new event
 when the measured journal/WAL plus reserved expansion would exceed its cap. The
 caller must handle pressure by pausing collection/verified compaction; it must not

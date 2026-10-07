@@ -188,6 +188,23 @@ def test_critical_pressure_pauses_before_new_batch_and_records_blocker():
     assert blockers[0][0] == "STORAGE_PRESSURE_ADMISSION_PAUSED"
 
 
+def test_shutdown_during_pressure_boundary_does_not_start_collection():
+    from src.intelligence.common import seal
+
+    runner = _Runner([_report(1)])
+    stop = asyncio.Event()
+
+    def boundary(**_kwargs):
+        stop.set()
+        return seal({"admission_pause_required": False})
+
+    summary = asyncio.run(
+        RepeatedInstalledPaperService(runner, pressure_boundary=boundary).run(stop)
+    )
+    assert runner.calls == 0
+    assert summary.stop_reason is RepeatedPaperServiceStopReason.SIGNALLED
+
+
 def test_typed_admission_block_triggers_after_append_rollback(tmp_path):
     from src.agg02.storage import DurableRawJournal
     from src.intelligence.common import seal

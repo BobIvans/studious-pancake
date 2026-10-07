@@ -166,6 +166,9 @@ class RepeatedInstalledPaperService:
                 if self._pressure_pauses(batch_id, "BATCH_BOUNDARY", pressure_receipts):
                     stop_reason = RepeatedPaperServiceStopReason.STORAGE_PRESSURE
                     break
+                if stop_event.is_set():
+                    stop_reason = RepeatedPaperServiceStopReason.SIGNALLED
+                    break
                 try:
                     report = await self._run_cycle_until_stop(stop_event)
                 except Agg02Error as exc:

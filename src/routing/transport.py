@@ -128,10 +128,14 @@ class SanitizedTransportError(RuntimeError):
         *,
         status_code: int | None = None,
         retryable: bool = False,
+        response_payload: Any = None,
+        retry_after: str | None = None,
     ) -> None:
         super().__init__(message)
         self.status_code = status_code
         self.retryable = retryable
+        self.response_payload = response_payload
+        self.retry_after = retry_after
 
 
 def _safe_netloc(parsed: SplitResult) -> str:
@@ -539,8 +543,18 @@ class HttpxJsonTransport:
                     floor, retry_after or 0.0
                 )
                 if attempt == self.policy.max_attempts:
+                    # Preserve bounded negative evidence without weakening cooldown.
+                    payload = None
+                    try:
+                        payload = self._decode_json(body)
+                    except SanitizedTransportError:
+                        pass
                     raise SanitizedTransportError(
-                        "provider rate limited", status_code=429, retryable=True
+                        "provider rate limited",
+                        status_code=429,
+                        retryable=True,
+                        response_payload=payload,
+                        retry_after=response_headers.get("retry-after"),
                     )
                 # The next attempt rechecks the cooldown and total deadline. Never
                 # shorten a server Retry-After to fit our bounded retry window.

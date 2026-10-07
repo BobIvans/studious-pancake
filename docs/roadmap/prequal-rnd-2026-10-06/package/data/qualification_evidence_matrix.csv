@@ -1,0 +1,10 @@
+evidence_id,required_for,current_state,source_owner,materialize_how,fail_closed_code
+E-RUNTIME-AUTHORITY,campaign+release,SPLIT,runtime/release authority,canonical artifact bytes + sha256,AUTHORITY_DIGEST_MISMATCH
+E-RPC-QUORUM,qualification verdict,generic logic exists; native not wired,data_plane/rpc + native collector,2+ provider/operator-independent finalized snapshots,BLOCKED_SINGLE_SOURCE_OR_QUORUM
+E-DEPLOYMENT-BINDING,exact venue/protocol,MISSING for native CPMM report,venue/protocol dossier,programdata/binary/source/reproducible hash,DEPLOYMENT_SOURCE_BINDING_MISSING
+E-CONTINUOUS-CAPTURE,qualification verdict,ONE_SHOT,campaign producer,continuous journal + gaps/reconnects,SUBSCRIPTION_CONTINUITY_MISSING
+E-FORWARD-HOLDOUT,qualification verdict,NOT_RUN,campaign manifest,sealed future partition,FORWARD_HOLDOUT_MISSING
+E-COSTS,net candidate,UNKNOWN,economics,integer fees/priority/flashloan/provider costs,COST_EVIDENCE_UNKNOWN
+E-PROJECT0,MarginFi/Project0 edges,SOURCE_GENERATION_SPLIT,marginfi provider,p0-ts-sdk >=2.8.0 + program/oracle vectors,PROJECT0_REBIND_REQUIRED
+E-24H,system problem testing,MISSING,campaign runner,24h non-synthetic read-only run,24H_CAMPAIGN_MISSING
+E-72H,production promotion,MISSING,release soak,72h exact-release non-synthetic sender-free soak,72H_SOAK_MISSING

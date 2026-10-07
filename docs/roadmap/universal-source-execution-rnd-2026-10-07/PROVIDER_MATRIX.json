@@ -1,0 +1,154 @@
+{
+  "schema_version": "gpr.provider-matrix.v1",
+  "solana": {
+    "builders": [
+      {
+        "id": "jupiter",
+        "role": "REFERENCE_ROUTER",
+        "free_limit": "1 RPS general",
+        "artifact": "UNSIGNED_TX_OR_INSTRUCTIONS",
+        "correlation_group": "JUPITER",
+        "local_sign": true
+      },
+      {
+        "id": "0x-solana",
+        "role": "PRIMARY_ALT_ROUTER",
+        "free_limit": "~5 RPS",
+        "artifact": "INSTRUCTIONS_AND_ALTS",
+        "correlation_group": "ZEROX",
+        "local_sign": true
+      },
+      {
+        "id": "titan",
+        "role": "META_ROUTER",
+        "free_limit": "Sandbox 1 RPS / 2.5M credits",
+        "artifact": "INSTRUCTIONS_AND_READY_TX",
+        "correlation_group": "TITAN_META",
+        "local_sign": true
+      },
+      {
+        "id": "openocean-solana",
+        "role": "META_COMPARATOR",
+        "free_limit": "2 RPS default",
+        "artifact": "TX_BODY",
+        "correlation_group": "JUPITER_TITAN_META",
+        "local_sign": true
+      },
+      {
+        "id": "okx-dex",
+        "role": "ALT_AGGREGATOR",
+        "free_limit": "Trial 1 RPS; review up to 5 RPS",
+        "artifact": "SWAP_TX_DATA",
+        "correlation_group": "OKX_AGG",
+        "local_sign": true
+      },
+      {
+        "id": "rango",
+        "role": "UNIVERSAL_BUILDER",
+        "free_limit": "free B2B; default limits unpublished",
+        "artifact": "SOLANA_TX",
+        "correlation_group": "RANGO_META",
+        "local_sign": true
+      }
+    ],
+    "radar": [
+      "dexscreener",
+      "geckoterminal",
+      "meteora",
+      "raydium",
+      "manifest",
+      "sanctum",
+      "jupiter-metadata",
+      "vybe",
+      "birdeye",
+      "okx-market",
+      "pyth",
+      "switchboard-optional",
+      "cex-public-ws",
+      "coingecko",
+      "defillama"
+    ]
+  },
+  "sui": {
+    "builders": [
+      {
+        "id": "aftermath",
+        "role": "SOR",
+        "free_limit": "1000 requests / 10s default",
+        "artifact": "TRANSACTION_OR_COMPOSABLE_PTB",
+        "correlation_group": "AFTERMATH_META"
+      },
+      {
+        "id": "cetus-aggregator",
+        "role": "MULTI_DEX_SOR",
+        "free_limit": "unpublished",
+        "artifact": "COMPOSABLE_PTB",
+        "correlation_group": "CETUS_META",
+        "sponsored_tx": true
+      },
+      {
+        "id": "7k-metaag",
+        "role": "META_AGGREGATOR",
+        "free_limit": "unpublished",
+        "artifact": "TRANSACTION",
+        "correlation_group": "SEVENK_META"
+      },
+      {
+        "id": "flowx-meta",
+        "role": "META_AGGREGATOR",
+        "free_limit": "unpublished",
+        "artifact": "TRANSACTION",
+        "correlation_group": "FLOWX_META"
+      },
+      {
+        "id": "okx-dex-sui",
+        "role": "ALT_AGGREGATOR",
+        "free_limit": "tier-dependent",
+        "artifact": "SWAP_TX_DATA",
+        "correlation_group": "OKX_AGG"
+      },
+      {
+        "id": "rango-sui",
+        "role": "UNIVERSAL_BUILDER",
+        "free_limit": "free B2B; default limits unpublished",
+        "artifact": "UNSIGNED_PTB_BASE64",
+        "correlation_group": "RANGO_META"
+      },
+      {
+        "id": "deepbook-direct",
+        "role": "DIRECT_CLOB",
+        "free_limit": "chain-state",
+        "artifact": "TRANSACTION",
+        "correlation_group": "DEEPBOOK"
+      }
+    ],
+    "radar": [
+      "deepbook",
+      "aftermath",
+      "cetus",
+      "scallop",
+      "navi",
+      "7k",
+      "flowx",
+      "bluefin",
+      "pyth",
+      "sui-grpc",
+      "sui-graphql"
+    ]
+  },
+  "ton": {
+    "radar": [
+      "ston",
+      "omniston",
+      "swap.coffee",
+      "dedust",
+      "tonco",
+      "toncenter",
+      "tonapi"
+    ],
+    "optional_builder": [
+      "rango-ton"
+    ],
+    "execution_semantics": "LOCAL_MULTI_MESSAGE_OR_ASYNC"
+  }
+}

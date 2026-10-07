@@ -70,6 +70,12 @@ class MarketSourceCatalog:
             self, "sources", tuple(sorted(self.sources, key=lambda s: s.source_id))
         )
 
+    def with_intake(self, source: MarketDataSource) -> "MarketSourceCatalog":
+        """Admit a reviewed free-slot source through this existing catalog owner."""
+        if any(item.source_id == source.source_id for item in self.sources):
+            raise ValueError("duplicate catalog source")
+        return MarketSourceCatalog(self.checked_at, (*self.sources, source))
+
     def require(self, source_id: str) -> MarketDataSource:
         for source in self.sources:
             if source.source_id == source_id:

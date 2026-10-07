@@ -27,7 +27,7 @@ from src.rooted_truth import (
     build_admission,
 )
 
-GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d"
 
 
 def digest(label: str) -> str:

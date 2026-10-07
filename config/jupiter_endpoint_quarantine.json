@@ -59,5 +59,29 @@
       "path": "src/execution/senders/"
     }
   ],
+  "read_only_research_references": [
+    {
+      "build": false,
+      "endpoint": "https://api.jup.ag/swap/v1/quote",
+      "method": "GET",
+      "path": "src/solana_parallel_radar/cli.py",
+      "production_promotion": false,
+      "purpose": "GPR-02_DISCOVERY_ONLY_QUOTE_REFERENCE",
+      "sha256": "f699fba361e97ef3d8afe8585d02711eea1f0fcf5c9afc68de6b35947dcc3df3",
+      "signer": false,
+      "submission": false
+    },
+    {
+      "build": false,
+      "endpoint": "https://api.jup.ag/swap/v1/quote",
+      "method": "GET",
+      "path": "src/solana_parallel_radar/probes.py",
+      "production_promotion": false,
+      "purpose": "GPR-02_DISCOVERY_ONLY_QUOTE_REFERENCE",
+      "sha256": "c7262a811a6c86838e7ea5098a41523b788f4cfeec6ed2ff248cc01ea2eeff0e",
+      "signer": false,
+      "submission": false
+    }
+  ],
   "schema_version": "mpr-next-08.jupiter-endpoint-quarantine.v1"
 }

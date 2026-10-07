@@ -1,0 +1,519 @@
+{
+  "archive_index": "gpr02-evidence/INDEX.json",
+  "branch": "impl/gpr02-solana-radar-2026-10-06",
+  "campaigns": [
+    {
+      "archive": "campaign-319773d9.tar.gz",
+      "campaign_id": "2856f72ee463cfd0f8485ad86d300565fab735c18378aae808b9be813388918a",
+      "candidates_by_source": {
+        "dexscreener": 10,
+        "meteora-dlmm": 10,
+        "raydium": 8
+      },
+      "capture_repository_sha": "319773d92df7cfb01c36781d3f35146a82214199",
+      "discovery_candidate_count": 28,
+      "exact_qualification": "BLOCKED",
+      "graph_identity": "231c97fabfaf1a566f86e18219723d5d2e080c51e5a48512e18346726089e6e2",
+      "journal_head": "4812b5db10a1db760342064c40a8aa88f3d4a00593bc1ac7c2bb3471e9f8047b",
+      "quotes_measured": 0,
+      "replay": "PASS",
+      "reserved_attempts": 8,
+      "successful_http_reads": 7,
+      "time_range_utc": [
+        "2026-10-06T05:29:15.775177+00:00",
+        "2026-10-06T05:29:20.346949+00:00"
+      ],
+      "unique_pool_count": 27
+    },
+    {
+      "archive": "campaign-c070dc4f.tar.gz",
+      "campaign_id": "8f7134f87ed2b3f4ef1490077a558161e0449fc7c480e56295e044f107f16a46",
+      "candidates_by_source": {
+        "dexscreener": 10,
+        "manifest": 35,
+        "meteora-dlmm": 10,
+        "raydium": 8
+      },
+      "capture_repository_sha": "c070dc4f86e3b502b814a963ddbae52ef70b1523",
+      "discovery_candidate_count": 63,
+      "exact_qualification": "BLOCKED",
+      "graph_identity": "54a1c421b883b128322330fa14451e1f75dcd159b159a0233b6e95e2bf0e39f9",
+      "journal_head": "3d4d25cff28f775dc675b1aa0ee652a4a6bec0fe943c50b1247b534ded5df5c2",
+      "quotes_measured": 0,
+      "replay": "PASS",
+      "reserved_attempts": 7,
+      "successful_http_reads": 6,
+      "time_range_utc": [
+        "2026-10-06T05:34:40.647857+00:00",
+        "2026-10-06T05:34:45.608158+00:00"
+      ],
+      "unique_pool_count": 62
+    },
+    {
+      "archive": "campaign-e4c3e0de.tar.gz",
+      "campaign_id": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+      "candidates_by_source": {
+        "dexscreener": 10,
+        "manifest": 35,
+        "meteora-dlmm": 10,
+        "raydium": 8
+      },
+      "capture_repository_sha": "e4c3e0dee6d8ff54832f1a9258dd9ffa8c0161d0",
+      "discovery_candidate_count": 63,
+      "exact_qualification": "BLOCKED",
+      "graph_identity": "1a914cdd4a00330761460e34b06605fce875d7a872a63f2f45f476e723a4aee7",
+      "journal_head": "1244d298c3b4ef526a1a4de4abac8f1243a6a053fd2ceb6261817b44cccde220",
+      "quotes_measured": 0,
+      "replay": "PASS",
+      "reserved_attempts": 7,
+      "successful_http_reads": 7,
+      "time_range_utc": [
+        "2026-10-06T05:37:28.836614+00:00",
+        "2026-10-06T05:37:34.742793+00:00"
+      ],
+      "unique_pool_count": 62
+    }
+  ],
+  "capture_heads": [
+    "319773d92df7cfb01c36781d3f35146a82214199",
+    "c070dc4f86e3b502b814a963ddbae52ef70b1523",
+    "e4c3e0dee6d8ff54832f1a9258dd9ffa8c0161d0"
+  ],
+  "changed_files": [
+    ".github/workflows/gpr02-solana-parallel-radar.yml",
+    "config/qualification/gpr02-solana-contracts.json",
+    "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/GPR-02_HANDOFF.json",
+    "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/GPR-02_HANDOFF.md",
+    "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/GPR-02_IMPLEMENTATION.md",
+    "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/GPR-02_PROBLEMS.json",
+    "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/gpr02-evidence/INDEX.json",
+    "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/gpr02-evidence/campaign-319773d9.tar.gz",
+    "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/gpr02-evidence/campaign-c070dc4f.tar.gz",
+    "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/gpr02-evidence/campaign-e4c3e0de.tar.gz",
+    "src/solana_parallel_radar/__init__.py",
+    "src/solana_parallel_radar/cli.py",
+    "src/solana_parallel_radar/funnel.py",
+    "src/solana_parallel_radar/portable.py",
+    "src/solana_parallel_radar/probes.py",
+    "src/solana_parallel_radar/qualification.py",
+    "src/solana_parallel_radar/radar.py",
+    "src/solana_parallel_radar/structural.py",
+    "src/solana_parallel_radar/token2022.py",
+    "tests/test_gpr02_solana_parallel_radar.py"
+  ],
+  "final_head_receipt": "/workspace/shared/gpr/GPR-02_HEAD_RECEIPT.json",
+  "latest_findings": {
+    "accepted_lst_observed_at_ns": 1791265053782285443,
+    "accepted_lst_observed_at_utc": "2026-10-06T05:37:33.782285+00:00",
+    "anomaly_recurrence_measured": false,
+    "bnsol": {
+      "current_epoch": 1050,
+      "difference_raw_units": 505835,
+      "mint_supply": 9052244321498178,
+      "pool_supply": 9052244322004013,
+      "pool_updated_epoch": 1050,
+      "qualification": "REJECTED_SUPPLY_MISMATCH",
+      "slot": 453809316
+    },
+    "direct_synthetic_residual_measured": false,
+    "full_exact_handoff_qualified": false,
+    "full_startup_hard_bound_qualified": false,
+    "jlp_live_nav_measured": false,
+    "manifest_measurements": [
+      {
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "canonical_bytes": 1284006,
+        "json_nodes": 37725,
+        "kind": "gpr02_manifest_payload_metrics",
+        "max_nodes": 120000,
+        "max_response_bytes": 8000000,
+        "max_rows": 5000,
+        "response_hash": "fb17f305e7bb29da9b04c2bfc186f413a2f6ae7253452035167bf3b853926941",
+        "rows": 3826
+      },
+      {
+        "book": {
+          "asks": [
+            [
+              "169421.31269999998",
+              "2"
+            ],
+            [
+              "169.421312",
+              "2"
+            ],
+            [
+              "1.6942",
+              "2"
+            ],
+            [
+              "0.169",
+              "2"
+            ],
+            [
+              "0.016900000000000002",
+              "0.995757"
+            ]
+          ],
+          "bids": [
+            [
+              "0.001",
+              "4.999998"
+            ],
+            [
+              "1.0000000000000001E-11",
+              "1000000000"
+            ]
+          ],
+          "depth_verified": false,
+          "evidence_state": "DISCOVERY_ONLY",
+          "exact_graph_allowed": false,
+          "fee_verified": false,
+          "market_id": "Dcz5oZKtqc3xJGzNJ22dwdtfCLCGqu765L7WgVuEmWZs",
+          "source_time": "1791265053"
+        },
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "classification": "DISCOVERY_ONLY",
+        "exact_graph_allowed": false,
+        "kind": "gpr02_manifest_book_reference",
+        "raw_evidence_ref": "1958cabc73ce44a02a2bcd18a1b4c54f8077a188863c44deeffc6a3625204ac8"
+      }
+    ],
+    "pair_coverage": {
+      "BNSOL/USDC": 1,
+      "BNSOL/WSOL": 2,
+      "JLP/USDC": 3,
+      "JLP/WSOL": 1,
+      "USD1/USDC": 3,
+      "USD1/USDT": 1,
+      "USD1/WSOL": 3,
+      "USDC/USDG": 1,
+      "USDC/USDT": 4,
+      "USDC/WSOL": 19,
+      "USDC/cbBTC": 2,
+      "USDC/hSOL": 1,
+      "USDC/xBTC_OKX": 1,
+      "USDG/USDT": 1,
+      "USDG/WSOL": 3,
+      "USDT/WSOL": 4,
+      "USDT/cbBTC": 1,
+      "USDT/xBTC_OKX": 1,
+      "WSOL/bbSOL": 2,
+      "WSOL/cbBTC": 5,
+      "WSOL/dSOL": 1,
+      "WSOL/hSOL": 1,
+      "cbBTC/xBTC_OKX": 2
+    },
+    "quotes_measured": 0,
+    "source_outcomes": [
+      {
+        "binding_name": null,
+        "correlation_group": "manifest-indexed",
+        "failure_reason": null,
+        "http_status": 200,
+        "provider_generation": "707c35a9b57d41806fc37062f2fcfc562d098bea645c71d64cfc23e4449050c0",
+        "quality_state": "accepted-with-rejections",
+        "source_generation": "bc6460879135392e1653c53a7b85c2ebab1aac1e93af73d6a3f06632b3f3a9cd",
+        "source_id": "manifest"
+      },
+      {
+        "binding_name": null,
+        "correlation_group": "dexscreener-indexed",
+        "failure_reason": null,
+        "http_status": 200,
+        "provider_generation": "f2470f98212c72361bf522d9d5d796602f2b479ea52623ef61115754c0b34af8",
+        "quality_state": "accepted-with-rejections",
+        "source_generation": "568b44f835f68fe520b854c7ba93a6b8abf43008f5e8f3af30ebe32675113779",
+        "source_id": "dexscreener"
+      },
+      {
+        "binding_name": null,
+        "correlation_group": "meteora-dlmm-indexed",
+        "failure_reason": null,
+        "http_status": 200,
+        "provider_generation": "0d8d228c65266da93058f2f4ff2429f8e0ceb340b00f50a5de3dca9c3ef2b881",
+        "quality_state": "accepted-with-rejections",
+        "source_generation": "7b7f34e29507883a11468f0860f8b37f31dd9ce29b9d417e70f1aecc472bf4f6",
+        "source_id": "meteora-dlmm"
+      },
+      {
+        "binding_name": null,
+        "correlation_group": "raydium-indexed",
+        "failure_reason": null,
+        "http_status": 200,
+        "provider_generation": "e2105203a8584afb09cd6ea143d8fbf2de2e2282689d43b90e142ce0fbb9e9dc",
+        "quality_state": "accepted-with-rejections",
+        "source_generation": "edd60a127b4f5bacfd9e057ae8ec84d4aefafea5e99b8288cd2cd7bedc1d8bd6",
+        "source_id": "raydium"
+      },
+      {
+        "binding_name": null,
+        "correlation_group": "manifest-indexed",
+        "failure_reason": null,
+        "http_status": 200,
+        "provider_generation": "707c35a9b57d41806fc37062f2fcfc562d098bea645c71d64cfc23e4449050c0",
+        "quality_state": "accepted",
+        "source_generation": "830b68bc6ac388cf05b631d4785cc8df6f01563d83a1862a4d721ac705bcbc5b",
+        "source_id": "gpr02-manifest-book"
+      },
+      {
+        "binding_name": "--zero-x-taker (public address), ZEROX_API_KEY",
+        "correlation_group": "0x-solana-router",
+        "failure_reason": null,
+        "http_status": null,
+        "provider_generation": "ee8da9163d9f23a493f4a80e0a3ee4a038f372f4cc40f45c9c91497c225a375c",
+        "quality_state": "missing-public-taker",
+        "source_generation": "b4fd3efc93f23f2877d5a8ef0fe858eb6cb0392e27b87e3e9eefc6498b56c61d",
+        "source_id": "gpr02-0x-preview"
+      },
+      {
+        "binding_name": "JUPITER_API_KEY",
+        "correlation_group": "jupiter-metis-router",
+        "failure_reason": null,
+        "http_status": null,
+        "provider_generation": "61d14d9af7725a7b016d203590b8f5debf5e3692d31f4bf371b7979a9f42f5ea",
+        "quality_state": "missing-credential-binding",
+        "source_generation": "c688291bde24074af87836bcad0087a7b766b8936702c6accce146743de87068",
+        "source_id": "gpr02-jupiter-reference"
+      },
+      {
+        "binding_name": "JUPITER_API_KEY",
+        "correlation_group": "jupiter-metis-router",
+        "failure_reason": null,
+        "http_status": null,
+        "provider_generation": "61d14d9af7725a7b016d203590b8f5debf5e3692d31f4bf371b7979a9f42f5ea",
+        "quality_state": "missing-credential-binding",
+        "source_generation": "c688291bde24074af87836bcad0087a7b766b8936702c6accce146743de87068",
+        "source_id": "gpr02-jupiter-reference"
+      },
+      {
+        "binding_name": "JUPITER_API_KEY",
+        "correlation_group": "jupiter-metis-router",
+        "failure_reason": null,
+        "http_status": null,
+        "provider_generation": "61d14d9af7725a7b016d203590b8f5debf5e3692d31f4bf371b7979a9f42f5ea",
+        "quality_state": "missing-credential-binding",
+        "source_generation": "c688291bde24074af87836bcad0087a7b766b8936702c6accce146743de87068",
+        "source_id": "gpr02-jupiter-reference"
+      },
+      {
+        "binding_name": null,
+        "correlation_group": "solana-public-shared",
+        "failure_reason": null,
+        "http_status": 200,
+        "provider_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+        "quality_state": "accepted",
+        "source_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+        "source_id": "solana_rpc"
+      },
+      {
+        "binding_name": null,
+        "correlation_group": "solana-public-shared",
+        "failure_reason": null,
+        "http_status": 200,
+        "provider_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+        "quality_state": "accepted",
+        "source_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+        "source_id": "solana_rpc"
+      }
+    ],
+    "structural_findings": [
+      {
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "correlation_group": "solana-public-shared",
+        "epoch": 1050,
+        "evidence_state": "DISCOVERY_ONLY",
+        "exact_graph_allowed": false,
+        "fee_adjusted": false,
+        "fee_redemption_qualification": false,
+        "independent_quorum": false,
+        "kind": "gpr02_sanctum_stake_pool_reference",
+        "lamports_per_raw_unit_denominator": 579483198588143,
+        "lamports_per_raw_unit_numerator": 706065928359484,
+        "mint": "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ",
+        "pool_id": "9mhGNSPArRMHpLDMSmxAvuoizBqtBGqYdT8WGuqgxNdn",
+        "provider_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+        "provider_id": "solana_rpc",
+        "raw_refs": [
+          "5d4c300dd037f316f0ecad5d96680a9ffbe435f5db94d1af1af2da213d2df2c2",
+          "534daf943f6d94880637d4bd2c459eb4ba081a2ba62bf7685f7591b2d6ceda45"
+        ],
+        "reference_kind": "STAKING_EXCHANGE_RATE",
+        "slot": 453809316
+      },
+      {
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "correlation_group": "solana-public-shared",
+        "epoch": 1050,
+        "evidence_state": "DISCOVERY_ONLY",
+        "exact_graph_allowed": false,
+        "fee_adjusted": false,
+        "fee_redemption_qualification": false,
+        "independent_quorum": false,
+        "kind": "gpr02_sanctum_stake_pool_reference",
+        "lamports_per_raw_unit_denominator": 799298249388265,
+        "lamports_per_raw_unit_numerator": 951000346731657,
+        "mint": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
+        "pool_id": "3wK2g8ZdzAH8FJ7PKr2RcvGh7V9VYson5hrVsJM5Lmws",
+        "provider_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+        "provider_id": "solana_rpc",
+        "raw_refs": [
+          "5d4c300dd037f316f0ecad5d96680a9ffbe435f5db94d1af1af2da213d2df2c2",
+          "534daf943f6d94880637d4bd2c459eb4ba081a2ba62bf7685f7591b2d6ceda45"
+        ],
+        "reference_kind": "STAKING_EXCHANGE_RATE",
+        "slot": 453809316
+      },
+      {
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "correlation_group": "solana-public-shared",
+        "epoch": 1050,
+        "evidence_state": "DISCOVERY_ONLY",
+        "exact_graph_allowed": false,
+        "fee_adjusted": false,
+        "fee_redemption_qualification": false,
+        "independent_quorum": false,
+        "kind": "gpr02_sanctum_stake_pool_reference",
+        "lamports_per_raw_unit_denominator": 1171791457387481,
+        "lamports_per_raw_unit_numerator": 1375087927761482,
+        "mint": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B",
+        "pool_id": "2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq",
+        "provider_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+        "provider_id": "solana_rpc",
+        "raw_refs": [
+          "5d4c300dd037f316f0ecad5d96680a9ffbe435f5db94d1af1af2da213d2df2c2",
+          "534daf943f6d94880637d4bd2c459eb4ba081a2ba62bf7685f7591b2d6ceda45"
+        ],
+        "reference_kind": "STAKING_EXCHANGE_RATE",
+        "slot": 453809316
+      },
+      {
+        "asset_id": "solana-mainnet:BNSOL",
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "kind": "gpr02_structural_rejection",
+        "raw_refs": [
+          "5d4c300dd037f316f0ecad5d96680a9ffbe435f5db94d1af1af2da213d2df2c2",
+          "534daf943f6d94880637d4bd2c459eb4ba081a2ba62bf7685f7591b2d6ceda45"
+        ],
+        "reason": "SANCTUM_RATE_STALE_OR_SUPPLY_MISMATCH"
+      },
+      {
+        "asset_id": "solana-mainnet:USDG",
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "kind": "gpr02_token2022_rejection",
+        "raw_refs": [
+          "5d4c300dd037f316f0ecad5d96680a9ffbe435f5db94d1af1af2da213d2df2c2",
+          "534daf943f6d94880637d4bd2c459eb4ba081a2ba62bf7685f7591b2d6ceda45"
+        ],
+        "reason": "UNSUPPORTED_TOKEN_2022_TRANSFER_SEMANTICS",
+        "startup_hard_bound_receipt": false
+      },
+      {
+        "asset_id": "solana-mainnet:PYUSD",
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "kind": "gpr02_token2022_rejection",
+        "raw_refs": [
+          "5d4c300dd037f316f0ecad5d96680a9ffbe435f5db94d1af1af2da213d2df2c2",
+          "534daf943f6d94880637d4bd2c459eb4ba081a2ba62bf7685f7591b2d6ceda45"
+        ],
+        "reason": "UNSUPPORTED_TOKEN_2022_TRANSFER_SEMANTICS",
+        "startup_hard_bound_receipt": false
+      },
+      {
+        "campaign_manifest_hash": "17b1adbc2ccd33baab8cee7d4150e4cacc8c44059c23ab79cf5c8ef40c5813af",
+        "kind": "gpr02_jlp_nav_rejection",
+        "live_nav_measured": false,
+        "raw_refs": [
+          "5d4c300dd037f316f0ecad5d96680a9ffbe435f5db94d1af1af2da213d2df2c2",
+          "534daf943f6d94880637d4bd2c459eb4ba081a2ba62bf7685f7591b2d6ceda45"
+        ],
+        "reason": "CURRENT_AUM_SUPPLY_ORACLE_STATE_REVIEW_REQUIRED",
+        "slot": 453809316
+      }
+    ],
+    "token2022_blocking_tlv_ids": [
+      12,
+      4,
+      16,
+      14
+    ],
+    "token2022_tlv_id_lengths": [
+      [
+        3,
+        32
+      ],
+      [
+        12,
+        32
+      ],
+      [
+        1,
+        108
+      ],
+      [
+        4,
+        65
+      ],
+      [
+        16,
+        129
+      ],
+      [
+        14,
+        64
+      ],
+      [
+        18,
+        64
+      ],
+      [
+        19,
+        174
+      ]
+    ]
+  },
+  "physical_accounting": {
+    "final_code": "Canonical guard grant observed before physical_attempt=true; logical invocation retained separately. Quote normalization/provenance requires physical=true and HTTP200.",
+    "guard_denial_tests": "PASS_DEPENDENCY_GENERATION_AND_QUOTA_NO_WIRE_CALLS",
+    "nonphysical_quote_test": "PASS_BLOCKED_BEFORE_NATIVE_CALLS",
+    "original_archive_semantics": "Original producer physical_attempt marked logical invocation; retained bytes unchanged. The second Manifest book generation mismatch is a pre-wire denial. Actual accounting uses reserved attempts and observed HTTP outcomes separately."
+  },
+  "portable_export_code_sha": "da9d71998c3294fd661d780f0fe9704e874125b2",
+  "readiness": {
+    "authenticated_quote_measurement": "BLOCKED_MISSING_BINDINGS",
+    "exact_qualification": "BLOCKED",
+    "live_capital": false,
+    "offline_implementation": "VERIFIED",
+    "production_promotion": false,
+    "public_research_discovery_and_structural_reads": "OBSERVED",
+    "sender": false,
+    "signer": false,
+    "stop_before": "GPR-04",
+    "submission": false
+  },
+  "recommended_next_actions": [
+    "Securely bind JUPITER_API_KEY and ZEROX_API_KEY and configure an explicit public 0x taker; run a new bounded quote slice without transaction consumption.",
+    "Provide reviewed independent RPC profiles and StartupIdentityPolicy values; run existing QPR-02 state and GPR-01 receipt owner only after correlated fresh pair/amount quotes exist.",
+    "Review observed USDG/PYUSD permanent delegate/confidential transfer/transfer hook semantics and issuer authorities; keep exact admission blocked until reviewed policy and independent pool decoder exist.",
+    "Investigate BNSOL pool/mint supply delta with bounded later same-bank reads; keep strict mismatch rejection.",
+    "Review JLP current AUM/custody supply/oracle bytes before claiming NAV; no cached AUM helper can qualify it.",
+    "Compare these Solana findings with GPR-03 and choose further measured campaigns before implementing GPR-04/05/06/07/08."
+  ],
+  "schema_version": "gpr02.solana-final-handoff.v1",
+  "tested_code_sha": "78bac3d27e98ed634f27ee36cc0fe062d2aa21d4",
+  "tests": {
+    "base_regressions_passed": 226,
+    "black": "PASS_10_FILES",
+    "command": ".venv/bin/python -m pytest -q --disable-socket --allow-unix-socket tests/test_gpr02_solana_parallel_radar.py tests/test_gpr01_research_economic_graph.py tests/test_gpr01_v22_delta.py tests/test_qpr01_campaign_identity.py tests/test_qpr02_data_plane.py tests/test_qpr03_source_intake.py tests/test_shadow_market_data_aggregation.py tests/test_shadow_arbitrage_graph.py",
+    "diff_check": "PASS",
+    "duration_seconds": 15.19,
+    "failed": 0,
+    "gpr02_passed": 80,
+    "lint": "PASS_E9_F63_F7_F82",
+    "mypy": "PASS_9_MODULES",
+    "passed": 306,
+    "portable_replays": 3,
+    "skipped": 0
+  },
+  "verified_gpr01_base_sha": "8c59759b491b6318f259138671dccfea25f2752e"
+}

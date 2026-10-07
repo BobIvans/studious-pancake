@@ -299,6 +299,29 @@ class DurableRawJournal:
             result.setdefault(event_id, []).append(evidence_id)
         return {key: tuple(value) for key, value in result.items()}
 
+    def retention_storage_inventory(self) -> tuple[dict[str, object], ...]:
+        """Bounded metadata-only storage view for retention/pressure planning.
+
+        This view never rehydrates archived Parquet payloads.  It reports only
+        the current inline SQLite payload bytes and owner-side pin/archive state.
+        """
+        rows = self._db.execute(
+            "SELECT e.event_id,LENGTH(e.payload),"
+            "EXISTS(SELECT 1 FROM raw_payload_archives a WHERE a.event_id=e.event_id),"
+            "EXISTS(SELECT 1 FROM raw_retention_pins p WHERE p.event_id=e.event_id) "
+            "FROM raw_events e "
+            "ORDER BY e.reconnect_epoch,e.source,e.partition_name,e.cursor_offset,e.event_id"
+        ).fetchall()
+        return tuple(
+            {
+                "event_id": str(event_id),
+                "inline_payload_bytes": int(inline_bytes or 0),
+                "archived": bool(archived),
+                "pinned": bool(pinned),
+            }
+            for event_id, inline_bytes, archived, pinned in rows
+        )
+
     def archive_verified_payloads(
         self,
         manifest: DatasetManifest,

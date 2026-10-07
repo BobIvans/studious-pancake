@@ -1,0 +1,48 @@
+{
+  "schema_version": "gpr.sui-deepbook-pools.v2.1",
+  "source_basis": "Renewed R&D attachment: current Mysten DeepBook SDK constants",
+  "safety": {
+    "evidence_state": "IDENTIFIER_VERIFIED",
+    "runtime_enabled": false,
+    "exact_graph_allowed": false,
+    "rule": "Pool IDs are read-only research onboarding inputs. Verify coin types, pool object, checkpoint/version, depth and fee semantics before exact promotion."
+  },
+  "pools": [
+    {
+      "relation": "WUSDC_ETH_ORIGIN/USDC_NATIVE",
+      "pool_id": "0xa0b9ebefb38c963fd115f52d71fa64501b79d1adcb5270563f92ce0442376545"
+    },
+    {
+      "relation": "USDT_WORMHOLE/USDC_NATIVE",
+      "pool_id": "0x4e2ca3988246e1d50b9bf209abb9c1cbfec65bd95afdacc620a36c67bdb8452f"
+    },
+    {
+      "relation": "USDT_SUI_BRIDGE/USDC_NATIVE",
+      "pool_id": "0xfc28a2fb22579c16d672a1152039cbf671e5f4b9f103feddff4ea06ef3c2bc25"
+    },
+    {
+      "relation": "suiUSDe/USDC_NATIVE",
+      "pool_id": "0x0fac1cebf35bde899cd9ecdd4371e0e33f44ba83b8a2902d69186646afa3a94b"
+    },
+    {
+      "relation": "SUI/suiUSDe",
+      "pool_id": "0x034f3a42e7348de2084406db7a725f9d9d132a56c68324713e6e623601fb4fd7"
+    },
+    {
+      "relation": "SUI/USDSUI",
+      "pool_id": "0x826eeacb2799726334aa580396338891205a41cf9344655e526aae6ddd5dc03f"
+    },
+    {
+      "relation": "USDSUI/USDC_NATIVE",
+      "pool_id": "0xa374264d43e6baa5aa8b35ff18ff24fdba7443b4bcb884cb4c2f568d32cdac36"
+    },
+    {
+      "relation": "XBTC/USDC_NATIVE",
+      "pool_id": "0x20b9a3ec7a02d4f344aa1ebc5774b7b0ccafa9a5d76230662fdc0300bb215307"
+    },
+    {
+      "relation": "ZWBTC/USDC_NATIVE",
+      "pool_id": "0xf5142aafa24866107df628bf92d0358c7da6acc46c2f10951690fd2b8570f117"
+    }
+  ]
+}

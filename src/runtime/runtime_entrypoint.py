@@ -260,7 +260,7 @@ async def _run_paper(
             on_report=lambda report: _print_report(report, as_json=as_json),
         )
         summary = await supervisor.run(stop)
-        if summary.stop_reason.value == "drain_timeout":
+        if summary.stop_reason.value in {"drain_timeout", "storage_pressure"}:
             return 7
         return _exit_code(summary.final_report)
     finally:

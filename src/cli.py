@@ -421,6 +421,9 @@ async def _run_installed_durable_paper_service_async(
         on_report=_print_paper_service_report,
     )
     summary = await supervisor.run(stop_event)
+    if summary.stop_reason.value == "storage_pressure":
+        print("INSTALLED_PAPER_SERVICE: status=BLOCKED reason=storage_pressure")
+        return 7
     final_report = summary.final_report
     if final_report is None:
         print("INSTALLED_PAPER_SERVICE: status=STOPPED reason=signal_before_cycle")

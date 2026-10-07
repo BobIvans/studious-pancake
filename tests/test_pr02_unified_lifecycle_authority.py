@@ -324,6 +324,55 @@ def test_installed_a3_records_intent_before_batch_and_uses_pr02_outbox(tmp_path)
         )
 
 
+def test_storage_pressure_typed_batch_block_is_durable_and_supervised(tmp_path):
+    from src.agg02.contracts import Agg02Error
+    from src.intelligence.common import seal
+    from src.paper_shadow.repeated_service_pr04 import RepeatedInstalledPaperService
+
+    calls = []
+
+    class Source:
+        def __call__(self):
+            raise Agg02Error("AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED")
+
+        def storage_pressure_boundary(self, *, batch_id, trigger):
+            calls.append((batch_id, trigger))
+            return seal({"admission_pause_required": False})
+
+    path = tmp_path / "pressure-service.sqlite3"
+    service = InstalledDurablePaperService(
+        load_runtime_config(),
+        InstalledPaperServiceConfig(db_path=path, run_id="pressure"),
+        batch_source=Source(),
+        runtime_cycle=_no_trade_cycle,
+    )
+    expected_batch = service.next_pressure_batch_id()
+    summary = asyncio.run(RepeatedInstalledPaperService(service).run(asyncio.Event()))
+    assert summary.stop_reason.value == "storage_pressure"
+    assert (
+        summary.final_report.terminal_reason
+        == "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED"
+    )
+    assert calls == [
+        (expected_batch, "BATCH_BOUNDARY"),
+        (expected_batch, "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED"),
+    ]
+    service.close()
+    with sqlite3.connect(path) as db:
+        assert (
+            db.execute(
+                "SELECT terminal_reason FROM a3_paper_service_cycles"
+            ).fetchone()[0]
+            == "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED"
+        )
+        assert (
+            db.execute(
+                "SELECT COUNT(*) FROM durable_time_incidents WHERE kind='STORAGE_PRESSURE_ADMISSION_PAUSED'"
+            ).fetchone()[0]
+            == 1
+        )
+
+
 def _batch_after_intent(service, seen, provider_hash):
     seen.append(
         service.authority.db.execute(

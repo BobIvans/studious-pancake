@@ -18,6 +18,7 @@ from pathlib import Path
 import time
 
 from src.config.runtime import RuntimeConfig
+from src.agg02.contracts import Agg02Error
 from src.durability.unified_authority_pr02 import (
     AuthorityFence,
     UnifiedLifecycleAuthority,
@@ -218,6 +219,16 @@ class InstalledDurablePaperService:
         if self._owns_authority:
             self.authority.close()
 
+    @property
+    def storage_pressure_boundary(self):
+        return getattr(self.batch_source, "storage_pressure_boundary", None)
+
+    def next_pressure_batch_id(self) -> str:
+        return self._cycle_id(self.authority.next_cycle_sequence(self.config.run_id))
+
+    def record_storage_pressure_blocker(self, reason: str, batch_id: str) -> None:
+        self.authority.record_runtime_incident(reason, batch_id)
+
     def __enter__(self) -> "InstalledDurablePaperService":
         return self
 
@@ -277,6 +288,12 @@ class InstalledDurablePaperService:
             if not isinstance(batch, A3ExactAttemptBatch):
                 raise TypeError("A3 source must return an exact-attempt batch")
         except Exception as exc:
+            reason = (
+                str(exc)
+                if isinstance(exc, Agg02Error)
+                and str(exc) == "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED"
+                else f"{A3_BATCH_SOURCE_FAILED}_{type(exc).__name__}"
+            )
             report = self._indeterminate_report(
                 cycle_id,
                 sequence,
@@ -287,7 +304,7 @@ class InstalledDurablePaperService:
                     ready=False,
                     blockers=(A3_BATCH_SOURCE_FAILED,),
                 ),
-                f"{A3_BATCH_SOURCE_FAILED}_{type(exc).__name__}",
+                reason,
             )
             self._commit(fence, report)
             return report
@@ -384,11 +401,17 @@ class InstalledDurablePaperService:
                 A3_RUNTIME_TIMEOUT,
             )
         except Exception as exc:
+            reason = (
+                str(exc)
+                if isinstance(exc, Agg02Error)
+                and str(exc) == "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED"
+                else f"blocked_a3_runtime_cycle_failed_{type(exc).__name__}"
+            )
             return self._indeterminate_report(
                 cycle_id,
                 sequence,
                 batch.evidence,
-                f"blocked_a3_runtime_cycle_failed_{type(exc).__name__}",
+                reason,
             )
         if not isinstance(a2_report, ExactAttemptRuntimeReport) or a2_report.status in {
             A2PaperOutcomeStatus.EXACT_ATTEMPT_READY_FOR_HANDOFF,

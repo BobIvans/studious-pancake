@@ -41,6 +41,7 @@ from .storage_budget import read_disk_budget, forecast_days_until_budget
 from .retention_policy import retention_dry_run
 from .parquet_compaction import publish_partition
 from .prune import prune_verified_payloads
+from .pressure_manager import run_pressure_cycle
 from .rollups import build_1m_rollup, build_5m_rollup, build_1h_rollup
 from .sampling import select_periodic_baseline, reservoir_sample_failures
 from .reports import build_report, bundle_report
@@ -105,6 +106,7 @@ def _parser() -> argparse.ArgumentParser:
         "compact",
         "prune",
         "rollups",
+        "pressure",
     ):
         sub = storage.add_parser(command)
         sub.add_argument("--journal", type=Path)
@@ -118,6 +120,11 @@ def _parser() -> argparse.ArgumentParser:
             sub.add_argument("--compaction", type=Path)
             sub.add_argument("--retention", type=Path)
             sub.add_argument("--references", type=Path)
+        if command == "pressure":
+            sub.add_argument("--batch-id")
+            sub.add_argument("--execute", action="store_true")
+            sub.add_argument("--references", type=Path)
+            sub.add_argument("--max-events", type=int, default=20_000)
     report = planes.add_parser("report").add_subparsers(dest="command", required=True)
     for command in ("build", "bundle"):
         sub = report.add_parser(command)
@@ -300,6 +307,36 @@ def storage_commands(args) -> dict:
     ):
         raise ValueError(
             "execute requires journal, compaction/retention receipts, records, references and out"
+        )
+    if args.command == "pressure":
+        if args.journal is None or not args.journal.is_file():
+            raise ValueError("existing --journal required")
+        records = load_json(args.records)["records"] if args.records else []
+        references = (
+            load_json(args.references)
+            if args.references
+            else {"records": [], "inventory_complete": False}
+        )
+        if args.execute and (
+            not args.records
+            or not args.references
+            or references.get("inventory_complete") is not True
+        ):
+            raise ValueError(
+                "--execute pressure requires records and complete references inventory"
+            )
+        return run_pressure_cycle(
+            state_root=args.state_root,
+            journal_path=args.journal,
+            records=records,
+            references=references.get("records", []),
+            reference_inventory_complete=references.get("inventory_complete") is True,
+            output_dir=args.out or (args.state_root / "pressure"),
+            minimum_age_ms=args.before,
+            max_events=args.max_events,
+            execute=args.execute,
+            now_ms=now,
+            batch_id=args.batch_id,
         )
     if args.command in {"status", "forecast"}:
         result = read_disk_budget(args.state_root, journal=args.journal)
@@ -583,7 +620,13 @@ def main(argv: list[str] | None = None) -> int:
             "laya": laya_commands,
         }[args.plane](args)
         print(canonical(result).decode())
-        return 0
+        return (
+            3
+            if args.plane == "storage"
+            and args.command == "pressure"
+            and result.get("admission_pause_required") is True
+            else 0
+        )
     except (ValueError, KeyError, OSError) as exc:
         print(
             canonical({"status": "BLOCKED", "reason": str(exc)}).decode(),

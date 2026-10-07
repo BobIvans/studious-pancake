@@ -299,6 +299,33 @@ class DurableRawJournal:
             result.setdefault(event_id, []).append(evidence_id)
         return {key: tuple(value) for key, value in result.items()}
 
+    def retention_storage_inventory(self) -> tuple[dict[str, object], ...]:
+        """Bounded metadata-only storage view for retention/pressure planning.
+
+        This view never rehydrates archived Parquet payloads.  It reports only
+        the current inline SQLite payload bytes and owner-side pin/archive state.
+        """
+        rows = self._db.execute(
+            "SELECT e.event_id,LENGTH(e.payload),"
+            "EXISTS(SELECT 1 FROM raw_payload_archives a WHERE a.event_id=e.event_id),"
+            "EXISTS(SELECT 1 FROM raw_retention_pins p WHERE p.event_id=e.event_id),"
+            "e.envelope_json "
+            "FROM raw_events e "
+            "ORDER BY e.reconnect_epoch,e.source,e.partition_name,e.cursor_offset,e.event_id"
+        ).fetchall()
+        return tuple(
+            {
+                "event_id": str(event_id),
+                "inline_payload_bytes": int(inline_bytes or 0),
+                "archived": bool(archived),
+                "pinned": bool(pinned),
+                "available_at_ms": json.loads(envelope_json)["available_at_ms"],
+                "gap_before": json.loads(envelope_json)["gap_before"],
+                "envelope_bytes": len(envelope_json.encode("utf-8")),
+            }
+            for event_id, inline_bytes, archived, pinned, envelope_json in rows
+        )
+
     def archive_verified_payloads(
         self,
         manifest: DatasetManifest,
@@ -339,9 +366,13 @@ class DurableRawJournal:
                 archived = replay.get(event_id)
                 if row is None or archived is None:
                     raise Agg02Error("AGG02_RETENTION_EVENT_MISSING")
-                if self._db.execute(
-                    "SELECT 1 FROM raw_payload_archives WHERE event_id=?", (event_id,)
-                ).fetchone():
+                previous_archive = self._db.execute(
+                    "SELECT manifest_json,receipt_hash FROM raw_payload_archives WHERE event_id=?",
+                    (event_id,),
+                ).fetchone()
+                if previous_archive:
+                    if previous_archive != (serialized, receipt_hash):
+                        raise Agg02Error("AGG02_ARCHIVE_LINEAGE_MISMATCH")
                     continue
                 envelope = json.loads(row[0])
                 archived_payload = archived["payload"]

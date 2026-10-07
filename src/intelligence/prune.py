@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from src.agg02.storage import DatasetManifest, DurableRawJournal
-from .common import save_json, seal, verify_seal
+from .common import load_json, save_json, seal, verify_seal
 from .evidence_refs import deletion_impact
 from .parquet_compaction import verify_partition
 from .retention_policy import retention_dry_run
@@ -63,7 +63,25 @@ def prune_verified_payloads(
             "model_authority": False,
         }
     )
-    write_tombstone_receipt(receipt_path, tombstone)
+    prepared_path = Path(receipt_path)
+    committed_path = prepared_path.with_suffix(".committed.json")
+    if prepared_path.exists():
+        existing = load_json(prepared_path)
+        verify_seal(existing)
+        if existing != tombstone:
+            raise ValueError("tombstone receipt identity rebound")
+        if committed_path.exists():
+            committed = load_json(committed_path)
+            verify_seal(committed)
+            if (
+                committed["status"] != "COMMITTED"
+                or committed["event_ids"] != list(event_ids)
+                or committed["compaction"] != compaction
+            ):
+                raise ValueError("committed tombstone identity mismatch")
+            return committed
+    else:
+        write_tombstone_receipt(receipt_path, tombstone)
     archived = journal.archive_verified_payloads(
         manifest,
         event_ids=event_ids,
@@ -75,8 +93,9 @@ def prune_verified_payloads(
         {
             **{k: v for k, v in tombstone.items() if k != "receipt_sha256"},
             "status": "COMMITTED",
-            "archived_events": archived,
+            "archived_events": len(event_ids),
+            "newly_archived_events": archived,
         }
     )
-    save_json(Path(receipt_path).with_suffix(".committed.json"), result)
+    save_json(committed_path, result)
     return result

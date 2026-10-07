@@ -121,19 +121,24 @@
     {
       "source_id": "openocean-solana",
       "stage": "DIN-03",
-      "status": "PLANNED",
-      "evidence_paths": [],
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/routing/clients.py",
+        "src/routing/adapters.py"
+      ],
       "enabled": false,
-      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
       "credential_ref": "OPENOCEAN_API_KEY"
     },
     {
       "source_id": "okx-onchainos",
       "stage": "DIN-03",
-      "status": "PLANNED",
-      "evidence_paths": [],
+      "status": "EXISTING_STUB",
+      "evidence_paths": [
+        "src/resources/contracts/routing/okx_solana_swap_instruction_v6_review_2026-07-21.json"
+      ],
       "enabled": false,
-      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
       "credential_ref": "OKX_DEX_CREDENTIALS"
     },
     {
@@ -269,10 +274,13 @@
     {
       "source_id": "pyth-hermes",
       "stage": "DIN-05",
-      "status": "PLANNED",
-      "evidence_paths": [],
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/ingest/pyth_auth.py",
+        "tests/test_pr_a_provider_truth_cleanup.py"
+      ],
       "enabled": false,
-      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
       "credential_ref": "FLASHLOAN_PYTH_API_KEY_REFERENCE"
     },
     {
@@ -287,10 +295,13 @@
     {
       "source_id": "helius",
       "stage": "DIN-05",
-      "status": "PLANNED",
-      "evidence_paths": [],
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/external_resources/helius.py",
+        "src/providers/helius/authenticated_ingress.py"
+      ],
       "enabled": false,
-      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
       "credential_ref": "HELIUS_API_KEY"
     },
     {
@@ -323,19 +334,24 @@
     {
       "source_id": "kamino",
       "stage": "DIN-05",
-      "status": "PLANNED",
-      "evidence_paths": [],
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/lending/kamino.py",
+        "src/lending/kamino_real_conformance.py"
+      ],
       "enabled": false,
-      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
       "credential_ref": "solana-rpc"
     },
     {
       "source_id": "slumlord",
       "stage": "LATER",
-      "status": "PLANNED",
-      "evidence_paths": [],
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/lending/slumlord.py"
+      ],
       "enabled": false,
-      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
       "credential_ref": "solana-rpc"
     },
     {

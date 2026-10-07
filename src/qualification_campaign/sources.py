@@ -134,6 +134,34 @@ class SourceDossier:
         )
 
 
+def source_admission_status(dossier, credential_headers, *, now_ns):
+    """Report binding names and fail closed before wire; never return values."""
+    reasons = []
+    try:
+        dossier.require_current(now_ns)
+    except ValueError as exc:
+        reasons.append(str(exc))
+    profile = dossier.profile
+    headers = credential_headers.get(profile.profile_id, {})
+    if profile.auth_header:
+        value = headers.get(profile.auth_header)
+        if not isinstance(value, str) or not value.strip():
+            reasons.append("MISSING_CREDENTIAL_BINDING:" + profile.credential_ref)
+        elif profile.auth_header == "Authorization" and (
+            not value.startswith("Bearer ") or not value[7:].strip()
+        ):
+            reasons.append("INVALID_CREDENTIAL_HEADER:" + profile.credential_ref)
+    return {
+        "source_id": dossier.source_id,
+        "source_generation": dossier.generation,
+        "provider_generation": profile.generation,
+        "credential_ref": profile.credential_ref,
+        "status": "BLOCKED" if reasons else "ADMISSIBLE",
+        "reasons": reasons,
+        "execution_authority": "NONE",
+    }
+
+
 @dataclass(frozen=True)
 class Candidate:
     market_id: str
@@ -340,6 +368,12 @@ class SourceIntakePlane:
         candidates = ()
         rejections = {}
         try:
+            admission_status = source_admission_status(
+                dossier, self.credential_headers, now_ns=started
+            )
+            if admission_status["status"] == "BLOCKED":
+                envelope["failure_reason"] = ";".join(admission_status["reasons"])
+                raise ValueError("SOURCE_ADMISSION_BLOCKED")
             self.evidence.claim_attempt(profile)
             entitlement = self.governance.entitlement(profile.profile_id)
             if entitlement.generation != profile.generation:

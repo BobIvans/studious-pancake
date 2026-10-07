@@ -1,0 +1,107 @@
+{
+  "schema_version": "gpr02.source-contracts.v1",
+  "pins": {
+    "manifest": {
+      "git_sha": "f1875a0f8e6deb2519d05740b83454b55094718e",
+      "files": {
+        "client/ts/src/client.ts": "c66e5a76f922f99c52910517df16712372e0c89c0b51b54d63b05f5b0264ff6b",
+        "scripts/stats-server.ts": "6a149710b1e5f9d58216c371fdfcd8209c7e60466c92678e6e0fdba09e09655a",
+        "scripts/stats_utils/manifestStatsServer.ts": "8a0dff8bfba9ae7a919d9843d0988d74322bdcd3609dfa880404f1412f36b25f"
+      },
+      "retrieval": "existing-verified-HTTPS-Git-proxy",
+      "live_provider_schema_verified": false
+    },
+    "0x": {
+      "git_sha": "73d019171b14d80827151491d5d95b572e754df6",
+      "files": {
+        "fern/openapi-solana-swap.json": "613f36510cc722c0b57f1e1247fc6708ecb9fd3ff142a850eed8949bc329eeed",
+        "fern/docs/pages/solana-swap-api/guides/get-started.mdx": "d1f7f64c6c4db5fca97b36cfb9c31f68efe9ceeab83f0fff2081179e76f9caea"
+      },
+      "retrieval": "existing-verified-HTTPS-Git-proxy",
+      "live_provider_schema_verified": false
+    },
+    "jupiter": {
+      "git_sha": "d1fa5774b5d93ec5ebc7f462063d786d8c17cf64",
+      "files": {
+        "openapi-spec/swap/v1/swap.yaml": "68d6f2d3dc21ad06d0cb1cecfa4ca3bb5a33dec5352b5047a3db951231dffdcc",
+        "swap/v1/get-quote.mdx": "fbf8716d8850463dcefa17089886c3598b2fcf3dbe637ec2ae81d09bd7bf19b2",
+        "perps/pool-account.mdx": "a04fedca03a9567373637b4a93e9c91814bbc825e4ee13eeba48ec4c72341774"
+      },
+      "retrieval": "existing-verified-HTTPS-Git-proxy",
+      "live_provider_schema_verified": false
+    },
+    "sanctum-list": {
+      "git_sha": "0360a1af31a6c6d99ce1947029d732e2cb2d6682",
+      "files": {
+        "sanctum-lst-list.toml": "dfd0e32ca1716338ce2d75acfa276e99043c3f72a7b7e5f11d5f2e59693436aa",
+        "rust/sanctum-lst-list/src/programs.rs": "818549aafd5b73fb7eb3fb01c4ae95da0c956fc639e077673b37addc2980eb93"
+      },
+      "retrieval": "existing-verified-HTTPS-Git-proxy",
+      "live_provider_schema_verified": false
+    },
+    "sanctum-pool": {
+      "git_sha": "d150a697442199ea13824c05cbbe23c80c7f4a0b",
+      "files": {
+        "core/src/state/pool.rs": "871d07823bf699a42e8a7ac3073685a16688be6ec43f7b8ffae45c6d2428c470"
+      },
+      "retrieval": "existing-verified-HTTPS-Git-proxy",
+      "live_provider_schema_verified": false
+    },
+    "token2022": {
+      "git_sha": "e27c3ad7e7d0db0e9a40940e584d3b20c1f6b491",
+      "files": {
+        "interface/src/extension/mod.rs": "502b8309d3243f81d3bb7b2ff5f9e412c48d4d68f354b8994792389fc904defd",
+        "interface/src/extension/transfer_fee/mod.rs": "2f51ac04733271b7578f0fb8c05805aac237f1521ffa1505b4055c03b6cbda5c"
+      },
+      "retrieval": "existing-verified-HTTPS-Git-proxy",
+      "live_provider_schema_verified": false
+    }
+  },
+  "sanctum_references": [
+    {
+      "asset_id": "solana-mainnet:dSOL",
+      "mint": "Dso1bDeDjCQxTrWHqUUi63oBvV7Mdm6WaobLbQ7gnPQ",
+      "pool_id": "9mhGNSPArRMHpLDMSmxAvuoizBqtBGqYdT8WGuqgxNdn",
+      "program_id": "SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY",
+      "decimals": 9,
+      "source_git_sha": "0360a1af31a6c6d99ce1947029d732e2cb2d6682"
+    },
+    {
+      "asset_id": "solana-mainnet:hSOL",
+      "mint": "he1iusmfkpAdwvxLNGV8Y1iSbj4rUy6yMhEA3fotn9A",
+      "pool_id": "3wK2g8ZdzAH8FJ7PKr2RcvGh7V9VYson5hrVsJM5Lmws",
+      "program_id": "SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY",
+      "decimals": 9,
+      "source_git_sha": "0360a1af31a6c6d99ce1947029d732e2cb2d6682"
+    },
+    {
+      "asset_id": "solana-mainnet:bbSOL",
+      "mint": "Bybit2vBJGhPF52GBdNaQfUJ6ZpThSgHBobjWZpLPb4B",
+      "pool_id": "2aMLkB5p5gVvCwKkdSo5eZAL1WwhZbxezQr1wxiynRhq",
+      "program_id": "SP12tWFxD9oJsVWNavTTBZvMbA6gkAmxtVgxdqvyvhY",
+      "decimals": 9,
+      "source_git_sha": "0360a1af31a6c6d99ce1947029d732e2cb2d6682"
+    },
+    {
+      "asset_id": "solana-mainnet:BNSOL",
+      "mint": "BNso1VUJnh4zcfpZa6986Ea66P6TCp59hvtNJ8b1X85",
+      "pool_id": "Hr9pzexrBge3vgmBNRR8u42CNQgBXdHm4UkUN2DH4a7r",
+      "program_id": "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy",
+      "decimals": 9,
+      "source_git_sha": "0360a1af31a6c6d99ce1947029d732e2cb2d6682"
+    }
+  ],
+  "jlp_reference": {
+    "pool_id": "5BUwFW4nRbftYTDMbgxykoFWqWHPzahFSNAaaaJtVKsq",
+    "program_id": "PERPHjGBqRHArX4DySjwM6UJHiR3sWAatqfdBS2qQJu",
+    "live_nav_available": false,
+    "blocker": "CURRENT_AUM_SUPPLY_ORACLE_STATE_REVIEW_REQUIRED"
+  },
+  "safety": {
+    "read_only": true,
+    "signer": false,
+    "sender": false,
+    "submission": false,
+    "production_promotion": false
+  }
+}

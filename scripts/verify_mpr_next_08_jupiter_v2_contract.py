@@ -35,6 +35,14 @@ EXPECTED_METHOD: Final = "GET"
 EXPECTED_PATH: Final = "/swap/v2/build"
 EXPECTED_ADAPTER: Final = "src.providers.jupiter.router.JupiterRouterAdapter"
 EXPECTED_PRODUCT_PATHS: Final = frozenset({"/price/v3", EXPECTED_PATH})
+RESEARCH_REFERENCE_URL: Final = "https://api.jup.ag/swap/v1/quote"
+RESEARCH_REFERENCE_FILES: Final = {
+    "src/solana_parallel_radar/probes.py": (RESEARCH_REFERENCE_URL,),
+    "src/solana_parallel_radar/cli.py": (
+        RESEARCH_REFERENCE_URL,
+        "openapi-spec/swap/v1/swap.yaml",
+    ),
+}
 EXPECTED_FORBIDDEN_MARKERS: Final = frozenset(
     {
         "/swap/v1",
@@ -331,6 +339,74 @@ def _validate_policy_references(
                 )
 
 
+def _reviewed_research_references(
+    root: Path,
+    payload: dict[str, Any],
+    blockers: list[str],
+    artifact_hashes: dict[str, str],
+) -> dict[str, tuple[str, ...]]:
+    """Admit exact reviewed research bytes without relaxing production checks."""
+    entries = payload.get("read_only_research_references", [])
+    if not isinstance(entries, list):
+        blockers.append("RESEARCH_REFERENCE_DECLARATIONS_INVALID")
+        return {}
+    reviewed: dict[str, tuple[str, ...]] = {}
+    for entry in entries:
+        if not isinstance(entry, dict):
+            blockers.append("RESEARCH_REFERENCE_DECLARATION_INVALID")
+            continue
+        relative = entry.get("path")
+        if not isinstance(relative, str) or relative not in RESEARCH_REFERENCE_FILES:
+            blockers.append("RESEARCH_REFERENCE_PATH_NOT_REVIEWED")
+            continue
+        expected = {
+            "path": relative,
+            "sha256": entry.get("sha256"),
+            "purpose": "GPR-02_DISCOVERY_ONLY_QUOTE_REFERENCE",
+            "method": "GET",
+            "endpoint": RESEARCH_REFERENCE_URL,
+            "build": False,
+            "signer": False,
+            "submission": False,
+            "production_promotion": False,
+        }
+        if (
+            entry != expected
+            or relative in reviewed
+            or not all(
+                entry.get(field) is False
+                for field in ("build", "signer", "submission", "production_promotion")
+            )
+        ):
+            blockers.append(f"RESEARCH_REFERENCE_CONTRACT_INVALID:{relative}")
+            continue
+        path = _repo_file(root, relative)
+        if not path.is_file():
+            blockers.append(f"RESEARCH_REFERENCE_PATH_MISSING:{relative}")
+            continue
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        artifact_hashes[relative] = actual
+        if entry.get("sha256") != actual:
+            blockers.append(f"RESEARCH_REFERENCE_REVIEW_HASH_MISMATCH:{relative}")
+            continue
+        reviewed[relative] = RESEARCH_REFERENCE_FILES[relative]
+    return reviewed
+
+
+def _imports_research_radar(source: str) -> bool:
+    prefix = "src.solana_parallel_radar"
+    for node in ast.walk(ast.parse(source)):
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names = [node.module, *(node.module + "." + a.name for a in node.names)]
+        else:
+            continue
+        if any(name == prefix or name.startswith(prefix + ".") for name in names):
+            return True
+    return False
+
+
 def _mega_b2_method(source: str) -> str | None:
     try:
         tree = ast.parse(source)
@@ -543,6 +619,9 @@ def verify_mpr_next_08_jupiter_v2_contract(
         forbidden_markers,
         blockers,
     )
+    research_references = _reviewed_research_references(
+        repo_root, quarantine, blockers, artifact_hashes
+    )
 
     mega_b2_source = _read_text(repo_root, MEGA_B2_PATH)
     mega_b2_method = _validate_mega_b2(mega_b2_source, blockers)
@@ -559,8 +638,19 @@ def verify_mpr_next_08_jupiter_v2_contract(
         except UnicodeDecodeError:
             blockers.append(f"ACTIVE_SURFACE_NOT_UTF8:{relative}")
             continue
+        if (
+            research_references
+            and path.suffix == ".py"
+            and not relative.startswith("src/solana_parallel_radar/")
+            and _imports_research_radar(text)
+        ):
+            blockers.append(f"RESEARCH_REFERENCE_IMPORTED_BY_PRODUCTION:{relative}")
         for marker in forbidden_markers:
-            if marker in text:
+            scanned = text
+            if marker == "/swap/v1" and relative in research_references:
+                for literal in research_references[relative]:
+                    scanned = scanned.replace(literal, "")
+            if marker in scanned:
                 blockers.append(
                     f"FORBIDDEN_ACTIVE_JUPITER_ENDPOINT:{relative}:{marker}"
                 )

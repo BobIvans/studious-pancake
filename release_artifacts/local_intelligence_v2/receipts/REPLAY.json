@@ -1,0 +1,1 @@
+{"candidate_evidence_preserved":true,"cursor_provider_a":{"offset":50,"partition":"pair","reconnect_epoch":0,"slot":99,"source":"provider-a"},"cursor_provider_b":{"offset":50,"partition":"pair","reconnect_epoch":0,"slot":100,"source":"provider-b"},"exact":true,"verified_events":100}

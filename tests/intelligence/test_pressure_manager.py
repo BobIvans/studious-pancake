@@ -93,7 +93,7 @@ def test_pressure_selection_is_oldest_eligible_not_oldest_fraction(tmp_path):
 def test_dry_run_never_mutates_payloads(monkeypatch, tmp_path):
     root = tmp_path / "state"
     root.mkdir()
-    path = tmp_path / "raw.db"
+    path = root / "raw.db"
     with DurableRawJournal(path) as journal:
         journal.append(event(1, b"x" * 100), b"x" * 100)
     monkeypatch.setattr(
@@ -122,7 +122,7 @@ def test_execute_offloads_only_proven_events_and_keeps_exact_replay(
 ):
     root = tmp_path / "state"
     root.mkdir()
-    path = tmp_path / "raw.db"
+    path = root / "raw.db"
     payloads = {}
     with DurableRawJournal(path) as journal:
         for i in range(1, 5):
@@ -165,7 +165,7 @@ def test_execute_offloads_only_proven_events_and_keeps_exact_replay(
 def test_critical_shortfall_requires_admission_pause(monkeypatch, tmp_path):
     root = tmp_path / "state"
     root.mkdir()
-    path = tmp_path / "raw.db"
+    path = root / "raw.db"
     with DurableRawJournal(path) as journal:
         journal.append(event(1, b"x" * 100), b"x" * 100)
         journal.pin_retention(["event-1"], evidence_id="must-keep")

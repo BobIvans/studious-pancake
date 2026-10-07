@@ -1,0 +1,13 @@
+# DIN-00 bounded source admission
+
+Dependency: RCN-00 https://github.com/BobIvans/studious-pancake/pull/579. This review branch is based on its validated integration head, targets main, and must not merge before RCN-00 or without approval.
+
+The existing QPR SourceIntakePlane now rejects absent/empty/invalid required credentials before campaign attempt reservation or wire admission. Status reports return binding names only. Provider aliases with the same real operator share the canonical ProviderGovernance physical bucket; incompatible budget policies fail closed in the existing authority rather than creating another bucket. No new journal, graph or candidate owner was introduced. Source schema generation and physical quota state remain separate. Existing Solana candidate validation is unchanged; Sui continues to use its separate outer intake owner.
+
+`config/qualification/din00-source-status.json` audits the 37 backlog rows against existing owners. Source presence never becomes `IMPLEMENTED_AND_VERIFIED`; no row is auto-enabled. Historical contracts and unsigned financing owners are explicitly unbound.
+
+Measured diagnostic: one admitted DEX Screener token batch request for the existing exact WSOL/USDC identifiers, HTTP 200, empty response, zero candidates. The current official API reference was fetched and its token-batch route matched the existing adapter. Docs and response hashes, provider/dossier generations, one committed physical request and replay identity are recorded in BOUNDED_READ_RECEIPT.json. The conservative engineering budget is 1 request/minute and 1 total; no claim of verified published quota or unlimited access. Existing provider/source fixtures cover success and negative HTTP/schema/quota behavior; new tests prove zero calls with absent/invalid credentials and one shared operator budget across provider aliases.
+
+Validation: 201 focused tests passed; `python scripts/verify_repo.py` passed including 5327 offline tests, 1 deselected, dependency audit, static/format/type/security gates, wheel/console smoke and a clean source tree. RCN-00's final head has 19 successful GitHub checks. Receipt-only follow-up changes do not alter tested code.
+
+Next: independent DIN-01/DIN-02 branches, bounded actual indexed reads and negative replay. Fresh reviewed provider profiles and distinct legitimate direct-state operators are required for exact proof. Jupiter/0x keys are missing; requirements are saved in environment settings. Never put values in chat. DIN-03–DIN-07 remain gated: no quote race, paper economics or 24-hour claim has been established here. Signing, sending and production promotion remain disabled.

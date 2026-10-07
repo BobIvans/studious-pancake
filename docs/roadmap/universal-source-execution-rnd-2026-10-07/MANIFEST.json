@@ -1,0 +1,33 @@
+{
+  "schema_version": "uxe.rnd-package.v1",
+  "date": "2026-10-07",
+  "repo": "BobIvans/studious-pancake",
+  "base_pr": 571,
+  "base_head": "f8e4aebf7781e184e2fc70df792ab9087da8eb58",
+  "title": "Universal Source + Execution + Slumlord R&D",
+  "next_prs": [
+    "UXE-00 Provider Contracts",
+    "UXE-01 Solana Multi-Provider Quote/Build Race",
+    "UXE-02 Sui Multi-Provider Quote/PTB Race",
+    "UXE-03 Dynamic Universe",
+    "UXE-04 FlashCapitalGraph",
+    "UXE-05 Slumlord Rent Financing",
+    "UXE-06 CorrelationLedger",
+    "UXE-07 TON Dynamic Research Lane"
+  ],
+  "live_signing_enabled": false,
+  "live_sending_enabled": false,
+  "private_keys_in_provider_calls": false,
+  "supporting_files": [
+    "RENT_SPONSOR_PLANNER.md",
+    "SOURCE_LINKS_AND_ONBOARDING.md"
+  ],
+  "rent_planning_modes": [
+    "EXISTING_ACCOUNT",
+    "PROVIDER_SPONSOR",
+    "SLUMLORD_EPHEMERAL",
+    "LOCAL_PERSISTENT",
+    "ROUTER_PAYER",
+    "NOT_SUPPORTED"
+  ]
+}

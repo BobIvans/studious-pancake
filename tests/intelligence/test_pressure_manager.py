@@ -51,7 +51,7 @@ def measured(used: int, budget: int) -> dict:
         "total_disk_bytes": budget * 10,
         "free_disk_bytes": budget * 5,
         "reserve_bytes": budget,
-        "spare_bytes": budget * 4,
+        "spare_bytes": 1_000_000_000,
         "storage_pressure_state": "NORMAL",
     }
 

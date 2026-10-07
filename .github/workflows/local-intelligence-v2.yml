@@ -4,6 +4,11 @@ on:
     paths:
       - 'src/intelligence/**'
       - 'src/agg02/storage.py'
+      - 'src/routing/transport.py'
+      - 'src/market/native_cpmm_capture.py'
+      - 'src/paper_shadow/native_cpmm_qualification.py'
+      - 'requirements*.lock'
+      - 'pyproject.toml'
       - 'tests/intelligence/**'
       - 'scripts/verify_local_intelligence_v2.py'
       - '.github/workflows/local-intelligence-v2.yml'
@@ -24,4 +29,5 @@ jobs:
       - run: python -m black --check src/intelligence tests/intelligence src/agg02/storage.py scripts/verify_local_intelligence_v2.py
       - run: python -m mypy --follow-imports=silent --ignore-missing-imports src/intelligence
       - run: python -m pytest -q tests/intelligence tests/test_agg02_market_data_capital.py tests/test_agg04_qualification.py tests/test_mpr2611_production_qualification.py tests/market_data_evolution/test_market_data_evolution.py --disable-socket --allow-unix-socket
+      - run: python -m pytest -q tests/test_native_cpmm_qualification.py tests/providers/test_pr004_transport_authority.py tests/routing/test_mpr2602_governed_transport.py tests/routing/test_mpr2602_transport_bounds.py --disable-socket --allow-unix-socket
       - run: python scripts/verify_local_intelligence_v2.py --out "$RUNNER_TEMP/local-intelligence-acceptance"

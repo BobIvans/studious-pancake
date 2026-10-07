@@ -73,3 +73,28 @@ receipts cannot grant deletion, signing, submission or live trading authority.
 
 Offline acceptance fixtures demonstrate mechanics, not a real 24h market campaign
 or profitable strategy. A real campaign must supply measured owner receipts.
+
+For the initial sender-free Mainnet campaign the configured RPC is
+`SOLANA_RPC_HTTP=https://api.mainnet.solana.com` per the operator's choice. Supply
+`FLASHLOAN_WALLET_PUBLIC_KEY` through environment settings using a dedicated
+research wallet you control. No private key or seed is needed. The ordinary paper
+runtime remains fail-closed without the public address. Native capture now derives
+its RPC endpoint and host admission from the existing public-read entitlement, so
+switching RPC providers requires configuration rather than code changes. HTTPS,
+genesis checks, read-method admission and provider quota ownership remain required.
+Endpoints requiring credentials must use the existing reviewed credential route;
+URL user-info and query credentials are denied by the anonymous capture path.
+
+The shared HTTP transport honors 429 and numeric/HTTP-date Retry-After. A server
+delay longer than the bounded retry window blocks the retry and retains a host
+cooldown; it is never truncated into an early retry. Short backoff stays within
+the total request deadline, and each physical attempt is charged by the existing
+governance hooks. Terminal 429 is a typed retryable failure even for non-JSON error
+bodies. Repeated calls during cooldown do not perform another HTTP request.
+
+Run the bounded installed paper owner with:
+`python -m src.intelligence.cli campaign run --out /workspace/paper-campaign --timeout-seconds 30`.
+The output directory must be empty. Missing public configuration writes a sealed
+BLOCKED receipt without starting a child process. This bounded readiness run is
+not a measured 24-hour campaign: qualification still requires the canonical
+paper vertical, measured observations, and its acceptance receipts.

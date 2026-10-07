@@ -64,6 +64,12 @@ def _parser() -> argparse.ArgumentParser:
         "--state-root", type=Path, default=Path("/workspace/local-intelligence-data")
     )
     planes = parser.add_subparsers(dest="plane", required=True)
+    campaign = planes.add_parser("campaign").add_subparsers(
+        dest="command", required=True
+    )
+    run = campaign.add_parser("run")
+    run.add_argument("--out", type=Path, required=True)
+    run.add_argument("--timeout-seconds", type=int, default=30)
     repo = planes.add_parser("repo").add_subparsers(dest="command", required=True)
     scan = repo.add_parser("scan")
     scan.add_argument("--repo", type=Path, default=Path.cwd())
@@ -564,6 +570,12 @@ def laya_commands(args) -> dict:
 def main(argv: list[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     try:
+        if args.plane == "campaign":
+            from .campaign import run_paper_campaign
+
+            result = run_paper_campaign(args.out, timeout_seconds=args.timeout_seconds)
+            print(canonical(result).decode())
+            return 0 if result["status"] == "COMPLETE" else 3
         result = {
             "repo": repo_commands,
             "storage": storage_commands,

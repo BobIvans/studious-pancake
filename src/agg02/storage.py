@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 import hashlib
+import json
 import os
 from pathlib import Path
 import sqlite3
@@ -77,6 +78,16 @@ class DurableRawJournal:
             "reconnect_epoch INTEGER NOT NULL, from_offset INTEGER NOT NULL, "
             "to_offset INTEGER, reason TEXT NOT NULL, closed INTEGER NOT NULL, "
             "PRIMARY KEY(source, partition_name, reconnect_epoch, from_offset))"
+        )
+        self._db.execute(
+            "CREATE TABLE IF NOT EXISTS raw_retention_pins ("
+            "event_id TEXT NOT NULL, evidence_id TEXT NOT NULL, "
+            "PRIMARY KEY(event_id,evidence_id))"
+        )
+        self._db.execute(
+            "CREATE TABLE IF NOT EXISTS raw_payload_archives ("
+            "event_id TEXT PRIMARY KEY, manifest_json TEXT NOT NULL, "
+            "original_bytes INTEGER NOT NULL, receipt_hash TEXT NOT NULL)"
         )
 
     def append(self, envelope: RawEventEnvelope, payload: bytes) -> JournalReceipt:
@@ -198,7 +209,124 @@ class DurableRawJournal:
         row = self._db.execute(
             "SELECT payload FROM raw_events WHERE event_id=?", (event_id,)
         ).fetchone()
-        return None if row is None else bytes(row[0])
+        if row is None:
+            return None
+        archived = self._db.execute(
+            "SELECT manifest_json FROM raw_payload_archives WHERE event_id=?",
+            (event_id,),
+        ).fetchone()
+        if archived is None:
+            return bytes(row[0])
+        manifest = DatasetManifest(**json.loads(archived[0]))
+        for event in DatasetReplayReader.read(manifest):
+            if event["event_id"] == event_id:
+                payload = bytes(event["payload"])
+                if hashlib.sha256(payload).hexdigest() != event["payload_sha256"]:
+                    raise Agg02Error("AGG02_ARCHIVED_PAYLOAD_HASH_MISMATCH")
+                return payload
+        raise Agg02Error("AGG02_ARCHIVED_EVENT_MISSING")
+
+    def retention_rows(self) -> tuple[dict[str, object], ...]:
+        """Read-only projection of the authoritative journal, including exact bytes."""
+        rows = self._db.execute(
+            "SELECT event_id,envelope_json FROM raw_events "
+            "ORDER BY reconnect_epoch,source,partition_name,cursor_offset,event_id"
+        ).fetchall()
+        return tuple(
+            {
+                **json.loads(envelope),
+                "envelope_json": envelope,
+                "payload": self.payload(event_id),
+            }
+            for event_id, envelope in rows
+        )
+
+    def pin_retention(self, event_ids: Iterable[str], *, evidence_id: str) -> None:
+        """Explicit evidence pin, serialized with raw archival in this owner."""
+        if not evidence_id:
+            raise Agg02Error("AGG02_RETENTION_EVIDENCE_ID_REQUIRED")
+        with self._db:
+            self._db.execute("BEGIN IMMEDIATE")
+            for event_id in event_ids:
+                if self.payload(event_id) is None:
+                    raise Agg02Error("AGG02_RETENTION_EVENT_MISSING")
+                self._db.execute(
+                    "INSERT OR IGNORE INTO raw_retention_pins VALUES (?,?)",
+                    (event_id, evidence_id),
+                )
+
+    def retention_pins(self) -> dict[str, tuple[str, ...]]:
+        result: dict[str, list[str]] = {}
+        for event_id, evidence_id in self._db.execute(
+            "SELECT event_id,evidence_id FROM raw_retention_pins ORDER BY event_id,evidence_id"
+        ):
+            result.setdefault(event_id, []).append(evidence_id)
+        return {key: tuple(value) for key, value in result.items()}
+
+    def archive_verified_payloads(
+        self,
+        manifest: DatasetManifest,
+        *,
+        event_ids: tuple[str, ...],
+        now_ms: int,
+        minimum_age_ms: int,
+        receipt_hash: str,
+    ) -> int:
+        """Reversible offload only: keep envelopes/cursors and exact Parquet replay.
+
+        The intelligence policy gate must supply its receipt before calling this.
+        Pins and payload identities are checked again under the owner write lock.
+        No row, cursor, gap, or archived payload is deleted by this operation.
+        """
+        if (
+            type(now_ms) is not int
+            or type(minimum_age_ms) is not int
+            or minimum_age_ms < 1
+        ):
+            raise Agg02Error("AGG02_RETENTION_CLOCK_INVALID")
+        replay = {str(r["event_id"]): r for r in DatasetReplayReader.read(manifest)}
+        if len(replay) != manifest.row_count or len(set(event_ids)) != len(event_ids):
+            raise Agg02Error("AGG02_ARCHIVE_DUPLICATE_EVENT")
+        serialized = canonical_json(asdict(manifest))
+        count = 0
+        with self._db:
+            self._db.execute("BEGIN IMMEDIATE")
+            for event_id in event_ids:
+                if self._db.execute(
+                    "SELECT 1 FROM raw_retention_pins WHERE event_id=?", (event_id,)
+                ).fetchone():
+                    raise Agg02Error("AGG02_RETENTION_EVENT_PINNED")
+                row = self._db.execute(
+                    "SELECT envelope_json,payload,payload_sha256 FROM raw_events WHERE event_id=?",
+                    (event_id,),
+                ).fetchone()
+                archived = replay.get(event_id)
+                if row is None or archived is None:
+                    raise Agg02Error("AGG02_RETENTION_EVENT_MISSING")
+                if self._db.execute(
+                    "SELECT 1 FROM raw_payload_archives WHERE event_id=?", (event_id,)
+                ).fetchone():
+                    continue
+                envelope = json.loads(row[0])
+                if now_ms - envelope["available_at_ms"] < minimum_age_ms:
+                    raise Agg02Error("AGG02_RETENTION_EVENT_TOO_YOUNG")
+                if (
+                    archived["envelope_json"] != row[0]
+                    or bytes(archived["payload"]) != bytes(row[1])
+                    or hashlib.sha256(bytes(archived["payload"])).hexdigest() != row[2]
+                ):
+                    raise Agg02Error("AGG02_ARCHIVE_LINEAGE_MISMATCH")
+                if envelope["gap_before"]:
+                    raise Agg02Error("AGG02_RETENTION_GAP_PIN_REQUIRED")
+                self._db.execute(
+                    "INSERT INTO raw_payload_archives VALUES (?,?,?,?)",
+                    (event_id, serialized, len(row[1]), receipt_hash),
+                )
+                self._db.execute(
+                    "UPDATE raw_events SET payload=? WHERE event_id=?", (b"", event_id)
+                )
+                count += 1
+        return count
 
     def replay_event_ids(self) -> tuple[str, ...]:
         rows = self._db.execute(
@@ -304,6 +432,7 @@ class AnalyticalDatasetPublisher:
         schema_version: str,
         rows: Iterable[Mapping[str, object]],
         destination: str | Path,
+        compression: str = "snappy",
     ) -> DatasetManifest:
         try:
             import pyarrow as pa
@@ -317,7 +446,7 @@ class AnalyticalDatasetPublisher:
         path.parent.mkdir(parents=True, exist_ok=True)
         temporary = path.with_suffix(path.suffix + ".tmp")
         table = pa.Table.from_pylist(normalized)
-        pq.write_table(table, temporary)
+        pq.write_table(table, temporary, compression=compression)
         digest = hashlib.sha256(temporary.read_bytes()).hexdigest()
         os.replace(temporary, path)
         available_values: list[int] = []

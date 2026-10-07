@@ -1,0 +1,259 @@
+{
+  "schema_version": "rcn00.reconciliation.v1",
+  "checked_at": "2026-10-07T20:22:49.292798+00:00",
+  "source_ref": "rnd/gpr-parallel-radar-2026-10-06",
+  "source_sha": "0f13b51cf772abbdfe14356009d82c002caa0ac4",
+  "target_ref": "main",
+  "target_sha": "72406c0e8a945fe07859807aa5107a8d10043fde",
+  "merge_base": "ac6297e3f174d073c524099f599490edfe30f7b1",
+  "implementation_sha": "f5c835e972826b8b3a0ffa8de8d6574beca69a08",
+  "pr_url": "https://github.com/BobIvans/studious-pancake/pull/579",
+  "pr_base": "main",
+  "merged": false,
+  "history": [
+    {
+      "base": "main",
+      "head": "0df15682ca0fbf49c9278d9038aaa35bd5e2f1e2",
+      "merge_commit_sha": "ac6297e3f174d073c524099f599490edfe30f7b1",
+      "merged": true,
+      "number": 566,
+      "state": "closed",
+      "merge_ancestry_verified": true,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "codex/prequal-rnd-master-2026-10-06",
+      "head": "6e9c1e642317b5122eee0ba9baba59593b460469",
+      "merge_commit_sha": "fd152c31514e9f291294cae1b19a6e10802bcfe8",
+      "merged": true,
+      "number": 568,
+      "state": "closed",
+      "merge_ancestry_verified": false,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "codex/qpr-01-campaign-authority",
+      "head": "a459b8c17463345b5ca488ae310a2015cb18e61b",
+      "merge_commit_sha": "8baeb41139b5735859933783392d7f4802bc8337",
+      "merged": true,
+      "number": 569,
+      "state": "closed",
+      "merge_ancestry_verified": false,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "codex/qpr-02-qualification-data-plane",
+      "head": "7132f7341661368917bcc3cf1618a93de96327f8",
+      "merge_commit_sha": "4a89d0e18070529e8f9c9e240a30ed3acb6fad38",
+      "merged": true,
+      "number": 570,
+      "state": "closed",
+      "merge_ancestry_verified": false,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "codex/qpr-03-campaign-source-intake",
+      "head": "f8e4aebf7781e184e2fc70df792ab9087da8eb58",
+      "merge_commit_sha": "476c3782a813323b6bb279fe08cb834bf80035c0",
+      "merged": true,
+      "number": 571,
+      "state": "closed",
+      "merge_ancestry_verified": false,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "rnd/gpr-parallel-radar-2026-10-06",
+      "head": "6436b7a4dd8f61d21b1f67d1185d1630ae3863b7",
+      "merge_commit_sha": "ffd126b6b12763a4bf37cccfad27388bb0fbd09d",
+      "merged": true,
+      "number": 572,
+      "state": "closed",
+      "merge_ancestry_verified": true,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "rnd/gpr-parallel-radar-2026-10-06",
+      "head": "d841ebc58929e20a0edc52d06aaf2a4ca595aaf1",
+      "merge_commit_sha": "baef8d09dd8c7c8a84d8b7781d3da5f8583fc8fd",
+      "merged": true,
+      "number": 573,
+      "state": "closed",
+      "merge_ancestry_verified": true,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "main",
+      "head": "c9bbef3479424ac9ace08411f11618037d2447ff",
+      "merge_commit_sha": "663a18b1b34d9aa1a7706fe8a39837659b5e1ac6",
+      "merged": true,
+      "number": 574,
+      "state": "closed",
+      "merge_ancestry_verified": true,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "rnd/gpr-parallel-radar-2026-10-06",
+      "head": "75c9ef9a641a0c5b864cadc60d95f4f801cfe819",
+      "merge_commit_sha": "0f13b51cf772abbdfe14356009d82c002caa0ac4",
+      "merged": true,
+      "number": 575,
+      "state": "closed",
+      "merge_ancestry_verified": true,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "main",
+      "head": "2b4eeb85128c1644dfc3ed2a45c411139349ca43",
+      "merge_commit_sha": "72406c0e8a945fe07859807aa5107a8d10043fde",
+      "merged": true,
+      "number": 576,
+      "state": "closed",
+      "merge_ancestry_verified": true,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "main",
+      "head": "f59ae8175e897d548d6ff5160ea20212f8d8ca18",
+      "merge_commit_sha": "098e8d0b8c0c951ae840f1e8eecbb00432729381",
+      "merged": true,
+      "number": 577,
+      "state": "closed",
+      "merge_ancestry_verified": true,
+      "original_head_ancestry_verified": true
+    },
+    {
+      "base": "main",
+      "head": "77f80b0f3a315430d121a3aa6491e63be0408e02",
+      "merge_commit_sha": "6d8b1187ea79a1b945413db98c79b0646a311ebb",
+      "merged": false,
+      "number": 578,
+      "state": "open"
+    }
+  ],
+  "owner_inventory": {
+    "src/qualification_campaign/cli.py": {
+      "present": true,
+      "sha256": "5944e611df65d5868ab47800a6c551febc3b94512cc0a1ccf908b08d45b13ec1"
+    },
+    "src/qualification_campaign/identity.py": {
+      "present": true,
+      "sha256": "83080f1c08ceece1f9d089ea7b7b3db8f475c80a4d8cda8638e12eb9026ea2fd"
+    },
+    "src/qualification_campaign/profiles.py": {
+      "present": true,
+      "sha256": "ed6e9885269fb3d56e40aa00384daef9b6e5d87b7cb67d3d25f4e374b5910a31"
+    },
+    "src/qualification_campaign/rpc.py": {
+      "present": true,
+      "sha256": "5e00de5fd22f5401f4a614ed2a5359a4679ad61d86403db0845a9d7cd11b3c57"
+    },
+    "src/qualification_campaign/sources.py": {
+      "present": true,
+      "sha256": "22660d120d7b133e477911aafe2d99258d1e966bdb94072ffb7f75f3a0f1d1ae"
+    },
+    "src/research_economic_graph/graph.py": {
+      "present": true,
+      "sha256": "9c262505851847ed5f6bb15e214090ed47e666e1c2f12fa071c1725b6303cd3d"
+    },
+    "src/research_economic_graph/verification.py": {
+      "present": true,
+      "sha256": "1c96150a67379177ae9add7903f267932637e6b04ccd6685727d5ac2b2b97290"
+    },
+    "src/solana_parallel_radar/cli.py": {
+      "present": true,
+      "sha256": "f699fba361e97ef3d8afe8585d02711eea1f0fcf5c9afc68de6b35947dcc3df3"
+    },
+    "src/gpr_sui_shadow/campaign.py": {
+      "present": true,
+      "sha256": "0eee8923fb65cd74749265fd63e63e89524b4299150e072b29007324c4c41d90"
+    },
+    "src/assets/resolution/resolver.py": {
+      "present": true,
+      "sha256": "4e534cbb6de7f994818ee207b3a339be1d1b8ede4c965df3103c6094b345c426"
+    },
+    "src/discovery/dynamic_universe/universe.py": {
+      "present": true,
+      "sha256": "8c2e118f70f950e242099eaeb6a0dcccb0b00d9bd318592b7a4817af9f15616f"
+    },
+    "src/strategy/relation_generators/generators.py": {
+      "present": true,
+      "sha256": "346cdab59bfa48eccd71851da731a25a38eee965f31d90a5074cd99d2018a40d"
+    },
+    "src/research/correlation_ledger/ledger.py": {
+      "present": true,
+      "sha256": "fd7ef19ef8cf9fafefa796bf5d623ca8226404c8b67bfb37e8505ca1bd13af2b"
+    },
+    "src/economics/flash_capital_graph/graph.py": {
+      "present": true,
+      "sha256": "0f24d5c7dec76816807e550e297aec6b9611d6f3058e7c9dc296c908d4d0277c"
+    }
+  },
+  "conflict_decisions": {
+    "src/market/native_cpmm_capture.py": "Retain configured HTTPS read endpoint; explicit profile must match governance. Use profile id instead of hard-coded public id. Independent rooted evidence unchanged; implicit endpoint overrides remain smoke-only. Preserve typed 429 negative bodies without changing cooldown.",
+    "src/paper_shadow/native_cpmm_qualification.py": "Reuse CampaignManifest, rooted snapshot and generation attestations; campaign transport uses main 900000 string/1048576 response/wire caps and one attempt. Derive allowlist from governed endpoints; retain storage/paper/cost gates.",
+    "src/runtime/runtime_entrypoint.py": "Semantic auto-merge reviewed: main live mode rejection, storage-pressure stop, authority and capability admission retained; restore parsed command dispatch and disabled-mode runtime authority digest.",
+    "requirements.lock": "Pinned Python 3.13.13 / uv 0.11.15 regeneration produced byte-identical main hash-lock.",
+    "requirements-dev.lock": "Pinned regeneration byte-identical; installed with --require-hashes.",
+    "config/requirements-lock.json": "Canonical pinned workflow regenerated identical digests. No manual hash mixing."
+  },
+  "additional_semantic_decisions": {
+    "src/market/streams.py": "Restored main global 1000000 raw-event bound; QPR existing blob storage is responsible for larger bounded evidence. No global payload widening.",
+    "src/provider_governance/runtime.py": "Read-only getVersion admitted; no send method admitted.",
+    "src/resources/runtime_authority.json": "Restored source generation bindings and authority owners; canonical authority validation passed.",
+    "src/durability/lifecycle.py": "Retained source bounded WAL lock upgrade retry; main storage pressure owners unchanged.",
+    "historical_docs": "Removed trailing spaces from imported docs only for diff --check."
+  },
+  "tests": {
+    "focused": {
+      "passed": 440,
+      "failed": 0
+    },
+    "initial_focused": {
+      "passed": 436,
+      "failed": 2,
+      "diagnosis": "Main typed transport 429 contract lacked retained QPR negative receipt; fixed and rerun."
+    },
+    "mandatory_verify_repo": {
+      "status": "PASS",
+      "full_offline_suite": {
+        "passed": 5322,
+        "deselected": 1
+      },
+      "dependency_audit": "PASS",
+      "package_smoke": "PASS",
+      "quality_static_format_type_bandit": "PASS",
+      "clean_source_tree": "PASS"
+    },
+    "image_smoke": {
+      "canonical_local": "BLOCKED_DOCKER_BUILD_DNS",
+      "canonical_github_ci": "PASS",
+      "local_verified_offline_wheelhouse_build_and_runtime": "PASS"
+    },
+    "secret_scan": {
+      "status": "PASS",
+      "tool": "gitleaks 8.30.0 official checksum verified",
+      "commits_scanned": 119,
+      "leaks": 0
+    },
+    "diff_check": "PASS"
+  },
+  "negative_proofs": [
+    "same operator/provider/correlation group never independent quorum",
+    "missing Pyth binding blocks before HTTP; Odos runtime retired",
+    "live mode rejected and no signer/sender imports in research owners",
+    "implicit RPC override remains smoke-only; profile mismatch blocked",
+    "real restored QPR empty evidence delegates BLOCKED to Dynamic Universe; stop_before QPR-04 retained",
+    "PR577 pressure-manager tests pass; cannot reclaim safely blocks ingestion",
+    "429 retry-after/cooldown preserved with bounded replayable negative evidence"
+  ],
+  "safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "production_promotion": false
+  },
+  "limitations": [
+    "RCN-00 PR not merged; approval required",
+    "Historical source pins are not current provider entitlement proof",
+    "No DIN real data or 24h paper proof claimed in RCN-00"
+  ]
+}

@@ -258,7 +258,7 @@ class SuiSourceProfile:
             1,
             expires_at_epoch_seconds=expires_at_epoch_seconds,
             source_ref=self.official_docs,
-            quota_pool_ref="gpr03:" + self.provider + ":" + self.operator,
+            quota_pool_ref="gpr03:operator:" + self.operator,
             allowed_endpoints=(self.endpoint,),
             allowed_http_methods=frozenset({self.method}),
             allowed_query_parameters=frozenset(self.allowed_query_parameters),

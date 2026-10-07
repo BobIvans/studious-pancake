@@ -8,6 +8,7 @@ import hashlib
 import gzip
 import json
 import os
+import subprocess
 from pathlib import Path
 import time
 
@@ -151,7 +152,11 @@ def default_profiles(pins):
     return (*base[:4], *books, base[-1])
 
 
-async def capture(root, pack, output):
+async def capture(root, pack, output, *, main_sha=None):
+    if main_sha is None:
+        main_sha = subprocess.check_output(
+            ["git", "-C", str(root), "rev-parse", "origin/main^{commit}"], text=True
+        ).strip()
     if output.exists():
         raise ValueError("SUI_NEW_CAMPAIGN_OUTPUT_REQUIRED")
     registry = AssetRegistry.load(pack / "ASSET_REGISTRY_V2.json")
@@ -163,7 +168,8 @@ async def capture(root, pack, output):
         "gpr.seed": seed.configuration,
         "gpr03.source_pins": pins,
         "gpr03.capture_policy": {
-            "base_sha": BASE_SHA,
+            "base_sha": main_sha,
+            "historical_gpr03_base_sha": BASE_SHA,
             "maximum_pools": 9,
             "maximum_attempts": 18,
             "read_only": True,
@@ -176,7 +182,7 @@ async def capture(root, pack, output):
     }
     manifest = CampaignManifest.create(
         root,
-        main_sha=BASE_SHA,
+        main_sha=main_sha,
         configuration=configuration,
         sources={p.profile_id: asdict(p) for p in profiles},
     )
@@ -383,7 +389,8 @@ async def capture(root, pack, output):
     (output / "retained-evidence.json").write_bytes(payload)
     summary = {
         "schema_version": "gpr03.campaign-report.v1",
-        "base_sha": BASE_SHA,
+        "base_sha": main_sha,
+        "historical_gpr03_base_sha": BASE_SHA,
         "capture_code_head": manifest.repository_sha,
         "campaign_id": manifest.campaign_id,
         "manifest": manifest.to_dict(),
@@ -521,6 +528,9 @@ def main():
     parser = argparse.ArgumentParser(
         description="Bounded Sui capture; no signer/sender/executor"
     )
+    parser.add_argument(
+        "--base-sha", help="Exact main SHA; defaults to fetched origin/main"
+    )
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--pack", type=Path, default=DEFAULT_PACK)
     parser.add_argument("--replay", type=Path)
@@ -533,7 +543,12 @@ def main():
         )
         return
     result = asyncio.run(
-        capture(Path(__file__).resolve().parents[2], args.pack, args.output.resolve())
+        capture(
+            Path(__file__).resolve().parents[2],
+            args.pack,
+            args.output.resolve(),
+            main_sha=args.base_sha,
+        )
     )
     print(
         json.dumps(

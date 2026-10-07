@@ -17,5 +17,17 @@
   ],
   "live_signing_enabled": false,
   "live_sending_enabled": false,
-  "private_keys_in_provider_calls": false
+  "private_keys_in_provider_calls": false,
+  "supporting_files": [
+    "RENT_SPONSOR_PLANNER.md",
+    "SOURCE_LINKS_AND_ONBOARDING.md"
+  ],
+  "rent_planning_modes": [
+    "EXISTING_ACCOUNT",
+    "PROVIDER_SPONSOR",
+    "SLUMLORD_EPHEMERAL",
+    "LOCAL_PERSISTENT",
+    "ROUTER_PAYER",
+    "NOT_SUPPORTED"
+  ]
 }

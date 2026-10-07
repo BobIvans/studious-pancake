@@ -16,6 +16,7 @@ def publish_partition(
     destination: str | Path,
     *,
     max_available_at_ms: int | None = None,
+    event_ids: set[str] | None = None,
     max_rows: int = 20_000,
     max_payload_bytes: int = 128 * 1024 * 1024,
 ) -> dict:
@@ -23,7 +24,9 @@ def publish_partition(
         raise ValueError("positive partition budget required")
     rows: list[dict[str, object]] = []
     byte_count = 0
-    for row in journal.iter_retention_rows(max_available_at_ms=max_available_at_ms):
+    for row in journal.iter_retention_rows(
+        max_available_at_ms=max_available_at_ms, event_ids=event_ids
+    ):
         payload = row["payload"]
         if not isinstance(payload, bytes):
             raise ValueError("exact raw payload required")
@@ -33,6 +36,8 @@ def publish_partition(
             break
         rows.append(row)
         byte_count += len(payload)
+    if event_ids is not None and {str(row["event_id"]) for row in rows} != set(event_ids):
+        raise ValueError("requested event partition incomplete")
     destination = Path(destination).resolve()
     if destination.exists():
         receipt = load_json(destination.with_suffix(".manifest.json"))

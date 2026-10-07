@@ -40,4 +40,4 @@ Limits:
 - Archive payload manifests retain their original evidence paths. These are reports, not a relocated journal database backup.
 - A broader ad-hoc mypy invocation following imports exposed two pre-existing production_qualification optional-type errors; the configured repository gate and isolated intelligence check pass.
 
-See [JSON report](FINAL_REPORT.json), [acceptance receipt](receipts/ACCEPTANCE.json), [replay receipt](receipts/REPLAY.json), [storage receipt](receipts/STORAGE.json), and [offline report](offline_report/summary.md).
+See [JSON report](FINAL_REPORT.json), [acceptance receipt](receipts/ACCEPTANCE.json), [replay receipt](receipts/REPLAY.json), [storage receipt](receipts/STORAGE.json), and [offline report](offline_report/00_SUMMARY.md).

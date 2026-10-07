@@ -1,0 +1,1 @@
+{"action":"REJECT","available_at_ms":200000,"decision_id":"reject-1","features":{"candidate_age_ms":99999},"reason_code":"STALE_QUOTE","source_refs":["observation-1"],"stage":"PRE_QUOTE","strategy_id":"offline-baseline","strategy_version":"v1","thresholds":{"maximum_age_ms":1000}}

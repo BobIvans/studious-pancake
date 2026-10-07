@@ -8,7 +8,7 @@ import json
 import os
 from pathlib import Path
 import sqlite3
-from typing import Iterable, Mapping
+from typing import Iterable, Iterator, Mapping
 
 from .contracts import Agg02Error, RawEventEnvelope, canonical_hash, canonical_json
 
@@ -45,7 +45,14 @@ class GapRecord:
 class DurableRawJournal:
     """SQLite raw-bytes journal whose cursor advances in the same transaction."""
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(
+        self, path: str | Path, *, max_journal_bytes: int | None = None
+    ) -> None:
+        if max_journal_bytes is not None and (
+            type(max_journal_bytes) is not int or max_journal_bytes < 1
+        ):
+            raise Agg02Error("AGG02_JOURNAL_BUDGET_INVALID")
+        self.max_journal_bytes = max_journal_bytes
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(self.path, isolation_level=None)
@@ -126,6 +133,18 @@ class DurableRawJournal:
                 if existing != (envelope.payload_sha256, envelope_json):
                     raise Agg02Error("AGG02_EVENT_ID_REBOUND")
                 return self._receipt(envelope, inserted=False)
+            if self.max_journal_bytes is not None:
+                used = sum(
+                    p.stat().st_size
+                    for p in (self.path, Path(str(self.path) + "-wal"))
+                    if p.exists()
+                )
+                # Reserve SQLite page/index/WAL expansion before admitting a new event.
+                if (
+                    used + len(payload) * 3 + len(envelope_json.encode()) * 3 + 65_536
+                    > self.max_journal_bytes
+                ):
+                    raise Agg02Error("AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED")
             cursor = self._db.execute(
                 "SELECT cursor_offset,reconnect_epoch FROM raw_cursors "
                 "WHERE source=? AND partition_name=?",
@@ -220,7 +239,10 @@ class DurableRawJournal:
         manifest = DatasetManifest(**json.loads(archived[0]))
         for event in DatasetReplayReader.read(manifest):
             if event["event_id"] == event_id:
-                payload = bytes(event["payload"])
+                value = event["payload"]
+                if not isinstance(value, bytes):
+                    raise Agg02Error("AGG02_ARCHIVED_PAYLOAD_TYPE_INVALID")
+                payload = value
                 if hashlib.sha256(payload).hexdigest() != event["payload_sha256"]:
                     raise Agg02Error("AGG02_ARCHIVED_PAYLOAD_HASH_MISMATCH")
                 return payload
@@ -228,18 +250,32 @@ class DurableRawJournal:
 
     def retention_rows(self) -> tuple[dict[str, object], ...]:
         """Read-only projection of the authoritative journal, including exact bytes."""
+        return tuple(self.iter_retention_rows())
+
+    def iter_retention_rows(
+        self,
+        *,
+        max_available_at_ms: int | None = None,
+        event_ids: set[str] | None = None,
+    ) -> Iterator[dict[str, object]]:
         rows = self._db.execute(
             "SELECT event_id,envelope_json FROM raw_events "
             "ORDER BY reconnect_epoch,source,partition_name,cursor_offset,event_id"
-        ).fetchall()
-        return tuple(
-            {
-                **json.loads(envelope),
+        )
+        for event_id, envelope in rows:
+            parsed = json.loads(envelope)
+            if event_ids is not None and event_id not in event_ids:
+                continue
+            if (
+                max_available_at_ms is not None
+                and parsed["available_at_ms"] > max_available_at_ms
+            ):
+                continue
+            yield {
+                **parsed,
                 "envelope_json": envelope,
                 "payload": self.payload(event_id),
             }
-            for event_id, envelope in rows
-        )
 
     def pin_retention(self, event_ids: Iterable[str], *, evidence_id: str) -> None:
         """Explicit evidence pin, serialized with raw archival in this owner."""
@@ -308,12 +344,15 @@ class DurableRawJournal:
                 ).fetchone():
                     continue
                 envelope = json.loads(row[0])
+                archived_payload = archived["payload"]
+                if not isinstance(archived_payload, bytes):
+                    raise Agg02Error("AGG02_ARCHIVED_PAYLOAD_TYPE_INVALID")
                 if now_ms - envelope["available_at_ms"] < minimum_age_ms:
                     raise Agg02Error("AGG02_RETENTION_EVENT_TOO_YOUNG")
                 if (
                     archived["envelope_json"] != row[0]
-                    or bytes(archived["payload"]) != bytes(row[1])
-                    or hashlib.sha256(bytes(archived["payload"])).hexdigest() != row[2]
+                    or archived_payload != bytes(row[1])
+                    or hashlib.sha256(archived_payload).hexdigest() != row[2]
                 ):
                     raise Agg02Error("AGG02_ARCHIVE_LINEAGE_MISMATCH")
                 if envelope["gap_before"]:

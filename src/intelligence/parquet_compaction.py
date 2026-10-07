@@ -8,11 +8,40 @@ from src.agg02.storage import (
     DatasetReplayReader,
     DurableRawJournal,
 )
-from .common import digest, save_json, seal, verify_seal
+from .common import digest, load_json, save_json, seal, verify_seal
 
 
-def publish_partition(journal: DurableRawJournal, destination: str | Path) -> dict:
-    rows = journal.retention_rows()
+def publish_partition(
+    journal: DurableRawJournal,
+    destination: str | Path,
+    *,
+    max_available_at_ms: int | None = None,
+    max_rows: int = 10_000,
+    max_payload_bytes: int = 64 * 1024 * 1024,
+) -> dict:
+    if max_rows < 1 or max_payload_bytes < 1:
+        raise ValueError("positive partition budget required")
+    rows: list[dict[str, object]] = []
+    byte_count = 0
+    for row in journal.iter_retention_rows(max_available_at_ms=max_available_at_ms):
+        payload = row["payload"]
+        if not isinstance(payload, bytes):
+            raise ValueError("exact raw payload required")
+        if len(payload) > max_payload_bytes:
+            raise ValueError("single payload exceeds partition budget")
+        if byte_count + len(payload) > max_payload_bytes or len(rows) == max_rows:
+            break
+        rows.append(row)
+        byte_count += len(payload)
+    destination = Path(destination).resolve()
+    if destination.exists():
+        receipt = load_json(destination.with_suffix(".manifest.json"))
+        verify_seal(receipt)
+        previous = DatasetManifest(**receipt["dataset"])
+        verify_partition(previous, rows=rows)
+        if Path(previous.path).resolve() != destination:
+            raise ValueError("partition destination identity mismatch")
+        return receipt
     manifest = AnalyticalDatasetPublisher().publish(
         dataset_id=digest([r["event_id"] for r in rows]),
         schema_version="studious.raw-archive.v2",
@@ -35,7 +64,10 @@ def verify_partition(manifest: DatasetManifest, *, rows=None) -> dict:
     import hashlib
 
     for row in replay:
-        if hashlib.sha256(bytes(row["payload"])).hexdigest() != row["payload_sha256"]:
+        payload = row["payload"]
+        if not isinstance(payload, bytes):
+            raise ValueError("raw replay payload must be bytes")
+        if hashlib.sha256(payload).hexdigest() != row["payload_sha256"]:
             raise ValueError("raw replay payload checksum mismatch")
     if rows is not None and tuple(dict(r) for r in rows) != replay:
         raise ValueError("compaction exact roundtrip failed")

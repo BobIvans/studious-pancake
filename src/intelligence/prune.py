@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from src.agg02.storage import DatasetManifest, DurableRawJournal
-from .common import digest, save_json, seal, verify_seal
+from .common import save_json, seal, verify_seal
 from .evidence_refs import deletion_impact
 from .parquet_compaction import verify_partition
 from .retention_policy import retention_dry_run

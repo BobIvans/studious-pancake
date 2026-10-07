@@ -4,7 +4,7 @@ from .common import digest
 
 
 def find_raw_references(records: list[dict]) -> dict[str, list[str]]:
-    result = {}
+    result: dict[str, list[str]] = {}
     for record in records:
         for event_id in record.get("raw_event_ids", []):
             result.setdefault(event_id, []).append(record["evidence_id"])
@@ -12,7 +12,7 @@ def find_raw_references(records: list[dict]) -> dict[str, list[str]]:
 
 
 def find_episode_references(records: list[dict]) -> dict[str, list[str]]:
-    result = {}
+    result: dict[str, list[str]] = {}
     for record in records:
         for episode in record.get("episode_ids", []):
             result.setdefault(episode, []).append(record["evidence_id"])

@@ -1,11 +1,10 @@
 import hashlib
-from pathlib import Path
 
 import pytest
 
 from src.agg02.contracts import RawEventEnvelope, Agg02Error
 from src.agg02.storage import DurableRawJournal
-from src.intelligence.parquet_compaction import publish_partition, verify_partition
+from src.intelligence.parquet_compaction import publish_partition
 from src.intelligence.prune import prune_verified_payloads
 from src.intelligence.retention_policy import retention_dry_run
 from src.intelligence.rollups import build_1m_rollup, verify_rollup_coverage
@@ -68,6 +67,7 @@ def test_real_owner_zstd_replay_prune_receipts_and_pins(tmp_path):
         rollup = build_1m_rollup(list(rows))
         assert verify_rollup_coverage(rollup, list(rows))["covered_events"] == 4
         compaction = publish_partition(journal, tmp_path / "raw.parquet")
+        assert publish_partition(journal, tmp_path / "raw.parquet") == compaction
         records = eligibility(rows)
         retention = retention_dry_run(records, now_ms=200_000_000)
         with pytest.raises(ValueError, match="unknown"):
@@ -177,3 +177,23 @@ def test_bounded_deterministic_failure_and_baseline_samples():
     assert (
         forecast_days_until_budget(0, 86400, 1, 1)["projected_days_until_budget"] == 1
     )
+
+
+def test_storage_pressure_blocks_admission_without_advancing_cursor(tmp_path):
+    with DurableRawJournal(
+        tmp_path / "bounded.db", max_journal_bytes=200_000
+    ) as journal:
+        with pytest.raises(Agg02Error, match="STORAGE_PRESSURE"):
+            journal.append(event(1, b"x" * 200_000), b"x" * 200_000)
+        assert journal.cursor("provider", "pairs") is None
+        assert journal.replay_event_ids() == ()
+
+
+def test_partition_row_budget_and_age_cutoff(tmp_path):
+    with DurableRawJournal(tmp_path / "raw.db") as journal:
+        for i in range(1, 4):
+            journal.append(event(i, b"x"), b"x")
+        partition = publish_partition(
+            journal, tmp_path / "bounded.parquet", max_rows=1, max_available_at_ms=2001
+        )
+        assert partition["proof"]["event_ids"] == ["event-1"]

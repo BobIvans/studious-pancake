@@ -4,7 +4,7 @@ from pathlib import Path, PurePosixPath
 import os
 import tempfile
 import zipfile
-from .common import digest, load_json, save_json
+from .common import load_json
 from .repo_snapshot import verify_snapshot_roundtrip
 
 
@@ -13,7 +13,17 @@ def build_portable_archive(
 ) -> dict:
     root, out = Path(snapshot), Path(destination)
     proof = verify_snapshot_roundtrip(root)
-    files = [root / "manifest.json"] + sorted((root / "blobs").glob("*"))
+    manifest = load_json(root / "manifest.json")
+    files = [root / "manifest.json"] + [
+        root / "blobs" / sha
+        for sha in sorted(
+            {
+                entry["sha256"]
+                for entry in manifest["entries"]
+                if entry["status"] == "EXACT"
+            }
+        )
+    ]
     if sum(p.stat().st_size for p in files) > max_bytes:
         raise ValueError("archive resource budget exceeded")
     out.parent.mkdir(parents=True, exist_ok=True)

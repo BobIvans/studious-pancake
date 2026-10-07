@@ -109,7 +109,8 @@ def resume_snapshot(
                     entry["status"] = "EXACT"
                     atomic_bytes(destination / "blobs" / entry["sha256"], data)
         state["completed"] = index + 1
-        save_json(destination / "state.json", state)
+        if state["completed"] % 64 == 0 or state["completed"] == stop:
+            save_json(destination / "state.json", state)
     if state["completed"] == len(state["entries"]):
         state["status"] = "COMPLETE"
         manifest = {k: state[k] for k in ("schema", "repo_sha", "entries", "status")}
@@ -146,10 +147,15 @@ def verify_snapshot_roundtrip(destination: str | Path) -> dict:
         raise ValueError("snapshot manifest identity mismatch")
     seen = set()
     for entry in manifest["entries"]:
+        path = PurePosixPath(entry["path"])
+        if path.is_absolute() or ".." in path.parts or "\\" in entry["path"]:
+            raise ValueError("unsafe snapshot path")
         if entry["path"] in seen:
             raise ValueError("duplicate tracked path")
         seen.add(entry["path"])
         if entry["status"] == "EXACT":
+            if not re.fullmatch(r"[a-f0-9]{64}", entry["sha256"]):
+                raise ValueError("invalid snapshot blob identity")
             blob = root / "blobs" / entry["sha256"]
             if (
                 blob.stat().st_size != entry["bytes"]

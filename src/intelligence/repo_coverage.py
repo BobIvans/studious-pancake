@@ -1,7 +1,7 @@
 """Explicit exclusions and analysis gaps."""
 
 
-def coverage_gaps(manifest: dict, analyses: list[dict] = ()) -> list[dict]:
+def coverage_gaps(manifest: dict, analyses: list[dict] | tuple = ()) -> list[dict]:
     return [
         {"path": e["path"], "reason": e["status"]}
         for e in manifest["entries"]
@@ -13,7 +13,7 @@ def coverage_gaps(manifest: dict, analyses: list[dict] = ()) -> list[dict]:
     ]
 
 
-def coverage_summary(manifest: dict, analyses: list[dict] = ()) -> dict:
+def coverage_summary(manifest: dict, analyses: list[dict] | tuple = ()) -> dict:
     return {
         "tracked_entries": len(manifest["entries"]),
         "exact_entries": sum(e["status"] == "EXACT" for e in manifest["entries"]),

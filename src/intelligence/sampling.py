@@ -9,7 +9,7 @@ def select_periodic_baseline(
 ) -> list[str]:
     if interval_ms < 1:
         raise ValueError("positive sample period required")
-    selected = {}
+    selected: dict[tuple, str] = {}
     for row in sorted(rows, key=lambda r: (r["available_at_ms"], r["event_id"])):
         key = (
             row["source_id"],
@@ -29,7 +29,7 @@ def reservoir_sample_failures(
     for row in rows:
         if row.get("reason_code"):
             classes[row["reason_code"]].append(row)
-    selected = set()
+    selected: set[str] = set()
     for items in classes.values():
         items.sort(key=lambda r: (r["available_at_ms"], r["event_id"]))
         selected.update((items[0]["event_id"], items[-1]["event_id"]))
@@ -41,7 +41,8 @@ def reservoir_sample_failures(
 def pin_significant_delta(rows: list[dict], *, threshold_atoms: int) -> list[str]:
     if threshold_atoms < 0:
         raise ValueError("negative delta threshold")
-    previous, pinned = {}, []
+    previous: dict[tuple, int] = {}
+    pinned: list[str] = []
     for row in sorted(rows, key=lambda r: (r["available_at_ms"], r["event_id"])):
         key = (row["source_id"], row["instrument_id"])
         value = row.get("value_atoms")

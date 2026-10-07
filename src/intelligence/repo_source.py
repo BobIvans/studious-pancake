@@ -4,11 +4,14 @@ from __future__ import annotations
 
 import ast
 import hashlib
+import io
+import tokenize
+from typing import Any
 from pathlib import PurePosixPath
 
 
 def analyze_source(path: str, data: bytes) -> dict:
-    result = {
+    result: dict[str, Any] = {
         "path": path,
         "sha256": hashlib.sha256(data).hexdigest(),
         "bytes": len(data),
@@ -18,14 +21,21 @@ def analyze_source(path: str, data: bytes) -> dict:
     if not path.endswith(".py"):
         return {**result, "status": "UNSUPPORTED_LANGUAGE"}
     try:
+        encoding, _ = tokenize.detect_encoding(io.BytesIO(data).readline)
+        if encoding not in {"utf-8", "utf-8-sig", "ascii"}:
+            return {**result, "status": "UNSUPPORTED_ENCODING", "encoding": encoding}
         tree = ast.parse(data, filename=path)
     except (SyntaxError, ValueError) as exc:
         return {**result, "status": "PARSE_ERROR", "reason": str(exc)}
     offsets = [0]
     for line in data.splitlines(keepends=True):
         offsets.append(offsets[-1] + len(line))
+    if data.startswith(b"\xef\xbb\xbf"):
+        offsets[0] = 3
     for node in ast.walk(tree):
         if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+            if node.end_lineno is None or node.end_col_offset is None:
+                raise ValueError("source range unavailable")
             result["symbols"].append(
                 {
                     "name": node.name,
@@ -96,7 +106,7 @@ def build_import_graph(analyses: list[dict]) -> dict[str, list[str]]:
 
 
 def resolve_reverse_imports(graph: dict[str, list[str]]) -> dict[str, list[str]]:
-    reverse = {key: [] for key in graph}
+    reverse: dict[str, list[str]] = {key: [] for key in graph}
     for source, targets in graph.items():
         for target in targets:
             reverse.setdefault(target, []).append(source)

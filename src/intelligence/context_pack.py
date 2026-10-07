@@ -26,7 +26,7 @@ def build_context_pack(
     goal: str = "",
     budget_bytes: int = 64_000,
     continuation: dict | None = None,
-    changed: list[str] = (),
+    changed: list[str] | tuple[str, ...] = (),
 ) -> dict:
     if mode not in MODES or budget_bytes < 1:
         raise ValueError("invalid context mode/budget")
@@ -35,7 +35,7 @@ def build_context_pack(
     manifest = load_json(root / "manifest.json")
     entries = {e["path"]: e for e in manifest["entries"] if e["status"] == "EXACT"}
     paths = sorted(entries)
-    actual_seed = RUNTIME_SEEDS.get(seed, seed)
+    actual_seed = RUNTIME_SEEDS.get(seed, seed) if seed is not None else None
     if mode in {"INTERCONNECTED_FILES", "RUNTIME_PATH", "TEST_IMPACT", "DELTA"}:
         analyses = [
             analyze_source(p, (root / "blobs" / entries[p]["sha256"]).read_bytes())
@@ -48,16 +48,30 @@ def build_context_pack(
                 list(changed), resolve_reverse_imports(graph)
             )
         elif mode == "TEST_IMPACT":
-            if actual_seed not in entries:
+            if actual_seed is None or actual_seed not in entries:
                 raise ValueError("seed missing from pinned snapshot")
             selected = affected_dependents(
                 [actual_seed], resolve_reverse_imports(graph)
             )
         else:
-            if actual_seed not in entries:
+            if actual_seed is None or actual_seed not in entries:
                 raise ValueError("seed missing from pinned snapshot")
             selected = affected_dependents([actual_seed], graph)
         paths = [p for p in selected if p in entries]
+    elif mode == "TECH_DEBT":
+        selected = []
+        for path in paths:
+            data = (root / "blobs" / entries[path]["sha256"]).read_bytes()
+            if (
+                b"TODO" in data
+                or b"FIXME" in data
+                or (
+                    path.endswith(".py")
+                    and analyze_source(path, data)["status"] != "ANALYZED"
+                )
+            ):
+                selected.append(path)
+        paths = selected
     elif goal:
         words = goal.lower().split()
         paths.sort(key=lambda p: (-sum(w in p.lower() for w in words), p))

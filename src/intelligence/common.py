@@ -69,7 +69,8 @@ def load_json(path: Path) -> dict:
 
 
 def seal(payload: dict) -> dict:
-    return {**payload, "receipt_sha256": digest(payload)}
+    normalized = json.loads(canonical(payload))
+    return {**normalized, "receipt_sha256": digest(normalized)}
 
 
 def verify_seal(receipt: dict) -> None:

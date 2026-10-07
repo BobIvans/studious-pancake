@@ -22,14 +22,14 @@ def build_scc_groups(graph: dict[str, list[str]]) -> list[list[str]]:
     for root in reversed(order):
         if root in seen:
             continue
-        group, stack = [], [root]
-        while stack:
-            node = stack.pop()
+        group, pending = [], [root]
+        while pending:
+            node = pending.pop()
             if node in seen:
                 continue
             seen.add(node)
             group.append(node)
-            stack.extend(reverse.get(node, []))
+            pending.extend(reverse.get(node, []))
         groups.append(sorted(group))
     return sorted(groups)
 

@@ -326,6 +326,11 @@ class CoreV1MaterializedBatchSource:
         self.source = source
         self.max_items = max_items
 
+    @property
+    def storage_pressure_boundary(self):
+        # Preserve the explicit collection-owner capability through materialization.
+        return getattr(self.source, "storage_pressure_boundary", None)
+
     def __call__(self) -> A3ExactAttemptBatch:
         try:
             drafts = tuple(self.source())

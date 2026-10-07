@@ -36,7 +36,9 @@ def publish_partition(
             break
         rows.append(row)
         byte_count += len(payload)
-    if event_ids is not None and {str(row["event_id"]) for row in rows} != set(event_ids):
+    if event_ids is not None and {str(row["event_id"]) for row in rows} != set(
+        event_ids
+    ):
         raise ValueError("requested event partition incomplete")
     destination = Path(destination).resolve()
     if destination.exists():

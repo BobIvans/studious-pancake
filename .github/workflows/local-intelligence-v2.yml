@@ -7,6 +7,13 @@ on:
       - 'src/routing/transport.py'
       - 'src/market/native_cpmm_capture.py'
       - 'src/paper_shadow/native_cpmm_qualification.py'
+      - 'src/paper_shadow/repeated_service_pr04.py'
+      - 'src/paper_shadow/durable_service_a3.py'
+      - 'src/runtime/core_v1_materializer.py'
+      - 'src/runtime/runtime_entrypoint.py'
+      - 'src/cli.py'
+      - 'tests/test_pr04_repeated_installed_paper_service.py'
+      - 'tests/test_pr02_unified_lifecycle_authority.py'
       - 'requirements*.lock'
       - 'pyproject.toml'
       - 'tests/intelligence/**'
@@ -30,4 +37,5 @@ jobs:
       - run: python -m mypy --follow-imports=silent --ignore-missing-imports src/intelligence
       - run: python -m pytest -q tests/intelligence tests/test_agg02_market_data_capital.py tests/test_agg04_qualification.py tests/test_mpr2611_production_qualification.py tests/market_data_evolution/test_market_data_evolution.py --disable-socket --allow-unix-socket
       - run: python -m pytest -q tests/test_native_cpmm_qualification.py tests/providers/test_pr004_transport_authority.py tests/routing/test_mpr2602_governed_transport.py tests/routing/test_mpr2602_transport_bounds.py --disable-socket --allow-unix-socket
+      - run: python -m pytest -q tests/test_pr04_repeated_installed_paper_service.py tests/test_pr02_unified_lifecycle_authority.py tests/test_mpr2601_scope_workers.py --disable-socket --allow-unix-socket
       - run: python scripts/verify_local_intelligence_v2.py --out "$RUNNER_TEMP/local-intelligence-acceptance"

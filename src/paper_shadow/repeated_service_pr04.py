@@ -17,6 +17,8 @@ import json
 import time
 from typing import Protocol
 
+from src.agg02.contracts import Agg02Error
+from src.intelligence.common import verify_seal
 from src.paper_shadow.durable_service_a3 import InstalledDurablePaperServiceReport
 
 PR04_SCHEMA = "pr04.repeated-installed-paper-service.v1"
@@ -33,6 +35,7 @@ class RepeatedPaperServiceStopReason(StrEnum):
     MAX_CYCLES = "max_cycles"
     CYCLE_NOT_READY = "cycle_not_ready"
     DRAIN_TIMEOUT = "drain_timeout"
+    STORAGE_PRESSURE = "storage_pressure"
 
 
 class UnsafePaperServiceReportError(RuntimeError):
@@ -67,6 +70,8 @@ class RepeatedPaperServiceSummary:
     )
     started_at_ns: int = 0
     completed_at_ns: int = 0
+    storage_pressure_status: str = "BLOCKED_NOT_WIRED"
+    storage_pressure_receipts: tuple[dict, ...] = ()
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "reports", tuple(self.reports))
@@ -104,6 +109,8 @@ class RepeatedPaperServiceSummary:
             "sender_imported": False,
             "submission_allowed": False,
             "live_enabled": False,
+            "storage_pressure_status": self.storage_pressure_status,
+            "storage_pressure_receipts": list(self.storage_pressure_receipts),
         }
         if include_hash:
             payload["summary_hash"] = self.summary_hash
@@ -120,12 +127,16 @@ class RepeatedInstalledPaperService:
         *,
         on_report: Callable[[InstalledDurablePaperServiceReport], None] | None = None,
         clock_ns: Callable[[], int] = time.time_ns,
+        pressure_boundary: Callable[..., dict] | None = None,
     ) -> None:
         self.cycle_runner = cycle_runner
         self.config = config or RepeatedPaperServiceConfig()
         self.on_report = on_report
         self.clock_ns = clock_ns
         self._run_lock = asyncio.Lock()
+        self.pressure_boundary = pressure_boundary or getattr(
+            cycle_runner, "storage_pressure_boundary", None
+        )
 
     async def run(self, stop_event: asyncio.Event) -> RepeatedPaperServiceSummary:
         """Run one cycle at a time; never overlap durable attempt ownership."""
@@ -136,6 +147,7 @@ class RepeatedInstalledPaperService:
             started_at_ns = self.clock_ns()
             reports: list[InstalledDurablePaperServiceReport] = []
             stop_reason = RepeatedPaperServiceStopReason.SIGNALLED
+            pressure_receipts: list[dict] = []
 
             while True:
                 if stop_event.is_set():
@@ -145,7 +157,23 @@ class RepeatedInstalledPaperService:
                     stop_reason = RepeatedPaperServiceStopReason.MAX_CYCLES
                     break
 
-                report = await self._run_cycle_until_stop(stop_event)
+                identity = getattr(self.cycle_runner, "next_pressure_batch_id", None)
+                batch_id = (
+                    identity()
+                    if callable(identity)
+                    else f"supervisor-batch-{len(reports)}"
+                )
+                if self._pressure_pauses(batch_id, "BATCH_BOUNDARY", pressure_receipts):
+                    stop_reason = RepeatedPaperServiceStopReason.STORAGE_PRESSURE
+                    break
+                try:
+                    report = await self._run_cycle_until_stop(stop_event)
+                except Agg02Error as exc:
+                    if str(exc) != "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED":
+                        raise
+                    self._pressure_pauses(batch_id, str(exc), pressure_receipts)
+                    stop_reason = RepeatedPaperServiceStopReason.STORAGE_PRESSURE
+                    break
                 if report is None:
                     stop_reason = RepeatedPaperServiceStopReason.DRAIN_TIMEOUT
                     break
@@ -153,6 +181,12 @@ class RepeatedInstalledPaperService:
                 reports.append(report)
                 if self.on_report is not None:
                     self.on_report(report)
+                if report.terminal_reason == "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED":
+                    self._pressure_pauses(
+                        batch_id, report.terminal_reason, pressure_receipts
+                    )
+                    stop_reason = RepeatedPaperServiceStopReason.STORAGE_PRESSURE
+                    break
 
                 if not report.ready_for_next_cycle and self.config.stop_when_not_ready:
                     stop_reason = RepeatedPaperServiceStopReason.CYCLE_NOT_READY
@@ -172,7 +206,45 @@ class RepeatedInstalledPaperService:
                 reports=tuple(reports),
                 started_at_ns=started_at_ns,
                 completed_at_ns=self.clock_ns(),
+                storage_pressure_status=(
+                    "WIRED" if self.pressure_boundary else "BLOCKED_NOT_WIRED"
+                ),
+                storage_pressure_receipts=tuple(pressure_receipts),
             )
+
+    def _pressure_pauses(
+        self, batch_id: str, trigger: str, receipts: list[dict]
+    ) -> bool:
+        if self.pressure_boundary is None:
+            pause = trigger == "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED"
+        else:
+            try:
+                receipt = self.pressure_boundary(batch_id=batch_id, trigger=trigger)
+                verify_seal(receipt)
+                if type(receipt.get("admission_pause_required")) is not bool:
+                    raise ValueError("pressure admission verdict missing")
+                receipts.append(receipt)
+                pause = (
+                    receipt["admission_pause_required"]
+                    or trigger == "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED"
+                )
+            except Exception:
+                self._record_pressure_blocker("STORAGE_PRESSURE_CYCLE_FAILED", batch_id)
+                return True
+        if pause:
+            reason = (
+                "STORAGE_PRESSURE_ADMISSION_PAUSED"
+                if self.pressure_boundary
+                else "BLOCKED_NOT_WIRED"
+            )
+            self._record_pressure_blocker(reason, batch_id)
+        return pause
+
+    def _record_pressure_blocker(self, reason: str, batch_id: str) -> None:
+        recorder = getattr(self.cycle_runner, "record_storage_pressure_blocker", None)
+        if callable(recorder):
+            # Failure to persist is propagated: admission never resumes silently.
+            recorder(reason, batch_id)
 
     async def _run_cycle_until_stop(self, stop_event: asyncio.Event):
         # The existing sequential supervisor has capacity one: no producer queue

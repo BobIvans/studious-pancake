@@ -13,7 +13,8 @@ import time
 
 from src.agg02.storage import DurableRawJournal
 
-from .common import digest, save_json, seal
+from .common import canonical, digest, load_json, save_json, seal, verify_seal
+from .evidence_refs import find_raw_references
 from .parquet_compaction import publish_partition
 from .prune import prune_verified_payloads
 from .retention_policy import retention_dry_run, retention_eligibility
@@ -79,9 +80,12 @@ def _planning_eligible(
     probe = dict(record)
     probe["compaction_verified"] = True
     probe["replay_verified"] = True
-    return retention_eligibility(
-        probe, now_ms=now_ms, minimum_age_ms=minimum_age_ms
-    )["eligible"] is True
+    return (
+        retention_eligibility(probe, now_ms=now_ms, minimum_age_ms=minimum_age_ms)[
+            "eligible"
+        ]
+        is True
+    )
 
 
 def select_reclaim_candidates(
@@ -93,28 +97,43 @@ def select_reclaim_candidates(
     requested_reclaim_bytes: int,
     max_events: int = 20_000,
     max_payload_bytes: int = DEFAULT_PARTITION_PAYLOAD_BYTES,
+    references: list[dict] | None = None,
 ) -> dict:
     if requested_reclaim_bytes < 0 or max_events < 1 or max_payload_bytes < 1:
         raise ValueError("invalid reclaim budget")
     storage = {row["event_id"]: row for row in journal.retention_storage_inventory()}
     candidates = []
+    seen: set[str] = set()
+    referenced = find_raw_references(references or [])
     for source in records:
         record = dict(source)
         event_id = record.get("event_id")
         if not isinstance(event_id, str) or event_id not in storage:
             continue
+        if event_id in seen:
+            raise ValueError("duplicate retention event")
+        seen.add(event_id)
         facts = storage[event_id]
-        if facts["archived"] or facts["pinned"] or facts["inline_payload_bytes"] <= 0:
-            continue
-        if not _planning_eligible(
-            record, now_ms=now_ms, minimum_age_ms=minimum_age_ms
+        inline_bytes = facts["inline_payload_bytes"]
+        available = facts["available_at_ms"]
+        if (
+            facts["archived"]
+            or facts["pinned"]
+            or facts["gap_before"]
+            or event_id in referenced
+            or not isinstance(inline_bytes, int)
+            or inline_bytes <= 0
+            or type(available) is not int
+            or record.get("available_at_ms") != available
         ):
+            continue
+        if not _planning_eligible(record, now_ms=now_ms, minimum_age_ms=minimum_age_ms):
             continue
         candidates.append(
             (
-                int(record.get("available_at_ms", 0)),
+                available,
                 event_id,
-                int(facts["inline_payload_bytes"]),
+                inline_bytes,
                 record,
             )
         )
@@ -142,7 +161,7 @@ def select_reclaim_candidates(
     }
 
 
-def run_pressure_cycle(
+def _run_pressure_cycle_locked(
     *,
     state_root: str | Path,
     journal_path: str | Path,
@@ -155,6 +174,8 @@ def run_pressure_cycle(
     max_payload_bytes: int = DEFAULT_PARTITION_PAYLOAD_BYTES,
     execute: bool = False,
     now_ms: int | None = None,
+    cycle_key: str,
+    request_sha: str,
 ) -> dict:
     state_root = Path(state_root)
     journal_path = Path(journal_path)
@@ -162,27 +183,10 @@ def run_pressure_cycle(
     now = int(time.time() * 1000) if now_ms is None else now_ms
     if now < 0:
         raise ValueError("invalid pressure clock")
-    state_root.mkdir(parents=True, exist_ok=True)
     if not journal_path.is_file():
         raise ValueError("pressure journal missing")
-    measurement = read_disk_budget(state_root, journal=journal_path)
-    used = int(measurement["measured_files_bytes"])
-    # If the AGG-02 journal is outside the managed state root, count its physical
-    # SQLite/WAL footprint once. This is disk-pressure accounting, not raw-data semantics.
-    try:
-        journal_inside = journal_path.resolve().is_relative_to(state_root.resolve())
-    except FileNotFoundError:
-        journal_inside = False
-    if not journal_inside:
-        used += sum(
-            path.stat().st_size
-            for path in (
-                journal_path,
-                Path(str(journal_path) + "-wal"),
-                Path(str(journal_path) + "-shm"),
-            )
-            if path.exists()
-        )
+    measurement = read_disk_budget(state_root)
+    used = _managed_used(measurement, state_root, journal_path, output_dir)
     plan = pressure_plan(used, int(measurement["intelligence_budget_bytes"]))
     base = {
         "plan": plan,
@@ -190,9 +194,33 @@ def run_pressure_cycle(
         "execute_requested": execute,
         "physical_reclaim_guaranteed": False,
         "sqlite_vacuum_performed": False,
+        "cycle_key": cycle_key,
+        "request_sha256": request_sha,
     }
-    if plan["level"] == "NORMAL" or plan["requested_reclaim_bytes"] == 0:
+    prepared_path = output_dir / f"pressure-{cycle_key}.prepare.json"
+    prepared = load_json(prepared_path) if prepared_path.exists() else None
+    if prepared is not None:
+        verify_seal(prepared)
+        if prepared["request_sha256"] != request_sha:
+            raise ValueError("pressure batch identity rebound")
+        now, base, plan = prepared["now_ms"], prepared["base"], prepared["base"]["plan"]
+    if prepared is None and (
+        plan["level"] == "NORMAL" or plan["requested_reclaim_bytes"] == 0
+    ):
         return seal({**base, "status": "NO_ACTION_REQUIRED"})
+    if reference_inventory_complete is not True:
+        return seal(
+            {
+                **base,
+                "status": (
+                    "ADMISSION_PAUSE_REQUIRED"
+                    if plan["level"] == "CRITICAL"
+                    else "REFERENCE_INVENTORY_INCOMPLETE"
+                ),
+                "reason": "REFERENCE_INVENTORY_INCOMPLETE",
+                "admission_pause_required": plan["level"] == "CRITICAL",
+            }
+        )
     with DurableRawJournal(journal_path) as journal:
         selection = select_reclaim_candidates(
             journal,
@@ -202,13 +230,20 @@ def run_pressure_cycle(
             requested_reclaim_bytes=int(plan["requested_reclaim_bytes"]),
             max_events=max_events,
             max_payload_bytes=max_payload_bytes,
+            references=references,
         )
+        if prepared is not None:
+            selection = prepared["selection"]
         planned = {**base, "selection": selection}
         if not selection["event_ids"]:
             return seal(
                 {
                     **planned,
-                    "status": "ADMISSION_PAUSE_REQUIRED" if plan["level"] == "CRITICAL" else "NO_SAFE_RECLAIM_CANDIDATES",
+                    "status": (
+                        "ADMISSION_PAUSE_REQUIRED"
+                        if plan["level"] == "CRITICAL"
+                        else "NO_SAFE_RECLAIM_CANDIDATES"
+                    ),
                     "reason": "NO_VERIFIED_EXPIRABLE_PAYLOADS",
                     "admission_pause_required": plan["level"] == "CRITICAL",
                 }
@@ -221,10 +256,30 @@ def run_pressure_cycle(
                     "admission_pause_required": plan["level"] == "CRITICAL",
                 }
             )
-        preflight_bytes = (
-            int(selection["logical_reclaim_bytes"]) + COMPACTION_HEADROOM_BYTES
+        if reference_inventory_complete is not True:
+            return seal(
+                {
+                    **planned,
+                    "status": "ADMISSION_PAUSE_REQUIRED",
+                    "reason": "REFERENCE_INVENTORY_INCOMPLETE",
+                    "admission_pause_required": True,
+                }
+            )
+        owner_inventory = {
+            r["event_id"]: r for r in journal.retention_storage_inventory()
+        }
+        envelope_bytes = sum(
+            _integer(owner_inventory[event_id]["envelope_bytes"])
+            for event_id in selection["event_ids"]
         )
-        if preflight_bytes > int(measurement["spare_bytes"]):
+        preflight_bytes = (
+            int(selection["logical_reclaim_bytes"]) * 3
+            + envelope_bytes * 4
+            + len(canonical(selection["records"])) * 4
+            + COMPACTION_HEADROOM_BYTES
+        )
+        headroom = read_disk_budget(state_root)
+        if preflight_bytes > int(headroom["spare_bytes"]):
             return seal(
                 {
                     **planned,
@@ -239,14 +294,19 @@ def run_pressure_cycle(
                 }
             )
         output_dir.mkdir(parents=True, exist_ok=True)
-        batch_id = digest(
-            {
-                "now_ms": now,
-                "level": plan["level"],
-                "event_ids": selection["event_ids"],
-            }
-        )[:20]
-        parquet = output_dir / f"pressure-{now}-{batch_id}.parquet"
+        if prepared is None:
+            save_json(
+                prepared_path,
+                seal(
+                    {
+                        "request_sha256": request_sha,
+                        "now_ms": now,
+                        "base": base,
+                        "selection": selection,
+                    }
+                ),
+            )
+        parquet = output_dir / f"pressure-{cycle_key}.parquet"
         compaction = publish_partition(
             journal,
             parquet,
@@ -260,16 +320,14 @@ def run_pressure_cycle(
             item["compaction_verified"] = True
             item["replay_verified"] = True
             proven.append(item)
-        retention = retention_dry_run(
-            proven, now_ms=now, minimum_age_ms=minimum_age_ms
-        )
+        retention = retention_dry_run(proven, now_ms=now, minimum_age_ms=minimum_age_ms)
         if {d["event_id"] for d in retention["decisions"] if d["eligible"]} != set(
             selection["event_ids"]
         ):
             raise ValueError("pressure retention proof changed after compaction")
-        retention_path = output_dir / f"pressure-{now}-{batch_id}.retention.json"
+        retention_path = output_dir / f"pressure-{cycle_key}.retention.json"
         save_json(retention_path, retention)
-        tombstone_path = output_dir / f"pressure-{now}-{batch_id}.tombstone.json"
+        tombstone_path = output_dir / f"pressure-{cycle_key}.tombstone.json"
         result = prune_verified_payloads(
             journal,
             compaction=compaction,
@@ -283,14 +341,23 @@ def run_pressure_cycle(
             row["event_id"]: row for row in journal.retention_storage_inventory()
         }
         remaining_inline = sum(
-            int(row["inline_payload_bytes"]) for row in after_inventory.values()
+            _integer(row["inline_payload_bytes"]) for row in after_inventory.values()
         )
         shortfall = max(
             0,
             int(plan["requested_reclaim_bytes"])
             - int(selection["logical_reclaim_bytes"]),
         )
-        pause = plan["level"] == "CRITICAL" and shortfall > 0
+        after_measurement = read_disk_budget(state_root)
+        after_used = _managed_used(
+            after_measurement, state_root, journal_path, output_dir
+        )
+        after_plan = pressure_plan(
+            after_used, int(after_measurement["intelligence_budget_bytes"])
+        )
+        pause = after_plan["level"] == "CRITICAL" or (
+            plan["level"] == "CRITICAL" and shortfall > 0
+        )
         return seal(
             {
                 **planned,
@@ -307,6 +374,7 @@ def run_pressure_cycle(
                 "reclaim_shortfall_bytes": shortfall,
                 "remaining_inline_payload_bytes": remaining_inline,
                 "admission_pause_required": pause,
+                "after_plan": after_plan,
                 "physical_reclaim_guaranteed": False,
                 "physical_reclaim_note": (
                     "Inline SQLite payload pages are reusable after offload; the database file "
@@ -314,6 +382,151 @@ def run_pressure_cycle(
                 ),
             }
         )
+
+
+def _integer(value: object) -> int:
+    if not isinstance(value, int):
+        raise ValueError("invalid owner byte accounting")
+    return value
+
+
+def _managed_used(measurement: dict, root: Path, journal: Path, output: Path) -> int:
+    used = int(measurement["measured_files_bytes"])
+    extra: set[Path] = set()
+    if not journal.resolve().is_relative_to(root.resolve()):
+        extra.update(
+            p.resolve()
+            for p in (journal, Path(str(journal) + "-wal"), Path(str(journal) + "-shm"))
+            if p.exists()
+        )
+    if output.exists() and not output.resolve().is_relative_to(root.resolve()):
+        extra.update(
+            p.resolve()
+            for p in output.rglob("*")
+            if p.is_file()
+            and not p.is_symlink()
+            and not p.resolve().is_relative_to(root.resolve())
+        )
+    used += sum(p.stat().st_size for p in extra)
+    return used
+
+
+def run_pressure_cycle(
+    *,
+    state_root: str | Path,
+    journal_path: str | Path,
+    records: list[dict],
+    references: list[dict],
+    reference_inventory_complete: bool,
+    output_dir: str | Path,
+    minimum_age_ms: int = 86_400_000,
+    max_events: int = 20_000,
+    max_payload_bytes: int = DEFAULT_PARTITION_PAYLOAD_BYTES,
+    execute: bool = False,
+    now_ms: int | None = None,
+    batch_id: str | None = None,
+) -> dict:
+    """One cross-process cycle, outside append; stable batch receipts survive restart."""
+    root, journal, output = Path(state_root), Path(journal_path), Path(output_dir)
+    if not root.is_dir() or not journal.is_file():
+        raise ValueError("existing pressure state root and journal required")
+    if (
+        minimum_age_ms < 1
+        or max_events < 1
+        or max_payload_bytes < 1
+        or (now_ms is not None and now_ms < 0)
+    ):
+        raise ValueError("invalid pressure limits/clock")
+    if batch_id is not None and not batch_id:
+        raise ValueError("nonempty pressure batch identity required")
+    request_sha = digest(
+        {
+            "root": str(root.resolve()),
+            "journal": str(journal.resolve()),
+            "output": str(output.resolve()),
+            "records": records,
+            "references": references,
+            "complete": reference_inventory_complete,
+            "age": minimum_age_ms,
+            "events": max_events,
+            "bytes": max_payload_bytes,
+            "execute": execute,
+        }
+    )
+    key = (
+        digest({"batch_id": batch_id})
+        if batch_id is not None
+        else digest(
+            {
+                "request": request_sha,
+                "now": now_ms if now_ms is not None else time.time_ns(),
+            }
+        )
+    )
+    receipt_path = output / f"pressure-{key}.receipt.json"
+    measurement = read_disk_budget(root)
+    plan = pressure_plan(
+        _managed_used(measurement, root, journal, output),
+        int(measurement["intelligence_budget_bytes"]),
+    )
+    recovery = (
+        output / f"pressure-{key}.prepare.json"
+    ).exists() or receipt_path.exists()
+    if plan["level"] == "NORMAL" and not recovery:
+        return seal(
+            {
+                "plan": plan,
+                "measurement": measurement,
+                "status": "NO_ACTION_REQUIRED",
+                "admission_pause_required": False,
+                "execute_requested": execute,
+                "physical_reclaim_guaranteed": False,
+                "sqlite_vacuum_performed": False,
+            }
+        )
+    # Lock the existing inode: NORMAL never creates even a lock file. No thread
+    # is hidden in the journal and SQLite append transactions remain independent.
+    import fcntl
+
+    with journal.open("rb") as lock:
+        try:
+            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError as exc:
+            raise ValueError("STORAGE_PRESSURE_CYCLE_ALREADY_RUNNING") from exc
+        if receipt_path.exists():
+            receipt = load_json(receipt_path)
+            verify_seal(receipt)
+            if receipt["request_sha256"] != request_sha:
+                raise ValueError("pressure batch identity rebound")
+            if "compaction" in receipt:
+                from src.agg02.storage import DatasetManifest
+                from .parquet_compaction import verify_partition
+
+                verify_partition(DatasetManifest(**receipt["compaction"]["dataset"]))
+            return receipt
+        ancestor = output
+        while not ancestor.exists():
+            ancestor = ancestor.parent
+        if ancestor.stat().st_dev != root.stat().st_dev:
+            raise ValueError("pressure output must share the measured filesystem")
+        result = _run_pressure_cycle_locked(
+            state_root=root,
+            journal_path=journal,
+            records=records,
+            references=references,
+            reference_inventory_complete=reference_inventory_complete,
+            output_dir=output,
+            minimum_age_ms=minimum_age_ms,
+            max_events=max_events,
+            max_payload_bytes=max_payload_bytes,
+            execute=execute,
+            now_ms=now_ms,
+            cycle_key=key,
+            request_sha=request_sha,
+        )
+        if execute and result["status"] != "NO_ACTION_REQUIRED":
+            save_json(receipt_path, result)
+        return result
 
 
 __all__ = [

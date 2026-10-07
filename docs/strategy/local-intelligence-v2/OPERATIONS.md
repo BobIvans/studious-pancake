@@ -177,3 +177,32 @@ At CRITICAL pressure, if there are not enough safe reclaim candidates or there i
 not enough reserve-preserving headroom to create the verified Parquet partition,
 the result is `ADMISSION_PAUSE_REQUIRED`. New evidence must pause rather than
 silently evict protected data.
+
+Pressure retries can supply `--batch-id <stable-owner-batch-id>`. The manager
+locks the existing journal inode across processes, persists its original plan,
+clock and selection before compaction, and seals a terminal receipt. Reusing a
+batch with different inputs fails closed. A restart after an offload resumes the
+same partition/tombstone rather than creating duplicate archives; cached success
+also re-verifies exact Parquet replay. CLI admission-pause verdicts exit with 3.
+NORMAL performs read-only measurement and creates neither directories nor locks.
+Output partitions on another filesystem are rejected. Compaction requires safe
+reserve-preserving headroom; post-operation physical pressure is measured again.
+Logical page reuse cannot clear an unchanged CRITICAL physical verdict.
+
+The existing `RepeatedInstalledPaperService` invokes an owner-supplied
+`storage_pressure_boundary` before each durable collection batch and after the
+typed `AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED` has unwound the append transaction.
+`StoragePressureBoundary` uses the same manager, retention, Parquet and tombstone
+receipts as the CLI, with an authoritative inventory callback. The A3 service and
+CORE-V1 materialized batch source forward this explicit source capability. The
+supervisor remains sequential, and its canonical durable authority records pause
+incidents; both installed entrypoints return a blocked exit code on pressure stop.
+An admission-blocked batch is not retried blindly even if compaction completes.
+
+Runtime collection binding is `BLOCKED_NOT_WIRED` when the source has no pressure
+port. The current reviewed installed dependency resolver produces a qualified
+draft source, not a long-running AGG-02 raw collector with a complete retention
+inventory. Native CPMM qualification is bounded capture and has no AGG-02 raw
+journal binding. No journal path, reference inventory or new scheduler is guessed
+for these sources. Owners supplying that binding expose the explicit port; a
+missing/invalid inventory blocks reclamation, and CRITICAL pauses admission.

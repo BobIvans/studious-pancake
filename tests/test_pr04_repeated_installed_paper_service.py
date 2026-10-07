@@ -150,6 +150,100 @@ def test_pr04_rejects_invalid_scheduler_configuration() -> None:
         RepeatedPaperServiceConfig(idle_delay_seconds=-0.1)
 
 
+def test_pressure_boundary_runs_once_per_batch_before_collection():
+    from src.intelligence.common import seal
+
+    runner = _Runner([_report(1), _report(2)])
+    seen = []
+
+    def boundary(*, batch_id, trigger):
+        seen.append((batch_id, trigger, runner.calls))
+        return seal({"admission_pause_required": False})
+
+    service = RepeatedInstalledPaperService(
+        runner,
+        RepeatedPaperServiceConfig(max_cycles=2, idle_delay_seconds=0),
+        pressure_boundary=boundary,
+    )
+    summary = asyncio.run(service.run(asyncio.Event()))
+    assert [row[2] for row in seen] == [0, 1]
+    assert len({row[0] for row in seen}) == 2
+    assert summary.storage_pressure_status == "WIRED"
+
+
+def test_critical_pressure_pauses_before_new_batch_and_records_blocker():
+    from src.intelligence.common import seal
+
+    runner = _Runner([_report(1)])
+    blockers = []
+    runner.record_storage_pressure_blocker = lambda reason, batch: blockers.append(
+        (reason, batch)
+    )
+    service = RepeatedInstalledPaperService(
+        runner, pressure_boundary=lambda **_k: seal({"admission_pause_required": True})
+    )
+    summary = asyncio.run(service.run(asyncio.Event()))
+    assert runner.calls == 0
+    assert summary.stop_reason is RepeatedPaperServiceStopReason.STORAGE_PRESSURE
+    assert blockers[0][0] == "STORAGE_PRESSURE_ADMISSION_PAUSED"
+
+
+def test_typed_admission_block_triggers_after_append_rollback(tmp_path):
+    from src.agg02.storage import DurableRawJournal
+    from src.intelligence.common import seal
+    from tests.intelligence.test_pressure_manager import event
+
+    calls = []
+    with DurableRawJournal(tmp_path / "raw.db", max_journal_bytes=1) as journal:
+
+        class Collector:
+            async def run_once(self):
+                journal.append(event(1, b"x"), b"x")
+
+        def boundary(*, batch_id, trigger):
+            assert not journal._db.in_transaction
+            calls.append(trigger)
+            return seal({"admission_pause_required": False})
+
+        summary = asyncio.run(
+            RepeatedInstalledPaperService(Collector(), pressure_boundary=boundary).run(
+                asyncio.Event()
+            )
+        )
+        assert calls == ["BATCH_BOUNDARY", "AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED"]
+        assert journal.cursor("provider", "pairs") is None
+        assert summary.stop_reason is RepeatedPaperServiceStopReason.STORAGE_PRESSURE
+
+
+def test_unwired_and_failed_pressure_ports_never_retry_blocked_collection():
+    from src.agg02.contracts import Agg02Error
+
+    class Collector:
+        def __init__(self):
+            self.calls = 0
+            self.blockers = []
+
+        async def run_once(self):
+            self.calls += 1
+            raise Agg02Error("AGG02_STORAGE_PRESSURE_ADMISSION_BLOCKED")
+
+        def record_storage_pressure_blocker(self, reason, batch):
+            self.blockers.append(reason)
+
+    runner = Collector()
+    summary = asyncio.run(RepeatedInstalledPaperService(runner).run(asyncio.Event()))
+    assert runner.calls == 1 and runner.blockers == ["BLOCKED_NOT_WIRED"]
+    assert summary.storage_pressure_status == "BLOCKED_NOT_WIRED"
+    failed = Collector()
+    summary = asyncio.run(
+        RepeatedInstalledPaperService(failed, pressure_boundary=lambda **_k: {}).run(
+            asyncio.Event()
+        )
+    )
+    assert failed.calls == 0
+    assert failed.blockers == ["STORAGE_PRESSURE_CYCLE_FAILED"]
+
+
 def test_pr04_cli_paper_mode_uses_repeated_supervisor() -> None:
     source = open("src/cli.py", encoding="utf-8").read()
 

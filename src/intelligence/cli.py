@@ -121,6 +121,7 @@ def _parser() -> argparse.ArgumentParser:
             sub.add_argument("--retention", type=Path)
             sub.add_argument("--references", type=Path)
         if command == "pressure":
+            sub.add_argument("--batch-id")
             sub.add_argument("--execute", action="store_true")
             sub.add_argument("--references", type=Path)
             sub.add_argument("--max-events", type=int, default=20_000)
@@ -335,6 +336,7 @@ def storage_commands(args) -> dict:
             max_events=args.max_events,
             execute=args.execute,
             now_ms=now,
+            batch_id=args.batch_id,
         )
     if args.command in {"status", "forecast"}:
         result = read_disk_budget(args.state_root, journal=args.journal)
@@ -618,7 +620,13 @@ def main(argv: list[str] | None = None) -> int:
             "laya": laya_commands,
         }[args.plane](args)
         print(canonical(result).decode())
-        return 0
+        return (
+            3
+            if args.plane == "storage"
+            and args.command == "pressure"
+            and result.get("admission_pause_required") is True
+            else 0
+        )
     except (ValueError, KeyError, OSError) as exc:
         print(
             canonical({"status": "BLOCKED", "reason": str(exc)}).decode(),

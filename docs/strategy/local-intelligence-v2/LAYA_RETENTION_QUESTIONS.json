@@ -1,0 +1,128 @@
+{
+  "schema": "studious.local-intelligence.laya-retention.v2",
+  "authority": {
+    "laya_can_extend_retention": true,
+    "laya_can_prioritize_ai_review": true,
+    "laya_can_delete_payload_directly": false,
+    "laya_can_grant_trading_authority": false,
+    "deterministic_retention_gate_required": true
+  },
+  "observation_state": [
+    {
+      "id": "novelty",
+      "type": "score",
+      "criteria": [
+        "duplicate",
+        "mostly_redundant",
+        "some_new_info",
+        "novel",
+        "highly_novel"
+      ]
+    },
+    {
+      "id": "research_value",
+      "type": "score",
+      "criteria": [
+        "none",
+        "low",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    {
+      "id": "anomaly",
+      "type": "noul",
+      "instructions": "Does this compact observation state contain an unusual market/provider condition worth retaining longer?"
+    },
+    {
+      "id": "new_failure_class",
+      "type": "noul",
+      "instructions": "Is this failure semantically different from the supplied recent failure exemplars?"
+    },
+    {
+      "id": "strong_ai_needed",
+      "type": "noul",
+      "instructions": "Would deeper reasoning plausibly change a research conclusion or next experiment?"
+    },
+    {
+      "id": "retention_extension",
+      "type": "choice",
+      "criteria": {
+        "normal": "Normal deterministic retention is sufficient",
+        "extend_24h": "Extend high-resolution retention by 24 hours",
+        "extend_7d": "Extend high-resolution retention by 7 days",
+        "pin_episode": "Pin as a research episode"
+      }
+    }
+  ],
+  "episode_state": [
+    {
+      "id": "episode_value",
+      "type": "score",
+      "criteria": [
+        "routine",
+        "minor",
+        "useful",
+        "high_value",
+        "canonical_example"
+      ]
+    },
+    {
+      "id": "strategy_learning_value",
+      "type": "score",
+      "criteria": [
+        "none",
+        "weak",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    {
+      "id": "contradiction",
+      "type": "noul",
+      "instructions": "Does this episode contradict the current strategy assumptions supplied in the state?"
+    },
+    {
+      "id": "distinct_root_cause",
+      "type": "noul",
+      "instructions": "Is the likely failure mechanism distinct from recent known episodes?"
+    },
+    {
+      "id": "followup_required",
+      "type": "noul",
+      "instructions": "Should a deterministic test or stronger research pass inspect this episode?"
+    }
+  ],
+  "repo_group_state": [
+    {
+      "id": "goal_relevance",
+      "type": "score",
+      "criteria": [
+        "none",
+        "weak",
+        "medium",
+        "high",
+        "critical"
+      ]
+    },
+    {
+      "id": "authoritative_owner",
+      "type": "noul"
+    },
+    {
+      "id": "needs_dependency_context",
+      "type": "noul"
+    },
+    {
+      "id": "evidence_gap",
+      "type": "noul"
+    },
+    {
+      "id": "include_next_pack",
+      "type": "noul"
+    }
+  ],
+  "operating_rule": "Use BM25/graph/deterministic retrieval before Laya. Do not score the full raw corpus for every categorical question."
+}

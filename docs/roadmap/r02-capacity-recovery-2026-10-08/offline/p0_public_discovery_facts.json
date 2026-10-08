@@ -1,0 +1,22 @@
+{
+  "source_pin": "0dotxyz/p0-ts-sdk@8a8353bb662459e5957b0cbbd2121f4fddb37fc3",
+  "source_git_version": "2.10.0",
+  "npm_version_match": "NOT_ASSERTED",
+  "package": "@0dotxyz/p0-ts-sdk",
+  "repo_license": "MIT",
+  "bank_only_reads_allowed": true,
+  "public_wallet_address_optional": true,
+  "public_marginfi_account_optional": true,
+  "walletless_mode": "discover protocol banks as read-only research; no user-specific eligibility/no qualified execution",
+  "with_public_authority": "client.getAccountAddresses(authorityPublicKey) returns addresses, read-only; or deriveMarginfiAccount(programId,group,authority,index,thirdPartyId) then verify on-chain",
+  "status_without_public_wallet": "P0_EXISTING_ACCOUNT_UNKNOWN_READ_BANKS_ONLY",
+  "forbidden": [
+    "createMarginfiAccountTx",
+    "sendTransaction",
+    "signTransaction",
+    "wallet private key/mnemonic"
+  ],
+  "protocol_idl": "src/idl/marginfi_0.1.12.json",
+  "account_init_required_if_missing": true,
+  "execution_authority": "NONE"
+}

@@ -1,0 +1,774 @@
+/**
+ * Lending Pool Operations
+ *
+ * This module provides comprehensive pool management functionality for the lending protocol.
+ * It handles pool information retrieval, deposit/withdraw operations, borrow/repay operations,
+ * and various pool-related utilities and statistics.
+ *
+ * @module LendingPool
+ */
+
+import { DEFAULT_CACHE_TIME, getConfig } from './config'
+import type {
+  EnvOption,
+  CacheOption,
+  Pool,
+  AssetIdentifier,
+  PoolStats,
+  FeeDetail,
+  CoinObject,
+  TransactionResult,
+  SingleCoinTransactionResult,
+  AccountCapOption,
+  BorrowFeeOption,
+  SuiClientOption,
+  MarketOption,
+  EMode,
+  MarketsOption,
+  ServiceOption
+} from './types'
+import {
+  normalizeCoinType,
+  withCache,
+  withSingleton,
+  parseTxValue,
+  requestHeaders,
+  parsePoolUID,
+  parseDevInspectResult,
+  devInspectTransaction,
+  getSuiObject,
+  suiClient
+} from './utils'
+import { buildNaviOpenApiUrl, mergeServiceHeaders, resolveNaviOpenApiEndpoint } from './services'
+import { Transaction } from '@mysten/sui/transactions'
+import BigNumber from 'bignumber.js'
+import { bcs } from '@mysten/sui/bcs'
+import packageJson from '../package.json'
+import { DEFAULT_MARKET_IDENTITY, getMarketConfig, MARKETS } from './market'
+
+/**
+ * Enumeration of pool operations
+ *
+ * This enum defines the different types of operations that can be performed
+ * on lending pools, used for health factor calculations and operation tracking.
+ */
+export enum PoolOperator {
+  /** Supply/deposit operation */
+  Supply = 1,
+  /** Withdraw operation */
+  Withdraw = 2,
+  /** Borrow operation */
+  Borrow = 3,
+  /** Repay operation */
+  Repay = 4
+}
+
+/**
+ * Fetches all available lending pools
+ *
+ * This function retrieves the complete list of lending pools from the Navi protocol API.
+ * It's wrapped with caching and singleton behavior for efficient data access.
+ *
+ * @param options - Optional environment and caching options
+ * @returns Promise<Pool[]> - Array of all available lending pools
+ */
+export const getPools = withCache(
+  withSingleton(
+    async (
+      options?: Partial<
+        EnvOption &
+        CacheOption &
+        MarketsOption &
+        ServiceOption & {
+          pools: string[]
+        }
+      >
+    ): Promise<Pool[]> => {
+      const markets = (options?.markets || [MARKETS.main]).map((identity) => {
+        return getMarketConfig(identity)
+      })
+      const endpoint = resolveNaviOpenApiEndpoint(options)
+      const poolsFilter = (options?.pools || []).join(',')
+      const url = buildNaviOpenApiUrl(
+        `/navi/pools?env=${options?.env || 'prod'}&sdk=${packageJson.version}&market=${markets.map(
+          (market) => {
+            return market.key
+          }
+        )}${!!poolsFilter ? '&pools=' + poolsFilter : ''}`,
+        options
+      )
+      const res: {
+        data: Pool[]
+        meta?: {
+          emodes?: EMode[]
+        }
+      } = await fetch(url, { headers: mergeServiceHeaders(requestHeaders, endpoint) }).then((res) =>
+        res.json()
+      )
+
+      res.data.forEach((pool) => {
+        const filterEmodes = (res?.meta?.emodes || []).filter((emode) => {
+          const market = getMarketConfig(emode.marketId)
+          return pool.market === market.key && emode.isActive
+        })
+        const emodes = filterEmodes.filter((emode) => {
+          return !!emode.assets.find((asset) => asset.assetId === pool.id)
+        })
+        pool.emodes = emodes
+        const poolSupplyAmount = BigNumber(pool.totalSupplyAmount)
+          .div(Math.pow(10, 9))
+          .decimalPlaces(pool.token.decimals, BigNumber.ROUND_DOWN)
+          .toString()
+        const poolBorrowAmount = BigNumber(pool.borrowedAmount)
+          .shiftedBy(-9)
+          .decimalPlaces(pool.token.decimals, BigNumber.ROUND_DOWN)
+          .toString()
+        const poolSupplyValue = BigNumber(poolSupplyAmount)
+          .multipliedBy(pool.oracle.price)
+          .toString()
+        const poolBorrowValue = BigNumber(poolBorrowAmount)
+          .multipliedBy(pool.oracle.price)
+          .toString()
+        const poolSupplyCapAmount = BigNumber(pool.supplyCapCeiling)
+          .shiftedBy(-27)
+          .decimalPlaces(pool.token.decimals, BigNumber.ROUND_DOWN)
+          .toString()
+        const poolBorrowCapAmount = BigNumber.max(
+          BigNumber(pool.borrowedAmount),
+          BigNumber(pool.validBorrowAmount)
+        )
+          .shiftedBy(-9)
+          .decimalPlaces(pool.token.decimals, BigNumber.ROUND_DOWN)
+          .toString()
+        const poolSupplyCapValue = BigNumber(poolSupplyCapAmount)
+          .multipliedBy(pool.oracle.price)
+          .toString()
+        const poolBorrowCapValue = BigNumber(poolBorrowCapAmount)
+          .multipliedBy(pool.oracle.price)
+          .toString()
+        pool.poolSupplyAmount = poolSupplyAmount
+        pool.poolBorrowAmount = poolBorrowAmount
+        pool.poolSupplyValue = poolSupplyValue
+        pool.poolBorrowValue = poolBorrowValue
+        pool.poolSupplyCapAmount = poolSupplyCapAmount
+        pool.poolBorrowCapAmount = poolBorrowCapAmount
+        pool.poolSupplyCapValue = poolSupplyCapValue
+        pool.poolBorrowCapValue = poolBorrowCapValue
+      })
+      return res.data
+    }
+  )
+)
+
+/**
+ * Gets information for a specific lending pool
+ *
+ * This function retrieves pool information based on various identifier types:
+ * - Pool object (returns directly)
+ * - String (coin type - normalized for comparison)
+ * - Number (pool ID)
+ *
+ * @param identifier - Asset identifier (string, Pool object, or number)
+ * @param options - Optional environment options
+ * @returns Promise<Pool> - Pool information
+ * @throws Error if pool is not found
+ */
+export async function getPool(
+  identifier: AssetIdentifier,
+  options?: Partial<EnvOption & MarketOption & ServiceOption>
+): Promise<Pool> {
+  let market = options?.market
+  if (typeof identifier === 'string') {
+    const parsedUID = parsePoolUID(identifier)
+    if (parsedUID) {
+      market = parsedUID.marketKey
+      identifier = parsedUID.poolId
+    }
+  }
+  const pools = await getPools({
+    ...options,
+    markets: [market || DEFAULT_MARKET_IDENTITY],
+    cacheTime: DEFAULT_CACHE_TIME
+  })
+
+  // If identifier is already a pool object, return it directly
+  if (typeof identifier === 'object') {
+    return identifier
+  }
+
+  // Find pool by identifier
+  const pool = pools.find((p) => {
+    if (typeof identifier === 'string') {
+      return normalizeCoinType(p.suiCoinType) === normalizeCoinType(identifier)
+    }
+    if (typeof identifier === 'number') {
+      return p.id === identifier
+    }
+    return false
+  })
+
+  if (!pool) {
+    throw new Error(`Pool not found`)
+  }
+
+  if (pool.isDeprecated) {
+    console.log(`The lending pool for coinType ${pool.suiCoinType} is going to be deprecated.`)
+  }
+  return pool
+}
+
+/**
+ * Fetches protocol statistics
+ *
+ * This function retrieves overall protocol statistics including TVL,
+ * total borrow amounts, and other key metrics.
+ *
+ * @param options - Optional caching options
+ * @returns Promise<PoolStats> - Protocol statistics
+ */
+export const getStats = withCache(
+  withSingleton(async (options?: Partial<CacheOption & ServiceOption>): Promise<PoolStats> => {
+    const endpoint = resolveNaviOpenApiEndpoint(options)
+    const url = buildNaviOpenApiUrl(`/navi/stats?sdk=${packageJson.version}`, options)
+    const res = await fetch(url, {
+      headers: mergeServiceHeaders(requestHeaders, endpoint)
+    }).then((res) => res.json())
+    return res.data
+  })
+)
+
+/**
+ * Fetches protocol fee information
+ *
+ * This function retrieves detailed fee information including:
+ * - Total fee value
+ * - V3 borrow fees
+ * - Borrow interest fees
+ * - Flash loan and liquidation fees
+ *
+ * @param options - Optional caching options
+ * @returns Promise with detailed fee breakdown
+ */
+export const getFees = withCache(
+  withSingleton(
+    async (
+      options?: Partial<CacheOption & ServiceOption>
+    ): Promise<{
+      totalValue: number
+      v3BorrowFee: {
+        totalValue: number
+        details: FeeDetail[]
+      }
+      borrowInterestFee: {
+        totalValue: number
+        details: FeeDetail[]
+      }
+      flashloanAndLiquidationFee: {
+        totalValue: number
+        details: FeeDetail[]
+      }
+    }> => {
+      const endpoint = resolveNaviOpenApiEndpoint(options)
+      const url = buildNaviOpenApiUrl(`/navi/fee?sdk=${packageJson.version}`, options)
+      const res = await fetch(url, {
+        headers: mergeServiceHeaders(requestHeaders, endpoint)
+      }).then((res) => res.json())
+      return res
+    }
+  )
+)
+
+/**
+ * Builds a deposit transaction for a lending pool
+ *
+ * This function creates a transaction block for depositing coins into a lending pool.
+ * It handles both regular deposits and deposits with account capabilities,
+ * and includes special handling for SUI gas coins.
+ *
+ * @param tx - Transaction object to build
+ * @param identifier - Asset identifier for the pool
+ * @param coinObject - Coin object to deposit
+ * @param options - Optional parameters including environment, account capability, and amount
+ * @returns Promise<Transaction> - Transaction with deposit operation
+ */
+export async function depositCoinPTB(
+  tx: Transaction,
+  identifier: AssetIdentifier,
+  coinObject: CoinObject,
+  options?: Partial<
+    EnvOption &
+    AccountCapOption &
+    ServiceOption &
+    MarketOption & {
+      amount: number | TransactionResult
+    }
+  >
+): Promise<Transaction> {
+  const config = await getConfig({
+    ...options,
+    cacheTime: DEFAULT_CACHE_TIME
+  })
+  const pool = await getPool(identifier, options)
+  const market = options?.market || DEFAULT_MARKET_IDENTITY
+  const env = options?.env || 'prod'
+
+  if (pool?.deprecatedAt && Date.now() > pool.deprecatedAt) {
+    throw new Error(`The lending pool for coinType ${pool.suiCoinType} has been deprecated.`)
+  }
+
+  // Handle SUI gas coin deposits
+  if (
+    normalizeCoinType(pool.suiCoinType) === normalizeCoinType('0x2::sui::SUI') &&
+    typeof coinObject === 'object' &&
+    coinObject?.$kind === 'GasCoin'
+  ) {
+    if (!options?.amount) {
+      throw new Error('Amount is required for sui coin')
+    }
+    coinObject = tx.splitCoins(coinObject, [options.amount])
+  }
+
+  // Determine deposit amount
+  let depositAmount: TransactionResult
+
+  if (typeof options?.amount !== 'undefined') {
+    depositAmount = parseTxValue(options.amount, tx.pure.u64)
+  } else {
+    depositAmount = tx.moveCall({
+      target: '0x2::coin::value',
+      arguments: [parseTxValue(coinObject as any, tx.object)],
+      typeArguments: [pool.suiCoinType]
+    })
+  }
+
+  // Build deposit transaction based on account capability
+  if (options?.accountCap) {
+    tx.moveCall({
+      target: `${config.package}::incentive_v3::deposit_with_account_cap`,
+      arguments: [
+        tx.object('0x06'),
+        tx.object(config.storage),
+        tx.object(pool.contract.pool),
+        tx.pure.u8(pool.id),
+        parseTxValue(coinObject, tx.object),
+        tx.object(config.incentiveV2),
+        tx.object(config.incentiveV3),
+        parseTxValue(options.accountCap, tx.object)
+      ],
+      typeArguments: [pool.suiCoinType]
+    })
+  } else {
+    tx.moveCall({
+      target: `${config.package}::incentive_v3::entry_deposit`,
+      arguments: [
+        tx.object('0x06'),
+        tx.object(config.storage),
+        tx.object(pool.contract.pool),
+        tx.pure.u8(pool.id),
+        parseTxValue(coinObject, tx.object),
+        depositAmount,
+        tx.object(config.incentiveV2),
+        tx.object(config.incentiveV3)
+      ],
+      typeArguments: [pool.suiCoinType]
+    })
+  }
+
+  // refresh stake for sui pool to balance the stake after deposit
+  if (config.version === 2 && pool.token.symbol === 'SUI' && env === 'prod' && market === 'main') {
+    tx.moveCall({
+      target: `${config.package}::pool::refresh_stake`,
+      arguments: [tx.object(pool.contract.pool), tx.object('0x05')]
+    })
+  }
+
+  return tx
+}
+
+/**
+ * Builds a withdraw transaction for a lending pool
+ *
+ * Constructs and adds withdrawal operations to a transaction object.
+ * This function supports standard withdrawal and withdrawal using account capability.
+ *
+ * @param tx - The transaction builder to append operations to
+ * @param identifier - Asset identifier for the pool
+ * @param amount - Amount to withdraw
+ * @param options - Optional parameters including environment and account capability
+ * @returns Transaction result representing the withdrawn coins
+ */
+export async function withdrawCoinPTB(
+  tx: Transaction,
+  identifier: AssetIdentifier,
+  amount: number | TransactionResult,
+  options?: Partial<EnvOption & AccountCapOption & MarketOption & ServiceOption>
+): Promise<SingleCoinTransactionResult> {
+  const config = await getConfig({
+    ...options,
+    cacheTime: DEFAULT_CACHE_TIME
+  })
+  const pool = await getPool(identifier, options)
+
+  const withdrawAmount = parseTxValue(amount, tx.pure.u64)
+
+  let withdrawBalance
+
+  if (config.version === 1) {
+    // Build withdraw transaction based on account capability
+    if (options?.accountCap) {
+      const [ret] = tx.moveCall({
+        target: `${config.package}::incentive_v3::withdraw_with_account_cap`,
+        arguments: [
+          tx.object('0x06'),
+          tx.object(config.priceOracle),
+          tx.object(config.storage),
+          tx.object(pool.contract.pool),
+          tx.pure.u8(pool.id),
+          withdrawAmount,
+          tx.object(config.incentiveV2),
+          tx.object(config.incentiveV3),
+          parseTxValue(options.accountCap, tx.object)
+        ],
+        typeArguments: [pool.suiCoinType]
+      })
+      withdrawBalance = ret
+    } else {
+      const [ret] = tx.moveCall({
+        target: `${config.package}::incentive_v3::withdraw`,
+        arguments: [
+          tx.object('0x06'),
+          tx.object(config.priceOracle),
+          tx.object(config.storage),
+          tx.object(pool.contract.pool),
+          tx.pure.u8(pool.id),
+          withdrawAmount,
+          tx.object(config.incentiveV2),
+          tx.object(config.incentiveV3)
+        ],
+        typeArguments: [pool.suiCoinType]
+      })
+      withdrawBalance = ret
+    }
+  } else {
+    // Build withdraw transaction based on account capability
+    if (options?.accountCap) {
+      const [ret] = tx.moveCall({
+        target: `${config.package}::incentive_v3::withdraw_with_account_cap_v2`,
+        arguments: [
+          tx.object('0x06'),
+          tx.object(config.priceOracle),
+          tx.object(config.storage),
+          tx.object(pool.contract.pool),
+          tx.pure.u8(pool.id),
+          withdrawAmount,
+          tx.object(config.incentiveV2),
+          tx.object(config.incentiveV3),
+          parseTxValue(options.accountCap, tx.object),
+          tx.object('0x05')
+        ],
+        typeArguments: [pool.suiCoinType]
+      })
+      withdrawBalance = ret
+    } else {
+      const [ret] = tx.moveCall({
+        target: `${config.package}::incentive_v3::withdraw_v2`,
+        arguments: [
+          tx.object('0x06'),
+          tx.object(config.priceOracle),
+          tx.object(config.storage),
+          tx.object(pool.contract.pool),
+          tx.pure.u8(pool.id),
+          withdrawAmount,
+          tx.object(config.incentiveV2),
+          tx.object(config.incentiveV3),
+          tx.object('0x05')
+        ],
+        typeArguments: [pool.suiCoinType]
+      })
+      withdrawBalance = ret
+    }
+  }
+
+  const withdrawCoin = tx.moveCall({
+    target: `0x2::coin::from_balance`,
+    arguments: [withdrawBalance],
+    typeArguments: [pool.suiCoinType]
+  })
+
+  return withdrawCoin as SingleCoinTransactionResult
+}
+
+export async function borrowCoinPTB(
+  tx: Transaction,
+  identifier: AssetIdentifier,
+  amount: number | TransactionResult,
+  options?: Partial<EnvOption & AccountCapOption & MarketOption & ServiceOption>
+): Promise<SingleCoinTransactionResult> {
+  const config = await getConfig({
+    ...options,
+    cacheTime: DEFAULT_CACHE_TIME
+  })
+  const pool = await getPool(identifier, options)
+
+  if (pool?.deprecatedAt && Date.now() > pool.deprecatedAt) {
+    throw new Error(`The lending pool for coinType ${pool.suiCoinType} has been deprecated.`)
+  }
+
+  const borrowAmount = parseTxValue(amount, tx.pure.u64)
+
+  let borrowBalance
+
+  if (config.version === 1) {
+    if (!options?.accountCap) {
+      const [ret] = tx.moveCall({
+        target: `${config.package}::incentive_v3::borrow`,
+        arguments: [
+          tx.object('0x06'),
+          tx.object(config.priceOracle),
+          tx.object(config.storage),
+          tx.object(pool.contract.pool),
+          tx.pure.u8(pool.id),
+          borrowAmount,
+          tx.object(config.incentiveV2),
+          tx.object(config.incentiveV3)
+        ],
+        typeArguments: [pool.suiCoinType]
+      })
+      borrowBalance = ret
+    } else {
+      const [ret] = tx.moveCall({
+        target: `${config.package}::incentive_v3::borrow_with_account_cap`,
+        arguments: [
+          tx.object('0x06'),
+          tx.object(config.priceOracle),
+          tx.object(config.storage),
+          tx.object(pool.contract.pool),
+          tx.pure.u8(pool.id),
+          borrowAmount,
+          tx.object(config.incentiveV2),
+          tx.object(config.incentiveV3),
+          parseTxValue(options.accountCap, tx.object)
+        ],
+        typeArguments: [pool.suiCoinType]
+      })
+      borrowBalance = ret
+    }
+  } else {
+    if (!options?.accountCap) {
+      const [ret] = tx.moveCall({
+        target: `${config.package}::incentive_v3::borrow_v2`,
+        arguments: [
+          tx.object('0x06'),
+          tx.object(config.priceOracle),
+          tx.object(config.storage),
+          tx.object(pool.contract.pool),
+          tx.pure.u8(pool.id),
+          borrowAmount,
+          tx.object(config.incentiveV2),
+          tx.object(config.incentiveV3),
+          tx.object('0x05')
+        ],
+        typeArguments: [pool.suiCoinType]
+      })
+      borrowBalance = ret
+    } else {
+      const [ret] = tx.moveCall({
+        target: `${config.package}::incentive_v3::borrow_with_account_cap_v2`,
+        arguments: [
+          tx.object('0x06'),
+          tx.object(config.priceOracle),
+          tx.object(config.storage),
+          tx.object(pool.contract.pool),
+          tx.pure.u8(pool.id),
+          borrowAmount,
+          tx.object(config.incentiveV2),
+          tx.object(config.incentiveV3),
+          parseTxValue(options.accountCap, tx.object),
+          tx.object('0x05')
+        ],
+        typeArguments: [pool.suiCoinType]
+      })
+      borrowBalance = ret
+    }
+  }
+
+  const coin = tx.moveCall({
+    target: `0x2::coin::from_balance`,
+    arguments: [tx.object(borrowBalance)],
+    typeArguments: [pool.suiCoinType]
+  })
+
+  return coin as SingleCoinTransactionResult
+}
+
+/**
+ * Builds a repay transaction for a lending pool debt
+ *
+ * Constructs and adds repayment operations to an existing transaction object.
+ * This function handles loan repayments, supporting both standard user
+ * repayments and privileged operations via account capabilities.
+ *
+ *
+ * @param tx - The transaction builder to append repayment operations to
+ * @param identifier - Unique identifier for the lending pool asset (e.g., "USDC", "SUI")
+ * @param coinObject - The coin object to use for repayment, or GasCoin for SUI payments
+ * @param options - Configuration options for the repayment
+ *   - `amount` - Specific amount to repay (required for SUI gas coin, otherwise uses value of specified coinObject)
+ *   - `accountCap` - Optional account capability object for privileged repayments
+ *   - `env` - Environment configuration
+ *   - `cacheTime` - Cache duration for configuration data
+ *
+ * @returns Promise<Transaction | TransactionResult> - The modified transaction object with repayment operations added
+ *
+ * @throws {Error} When amount is not provided for SUI gas coin repayments
+ * @throws Will throw if pool doesn't exist or repayment validation fails
+ */
+export async function repayCoinPTB(
+  tx: Transaction,
+  identifier: AssetIdentifier,
+  coinObject: CoinObject,
+  options?: Partial<
+    EnvOption &
+    AccountCapOption &
+    ServiceOption &
+    MarketOption & {
+      amount: number | TransactionResult
+    }
+  >
+): Promise<Transaction | TransactionResult> {
+  const config = await getConfig({
+    ...options,
+    cacheTime: DEFAULT_CACHE_TIME
+  })
+  const pool = await getPool(identifier, options)
+  if (
+    normalizeCoinType(pool.suiCoinType) === normalizeCoinType('0x2::sui::SUI') &&
+    typeof coinObject === 'object' &&
+    coinObject?.$kind === 'GasCoin'
+  ) {
+    if (!options?.amount) {
+      throw new Error('Amount is required for sui coin')
+    }
+    coinObject = tx.splitCoins(coinObject, [options.amount])
+  }
+
+  let repayAmount: TransactionResult
+
+  if (typeof options?.amount !== 'undefined') {
+    repayAmount = parseTxValue(options.amount, tx.pure.u64)
+  } else {
+    repayAmount = tx.moveCall({
+      target: '0x2::coin::value',
+      arguments: [parseTxValue(coinObject as any, tx.object)],
+      typeArguments: [pool.suiCoinType]
+    })
+  }
+
+  if (options?.accountCap) {
+    const [ret] = tx.moveCall({
+      target: `${config.package}::incentive_v3::repay_with_account_cap`,
+      arguments: [
+        tx.object('0x06'),
+        tx.object(config.priceOracle),
+        tx.object(config.storage),
+        tx.object(pool.contract.pool),
+        tx.pure.u8(pool.id),
+        parseTxValue(coinObject, tx.object),
+        tx.object(config.incentiveV2),
+        tx.object(config.incentiveV3),
+        parseTxValue(options.accountCap, tx.object)
+      ],
+      typeArguments: [pool.suiCoinType]
+    })
+    const coin = tx.moveCall({
+      target: `0x2::coin::from_balance`,
+      arguments: [ret],
+      typeArguments: [pool.suiCoinType]
+    })
+    return coin
+  } else {
+    tx.moveCall({
+      target: `${config.package}::incentive_v3::entry_repay`,
+      arguments: [
+        tx.object('0x06'),
+        tx.object(config.priceOracle),
+        tx.object(config.storage),
+        tx.object(pool.contract.pool),
+        tx.pure.u8(pool.id),
+        parseTxValue(coinObject, tx.object),
+        repayAmount,
+        tx.object(config.incentiveV2),
+        tx.object(config.incentiveV3)
+      ],
+      typeArguments: [pool.suiCoinType]
+    })
+    return tx
+  }
+}
+
+/**
+ * Fetches the current borrow fee rate
+ *
+ * This function can retrieve borrow fee rates in two ways:
+ * - If `address` and `asset` are provided, it calculates the specific borrow fee rate
+ *   for a given address and asset by calling the on-chain `get_borrow_fee_v2` function
+ * - Otherwise, it returns the global borrow fee rate from the incentive V3 contract
+ *
+ * @param options - Optional configuration options
+ *   - `address` - User address to calculate specific borrow fee (requires `asset` to be set)
+ *   - `asset` - Asset identifier to calculate specific borrow fee (requires `address` to be set)
+ *   - `env` - Environment setting ('dev' or 'prod')
+ *   - `client` - Sui client instance for on-chain queries
+ *   - `cacheTime` - Cache expiration time in milliseconds
+ *   - `disableCache` - Whether to disable caching for this operation
+ * @returns Promise<number> - Borrow fee rate as a decimal number
+ *   - When `address` and `asset` are provided: returns the specific fee rate (divided by 10000)
+ *   - Otherwise: returns the global fee rate (divided by 100)
+ */
+export const getBorrowFee = withCache(
+  withSingleton(
+    async (
+      options?: Partial<EnvOption & CacheOption & BorrowFeeOption & SuiClientOption & MarketOption>
+    ): Promise<number> => {
+      const config = await getConfig({
+        ...options
+      })
+      const client = options?.client ?? suiClient
+      if (options?.address && typeof options?.asset !== 'undefined') {
+        try {
+          const pool = await getPool(options.asset, options)
+          const tx = new Transaction()
+          tx.moveCall({
+            target: `${config.package}::incentive_v3::get_borrow_fee_v2`,
+            arguments: [
+              tx.object(config.incentiveV3),
+              tx.pure.address(options.address),
+              tx.pure.u8(pool.id),
+              tx.pure.u64(10000)
+            ],
+            typeArguments: []
+          })
+          const result = await devInspectTransaction(client, {
+            transactionBlock: tx,
+            sender: options.address
+          })
+          const res = parseDevInspectResult<number[]>(result, [bcs.u64()])
+          return (Number(res[0]) || 0) / 100
+        } catch (error) {
+          // Per-user borrow-fee query failed -> fall back to the global rate below
+          // (semantic change; marked explicitly for traceability, fallback behavior unchanged).
+          console.error(
+            '[lending] getBorrowFee per-user query failed, falling back to global rate:',
+            error
+          )
+        }
+      }
+      const rawData: any = await getSuiObject(client, {
+        id: config.incentiveV3,
+        options: { showType: true, showOwner: true, showContent: true }
+      })
+      const borrowFee = rawData.data.content.fields.borrow_fee_rate
+      return Number(borrowFee) / 100
+    }
+  )
+)

@@ -19,3 +19,7 @@ PR #579 (RCN-00) already restored stacked QPR-01/02/03, GPR-01/02/03 and UXE doc
 
 ## Principle
 Research graph remains broad; real capital hubs are separately qualified. Borrow-capacity observation is not transaction authority. R-02 has **no signing, no sending, no account creation, no borrowing**; R-03/R-05 later cover protocol builders and full exact simulation.
+
+
+## 2026-10-08 offline-first source audit update
+This directory now includes `offline/`: four locally readable protocol/architecture dossiers plus source ledger, verified upstream Git commit/version pins, 27-option provider selector and dependency-free offline checker. It does **not** mirror every upstream web page or certify the current chain state. Codex must be able to complete its design work and deterministic negative tests with zero documentation web access, and must report missing on-chain/SDK evidence honestly.

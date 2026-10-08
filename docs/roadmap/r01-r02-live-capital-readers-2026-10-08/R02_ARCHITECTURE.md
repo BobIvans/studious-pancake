@@ -72,3 +72,9 @@ Before any lender enters preferred shortlist: (a) must have proven no *new lende
 - one bounded live observation per core provider if source access works; if not, zero positive edges + recorded authentic network/auth blocker.
 - deterministic replay fixture for each adapter, tested with network disabled.
 - end-of-R-02 report with current SHA, exact tests, per-provider capabilities, account-init verdict, fee source, slots/checkpoints and no live authority.
+
+
+## R02 offline-first provider expansion boundary
+Read `offline/README.md` and locally pinned provider dossiers before touching code. All 27 catalog IDs are candidate *possibilities*, not qualified independent lenders. `offline/PROVIDER_ECONOMICS_AND_SELECTOR.md` supplies decision rules, including `underlying_capital_resource_id` dedup for pool flash swaps and InstaFlash underlying routing. Implement only Jupiter/Kamino/NAVI/Project0 real capital readers in R02; broader EVM pool-flash routing belongs to separately approved R07 and requires a deployed callback contract.
+
+Critical Kamino source-confirmed detail: klend mainnet program and flash borrow/repay instruction accounts have no obligation account, repay takes borrow_instruction_index:u8, and fee can be levied via reserve origination fee. Do not assume zero. NAVI old navi-sdk is legacy; modular lending SDK is required. Scallop read-only ScallopQuery v5.4.1 exists but ScallopClient signing defaults make it forbidden in R02.

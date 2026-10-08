@@ -30,3 +30,7 @@ R02-0: select official versions and validate owner identities; no live requests 
 **PASS** only when 4 readers have pinned source and strict schema tests, at least one independently verified actual on-chain snapshot per available provider (or truthful typed negative due to access), reproducible offline replay, cost/account classification, and successful existing QPR/Graph tests. Unavailable external connectivity does NOT count as positive-live PASS; mark BLOCKED_LIVE_READ honestly and keep readers opt-in.
 
 After R-02 acceptance: R-03 protocol builders -> R-04 selector -> R-05 full atomic simulation -> R-06 repeatable paper campaign -> R-08 explicit promotion review. Even successful simulation is not profit/production proof.
+
+
+## Offline Codex acceptance (mandatory even with blocked web)
+Run `python docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/verify_bundle.py` before implementation. It checks 27 provider entries vs source ledger, enabled=false, source pins, mandatory signatures and local reference files with **no network**. This is a documentation-consistency check, NOT protocol live-chain validation. To claim R02 read-qualified for any lender still requires actual pinned SDK/IDL decoder and governed chain state plus replay. If no internet/RPC: return typed BLOCKED_LIVE_READ; this must not be called a successful live snapshot.

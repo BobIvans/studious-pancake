@@ -23,3 +23,18 @@ Publish each scoped code PR on main with exact branch/HEAD, changed paths, code-
 
 ## Full verification
 Run focused existing capital graph/lending/Jupiter/Kamino/QPR/DIN/Sui tests, then python scripts/verify_repo.py; report real run, not #579/#582 historical test totals.
+
+
+## Offline documentation guarantee and additional provider options (2026-10-08 update)
+
+**READ LOCALLY FIRST**: `offline/README.md`, `offline/SOURCE_LEDGER.json`, `offline/CONTRACT_FACTS.json`, all three `offline/*_PROTOCOL_DOSSIERS.md`, `offline/PROVIDER_ECONOMICS_AND_SELECTOR.md` and `offline/GAPS_AND_STOP_CONDITIONS.md`. Run `python docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/verify_bundle.py`. This script uses only standard Python and makes no web requests.
+
+This package now catalogs **27 distinct IDs**, but not 27 independent qualified flash lenders: some are pool-specific flash-swaps, one is an aggregator, one is a standard, one is rent-only, and others are unverified/blocked. Strong options newly found: Euler EVault, Uniswap V2 flash swaps, PancakeSwap V3, Silo flash loans, Balancer V2, Instadapp FLA routing (not independent). Separate source review required for each later implementation.
+
+The OFFLINE materials are an original primary-source synthesis, not complete mirrored SDK and IDL files. If code cannot be implemented from existing repo decoders, cached verified SDK version and local dossiers, stop that provider with MISSING_PINNED_ABI or NETWORK_STATE_UNAVAILABLE; **never fabricate ABI layouts, live capacities, fee quotes or 'account-free' status**.
+
+**Only R-02 four readers first**: Jupiter, Kamino, NAVI and pre-existing-account-only P0. The expanded catalog is an **R-07 optional provider selection backlog**, not scope creep before R-02 verified snapshots and exact simulation. New provider contracts/reusable EVM callback deployment must not be attempted during R-02.
+
+For Sui, JSON-RPC retired in 2026; use existing DIN-02 governed gRPC/GraphQL readers. Kamino flash has an official separately pinned instruction flow with no obligation account in flash instruction accounts, but fees may apply. Jupiter docs no position initialization; Solana ATA/network costs still apply. Scallop `ScallopClient` may sign/send by default; read via `ScallopQuery` only. Save/Solend historical flash interface remains unqualified.
+
+No signing, sending, account creation, live flash borrowing, or production deployment in any R-02 document/test.

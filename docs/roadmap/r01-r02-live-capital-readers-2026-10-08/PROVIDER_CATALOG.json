@@ -1,14 +1,16 @@
 {
-  "schema_version": "r02.flashloan-provider-selection.v1",
+  "schema_version": "r02.flashloan-provider-selection.v2",
   "audited_date": "2026-10-08",
   "source_main_sha": "103c13795f1d2ac1fa88cf02bba1e9bb2e2477cf",
-  "status": "RND_ONLY_UNVERIFIED_LIVE",
+  "status": "RND_ONLY_27_OPTIONS_ALL_DISABLED_NO_LIVE_CAPITAL",
   "default_policy": {
     "no_new_lender_position": true,
     "sign_enabled": false,
     "send_enabled": false,
     "default_enabled": false,
-    "allow_unknown_setup_as_zero": false
+    "allow_unknown_setup_as_zero": false,
+    "prevent_provider_router_double_count": true,
+    "execution_authority": "NONE"
   },
   "entries": [
     {
@@ -21,19 +23,27 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://developers.jup.ag/docs/lend/flashloan/execute"
+      "official_source": "https://developers.jup.ag/docs/lend/flashloan/execute",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "kamino",
       "chain": "solana",
       "priority": "P0",
-      "lender_position_status": "LIKELY_NO_OBLIGATION_FLASH_IX_VERIFY_IDL",
-      "flash_fee_state": "DYNAMIC_ONCHAIN",
+      "lender_position_status": "NO_OBLIGATION_ACCOUNT_IN_OFFICIAL_FLASH_IX_ACCOUNTS_VERIFY_LIVE",
+      "flash_fee_state": "RESERVE_ORIGINATION_FEE_MAY_APPLY_READ_STATE",
       "receiver_contract_deployment_required": false,
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://github.com/Kamino-Finance/klend"
+      "official_source": "https://github.com/Kamino-Finance/klend",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "navi",
@@ -45,19 +55,28 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://sdk.naviprotocol.io/lending/flashloan"
+      "official_source": "https://sdk.naviprotocol.io/lending/flashloan",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY",
+      "sdk_use": "@naviprotocol/lending_NOT_LEGACY_navi-sdk"
     },
     {
       "id": "project0",
       "chain": "solana",
       "priority": "P1_EXISTING_ACCOUNT",
-      "lender_position_status": "EXISTING_MARGINFI_ACCOUNT_REQUIRED",
+      "lender_position_status": "EXISTING_MARGINFI_ACCOUNT_REQUIRED_DO_NOT_CREATE",
       "flash_fee_state": "DOCS_ZERO_VERIFY_ONCHAIN",
       "receiver_contract_deployment_required": false,
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://docs.marginfi.com/typescript-sdk/getting-started"
+      "official_source": "https://docs.marginfi.com/typescript-sdk/getting-started",
+      "liquidity_class": "INDEPENDENT_LENDER_EXISTING_POSITION",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "deepbook",
@@ -69,19 +88,28 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://docs.sui.io/onchain-finance/deepbook/deepbookv3-sdk/flash-loans"
+      "official_source": "https://docs.sui.io/onchain-finance/deepbook/deepbookv3-sdk/flash-loans",
+      "liquidity_class": "SHARED_TRADING_POOL_FLASH",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "scallop",
       "chain": "sui",
       "priority": "P2",
       "lender_position_status": "UNVERIFIED",
-      "flash_fee_state": "DOCS_0_1_PERCENT_VERIFY_ONCHAIN",
+      "flash_fee_state": "DOCS_0_1_PERCENT_VERIFY_LIVE",
       "receiver_contract_deployment_required": false,
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://docs.scallop.io/protocol/fee"
+      "official_source": "https://docs.scallop.io/protocol/fee",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY",
+      "sdk_use": "@scallop-io/sui-scallop-sdk@5.4.1_QUERY_ONLY"
     },
     {
       "id": "cetus",
@@ -93,7 +121,11 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://cetus-1.gitbook.io/cetus-developer-docs/"
+      "official_source": "https://cetus-1.gitbook.io/cetus-developer-docs/",
+      "liquidity_class": "POOL_FLASH_SWAP_UNVERIFIED",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "RESEARCH_ONLY",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "bucket",
@@ -105,7 +137,11 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://docs.bucketprotocol.io/mechanism/usdb-peg"
+      "official_source": "https://docs.bucketprotocol.io/mechanism/usdb-peg",
+      "liquidity_class": "SYNTHETIC_MINT_USDB",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "morpho_blue",
@@ -117,7 +153,11 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://docs.morpho.org/developers/contracts/blue/"
+      "official_source": "https://docs.morpho.org/developers/contracts/blue/",
+      "liquidity_class": "SINGLETON_LENDER",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "aave_v3",
@@ -129,7 +169,11 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://aave.com/docs/aave-v3/guides/flash-loans"
+      "official_source": "https://aave.com/docs/aave-v3/guides/flash-loans",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "balancer_v3",
@@ -141,7 +185,11 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/Vault.sol"
+      "official_source": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/Vault.sol",
+      "liquidity_class": "VAULT_FLASH_ACCOUNTING",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "dodo",
@@ -153,7 +201,11 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://github.com/DODOEX"
+      "official_source": "https://github.com/DODOEX",
+      "liquidity_class": "POOL_FLASH_SWAP",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "uniswap_v3",
@@ -165,19 +217,27 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://developers.uniswap.org/docs/protocols/v3/guides/flash-swaps/getting-started"
+      "official_source": "https://developers.uniswap.org/docs/protocols/v3/guides/flash-swaps/getting-started",
+      "liquidity_class": "POOL_FLASH_SWAP",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "PRIMARY_DOC_REVIEW",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "save_solend",
       "chain": "solana",
-      "priority": "RESEARCH",
+      "priority": "BLOCKED_PENDING_DEPLOYED_ABI",
       "lender_position_status": "UNVERIFIED",
-      "flash_fee_state": "VERIFY_RESERVE",
+      "flash_fee_state": "NOT_QUALIFIED",
       "receiver_contract_deployment_required": false,
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://docs.save.finance/architecture/user-instructions"
+      "official_source": "https://docs.save.finance/architecture/user-instructions",
+      "liquidity_class": "BLOCKED_UNVERIFIED",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "RESEARCH_ONLY",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "erc3156_implementations",
@@ -189,7 +249,11 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://eips.ethereum.org/EIPS/eip-3156"
+      "official_source": "https://eips.ethereum.org/EIPS/eip-3156",
+      "liquidity_class": "STANDARD_NOT_LENDER",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "RESEARCH_ONLY",
+      "executability": "NONE_R02_READ_ONLY"
     },
     {
       "id": "slumlord_rent",
@@ -201,7 +265,212 @@
       "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
       "enabled": false,
       "live_capacity_verified": false,
-      "official_source": "https://github.com/BobIvans/studious-pancake/blob/main/src/lending/slumlord.py"
+      "official_source": "https://github.com/BobIvans/studious-pancake/blob/main/src/lending/slumlord.py",
+      "liquidity_class": "RENT_ONLY_NOT_CAPITAL",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "source_grade": "RESEARCH_ONLY",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "euler_evk",
+      "chain": "evm",
+      "priority": "P1_LATER",
+      "lender_position_status": "NO_LENDER_POSITION_CALLBACK_CONTRACT_REQUIRED",
+      "flash_fee_state": "CORE_ZERO_VAULT_HOOK_DYNAMIC",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://docs.euler.finance/build/evk/interacting-with-vaults/",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "source_grade": "DOC_AND_SOURCE",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "uniswap_v2_flash_swap",
+      "chain": "evm",
+      "priority": "P1_LATER",
+      "lender_position_status": "NO_LENDER_POSITION_CALLBACK_CONTRACT_REQUIRED",
+      "flash_fee_state": "POOL_SWAP_FEE_IN_INVARIANT",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://developers.uniswap.org/docs/protocols/v2/concepts/flash-swap",
+      "liquidity_class": "POOL_FLASH_SWAP",
+      "source_grade": "DOC",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "pancakeswap_v3",
+      "chain": "evm",
+      "priority": "P2",
+      "lender_position_status": "NO_LENDER_POSITION_CALLBACK_CONTRACT_REQUIRED",
+      "flash_fee_state": "POOL_FEE_CALLBACK",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://github.com/pancakeswap/pancake-developer/blob/master/docs/pages/contracts/v3/pancakev3pool.md",
+      "liquidity_class": "POOL_FLASH_SWAP",
+      "source_grade": "OFFICIAL_SOURCE_DOC",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "balancer_v2",
+      "chain": "evm",
+      "priority": "P2",
+      "lender_position_status": "NO_LENDER_POSITION_CALLBACK_CONTRACT_REQUIRED",
+      "flash_fee_state": "CURRENT_PROTOCOL_FEE_UNKNOWN",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://github.com/balancer/docs-developers/blob/main/resources/flash-loans.md",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "source_grade": "OFFICIAL_SOURCE_DOC",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "silo_v2",
+      "chain": "evm",
+      "priority": "P2",
+      "lender_position_status": "NO_LENDER_POSITION_CALLBACK_CONTRACT_REQUIRED",
+      "flash_fee_state": "VAULT_SPECIFIC_FLASHLOAN_FEE",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://docs.silo.finance/docs/developers/dev-tutorials/hooks/",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "source_grade": "OFFICIAL_DOC",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "spark_lend",
+      "chain": "evm",
+      "priority": "RESEARCH",
+      "lender_position_status": "NO_LENDER_POSITION_CALLBACK_CONTRACT_REQUIRED",
+      "flash_fee_state": "DYNAMIC_ONCHAIN_PREMIUM",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://docs.spark.fi/",
+      "liquidity_class": "INDEPENDENT_LENDER",
+      "source_grade": "OLDER_DEPLOYMENT_NOT_CURRENT",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "instadapp_fla",
+      "chain": "evm",
+      "priority": "P2_AGGREGATOR",
+      "lender_position_status": "NO_LENDER_POSITION_CALLBACK_CONTRACT_REQUIRED",
+      "flash_fee_state": "UNDERLYING_ROUTE_DYNAMIC_FEE",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://docs.instadapp.io/flashloan/contracts",
+      "liquidity_class": "ROUTER_NOT_INDEPENDENT_LIQUIDITY",
+      "source_grade": "OFFICIAL_DOC",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "fluid_dex_v2_accounting",
+      "chain": "evm",
+      "priority": "RESEARCH",
+      "lender_position_status": "NOT_PROVEN_GENERAL_FLASHLOAN",
+      "flash_fee_state": "DEX_FLASH_ACCOUNTING_NOT_CAPITAL_FEE",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://docs.fluid.instadapp.io/integrate/dex-v2-swaps.html",
+      "liquidity_class": "NOT_CONFIRMED_LENDER",
+      "source_grade": "OFFICIAL_DOC_NOT_LENDER_PROOF",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "suilend",
+      "chain": "sui",
+      "priority": "RESEARCH",
+      "lender_position_status": "UNKNOWN",
+      "flash_fee_state": "UNKNOWN",
+      "receiver_contract_deployment_required": false,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://docs.suilend.fi/send/how-to-redeem-msend-and-claim-send-season-1",
+      "liquidity_class": "UNVERIFIED_PROTOCOL",
+      "source_grade": "APP_ONLY",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "pancakeswap_v2_flash_swap",
+      "chain": "evm",
+      "priority": "RESEARCH",
+      "lender_position_status": "UNVERIFIED",
+      "flash_fee_state": "POOL_FEE_VERIFY",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://docs.pancakeswap.finance/",
+      "liquidity_class": "POOL_FLASH_SWAP",
+      "source_grade": "NOT_DIRECTLY_REVIEWED",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
+    },
+    {
+      "id": "maker_dssflash",
+      "chain": "evm",
+      "priority": "RESEARCH",
+      "lender_position_status": "UNKNOWN",
+      "flash_fee_state": "MINT_PROTOCOL_FEE_VERIFY",
+      "receiver_contract_deployment_required": true,
+      "needs_token_account_or_gas": "VERIFY_BY_ROUTE",
+      "enabled": false,
+      "live_capacity_verified": false,
+      "official_source": "https://docs.makerdao.com/",
+      "liquidity_class": "SYNTHETIC_MINT_NOT_CASH",
+      "source_grade": "NOT_DIRECTLY_REVIEWED",
+      "underlying_capital_resource_id": "UNKNOWN",
+      "executability": "NONE_R02_READ_ONLY"
     }
+  ],
+  "checked_source_ledger": "offline/SOURCE_LEDGER.json",
+  "source_integrity_note": "Official docs + pinned repositories summarized locally, full ABI/source files not vendored; unknown blocks",
+  "provider_count": 27,
+  "preferred_qualification_order": [
+    "jupiter_lend",
+    "kamino",
+    "navi",
+    "project0_existing_only",
+    "deepbook"
+  ],
+  "expansion_wave": [
+    "scallop",
+    "bucket",
+    "morpho_blue",
+    "euler_evk",
+    "uniswap_v2_flash_swap",
+    "uniswap_v3",
+    "pancakeswap_v3",
+    "aave_v3",
+    "balancer_v2",
+    "balancer_v3",
+    "silo_v2",
+    "dodo",
+    "instadapp_fla"
   ]
 }

@@ -50,3 +50,17 @@ For each candidate produce separate fields:
 - Balancer Vault: https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/Vault.sol
 - Uniswap V3: https://developers.uniswap.org/docs/protocols/v3/guides/flash-swaps/getting-started
 - Save: https://docs.save.finance/architecture/user-instructions
+
+
+## New options from official source audit, do not enable by default
+- **Euler EVault**: `flashLoan(uint256,bytes)`, usually zero base flash fee; vault hooks can add cost/limits. Receiver contract needed. New viable EVM expansion candidate.
+- **Uniswap V2 flash swaps**: optimistic pool swaps, nonzero fee; callback contract needed; pool reserves shared with trading liquidity.
+- **Uniswap V3 and PancakeSwap V3 pool.flash**: explicit callback repayment fees. Callback must verify factory/pool.
+- **Balancer V2** separate from V3: traditional `Vault.flashLoan` callback, whereas Balancer V3 uses `unlock/sendTo/settle`; different ABI.
+- **Silo V2**, vault-configured `flashloanFee`, hooks may restrict eligibility.
+- **Instadapp Flashloan Aggregator**: route chooser `getBestRoutes`; must deduplicate underlying Aave/Balancer/etc. This adds a funding *route*, not new independent capital.
+- **SparkLend** separate Aave-style pool (historic zero fee is NOT current proof), **Fluid DEX V2** flash-accounting without a verified cash lender, **Suilend** user-facing flash behavior but no pinned standalone SDK — keep research-only.
+- **PancakeSwap V2** and **Maker DSSFlash** included as unverified research placeholders, not enabled providers. 
+- Save/Solend remains blocked by official docs warning. `ERC-3156` is only a standard; `Slumlord` only rent assistance.
+
+See `offline/SOURCE_LEDGER.json` for exact official links/SHAs and each confidence grade, and `offline/*_PROTOCOL_DOSSIERS.md` for self-contained integration notes. Always prioritize no new lender position, but never confuse with zero gas/ATA/receiver deployment costs.

@@ -1,0 +1,221 @@
+{
+  "schema": "r02.offline-vendor-manifest.v2",
+  "date": "2026-10-08",
+  "purpose": "offline SDK reading and codegen reference only; not an installed dependency, executable runtime, deployed ABI attestation or live evidence",
+  "reproduction": "git blob SHA1 = SHA1('blob '+content.byteLength+'\\0'+content bytes); verify SHA and byte count offline",
+  "source_policy": "MIT SDK sources only. No Kamino klend or Instadapp Fluid BSL onchain implementations are included.",
+  "project0_package_version": "2.10.0 Git source, npm registry version parity unverified",
+  "navi_package_version": "2.0.12",
+  "kamino_package_version": "13.0.2",
+  "entries": [
+    {
+      "local_path": "offline/vendor/kamino/fraction.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/classes/fraction.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/classes/fraction.ts",
+      "upstream_git_blob_sha": "0020a1293fd0bced5987b2429a6b5ed8e2f693e8",
+      "license_label": "MIT (package.json)",
+      "bytes": 5256,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/kamino/LastUpdate.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/types/LastUpdate.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/types/LastUpdate.ts",
+      "upstream_git_blob_sha": "af19618ccc48c47bb5174a3ff57a63f36b3c6149",
+      "license_label": "MIT (package.json)",
+      "bytes": 2436,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/kamino/package.json.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/package.json",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "package.json",
+      "upstream_git_blob_sha": "efce3196423cab1e81125a74a49014ad36cf6ace",
+      "license_label": "MIT (package.json)",
+      "bytes": 3879,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/kamino/Reserve.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/accounts/Reserve.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/accounts/Reserve.ts",
+      "upstream_git_blob_sha": "e4bcbb3496cab231b0f5904d20454cfc07e095f1",
+      "license_label": "MIT (package.json)",
+      "bytes": 8797,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/kamino/ReserveCollateral.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/types/ReserveCollateral.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/types/ReserveCollateral.ts",
+      "upstream_git_blob_sha": "f2bd33ad71ec6d6a84d02d27f7b515bde68b3ee8",
+      "license_label": "MIT (package.json)",
+      "bytes": 2787,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/kamino/ReserveConfig.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/types/ReserveConfig.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/types/ReserveConfig.ts",
+      "upstream_git_blob_sha": "9925e64863b94c36da3f4a73832436709c51ca7e",
+      "license_label": "MIT (package.json)",
+      "bytes": 20121,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/kamino/ReserveFees.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/types/ReserveFees.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/types/ReserveFees.ts",
+      "upstream_git_blob_sha": "54358dac24be146a1f7b310d2851dd7b61d69789",
+      "license_label": "MIT (package.json)",
+      "bytes": 2058,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/kamino/ReserveLiquidity.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/types/ReserveLiquidity.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/types/ReserveLiquidity.ts",
+      "upstream_git_blob_sha": "c2b2b0d12d434b0d62625376aa50cbe00ea78ad8",
+      "license_label": "MIT (package.json)",
+      "bytes": 9216,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/kamino/WithdrawQueue.ts.txt",
+      "origin": "https://github.com/Kamino-Finance/klend-sdk/blob/3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8/src/@codegen/klend/types/WithdrawQueue.ts",
+      "upstream_repository": "Kamino-Finance/klend-sdk",
+      "upstream_commit_sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "upstream_path": "src/@codegen/klend/types/WithdrawQueue.ts",
+      "upstream_git_blob_sha": "90fad622b5900e29a34ab128d42212ac87e1588e",
+      "license_label": "MIT (package.json)",
+      "bytes": 2837,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/navi/config.ts.txt",
+      "origin": "https://github.com/naviprotocol/naviprotocol-monorepo/blob/40d971c8ebd46d2af6c6210c6aaf1521ebefda9b/packages/lending/src/config.ts",
+      "upstream_repository": "naviprotocol/naviprotocol-monorepo",
+      "upstream_commit_sha": "40d971c8ebd46d2af6c6210c6aaf1521ebefda9b",
+      "upstream_path": "packages/lending/src/config.ts",
+      "upstream_git_blob_sha": "714be41fcf342319da50d93b4d7933fad8e0817d",
+      "license_label": "MIT",
+      "bytes": 2224,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/navi/flashloan.ts.txt",
+      "origin": "https://github.com/naviprotocol/naviprotocol-monorepo/blob/40d971c8ebd46d2af6c6210c6aaf1521ebefda9b/packages/lending/src/flashloan.ts",
+      "upstream_repository": "naviprotocol/naviprotocol-monorepo",
+      "upstream_commit_sha": "40d971c8ebd46d2af6c6210c6aaf1521ebefda9b",
+      "upstream_path": "packages/lending/src/flashloan.ts",
+      "upstream_git_blob_sha": "fdb4c0cdb9f8a81c52904f55eaa01e74af0c3982",
+      "license_label": "MIT",
+      "bytes": 6492,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/navi/LICENSE.txt",
+      "origin": "https://github.com/naviprotocol/naviprotocol-monorepo/blob/40d971c8ebd46d2af6c6210c6aaf1521ebefda9b/LICENSE",
+      "upstream_repository": "naviprotocol/naviprotocol-monorepo",
+      "upstream_commit_sha": "40d971c8ebd46d2af6c6210c6aaf1521ebefda9b",
+      "upstream_path": "LICENSE",
+      "upstream_git_blob_sha": "feb00aadb1e21c510b3c5ae877fc0f2dada769e7",
+      "license_label": "MIT",
+      "bytes": 1061,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/navi/package.json.txt",
+      "origin": "https://github.com/naviprotocol/naviprotocol-monorepo/blob/40d971c8ebd46d2af6c6210c6aaf1521ebefda9b/packages/lending/package.json",
+      "upstream_repository": "naviprotocol/naviprotocol-monorepo",
+      "upstream_commit_sha": "40d971c8ebd46d2af6c6210c6aaf1521ebefda9b",
+      "upstream_path": "packages/lending/package.json",
+      "upstream_git_blob_sha": "ae7818ad936c8b19099f650bd4bb795e48c12c13",
+      "license_label": "MIT",
+      "bytes": 1809,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/navi/pool.ts.txt",
+      "origin": "https://github.com/naviprotocol/naviprotocol-monorepo/blob/40d971c8ebd46d2af6c6210c6aaf1521ebefda9b/packages/lending/src/pool.ts",
+      "upstream_repository": "naviprotocol/naviprotocol-monorepo",
+      "upstream_commit_sha": "40d971c8ebd46d2af6c6210c6aaf1521ebefda9b",
+      "upstream_path": "packages/lending/src/pool.ts",
+      "upstream_git_blob_sha": "00803355077b90e01484fa31dba42dc38513f629",
+      "license_label": "MIT",
+      "bytes": 25002,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/navi/types.ts.txt",
+      "origin": "https://github.com/naviprotocol/naviprotocol-monorepo/blob/40d971c8ebd46d2af6c6210c6aaf1521ebefda9b/packages/lending/src/types.ts",
+      "upstream_repository": "naviprotocol/naviprotocol-monorepo",
+      "upstream_commit_sha": "40d971c8ebd46d2af6c6210c6aaf1521ebefda9b",
+      "upstream_path": "packages/lending/src/types.ts",
+      "upstream_git_blob_sha": "a67a742d8a6d41e2e3960f50253f43a6ae2fc573",
+      "license_label": "MIT",
+      "bytes": 14628,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/p0/client.ts.txt",
+      "origin": "https://github.com/0dotxyz/p0-ts-sdk/blob/8a8353bb662459e5957b0cbbd2121f4fddb37fc3/src/models/client.ts",
+      "upstream_repository": "0dotxyz/p0-ts-sdk",
+      "upstream_commit_sha": "8a8353bb662459e5957b0cbbd2121f4fddb37fc3",
+      "upstream_path": "src/models/client.ts",
+      "upstream_git_blob_sha": "7d9952aef4b6183a8234eff0701ef04fbfced1bd",
+      "license_label": "MIT",
+      "bytes": 17491,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/p0/flash-loan.ts.txt",
+      "origin": "https://github.com/0dotxyz/p0-ts-sdk/blob/8a8353bb662459e5957b0cbbd2121f4fddb37fc3/src/services/account/actions/flash-loan.ts",
+      "upstream_repository": "0dotxyz/p0-ts-sdk",
+      "upstream_commit_sha": "8a8353bb662459e5957b0cbbd2121f4fddb37fc3",
+      "upstream_path": "src/services/account/actions/flash-loan.ts",
+      "upstream_git_blob_sha": "74ddb79ac9157570f967530cfae91acaa1bde5f5",
+      "license_label": "MIT",
+      "bytes": 3853,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/p0/LICENSE.txt",
+      "origin": "https://github.com/0dotxyz/p0-ts-sdk/blob/8a8353bb662459e5957b0cbbd2121f4fddb37fc3/LICENSE",
+      "upstream_repository": "0dotxyz/p0-ts-sdk",
+      "upstream_commit_sha": "8a8353bb662459e5957b0cbbd2121f4fddb37fc3",
+      "upstream_path": "LICENSE",
+      "upstream_git_blob_sha": "0874a33a41b2543bed5f3df626430a0c7c5368c5",
+      "license_label": "MIT",
+      "bytes": 1068,
+      "reference_only": true
+    },
+    {
+      "local_path": "offline/vendor/p0/package.json.txt",
+      "origin": "https://github.com/0dotxyz/p0-ts-sdk/blob/8a8353bb662459e5957b0cbbd2121f4fddb37fc3/package.json",
+      "upstream_repository": "0dotxyz/p0-ts-sdk",
+      "upstream_commit_sha": "8a8353bb662459e5957b0cbbd2121f4fddb37fc3",
+      "upstream_path": "package.json",
+      "upstream_git_blob_sha": "cff5c123d1975e12633049e66bd9415ce2842e1d",
+      "license_label": "MIT",
+      "bytes": 3314,
+      "reference_only": true
+    }
+  ]
+}

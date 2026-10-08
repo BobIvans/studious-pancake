@@ -96,7 +96,7 @@ class ProviderProfile:
             max_concurrency=1,
             expires_at_epoch_seconds=expires_at_epoch_seconds,
             source_ref=self.official_docs,
-            quota_pool_ref="campaign:" + self.provider + ":" + self.operator,
+            quota_pool_ref="campaign:operator:" + self.operator,
             allowed_endpoints=(self.endpoint,),
             allowed_http_methods=frozenset({"POST" if self.role == "rpc" else "GET"}),
             allowed_rpc_methods=READ_RPC_METHODS if self.role == "rpc" else frozenset(),

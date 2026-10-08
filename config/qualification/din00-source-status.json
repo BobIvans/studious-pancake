@@ -1,0 +1,408 @@
+{
+  "schema_version": "din00.catalog-admission.v1",
+  "catalog_sha256": "ca148a033c7e46a44829f9323fe1d5b3dcc8794eabd3b650c3472f5a2ce1d343",
+  "declared_provider_count": 37,
+  "actual_provider_count": 37,
+  "count_matches": true,
+  "rcn_dependency": "https://github.com/BobIvans/studious-pancake/pull/579",
+  "operators_share_budget": true,
+  "sign_enabled": false,
+  "send_enabled": false,
+  "sources": [
+    {
+      "source_id": "dexscreener",
+      "stage": "DIN-01",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/solana_parallel_radar/radar.py",
+        "tests/test_gpr02_solana_parallel_radar.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "none"
+    },
+    {
+      "source_id": "geckoterminal",
+      "stage": "DIN-01",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/market/discovery.py",
+        "tests/test_qpr03_source_intake.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "none"
+    },
+    {
+      "source_id": "raydium-indexer",
+      "stage": "DIN-01",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/market/discovery.py",
+        "src/market/native_cpmm_capture.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "none"
+    },
+    {
+      "source_id": "meteora-dlmm",
+      "stage": "DIN-01",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/solana_parallel_radar/radar.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "none"
+    },
+    {
+      "source_id": "manifest-books",
+      "stage": "DIN-01",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/solana_parallel_radar/radar.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "none"
+    },
+    {
+      "source_id": "orca-whirlpools",
+      "stage": "DIN-01",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "sanctum",
+      "stage": "DIN-05",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/solana_parallel_radar/structural.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "jupiter",
+      "stage": "DIN-03",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/solana_parallel_radar/probes.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "JUPITER_API_KEY"
+    },
+    {
+      "source_id": "0x-solana",
+      "stage": "DIN-03",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/solana_parallel_radar/probes.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "ZEROX_API_KEY"
+    },
+    {
+      "source_id": "titan",
+      "stage": "DIN-03",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "TITAN_API_KEY"
+    },
+    {
+      "source_id": "openocean-solana",
+      "stage": "DIN-03",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/routing/clients.py",
+        "src/routing/adapters.py"
+      ],
+      "enabled": false,
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
+      "credential_ref": "OPENOCEAN_API_KEY"
+    },
+    {
+      "source_id": "okx-onchainos",
+      "stage": "DIN-03",
+      "status": "EXISTING_STUB",
+      "evidence_paths": [
+        "src/resources/contracts/routing/okx_solana_swap_instruction_v6_review_2026-07-21.json"
+      ],
+      "enabled": false,
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
+      "credential_ref": "OKX_DEX_CREDENTIALS"
+    },
+    {
+      "source_id": "rango",
+      "stage": "DIN-03",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "RANGO_API_KEY"
+    },
+    {
+      "source_id": "deepbook-v3",
+      "stage": "DIN-02",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/gpr_sui_shadow/sources.py",
+        "src/gpr_sui_shadow/campaign.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "rpc-provider"
+    },
+    {
+      "source_id": "cetus-pools",
+      "stage": "DIN-02",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/gpr_sui_shadow/sources.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "cetus-aggregator",
+      "stage": "DIN-04",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "aftermath-pools",
+      "stage": "DIN-02",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/gpr_sui_shadow/sources.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "aftermath-router",
+      "stage": "DIN-04",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "scallop",
+      "stage": "DIN-02",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/gpr_sui_shadow/sources.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "navi",
+      "stage": "DIN-05",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "7k-bluefin",
+      "stage": "DIN-04",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "flowx",
+      "stage": "DIN-04",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "sui-grpc",
+      "stage": "DIN-02",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "SUI_GRPC_ENDPOINT"
+    },
+    {
+      "source_id": "sui-graphql",
+      "stage": "DIN-02",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/gpr_sui_shadow/verification.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "SUI_GRAPHQL_ENDPOINT"
+    },
+    {
+      "source_id": "solana-rpc",
+      "stage": "DIN-01",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/qualification_campaign/rpc.py"
+      ],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "SOLANA_RPC_URL"
+    },
+    {
+      "source_id": "pyth-hermes",
+      "stage": "DIN-05",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/ingest/pyth_auth.py",
+        "tests/test_pr_a_provider_truth_cleanup.py"
+      ],
+      "enabled": false,
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
+      "credential_ref": "FLASHLOAN_PYTH_API_KEY_REFERENCE"
+    },
+    {
+      "source_id": "switchboard",
+      "stage": "DIN-05",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "helius",
+      "stage": "DIN-05",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/external_resources/helius.py",
+        "src/providers/helius/authenticated_ingress.py"
+      ],
+      "enabled": false,
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
+      "credential_ref": "HELIUS_API_KEY"
+    },
+    {
+      "source_id": "birdeye",
+      "stage": "DIN-05",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "BIRDEYE_API_KEY"
+    },
+    {
+      "source_id": "vybe",
+      "stage": "DIN-05",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "VYBE_API_KEY"
+    },
+    {
+      "source_id": "project0",
+      "stage": "DIN-05",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "solana-rpc"
+    },
+    {
+      "source_id": "kamino",
+      "stage": "DIN-05",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/lending/kamino.py",
+        "src/lending/kamino_real_conformance.py"
+      ],
+      "enabled": false,
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
+      "credential_ref": "solana-rpc"
+    },
+    {
+      "source_id": "slumlord",
+      "stage": "LATER",
+      "status": "IMPLEMENTED_BUT_UNBOUND",
+      "evidence_paths": [
+        "src/lending/slumlord.py"
+      ],
+      "enabled": false,
+      "reason": "Existing contracts/owners, not a reviewed current DIN read profile. No automatic provider enablement.",
+      "credential_ref": "solana-rpc"
+    },
+    {
+      "source_id": "ston-fi",
+      "stage": "DEFER",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "omniston",
+      "stage": "DEFER",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "dedust",
+      "stage": "DEFER",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "optional"
+    },
+    {
+      "source_id": "cex-public-books",
+      "stage": "DIN-06",
+      "status": "PLANNED",
+      "evidence_paths": [],
+      "enabled": false,
+      "reason": "No current bounded real read or current entitlement established in DIN-00; catalog never executes sources.",
+      "credential_ref": "none"
+    }
+  ],
+  "retired": [
+    {
+      "source_id": "odos",
+      "status": "RETIRED",
+      "evidence_paths": [
+        "tests/test_pr_a_provider_truth_cleanup.py"
+      ]
+    }
+  ],
+  "limitations": [
+    "No implemented stub is marked verified on source presence alone.",
+    "sui-grpc requires a reviewed current transport/provider profile; not inferred from a GraphQL client.",
+    "Current docs/source network access must be applied before live admission."
+  ]
+}

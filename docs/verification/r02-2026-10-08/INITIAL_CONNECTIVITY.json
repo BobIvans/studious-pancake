@@ -1,0 +1,74 @@
+[
+  {
+    "chain": "solana",
+    "endpoint": "https://api.mainnet.solana.com",
+    "method": "getGenesisHash",
+    "observed_at_ns": 1791424011988830739,
+    "qualification": "SMOKE_ONLY",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "response": {
+      "jsonrpc": "2.0",
+      "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+      "id": 1
+    },
+    "response_hash": "d4623e600dbc6619f92f8bd5b30abeb9d26f6338f39399c1b3fae534b07ee5c0"
+  },
+  {
+    "chain": "solana",
+    "endpoint": "https://api.mainnet.solana.com",
+    "method": "getMultipleAccounts",
+    "observed_at_ns": 1791424012548998751,
+    "qualification": "SMOKE_ONLY",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "response": {
+      "jsonrpc": "2.0",
+      "result": {
+        "context": {
+          "apiVersion": "4.3.0",
+          "slot": 454400887
+        },
+        "value": [
+          {
+            "data": [
+              "oqEtHINbylj6ILdkXu7s3KgFuT24xGCJy4WP8NhP5dCkeKPE4Y/klQr+HpfkVsu5LmQqJbULpjlv8kgWS8p0aWOoRZKs1szDAQAA+fXGagAAAAAAAAAAAAAAAAD/",
+              "base64"
+            ],
+            "executable": false,
+            "lamports": 1538160,
+            "owner": "jupgfSgfuAXv4B6R2Uxu85Z1qdzgju79s6MfZekN6XS",
+            "rentEpoch": 18446744073709551615,
+            "space": 93
+          }
+        ]
+      },
+      "id": 2
+    },
+    "response_hash": "77f32dc481158ac0866c7b4c428beae382a97ddc3821fa4d8cb88ba3d5f42253"
+  },
+  {
+    "chain": "sui",
+    "endpoint": "https://graphql.mainnet.sui.io/graphql",
+    "method": "GraphQL checkpoint",
+    "observed_at_ns": 1791424012747973201,
+    "qualification": "SMOKE_ONLY",
+    "sign_enabled": false,
+    "send_enabled": false,
+    "http_status": 200,
+    "response": {
+      "data": {
+        "chainIdentifier": "4btiuiMPvEENsttpZC7CZ53DruC3MAgfznDbASZ7DR6S",
+        "checkpoint": {
+          "sequenceNumber": 331514367,
+          "digest": "3qcymq2FhB5GDMHSTXnBgQQDe9FsxtiVcW23mkNGyBuC",
+          "timestamp": "2026-10-08T01:46:54.336Z",
+          "epoch": {
+            "epochId": 1274
+          }
+        }
+      }
+    },
+    "response_hash": "aae125f90bcdacced5360c1114c081208281b9fd8504fcc771c9314217a2e12c"
+  }
+]

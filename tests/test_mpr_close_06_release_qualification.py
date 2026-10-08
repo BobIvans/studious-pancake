@@ -21,6 +21,12 @@ def test_qualify_release_materializes_bundle_and_stays_blocked_without_full_evid
     _copy(ROOT / "src" / "resources" / "capabilities.json", repo / "src" / "resources" / "capabilities.json")
     _copy(ROOT / "src" / "resources" / "production_debt.json", repo / "src" / "resources" / "production_debt.json")
     _copy(ROOT / "config" / "runtime_authority_map.json", repo / "config" / "runtime_authority_map.json")
+    authority_path = ROOT / "src/resources/runtime_authority.json"
+    authority = json.loads(authority_path.read_text(encoding="utf-8"))
+    _copy(authority_path, repo / "src/resources/runtime_authority.json")
+    _copy(ROOT / "config/runtime_authority.json", repo / "config/runtime_authority.json")
+    for name in authority["generation_bindings"]:
+        _copy(ROOT / "src/resources" / name, repo / "src/resources" / name)
     _copy(ROOT / "config" / "production_cutover_manifest.json", repo / "config" / "production_cutover_manifest.json")
 
     output = repo / ".runtime" / "release-qualification.json"

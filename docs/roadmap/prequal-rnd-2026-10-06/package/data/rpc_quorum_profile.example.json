@@ -1,0 +1,24 @@
+{
+  "schema_version": "prequal.rpc-quorum-profile.v1",
+  "profile_id": "solana-mainnet-qualification-v1",
+  "minimum_independent_sources": 2,
+  "members": [
+    {"provider_profile_id":"rpc-a","provider":"","operator":"","correlation_group":""},
+    {"provider_profile_id":"rpc-b","provider":"","operator":"","correlation_group":""}
+  ],
+  "requirements": {
+    "cluster_genesis_hash_match": true,
+    "commitment": "finalized",
+    "same_context_slot": true,
+    "same_payload_hash_or_typed_reconciliation": true,
+    "provider_independence": true,
+    "operator_independence": true,
+    "correlation_group_independence": true,
+    "max_slot_skew": 0
+  },
+  "fallback": {
+    "single_source_capture_allowed": true,
+    "single_source_verdict": "BLOCKED_SINGLE_SOURCE",
+    "public_rpc_use": "SMOKE_ONLY"
+  }
+}

@@ -1,0 +1,57 @@
+{
+  "schema_version": "gpr.transformation-registry.v2.2",
+  "rule": "Transport/protocol mechanisms without their own token identity must be modeled as transformations, never fake assets or mints.",
+  "safety": {
+    "default_execution_class": "REBALANCE_ONLY",
+    "default_evidence_state": "IDENTIFIER_VERIFIED",
+    "atomic_graph_allowed": false
+  },
+  "transformations": [
+    {
+      "transformation_id": "USDT0_LEGACY_MESH_SOLANA",
+      "kind": "TRANSPORT_REBALANCE",
+      "economic_asset": "USDT",
+      "source_representation": "solana-mainnet:USDT",
+      "canonical_transport_id": "USDT0_LEGACY_MESH",
+      "creates_new_solana_mint": false,
+      "solana_mint_rule": "Use native Solana USDT mint Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB; do not create a USDT0 token node.",
+      "execution_class": "REBALANCE_ONLY",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "atomic_graph_allowed": false
+    },
+    {
+      "transformation_id": "CCTP_USDC_SOLANA_SUI",
+      "kind": "NATIVE_BURN_MINT",
+      "economic_asset": "USDC",
+      "source_representation": "solana-mainnet:USDC",
+      "target_representation": "sui-mainnet:USDC_NATIVE",
+      "creates_token_identity": false,
+      "token_identity_rule": "CCTP has no mint of its own; endpoints retain their native USDC identities.",
+      "execution_class": "REBALANCE_ONLY",
+      "signal_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "atomic_graph_allowed": false
+    },
+    {
+      "transformation_id": "WORMHOLE_USDC_SOLANA_TO_SUI",
+      "kind": "LOCK_MINT_BRIDGE",
+      "economic_asset": "USDC",
+      "source_representation": "solana-mainnet:USDC",
+      "target_representation": "sui-mainnet:USDC_SOL_PORTAL_ON_SUI",
+      "creates_transport_identity": false,
+      "resulting_asset_identity_is_representation_specific": true,
+      "execution_class": "REBALANCE_ONLY",
+      "signal_class": "CROSS_CHAIN_SIGNAL",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "atomic_graph_allowed": false
+    },
+    {
+      "transformation_id": "WORMHOLE_SOLANA_TO_SUI_TEMPLATE",
+      "kind": "LOCK_MINT_BRIDGE_TEMPLATE",
+      "rule": "Wormhole route is a bridge transformation. Any wrapped output must use the target representation's canonical identifier from Asset Registry V2.2.",
+      "execution_class": "REBALANCE_ONLY",
+      "evidence_state": "IDENTIFIER_VERIFIED",
+      "atomic_graph_allowed": false
+    }
+  ]
+}

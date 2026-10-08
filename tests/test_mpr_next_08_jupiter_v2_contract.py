@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
+import pytest
 import yaml
 
 from scripts.verify_mpr_next_08_jupiter_v2_contract import (
@@ -264,3 +266,140 @@ def test_mpr_next_08_rejects_missing_verify_repo_wiring(tmp_path: Path) -> None:
 
     assert evidence.accepted is False
     assert "VERIFY_REPO_DOES_NOT_RUN_MPR_NEXT_08" in evidence.blockers
+
+
+def _review_research_references(root: Path) -> None:
+    paths = (
+        "src/solana_parallel_radar/cli.py",
+        "src/solana_parallel_radar/probes.py",
+    )
+    entries = []
+    for relative in paths:
+        path = root / relative
+        if not path.exists():
+            _write(path, "REFERENCE = 'https://api.jup.ag/swap/v1/quote'\n")
+        entries.append(
+            {
+                "path": relative,
+                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+                "purpose": "GPR-02_DISCOVERY_ONLY_QUOTE_REFERENCE",
+                "method": "GET",
+                "endpoint": "https://api.jup.ag/swap/v1/quote",
+                "build": False,
+                "signer": False,
+                "submission": False,
+                "production_promotion": False,
+            }
+        )
+    quarantine = _quarantine()
+    quarantine["read_only_research_references"] = entries
+    _write(root / "config/jupiter_endpoint_quarantine.json", json.dumps(quarantine))
+
+
+def test_reviewed_research_quotes_preserve_production_v2_contract(
+    tmp_path: Path,
+) -> None:
+    _write_fixture_repo(tmp_path)
+    _review_research_references(tmp_path)
+
+    evidence = verify_mpr_next_08_jupiter_v2_contract(tmp_path)
+
+    assert evidence.accepted
+    assert evidence.router_endpoint == "/swap/v2/build"
+    assert evidence.product_contract_paths == ("/price/v3", "/swap/v2/build")
+    assert "src/solana_parallel_radar/probes.py" in evidence.artifact_hashes
+
+
+def test_research_allowance_does_not_allow_a_production_legacy_endpoint(
+    tmp_path: Path,
+) -> None:
+    _write_fixture_repo(tmp_path, active_source="URL = '/swap/v1/quote'\n")
+    _review_research_references(tmp_path)
+
+    evidence = verify_mpr_next_08_jupiter_v2_contract(tmp_path)
+
+    assert not evidence.accepted
+    assert "FORBIDDEN_ACTIVE_JUPITER_ENDPOINT:src/active_runtime.py:/swap/v1" in (
+        evidence.blockers
+    )
+
+
+def test_research_source_changes_require_reviewed_byte_hash(tmp_path: Path) -> None:
+    _write_fixture_repo(tmp_path)
+    _review_research_references(tmp_path)
+    path = tmp_path / "src/solana_parallel_radar/probes.py"
+    path.write_text(path.read_text() + "CHANGED = True\n")
+
+    evidence = verify_mpr_next_08_jupiter_v2_contract(tmp_path)
+
+    assert not evidence.accepted
+    assert (
+        "RESEARCH_REFERENCE_REVIEW_HASH_MISMATCH:src/solana_parallel_radar/probes.py"
+        in (evidence.blockers)
+    )
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("method", "POST"),
+        ("endpoint", "https://api.jup.ag/swap/v1/swap"),
+        ("path", "src/active_runtime.py"),
+        ("purpose", "PRODUCTION"),
+        ("build", True),
+        ("build", 0),
+        ("signer", True),
+        ("submission", True),
+        ("production_promotion", True),
+    ],
+)
+def test_research_declaration_cannot_expand_execution_authority(
+    tmp_path: Path, field: str, value: object
+) -> None:
+    _write_fixture_repo(tmp_path)
+    _review_research_references(tmp_path)
+    path = tmp_path / "config/jupiter_endpoint_quarantine.json"
+    payload = json.loads(path.read_text())
+    payload["read_only_research_references"][0][field] = value
+    path.write_text(json.dumps(payload))
+
+    assert not verify_mpr_next_08_jupiter_v2_contract(tmp_path).accepted
+
+
+def test_rehashing_research_source_cannot_allow_a_swap_endpoint(tmp_path: Path) -> None:
+    _write_fixture_repo(tmp_path)
+    _write(
+        tmp_path / "src/solana_parallel_radar/probes.py",
+        "URL = 'https://api.jup.ag/swap/v1/swap'\n",
+    )
+    _review_research_references(tmp_path)
+
+    evidence = verify_mpr_next_08_jupiter_v2_contract(tmp_path)
+
+    assert not evidence.accepted
+    assert (
+        "FORBIDDEN_ACTIVE_JUPITER_ENDPOINT:src/solana_parallel_radar/probes.py:/swap/v1"
+        in (evidence.blockers)
+    )
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "from src.solana_parallel_radar.probes import jupiter_request\n",
+        "import src.solana_parallel_radar.cli as radar\n",
+        "from src import solana_parallel_radar\n",
+    ],
+)
+def test_production_cannot_import_the_research_quote_adapter(
+    tmp_path: Path, source: str
+) -> None:
+    _write_fixture_repo(tmp_path, active_source=source)
+    _review_research_references(tmp_path)
+
+    evidence = verify_mpr_next_08_jupiter_v2_contract(tmp_path)
+
+    assert not evidence.accepted
+    assert "RESEARCH_REFERENCE_IMPORTED_BY_PRODUCTION:src/active_runtime.py" in (
+        evidence.blockers
+    )

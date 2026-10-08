@@ -1,0 +1,16 @@
+{
+  "checked_against_main_sha": "ac6297e3f174d073c524099f599490edfe30f7b1",
+  "snapshot_scan_base": "uploaded studious-pancake-main (12)(4).zip; main is 5 commits ahead only in PR #566 provider-truth files",
+  "files_in_snapshot": 2703,
+  "direct_sqlite_connects": 137,
+  "unapproved_direct_sqlite_connects": 85,
+  "broad_exception_handlers": 554,
+  "time_time_calls": 260,
+  "datetime_now_calls": 51,
+  "os_getenv_calls": 176,
+  "raw_aiohttp_style_calls": 140,
+  "open_pr_count_observed": 30,
+  "pr566_state": "merged",
+  "pr566_merge_commit": "ac6297e3f174d073c524099f599490edfe30f7b1",
+  "warning": "Counts are static debt indicators, not claims that every occurrence is active production runtime. Quarantined/tests must be separated from canonical active graph."
+}

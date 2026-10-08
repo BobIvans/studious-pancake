@@ -323,13 +323,32 @@ class DurableLifecycleStore:
         ):
             self.db.execute(pragma)
         if self.path != ":memory:":
-            self.db.execute("PRAGMA journal_mode=WAL")
+            self._enable_wal(busy_timeout_ms)
             Path(self.path).chmod(0o600)
             self._revalidate_open_file()
         self._verify_pragma_policy(busy_timeout_ms)
         self._migrate()
         self.integrity_check()
         self._secure_sqlite_files()
+
+    def _enable_wal(self, busy_timeout_ms: int) -> None:
+        """Retry WAL lock upgrades that SQLite's busy handler can reject early."""
+        deadline = time.monotonic() + busy_timeout_ms / 1000
+        while True:
+            remaining = max(0, int((deadline - time.monotonic()) * 1000))
+            self.db.execute(f"PRAGMA busy_timeout={remaining}")
+            try:
+                self.db.execute("PRAGMA journal_mode=WAL")
+            except sqlite3.OperationalError as error:
+                code = getattr(error, "sqlite_errorcode", 0)
+                remaining_seconds = deadline - time.monotonic()
+                if code & 0xFF != sqlite3.SQLITE_BUSY or remaining_seconds <= 0:
+                    self.db.close()
+                    raise
+                time.sleep(min(0.01, remaining_seconds))
+            else:
+                self.db.execute(f"PRAGMA busy_timeout={busy_timeout_ms}")
+                return
 
     def _prepare_secure_path(self) -> None:
         """Reject path substitution and create private state storage.

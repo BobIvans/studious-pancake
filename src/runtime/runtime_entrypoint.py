@@ -23,6 +23,7 @@ from src.paper_shadow.repeated_service_pr04 import (
     RepeatedPaperServiceConfig,
 )
 from src.runtime.bootstrap import BootstrapContext
+from src.runtime.dispatch import parsed_command
 from src.runtime.command_capabilities import CommandCapabilityManifest
 from src.runtime.platform_identity import load_platform_policy, qualify_platform
 from src.runtime.process_hooks import AsyncSignalHandlerOwner
@@ -275,7 +276,7 @@ async def _run_paper(
 
 def handles(argv: Sequence[str]) -> bool:
     args = list(argv)
-    return "run" in args
+    return parsed_command(args) == "run"
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -318,7 +319,18 @@ def main(argv: Sequence[str] | None = None) -> int:
             print("RUNTIME_ADMISSION_BLOCKED:" + ",".join(blockers), file=sys.stderr)
             return EXIT_ADMISSION_BLOCKED
         if parsed.mode == "disabled":
-            print(json.dumps({"admitted": True, "mode": "disabled"}, sort_keys=True))
+            print(
+                json.dumps(
+                    {
+                        "admitted": True,
+                        "mode": "disabled",
+                        "runtime_authority_sha256": contract.observed[
+                            "runtime_authority_sha256"
+                        ],
+                    },
+                    sort_keys=True,
+                )
+            )
             return 0
         if parsed.mode == "paper":
             return asyncio.run(

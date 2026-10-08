@@ -32,7 +32,7 @@ from src.strategy.exact_cpmm_capacity import (
 pytestmark = pytest.mark.unit
 
 NOW = 1_000.0
-GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp"
+GENESIS = "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d"
 TOKEN_PROGRAM = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
 GENERATION = ObservationGeneration(
     genesis_hash=GENESIS,

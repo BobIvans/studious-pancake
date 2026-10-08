@@ -106,7 +106,8 @@ class NativeAccount:
             or len(encoded) != 2
             or encoded[1] != "base64"
             or not isinstance(encoded[0], str)
-            or len(encoded[0]) > 900_000
+            or len(encoded[0])
+            > (6_000_000 if value.get("owner") == LOADER else 900_000)
         ):
             raise NativeCaptureError("bounded base64 account data required")
         try:
@@ -282,7 +283,7 @@ def decode_native_capture(
             ):
                 raise NativeCaptureError("RPC request envelope mismatch")
             if content_hash(
-                {"url": "https://api.mainnet-beta.solana.com", "body": request_body}
+                {"url": receipt.get("endpoint"), "body": request_body}
             ) != receipt.get("request_fingerprint"):
                 raise NativeCaptureError("RPC request provenance mismatch")
             started = integer(receipt.get("requested_at_ns"), "request time", 1)

@@ -1,0 +1,147 @@
+{
+  "schema_version": "r02.blocked-readonly-verification.v1",
+  "checked_at": "2026-10-08T01:52:01.559362+00:00",
+  "main_sha": "103c13795f1d2ac1fa88cf02bba1e9bb2e2477cf",
+  "assignment_sha": "e059b1551dd575e25f54979fbe73316bbd0ce316",
+  "r01_pr": "https://github.com/BobIvans/studious-pancake/pull/584",
+  "status": "BLOCKED",
+  "sign_enabled": false,
+  "send_enabled": false,
+  "execution_authority": "NONE",
+  "qualified_edges": [],
+  "catalog_count": 27,
+  "catalog_policy": "ALL_DISABLED_RESEARCH_BACKLOG_NOT_R07_IMPLEMENTATION",
+  "wallet_public_account_supplied": false,
+  "cost_policy": {
+    "upfront_cost_atoms": "UNKNOWN",
+    "network_fee_atoms": "UNKNOWN",
+    "zero_protocol_fee_is_not_zero_setup_cost": true
+  },
+  "captures": {
+    "CAPTURE.json": "f71188cbf8f7ff6521eb60f1d0ed513af3873dc39260381740f4f6cb7a784878",
+    "INITIAL_CONNECTIVITY.json": "e616b103c557f5d1564158edbdc1a1323c7553f7627596d799b9107872bd9826"
+  },
+  "assignment_file_sha256": {
+    "README.md": "feb922ec6dbb5c5c766d29677d21b222d6ddac38f124976d4a3c6a244c92e9b2",
+    "R02_TESTS_AND_EXIT_GATES.md": "195ba8100c5aba86ad2fd5fd25c1666bb4cb39b9356f5e7fc3d4502e91e0da64",
+    "R02_ARCHITECTURE.md": "d7e294674001793da99de600ec58ec4b182b4227a82f9f8dd40e464aaf9f149f",
+    "R01_BRANCH_RECONCILIATION.md": "d6dd5aca812ff3662e89df1be8615ffaba359d2877854de61510aa6fcf0b46bc",
+    "PROVIDER_SELECTION.md": "a1aedc01b8879d7c3850afcd30e2ee8faf631a90cba728ca9f6430084a43a505",
+    "PROVIDER_CATALOG.json": "6b23114647fd1cfe73cd2cdcabfdd2b00c0b7f5beb968b721e9803ad9b1e5c5f",
+    "MASTER_CONTEXT.md": "37d3d3de28d6c1b155352f71e412eb348a4850adc367177ffbc158748f6cc785",
+    "CODEX_START_HERE.md": "13910a1efe4e64aaa20731c59185d2344cd5a3cfc95a076d59f388921b46b76e",
+    "CAPITAL_SNAPSHOT_EXAMPLE.json": "61838c2664faf54d12e74351fd6df40a18db80c96fa7fcfd93ab8ddbdaafe4c1",
+    "offline/verify_bundle.py": "b764003a0cf2b215d6795c7ecd726a330c2af427356c2bf966028c8ad5db9886",
+    "offline/SUI_PROTOCOL_DOSSIERS.md": "94e7c3b8148303bc1b8a324008c3620b480213b36fc877a1bed94e2aa68ae0ed",
+    "offline/SOURCE_LEDGER.json": "1ccb06f4966edaa3ea35146d1d5f8eebae196628fdfc4dbe9d6ad820665d7c3b",
+    "offline/SOLANA_PROTOCOL_DOSSIERS.md": "740d194eb1d62ce282286df7372049d206527e400b8f81cac58bf76adcb43337",
+    "offline/README.md": "e4e502c816176adca891a1f971a2cc8523513217bbfee507472324e1a5a3417f",
+    "offline/PROVIDER_ECONOMICS_AND_SELECTOR.md": "0b2be9e81ee2eabc709fd1413d746faf5804e9694575162ea61b3c205b94a55c",
+    "offline/GAPS_AND_STOP_CONDITIONS.md": "f8f594cace5437c89672217e67fe36480224b5eab12d7f4edc1d49352b3d5b28",
+    "offline/EVM_PROTOCOL_DOSSIERS.md": "d6c14b8cb3905380bdbdc32e1d865da0877142924515412d7eb587cf28a91371",
+    "offline/CONTRACT_FACTS.json": "566f3ff4ece334ee64a39a3fe5b1660499de6e77a1906ffc6698867cc9bdfd24"
+  },
+  "providers": {
+    "jupiter_lend": {
+      "status": "MISSING_PINNED_ABI",
+      "observed_slot": 454401538,
+      "read_owner_matches_pinned_program": true,
+      "partial_decoded_admin": {
+        "authority": "HqPrpa4ESBDnRHRWaiYtjv4xe93wvCS9NNZtDwR89cVa",
+        "liquidity_program": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC",
+        "status": true,
+        "flashloan_fee": 0,
+        "flashloan_timestamp": 1791424174,
+        "is_flashloan_active": false,
+        "active_flashloan_amount": 0,
+        "bump": 255
+      },
+      "source_commit": "33a22cf7a5bfdd32ab1712dda4adfbeb9b348ad9",
+      "idl_blob": "0d0ae6d624b33355315e98baaf0a5d00d317beb8",
+      "blockers": [
+        "NO_LOCAL_FULL_LIQUIDITY_RESERVE_CAP_DECODER",
+        "NO_REVIEWED_MINT_RESOURCE_BINDINGS",
+        "SINGLE_PUBLIC_SMOKE_RPC_NOT_INDEPENDENT_QUORUM",
+        "NO_WALLET_ATA_COST_PROOF"
+      ],
+      "needs_new_lender_position": "NOT_IN_PUBLISHED_FLOW_NOT_LIVE_VERIFIED"
+    },
+    "kamino": {
+      "status": "MISSING_PINNED_ABI",
+      "observed_slot": 454401538,
+      "partial_read": "program account exists and executable; not deployed bytecode attestation or reserve state",
+      "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+      "required_klend_commit": "a08760976f51a3a58c4a0c6ea27b4a0e565bca79",
+      "required_sdk_commit": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "required_sdk_version": "13.0.2",
+      "blockers": [
+        "LOCAL_FIXTURE_JSON_DECODER_IS_NOT_BINARY_RESERVE_DECODER",
+        "LOCAL_REVIEW_V1_23_NOT_REQUESTED_V1_25",
+        "NO_ADMITTED_CURRENT_MARKET_RESERVE_SET",
+        "NO_FLASH_FEE_LIMIT_ORACLE_PROOF"
+      ],
+      "needs_new_lender_position": "NO_OBLIGATION_IN_OFFLINE_FLASH_SOURCE_NOT_LIVE_QUALIFIED"
+    },
+    "navi": {
+      "status": "MISSING_PINNED_ABI",
+      "initial_checkpoint": {
+        "sequenceNumber": 331514367,
+        "digest": "3qcymq2FhB5GDMHSTXnBgQQDe9FsxtiVcW23mkNGyBuC",
+        "timestamp": "2026-10-08T01:46:54.336Z",
+        "epoch": {
+          "epochId": 1274
+        }
+      },
+      "subsequent_graphql_read": {
+        "status": "NETWORK_STATE_UNAVAILABLE",
+        "error_type": "SanitizedTransportError",
+        "error": "provider operation timed out or transport failed"
+      },
+      "blockers": [
+        "NO_LOCAL_PINNED_MODULAR_NAVIPROTOCOL_LENDING_SDK",
+        "SOURCE_LEDGER_HAS_NO_CURRENT_NAVI_SDK_PIN",
+        "NO_REVIEWED_LIVE_POOL_PACKAGE_DECIMAL_BINDINGS",
+        "CHAIN_CHECKPOINT_IS_NOT_NAVI_POOL_STATE"
+      ],
+      "needs_new_lender_position": "NOT_IN_PUBLISHED_FLOW_NOT_LIVE_VERIFIED"
+    },
+    "project0": {
+      "status": "EXISTING_ACCOUNT_NOT_SUPPLIED",
+      "protocol_request_executed": false,
+      "blockers": [
+        "EXISTING_MARGINFI_ACCOUNT_AND_PUBLIC_AUTHORITY_NOT_SUPPLIED",
+        "NO_LOCAL_CURRENT_0DOTXYZ_P0_TS_SDK_2_8_PLUS",
+        "LEGACY_LOCAL_BINARY_PIN_NOT_CURRENT_SDK_QUALIFICATION"
+      ],
+      "needs_new_lender_position": "UNKNOWN_PREEXISTING_ACCOUNT_REQUIRED_NO_CREATION"
+    }
+  },
+  "checks": {
+    "offline_bundle": {
+      "status": "PASS",
+      "entries": 27,
+      "signatures": 17,
+      "source_pins": 10
+    },
+    "focused": {
+      "passed": 35,
+      "failed": 0,
+      "log_sha256": "bb530ae81a464a7ed9e17ff87bc523010eaeb58bdaed2640b97553a6c8e72d30"
+    },
+    "deterministic_replay": "PASS_NO_NETWORK",
+    "full_verifier": {
+      "command": "python scripts/verify_repo.py",
+      "exit_code": 0,
+      "passed": 5339,
+      "deselected": 1,
+      "verified_commit": "45730c156f83be7fc00ef37ad9083da7a53f1225",
+      "log_sha256": "d5f3fbcab53d993960a67b16ef5cdcdcfda9362866d481928c81923e67350596",
+      "initial_run": {
+        "exit_code": 1,
+        "passed": 5339,
+        "deselected": 1,
+        "reason": "Untracked new evidence/test files triggered the canonical clean-source-tree guard; committed files and reran the complete verifier."
+      }
+    }
+  }
+}

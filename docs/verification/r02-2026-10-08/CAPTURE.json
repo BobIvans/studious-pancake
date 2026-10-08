@@ -1,0 +1,168 @@
+{
+  "schema_version": "r02.prerequisite-capture.v1",
+  "execution_authority": "NONE",
+  "qualified_edges": [],
+  "records": [
+    {
+      "chain": "solana",
+      "endpoint": "https://api.mainnet.solana.com",
+      "method": "getGenesisHash",
+      "params": [],
+      "request_hash": "4456f5aba317309c32493a9944be08c1a2a9cc65fd0c47cb26569578a1f19b75",
+      "observed_at_ns": 1791424188959482280,
+      "qualification": "SMOKE_ONLY",
+      "profile": {
+        "profile_id": "solana_rpc",
+        "provider": "solana-public",
+        "operator": "solana-public",
+        "correlation_group": "solana-public-shared",
+        "endpoint": "https://api.mainnet.solana.com",
+        "official_docs": "https://solana.com/docs/references/clusters",
+        "credential_ref": "anonymous-public-read",
+        "credential_generation": "anonymous-v1",
+        "auth_header": null,
+        "request_limit": 12,
+        "window_seconds": 60,
+        "campaign_attempt_cap": 100,
+        "smoke_only": true,
+        "role": "rpc",
+        "allowed_query_parameters": [],
+        "schema_version": "prequal.provider-profile.v1"
+      },
+      "source_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+      "sign_enabled": false,
+      "send_enabled": false,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": "5eykt4UsFv8P8NJdTREpY1vzqKqZKvdpKuc147dw2N9d",
+        "id": 1
+      },
+      "response_hash": "d4623e600dbc6619f92f8bd5b30abeb9d26f6338f39399c1b3fae534b07ee5c0"
+    },
+    {
+      "chain": "solana",
+      "endpoint": "https://api.mainnet.solana.com",
+      "method": "getMultipleAccounts",
+      "params": [
+        [
+          "ALXWtv2P4GqH1B7Lq731joag52yRBRqmHV4naiXPTYWL",
+          "jupgfSgfuAXv4B6R2Uxu85Z1qdzgju79s6MfZekN6XS",
+          "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+        ],
+        {
+          "encoding": "base64",
+          "commitment": "finalized"
+        }
+      ],
+      "request_hash": "a1bd1ffdc469e030a1e03e0d7ef4ceb34c75afa96f9283fecbe064c50350bae3",
+      "observed_at_ns": 1791424189601816803,
+      "qualification": "SMOKE_ONLY",
+      "profile": {
+        "profile_id": "solana_rpc",
+        "provider": "solana-public",
+        "operator": "solana-public",
+        "correlation_group": "solana-public-shared",
+        "endpoint": "https://api.mainnet.solana.com",
+        "official_docs": "https://solana.com/docs/references/clusters",
+        "credential_ref": "anonymous-public-read",
+        "credential_generation": "anonymous-v1",
+        "auth_header": null,
+        "request_limit": 12,
+        "window_seconds": 60,
+        "campaign_attempt_cap": 100,
+        "smoke_only": true,
+        "role": "rpc",
+        "allowed_query_parameters": [],
+        "schema_version": "prequal.provider-profile.v1"
+      },
+      "source_generation": "3652839bcbaf47df9ee7eff152ee685138a9d318033e1f88a1b8253b137d6e96",
+      "sign_enabled": false,
+      "send_enabled": false,
+      "response": {
+        "jsonrpc": "2.0",
+        "result": {
+          "context": {
+            "apiVersion": "4.3.0",
+            "slot": 454401538
+          },
+          "value": [
+            {
+              "data": [
+                "oqEtHINbylj6ILdkXu7s3KgFuT24xGCJy4WP8NhP5dCkeKPE4Y/klQr+HpfkVsu5LmQqJbULpjlv8kgWS8p0aWOoRZKs1szDAQAArvbGagAAAAAAAAAAAAAAAAD/",
+                "base64"
+              ],
+              "executable": false,
+              "lamports": 1538160,
+              "owner": "jupgfSgfuAXv4B6R2Uxu85Z1qdzgju79s6MfZekN6XS",
+              "rentEpoch": 18446744073709551615,
+              "space": 93
+            },
+            {
+              "data": [
+                "AgAAAMfD3M6bCIA1D/VSVLr5HXy0Me2cOLtdJAF4wWT6Abt3",
+                "base64"
+              ],
+              "executable": true,
+              "lamports": 1141446,
+              "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+              "rentEpoch": 18446744073709551615,
+              "space": 36
+            },
+            {
+              "data": [
+                "AgAAAIRMohNu7QFIhSZnG4DdIQLFGAqjMqCcvme5zoE+LQAr",
+                "base64"
+              ],
+              "executable": true,
+              "lamports": 33141440,
+              "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+              "rentEpoch": 18446744073709551615,
+              "space": 36
+            }
+          ]
+        },
+        "id": 2
+      },
+      "response_hash": "cd785f7f3797f18d0548de024a61184f18380830d49c162cb3cab3ec6176f79b"
+    },
+    {
+      "chain": "sui",
+      "endpoint": "https://graphql.mainnet.sui.io/graphql",
+      "method": "GraphQL checkpoint",
+      "request_body": {
+        "query": "query GprCheckpoint {\n  chainIdentifier\n  checkpoint { sequenceNumber digest timestamp epoch { epochId } }\n}"
+      },
+      "request_hash": "5851ee0ac7783fff2977ff7c0144f9e116c2a2112ebc8505e5ca9e04be76575e",
+      "observed_at_ns": 1791424189914446181,
+      "qualification": "SMOKE_ONLY",
+      "profile": {
+        "profile_id": "sui-graphql-smoke",
+        "provider": "mystenlabs",
+        "operator": "mystenlabs",
+        "correlation_group": "mysten-sui-public",
+        "endpoint": "https://graphql.mainnet.sui.io/graphql",
+        "official_docs": "https://github.com/MystenLabs/ts-sdks",
+        "schema_pin": "1719630ca8ef753856e923ca11ddddf0e9e62add15b2500e4554a738abe071fb",
+        "method": "POST",
+        "purpose": "checkpoint",
+        "source_kind": "graphql",
+        "request_limit": 12,
+        "campaign_attempt_cap": 12,
+        "window_seconds": 60,
+        "smoke_only": true,
+        "credential_ref": "anonymous-public-read",
+        "credential_generation": "anonymous-v1",
+        "allowed_query_parameters": [],
+        "max_response_bytes": 1048576,
+        "max_json_nodes": 20000
+      },
+      "source_generation": "b1eb8d3153fb634c6458a5c529234b8f9ada1c34b19b0cedbb2ad177cb27bcca",
+      "sign_enabled": false,
+      "send_enabled": false,
+      "error_type": "SanitizedTransportError",
+      "error": "provider operation timed out or transport failed",
+      "response_hash": "74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b"
+    }
+  ],
+  "records_sha256": "f1a03da16a616ffbd1e27ebb3b20f127827fbbec6ccd49963b7e3dd71f1fface"
+}

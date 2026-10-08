@@ -1,0 +1,367 @@
+{
+  "main_sha": "103c13795f1d2ac1fa88cf02bba1e9bb2e2477cf",
+  "assignment_sha": "e059b1551dd575e25f54979fbe73316bbd0ce316",
+  "pull_requests": [
+    {
+      "number": 568,
+      "base": "codex/prequal-rnd-master-2026-10-06",
+      "head": "6e9c1e642317b5122eee0ba9baba59593b460469",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "fd152c31514e9f291294cae1b19a6e10802bcfe8"
+    },
+    {
+      "number": 569,
+      "base": "codex/qpr-01-campaign-authority",
+      "head": "a459b8c17463345b5ca488ae310a2015cb18e61b",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "8baeb41139b5735859933783392d7f4802bc8337"
+    },
+    {
+      "number": 570,
+      "base": "codex/qpr-02-qualification-data-plane",
+      "head": "7132f7341661368917bcc3cf1618a93de96327f8",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "4a89d0e18070529e8f9c9e240a30ed3acb6fad38"
+    },
+    {
+      "number": 571,
+      "base": "codex/qpr-03-campaign-source-intake",
+      "head": "f8e4aebf7781e184e2fc70df792ab9087da8eb58",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "476c3782a813323b6bb279fe08cb834bf80035c0"
+    },
+    {
+      "number": 572,
+      "base": "rnd/gpr-parallel-radar-2026-10-06",
+      "head": "6436b7a4dd8f61d21b1f67d1185d1630ae3863b7",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "ffd126b6b12763a4bf37cccfad27388bb0fbd09d"
+    },
+    {
+      "number": 573,
+      "base": "rnd/gpr-parallel-radar-2026-10-06",
+      "head": "d841ebc58929e20a0edc52d06aaf2a4ca595aaf1",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "baef8d09dd8c7c8a84d8b7781d3da5f8583fc8fd"
+    },
+    {
+      "number": 574,
+      "base": "main",
+      "head": "c9bbef3479424ac9ace08411f11618037d2447ff",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "663a18b1b34d9aa1a7706fe8a39837659b5e1ac6"
+    },
+    {
+      "number": 575,
+      "base": "rnd/gpr-parallel-radar-2026-10-06",
+      "head": "75c9ef9a641a0c5b864cadc60d95f4f801cfe819",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "0f13b51cf772abbdfe14356009d82c002caa0ac4"
+    },
+    {
+      "number": 576,
+      "base": "main",
+      "head": "2b4eeb85128c1644dfc3ed2a45c411139349ca43",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "72406c0e8a945fe07859807aa5107a8d10043fde"
+    },
+    {
+      "number": 577,
+      "base": "main",
+      "head": "f59ae8175e897d548d6ff5160ea20212f8d8ca18",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "098e8d0b8c0c951ae840f1e8eecbb00432729381"
+    },
+    {
+      "number": 578,
+      "base": "main",
+      "head": "77f80b0f3a315430d121a3aa6491e63be0408e02",
+      "state": "open",
+      "merged": false,
+      "merge_commit_sha": "6d8b1187ea79a1b945413db98c79b0646a311ebb"
+    },
+    {
+      "number": 579,
+      "base": "main",
+      "head": "b3fa7d894e482b5d6447f1607587ebb9dce73be8",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "9b45c7b6bab20e6ebda9abccdd87536c3c9e8915"
+    },
+    {
+      "number": 580,
+      "base": "main",
+      "head": "5c83923cbd1f5eb4787d6fdcea0735636e65fe34",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "c710a5d6914604c2f0f29b5d5bf685370d7489c0"
+    },
+    {
+      "number": 581,
+      "base": "main",
+      "head": "8dc5c1e6f96c50a074f4bf93fadefe0c454dafd6",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "c3949d7fe22fb341be1bbecdf9fd7e9f755433e4"
+    },
+    {
+      "number": 582,
+      "base": "main",
+      "head": "a665b9f3d447e26ff96c1fef28704021ac855247",
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "103c13795f1d2ac1fa88cf02bba1e9bb2e2477cf"
+    },
+    {
+      "number": 583,
+      "base": "main",
+      "head": "e059b1551dd575e25f54979fbe73316bbd0ce316",
+      "state": "open",
+      "merged": false,
+      "merge_commit_sha": "e63a7451f174306f25ea7278793af0623095f2a1"
+    }
+  ],
+  "legacy_refs": {
+    "codex/qpr-03-campaign-source-intake": {
+      "head": "476c3782a813323b6bb279fe08cb834bf80035c0",
+      "ahead": 1,
+      "behind": 90
+    },
+    "rnd/gpr-parallel-radar-2026-10-06": {
+      "head": "0f13b51cf772abbdfe14356009d82c002caa0ac4",
+      "ahead": 0,
+      "behind": 53
+    },
+    "rnd/universal-source-execution-slumlord-2026-10-07": {
+      "head": "75c9ef9a641a0c5b864cadc60d95f4f801cfe819",
+      "ahead": 0,
+      "behind": 71
+    }
+  },
+  "qpr_unique_commit": {
+    "sha": "476c3782a813323b6bb279fe08cb834bf80035c0",
+    "parents": [
+      "7132f7341661368917bcc3cf1618a93de96327f8",
+      "f8e4aebf7781e184e2fc70df792ab9087da8eb58"
+    ],
+    "classification": "ALREADY_EQUIVALENT",
+    "code_and_tests_diff": "",
+    "introduced_paths": 36,
+    "missing_paths": [],
+    "changed_paths_since_merge": [
+      "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/CODEX_START_HERE.md",
+      "docs/roadmap/gpr-parallel-radar-rnd-2026-10-06/MASTER_CONTEXT.md"
+    ],
+    "no_cherry_pick": true
+  },
+  "owner_imports": {
+    "src.qualification_campaign.cli": "PASS",
+    "src.qualification_campaign.identity": "PASS",
+    "src.qualification_campaign.profiles": "PASS",
+    "src.qualification_campaign.rpc": "PASS",
+    "src.qualification_campaign.sources": "PASS",
+    "src.qualification_campaign.transport": "PASS",
+    "src.qualification_campaign.evidence": "PASS",
+    "src.solana_parallel_radar.cli": "PASS",
+    "src.solana_parallel_radar.din_discovery": "PASS",
+    "src.gpr_sui_shadow.campaign": "PASS",
+    "src.research_economic_graph.graph": "PASS",
+    "src.assets.resolution.resolver": "PASS",
+    "src.discovery.dynamic_universe.universe": "PASS",
+    "src.economics.flash_capital_graph.graph": "PASS",
+    "src.runtime.runtime_entrypoint": "PASS",
+    "src.market.native_cpmm_capture": "PASS",
+    "src.paper_shadow.native_cpmm_qualification": "PASS"
+  },
+  "historical_owner_inventory": {
+    "src/qualification_campaign/cli.py": {
+      "sha256": "5944e611df65d5868ab47800a6c551febc3b94512cc0a1ccf908b08d45b13ec1",
+      "matches_historical_receipt": true
+    },
+    "src/qualification_campaign/identity.py": {
+      "sha256": "83080f1c08ceece1f9d089ea7b7b3db8f475c80a4d8cda8638e12eb9026ea2fd",
+      "matches_historical_receipt": true
+    },
+    "src/qualification_campaign/profiles.py": {
+      "sha256": "bfcbdc8a012cc36861a1c415f385a82423a08cb73def5fd56db369ce3fe5b747",
+      "matches_historical_receipt": false
+    },
+    "src/qualification_campaign/rpc.py": {
+      "sha256": "5e00de5fd22f5401f4a614ed2a5359a4679ad61d86403db0845a9d7cd11b3c57",
+      "matches_historical_receipt": true
+    },
+    "src/qualification_campaign/sources.py": {
+      "sha256": "583797028b14fb79a39ff893355a22789f67040075f9e71b55a4a01c278f353f",
+      "matches_historical_receipt": false
+    },
+    "src/research_economic_graph/graph.py": {
+      "sha256": "9c262505851847ed5f6bb15e214090ed47e666e1c2f12fa071c1725b6303cd3d",
+      "matches_historical_receipt": true
+    },
+    "src/research_economic_graph/verification.py": {
+      "sha256": "1c96150a67379177ae9add7903f267932637e6b04ccd6685727d5ac2b2b97290",
+      "matches_historical_receipt": true
+    },
+    "src/solana_parallel_radar/cli.py": {
+      "sha256": "f699fba361e97ef3d8afe8585d02711eea1f0fcf5c9afc68de6b35947dcc3df3",
+      "matches_historical_receipt": true
+    },
+    "src/gpr_sui_shadow/campaign.py": {
+      "sha256": "9b2bc3b4a8043df26001033ac09ca010308b469ac68c0e541c5b677dc5aeda95",
+      "matches_historical_receipt": false
+    },
+    "src/assets/resolution/resolver.py": {
+      "sha256": "4e534cbb6de7f994818ee207b3a339be1d1b8ede4c965df3103c6094b345c426",
+      "matches_historical_receipt": true
+    },
+    "src/discovery/dynamic_universe/universe.py": {
+      "sha256": "8c2e118f70f950e242099eaeb6a0dcccb0b00d9bd318592b7a4817af9f15616f",
+      "matches_historical_receipt": true
+    },
+    "src/strategy/relation_generators/generators.py": {
+      "sha256": "346cdab59bfa48eccd71851da731a25a38eee965f31d90a5074cd99d2018a40d",
+      "matches_historical_receipt": true
+    },
+    "src/research/correlation_ledger/ledger.py": {
+      "sha256": "fd7ef19ef8cf9fafefa796bf5d623ca8226404c8b67bfb37e8505ca1bd13af2b",
+      "matches_historical_receipt": true
+    },
+    "src/economics/flash_capital_graph/graph.py": {
+      "sha256": "0f24d5c7dec76816807e550e297aec6b9611d6f3058e7c9dc296c908d4d0277c",
+      "matches_historical_receipt": true
+    }
+  },
+  "historical_receipt_sha256": "2dfb55390bb7990054dc353991e55b4d1e960ca626c6cc247817fd98771b1a78",
+  "sign_enabled": false,
+  "send_enabled": false,
+  "schema_version": "r01.verification.v1",
+  "checked_at": "2026-10-08T01:48:41.805133+00:00",
+  "status": "PASS_WITHOUT_REMERGE",
+  "execution_authority": "NONE",
+  "branch": "codex/r01-verification-2026-10-08",
+  "checks": {
+    "focused": {
+      "passed": 352,
+      "failed": 0,
+      "log_sha256": "c0e9b3387c97913ed259ad0daf75284916dbfa73dd54d5f4098728ff625e36fc"
+    },
+    "full_verifier": {
+      "command": "python scripts/verify_repo.py",
+      "exit_code": 0,
+      "passed": 5331,
+      "deselected": 1,
+      "log_sha256": "be06ea20da6710cb966809d5fa8663b044f1acb5b5c57742d1774b15578872c4"
+    },
+    "offline_bundle": {
+      "status": "PASS",
+      "provider_count": 27,
+      "signatures": 17,
+      "source_pins": 10,
+      "assignment_commit": "e059b1551dd575e25f54979fbe73316bbd0ce316"
+    }
+  },
+  "owner_diff_matrix": {
+    "src/qualification_campaign": {
+      "present": true,
+      "files": 8,
+      "sha256": "af8bfd0fdb7658d3b2fe89a16bfdc647989279b8afe8730c53d4cff16c5f7813",
+      "changed_since_rcn00": [
+        "src/qualification_campaign/profiles.py",
+        "src/qualification_campaign/sources.py"
+      ]
+    },
+    "src/solana_parallel_radar": {
+      "present": true,
+      "files": 10,
+      "sha256": "a825441c2fb0cc0b2deedffa578c604d6d21ace41d4315c2ac7e280ae04319bd",
+      "changed_since_rcn00": [
+        "src/solana_parallel_radar/din_discovery.py"
+      ]
+    },
+    "src/gpr_sui_shadow": {
+      "present": true,
+      "files": 7,
+      "sha256": "85aa3944026d667eb95f4aa5ef1f7ffafa5379ebe0020182f9fbf61489bcf0f0",
+      "changed_since_rcn00": [
+        "src/gpr_sui_shadow/campaign.py",
+        "src/gpr_sui_shadow/models.py"
+      ]
+    },
+    "src/research_economic_graph": {
+      "present": true,
+      "files": 8,
+      "sha256": "8e7efa8f6b090f5355d90ecf7d9e431261f3034580971d82768987259ce03e9f",
+      "changed_since_rcn00": []
+    },
+    "src/assets/resolution": {
+      "present": true,
+      "files": 4,
+      "sha256": "b1da56452ffe1272148002f7b7a8805e6ffd5dba853b70a0f21fb0f31ad99857",
+      "changed_since_rcn00": []
+    },
+    "src/discovery/dynamic_universe": {
+      "present": true,
+      "files": 6,
+      "sha256": "1de0b53b58f3c0341602b23d6c58a159d888d8255607edd9fab73b906bb1c579",
+      "changed_since_rcn00": []
+    },
+    "src/economics/flash_capital_graph": {
+      "present": true,
+      "files": 2,
+      "sha256": "ceb7e1031902c0ff6c03283102715dba45a34a8227d471a1d9a0b0da729bca21",
+      "changed_since_rcn00": []
+    },
+    "src/runtime/runtime_entrypoint.py": {
+      "present": true,
+      "files": 1,
+      "sha256": "de363ae36b94c4a4816ccee3d606cfce05a05279f5cc48a597acbaf0ad8544b2",
+      "changed_since_rcn00": []
+    },
+    "src/market/native_cpmm_capture.py": {
+      "present": true,
+      "files": 1,
+      "sha256": "46b1be0f1621c8974f40d6623a6eebd7d45f118c44c3e670b55404ab44fa15ef",
+      "changed_since_rcn00": []
+    },
+    "src/paper_shadow/native_cpmm_qualification.py": {
+      "present": true,
+      "files": 1,
+      "sha256": "aceee09e0013aa814fa44132c8dd07d76d3bed27fd0f1cf26ab0a1923f8124e5",
+      "changed_since_rcn00": []
+    },
+    "requirements.lock": {
+      "present": true,
+      "files": 1,
+      "sha256": "ba9f8fa1c2489de4c217d7fa65d64cf8e3e3dbe20029c39aa4fa237fe53c955e",
+      "changed_since_rcn00": []
+    },
+    "requirements-dev.lock": {
+      "present": true,
+      "files": 1,
+      "sha256": "e9344320c38dce18d478ff0a7010ea9c1e138664a47e0890576408db70080694",
+      "changed_since_rcn00": []
+    },
+    "config/runtime_authority.json": {
+      "present": true,
+      "files": 1,
+      "sha256": "138161636c550db9965915fed38ea9a6f7e804e449315e13772950c8f0b508b6",
+      "changed_since_rcn00": []
+    },
+    "src/resources/runtime_authority.json": {
+      "present": true,
+      "files": 1,
+      "sha256": "62a00cc913e1c573118e9c477bd6d2d60729c38bc300eb51663d72db539d4f3d",
+      "changed_since_rcn00": []
+    }
+  }
+}

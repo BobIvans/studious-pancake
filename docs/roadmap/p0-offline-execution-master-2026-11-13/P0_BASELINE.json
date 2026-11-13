@@ -170,7 +170,8 @@
       ],
       "cause": "PLATFORM: src/qualification_campaign/evidence.py:11 'import fcntl' + fcntl.flock (Unix-only). Blocks CampaignEvidenceStore import and all three test modules from collection on Windows. Same import also in src/config/activation.py, src/intelligence/pressure_manager.py, src/legacy_arb_bot.py (quarantined).",
       "remediation": "POSIX path unchanged + Windows file-lock fallback (msvcrt) in canonical owner (PR-0). Alternative: install WSL (absent on this machine)."
-    }
+    },
+    "note": "Historical baseline from the prior P0-0 PR audit; not rerun by this documentation update. Latest coding agent must rerun against its fetched current main and report exact platform/test counts."
   },
   "inventory": [
     {
@@ -456,12 +457,10 @@
     },
     {
       "id": "X-02",
-      "package": "capital",
-      "deliverable": "R-01 verification / R-02 capital readers / R-03 builders (separate workstream)",
-      "owner": "PR #583 + #586 (docs-only, unmerged)",
-      "status": "OPEN_PR_NOT_IN_MAIN",
-      "note": "explicitly NOT part of market-data P0; must not be relabeled green by P0 completion",
-      "dependency": "separate workstream"
+      "status": "BLOCKED",
+      "deliverable": "Flash-capital R-02 reader qualification and R-03 builder readiness",
+      "blocker": "R-01 is complete (#584). R-02 #585 has partial prerequisite reads only; zero qualified edges and 27 catalog candidates remain disabled. Offline SDK/docs pack #586 is merged, but real reserve/pool capacity and provider-specific unsigned builder conformance remain unproven.",
+      "evidence": "docs/verification/r02-2026-10-08/RECEIPT.json; docs/roadmap/r02-capacity-recovery-2026-10-08/"
     },
     {
       "id": "X-03",
@@ -485,7 +484,8 @@
       "src/execution/live_control.py",
       "src/execution/senders/",
       "src/execution/shadow.py"
-    ]
+    ],
+    "no_change_in_current_docs_pr": true
   },
   "test_commands": {
     "offline_bundle": "python -I docs/integrations/offline/solana-p0/verify_offline_bundle.py",

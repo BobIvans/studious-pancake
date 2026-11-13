@@ -1,3 +1,20 @@
+"""Immutable partitioned Parquet residual observations with typed provenance.
+
+Stream H extensions:
+- Residual FEATURES cover the typed series families; raw nominal prices are
+  never features and residuals are always computed against proven anchors.
+- Every observation carries a timestamp-alignment provenance flag. Lead/lag
+  windows (100ms/500ms/1s/5s/30s/5m) are computed only over
+  CHAIN_ALIGNED samples; unalignable samples are excluded with a typed reason.
+- Findings remain DISCOVERY_ONLY: no correlation output can alter
+  execution_class, evidence_state, heat or any promotion boundary.
+- Partition directories use bounded-length content labels so the immutable
+  content-addressed Parquet layout stays under Windows MAX_PATH while the
+  storage pattern (partitioned, content-addressed, exclusive-create, capped
+  queries) is unchanged; legacy 64-hex directories remain readable via the
+  same glob and fail-closed row verification.
+"""
+
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 import json
@@ -22,8 +39,19 @@ FEATURES = frozenset(
         "route_topology_change",
         "depth_shock",
         "flash_capacity_change",
+        "vwap_execution_residual",
+        "oracle_residual",
     )
 )
+CHAIN_ALIGNED = "CHAIN_ALIGNED"
+UNALIGNED = "UNALIGNED"
+ALIGNMENT_STATES = frozenset((CHAIN_ALIGNED, UNALIGNED))
+TIMESTAMP_ALIGNMENT_UNPROVEN = "timestamp_alignment_unproven"
+# Bounded-length partition labels: 64 bits per directory component and 128
+# bits per file name. Collisions fail closed (content verification on
+# FileExistsError), and full digests remain inside every row payload.
+PARTITION_LABEL_HEX = 16
+FILE_LABEL_HEX = 32
 
 
 @dataclass(frozen=True)
@@ -35,6 +63,7 @@ class NormalizedObservation:
     features: tuple[tuple[str, float], ...]
     liquidity_resources: tuple[str, ...]
     regime: str
+    timestamp_alignment: str = UNALIGNED
 
     def __post_init__(self) -> None:
         for value in (self.chain, self.market_id, self.relation_id, self.regime):
@@ -43,6 +72,8 @@ class NormalizedObservation:
             raise ValueError(
                 "normalized observations require positive chain provenance"
             )
+        if self.timestamp_alignment not in ALIGNMENT_STATES:
+            raise ValueError("timestamp alignment must be an explicit provenance flag")
         features = tuple(sorted(self.features))
         if (
             not features
@@ -73,6 +104,10 @@ def normalized_residual(
     return (value - anchor - conversion_cost) / scale
 
 
+def partition_label(value: str) -> str:
+    return digest(value)[:PARTITION_LABEL_HEX]
+
+
 @dataclass(frozen=True)
 class CorrelationFinding:
     x: str
@@ -88,6 +123,22 @@ class CorrelationFinding:
     sample_refs: tuple[str, ...]
     generation: str
     verification_state: str = "DISCOVERY_ONLY"
+
+
+@dataclass(frozen=True)
+class LeadLagExclusion:
+    x: str
+    y: str
+    feature: str
+    window_seconds: float | None
+    reason: str
+    sample_count: int
+
+
+@dataclass(frozen=True)
+class LeadLagReport:
+    findings: tuple[CorrelationFinding, ...]
+    exclusions: tuple[LeadLagExclusion, ...]
 
 
 class CorrelationLedger:
@@ -126,7 +177,12 @@ class CorrelationLedger:
             day = datetime.fromtimestamp(o.evidence.observed_at, UTC).strftime(
                 "%Y-%m-%d"
             )
-            key = (digest(o.chain), day, digest(o.evidence.source), digest(o.market_id))
+            key = (
+                partition_label(o.chain),
+                day,
+                partition_label(o.evidence.source),
+                partition_label(o.market_id),
+            )
             partitions.setdefault(key, []).append(o)
         for key, values in sorted(partitions.items()):
             folder = self.root / "normalized" / key[0] / key[1] / key[2] / key[3]
@@ -141,7 +197,7 @@ class CorrelationLedger:
                     {o.identity: o for o in values}.values(), key=lambda o: o.identity
                 )
             ]
-            path = folder / (digest(rows) + ".parquet")
+            path = folder / (digest(rows)[:FILE_LABEL_HEX] + ".parquet")
             table = pa.Table.from_pylist(rows)
             # Exclusive creation avoids replacing history; retry verifies it.
             try:
@@ -166,14 +222,20 @@ class CorrelationLedger:
                 )
             for row in file.read().to_pylist():
                 payload = json.loads(row["payload"])
+                # Pre-alignment payloads remain readable and stay UNALIGNED:
+                # missing provenance is never promoted to chain alignment, and
+                # the stored identity is verified against the exact stored
+                # payload shape.
+                legacy_alignment = "timestamp_alignment" not in payload
+                legacy_identity = digest(payload) if legacy_alignment else None
+                payload.setdefault("timestamp_alignment", UNALIGNED)
                 payload["evidence"] = Evidence(**payload["evidence"])
                 payload["features"] = tuple(tuple(f) for f in payload["features"])
                 payload["liquidity_resources"] = tuple(payload["liquidity_resources"])
                 o = NormalizedObservation(**payload)
-                if (
-                    o.identity != row["identity"]
-                    or o.evidence.observed_at != row["observed_at"]
-                ):
+                if (legacy_identity if legacy_alignment else o.identity) != row[
+                    "identity"
+                ] or o.evidence.observed_at != row["observed_at"]:
                     raise ValueError("corrupt normalized observation")
                 if (
                     o.evidence.generation == self.generation
@@ -201,7 +263,7 @@ class CorrelationLedger:
             if market_or_relation in (o.market_id, o.relation_id)
         )
 
-    def lead_lag(
+    def lead_lag_report(
         self,
         x: str,
         y: str,
@@ -210,7 +272,7 @@ class CorrelationLedger:
         feature: str,
         now: float,
         lags: tuple[float, ...] = (0, 0.1, 0.5, 1.0),
-    ) -> tuple[CorrelationFinding, ...]:
+    ) -> LeadLagReport:
         if (
             feature not in FEATURES
             or not math.isfinite(now)
@@ -223,8 +285,22 @@ class CorrelationLedger:
         observations = self.observations(
             since=now - max(windows) - max(lags), until=now
         )
+        # Provenance gate: lead/lag windows are computed only over samples
+        # whose source and chain timestamps are alignable; unalignable samples
+        # are excluded with a typed reason (unknown provenance is not zero).
+        aligned = tuple(
+            o for o in observations if o.timestamp_alignment == CHAIN_ALIGNED
+        )
+        exclusions: list[LeadLagExclusion] = []
+        excluded = len(observations) - len(aligned)
+        if excluded:
+            exclusions.append(
+                LeadLagExclusion(
+                    x, y, feature, None, TIMESTAMP_ALIGNMENT_UNPROVEN, excluded
+                )
+            )
         series: dict[str, dict[int, NormalizedObservation]] = {x: {}, y: {}}
-        for o in observations:
+        for o in aligned:
             if feature not in dict(o.features):
                 continue
             for name in series:
@@ -287,7 +363,21 @@ class CorrelationLedger:
                         self.generation,
                     )
                 )
-        return tuple(findings)
+        return LeadLagReport(tuple(findings), tuple(exclusions))
+
+    def lead_lag(
+        self,
+        x: str,
+        y: str,
+        windows: tuple[float, ...] = WINDOWS,
+        *,
+        feature: str,
+        now: float,
+        lags: tuple[float, ...] = (0, 0.1, 0.5, 1.0),
+    ) -> tuple[CorrelationFinding, ...]:
+        return self.lead_lag_report(
+            x, y, windows, feature=feature, now=now, lags=lags
+        ).findings
 
     def preserve_anomaly(
         self, candidate: str, *, at: float, findings: tuple[CorrelationFinding, ...]

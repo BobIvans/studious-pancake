@@ -50,7 +50,9 @@ def test_direct_fragmented_synthetic_and_anchors_are_evidence_driven():
         ),
     )
     anchors = tuple(
-        StructuralAnchor(assets[0].asset_id, kind, "SOL", evidence(), True)
+        StructuralAnchor(
+            assets[0].asset_id, kind, "SOL", evidence(), True, underlying_proven=True
+        )
         for kind in ("LST", "NAV", "USD", "WRAPPER", "ORACLE", "PARITY")
     )
     batch = generate(
@@ -125,7 +127,16 @@ def test_flash_capacity_is_a_separate_supported_relation():
 
 def test_stale_or_wrong_generation_anchors_do_not_promote():
     a = asset()
-    anchors = (StructuralAnchor(a.asset_id, "NAV", "SOL", evidence(timestamp=1), True),)
+    anchors = (
+        StructuralAnchor(
+            a.asset_id,
+            "NAV",
+            "SOL",
+            evidence(timestamp=1),
+            True,
+            underlying_proven=True,
+        ),
+    )
     batch = generate(
         (a, asset(OTHER)),
         (market(evidence=evidence(timestamp=500)),),

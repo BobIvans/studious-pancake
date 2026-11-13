@@ -1,0 +1,241 @@
+{
+  "schema_version": "r02.offline-contract-facts.v2",
+  "checked_at": "2026-10-08",
+  "meaning": "read_only_reference_not_executable_abi",
+  "every_method_requires_local_pinned_abi_before_build": true,
+  "sign_enabled": false,
+  "send_enabled": false,
+  "entries": [
+    {
+      "id": "jupiter_lend",
+      "interface_name": "@jup-ag/lend/flashloan",
+      "known_signatures": [
+        "getFlashloanIx({connection,signer,asset,amount}): {borrowIx,paybackIx}",
+        "getFlashBorrowIx",
+        "getFlashPaybackIx"
+      ],
+      "capacity_source": "solana_admin_and_liquidity_accounts",
+      "fee_source": "docs_zero_but_decode_flashloan_admin",
+      "position_setup": "no_marginfi_position_in_published_flow",
+      "fail_closed_if": "REJECT_PAUSED_ACTIVE_NONZERO_FEE_UNQUALIFIED",
+      "source_ref_id": "jupiter_lend"
+    },
+    {
+      "id": "kamino",
+      "interface_name": "klend-interface",
+      "known_signatures": [
+        "flash_borrow_reserve_liquidity(amount:u64)",
+        "flash_repay_reserve_liquidity(amount:u64,borrow_instruction_index:u8)"
+      ],
+      "capacity_source": "reserve_and_liquidity_vault",
+      "fee_source": "reserve_origination_and_flash_fee_onchain",
+      "position_setup": "no_obligation_in_flash_ix_account_struct",
+      "fail_closed_if": "REJECT_UNKNOWN_RESERVE_FEE",
+      "source_ref_id": "kamino"
+    },
+    {
+      "id": "navi",
+      "interface_name": "@naviprotocol/lending",
+      "known_signatures": [
+        "getAllFlashLoanAssets({env,cacheTime})",
+        "getFlashLoanAsset(coinType|id|pool)",
+        "flashloanPTB(tx,coinType,amount,opts)",
+        "repayFlashLoanPTB(tx,coinType,receipt,balance)"
+      ],
+      "capacity_source": "sui_pool_object_and_checkpoint",
+      "fee_source": "dynamic_flashloanFee_per_coinType",
+      "position_setup": "no_lending_position_in_PT_B_API",
+      "fail_closed_if": "REJECT_OFFCHAIN_ONLY_MAX",
+      "source_ref_id": "navi"
+    },
+    {
+      "id": "project0",
+      "interface_name": "@0dotxyz/p0-ts-sdk",
+      "known_signatures": [
+        "createMarginfiAccountTx(authority,index,thirdPartyId)",
+        "lending_account_start_flashloan",
+        "lending_account_end_flashloan"
+      ],
+      "capacity_source": "bank_and_marginfi_account",
+      "fee_source": "docs_zero_onchain_verify",
+      "position_setup": "existing_marginfi_account_needed",
+      "fail_closed_if": "BLOCK_MISSING_ACCOUNT_AND_NO_ACCOUNT_CREATION",
+      "source_ref_id": "project0"
+    },
+    {
+      "id": "deepbook",
+      "interface_name": "DeepBookV3 SDK",
+      "known_signatures": [
+        "borrowBaseAsset(poolKey,borrowAmount)",
+        "returnBaseAsset({poolKey,borrowAmount,baseCoinInput,flashLoan})",
+        "borrowQuoteAsset",
+        "returnQuoteAsset"
+      ],
+      "capacity_source": "pool_resource_at_checkpoint",
+      "fee_source": "pool_fee_state_unverified",
+      "position_setup": "no_flash_lender_position_shown",
+      "fail_closed_if": "POOL_BALANCE_NOT_BORROW_CAP",
+      "source_ref_id": "deepbook"
+    },
+    {
+      "id": "scallop",
+      "interface_name": "@scallop-io/sui-scallop-sdk 5.4.1",
+      "known_signatures": [
+        "new Scallop({walletAddress,network,readTransport})",
+        "createScallopQuery()",
+        "query.getMarketPools()"
+      ],
+      "capacity_source": "scallop_market_state",
+      "fee_source": "published_flash_fee_0_1_percent_confirm_live",
+      "position_setup": "query_only_not_client_signing",
+      "fail_closed_if": "NO_CLIENT_FLASHLOAN_IN_R02",
+      "source_ref_id": "scallop"
+    },
+    {
+      "id": "bucket",
+      "interface_name": "Bucket Sui flash mint",
+      "known_signatures": [
+        "flash_mint/loan package API requires verification"
+      ],
+      "capacity_source": "USDB_issuer",
+      "fee_source": "PSM_OUT_0_30_percent_separate_from_flash_fee",
+      "position_setup": "account_setup_unknown",
+      "fail_closed_if": "USDB_ONLY_AND_FEE_UNKNOWN",
+      "source_ref_id": "bucket"
+    },
+    {
+      "id": "morpho_blue",
+      "interface_name": "IMorpho",
+      "known_signatures": [
+        "flashLoan(address token,uint256 assets,bytes data)",
+        "onMorphoFlashLoan(uint256 assets,bytes data)"
+      ],
+      "capacity_source": "singleton_contract_token_balance",
+      "fee_source": "zero",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "VERIFY_CALLBACK_CONTRACT",
+      "source_ref_id": "morpho_blue"
+    },
+    {
+      "id": "euler_evk",
+      "interface_name": "IEVault",
+      "known_signatures": [
+        "flashLoan(uint256 amount,bytes data)",
+        "onFlashLoan(bytes data)"
+      ],
+      "capacity_source": "evault_cash_and_hooks",
+      "fee_source": "core_zero_but_hook_may_charge",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "CHECK_HOOK_AND_CALLBACK",
+      "source_ref_id": "euler_evk"
+    },
+    {
+      "id": "aave_v3",
+      "interface_name": "IPool",
+      "known_signatures": [
+        "flashLoanSimple(receiver,asset,amount,params,referralCode)",
+        "flashLoan(receiver,assets,amounts,interestRateModes,onBehalfOf,params,referralCode)",
+        "FLASHLOAN_PREMIUM_TOTAL()"
+      ],
+      "capacity_source": "reserve_data_and_pool",
+      "fee_source": "dynamic_current_premium",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "NO_GENERAL_FEE_WAIVER",
+      "source_ref_id": "aave_v3"
+    },
+    {
+      "id": "balancer_v3",
+      "interface_name": "IVaultMain",
+      "known_signatures": [
+        "unlock(bytes data)",
+        "sendTo(IERC20 token,address to,uint256 amount)",
+        "settle(IERC20 token,uint256 amountHint)"
+      ],
+      "capacity_source": "vault_reserves_and_transient_delta",
+      "fee_source": "verify_vault_specific",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "NOT_BALANCER_V2_FLASHLOAN_ABI",
+      "source_ref_id": "balancer_v3"
+    },
+    {
+      "id": "uniswap_v2_flash_swap",
+      "interface_name": "IUniswapV2Pair",
+      "known_signatures": [
+        "swap(uint amount0Out,uint amount1Out,address to,bytes data)",
+        "uniswapV2Call(...)"
+      ],
+      "capacity_source": "pair_reserves",
+      "fee_source": "pair_swap_fee_in_invariant",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "NEVER_DOUBLE_COUNT_SWAP_AND_FLASH",
+      "source_ref_id": "uniswap_v2_flash_swap"
+    },
+    {
+      "id": "uniswap_v3",
+      "interface_name": "IUniswapV3Pool",
+      "known_signatures": [
+        "flash(address recipient,uint256 amount0,uint256 amount1,bytes data)",
+        "uniswapV3FlashCallback(uint256 fee0,uint256 fee1,bytes data)"
+      ],
+      "capacity_source": "pool_token_balances",
+      "fee_source": "fee0_fee1_callback",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "VERIFY_FACTORY_CALLBACK",
+      "source_ref_id": "uniswap_v3"
+    },
+    {
+      "id": "pancakeswap_v3",
+      "interface_name": "IPancakeV3Pool",
+      "known_signatures": [
+        "flash(address recipient,uint256 amount0,uint256 amount1,bytes data)",
+        "pancakeV3FlashCallback"
+      ],
+      "capacity_source": "pool_token_balances",
+      "fee_source": "fee_in_callback",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "VERIFY_PANCAKE_FACTORY",
+      "source_ref_id": "pancakeswap_v3"
+    },
+    {
+      "id": "dodo",
+      "interface_name": "IDODOPOOL",
+      "known_signatures": [
+        "flashLoan",
+        "DVMFlashLoanCall",
+        "DPPFlashLoanCall"
+      ],
+      "capacity_source": "pool_base_and_quote",
+      "fee_source": "pool_quote_fee_rules",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "NO_UNIVERSAL_DODO_POOL",
+      "source_ref_id": "dodo"
+    },
+    {
+      "id": "instadapp_fla",
+      "interface_name": "InstaFlashResolver",
+      "known_signatures": [
+        "getBestRoutes(address[] tokens,uint256[] amounts)",
+        "flashLoan(tokens,amounts,route,data,instaData)"
+      ],
+      "capacity_source": "underlying_provider",
+      "fee_source": "aggregate_best_fee",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "DEDUPE_UNDERLYING_RESOURCE",
+      "source_ref_id": "instadapp_fla"
+    },
+    {
+      "id": "silo_v2",
+      "interface_name": "ISilo",
+      "known_signatures": [
+        "flashLoan",
+        "flashloanFee",
+        "Hook.FLASH_LOAN"
+      ],
+      "capacity_source": "per_silo_vault",
+      "fee_source": "deployment_specific",
+      "position_setup": "callback_receiver_required",
+      "fail_closed_if": "HOOK_PERMISSION_UNKNOWN",
+      "source_ref_id": "silo_v2"
+    }
+  ]
+}

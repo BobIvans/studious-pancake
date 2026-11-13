@@ -17,4 +17,4 @@ This folder is the single task index for Codex CLI, GLM and other coding agents.
 - tasks/R06_PAPER_QUALIFICATION.md — campaign-gated, replayable paper qualification.
 - tasks/R07_PROVIDER_EXPANSION.md — one-by-one evaluation of the broad provider catalog.
 
-The existing Solana P0 handoff remains authoritative for market-data work. The R-02 focused SDK references and the broad 27-candidate offline flash-capital dossiers remain in their own directories to avoid copying or creating competing sources of truth.
+The existing Solana P0 handoff remains authoritative for market-data work. R13 adds Solana/Sui multi-provider quote/build races; R14 adds explicit route-level rent/sponsor planning using the existing Slumlord adapter and documented planner design. The R-02 focused SDK references and the broad 27-candidate offline flash-capital dossiers remain in their own directories to avoid copying or creating competing sources of truth.

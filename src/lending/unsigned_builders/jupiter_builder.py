@@ -262,9 +262,7 @@ def assemble_jupiter_lend_message(
             JUPITER_BUILDER_PROVIDER,
             "cannot assemble a message from blocked plans",
         )
-    sequence: list[SequenceItem] = [
-        _to_sequence_item(item) for item in before_borrow
-    ]
+    sequence: list[SequenceItem] = [_to_sequence_item(item) for item in before_borrow]
     sequence.append(borrow_plan.bookend.to_sequence_item())
     sequence.extend(_to_sequence_item(item) for item in route_between)
     sequence.append(repay_plan.bookend.to_sequence_item())

@@ -151,7 +151,9 @@ class UnsignedBuilderError(ValueError):
         provider: str,
         message: str,
     ) -> "UnsignedBuilderError":
-        return cls((ConformanceViolation(code=code, message=message, provider=provider),))
+        return cls(
+            (ConformanceViolation(code=code, message=message, provider=provider),)
+        )
 
 
 def _require_text(value: str, label: str) -> str:
@@ -212,7 +214,9 @@ def _canonical_payload(value: object) -> object:
     if isinstance(value, (tuple, list)):
         return [_canonical_payload(item) for item in value]
     if isinstance(value, dict):
-        return {str(key): _canonical_payload(item) for key, item in sorted(value.items())}
+        return {
+            str(key): _canonical_payload(item) for key, item in sorted(value.items())
+        }
     if isinstance(value, (str, int, float, bool)) or value is None:
         return value
     raise UnsignedBuilderError.single(
@@ -415,7 +419,9 @@ class PtArgument:
 
     def __post_init__(self) -> None:
         if self.kind == "object_id":
-            object.__setattr__(self, "value", _validate_object_id(self.value, "ptb object argument"))
+            object.__setattr__(
+                self, "value", _validate_object_id(self.value, "ptb object argument")
+            )
         elif self.kind == "result_ref":
             _require_text(self.value, "ptb result_ref")
             parts = self.value.split(":")
@@ -511,7 +517,10 @@ class HotPotatoReceipt:
 
     def __post_init__(self) -> None:
         PtArgument(kind="result_ref", value=self.result_ref)
-        if type(self.producer_command_index) is not int or self.producer_command_index < 0:
+        if (
+            type(self.producer_command_index) is not int
+            or self.producer_command_index < 0
+        ):
             raise UnsignedBuilderError.single(
                 ConformanceErrorCode.INVALID_INPUT,
                 "contract",
@@ -680,8 +689,12 @@ def check_bookend_sequence(
 
     _require_text(provider, "provider")
     _validate_pubkey(program_id, "program_id")
-    borrow_disc = bytes.fromhex(_require_text(borrow_discriminator_hex, "borrow discriminator"))
-    repay_disc = bytes.fromhex(_require_text(repay_discriminator_hex, "repay discriminator"))
+    borrow_disc = bytes.fromhex(
+        _require_text(borrow_discriminator_hex, "borrow discriminator")
+    )
+    repay_disc = bytes.fromhex(
+        _require_text(repay_discriminator_hex, "repay discriminator")
+    )
     borrow_indexes: list[int] = []
     repay_indexes: list[int] = []
     for index, item in enumerate(sequence):
@@ -713,7 +726,9 @@ def check_bookend_sequence(
             provider,
             "borrow bookend must strictly precede repay bookend",
         )
-    return BookendCertificate(borrow_index=borrow_indexes[0], repay_index=repay_indexes[0])
+    return BookendCertificate(
+        borrow_index=borrow_indexes[0], repay_index=repay_indexes[0]
+    )
 
 
 def check_account_order(
@@ -889,10 +904,7 @@ class UnsignedRepayPlan:
                 "state fingerprint must be lowercase sha256 when provided",
             )
         object.__setattr__(self, "blockers", tuple(self.blockers))
-        built = (
-            self.bookend is not None
-            and self.borrow_bookend is not None
-        )
+        built = self.bookend is not None and self.borrow_bookend is not None
         _validated_build_status_pair(
             self.provider,
             self.build_status,
@@ -1004,7 +1016,8 @@ def finalize_unsigned_solana_plan(
     if (
         borrow_plan.bookend.amount_base_units is not None
         and repay_plan.bookend.amount_base_units is not None
-        and borrow_plan.bookend.amount_base_units != repay_plan.bookend.amount_base_units
+        and borrow_plan.bookend.amount_base_units
+        != repay_plan.bookend.amount_base_units
     ):
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.AMOUNT_MISMATCH,

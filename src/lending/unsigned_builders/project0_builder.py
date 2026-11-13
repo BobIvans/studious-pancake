@@ -82,7 +82,10 @@ class Project0BracketCertificate:
                 PROJECT0_BUILDER_PROVIDER,
                 "begin_index must be a non-negative integer",
             )
-        if type(self.route_instruction_count) is not int or self.route_instruction_count < 0:
+        if (
+            type(self.route_instruction_count) is not int
+            or self.route_instruction_count < 0
+        ):
             raise UnsignedBuilderError.single(
                 ConformanceErrorCode.INVALID_INPUT,
                 PROJECT0_BUILDER_PROVIDER,

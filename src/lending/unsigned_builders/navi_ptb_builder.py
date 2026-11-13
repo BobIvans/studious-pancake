@@ -117,14 +117,26 @@ class NaviVerifiedDeploymentConfig:
     def __post_init__(self) -> None:
         from src.lending.unsigned_builders.contract import _validate_object_id
 
-        object.__setattr__(self, "package_id", _validate_object_id(self.package_id, "config package_id"))
-        object.__setattr__(self, "storage_id", _validate_object_id(self.storage_id, "config storage_id"))
+        object.__setattr__(
+            self,
+            "package_id",
+            _validate_object_id(self.package_id, "config package_id"),
+        )
+        object.__setattr__(
+            self,
+            "storage_id",
+            _validate_object_id(self.storage_id, "config storage_id"),
+        )
         object.__setattr__(
             self,
             "flashloan_config_id",
             _validate_object_id(self.flashloan_config_id, "config flashloan_config_id"),
         )
-        object.__setattr__(self, "pool_object_id", _validate_object_id(self.pool_object_id, "config pool_object_id"))
+        object.__setattr__(
+            self,
+            "pool_object_id",
+            _validate_object_id(self.pool_object_id, "config pool_object_id"),
+        )
         _require_coin_type(self.sui_coin_type)
         if self.version not in (1, 2):
             raise UnsignedBuilderError.single(
@@ -361,8 +373,9 @@ def check_navi_command_shape(
     expected_borrow_function = (
         NAVI_BORROW_FUNCTION_V2 if config.version == 2 else NAVI_BORROW_FUNCTION_V1
     )
-    if borrow.function_name != expected_borrow_function or not borrow.target.startswith(
-        f"{config.package_id}::{NAVI_LENDING_MODULE}::"
+    if (
+        borrow.function_name != expected_borrow_function
+        or not borrow.target.startswith(f"{config.package_id}::{NAVI_LENDING_MODULE}::")
     ):
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.PACKAGE_ID_MISMATCH,
@@ -419,19 +432,28 @@ def check_navi_command_shape(
             NAVI_BUILDER_PROVIDER,
             "repay must pass the 0x06 Clock shared object first",
         )
-    if repay.arguments[1].kind != "object_id" or repay.arguments[1].value != config.storage_id:
+    if (
+        repay.arguments[1].kind != "object_id"
+        or repay.arguments[1].value != config.storage_id
+    ):
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.PTB_OBJECT_CONFLICT,
             NAVI_BUILDER_PROVIDER,
             "repay must pass the configured storage object",
         )
-    if repay.arguments[2].kind != "object_id" or repay.arguments[2].value != config.pool_object_id:
+    if (
+        repay.arguments[2].kind != "object_id"
+        or repay.arguments[2].value != config.pool_object_id
+    ):
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.PTB_OBJECT_CONFLICT,
             NAVI_BUILDER_PROVIDER,
             "repay must pass the configured pool object",
         )
-    if repay.arguments[3].kind != "result_ref" or repay.arguments[3].value != _BORROW_RECEIPT_RESULT:
+    if (
+        repay.arguments[3].kind != "result_ref"
+        or repay.arguments[3].value != _BORROW_RECEIPT_RESULT
+    ):
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.HOT_POTATO_UNCONSUMED,
             NAVI_BUILDER_PROVIDER,
@@ -445,13 +467,19 @@ def check_navi_command_shape(
                 NAVI_BUILDER_PROVIDER,
                 "repay coin argument differs from the bound repayment coin",
             )
-    if borrow.arguments[0].kind != "object_id" or borrow.arguments[0].value != config.flashloan_config_id:
+    if (
+        borrow.arguments[0].kind != "object_id"
+        or borrow.arguments[0].value != config.flashloan_config_id
+    ):
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.PTB_OBJECT_CONFLICT,
             NAVI_BUILDER_PROVIDER,
             "borrow must pass the configured flashloan config object",
         )
-    if borrow.arguments[1].kind != "object_id" or borrow.arguments[1].value != config.pool_object_id:
+    if (
+        borrow.arguments[1].kind != "object_id"
+        or borrow.arguments[1].value != config.pool_object_id
+    ):
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.PTB_OBJECT_CONFLICT,
             NAVI_BUILDER_PROVIDER,
@@ -518,7 +546,9 @@ def build_navi_unconsumed_receipt_probe(
         PtArgument(kind="object_id", value=config.pool_object_id),
         PtArgument(kind="pure", value=f"u64:{amount}"),
     ]
-    borrow_function = NAVI_BORROW_FUNCTION_V2 if config.version == 2 else NAVI_BORROW_FUNCTION_V1
+    borrow_function = (
+        NAVI_BORROW_FUNCTION_V2 if config.version == 2 else NAVI_BORROW_FUNCTION_V1
+    )
     if config.version == 2:
         borrow_arguments.append(
             PtArgument(kind="object_id", value=_SUI_SYSTEM_STATE_NORMALIZED)

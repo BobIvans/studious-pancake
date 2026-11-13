@@ -306,7 +306,9 @@ def resolve_absolute_borrow_index(
     (BOOKEND_ORDER_INVALID).
     """
 
-    matches = [index for index, item in enumerate(sequence) if item == borrow_instruction]
+    matches = [
+        index for index, item in enumerate(sequence) if item == borrow_instruction
+    ]
     if len(matches) == 0:
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.BOOKEND_MISSING,

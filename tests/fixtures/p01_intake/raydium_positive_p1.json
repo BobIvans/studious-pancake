@@ -1,0 +1,27 @@
+{
+ "success": true,
+ "data": {
+  "data": [
+   {
+    "id": "8VzotRh8e6y9V3mLRACzJAfg6dMLm4D22HyqUByVvyoU",
+    "mintA": {
+     "address": "So11111111111111111111111111111111111111112"
+    },
+    "mintB": {
+     "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    },
+    "programId": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
+   },
+   {
+    "id": "8Zv72jA9EQGNd91qrTXub3SSLnZYS7tqaheVXa26gK8B",
+    "mintA": {
+     "address": "So11111111111111111111111111111111111111112"
+    },
+    "mintB": {
+     "address": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+    },
+    "programId": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
+   }
+  ]
+ }
+}

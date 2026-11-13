@@ -1,0 +1,17 @@
+{
+ "success": true,
+ "data": {
+  "data": [
+   {
+    "id": "8dqQB2d9phZbmEGMHkrpsvDCawmk7Baf97K9ax4hReSt",
+    "mintA": {
+     "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+    },
+    "mintB": {
+     "address": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+    },
+    "programId": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C"
+   }
+  ]
+ }
+}

@@ -22,7 +22,12 @@ from typing import Callable
 from src.assets.resolution.evidence import Evidence
 from src.assets.resolution.resolver import CandidateAsset, ChainAssetProof
 from src.discovery.dynamic_universe.universe import DiscoveryEnvelope, MarketIdentity
-from src.qualification_campaign.sources import Candidate, SourceIntakePlane
+from src.qualification_campaign.sources import (
+    Candidate,
+    DiscoveryAdapter,
+    SourceDossier,
+    SourceIntakePlane,
+)
 
 # Quality states emitted by the canonical intake plane.
 POSITIVE_STATES = frozenset({"accepted", "accepted-with-rejections"})
@@ -102,7 +107,9 @@ class IntakeScheduler:
     def __init__(
         self,
         plane: SourceIntakePlane,
-        sources: dict[str, tuple[object, Callable[[int], object], CadencePolicy]],
+        sources: dict[
+            str, tuple[SourceDossier, Callable[[int], DiscoveryAdapter], CadencePolicy]
+        ],
         *,
         clock_ns: Callable[[], int],
         max_physical_requests: int,
@@ -266,9 +273,9 @@ def radar_universe_envelopes(
             if not isinstance(candidate, Candidate):
                 raise ValueError("canonical radar candidate required")
             family = VENUE_FAMILY.get(candidate.venue_label)
-            pair_proven = family is not None
             if family is None:
                 rejections["unknown-venue-family"] += 1
+            pair_proven = family is not None
             for mint in candidate.mints:
                 if mint in assets:
                     continue
@@ -291,7 +298,7 @@ def radar_universe_envelopes(
                     True,
                     extensions=proof.extensions,
                 )
-            if pair_proven:
+            if family is not None and pair_proven:
                 base, quote = candidate.mints
                 market = MarketIdentity(
                     "solana",

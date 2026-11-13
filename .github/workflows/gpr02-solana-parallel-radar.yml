@@ -6,6 +6,7 @@ on:
       - "src/solana_parallel_radar/**"
       - "config/qualification/gpr02-solana-contracts.json"
       - "tests/test_gpr02_solana_parallel_radar.py"
+      - "tests/test_p01_intake_cadence.py"
       - ".github/workflows/gpr02-solana-parallel-radar.yml"
   workflow_dispatch:
 
@@ -33,6 +34,7 @@ jobs:
           python -m mypy --config-file mypy.ini --follow-imports=silent src/solana_parallel_radar
           python -m pytest -q --disable-socket --allow-unix-socket \
             tests/test_gpr02_solana_parallel_radar.py \
+            tests/test_p01_intake_cadence.py \
             tests/test_gpr01_research_economic_graph.py tests/test_gpr01_v22_delta.py \
             tests/test_qpr01_campaign_identity.py tests/test_qpr02_data_plane.py \
             tests/test_qpr03_source_intake.py tests/test_shadow_market_data_aggregation.py \

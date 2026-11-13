@@ -1,3 +1,5 @@
+> **Historical snapshot note (2026-11-13):** this file records the 2026-10-08 baseline below. Current status supersedes its old PR-state notes: R-01 verification is complete in #584; R-02 prerequisite evidence/blockers are merged in #585; the focused offline SDK and R-03 handoff is merged in #586; the old broad-document draft #583 was superseded by #591 and closed. For current project orchestration, read `docs/roadmap/agent-execution-master-2026-11-13/CODEX_START_HERE.md`. Do not treat old SHAs, open/draft flags or test totals below as current.
+
 # Actual main and retained blocked evidence
 ## GitHub state — 2026-10-08
 - `main` audited at `8e222fcddb7fd3bc6e5720d9585e5d5903812294` (merge PR #585).

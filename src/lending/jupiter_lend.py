@@ -109,7 +109,9 @@ class JupiterLendCapacityRejectionCode(StrEnum):
     FINANCING_MINT_BINDING_MISMATCH = "R02CAPA_FINANCING_MINT_BINDING_MISMATCH"
     FINANCING_RESERVE_BINDING_MISMATCH = "R02CAPA_FINANCING_RESERVE_BINDING_MISMATCH"
     FINANCING_VAULT_BINDING_MISMATCH = "R02CAPA_FINANCING_VAULT_BINDING_MISMATCH"
-    FINANCING_LIQUIDITY_PROGRAM_MISMATCH = "R02CAPA_FINANCING_LIQUIDITY_PROGRAM_MISMATCH"
+    FINANCING_LIQUIDITY_PROGRAM_MISMATCH = (
+        "R02CAPA_FINANCING_LIQUIDITY_PROGRAM_MISMATCH"
+    )
     MISSING_EFFECTIVE_FLASH_CAP = "MISSING_EFFECTIVE_FLASH_CAP"
     LIVE_ROOTED_RPC_NOT_AUTHORIZED = "LIVE_ROOTED_RPC_NOT_AUTHORIZED"
     GRAPH_ALLOWANCE_PENDING = (
@@ -313,9 +315,7 @@ JUPITER_TOKEN_RESERVE_SEED_SOURCE = (
 )
 TOKEN_RESERVE_DISCRIMINATOR = bytes((21, 18, 59, 135, 120, 20, 31, 12))
 TOKEN_RESERVE_ACCOUNT_LEN = 192
-SPL_TOKEN_PROGRAM_ID = Pubkey.from_string(
-    "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-)
+SPL_TOKEN_PROGRAM_ID = Pubkey.from_string("TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA")
 SPL_TOKEN_2022_PROGRAM_ID = Pubkey.from_string(
     "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
 )
@@ -630,7 +630,10 @@ class JupiterLendReserveCapacityObservation:
         if not self.slot_rooted:
             if self.slot is not None:
                 raise ValueError("unrooted observation cannot claim a slot")
-            if self.slot_provenance != JupiterLendSlotProvenance.OFFLINE_FIXTURE_NOT_ROOTED:
+            if (
+                self.slot_provenance
+                != JupiterLendSlotProvenance.OFFLINE_FIXTURE_NOT_ROOTED
+            ):
                 raise ValueError("unrooted observation must use offline provenance")
             if "LIVE_ROOTED_RPC_NOT_AUTHORIZED" not in self.blockers:
                 raise ValueError(
@@ -641,7 +644,8 @@ class JupiterLendReserveCapacityObservation:
                 self.slot is None
                 or type(self.slot) is not int
                 or self.slot < 0
-                or self.slot_provenance != JupiterLendSlotProvenance.LIVE_ROOTED_RPC.value
+                or self.slot_provenance
+                != JupiterLendSlotProvenance.LIVE_ROOTED_RPC.value
             ):
                 raise ValueError("rooted observation requires an integer rooted slot")
         if self.status not in ("PARTIAL_DECODED", "BLOCKED_LIVE_STATE"):
@@ -915,9 +919,7 @@ def reserve_capital_edge_gate(
         )
     return JupiterLendCapitalEdgeGate(
         edge=None,
-        blocker=(
-            JupiterLendCapacityRejectionCode.GRAPH_ALLOWANCE_PENDING.value
-        ),
+        blocker=(JupiterLendCapacityRejectionCode.GRAPH_ALLOWANCE_PENDING.value),
         blockers=observation.blockers,
         note=(
             "FlashCapitalGraph provider allowance for jupiter-lend requires "

@@ -3,6 +3,7 @@ from dataclasses import replace
 import pytest
 
 from src.research.correlation_ledger.ledger import (
+    CHAIN_ALIGNED,
     CorrelationLedger,
     NormalizedObservation,
     normalized_residual,
@@ -10,7 +11,7 @@ from src.research.correlation_ledger.ledger import (
 from tests.test_dynamic_asset_resolution import evidence
 
 
-def sample(market, t, value, *, group=None):
+def sample(market, t, value, *, group=None, aligned=True):
     e = replace(
         evidence(market, position=round(t * 100), timestamp=t),
         correlation_group=group or market,
@@ -23,6 +24,7 @@ def sample(market, t, value, *, group=None):
         (("stable_residual", value),),
         (market,),
         "quiet",
+        timestamp_alignment=CHAIN_ALIGNED if aligned else "UNALIGNED",
     )
 
 

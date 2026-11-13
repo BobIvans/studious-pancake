@@ -106,8 +106,8 @@
       "canonical_urls": [
         "https://github.com/orca-so/whirlpools",
         "https://github.com/orca-so/whirlpools/blob/cc683ec92acb5e7606caa3d8e514d9383e9c7c11/programs/whirlpool/src/state/whirlpool.rs",
-        "https://github.com/orca-so/whirlpools/blob/cc683ec92acb5e7606caa3d3e8e514d9383e9c7c11/programs/whirlpool/src/state/tick_array.rs",
-        "https://github.com/orca-so/whirlpools/blob/cc683ec92acb5e7606caa3d3e8e514d9383e9c7c11/LICENSE"
+        "https://github.com/orca-so/whirlpools/blob/cc683ec92acb5e7606caa3d8e514d9383e9c7c11/programs/whirlpool/src/state/tick_array.rs",
+        "https://github.com/orca-so/whirlpools/blob/cc683ec92acb5e7606caa3d8e514d9383e9c7c11/LICENSE"
       ],
       "upstream_repository": "orca-so/whirlpools",
       "upstream_commit": "cc683ec92acb5e7606caa3d8e514d9383e9c7c11",
@@ -140,6 +140,85 @@
       "sdk_reference_page_git_blob_sha1": "ccb6d1ff855ea83bd33c85b450563a0bb641ecb0",
       "snapshot_status": "PINNED_DOCS_AND_PACKAGE_METADATA; SELECTED_TECHNICAL_FACTS_IN_DIRECT_STATE_NOTE",
       "notes": "The SDK is anchor/web3.js-based and the account model uses LbPair, BinArray, BinArrayBitmapExtension, Oracle and reserve PDAs. Pin the transitive SDK lockfile before use; do not casually import the current TypeScript SDK into the Python runtime."
+    },
+    "dexscreener": {
+      "provider": "DEX Screener",
+      "canonical_urls": [
+        "https://docs.dexscreener.com/api/reference"
+      ],
+      "retrieved_at_utc": "2026-11-13",
+      "endpoint_families": [
+        "/latest/dex/search",
+        "/latest/dex/pairs/{chainId}/{pairId}",
+        "/token-pairs/v1/{chainId}/{tokenAddress}",
+        "/tokens/v1/{chainId}/{tokenAddresses}"
+      ],
+      "published_rate_limits": {
+        "pair_search_token": "300 requests/minute",
+        "profile_boost_takeover_ads_orders": "60 requests/minute"
+      },
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "notes": "Discovery metadata only; pool price/liquidity is not direct state. Current official docs checked 2026-11-13."
+    },
+    "geckoterminal_v2": {
+      "provider": "GeckoTerminal",
+      "canonical_urls": [
+        "https://api.geckoterminal.com/docs/index.html",
+        "https://api.geckoterminal.com/docs/v2/swagger.json"
+      ],
+      "retrieved_at_utc": "2026-11-13",
+      "base_url": "https://api.geckoterminal.com/api/v2",
+      "api_version": "V2 beta; Accept: application/json;version=20230203",
+      "published_rate_limits": {
+        "public_api": "approximately 10 calls/minute, may fluctuate"
+      },
+      "data_freshness": {
+        "cache": "approximately 1 minute",
+        "post_confirmation": "2-3 seconds subject to network"
+      },
+      "snapshot_status": "OFFICIAL_CONTRACT_REFERENCE_ONLY",
+      "notes": "Older repo catalogue notes saying 30 calls/minute are stale relative to the current official docs. Keep blocked until its exact live response contract and auth/network access are captured."
+    },
+    "raydium_api_v3": {
+      "provider": "Raydium API V3",
+      "canonical_urls": [
+        "https://docs.raydium.io/api-reference/api-v3/overview",
+        "https://docs.raydium.io/sdk-api/rest-api",
+        "https://api-v3.raydium.io"
+      ],
+      "upstream_repository": "raydium-io/raydium-docs-v1",
+      "upstream_commit": "7023f95844fb79abd1c36f1650278d024de5e175",
+      "upstream_docs_paths": {
+        "sdk-api/rest-api.mdx": "1416187265161d0ae950896c219e04e184429b15",
+        "api-reference/api-v3/overview.mdx": "4757172c2ef00b2afa04614594d011980a5e7555",
+        "reference/program-addresses.mdx": "23e2cff9ef641aae8045786d8a8fa29bd1c37cc8"
+      },
+      "snapshot_status": "SOURCE_COMMIT_AND_BLOB_PINS; TECHNICAL_EXTRACT_IN_SOLANA_DISCOVERY_SOURCES.md",
+      "notes": "API v3 is an indexed pool/mint/config read layer. Rate limits are progressive per IP; 429 includes Retry-After. Cache TTL varies by endpoint; direct RPC is required for exact fresh state."
+    },
+    "meteora_dlmm_data_api": {
+      "provider": "Meteora DLMM",
+      "canonical_urls": [
+        "https://github.com/MeteoraAg/dlmm-sdk",
+        "https://github.com/MeteoraAg/docs/blob/23bcd7f9abdbb7fc400aa1902119785b9e114114/developer-guides/dlmm/program/accounts.mdx",
+        "https://github.com/MeteoraAg/docs/blob/23bcd7f9abdbb7fc400aa1902119785b9e114114/developer-guides/dlmm/typescript-sdk/reference.mdx",
+        "https://github.com/MeteoraAg/dlmm-sdk/blob/1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1/ts-client/package.json"
+      ],
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "package_name": "@meteora-ag/dlmm",
+      "package_version": "1.9.15",
+      "package_license": "ISC",
+      "package_json_git_blob_sha1": "6b0040e267f19f7dffa287b6768e5a660f6087cb",
+      "program_id_mainnet": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "docs_repository_commit": "23bcd7f9abdbb7fc400aa1902119785b9e114114",
+      "accounts_page_git_blob_sha1": "b755cbbcfcdc343fe7376e973893155162fa03e5",
+      "sdk_reference_page_git_blob_sha1": "ccb6d1ff855ea83bd33c85b450563a0bb641ecb0",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY_FOR_DATA_API; SDK AND ACCOUNT DOCUMENTS COMMIT-PINNED",
+      "notes": "The SDK is anchor/web3.js-based and the account model uses LbPair, BinArray, BinArrayBitmapExtension, Oracle and reserve PDAs. Pin the transitive SDK lockfile before use; do not casually import the current TypeScript SDK into the Python runtime.",
+      "data_api_base_url": "https://dlmm.datapi.meteora.ag",
+      "data_api_swagger": "https://dlmm.datapi.meteora.ag/swagger-ui/",
+      "published_rate_limit": "30 requests/second"
     }
   },
   "known_contract_drift": [

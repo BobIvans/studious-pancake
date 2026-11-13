@@ -323,9 +323,29 @@
         "P0-0 baseline in superseded #590 branch"
       ],
       "blockers": [
-        "Historical native Windows test blockers: fcntl and os.getuid; WSL-first was selected but current local WSL state not verified; historical counts need rerun."
+        "Historical native Windows test blockers: fcntl and os.getuid; WSL-first was selected but current local WSL state not verified; historical counts need rerun.",
+        "CI run #2975 on documentation PR #595 fails strict pip-audit with 68 known advisories across nine packages; no runtime/dependency files changed in the PR."
       ],
-      "next": "R11 record actual platform, run bundle verifiers/full verifier, resolve without weakening gates."
+      "next": "R11 platform baseline plus R12 dependency audit remediation; verify current WSL and run full verifier."
+    },
+    {
+      "id": "SEC-R12",
+      "name": "Dependency and supply-chain security remediation",
+      "status": "BLOCKED",
+      "owners": [
+        "pyproject.toml",
+        "requirements.lock",
+        "requirements-dev.lock",
+        "uv lock workflow",
+        "scripts/verify_repo.py"
+      ],
+      "evidence": [
+        "CI run #2975 on PR #595: pip-audit reported 68 known advisories across 9 packages; formatter, mypy, wheel smoke, non-root image smoke and secret scan succeeded."
+      ],
+      "blockers": [
+        "The strict dependency audit remains failing. Findings observed: aiohttp 3.14.3, brotli 1.2.0, certifi 2026.6.17, setuptools 83.0.0, black 26.3.1, msgpack 1.2.2, filelock 3.32.5, pillow 12.3.0 and uv 0.11.15. Revalidate fix versions against current advisories and project constraints."
+      ],
+      "next": "R12 verify advisory IDs, upgrade compatible pins through official lock workflow, run full tests and pip-audit, publish report."
     }
   ],
   "global_safety": {
@@ -337,5 +357,8 @@
     "no_account_creation": true,
     "no_spending": true
   },
-  "next_agent_action": "Refresh this status matrix against latest main and current PRs, launch independent tracks concurrently in isolated worktrees, and update each row only with verifiable commit/tests/evidence."
+  "next_agent_action": "Refresh this status matrix against latest main and current PRs, launch independent tracks concurrently in isolated worktrees, and update each row only with verifiable commit/tests/evidence.",
+  "audit_notes": [
+    "PR #595 CI run #2975: scripts/verify_repo.py failed at strict pip-audit with 68 findings in 9 locked packages. This documentation-only PR changed no dependency/runtime files; it is an existing dependency-security baseline issue pending revalidation."
+  ]
 }

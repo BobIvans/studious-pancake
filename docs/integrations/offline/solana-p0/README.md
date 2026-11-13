@@ -6,11 +6,12 @@
 ## Read order
 
 1. `SOURCE_MANIFEST.json` — exact upstream locations, retrieval commits/blob IDs, version and mirror status.
-2. `SOLANA_RPC_STATE.md` — RPC consistency, account reads, program/mint proof.
-3. `JUPITER_SWAP_V2.md` and `JUPITER_SWAP_V2.openapi.yaml` — current official Jupiter API contract.
-4. `ZEROX_SOLANA_SWAP.md` — current official 0x Solana request/response contract.
-5. `DIRECT_STATE_RAYDIUM_ORCA_METEORA.md` — venue account state, math inputs, identity checks and license boundaries.
-6. Task prompts in `docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/`.
+2. `SOLANA_DISCOVERY_SOURCES.md` — current discovery sources, endpoints and conservative quota notes.
+3. `SOLANA_RPC_STATE.md` — RPC consistency, account reads, program/mint proof.
+4. `JUPITER_SWAP_V2.md` and `JUPITER_SWAP_V2.openapi.yaml` — current official Jupiter API contract.
+5. `ZEROX_SOLANA_SWAP.md` — current official 0x Solana request/response contract.
+6. `DIRECT_STATE_RAYDIUM_ORCA_METEORA.md` — venue account state, math inputs, identity checks and license boundaries.
+7. Task prompts in `docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/`.
 
 ## Important truth about offline completeness
 

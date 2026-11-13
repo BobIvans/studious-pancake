@@ -1,11 +1,14 @@
 {
   "aftermath": {
     "classification": "RESEARCH_SOURCE_CONTRACT_ONLY",
-    "engineering_budget": {
-      "max_json_nodes": 60000,
+    "narrowed_profile": {
+      "max_json_nodes": 20000,
       "max_normalized_row_scan": 512,
-      "max_response_bytes": 2097152,
-      "reason": "actual HTTP200 body exceeded 1MiB in first immutable campaign"
+      "max_response_bytes": 1048576,
+      "measured_bulk_observation": "gzip HTTP 200 decoded beyond 2MiB in first immutable campaign; bulk POST {} stays fail-closed",
+      "reason": "engineering 2MiB/60000 subcap retired 2026-11-14; responses must fit the shared 1MiB/20000 bounded profile; any field/range request parameter requires a new source pin before issuance",
+      "request_body_pin": "{}",
+      "request_body_pin_reason": "only measured request shape (pinned pools.ts getAllPools); no range/field parameter is source-pinned offline"
     },
     "numeric_public_quota": "UNKNOWN; engineering subcap 12 attempts",
     "sha256": "c6747a9476a5a200bb5b4435fdf6f0f3aba85b98270ddb070cb91485481b4d39",

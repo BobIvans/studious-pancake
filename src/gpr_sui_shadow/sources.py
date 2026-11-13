@@ -34,6 +34,17 @@ def checkpoint_request(endpoint):
     )
 
 
+def aftermath_pools_request(endpoint):
+    """Pinned bulk read shape: the ONLY measured Aftermath request body.
+
+    No field/range parameter is source-pinned offline, so the narrowing is
+    enforced by the profile's 1 MiB/20,000-node response contract: the measured
+    bulk response exceeds it and fails closed with a typed transport reason.
+    Any targeted parameter requires a new immutable source pin first.
+    """
+    return SuiReadRequest("POST", endpoint, "pool-index", body={})
+
+
 def object_request(endpoint, candidate, checkpoint):
     uint(checkpoint, "checkpoint")
     return SuiReadRequest(

@@ -22,6 +22,7 @@ from src.routing.transport import (
     HttpxJsonTransport,
     TransportPolicy,
     build_tls_context,
+    decide_response_content_length,
     SanitizedTransportError,
 )
 from src.research_economic_graph.graph import retained_records, require_generation
@@ -65,12 +66,19 @@ class CapturedJsonTransport(HttpxJsonTransport):
         self._sui_capture_guard_installed = True
 
     async def _read_bounded(self, response):
+        decision = decide_response_content_length(
+            response.headers.get("content-length"),
+            transfer_encoding=response.headers.get("transfer-encoding"),
+            cap=min(self.policy.max_wire_bytes, self.policy.max_response_bytes),
+        )
         self.raw_capture = {
             **(self.raw_capture or {}),
             "http_status": response.status_code,
             "content_type": response.headers.get("content-type"),
             "content_encoding": response.headers.get("content-encoding", "identity"),
             "declared_content_length": response.headers.get("content-length"),
+            "declared_transfer_encoding": response.headers.get("transfer-encoding"),
+            "content_length_mode": decision.mode,
             "response_limit_bytes": self.policy.max_response_bytes,
             "json_node_limit": self.policy.max_json_nodes,
             "body_capture_complete": False,

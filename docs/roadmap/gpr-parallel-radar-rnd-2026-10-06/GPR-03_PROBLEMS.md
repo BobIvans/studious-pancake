@@ -42,3 +42,34 @@ exact checkpoint state from independent providers, qualified book depth/fees and
 unit/time comparable quote/rate/oracle observations. The wide indexed stable
 books support a liquidity-quality investigation; they do not support a trading
 or production-readiness claim.
+
+## Offline remediation 2026-11-14 (agent/sui-gpr03-remediation)
+
+Bounded transport: the shared transport now fails closed before any send when a
+declared request Content-Length disagrees with the actual built body, and
+tolerates missing, malformed and chunked-framed response Content-Length headers
+by bounding the streamed body with the unchanged wire/response caps instead of
+trusting the header; only a trusted over-cap declaration rejects before read.
+The recorded 400/43-byte GraphQL rejection replays offline with the exact
+123-byte request proof and complete typed negative capture
+(`tests/test_gpr03_remediation.py`). The deployed endpoint interoperability is
+still unmeasured and remains blocked pending live evidence.
+
+Aftermath: the 2 MiB/60,000-node engineering subcap is retired; every source
+now uses the shared 1 MiB/20,000-node bounded profile, the pinned bulk `{}`
+request shape is unchanged, and oversized responses fail closed with a typed
+reason. No field/range request parameter is source-pinned offline; a targeted
+narrowed read requires a new immutable source pin before issuance.
+
+Provider binding: `src/gpr_sui_shadow/providers.py` defines the typed evidence
+requirements for two independent non-smoke gRPC/GraphQL providers (checkpoint
+consistency and object-version provenance) with offline verification over
+retained captures. Live binding stays typed
+`BLOCKED(LIVE_SUI_PROVIDERS_NOT_AUTHORIZED)`; no offline code path can flip it.
+
+Decoders: `src/gpr_sui_shadow/decoders.py` binds exact package/module/type
+before decoding, decodes the pinned bounded pool layout with canonical ULEB128
+u64 fields, and binds decimals back to retained `0x2::coin::CoinMetadata<T>`
+BCS. Wrong package, unknown type, truncated/noncanonical BCS and invalid fee
+fractions fail closed. The layout remains a reviewed test contract; the
+dynamic-object book/fee layout binding is still missing for production.

@@ -6,7 +6,6 @@ import base64
 from copy import deepcopy
 from dataclasses import asdict, replace
 from datetime import UTC, datetime
-import hashlib
 import json
 from pathlib import Path
 
@@ -15,6 +14,7 @@ import pytest
 
 from src.gpr_sui_shadow.bcs import metadata_decimals
 from src.gpr_sui_shadow.campaign import default_profiles
+from src.gpr_sui_shadow.decoders import DeepBookPoolDecoder, POOL_DECODER_LAYOUT
 from src.gpr_sui_shadow.intake import (
     CapturedJsonTransport,
     SuiIntakePlane,
@@ -35,7 +35,6 @@ from src.gpr_sui_shadow.sources import (
     residual_bps,
 )
 from src.gpr_sui_shadow.verification import (
-    DecodedPoolState,
     RepresentationProof,
     SuiVerificationPolicy,
     SuiHardBoundGate,
@@ -103,6 +102,36 @@ def metadata_bcs(address, decimals):
     return bytes.fromhex(address[2:]) + bytes([decimals]) + b"\x04coin\x03USD\x00\x00"
 
 
+def uleb128(value):
+    out = bytearray()
+    while True:
+        byte = value & 0x7F
+        value >>= 7
+        if value:
+            out.append(byte | 0x80)
+        else:
+            out.append(byte)
+            return bytes(out)
+
+
+REVIEWED_PACKAGE = "0x" + "3" * 64
+
+
+def pool_state_bcs(**overrides):
+    """BCS bytes of the reviewed test-contract layout (POOL_DECODER_LAYOUT)."""
+    fields = {
+        "object_version": 10,
+        "lot_size": 1,
+        "tick_size": 1,
+        "taker_fee_numerator": 1,
+        "fee_denominator": 1000,
+        "bid_depth_units": 100,
+        "ask_depth_units": 200,
+        **overrides,
+    }
+    return b"".join(uleb128(fields[name]) for name in POOL_DECODER_LAYOUT)
+
+
 def object_payload(candidate):
     state = {
         "coin_types": candidate.coin_types,
@@ -115,7 +144,7 @@ def object_payload(candidate):
         "tick_size": 1,
         "fee_semantics": "FIXTURE_INLINE_NO_PRODUCTION_DECODER",
     }
-    tag = "0x" + "3" * 64 + "::pool::Pool<" + ",".join(candidate.coin_types) + ">"
+    tag = REVIEWED_PACKAGE + "::pool::Pool<" + ",".join(candidate.coin_types) + ">"
     obj = {
         "address": candidate.pool_id,
         "version": 10,
@@ -124,9 +153,7 @@ def object_payload(candidate):
             "contents": {
                 "type": {"repr": tag},
                 "json": state,
-                "bcs": base64.b64encode(
-                    json.dumps(state, sort_keys=True).encode()
-                ).decode(),
+                "bcs": base64.b64encode(pool_state_bcs()).decode(),
             }
         },
     }
@@ -158,30 +185,9 @@ def object_payload(candidate):
     }
 
 
-class FixtureDecoder:
-    code_sha256 = "f" * 64
-
-    def decode(self, checkpoint, obj, bcs):
-        state = json.loads(bcs)
-        h = hashlib.sha256(bcs).hexdigest()
-        return DecodedPoolState(
-            obj["address"],
-            obj["version"],
-            checkpoint["sequenceNumber"],
-            obj["asMoveObject"]["contents"]["type"]["repr"],
-            tuple(state.pop("coin_types")),
-            tuple(state.pop("decimals")),
-            **state,
-            state_bcs_sha256=h,
-            depth_bcs_sha256=h,
-            fee_bcs_sha256=h,
-            metadata_bcs_sha256=tuple(
-                hashlib.sha256(
-                    base64.b64decode(checkpoint["query"][a]["contents"]["bcs"])
-                ).hexdigest()
-                for a in ("a", "b")
-            ),
-        )
+def reviewed_decoder():
+    """Typed package-bound decoder over the pinned test-contract layout."""
+    return DeepBookPoolDecoder(expected_package=REVIEWED_PACKAGE)
 
 
 def setup(tmp_path, profiles, *, mutate=None, ip_changes=None, policy_changes=None):
@@ -216,7 +222,7 @@ def setup(tmp_path, profiles, *, mutate=None, ip_changes=None, policy_changes=No
     policy = SuiVerificationPolicy(
         "reviewed-fixture-mainnet-id",
         ip.generation,
-        decoder_fingerprint(FixtureDecoder()),
+        decoder_fingerprint(reviewed_decoder()),
         proofs,
         (
             (
@@ -293,7 +299,7 @@ def setup(tmp_path, profiles, *, mutate=None, ip_changes=None, policy_changes=No
         evidence,
         ip,
         policy,
-        FixtureDecoder(),
+        reviewed_decoder(),
         started_at_ns=1000 * 10**9,
         wall_ns=lambda: NOW,
     )
@@ -307,6 +313,11 @@ def test_positive_independent_fixture_receipts_reconstruct_and_remain_shadow(tmp
     verification_ref, receipt_refs = gate.qualify(request, candidate, captures)
     state = gate.require_receipts(request, candidate, verification_ref, receipt_refs)
     assert state.checkpoint == 100 and state.object_version == 10
+    assert state.package_id == REVIEWED_PACKAGE
+    assert (state.lot_size, state.tick_size) == (1, 1)
+    assert (state.taker_fee_numerator, state.fee_denominator) == (1, 1000)
+    assert (state.bid_depth_units, state.ask_depth_units) == (100, 200)
+    assert state.fee_semantics == "FIXTURE_REVIEWED_CONTRACT"
     rows = evidence.replay()
     assert all(r.get("exact_graph_allowed") is not True for r in rows)
     receipts = [
@@ -659,15 +670,12 @@ def test_scoped_profiles_sources_no_production_credentials_and_focus_corpus():
     assert len(profiles) == 8 and all(
         p.smoke_only and p.campaign_attempt_cap in (1, 12) for p in profiles
     )
-    assert (
-        next(p for p in profiles if p.source_kind == "aftermath").max_response_bytes
-        == 2_097_152
-    )
-    assert all(
-        p.max_response_bytes == 1_048_576
-        for p in profiles
-        if p.source_kind != "aftermath"
-    )
+    # The retired 2 MiB/60,000 aftermath engineering subcap must never return:
+    # every source now uses the shared 1 MiB / 20,000-node bounded profile.
+    assert all(p.max_response_bytes == 1_048_576 for p in profiles)
+    assert all(p.max_json_nodes == 20_000 for p in profiles)
+    assert pins["aftermath"]["narrowed_profile"]["max_response_bytes"] == 1_048_576
+    assert "engineering_budget" not in pins["aftermath"]
     assert all(p.credential_ref == "anonymous-public-read" for p in profiles)
     registry, seed = corpus()
     assert len(seed.pools) == 9

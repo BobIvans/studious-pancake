@@ -4,6 +4,9 @@ import re
 
 from .models import coin_type, object_id
 
+MAX_TYPE_ARGS = 4
+MAX_MOVE_TEXT = 128
+
 
 def move_tag(tag):
     if not isinstance(tag, str) or len(tag) > 1024 or any(c.isspace() for c in tag):
@@ -11,6 +14,60 @@ def move_tag(tag):
     return re.sub(
         r"0x([a-fA-F0-9]{1,64})(?=::)", lambda m: "0x" + m[1].lower().zfill(64), tag
     )
+
+
+def parse_move_type(tag):
+    """Parse ``0x<pkg>::<module>::<Name><<Arg, ...>>`` strictly; never infer."""
+    canonical = move_tag(tag)
+    if canonical != tag:
+        raise ValueError("SUI_CANONICAL_MOVE_TYPE_REPR_REQUIRED")
+    package, separator, rest = canonical.partition("::")
+    if not separator or len(package) != 66 or not package.startswith("0x"):
+        raise ValueError("SUI_UNKNOWN_MOVE_TYPE_STRUCTURE")
+    object_id(package)
+    module, separator, tail = rest.partition("::")
+    if not separator:
+        raise ValueError("SUI_UNKNOWN_MOVE_TYPE_STRUCTURE")
+    name, marker, args_text = tail.partition("<")
+    for field in (module, name):
+        if (
+            not field
+            or len(field) > MAX_MOVE_TEXT
+            or not field.replace("_", "a").isalnum()
+        ):
+            raise ValueError("SUI_UNKNOWN_MOVE_TYPE_STRUCTURE")
+    args = []
+    if marker:
+        if not args_text.endswith(">"):
+            raise ValueError("SUI_UNKNOWN_MOVE_TYPE_STRUCTURE")
+        depth = 0
+        current: list[str] = []
+        for char in args_text[:-1]:
+            if char == "<":
+                depth += 1
+            elif char == ">":
+                depth -= 1
+                if depth < 0:
+                    raise ValueError("SUI_UNKNOWN_MOVE_TYPE_STRUCTURE")
+            elif char == "," and depth == 0:
+                args.append("".join(current).strip())
+                current = []
+                continue
+            current.append(char)
+        args.append("".join(current).strip())
+        if len(args) > MAX_TYPE_ARGS or any(not arg for arg in args):
+            raise ValueError("SUI_UNKNOWN_MOVE_TYPE_STRUCTURE")
+    return package, module, name, tuple(args)
+
+
+def bind_move_type(tag, *, expected_package, expected_module, expected_type):
+    """Bind package/module/type exactly; anything else is unknown and fails."""
+    package, module, name, args = parse_move_type(tag)
+    if object_id(package) != object_id(expected_package):
+        raise ValueError("SUI_REVIEWED_PACKAGE_BINDING_MISMATCH")
+    if module != expected_module or name != expected_type:
+        raise ValueError("SUI_UNKNOWN_MOVE_TYPE_REQUIRED")
+    return package, args
 
 
 def metadata_decimals(body, *, address, tag, expected_coin_type):

@@ -13,7 +13,7 @@ from src.research_economic_graph.queue import VerificationTarget
 from .intake import validate_capture
 from .models import SuiCandidate, coin_type, object_id, sha, uint
 from .sources import OBJECT_QUERY
-from .bcs import metadata_decimals, move_tag
+from .bcs import metadata_decimals, move_tag, parse_move_type
 
 
 def decoder_fingerprint(decoder):
@@ -100,6 +100,7 @@ class SuiVerificationPolicy:
 @dataclass(frozen=True)
 class DecodedPoolState:
     pool_id: str
+    package_id: str
     object_version: int
     checkpoint: int
     move_type: str
@@ -119,6 +120,7 @@ class DecodedPoolState:
 
     def __post_init__(self):
         object.__setattr__(self, "pool_id", object_id(self.pool_id))
+        object.__setattr__(self, "package_id", object_id(self.package_id))
         types = tuple(coin_type(t) for t in self.coin_types)
         if len(types) != 2 or len(set(types)) != 2 or len(self.decimals) != 2:
             raise ValueError("SUI_DECODED_POOL_TYPES_REQUIRED")
@@ -283,6 +285,7 @@ class SuiHardBoundGate:
             raise ValueError("SUI_CHECKPOINT_OBJECT_METADATA_DISAGREEMENT")
         cp, obj, bcs = checked[0]
         actual_type = move_tag(obj["asMoveObject"]["contents"]["type"]["repr"])
+        actual_package = parse_move_type(actual_type)[0]
         if (candidate.venue, actual_type) not in {
             (v, move_tag(t)) for v, t in self.policy.venue_move_types
         }:
@@ -295,6 +298,7 @@ class SuiHardBoundGate:
         # proofs require a separately pinned decoder/query before they can qualify.
         if (
             decoded.pool_id != candidate.pool_id
+            or decoded.package_id != actual_package
             or decoded.object_version != obj["version"]
             or decoded.checkpoint != cp["sequenceNumber"]
             or decoded.move_type != obj["asMoveObject"]["contents"]["type"]["repr"]

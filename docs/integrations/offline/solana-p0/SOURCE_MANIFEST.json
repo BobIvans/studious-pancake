@@ -70,7 +70,7 @@
       "pool_state_git_blob_sha1": "bc80829f58f8652bcffba9c559327dd37f63f507",
       "program_id_mainnet": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
       "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
-      "license_status": "Do not vendor source until the upstream license is checked and recorded for the exact commit.",
+      "license_status": "Apache-2.0 verified at pinned upstream commit; license text is mirrored. Selected source files are inert reference snapshots, not runtime dependencies.",
       "upstream_license": "Apache-2.0",
       "local_snapshots": [
         "vendor-reference/raydium/LICENSE-APACHE-2.0.txt",
@@ -94,7 +94,7 @@
       "pool_state_git_blob_sha1": "309cf1842be657698128a8de270943e90cc48ab7",
       "program_id_mainnet": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
       "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
-      "license_status": "Check the exact upstream program-source license before copying or linking code into the project.",
+      "license_status": "Apache-2.0 verified at pinned upstream commit; selected source files are inert reference snapshots, not runtime dependencies.",
       "upstream_license": "Apache-2.0",
       "local_snapshots": [
         "vendor-reference/raydium/clmm/pool.rs.txt",

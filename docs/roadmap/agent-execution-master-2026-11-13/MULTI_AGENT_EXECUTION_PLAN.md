@@ -119,3 +119,45 @@ Every worker returns:
 - unresolved blockers and recommended next task.
 
 The lead updates the central status board after each PR. "Done" without an artifact and test/evidence is not an accepted status.
+
+
+
+## 5.1 Additional specialist lanes — quote/build race and rent planning
+
+These two specialist lanes are added from the existing Universal Source + Execution research package. They are intentionally separate from P0-2 and R-03: they extend those contracts without creating duplicate owners.
+
+### G4 — R-13 Multi-provider quote/build race (Solana + Sui)
+- Start from docs/roadmap/agent-execution-master-2026-11-13/tasks/R13_MULTIPROVIDER_QUOTES_AND_BUILDS.md and the existing EXECUTION_BUILDER_CONTRACT.md / IMPLEMENTATION_ROADMAP.md.
+- Solana candidates: 0x, Titan, Jupiter, OpenOcean, OKX DEX, Rango.
+- Sui candidates: Aftermath, Cetus Aggregator, 7K/Bluefin7K, FlowX, OKX DEX, Rango, direct DeepBook.
+- Reuse P0-2's canonical Jupiter V2 + 0x owner. Do not add another Jupiter adapter or quote schema.
+- First audit code vs documented contracts. QuoteProvider/TransactionBuilder names in docs are not proof of executable classes or boot-path wiring.
+- Preserve every quote, including losing providers; normalize exact amounts, fee/units, route programs/underlying venues, raw hashes, source generations, time and actual slot/checkpoint only when supplied.
+- Keep operator/correlation groups and shared underlying pools. Multiple aggregator quotes are not independent liquidity.
+- Report separately whether a provider returns quote-only data, instructions, unsigned transaction or a composable PTB. No provider owns private keys.
+- No quote extrapolation across amounts; re-quote every nonlinear sizing point.
+
+### J1 — R-14 RentSponsorPlanner / Slumlord integration
+- Start from docs/roadmap/agent-execution-master-2026-11-13/tasks/R14_RENT_SPONSOR_INTEGRATION.md and docs/roadmap/universal-source-execution-rnd-2026-10-07/RENT_SPONSOR_PLANNER.md.
+- Current code owner src/lending/slumlord.py already provides sender-free Borrow/Repay/CheckRepaid instruction construction and order validation. The planner design is documented; do not claim a production RentSponsorPlanner class until actual code/callsites are verified.
+- Decision modes: existing token account, provider sponsor/payer, ephemeral Slumlord rent, persistent local rent, unsupported.
+- Verify 0x sponsor and Titan payer documentation, fee payer/co-signer and close-authority requirements; unknown setup costs remain UNKNOWN.
+- Slumlord is rent assistance, not trading capital or a universal free-ATA facility. Only temporary funded accounts that can be emptied/closed before same-transaction repayment are eligible. A final non-empty output ATA requires persistent funding.
+- Integrate the rent plan as metadata/unsigned instruction references in the existing UnsignedExecutionPlan; do not add a transaction composer or create accounts.
+- R-14 joins R-04 net-cost ranking after R-03/R-13 interface freeze.
+
+## 5.2 Current-main audit snapshot (refresh before every execution)
+
+- Audited main for this handoff update: 86be458a87ed3f499cc32ff56426b2866c90422a (merge #595). This SHA is historical as soon as main moves.
+- #595 is merged and is the current whole-project parallel handoff. Its PROJECT_STATUS.json was audited at the prior base 176f413 and must be refreshed before new code.
+- #593 P0-1 implementation remains OPEN_PR_NOT_IN_MAIN. Its head a3c9fef74c6c01197290890d413ad3e4d5034b4b is based on 176f413 and the current-main comparison showed 4 commits ahead / 64 behind. Its GitHub Actions Repository verification failed strict pip-audit with the same 68 findings in 9 packages; other workflow jobs reported success. Rebase/refresh against current main and rerun all tests/audits before merge; do not assume a mergeability flag or prior Windows subset is a fresh green verifier.
+- #594 parallel-mandate documentation branch is based on 176f413 and is superseded by #595 plus this R-13/R-14 expansion. Close it once this update is merged; do not merge its stale branch.
+- #590 P0-0 baseline PR was closed unmerged and superseded by the refreshed baseline included in #595. Rebuild the baseline only when a new audit warrants it.
+- #595's Repository verification failed strict pip-audit: 68 reported advisories across aiohttp, brotli, certifi, setuptools, black, msgpack, filelock, pillow and uv. Formatting, mypy, secret scan, wheel/console smoke and non-root runtime image smoke passed in that PR run. This is a real R-12 blocker, not a reason to weaken pip-audit.
+- The three offline bundle verifiers and full repository verifier must be run by the implementation agent on the actual checked-out current main. This documentation task has not run those Python verifiers.
+
+## 5.3 Large-budget execution policy
+
+A large aggregate coding-token budget should fund broad repository understanding, parallel independent source research, implementation, differential tests, replay and code review. It is not the same as a single 500-million-token context window, a guaranteed number of simultaneous agents, unlimited external API calls or permission to bypass CI.
+
+Use parallelism where the harness exposes isolated agents/worktrees. Four-to-eight concurrent focused workers is a suggested starting range only when the tool actually supports it and provider/RPC quotas allow it. Otherwise keep the same workstream DAG and execute independent lanes in bounded batches. Keep one strong lead/integrator and one PR/merge queue.

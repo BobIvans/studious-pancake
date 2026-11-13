@@ -2,8 +2,8 @@
   "schema_version": "studious-pancake.p0-baseline.v1",
   "created_at_utc": "2026-11-13",
   "repository": "BobIvans/studious-pancake",
-  "main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
-  "preparation_sha_recorded_in_dossier": "64a11d33f46291504847cb1bdfd6cdc3dcff5da9",
+  "main_sha": "215a3544483d73052e796eff79b893d346b10524",
+  "preparation_sha_recorded_in_dossier": "86be458a87ed3f499cc32ff56426b2866c90422a",
   "working_tree": "not_applicable_github_api_audit_only; local agent must verify its own clean worktree",
   "branch": "main",
   "allowed_status_vocabulary": [
@@ -47,7 +47,7 @@
     }
   },
   "pr_reconciliation": {
-    "note": "Refreshed against main@86be458a87ed3f499cc32ff56426b2866c90422a after #595 merged. This is still a GitHub metadata/source-owner audit only; local working tree, offline verifier and full test suite must be checked by the execution agent. Historical offline bundle and Windows test receipts below remain historical, not newly executed.",
+    "note": "Refreshed after PR #597 merged against main@215a3544483d73052e796eff79b893d346b10524. R-01 #584 remains COMPLETE; R-02 #585 remains BLOCKED evidence; #586 SDK pack, #588/#589 P0 source packs, #591/#592/#595 whole-project master and #597 R13/R14 updates are merged. #593 remains open/unmerged on old base 176f413 and compares 4 ahead / 76 behind; it must be rebased and reverified. #594 is closed unmerged as superseded by #595/#597. #590 is closed unmerged and superseded. Local working tree/offline verifiers/full tests are not run by this GitHub-only audit.",
     "open_prs_inspected": [
       {
         "number": 567,
@@ -130,21 +130,28 @@
         "number": 593,
         "title": "P0-1 safe Solana indexed intake -> Dynamic Universe",
         "state": "open_not_merged",
-        "classification": "IMPLEMENTATION_REVIEW_REQUIRED; old base 176f413; compare 4 ahead / 64 behind current main; CI strict pip-audit failure; refresh before merge",
+        "classification": "IMPLEMENTATION_REVIEW_REQUIRED; base 176f413; compare 4 ahead / 76 behind current main; strict pip-audit CI failure; rebase before merge",
         "workstream": "P0-1"
       },
       {
         "number": 594,
         "title": "Parallel master execution mandate",
-        "state": "open_stale_superseded",
-        "classification": "SUPERSEDED_BY_PR_595_AND_R13_R14_TASKS; do_not_merge_stale_branch",
+        "state": "closed_unmerged",
+        "classification": "SUPERSEDED_BY_PR_595_AND_597; do_not_merge",
         "workstream": "whole-project orchestration"
       },
       {
         "number": 595,
         "title": "Whole-project parallel execution handoff",
         "state": "merged",
-        "classification": "CURRENT_PARALLEL_MASTER; includes R08-R12",
+        "classification": "CURRENT_PARALLEL_MASTER",
+        "workstream": "whole-project orchestration"
+      },
+      {
+        "number": 597,
+        "title": "Whole-project parallel execution R13/R14 extension",
+        "state": "merged",
+        "classification": "R13_R14_TASKS_AND_STATUS_UPDATE",
         "workstream": "whole-project orchestration"
       }
     ],
@@ -550,15 +557,18 @@
     ],
     "master_document": "docs/roadmap/agent-execution-master-2026-11-13/MULTI_AGENT_EXECUTION_PLAN.md",
     "task_index": "docs/roadmap/agent-execution-master-2026-11-13/TASK_INDEX.md",
-    "current_workstream_count": 19
+    "current_workstream_count": 19,
+    "whole_project_parallel_master_pr": 595,
+    "r13_r14_extension_pr": 597,
+    "parallel_workstream_count": 14
   },
   "refreshed_at_utc": "2026-11-13",
   "latest_ci_snapshot": {
     "checked_at_utc": "2026-11-13",
-    "source": "GitHub Actions workflow logs for PR #595 and PR #593",
+    "source": "GitHub Actions workflow logs for PR #593 and #595",
     "repository_verification": "FAILED_STRICT_PIP_AUDIT",
     "pip_audit_summary": "68 advisories across 9 pinned packages: aiohttp, brotli, certifi, setuptools, black, msgpack, filelock, pillow, uv",
     "other_observed_jobs": "release authority, read-only qualification campaign, secret scan, wheel/console smoke and non-root runtime image smoke succeeded on the inspected runs",
-    "scope_note": "Historical CI output, refresh after rebasing #593 or dependency remediation. Do not weaken --strict."
+    "scope_note": "Captured workflow output; refresh after rebase of #593 and R12 remediation. Do not weaken --strict."
   }
 }

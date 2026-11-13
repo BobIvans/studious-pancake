@@ -2,7 +2,7 @@
 
 **Repository:** `BobIvans/studious-pancake`  
 **Created:** 2026-11-13  
-**Base expected at preparation:** `main` (verify the exact fetched SHA before work; the current local user checkout reported `1638e0d0b8726693baa4501b3a627df354c8890a`).  
+**Base expected at this handoff:** `main` at merge #591 (`f2339abd035c46f23aeea13a77b0885b606914e9`). This is historical; fetch and record the latest SHA before work.  
 **Purpose:** one durable entry point for Codex or another coding agent to execute the remaining P0 work without depending on chat history or ad-hoc internet browsing.
 
 
@@ -16,7 +16,7 @@ The immediate P0 target is the three market-data tasks listed below. Each has a 
 
 Common offline technical baseline: [pinned Raydium/Meteora source snapshots](../../integrations/offline/solana-p0/vendor-reference/README.md), [source blob manifest](../../integrations/offline/solana-p0/VENDOR_SOURCE_MANIFEST.json), [Solana P0 dossier index](../../integrations/offline/solana-p0/README.md), [source manifest](../../integrations/offline/solana-p0/SOURCE_MANIFEST.json), [Solana RPC account-state reference](../../integrations/offline/solana-p0/SOLANA_RPC_STATE.md), [offline verifier](../../integrations/offline/solana-p0/verify_offline_bundle.py).
 
-**Important scope boundary:** the separate R-01/R-02/R-03 flash-capital readers and unsigned builders are not silently folded into these three market-data tasks. Their existing offline dossiers and unmerged review PRs #583/#586 must be reconciled as a distinct capital workstream. Market-data P0 completion alone does not qualify a flashloan route or capital provider.
+**Important scope boundary:** the separate R-02/R-03 flash-capital readers and unsigned builders remain a distinct capital workstream. R-01 is complete (#584); the broad 27-provider offline dossier is now in main through #591, and the focused R-02 SDK source kit is in main through #586. The old draft #583 is closed/superseded. Market-data P0 completion alone does not qualify a flashloan route or capital provider. Use `docs/roadmap/agent-execution-master-2026-11-13/CODEX_START_HERE.md` as the current cross-project handoff.
 
 Next-phase prompts are collected in [P1/P2 after P0](tasks/P1_P2_AFTER_P0.md). Do not begin them until the three P0 exit gates have evidence.
 
@@ -24,7 +24,7 @@ Next-phase prompts are collected in [P1/P2 after P0](tasks/P1_P2_AFTER_P0.md). D
 
 1. Read this file completely, then read every linked in-repository owner listed in §2 before editing code.
 2. Fetch current `main`; record exact base SHA and working-tree status. Never assume the base SHA above is still current.
-3. Inspect open PRs #583 and #586 before planning R-01/R-02/R-03. Do not duplicate their work or assume their changes are in `main`. Inspect PR #578 and older GPR/QPR branches only to reconcile unique evidence; current `main` and its accepted owners remain authoritative.
+3. R-01 is complete (#584); #586 is merged, and #583 is closed/superseded by #591. Read the merged offline dossiers in main; do not treat these PRs as open work. Inspect only genuinely open newer PRs for unique changes. Never re-merge old GPR/QPR branches.
 4. Build a machine-readable P0 inventory with one row per deliverable: owner, status, exact files/tests, external source contract, credentials, docs-pin status, evidence path, blocker, dependency and acceptance command. Use only these states: `IN_MAIN_VERIFIED`, `IMPLEMENTED_UNQUALIFIED`, `OPEN_PR_NOT_IN_MAIN`, `IMPLEMENTED_UNBOUND`, `FIXTURE_ONLY`, `STUB`, `PLANNED`, `BLOCKED`, `RETIRED`.
 5. **Do not restart completed work.** Reuse canonical owners and their contracts. If two owners conflict, stop and write a reconciliation note; do not silently create a third owner.
 6. Preserve all current source governance, admission, quota/backoff, provider identity, evidence journal, replay, QPR gates, identity fail-closed rules and runtime capability gates.
@@ -84,7 +84,7 @@ Read these files from current `main` completely, not from an old branch:
 6. `docs/roadmap/prequal-rnd-2026-10-06/CODEX_START_HERE.md`, `package/18_CODEX_START_HERE.md`, `package/01_MASTER_CONTEXT_RU.md`, source plugin architecture, PR sequence and acceptance gates.
 7. `docs/verification/r02-2026-10-08/README.md`, `CAPTURE.json`, `RECEIPT.json`, `offline/` bundle and its verifier.
 8. `config/qualification/din00-source-status.json`, `src/resources/market_source_catalog.json`, current source governance and evidence/replay owners.
-9. Existing QPR/GPR implementation owners and tests; inspect PR #583 and #586 diffs/branches for their offline SDK bundle and handoff.
+9. Existing QPR/GPR implementation owners and tests; read the merged broad provider dossier and focused R-02 SDK pack directly from main.
 10. Current `src/solana_parallel_radar/`, `src/discovery/dynamic_universe/`, `src/assets/resolution/`, `src/research_economic_graph/`, `src/economics/flash_capital_graph/`, `src/qualification_campaign/`, paper/shadow composition root and exact simulation owners.
 
 Do not assume the README's older or newer statements are automatically consistent with a research report. Reconcile them against code, tests, package boundary and current commit. Record discrepancies.
@@ -96,8 +96,8 @@ This is a dependency graph, not permission to mark every item complete. First ve
 ### P0-0 — Baseline and branch/PR reconciliation
 
 - Verify current `main` SHA, clean state, CI and package/runtime capability matrix.
-- Reconcile PR #578, #583, #586 and older GPR/QPR branches. Identify unique code, docs pins, SDK artifacts, tests and evidence that are not in main.
-- Keep PR #583/#586 changes classified as open-PR work until actually merged.
+- Verify the #591 master handoff, the merged #586 SDK pack, #588/#589 market-data dossiers and current open PRs. Do not re-import #583/#586 content or merge legacy branches.
+- Treat #583 as closed/superseded and #586 as merged. Their useful documentation is in main; verify exact file paths and hashes.
 - Produce `P0_BASELINE.json` and a concise reconciliation report.
 - Do not cherry-pick or merge without a conflict analysis and reviewable PR.
 
@@ -138,10 +138,10 @@ Acceptance: two real provider captures (when keys and network are supplied), sam
 
 Acceptance: offline fixture decoding and negative fixtures for wrong owner, version, mint, truncation and stale slot/checkpoint; live RPC capture is a separate bounded qualification.
 
-### Separate capital workstream — R-01 verification, then R-02 live capital readers (not one of the three market-data P0 tasks above)
+### Separate capital workstream — R-01 complete; R-02 live capital readers remain BLOCKED (not one of the three market-data P0 tasks above)
 
-- Follow the explicit dependency: R-01 verification before R-02; inspect #583 and #586, their offline bundles and current status.
-- R-02 target readers: Project 0, Jupiter Lend, Kamino, NAVI (and only other explicitly scoped providers). Current historical R-02 report says four qualified readers were not delivered and R-02 was BLOCKED.
+- Do not rerun R-01. Read the current master at `docs/roadmap/agent-execution-master-2026-11-13/` plus the merged R-02 source dossier and #586 SDK pack.
+- R-02 target readers: Project 0, Jupiter Lend, Kamino, NAVI. #585 remains the actual negative receipt: zero qualified capital edges; Jupiter admin/Kamino program observations and a Sui checkpoint did not establish reserve/pool capacity; 27 catalog candidates remain disabled.
 - Do not invent account layouts. Pin exact SDK/package versions, IDLs/decoders, program/deployment IDs, reserve/pool resource bindings, mint/decimal bindings, authority/owner checks and independent rooted source requirements.
 - For Project 0, only inspect already-existing public account and authority addresses supplied by the user or authoritative public registry. No account initialization or wallet-specific transaction.
 - Derive capacity, borrow limits, fee, reserve liquidity, freshness, oracle state, account/ATA setup costs and upfront cost only from authoritative evidence. Unknown means UNKNOWN, never zero.
@@ -151,7 +151,7 @@ Acceptance: four readers only count as qualified if each has pinned decoder + re
 
 ### Separate capital workstream — Protocol-specific builders (R-03) and capital-aware paper path
 
-- Only after R-01/R-02 gates and exact protocol contracts: implement SDK-conformant borrow/repay instruction or Sui PTB builders as unsigned plans/evidence.
+- R-03 shared contract-only and SDK-conformant unsigned builders may proceed offline while R-02 is blocked, as specified in the merged #586 handoff. Live-capital-backed promotion and exact route qualification remain blocked until the matching R-02 provider proof passes.
 - Reuse existing QuoteProvider, TransactionBuilder, UnsignedExecutionPlan, ProviderCorrelation, BuildEvidence, RentSponsorPlanner contracts where present; audit current main before creating any new contract.
 - Validate borrow/repay pairing, atomicity, account metas, versioned transaction constraints, rent/setup costs and provider-specific fees.
 - Keep signer and sender absent/unreachable. Builders must produce unsigned plans only.

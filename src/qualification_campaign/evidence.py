@@ -6,15 +6,20 @@ attempt reservations survive restart. Replay uses retained bytes only.
 
 import errno
 import json
+import sys
 import time
 import os
 import tempfile
 from pathlib import Path
 from dataclasses import asdict
 
-try:
-    import fcntl
-except ImportError:  # win32: emulate the flock operations used below.
+if sys.platform == "win32":
+    # win32: emulate the flock operations used below.  A sys.platform guard
+    # (not try/except ImportError) keeps static analysis platform-conditional:
+    # mypy analyzes this branch only on win32 and the POSIX branch below only
+    # on POSIX, so msvcrt attributes are never checked against POSIX typeshed.
+    # Runtime selection is unchanged: win32 uses the shim, every other
+    # platform imports real fcntl.
     import msvcrt
 
     class _PosixFlockShim:
@@ -34,8 +39,8 @@ except ImportError:  # win32: emulate the flock operations used below.
         and the advisory-versus-mandatory distinction is unobservable.
         ``LOCK_SH`` is unavailable in ``msvcrt`` and is conservatively
         mapped to the exclusive lock (no weakening; unused here).  The
-        constants carry the POSIX fcntl values.  POSIX hosts import the
-        real module above and never enter this branch.
+        constants carry the POSIX fcntl values.  POSIX hosts take the
+        POSIX branch below and never enter this branch.
         """
 
         LOCK_SH = 0x01
@@ -78,7 +83,14 @@ except ImportError:  # win32: emulate the flock operations used below.
                 except OSError:
                     time.sleep(0.002)
 
+    # Deliberate rebinding of the fcntl module name to the shim instance on
+    # win32 only.  No type: ignore is needed: mypy treats the two
+    # platform-conditional branches as independent first bindings, so no
+    # [assignment] error is raised (and with warn_unused_ignores enabled an
+    # ignore here would itself error under win32 analysis).
     fcntl = _PosixFlockShim()
+else:
+    import fcntl
 
 from src.market.streams import RawStreamEvent, RecoverableStreamJournal
 from .identity import CampaignManifest, canonical_bytes, digest
@@ -156,7 +168,10 @@ class CampaignEvidenceStore:
                     if temporary is not None:
                         temporary.unlink(missing_ok=True)
                 if os.name == "posix":
-                    fd = os.open(self.blob_dir, os.O_DIRECTORY)
+                    # getattr keeps the POSIX-only open flag static-analysis
+                    # clean under win32 mypy (mypy does not narrow os.name);
+                    # on POSIX it resolves to os.O_DIRECTORY exactly.
+                    fd = os.open(self.blob_dir, getattr(os, "O_DIRECTORY", 0))
                     try:
                         os.fsync(fd)
                     finally:

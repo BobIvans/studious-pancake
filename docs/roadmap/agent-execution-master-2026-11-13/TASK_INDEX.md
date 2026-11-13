@@ -59,6 +59,7 @@ R07 source research can run throughout; provider activation is individually gate
 | R09 | tasks/R09_MULTICHAIN_AND_DATA_FEEDS.md | Sui, TON, EVM, CEX, oracle and reference data |
 | R10 | tasks/R10_STRATEGIES_AND_INTELLIGENCE.md | strategy coverage, graph, correlations, ML and replay experiments |
 | R11 | tasks/R11_PLATFORM_CI_AND_REPRODUCIBILITY.md | Windows/WSL, CI, packaging, offline verifiers and test reliability |
+| R12 | tasks/R12_DEPENDENCY_SECURITY_REMEDIATION.md | Remediate current strict pip-audit blockers in pinned dependency locks |
 
 ## Parallel execution policy
 Start independent tracks A, B, C-00, E and source research concurrently in isolated worktrees. Workers may begin read-only audits, technical source verification, offline fixtures and contract proposals while dependencies are pending. The lead freezes shared interfaces before multiple workers edit a common owner. E1/R04 and later integration stages may prepare design/tests but cannot claim readiness until their evidence dependencies pass.
@@ -69,8 +70,6 @@ Use IN_MAIN_VERIFIED, IMPLEMENTED_UNQUALIFIED, IMPLEMENTED_UNBOUND, OPEN_PR_NOT_
 ## Global safety
 No private material, account creation, token-account creation, signer loading, sending, borrowing, spending, production promotion or env-flag bypass. No provider is enabled because it appears in the catalog or has an adapter class. No mass merge. 
 
-
-| R12 | tasks/R12_DEPENDENCY_SECURITY_REMEDIATION.md | Verify and remediate pinned dependency advisories; CI audit on PR #595 reported 68 findings across 9 packages |
 
 ## Whole-project orchestration references
 - Multi-agent launch matrix and collision/dependency rules: docs/roadmap/agent-execution-master-2026-11-13/MULTI_AGENT_EXECUTION_PLAN.md

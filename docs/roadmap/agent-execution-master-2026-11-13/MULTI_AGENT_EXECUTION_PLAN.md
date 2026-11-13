@@ -47,6 +47,7 @@ Launch these workstreams concurrently when resources/agent tooling permit. If a 
 | F1 | R07 provider expansion | rank 27 candidates, pin docs, identify gaps | one provider per PR; qualification gates |
 | G1 | Runtime composition / boot path | dependency map, integration design, contract tests | P0/R02/R03 owner readiness and capability review |
 | G2 | Platform / CI / reproducibility | WSL/Windows audit, bundle verifiers, test gates | preserve POSIX and capability behavior |
+| G3 | Dependency / supply-chain security | pip-audit baseline and lockfile remediation | compatibility tests, source provenance and full verification |
 | H1 | Knowledge base / documentation | source pin refresh, owner docs, machine status ledger | verify official current versions and licenses |
 
 ### Suggested execution waves

@@ -30,6 +30,7 @@ No secrets or private keys, account/ATA/position creation, signing, sending, bor
 5. Full repo verifier output, offline replay evidence and a project-wide integration report.
 
 ## Read order / maps
+- PROJECT_STATUS.json — machine-readable initial inventory for all 17 workstreams; refresh it against current main and PRs before coding.
 - MULTI_AGENT_EXECUTION_PLAN.md — launch matrix, worktree and dependency rules.
 - PROJECT_KNOWLEDGE_BASE_MAP.md — current main code owners and docs.
 - TASK_INDEX.md — all assignment texts.

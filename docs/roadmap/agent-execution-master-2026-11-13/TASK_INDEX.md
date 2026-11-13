@@ -1,6 +1,10 @@
 # Task index — executable assignment prompts
 
-Rule: one scoped assignment per coding-agent run/PR. This index is orchestration, not a replacement for protocol-specific docs.
+Rule: one scoped assignment per PR. A coordinator may dispatch multiple independent assignments concurrently in isolated worktrees/branches. This index is orchestration, not a replacement for protocol-specific docs. For broad parallel mode, read `PARALLEL_EXECUTION_MANDATE.md` before dispatching agents.
+
+## Coordinator mode — use this to execute the broader strategy concurrently
+
+Read `PARALLEL_EXECUTION_MANDATE.md`. It audits the current main owners, records GPR-01/02/03 and Dynamic Universe status, and assigns parallel workstreams for P0-1/2/3, GPR-03 remediation, R-02 CAP-A/B/C/D, offline R-03 builders, provider expansion, TON radar, Dynamic Universe/CorrelationLedger, FlashCapitalGraph and Slumlord RentSponsorPlanner. Each child remains one PR; the coordinator integrates by dependency gates. Do not rebuild existing owners.
 
 ## Completed / do not repeat
 | Work | Evidence | Instruction |

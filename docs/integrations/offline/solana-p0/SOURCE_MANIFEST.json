@@ -70,7 +70,16 @@
       "pool_state_git_blob_sha1": "bc80829f58f8652bcffba9c559327dd37f63f507",
       "program_id_mainnet": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
       "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
-      "license_status": "Do not vendor source until the upstream license is checked and recorded for the exact commit."
+      "license_status": "Do not vendor source until the upstream license is checked and recorded for the exact commit.",
+      "upstream_license": "Apache-2.0",
+      "local_snapshots": [
+        "vendor-reference/raydium/LICENSE-APACHE-2.0.txt",
+        "vendor-reference/raydium/cpmm/pool.rs.txt",
+        "vendor-reference/raydium/cpmm/config.rs.txt",
+        "vendor-reference/raydium/cpmm/swap_base_input.rs.txt",
+        "vendor-reference/raydium/cpmm/fees.rs.txt",
+        "vendor-reference/raydium/cpmm/constant_product.rs.txt"
+      ]
     },
     "raydium_clmm_program": {
       "provider": "Raydium CLMM",
@@ -85,7 +94,16 @@
       "pool_state_git_blob_sha1": "309cf1842be657698128a8de270943e90cc48ab7",
       "program_id_mainnet": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
       "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
-      "license_status": "Check the exact upstream program-source license before copying or linking code into the project."
+      "license_status": "Check the exact upstream program-source license before copying or linking code into the project.",
+      "upstream_license": "Apache-2.0",
+      "local_snapshots": [
+        "vendor-reference/raydium/clmm/pool.rs.txt",
+        "vendor-reference/raydium/clmm/tick_array.rs.txt",
+        "vendor-reference/raydium/clmm/tick_array_bit_map.rs.txt",
+        "vendor-reference/raydium/clmm/swap_math.rs.txt",
+        "vendor-reference/raydium/clmm/tick_math.rs.txt",
+        "vendor-reference/raydium/clmm/config.rs.txt"
+      ]
     },
     "raydium_sdk_v2": {
       "provider": "Raydium SDK V2",
@@ -139,7 +157,18 @@
       "accounts_page_git_blob_sha1": "b755cbbcfcdc343fe7376e973893155162fa03e5",
       "sdk_reference_page_git_blob_sha1": "ccb6d1ff855ea83bd33c85b450563a0bb641ecb0",
       "snapshot_status": "PINNED_DOCS_AND_PACKAGE_METADATA; SELECTED_TECHNICAL_FACTS_IN_DIRECT_STATE_NOTE",
-      "notes": "The SDK is anchor/web3.js-based and the account model uses LbPair, BinArray, BinArrayBitmapExtension, Oracle and reserve PDAs. Pin the transitive SDK lockfile before use; do not casually import the current TypeScript SDK into the Python runtime."
+      "notes": "The SDK is anchor/web3.js-based and the account model uses LbPair, BinArray, BinArrayBitmapExtension, Oracle and reserve PDAs. Pin the transitive SDK lockfile before use; do not casually import the current TypeScript SDK into the Python runtime.",
+      "local_snapshots": [
+        "vendor-reference/meteora/lb_clmm.idl.json",
+        "vendor-reference/meteora/lbPair.ts.txt",
+        "vendor-reference/meteora/binArray.ts.txt",
+        "vendor-reference/meteora/types.ts.txt",
+        "vendor-reference/meteora/swap_quote_example.ts.txt",
+        "vendor-reference/meteora/dlmm_index.ts.txt",
+        "vendor-reference/meteora/package.json"
+      ],
+      "idl_metadata_version": "0.12.0",
+      "license_note": "The package.json in the pinned SDK declares ISC; these snapshots are reference-only and not imported as runtime dependencies."
     },
     "dexscreener": {
       "provider": "DEX Screener",
@@ -240,5 +269,6 @@
       "corrective_target": "Reuse and extend after V2 response normalization; do not create parallel quote-domain objects.",
       "status": "REUSE_CANONICAL_OWNER"
     }
-  ]
+  ],
+  "vendor_reference_manifest": "VENDOR_SOURCE_MANIFEST.json"
 }

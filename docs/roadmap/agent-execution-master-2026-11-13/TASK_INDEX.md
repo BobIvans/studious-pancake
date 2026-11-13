@@ -68,3 +68,11 @@ Use IN_MAIN_VERIFIED, IMPLEMENTED_UNQUALIFIED, IMPLEMENTED_UNBOUND, OPEN_PR_NOT_
 
 ## Global safety
 No private material, account creation, token-account creation, signer loading, sending, borrowing, spending, production promotion or env-flag bypass. No provider is enabled because it appears in the catalog or has an adapter class. No mass merge. 
+
+
+## Whole-project orchestration references
+- Multi-agent launch matrix and collision/dependency rules: docs/roadmap/agent-execution-master-2026-11-13/MULTI_AGENT_EXECUTION_PLAN.md
+- Current-main knowledge/owner map: docs/roadmap/agent-execution-master-2026-11-13/PROJECT_KNOWLEDGE_BASE_MAP.md
+- Machine-readable initial workstream status: docs/roadmap/agent-execution-master-2026-11-13/PROJECT_STATUS.json (refresh before implementation)
+- Full orchestrator prompt: docs/roadmap/agent-execution-master-2026-11-13/PARALLEL_AGENT_LAUNCH_PROMPT.md
+- GLM-5.3-Flash operating guide: docs/roadmap/agent-execution-master-2026-11-13/GLM_AGENT_OPERATING_GUIDE.md

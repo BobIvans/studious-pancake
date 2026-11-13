@@ -1,56 +1,70 @@
-# Task index — executable assignment prompts
+# Whole-project task index — parallel workstream assignments
 
-Rule: one scoped assignment per coding-agent run/PR. This index is orchestration, not a replacement for protocol-specific docs.
+This is the orchestration index, not a replacement for protocol-specific technical dossiers. The lead launches independent workstreams concurrently; each worker owns one narrow task/PR/worktree. Shared-owner edits are serialized behind interface freeze.
 
 ## Completed / do not repeat
 | Work | Evidence | Instruction |
 |---|---|---|
-| R-01 reconciliation | PR #584 merged | PASS; do not rerun or re-merge historical branches |
-| QPR-01 authority/fixes | Reconciled current main; verify owners | Do not rebuild; fix only a demonstrated regression |
-| R-02 prerequisite observations | PR #585 merged | BLOCKED, zero qualified edges; use exact negative evidence |
-| R-02 offline SDK bundle | PR #586 merged | Use checked-in source/layout pins; do not re-vendor |
-| Solana market-data offline master | PR #588 merged | Use its P0-1/P0-2/P0-3 prompts |
-| Raydium/Meteora offline source snapshots | PR #589 merged | Verify locally; respect Orca license blocker |
+| R-01 reconciliation | #584 merged | COMPLETE; do not rerun or remerge legacy branches |
+| QPR-01 authority/fixes | reconciled mainline | verify owners; no duplicate implementation |
+| R-02 prerequisite observations | #585 merged | BLOCKED; zero qualified capital edges; preserve negative evidence |
+| R-02 offline SDK pack | #586 merged | use local pins; do not re-vendor |
+| Solana P0 offline master | #588 merged | three market-data tasks already written |
+| Raydium/Meteora references | #589 merged | verify local blobs; Orca license blocker remains |
+| Whole-project agent handoff | #591/#592 merged | current orchestration base; use this parallelized successor |
 
-## Track A — market-data qualification
-| ID | Assignment | Start text |
-|---|---|---|
-| P0-1 | Bounded indexed Solana intake, exact identities and Dynamic Universe handoff | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-1_SOLANA_INTAKE_DYNAMIC_UNIVERSE.md |
-| P0-2 | Jupiter Swap V2 + 0x comparable quote capture/replay | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-2_JUPITER_0X_QUOTES.md |
-| P0-3 | Raydium CPMM/CLMM + Meteora exact direct-state; Orca license gate | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-3_DIRECT_STATE_VERIFICATION.md |
-| P1/P2 | Sui intake, further source coverage, CEX/oracle/reference streams, correlations and later strategy work | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P1_P2_AFTER_P0.md |
+## Track A — Solana market-data (parallel after shared identity/evidence contract)
+| ID | Assignment |
+|---|---|
+| P0-1 | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-1_SOLANA_INTAKE_DYNAMIC_UNIVERSE.md |
+| P0-2 | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-2_JUPITER_0X_QUOTES.md |
+| P0-3 | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-3_DIRECT_STATE_VERIFICATION.md |
+| P1/P2 source expansion | docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P1_P2_AFTER_P0.md |
 
-P0-1, P0-2 and P0-3 are distinct. Quote aggregators are not independent liquidity sources. Indexed pool lists are discovery only.
+## Track B — flash-capital R-02 (four independent read-only readers)
+| ID | Assignment |
+|---|---|
+| R02-CAP-A Jupiter Lend | tasks/R02_CAPITAL_READERS.md |
+| R02-CAP-B Kamino | tasks/R02_CAPITAL_READERS.md |
+| R02-CAP-C NAVI | tasks/R02_CAPITAL_READERS.md |
+| R02-CAP-D Project 0 bank-only | tasks/R02_CAPITAL_READERS.md |
 
-## Track B — flash-capital
+Detailed source baseline: docs/roadmap/r02-capacity-recovery-2026-10-08/ and docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/.
+
+## Track C — R-03 unsigned builders
+| ID | Assignment |
+|---|---|
+| R03-00 common contract | tasks/R03_UNSIGNED_BUILDERS.md |
+| R03-A Jupiter | tasks/R03_UNSIGNED_BUILDERS.md |
+| R03-B Kamino | tasks/R03_UNSIGNED_BUILDERS.md |
+| R03-C NAVI | tasks/R03_UNSIGNED_BUILDERS.md |
+| R03-D Project 0 | tasks/R03_UNSIGNED_BUILDERS.md |
+
+R03 contract-only and offline fixtures can run while R02 is blocked. No live-capital-backed promotion until the matching R02 proof passes.
+
+## Track D — route / simulation / paper / providers
 | ID | Assignment | Dependency |
 |---|---|---|
-| R02-CAP-A | Jupiter TokenReserve/vault/limits reader | R-01 done; #585 negative receipt; #586 pinned layout |
-| R02-CAP-B | Kamino full Reserve/LendingMarket/fee/cap reader | R-01 done; pinned klend-sdk codegen |
-| R02-CAP-C | NAVI deployed package/config/pool shared-object reader | R-01 done; Sui governed gRPC/GraphQL only |
-| R02-CAP-D | Project 0 bank-only reader; optional existing public account scan | No wallet needed for bank research; never create account |
-| R03-00 | Shared unsigned execution-plan / financing obligation contract | May start offline while R-02 is blocked |
-| R03-A..D | Jupiter, Kamino, NAVI, conditional P0 unsigned builders/PTB | Source-pinned SDK conformance; no signer/sender |
+| R04 | tasks/R04_CAPITAL_AWARE_ROUTE_SELECTOR.md | exact quotes + relevant R02 capacity + R03 builder |
+| R05 | tasks/R05_EXACT_ATOMIC_SIMULATION.md | R04 candidate and full current state |
+| R06 | tasks/R06_PAPER_QUALIFICATION.md | existing QPR/campaign readiness PASS + R05 |
+| R07 | tasks/R07_PROVIDER_EXPANSION.md | one provider per PR; source/deployment/reader/builder/simulation proof |
 
-Detailed owner and acceptance docs:
-- docs/roadmap/r02-capacity-recovery-2026-10-08/R02_UNBLOCK_MATRIX.md
-- docs/roadmap/r02-capacity-recovery-2026-10-08/R02_ACCEPTANCE.md
-- docs/roadmap/r02-capacity-recovery-2026-10-08/R03_SHADOW_BUILDERS.md
-- docs/roadmap/r01-r02-live-capital-readers-2026-10-08/R02_ARCHITECTURE.md
-- docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/PROVIDER_SELECTION.md
+R07 source research can run throughout; provider activation is individually gated.
 
-## Track C — route / simulation / qualification
-| ID | Assignment | Entry gate |
+## Track E — whole-project additional assignments
+| ID | Assignment | Parallel scope |
 |---|---|---|
-| R04 | Capital-aware universal route selector | Exact quote inputs + relevant R-02 capacity + R-03 unsigned contracts |
-| R05 | Full atomic simulation + economic reconciliation | R04 candidates; current chain state; per-provider conformance |
-| R06 | 24-hour paper campaign | Existing QPR/campaign readiness PASS; exact simulation/replay; otherwise BLOCKED |
-| R07 | Add providers from broad 27-ID catalog | R06/selection owner stable; one provider per PR; source and deployment proof |
+| R08 | tasks/R08_RUNTIME_COMPOSITION_INTEGRATION.md | audit current app composition and missing owner injections; code only after contract/gates |
+| R09 | tasks/R09_MULTICHAIN_AND_DATA_FEEDS.md | Sui, TON, EVM, CEX, oracle and reference data |
+| R10 | tasks/R10_STRATEGIES_AND_INTELLIGENCE.md | strategy coverage, graph, correlations, ML and replay experiments |
+| R11 | tasks/R11_PLATFORM_CI_AND_REPRODUCIBILITY.md | Windows/WSL, CI, packaging, offline verifiers and test reliability |
 
-See separate assignment texts under tasks/.
+## Parallel execution policy
+Start independent tracks A, B, C-00, E and source research concurrently in isolated worktrees. Workers may begin read-only audits, technical source verification, offline fixtures and contract proposals while dependencies are pending. The lead freezes shared interfaces before multiple workers edit a common owner. E1/R04 and later integration stages may prepare design/tests but cannot claim readiness until their evidence dependencies pass.
 
 ## Global evidence states
-Use: IN_MAIN_VERIFIED, IMPLEMENTED_UNQUALIFIED, OPEN_PR_NOT_IN_MAIN, FIXTURE_ONLY, LIVE_READ_PROVEN, RPC_EXACT, PAPER_QUALIFIED, BLOCKED, RETIRED. Distinguish built code, source compatibility, real observations, exact capacity, simulation and qualification. Every PASS identifies commit, config generation, raw evidence hash, slot/checkpoint, source version, tests and replay command.
+Use IN_MAIN_VERIFIED, IMPLEMENTED_UNQUALIFIED, IMPLEMENTED_UNBOUND, OPEN_PR_NOT_IN_MAIN, FIXTURE_ONLY, STUB, PLANNED, LIVE_READ_PROVEN, RPC_EXACT, BUILT_OFFLINE_UNQUALIFIED, SIMULATION_PASS, PAPER_QUALIFIED, BLOCKED and RETIRED. Each PASS identifies commit, config/source generation, evidence hashes, slot/checkpoint, tests and replay command.
 
 ## Global safety
-No private material, account creation, token-account creation, signer loading, transaction sending, real borrow, funds spending or production enablement. No provider is enabled just because it is catalogued or has an adapter class. No merge of implementation PR without human review/approval.
+No private material, account creation, token-account creation, signer loading, sending, borrowing, spending, production promotion or env-flag bypass. No provider is enabled because it appears in the catalog or has an adapter class. No mass merge. 

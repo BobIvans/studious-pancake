@@ -1,0 +1,364 @@
+{
+  "schema_version": "studious-pancake.project-status.v1",
+  "updated_at_utc": "2026-11-13",
+  "repository": "BobIvans/studious-pancake",
+  "main_sha_at_audit": "176f41378645f6f3b3fd95a59617633b5808acb4",
+  "audit_scope": "GitHub mainline docs/code-owner inspection for orchestration design; no local checkout, full test suite, current live RPC or CI run was performed by this documentation task.",
+  "status_vocabulary": [
+    "IN_MAIN_VERIFIED",
+    "IMPLEMENTED_UNQUALIFIED",
+    "IMPLEMENTED_UNBOUND",
+    "FIXTURE_ONLY",
+    "STUB",
+    "PLANNED",
+    "LIVE_READ_PROVEN",
+    "RPC_EXACT",
+    "BUILT_OFFLINE_UNQUALIFIED",
+    "SIMULATION_PASS",
+    "PAPER_QUALIFIED",
+    "BLOCKED",
+    "RETIRED"
+  ],
+  "runtime_truth": {
+    "status": "IN_MAIN_VERIFIED",
+    "product_state": "not-production-ready",
+    "supported_entrypoint": "flashloan-bot",
+    "mode_summary": {
+      "disabled": "available",
+      "paper": "sender-free and fail-closed",
+      "shadow": "detector-only for explicitly shadow-ready strategies",
+      "live": "hard-denied"
+    },
+    "proof": "README.md + config/capabilities.json + src/resources/runtime_authority.json",
+    "note": "A code module or test does not prove the supported installed entrypoint can execute it."
+  },
+  "workstreams": [
+    {
+      "id": "GOV-01",
+      "name": "QPR/DIN source governance, authority and evidence replay",
+      "status": "IN_MAIN_VERIFIED",
+      "owners": [
+        "src/qualification_campaign/",
+        "src/provider_governance/",
+        "src/market/streams.py",
+        "src/gpr_sui_shadow/",
+        "src/solana_parallel_radar/"
+      ],
+      "evidence": [
+        "PR #579",
+        "PR #580",
+        "PR #581",
+        "PR #582",
+        "PR #584"
+      ],
+      "blockers": [
+        "Current source-provider independence, live entitlement and QPR readiness must be rechecked for each new campaign."
+      ],
+      "next": "Preserve owners; run their tests and replay; do not duplicate governance."
+    },
+    {
+      "id": "UNIVERSE-01",
+      "name": "Canonical identities, Dynamic Universe and research graph",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/assets/resolution/",
+        "src/discovery/dynamic_universe/",
+        "src/research_economic_graph/",
+        "src/strategy/relation_generators/",
+        "src/research/correlation_ledger/"
+      ],
+      "evidence": [
+        "PR #571/#576/#579",
+        "docs/roadmap/dynamic-universe-master-2026-10-07/IMPLEMENTATION_REPORT.md"
+      ],
+      "blockers": [
+        "Historical implementation report says the subsystem is library/diagnostic-CLI level and was not wired into supported application boot path; exact/current qualification needs recheck."
+      ],
+      "next": "Audit canonical owners, current generations, integration tests and boot-path gap; do not create another graph."
+    },
+    {
+      "id": "SOL-DISC-01",
+      "name": "Solana indexed market intake",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/market/discovery.py",
+        "src/solana_parallel_radar/",
+        "src/discovery/dynamic_universe/"
+      ],
+      "evidence": [
+        "DIN-01 report and replay",
+        "P0-1 assignment"
+      ],
+      "blockers": [
+        "Historical capture was small/partial; current docs/schema and live identity coverage need recheck; continuous cadence/coverage/boot integration gaps."
+      ],
+      "next": "P0-1 bounded intake and identity-backed Dynamic Universe handoff."
+    },
+    {
+      "id": "SOL-QUOTE-01",
+      "name": "Jupiter V2 + 0x comparable quotes",
+      "status": "IMPLEMENTED_UNBOUND",
+      "owners": [
+        "src/solana_parallel_radar/probes.py",
+        "src/solana_parallel_radar/cli.py",
+        "existing quote normalizers"
+      ],
+      "evidence": [
+        "P0-2 assignment",
+        "Jupiter V2 OpenAPI mirror"
+      ],
+      "blockers": [
+        "Historical main probe used Jupiter V1 /swap/v1/quote; V2 migration, source auth, comparable live captures and replay require recheck."
+      ],
+      "next": "P0-2 migrate existing owner; do not add duplicate router."
+    },
+    {
+      "id": "SOL-STATE-01",
+      "name": "Solana direct venue state",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/providers/raydium_cpmm_native.py",
+        "docs/integrations/offline/solana-p0/vendor-reference/"
+      ],
+      "evidence": [
+        "P0-3 assignment",
+        "PR #589 pinned Raydium/Meteora source references"
+      ],
+      "blockers": [
+        "Raydium CPMM canonical owner needs current exact-state proof; CLMM/DLMM readers incomplete; Orca custom license review blocked."
+      ],
+      "next": "P0-3 complete one venue reader at a time with full dependencies and exact-in math."
+    },
+    {
+      "id": "SUI-DATA-01",
+      "name": "Sui market discovery and exact-state qualification",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/gpr_sui_shadow/",
+        "src/discovery/dynamic_universe/ingestors.py",
+        "src/multichain/sui.py"
+      ],
+      "evidence": [
+        "DIN-02 report/replay",
+        "GPR-03 PR #573 restored by #579"
+      ],
+      "blockers": [
+        "Historical 21 coin/24 market sample is not current; current package/object/checkpoint, decimals and depth/fee proofs need live capture."
+      ],
+      "next": "R09 Sui lane; distinguish DEX state from lender capacity."
+    },
+    {
+      "id": "TON-RADAR-01",
+      "name": "TON market radar",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/discovery/dynamic_universe/ton_radar.py"
+      ],
+      "evidence": [
+        "Dynamic Universe implementation report"
+      ],
+      "blockers": [
+        "Read-only discovery/async classification; current source schema and atomic flash-borrow/repay path not proven."
+      ],
+      "next": "Keep radar; pin current sources; research execution primitive separately."
+    },
+    {
+      "id": "EVM-DATA-01",
+      "name": "EVM venues and capital semantics",
+      "status": "FIXTURE_ONLY",
+      "owners": [
+        "src/multichain/evm_financing.py",
+        "src/resources/multichain_capabilities.json"
+      ],
+      "evidence": [
+        "AGG-11 multichain models/capability registry"
+      ],
+      "blockers": [
+        "Deployment pins, ABI/bytecode, real capacity, receiver/callback and fork simulation missing."
+      ],
+      "next": "R09 source and deployment dossiers; no live executor claim."
+    },
+    {
+      "id": "CAP-R02",
+      "name": "Live flash-capital readers",
+      "status": "BLOCKED",
+      "owners": [
+        "src/economics/flash_capital_graph/graph.py",
+        "src/lending/jupiter_lend.py",
+        "src/lending/kamino.py",
+        "src/lending/agg03_financing_ports.py",
+        "src/providers/marginfi/",
+        "src/multichain/sui.py"
+      ],
+      "evidence": [
+        "PR #585 negative capture",
+        "PR #586 merged offline SDK pack",
+        "PR #591 merged 27-provider dossier"
+      ],
+      "blockers": [
+        "Jupiter admin observation lacks TokenReserve/vault/effective borrow capacity; Kamino executable program observation lacks full reserve/fee/capacity proof; NAVI checkpoint lacks pool object state; P0 authority/account not supplied; zero qualified edges; 27 providers disabled."
+      ],
+      "next": "R02-CAP-A/B/C/D in parallel, read-only, exact resource proofs."
+    },
+    {
+      "id": "CAP-R03",
+      "name": "Provider-specific unsigned financing builders",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/lending/agg03_financing_ports.py",
+        "src/lending/financing.py",
+        "src/providers/marginfi/",
+        "src/planning/atomic_marginfi_jupiter.py",
+        "src/multichain/sui.py"
+      ],
+      "evidence": [
+        "PR #586 R03 builder handoff",
+        "src/multichain/evm_financing.py"
+      ],
+      "blockers": [
+        "Existing models and ports do not prove byte-level SDK conformance or full live state-bound builder path."
+      ],
+      "next": "R03-00 contract freeze then provider-specific offline/unsigned builders."
+    },
+    {
+      "id": "STRATEGY-01",
+      "name": "Strategy and relation research",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/strategy/strategies.py",
+        "src/strategy/relation_generators/",
+        "src/strategy/arbitrage_graph.py",
+        "src/strategy/multihop_solver.py",
+        "src/research/correlation_ledger/"
+      ],
+      "evidence": [
+        "Dynamic Universe/GPR implementation report",
+        "tests under tests/test_dynamic_relations.py and multihop solver tests"
+      ],
+      "blockers": [
+        "Only explicit shadow-ready capabilities are supported; topology shortlists do not equal exact route/economic proof; many registry strategies remain disabled/fixture-only."
+      ],
+      "next": "R10 inventory all families and replay-based experiments."
+    },
+    {
+      "id": "ROUTE-R04",
+      "name": "Capital-aware route/lender/amount selection",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/strategy/arbitrage_graph.py",
+        "src/strategy/multihop_solver.py",
+        "src/economics/non_monotonic_sizing.py",
+        "src/economics/flash_capital_graph/graph.py"
+      ],
+      "evidence": [
+        "Existing graph, bounded solver, PR118 sizing and FlashCapitalGraph"
+      ],
+      "blockers": [
+        "No proof in current status that exact quotes, live capacity, provider-specific unsigned build and all-in costs are integrated for a supported complete route."
+      ],
+      "next": "R04 only for combinations with real exact quote/capacity/build evidence."
+    },
+    {
+      "id": "SIM-R05",
+      "name": "Complete exact atomic transaction/PTB simulation",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/execution/exact_simulation.py",
+        "src/paper_shadow/atomic_vertical.py",
+        "src/planning/atomic_marginfi_jupiter.py"
+      ],
+      "evidence": [
+        "ExactSimulationFinalizer and atomic vertical code"
+      ],
+      "blockers": [
+        "Live/current RPC, lender reader, route build conformance and complete transaction evidence remain gated."
+      ],
+      "next": "R05 after qualified R04 candidates and relevant provider evidence."
+    },
+    {
+      "id": "PAPER-R06",
+      "name": "Durable paper and campaign qualification",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/paper_shadow/",
+        "src/qualification_campaign/",
+        "src/runtime/core_v1_composition.py"
+      ],
+      "evidence": [
+        "Durable paper service and campaign owners"
+      ],
+      "blockers": [
+        "No current 24h paper qualification PASS; QPR readiness and full exact vertical dependencies must be current."
+      ],
+      "next": "R06 only after source/QPR/R04/R05 gates."
+    },
+    {
+      "id": "PROVIDER-R07",
+      "name": "Broad additional provider research/qualification",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "docs/roadmap/r01-r02-live-capital-readers-2026-10-08/PROVIDER_CATALOG.json",
+        "offline/SOURCE_LEDGER.json",
+        "src/resources/multichain_capabilities.json"
+      ],
+      "evidence": [
+        "27-candidate provider catalog; offline protocol dossiers"
+      ],
+      "blockers": [
+        "Catalog rows are not 27 independent qualified lenders; current deployment/capacity/fees and exact route increment must be proven per provider."
+      ],
+      "next": "One provider per PR; research concurrently, enable only after its own gates."
+    },
+    {
+      "id": "PLATFORM-R11",
+      "name": "Platform/CI/offline reproducibility",
+      "status": "BLOCKED",
+      "owners": [
+        "scripts/verify_repo.py",
+        ".github/workflows/",
+        "docs/integrations/offline/",
+        "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/"
+      ],
+      "evidence": [
+        "P0-0 baseline in superseded #590 branch"
+      ],
+      "blockers": [
+        "Historical native Windows test blockers: fcntl and os.getuid; WSL-first was selected but current local WSL state not verified; historical counts need rerun.",
+        "CI run #2975 on documentation PR #595 fails strict pip-audit with 68 known advisories across nine packages; no runtime/dependency files changed in the PR."
+      ],
+      "next": "R11 platform baseline plus R12 dependency audit remediation; verify current WSL and run full verifier."
+    },
+    {
+      "id": "SEC-R12",
+      "name": "Dependency and supply-chain security remediation",
+      "status": "BLOCKED",
+      "owners": [
+        "pyproject.toml",
+        "requirements.lock",
+        "requirements-dev.lock",
+        "uv lock workflow",
+        "scripts/verify_repo.py"
+      ],
+      "evidence": [
+        "CI run #2975 on PR #595: pip-audit reported 68 known advisories across 9 packages; formatter, mypy, wheel smoke, non-root image smoke and secret scan succeeded."
+      ],
+      "blockers": [
+        "The strict dependency audit remains failing. Findings observed: aiohttp 3.14.3, brotli 1.2.0, certifi 2026.6.17, setuptools 83.0.0, black 26.3.1, msgpack 1.2.2, filelock 3.32.5, pillow 12.3.0 and uv 0.11.15. Revalidate fix versions against current advisories and project constraints."
+      ],
+      "next": "R12 verify advisory IDs, upgrade compatible pins through official lock workflow, run full tests and pip-audit, publish report."
+    }
+  ],
+  "global_safety": {
+    "live_enabled": false,
+    "sign_enabled": false,
+    "send_enabled": false,
+    "production_ready": false,
+    "all_unqualified_provider_candidates_disabled": true,
+    "no_account_creation": true,
+    "no_spending": true
+  },
+  "next_agent_action": "Refresh this status matrix against latest main and current PRs, launch independent tracks concurrently in isolated worktrees, and update each row only with verifiable commit/tests/evidence.",
+  "audit_notes": [
+    "PR #595 CI run #2975: scripts/verify_repo.py failed at strict pip-audit with 68 findings in 9 locked packages. This documentation-only PR changed no dependency/runtime files; it is an existing dependency-security baseline issue pending revalidation."
+  ]
+}

@@ -41,10 +41,8 @@ _POOL_TYPE_BY_PROGRAM_ID: Dict[str, str] = {
     "whirLbMiicVdio4qvUfM5KAg6Ct8VwpYzGff3uctyCc": "clmm",  # Orca Whirlpool
     "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK": "clmm",  # Raydium CLMM
     "CAMMCkzFhJfPWvTv7SwbeCfFFmCd29S4mxS3vz5S2SEt": "clmm",  # Raydium CLMM (alt)
-    "whirLbMi2tG34uFp881tua2RZBY9oXKVvVf9xrq7Rqi": "clmm",  # Orca variant seen in codebase
     # Discrete liquidity (Meteora DLMM)
-    "LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3": "dlmm",  # Meteora DLMM
-    "LbS9W8ioppRE44Yfczz7Spx3SJJ86VNoX8s6iF5K1nL": "dlmm",  # Meteora variant seen in codebase
+    "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo": "dlmm",  # Meteora DLMM (pinned mainnet program)
     # Stableswap (Saber)
     "SSwpkEEcbUqx4uweEw4KsK9cZ4cwvJj2w2mYbFXM7Yr": "stableswap",  # Saber StableSwap
 }

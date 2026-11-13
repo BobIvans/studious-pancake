@@ -1,0 +1,165 @@
+{
+  "schema_version": "studious-pancake.solana-p0-offline-sources.v1",
+  "prepared_at_utc": "2026-11-13",
+  "repository_base_sha_audited": "1638e0d0b8726693baa4501b3a627df354c8890a",
+  "hash_policy": {
+    "github_blob_sha1": "Exact GitHub Git blob object ID from the upstream repository at the recorded commit. Verify with git hash-object on an identical checked-in snapshot.",
+    "sha256": "The repository verifier computes SHA-256 locally for audit output. It is not claimed as a provider-supplied signature.",
+    "source_commit_pin": "A Git commit pin identifies the reviewed upstream source generation; a pin is not an on-chain deployment attestation."
+  },
+  "sources": {
+    "jupiter_swap_v2_openapi": {
+      "provider": "Jupiter",
+      "canonical_urls": [
+        "https://developers.jup.ag/docs/swap/index.md",
+        "https://developers.jup.ag/docs/api-reference/swap/order",
+        "https://developers.jup.ag/docs/api-reference/swap/build",
+        "https://developers.jup.ag/docs/openapi-spec/swap/v2/swap.yaml",
+        "https://github.com/jup-ag/docs"
+      ],
+      "upstream_repository": "jup-ag/docs",
+      "upstream_commit": "d40d936979af3ec75a12a053e3fbeb1f75eb31ce",
+      "upstream_path": "openapi-spec/swap/v2/swap.yaml",
+      "upstream_git_blob_sha1": "c8bad7a7dc9ff60149b55c20e46d7d57e75e2dd8",
+      "api_version": "Swap API V2; OpenAPI 3.0.3; spec info.version 2.0.0",
+      "local_snapshot": "JUPITER_SWAP_V2.openapi.yaml",
+      "snapshot_status": "RAW_OFFICIAL_OPENAPI_MIRROR",
+      "auth": "x-api-key; current official docs also describe keyless low-rate access at 0.5 requests/second",
+      "notes": "V2 is the recommended contract. Do not continue to use the old GPR-02 /swap/v1/quote request construction without an explicit migration decision."
+    },
+    "0x_solana_swap_instructions": {
+      "provider": "0x",
+      "canonical_urls": [
+        "https://docs.0x.org/api-reference/solana-swap-ap-is/swap/instructions",
+        "https://docs.0x.org/api-reference/solana-swap-ap-is/swap/instructions.md",
+        "https://docs.0x.org/llms.txt",
+        "https://dashboard.0x.org/apps"
+      ],
+      "retrieved_at_utc": "2026-11-13",
+      "api": "POST https://api.0x.org/solana/swap-instructions",
+      "api_status": "Open Beta according to the current docs",
+      "auth_header": "0x-api-key",
+      "repo_credential_ref_to_reconcile": "ZEROX_API_KEY",
+      "provider_example_env_name": "ZEROEX_API_KEY",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "reason": "The exact official request/response fields needed by this task are transcribed in ZEROX_SOLANA_SWAP.md; no stable machine-readable OpenAPI mirror is included in this bundle. Re-fetch the official .md page and record its content SHA-256 before any live source qualification."
+    },
+    "solana_rpc": {
+      "provider": "Solana Foundation documentation",
+      "canonical_urls": [
+        "https://solana.com/docs/rpc",
+        "https://solana.com/docs/rpc/http",
+        "https://solana.com/docs/rpc/http/getprogramaccounts",
+        "https://solana.com/docs/rpc/http/getmultipleaccounts",
+        "https://solana.com/docs/rpc/http/getaccountinfo"
+      ],
+      "retrieved_at_utc": "2026-11-13",
+      "snapshot_status": "OFFICIAL_CONTRACT_EXTRACT_ONLY",
+      "notes": "The method contracts and safety semantics used by this P0 are summarized in SOLANA_RPC_STATE.md. RPC provider response limits and rate policies must be separately pinned per actual endpoint."
+    },
+    "raydium_cpmm_program": {
+      "provider": "Raydium CPMM",
+      "canonical_urls": [
+        "https://github.com/raydium-io/raydium-cp-swap",
+        "https://github.com/raydium-io/raydium-cp-swap/blob/3d69122790e97cd6aff24e8ba95940793773f58c/programs/cp-swap/src/states/pool.rs",
+        "https://github.com/raydium-io/raydium-cp-swap/blob/3d69122790e97cd6aff24e8ba95940793773f58c/programs/cp-swap/src/lib.rs"
+      ],
+      "upstream_repository": "raydium-io/raydium-cp-swap",
+      "upstream_commit": "3d69122790e97cd6aff24e8ba95940793773f58c",
+      "pool_state_path": "programs/cp-swap/src/states/pool.rs",
+      "pool_state_git_blob_sha1": "bc80829f58f8652bcffba9c559327dd37f63f507",
+      "program_id_mainnet": "CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C",
+      "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
+      "license_status": "Do not vendor source until the upstream license is checked and recorded for the exact commit."
+    },
+    "raydium_clmm_program": {
+      "provider": "Raydium CLMM",
+      "canonical_urls": [
+        "https://github.com/raydium-io/raydium-clmm",
+        "https://github.com/raydium-io/raydium-clmm/blob/6d7a0f82d2f293c553c69aaf943377367c6c4cc6/programs/amm/src/states/pool.rs",
+        "https://github.com/raydium-io/raydium-clmm/blob/6d7a0f82d2f293c553c69aaf943377367c6c4cc6/programs/amm/src/lib.rs"
+      ],
+      "upstream_repository": "raydium-io/raydium-clmm",
+      "upstream_commit": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "pool_state_path": "programs/amm/src/states/pool.rs",
+      "pool_state_git_blob_sha1": "309cf1842be657698128a8de270943e90cc48ab7",
+      "program_id_mainnet": "CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+      "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS",
+      "license_status": "Check the exact upstream program-source license before copying or linking code into the project."
+    },
+    "raydium_sdk_v2": {
+      "provider": "Raydium SDK V2",
+      "canonical_urls": [
+        "https://github.com/raydium-io/raydium-sdk-V2",
+        "https://github.com/raydium-io/raydium-sdk-V2/blob/1cf5bb129dbbb1c76dab67819c3d478349c8ed25/package.json"
+      ],
+      "upstream_repository": "raydium-io/raydium-sdk-V2",
+      "upstream_commit": "1cf5bb129dbbb1c76dab67819c3d478349c8ed25",
+      "package_version": "0.2.84-alpha",
+      "package_license": "GPL-3.0",
+      "package_json_git_blob_sha1": "37b95fe000925f0c187e500681f0eeddcecca071",
+      "snapshot_status": "PINNED_PACKAGE_METADATA_ONLY",
+      "notes": "Do not add this SDK as a dependency or copy source without an explicit GPL compatibility review. The Python project may not need this SDK to independently decode public pool accounts."
+    },
+    "orca_whirlpools": {
+      "provider": "Orca Whirlpools",
+      "canonical_urls": [
+        "https://github.com/orca-so/whirlpools",
+        "https://github.com/orca-so/whirlpools/blob/cc683ec92acb5e7606caa3d8e514d9383e9c7c11/programs/whirlpool/src/state/whirlpool.rs",
+        "https://github.com/orca-so/whirlpools/blob/cc683ec92acb5e7606caa3d3e8e514d9383e9c7c11/programs/whirlpool/src/state/tick_array.rs",
+        "https://github.com/orca-so/whirlpools/blob/cc683ec92acb5e7606caa3d3e8e514d9383e9c7c11/LICENSE"
+      ],
+      "upstream_repository": "orca-so/whirlpools",
+      "upstream_commit": "cc683ec92acb5e7606caa3d8e514d9383e9c7c11",
+      "whirlpool_state_path": "programs/whirlpool/src/state/whirlpool.rs",
+      "whirlpool_state_git_blob_sha1": "66586dc10495a66561d481ad3e79ca54d8455c46",
+      "tick_array_state_path": "programs/whirlpool/src/state/tick_array.rs",
+      "tick_array_state_git_blob_sha1": "6c7a97d3b837d4dca1c035ddab5f89c039303523",
+      "license_path": "LICENSE",
+      "license_git_blob_sha1": "b23af5cac9948597e9f20dce031eb7bd9d16377d",
+      "snapshot_status": "PINNED_SOURCE_REFERENCE_AND_FACTS; SOURCE_NOT_MIRRORED",
+      "license_status": "RESTRICTED_CUSTOM_LICENSE: repository says code from 2025-02-27 onward is under Orca License. Obtain legal approval for intended commercial/profit-generating use before SDK/code reuse."
+    },
+    "meteora_dlmm": {
+      "provider": "Meteora DLMM",
+      "canonical_urls": [
+        "https://github.com/MeteoraAg/dlmm-sdk",
+        "https://github.com/MeteoraAg/docs/blob/23bcd7f9abdbb7fc400aa1902119785b9e114114/developer-guides/dlmm/program/accounts.mdx",
+        "https://github.com/MeteoraAg/docs/blob/23bcd7f9abdbb7fc400aa1902119785b9e114114/developer-guides/dlmm/typescript-sdk/reference.mdx",
+        "https://github.com/MeteoraAg/dlmm-sdk/blob/1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1/ts-client/package.json"
+      ],
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "package_name": "@meteora-ag/dlmm",
+      "package_version": "1.9.15",
+      "package_license": "ISC",
+      "package_json_git_blob_sha1": "6b0040e267f19f7dffa287b6768e5a660f6087cb",
+      "program_id_mainnet": "LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "docs_repository_commit": "23bcd7f9abdbb7fc400aa1902119785b9e114114",
+      "accounts_page_git_blob_sha1": "b755cbbcfcdc343fe7376e973893155162fa03e5",
+      "sdk_reference_page_git_blob_sha1": "ccb6d1ff855ea83bd33c85b450563a0bb641ecb0",
+      "snapshot_status": "PINNED_DOCS_AND_PACKAGE_METADATA; SELECTED_TECHNICAL_FACTS_IN_DIRECT_STATE_NOTE",
+      "notes": "The SDK is anchor/web3.js-based and the account model uses LbPair, BinArray, BinArrayBitmapExtension, Oracle and reserve PDAs. Pin the transitive SDK lockfile before use; do not casually import the current TypeScript SDK into the Python runtime."
+    }
+  },
+  "known_contract_drift": [
+    {
+      "owner": "src/solana_parallel_radar/cli.py::read_contracts",
+      "problem": "Current repo owner still points Jupiter at /swap/v1/quote and V1 docs.",
+      "corrective_target": "Jupiter Swap API V2 /order for quote-only capture; retain /build only as a later unsigned-instruction pathway if required.",
+      "status": "MIGRATION_REQUIRED"
+    },
+    {
+      "owner": "src/solana_parallel_radar/probes.py::jupiter_request",
+      "problem": "Current request builder uses V1 parameters and response normalizer.",
+      "corrective_target": "Implement a V2-specific request/response contract and keep explicit versioned compatibility tests; do not silently reinterpret V2 as V1.",
+      "status": "MIGRATION_REQUIRED"
+    },
+    {
+      "owner": "src/solana_parallel_radar/funnel.py",
+      "problem": "Existing QuotePreview and comparison boundaries are reusable.",
+      "corrective_target": "Reuse and extend after V2 response normalization; do not create parallel quote-domain objects.",
+      "status": "REUSE_CANONICAL_OWNER"
+    }
+  ]
+}

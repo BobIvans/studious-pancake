@@ -17,8 +17,8 @@ Workstream: R11 platform/CI reproducibility. Branch `agent/platform-repro` (base
 
 ## Change
 
-- `src/qualification_campaign/evidence.py`: `import fcntl` wrapped in `try/except ImportError`; fallback path defines `_PosixFlockShim` emulating the flock operations this module uses via stdlib `msvcrt.locking`; the blob-path directory fsync runs the POSIX-exact branch on POSIX and a documented conservative branch on win32. No new dependency; POSIX hosts import real `fcntl` and never enter the shim.
-- `src/durability/lifecycle.py`: new `_posix_owner_ids()` helper returning `(os.getuid(), os.getgid())` when the attributes exist, else `None`; the two ownership comparisons and the group/world-writable mode comparison are gated on it. Same checks, same order, same error messages on POSIX.
+- `src/qualification_campaign/evidence.py`: `import fcntl` behind a `sys.platform == "win32"` guard (hotfix restructure of the original `try/except ImportError` so static analysis is platform-conditional — mypy analyzes the msvcrt branch only on win32 and the POSIX branch only on POSIX; runtime selection is unchanged); win32 path defines `_PosixFlockShim` emulating the flock operations this module uses via stdlib `msvcrt.locking`, with one targeted `# type: ignore[assignment]` on the documented module-name rebinding; the blob-path directory fsync runs the POSIX-exact branch on POSIX and a documented conservative branch on win32. No new dependency; POSIX hosts import real `fcntl` and never enter the shim.
+- `src/durability/lifecycle.py`: new `_posix_owner_ids()` helper returning `(os.getuid(), os.getgid())` on `sys.platform != "win32"`, else `None`; the two ownership comparisons and the group/world-writable mode comparison are gated on it. Same checks, same order, same error messages on POSIX.
 
 ## POSIX-equivalence argument
 

@@ -11,7 +11,7 @@ Read, in order:
 
 FIRST ACTION — audit before edits:
 - fetch origin/main, record exact SHA and worktree status;
-- inspect every open PR and identify merged, stale, duplicate, unique or blocking changes; specifically reconcile #590 against current main and #583/#586/#591/#592 status;
+- inspect every open PR and identify merged, stale, duplicate, unique or blocking changes. Current snapshot: #595 is merged; #590 is closed unmerged and superseded; #594 is stale/superseded; #593 remains open and is based on 176f413, which compares 4 commits ahead / 64 behind current main. Refresh #593 on the current base and rerun its verifier before merge. #584/#585/#586/#588/#589/#591/#592 are merged; do not repeat their work.;
 - run all three checked-in offline bundle verifiers;
 - build an IMPLEMENTATION_STATUS.json (or similarly named machine-readable matrix) listing every major deliverable with exact owner, existing tests, docs pin, status, dependency, PR, blocker and acceptance command;
 - verify current runtime truth. README currently says not production-ready, sender-free, live hard-denied and multiple providers/strategies are evidence-gated. Do not overstate it.
@@ -32,6 +32,8 @@ L. CEX/oracle/reference data source dossier + bounded feed design.
 M. Platform/WSL/Windows/CI/replay reliability.
 N. Supported runtime boot-path integration audit/design.
 O. Dependency vulnerability and lockfile supply-chain remediation (R12); verify exact advisory fixes and Python 3.13 compatibility.
+P. R13 multi-provider quote/build race across Solana (0x/Titan/Jupiter/OpenOcean/OKX/Rango) and Sui (Aftermath/Cetus/7K/FlowX/OKX/Rango/DeepBook), reusing P0-2 and existing quote/build contracts.
+Q. R14 RentSponsorPlanner: existing accounts, provider sponsor/payer, Slumlord ephemeral rent and persistent funding; reuse src/lending/slumlord.py and do not claim all ATAs are free.
 
 Do not wait for one lane to finish before launching unrelated lanes. For dependencies, allow research, source verification, interface proposals and offline fixtures to proceed; gate only changes that require a shared interface or proof from another task.
 
@@ -42,7 +44,7 @@ AFTER INDEPENDENT WORK:
 - R07 add one provider per PR from the 27-provider catalog. Provider research can run throughout; do not enable unqualified candidates.
 
 Engineering rules:
-- One task ID per worktree and PR. No two agents edit the same canonical owner concurrently.
+- One task ID per worktree and PR. No two agents edit the same canonical owner concurrently. R13 must coordinate with P0-2 for the shared Jupiter/0x quote owner; R14 must coordinate with R03 for the shared unsigned execution-plan contract. Freeze interfaces before those edits.
 - Reuse existing AssetResolver, DynamicUniverse, ResearchEconomicGraph, UniversalArbitrageGraph, FlashCapitalGraph, relation generators, PR118 nonlinear sizing, ExactSimulationFinalizer, QPR/DIN governance, unified lifecycle/capital authority and paper service.
 - Do not create a second registry, data plane, quote schema, graph, router, solver, transaction kernel, journal, capital ledger, signer or sender.
 - Preserve maximum research universe: Solana/Sui/TON/EVM, LSTs, stablecoins, wrappers, BTC variants, long-tail/event assets, RWA references, CEX/oracle signals and cross-chain research. Flash-borrowable settlement hubs and tradable target assets are different concepts.

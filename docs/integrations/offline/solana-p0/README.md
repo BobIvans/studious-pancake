@@ -11,13 +11,14 @@
 4. `JUPITER_SWAP_V2.md` and `JUPITER_SWAP_V2.openapi.yaml` — current official Jupiter API contract.
 5. `ZEROX_SOLANA_SWAP.md` — current official 0x Solana request/response contract.
 6. `DIRECT_STATE_RAYDIUM_ORCA_METEORA.md` — venue account state, math inputs, identity checks and license boundaries.
-7. Task prompts in `docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/`.
+7. `VENDOR_SOURCE_MANIFEST.json` and `vendor-reference/README.md` — selected raw Raydium source layouts/math and Meteora IDL/helpers, pinned by upstream blob hash.
+8. Task prompts in `docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/`.
 
 ## Important truth about offline completeness
 
 - Jupiter's complete OpenAPI 3.0.3 Swap API V2 specification is mirrored here as a raw official YAML snapshot.
 - 0x, Solana RPC and venue references are captured here as technical extracts with exact canonical source URLs and retrieval metadata. The 0x public docs page is Open Beta and does not provide a stable checked-in OpenAPI file in this dossier.
-- Raydium and Meteora upstream source paths/commits/blob IDs are pinned. This dossier records the program IDs, account families and decoding requirements; it does not vendor entire SDK repositories.
+- Selected Raydium CPMM/CLMM source files are mirrored as inert `.rs.txt` references with the Apache-2.0 license. The Meteora `lb_clmm` Anchor IDL, helpers, package metadata and quote example are mirrored with upstream blob pins; the package metadata declares ISC. This does not vendor or import entire SDK packages.
 - Orca's current repository license is a custom Orca License (post-2025-02-27), not the former Apache-2.0 license. Do not copy its implementation or integrate its SDK until license use is approved. The public program/account facts are described here for independent review only.
 - A source pin is not the same as a mirrored source file, a deployed bytecode attestation, or proof of live data. Consult the manifest status for each item.
 
@@ -38,4 +39,4 @@ From repository root:
 python docs/integrations/offline/solana-p0/verify_offline_bundle.py
 ```
 
-The verifier is network-free. It checks the Jupiter OpenAPI snapshot against its upstream Git blob SHA-1 and checks required dossier files. It does not perform live provider qualification.
+The verifier is network-free. It checks the Jupiter OpenAPI snapshot and all 19 vendor-reference files against upstream Git blob SHA-1 values, then prints SHA-256 audit digests. It does not perform live provider qualification.

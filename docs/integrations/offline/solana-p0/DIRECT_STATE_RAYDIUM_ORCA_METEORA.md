@@ -19,9 +19,11 @@ For every venue reader:
 Mainnet program ID recorded from the pinned program source:
 `CPMMoo8L3F4NbTegBCKVNunggL7H1ZpdTHKxQB5qKP1C`.
 
-Relevant upstream source:
-- `programs/cp-swap/src/states/pool.rs` — zero-copy pool state, seeds, status and pool configuration.
-- `programs/cp-swap/src/lib.rs` — deployed program ID and instruction module.
+Relevant upstream source is mirrored as inert text under `vendor-reference/raydium/cpmm/`:
+- `pool.rs.txt` — zero-copy pool state, seeds, status and vault/mint configuration.
+- `config.rs.txt` — AMM config and fee configuration fields.
+- `swap_base_input.rs.txt`, `fees.rs.txt`, `constant_product.rs.txt` — input swap, fee and constant-product math.
+- Upstream Apache-2.0 license text is retained at `vendor-reference/raydium/LICENSE-APACHE-2.0.txt`.
 - The repo already contains a native Raydium CPMM decoder/collector. **Audit and reuse that canonical owner**; do not write a second CPMM decoder.
 
 Reader must bind the pool account to the expected CPMM program, decode its exact pinned pool state, validate token mints/vaults and fetch vault token-account balances at the same or bounded slot. Decode the current fee configuration and pool status flags before treating swaps as possible. Keep unsupported extensions and changed layouts fail-closed.
@@ -31,9 +33,12 @@ Reader must bind the pool account to the expected CPMM program, decode its exact
 Mainnet program ID recorded from the pinned CLMM program source:
 `CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK`.
 
-Relevant upstream source:
-- `programs/amm/src/states/pool.rs` — zero-copy PoolState, PDA seeds, tick bitmap, price/liquidity state, fee and status fields.
-- `programs/amm/src/lib.rs` — deployed program ID and instruction modules.
+Selected upstream files are mirrored as inert text under `vendor-reference/raydium/clmm/`:
+- `pool.rs.txt` — PoolState, PDA seeds, price/liquidity, fee and status fields.
+- `tick_array.rs.txt`, `tick_array_bit_map.rs.txt` — initialized tick array and bitmap traversal.
+- `swap_math.rs.txt`, `tick_math.rs.txt` — exact swap and tick math reference.
+- `config.rs.txt` — AMM fee/config fields.
+- These are from the pinned Apache-2.0 program repository and are not imported as project dependencies.
 
 Exact CLMM depth requires more than pool vault totals:
 - pool liquidity and Q64.64 sqrt price/current tick;
@@ -62,8 +67,10 @@ Pinned source facts:
 Mainnet program ID from the pinned SDK/docs:
 `LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo`.
 
-Pinned SDK:
-- package `@meteora-ag/dlmm` version `1.9.15`, license `ISC`;
+Pinned SDK and offline source snapshots:
+- full Anchor IDL mirrored at `vendor-reference/meteora/lb_clmm.idl.json` (IDL metadata version `0.12.0`);
+- helpers/types/quote example and SDK entrypoint mirrored as `.ts.txt` under `vendor-reference/meteora/`;
+- package `@meteora-ag/dlmm` version `1.9.15`, package metadata declares license `ISC`;
 - relevant account types include `LbPair`, `BinArray`, `PositionV2`, limit-order structures and preset parameters;
 - account guide describes `LbPair`, reserve vaults, `BinArray`, `BinArrayBitmapExtension`, `Oracle`, position accounts and deterministic PDA derivations;
 - SDK `getTokensMintFromPoolAddress` validates the pool account exists then reads X/Y mints; `getTokenProgramId` maps pool flags to SPL Token vs Token-2022.

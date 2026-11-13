@@ -2,7 +2,7 @@
 
 **Priority:** P0  
 **Mode:** offline account-layout/quote implementation and fixtures first; bounded RPC reads are separate read-only qualification.  
-**Technical baseline:** `docs/integrations/offline/solana-p0/DIRECT_STATE_RAYDIUM_ORCA_METEORA.md` and `SOLANA_RPC_STATE.md`.
+**Technical baseline:** `docs/integrations/offline/solana-p0/DIRECT_STATE_RAYDIUM_ORCA_METEORA.md`, `SOLANA_RPC_STATE.md`, `VENDOR_SOURCE_MANIFEST.json` and `vendor-reference/README.md`. Use the checked-in Raydium source snapshots and Meteora IDL/helpers offline; do not fetch moving `main` branches while coding.
 
 ## Assignment
 

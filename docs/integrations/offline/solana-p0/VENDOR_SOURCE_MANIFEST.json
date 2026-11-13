@@ -1,0 +1,178 @@
+{
+  "schema_version": "studious-pancake.solana-p0-vendor-reference.v1",
+  "prepared_at_utc": "2026-11-13",
+  "usage": "Reference-only source snapshots. These files are inert documentation artifacts; the Python runtime does not import them.",
+  "files": [
+    {
+      "key": "raydium_apache_license",
+      "upstream_repository": "raydium-io/raydium-cp-swap",
+      "upstream_commit": "3d69122790e97cd6aff24e8ba95940793773f58c",
+      "upstream_path": "LICENSE",
+      "upstream_git_blob_sha1": "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/LICENSE-APACHE-2.0.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "cpmm_pool_state",
+      "upstream_repository": "raydium-io/raydium-cp-swap",
+      "upstream_commit": "3d69122790e97cd6aff24e8ba95940793773f58c",
+      "upstream_path": "programs/cp-swap/src/states/pool.rs",
+      "upstream_git_blob_sha1": "bc80829f58f8652bcffba9c559327dd37f63f507",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/cpmm/pool.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "cpmm_amm_config",
+      "upstream_repository": "raydium-io/raydium-cp-swap",
+      "upstream_commit": "3d69122790e97cd6aff24e8ba95940793773f58c",
+      "upstream_path": "programs/cp-swap/src/states/config.rs",
+      "upstream_git_blob_sha1": "eaa966e7977315c4a5d3361c6b9bde0ce973515e",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/cpmm/config.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "cpmm_swap_base_input",
+      "upstream_repository": "raydium-io/raydium-cp-swap",
+      "upstream_commit": "3d69122790e97cd6aff24e8ba95940793773f58c",
+      "upstream_path": "programs/cp-swap/src/instructions/swap_base_input.rs",
+      "upstream_git_blob_sha1": "514a2dec36f7bf337302c1b25a2a883f2e230945",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/cpmm/swap_base_input.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "cpmm_fee_math",
+      "upstream_repository": "raydium-io/raydium-cp-swap",
+      "upstream_commit": "3d69122790e97cd6aff24e8ba95940793773f58c",
+      "upstream_path": "programs/cp-swap/src/curve/fees.rs",
+      "upstream_git_blob_sha1": "d147b6994c3e4f63c92471bec779d009be1fe84b",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/cpmm/fees.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "cpmm_constant_product",
+      "upstream_repository": "raydium-io/raydium-cp-swap",
+      "upstream_commit": "3d69122790e97cd6aff24e8ba95940793773f58c",
+      "upstream_path": "programs/cp-swap/src/curve/constant_product.rs",
+      "upstream_git_blob_sha1": "7b98d67bcbc7525d825a651db467554e1dc18b71",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/cpmm/constant_product.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "clmm_pool_state",
+      "upstream_repository": "raydium-io/raydium-clmm",
+      "upstream_commit": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "upstream_path": "programs/amm/src/states/pool.rs",
+      "upstream_git_blob_sha1": "309cf1842be657698128a8de270943e90cc48ab7",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/clmm/pool.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "clmm_tick_array",
+      "upstream_repository": "raydium-io/raydium-clmm",
+      "upstream_commit": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "upstream_path": "programs/amm/src/states/tick_array.rs",
+      "upstream_git_blob_sha1": "6c379b8dafe2c258f63ab6bbc12e5eb4a63fbd20",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/clmm/tick_array.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "clmm_tick_bitmap",
+      "upstream_repository": "raydium-io/raydium-clmm",
+      "upstream_commit": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "upstream_path": "programs/amm/src/libraries/tick_array_bit_map.rs",
+      "upstream_git_blob_sha1": "496bcae5b7b38b9776141c7b98cbc536344970c0",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/clmm/tick_array_bit_map.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "clmm_swap_math",
+      "upstream_repository": "raydium-io/raydium-clmm",
+      "upstream_commit": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "upstream_path": "programs/amm/src/libraries/swap_math.rs",
+      "upstream_git_blob_sha1": "ebe47d579cd8976a507c965a9d6e4db2fd6173db",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/clmm/swap_math.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "clmm_tick_math",
+      "upstream_repository": "raydium-io/raydium-clmm",
+      "upstream_commit": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "upstream_path": "programs/amm/src/libraries/tick_math.rs",
+      "upstream_git_blob_sha1": "451dffe87a906faaf6c9a187bdce5eeaf08d4f24",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/clmm/tick_math.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "clmm_amm_config",
+      "upstream_repository": "raydium-io/raydium-clmm",
+      "upstream_commit": "6d7a0f82d2f293c553c69aaf943377367c6c4cc6",
+      "upstream_path": "programs/amm/src/states/config.rs",
+      "upstream_git_blob_sha1": "e03a151bcfd436d5ff4fc253a4cfb9c26ceacf94",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/raydium/clmm/config.rs.txt",
+      "license": "Apache-2.0"
+    },
+    {
+      "key": "meteora_idl",
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "upstream_path": "ts-client/src/dlmm/idl/idl.json",
+      "upstream_git_blob_sha1": "6715f5cf19dffa8651a185ac0dd823218c6a2a75",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/meteora/lb_clmm.idl.json",
+      "license": "ISC (package.json metadata)"
+    },
+    {
+      "key": "meteora_pair_helper",
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "upstream_path": "ts-client/src/dlmm/helpers/lbPair.ts",
+      "upstream_git_blob_sha1": "c2ca5cc257e1eee051765360d1af972d4f101b71",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/meteora/lbPair.ts.txt",
+      "license": "ISC (package.json metadata)"
+    },
+    {
+      "key": "meteora_bin_array_helper",
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "upstream_path": "ts-client/src/dlmm/helpers/binArray.ts",
+      "upstream_git_blob_sha1": "001968bfe887a3d2b3574f64e046ed39ecc3f05d",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/meteora/binArray.ts.txt",
+      "license": "ISC (package.json metadata)"
+    },
+    {
+      "key": "meteora_types",
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "upstream_path": "ts-client/src/dlmm/types/index.ts",
+      "upstream_git_blob_sha1": "3d3576f508ca79bb89da759326fc3903b874070e",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/meteora/types.ts.txt",
+      "license": "ISC (package.json metadata)"
+    },
+    {
+      "key": "meteora_swap_quote_example",
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "upstream_path": "ts-client/src/examples/swap_quote.ts",
+      "upstream_git_blob_sha1": "90c1fd66a1b4419f65dd03ef38e67ab5312a52d3",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/meteora/swap_quote_example.ts.txt",
+      "license": "ISC (package.json metadata)"
+    },
+    {
+      "key": "meteora_index",
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "upstream_path": "ts-client/src/dlmm/index.ts",
+      "upstream_git_blob_sha1": "6c40c27937c2cc73d825f637ca04b0a60ee5fd6e",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/meteora/dlmm_index.ts.txt",
+      "license": "ISC (package.json metadata)"
+    },
+    {
+      "key": "meteora_package",
+      "upstream_repository": "MeteoraAg/dlmm-sdk",
+      "upstream_commit": "1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1",
+      "upstream_path": "ts-client/package.json",
+      "upstream_git_blob_sha1": "6b0040e267f19f7dffa287b6768e5a660f6087cb",
+      "local_path": "docs/integrations/offline/solana-p0/vendor-reference/meteora/package.json",
+      "license": "ISC (package.json metadata)"
+    }
+  ]
+}

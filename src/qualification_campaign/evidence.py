@@ -4,13 +4,81 @@ No second SQLite factory. One campaign per journal; negative events and physical
 attempt reservations survive restart. Replay uses retained bytes only.
 """
 
+import errno
 import json
 import time
 import os
 import tempfile
-import fcntl
 from pathlib import Path
 from dataclasses import asdict
+
+try:
+    import fcntl
+except ImportError:  # win32: emulate the flock operations used below.
+    import msvcrt
+
+    class _PosixFlockShim:
+        """``fcntl.flock``-compatible whole-file advisory lock for Windows.
+
+        Replicates, via ``msvcrt.locking`` over the fixed byte range
+        ``[0, 2**31 - 1)`` anchored at offset 0, the exact operations this
+        module performs on dedicated never-written lock files:
+        blocking ``LOCK_EX`` acquire (flock blocks indefinitely, so
+        ``LK_NBLCK`` is retried instead of ``LK_LOCK``'s bounded 10s wait)
+        and ``LOCK_UN`` release of a held lock.  ``LOCK_NB`` contention
+        raises ``BlockingIOError`` like POSIX ``EWOULDBLOCK``.  Locks are
+        per open handle, matching flock's per-open-file-description scope,
+        so two handles (processes or threads) exclude each other.  Because
+        the lock file is never written, locking from offset 0 is
+        equivalent to flock's whole-file lock for cooperating processes,
+        and the advisory-versus-mandatory distinction is unobservable.
+        ``LOCK_SH`` is unavailable in ``msvcrt`` and is conservatively
+        mapped to the exclusive lock (no weakening; unused here).  The
+        constants carry the POSIX fcntl values.  POSIX hosts import the
+        real module above and never enter this branch.
+        """
+
+        LOCK_SH = 0x01
+        LOCK_EX = 0x02
+        LOCK_NB = 0x04
+        LOCK_UN = 0x08
+
+        _RANGE_LENGTH = 2**31 - 1
+
+        @staticmethod
+        def _fileno(fd):
+            return fd.fileno() if hasattr(fd, "fileno") else fd
+
+        def _locked_range_call(self, handle, mode):
+            previous = os.lseek(handle, 0, os.SEEK_CUR)
+            try:
+                os.lseek(handle, 0, os.SEEK_SET)
+                msvcrt.locking(handle, mode, self._RANGE_LENGTH)
+            finally:
+                os.lseek(handle, previous, os.SEEK_SET)
+
+        def flock(self, fd, operation):
+            handle = self._fileno(fd)
+            if operation & self.LOCK_UN:
+                self._locked_range_call(handle, msvcrt.LK_UNLCK)
+                return
+            nonblocking = bool(operation & self.LOCK_NB)
+            if nonblocking:
+                try:
+                    self._locked_range_call(handle, msvcrt.LK_NBLCK)
+                except OSError as error:
+                    raise BlockingIOError(
+                        errno.EAGAIN, "resource temporarily unavailable"
+                    ) from error
+                return
+            while True:
+                try:
+                    self._locked_range_call(handle, msvcrt.LK_NBLCK)
+                    return
+                except OSError:
+                    time.sleep(0.002)
+
+    fcntl = _PosixFlockShim()
 
 from src.market.streams import RawStreamEvent, RecoverableStreamJournal
 from .identity import CampaignManifest, canonical_bytes, digest
@@ -87,11 +155,18 @@ class CampaignEvidenceStore:
                 finally:
                     if temporary is not None:
                         temporary.unlink(missing_ok=True)
-                fd = os.open(self.blob_dir, os.O_DIRECTORY)
-                try:
-                    os.fsync(fd)
-                finally:
-                    os.close(fd)
+                if os.name == "posix":
+                    fd = os.open(self.blob_dir, os.O_DIRECTORY)
+                    try:
+                        os.fsync(fd)
+                    finally:
+                        os.close(fd)
+                # win32: os.open cannot open a directory handle.  The blob
+                # bytes are fsynced above before the hardlink, and NTFS
+                # journals the link metadata, so a lost dirent cannot
+                # corrupt retained evidence: replay fails closed on a
+                # missing or mismatched blob reference.  POSIX keeps the
+                # exact directory-fsync durability step.
             stored = {
                 "kind": "blob_reference",
                 "raw_payload_ref": name,

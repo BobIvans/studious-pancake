@@ -28,6 +28,23 @@ SCHEMA_NAME = "pr041.durable-lifecycle.v1"
 ZERO_HASH = "0" * 64
 
 
+def _posix_owner_ids() -> tuple[int, int] | None:
+    """Return ``(uid, gid)`` where POSIX file ownership is enforced.
+
+    On Windows ``os.stat`` reports the placeholder ``0`` for ``st_uid`` /
+    ``st_gid`` and synthetic mode bits (a writable directory always reads
+    ``0o777``), with access governed by NTFS ACLs instead, so the POSIX
+    ownership and group/world-writable comparisons are not meaningful and
+    are skipped there (conservative platform-neutral fallback; every other
+    topology gate -- symlink rejection, regular-file, hard-link count and
+    SQLite sidecar checks -- still applies on win32).  POSIX hosts return
+    the real ids and behavior is unchanged byte-for-byte.
+    """
+    if hasattr(os, "getuid") and hasattr(os, "getgid"):
+        return os.getuid(), os.getgid()
+    return None
+
+
 def _serialized_sqlite_call(method):
     """Keep a shared-connection reader outside another thread's transaction."""
 
@@ -371,16 +388,19 @@ class DurableLifecycleStore:
                 raise UnsupportedTopologyError(
                     "symlink durable path component rejected"
                 )
+        owner_ids = _posix_owner_ids()
         for component in (parent, path) if path.exists() else (parent,):
             metadata = component.lstat()
             if stat.S_ISLNK(metadata.st_mode):
                 raise UnsupportedTopologyError("symlink durable path rejected")
-            if metadata.st_uid != os.getuid() or metadata.st_gid != os.getgid():
+            if owner_ids is not None and (
+                metadata.st_uid != owner_ids[0] or metadata.st_gid != owner_ids[1]
+            ):
                 raise UnsupportedTopologyError("durable path owner mismatch")
         parent_metadata = parent.lstat()
         if not stat.S_ISDIR(parent_metadata.st_mode):
             raise UnsupportedTopologyError("durable state parent must be a directory")
-        if parent_metadata.st_mode & 0o022:
+        if owner_ids is not None and parent_metadata.st_mode & 0o022:
             raise UnsupportedTopologyError(
                 "durable state parent is group/world writable"
             )
@@ -412,6 +432,7 @@ class DurableLifecycleStore:
         """Keep the database and any SQLite-managed sidecars owner-only."""
         if self.path == ":memory:":
             return
+        owner_ids = _posix_owner_ids()
         for suffix in ("", "-wal", "-shm"):
             candidate = Path(f"{self.path}{suffix}")
             if candidate.exists():
@@ -421,7 +442,9 @@ class DurableLifecycleStore:
                     raise UnsupportedTopologyError(
                         "SQLite database sidecar is not a private regular file"
                     )
-                if metadata.st_uid != os.getuid() or metadata.st_gid != os.getgid():
+                if owner_ids is not None and (
+                    metadata.st_uid != owner_ids[0] or metadata.st_gid != owner_ids[1]
+                ):
                     self.db.close()
                     raise UnsupportedTopologyError(
                         "SQLite database sidecar owner mismatch"

@@ -64,6 +64,14 @@ R07 source research can run throughout; provider activation is individually gate
 ## Parallel execution policy
 Start independent tracks A, B, C-00, E and source research concurrently in isolated worktrees. Workers may begin read-only audits, technical source verification, offline fixtures and contract proposals while dependencies are pending. The lead freezes shared interfaces before multiple workers edit a common owner. E1/R04 and later integration stages may prepare design/tests but cannot claim readiness until their evidence dependencies pass.
 
+## Track F — quote/build and rent economics specialist lanes
+| ID | Assignment | Parallel scope / dependency |
+|---|---|---|
+| R13 | tasks/R13_MULTIPROVIDER_QUOTES_AND_BUILDS.md | Research and qualify Solana/Sui providers in parallel; shared quote/build contracts must be frozen; P0-2 owns Jupiter V2 + 0x baseline |
+| R14 | tasks/R14_RENT_SPONSOR_INTEGRATION.md | Audit/implement route-level existing-account/provider-sponsor/Slumlord/persistent-rent choice; freeze with R03 and R13 before integration |
+
+R13/R14 extend documented Universal Source + Execution contracts. The files are design baselines, not proof that all provider adapters or RentSponsorPlanner are implemented in code. Inspect actual callsites and package boundaries before changing owners.
+
 ## Global evidence states
 Use IN_MAIN_VERIFIED, IMPLEMENTED_UNQUALIFIED, IMPLEMENTED_UNBOUND, OPEN_PR_NOT_IN_MAIN, FIXTURE_ONLY, STUB, PLANNED, LIVE_READ_PROVEN, RPC_EXACT, BUILT_OFFLINE_UNQUALIFIED, SIMULATION_PASS, PAPER_QUALIFIED, BLOCKED and RETIRED. Each PASS identifies commit, config/source generation, evidence hashes, slot/checkpoint, tests and replay command.
 

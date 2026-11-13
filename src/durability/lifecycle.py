@@ -14,6 +14,7 @@ from pathlib import Path
 import shutil
 import stat
 import sqlite3
+import sys
 import time
 from threading import RLock
 from typing import cast
@@ -37,10 +38,12 @@ def _posix_owner_ids() -> tuple[int, int] | None:
     ownership and group/world-writable comparisons are not meaningful and
     are skipped there (conservative platform-neutral fallback; every other
     topology gate -- symlink rejection, regular-file, hard-link count and
-    SQLite sidecar checks -- still applies on win32).  POSIX hosts return
-    the real ids and behavior is unchanged byte-for-byte.
+    SQLite sidecar checks -- still applies on win32).  The sys.platform
+    guard keeps the ``os.getuid``/``os.getgid`` calls platform-conditional
+    for static analysis; POSIX hosts return the real ids and behavior is
+    unchanged byte-for-byte.
     """
-    if hasattr(os, "getuid") and hasattr(os, "getgid"):
+    if sys.platform != "win32":
         return os.getuid(), os.getgid()
     return None
 

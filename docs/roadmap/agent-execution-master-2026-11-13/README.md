@@ -9,6 +9,7 @@ This folder is the single task index for Codex CLI, GLM and other coding agents.
 - PARALLEL_AGENT_LAUNCH_PROMPT.md — copy-ready GLM/Codex orchestrator prompt.
 - GLM_AGENT_OPERATING_GUIDE.md — long-horizon/multi-agent use without assumptions about account quota.
 - TASK_INDEX.md — completed work, parallel tracks, dependencies and every assignment path.
+- tasks/R12_DEPENDENCY_SECURITY_REMEDIATION.md — strict pip-audit and lockfile supply-chain remediation based on current CI findings.
 - tasks/R02_CAPITAL_READERS.md — Jupiter, Kamino, NAVI and Project 0 read-only readers.
 - tasks/R03_UNSIGNED_BUILDERS.md — shared unsigned contracts and provider-specific builder requirements.
 - tasks/R04_CAPITAL_AWARE_ROUTE_SELECTOR.md — connect exact route quotes to eligible lender/resource/amount choices.

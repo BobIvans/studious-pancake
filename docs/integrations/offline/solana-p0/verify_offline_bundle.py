@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify checked-in Solana P0 docs without network access."""
+"""Verify the offline Solana P0 source bundle without network access."""
 
 from __future__ import annotations
 
@@ -12,19 +12,21 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[4]
 BASE = Path("docs/integrations/offline/solana-p0")
 MANIFEST = ROOT / BASE / "SOURCE_MANIFEST.json"
+VENDOR_MANIFEST = ROOT / BASE / "VENDOR_SOURCE_MANIFEST.json"
 
 REQUIRED = (
     "README.md",
     "SOURCE_MANIFEST.json",
+    "VENDOR_SOURCE_MANIFEST.json",
     "SOLANA_RPC_STATE.md",
     "SOLANA_DISCOVERY_SOURCES.md",
     "JUPITER_SWAP_V2.md",
     "JUPITER_SWAP_V2.openapi.yaml",
     "ZEROX_SOLANA_SWAP.md",
     "DIRECT_STATE_RAYDIUM_ORCA_METEORA.md",
+    "vendor-reference/README.md",
     "verify_offline_bundle.py",
 )
-
 
 def git_blob_sha1(path: Path) -> str:
     result = subprocess.run(
@@ -35,10 +37,11 @@ def git_blob_sha1(path: Path) -> str:
     )
     return result.stdout.strip()
 
-
 def main() -> int:
-    data = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    main_manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+    vendor_manifest = json.loads(VENDOR_MANIFEST.read_text(encoding="utf-8"))
     errors: list[str] = []
+
     for relative in REQUIRED:
         path = ROOT / BASE / relative
         if not path.is_file():
@@ -47,34 +50,34 @@ def main() -> int:
         digest = hashlib.sha256(path.read_bytes()).hexdigest()
         print(f"OK_FILE {relative} sha256={digest}")
 
-    yaml_path = ROOT / BASE / "JUPITER_SWAP_V2.openapi.yaml"
-    expected = data["sources"]["jupiter_swap_v2_openapi"]["upstream_git_blob_sha1"]
-    actual = git_blob_sha1(yaml_path) if yaml_path.is_file() else ""
-    if actual != expected:
-        errors.append(
-            f"JUPITER_OPENAPI_GIT_BLOB_MISMATCH expected={expected} actual={actual}"
-        )
+    jup_path = ROOT / BASE / "JUPITER_SWAP_V2.openapi.yaml"
+    expected_jup = main_manifest["sources"]["jupiter_swap_v2_openapi"]["upstream_git_blob_sha1"]
+    actual_jup = git_blob_sha1(jup_path) if jup_path.is_file() else ""
+    if actual_jup != expected_jup:
+        errors.append(f"JUPITER_OPENAPI_GIT_BLOB_MISMATCH expected={expected_jup} actual={actual_jup}")
     else:
-        print(f"OK_UPSTREAM_GIT_BLOB jupiter_swap_v2_openapi={actual}")
+        print(f"OK_UPSTREAM_GIT_BLOB jupiter_swap_v2_openapi={actual_jup}")
 
-    for task in (
-        ROOT / "docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-1_SOLANA_INTAKE_DYNAMIC_UNIVERSE.md",
-        ROOT / "docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-2_JUPITER_0X_QUOTES.md",
-        ROOT / "docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P0-3_DIRECT_STATE_VERIFICATION.md",
-        ROOT / "docs/roadmap/p0-offline-execution-master-2026-11-13/tasks/P1_P2_AFTER_P0.md",
-    ):
-        if not task.is_file():
-            errors.append(f"MISSING_TASK:{task.relative_to(ROOT)}")
+    for item in vendor_manifest["files"]:
+        path = ROOT / item["local_path"]
+        if not path.is_file():
+            errors.append(f"MISSING_VENDOR:{item['local_path']}")
+            continue
+        actual = git_blob_sha1(path)
+        expected = item["upstream_git_blob_sha1"]
+        if actual != expected:
+            errors.append(f"VENDOR_BLOB_MISMATCH:{item['local_path']} expected={expected} actual={actual}")
         else:
-            print(f"OK_TASK {task.relative_to(ROOT)}")
+            digest = hashlib.sha256(path.read_bytes()).hexdigest()
+            print(f"OK_VENDOR {item['key']} git_blob_sha1={actual} sha256={digest}")
 
     if errors:
         for error in errors:
             print(f"FAIL {error}", file=sys.stderr)
         return 1
-    print("OFFLINE_DOC_BUNDLE_OK (no network requests performed)")
-    return 0
 
+    print(f"OFFLINE_DOC_BUNDLE_OK vendor_files={len(vendor_manifest['files'])} (no network requests performed)")
+    return 0
 
 if __name__ == "__main__":
     raise SystemExit(main())

@@ -5,6 +5,21 @@
 **Base expected at preparation:** `main` (verify the exact fetched SHA before work; the current local user checkout reported `1638e0d0b8726693baa4501b3a627df354c8890a`).  
 **Purpose:** one durable entry point for Codex or another coding agent to execute the remaining P0 work without depending on chat history or ad-hoc internet browsing.
 
+
+## User-clarified primary P0 scope — three independent work packages
+
+The immediate P0 target is the three market-data tasks listed below. Each has a standalone Codex prompt and a provider-technical dossier; do not combine them into one oversized coding session:
+
+1. **P0-1 — Safe Solana indexed intake → Dynamic Universe:** [task](tasks/P0-1_SOLANA_INTAKE_DYNAMIC_UNIVERSE.md), [offline source discovery notes](../../integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md).
+2. **P0-2 — Jupiter V2 + 0x comparable quote capture:** [task](tasks/P0-2_JUPITER_0X_QUOTES.md), [Jupiter OpenAPI + V2 notes](../../integrations/offline/solana-p0/JUPITER_SWAP_V2.md), [0x contract extract](../../integrations/offline/solana-p0/ZEROX_SOLANA_SWAP.md).
+3. **P0-3 — Raydium/Orca/Meteora direct-state verification:** [task](tasks/P0-3_DIRECT_STATE_VERIFICATION.md), [venue decoder reference](../../integrations/offline/solana-p0/DIRECT_STATE_RAYDIUM_ORCA_METEORA.md).
+
+Common offline technical baseline: [Solana P0 dossier index](../../integrations/offline/solana-p0/README.md), [source manifest](../../integrations/offline/solana-p0/SOURCE_MANIFEST.json), [Solana RPC account-state reference](../../integrations/offline/solana-p0/SOLANA_RPC_STATE.md), [offline verifier](../../integrations/offline/solana-p0/verify_offline_bundle.py).
+
+**Important scope boundary:** the separate R-01/R-02/R-03 flash-capital readers and unsigned builders are not silently folded into these three market-data tasks. Their existing offline dossiers and unmerged review PRs #583/#586 must be reconciled as a distinct capital workstream. Market-data P0 completion alone does not qualify a flashloan route or capital provider.
+
+Next-phase prompts are collected in [P1/P2 after P0](tasks/P1_P2_AFTER_P0.md). Do not begin them until the three P0 exit gates have evidence.
+
 ## 0. Start here — rules for the agent
 
 1. Read this file completely, then read every linked in-repository owner listed in §2 before editing code.
@@ -123,7 +138,7 @@ Acceptance: two real provider captures (when keys and network are supplied), sam
 
 Acceptance: offline fixture decoding and negative fixtures for wrong owner, version, mint, truncation and stale slot/checkpoint; live RPC capture is a separate bounded qualification.
 
-### P0-4 — R-01 verification, then R-02 live capital readers
+### Separate capital workstream — R-01 verification, then R-02 live capital readers (not one of the three market-data P0 tasks above)
 
 - Follow the explicit dependency: R-01 verification before R-02; inspect #583 and #586, their offline bundles and current status.
 - R-02 target readers: Project 0, Jupiter Lend, Kamino, NAVI (and only other explicitly scoped providers). Current historical R-02 report says four qualified readers were not delivered and R-02 was BLOCKED.
@@ -134,7 +149,7 @@ Acceptance: offline fixture decoding and negative fixtures for wrong owner, vers
 
 Acceptance: four readers only count as qualified if each has pinned decoder + real rooted state evidence + replay + independent consistency checks + explicit capacity/fee/cost semantics. A program account existing or an admin fee field alone is not reserve capacity.
 
-### P0-5 — Protocol-specific builders (R-03) and capital-aware paper path
+### Separate capital workstream — Protocol-specific builders (R-03) and capital-aware paper path
 
 - Only after R-01/R-02 gates and exact protocol contracts: implement SDK-conformant borrow/repay instruction or Sui PTB builders as unsigned plans/evidence.
 - Reuse existing QuoteProvider, TransactionBuilder, UnsignedExecutionPlan, ProviderCorrelation, BuildEvidence, RentSponsorPlanner contracts where present; audit current main before creating any new contract.
@@ -145,16 +160,17 @@ Acceptance: four readers only count as qualified if each has pinned decoder + re
 
 Acceptance: end-to-end sender-free paper evidence for a supported route, or explicit blocker receipt. No live promotion.
 
-### P0 exit gate
+### P0 market-data exit gate — the three user-clarified P0 tasks
 
-P0 is complete only when:
-1. P0-1 has a durable safe Solana/Sui candidate universe and verified identity handoff.
-2. P0-2 has real comparable quote captures and deterministic replay.
-3. P0-3 has exact state readers for the venues actually claimed as supported.
-4. P0-4 has qualified capital readers for the protocols actually claimed as supported, or explicit documented blockers and a narrowed scope (never false PASS).
-5. P0-5 produces sender-free unsigned-plan/simulation/paper receipts for at least one fully supported route per claimed chain/protocol path.
-6. All acceptance tests, offline replay, CI, capability and quarantine gates pass.
-7. No signer/sender/live transaction or production promotion has been enabled.
+P0 market-data is complete only when:
+1. P0-1 has a durable, refreshable Solana candidate pool universe and verified identity handoff with provenance and lifecycle semantics.
+2. P0-2 has real, comparable Jupiter V2 and 0x quotes for the same mint pair, base-unit input size and time window, with retained raw evidence and deterministic replay.
+3. P0-3 has exact-state readers for each venue/version claimed as supported, using pool + dependent tick/bin accounts and amount-specific venue math.
+4. All offline tests/replays, CI, capability and quarantine gates pass.
+5. Any unavailable source or unlicensed venue remains explicitly BLOCKED/unsupported, never false PASS.
+6. No signer/sender/live transaction, flash borrowing or production promotion has been enabled.
+
+The separate capital workstream (R-01/R-02/R-03) remains required before a route can be claimed as flashloan-qualified; its status is not made green by these market-data deliverables.
 
 A blocked provider does not necessarily block all research progress, but it must remain excluded from any route whose correctness depends on it.
 
@@ -163,6 +179,8 @@ A blocked provider does not necessarily block all research progress, but it must
 This is a checklist, not a claim that the files have already been downloaded. Codex must resolve the exact currently supported endpoint/version and record it in each dossier.
 
 ### Solana discovery / pool state
+- Read the checked-in P0 dossiers first: `docs/integrations/offline/solana-p0/README.md`, `SOURCE_MANIFEST.json`, `SOLANA_DISCOVERY_SOURCES.md` and `SOLANA_RPC_STATE.md`.
+- Current discovery references include DEX Screener, Raydium API V3, Meteora DLMM Data API, GeckoTerminal V2, Manifest and Sanctum; the dossier distinguishes raw mirror, source pin and extract-only status.
 - Solana RPC JSON-RPC official method reference and account response schema.
 - Raydium official API documentation, program/IDL/SDK source and CPMM/CLMM account layouts.
 - Meteora DLMM official SDK/IDL and bin/fee/account layout documentation.
@@ -180,8 +198,8 @@ This is a checklist, not a claim that the files have already been downloaded. Co
 - Scallop docs/SDK only for the specific rate or lending observations actually used; do not confuse lending data with swap quotes.
 
 ### Quotes
-- Jupiter official Swap API V2 docs, OpenAPI/schema if published, authentication and rate-limit policy.
-- 0x official Solana Swap API docs, exact request/response schema, auth and rate-limit policy.
+- Jupiter Swap API V2 OpenAPI 3.0.3 is mirrored in `docs/integrations/offline/solana-p0/JUPITER_SWAP_V2.openapi.yaml`; read `JUPITER_SWAP_V2.md`.
+- 0x Solana Swap API request/response contract extract is checked in at `ZEROX_SOLANA_SWAP.md`; exact current docs page is pinned by URL and retrieval date in `SOURCE_MANIFEST.json`.
 
 ### Flash capital / builders
 - Project 0 official SDK/package, source commit, IDL/program deployment and account layout.

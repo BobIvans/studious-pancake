@@ -1,0 +1,124 @@
+{
+  "accounts": {
+    "flashloan_admin": "ALXWtv2P4GqH1B7Lq731joag52yRBRqmHV4naiXPTYWL",
+    "flashloan_borrow_position_on_liquidity": "6gBq2J7rg3x2ic1de6QBSXq5WLfuaLfswGz7tvmKkz51",
+    "flashloan_token_reserves_liquidity": "6cGXszer5keoaWm8Co5G9f4KGBThuGz4NsKTqYij1ekJ",
+    "liquidity": "6swiTCWtSwqi8sm9wzNwKA9NEpJWbXjLcVz654u7zz38",
+    "liquidity_program": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC",
+    "mint": "6YMEjhBqVTMaSRWcmVkLrnHZ22FWEDJEpTeonAg8GKRb",
+    "rate_model": "6k78AbasGMFFrhG95Pj6jQbqkVt7FQMhVgemxJovWKPi",
+    "signer": "6QWeT6FpJrm8AF1btu6WH2k2Xhq6t5vbheKVfQavmenB",
+    "signer_borrow_token_account": "6URwbPipuA4MJLG7LCRRZuWnms3JZ9cRG3z9indXWz6t",
+    "token_program": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+    "vault": "6p2RJu3sreYUznWeWh422HNbzf6JvU3X46KS1grXFeiR"
+  },
+  "amount_base_units": 1000000,
+  "borrow_discriminator_hex": "67134e18f009873f",
+  "expected_account_metas": [
+    {
+      "is_signer": true,
+      "is_writable": true,
+      "pubkey": "6QWeT6FpJrm8AF1btu6WH2k2Xhq6t5vbheKVfQavmenB"
+    },
+    {
+      "is_signer": false,
+      "is_writable": true,
+      "pubkey": "ALXWtv2P4GqH1B7Lq731joag52yRBRqmHV4naiXPTYWL"
+    },
+    {
+      "is_signer": false,
+      "is_writable": true,
+      "pubkey": "6URwbPipuA4MJLG7LCRRZuWnms3JZ9cRG3z9indXWz6t"
+    },
+    {
+      "is_signer": false,
+      "is_writable": false,
+      "pubkey": "6YMEjhBqVTMaSRWcmVkLrnHZ22FWEDJEpTeonAg8GKRb"
+    },
+    {
+      "is_signer": false,
+      "is_writable": true,
+      "pubkey": "6cGXszer5keoaWm8Co5G9f4KGBThuGz4NsKTqYij1ekJ"
+    },
+    {
+      "is_signer": false,
+      "is_writable": true,
+      "pubkey": "6gBq2J7rg3x2ic1de6QBSXq5WLfuaLfswGz7tvmKkz51"
+    },
+    {
+      "is_signer": false,
+      "is_writable": false,
+      "pubkey": "6k78AbasGMFFrhG95Pj6jQbqkVt7FQMhVgemxJovWKPi"
+    },
+    {
+      "is_signer": false,
+      "is_writable": true,
+      "pubkey": "6p2RJu3sreYUznWeWh422HNbzf6JvU3X46KS1grXFeiR"
+    },
+    {
+      "is_signer": false,
+      "is_writable": false,
+      "pubkey": "6swiTCWtSwqi8sm9wzNwKA9NEpJWbXjLcVz654u7zz38"
+    },
+    {
+      "is_signer": false,
+      "is_writable": false,
+      "pubkey": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC"
+    },
+    {
+      "is_signer": false,
+      "is_writable": false,
+      "pubkey": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    },
+    {
+      "is_signer": false,
+      "is_writable": false,
+      "pubkey": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+    },
+    {
+      "is_signer": false,
+      "is_writable": false,
+      "pubkey": "11111111111111111111111111111111"
+    },
+    {
+      "is_signer": false,
+      "is_writable": false,
+      "pubkey": "Sysvar1nstructions1111111111111111111111111"
+    }
+  ],
+  "expected_borrow_data_hex": "67134e18f009873f40420f0000000000",
+  "expected_certificate": {
+    "borrow_index": 1,
+    "repay_index": 3
+  },
+  "expected_repay_data_hex": "d52f998954f35ee840420f0000000000",
+  "expected_sequence": [
+    {
+      "data_hex": "00",
+      "program_id": "11111111111111111111111111111111"
+    },
+    {
+      "data_hex": "67134e18f009873f40420f0000000000",
+      "program_id": "jupgfSgfuAXv4B6R2Uxu85Z1qdzgju79s6MfZekN6XS"
+    },
+    {
+      "data_hex": "deadbeef",
+      "program_id": "6ws1bVyu3F8wGy1fPHhrc2v8UyWiGbRAAuek8SwikKMq"
+    },
+    {
+      "data_hex": "d52f998954f35ee840420f0000000000",
+      "program_id": "jupgfSgfuAXv4B6R2Uxu85Z1qdzgju79s6MfZekN6XS"
+    }
+  ],
+  "expected_sequence_fingerprint": "9015fa8195a152f031a77ad3ee64ba7bde63333bbd083d0906317673d614adee",
+  "payback_discriminator_hex": "d52f998954f35ee8",
+  "program_id": "jupgfSgfuAXv4B6R2Uxu85Z1qdzgju79s6MfZekN6XS",
+  "schema": "r03.jupiter-lend.golden.v1",
+  "source_pin": {
+    "commit": "33a22cf7a5bfdd32ab1712dda4adfbeb9b348ad9",
+    "idl_blob_sha1": "0d0ae6d624b33355315e98baaf0a5d00d317beb8",
+    "idl_version": "0.1.4",
+    "repository": "https://github.com/jup-ag/jupiter-lend"
+  },
+  "state_fingerprint": "f50fa217fb57caa3787497bcef9cd5822e4966604b1bf1b7ea104d7000c2de24"
+}

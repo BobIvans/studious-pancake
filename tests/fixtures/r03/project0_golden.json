@@ -1,0 +1,19 @@
+{
+  "existing_account_fixture": "71nJjoSudYSAR4GApb2mtugtj8iuwf6yjKKQBpzKVegY",
+  "expected_begin_index": 0,
+  "expected_end_flashloan_discriminator_hex": "697cc96a9902089c",
+  "expected_end_index": 2,
+  "expected_start_flashloan_discriminator_hex": "0e8321dc51bab46b",
+  "route_instruction_count": 1,
+  "schema": "r03.project0.golden.v1",
+  "source_pin": {
+    "commit": "8a8353bb662459e5957b0cbbd2121f4fddb37fc3",
+    "flash_loan_ts_blob_sha1": "74ddb79ac9157570f967530cfae91acaa1bde5f5",
+    "git_version": "2.10.0",
+    "repository": "https://github.com/0dotxyz/p0-ts-sdk"
+  },
+  "with_account_blocker_code": "R03_MISSING_PINNED_BUILDER_ABI",
+  "with_account_status": "blocked_missing_pinned_builder_abi",
+  "without_account_blocker_code": "R03_OPERATOR_ACCOUNT_INPUT_REQUIRED",
+  "without_account_status": "blocked_input_required"
+}

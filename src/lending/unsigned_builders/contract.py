@@ -86,6 +86,7 @@ class ConformanceErrorCode(StrEnum):
     PTB_VERSION_UNKNOWN = "R03_PTB_VERSION_UNKNOWN"
     PTB_AMOUNT_INVALID = "R03_PTB_AMOUNT_INVALID"
     PTB_OBJECT_CONFLICT = "R03_PTB_OBJECT_CONFLICT"
+    PTB_REQUIRED_OBJECT_MISSING = "R03_PTB_REQUIRED_OBJECT_MISSING"
     BUILD_CAPACITY_ADMIXTURE = "R03_BUILD_CAPACITY_ADMIXTURE"
     INVALID_INPUT = "R03_INVALID_INPUT"
 
@@ -175,19 +176,29 @@ def _validate_pubkey(value: str, label: str) -> str:
 
 
 def _validate_object_id(value: str, label: str) -> str:
-    """Normalize a Sui object id to canonical ``0x`` + 64 lowercase hex."""
+    """Normalize a Sui object id/address to canonical ``0x`` + 64 lowercase hex.
+
+    Sui addresses are 32-byte values whose leading zeros may be omitted in the
+    literal form (e.g. the pinned SDK passes ``0x05`` SuiSystemState and
+    ``0x06`` Clock); shorthand literals are left-padded here so all
+    comparisons are canonical.
+    """
 
     _require_text(value, label)
     raw = value.strip()
     if raw.lower().startswith("0x"):
         raw = raw[2:]
-    if len(raw) != 64 or any(char not in "0123456789abcdef" for char in raw.lower()):
+    if (
+        not raw
+        or len(raw) > 64
+        or any(char not in "0123456789abcdef" for char in raw.lower())
+    ):
         raise UnsignedBuilderError.single(
             ConformanceErrorCode.INVALID_INPUT,
             "contract",
             f"{label} must be a 32-byte Sui object id",
         )
-    return "0x" + raw.lower()
+    return "0x" + raw.lower().rjust(64, "0")
 
 
 def _canonical_payload(value: object) -> object:

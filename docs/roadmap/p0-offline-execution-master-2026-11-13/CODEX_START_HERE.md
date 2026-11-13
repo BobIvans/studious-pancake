@@ -91,6 +91,8 @@ Do not assume the README's older or newer statements are automatically consisten
 
 ## 3. P0 work breakdown and dependency order
 
+**Parallel execution update (2026-11-13):** P0-1, P0-2 and P0-3 are independent work packages and may be researched/implemented concurrently in separate worktrees after the coordinator freezes their shared identity/evidence interfaces. Their integration and final market-data exit gate remain joint. Do not serialize unrelated P0 lanes just because the earlier draft described a sequential PR order.
+
 This is a dependency graph, not permission to mark every item complete. First verify what is already in current `main`.
 
 ### P0-0 — Baseline and branch/PR reconciliation
@@ -212,7 +214,7 @@ Do not bundle every vendor's entire website. Capture only the authoritative page
 
 ## 5. Agent execution strategy and deliverables
 
-Do not attempt to hold the whole repository in one prompt. Use durable handoffs:
+Do not attempt to hold the whole repository in one prompt. Use the whole-project multi-agent orchestration docs at docs/roadmap/agent-execution-master-2026-11-13/. The P0 work is one track in that project-wide parallel plan. Use durable handoffs:
 
 - `P0_BASELINE.json` — current SHA, open PR heads, inventory, test commands.
 - `P0_DOCS_MANIFEST.json` — provider docs and SDK pin completeness.
@@ -222,7 +224,7 @@ Do not attempt to hold the whole repository in one prompt. Use durable handoffs:
 - At every stop, record exact changed files, tests run, tests not run, evidence hashes, live requests attempted, blockers, next task and exact next command.
 - Keep prompts short: tell the agent to read this file and the active stage file. The repository is the persistent memory.
 
-Parallelize only independent work: documentation dossier acquisition and offline fixture/test preparation may run in parallel. Do not parallelize shared owner changes or dependent R-01/R-02/R-03 stages without explicit contracts and branch isolation.
+Parallelize all independent project work immediately: P0-1/2/3; R02-CAP-A/B/C/D; R03-00 offline contract work; strategy/graph research; Sui/TON/EVM source research; CEX/oracle feed dossiers; platform/CI and runtime composition audits. Use separate worktrees, one task owner per PR and a shared interface freeze where necessary. R-01 is already complete (#584); do not redo it. R-02 reader implementations are independent; R-03 unsigned contract/build work may proceed offline, while live-capital association waits for the corresponding R-02 proof. R04/R05/R06 and provider promotion remain dependency-gated. The whole-project launch matrix is authoritative in MULTI_AGENT_EXECUTION_PLAN.md.
 
 ## 6. Human inputs and secret handling
 

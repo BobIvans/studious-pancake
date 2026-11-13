@@ -27,6 +27,7 @@ This is never execution-ready and never creates accounts.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Sequence
 
 from src.lending.unsigned_builders.contract import (
     BuildStatus,

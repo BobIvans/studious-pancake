@@ -1,0 +1,23 @@
+{
+  "schema": "r02.capital-evidence-example.v1",
+  "test_fixture_only": true,
+  "source": "synthetic_negative_no_live_rpc",
+  "chain": "solana",
+  "provider": "jupiter_lend",
+  "genesis": "UNVERIFIED",
+  "slot_or_checkpoint": null,
+  "canonical_identifier": "UNVERIFIED_MINT",
+  "resource_id": "UNVERIFIED_RESERVE",
+  "flash_enabled": false,
+  "max_amount_atoms": null,
+  "fee_numerator": null,
+  "fee_denominator": null,
+  "needs_lender_position_init": "NO_LENDER_POSITION_IN_PUBLISHED_FLASH_API",
+  "network_fee_atoms": "UNKNOWN",
+  "negative_observation": {
+    "reason": "NO_PINNED_LIVE_ONCHAIN_STATE",
+    "create_edge": false
+  },
+  "sign_enabled": false,
+  "send_enabled": false
+}

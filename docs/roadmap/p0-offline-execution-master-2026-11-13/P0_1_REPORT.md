@@ -72,7 +72,10 @@ One new module plus canonical-owner wiring, per the P0-1 task and the baseline p
 
 **Execution status (honest):**
 - **Executed locally (Windows):** the dev-equivalent pure-logic paths were executed once via a temporary harness (documented here, not committed): scheduler, bridge, coverage, `parse_cadence`, and all fixture-driven adapter normalizations — **all passed**. The committed pytest module is `fcntl`-gated.
-- **Not yet executed as committed pytest:** the whole committed module imports `src.qualification_campaign.evidence` (Unix-only `fcntl`), so per the operator's **WSL-first decision** it runs under WSL or CI Linux. WSL was **not yet installed** at PR-open time; this is blocker B-ENV-2 in `P0_BASELINE.json`. CI (Linux) will run it on push.
+- **Executed on CI Linux (head `f8413382`):**
+  - `GPR-02 Solana read-only radar` — **success** (includes `tests/test_p01_intake_cadence.py`: 9 tests, plus all existing radar/GPR/QPR suites; 312+ passed). The first two GPR-02 runs failed and were fixed in-PR: mypy narrowing (commit `6947b7fa`) and two test-only defects the fcntl gate had hidden locally — wrong fixture path and `capture()`'s `git rev-parse origin/main` on a shallow checkout (commit `f8413382`).
+  - `MPR-NEXT-08 Jupiter V2 contract` — success; `Read-only qualification campaign` — success; `Release authority` — success.
+  - `CI` → `Repository verification` — **failure, pre-existing on main**: `pip_audit --strict` reports 68 known vulnerabilities in 9 locked packages (pillow 12.3.0 → 13.0.0, uv, …). Identical failure on `main` commits; unrelated to this change. Remediation is a separate dependency-bump PR (B-CI-1 below).
 - Runnable Windows subset (no regressions from this change): **60 passed** (dynamic universe, asset resolution, Jupiter quarantine contract, promotion campaign). Pre-existing Windows failures (`os.getuid`) unchanged.
 - Offline bundle verifier: `python -I docs/integrations/offline/solana-p0/verify_offline_bundle.py` → exit 0 (re-checked on this branch).
 
@@ -97,6 +100,7 @@ The cadence run consumes only retained journal events; `network_reads` is assert
 | ID | Blocker | Owner |
 |---|---|---|
 | B-ENV-2 | `fcntl` (Unix-only) gates the committed test module on native Windows; WSL not yet installed | operator WSL install (decided 2026-11-13) |
+| B-CI-1 | Pre-existing `pip_audit --strict` failure on main: 68 known vulnerabilities in 9 locked packages (pillow 12.3.0, uv 0.11.15, …) — makes the `CI` workflow red independent of any change | separate dependency-bump PR |
 | B-P01-1 | GeckoTerminal docs/schema pin missing | separate snapshot acquisition |
 | B-P01-2 | Historical diagnostic counts (245/21/24) stale + proxy-denied; re-verify under bounded live capture | opt-in live run |
 | B-P01-3 | Live mint proof (owner/decimals/Token-2022) requires governed RPC quorum | `INDEPENDENT_ROOTED_RPC_PROFILES_REQUIRED` (existing) |

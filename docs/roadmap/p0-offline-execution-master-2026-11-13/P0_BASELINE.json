@@ -1,0 +1,526 @@
+{
+  "schema_version": "studious-pancake.p0-baseline.v1",
+  "created_at_utc": "2026-11-13",
+  "repository": "BobIvans/studious-pancake",
+  "main_sha": "176f41378645f6f3b3fd95a59617633b5808acb4",
+  "preparation_sha_recorded_in_dossier": "64a11d33f46291504847cb1bdfd6cdc3dcff5da9",
+  "working_tree": "not_applicable_github_api_audit_only; local agent must verify its own clean worktree",
+  "branch": "main",
+  "allowed_status_vocabulary": [
+    "IN_MAIN_VERIFIED",
+    "IMPLEMENTED_UNQUALIFIED",
+    "OPEN_PR_NOT_IN_MAIN",
+    "IMPLEMENTED_UNBOUND",
+    "FIXTURE_ONLY",
+    "STUB",
+    "PLANNED",
+    "BLOCKED",
+    "RETIRED"
+  ],
+  "offline_bundle_verification": {
+    "command": "python -I docs/integrations/offline/solana-p0/verify_offline_bundle.py",
+    "exit_code": 0,
+    "network_requests": 0,
+    "required_files_present": 11,
+    "vendor_files_blob_verified": 19,
+    "jupiter_openapi_blob_verified": "c8bad7a7dc9ff60149b55c20e46d7d57e75e2dd8",
+    "local_availability": {
+      "source_manifests": [
+        "docs/integrations/offline/solana-p0/SOURCE_MANIFEST.json",
+        "docs/integrations/offline/solana-p0/VENDOR_SOURCE_MANIFEST.json"
+      ],
+      "api_contracts": [
+        "docs/integrations/offline/solana-p0/JUPITER_SWAP_V2.openapi.yaml (RAW_OFFICIAL_OPENAPI_MIRROR, OpenAPI 3.0.3 / info.version 2.0.0)",
+        "docs/integrations/offline/solana-p0/JUPITER_SWAP_V2.md",
+        "docs/integrations/offline/solana-p0/ZEROX_SOLANA_SWAP.md (OFFICIAL_CONTRACT_EXTRACT_ONLY - no machine-readable OpenAPI; re-fetch + hash before live qualification)",
+        "docs/integrations/offline/solana-p0/SOLANA_RPC_STATE.md (OFFICIAL_CONTRACT_EXTRACT_ONLY)"
+      ],
+      "idl": [
+        "docs/integrations/offline/solana-p0/vendor-reference/meteora/lb_clmm.idl.json (Anchor IDL, metadata 0.12.0, program LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo)"
+      ],
+      "sdk_reference_snapshots": [
+        "docs/integrations/offline/solana-p0/vendor-reference/raydium/cpmm/*.rs.txt (6 files, Apache-2.0, commit 3d69122790e97cd6aff24e8ba95940793773f58c)",
+        "docs/integrations/offline/solana-p0/vendor-reference/raydium/clmm/*.rs.txt (6 files, Apache-2.0, commit 6d7a0f82d2f293c553c69aaf943377367c6c4cc6)",
+        "docs/integrations/offline/solana-p0/vendor-reference/meteora/*.ts.txt + package.json (7 files, package 1.9.15 ISC, commit 1532e540db41ac405dbf4c5bb2ddfceaa1f98ff1)"
+      ],
+      "orca": "SOURCE_NOT_MIRRORED by design: custom Orca License (2025-02-27 onward) is a legal-review blocker; only hand-authored account facts in DIRECT_STATE_RAYDIUM_ORCA_METEORA.md"
+    }
+  },
+  "pr_reconciliation": {
+    "note": "Refreshed after documentation merges #586, #591 and #592. Current main contains the offline capital SDK kit and full agent handoff. This JSON preserves the P0 code inventory from the prior audit; runtime/source statuses must be rechecked against the current fetched main before implementation.",
+    "open_prs_inspected": [
+      {
+        "number": 584,
+        "title": "R-01 verification without remerging legacy branches",
+        "state": "merged",
+        "classification": "COMPLETE_DO_NOT_REPEAT",
+        "workstream": "qualification/reconciliation"
+      },
+      {
+        "number": 585,
+        "title": "R-02 retain real read-only observations and pinned-state blockers",
+        "state": "merged",
+        "classification": "BLOCKED_EVIDENCE_RETAINED",
+        "workstream": "flash-capital"
+      },
+      {
+        "number": 586,
+        "title": "R-02 pinned offline SDK decoders + R-03 shadow builder handoff",
+        "state": "merged",
+        "classification": "IN_MAIN_VERIFIED_DOCUMENTATION",
+        "workstream": "flash-capital"
+      },
+      {
+        "number": 588,
+        "title": "P0 master handoff: offline-first Codex execution plan",
+        "state": "merged",
+        "classification": "IN_MAIN_VERIFIED_DOCUMENTATION",
+        "workstream": "Solana market-data"
+      },
+      {
+        "number": 589,
+        "title": "Pinned Raydium and Meteora source references",
+        "state": "merged",
+        "classification": "IN_MAIN_VERIFIED_DOCUMENTATION",
+        "workstream": "Solana market-data"
+      },
+      {
+        "number": 591,
+        "title": "Unified offline-first coding-agent handoff",
+        "state": "merged",
+        "classification": "IN_MAIN_VERIFIED_DOCUMENTATION",
+        "workstream": "whole-project orchestration"
+      },
+      {
+        "number": 592,
+        "title": "Refresh P0/R-02 handoff cross-links",
+        "state": "merged",
+        "classification": "IN_MAIN_VERIFIED_DOCUMENTATION",
+        "workstream": "whole-project orchestration"
+      },
+      {
+        "number": 583,
+        "title": "Older R-01/R-02 broad offline dossier",
+        "state": "closed_not_merged_superseded_by_591",
+        "classification": "UNIQUE_DOCUMENTATION_RESTORED_TO_MAIN",
+        "workstream": "flash-capital"
+      },
+      {
+        "number": 590,
+        "title": "P0-0 baseline/reconciliation",
+        "state": "open_stale_docs_only",
+        "classification": "SUPERSEDED_BY_CURRENT_PARALLEL_MASTER; do not merge stale branch",
+        "workstream": "P0 baseline"
+      },
+      {
+        "number": 578,
+        "title": "RCN-00 QPR/GPR reconciliation R&D",
+        "state": "open_historical_docs_only",
+        "classification": "INSPECT_FOR_UNIQUE_EVIDENCE_ONLY",
+        "workstream": "historical"
+      },
+      {
+        "number": 567,
+        "title": "GPR master handoff",
+        "state": "open_historical_docs_only",
+        "classification": "INSPECT_FOR_UNIQUE_EVIDENCE_ONLY",
+        "workstream": "historical"
+      }
+    ],
+    "duplicate_plan": "No parallel resolver, market graph, quote schema, journal, financing graph, amount solver, transaction kernel, or lifecycle authority. Existing canonical owners in current main remain authoritative. Independent tasks use separate branches/worktrees; overlapping owner changes require a shared contract decision and one integration owner.",
+    "old_branch_policy": "R-01 complete; do not remerge legacy GPR/QPR/UXE branches or cherry-pick historical commits."
+  },
+  "test_baseline": {
+    "environment": "Windows 11 native, CPython 3.13.15, project .venv (pytest 9.0.3 / pytest-socket 0.7.0 / pytest-asyncio 1.3.0 / hypothesis 6.138.15 installed from pinned dev extras)",
+    "wsl": "not installed",
+    "command_template": ".venv/Scripts/python.exe -m pytest <tests> -q -p no:cacheprovider",
+    "runnable_subset": {
+      "tests": [
+        "tests/test_dynamic_universe.py",
+        "tests/test_dynamic_asset_resolution.py",
+        "tests/test_native_cpmm_qualification.py",
+        "tests/test_mpr_next_08_jupiter_v2_contract.py",
+        "tests/test_dynamic_promotion_campaign.py"
+      ],
+      "passed": 92,
+      "failed": 2,
+      "failures": [
+        {
+          "test": "tests/test_mpr_next_08_jupiter_v2_contract.py::test_mpr_next_08_accepts_current_checkout",
+          "cause": "LOCAL_ENV_LINE_ENDINGS: core.autocrlf=true wrote CRLF on disk; research-reference sha256 pins in config/jupiter_endpoint_quarantine.json are LF bytes. LF-normalized hashes match pins exactly (cli.py f699fba3..., probes.py c7262a81...). Repo content intact; CI (Linux) unaffected.",
+          "remediation": "RESOLVED LOCALLY 2026-11-13 by forced LF re-checkout: rm <file> && git -c core.autocrlf=false checkout -- src/solana_parallel_radar/cli.py src/solana_parallel_radar/probes.py; quarantine suite now 24/24 passed. No verifier weakening, no git config change."
+        },
+        {
+          "test": "tests/test_native_cpmm_qualification.py::test_governed_collector_one_bank_root_receipts_and_physical_charges",
+          "cause": "PLATFORM: src/durability/lifecycle.py:378 calls os.getuid() which does not exist on Windows",
+          "remediation": "platform-guard in canonical owner (PR-0), behavior unchanged on POSIX"
+        },
+        {
+          "test": "tests/test_native_cpmm_qualification.py::test_cancelled_physical_read_preserves_durable_quota_and_blocks_old_state",
+          "cause": "same os.getuid() root cause",
+          "remediation": "same as above"
+        }
+      ]
+    },
+    "collection_blocked_subset": {
+      "tests": [
+        "tests/test_gpr02_solana_parallel_radar.py",
+        "tests/test_din01_bounded_discovery.py",
+        "tests/test_qpr03_source_intake.py"
+      ],
+      "cause": "PLATFORM: src/qualification_campaign/evidence.py:11 'import fcntl' + fcntl.flock (Unix-only). Blocks CampaignEvidenceStore import and all three test modules from collection on Windows. Same import also in src/config/activation.py, src/intelligence/pressure_manager.py, src/legacy_arb_bot.py (quarantined).",
+      "remediation": "POSIX path unchanged + Windows file-lock fallback (msvcrt) in canonical owner (PR-0). Alternative: install WSL (absent on this machine)."
+    }
+  },
+  "inventory": [
+    {
+      "id": "P0-1-01",
+      "package": "P0-1",
+      "deliverable": "Source governance + catalog admission",
+      "owner": "src/qualification_campaign/sources.py (SourceDossier, SourceIntakePlane, deduplicate_candidates), src/market/source_catalog.py, config/qualification/din00-source-status.json (37 rows, all enabled:false), src/resources/market_source_catalog.json",
+      "status": "IN_MAIN_VERIFIED",
+      "tests": [
+        "tests/test_din00_source_admission.py",
+        "tests/test_qpr03_source_intake.py (collection-blocked on Windows)"
+      ],
+      "docs_pin": "gpr02-solana-contracts.json pins present; live_provider_schema_verified=false for all",
+      "blocker": null,
+      "dependency": null
+    },
+    {
+      "id": "P0-1-02",
+      "package": "P0-1",
+      "deliverable": "Mint identity canonicalization (mint, decimals, token program, Token-2022, AssetIdentity/generation)",
+      "owner": "src/assets/resolution/resolver.py (AssetIdentity, RESOLVE_LIVE, fail-closed resolve), chain_readers.py (SolanaMintVerifier 1-3 endpoints finalized), src/solana_parallel_radar/token2022.py",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "tests": [
+        "tests/test_dynamic_asset_resolution.py"
+      ],
+      "docs_pin": "SOLANA_RPC_STATE.md identity contract",
+      "blocker": "live RPC mint proof was proxy-denied in the historical diagnostic; re-verify under bounded live capture",
+      "dependency": null
+    },
+    {
+      "id": "P0-1-03",
+      "package": "P0-1",
+      "deliverable": "DEX Screener intake",
+      "owner": "src/market/discovery.py (token-pairs/v1), src/solana_parallel_radar/radar.py (BatchRadarAdapter, <=512 candidates)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "tests": [
+        "tests/test_gpr02_solana_parallel_radar.py (collection-blocked on Windows)"
+      ],
+      "docs_pin": "SOURCE_MANIFEST.json dexscreener OFFICIAL_CONTRACT_EXTRACT_ONLY; 300 req/min published",
+      "evidence": "DIN-01 committed capture: 1 HTTP 200, empty result",
+      "dependency": null
+    },
+    {
+      "id": "P0-1-04",
+      "package": "P0-1",
+      "deliverable": "Raydium API V3 intake (discovery only)",
+      "owner": "src/market/discovery.py (api-v3.raydium.io/pools/info/list), src/solana_parallel_radar/radar.py (TargetedCatalogAdapter)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "docs_pin": "SOURCE_MANIFEST.json raydium_api_v3 commit+blob pins",
+      "evidence": "DIN-01 committed capture: HTTP 200 accepted-with-rejections, 11 unique pool identities total (Raydium+Meteora)",
+      "dependency": null
+    },
+    {
+      "id": "P0-1-05",
+      "package": "P0-1",
+      "deliverable": "Meteora DLMM Data API intake (discovery only)",
+      "owner": "src/market/discovery.py (dlmm.datapi.meteora.ag/pools)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "docs_pin": "SOURCE_MANIFEST.json meteora_dlmm_data_api; 30 req/s published",
+      "evidence": "DIN-01 committed capture: HTTP 200 accepted-with-rejections",
+      "dependency": null
+    },
+    {
+      "id": "P0-1-06",
+      "package": "P0-1",
+      "deliverable": "Manifest intake",
+      "owner": "src/solana_parallel_radar/radar.py (ManifestRadarAdapter, mfx-stats-mainnet.fly.dev/tickers)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "docs_pin": "gpr02-solana-contracts.json manifest pin",
+      "evidence": "no committed live Manifest capture in repo",
+      "dependency": null
+    },
+    {
+      "id": "P0-1-07",
+      "package": "P0-1",
+      "deliverable": "Sanctum LST intake + structural reference",
+      "owner": "src/discovery/dynamic_universe/ingestors.py (SanctumLstIngestor), src/solana_parallel_radar/structural.py",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "docs_pin": "gpr02-solana-contracts.json sanctum-list/pool + 4 LST references (dSOL/hSOL/bbSOL/BNSOL)",
+      "evidence": "historical: 245 Sanctum assets observed (evidence outside Git); re-verify",
+      "dependency": null
+    },
+    {
+      "id": "P0-1-08",
+      "package": "P0-1",
+      "deliverable": "GeckoTerminal intake",
+      "owner": "src/market/discovery.py geckoterminal request (adapter exists)",
+      "status": "BLOCKED",
+      "blocker": "CURRENT_DOCS_PIN_MISSING (DIN-01 committed blocked_sources row); current docs say ~10 req/min beta; keep blocked per P0-1 task",
+      "dependency": "fresh official schema/API snapshot + access review"
+    },
+    {
+      "id": "P0-1-09",
+      "package": "P0-1",
+      "deliverable": "Dynamic Universe core (lifecycle, complete-snapshot retirement, 4096 cap, dedupe)",
+      "owner": "src/discovery/dynamic_universe/universe.py (DynamicUniverse, DiscoveryEnvelope, Lifecycle)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "tests": [
+        "tests/test_dynamic_universe.py (partial-snapshot-never-retires tested)"
+      ],
+      "dependency": null
+    },
+    {
+      "id": "P0-1-10",
+      "package": "P0-1",
+      "deliverable": "Research graph handoff (DISCOVERY_ONLY edges, VerificationQueue, promotion boundary)",
+      "owner": "src/research_economic_graph/graph.py (SolanaResearchAdapter.ingest), queue.py, src/discovery/dynamic_universe/promotion.py (PromotionBoundary fail-closed on QPR PASS)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "tests": [
+        "tests/test_gpr01_research_economic_graph.py",
+        "tests/test_dynamic_promotion_campaign.py"
+      ],
+      "blocker": "exact handoff (ingest_solana_exact) requires QPR-02 rooted quorum PASS no in-repo campaign can produce; DISCOVERY_ONLY handoff works",
+      "dependency": null
+    },
+    {
+      "id": "P0-1-11",
+      "package": "P0-1",
+      "deliverable": "Evidence journal + deterministic replay (zero network)",
+      "owner": "src/market/streams.py (RecoverableStreamJournal), src/qualification_campaign/evidence.py (CampaignEvidenceStore), src/assets/resolution/evidence.py (EvidenceStore), src/solana_parallel_radar/portable.py",
+      "status": "IN_MAIN_VERIFIED",
+      "tests": [
+        "committed DIN-01 replay fixture docs/roadmap/din01-bounded-solana-2026-10-07/capture/"
+      ],
+      "blocker": "fcntl import makes CampaignEvidenceStore Windows-unusable (platform fix required)",
+      "dependency": "PR-0 platform fix for Windows runs"
+    },
+    {
+      "id": "P0-1-12",
+      "package": "P0-1",
+      "deliverable": "Continuous/periodic bounded polling cadence",
+      "owner": "none yet (one-shot bounded polls only)",
+      "status": "STUB",
+      "evidence": "CONTINUOUS_CAPTURE_NOT_IMPLEMENTED blocker in src/qualification_campaign/cli.py:137",
+      "dependency": "P0-1 build"
+    },
+    {
+      "id": "P0-1-13",
+      "package": "P0-1",
+      "deliverable": "Hot-pair target (120-160) + source coverage report emitter",
+      "owner": "none yet (priority_pairs exists from registry)",
+      "status": "PLANNED",
+      "dependency": "P0-1 build; conditional on measured coverage/budgets"
+    },
+    {
+      "id": "P0-1-14",
+      "package": "P0-1",
+      "deliverable": "Boot-path wiring of Dynamic Universe into supported composition root",
+      "owner": "none (library + diagnostic CLIs only)",
+      "status": "PLANNED",
+      "evidence": "src/paper_shadow/composition.py does not import dynamic_universe; implementation report states not wired",
+      "dependency": "after P0-1 gates"
+    },
+    {
+      "id": "P0-1-15",
+      "package": "P0-1",
+      "deliverable": "Sui intake (DeepBook etc.)",
+      "owner": "src/discovery/dynamic_universe/ingestors.py (DeepBookIngestor, full Move coin type)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "evidence": "historical: 21 coins / 24 markets observed; P1-1 continues Sui scope",
+      "dependency": "P1-1"
+    },
+    {
+      "id": "P0-2-01",
+      "package": "P0-2",
+      "deliverable": "Jupiter V1 quote probe (known drift, deliberately quarantined)",
+      "owner": "src/solana_parallel_radar/probes.py:277-295 (jupiter_request -> https://api.jup.ag/swap/v1/quote), cli.py:146-205 (read_contracts V1 pins)",
+      "status": "IN_MAIN_VERIFIED",
+      "note": "V1 is byte-hash-pinned as read-only research reference by config/jupiter_endpoint_quarantine.json; migration requires a reviewed hash update (by design)",
+      "dependency": "P0-2 migration"
+    },
+    {
+      "id": "P0-2-02",
+      "package": "P0-2",
+      "deliverable": "Jupiter V2 /swap/v2/order capture",
+      "owner": "none in main (0 grep matches for /swap/v2/order)",
+      "status": "PLANNED",
+      "docs_pin": "JUPITER_SWAP_V2.openapi.yaml full official mirror verified",
+      "credentials": "JUPITER_API_KEY (existing name, keep)",
+      "dependency": "P0-2 build; must not add an adapter beside the GPR-02 owner"
+    },
+    {
+      "id": "P0-2-03",
+      "package": "P0-2",
+      "deliverable": "0x POST /solana/swap-instructions governed capture",
+      "owner": "src/solana_parallel_radar/probes.py (ReadContract POST allowance, normalize_zero_x slot=null by design), cli.py:739-770",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "credentials": "ZEROX_API_KEY (repo canonical; ZEROEX_API_KEY absent from repo)",
+      "blocker": "live capture needs ZEROX_API_KEY + public taker (--zero-x-taker); din00 status IMPLEMENTED_BUT_UNBOUND enabled=false",
+      "dependency": "bounded live capture opt-in"
+    },
+    {
+      "id": "P0-2-04",
+      "package": "P0-2",
+      "deliverable": "Same-pair comparison (same mint pair, base-unit amount, freshness <=45s, slot gap <=32, correlation)",
+      "owner": "src/solana_parallel_radar/funnel.py (QuotePreview:37, compare_quotes:143), cli.py:790-806",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "gap": "public-taker parity between providers not explicitly enforced (P0-2 item 8); no route-program/venue overlap metadata beyond route_mints/direct",
+      "dependency": "P0-2 build"
+    },
+    {
+      "id": "P0-2-05",
+      "package": "P0-2",
+      "deliverable": "Provider-response fixture replay (success + no-route + 4xx/429/5xx + malformed + schema-drift)",
+      "owner": "journal replay exists (cli.py::replay, portable.py) but only transport-failure fixtures exist; no Jupiter/0x response fixture files anywhere",
+      "status": "STUB",
+      "dependency": "P0-2 build"
+    },
+    {
+      "id": "P0-2-06",
+      "package": "P0-2",
+      "deliverable": "Jupiter V2 quarantine guard (production /swap/v2/build vs research V1 pins)",
+      "owner": "config/jupiter_endpoint_quarantine.json, scripts/verify_mpr_next_08_jupiter_v2_contract.py, tests/test_mpr_next_08_jupiter_v2_contract.py",
+      "status": "IN_MAIN_VERIFIED",
+      "dependency": null
+    },
+    {
+      "id": "P0-3-01",
+      "package": "P0-3",
+      "deliverable": "Raydium CPMM exact decoder + governed collector (canonical owner)",
+      "owner": "src/providers/raydium_cpmm_native.py (637-byte PoolState, discriminator, vault/mint/token-program bindings, genesis/clock/rooted-bank proofs), src/market/native_cpmm_capture.py (GovernedNativeCpmmCollector), src/strategy/exact_cpmm_capacity.py, src/direct_venue/cpmm_math.py",
+      "status": "IN_MAIN_VERIFIED",
+      "tests": [
+        "tests/test_native_cpmm_qualification.py (17+ fault classes)",
+        "tests/test_exact_cpmm_capacity.py"
+      ],
+      "blocker": "no real mainnet account bytes committed (synthetic fixtures only); os.getuid platform failure in durability layer on Windows",
+      "dependency": null
+    },
+    {
+      "id": "P0-3-02",
+      "package": "P0-3",
+      "deliverable": "Raydium CLMM exact state reader (PoolState + tick bitmap + tick arrays + swap math)",
+      "owner": "none (only caller-supplied math in quarantined src/ingest/amm_math.py; vendor refs pinned offline)",
+      "status": "STUB",
+      "docs_pin": "vendor-reference/raydium/clmm/* (6 files, blob-verified, Apache-2.0), program CAMMCzo5YL8w4VFF8KVHrK22GGUsp5VTaW7grrKgrWqK",
+      "dependency": "P0-3 build"
+    },
+    {
+      "id": "P0-3-03",
+      "package": "P0-3",
+      "deliverable": "Orca Whirlpools exact reader",
+      "owner": "src/direct_venue/mpr2617.py (offline proof validator, license fail-closed)",
+      "status": "BLOCKED",
+      "blocker": "BLOCKED_LICENSE_REVIEW: custom Orca License for code from 2025-02-27 onward; no source mirrored; do not vendor",
+      "dependency": "legal approval only"
+    },
+    {
+      "id": "P0-3-04",
+      "package": "P0-3",
+      "deliverable": "Meteora DLMM exact reader (LbPair + BinArray + bitmap ext + dynamic fee)",
+      "owner": "none canonical (approx quarantined decoder in src/ingest/pool_state_manager.py:471-512; partial bin math in src/ingest/amm_math.py with float pow for |k|>100)",
+      "status": "STUB",
+      "docs_pin": "vendor-reference/meteora/* (IDL + helpers blob-verified), program LBUZKhRxPF3XUpBCjp4YzTKgLccjZhTSDM9YuVaPwxo",
+      "defect": "WRONG_PROGRAM_ID_REGISTERED: src/config/addresses.py:45 and src/ingest/amm_math_dispatcher.py register DLMM as LBUZKhRxPF3XUpBCjp4YzTKgLLjggiJWUna9LZJRQD3 (not canonical); tx_builder.py:669 whitelist same defect; also bogus Orca variant whirLbMi2tG34uFp881tua2RZBY9oXKVvVf9xrq7Rqi in dispatcher",
+      "dependency": "P0-3 build + defect fix"
+    },
+    {
+      "id": "P0-3-05",
+      "package": "P0-3",
+      "deliverable": "Governed RPC account reads (finalized, minContextSlot, slot coherence, receipts)",
+      "owner": "src/routing/transport.py, src/provider_governance/*, src/market/native_cpmm_capture.py, src/qualification_campaign/rpc.py, src/data_plane/rpc.py (quorum gates)",
+      "status": "IN_MAIN_VERIFIED",
+      "dependency": null
+    },
+    {
+      "id": "P0-3-06",
+      "package": "P0-3",
+      "deliverable": "Evidence classes POOL_ACCOUNT_VERIFIED / VENUE_STATE_DECODED / AMOUNT_SPECIFIC_QUOTE / INDEXED_CANDIDATE as named vocabulary",
+      "owner": "absent; nearest: PromotionStage.RPC_EXACT (promotion.py), evidence_kind captured-rpc/synthetic-fixture (cpmm), DISCOVERY_ONLY default",
+      "status": "STUB",
+      "note": "extend existing owners, do not create a parallel evidence vocabulary",
+      "dependency": "P0-1/P0-3 builds"
+    },
+    {
+      "id": "X-01",
+      "package": "cross",
+      "deliverable": "Windows platform gates (fcntl in CampaignEvidenceStore; os.getuid in durability/lifecycle.py; autocrlf hash pins)",
+      "owner": "src/qualification_campaign/evidence.py:11,130,150; src/durability/lifecycle.py:378; local git config",
+      "status": "BLOCKED",
+      "blocker": "blocks 3 test modules + 2 tests + hash-pinned local verification on native Windows; WSL absent",
+      "dependency": "PR-0 (recommended)"
+    },
+    {
+      "id": "X-02",
+      "package": "capital",
+      "deliverable": "R-01 verification / R-02 capital readers / R-03 builders (separate workstream)",
+      "owner": "PR #583 + #586 (docs-only, unmerged)",
+      "status": "OPEN_PR_NOT_IN_MAIN",
+      "note": "explicitly NOT part of market-data P0; must not be relabeled green by P0 completion",
+      "dependency": "separate workstream"
+    },
+    {
+      "id": "X-03",
+      "package": "cross",
+      "deliverable": "Credentials for bounded live capture",
+      "owner": "environment only",
+      "status": "BLOCKED",
+      "credentials": "JUPITER_API_KEY, ZEROX_API_KEY, public taker address (names only; none configured in this environment)",
+      "note": "offline implementation/fixtures/replay do not need them; live capture is separate opt-in"
+    }
+  ],
+  "safety_snapshot": {
+    "signer_enabled": false,
+    "sender_enabled": false,
+    "transaction_submission": false,
+    "production_promotion": false,
+    "all_37_governed_sources_enabled": false,
+    "quarantined_paths": [
+      "src/ingest/",
+      "src/legacy_arb_bot.py",
+      "src/execution/live_control.py",
+      "src/execution/senders/",
+      "src/execution/shadow.py"
+    ]
+  },
+  "test_commands": {
+    "offline_bundle": "python -I docs/integrations/offline/solana-p0/verify_offline_bundle.py",
+    "p0_runnable_subset": ".venv/Scripts/python.exe -m pytest tests/test_dynamic_universe.py tests/test_dynamic_asset_resolution.py tests/test_native_cpmm_qualification.py tests/test_mpr_next_08_jupiter_v2_contract.py tests/test_dynamic_promotion_campaign.py -q -p no:cacheprovider",
+    "p0_blocked_on_windows": ".venv/Scripts/python.exe -m pytest tests/test_gpr02_solana_parallel_radar.py tests/test_din01_bounded_discovery.py tests/test_qpr03_source_intake.py -q -p no:cacheprovider  # requires PR-0 fcntl fix or WSL"
+  },
+  "operator_decisions_2026_11_13": {
+    "baseline_artifacts": "Updated P0 baseline and project-wide multi-agent plan are documentation-only outputs; this new PR supersedes stale PR #590.",
+    "parallel_execution": "Run independent market-data, capital-reader, strategy/research, multi-chain, offline-builder, and platform tracks concurrently in isolated worktrees. Respect explicit dependency gates for route selection, full simulation, paper qualification and provider promotion.",
+    "platform_testing": "P0-0 historical audit found fcntl/os.getuid native-Windows blockers and selected WSL-first. Verify actual local WSL state; do not assume WSL is installed. Keep POSIX behavior and safety gates unchanged.",
+    "environment": "Current user's known development environment is Windows 11 + CPython 3.13; latest local platform state must be rechecked."
+  },
+  "next_agent_handoff": "Read root AGENTS.md and CODEX_START_HERE.md, then docs/roadmap/agent-execution-master-2026-11-13/CODEX_START_HERE.md and MULTI_AGENT_EXECUTION_PLAN.md. Verify current main and all open PRs. Run offline verifiers. Launch independent tasks concurrently in separate worktrees: P0-1/2/3; R02-CAP-A/B/C/D; R03-00 offline contract; strategy/universe inventory; Sui/TON/EVM/CEX/oracle research; platform/CI. R04/R05/R06 and live provider promotion remain dependency-gated. Return per-track PRs, evidence and a central status matrix.",
+  "parallel_execution": {
+    "coordinator": "One lead agent owns baseline, ownership matrix, interface freeze, PR/CI dashboard and conflict resolution; worker agents do not modify the same canonical owner.",
+    "parallel_tracks": [
+      "P0-1 indexed intake",
+      "P0-2 Jupiter V2 + 0x quotes",
+      "P0-3 exact Raydium CLMM/Meteora state",
+      "R02-CAP-A Jupiter",
+      "R02-CAP-B Kamino",
+      "R02-CAP-C NAVI",
+      "R02-CAP-D Project 0 bank-only",
+      "R03-00 unsigned contracts/offline conformance",
+      "strategy/relation/graph inventory and tests",
+      "Sui/TON/EVM/CEX/oracle discovery dossiers",
+      "platform/reproducibility/CI audit"
+    ],
+    "staged_integrations": [
+      "R04 capital-aware route selection",
+      "R05 exact atomic simulation",
+      "R06 paper qualification",
+      "R07 provider implementation/promotion",
+      "supported composition-root wiring"
+    ],
+    "rule": "Parallelize independent work and research immediately; serialize shared-file integration, authority changes and promotion gates."
+  }
+}

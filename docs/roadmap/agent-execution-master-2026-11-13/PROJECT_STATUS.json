@@ -2,8 +2,8 @@
   "schema_version": "studious-pancake.project-status.v1",
   "updated_at_utc": "2026-11-13",
   "repository": "BobIvans/studious-pancake",
-  "main_sha_at_audit": "86be458a87ed3f499cc32ff56426b2866c90422a",
-  "audit_scope": "GitHub read-only audit against main@86be458a87ed3f499cc32ff56426b2866c90422a on 2026-11-13: reviewed README, capability manifest, canonical owner paths, PR #593/#594/#595/#590 and workflow logs. No local checkout/full verifier or new live RPC was run; historical evidence remains historical.",
+  "main_sha_at_audit": "215a3544483d73052e796eff79b893d346b10524",
+  "audit_scope": "GitHub read-only audit against main@215a3544483d73052e796eff79b893d346b10524 after PR #597 merged and stale PR #594 closed on 2026-11-13. Inspected current main metadata, PR #593 compare and workflow results, status and key canonical owners. No local checkout/full verifier or new live RPC was run; historical evidence remains historical.",
   "status_vocabulary": [
     "IN_MAIN_VERIFIED",
     "IMPLEMENTED_UNQUALIFIED",
@@ -91,11 +91,11 @@
         "PR #593 (open; head a3c9fef74c6c01197290890d413ad3e4d5034b4b)"
       ],
       "blockers": [
-        "PR #593 contains the cadence/coverage/identity bridge but is not merged; its base 176f413 is behind current main. GitHub comparison reported 4 commits ahead / 64 behind current main and it must be refreshed before merge.",
+        "PR #593 contains the cadence/coverage/identity bridge but is not merged. Its base 176f413 now compares 4 commits ahead / 76 behind current main; refresh/rebase before merge.",
         "All fixtures are synthetic; no live provider capture or complete rooted mint proof was performed in that PR.",
-        "Repository verification CI failed strict pip-audit with the existing 68 findings across 9 packages; remaining workflow jobs passed. Revalidate after R-12 remediation."
+        "PR #593 Repository verification CI failed strict pip-audit with the existing 68 findings across 9 packages; other visible jobs succeeded. R-12 remains a prerequisite for a clean full CI run."
       ],
-      "next": "Refresh/rebase #593 on current main, rerun focused/full verifier and strict dependency audit, then merge only after clean CI and review; preserve source blockers."
+      "next": "Refresh/rebase #593 on current main; rerun focused/full verifier and strict dependency audit, then merge only after clean CI and review; preserve source blockers."
     },
     {
       "id": "SOL-QUOTE-01",
@@ -401,16 +401,17 @@
     "no_account_creation": true,
     "no_spending": true
   },
-  "next_agent_action": "Fetch latest main and refresh this matrix. Run all offline dossier verifiers. Launch independent workstreams concurrently in isolated worktrees: P0-1/2/3, R02-A/B/C/D, R03-00, R09/R10, R11/R12, R13 and R14. Rebase/reverify #593 before merging; resolve strict pip-audit blocker under R12. R04/R05/R06 and provider promotion remain evidence-gated.",
+  "next_agent_action": "Fetch latest main and re-run the baseline before implementation. Launch independent workstreams in isolated worktrees: P0-1/2/3, R02-A/B/C/D, R03-00, R09/R10, R11/R12, R13 and R14. PR #593 must be rebased from its 176f413 base (4 ahead / 76 behind current main) and reverified; strict pip-audit remains failed. R04/R05/R06 and provider promotion remain evidence-gated.",
   "audit_notes": [
     "Current main SHA was fetched from GitHub branch metadata: 86be458a87ed3f499cc32ff56426b2866c90422a (merge #595).",
     "PR #593 is an implementation PR, not yet merged. It adds bounded cadence/coverage bridge and synthetic fixtures; no live capture was performed. Its source branch is behind current main and its Repository verification failed strict pip-audit.",
     "PR #594's older documentation branch is stale/superseded. R-13 multi-provider quote/build race and R-14 RentSponsorPlanner/Slumlord scope now have dedicated assignments.",
     "Current CI logs from #595/#593 show strict pip-audit failure with 68 advisories across 9 locked packages; formatter/mypy, secret scan, wheel/console and non-root image smoke succeeded. Refresh audit before remediation.",
-    "No local verifier or live RPC was run during this status refresh. Historical test totals and #585 evidence are not current live capacity."
+    "No local verifier or live RPC was run during this status refresh. Historical test totals and #585 evidence are not current live capacity.",
+    "After PR #597 merged at 215a3544483d73052e796eff79b893d346b10524, PR #594 was closed unmerged as superseded. PR #593 compare against latest main is diverged 4 ahead / 76 behind; its Repository verification workflow is still failed."
   ],
   "pr_snapshot": {
-    "main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
+    "main_sha": "215a3544483d73052e796eff79b893d346b10524",
     "checked_at_utc": "2026-11-13",
     "prs": [
       {
@@ -439,6 +440,11 @@
         "workstream": "P0_RAYDIUM_METEORA_VENDOR_REFERENCES"
       },
       {
+        "number": 590,
+        "state": "CLOSED_UNMERGED_SUPERSEDED",
+        "workstream": "P0_BASELINE_REPLACED_BY_595"
+      },
+      {
         "number": 591,
         "state": "MERGED",
         "workstream": "WHOLE_PROJECT_AGENT_HANDOFF"
@@ -458,9 +464,9 @@
       },
       {
         "number": 594,
-        "state": "OPEN_STALE_SUPERSEDED",
-        "base_sha": "176f41378645f6f3b3fd95a59617633b5808acb4",
-        "note": "Unique useful specialist items transferred into R13/R14 and refreshed orchestration; do not merge stale branch"
+        "state": "CLOSED_UNMERGED_SUPERSEDED",
+        "workstream": "whole-project orchestration",
+        "note": "Useful specialist scope transferred into R13/R14 and #595/#597 merged master."
       },
       {
         "number": 595,
@@ -468,9 +474,9 @@
         "workstream": "WHOLE_PROJECT_PARALLEL_EXECUTION_MASTER"
       },
       {
-        "number": 590,
-        "state": "CLOSED_UNMERGED_SUPERSEDED",
-        "workstream": "P0_BASELINE_REPLACED_BY_595"
+        "number": 597,
+        "state": "MERGED",
+        "workstream": "R13_R14_PARALLEL_EXECUTION_UPDATE"
       }
     ]
   }

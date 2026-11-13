@@ -1,0 +1,543 @@
+{
+  "schema_version": "r02.offline-primary-evidence-ledger.v2",
+  "checked_at": "2026-10-08",
+  "source_repository": "BobIvans/studious-pancake",
+  "root_repo_head_at_audit": "103c13795f1d2ac1fa88cf02bba1e9bb2e2477cf",
+  "completeness": "TARGETED_OFFICIAL_SOURCE_AUDIT_NOT_EVERY_PAGE_OR_CONTRACT",
+  "offline_content_kind": "ORIGINAL_EDITORIAL_TECHNICAL_FACTS_NOT_FULL_COPY",
+  "live_chain_capacity_verified": false,
+  "execution_authority": "NONE",
+  "source_pins": [
+    {
+      "repo": "jup-ag/docs",
+      "sha": "1de8fd08f9ae17b38b9c4f07eb29637d6e2182a7"
+    },
+    {
+      "repo": "jup-ag/agent-skills",
+      "sha": "a2211e3f6a7caa03310c7a9a8d816e723b0bdc5f"
+    },
+    {
+      "repo": "Kamino-Finance/klend",
+      "sha": "a08760976f51a3a58c4a0c6ea27b4a0e565bca79",
+      "release": "v1.25.0"
+    },
+    {
+      "repo": "Kamino-Finance/klend-sdk",
+      "sha": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+      "package": "@kamino-finance/klend-sdk",
+      "version": "13.0.2"
+    },
+    {
+      "repo": "scallop-io/sui-scallop-sdk",
+      "sha": "ce59a37254c1851ae1d5e77b7d8ef690f0bdd28d",
+      "package": "@scallop-io/sui-scallop-sdk",
+      "version": "5.4.1",
+      "node_requirement": ">=22"
+    },
+    {
+      "repo": "morpho-org/morpho-blue",
+      "sha": "8e26ca6a8dbc5089edcd67fb576248810fd2870a"
+    },
+    {
+      "repo": "euler-xyz/euler-vault-kit",
+      "sha": "e88274cc624b9867d3c0197614dc5fe5201377c3"
+    },
+    {
+      "repo": "naviprotocol/navi-sdk",
+      "sha": "2e0914a90330c8aeac51b7ded159bc8e0b5f6778",
+      "legacy": true
+    },
+    {
+      "repo": "naviprotocol/protocol-interface",
+      "sha": "31d6401e298a10adb6b0e09c6137ab6d7024f08c",
+      "interface_only": true
+    },
+    {
+      "repo": "MystenLabs/sui",
+      "sha": "2b2bb5a33a0963887b6afe4c2c34325ce93cc61e",
+      "sdk_api_not_pinned": true
+    }
+  ],
+  "entries": [
+    {
+      "id": "jupiter_lend",
+      "role": "P0_SOLANA",
+      "review_grade": "DOC_AND_PINNED_SOURCE",
+      "official_url": "https://developers.jup.ag/docs/lend/flashloan/execute",
+      "reviewed_facts": [
+        "getFlashloanIx",
+        "borrowIx/paybackIx",
+        "zero-fee docs"
+      ],
+      "pinned_repo": "jup-ag/docs",
+      "pinned_repo_sha": "1de8fd08f9ae17b38b9c4f07eb29637d6e2182a7",
+      "pinned_file_path": "lend/flashloan/execute.mdx",
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "kamino",
+      "role": "P0_SOLANA",
+      "review_grade": "CONTRACT_AND_PINNED_SOURCE",
+      "official_url": "https://github.com/Kamino-Finance/klend/blob/master/libs/klend-interface/src/instructions/flash.rs",
+      "reviewed_facts": [
+        "flash_borrow_reserve_liquidity",
+        "flash_repay_reserve_liquidity",
+        "borrow_instruction_index:u8",
+        "flash fee not assumed zero"
+      ],
+      "pinned_repo": "Kamino-Finance/klend",
+      "pinned_repo_sha": "a08760976f51a3a58c4a0c6ea27b4a0e565bca79",
+      "pinned_file_path": "libs/klend-interface/src/instructions/flash.rs",
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "navi",
+      "role": "P0_SUI",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://sdk.naviprotocol.io/lending/flashloan",
+      "reviewed_facts": [
+        "getAllFlashLoanAssets",
+        "flashloanPTB",
+        "repayFlashLoanPTB",
+        "legacy SDK deprecated"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "project0",
+      "role": "P0_SOLANA_EXISTING_ACCOUNT_ONLY",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://docs.marginfi.com/typescript-sdk/accounts",
+      "reviewed_facts": [
+        "createMarginfiAccountTx creates account PDA",
+        "no protocol flash fee",
+        "no CPI",
+        "SDK >=2.8.0"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "deepbook",
+      "role": "P1_SUI",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://docs.sui.io/onchain-finance/deepbook/deepbookv3-sdk/flash-loans",
+      "reviewed_facts": [
+        "borrowBaseAsset",
+        "returnBaseAsset",
+        "borrowQuoteAsset",
+        "returnQuoteAsset"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "scallop",
+      "role": "P1_SUI",
+      "review_grade": "OFFICIAL_DOC_AND_PINNED_SOURCE",
+      "official_url": "https://docs.scallop.io/protocol/fee",
+      "reviewed_facts": [
+        "flash fee 0.1% docs",
+        "ScallopQuery read-only",
+        "ScallopClient can sign/send by default"
+      ],
+      "pinned_repo": "scallop-io/sui-scallop-sdk",
+      "pinned_repo_sha": "ce59a37254c1851ae1d5e77b7d8ef690f0bdd28d",
+      "pinned_file_path": "package.json",
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "cetus",
+      "role": "RESEARCH_SUI",
+      "review_grade": "SECONDARY_OFFICIAL_COMPARISON_ONLY",
+      "official_url": "https://sdk.naviprotocol.io/lending/flashloan",
+      "reviewed_facts": [
+        "NAVI compares Cetus low-level Move flashloan; direct current deployment not inspected"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "RESEARCH_OR_BLOCKED"
+    },
+    {
+      "id": "bucket",
+      "role": "P2_SUI",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://docs.bucketprotocol.io/developer-and-security/technical-resources",
+      "reviewed_facts": [
+        "flash mint/loan USDB",
+        "PSM OUT 0.30% in separate docs"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "morpho_blue",
+      "role": "P1_EVM",
+      "review_grade": "OFFICIAL_DOC_AND_PINNED_SOURCE",
+      "official_url": "https://docs.morpho.org/developers/contracts/blue/",
+      "reviewed_facts": [
+        "flashLoan(address,uint256,bytes)",
+        "zero fee",
+        "singleton balance",
+        "onMorphoFlashLoan"
+      ],
+      "pinned_repo": "morpho-org/morpho-blue",
+      "pinned_repo_sha": "8e26ca6a8dbc5089edcd67fb576248810fd2870a",
+      "pinned_file_path": "src/interfaces/IMorpho.sol",
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "aave_v3",
+      "role": "P2_EVM",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://aave.com/docs/aave-v3/guides/flash-loans",
+      "reviewed_facts": [
+        "flashLoanSimple",
+        "flashLoan",
+        "FLASHLOAN_PREMIUM_TOTAL",
+        "fee waiver whitelist-specific"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "balancer_v3",
+      "role": "P2_EVM",
+      "review_grade": "OFFICIAL_CONTRACT_SOURCE",
+      "official_url": "https://github.com/balancer/balancer-v3-monorepo/blob/main/pkg/vault/contracts/Vault.sol",
+      "reviewed_facts": [
+        "unlock",
+        "sendTo",
+        "settle",
+        "transient accounting"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "dodo",
+      "role": "P2_EVM",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://docs.dodoex.io/en/developer/contracts/dodo-v1-v2/guides/flash-loan",
+      "reviewed_facts": [
+        "pool.flashLoan",
+        "DVMFlashLoanCall",
+        "DPPFlashLoanCall",
+        "pool-specific debt"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "uniswap_v3",
+      "role": "P2_EVM",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://developers.uniswap.org/docs/protocols/v3/guides/flash-swaps/getting-started",
+      "reviewed_facts": [
+        "pool.flash",
+        "uniswapV3FlashCallback",
+        "fee0",
+        "fee1"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "save_solend",
+      "role": "BLOCKED_SOLANA",
+      "review_grade": "OFFICIAL_DOC_NEGATIVE",
+      "official_url": "https://docs.save.finance/developers/flash-loans",
+      "reviewed_facts": [
+        "documentation says implementation has constraints, not ready to assume"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "RESEARCH_OR_BLOCKED"
+    },
+    {
+      "id": "erc3156_implementations",
+      "role": "STANDARD_NOT_LENDER",
+      "review_grade": "NOT_PROVIDER",
+      "official_url": "https://eips.ethereum.org/EIPS/eip-3156",
+      "reviewed_facts": [
+        "interface standard only",
+        "deployment-specific max/fee"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "RESEARCH_OR_BLOCKED"
+    },
+    {
+      "id": "slumlord_rent",
+      "role": "RENT_ONLY",
+      "review_grade": "LOCAL_SOURCE",
+      "official_url": "https://github.com/BobIvans/studious-pancake/blob/main/src/lending/slumlord.py",
+      "reviewed_facts": [
+        "rent only",
+        "not trade capital"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "euler_evk",
+      "role": "P1_EVM",
+      "review_grade": "OFFICIAL_DOC_AND_PINNED_SOURCE",
+      "official_url": "https://docs.euler.finance/build/evk/interacting-with-vaults/",
+      "reviewed_facts": [
+        "EVault.flashLoan(uint256,bytes)",
+        "onFlashLoan(bytes)",
+        "hooks can change fees"
+      ],
+      "pinned_repo": "euler-xyz/euler-vault-kit",
+      "pinned_repo_sha": "e88274cc624b9867d3c0197614dc5fe5201377c3",
+      "pinned_file_path": "docs/whitepaper.md",
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "uniswap_v2_flash_swap",
+      "role": "P1_EVM_POOL",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://developers.uniswap.org/docs/protocols/v2/concepts/flash-swap",
+      "reviewed_facts": [
+        "pair.swap",
+        "uniswapV2Call callback",
+        "pair invariant + fee"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "pancakeswap_v3",
+      "role": "P2_EVM_POOL",
+      "review_grade": "OFFICIAL_SOURCE_DOC",
+      "official_url": "https://github.com/pancakeswap/pancake-developer/blob/master/docs/pages/contracts/v3/pancakev3pool.md",
+      "reviewed_facts": [
+        "pool.flash",
+        "pancakeV3FlashCallback",
+        "pool fee"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "balancer_v2",
+      "role": "P2_EVM",
+      "review_grade": "OFFICIAL_SOURCE_DOC",
+      "official_url": "https://github.com/balancer/docs-developers/blob/main/resources/flash-loans.md",
+      "reviewed_facts": [
+        "Vault.flashLoan",
+        "receiveFlashLoan",
+        "separate from V3"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "silo_v2",
+      "role": "P2_EVM",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://docs.silo.finance/docs/developers/dev-tutorials/hooks/",
+      "reviewed_facts": [
+        "FLASH_LOAN hook",
+        "vault-specific flashloanFee"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "spark_lend",
+      "role": "RESEARCH_EVM",
+      "review_grade": "INDIRECT_HISTORIC_DOC",
+      "official_url": "https://docs.spark.fi/",
+      "reviewed_facts": [
+        "Aave-derived Pool behavior",
+        "current premium and contracts not pinned"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "RESEARCH_OR_BLOCKED"
+    },
+    {
+      "id": "instadapp_fla",
+      "role": "P2_ROUTER",
+      "review_grade": "OFFICIAL_DOC",
+      "official_url": "https://docs.instadapp.io/flashloan/contracts",
+      "reviewed_facts": [
+        "getBestRoutes",
+        "flashLoan",
+        "underlying lender dedup required"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "fluid_dex_v2_accounting",
+      "role": "RESEARCH_EVM_ROUTING",
+      "review_grade": "OFFICIAL_DOC_NOT_FLASH_LENDER_PROOF",
+      "official_url": "https://docs.fluid.instadapp.io/integrate/dex-v2-swaps.html",
+      "reviewed_facts": [
+        "flash accounting/settle",
+        "not proven generic loan"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "RESEARCH_OR_BLOCKED"
+    },
+    {
+      "id": "suilend",
+      "role": "RESEARCH_SUI",
+      "review_grade": "APP_WORKFLOW_ONLY",
+      "official_url": "https://docs.suilend.fi/send/how-to-redeem-msend-and-claim-send-season-1",
+      "reviewed_facts": [
+        "UI penalty redemption uses flash loan",
+        "no general-purpose SDK proof"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "RESEARCH_OR_BLOCKED"
+    },
+    {
+      "id": "pancakeswap_v2_flash_swap",
+      "role": "RESEARCH_EVM_POOL",
+      "review_grade": "NO_DIRECT_OFFICIAL_SOURCE_INSPECTED",
+      "official_url": "https://docs.pancakeswap.finance/",
+      "reviewed_facts": [
+        "verify official V2 pair callback and deployed reserves"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    },
+    {
+      "id": "maker_dssflash",
+      "role": "RESEARCH_EVM_SYNTH",
+      "review_grade": "NO_DIRECT_OFFICIAL_SOURCE_INSPECTED",
+      "official_url": "https://docs.makerdao.com/",
+      "reviewed_facts": [
+        "requires current DAI/USDS issuer, fee and governance pin"
+      ],
+      "pinned_repo": null,
+      "pinned_repo_sha": null,
+      "pinned_file_path": null,
+      "upstream_full_docs_vendored": false,
+      "live_state_checked": false,
+      "decoder_fully_verified": false,
+      "readiness": "OFFLINE_BEHAVIOR_REFERENCE_ONLY"
+    }
+  ]
+}

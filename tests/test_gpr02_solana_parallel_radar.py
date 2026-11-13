@@ -29,6 +29,7 @@ from src.research_economic_graph import (
     StartupIdentityPolicy,
     VerificationQueue,
 )
+from src.research_economic_graph.graph import retained_records
 from src.research_economic_graph.registry import SPL_TOKEN_PROGRAM, TOKEN_2022_PROGRAM
 from src.routing.transport import HttpxJsonTransport, TransportPolicy
 from src.solana_parallel_radar import (
@@ -40,11 +41,12 @@ from src.solana_parallel_radar.cli import read_contracts, CONTRACT_PATH, capture
 from src.solana_parallel_radar.funnel import (
     QuotePreview,
     compare_quotes,
-    normalize_jupiter,
+    normalize_jupiter_v2,
     qualification_blockers,
 )
 from src.solana_parallel_radar.probes import (
     GovernedReadPlane,
+    NATIVE_SOL_SENTINEL,
     jupiter_request,
     normalized_reference,
     normalize_zero_x,
@@ -350,17 +352,34 @@ def test_manifest_book_depth_numeric_identity_fail_closed(fault):
         )
 
 
-def quote_payload(input_mint=address(1), output_mint=address(2)):
+def quote_payload(input_mint=address(1), output_mint=address(2), taker=None):
+    """Pinned Jupiter Swap API V2 GET /order response shape (offline lab)."""
     return {
+        "mode": "ultra",
         "inputMint": input_mint,
         "outputMint": output_mint,
         "inAmount": "1000",
         "outAmount": "1010",
         "otherAmountThreshold": "1000",
-        "contextSlot": 100,
         "swapMode": "ExactIn",
+        "slippageBps": 50,
+        "router": "metis",
+        "requestId": "lab-request-1",
+        "transaction": None,
+        "taker": taker,
         "routePlan": [
-            {"swapInfo": {"inputMint": input_mint, "outputMint": output_mint}}
+            {
+                "swapInfo": {
+                    "ammKey": address(4),
+                    "label": "lab-amm",
+                    "inputMint": input_mint,
+                    "outputMint": output_mint,
+                    "inAmount": "1000",
+                    "outAmount": "1010",
+                },
+                "percent": 100,
+                "bps": 10000,
+            }
         ],
     }
 
@@ -431,11 +450,673 @@ def test_zero_x_quote_reads_economic_fields_without_consuming_instruction_object
         contract=zc,
         raw_evidence_ref="raw",
     )
-    assert q.slot is None and q.output_amount == 1010
+    assert q.slot is None and q.output_amount == 1010 and q.taker is None
     assert (
         compare_quotes(q, replace(q, slot=100), now_ns=NOW)["slot_alignment"]
         == "UNKNOWN"
     )
+
+
+def v2_request():
+    return jupiter_request(address(1), address(2), 1000)
+
+
+def test_jupiter_v2_parser_accepts_pinned_order_shape_and_rejects_v1():
+    payload = quote_payload()
+    q = normalize_jupiter_v2(
+        payload,
+        request=v2_request(),
+        observed_at_ns=NOW,
+        source_id="gpr02-jupiter-reference",
+        provider_generation="a" * 64,
+        correlation_group="jupiter-metis-router",
+        raw_evidence_ref="raw",
+    )
+    assert q.slot is None and q.output_amount == 1010 and q.taker is None
+    assert q.direct and q.route_mints == (address(1), address(2))
+    # A V1 payload (contextSlot / instructionVersion) is never reinterpreted.
+    v1 = quote_payload()
+    v1["contextSlot"] = 100
+    with pytest.raises(ValueError, match="JUPITER_V1_QUOTE_SCHEMA"):
+        normalize_jupiter_v2(
+            v1,
+            request=v2_request(),
+            observed_at_ns=NOW,
+            source_id="gpr02-jupiter-reference",
+            provider_generation="a" * 64,
+            correlation_group="jupiter-metis-router",
+            raw_evidence_ref="raw",
+        )
+
+
+@pytest.mark.parametrize(
+    "mutate,reason",
+    [
+        (lambda p: p.pop("router"), "JUPITER_V2_ORDER_RESPONSE_REQUIRED"),
+        (lambda p: p.update(router="unknown"), "JUPITER_V2_ORDER_RESPONSE_REQUIRED"),
+        (lambda p: p.update(transaction="bW9jaw=="), "TRANSACTION_PRESENT"),
+        (lambda p: p.update(taker=address(9)), "TAKER_ECHO_MISMATCH"),
+        (lambda p: p.update(slippageBps=30), "SLIPPAGE_ECHO_MISMATCH"),
+        (lambda p: p.update(inAmount="1001"), "IDENTITY_MISMATCH"),
+        (
+            lambda p: p["routePlan"][0]["swapInfo"].update(outputMint=address(9)),
+            "ROUTE_ENDPOINTS_MISSING",
+        ),
+    ],
+)
+def test_jupiter_v2_parser_fault_matrix(mutate, reason):
+    payload = quote_payload()
+    mutate(payload)
+    with pytest.raises(ValueError, match=reason):
+        normalize_jupiter_v2(
+            payload,
+            request=v2_request(),
+            observed_at_ns=NOW,
+            source_id="gpr02-jupiter-reference",
+            provider_generation="a" * 64,
+            correlation_group="jupiter-metis-router",
+            raw_evidence_ref="raw",
+        )
+
+
+def test_jupiter_v2_taker_aware_mode_requires_full_echo_parity():
+    request = jupiter_request(address(1), address(2), 1000, taker=address(9))
+    payload = quote_payload(taker=address(9))
+    q = normalize_jupiter_v2(
+        payload,
+        request=request,
+        observed_at_ns=NOW,
+        source_id="gpr02-jupiter-reference",
+        provider_generation="a" * 64,
+        correlation_group="jupiter-metis-router",
+        raw_evidence_ref="raw",
+    )
+    assert q.taker == address(9)
+    other = replace(
+        q,
+        source_id="gpr02-0x-preview",
+        correlation_group="0x-solana-router",
+        raw_evidence_ref="raw2",
+    )
+    assert compare_quotes(q, other, now_ns=NOW)["taker_mode"] == "PUBLIC_TAKER_AWARE"
+    with pytest.raises(ValueError, match="TAKER_PARITY"):
+        compare_quotes(q, replace(other, taker=None), now_ns=NOW)
+
+
+def test_native_sol_sentinel_is_rejected_in_both_pinned_quote_contracts():
+    with pytest.raises(ValueError, match="NATIVE_SOL_SENTINEL"):
+        jupiter_request(NATIVE_SOL_SENTINEL, address(2), 1000)
+    with pytest.raises(ValueError, match="NATIVE_SOL_SENTINEL"):
+        jupiter_request(address(1), NATIVE_SOL_SENTINEL, 1000)
+
+
+def jupiter_v2_order_fixture(input_mint=address(1), output_mint=address(2), taker=None):
+    """Pinned V2 ``GET /order`` 200 shape; synthetic and fully redacted.
+
+    Field set mirrors docs/integrations/offline/solana-p0/JUPITER_SWAP_V2.openapi.yaml
+    (OpenAPI 3.0.3 / info.version 2.0.0, blob-pinned in SOURCE_MANIFEST.json).
+    Contains no credentials, no transaction bytes and no private data.
+    """
+    return {
+        "mode": "ultra",
+        "inputMint": input_mint,
+        "outputMint": output_mint,
+        "inAmount": "1000000",
+        "outAmount": "998000",
+        "inUsdValue": 1000.0,
+        "outUsdValue": 998.0,
+        "priceImpact": -0.02,
+        "otherAmountThreshold": "993010",
+        "swapMode": "ExactIn",
+        "slippageBps": 50,
+        "routePlan": [
+            {
+                "swapInfo": {
+                    "ammKey": address(4),
+                    "label": "lab-amm-1",
+                    "inputMint": input_mint,
+                    "outputMint": output_mint,
+                    "inAmount": "1000000",
+                    "outAmount": "998000",
+                },
+                "percent": 100,
+                "bps": 10000,
+            }
+        ],
+        "feeMint": output_mint,
+        "feeBps": 5,
+        "router": "metis",
+        "transaction": None,
+        "lastValidBlockHeight": "100500",
+        "gasless": False,
+        "requestId": "lab-request-v2-1",
+        "taker": taker,
+    }
+
+
+def zero_x_swap_instructions_fixture(input_mint=address(1), output_mint=address(2)):
+    """Pinned 0x ``POST /solana/swap-instructions`` 200 shape; inert bytes only."""
+    return {
+        "amount_out": 997_000,
+        "min_amount_out": 992_030,
+        "route_plan": [
+            {
+                "token_in": input_mint,
+                "token_out": output_mint,
+                "amount_in": 1_000_000,
+                "amount_out": 997_000,
+                "dex_address": address(5),
+                "dex_label": "lab-dex",
+                "dex_program_id": address(6),
+                "ppb": 3,
+            }
+        ],
+        "instructions": [{"inert": "never decoded, never signed"}],
+        "address_lookup_tables": [{"inert": "never resolved"}],
+        "zid": "lab-zid-1",
+    }
+
+
+def race_plane(tmp_path, handler):
+    """Governed zero-network read plane bound to both pinned quote contracts."""
+    zx, jc = contracts()
+    manifest = CampaignManifest(
+        "a" * 40,
+        "b" * 40,
+        "c" * 64,
+        (("config", "d" * 64),),
+        tuple((c.source_id, c.generation) for c in (zx, jc))
+        + tuple((c.profile.profile_id, c.profile.generation) for c in (zx, jc)),
+    )
+    journal = RecoverableStreamJournal(tmp_path / "race-evidence.sqlite")
+    evidence = CampaignEvidenceStore(journal, manifest, wall_ns=lambda: NOW)
+    client = httpx.AsyncClient(
+        transport=httpx.MockTransport(handler), trust_env=False, follow_redirects=False
+    )
+    transport = HttpxJsonTransport(
+        policy=TransportPolicy(max_attempts=1),
+        allowed_hosts=frozenset({zx.profile.hostname, jc.profile.hostname}),
+        client=client,
+    )
+    gov = ProviderGovernance(
+        {
+            # The ReadContract entitlement (not the bare profile) grants the
+            # pinned method scope: POST for 0x, GET for Jupiter.
+            c.profile.profile_id: c.entitlement(expires_at_epoch_seconds=2000)
+            for c in (zx, jc)
+        },
+        clock=lambda: 1002,
+        wall_clock=lambda: 1002,
+    )
+    plane = GovernedReadPlane(gov, transport, evidence, wall_ns=lambda: NOW)
+    return zx, jc, plane, evidence, journal, transport, client
+
+
+def zero_x_body(taker=address(25), token_in=address(1), token_out=address(2)):
+    return {
+        "token_in": token_in,
+        "token_out": token_out,
+        "amount_in": 1_000_000,
+        "taker": taker,
+        "slippage_bps": 50,
+    }
+
+
+def test_jupiter_v2_positive_fixture_matches_pinned_order_schema():
+    q = normalize_jupiter_v2(
+        jupiter_v2_order_fixture(),
+        request=jupiter_request(address(1), address(2), 1_000_000),
+        observed_at_ns=NOW,
+        source_id="gpr02-jupiter-reference",
+        provider_generation="a" * 64,
+        correlation_group="jupiter-metis-router",
+        raw_evidence_ref="raw",
+    )
+    assert (q.input_mint, q.output_mint) == (address(1), address(2))
+    assert q.input_amount == 1_000_000 and q.output_amount == 998_000
+    assert q.minimum_output_amount == 993_010 and q.slot is None and q.taker is None
+    assert q.direct and q.route_mints == (address(1), address(2))
+
+
+@pytest.mark.parametrize(
+    "mutate,reason",
+    [
+        (lambda p: p.update(swapMode="ExactOut"), "IDENTITY_MISMATCH"),
+        (lambda p: p.update(outAmount="1.5"), "EXACT_BOUNDED_INTEGER"),
+        (lambda p: p.update(inputMint=address(9)), "IDENTITY_MISMATCH"),
+        (lambda p: p.update(routePlan=[]), "BOUNDED_QUOTE_ROUTE_REQUIRED"),
+        (
+            lambda p: p["routePlan"][0]["swapInfo"].pop("inputMint"),
+            "inputMint",
+        ),
+    ],
+)
+def test_jupiter_v2_offline_fixture_negatives(mutate, reason):
+    payload = jupiter_v2_order_fixture()
+    mutate(payload)
+    with pytest.raises((ValueError, KeyError), match=reason):
+        normalize_jupiter_v2(
+            payload,
+            request=jupiter_request(address(1), address(2), 1_000_000),
+            observed_at_ns=NOW,
+            source_id="gpr02-jupiter-reference",
+            provider_generation="a" * 64,
+            correlation_group="jupiter-metis-router",
+            raw_evidence_ref="raw",
+        )
+
+
+@pytest.mark.parametrize(
+    "outcome",
+    [
+        "schema-drift",
+        "no-route",
+        "missing-fields",
+        "bad-amount",
+        "mint-mismatch",
+        "429",
+        "timeout",
+        "error-envelope",
+    ],
+)
+def test_jupiter_v2_offline_negatives_retain_immutable_receipts(tmp_path, outcome):
+    async def run():
+        def handler(req):
+            if outcome == "timeout":
+                raise httpx.ReadTimeout("private", request=req)
+            if outcome == "429":
+                return httpx.Response(
+                    429, json={"error": "rate limited"}, headers={"retry-after": "2"}
+                )
+            if outcome == "error-envelope":
+                return httpx.Response(
+                    400, json={"requestId": "lab-req", "error": "Bad request"}
+                )
+            payload = jupiter_v2_order_fixture()
+            if outcome == "schema-drift":
+                payload["contextSlot"] = 100  # V1 marker: never reinterpreted
+            if outcome == "no-route":
+                payload["routePlan"] = []
+            if outcome == "missing-fields":
+                payload.pop("otherAmountThreshold")
+            if outcome == "bad-amount":
+                payload["outAmount"] = "1.5"
+            if outcome == "mint-mismatch":
+                payload["outputMint"] = address(9)
+            return httpx.Response(200, json=payload)
+
+        _, jc, plane, evidence, journal, transport, client = race_plane(
+            tmp_path, handler
+        )
+        req = jupiter_request(address(1), address(2), 1_000_000)
+        ref, envelope = await plane.collect(jc, req, credential="TEST-ONLY-SECRET")
+        q = normalized_reference(evidence, jc, req, ref, envelope)
+        rows = evidence.replay()
+        if outcome in ("429", "timeout", "error-envelope"):
+            assert q is None and envelope["physical_attempt"] is True
+            assert not any(r.get("kind") == "gpr02_quote_preview" for r in rows)
+        if outcome == "429":
+            # The governed transport preserves the bounded 429 as a sanitized
+            # negative receipt and holds a cooldown instead of surfacing the
+            # provider body.
+            assert envelope["quality_state"] == "quota-or-transport-error"
+            assert envelope["error"] == "SanitizedTransportError"
+            assert envelope["failure_reason"] == "provider rate limited"
+        if outcome == "timeout":
+            assert envelope["quality_state"] == "quota-or-transport-error"
+            assert envelope["error"] == "SanitizedTransportError"
+            assert "timed out" in envelope["failure_reason"]
+            assert "private" not in json.dumps(evidence.replay())
+        if outcome == "error-envelope":
+            assert envelope["quality_state"] == "http-error"
+            assert envelope["raw_payload"] == {
+                "requestId": "lab-req",
+                "error": "Bad request",
+            }
+        if outcome in (
+            "schema-drift",
+            "no-route",
+            "missing-fields",
+            "bad-amount",
+            "mint-mismatch",
+        ):
+            # HTTP 200 with a drifted, empty or foreign payload: raw evidence is
+            # retained immutably and the quote is never normalized.
+            assert q is None and envelope["http_status"] == 200
+            rejected = [r for r in rows if r.get("kind") == "gpr02_quote_rejected"]
+            assert len(rejected) == 1
+            assert rejected[0]["reason"] == "QUOTE_SCHEMA_OR_IDENTITY_REJECTED"
+            assert rejected[0]["raw_evidence_ref"] == ref
+            raw = retained_records(evidence)[ref]
+            assert raw["kind"] == "gpr02_reference_read"
+            assert raw["http_status"] == 200 and raw["response_hash"]
+        assert rows == evidence.replay()
+        await transport.aclose()
+        await client.aclose()
+        journal.close()
+
+    asyncio.run(run())
+
+
+def test_quote_evidence_retains_pinned_route_and_fee_metadata(tmp_path):
+    async def run():
+        captured = []
+
+        def handler(req):
+            captured.append(req)
+            return httpx.Response(200, json=jupiter_v2_order_fixture())
+
+        zx, jc, plane, evidence, journal, transport, client = race_plane(
+            tmp_path, handler
+        )
+        req = jupiter_request(address(1), address(2), 1_000_000)
+        ref, envelope = await plane.collect(jc, req, credential="TEST-ONLY-SECRET")
+        assert normalized_reference(evidence, jc, req, ref, envelope) is not None
+        row = next(
+            r for r in evidence.replay() if r.get("kind") == "gpr02_quote_preview"
+        )
+        meta = row["quote_metadata"]
+        assert meta["api"] == "swap-v2-order" and meta["router"] == "metis"
+        assert meta["request_id"] == "lab-request-v2-1"
+        assert meta["fee_bps"] == 5 and meta["fee_mint"] == address(2)
+        assert meta["gasless"] is False and meta["slot"] is None
+        assert meta["route_legs"] == [
+            {
+                "amm_key": address(4),
+                "label": "lab-amm-1",
+                "input_mint": address(1),
+                "output_mint": address(2),
+                "in_amount": "1000000",
+                "out_amount": "998000",
+                "percent": 100,
+                "bps": 10000,
+            }
+        ]
+        assert row["quote_hash"] == digest(row["quote"])
+        await transport.aclose()
+        await client.aclose()
+        journal.close()
+
+    asyncio.run(run())
+
+
+def test_zero_x_quote_evidence_retains_route_program_identities(tmp_path):
+    async def run():
+        def handler(req):
+            return httpx.Response(200, json=zero_x_swap_instructions_fixture())
+
+        zx, _, plane, evidence, journal, transport, client = race_plane(
+            tmp_path, handler
+        )
+        req = SourceReadRequest(
+            zx.profile.endpoint, semantic_headers=zx.semantic_headers
+        )
+        body = zero_x_body()
+        ref, envelope = await plane.collect(
+            zx, req, credential="TEST-ONLY-SECRET", json_body=body
+        )
+        q = normalized_reference(evidence, zx, req, ref, envelope, body=body)
+        assert q is not None and q.taker == address(25) and q.slot is None
+        row = next(
+            r for r in evidence.replay() if r.get("kind") == "gpr02_quote_preview"
+        )
+        meta = row["quote_metadata"]
+        assert meta["api"] == "solana-swap-instructions"
+        assert meta["zid"] == "lab-zid-1" and meta["slot"] is None
+        assert meta["route_legs"] == [
+            {
+                "token_in": address(1),
+                "token_out": address(2),
+                "amount_in": 1_000_000,
+                "amount_out": 997_000,
+                "dex_address": address(5),
+                "dex_label": "lab-dex",
+                "dex_program_id": address(6),
+                "ppb": 3,
+            }
+        ]
+        await transport.aclose()
+        await client.aclose()
+        journal.close()
+
+    asyncio.run(run())
+
+
+def test_pinned_quote_contracts_bind_credentials_and_unsigned_methods():
+    zx, jc = contracts()
+    assert zx.profile.credential_ref == "ZEROX_API_KEY"
+    assert zx.profile.endpoint == "https://api.0x.org/solana/swap-instructions"
+    assert zx.method == "POST" and zx.auth_header == "0x-api-key"
+    assert jc.profile.credential_ref == "JUPITER_API_KEY"
+    assert jc.profile.endpoint == "https://api.jup.ag/swap/v2/order"
+    assert jc.method == "GET" and jc.auth_header == "x-api-key"
+
+
+def test_zero_x_plane_guards_public_taker_slippage_and_native_sentinel(tmp_path):
+    async def run():
+        calls = []
+
+        def handler(req):
+            calls.append(req)
+            return httpx.Response(200, json=zero_x_swap_instructions_fixture())
+
+        zx, _, plane, evidence, journal, transport, client = race_plane(
+            tmp_path, handler
+        )
+        req = SourceReadRequest(
+            zx.profile.endpoint, semantic_headers=zx.semantic_headers
+        )
+        body = zero_x_body()
+        for bad, reason in (
+            ({k: v for k, v in body.items() if k != "taker"}, "0X_BOUNDED_REFERENCE"),
+            ({**body, "slippage_bps": 51}, "0X_BOUNDED_REFERENCE"),
+            ({**body, "token_in": NATIVE_SOL_SENTINEL}, "NATIVE_SOL_SENTINEL"),
+            ({**body, "token_out": NATIVE_SOL_SENTINEL}, "NATIVE_SOL_SENTINEL"),
+            ({**body, "taker": NATIVE_SOL_SENTINEL}, "NATIVE_SOL_SENTINEL"),
+        ):
+            with pytest.raises(ValueError, match=reason):
+                await plane.collect(
+                    zx, req, credential="TEST-ONLY-SECRET", json_body=bad
+                )
+        assert calls == []
+        assert [r for r in evidence.replay() if r.get("kind") != "manifest"] == []
+        ref, envelope = await plane.collect(
+            zx, req, credential="TEST-ONLY-SECRET", json_body=body
+        )
+        assert envelope["quality_state"] == "accepted"
+        assert normalized_reference(evidence, zx, req, ref, envelope, body=body)
+        await transport.aclose()
+        await client.aclose()
+        journal.close()
+
+    asyncio.run(run())
+
+
+def taker_race_quotes():
+    """Same pair/amount/taker/slippage race across the two pinned providers."""
+    zx, jc = contracts()
+    req = jupiter_request(address(1), address(2), 1_000_000, taker=address(25))
+    j = normalize_jupiter_v2(
+        jupiter_v2_order_fixture(taker=address(25)),
+        request=req,
+        observed_at_ns=NOW,
+        source_id=jc.source_id,
+        provider_generation=jc.profile.generation,
+        correlation_group=jc.profile.correlation_group,
+        raw_evidence_ref="raw-jup",
+    )
+    z = normalize_zero_x(
+        zero_x_swap_instructions_fixture(),
+        body=zero_x_body(),
+        observed_at_ns=NOW,
+        contract=zx,
+        raw_evidence_ref="raw-0x",
+    )
+    return zx, jc, req, j, z
+
+
+def test_comparable_race_binds_pair_amount_taker_slippage_and_window():
+    zx, jc, req, j, z = taker_race_quotes()
+    assert (j.input_mint, j.output_mint, j.input_amount) == (
+        z.input_mint,
+        z.output_mint,
+        z.input_amount,
+    )
+    assert j.taker == z.taker == address(25)
+    assert dict(req.params)["taker"] == address(25)
+    assert dict(req.params)["slippageBps"] == "50"
+    assert dict(req.params)["amount"] == "1000000"
+    assert zero_x_body()["slippage_bps"] == 50
+    r = compare_quotes(z, j, now_ns=NOW)
+    assert r["independent"] is True  # distinct correlation groups, not venues
+    assert r["taker_mode"] == "PUBLIC_TAKER_AWARE"
+    assert r["slot_alignment"] == "UNKNOWN"  # neither pinned contract returns a slot
+    assert r["execution_authority"] is False and r["production_promotion"] is False
+    assert sorted(r["raw_evidence_refs"]) == ["raw-0x", "raw-jup"]
+    assert r["disagreement_bps"] == (998_000 - 997_000) * 10_000 // 997_000
+
+
+def test_race_never_extrapolates_across_sizes_modes_pairs_or_freshness():
+    zx, jc, _, j, z = taker_race_quotes()
+    bigger = jupiter_v2_order_fixture(taker=address(25))
+    bigger["inAmount"] = "2000000"
+    bigger["outAmount"] = "1996000"
+    bigger["otherAmountThreshold"] = "1986020"
+    j2 = normalize_jupiter_v2(
+        bigger,
+        request=jupiter_request(address(1), address(2), 2_000_000, taker=address(25)),
+        observed_at_ns=NOW,
+        source_id=jc.source_id,
+        provider_generation=jc.profile.generation,
+        correlation_group=jc.profile.correlation_group,
+        raw_evidence_ref="raw-jup-2x",
+    )
+    # A different exact base-unit size is never compared or scaled.
+    with pytest.raises(ValueError, match="UNITS_OR_REPRESENTATION"):
+        compare_quotes(j2, z, now_ns=NOW)
+    with pytest.raises(ValueError, match="TAKER_PARITY"):
+        compare_quotes(j, replace(z, taker=None), now_ns=NOW)
+    quote_only = normalize_jupiter_v2(
+        jupiter_v2_order_fixture(),
+        request=jupiter_request(address(1), address(2), 1_000_000),
+        observed_at_ns=NOW,
+        source_id=jc.source_id,
+        provider_generation=jc.profile.generation,
+        correlation_group=jc.profile.correlation_group,
+        raw_evidence_ref="raw-jup-qo",
+    )
+    # Quote-only and taker-aware captures are distinct comparison modes.
+    with pytest.raises(ValueError, match="TAKER_PARITY"):
+        compare_quotes(quote_only, z, now_ns=NOW)
+    with pytest.raises(ValueError, match="STALE_OR_FUTURE"):
+        compare_quotes(replace(z, observed_at_ns=NOW - 45_000_000_001), j, now_ns=NOW)
+    z3 = normalize_zero_x(
+        zero_x_swap_instructions_fixture(output_mint=address(3)),
+        body=zero_x_body(token_out=address(3)),
+        observed_at_ns=NOW,
+        contract=zx,
+        raw_evidence_ref="raw-0x-3",
+    )
+    with pytest.raises(ValueError, match="UNITS_OR_REPRESENTATION"):
+        compare_quotes(z3, j, now_ns=NOW)
+
+
+def test_comparable_race_retains_losing_quote_evidence(tmp_path):
+    async def run():
+        def handler(req):
+            if req.url.host == "api.0x.org":
+                return httpx.Response(200, json=zero_x_swap_instructions_fixture())
+            return httpx.Response(200, json=jupiter_v2_order_fixture(taker=address(25)))
+
+        zx, jc, plane, evidence, journal, transport, client = race_plane(
+            tmp_path, handler
+        )
+        zreq = SourceReadRequest(
+            zx.profile.endpoint, semantic_headers=zx.semantic_headers
+        )
+        body = zero_x_body()
+        zref, zenv = await plane.collect(
+            zx, zreq, credential="TEST-ONLY-SECRET", json_body=body
+        )
+        z = normalized_reference(evidence, zx, zreq, zref, zenv, body=body)
+        jreq = jupiter_request(address(1), address(2), 1_000_000, taker=address(25))
+        jref, jenv = await plane.collect(jc, jreq, credential="TEST-ONLY-SECRET")
+        j = normalized_reference(evidence, jc, jreq, jref, jenv)
+        assert z is not None and j is not None
+        # 0x loses this race by output amount; both quotes stay retained.
+        evidence.append(
+            "gpr02-comparison", compare_quotes(z, j, now_ns=NOW), observed_at_ns=NOW
+        )
+        raws = retained_records(evidence)
+        assert raws[zref]["correlation_group"] == zx.profile.correlation_group
+        assert raws[jref]["correlation_group"] == jc.profile.correlation_group
+        loser = next(
+            r
+            for r in evidence.replay()
+            if r.get("kind") == "gpr02_quote_preview"
+            and r["quote"]["source_id"] == zx.source_id
+        )
+        assert loser["quote"]["output_amount"] == 997_000
+        assert loser["quote_hash"] == digest(loser["quote"])
+        comp = next(
+            r for r in evidence.replay() if r.get("kind") == "gpr02_quote_comparison"
+        )
+        assert set(comp["raw_evidence_refs"]) == {zref, jref}
+        assert comp["execution_authority"] is False
+        await transport.aclose()
+        await client.aclose()
+        journal.close()
+
+    asyncio.run(run())
+
+
+def test_provider_negative_does_not_block_or_freshen_the_other_race_leg(tmp_path):
+    async def run():
+        def handler(req):
+            if req.url.host == "api.0x.org":
+                return httpx.Response(
+                    429, json={"error": "quota"}, headers={"retry-after": "7"}
+                )
+            return httpx.Response(200, json=jupiter_v2_order_fixture(taker=address(25)))
+
+        zx, jc, plane, evidence, journal, transport, client = race_plane(
+            tmp_path, handler
+        )
+        zreq = SourceReadRequest(
+            zx.profile.endpoint, semantic_headers=zx.semantic_headers
+        )
+        body = zero_x_body()
+        zref, zenv = await plane.collect(
+            zx, zreq, credential="TEST-ONLY-SECRET", json_body=body
+        )
+        assert zenv["quality_state"] == "quota-or-transport-error"
+        assert zenv["failure_reason"] == "provider rate limited"
+        assert normalized_reference(evidence, zx, zreq, zref, zenv, body=body) is None
+        jreq = jupiter_request(address(1), address(2), 1_000_000, taker=address(25))
+        jref, jenv = await plane.collect(jc, jreq, credential="TEST-ONLY-SECRET")
+        assert normalized_reference(evidence, jc, jreq, jref, jenv) is not None
+        rows = evidence.replay()
+        assert not any(
+            r.get("kind") == "gpr02_quote_preview"
+            and r["quote"]["source_id"] == zx.source_id
+            for r in rows
+        )
+        assert any(
+            r.get("kind") == "gpr02_quote_preview"
+            and r["quote"]["source_id"] == jc.source_id
+            for r in rows
+        )
+        # No comparison is synthesized from a partial race; the 429 negative
+        # receipt stays retained with its retry-after binding.
+        assert not any(r.get("kind") == "gpr02_quote_comparison" for r in rows)
+        negative = [r for r in rows if r.get("source_id") == zx.source_id][-1]
+        assert negative["quality_state"] == "quota-or-transport-error"
+        assert negative["failure_reason"] == "provider rate limited"
+        await transport.aclose()
+        await client.aclose()
+        journal.close()
+
+    asyncio.run(run())
 
 
 @pytest.mark.parametrize(
@@ -853,7 +1534,9 @@ def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
 
         def handler(req):
             if req.url.host == "api.jup.ag":
-                return httpx.Response(200, json=quote_payload(WSOL_MINT, address(3)))
+                return httpx.Response(
+                    200, json=quote_payload(WSOL_MINT, address(3), taker=address(25))
+                )
             body = json.loads(req.content)
             if req.url.host == "api.0x.org":
                 return httpx.Response(
@@ -945,8 +1628,8 @@ def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
                 ),
                 body,
             ),
-            (jc, jupiter_request(WSOL_MINT, address(3), 1000), None),
-            (jc, jupiter_request(WSOL_MINT, address(3), 1000), None),
+            (jc, jupiter_request(WSOL_MINT, address(3), 1000, taker=address(25)), None),
+            (jc, jupiter_request(WSOL_MINT, address(3), 1000, taker=address(25)), None),
         ):
             raw, e = await plane.collect(
                 c, req, credential="TEST-ONLY-SECRET", json_body=request_body

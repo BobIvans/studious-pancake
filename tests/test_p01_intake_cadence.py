@@ -45,7 +45,7 @@ from src.qualification_campaign.evidence import CampaignEvidenceStore  # noqa: E
 
 USDC = "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
 JITOSOL = "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
-FIXTURES = Path(__file__).resolve().parents[1] / "fixtures" / "p01_intake"
+FIXTURES = Path(__file__).resolve().parents[1] / "tests" / "fixtures" / "p01_intake"
 
 
 def load_fixture(name):
@@ -479,6 +479,11 @@ def test_din_capture_with_cadence_retains_evidence_and_replays_offline(
 
     monkeypatch.setattr(runner, "campaign_transport", transport)
     monkeypatch.setattr(runner.CampaignManifest, "create", manifest)
+    # The CI checkout is shallow and has no origin/main ref; pin the recorded
+    # main SHA instead of invoking git.
+    monkeypatch.setattr(
+        runner.subprocess, "check_output", lambda *args, **kwargs: "0" * 40
+    )
     root = Path(__file__).resolve().parents[1]
     output = tmp_path / "capture"
     result = asyncio.run(

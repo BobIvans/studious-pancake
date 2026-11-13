@@ -18,7 +18,7 @@ def test_shipped_supply_chain_objects_pass_static_controls() -> None:
 def test_locks_include_resolved_transitive_dependencies() -> None:
     manifest = json.loads((ROOT / "config/requirements-lock.json").read_text())
     assert manifest["python"] == "3.13"
-    assert manifest["resolver"] == {"name": "uv", "version": "0.11.15"}
+    assert manifest["resolver"] == {"name": "uv", "version": "0.13.4"}
     for lock_name in ("requirements.lock", "requirements-dev.lock"):
         digest = hashlib.sha256((ROOT / lock_name).read_bytes()).hexdigest()
         assert manifest["resolved_locks"][lock_name]["sha256"] == digest

@@ -3,6 +3,7 @@
 This folder is the single task index for Codex CLI, GLM and other coding agents.
 
 - CODEX_START_HERE.md — copy-ready master trigger and architecture/safety boundaries.
+- PARALLEL_EXECUTION_MANDATE.md — broad coordinator mission for large-token, multi-agent execution across isolated worktrees/PRs; current owner audit, source universe and dependency gates.
 - TASK_INDEX.md — completed work, parallel tracks, dependencies and every assignment path.
 - tasks/R02_CAPITAL_READERS.md — Jupiter, Kamino, NAVI and Project 0 read-only readers.
 - tasks/R03_UNSIGNED_BUILDERS.md — shared unsigned contracts and provider-specific builder requirements.

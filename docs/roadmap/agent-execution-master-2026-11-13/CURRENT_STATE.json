@@ -1,0 +1,106 @@
+{
+  "schema_version": "studious-pancake.coordinator-current-state.v1",
+  "updated_at_utc": "2026-11-13",
+  "coordinator": "master-parallel-coordinator",
+  "main_sha_audited": "86be458a87ed3f499cc32ff56426b2866c90422a",
+  "main_sha_previous_handoff": "176f41378645f6f3b3fd95a59617633b5808acb4",
+  "worktree_state": {
+    "branch": "main",
+    "up_to_date_with_origin": true,
+    "uncommitted": "in-flight P0-2 Jupiter V2 migration (probes.py, cli.py, funnel.py, qualification.py, gpr02-solana-contracts.json, verify_mpr_next_08 script, 2 test files); preserved as patch sp-worktrees/_coordinator/p0-2-local.patch and handed to lane B",
+    "local_worktree_policy": "coordinator does not modify the user's dirty checkout; all lane work happens in git worktrees under ../sp-worktrees/"
+  },
+  "ci_truth": {
+    "main_latest_run": {
+      "sha": "86be458a",
+      "ci_repository_verification": "FAILURE",
+      "cause": "strict pip-audit: 68 known advisories across 9 locked packages (aiohttp 3.14.3, brotli 1.2.0, certifi 2026.6.17, setuptools 83.0.0, black 26.3.1, msgpack 1.2.2, filelock 3.32.5, pillow 12.3.0, uv 0.11.15) — pre-existing, not caused by recent docs merges",
+      "read_only_qualification_campaign": "SUCCESS",
+      "release_authority": "SUCCESS"
+    },
+    "pr_593_checks": {
+      "mergeable": true,
+      "repository_verification": "FAILURE (same pre-existing pip-audit)",
+      "deterministic_read_only": "SUCCESS",
+      "jupiter_v2_contract_and_quarantine": "SUCCESS",
+      "campaign": "SUCCESS",
+      "release_authority": "SUCCESS",
+      "wheel_console_smoke": "SUCCESS",
+      "non_root_runtime_image_smoke": "SUCCESS",
+      "secret_scanning": "SUCCESS"
+    }
+  },
+  "pr_reconciliation": {
+    "open_count": 34,
+    "live_relevant": [
+      {"number": 593, "head": "codex/p0-1-solana-intake-dynamic-universe-2026-11-13", "state": "MERGEABLE, all own checks green, awaiting human review", "class": "implementation"},
+      {"number": 594, "head": "docs/parallel-master-execution-mandate-2026-11-13", "state": "CONFLICTING docs-only; mandate text already read from branch; supersede by rebasing or closing after coordinator docs PR lands", "class": "docs"}
+    ],
+    "superseded_or_historical": [
+      {"number": 590, "note": "P0-0 baseline branch based on historical main; not in open list; do not merge as-is (mandate §2)"},
+      {"note": "34 open PRs total; remaining 32 are legacy MPR/roadmap backlog (PR-127..PR-200, MPR-41..45, #565/#567/#578); do not remerge; not part of this execution wave"}
+    ]
+  },
+  "offline_verifiers_at_audit": [
+    {"cmd": "python -I docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/verify_bundle.py", "result": "PASS: 27 disabled candidate records, 17 offline signatures, 10 upstream commit pins, zero network"},
+    {"cmd": "python -I docs/roadmap/r02-capacity-recovery-2026-10-08/offline/verify_offline.py", "result": "PASS summary: live_readers_qualified=0, execution_authority=NONE, network_requests=0"},
+    {"cmd": "python -I docs/integrations/offline/solana-p0/verify_offline_bundle.py", "result": "OFFLINE_DOC_BUNDLE_OK vendor_files=19, no network"}
+  ],
+  "platform_truth": {
+    "os": "win32 native, Git Bash",
+    "wsl": "NOT INSTALLED (wsl.exe reports distribution not installed)",
+    "known_windows_blockers": [
+      "fcntl in src/qualification_campaign/evidence.py makes GPR-02/DIN-01/QPR-03 test modules unimportable natively (R11 lane assigned)",
+      "os.getuid in src/durability/lifecycle.py:378 fails 2 collector tests (R11 lane assigned)",
+      "core.autocrlf=true corrupts LF-hash-pinned files; lanes must commit with git -c core.autocrlf=false"
+    ],
+    "shared_venv": "main checkout .venv (pytest 9.0.3, pytest-socket installed); agents run it with cwd set to their worktree"
+  },
+  "workstreams": [
+    {"lane": "B", "id": "SOL-QUOTE-01/P0-2", "title": "Jupiter V2 + 0x comparable quote race", "status": "IMPLEMENTED_UNBOUND", "canonical_owners": ["src/solana_parallel_radar/probes.py", "src/solana_parallel_radar/cli.py", "src/solana_parallel_radar/funnel.py", "config/qualification/gpr02-solana-contracts.json", "scripts/verify_mpr_next_08_jupiter_v2_contract.py"], "assignment": "complete in-flight V2 migration (local patch), fix RESEARCH_REFERENCE_REVIEW_HASH_MISMATCH, offline V2 fixtures incl. schema-drift/no-route/429/timeout negatives, 0x public-taker contract preserved", "branch": "agent/p0-2-jupiter-0x", "worktree": "../sp-worktrees/p0-2-jupiter-0x"},
+    {"lane": "C", "id": "SOL-STATE-01/P0-3", "title": "Exact direct-state venue coverage (Raydium CLMM, Meteora DLMM)", "status": "IMPLEMENTED_UNQUALIFIED", "canonical_owners": ["src/providers/raydium_cpmm_native.py (read-only reuse)", "src/config/addresses.py", "docs/integrations/offline/solana-p0/vendor-reference/"], "assignment": "CLMM/DLMM offline decoders+exact math from pinned #589 vendor sources, known Meteora DLMM program-id defect audit/fix, positive/negative differential fixtures", "branch": "agent/p0-3-direct-state", "worktree": "../sp-worktrees/p0-3-direct-state"},
+    {"lane": "E-A", "id": "CAP-A", "title": "R-02 Jupiter Lend read-only capacity reader", "status": "BLOCKED(live) / work starts offline", "canonical_owners": ["src/lending/jupiter_lend.py"], "assignment": "exact TokenReserve PDA/layout reader + offline fixture replay; live RPC proof typed BLOCKED", "branch": "agent/r02-cap-a-jupiter-lend", "worktree": "../sp-worktrees/r02-cap-a-jupiter-lend"},
+    {"lane": "E-B", "id": "CAP-B", "title": "R-02 Kamino read-only capacity reader", "status": "BLOCKED(live) / work starts offline", "canonical_owners": ["src/lending/kamino.py", "src/lending/kamino_real_conformance.py (read)"], "assignment": "pinned Reserve/LendingMarket decoder, available liquidity + fee rounding + caps; live proof BLOCKED", "branch": "agent/r02-cap-b-kamino", "worktree": "../sp-worktrees/r02-cap-b-kamino"},
+    {"lane": "E-C", "id": "CAP-C", "title": "R-02 NAVI Sui read-only capacity reader", "status": "BLOCKED(live) / work starts offline", "canonical_owners": ["src/multichain/sui.py"], "assignment": "shared pool object/coin-type/decimals reader, getAllFlashLoanAssets demoted to discovery-only; live proof BLOCKED", "branch": "agent/r02-cap-c-navi", "worktree": "../sp-worktrees/r02-cap-c-navi"},
+    {"lane": "E-D", "id": "CAP-D", "title": "R-02 Project 0 / MarginFi wallet-free bank reader", "status": "BLOCKED(live) / work starts offline", "canonical_owners": ["src/providers/marginfi/", "src/lending/agg03_financing_ports.py (read)"], "assignment": "bank discovery reader, no account creation; live proof BLOCKED", "branch": "agent/r02-cap-d-project0", "worktree": "../sp-worktrees/r02-cap-d-project0"},
+    {"lane": "F", "id": "CAP-R03", "title": "R-03 unsigned borrow/repay builders + PTB conformance", "status": "IMPLEMENTED_UNQUALIFIED", "canonical_owners": ["src/lending/financing.py", "NEW src/lending/unsigned_builders/"], "assignment": "freeze builder conformance contract; offline SDK-conformant Jupiter Lend/Kamino instructions + NAVI PTB v1/v2 fixtures; build_status separate from capacity_status", "branch": "agent/r03-builders", "worktree": "../sp-worktrees/r03-builders"},
+    {"lane": "D", "id": "SUI-DATA-01", "title": "GPR-03 Sui measured-blocker remediation", "status": "IMPLEMENTED_UNQUALIFIED", "canonical_owners": ["src/gpr_sui_shadow/"], "assignment": "GraphQL Content-Length repro/fix without weakening bounds; Aftermath response cap; checkpoint provider qualification offline", "branch": "agent/sui-gpr03-remediation", "worktree": "../sp-worktrees/sui-gpr03-remediation"},
+    {"lane": "G", "id": "PROVIDER-R07-research", "title": "Multi-provider quote/build dossiers (Solana+ Sui)", "status": "PLANNED", "canonical_owners": ["docs/integrations/offline/ (new versioned dossiers only)"], "assignment": "Titan/OKX/OpenOcean/Rango + Aftermath/Cetus/7K/FlowX official contract pins, quotas, build-output semantics; docs+manifest only, no src", "branch": "agent/provider-dossiers-wave1", "worktree": "../sp-worktrees/provider-dossiers-wave1"},
+    {"lane": "H", "id": "STRATEGY-01", "title": "Relation generators + residual/correlation expansion", "status": "IMPLEMENTED_UNQUALIFIED", "canonical_owners": ["src/strategy/relation_generators/", "src/research/correlation_ledger/"], "assignment": "residual series families (stable/LST/wrapper/VWAP/direct-vs-synthetic), lead/lag alignment gating, parity/cycle generator tightening; no new graph/solver", "branch": "agent/relations-correlation", "worktree": "../sp-worktrees/relations-correlation"},
+    {"lane": "I", "id": "TON-RADAR-01", "title": "TON research universe", "status": "IMPLEMENTED_UNQUALIFIED", "canonical_owners": ["src/discovery/dynamic_universe/ton_radar.py"], "assignment": "STON schema pin verification, Omniston/swap.coffee/DeDust/Tonco/TON Center/TonAPI dossiers, bounded adapters where justified; async research-only semantics", "branch": "agent/ton-radar-wave1", "worktree": "../sp-worktrees/ton-radar-wave1"},
+    {"lane": "J", "id": "RENT-SPONSOR", "title": "RentSponsorPlanner on existing Slumlord adapter", "status": "PLANNED", "canonical_owners": ["src/lending/slumlord.py (read-only reuse)", "NEW src/planning/rent_sponsor_planner.py"], "assignment": "4-tier rent plan (qualified ATA → provider sponsor → Slumlord ephemeral → persistent funding) with fail-closed economics; unsigned/local only", "branch": "agent/rent-sponsor-planner", "worktree": "../sp-worktrees/rent-sponsor-planner"},
+    {"lane": "A", "id": "SOL-DISC-01/P0-1", "title": "P0-1 follow-through audit (PR #593 open)", "status": "OPEN_PR_NOT_IN_MAIN", "canonical_owners": ["PR #593 owns src/solana_parallel_radar/intake_cadence.py + coverage + DynamicUniverse bridge"], "assignment": "docs-only audit: verify #593 coverage claims, boot-path/cadence integration gap plan (R08 handoff); NO src edits to avoid collision", "branch": "agent/p0-1-followthrough-audit", "worktree": "../sp-worktrees/p0-1-followthrough-audit"},
+    {"lane": "L", "id": "EVM-DATA-01", "title": "EVM research domain dossiers (Morpho/Aave etc.)", "status": "FIXTURE_ONLY", "canonical_owners": ["docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/EVM_PROTOCOL_DOSSIERS.md (extend)", "src/multichain/evm_financing.py (read)"], "assignment": "deployment/ABI/license dossiers for Morpho Blue + Aave V3 as isolated EVM domain; docs-only", "branch": "agent/evm-dossiers-wave1", "worktree": "../sp-worktrees/evm-dossiers-wave1"},
+    {"lane": "R11", "id": "PLATFORM-R11", "title": "Windows/WSL platform unblock", "status": "BLOCKED", "canonical_owners": ["src/qualification_campaign/evidence.py", "src/durability/lifecycle.py"], "assignment": "cross-platform fcntl fallback + getuid guard so GPR-02/DIN/QPR suites run natively; zero behavior change on POSIX", "branch": "agent/platform-repro", "worktree": "../sp-worktrees/platform-repro"},
+    {"lane": "R12", "id": "SEC-R12", "title": "Dependency security remediation (unblocks red CI)", "status": "BLOCKED", "canonical_owners": ["requirements.lock", "requirements-dev.lock", "pyproject.toml"], "assignment": "revalidate 68 advisories, upgrade pins via official lock workflow, full test + pip-audit rerun", "branch": "agent/r12-dependency-security", "worktree": "../sp-worktrees/r12-dependency-security"}
+  ],
+  "shared_contract_freeze": {
+    "quote_normalization": "src/solana_parallel_radar/funnel.py + probes.py are the ONLY quote owners (lane B); no other lane may add a quote schema",
+    "capital_graph": "src/economics/flash_capital_graph/graph.py frozen this wave: readers (E-A/B/C/D) emit through existing ports, must not edit graph.py",
+    "builders": "R-03 builders confined to NEW src/lending/unsigned_builders/ tree; imports from src/lending/financing.py and src/multichain/sui.py are read-only",
+    "graph_and_solver": "src/research_economic_graph/, src/strategy/arbitrage_graph.py, src/strategy/multihop_solver.py frozen: only lane H may touch relation_generators/ and correlation_ledger/",
+    "addresses": "src/config/addresses.py owned by lane C only",
+    "governance": "src/qualification_campaign/, src/provider_governance/ owned by R11 (evidence.py platform fix) — lane B must not edit these"
+  },
+  "dependency_gates": {
+    "R04": "requires exact quotes (B) + qualified R-02 capacity (E) + R-03 builder (F) — not started this wave",
+    "R05": "requires R04 candidates + current state — not started this wave",
+    "R06": "requires QPR readiness PASS + R05 — not started this wave"
+  },
+  "global_safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "live_enabled": false,
+    "production_ready": false,
+    "no_account_creation": true,
+    "no_private_keys": true,
+    "live_provider_captures_this_wave": "NOT authorized; lanes record typed BLOCKED for live evidence"
+  },
+  "coordinator_merge_queue": "one reviewable PR per lane; integrate in order R12 → R11 → B → C → E/F → G/H/I/J/D; human approval required for every implementation merge",
+  "execution_constraints": {
+    "agent_concurrency_limit": "host rejects background agents beyond ~3 concurrent ('user concurrency limit exceeded'); coordinator runs a scheduler: ≤3 lanes in flight, resume queue R12→B→R11→C→F→CAP-A→CAP-B→CAP-C→CAP-D→G→I→J→L",
+    "rejected_initial_agents": ["R12", "R11", "B", "C", "CAP-A", "CAP-B", "CAP-C", "CAP-D", "F", "D", "G", "I", "J", "L"],
+    "resumed_so_far": ["R12"],
+    "running_at_snapshot": ["D(sui-gpr03, progress: 105 passed/1 os.getuid fail)", "H(relations)", "A(p0-1 audit)"]
+  }
+}

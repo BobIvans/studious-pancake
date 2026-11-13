@@ -1,0 +1,144 @@
+{
+  "source_pin": "Kamino-Finance/klend-sdk@3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+  "sdk_package": "@kamino-finance/klend-sdk",
+  "sdk_version": "13.0.2",
+  "official_program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+  "source_files": [
+    "src/@codegen/klend/accounts/Reserve.ts",
+    "src/@codegen/klend/types/ReserveLiquidity.ts",
+    "src/@codegen/klend/types/ReserveConfig.ts",
+    "src/@codegen/klend/types/ReserveFees.ts",
+    "src/classes/fraction.ts"
+  ],
+  "reserve_discriminator": [
+    43,
+    242,
+    204,
+    202,
+    26,
+    247,
+    59,
+    127
+  ],
+  "only_structural_prefix": true,
+  "prefix_fields": [
+    {
+      "name": "version",
+      "type": "u64",
+      "offset": 8,
+      "bytes": 8
+    },
+    {
+      "name": "last_update_slot",
+      "type": "u64",
+      "offset": 16,
+      "bytes": 8
+    },
+    {
+      "name": "last_update_stale",
+      "type": "u8",
+      "offset": 24,
+      "bytes": 1
+    },
+    {
+      "name": "last_update_price_status",
+      "type": "u8",
+      "offset": 25,
+      "bytes": 1
+    },
+    {
+      "name": "last_update_pad",
+      "type": "bytes2",
+      "offset": 26,
+      "bytes": 2
+    },
+    {
+      "name": "last_update_timestamp",
+      "type": "u32",
+      "offset": 28,
+      "bytes": 4
+    },
+    {
+      "name": "lending_market",
+      "type": "pubkey",
+      "offset": 32,
+      "bytes": 32
+    },
+    {
+      "name": "farm_collateral",
+      "type": "pubkey",
+      "offset": 64,
+      "bytes": 32
+    },
+    {
+      "name": "farm_debt",
+      "type": "pubkey",
+      "offset": 96,
+      "bytes": 32
+    },
+    {
+      "name": "mint",
+      "type": "pubkey",
+      "offset": 128,
+      "bytes": 32
+    },
+    {
+      "name": "supply_vault",
+      "type": "pubkey",
+      "offset": 160,
+      "bytes": 32
+    },
+    {
+      "name": "fee_vault",
+      "type": "pubkey",
+      "offset": 192,
+      "bytes": 32
+    },
+    {
+      "name": "total_available_amount",
+      "type": "u64",
+      "offset": 224,
+      "bytes": 8
+    },
+    {
+      "name": "borrowed_amount_sf",
+      "type": "u128",
+      "offset": 232,
+      "bytes": 16
+    },
+    {
+      "name": "market_price_sf",
+      "type": "u128",
+      "offset": 248,
+      "bytes": 16
+    },
+    {
+      "name": "market_price_last_updated_ts",
+      "type": "u64",
+      "offset": 264,
+      "bytes": 8
+    },
+    {
+      "name": "mint_decimals",
+      "type": "u64",
+      "offset": 272,
+      "bytes": 8
+    }
+  ],
+  "fee_state_reference": {
+    "config_field": "fees.flashLoanFeeSf",
+    "scale": "2^60",
+    "exact_fee_formula": "PROTOCOL_SPECIFIC_ROUNDING_TO_BE_VERIFIED_IN_DEPLOYED_HANDLER",
+    "note": "reserveOriginationFee may be nonzero; simply reading u64 is not exact payable amount"
+  },
+  "limitations": [
+    "Prefix probe alone cannot read flash fee or borrowing ceilings",
+    "All reserve account owner/market/version checks required",
+    "GetReserve SDK decoder from pinned source for full state",
+    "Same slot vault token account + mint + oracle checks",
+    "No obligation account required in offline flash instruction accounts, user ATA may still be needed",
+    "Program source BSL restricted: DO NOT copy or use program sources for production"
+  ],
+  "execution_authority": "NONE",
+  "prefix_len_bytes": 280
+}

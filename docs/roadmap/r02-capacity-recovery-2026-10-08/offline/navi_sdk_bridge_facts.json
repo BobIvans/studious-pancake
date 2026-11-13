@@ -1,0 +1,22 @@
+{
+  "source_pin": "naviprotocol/naviprotocol-monorepo@40d971c8ebd46d2af6c6210c6aaf1521ebefda9b",
+  "sdk": "@naviprotocol/lending",
+  "version": "2.0.12",
+  "node_requirement": ">=22",
+  "offline_vendor_files": [
+    "vendor/navi/flashloan.ts.txt",
+    "vendor/navi/config.ts.txt",
+    "vendor/navi/pool.ts.txt",
+    "vendor/navi/types.ts.txt"
+  ],
+  "helper_behavior": {
+    "discover": "getAllFlashLoanAssets: calls SDK NAVI OPEN API /navi/flashloan?env=prod&sdk=2.0.12&market=<id>, cached",
+    "builder": "flashloanPTB: choose config.version=1 -> flash_loan_with_ctx or version=2 -> flash_loan_with_ctx_v2 (+ 0x05 SuiSystemState)",
+    "repay": "flash_repay_with_ctx (0x06 Clock + storage + pool + receipt + coin)",
+    "dynamic_config": "getConfig/getPool retrieve package + flashloan config and pool object IDs"
+  },
+  "safety": "API max and fee are DISCOVERY not proof of on-chain pool capacity, hold until current package and shared pool checkpoint validates",
+  "source_current_sui_transport": "gRPC/GraphQL only, ignore SDK legacy jsonRpc client examples",
+  "account_creation": "not in flashloanPTB helper",
+  "execution_authority": "NONE"
+}

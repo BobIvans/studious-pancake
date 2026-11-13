@@ -1,0 +1,133 @@
+{
+  "source_pin": "jup-ag/jupiter-lend@a484ddcf9b34ef6f6d575ad10b0673a18d9c8f31",
+  "source_blob": "09209f553900df7da61f84a106ad85767fdac71d",
+  "idl_name": "liquidity",
+  "idl_version": "0.1.8",
+  "owner_program_id": "jupeiUmn818Jg1ekPURTpr4mFo29p46vygyykFJ3wZC",
+  "account": "TokenReserve",
+  "discriminator": [
+    21,
+    18,
+    59,
+    135,
+    120,
+    20,
+    31,
+    12
+  ],
+  "fields": [
+    {
+      "name": "mint",
+      "type": "pubkey",
+      "bytes": 32,
+      "offset": 8
+    },
+    {
+      "name": "vault",
+      "type": "pubkey",
+      "bytes": 32,
+      "offset": 40
+    },
+    {
+      "name": "borrow_rate",
+      "type": "u16",
+      "bytes": 2,
+      "offset": 72
+    },
+    {
+      "name": "fee_on_interest",
+      "type": "u16",
+      "bytes": 2,
+      "offset": 74
+    },
+    {
+      "name": "last_utilization",
+      "type": "u16",
+      "bytes": 2,
+      "offset": 76
+    },
+    {
+      "name": "last_update_timestamp",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 78
+    },
+    {
+      "name": "supply_exchange_price",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 86
+    },
+    {
+      "name": "borrow_exchange_price",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 94
+    },
+    {
+      "name": "max_utilization",
+      "type": "u16",
+      "bytes": 2,
+      "offset": 102
+    },
+    {
+      "name": "total_supply_with_interest",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 104
+    },
+    {
+      "name": "total_supply_interest_free",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 112
+    },
+    {
+      "name": "total_borrow_with_interest",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 120
+    },
+    {
+      "name": "total_borrow_interest_free",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 128
+    },
+    {
+      "name": "total_claim_amount",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 136
+    },
+    {
+      "name": "interacting_protocol",
+      "type": "pubkey",
+      "bytes": 32,
+      "offset": 144
+    },
+    {
+      "name": "interacting_timestamp",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 176
+    },
+    {
+      "name": "interacting_balance",
+      "type": "u64",
+      "bytes": 8,
+      "offset": 184
+    }
+  ],
+  "account_size_bytes": 192,
+  "scope": "layout_only_not_capacity_proof",
+  "requires_additional": [
+    "exact PDA mint binding",
+    "SPL vault token account amount and token program owner",
+    "flashloan program user borrow position and active/cap state",
+    "protocol liquidity limits and max utilization",
+    "same finalized slot independent quorum",
+    "deployed source/version check"
+  ],
+  "execution_authority": "NONE"
+}

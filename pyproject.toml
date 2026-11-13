@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools==83.0.0", "wheel==0.47.0"]
+requires = ["setuptools==84.1.0", "wheel==0.47.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -16,12 +16,12 @@ classifiers = [
   "Topic :: Office/Business :: Financial :: Investment",
 ]
 dependencies = [
-  "aiohttp==3.14.3",
+  "aiohttp==3.14.4",
   "aiohttp-socks==0.11.0",
   "aiolimiter==1.1.0",
   "aiosqlite==0.20.0",
   "base58==2.1.1",
-  "brotli==1.2.0",
+  "brotli==1.2.1",
   "cachetools==7.0.5",
   "construct==2.10.70",
   "construct-typing==0.7.0",
@@ -61,7 +61,7 @@ service = [
 ]
 dev = [
   "bandit==1.9.2",
-  "black==26.3.1",
+  "black==26.10.1",
   "build==1.5.0",
   "flake8==7.3.0",
   "mypy==1.18.2",
@@ -72,9 +72,9 @@ dev = [
   "pytest-asyncio==1.3.0",
   "pytest-socket==0.7.0",
   "pytest-xprocess==1.0.2",
-  "setuptools==83.0.0",
+  "setuptools==84.1.0",
   "types-PyYAML==6.0.12.20260518",
-  "uv==0.11.15",
+  "uv==0.13.4",
   "wheel==0.47.0",
 ]
 

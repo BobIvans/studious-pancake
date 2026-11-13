@@ -17,6 +17,7 @@ REQUIRED = (
     "README.md",
     "SOURCE_MANIFEST.json",
     "SOLANA_RPC_STATE.md",
+    "SOLANA_DISCOVERY_SOURCES.md",
     "JUPITER_SWAP_V2.md",
     "JUPITER_SWAP_V2.openapi.yaml",
     "ZEROX_SOLANA_SWAP.md",

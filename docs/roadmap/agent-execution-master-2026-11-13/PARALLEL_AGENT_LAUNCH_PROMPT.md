@@ -11,7 +11,7 @@ Read, in order:
 
 FIRST ACTION — audit before edits:
 - fetch origin/main, record exact SHA and worktree status;
-- inspect every open PR and identify merged, stale, duplicate, unique or blocking changes. Current snapshot: #595 is merged; #590 is closed unmerged and superseded; #594 is stale/superseded; #593 remains open and is based on 176f413, which compares 4 commits ahead / 64 behind current main. Refresh #593 on the current base and rerun its verifier before merge. #584/#585/#586/#588/#589/#591/#592 are merged; do not repeat their work.;
+- inspect every open PR and identify merged, stale, duplicate, unique or blocking changes. Current snapshot: #595 is merged; #590 is closed unmerged and superseded; #594 is stale/superseded; #593 remains open and is based on 176f413, which compares 4 commits ahead / 64 behind current main. Refresh #593 on the current base and rerun its verifier before merge. #584/#585/#586/#588/#589/#591/#592 are merged; do not repeat their work.
 - run all three checked-in offline bundle verifiers;
 - build an IMPLEMENTATION_STATUS.json (or similarly named machine-readable matrix) listing every major deliverable with exact owner, existing tests, docs pin, status, dependency, PR, blocker and acceptance command;
 - verify current runtime truth. README currently says not production-ready, sender-free, live hard-denied and multiple providers/strategies are evidence-gated. Do not overstate it.

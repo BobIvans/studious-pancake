@@ -1,0 +1,76 @@
+{
+  "borrow_index_vector": {
+    "borrow_position_in_sequence": 3,
+    "expected_absolute_borrow_index": 3,
+    "repay_index_supplied": 4,
+    "sequence": [
+      {
+        "data_hex": "00",
+        "program_id": "11111111111111111111111111111111"
+      },
+      {
+        "data_hex": "01",
+        "program_id": "75hbt6uvDqjPZ9WgFtMhBnTeyHw7cinoHiz4FD2vEz1F"
+      },
+      {
+        "data_hex": "cafe",
+        "program_id": "6ws1bVyu3F8wGy1fPHhrc2v8UyWiGbRAAuek8SwikKMq"
+      },
+      {
+        "data_hex": "aabbccdd0100000000000000",
+        "program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD"
+      },
+      {
+        "data_hex": "beef",
+        "program_id": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+      }
+    ]
+  },
+  "expected_flash_loan_fee_sf": 300000,
+  "expected_origination_fee_sf": 0,
+  "fee_vectors": [
+    {
+      "conservative_required_repayment": 1000001,
+      "fee_ceil": 1,
+      "fee_floor": 0,
+      "fee_sf": 300000,
+      "floor_required_repayment": 1000000,
+      "onchain_rounding_known": false,
+      "principal": 1000000
+    },
+    {
+      "conservative_required_repayment": 1000000,
+      "fee_ceil": 0,
+      "fee_floor": 0,
+      "fee_sf": 0,
+      "floor_required_repayment": 1000000,
+      "onchain_rounding_known": false,
+      "principal": 1000000
+    },
+    {
+      "conservative_required_repayment": 2000000,
+      "fee_ceil": 1000000,
+      "fee_floor": 1000000,
+      "fee_sf": 1152921504606846976,
+      "floor_required_repayment": 2000000,
+      "onchain_rounding_known": false,
+      "principal": 1000000
+    }
+  ],
+  "lending_program_id": "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
+  "note": "generated flashBorrowReserveLiquidity/flashRepayReserveLiquidity modules are absent from the pinned kit; instruction bytes are never fabricated",
+  "reserve_fees_borsh_payload_hex": "0000000000000000e0930400000000000000000000000000",
+  "retarget_vector": {
+    "expected": 3,
+    "inserted_before": 2,
+    "original_index": 1
+  },
+  "schema": "r03.kamino.golden.v1",
+  "source_pin": {
+    "commit": "3c3a38d4ff9d7cf7b0380a383b81c9cd4f0f58b8",
+    "fraction_blob_sha1": "0020a1293fd0bced5987b2429a6b5ed8e2f693e8",
+    "repository": "https://github.com/Kamino-Finance/klend-sdk",
+    "reserve_fees_blob_sha1": "54358dac24be146a1f7b310d2851dd7b61d69789",
+    "sdk_version": "13.0.2"
+  }
+}

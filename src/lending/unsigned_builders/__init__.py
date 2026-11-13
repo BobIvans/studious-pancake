@@ -1,0 +1,66 @@
+"""R03 unsigned builder package: frozen conformance contract + provider builders.
+
+Sender-free, network-free.  ``build_status`` is never ``capacity_status``; an
+unsigned offline build is not a live-capital route.  See ``contract.py`` for the
+frozen R03-00 interface and per-provider modules for pinned SDK bindings.
+"""
+
+from src.lending.unsigned_builders.contract import (
+    RECEIPT_TYPE_UNKNOWN,
+    UNSIGNED_BUILDERS_CONTRACT_VERSION,
+    AccountMetaSpec,
+    BookendCertificate,
+    BookendKind,
+    BuildStatus,
+    BuilderSourcePin,
+    CapacityStatus,
+    ConformanceErrorCode,
+    ConformanceViolation,
+    FinalizedUnsignedSolanaPlan,
+    HotPotatoReceipt,
+    PtArgument,
+    PtBuildResult,
+    PtCommand,
+    SequenceItem,
+    UnsignedBorrowPlan,
+    UnsignedRepayPlan,
+    UnsignedSolanaBookend,
+    UnsignedBuilderError,
+    assert_no_execution_ready_capacity_member,
+    canonical_hash,
+    check_account_order,
+    check_bookend_sequence,
+    check_hot_potato_receipt,
+    check_ptb_package,
+    finalize_unsigned_solana_plan,
+)
+
+__all__ = [
+    "RECEIPT_TYPE_UNKNOWN",
+    "UNSIGNED_BUILDERS_CONTRACT_VERSION",
+    "AccountMetaSpec",
+    "BookendCertificate",
+    "BookendKind",
+    "BuildStatus",
+    "BuilderSourcePin",
+    "CapacityStatus",
+    "ConformanceErrorCode",
+    "ConformanceViolation",
+    "FinalizedUnsignedSolanaPlan",
+    "HotPotatoReceipt",
+    "PtArgument",
+    "PtBuildResult",
+    "PtCommand",
+    "SequenceItem",
+    "UnsignedBorrowPlan",
+    "UnsignedRepayPlan",
+    "UnsignedSolanaBookend",
+    "UnsignedBuilderError",
+    "assert_no_execution_ready_capacity_member",
+    "canonical_hash",
+    "check_account_order",
+    "check_bookend_sequence",
+    "check_hot_potato_receipt",
+    "check_ptb_package",
+    "finalize_unsigned_solana_plan",
+]

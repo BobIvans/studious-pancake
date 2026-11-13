@@ -1,0 +1,13 @@
+[
+ {
+  "chainId": "ethereum",
+  "pairAddress": "82ZjtKS4W1tZWR1nN4vZG3GLPWsw3cQH7SKF4XfJheYX",
+  "baseToken": {
+   "address": "So11111111111111111111111111111111111111112"
+  },
+  "quoteToken": {
+   "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  },
+  "dexId": "uniswap"
+ }
+]

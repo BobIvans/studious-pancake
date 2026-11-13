@@ -1,0 +1,65 @@
+{
+ "schema_version": "p01.intake-fixtures.v1",
+ "fixtures": {
+  "dexscreener_drift.json": {
+   "sha256": "986eafeb5084c3e19aaed9aa1521453e381962175dd4d7d8f15eccc670e4f97c",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "dexscreener_foreign_chain.json": {
+   "sha256": "607aa64341eb9353cd26ee99025ab04a5d289b79cfdf38a139568ebeb2fad5cc",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "dexscreener_positive.json": {
+   "sha256": "146fe657c73226b1d02c8b54815b0394e153c65d03875cf7030a4fd87ad8d08f",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "manifest_drift.json": {
+   "sha256": "1ab3c551d13aca87158920f86bdc02a7d7376086e1f25d8a72706f850ba4854b",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "manifest_positive.json": {
+   "sha256": "b62aa54894352a1437fa3d330e797073073df293b2dc6c8db12f9df0a0f80d61",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "meteora_drift.json": {
+   "sha256": "a70c5e28c0dc2d6856537392917b5a3cab4ae67f4780948ff96b142dcbc8aed2",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "meteora_positive.json": {
+   "sha256": "a2b6359565ce146956a9a97ac77d49ef1621fb37be1fa377e0125947409f0a72",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "raydium_429.json": {
+   "sha256": "1ac0e8094e36599acdaac7cf3712e17e6a0384a566764192ef73f071a956817c",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "raydium_empty_page.json": {
+   "sha256": "be63b36d7cd3aa1e6d7d4fa09927f21a245a11a4f98c51f3527bbd87656c34b6",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "raydium_positive_p1.json": {
+   "sha256": "e4d3195dc12473acf503265c0e8fa55bf2a8e04c001e6f6ee0daf2292bfc8d00",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "raydium_positive_p2.json": {
+   "sha256": "a735b99bb2754acba21382d68eb3d310677fdd2f4e381c6709b82d52f235d4b9",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  },
+  "raydium_schema_drift.json": {
+   "sha256": "b8a4e7500901d177e36a107ae358c205c6822b9298690305f929e828b63182fd",
+   "provenance": "SYNTHETIC_TEST rows shaped from the checked-in official contract extracts in docs/integrations/offline/solana-p0/SOLANA_DISCOVERY_SOURCES.md; no live provider response was captured or copied",
+   "evidence_kind": "SYNTHETIC_TEST"
+  }
+ }
+}

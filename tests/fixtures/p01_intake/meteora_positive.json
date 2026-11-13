@@ -1,0 +1,22 @@
+{
+ "data": [
+  {
+   "address": "9BBmKSMEZ5wQsxGQn9UBCvPJYDTMVh5DcNeQ3zRVQK2Y",
+   "token_x": {
+    "address": "So11111111111111111111111111111111111111112"
+   },
+   "token_y": {
+    "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+   }
+  },
+  {
+   "address": "9F74TjpF9PEe23WvDSo6VoA4nNfZAkm3AnK47NU69eMF",
+   "token_x": {
+    "address": "So11111111111111111111111111111111111111112"
+   },
+   "token_y": {
+    "address": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn"
+   }
+  }
+ ]
+}

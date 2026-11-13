@@ -1,0 +1,10 @@
+[
+ {
+  "chainId": "solana",
+  "pairAddress": "7xeSk1y3uibLNKmGvmbdyAVa9MfjNYiTZ2eb19chxKDp",
+  "quoteToken": {
+   "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  },
+  "dexId": "raydium"
+ }
+]

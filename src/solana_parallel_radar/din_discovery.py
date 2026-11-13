@@ -37,6 +37,11 @@ from src.research_economic_graph import (
     SolanaResearchAdapter,
 )
 from src.routing.transport import TransportPolicy
+from src.solana_parallel_radar.intake_cadence import (
+    CadencePolicy,
+    IntakeScheduler,
+    coverage_report,
+)
 from src.solana_parallel_radar.radar import BatchRadarAdapter, TargetedCatalogAdapter
 
 SOURCES = {
@@ -47,7 +52,7 @@ SOURCES = {
 }
 
 
-def reviewed_sources(mints, pins):
+def reviewed_sources(mints, pins, *, request_limit=1, campaign_attempt_cap=1):
     """Unavailable docs block the source; never synthesize a review or quota."""
     sources, blocked = [], []
     for source, operator in SOURCES.items():
@@ -82,9 +87,9 @@ def reviewed_sources(mints, pins):
             request.url,
             pin["url"],
             role="discovery",
-            request_limit=1,
+            request_limit=request_limit,
             window_seconds=60,
-            campaign_attempt_cap=1,
+            campaign_attempt_cap=campaign_attempt_cap,
             smoke_only=True,
             allowed_query_parameters=tuple(k for k, _ in request.params),
         )
@@ -104,10 +109,82 @@ def reviewed_sources(mints, pins):
     return tuple(sources), tuple(blocked)
 
 
-async def capture(root, output, *, mints, pins):
+def parse_cadence(config):
+    """Validate operator cadence configuration; unknown keys fail closed."""
+    if not isinstance(config, dict):
+        raise ValueError("cadence configuration object required")
+    allowed = {
+        "rounds",
+        "round_interval_ns",
+        "max_pages_per_round",
+        "backoff_multiplier",
+        "max_backoff_ns",
+        "retry_after_cap_ns",
+        "max_physical_requests",
+        "campaign_attempt_cap",
+        "request_limit",
+        "window_seconds",
+        "hot_pair_target",
+    }
+    if set(config) - allowed:
+        raise ValueError("unknown cadence configuration keys")
+    try:
+        policy = CadencePolicy(
+            round_interval_ns=config["round_interval_ns"],
+            max_pages_per_round=config.get("max_pages_per_round", 1),
+            backoff_multiplier=config.get("backoff_multiplier", 4),
+            max_backoff_ns=config.get("max_backoff_ns", 3_600_000_000_000),
+            retry_after_cap_ns=config.get("retry_after_cap_ns", 3_600_000_000_000),
+        )
+    except KeyError as exc:
+        raise ValueError("cadence configuration incomplete") from exc
+    rounds = config.get("rounds")
+    if type(rounds) is not int or not 1 <= rounds <= 64:
+        raise ValueError("cadence rounds outside 1..64")
+    budget = config.get("max_physical_requests")
+    if type(budget) is not int or budget <= 0:
+        raise ValueError("positive cadence request budget required")
+    attempt_cap = config.get("campaign_attempt_cap", budget)
+    if type(attempt_cap) is not int or attempt_cap <= 0:
+        raise ValueError("positive campaign attempt cap required")
+    request_limit = config.get("request_limit", 8)
+    window_seconds = config.get("window_seconds", 60)
+    if type(request_limit) is not int or request_limit <= 0:
+        raise ValueError("positive request limit required")
+    if type(window_seconds) is not int or window_seconds <= 0:
+        raise ValueError("positive window seconds required")
+    return {
+        "policy": policy,
+        "rounds": rounds,
+        "max_physical_requests": budget,
+        "campaign_attempt_cap": attempt_cap,
+        "request_limit": request_limit,
+        "window_seconds": window_seconds,
+        "hot_pair_target": config.get("hot_pair_target"),
+    }
+
+
+def _adapter_factory(source, mints):
+    """Page-aware adapter builders over the same reviewed request contracts."""
+    if source == "dexscreener":
+        return lambda page: BatchRadarAdapter(mints)
+    return lambda page: TargetedCatalogAdapter(
+        DiscoveryRequest(source, page=page), mints
+    )
+
+
+async def capture(root, output, *, mints, pins, cadence=None):
     if output.exists():
         raise ValueError("NEW_CAMPAIGN_OUTPUT_REQUIRED")
-    sources, blocked = reviewed_sources(mints, pins)
+    cadence_config = parse_cadence(cadence) if cadence is not None else None
+    sources, blocked = reviewed_sources(
+        mints,
+        pins,
+        request_limit=cadence_config["request_limit"] if cadence_config else 1,
+        campaign_attempt_cap=(
+            cadence_config["campaign_attempt_cap"] if cadence_config else 1
+        ),
+    )
     if not sources:
         raise ValueError("NO_CURRENT_REVIEWED_SOURCE")
     registry = AssetRegistry.load()
@@ -127,6 +204,7 @@ async def capture(root, output, *, mints, pins):
                 "blocked_sources": blocked,
                 "budget_class": "ENGINEERING_ONE_SHOT_NOT_PUBLISHED_ENTITLEMENT",
                 "max_response_bytes": 1_048_576,
+                **({"cadence": cadence} if cadence_config else {}),
             },
         },
         sources={
@@ -157,6 +235,7 @@ async def capture(root, output, *, mints, pins):
             store=authority,
         )
         receipts, records = [], []
+        round_receipts: list[dict] = []
         async with campaign_transport(
             {d.profile.hostname for d, _ in sources},
             policy=TransportPolicy(max_attempts=1),
@@ -170,12 +249,56 @@ async def capture(root, output, *, mints, pins):
                     {"kind": "source_dossier", "dossier": asdict(dossier)},
                     observed_at_ns=time.time_ns(),
                 )
-                gathered, receipt = await intake.collect(dossier, adapter)
-                records.extend(gathered)
-                receipts.append(
-                    {k: v for k, v in receipt.items() if k != "raw_payload"}
+            if cadence_config:
+                scheduler = IntakeScheduler(
+                    intake,
+                    {
+                        dossier.source_id: (
+                            dossier,
+                            _adapter_factory(dossier.source_id, tuple(mints)),
+                            cadence_config["policy"],
+                        )
+                        for dossier, _ in sources
+                    },
+                    clock_ns=time.time_ns,
+                    max_physical_requests=cadence_config["max_physical_requests"],
                 )
+                run = await scheduler.run_rounds(cadence_config["rounds"])
+                records = list(run.records)
+                receipts = run.observation_receipts
+                round_receipts = run.round_receipts
+            else:
+                for dossier, adapter in sources:
+                    gathered, receipt = await intake.collect(dossier, adapter)
+                    records.extend(gathered)
+                    receipts.append(
+                        {k: v for k, v in receipt.items() if k != "raw_payload"}
+                    )
         universe = deduplicate_candidates(records)
+        coverage = coverage_report(
+            hot_pair_target=(
+                cadence_config["hot_pair_target"] if cadence_config else None
+            ),
+            sources={
+                dossier.source_id: {
+                    "correlation_group": dossier.profile.correlation_group,
+                    "docs_pin_checked_at": dossier.checked_at,
+                }
+                for dossier, _ in sources
+            },
+            blocked_sources=blocked,
+            round_receipts=round_receipts,
+            candidate_receipts=len(records),
+            unique_identities=len(universe),
+            identity_verified_mints=0,
+            identity_unverified_mints=0,
+            blockers=[
+                "INDEPENDENT_ROOTED_RPC_PROFILES_REQUIRED",
+                "IDENTITY_DECIMALS_TOKEN_PROGRAM_PROOF_REQUIRED",
+                "DYNAMIC_UNIVERSE_EXACT_HANDOFF_NOT_ADMITTED",
+                "PUBLISHED_PROVIDER_ENTITLEMENTS_NOT_REVERIFIED",
+            ],
+        )
         graph = SolanaResearchAdapter(ResearchEconomicGraph(registry, seed)).ingest(
             evidence
         )
@@ -192,6 +315,8 @@ async def capture(root, output, *, mints, pins):
             "blocked_sources": blocked,
             "candidate_receipts": len(records),
             "deduplicated_candidates": len(universe),
+            "round_receipts": round_receipts,
+            "coverage": coverage,
             "graph_identity": graph.identity,
             "journal_head": evidence.head,
             "retained_evidence_sha256": hashlib.sha256(

@@ -1,0 +1,24 @@
+[
+ {
+  "chainId": "solana",
+  "pairAddress": "7porTR32j7zt69GG4AwoPQx3f3FL2RLpSDKGtPXWTeaQ",
+  "baseToken": {
+   "address": "So11111111111111111111111111111111111111112"
+  },
+  "quoteToken": {
+   "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  },
+  "dexId": "raydium"
+ },
+ {
+  "chainId": "solana",
+  "pairAddress": "7tj9biW3KRJ7EEWmVUGigHiouCTXhV2dzcyvwma7Cyu7",
+  "baseToken": {
+   "address": "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v"
+  },
+  "quoteToken": {
+   "address": "So11111111111111111111111111111111111111112"
+  },
+  "dexId": "raydium"
+ }
+]

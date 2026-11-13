@@ -10,7 +10,7 @@ from src.research_economic_graph import (
     ingest_solana_exact,
 )
 from src.research_economic_graph.graph import retained_records
-from .funnel import compare_quotes, normalize_jupiter
+from .funnel import compare_quotes, normalize_jupiter_v2
 from .probes import normalize_zero_x
 from src.qualification_campaign.sources import SourceReadRequest
 
@@ -81,7 +81,7 @@ def retained_quote(
             raw_evidence_ref=row["quote"]["raw_evidence_ref"],
         )
     else:
-        quote = normalize_jupiter(
+        quote = normalize_jupiter_v2(
             raw["raw_payload"],
             request=request,
             observed_at_ns=raw["observed_at_ns"],
@@ -180,7 +180,11 @@ async def qualify_exact_request(
             raise ValueError("RETAINED_QPR02_QUORUM_REQUIRED")
         verification_id = bundles[-1][0]
         state, _ = gate.verified_state(verification_id, pool_id)
-        if final.slot is None or abs(final.slot - state.slot) > 32:
+        # Pinned V2 /order responses carry no context slot. Alignment is only
+        # asserted when the provider actually returned one; a slot is never
+        # synthesized and quote comparability relies on the enforced freshness
+        # window plus this separately captured direct-state slot as evidence.
+        if final.slot is not None and abs(final.slot - state.slot) > 32:
             raise ValueError("FINAL_QUOTE_DIRECT_STATE_SLOT_ALIGNMENT_REQUIRED")
         relation = graph.relations[request.relation_id]
         receipts = gate.startup_receipts(
@@ -220,6 +224,15 @@ async def qualify_exact_request(
                 "receipt_refs": receipts,
                 "verification_id": verification_id,
                 "observation_id": observation.observation_id,
+                # The pinned V2/0x quote contracts provide no context slot:
+                # record both slots verbatim, unknown stays unknown.
+                "quote_slot": final.slot,
+                "direct_state_slot": state.slot,
+                "quote_slot_alignment": (
+                    "WITHIN_BOUND"
+                    if final.slot is not None and abs(final.slot - state.slot) <= 32
+                    else "UNKNOWN"
+                ),
                 "live_authorization": False,
                 "production_promotion": False,
             },

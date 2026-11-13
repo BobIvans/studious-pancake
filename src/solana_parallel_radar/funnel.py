@@ -50,12 +50,17 @@ class QuotePreview:
     route_mints: tuple[str, ...]
     direct: bool
     evidence_state: str = "DISCOVERY_ONLY"
+    # Explicit public-taker mode: None means quote-only. A taker is a public
+    # address, never a key; parity between compared quotes is enforced below.
+    taker: str | None = None
 
     def __post_init__(self):
         from src.config.chain_registry import validate_pubkey
 
         for mint in (self.input_mint, self.output_mint, *self.route_mints):
             validate_pubkey(mint)
+        if self.taker is not None:
+            validate_pubkey(self.taker)
         for n in (
             self.input_amount,
             self.output_amount,
@@ -83,7 +88,7 @@ class QuotePreview:
             raise ValueError("QUOTE_PREVIEW_IDENTITY_OR_AUTHORITY_INVALID")
 
 
-def normalize_jupiter(
+def normalize_jupiter_v2(
     payload,
     *,
     request,
@@ -93,7 +98,22 @@ def normalize_jupiter(
     correlation_group,
     raw_evidence_ref,
 ):
+    """Pinned Jupiter Swap API V2 ``GET /order`` parser.
+
+    Distinct from the legacy V1 parser: a V1 payload (which carries
+    ``contextSlot``) is rejected, never reinterpreted. The V2 order response
+    has no context slot, so the preview slot stays None by contract.
+    """
     params = dict(request.params)
+    if "contextSlot" in payload or "instructionVersion" in payload:
+        raise ValueError("JUPITER_V1_QUOTE_SCHEMA_REJECTED")
+    if payload.get("mode") is None or payload.get("router") not in (
+        "metis",
+        "jupiterz",
+        "dflow",
+        "okx",
+    ):
+        raise ValueError("JUPITER_V2_ORDER_RESPONSE_REQUIRED")
     if (
         payload.get("inputMint") != params["inputMint"]
         or payload.get("outputMint") != params["outputMint"]
@@ -101,6 +121,17 @@ def normalize_jupiter(
         or payload.get("swapMode") != "ExactIn"
     ):
         raise ValueError("QUOTE_REQUEST_RESPONSE_IDENTITY_MISMATCH")
+    if "slippageBps" in params and uint(payload.get("slippageBps")) != uint(
+        params["slippageBps"]
+    ):
+        raise ValueError("QUOTE_SLIPPAGE_ECHO_MISMATCH")
+    expected_taker = params.get("taker")
+    if (payload.get("taker") or None) != expected_taker:
+        raise ValueError("QUOTE_TAKER_ECHO_MISMATCH")
+    if payload.get("transaction") is not None:
+        # Quote-only capture returns a null transaction. A present transaction
+        # (or a build errorCode) is inert but not a comparable quote.
+        raise ValueError("JUPITER_V2_TRANSACTION_PRESENT")
     routes = payload.get("routePlan")
     if not isinstance(routes, list) or not 1 <= len(routes) <= 16:
         raise ValueError("BOUNDED_QUOTE_ROUTE_REQUIRED")
@@ -129,7 +160,7 @@ def normalize_jupiter(
         uint(payload["inAmount"]),
         uint(payload["outAmount"]),
         uint(payload["otherAmountThreshold"]),
-        uint(payload["contextSlot"]),
+        None,
         observed_at_ns,
         source_id,
         provider_generation,
@@ -137,6 +168,7 @@ def normalize_jupiter(
         raw_evidence_ref,
         mints,
         direct,
+        taker=expected_taker,
     )
 
 
@@ -147,6 +179,9 @@ def compare_quotes(a, b, *, now_ns, max_age_ns=45_000_000_000, max_slot_gap=32):
         b.input_amount,
     ):
         raise ValueError("QUOTE_UNITS_OR_REPRESENTATION_MISMATCH")
+    if a.taker != b.taker:
+        # Quote-only and taker-aware captures are not comparable modes.
+        raise ValueError("QUOTE_TAKER_PARITY_MISMATCH")
     if not 0 < max_age_ns <= 45_000_000_000 or not 0 <= max_slot_gap <= 32:
         raise ValueError("BOUNDED_QUOTE_FRESHNESS_REQUIRED")
     if any(not 0 <= now_ns - q.observed_at_ns <= max_age_ns for q in (a, b)):
@@ -164,6 +199,7 @@ def compare_quotes(a, b, *, now_ns, max_age_ns=45_000_000_000, max_slot_gap=32):
         // a.output_amount,
         "direct_vs_synthetic": a.direct != b.direct,
         "independent": a.correlation_group != b.correlation_group,
+        "taker_mode": "QUOTE_ONLY" if a.taker is None else "PUBLIC_TAKER_AWARE",
         "slot_alignment": (
             "UNKNOWN" if a.slot is None or b.slot is None else "WITHIN_BOUND"
         ),

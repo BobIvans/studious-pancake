@@ -110,3 +110,37 @@ Preserve broad asset and chain research even when capital coverage is narrower. 
 An implementation can be in main and offline-tested, implemented but unqualified, fixture-only, source-compatible but not bound to runtime, live-read proven, exact state proven, builder-conformant, simulation-passed, paper-qualified or blocked.
 
 Never collapse those into one "implemented" badge. A README, report, merged docs PR, unit test, SDK source pin, account presence or model-generated report is not a mainnet qualification receipt.
+
+
+
+## 10. Additional market-scale / shadow research owners (PR #559–#564)
+
+The project has a substantial shadow market-scale foundation beyond the original GPR modules. Audit these owners before designing another graph, stream journal, scheduler or market database:
+
+- src/strategy/arbitrage_graph.py and src/strategy/multihop_solver.py — bounded universal graph and multi-hop route candidate evaluation; PR #559 added bounded 3/4-hop shadow candidates. This is candidate topology, not an executable transaction.
+- src/strategy/market_graph_ingest.py, src/market/observations.py, src/market/streams.py, src/agg02/ — provenance-bearing market observations, stream/gap/replay and raw-journal owners.
+- src/market_data_evolution/ — source/episode/retention/replay/graph review contracts; reuse its point-in-time data and evidence lineage.
+- src/strategy/exact_cpmm_capacity.py, src/direct_venue/cpmm_math.py, src/providers/raydium_cpmm_native.py — exact CPMM math/state owners; PR #562 adds the existing exact-capacity bridge.
+- src/market/native_cpmm_capture.py and src/paper_shadow/native_cpmm_qualification.py — PR #564 read-only native capture and sender-free qualification. Historical live attempt returned transport error and zero native snapshots; do not treat the code path as currently live-qualified.
+- src/economics/split_flow.py, src/strategy/conflict_scheduler.py, src/strategy/shadow_workers.py, src/strategy/shadow_portfolio.py, src/research/pr356_allocation.py — existing split allocation, conflict scheduling, replay worker and joint portfolio owners. Read their current limitations before extension.
+- src/mechanism_discovery/ — claims, intent, research quality and causal/replay helpers. Statistical correlations and synthetic twins do not prove executable arbitrage.
+
+Reference: docs/web3-market-scale/IMPLEMENTATION_RU.md and docs/web3-market-scale/execution_matrix.json. The archive retains 170 design-input files and 189 acceptance cases. The implementation report explicitly says the entire archive is NOT complete/qualified; consult the current execution matrix and do not equate unit-test count with closure of all 189 cases.
+
+## 11. Multi-provider quote/build and rent planning knowledge
+
+- Existing design contracts: docs/roadmap/universal-source-execution-rnd-2026-10-07/EXECUTION_BUILDER_CONTRACT.md and IMPLEMENTATION_ROADMAP.md. These describe desired QuoteProvider, TransactionBuilder, ProviderCorrelation and UnsignedExecutionPlan behavior. Verify real code implementations and supported runtime reachability before marking them implemented.
+- Solana quote owner: src/solana_parallel_radar/probes.py and cli.py; P0-2 owns migration to current Jupiter V2 and 0x comparison. Add Titan/OpenOcean/OKX/Rango only as separate pinned providers after base pair is correct.
+- Sui provider/market owners: src/gpr_sui_shadow/, src/multichain/sui.py and exact venue owners; add Aftermath/Cetus/7K/FlowX/OKX/Rango/DeepBook one contract at a time with object/checkpoint provenance.
+- Slumlord instruction adapter: src/lending/slumlord.py implements sender-free Borrow/Repay/CheckRepaid preparation and order validation. It is rent-only support, not swap capital.
+- RentSponsorPlanner is currently documented in docs/roadmap/universal-source-execution-rnd-2026-10-07/RENT_SPONSOR_PLANNER.md. Do not infer a production planner class exists; implement through R-14 only after inspecting code/callsites and freezing R-03/R-13 unsigned-plan contracts.
+- Provider sponsor/payer (0x, Titan) and local persistent rent are separate modes with payer/co-sign/close-authority and refund semantics. Unknown account cost remains UNKNOWN.
+
+## 12. Current PR/CI notes at main audit 86be458a87ed3f499cc32ff56426b2866c90422a
+
+- PR #595 is merged and introduced the whole-project parallel plan, machine-readable 17-workstream status, owner map, GLM operating guide and R08–R12 task assignments.
+- PR #593 remains an open, unmerged P0-1 implementation branch based on the older 176f413 main; compare reported 4 commits ahead / 64 behind current main. Its CI Repository verification failed strict pip-audit with 68 findings across nine locked packages; inspect current branch checks and rebase before any merge.
+- PR #594 is stale/superseded by #595 plus the R-13/R-14 specialist tasks; do not merge its divergent branch.
+- PR #590 is closed unmerged; its refreshed P0 inventory/parallel plan were included by #595.
+- Current CI finding from #595 / #593: pip-audit fails on aiohttp, brotli, certifi, setuptools, black, msgpack, filelock, pillow and uv. R-12 owns remediation. Do not weaken audit.
+- Mainline status is not a live RPC or full local verifier run. Recheck current PRs, evidence, source pins and tests before every implementation branch.

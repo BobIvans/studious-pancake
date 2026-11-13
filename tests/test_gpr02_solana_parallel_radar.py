@@ -41,10 +41,12 @@ from src.solana_parallel_radar.funnel import (
     QuotePreview,
     compare_quotes,
     normalize_jupiter,
+    normalize_jupiter_v2,
     qualification_blockers,
 )
 from src.solana_parallel_radar.probes import (
     GovernedReadPlane,
+    NATIVE_SOL_SENTINEL,
     jupiter_request,
     normalized_reference,
     normalize_zero_x,
@@ -350,17 +352,34 @@ def test_manifest_book_depth_numeric_identity_fail_closed(fault):
         )
 
 
-def quote_payload(input_mint=address(1), output_mint=address(2)):
+def quote_payload(input_mint=address(1), output_mint=address(2), taker=None):
+    """Pinned Jupiter Swap API V2 GET /order response shape (offline lab)."""
     return {
+        "mode": "ultra",
         "inputMint": input_mint,
         "outputMint": output_mint,
         "inAmount": "1000",
         "outAmount": "1010",
         "otherAmountThreshold": "1000",
-        "contextSlot": 100,
         "swapMode": "ExactIn",
+        "slippageBps": 50,
+        "router": "metis",
+        "requestId": "lab-request-1",
+        "transaction": None,
+        "taker": taker,
         "routePlan": [
-            {"swapInfo": {"inputMint": input_mint, "outputMint": output_mint}}
+            {
+                "swapInfo": {
+                    "ammKey": address(4),
+                    "label": "lab-amm",
+                    "inputMint": input_mint,
+                    "outputMint": output_mint,
+                    "inAmount": "1000",
+                    "outAmount": "1010",
+                },
+                "percent": 100,
+                "bps": 10000,
+            }
         ],
     }
 
@@ -431,11 +450,104 @@ def test_zero_x_quote_reads_economic_fields_without_consuming_instruction_object
         contract=zc,
         raw_evidence_ref="raw",
     )
-    assert q.slot is None and q.output_amount == 1010
+    assert q.slot is None and q.output_amount == 1010 and q.taker is None
     assert (
         compare_quotes(q, replace(q, slot=100), now_ns=NOW)["slot_alignment"]
         == "UNKNOWN"
     )
+
+
+def v2_request():
+    return jupiter_request(address(1), address(2), 1000)
+
+
+def test_jupiter_v2_parser_accepts_pinned_order_shape_and_rejects_v1():
+    payload = quote_payload()
+    q = normalize_jupiter_v2(
+        payload,
+        request=v2_request(),
+        observed_at_ns=NOW,
+        source_id="gpr02-jupiter-reference",
+        provider_generation="a" * 64,
+        correlation_group="jupiter-metis-router",
+        raw_evidence_ref="raw",
+    )
+    assert q.slot is None and q.output_amount == 1010 and q.taker is None
+    assert q.direct and q.route_mints == (address(1), address(2))
+    # A V1 payload (contextSlot / instructionVersion) is never reinterpreted.
+    v1 = quote_payload()
+    v1["contextSlot"] = 100
+    with pytest.raises(ValueError, match="JUPITER_V1_QUOTE_SCHEMA"):
+        normalize_jupiter_v2(
+            v1,
+            request=v2_request(),
+            observed_at_ns=NOW,
+            source_id="gpr02-jupiter-reference",
+            provider_generation="a" * 64,
+            correlation_group="jupiter-metis-router",
+            raw_evidence_ref="raw",
+        )
+
+
+@pytest.mark.parametrize(
+    "mutate,reason",
+    [
+        (lambda p: p.pop("router"), "JUPITER_V2_ORDER_RESPONSE_REQUIRED"),
+        (lambda p: p.update(router="unknown"), "JUPITER_V2_ORDER_RESPONSE_REQUIRED"),
+        (lambda p: p.update(transaction="bW9jaw=="), "TRANSACTION_PRESENT"),
+        (lambda p: p.update(taker=address(9)), "TAKER_ECHO_MISMATCH"),
+        (lambda p: p.update(slippageBps=30), "SLIPPAGE_ECHO_MISMATCH"),
+        (lambda p: p.update(inAmount="1001"), "IDENTITY_MISMATCH"),
+        (
+            lambda p: p["routePlan"][0]["swapInfo"].update(outputMint=address(9)),
+            "ROUTE_ENDPOINTS_MISSING",
+        ),
+    ],
+)
+def test_jupiter_v2_parser_fault_matrix(mutate, reason):
+    payload = quote_payload()
+    mutate(payload)
+    with pytest.raises(ValueError, match=reason):
+        normalize_jupiter_v2(
+            payload,
+            request=v2_request(),
+            observed_at_ns=NOW,
+            source_id="gpr02-jupiter-reference",
+            provider_generation="a" * 64,
+            correlation_group="jupiter-metis-router",
+            raw_evidence_ref="raw",
+        )
+
+
+def test_jupiter_v2_taker_aware_mode_requires_full_echo_parity():
+    request = jupiter_request(address(1), address(2), 1000, taker=address(9))
+    payload = quote_payload(taker=address(9))
+    q = normalize_jupiter_v2(
+        payload,
+        request=request,
+        observed_at_ns=NOW,
+        source_id="gpr02-jupiter-reference",
+        provider_generation="a" * 64,
+        correlation_group="jupiter-metis-router",
+        raw_evidence_ref="raw",
+    )
+    assert q.taker == address(9)
+    other = replace(
+        q,
+        source_id="gpr02-0x-preview",
+        correlation_group="0x-solana-router",
+        raw_evidence_ref="raw2",
+    )
+    assert compare_quotes(q, other, now_ns=NOW)["taker_mode"] == "PUBLIC_TAKER_AWARE"
+    with pytest.raises(ValueError, match="TAKER_PARITY"):
+        compare_quotes(q, replace(other, taker=None), now_ns=NOW)
+
+
+def test_native_sol_sentinel_is_rejected_in_both_pinned_quote_contracts():
+    with pytest.raises(ValueError, match="NATIVE_SOL_SENTINEL"):
+        jupiter_request(NATIVE_SOL_SENTINEL, address(2), 1000)
+    with pytest.raises(ValueError, match="NATIVE_SOL_SENTINEL"):
+        jupiter_request(address(1), NATIVE_SOL_SENTINEL, 1000)
 
 
 @pytest.mark.parametrize(
@@ -853,7 +965,9 @@ def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
 
         def handler(req):
             if req.url.host == "api.jup.ag":
-                return httpx.Response(200, json=quote_payload(WSOL_MINT, address(3)))
+                return httpx.Response(
+                    200, json=quote_payload(WSOL_MINT, address(3), taker=address(25))
+                )
             body = json.loads(req.content)
             if req.url.host == "api.0x.org":
                 return httpx.Response(
@@ -945,8 +1059,8 @@ def test_actual_funnel_reconstructs_quotes_and_delegates_existing_exact_owners(
                 ),
                 body,
             ),
-            (jc, jupiter_request(WSOL_MINT, address(3), 1000), None),
-            (jc, jupiter_request(WSOL_MINT, address(3), 1000), None),
+            (jc, jupiter_request(WSOL_MINT, address(3), 1000, taker=address(25)), None),
+            (jc, jupiter_request(WSOL_MINT, address(3), 1000, taker=address(25)), None),
         ):
             raw, e = await plane.collect(
                 c, req, credential="TEST-ONLY-SECRET", json_body=request_body

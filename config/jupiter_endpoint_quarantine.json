@@ -62,26 +62,27 @@
   "read_only_research_references": [
     {
       "build": false,
-      "endpoint": "https://api.jup.ag/swap/v1/quote",
+      "endpoint": "https://api.jup.ag/swap/v2/order",
       "method": "GET",
       "path": "src/solana_parallel_radar/cli.py",
       "production_promotion": false,
       "purpose": "GPR-02_DISCOVERY_ONLY_QUOTE_REFERENCE",
-      "sha256": "f699fba361e97ef3d8afe8585d02711eea1f0fcf5c9afc68de6b35947dcc3df3",
+      "sha256": "a66c87bf52a605d98b4887f6ab4d89e4904e3a02a5563b776d1ab267597d64c4",
       "signer": false,
       "submission": false
     },
     {
       "build": false,
-      "endpoint": "https://api.jup.ag/swap/v1/quote",
+      "endpoint": "https://api.jup.ag/swap/v2/order",
       "method": "GET",
       "path": "src/solana_parallel_radar/probes.py",
       "production_promotion": false,
       "purpose": "GPR-02_DISCOVERY_ONLY_QUOTE_REFERENCE",
-      "sha256": "c7262a811a6c86838e7ea5098a41523b788f4cfeec6ed2ff248cc01ea2eeff0e",
+      "sha256": "1d583f2eb44dd7f99d02366c2ee8193692392b2d7ec9d6e25bd0992a34ccc3a9",
       "signer": false,
       "submission": false
     }
   ],
-  "schema_version": "mpr-next-08.jupiter-endpoint-quarantine.v1"
+  "schema_version": "mpr-next-08.jupiter-endpoint-quarantine.v1",
+  "review_note": "P0-2 migration: research quote reference moved from Jupiter V1 /swap/v1/quote to the pinned V2 GET /swap/v2/order contract (jup-ag/docs@d40d9369). Production active contract is unchanged (/swap/v2/build)."
 }

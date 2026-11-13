@@ -10,7 +10,7 @@ from src.research_economic_graph import (
     ingest_solana_exact,
 )
 from src.research_economic_graph.graph import retained_records
-from .funnel import compare_quotes, normalize_jupiter
+from .funnel import compare_quotes, normalize_jupiter_v2
 from .probes import normalize_zero_x
 from src.qualification_campaign.sources import SourceReadRequest
 
@@ -81,7 +81,7 @@ def retained_quote(
             raw_evidence_ref=row["quote"]["raw_evidence_ref"],
         )
     else:
-        quote = normalize_jupiter(
+        quote = normalize_jupiter_v2(
             raw["raw_payload"],
             request=request,
             observed_at_ns=raw["observed_at_ns"],

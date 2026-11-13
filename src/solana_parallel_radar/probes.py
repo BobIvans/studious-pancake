@@ -21,11 +21,15 @@ from src.qualification_campaign.evidence import redact_payload
 from src.qualification_campaign.profiles import ProviderProfile
 from src.qualification_campaign.sources import SourceReadRequest
 from src.routing.transport import SanitizedTransportError
-from .funnel import QuotePreview, normalize_jupiter, uint
+from .funnel import QuotePreview, normalize_jupiter_v2, uint
 
 _active_reference_read: ContextVar[dict | None] = ContextVar(
     "gpr02_active_reference_read", default=None
 )
+
+# The system-program sentinel is not a token mint; both pinned quote contracts
+# bind canonical SPL/Token-2022 mints and the registry's WSOL mint for SOL.
+NATIVE_SOL_SENTINEL = "11111111111111111111111111111111"
 
 
 @dataclass(frozen=True)
@@ -139,6 +143,8 @@ class GovernedReadPlane:
             ):
                 raise ValueError("0X_BOUNDED_REFERENCE_REQUEST_REQUIRED")
             for k in ("token_in", "token_out", "taker"):
+                if json_body[k] == NATIVE_SOL_SENTINEL:
+                    raise ValueError("NATIVE_SOL_SENTINEL_REJECTED")
                 validate_pubkey(json_body[k])
             uint(json_body["amount_in"])
         fingerprint = digest(
@@ -274,22 +280,35 @@ class GovernedReadPlane:
         return ref, envelope
 
 
-def jupiter_request(input_mint, output_mint, amount, *, direct=False, sanctum=False):
+def jupiter_request(input_mint, output_mint, amount, *, taker=None):
+    """Pinned Jupiter Swap API V2 ``GET /order`` request.
+
+    Quote-only unless an explicit public taker is supplied (required by 0x and
+    used for taker-aware comparisons). V1-only parameters
+    (``restrictIntermediateTokens``, ``onlyDirectRoutes``, ``dexes``,
+    ``instructionVersion``) do not exist in the pinned V2 contract and are
+    deliberately not sent.
+    """
+    from src.config.chain_registry import validate_pubkey
+
+    if input_mint == NATIVE_SOL_SENTINEL or output_mint == NATIVE_SOL_SENTINEL:
+        # Native SOL is not a token mint; quotes bind the registry's WSOL mint.
+        raise ValueError("NATIVE_SOL_SENTINEL_REJECTED")
+    validate_pubkey(input_mint)
+    validate_pubkey(output_mint)
+    if taker is not None:
+        validate_pubkey(taker)
     params = {
         "inputMint": input_mint,
         "outputMint": output_mint,
         "amount": str(uint(amount)),
-        "slippageBps": "50",
         "swapMode": "ExactIn",
-        "restrictIntermediateTokens": "true",
-        "instructionVersion": "V2",
+        "slippageBps": "50",
     }
-    if direct:
-        params["onlyDirectRoutes"] = "true"
-    if sanctum:
-        params["dexes"] = "Sanctum,Sanctum Infinity"
+    if taker is not None:
+        params["taker"] = taker
     return SourceReadRequest(
-        "https://api.jup.ag/swap/v1/quote",
+        "https://api.jup.ag/swap/v2/order",
         tuple(sorted(params.items())),
         (("Accept", "application/json"),),
     )
@@ -320,7 +339,56 @@ def normalize_zero_x(payload, *, body, observed_at_ns, contract, raw_evidence_re
             {r["token_in"], r["token_out"]} == {body["token_in"], body["token_out"]}
             for r in routes
         ),
+        taker=body.get("taker"),
     )
+
+
+def _jupiter_v2_quote_metadata(payload):
+    """Aggregator route/fee metadata retained next to the normalized quote."""
+    routes = payload.get("routePlan") or []
+    legs = tuple(
+        {
+            "amm_key": step["swapInfo"]["ammKey"],
+            "label": step["swapInfo"]["label"],
+            "input_mint": step["swapInfo"]["inputMint"],
+            "output_mint": step["swapInfo"]["outputMint"],
+            "in_amount": step["swapInfo"]["inAmount"],
+            "out_amount": step["swapInfo"]["outAmount"],
+        }
+        for step in routes
+    )
+    return {
+        "api": "swap-v2-order",
+        "router": payload.get("router"),
+        "mode": payload.get("mode"),
+        "request_id": payload.get("requestId"),
+        "quote_id": payload.get("quoteId"),
+        "expire_at": payload.get("expireAt"),
+        "fee_bps": payload.get("feeBps"),
+        "fee_mint": payload.get("feeMint"),
+        "platform_fee": payload.get("platformFee"),
+        "gasless": payload.get("gasless"),
+        "route_legs": legs,
+        "slot": None,
+    }
+
+
+def _zero_x_quote_metadata(payload):
+    routes = payload.get("route_plan") or []
+    return {
+        "api": "solana-swap-instructions",
+        "route_legs": tuple(
+            {
+                "token_in": r["token_in"],
+                "token_out": r["token_out"],
+                "dex_label": r.get("dex_label"),
+                "dex_program_id": r.get("dex_program_id"),
+            }
+            for r in routes
+        ),
+        "slot": None,
+        "zid": payload.get("zid"),
+    }
 
 
 def normalized_reference(evidence, contract, request, ref, envelope, *, body=None):
@@ -340,8 +408,9 @@ def normalized_reference(evidence, contract, request, ref, envelope, *, body=Non
                 contract=contract,
                 raw_evidence_ref=ref,
             )
+            metadata = _zero_x_quote_metadata(envelope["raw_payload"])
         else:
-            quote = normalize_jupiter(
+            quote = normalize_jupiter_v2(
                 envelope["raw_payload"],
                 request=request,
                 observed_at_ns=envelope["observed_at_ns"],
@@ -350,12 +419,14 @@ def normalized_reference(evidence, contract, request, ref, envelope, *, body=Non
                 correlation_group=contract.profile.correlation_group,
                 raw_evidence_ref=ref,
             )
+            metadata = _jupiter_v2_quote_metadata(envelope["raw_payload"])
         evidence.append(
             "gpr02-quote",
             {
                 "kind": "gpr02_quote_preview",
                 "quote": asdict(quote),
                 "quote_hash": digest(asdict(quote)),
+                "quote_metadata": metadata,
             },
             observed_at_ns=evidence.wall_ns(),
         )

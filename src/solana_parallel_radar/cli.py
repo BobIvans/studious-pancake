@@ -145,24 +145,22 @@ def source_configuration(registry, contracts, *, checked_at=None):
 
 def read_contracts(contracts):
     pins = contracts["pins"]
+    # Pinned Jupiter Swap API V2 GET /order parameters (quote-only capture).
     params = (
         "inputMint",
         "outputMint",
         "amount",
-        "slippageBps",
         "swapMode",
-        "restrictIntermediateTokens",
-        "instructionVersion",
-        "onlyDirectRoutes",
-        "dexes",
+        "slippageBps",
+        "taker",
     )
     j = ProviderProfile(
         "gpr02-jupiter-provider",
         "jupiter",
         "jupiter",
         "jupiter-metis-router",
-        "https://api.jup.ag/swap/v1/quote",
-        "https://dev.jup.ag/api-reference/swap/quote",
+        "https://api.jup.ag/swap/v2/order",
+        "https://developers.jup.ag/docs/swap/index.md",
         credential_ref="JUPITER_API_KEY",
         role="discovery",
         request_limit=4,
@@ -185,8 +183,8 @@ def read_contracts(contracts):
         "gpr02-jupiter-reference",
         j,
         pins["jupiter"]["git_sha"],
-        pins["jupiter"]["files"]["swap/v1/get-quote.mdx"],
-        pins["jupiter"]["files"]["openapi-spec/swap/v1/swap.yaml"],
+        pins["jupiter"]["files"]["JUPITER_SWAP_V2.md"],
+        pins["jupiter"]["files"]["JUPITER_SWAP_V2.openapi.yaml"],
         auth_header="x-api-key",
     )
     zc = ReadContract(
@@ -769,19 +767,27 @@ async def capture(
             )
             zero_quote = normalized_reference(evidence, zc, request, r, e, body=body)
         quotes = []
-        for direct in (False, True):
-            request = jupiter_request(
-                a.canonical_identifier, b.canonical_identifier, 1_000_000, direct=direct
-            )
-            r, e = await plane.collect(
-                jc, request, credential=os.environ.get("JUPITER_API_KEY")
-            )
-            q = normalized_reference(evidence, jc, request, r, e)
-            if q:
-                quotes.append(q)
+        # V2 has no direct-routes/dexes filters: one quote-only request per
+        # pair. When a public taker is configured for 0x, a matching
+        # taker-aware Jupiter quote is captured for same-mode comparison.
+        request = jupiter_request(
+            a.canonical_identifier,
+            b.canonical_identifier,
+            1_000_000,
+            taker=zero_x_taker,
+        )
+        r, e = await plane.collect(
+            jc, request, credential=os.environ.get("JUPITER_API_KEY")
+        )
+        q = normalized_reference(evidence, jc, request, r, e)
+        if q:
+            quotes.append(q)
         # A fresh final diagnostic quote has its own physical read and provenance.
         request = jupiter_request(
-            a.canonical_identifier, b.canonical_identifier, 1_000_000
+            a.canonical_identifier,
+            b.canonical_identifier,
+            1_000_000,
+            taker=zero_x_taker,
         )
         r, e = await plane.collect(
             jc, request, credential=os.environ.get("JUPITER_API_KEY")
@@ -804,16 +810,6 @@ async def capture(
                         },
                         observed_at_ns=time.time_ns(),
                     )
-        if a.asset_key in ("BNSOL", "bbSOL", "hSOL", "dSOL"):
-            request = jupiter_request(
-                a.canonical_identifier, b.canonical_identifier, 1_000_000, sanctum=True
-            )
-            r, e = await plane.collect(
-                jc, request, credential=os.environ.get("JUPITER_API_KEY")
-            )
-            q = normalized_reference(evidence, jc, request, r, e)
-            if q:
-                quotes.append(q)
         credential_headers = {}
         for p in rpcs:
             if p.auth_header:

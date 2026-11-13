@@ -21,13 +21,13 @@
       "live_provider_schema_verified": false
     },
     "jupiter": {
-      "git_sha": "d1fa5774b5d93ec5ebc7f462063d786d8c17cf64",
+      "git_sha": "d40d936979af3ec75a12a053e3fbeb1f75eb31ce",
       "files": {
-        "openapi-spec/swap/v1/swap.yaml": "68d6f2d3dc21ad06d0cb1cecfa4ca3bb5a33dec5352b5047a3db951231dffdcc",
-        "swap/v1/get-quote.mdx": "fbf8716d8850463dcefa17089886c3598b2fcf3dbe637ec2ae81d09bd7bf19b2",
-        "perps/pool-account.mdx": "a04fedca03a9567373637b4a93e9c91814bbc825e4ee13eeba48ec4c72341774"
+        "JUPITER_SWAP_V2.openapi.yaml": "919a7c91d8d06df16c1504a6ceb71c8bfa0679ad7b5f269507f3fd6fb1414099",
+        "JUPITER_SWAP_V2.md": "bbf96fe67cdc432cb4164f7000c98e6d3f6850480e8077902ba225b462a99a37"
       },
-      "retrieval": "existing-verified-HTTPS-Git-proxy",
+      "local_mirror_dir": "docs/integrations/offline/solana-p0",
+      "retrieval": "checked-in-offline-dossiers-2026-11-13 (upstream jup-ag/docs@d40d9369 blob c8bad7a7dc9ff60149b55c20e46d7d57e75e2dd8, verified by verify_offline_bundle.py)",
       "live_provider_schema_verified": false
     },
     "sanctum-list": {

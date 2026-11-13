@@ -35,12 +35,12 @@ EXPECTED_METHOD: Final = "GET"
 EXPECTED_PATH: Final = "/swap/v2/build"
 EXPECTED_ADAPTER: Final = "src.providers.jupiter.router.JupiterRouterAdapter"
 EXPECTED_PRODUCT_PATHS: Final = frozenset({"/price/v3", EXPECTED_PATH})
-RESEARCH_REFERENCE_URL: Final = "https://api.jup.ag/swap/v1/quote"
+RESEARCH_REFERENCE_URL: Final = "https://api.jup.ag/swap/v2/order"
 RESEARCH_REFERENCE_FILES: Final = {
     "src/solana_parallel_radar/probes.py": (RESEARCH_REFERENCE_URL,),
     "src/solana_parallel_radar/cli.py": (
         RESEARCH_REFERENCE_URL,
-        "openapi-spec/swap/v1/swap.yaml",
+        "JUPITER_SWAP_V2.openapi.yaml",
     ),
 }
 EXPECTED_FORBIDDEN_MARKERS: Final = frozenset(

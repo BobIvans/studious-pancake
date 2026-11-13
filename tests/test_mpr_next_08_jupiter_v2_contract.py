@@ -277,14 +277,14 @@ def _review_research_references(root: Path) -> None:
     for relative in paths:
         path = root / relative
         if not path.exists():
-            _write(path, "REFERENCE = 'https://api.jup.ag/swap/v1/quote'\n")
+            _write(path, "REFERENCE = 'https://api.jup.ag/swap/v2/order'\n")
         entries.append(
             {
                 "path": relative,
                 "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                 "purpose": "GPR-02_DISCOVERY_ONLY_QUOTE_REFERENCE",
                 "method": "GET",
-                "endpoint": "https://api.jup.ag/swap/v1/quote",
+                "endpoint": "https://api.jup.ag/swap/v2/order",
                 "build": False,
                 "signer": False,
                 "submission": False,

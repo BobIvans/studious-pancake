@@ -31,6 +31,7 @@ K. Sui/TON/EVM venue and capital research dossiers.
 L. CEX/oracle/reference data source dossier + bounded feed design.
 M. Platform/WSL/Windows/CI/replay reliability.
 N. Supported runtime boot-path integration audit/design.
+O. Dependency vulnerability and lockfile supply-chain remediation (R12); verify exact advisory fixes and Python 3.13 compatibility.
 
 Do not wait for one lane to finish before launching unrelated lanes. For dependencies, allow research, source verification, interface proposals and offline fixtures to proceed; gate only changes that require a shared interface or proof from another task.
 

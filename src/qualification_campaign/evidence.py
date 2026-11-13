@@ -15,7 +15,13 @@ from dataclasses import asdict
 try:
     import fcntl
 except ImportError:  # win32: emulate the flock operations used below.
+    # getattr access keeps mypy silent on Linux, where the msvcrt stub is
+    # empty, without platform-conditional ignores (attrs exist on win32).
     import msvcrt
+
+    _LOCKING = getattr(msvcrt, "locking")
+    _LK_UNLCK = getattr(msvcrt, "LK_UNLCK")
+    _LK_NBLCK = getattr(msvcrt, "LK_NBLCK")
 
     class _PosixFlockShim:
         """``fcntl.flock``-compatible whole-file advisory lock for Windows.
@@ -53,19 +59,19 @@ except ImportError:  # win32: emulate the flock operations used below.
             previous = os.lseek(handle, 0, os.SEEK_CUR)
             try:
                 os.lseek(handle, 0, os.SEEK_SET)
-                msvcrt.locking(handle, mode, self._RANGE_LENGTH)
+                _LOCKING(handle, mode, self._RANGE_LENGTH)
             finally:
                 os.lseek(handle, previous, os.SEEK_SET)
 
         def flock(self, fd, operation):
             handle = self._fileno(fd)
             if operation & self.LOCK_UN:
-                self._locked_range_call(handle, msvcrt.LK_UNLCK)
+                self._locked_range_call(handle, _LK_UNLCK)
                 return
             nonblocking = bool(operation & self.LOCK_NB)
             if nonblocking:
                 try:
-                    self._locked_range_call(handle, msvcrt.LK_NBLCK)
+                    self._locked_range_call(handle, _LK_NBLCK)
                 except OSError as error:
                     raise BlockingIOError(
                         errno.EAGAIN, "resource temporarily unavailable"
@@ -73,12 +79,12 @@ except ImportError:  # win32: emulate the flock operations used below.
                 return
             while True:
                 try:
-                    self._locked_range_call(handle, msvcrt.LK_NBLCK)
+                    self._locked_range_call(handle, _LK_NBLCK)
                     return
                 except OSError:
                     time.sleep(0.002)
 
-    fcntl = _PosixFlockShim()
+    fcntl = _PosixFlockShim()  # type: ignore[assignment]  # shim replaces the module on win32
 
 from src.market.streams import RawStreamEvent, RecoverableStreamJournal
 from .identity import CampaignManifest, canonical_bytes, digest

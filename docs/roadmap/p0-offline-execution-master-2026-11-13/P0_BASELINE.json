@@ -2,7 +2,7 @@
   "schema_version": "studious-pancake.p0-baseline.v1",
   "created_at_utc": "2026-11-13",
   "repository": "BobIvans/studious-pancake",
-  "main_sha": "176f41378645f6f3b3fd95a59617633b5808acb4",
+  "main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a",
   "preparation_sha_recorded_in_dossier": "64a11d33f46291504847cb1bdfd6cdc3dcff5da9",
   "working_tree": "not_applicable_github_api_audit_only; local agent must verify its own clean worktree",
   "branch": "main",
@@ -47,8 +47,29 @@
     }
   },
   "pr_reconciliation": {
-    "note": "Refreshed after documentation merges #586, #591 and #592. Current main contains the offline capital SDK kit and full agent handoff. This JSON preserves the P0 code inventory from the prior audit; runtime/source statuses must be rechecked against the current fetched main before implementation.",
+    "note": "Refreshed against main@86be458a87ed3f499cc32ff56426b2866c90422a after #595 merged. This is still a GitHub metadata/source-owner audit only; local working tree, offline verifier and full test suite must be checked by the execution agent. Historical offline bundle and Windows test receipts below remain historical, not newly executed.",
     "open_prs_inspected": [
+      {
+        "number": 567,
+        "title": "GPR master handoff",
+        "state": "open_historical_docs_only",
+        "classification": "INSPECT_FOR_UNIQUE_EVIDENCE_ONLY",
+        "workstream": "historical"
+      },
+      {
+        "number": 578,
+        "title": "RCN-00 QPR/GPR reconciliation R&D",
+        "state": "open_historical_docs_only",
+        "classification": "INSPECT_FOR_UNIQUE_EVIDENCE_ONLY",
+        "workstream": "historical"
+      },
+      {
+        "number": 583,
+        "title": "Older R-01/R-02 broad offline dossier",
+        "state": "closed_not_merged",
+        "classification": "UNIQUE_OFFLINE_DOSSIER_RESTORED_TO_MAIN_BY_PR_591_592",
+        "workstream": "flash-capital"
+      },
       {
         "number": 584,
         "title": "R-01 verification without remerging legacy branches",
@@ -85,6 +106,13 @@
         "workstream": "Solana market-data"
       },
       {
+        "number": 590,
+        "title": "P0-0 baseline/reconciliation",
+        "state": "closed_unmerged",
+        "classification": "SUPERSEDED_BY_PR_595_CURRENT_PARALLEL_MASTER; do_not_merge_stale_branch",
+        "workstream": "P0 baseline"
+      },
+      {
         "number": 591,
         "title": "Unified offline-first coding-agent handoff",
         "state": "merged",
@@ -99,36 +127,30 @@
         "workstream": "whole-project orchestration"
       },
       {
-        "number": 583,
-        "title": "Older R-01/R-02 broad offline dossier",
-        "state": "closed_not_merged_superseded_by_591",
-        "classification": "UNIQUE_DOCUMENTATION_RESTORED_TO_MAIN",
-        "workstream": "flash-capital"
+        "number": 593,
+        "title": "P0-1 safe Solana indexed intake -> Dynamic Universe",
+        "state": "open_not_merged",
+        "classification": "IMPLEMENTATION_REVIEW_REQUIRED; old base 176f413; compare 4 ahead / 64 behind current main; CI strict pip-audit failure; refresh before merge",
+        "workstream": "P0-1"
       },
       {
-        "number": 590,
-        "title": "P0-0 baseline/reconciliation",
-        "state": "open_stale_docs_only",
-        "classification": "SUPERSEDED_BY_CURRENT_PARALLEL_MASTER; do not merge stale branch",
-        "workstream": "P0 baseline"
+        "number": 594,
+        "title": "Parallel master execution mandate",
+        "state": "open_stale_superseded",
+        "classification": "SUPERSEDED_BY_PR_595_AND_R13_R14_TASKS; do_not_merge_stale_branch",
+        "workstream": "whole-project orchestration"
       },
       {
-        "number": 578,
-        "title": "RCN-00 QPR/GPR reconciliation R&D",
-        "state": "open_historical_docs_only",
-        "classification": "INSPECT_FOR_UNIQUE_EVIDENCE_ONLY",
-        "workstream": "historical"
-      },
-      {
-        "number": 567,
-        "title": "GPR master handoff",
-        "state": "open_historical_docs_only",
-        "classification": "INSPECT_FOR_UNIQUE_EVIDENCE_ONLY",
-        "workstream": "historical"
+        "number": 595,
+        "title": "Whole-project parallel execution handoff",
+        "state": "merged",
+        "classification": "CURRENT_PARALLEL_MASTER; includes R08-R12",
+        "workstream": "whole-project orchestration"
       }
     ],
     "duplicate_plan": "No parallel resolver, market graph, quote schema, journal, financing graph, amount solver, transaction kernel, or lifecycle authority. Existing canonical owners in current main remain authoritative. Independent tasks use separate branches/worktrees; overlapping owner changes require a shared contract decision and one integration owner.",
-    "old_branch_policy": "R-01 complete; do not remerge legacy GPR/QPR/UXE branches or cherry-pick historical commits."
+    "old_branch_policy": "R-01 complete; do not remerge legacy GPR/QPR/UXE branches or cherry-pick historical commits.",
+    "current_main_sha": "86be458a87ed3f499cc32ff56426b2866c90422a"
   },
   "test_baseline": {
     "environment": "Windows 11 native, CPython 3.13.15, project .venv (pytest 9.0.3 / pytest-socket 0.7.0 / pytest-asyncio 1.3.0 / hypothesis 6.138.15 installed from pinned dev extras)",
@@ -521,6 +543,22 @@
       "R07 provider implementation/promotion",
       "supported composition-root wiring"
     ],
-    "rule": "Parallelize independent work and research immediately; serialize shared-file integration, authority changes and promotion gates."
+    "rule": "Parallelize independent work and research immediately; serialize shared-file integration, authority changes and promotion gates.",
+    "additional_assignments": [
+      "R13 multi-provider quote/build race (Solana + Sui)",
+      "R14 RentSponsorPlanner / provider sponsor / Slumlord ephemeral rent"
+    ],
+    "master_document": "docs/roadmap/agent-execution-master-2026-11-13/MULTI_AGENT_EXECUTION_PLAN.md",
+    "task_index": "docs/roadmap/agent-execution-master-2026-11-13/TASK_INDEX.md",
+    "current_workstream_count": 19
+  },
+  "refreshed_at_utc": "2026-11-13",
+  "latest_ci_snapshot": {
+    "checked_at_utc": "2026-11-13",
+    "source": "GitHub Actions workflow logs for PR #595 and PR #593",
+    "repository_verification": "FAILED_STRICT_PIP_AUDIT",
+    "pip_audit_summary": "68 advisories across 9 pinned packages: aiohttp, brotli, certifi, setuptools, black, msgpack, filelock, pillow, uv",
+    "other_observed_jobs": "release authority, read-only qualification campaign, secret scan, wheel/console smoke and non-root runtime image smoke succeeded on the inspected runs",
+    "scope_note": "Historical CI output, refresh after rebasing #593 or dependency remediation. Do not weaken --strict."
   }
 }

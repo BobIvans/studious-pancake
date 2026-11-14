@@ -382,3 +382,21 @@ To inspect locally:
 python -c "import gzip,pathlib; p=pathlib.Path('docs/strategy-expansion/2026-11-14/BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_CANDIDATES_2026-10-06.json.gz'); pathlib.Path(str(p)[:-3]).write_bytes(gzip.decompress(p.read_bytes()))"
 \`\`\`
 The resulting JSON is a historical seed list, not an authoritative registry. Re-resolve all canonical mints/types, current market/pool/book identity, state, exact quotes and capacity before promotion. Historical HOT/WARM/RSRCH/EVENT labels are not current heat scores.
+
+
+
+## 21. Broad arbitrage strategy and data-source integration map
+
+The broad strategy atlas is now paired with an explicit data-source map. Read these canonical addenda:
+- ARBITRAGE_MAP_STRATEGY_AND_DATA_SOURCE_ATLAS_RU.md
+- ARBITRAGE_DATA_SOURCE_CATALOG_V1.json
+- ARBITRAGE_MAP_DATA_SOURCE_ASSIGNMENTS_RU.md
+- CODEX_ARBITRAGE_MAP_START_HERE.md
+
+They map the existing 25 STRAT families, 33 direct venues, 17 flash funding candidates, 19 route templates, 64 V3 anomaly IDs, 25 V4 detectors, 36 V6 route hypotheses and 12 conditional hyperedges to source roles and integration requirements. DS-00…DS-11 extends the same work already assigned under P0/GPR/DV/R02/R03/R13/R10/SX/EXP/W6.
+
+The data layers are deliberately separate: raw chain intake, protocol decoder, direct pool/book state, aggregator quote/build, lending capacity, oracle reference, CEX/perps market data, indexer/analytics, bridge/claim status and market-episode outcomes. A quote router is not an independent pool; a CEX quote is not on-chain settlement; a bridge is not same-transaction liquidity; an oracle is not tradable depth.
+
+**Current external-source caveats:** BIP-928 moved most Balancer pools to withdrawals-only on 2026-10-30, with only explicit partner-requested V3 exceptions potentially active until 2026-11-30. DefiLlama's free yield pool/chart endpoints ended on 2026-11-13. CoinGecko public rate limits are low and GeckoTerminal higher-rate DEX data now requires Pro. Sui mainnet JSON-RPC is disabled; use gRPC/GraphQL/checkpoints. Refresh these conditions before adapter work.
+
+The goal is maximum research breadth and correct source wiring, not a ticker-only list. Every strategy must traverse the current canonical AssetResolver/DynamicUniverse → graph/relation → exact state/quote → financing/capital → unsigned builder → PR118/cost reconciliation → R04/R05 → paper/replay owners. SIGNAL_ONLY and HEDGED_NON_ATOMIC lanes remain useful but must not be mislabelled as flashloan-circular.

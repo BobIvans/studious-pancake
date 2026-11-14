@@ -44,3 +44,16 @@ R10 inventory/replay explicitly states that it made no `src/` strategy-owner cha
 ## How to use
 
 Place this directory in the repository as-is. Agents should start from `CODEX_STRATEGY_EXPANSION_START_HERE.md`, read the source files above, refresh all statuses against current main and active PRs, then execute independent work packages in parallel only where ownership/dependencies permit. The pack must remain an additive overlay: the active market-integration assignment is owned by its existing agents.
+
+
+
+## Arbitrage Strategy + Data Source Map (2026-11-14)
+
+The strategy pack now includes a dedicated broad arbitrage map and integration programme:
+
+- ARBITRAGE_MAP_STRATEGY_AND_DATA_SOURCE_ATLAS_RU.md — all opportunity families and execution/atomicity classes, chain/source architecture, strategy-to-data dependencies, and current API/protocol lifecycle caveats.
+- ARBITRAGE_DATA_SOURCE_CATALOG_V1.json — machine-readable catalogue with 50 source rows, 25 archived STRAT families, 33 direct venues, 17 funding candidates, 10 EXP extensions and DS-00…DS-11 integration tasks.
+- ARBITRAGE_MAP_DATA_SOURCE_ASSIGNMENTS_RU.md — concrete source integration tasks from raw chain intake to per-strategy wire-up and replay.
+- CODEX_ARBITRAGE_MAP_START_HERE.md — copy-ready lead-agent trigger for wiring this map into the existing bot.
+
+This addendum extends MASTER/GPR/DV/R/F/F6/SX/EXP/W6 and does not replace them. It deliberately distinguishes active same-chain atomic candidates from conditional claims/redemptions, external signals and hedged inventory strategies. It also records the Balancer BIP-928 withdrawals-only status, DefiLlama free-yield endpoint change on 2026-11-13, CoinGecko/GeckoTerminal quotas and the Sui mainnet JSON-RPC shutdown.

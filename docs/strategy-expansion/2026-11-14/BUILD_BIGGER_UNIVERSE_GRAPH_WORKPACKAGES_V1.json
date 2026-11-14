@@ -1601,7 +1601,7 @@
     "open_prs": [
       649,
       655,
-      656
+      657
     ],
     "note": "SX-17 archive taxonomy is merged (#654); SX-18 runtime fanout and W6-12 participant intelligence are new current-repo gaps. Original 40 historical work packages and V1/V3/V4/V6 counts are preserved."
   },

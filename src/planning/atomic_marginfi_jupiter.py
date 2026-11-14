@@ -4,6 +4,33 @@ The planner is intentionally sender-free.  It accepts only two canonical Jupiter
 instruction bundles, a verified MarginFi provider port, and capital reservation
 evidence.  The output is one typed ``TransactionPlan`` for the canonical v0
 compiler.  No signing, simulation result, permit, or submission is created here.
+
+R-14 Kamino wiring (additive): the planner also accepts one optional
+``KaminoFinancingPlanReference`` — a pair of ALREADY-BUILT unsigned Kamino flash
+borrow/repay plans from ``src.lending.unsigned_builders.kamino_builder``
+(pinned ``@kamino-finance/klend-sdk`` ABI).  Per the R-14 assignment rule these
+plans are integrated as metadata/unsigned instruction references inside the
+existing plan structure only:
+
+- the exact builder bytes are carried verbatim into the plan (no re-encoding,
+  no discriminator/amount recomputation, no account creation, no composer, no
+  execution path);
+- ``build_status`` (``BUILT_OFFLINE_UNQUALIFIED``) and ``capacity_status``
+  (``NOT_EVALUATED``) are carried as separate typed fields and are fail-closed:
+  any capacity claim attached to the reference or either plan is rejected with
+  ``R03_BUILD_CAPACITY_ADMIXTURE``;
+- the repay ``u8`` ``borrowInstructionIndex`` is verified at FINAL ordering via
+  ``retarget_borrow_index`` and must equal the final absolute borrow index —
+  mismatch fails closed (mirroring the builder's own
+  ``assemble_kamino_flash_message`` check); the planner never re-encodes.
+
+There is no provider dispatch registry in the frozen financing contract modules
+(``src/lending/financing.py`` / ``src/lending/agg03_financing_ports.py`` expose
+no additive registration point), so per the R-14 rule the Kamino wiring is
+registered HERE: the plans are consumed as direct typed references from
+``src.lending.unsigned_builders.kamino_builder`` and remain reachable for an
+R-13 ``BuildHandoff`` (winner-only, parity-checked) via
+``AtomicPlannerResult.kamino_financing``.
 """
 
 from __future__ import annotations
@@ -15,7 +42,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Callable, Mapping, Protocol, Sequence
 
-from solders.instruction import Instruction
+from solders.instruction import AccountMeta, Instruction
 from solders.pubkey import Pubkey
 
 from src.execution.models import (
@@ -24,6 +51,26 @@ from src.execution.models import (
     PlannedInstruction,
     TipPolicy,
     TransactionPlan,
+)
+from src.lending.unsigned_builders.contract import (
+    BuildStatus,
+    CapacityStatus,
+    ConformanceErrorCode,
+    UnsignedBorrowPlan,
+    UnsignedRepayPlan,
+    UnsignedSolanaBookend,
+    UnsignedBuilderError,
+)
+from src.lending.unsigned_builders.kamino_builder import (
+    KAMINO_BUILDER_CHAIN,
+    KAMINO_BUILDER_PROVIDER,
+    KAMINO_BUILDER_SOURCE_PIN,
+    KAMINO_FLASH_BORROW_DISCRIMINATOR,
+    KAMINO_FLASH_BORROW_DISCRIMINATOR_HEX,
+    KAMINO_FLASH_REPAY_DISCRIMINATOR,
+    KAMINO_FLASH_REPAY_DISCRIMINATOR_HEX,
+    KAMINO_KLEND_PROGRAM_ID,
+    retarget_borrow_index,
 )
 from src.providers.jupiter.router import (
     JupiterInstructionBundle,
@@ -48,6 +95,16 @@ from src.planning.instruction_firewall import (
 
 PLANNER_VERSION = "pr034.atomic-marginfi-jupiter.v1"
 
+#: Pinned Kamino flash data layouts, mirrored from
+#: ``src/lending/unsigned_builders/kamino_builder.py`` (klend-sdk@13.0.2):
+#: borrow = discriminator(8) + u64 liquidityAmount LE (16 bytes); repay =
+#: discriminator(8) + u64 liquidityAmount LE + u8 borrowInstructionIndex
+#: (17 bytes; the u8 sits at offset 16).  Used only to VERIFY the carried
+#: builder bytes — the planner never re-encodes them.
+_KAMINO_FLASH_BORROW_DATA_SIZE = 16
+_KAMINO_FLASH_REPAY_DATA_SIZE = 17
+_KAMINO_REPAY_EMBEDDED_BORROW_INDEX_OFFSET = 16
+
 
 class AtomicPlannerRejectionCode(str, Enum):
     INVALID_REQUEST = "PR034_INVALID_REQUEST"
@@ -64,6 +121,7 @@ class AtomicPlannerRejectionCode(str, Enum):
     UNEXPECTED_SIGNER = "PR034_UNEXPECTED_SIGNER"
     ALT_PROVENANCE_MISMATCH = "PR034_ALT_PROVENANCE_MISMATCH"
     MARGINFI_PROVIDER_REJECTED = "PR034_MARGINFI_PROVIDER_REJECTED"
+    KAMINO_FINANCING_REJECTED = "PR034_KAMINO_FINANCING_REJECTED"
     SEQUENCE_INVARIANT = "PR034_SEQUENCE_INVARIANT"
     INSTRUCTION_LIMIT = "PR034_INSTRUCTION_LIMIT"
 
@@ -182,6 +240,248 @@ class AtomicPlannerPolicy:
 
 
 @dataclass(frozen=True, slots=True)
+class KaminoFinancingPlanReference:
+    """R-14: unsigned Kamino flash plans as planner instruction references.
+
+    Carries one already-built ``UnsignedBorrowPlan`` / ``UnsignedRepayPlan``
+    pair from ``src.lending.unsigned_builders.kamino_builder`` (pinned
+    ``@kamino-finance/klend-sdk`` ABI) into the atomic planner as EXACT-BYTES
+    metadata references.  Fail-closed at construction:
+
+    - build status and capacity status are separate typed fields; only
+      ``BUILT_OFFLINE_UNQUALIFIED`` plans with ``NOT_EVALUATED`` capacity may
+      be referenced — any capacity claim is rejected with
+      ``R03_BUILD_CAPACITY_ADMIXTURE`` (no fake PASS, build != capacity);
+    - provider/chain parity against the pinned Kamino builder identity
+      (wrong chain or foreign provider is rejected);
+    - both plans must bind the pinned ``KAMINO_BUILDER_SOURCE_PIN`` digest
+      (a foreign or missing pin is rejected with ``R03_SOURCE_PIN_UNVERIFIED``);
+    - the bookend bytes must be the pinned Kamino flash ABI (foreign program
+      bytes or foreign discriminators are rejected); the repay plan must bind
+      the exact borrow bookend bytes;
+    - the repay data must match the pinned 17-byte layout and its embedded
+      ``u8`` ``borrowInstructionIndex`` must be retargetable to the final
+      planner ordering (never backwards).
+
+    No account is created, nothing is signed or sent, and no transaction
+    composer is introduced here: the reference is verified bytes plus typed
+    status, reachable via ``AtomicPlannerResult.kamino_financing`` for an
+    R-13 ``BuildHandoff``.
+    """
+
+    borrow_plan: UnsignedBorrowPlan
+    repay_plan: UnsignedRepayPlan
+    build_status: BuildStatus
+    capacity_status: CapacityStatus
+    original_borrow_index: int
+
+    def __post_init__(self) -> None:
+        if not isinstance(self.build_status, BuildStatus) or not isinstance(
+            self.capacity_status, CapacityStatus
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "build_status and capacity_status must be the frozen R-03 "
+                "contract enums",
+                details={"reason": "status_fields_must_be_typed_contract_enums"},
+            )
+        if (
+            type(self.original_borrow_index) is not int
+            or self.original_borrow_index < 0
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "original_borrow_index must be the non-negative build-time "
+                "borrow index the repay plan was retargeted from",
+                details={"reason": "original_borrow_index_invalid"},
+            )
+        # Build/capacity separation: strict, no fake PASS, no capacity claim.
+        if self.capacity_status is not CapacityStatus.NOT_EVALUATED:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "a Kamino financing reference must not carry capacity claims; "
+                "capacity is owned by the independent R-02 gate",
+                details={
+                    "r03_code": ConformanceErrorCode.BUILD_CAPACITY_ADMIXTURE.value,
+                    "reason": "capacity_claim_attached_to_reference",
+                    "capacity_status": self.capacity_status.value,
+                },
+            )
+        if self.build_status is not BuildStatus.BUILT_OFFLINE_UNQUALIFIED:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "only BUILT_OFFLINE_UNQUALIFIED Kamino plans may be referenced; "
+                "a blocked build carries no instructions to wire",
+                details={
+                    "reason": "reference_requires_built_offline_unqualified_plan",
+                    "build_status": self.build_status.value,
+                },
+            )
+        if (
+            self.borrow_plan.build_status is not self.build_status
+            or self.repay_plan.build_status is not self.build_status
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "declared build_status does not match the plans' actual build "
+                "status (no fake PASS)",
+                details={
+                    "r03_code": ConformanceErrorCode.BUILD_CAPACITY_ADMIXTURE.value,
+                    "reason": "declared_build_status_mismatch",
+                },
+            )
+        if (
+            self.borrow_plan.capacity_status is not CapacityStatus.NOT_EVALUATED
+            or self.repay_plan.capacity_status is not CapacityStatus.NOT_EVALUATED
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "a referenced Kamino plan must not carry capacity claims; "
+                "capacity is owned by the independent R-02 gate",
+                details={
+                    "r03_code": ConformanceErrorCode.BUILD_CAPACITY_ADMIXTURE.value,
+                    "reason": "capacity_claim_attached_to_plan",
+                },
+            )
+        # Provider / chain / source-pin parity.
+        if (
+            self.borrow_plan.provider != KAMINO_BUILDER_PROVIDER
+            or self.repay_plan.provider != KAMINO_BUILDER_PROVIDER
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "Kamino financing reference plans belong to another provider",
+                details={"reason": "provider_mismatch"},
+            )
+        if (
+            self.borrow_plan.chain != KAMINO_BUILDER_CHAIN
+            or self.repay_plan.chain != KAMINO_BUILDER_CHAIN
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "Kamino financing reference plans carry the wrong chain",
+                details={
+                    "reason": "chain_mismatch",
+                    "expected": KAMINO_BUILDER_CHAIN,
+                    "borrow_chain": self.borrow_plan.chain,
+                    "repay_chain": self.repay_plan.chain,
+                },
+            )
+        for label, plan in (("borrow", self.borrow_plan), ("repay", self.repay_plan)):
+            if plan.source_pin.digest != KAMINO_BUILDER_SOURCE_PIN.digest:
+                raise AtomicPlannerError(
+                    AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                    "Kamino financing reference plans must bind the pinned "
+                    "KAMINO_BUILDER_SOURCE_PIN identity",
+                    details={
+                        "r03_code": ConformanceErrorCode.SOURCE_PIN_UNVERIFIED.value,
+                        "reason": "source_pin_missing_or_foreign",
+                        "plan": label,
+                    },
+                )
+        # Built plans carry exact, unblocked bookends.
+        if self.borrow_plan.blockers or self.repay_plan.blockers:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "a referenced Kamino plan must not carry blockers",
+                details={"reason": "blocked_plan_cannot_be_referenced"},
+            )
+        if (
+            self.borrow_plan.bookend is None
+            or self.repay_plan.bookend is None
+            or self.repay_plan.borrow_bookend is None
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "a built Kamino financing reference must carry its borrow and "
+                "repay bookend bytes",
+                details={"reason": "built_reference_requires_bookends"},
+            )
+        # Exact pinned bytes (foreign builder bytes are rejected).
+        borrow_bookend = self.borrow_plan.bookend
+        repay_bookend = self.repay_plan.bookend
+        if (
+            borrow_bookend.program_id != KAMINO_KLEND_PROGRAM_ID
+            or repay_bookend.program_id != KAMINO_KLEND_PROGRAM_ID
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "Kamino financing bookends target a foreign program",
+                details={
+                    "r03_code": ConformanceErrorCode.PROGRAM_ID_MISMATCH.value,
+                    "reason": "foreign_program_bytes",
+                },
+            )
+        if (
+            borrow_bookend.discriminator_hex != KAMINO_FLASH_BORROW_DISCRIMINATOR_HEX
+            or repay_bookend.discriminator_hex != KAMINO_FLASH_REPAY_DISCRIMINATOR_HEX
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "Kamino financing bookend bytes were not built by the pinned "
+                "Kamino flash builder",
+                details={
+                    "r03_code": ConformanceErrorCode.BUILD_CAPACITY_ADMIXTURE.value,
+                    "reason": "foreign_builder_bytes",
+                },
+            )
+        if self.repay_plan.borrow_bookend != borrow_bookend:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "repay plan is not bound to the exact borrow bookend bytes",
+                details={
+                    "r03_code": ConformanceErrorCode.PROGRAM_ID_MISMATCH.value,
+                    "reason": "repay_not_bound_to_borrow_bytes",
+                },
+            )
+        borrow_raw = bytes.fromhex(borrow_bookend.data_hex)
+        if (
+            len(borrow_raw) != _KAMINO_FLASH_BORROW_DATA_SIZE
+            or not borrow_raw.startswith(KAMINO_FLASH_BORROW_DISCRIMINATOR)
+            or borrow_bookend.amount_base_units is None
+            or borrow_raw[8:] != borrow_bookend.amount_base_units.to_bytes(8, "little")
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "borrow bookend data does not match the pinned flash-borrow " "layout",
+                details={
+                    "r03_code": ConformanceErrorCode.INVALID_INPUT.value,
+                    "reason": "borrow_data_layout_mismatch",
+                },
+            )
+        repay_raw = bytes.fromhex(repay_bookend.data_hex)
+        if (
+            len(repay_raw) != _KAMINO_FLASH_REPAY_DATA_SIZE
+            or not repay_raw.startswith(KAMINO_FLASH_REPAY_DISCRIMINATOR)
+            or repay_bookend.amount_base_units is None
+            or repay_raw[8:16] != repay_bookend.amount_base_units.to_bytes(8, "little")
+            or borrow_bookend.amount_base_units != repay_bookend.amount_base_units
+        ):
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "repay bookend data does not match the pinned flash-repay "
+                "layout or its amount differs from the borrow",
+                details={
+                    "r03_code": ConformanceErrorCode.AMOUNT_MISMATCH.value,
+                    "reason": "repay_data_layout_or_amount_mismatch",
+                },
+            )
+        embedded_index = repay_raw[_KAMINO_REPAY_EMBEDDED_BORROW_INDEX_OFFSET]
+        if embedded_index < self.original_borrow_index:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "repay borrowInstructionIndex cannot retarget backwards from "
+                "the declared build-time borrow index",
+                details={
+                    "r03_code": ConformanceErrorCode.INVALID_INPUT.value,
+                    "reason": "borrow_index_retarget_backwards",
+                    "original_borrow_index": self.original_borrow_index,
+                    "embedded_index": embedded_index,
+                },
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class AtomicPlannerRequest:
     opportunity_id: str
     payer: Pubkey
@@ -202,6 +502,7 @@ class AtomicPlannerRequest:
     rent_financing_snapshot: FinancingPlannerSnapshot | None = None
     rent_borrow_amount: int = 0
     provider_account_snapshot_hash: str | None = None
+    kamino_financing: KaminoFinancingPlanReference | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -237,6 +538,7 @@ class AtomicPlannerProvenance:
         tuple[str, str, int, str, int, int], ...
     ] = ()
     provider_account_snapshot_hash: str | None = None
+    kamino_financing_fingerprint: str | None = None
 
     @property
     def digest(self) -> str:
@@ -270,6 +572,7 @@ class AtomicPlannerProvenance:
             "auxiliary_financing_identities": self.auxiliary_financing_identities,
             "auxiliary_financing_obligations": self.auxiliary_financing_obligations,
             "provider_account_snapshot_hash": self.provider_account_snapshot_hash,
+            "kamino_financing_fingerprint": self.kamino_financing_fingerprint,
         }
         return _sha256_json(payload)
 
@@ -284,6 +587,9 @@ class AtomicPlannerResult:
     flash_start_index: int
     flash_end_index: int
     cleanup_count: int
+    kamino_financing: KaminoFinancingPlanReference | None = None
+    kamino_borrow_final_index: int | None = None
+    kamino_repay_final_index: int | None = None
 
 
 class AtomicMarginfiJupiterPlanner:
@@ -401,9 +707,27 @@ class AtomicMarginfiJupiterPlanner:
             if ix is not None
         )
 
+        # R-14: Kamino unsigned plans are wired as EXACT-BYTES instruction
+        # references around the existing immutable order — borrow after the
+        # Jupiter setup prefix (before the primary financing bracket), repay
+        # at the final position.  No composer, no account creation: the
+        # bookend bytes are carried verbatim.
+        kamino_reference = request.kamino_financing
+        kamino_borrow_instruction: Instruction | None = None
+        kamino_repay_instruction: Instruction | None = None
+        if kamino_reference is not None:
+            borrow_bookend = kamino_reference.borrow_plan.bookend
+            repay_bookend = kamino_reference.repay_plan.bookend
+            # The reference constructor guarantees built bookends; the asserts
+            # are for type narrowing only.
+            assert borrow_bookend is not None and repay_bookend is not None
+            kamino_borrow_instruction = _kamino_bookend_instruction(borrow_bookend)
+            kamino_repay_instruction = _kamino_bookend_instruction(repay_bookend)
+
         immutable_sequence = (
             *((rent_prepared.borrow_instruction,) if rent_prepared else ()),
             *pre_flash_setup,
+            *((kamino_borrow_instruction,) if kamino_borrow_instruction else ()),
             prepared.borrow_instruction,
             *leg_a_other,
             leg_a_swap,
@@ -412,6 +736,7 @@ class AtomicMarginfiJupiterPlanner:
             prepared.repay_instruction,
             *cleanup,
             *(rent_prepared.repay_instructions if rent_prepared else ()),
+            *((kamino_repay_instruction,) if kamino_repay_instruction else ()),
         )
 
         try:
@@ -457,8 +782,19 @@ class AtomicMarginfiJupiterPlanner:
             leg_b_swap=leg_b_swap,
             cleanup=cleanup,
             rent_prepared=rent_prepared,
+            kamino_borrow_instruction=kamino_borrow_instruction,
+            kamino_repay_instruction=kamino_repay_instruction,
         )
         self._validate_final_instructions(final_instructions, request.payer)
+        kamino_borrow_final_index: int | None = None
+        kamino_repay_final_index: int | None = None
+        if kamino_reference is not None:
+            kamino_borrow_final_index, kamino_repay_final_index = (
+                self._verify_kamino_final_ordering(
+                    kamino_reference,
+                    final_instructions,
+                )
+            )
         if request.marginfi_source_vectors is not None:
             if not isinstance(self._marginfi, MarginfiFlashLoanProvider):
                 raise AtomicPlannerError(
@@ -503,6 +839,8 @@ class AtomicMarginfiJupiterPlanner:
             leg_b_swap=leg_b_swap,
             cleanup=cleanup,
             rent_prepared=rent_prepared,
+            kamino_borrow_instruction=kamino_borrow_instruction,
+            kamino_repay_instruction=kamino_repay_instruction,
         )
 
         provider_snapshot = self._provider_snapshot(request)
@@ -622,6 +960,11 @@ class AtomicMarginfiJupiterPlanner:
                 else ()
             ),
             provider_account_snapshot_hash=request.provider_account_snapshot_hash,
+            kamino_financing_fingerprint=(
+                None
+                if kamino_reference is None
+                else _kamino_reference_fingerprint(kamino_reference)
+            ),
             auxiliary_financing_obligations=(
                 (
                     (
@@ -646,6 +989,9 @@ class AtomicMarginfiJupiterPlanner:
             flash_start_index=int(finalized.start_index),
             flash_end_index=int(finalized.end_index),
             cleanup_count=len(cleanup),
+            kamino_financing=kamino_reference,
+            kamino_borrow_final_index=kamino_borrow_final_index,
+            kamino_repay_final_index=kamino_repay_final_index,
         )
 
     def _provider_snapshot(self, request: AtomicPlannerRequest) -> Any:
@@ -867,16 +1213,23 @@ class AtomicMarginfiJupiterPlanner:
         leg_b_swap: Instruction,
         cleanup: tuple[Instruction, ...],
         rent_prepared: PreparedAuxiliaryFinancingLoan | None,
+        kamino_borrow_instruction: Instruction | None,
+        kamino_repay_instruction: Instruction | None,
     ) -> None:
         final = tuple(finalized.instructions)
         start_index = int(finalized.start_index)
         end_index = int(finalized.end_index)
+        kamino_prefix = (
+            (kamino_borrow_instruction,) if kamino_borrow_instruction else ()
+        )
+        kamino_suffix = (kamino_repay_instruction,) if kamino_repay_instruction else ()
         if not getattr(self._marginfi, "uses_flashloan_bookends", True):
             rent_prefix = (rent_prepared.borrow_instruction,) if rent_prepared else ()
             rent_suffix = rent_prepared.repay_instructions if rent_prepared else ()
             expected = (
                 *rent_prefix,
                 *pre_flash_setup,
+                *kamino_prefix,
                 prepared.borrow_instruction,
                 *leg_a_other,
                 leg_a_swap,
@@ -885,9 +1238,14 @@ class AtomicMarginfiJupiterPlanner:
                 prepared.repay_instruction,
                 *cleanup,
                 *rent_suffix,
+                *kamino_suffix,
             )
-            expected_start = len(rent_prefix) + len(pre_flash_setup)
-            expected_end = len(expected) - len(rent_suffix) - len(cleanup) - 1
+            expected_start = (
+                len(rent_prefix) + len(pre_flash_setup) + len(kamino_prefix)
+            )
+            expected_end = (
+                len(expected) - len(rent_suffix) - len(kamino_suffix) - len(cleanup) - 1
+            )
             if (
                 final != expected
                 or start_index != expected_start
@@ -904,7 +1262,7 @@ class AtomicMarginfiJupiterPlanner:
                 )
             return
         if (
-            start_index != len(pre_flash_setup)
+            start_index != len(pre_flash_setup) + len(kamino_prefix)
             or end_index != len(final) - 1
             or start_index < 0
             or start_index + 1 >= len(final)
@@ -917,6 +1275,7 @@ class AtomicMarginfiJupiterPlanner:
         end_instruction = final[end_index]
         expected = (
             *pre_flash_setup,
+            *kamino_prefix,
             start_instruction,
             prepared.borrow_instruction,
             *leg_a_other,
@@ -925,6 +1284,7 @@ class AtomicMarginfiJupiterPlanner:
             leg_b_swap,
             prepared.repay_instruction,
             *cleanup,
+            *kamino_suffix,
             end_instruction,
         )
         if final != expected:
@@ -1078,10 +1438,16 @@ class AtomicMarginfiJupiterPlanner:
         leg_b_swap: Instruction,
         cleanup: tuple[Instruction, ...],
         rent_prepared: PreparedAuxiliaryFinancingLoan | None,
+        kamino_borrow_instruction: Instruction | None,
+        kamino_repay_instruction: Instruction | None,
     ) -> tuple[PlannedInstruction, ...]:
         final = tuple(finalized.instructions)
         start_index = int(finalized.start_index)
         end_index = int(finalized.end_index)
+        kamino_prefix = (
+            (kamino_borrow_instruction,) if kamino_borrow_instruction else ()
+        )
+        kamino_suffix = (kamino_repay_instruction,) if kamino_repay_instruction else ()
         specs: list[tuple[Instruction, str, str]] = []
         if not getattr(self._marginfi, "uses_flashloan_bookends", True):
             if rent_prepared is not None:
@@ -1095,6 +1461,10 @@ class AtomicMarginfiJupiterPlanner:
             specs.extend(
                 (instruction, "jupiter_setup", f"setup_{index}")
                 for index, instruction in enumerate(pre_flash_setup)
+            )
+            specs.extend(
+                (instruction, "financing_kamino_borrow", "kamino_flash_borrow")
+                for instruction in kamino_prefix
             )
             specs.append(
                 (
@@ -1135,6 +1505,10 @@ class AtomicMarginfiJupiterPlanner:
                         rent_prepared.repay_instructions
                     )
                 )
+            specs.extend(
+                (instruction, "financing_kamino_repay", "kamino_flash_repay")
+                for instruction in kamino_suffix
+            )
             if tuple(instruction for instruction, _, _ in specs) != final:
                 raise AtomicPlannerError(
                     AtomicPlannerRejectionCode.SEQUENCE_INVARIANT,
@@ -1147,6 +1521,10 @@ class AtomicMarginfiJupiterPlanner:
         specs.extend(
             (instruction, "jupiter_setup", f"setup_{index}")
             for index, instruction in enumerate(pre_flash_setup)
+        )
+        specs.extend(
+            (instruction, "financing_kamino_borrow", "kamino_flash_borrow")
+            for instruction in kamino_prefix
         )
         specs.append((final[start_index], "marginfi_start", "marginfi_start_flashloan"))
         specs.append(
@@ -1177,6 +1555,10 @@ class AtomicMarginfiJupiterPlanner:
             (instruction, "jupiter_cleanup", f"cleanup_{index}")
             for index, instruction in enumerate(cleanup)
         )
+        specs.extend(
+            (instruction, "financing_kamino_repay", "kamino_flash_repay")
+            for instruction in kamino_suffix
+        )
         specs.append((final[end_index], "marginfi_end", "marginfi_end_flashloan"))
         if tuple(instruction for instruction, _, _ in specs) != final:
             raise AtomicPlannerError(
@@ -1188,11 +1570,157 @@ class AtomicMarginfiJupiterPlanner:
             for instruction, role, name in specs
         )
 
+    def _verify_kamino_final_ordering(
+        self,
+        reference: KaminoFinancingPlanReference,
+        final_instructions: tuple[Instruction, ...],
+    ) -> tuple[int, int]:
+        """Verify the Kamino references inside the FINAL ordering, fail-closed.
+
+        Mirrors the builder's own ``assemble_kamino_flash_message`` check: the
+        repay data's embedded ``u8`` ``borrowInstructionIndex`` must equal the
+        absolute borrow index in the final compiled order, retargeted via
+        ``retarget_borrow_index`` from the declared build-time index.  The
+        planner never re-encodes: a stale or shifted index is a typed
+        rejection (the offline caller must rebuild the repay plan against the
+        final ordering, exactly as the pinned builder requires).
+        """
+        assert reference.borrow_plan.bookend is not None
+        assert reference.repay_plan.bookend is not None
+        borrow_instruction = _kamino_bookend_instruction(reference.borrow_plan.bookend)
+        repay_instruction = _kamino_bookend_instruction(reference.repay_plan.bookend)
+        borrow_positions = [
+            index
+            for index, instruction in enumerate(final_instructions)
+            if instruction == borrow_instruction
+        ]
+        repay_positions = [
+            index
+            for index, instruction in enumerate(final_instructions)
+            if instruction == repay_instruction
+        ]
+        if len(borrow_positions) != 1:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "Kamino flash borrow reference is missing from or duplicated "
+                "in the final ordering",
+                details={
+                    "r03_code": (
+                        ConformanceErrorCode.DUPLICATE_BOOKEND.value
+                        if len(borrow_positions) > 1
+                        else ConformanceErrorCode.BOOKEND_MISSING.value
+                    ),
+                    "reason": "kamino_borrow_bookend_not_unique",
+                },
+            )
+        if len(repay_positions) != 1:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "Kamino flash repay reference is missing from or duplicated in "
+                "the final ordering",
+                details={
+                    "r03_code": (
+                        ConformanceErrorCode.DUPLICATE_BOOKEND.value
+                        if len(repay_positions) > 1
+                        else ConformanceErrorCode.BOOKEND_MISSING.value
+                    ),
+                    "reason": "kamino_repay_bookend_not_unique",
+                },
+            )
+        borrow_index = borrow_positions[0]
+        repay_index = repay_positions[0]
+        if borrow_index >= repay_index:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "Kamino flash borrow reference must strictly precede its repay "
+                "reference",
+                details={
+                    "r03_code": ConformanceErrorCode.BOOKEND_ORDER_INVALID.value,
+                    "reason": "kamino_bookend_order_invalid",
+                },
+            )
+        repay_raw = bytes.fromhex(reference.repay_plan.bookend.data_hex)
+        embedded_index = repay_raw[_KAMINO_REPAY_EMBEDDED_BORROW_INDEX_OFFSET]
+        try:
+            expected_index = retarget_borrow_index(
+                reference.original_borrow_index,
+                borrow_index - reference.original_borrow_index,
+            )
+        except UnsignedBuilderError as exc:
+            violation = exc.violations[0]
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "Kamino borrow index could not be retargeted to the final " "ordering",
+                details={
+                    "r03_code": violation.code.value,
+                    "reason": "borrow_index_retarget_failed",
+                    "original_borrow_index": reference.original_borrow_index,
+                    "final_borrow_index": borrow_index,
+                },
+            ) from exc
+        # expected_index is the final absolute borrow index (original index
+        # plus the measured ordering shift); the embedded repay u8 must carry
+        # exactly that value — the planner never re-encodes the repay bytes.
+        if embedded_index != expected_index:
+            raise AtomicPlannerError(
+                AtomicPlannerRejectionCode.KAMINO_FINANCING_REJECTED,
+                "repay borrowInstructionIndex "
+                f"{embedded_index} does not match the final absolute borrow "
+                f"index {expected_index}; re-resolve the index after any "
+                "ordering shift",
+                details={
+                    "r03_code": ConformanceErrorCode.INVALID_INPUT.value,
+                    "reason": "repay_index_mismatch_after_retarget",
+                    "embedded_index": embedded_index,
+                    "final_borrow_index": expected_index,
+                },
+            )
+        return borrow_index, repay_index
+
 
 def _solders_many(
     values: Sequence[JupiterRawInstruction],
 ) -> tuple[Instruction, ...]:
     return tuple(value.to_solders_instruction() for value in values)
+
+
+def _kamino_bookend_instruction(bookend: UnsignedSolanaBookend) -> Instruction:
+    """Materialize a Kamino bookend as an EXACT-BYTES instruction reference.
+
+    Byte preservation: program id, data bytes and ordered account metas are
+    taken verbatim from the builder bookend (hex-decoded only) — no
+    re-encoding, no discriminator/amount recomputation, no account creation.
+    """
+    return Instruction(
+        Pubkey.from_string(bookend.program_id),
+        bytes.fromhex(bookend.data_hex),
+        tuple(
+            AccountMeta(
+                pubkey=Pubkey.from_string(meta.pubkey),
+                is_signer=meta.is_signer,
+                is_writable=meta.is_writable,
+            )
+            for meta in bookend.account_metas
+        ),
+    )
+
+
+def _kamino_reference_fingerprint(reference: KaminoFinancingPlanReference) -> str:
+    """Stable provenance fingerprint for a referenced Kamino plan pair."""
+    borrow_bookend = reference.borrow_plan.bookend
+    repay_bookend = reference.repay_plan.bookend
+    assert borrow_bookend is not None and repay_bookend is not None
+    return _sha256_json(
+        {
+            "borrow_build_fingerprint": reference.borrow_plan.build_fingerprint,
+            "repay_build_fingerprint": reference.repay_plan.build_fingerprint,
+            "build_status": reference.build_status.value,
+            "capacity_status": reference.capacity_status.value,
+            "original_borrow_index": reference.original_borrow_index,
+            "borrow_data_hex": borrow_bookend.data_hex,
+            "repay_data_hex": repay_bookend.data_hex,
+        }
+    )
 
 
 def _positive_int(value: object, label: str) -> int:

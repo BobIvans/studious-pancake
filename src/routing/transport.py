@@ -119,6 +119,37 @@ class TlsTrustEvidence:
     verify_mode: str
 
 
+@dataclass(frozen=True)
+class ContentLengthDecision:
+    """Typed decision for an untrusted response framing header.
+
+    ``absent``/``chunked-ignored``/``malformed-ignored`` tolerate missing,
+    chunked-framed or unparseable Content-Length headers: the streamed body is
+    still bounded by the wire/response caps below, so tolerance never weakens
+    a cap. ``over-cap`` fails closed before the body is read.
+    """
+
+    mode: str
+    declared: int | None
+
+
+def decide_response_content_length(
+    declared: str | None, *, transfer_encoding: str | None, cap: int
+) -> ContentLengthDecision:
+    if transfer_encoding:
+        # RFC 9110: transfer-encoding frames the body; content-length, if any,
+        # is ignored rather than trusted.
+        return ContentLengthDecision("chunked-ignored", None)
+    if declared is None:
+        return ContentLengthDecision("absent", None)
+    if not declared.isascii() or not declared.isdecimal():
+        return ContentLengthDecision("malformed-ignored", None)
+    value = int(declared)
+    if len(declared) > 20 or value > cap:
+        return ContentLengthDecision("over-cap", value)
+    return ContentLengthDecision("within-cap", value)
+
+
 class SanitizedTransportError(RuntimeError):
     """Transport failure that never embeds query parameters or credentials."""
 
@@ -403,14 +434,16 @@ class HttpxJsonTransport:
                 raise SanitizedTransportError("provider JSON node limit exceeded")
 
     async def _read_bounded(self, response: httpx.Response) -> bytes:
-        declared = response.headers.get("content-length")
-        if declared is not None:
-            if not declared.isascii() or not declared.isdecimal():
-                raise SanitizedTransportError("provider content length is invalid")
-            if len(declared) > 20 or int(declared) > min(
-                self.policy.max_wire_bytes, self.policy.max_response_bytes
-            ):
-                raise SanitizedTransportError("provider response body too large")
+        decision = decide_response_content_length(
+            response.headers.get("content-length"),
+            transfer_encoding=response.headers.get("transfer-encoding"),
+            cap=min(self.policy.max_wire_bytes, self.policy.max_response_bytes),
+        )
+        # Missing, chunked-framed and malformed declarations are tolerated:
+        # the streamed caps below still fail closed on genuinely oversized
+        # payloads. Only a trusted over-cap declaration rejects before read.
+        if decision.mode == "over-cap":
+            raise SanitizedTransportError("provider response body too large")
         encoding = response.headers.get("content-encoding", "identity").lower().strip()
         if encoding not in {"identity", "gzip", "deflate"}:
             raise SanitizedTransportError("provider content encoding is unsupported")
@@ -519,6 +552,25 @@ class HttpxJsonTransport:
                     request = self._client.build_request(
                         method, url, headers=headers, params=params, json=json_body
                     )
+                    # A declared request Content-Length that disagrees with the
+                    # actual built body desynchronizes HTTP framing (servers
+                    # then report the header missing or truncate the body).
+                    # Fail closed before any bytes are sent; never rewrite it.
+                    declared_request_length = next(
+                        (
+                            value
+                            for key, value in (headers or {}).items()
+                            if isinstance(key, str) and key.lower() == "content-length"
+                        ),
+                        None,
+                    )
+                    if (
+                        declared_request_length is not None
+                        and str(len(request.content)) != declared_request_length
+                    ):
+                        raise SanitizedTransportError(
+                            "provider request content-length parity violation"
+                        )
                     status, response_headers, body = await self._physical_attempt(
                         request, attempt
                     )
@@ -622,12 +674,14 @@ async def _sleep_with_deadline(delay: float, deadline: float) -> None:
 
 
 __all__ = [
+    "ContentLengthDecision",
     "HttpxJsonTransport",
     "SanitizedTransportError",
     "TlsTrustEvidence",
     "Transport",
     "TransportPolicy",
     "build_tls_context",
+    "decide_response_content_length",
     "redact_headers",
     "sanitize_url",
 ]

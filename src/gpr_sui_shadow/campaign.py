@@ -33,6 +33,7 @@ from .models import SuiCandidate, SuiReadRequest, SuiSourceProfile, sha
 from .sources import (
     PoolIndexAdapter,
     ScallopRateAdapter,
+    aftermath_pools_request,
     checkpoint_request,
     object_request,
     indexed_book_reference,
@@ -116,16 +117,20 @@ def default_profiles(pins):
         )
         for key, provider, operator, group, url, docs, pin, method, purpose in rows
     )
+    narrowed = pins["aftermath"]["narrowed_profile"]
+    # The retired 2 MiB/60,000 engineering subcap must never re-enter through
+    # config drift: aftermath responses must fit the shared bounded profile.
+    if (
+        narrowed["max_response_bytes"] > SuiSourceProfile.max_response_bytes
+        or narrowed["max_json_nodes"] > SuiSourceProfile.max_json_nodes
+    ):
+        raise ValueError("SUI_AFTERMATH_NARROWED_PROFILE_REQUIRED")
     base = tuple(
         (
             replace(
                 p,
-                max_response_bytes=pins["aftermath"]["engineering_budget"][
-                    "max_response_bytes"
-                ],
-                max_json_nodes=pins["aftermath"]["engineering_budget"][
-                    "max_json_nodes"
-                ],
+                max_response_bytes=narrowed["max_response_bytes"],
+                max_json_nodes=narrowed["max_json_nodes"],
             )
             if p.source_kind == "aftermath"
             else p
@@ -201,8 +206,15 @@ async def capture(root, pack, output, *, main_sha=None):
     async with sui_transport({p.hostname for p in profiles}, os.environ) as transport:
         intake = SuiIntakePlane(governance, transport, evidence)
         for p in profiles[:4]:
-            request = SuiReadRequest(
-                p.method, p.endpoint, p.purpose, body={} if p.method == "POST" else None
+            request = (
+                aftermath_pools_request(p.endpoint)
+                if p.source_kind == "aftermath"
+                else SuiReadRequest(
+                    p.method,
+                    p.endpoint,
+                    p.purpose,
+                    body={} if p.method == "POST" else None,
+                )
             )
             adapter = (
                 ScallopRateAdapter()
@@ -372,7 +384,7 @@ async def capture(root, pack, output, *, main_sha=None):
             "qualification": "BLOCKED",
             "blockers": [
                 "reviewed-decimals-and-full-representation-policy-missing",
-                "independent-nonsmoke-state-provider-bindings-missing",
+                "live-sui-providers-not-authorized",
                 "verified-dynamic-object-depth-fee-decoder-missing",
             ],
             "gpr04_started": False,

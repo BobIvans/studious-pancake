@@ -34,6 +34,66 @@
   },
   "workstreams": [
     {
+      "id": "CAP-R02",
+      "name": "Live flash-capital readers",
+      "status": "BLOCKED",
+      "owners": [
+        "src/economics/flash_capital_graph/graph.py",
+        "src/lending/jupiter_lend.py",
+        "src/lending/kamino.py",
+        "src/lending/agg03_financing_ports.py",
+        "src/providers/marginfi/",
+        "src/multichain/sui.py"
+      ],
+      "evidence": [
+        "PR #585 negative capture",
+        "PR #586 merged offline SDK pack",
+        "PR #591 merged 27-provider dossier",
+        "PR #602 CAP-A, #609 CAP-C, #612 CAP-B, #619 CAP-D merged reader slices"
+      ],
+      "blockers": [
+        "All four provider readers are implemented offline/unqualified; zero qualified capital edges. Effective capacity remains UNKNOWN pending LIVE_ROOTED_RPC, LIVE_SUI_CHECKPOINT and optional existing operator account evidence. No provider activation."
+      ],
+      "next": "Run individually authorized rooted/read-only observations and prove resource-level capacity, fee, constraints, freshness and independent provenance for each provider."
+    },
+    {
+      "id": "CAP-R03",
+      "name": "Provider-specific unsigned financing builders",
+      "status": "BUILT_OFFLINE_UNQUALIFIED",
+      "owners": [
+        "src/lending/agg03_financing_ports.py",
+        "src/lending/financing.py",
+        "src/providers/marginfi/",
+        "src/planning/atomic_marginfi_jupiter.py",
+        "src/multichain/sui.py"
+      ],
+      "evidence": [
+        "PR #586 R03 builder handoff",
+        "src/multichain/evm_financing.py",
+        "PR #606 unsigned builder conformance; #640 Kamino instruction references in planner"
+      ],
+      "blockers": [
+        "Unsigned SDK-conformant build does not prove live reserve capacity or a supported full route; Project 0 needs existing operator account evidence."
+      ],
+      "next": "Bind matching R02 resource proof, exact quote/venue evidence and full transaction/PTB simulation; keep outputs unsigned."
+    },
+    {
+      "id": "EVM-DATA-01",
+      "name": "EVM venues and capital semantics",
+      "status": "FIXTURE_ONLY",
+      "owners": [
+        "src/multichain/evm_financing.py",
+        "src/resources/multichain_capabilities.json"
+      ],
+      "evidence": [
+        "AGG-11 multichain models/capability registry"
+      ],
+      "blockers": [
+        "Per-venue deployed chain/contract/bytecode pins, current on-chain state, callback semantics, capital capacity and fork simulation remain incomplete; Euler BSL licensing is blocked."
+      ],
+      "next": "Continue one venue/source dossier at a time; keep EVM candidates disabled until deployed-state and execution semantics are independently proven."
+    },
+    {
       "id": "GOV-01",
       "name": "QPR/DIN source governance, authority and evidence replay",
       "status": "IN_MAIN_VERIFIED",
@@ -57,24 +117,170 @@
       "next": "Preserve owners; run their tests and replay; do not duplicate governance."
     },
     {
-      "id": "UNIVERSE-01",
-      "name": "Canonical identities, Dynamic Universe and research graph",
-      "status": "IMPLEMENTED_UNQUALIFIED",
+      "id": "PAPER-R06",
+      "name": "Durable paper and campaign qualification",
+      "status": "BLOCKED",
       "owners": [
-        "src/assets/resolution/",
-        "src/discovery/dynamic_universe/",
-        "src/research_economic_graph/",
-        "src/strategy/relation_generators/",
-        "src/research/correlation_ledger/"
+        "src/paper_shadow/",
+        "src/qualification_campaign/",
+        "src/runtime/core_v1_composition.py"
       ],
       "evidence": [
-        "PR #571/#576/#579",
-        "docs/roadmap/dynamic-universe-master-2026-10-07/IMPLEMENTATION_REPORT.md"
+        "Durable paper service and campaign owners"
       ],
       "blockers": [
-        "Historical implementation report says the subsystem is library/diagnostic-CLI level and was not wired into supported application boot path; exact/current qualification needs recheck."
+        "No current 24-hour paper qualification PASS on an evidence-complete route; QPR/campaign readiness and R05 dependencies remain gating."
       ],
-      "next": "Audit canonical owners, current generations, integration tests and boot-path gap; do not create another graph."
+      "next": "Do not start a paper campaign until current QPR/campaign gate, R04 candidate and R05 exact simulation are all PASS."
+    },
+    {
+      "id": "PLATFORM-R11",
+      "name": "Platform/CI/offline reproducibility",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "scripts/verify_repo.py",
+        ".github/workflows/",
+        "docs/integrations/offline/",
+        "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/"
+      ],
+      "evidence": [
+        "P0-0 baseline in superseded #590 branch",
+        "PR #623 platform compatibility shims and current repository verification workflows"
+      ],
+      "blockers": [
+        "Linux CI is green on inspected merged PRs; user's exact local Windows/WSL setup and residual native Windows coverage still need operator-local verification."
+      ],
+      "next": "Run current-main offline verifiers and tests on the target Windows/WSL environment; keep OS-specific issues separate from CI."
+    },
+    {
+      "id": "PROVIDER-R07",
+      "name": "Broad additional provider research/qualification",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "docs/roadmap/r01-r02-live-capital-readers-2026-10-08/PROVIDER_CATALOG.json",
+        "offline/SOURCE_LEDGER.json",
+        "src/resources/multichain_capabilities.json"
+      ],
+      "evidence": [
+        "27-candidate provider catalog; offline protocol dossiers"
+      ],
+      "blockers": [
+        "Catalog rows are not 27 independent qualified lenders; current deployment/capacity/fees and exact route increment must be proven per provider."
+      ],
+      "next": "One provider per PR; research concurrently, enable only after its own gates."
+    },
+    {
+      "id": "QUOTE-BUILD-R13",
+      "name": "Multi-provider quote/build race (Solana + Sui)",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/solana_parallel_radar/",
+        "src/gpr_sui_shadow/",
+        "docs/roadmap/universal-source-execution-rnd-2026-10-07/EXECUTION_BUILDER_CONTRACT.md",
+        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R13_MULTIPROVIDER_QUOTES_AND_BUILDS.md"
+      ],
+      "evidence": [
+        "P0-2 Jupiter V2 + 0x contract",
+        "UXE/R-03 offline builder dossier",
+        "R-13 assignment",
+        "PR #638 frozen quote/build kernel; PR #647 Titan adapter"
+      ],
+      "blockers": [
+        "Titan is sender-free/offline adapter evidence only; other provider adapters/live entitlements/real quotes remain individually unqualified."
+      ],
+      "next": "Continue per-provider adapters against frozen R13-K kernel, one provider per PR, with correlation and exact amount semantics."
+    },
+    {
+      "id": "R08",
+      "name": "Supported runtime composition and owner injection",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/application.py",
+        "src/runtime/core_v1_composition.py",
+        "src/strategy/registry.py",
+        "src/strategy/consumer.py",
+        "existing paper/shadow composition"
+      ],
+      "evidence": [
+        "PR #624",
+        "PR #627"
+      ],
+      "blockers": [
+        "Audit reported 15/27 owner groups wired and 12 library-only; audit/contract tests do not mean every market/capital/strategy owner is reachable from the installed boot path."
+      ],
+      "next": "Use existing eight-step integration plan; SX-17 supplies bounded multi-strategy fanout, not a duplicate application/runtime."
+    },
+    {
+      "id": "RENT-PLAN-R14",
+      "name": "Route-level rent/provider sponsorship planner",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/lending/slumlord.py",
+        "docs/roadmap/universal-source-execution-rnd-2026-10-07/RENT_SPONSOR_PLANNER.md",
+        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R14_RENT_SPONSOR_INTEGRATION.md"
+      ],
+      "evidence": [
+        "Existing sender-free Slumlord Borrow/Repay/CheckRepaid adapter",
+        "R-14 assignment",
+        "PR #617 RentSponsorPlanner; PR #640 Kamino wiring follow-up"
+      ],
+      "blockers": [
+        "Route-specific sponsor/payer live semantics and cost evidence remain provider-dependent; no on-chain account creation or funding is authorized."
+      ],
+      "next": "Verify provider-specific co-sign/rent refund/close authority and wire plan only into existing unsigned plan/economic ranking."
+    },
+    {
+      "id": "ROUTE-R04",
+      "name": "Capital-aware route/lender/amount selection",
+      "status": "BLOCKED",
+      "owners": [
+        "src/strategy/arbitrage_graph.py",
+        "src/strategy/multihop_solver.py",
+        "src/economics/non_monotonic_sizing.py",
+        "src/economics/flash_capital_graph/graph.py"
+      ],
+      "evidence": [
+        "Existing graph, bounded solver, PR118 sizing and FlashCapitalGraph"
+      ],
+      "blockers": [
+        "Zero qualified R02 capital edges; route combinations still need comparable exact quotes, exact state, provider-specific builders and full all-cost/rent evidence."
+      ],
+      "next": "Prepare offline route selector tests but do not promote until a matching quote + R02 capacity + R03 builder combination is proven."
+    },
+    {
+      "id": "SEC-R12",
+      "name": "Dependency and supply-chain security remediation",
+      "status": "IMPLEMENTED",
+      "owners": [
+        "pyproject.toml",
+        "requirements.lock",
+        "requirements-dev.lock",
+        "uv lock workflow",
+        "scripts/verify_repo.py"
+      ],
+      "evidence": [
+        "CI run #2975 on PR #595: pip-audit reported 68 known advisories across 9 packages; formatter, mypy, wheel smoke, non-root image smoke and secret scan succeeded.",
+        "PR #605 strict pip-audit reports zero findings with no ignores"
+      ],
+      "blockers": [],
+      "next": "Keep strict dependency audit enabled and re-run on every lockfile/dependency update."
+    },
+    {
+      "id": "SIM-R05",
+      "name": "Complete exact atomic transaction/PTB simulation",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/execution/exact_simulation.py",
+        "src/paper_shadow/atomic_vertical.py",
+        "src/planning/atomic_marginfi_jupiter.py"
+      ],
+      "evidence": [
+        "ExactSimulationFinalizer and atomic vertical code"
+      ],
+      "blockers": [
+        "Exact simulation owner exists, but current live state, matching qualified capital, provider-specific build conformance and a supported complete candidate route are not yet available."
+      ],
+      "next": "Complete sender-free exact simulation for evidence-complete R04 candidates only."
     },
     {
       "id": "SOL-DISC-01",
@@ -135,101 +341,6 @@
       "next": "Bind verified exact state to quote/route evaluators; keep Orca excluded pending legal/source review."
     },
     {
-      "id": "SUI-DATA-01",
-      "name": "Sui market discovery and exact-state qualification",
-      "status": "IMPLEMENTED_UNQUALIFIED",
-      "owners": [
-        "src/gpr_sui_shadow/",
-        "src/discovery/dynamic_universe/ingestors.py",
-        "src/multichain/sui.py"
-      ],
-      "evidence": [
-        "DIN-02 report/replay",
-        "GPR-03 PR #573 restored by #579",
-        "PR #635 Sui/EVM source dossiers"
-      ],
-      "blockers": [
-        "Current independent checkpoint/object state, source availability and exact depth/fee semantics remain to be verified per venue."
-      ],
-      "next": "Continue Sui direct-state/provider lanes; NAVI capacity reader remains separate R02-CAP-C."
-    },
-    {
-      "id": "TON-RADAR-01",
-      "name": "TON market radar",
-      "status": "IMPLEMENTED_UNQUALIFIED",
-      "owners": [
-        "src/discovery/dynamic_universe/ton_radar.py"
-      ],
-      "evidence": [
-        "Dynamic Universe implementation report",
-        "PR #620/#630 TON ingestion/source dossiers"
-      ],
-      "blockers": [
-        "TON route/settlement remains asynchronous; no atomic flash borrow/repay path is proven."
-      ],
-      "next": "Keep discovery/signal/rebalance only; validate source pins and independent direct-pool state."
-    },
-    {
-      "id": "EVM-DATA-01",
-      "name": "EVM venues and capital semantics",
-      "status": "FIXTURE_ONLY",
-      "owners": [
-        "src/multichain/evm_financing.py",
-        "src/resources/multichain_capabilities.json"
-      ],
-      "evidence": [
-        "AGG-11 multichain models/capability registry"
-      ],
-      "blockers": [
-        "Per-venue deployed chain/contract/bytecode pins, current on-chain state, callback semantics, capital capacity and fork simulation remain incomplete; Euler BSL licensing is blocked."
-      ],
-      "next": "Continue one venue/source dossier at a time; keep EVM candidates disabled until deployed-state and execution semantics are independently proven."
-    },
-    {
-      "id": "CAP-R02",
-      "name": "Live flash-capital readers",
-      "status": "BLOCKED",
-      "owners": [
-        "src/economics/flash_capital_graph/graph.py",
-        "src/lending/jupiter_lend.py",
-        "src/lending/kamino.py",
-        "src/lending/agg03_financing_ports.py",
-        "src/providers/marginfi/",
-        "src/multichain/sui.py"
-      ],
-      "evidence": [
-        "PR #585 negative capture",
-        "PR #586 merged offline SDK pack",
-        "PR #591 merged 27-provider dossier",
-        "PR #602 CAP-A, #609 CAP-C, #612 CAP-B, #619 CAP-D merged reader slices"
-      ],
-      "blockers": [
-        "All four provider readers are implemented offline/unqualified; zero qualified capital edges. Effective capacity remains UNKNOWN pending LIVE_ROOTED_RPC, LIVE_SUI_CHECKPOINT and optional existing operator account evidence. No provider activation."
-      ],
-      "next": "Run individually authorized rooted/read-only observations and prove resource-level capacity, fee, constraints, freshness and independent provenance for each provider."
-    },
-    {
-      "id": "CAP-R03",
-      "name": "Provider-specific unsigned financing builders",
-      "status": "BUILT_OFFLINE_UNQUALIFIED",
-      "owners": [
-        "src/lending/agg03_financing_ports.py",
-        "src/lending/financing.py",
-        "src/providers/marginfi/",
-        "src/planning/atomic_marginfi_jupiter.py",
-        "src/multichain/sui.py"
-      ],
-      "evidence": [
-        "PR #586 R03 builder handoff",
-        "src/multichain/evm_financing.py",
-        "PR #606 unsigned builder conformance; #640 Kamino instruction references in planner"
-      ],
-      "blockers": [
-        "Unsigned SDK-conformant build does not prove live reserve capacity or a supported full route; Project 0 needs existing operator account evidence."
-      ],
-      "next": "Bind matching R02 resource proof, exact quote/venue evidence and full transaction/PTB simulation; keep outputs unsigned."
-    },
-    {
       "id": "STRATEGY-01",
       "name": "Strategy and relation research",
       "status": "IMPLEMENTED_UNQUALIFIED",
@@ -250,150 +361,23 @@
       "next": "Execute SX-17 runtime fanout plus R10-1/2/3 detector/evaluator follow-through; catalog presence must never imply installed runtime reachability."
     },
     {
-      "id": "ROUTE-R04",
-      "name": "Capital-aware route/lender/amount selection",
-      "status": "BLOCKED",
-      "owners": [
-        "src/strategy/arbitrage_graph.py",
-        "src/strategy/multihop_solver.py",
-        "src/economics/non_monotonic_sizing.py",
-        "src/economics/flash_capital_graph/graph.py"
-      ],
-      "evidence": [
-        "Existing graph, bounded solver, PR118 sizing and FlashCapitalGraph"
-      ],
-      "blockers": [
-        "Zero qualified R02 capital edges; route combinations still need comparable exact quotes, exact state, provider-specific builders and full all-cost/rent evidence."
-      ],
-      "next": "Prepare offline route selector tests but do not promote until a matching quote + R02 capacity + R03 builder combination is proven."
-    },
-    {
-      "id": "SIM-R05",
-      "name": "Complete exact atomic transaction/PTB simulation",
+      "id": "SUI-DATA-01",
+      "name": "Sui market discovery and exact-state qualification",
       "status": "IMPLEMENTED_UNQUALIFIED",
       "owners": [
-        "src/execution/exact_simulation.py",
-        "src/paper_shadow/atomic_vertical.py",
-        "src/planning/atomic_marginfi_jupiter.py"
-      ],
-      "evidence": [
-        "ExactSimulationFinalizer and atomic vertical code"
-      ],
-      "blockers": [
-        "Exact simulation owner exists, but current live state, matching qualified capital, provider-specific build conformance and a supported complete candidate route are not yet available."
-      ],
-      "next": "Complete sender-free exact simulation for evidence-complete R04 candidates only."
-    },
-    {
-      "id": "PAPER-R06",
-      "name": "Durable paper and campaign qualification",
-      "status": "BLOCKED",
-      "owners": [
-        "src/paper_shadow/",
-        "src/qualification_campaign/",
-        "src/runtime/core_v1_composition.py"
-      ],
-      "evidence": [
-        "Durable paper service and campaign owners"
-      ],
-      "blockers": [
-        "No current 24-hour paper qualification PASS on an evidence-complete route; QPR/campaign readiness and R05 dependencies remain gating."
-      ],
-      "next": "Do not start a paper campaign until current QPR/campaign gate, R04 candidate and R05 exact simulation are all PASS."
-    },
-    {
-      "id": "PROVIDER-R07",
-      "name": "Broad additional provider research/qualification",
-      "status": "IMPLEMENTED_UNQUALIFIED",
-      "owners": [
-        "docs/roadmap/r01-r02-live-capital-readers-2026-10-08/PROVIDER_CATALOG.json",
-        "offline/SOURCE_LEDGER.json",
-        "src/resources/multichain_capabilities.json"
-      ],
-      "evidence": [
-        "27-candidate provider catalog; offline protocol dossiers"
-      ],
-      "blockers": [
-        "Catalog rows are not 27 independent qualified lenders; current deployment/capacity/fees and exact route increment must be proven per provider."
-      ],
-      "next": "One provider per PR; research concurrently, enable only after its own gates."
-    },
-    {
-      "id": "PLATFORM-R11",
-      "name": "Platform/CI/offline reproducibility",
-      "status": "IMPLEMENTED_UNQUALIFIED",
-      "owners": [
-        "scripts/verify_repo.py",
-        ".github/workflows/",
-        "docs/integrations/offline/",
-        "docs/roadmap/r02-capacity-recovery-2026-10-08/offline/"
-      ],
-      "evidence": [
-        "P0-0 baseline in superseded #590 branch",
-        "PR #623 platform compatibility shims and current repository verification workflows"
-      ],
-      "blockers": [
-        "Linux CI is green on inspected merged PRs; user's exact local Windows/WSL setup and residual native Windows coverage still need operator-local verification."
-      ],
-      "next": "Run current-main offline verifiers and tests on the target Windows/WSL environment; keep OS-specific issues separate from CI."
-    },
-    {
-      "id": "SEC-R12",
-      "name": "Dependency and supply-chain security remediation",
-      "status": "IMPLEMENTED",
-      "owners": [
-        "pyproject.toml",
-        "requirements.lock",
-        "requirements-dev.lock",
-        "uv lock workflow",
-        "scripts/verify_repo.py"
-      ],
-      "evidence": [
-        "CI run #2975 on PR #595: pip-audit reported 68 known advisories across 9 packages; formatter, mypy, wheel smoke, non-root image smoke and secret scan succeeded.",
-        "PR #605 strict pip-audit reports zero findings with no ignores"
-      ],
-      "blockers": [],
-      "next": "Keep strict dependency audit enabled and re-run on every lockfile/dependency update."
-    },
-    {
-      "id": "QUOTE-BUILD-R13",
-      "name": "Multi-provider quote/build race (Solana + Sui)",
-      "status": "IMPLEMENTED_UNQUALIFIED",
-      "owners": [
-        "src/solana_parallel_radar/",
         "src/gpr_sui_shadow/",
-        "docs/roadmap/universal-source-execution-rnd-2026-10-07/EXECUTION_BUILDER_CONTRACT.md",
-        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R13_MULTIPROVIDER_QUOTES_AND_BUILDS.md"
+        "src/discovery/dynamic_universe/ingestors.py",
+        "src/multichain/sui.py"
       ],
       "evidence": [
-        "P0-2 Jupiter V2 + 0x contract",
-        "UXE/R-03 offline builder dossier",
-        "R-13 assignment",
-        "PR #638 frozen quote/build kernel; PR #647 Titan adapter"
+        "DIN-02 report/replay",
+        "GPR-03 PR #573 restored by #579",
+        "PR #635 Sui/EVM source dossiers"
       ],
       "blockers": [
-        "Titan is sender-free/offline adapter evidence only; other provider adapters/live entitlements/real quotes remain individually unqualified."
+        "Current independent checkpoint/object state, source availability and exact depth/fee semantics remain to be verified per venue."
       ],
-      "next": "Continue per-provider adapters against frozen R13-K kernel, one provider per PR, with correlation and exact amount semantics."
-    },
-    {
-      "id": "RENT-PLAN-R14",
-      "name": "Route-level rent/provider sponsorship planner",
-      "status": "IMPLEMENTED_UNQUALIFIED",
-      "owners": [
-        "src/lending/slumlord.py",
-        "docs/roadmap/universal-source-execution-rnd-2026-10-07/RENT_SPONSOR_PLANNER.md",
-        "docs/roadmap/agent-execution-master-2026-11-13/tasks/R14_RENT_SPONSOR_INTEGRATION.md"
-      ],
-      "evidence": [
-        "Existing sender-free Slumlord Borrow/Repay/CheckRepaid adapter",
-        "R-14 assignment",
-        "PR #617 RentSponsorPlanner; PR #640 Kamino wiring follow-up"
-      ],
-      "blockers": [
-        "Route-specific sponsor/payer live semantics and cost evidence remain provider-dependent; no on-chain account creation or funding is authorized."
-      ],
-      "next": "Verify provider-specific co-sign/rent refund/close authority and wire plan only into existing unsigned plan/economic ranking."
+      "next": "Continue Sui direct-state/provider lanes; NAVI capacity reader remains separate R02-CAP-C."
     },
     {
       "id": "SX17",
@@ -415,6 +399,42 @@
         "No complete installed bounded multi-strategy fanout with immutable snapshot generation, deterministic merge, backpressure and failure isolation."
       ],
       "next": "Execute docs/strategy-expansion/2026-11-14/tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md; reuse owners and do not add registry/consumer/scheduler."
+    },
+    {
+      "id": "TON-RADAR-01",
+      "name": "TON market radar",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/discovery/dynamic_universe/ton_radar.py"
+      ],
+      "evidence": [
+        "Dynamic Universe implementation report",
+        "PR #620/#630 TON ingestion/source dossiers"
+      ],
+      "blockers": [
+        "TON route/settlement remains asynchronous; no atomic flash borrow/repay path is proven."
+      ],
+      "next": "Keep discovery/signal/rebalance only; validate source pins and independent direct-pool state."
+    },
+    {
+      "id": "UNIVERSE-01",
+      "name": "Canonical identities, Dynamic Universe and research graph",
+      "status": "IMPLEMENTED_UNQUALIFIED",
+      "owners": [
+        "src/assets/resolution/",
+        "src/discovery/dynamic_universe/",
+        "src/research_economic_graph/",
+        "src/strategy/relation_generators/",
+        "src/research/correlation_ledger/"
+      ],
+      "evidence": [
+        "PR #571/#576/#579",
+        "docs/roadmap/dynamic-universe-master-2026-10-07/IMPLEMENTATION_REPORT.md"
+      ],
+      "blockers": [
+        "Historical implementation report says the subsystem is library/diagnostic-CLI level and was not wired into supported application boot path; exact/current qualification needs recheck."
+      ],
+      "next": "Audit canonical owners, current generations, integration tests and boot-path gap; do not create another graph."
     },
     {
       "id": "W6-12",
@@ -452,7 +472,8 @@
     "PR #649 LLAMMA has green CI but remains open/source-blocked due pending source commit pin, whitepaper, unit-scale reconciliation and rooted per-market state. A green CI does not clear those semantic blockers.",
     "SX-12 #645 and SX-08 #648 are merged research/offline models; neither activates strategy execution or live capital.",
     "Runtime strategy audit: six registered strategy entries, only circular_arbitrage has a real two-leg shadow detector; SX-17 is a new required runtime fanout/composition package.",
-    "W6-12 is a new public/authorized pseudonymous participant intelligence package; no identity resolution/private orderflow/copy trading."
+    "W6-12 is a new public/authorized pseudonymous participant intelligence package; no identity resolution/private orderflow/copy trading.",
+    "Documentation successor PR #656 is the clean-base branch for SX-17/W6-12 and this refreshed project status; prior stale-base PR #652 was closed unmerged as superseded."
   ],
   "pr_snapshot": {
     "main_sha": "c9ed36b6902502fc4dc51610f0094d27a50fd6fb",
@@ -552,6 +573,17 @@
         "number": 649,
         "state": "OPEN_SOURCE_BLOCKED",
         "workstream": "SX03_CURVE_LLAMMA"
+      },
+      {
+        "number": 652,
+        "state": "CLOSED_UNMERGED_SUPERSEDED",
+        "workstream": "SX17_W6-12 docs predecessor",
+        "note": "Stale-base draft superseded by clean-base PR #656."
+      },
+      {
+        "number": 656,
+        "state": "OPEN_CI_PENDING",
+        "workstream": "SX17_W6-12 strategy runtime and participant-intelligence extension"
       }
     ]
   }

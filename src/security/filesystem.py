@@ -83,13 +83,19 @@ def atomic_write_bytes(
             os.fsync(output.fileno())
         os.replace(temporary, target)
         os.chmod(target, mode)
-        directory_fd = os.open(
-            target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
-        )
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
+        if os.name == "posix":
+            directory_fd = os.open(
+                target.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
+            )
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        # win32: os.open cannot open a directory handle (PermissionError), so
+        # the directory-entry fsync is conservatively skipped rather than
+        # emulated.  The file bytes are fsynced above before os.replace and
+        # NTFS journals rename metadata; POSIX keeps the exact directory-fsync
+        # durability step.  Same conservative pattern as evidence.py blob dirs.
         return target
     except (OSError, FilesystemSecurityError):
         try:

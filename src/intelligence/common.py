@@ -39,11 +39,17 @@ def atomic_bytes(path: Path, data: bytes) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(name, path)
-        directory = os.open(path.parent, os.O_RDONLY)
-        try:
-            os.fsync(directory)
-        finally:
-            os.close(directory)
+        if os.name == "posix":
+            directory = os.open(path.parent, os.O_RDONLY)
+            try:
+                os.fsync(directory)
+            finally:
+                os.close(directory)
+        # win32: os.open cannot open a directory handle (PermissionError), so
+        # the directory-entry fsync is conservatively skipped rather than
+        # emulated.  The file bytes are fsynced above before os.replace and
+        # NTFS journals rename metadata; POSIX keeps the exact directory-fsync
+        # durability step.  Same conservative pattern as evidence.py blob dirs.
     finally:
         Path(name).unlink(missing_ok=True)
 

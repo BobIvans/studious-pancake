@@ -159,6 +159,13 @@ def _secure_read(
 
 
 def _fsync_directory(path: Path) -> None:
+    if os.name != "posix":
+        # win32: os.open cannot open a directory handle (PermissionError), so
+        # the directory-entry fsync is conservatively skipped rather than
+        # emulated.  Anchor and state bytes are fsynced before os.replace and
+        # NTFS journals rename metadata; POSIX keeps the exact directory-fsync
+        # durability step.  Same conservative pattern as evidence.py blob dirs.
+        return
     descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
     try:
         os.fsync(descriptor)

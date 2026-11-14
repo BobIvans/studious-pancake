@@ -401,6 +401,15 @@ def _canonical_json_bytes(value: Mapping[str, Any]) -> bytes:
 
 
 def _fsync_directory(path: Path) -> None:
+    if os.name != "posix":
+        # win32: os.open cannot open a directory handle (PermissionError); the
+        # previous swallow-all OSError handler also muted genuine POSIX fsync
+        # failures.  State bytes are fsynced before os.replace and NTFS
+        # journals rename metadata, so the directory-entry fsync is
+        # conservatively skipped on win32; POSIX keeps its exact semantics
+        # (open errors still swallowed, fsync errors raised).  Same
+        # conservative pattern as evidence.py blob dirs.
+        return
     try:
         descriptor = os.open(path, os.O_RDONLY)
     except OSError:

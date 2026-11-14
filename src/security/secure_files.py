@@ -199,6 +199,13 @@ def copy_secure_regular_file(
 
 
 def _fsync_directory(path: Path) -> None:
+    if os.name != "posix":
+        # win32: os.open cannot open a directory handle (PermissionError), so
+        # the directory-entry fsync is conservatively skipped rather than
+        # emulated.  The copied bytes are fsynced before os.replace and NTFS
+        # journals rename metadata; POSIX keeps the exact directory-fsync
+        # durability step.  Same conservative pattern as evidence.py blob dirs.
+        return
     flags = os.O_RDONLY | getattr(os, "O_DIRECTORY", 0)
     descriptor = os.open(path, flags)
     try:

@@ -364,3 +364,17 @@ The repository owner explicitly grants the coding agent autonomous repository-en
 This grants broad repository engineering autonomy, **not unrestricted infrastructure or financial authority**. It does not grant access to secrets/private keys, creation or use of wallets/accounts/ATAs/obligations/positions, signing, broadcasting, submitting, borrowing, spending, deploying, provider activation, live market interaction, QPR/DIN override or production promotion. Use only already-approved read-only sources and public evidence. When a credential, paid access, operator approval, private account address or user authorization is required, report the exact missing item as BLOCKED and continue independent work.
 
 No agent may enable live capabilities by editing environment flags, config, feature flags or CI policy. A coding agent may prepare unsigned plans and sender-free simulations only under the existing project's authorization/evidence gates. Production/live execution remains a separate explicit operator decision after paper qualification and all security/economic gates.
+
+
+
+## 20. Runtime-wide parallel strategy execution and participant-intelligence extension
+
+The recovered atlas lists many strategies, venues, sources and financing candidates. That is the research universe, not proof the installed bot runs all those strategies. Current code truth must be refreshed on every run. At the 2026-11-14 audit, src/strategy/strategies.py had six registrations and only the circular two-leg detector had a real non-empty shadow detection path; LST detectors were stubs, liquidation/orderbook were disabled/quarantined shells, and Pump was a boundary-only disabled adapter. SX-01 StrategyContractV1 is an advisory typed contract and explicitly does not create a runtime registry. R08 reports 15/27 owner groups wired, 12 library-only.
+
+Add two child packages without replacing the MASTER/P0/GPR/DV/F/F6 programme:
+1. **SX-17 — multi-strategy runtime fanout:** bounded concurrent evaluation of independently proven detectors over one immutable market snapshot generation, using existing application, registry, consumer, queue, AGG-05 conflict/resource admission and paper/shadow composition. Exact acceptance and owners: docs/strategy-expansion/2026-11-14/tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md.
+2. **W6-12 — observed participant strategy intelligence:** pseudonymous, public/authorized on-chain participant episodes and strategy archetypes, complete net economics, negative/censored histories and replay/holdout controls. Reuse MarketEpisode/raw journal/decision/causal owners; no identity resolution or copy-trading. Exact acceptance: docs/strategy-expansion/2026-11-14/tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md.
+
+Do not create a second strategy registry, raw database, wallet graph, feature store, scheduler, queue or consumer. SX-17 coordinates R08/R10/SX-01/SX-12; each strategy detector retains its own source, exact-state, quote, capacity, builder and paper blockers. Parallel fanout does not promote stubs or grant transaction authority. W6-12 outputs only research archetypes and evidence-bound hypotheses.
+
+Preserve the historical W6-00…W6-11 and W6F-001…096 IDs. W6-12 adds eight new functions W6F-097…W6F-104; do not rewrite archive counts or imply those new items were part of the old ZIP.

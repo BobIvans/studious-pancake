@@ -103,6 +103,12 @@
 - Per-family dashboard: status, dependencies, sample size, exactness, capacity, net outcome, rejection/no-trade, resource conflicts, costs and holdout.
 - Acceptance: no whole-universe coverage claim from one passing venue; each pack separately gated and rollbackable.
 
+### SX-16 — Final strategy-pack integration and evidence reconciliation
+- Coordinator-only final pass after the independent lanes return.
+- Reconcile strategy IDs, owner paths, schemas, capability vocabulary and typed blockers into the existing crosswalk/registry owners; preserve original WG/OP/R10 IDs.
+- Check no duplicate graph, solver, registry, ledger, journal, scheduler or capital authority was introduced; verify every family has an explicit status and next evidence gate.
+- Acceptance: deterministic crosswalk validation, no unresolved ownership collision, per-family evidence bundle references and a truthful coverage report. No live promotion.
+
 ## Dependency and parallel execution plan
 
 - SX-00 first as a short read-only coordinator gate.

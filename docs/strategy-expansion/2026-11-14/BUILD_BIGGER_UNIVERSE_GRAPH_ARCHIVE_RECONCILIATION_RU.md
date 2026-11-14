@@ -137,3 +137,20 @@ The Library ZIPs are not a substitute for current official docs. They preserve h
 3. Revalidate identities, markets, quote and capacity.
 4. Maintain all historical source IDs and negative evidence for replay.
 5. Add any additional material found in the available Build Bigger Universe Graph chat or repository history as a new provenance-tagged delta.
+
+
+## 12. Exact relationship backlog parsed from embedded input 03
+
+The source \`inputs/03__Вставленный текст(20261006-034611).txt\` in the first graph ZIP is preserved as exact machine-readable data in repository file:
+\`BUILD_BIGGER_UNIVERSE_GRAPH_ARCHIVE_CANDIDATES_2026-10-06.json.gz\`.
+
+The gzip contains:
+- 83 deduplicated Solana relationship rows (#1–83), including source refs and abbreviated mint candidates;
+- 14 triangular route templates from the original input;
+- 12 Sui relationships (#205–216);
+- all 100 additions (#225–324) across D1 LST, D2 USD, D3 BTC wrappers, D4 CLOB-AMM, D5 Sui, D6 EVENT;
+- 4 unnumbered dynamic EVENT templates.
+
+This makes the exact old relationship backlog available to the coding agent rather than only summarizing it in prose. The compressed file SHA-256 is \`6dbcb44fdb9ec74b623836f055978628ed865b756edf9d43dc85ddca74489aee\`; the decompressed JSON SHA-256 is \`8f8d958d9d45636c8275d8fcbd13273a8eeb60a1da65b7efdfcca903ebcd5467\`.
+
+**Data integrity / no invention:** the source says #1–224, but its actual table includes 83 Solana rows and Sui #205–216; TON #185–204 is intentionally excluded and #217–224 are absent. Dataset rows marked RESOLVE remain unresolved; shortened mint labels are never on-chain identifiers. #293 is a detector methodology row, while basket/NAV/event rows need not represent tradable pairs. All historical tiers are stale metadata, not current HOT/WARM watch priority. Never infer market identity, quote, capacity or permission from these records.

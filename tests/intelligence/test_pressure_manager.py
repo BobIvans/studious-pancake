@@ -291,11 +291,13 @@ def test_restart_recovers_after_offload_without_duplicate_archive(
 
 
 def test_cross_process_lock_blocks_a_second_pressure_cycle(monkeypatch, tmp_path):
-    import fcntl
+    # Same lock mechanism run_pressure_cycle uses (platform_compat binding), so
+    # the simulated contending holder excludes the cycle on every platform.
+    from src.platform_compat.flock import fcntl, flock_live_file
 
     args = setup_cycle(monkeypatch, tmp_path)
     with args["journal_path"].open("rb") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        flock_live_file(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         with pytest.raises(ValueError, match="ALREADY_RUNNING"):
             run_pressure_cycle(**args)
     assert not args["output_dir"].exists()

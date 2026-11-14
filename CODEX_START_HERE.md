@@ -47,3 +47,19 @@ For Codex CLI, GLM-5.3-Flash and other coding agents:
 R-04 selector → R-05 complete unsigned transaction/PTB simulation → R-06 paper qualification remain gated by exact quotes, relevant effective capital capacity, matching builder conformance, complete same-state simulation and QPR readiness.
 
 Keep the research universe broad, while separating LOCAL_ATOMIC, CONDITIONAL_HYPEREDGE, HEDGED_NON_ATOMIC, SIGNAL_ONLY and EXCLUDED classes. Robinhood Stock Tokens and tokenized equities remain excluded. No private keys, accounts/ATAs/obligations creation, signing, sending, borrowing, spending, deployments, provider enabling or production promotion. Live stays hard-denied.
+
+
+
+## New execution-critical gaps — 2026-11-14
+
+The full MASTER assignment remains the single top-level trigger. The strategy campaign is a child workstream and now adds two explicit assignments:
+- SX-17 runtime multi-strategy fanout: docs/strategy-expansion/2026-11-14/tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md
+- W6-12 observed participant strategy intelligence: docs/strategy-expansion/2026-11-14/tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md
+
+**Do not mistake strategy inventory for a running parallel strategy engine.** At the latest inspected source, src/strategy/strategies.py still had six registrations; only circular_arbitrage had a real two-leg shadow detector. LST remained stubbed, liquidation/orderbook remained disabled or fixture-only, and Pump remained boundary-only. SX-01 is a typed advisory contract, not a runtime registry. R08 reports 15/27 owner groups wired and 12 library-only. SX-17 must close the safe runtime fanout/composition gap by extending the existing application, StrategyRegistry, OpportunityConsumer, queue, AGG-05 and paper/shadow owners.
+
+W6-12 adds public/authorized, pseudonymous on-chain participant episodes and evidence-backed strategy archetypes. It explicitly forbids real-world identity resolution, doxxing, private orderflow and automatic copy-trading. Reuse the existing MarketEpisode, raw journal, decision dataset and causal/replay owners.
+
+Latest checked main at this docs update: 73911801f12eb8c365421d5dcaea40c20a503a0a (after #646 and #647). Open strategy PRs at this snapshot: #645 SX-12, #648 SX-08, #649 SX-03. All three are based on older commits and currently are not mergeable against latest main; inspect and rebase before review. #649 carries an explicit proprietary-source / missing revision / whitepaper blocker; no code reuse or qualification until resolved.
+
+The final completion target is not “all ideas enabled”. It is every strategy family assigned a truthful status and owner, every implemented detector reachable through the supported sender-free runtime only after its own gates, every shared resource allocated once, and every unresolved source/rights/capacity item recorded as BLOCKED/RESEARCH_ONLY/EXCLUDED. R04/R05/R06 and any later production authority remain separate gates.

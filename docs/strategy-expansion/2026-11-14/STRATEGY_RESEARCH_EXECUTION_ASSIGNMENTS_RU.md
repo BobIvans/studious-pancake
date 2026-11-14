@@ -8,9 +8,9 @@
 Refresh current main, PRs, CI, branch protection and exact owners. Reconcile S01–S07, OP/WG, R10, SX, EXP and W6 IDs. Refresh crosswalk and dashboard through the single canonical owner. Never trust snapshot SHA.
 
 ## SX — merged vs remaining
-- SX-00 #639, SX-01 #641, SX-09 #642, SX-10/SX-11 #643: merged at the checked snapshot; don't repeat.
-- SX-12 #645 remains an open lane in the latest checked state; it consumes SX-01 ResourceManifest and AGG-05. Review its current head/checks; do not duplicate it.
-- SX-03 #649 and SX-08 #648 are open implementation lanes; review their exact current heads/source pins before dispatching follow-up work.
+- Merged: SX-00 #639, SX-01 #641, SX-02 #653, SX-07 #651, SX-08 #648, SX-09 #642, SX-10/SX-11 #643, SX-12 #645. Do not repeat these offline/research/contract packages.
+- SX-17 archive detector/anomaly taxonomy #654 is merged; exact pair archive dataset #650 is merged separately. Preserve SX-17 for taxonomy; runtime fanout is SX-18.
+- SX-03 #649 remains open and source/evidence blocked. R10-2 #655 is open for an offline MarginFi bridge and needs current-main rebase/review. Check current heads/CI before dispatch.
 - SX-02 flash-mint/lender comparison; SX-04 OEV; SX-05 JIT/LVR; SX-06 CLOB/RFQ/queue; SX-07 complete-set claims; SX-13 causal/learning; SX-14 verifiable procurement/mechanism lab; SX-15 observability; SX-16 coordinator integration.
 - #646 Build Bigger Universe master recovery is merged. #650 is the separate exact archival relationship dataset follow-up; check its status and do not duplicate its rows.
 - SX-12 depends on SX-01+AGG-05; SX-15 consumes evidence from completed lanes; SX-16 runs last.

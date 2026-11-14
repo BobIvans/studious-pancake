@@ -1,0 +1,203 @@
+{
+  "schema_version": "studious-pancake.evm-financing-wave2-offline-sources.v1",
+  "prepared_at_utc": "2026-11-14",
+  "retrieval_window_utc": "2026-11-14T08:30Z..2026-11-14T11:45Z",
+  "repository_base_sha_audited": "e2b65c0ceefdc6f9f99cdc0187ff23dc7815acc8",
+  "branch": "agent/evm-sui-dossiers-wave2",
+  "stream": "R09-L2 (EVM financing wave-2 source dossiers - docs-only lane)",
+  "wave1_inheritance": {
+    "aave_deployment_pins": "Inherited verbatim from docs/roadmap/r01-r02-live-capital-readers-2026-10-08/offline/EVM_PROTOCOL_DOSSIERS.md aave_v3@2026-11-14 section (PR #618, same-day retrieval window 2026-11-13T20:51Z..2026-11-14T00:11:53Z). NOT re-pinned in wave-2.",
+    "morpho_blue": "Wave-1 owned (PR #618); referenced by EVM_CALLBACK_ATOMICITY_WAVE2.md only."
+  },
+  "hash_policy": {
+    "content_sha256": "SHA-256 computed locally over the line-ending-normalized bytes (CRLF->LF) of each dossier file by verify_offline_bundle.py, so the check is stable across git autocrlf/eol settings while still catching any content edit; it is a local integrity hash, not a provider-supplied signature.",
+    "upstream_commit_pin": "GitHub commit pins identify the reviewed upstream source generation via the authenticated GitHub metadata API; a pin is not an on-chain deployment attestation.",
+    "docs_pages": "Docs pages were read as official text and transcribed as original editorial extracts with load-bearing verbatim quotes; full page copies are deliberately not vendored. Exact canonical URLs + retrieval timestamps recorded per source."
+  },
+  "flag_taxonomy_note": "RAW_OFFICIAL_SNAPSHOT is claimed ONLY for verbatim constants copied from pinned official sources (deployment addresses, Solidity signatures, license parameter text). Behavior text is OFFICIAL_CONTRACT_EXTRACT_ONLY / DOCS_REFERENCE_ONLY. No live chain read of any kind was performed.",
+  "safety": {
+    "sign_enabled": false,
+    "send_enabled": false,
+    "credentials_used": "NONE (no credentials exist in this environment)",
+    "live_provider_calls": "NONE",
+    "live_rpc_calls": "NONE (docs/GitHub research only; zero chain reads)",
+    "provider_enabled_by_this_wave": false,
+    "capacity_claims": "NONE - all flash capacity states are UNKNOWN by typing (never zero)"
+  },
+  "sources": {
+    "aave_v3_flashloansimple": {
+      "provider": "Aave V3 (aave/aave-v3-origin + aave.com docs)",
+      "chain": "evm: 1, 10, 42161, 8453 (deployment addresses inherited from wave-1 PR #618)",
+      "canonical_urls": [
+        "https://aave.com/docs/aave-v3/guides/flash-loans",
+        "https://github.com/aave/aave-v3-origin/tree/5c2eb37f39959dd491ba97fdc2af94bb4ee88f41/src/contracts/interfaces/IPool.sol",
+        "https://github.com/aave/aave-v3-origin/tree/5c2eb37f39959dd491ba97fdc2af94bb4ee88f41/src/contracts/misc/flashloan/interfaces/IFlashLoanSimpleReceiver.sol",
+        "https://aave.com/docs/reference/addresses (wave-1 parsed; JS-rendered page, not re-parsed wave-2)"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "RAW_OFFICIAL_SNAPSHOT (signatures/constants) + OFFICIAL_CONTRACT_EXTRACT_ONLY (docs behavior)",
+      "interface_surface": "flashLoanSimple(address receiverAddress, address asset, uint256 amount, bytes calldata params, uint16 referralCode); executeOperation(address asset, uint256 amount, uint256 premium, address initiator, bytes calldata params) external returns (bool) on IFlashLoanSimpleReceiver; FLASHLOAN_PREMIUM_TOTAL() / FLASHLOAN_PREMIUM_TO_PROTOCOL() external view returns (uint128)",
+      "flash_loan_semantics": "single reserve; fee NEVER waived on simple variant; pull repayment: receiver approves Pool for amount+premium, Pool pulls at end of callback; missing funds reverts whole transaction; 0.05% deployment default, governance adjustable per deployment",
+      "fee_fields": "FLASHLOAN_PREMIUM_TOTAL uint128 bps-of-10000 (live value NOT read; typed blocker), FLASHLOAN_PREMIUM_TO_PROTOCOL uint128 (0 at init per docs)",
+      "capacity_read_surface": "Pool.getReservesList() -> Pool.getReserveData(index) + IERC20(asset).balanceOf(POOL) (documented approach only; NOT executed)",
+      "upstream_pins": {
+        "github_repo": "aave/aave-v3-origin",
+        "commit": "5c2eb37f39959dd491ba97fdc2af94bb4ee88f41",
+        "commit_date": "2025-09-19T10:39:19Z",
+        "note": "same commit as wave-1 pin; re-verified live via GitHub API 2026-11-14",
+        "deployment_registry": "@aave-dao/aave-address-book@4.77.6 (wave-1)"
+      },
+      "license_status": "BSL 1.1 (aave-v3-origin v3.3; converts to MIT by 2027-03-06; wave-1 license block inherited)",
+      "status": "PINNED_CURRENT",
+      "typed_blockers": [
+        "MISSING_DEPLOYED_ABI: bytes4 selectors for flashLoanSimple/executeOperation not source-published; derive from pinned ABI or leave unset",
+        "BLOCKED_MISSING_PIN: per-chain live FLASHLOAN_PREMIUM_TOTAL() / FLASHLOAN_PREMIUM_TO_PROTOCOL() (R-02 bounded read)",
+        "BLOCKED_MISSING_PIN: L2 Pool variant flashLoanSimple specifics for OP/Arbitrum/Base (wave-1 blocker, open)",
+        "BLOCKED_MISSING_PIN: per-reserve flash-enabled/active/borrowing/paused state",
+        "BLOCKED_LICENSE_GRANT: aave-v3-origin BSL 1.1 until 2027-03-06",
+        "EXTERNAL_CONFORMANCE_MISSING: fork-simulation proof (R-05)"
+      ],
+      "dossier_file": "AAVE_V3_FLASHLOAN_SIMPLE_WAVE2.md",
+      "content_sha256": "cb434ad021eb8732ea4d66c0fc36f0588f19c83e93a5105610792e205f718a25"
+    },
+    "fluid_liquidity": {
+      "provider": "Fluid (Instadapp) Liquidity layer",
+      "chain": "evm: 1, 42161, 8453 pinned; 10 MISSING_PIN",
+      "canonical_urls": [
+        "https://github.com/Instadapp/fluid-contracts-public/tree/404d73f91e6806f881f8dabeb30494f93f9e99b7/deployments/mainnet/Liquidity.json",
+        "https://github.com/Instadapp/fluid-contracts-public/blob/main/contracts/liquidity/SPEC.md",
+        "https://github.com/Instadapp/fluid-contracts-public/blob/main/docs/docs.md"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "RAW_OFFICIAL_SNAPSHOT (deployment addresses) + OFFICIAL_CONTRACT_EXTRACT_ONLY (SPEC/docs)",
+      "interface_surface": "Liquidity core exposes operate() to allow-listed protocols (Lending/fToken, Vault, DEX, stETH queue, Flashloan); NO public flashLoan ABI, callback interface, or fee formula pinned - MISSING_PIN typed",
+      "flash_loan_semantics": "a 'Flashloan' protocol class exists on the Liquidity layer (SPEC.md + proxy.sol comments) but is not publicly callable/documented; end users never talk to Liquidity directly",
+      "fee_fields": "UNKNOWN - no flash fee formula in pinned sources",
+      "capacity_read_surface": "unpinned (no public ABI); capacity UNKNOWN",
+      "deployment_pins": {
+        "1": "0x52Aa899454998Be5b000Ad077a46Bbe360F4e497",
+        "42161": "0x52Aa899454998Be5b000Ad077a46Bbe360F4e497",
+        "8453": "0x52Aa899454998Be5b000Ad077a46Bbe360F4e497",
+        "10": "MISSING_PIN"
+      },
+      "deployment_pin_source": "deployments/<chain>/Liquidity.json in the official repo at the pinned SHA; identical addresses are a deterministic deployment artifact, NOT shared liquidity; no deployments/optimism/ dir exists",
+      "upstream_pins": {
+        "github_repo": "Instadapp/fluid-contracts-public",
+        "commit": "404d73f91e6806f881f8dabeb30494f93f9e99b7",
+        "commit_date": "2026-11-05T20:33:29Z"
+      },
+      "license_status": "BSL 1.1 (LICENSE file: Licensor Instadapp Labs; Additional Use Grant educational-only; production use prohibited; Change Date 2027-12-19; Change License GPL-2.0-or-later; GitHub API license field NOASSERTION)",
+      "status": "PARTIAL_PIN",
+      "typed_blockers": [
+        "MISSING_PIN: public flash-loan ABI on Fluid Liquidity (entry, callback, fee, min/max)",
+        "MISSING_PIN: OP Mainnet Liquidity deployment address",
+        "BLOCKED_LICENSE_GRANT: BSL 1.1 educational-only Additional Use Grant until 2027-12-19",
+        "BLOCKED_MISSING_PIN: per-chain live Liquidity balances (capacity UNKNOWN)",
+        "EXTERNAL_CONFORMANCE_MISSING: fork-simulation proof (R-05)"
+      ],
+      "dossier_file": "FLUID_LIQUIDITY_WAVE2.md",
+      "content_sha256": "44cd39dc7ee3cf8dfe7af77e369acf6e3b7f539332f72dcaa2c3ac581cf16417"
+    },
+    "euler_evk": {
+      "provider": "Euler v2 / Euler Vault Kit (EVault)",
+      "chain": "evm: per-vault (deployment registry MISSING_PIN)",
+      "canonical_urls": [
+        "https://github.com/euler-xyz/euler-vault-kit/tree/93a1de491531e54cbbcf0e5c8cacfe558f924867/src/EVault/IEVault.sol",
+        "https://github.com/euler-xyz/euler-vault-kit/tree/93a1de491531e54cbbcf0e5c8cacfe558f924867/src/interfaces/IFlashLoan.sol"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "RAW_OFFICIAL_SNAPSHOT (signatures + license parameters) + OFFICIAL_CONTRACT_EXTRACT_ONLY (nat-spec)",
+      "interface_surface": "EVault.flashLoan(uint256 amount, bytes calldata data) external; IFlashLoan.onFlashLoan(bytes memory data) external invoked on msg.sender; repay to main Euler address before returning",
+      "flash_loan_semantics": "caller == callback receiver (no receiver param); repay-by-transfer in same tx; fee NOT assumed zero - installed hooks can impose fee/eligibility/pause per vault; every vault is a separate liquidity resource",
+      "fee_fields": "UNKNOWN per vault (hook state); no generic zero-fee provider allowed (wave-1 rule)",
+      "capacity_read_surface": "per-vault balance reads (documented approach only; NOT executed)",
+      "upstream_pins": {
+        "github_repo": "euler-xyz/euler-vault-kit",
+        "commit": "93a1de491531e54cbbcf0e5c8cacfe558f924867",
+        "commit_date": "2026-10-29T15:17:06Z",
+        "previous_pin_wave1": "e88274cc624b9867d3c0197614dc5fe5201377c3"
+      },
+      "license_status": "BSL 1.1 (repo-root LICENSE: Licensor Euler Labs Ltd; Additional Use Grant NONE; Change Date 2029-04-24; Change License GPL-2.0-or-later); file-level note: src/interfaces/IFlashLoan.sol carries SPDX GPL-2.0-or-later header; GitHub API NOASSERTION",
+      "status": "PINNED_CURRENT",
+      "typed_blockers": [
+        "MISSING_PIN: official per-vault EVK deployment registry (org search found none 2026-11-14)",
+        "BLOCKED_MISSING_PIN: installed hook fee/eligibility/pause state per vault (wave-1 blocker)",
+        "MISSING_DEPLOYED_ABI: bytes4 selectors not source-published",
+        "BLOCKED_LICENSE_GRANT: EVK BSL 1.1 with no Additional Use Grant until 2029-04-24",
+        "EXTERNAL_CONFORMANCE_MISSING: fork-simulation proof (R-05)"
+      ],
+      "dossier_file": "EULER_EVK_FLASH_WAVE2.md",
+      "content_sha256": "d22733f1b18e2e7d59c203b212fdf06467b06a41e067abe353b721352782746b"
+    },
+    "spark_lend": {
+      "provider": "SparkLend (Spark Pool) + Spark PSM3",
+      "chain": "evm: 1 (registry rows transcribed)",
+      "canonical_urls": [
+        "https://docs.spark.finance/dev/sparklend/features/flash-loans",
+        "https://docs.spark.finance/dev/deployments/",
+        "https://github.com/sparkdotfi/spark-address-registry/tree/master/src",
+        "https://github.com/sparkdotfi/spark-psm"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "RAW_OFFICIAL_SNAPSHOT (registry constants) + OFFICIAL_CONTRACT_EXTRACT_ONLY (docs behavior + PSM3 README)",
+      "interface_surface": "flashLoan (multi, fee waived for FLASH_BORROWER_ROLE) + flashLoanSimple (single, fee never waived); executeOperation(address[],uint256[],uint256[],address,bytes) returns bool (multi) / IFlashLoanSimpleReceiver (single); false return -> INVALID_FLASHLOAN_EXECUTOR_RETURN (13)",
+      "flash_loan_semantics": "flashLoanEnabled is bit 63 of reserve config (setReserveFlashLoaning); disabled -> FLASHLOAN_DISABLED (91); FLASHLOAN_INTO_BORROW_DEPRECATED on non-zero interestRateModes; repay via Pool allowance amount+premium, Pool safeTransferFrom; revert if unpayable",
+      "fee_fields": "premium split LPs/treasury via updateFlashloanPremiumTotal/ToProtocol; live values via Pool.FLASHLOAN_PREMIUM_TOTAL()/TO_PROTOCOL(); docs state NO default number - live value NOT read (typed blocker)",
+      "capacity_read_surface": "reserve data + balanceOf (documented approach only; NOT executed)",
+      "deployment_pins": {
+        "1_POOL": "0xC13e21B648A5Ee794902342038FF3aDAB66BE987",
+        "1_POOL_ADDRESSES_PROVIDER": "0x02C3eA4e34C0cBd694D2adFa2c690EECbC1793eE",
+        "1_POOL_ADDRESSES_PROVIDER_REGISTRY": "0x03cFa0C4622FF84E50E75062683F44c9587e6Cc1",
+        "1_POOL_CONFIGURATOR": "0x542DBa469bdE58FAeE189ffB60C6b49CE60E0738"
+      },
+      "deployment_pin_source": "sparkdotfi/spark-address-registry src/SparkLend.sol at pinned master SHA",
+      "upstream_pins": {
+        "address_registry_repo": "sparkdotfi/spark-address-registry",
+        "address_registry_commit": "1772efe41c35b6b059a6467f0c6f2e4e9fc96cde",
+        "address_registry_pushed_at": "2026-11-13T07:29:04Z",
+        "psm_repo": "sparkdotfi/spark-psm",
+        "psm_commit": "2b1a72a7c24f95db0c4bda13ea9062ce9824577b"
+      },
+      "license_status": "address-registry AGPL-3.0; spark-psm AGPL-3.0; SparkLend core derived from Aave v3.0.2 lineage (upstream Aave BSL terms unresolved for derived production use - BLOCKED_LICENSE_GRANT caution)",
+      "status": "PINNED_CURRENT",
+      "typed_blockers": [
+        "MISSING_PIN: live FLASHLOAN_PREMIUM_TOTAL() and FLASH_BORROWER_ROLE policy",
+        "MISSING_PIN: per-reserve flashLoanEnabled (bit 63) state",
+        "MISSING_DEPLOYED_ABI: bytes4 selectors not source-published",
+        "BLOCKED_MISSING_PIN: pool liquidity capacity (UNKNOWN)",
+        "MISSING_PIN (negative finding): PSM3 has no flash-loan/flash-mint/borrow entry point - swap/deposit/withdraw only; never booked as financing source",
+        "EXTERNAL_CONFORMANCE_MISSING: fork-simulation proof (R-05)"
+      ],
+      "dossier_file": "SPARK_LEND_PSM3_WAVE2.md",
+      "content_sha256": "6e0fd57230b8ca6db42b0041f1687e3395993d4d22585c4493fc98230073e4b9"
+    },
+    "evm_callback_atomicity": {
+      "provider": "cross-provider EVM callback atomicity note",
+      "chain": "evm (domain-isolated from Solana/Sui)",
+      "canonical_urls": [
+        "https://aave.com/docs/aave-v3/guides/flash-loans",
+        "https://eips.ethereum.org/EIPS/eip-3156 (standard, not a lender - wave-1 fact)"
+      ],
+      "retrieved_at_utc": "2026-11-14",
+      "snapshot_status": "DOCS_REFERENCE_ONLY",
+      "interface_surface": "table of entry/callback pairs: Aave flashLoanSimple/executeOperation (IFlashLoanSimpleReceiver), Aave flashLoan/executeOperation (IFlashLoanReceiver), Euler flashLoan/onFlashLoan (IFlashLoan), Fluid (no public ABI - MISSING_PIN), Morpho flashLoan/onMorphoFlashLoan (wave-1)",
+      "flash_loan_semantics": "callback-in-one-transaction model; missing repayment reverts whole tx; receiver contract deployment mandatory (EOA cannot receive callbacks); repayment = principal + live fee",
+      "fee_fields": "per-deployment (Aave/Spark live premium; Morpho zero docs; Euler per-hook); never cached constants",
+      "capacity_read_surface": "n/a (note file; capacity UNKNOWN everywhere)",
+      "upstream_pins": {
+        "note": "quotes sourced from the pinned repos/docs cited in the per-source dossiers"
+      },
+      "license_status": "n/a (editorial note; upstream licenses recorded per source)",
+      "status": "PINNED_CURRENT",
+      "typed_blockers": [
+        "MISSING_DEPLOYED_ABI: bytes4 selectors for all listed callbacks not source-published; never copy from third-party selector databases"
+      ],
+      "dossier_file": "EVM_CALLBACK_ATOMICITY_WAVE2.md",
+      "content_sha256": "c049c379368c4e0568785dc717fac95a778e2d363d3f312753946b8d4a0abae8"
+    }
+  },
+  "overlap_files": [
+    "OVERLAP_NOTES.md",
+    "README.md"
+  ]
+}

@@ -125,3 +125,22 @@
 - Resource conflicts and comparison to independent baseline.
 - Positive, negative, stale, partial, rejected and no-trade examples.
 - No live/sender/signer changes; rollback and next dependency.
+
+
+
+### SX-17 — Runtime multi-strategy fanout and evidence-gated composition
+- **Assignment:** tasks/SX17_MULTI_STRATEGY_RUNTIME_FANOUT_RU.md
+- Close the gap between the broad strategy catalog/library modules and the actual installed runtime. Audit the six current registrations and the one real two-leg shadow detector; map all remaining detector shells/fixture-only boundaries honestly.
+- Reuse SX-01 StrategyContractV1, current StrategyRegistry, build_application, OpportunityConsumer/queue/tracker, R08 composition, QPR/DIN, AGG-05 WorkResourceSet/conflict scheduler, SX-12 portfolio optimizer and existing paper/shadow composition.
+- Add bounded concurrent detector evaluation over one immutable MarketSnapshotGeneration, deterministic ordering, worker cancellation/deadline/backpressure, failure isolation, duplicate idempotency and shared-resource conflict admission.
+- Do not create a second registry, runner, queue, scheduler, ledger, graph or paper authority. Do not enable all catalog entries. Only real detector bodies with their own state/quote/capacity/build gates may enter shadow.
+- Dependencies: SX-01 (#641), R08 (#624/#627), AGG-05, R10-1/R10-2/R10-3 and SX-12 (#645 if merged). R04/R05/R06 remain promotion gates.
+- Acceptance: 1/2/4/8-worker determinism; completion-order invariance; stale generation rejection; isolated exception/timeout; bounded queue/backpressure; no duplicate resource consumption; installed wheel/capability parity; no promotion from class/config presence.
+
+### W6-12 — Observed participant strategy intelligence and evidence graph
+- **Assignment:** tasks/W6_12_OBSERVED_PARTICIPANT_STRATEGY_INTELLIGENCE_RU.md
+- Extend W6-01/02 archetype IR and population calibration, W6-05/06 competition/survival and PSRO/self-play with an explicit evidence path from public on-chain participant episodes to falsifiable strategy archetypes, complete economic attribution and held-out replay.
+- Reuse MarketEpisode, the existing raw journal/replay, episode_builder, decision dataset/ranker, correlation ledger, research_quality and causal benchmark owners; no second wallet graph, event store, feature store or strategy registry.
+- Use only public/authorized protocol activity. Public addresses remain pseudonymous technical identifiers; no real-world identity resolution, doxxing, private orderflow, leaked data or automatic copy-trading.
+- Attribute full lifecycle and liabilities: transfers, inventory, residual assets, fees, gas, funding, borrow, rent, failed/reverted/no-fill attempts, mark-to-market, drawdown and capital lock. Missing/censored history must remain UNKNOWN.
+- Acceptance: deterministic episode/archetype graph, source-rights/provenance manifest, leakage-resistant chronological and actor/pool/protocol splits, nulls/negative corpus, multiple-testing correction, confidence/effective sample sizes and local replay. Models remain advisory.
